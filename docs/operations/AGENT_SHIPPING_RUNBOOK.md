@@ -150,19 +150,22 @@ Current hook sources: [commit-msg](../../.husky/commit-msg),
 [pre-commit](../../.husky/pre-commit) and [pre-push](../../.husky/pre-push).
 
 - `commit-msg`: Commitlint.
-- `pre-commit`: `lint-staged`; agent staging/source-only guard; legacy sync
-  (`agent-check` is report-only, `integration` rebuilds and stages generated
-  scope); lazy-chunk, pricing, CommonJS mirror and heys-mcp web-mirror guards;
-  allowlist auto-fixes. **Windows + dev-сервер:** при `localhost:3001` rebuild
-  не останавливается — неизменённые locked-бандлы пропускаются, новые хэши
-  пишутся в новые файлы; после коммита с новым lazy — hard reload. Commit body —
-  строки ≤100 символов (commitlint).
+- `pre-commit`: workspace runtime check; `lint-staged`; staged-hygiene (partial
+  stage on shared MCP files, deleted workspace manifests); agent
+  staging/source-only guard and multi-zone block; legacy sync (`agent-check` is
+  report-only, `integration` rebuilds and stages generated scope); lazy-chunk,
+  pricing, CommonJS mirror and heys-mcp web-mirror guards; allowlist auto-fixes.
+  **Windows + dev-сервер:** при `localhost:3001` rebuild не останавливается —
+  неизменённые locked-бандлы пропускаются, новые хэши пишутся в новые файлы;
+  после коммита с новым lazy — hard reload. Commit body — строки ≤100 символов
+  (commitlint).
 - `pre-push`: delegates to `push:preflight` for the outgoing committed range.
-  The current fast gates are source/generated scope, Gitleaks, the migration
-  test when migration contracts changed, direct-localStorage,
-  unscoped-client-write and raw-session-clear guards, plus relevant Vitest.
-  Clean legacy-bundle verification and the full web suite belong to deploy CI.
-  React start-transition counting is optional diagnostics, not a blocking hook.
+  The current fast gates are workspace runtime, source/generated scope,
+  Gitleaks, the migration test when migration contracts changed,
+  direct-localStorage, unscoped-client-write and raw-session-clear guards, plus
+  relevant Vitest. Clean legacy-bundle verification and the full web suite
+  belong to deploy CI. React start-transition counting is optional diagnostics,
+  not a blocking hook.
 - `pnpm lint:shared-cache` is a manual-only check, not an active Husky hook.
 
 Hooks fail closed. Follow their stderr and fix only the reported owned scope. Do

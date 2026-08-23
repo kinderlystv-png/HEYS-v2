@@ -128,8 +128,10 @@ const POLICY_EXPECTATIONS = {
 const HOOK_CONTRACTS = {
   [FILES.commitMsgHook]: ['pnpm exec commitlint --edit'],
   [FILES.preCommitHook]: [
+    'scripts/check-workspace-runtime.mjs',
     'pnpm exec lint-staged',
     'scripts/check-agent-staging.mjs --print-mode',
+    'scripts/check-staged-hygiene.mjs',
     'scripts/check-agent-staging.mjs --mode=',
     'scripts/auto-sync-legacy-bundles.mjs --mode=agent-check',
     'scripts/auto-sync-legacy-bundles.mjs --mode=integration',
@@ -147,6 +149,9 @@ const HOOK_CONTRACTS = {
 };
 
 const RUNBOOK_HOOK_TERMS = [
+  'workspace runtime',
+  'staged-hygiene',
+  'multi-zone',
   'Commitlint',
   'lint-staged',
   'source-only',

@@ -220,6 +220,14 @@ function main() {
   printGitContext();
 
   let failures = 0;
+  if (
+    !runGate('0) Workspace runtime', process.execPath, ['scripts/check-workspace-runtime.mjs'], {
+      compactSuccess: true,
+    })
+  ) {
+    failures += 1;
+  }
+
   writeLine('');
   writeLine('1) Source-only scope');
   if (!runScopeGate()) failures += 1;

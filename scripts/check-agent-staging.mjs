@@ -145,12 +145,9 @@ function getForbiddenAgentStagedFiles(files = getStagedFiles()) {
   return files.filter(isGeneratedOrReleaseFile);
 }
 
-// Cross-zone check (improvement C): staged source files MUST belong to ≤1 zone
-// per agent-zones manifest. Multiple zones in one commit → likely cross-agent
-// contamination (security agent's git add -A pulling in fingers work, etc).
-// Returns warning info (not blocking) for now — staging guard already exists,
-// this adds visibility.
-async function getMultiZoneWarning(files = getStagedFiles()) {
+// Cross-zone check: staged source files MUST belong to ≤1 zone per agent-zones
+// manifest. Multiple zones in one commit → likely cross-agent contamination.
+async function getMultiZoneInfo(files = getStagedFiles()) {
   try {
     const { getZoneForFile } = await import('./agent-zones.mjs');
     const sourceFiles = files.filter((f) => !isGeneratedOrReleaseFile(f));
@@ -171,6 +168,31 @@ async function getMultiZoneWarning(files = getStagedFiles()) {
   } catch {
     return null;
   }
+}
+
+function assertMultiZoneStaging({
+  multiZone,
+  env = process.env,
+} = {}) {
+  if (!multiZone) return { ok: true };
+  if (env.HEYS_ALLOW_MULTI_ZONE === '1' || env.HEYS_SHIP === '1') {
+    return { ok: true, multiZone, allowed: true };
+  }
+  return { ok: false, multiZone };
+}
+
+function printMultiZoneFailure(multiZone) {
+  process.stderr.write(
+    '[agent-staging] Staged files span multiple agent zones (' + multiZone.zones.join(', ') + '):\n',
+  );
+  multiZone.byZone.forEach(({ zone, files }) => {
+    process.stderr.write(`  [${zone}]\n`);
+    files.forEach((f) => process.stderr.write(`    - ${f}\n`));
+  });
+  process.stderr.write(
+    '[agent-staging] Likely cross-task contamination — stage one zone or use explicit commit paths.\n',
+  );
+  process.stderr.write('[agent-staging] Override: HEYS_ALLOW_MULTI_ZONE=1\n');
 }
 
 function assertAgentStaging({
@@ -272,22 +294,11 @@ async function main() {
     return 1;
   }
 
-  // Cross-zone advisory warning (improvement C). Не блокирует — даёт
-  // видимость когда staged содержит файлы из нескольких agent-зон.
-  const multiZone = await getMultiZoneWarning();
-  if (multiZone) {
-    process.stderr.write(
-      '[agent-staging] ⚠ Staged-файлы из НЕСКОЛЬКИХ agent-зон (' +
-        multiZone.zones.join(', ') +
-        '):\n',
-    );
-    multiZone.byZone.forEach(({ zone, files }) => {
-      process.stderr.write(`  [${zone}]\n`);
-      files.forEach((f) => process.stderr.write(`    - ${f}\n`));
-    });
-    process.stderr.write(
-      '[agent-staging] Если это намеренный multi-zone коммит — продолжаем; иначе проверь staging.\n',
-    );
+  const multiZone = await getMultiZoneInfo();
+  const zoneGate = assertMultiZoneStaging({ multiZone });
+  if (!zoneGate.ok) {
+    printMultiZoneFailure(zoneGate.multiZone);
+    return 1;
   }
 
   const isolation = assertNotSharedRootDuringParallel({ mode });
@@ -315,9 +326,11 @@ export {
   RELEASE_FILE_PATTERNS,
   assertAgentStaging,
   assertMainIsIntegrationOnly,
+  assertMultiZoneStaging,
   assertNotSharedRootDuringParallel,
   detectStagingMode,
   getForbiddenAgentStagedFiles,
+  getMultiZoneInfo,
   isGeneratedOrReleaseFile,
   isIntegrationBranch,
   isProtectedTrunk,

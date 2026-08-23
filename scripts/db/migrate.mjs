@@ -138,12 +138,16 @@ function sqlLiteral(value) {
 function runPsql(sql, { quiet = true } = {}) {
   const args = ['-X', '-v', 'ON_ERROR_STOP=1'];
   if (quiet) args.push('-qAt');
-  const result = spawnSync(PSQL_WRAPPER, args, {
+  const options = {
     cwd: ROOT_DIR,
     input: sql,
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
-  });
+  };
+  // psql.sh is bash; Node spawnSync(path) on Windows does not execute .sh.
+  const result = process.platform === 'win32'
+    ? spawnSync('bash', [PSQL_WRAPPER, ...args], options)
+    : spawnSync(PSQL_WRAPPER, args, options);
   if (result.status !== 0) {
     throw new Error((result.stderr || result.stdout || 'psql failed').trim());
   }
