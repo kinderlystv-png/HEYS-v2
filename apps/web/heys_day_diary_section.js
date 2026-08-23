@@ -1238,16 +1238,6 @@
                         }
                     }, '+ Добавить приём')
                 ),
-                // 🎯 R-DAY-STICKY-V2 (2026-05-15): отдельный fixed-bar поверх списка.
-                // НЕ трогает шапки приёмов (sticky на них ломал layout). Один общий
-                // bar показывает данные текущего приёма в момент скролла, через
-                // scroll listener + data-meal-index lookup.
-                isMobile && HEYS.dayComponents?.MealStickyBar && React.createElement(HEYS.dayComponents.MealStickyBar, {
-                    day,
-                    pIndex,
-                    isMobile,
-                    key: 'meal-sticky-bar',
-                }),
                 mealsUI,
                 dailyWaveOverview,
                 daySummary,

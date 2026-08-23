@@ -12,7 +12,6 @@ function read(relPath) {
 }
 
 let formatDateHeaderRow;
-let formatDaysAgoRu;
 
 beforeAll(() => {
   global.window = global;
@@ -25,7 +24,6 @@ beforeAll(() => {
   new Function('window', utilsSrc)(global);
 
   formatDateHeaderRow = global.HEYS.dayUtils.formatDateHeaderRow;
-  formatDaysAgoRu = global.HEYS.dayUtils.formatDaysAgoRu;
 });
 
 describe('formatDateHeaderRow (v4 date line)', () => {
@@ -36,12 +34,12 @@ describe('formatDateHeaderRow (v4 date line)', () => {
     expect(row.relative).toBeNull();
   });
 
-  it('today on weekend — red abbr instead of «Сегодня»', () => {
+  it('today on weekend — «Сегодня, …», не красное сокращение', () => {
     vi.setSystemTime(new Date('2026-08-09T12:00:00+03:00'));
     const row = formatDateHeaderRow('2026-08-09');
     expect(row.isToday).toBe(true);
-    expect(row.weekendAbbr).toBe('вс');
-    expect(row.main).toMatch(/^вс, 9 августа/);
+    expect(row.weekendAbbr).toBeUndefined();
+    expect(row.main).toMatch(/^Сегодня, 9 августа/);
     vi.setSystemTime(new Date('2026-08-10T12:00:00+03:00'));
   });
 
@@ -51,10 +49,19 @@ describe('formatDateHeaderRow (v4 date line)', () => {
     expect(row.relative).toBeNull();
   });
 
-  it('three days ago — weekday + «три дня назад»', () => {
+  it('three days ago — короткий день недели, без «N дней назад»', () => {
     const row = formatDateHeaderRow('2026-08-07');
-    expect(row.main).toMatch(/^Пятница, 7 августа/);
-    expect(formatDaysAgoRu('2026-08-07')).toBe('3 дня назад');
-    expect(row.relative).toBe('3 дня назад');
+    expect(row.main).toMatch(/^пт, 7 августа/);
+    expect(row.relative).toBeNull();
+  });
+
+  it('night window on effective today — «Ночь на …»', () => {
+    vi.setSystemTime(new Date('2026-08-21T01:30:00+03:00'));
+    const row = formatDateHeaderRow('2026-08-20');
+    expect(row.isToday).toBe(true);
+    expect(row.isNightLabel).toBe(true);
+    expect(row.main).toBe('Ночь на 21 августа');
+    expect(row.relative).toBeNull();
+    vi.setSystemTime(new Date('2026-08-10T12:00:00+03:00'));
   });
 });

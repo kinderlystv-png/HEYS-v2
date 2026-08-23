@@ -69,6 +69,23 @@
   // Автопрокрутка у края в расстановке: скорость постоянная (канвас v4, 58).
   const EDGE_SCROLL_STEP_PX = 12;
   const EDGE_SCROLL_TICK_MS = 16;
+  // Бюджет экрана: 4×8 клеток (канвас home-widgets, «Бюджет экрана», 23 августа).
+  const SCREEN_CELL_BUDGET = 32;
+  const SCREEN_ROW_BUDGET = 8;
+
+  /** Сколько клеток занимает одна плитка. */
+  function widgetCellCount(widget) {
+    if (!widget) return 0;
+    const sizeInfo = HEYS.Widgets.registry?.getSize?.(widget.size);
+    const cols = Math.max(1, sizeInfo?.cols || widget.cols || 1);
+    const rows = Math.max(1, sizeInfo?.rows || widget.rows || 1);
+    return cols * rows;
+  }
+
+  /** Сумма клеток по списку виджетов. */
+  function countUsedCells(widgets) {
+    return (widgets || []).reduce((sum, w) => sum + widgetCellCount(w), 0);
+  }
 
   // Дефолтный набор — контракт home-widgets, раздел «Дефолтный набор»:
   // одиннадцать плиток в порядке чтения, у каждой назван вид. Порядок и есть
@@ -169,14 +186,14 @@
     },
     {
       type: 'weight',
-      size: '2x2',
+      size: '2x1',
       settings: {
-        displayVariant: 'spark',
-        showBmi: true,
-        showGoal: true,
-        showChart: true,
+        displayVariant: 'number_week',
+        showBmi: false,
+        showGoal: false,
+        showChart: false,
         showTrend: true,
-        showAnalytics: true
+        showAnalytics: false
       }
     },
     {
@@ -760,16 +777,33 @@
      * @param {boolean} skipHistory - не сохранять в историю (для undo/redo)
      */
     addWidget(widget, skipHistory = false) {
-      // «Скоро» — обещание в каталоге, а не виджет: плитки для него ещё нет,
+      // «Скоро» — обещение в каталоге, а не виджет: плитки для него ещё нет,
       // и пустая клетка на экране обесценила бы само обещание.
       const def = HEYS.Widgets.registry?.getType?.(widget?.type);
       if (def?.comingSoon) return null;
 
+      const normalized = this._normalizeWidget(widget);
+      const usedBefore = countUsedCells(this._widgets);
+      const needCells = widgetCellCount(normalized);
+
+      // Переполненные раскладки (>32): добавление заблокировано до уборки или сброса.
+      if (usedBefore > SCREEN_CELL_BUDGET) {
+        HEYS.Widgets.emit('widget:add-blocked', { reason: 'overflow', used: usedBefore, need: needCells });
+        return null;
+      }
+      if (usedBefore + needCells > SCREEN_CELL_BUDGET) {
+        HEYS.Widgets.emit('widget:add-blocked', {
+          reason: 'budget',
+          used: usedBefore,
+          need: needCells,
+          type: normalized.type
+        });
+        return null;
+      }
+
       if (!skipHistory) {
         this._pushHistory();
       }
-
-      const normalized = this._normalizeWidget(widget);
 
       // Новая плитка встаёт в конец порядка (канвас v4, строка 55);
       // координаты ей назначит flow-укладка.
@@ -815,6 +849,61 @@
       }
 
       return true;
+    },
+
+    /**
+     * Замена плитки из каталога: стоявший виджет уходит, новый встаёт на его место.
+     * Счётчик клеток не растёт, если размер совпадает (канвас v4, «замена перетаскиванием»).
+     */
+    replaceWidgetFromCatalog(targetId, typeKey, skipHistory = false) {
+      const idx = this._widgets.findIndex((w) => w.id === targetId);
+      if (idx === -1) return null;
+
+      const def = HEYS.Widgets.registry?.getType?.(typeKey);
+      if (def?.comingSoon) return null;
+
+      const created = HEYS.Widgets.registry?.createWidget?.(typeKey);
+      if (!created) return null;
+
+      const usedBefore = countUsedCells(this._widgets);
+      if (usedBefore > SCREEN_CELL_BUDGET) {
+        HEYS.Widgets.emit('widget:add-blocked', { reason: 'overflow', used: usedBefore });
+        return null;
+      }
+
+      const removed = this._widgets[idx];
+      const removedCells = widgetCellCount(removed);
+      const newCells = widgetCellCount(created);
+      const usedAfterSwap = usedBefore - removedCells + newCells;
+      if (usedAfterSwap > SCREEN_CELL_BUDGET) {
+        HEYS.Widgets.emit('widget:add-blocked', {
+          reason: 'budget',
+          used: usedBefore,
+          need: newCells,
+          type: typeKey,
+          replace: true
+        });
+        return null;
+      }
+
+      if (!skipHistory) {
+        this._pushHistory();
+      }
+
+      const normalized = this._normalizeWidget(created);
+      this._widgets[idx] = normalized;
+      this._autoPackWidgets();
+      const result = this.getWidget(normalized.id) || normalized;
+      this._debouncedSave();
+
+      HEYS.Widgets.emit('widget:replaced', { removed, widget: result, index: idx });
+      HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
+
+      if (navigator.vibrate) {
+        navigator.vibrate(10);
+      }
+
+      return result;
     },
 
     /**
@@ -2035,7 +2124,7 @@
 
       console.info('[HEYS.dnd] 👇 pointerDown', { widgetId, isEditMode: state.isEditMode(), isTouchEvent, pointerType: event?.pointerType, tagName: t?.tagName, targetClass: t?.className?.substring?.(0, 60) });
 
-      // Drag только в режиме расстановки (вход — «Изменить экран» / «Добавить»).
+      // Drag только в режиме расстановки (вход — FAB настройки экрана).
       // Long press вне edit mode больше не открывает расстановку (у динамики веса — смена вида).
       if (!state.isEditMode()) return;
       this._prepareForDrag(widgetId, event);
@@ -2868,6 +2957,22 @@
   HEYS.Widgets.canUndo = () => state.canUndo();
   HEYS.Widgets.canRedo = () => state.canRedo();
   HEYS.Widgets.resetLayout = () => state.resetLayout();
+  HEYS.Widgets.SCREEN_CELL_BUDGET = SCREEN_CELL_BUDGET;
+  HEYS.Widgets.SCREEN_ROW_BUDGET = SCREEN_ROW_BUDGET;
+  HEYS.Widgets.widgetCellCount = widgetCellCount;
+  HEYS.Widgets.countUsedCells = (widgets) => countUsedCells(widgets || state.getWidgets());
+  HEYS.Widgets.getBudgetInfo = () => {
+    const used = countUsedCells(state.getWidgets());
+    return {
+      used,
+      total: SCREEN_CELL_BUDGET,
+      rows: SCREEN_ROW_BUDGET,
+      isOverflow: used > SCREEN_CELL_BUDGET,
+      remaining: Math.max(0, SCREEN_CELL_BUDGET - used)
+    };
+  };
+  HEYS.Widgets.replaceWidgetFromCatalog = (targetId, typeKey) =>
+    state.replaceWidgetFromCatalog(targetId, typeKey);
 
   // Verbose init log removed
 

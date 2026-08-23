@@ -436,6 +436,44 @@
         return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
     }
 
+    /** Календарный сегодня без ночного сдвига (лимит «вперёд» в капсуле). */
+    function calendarTodayISO() {
+        return fmtDate(new Date());
+    }
+
+    function isNightWindowNow() {
+        return new Date().getHours() < NIGHT_HOUR_THRESHOLD;
+    }
+
+    /** Перерисовка капсулы/меты в 03:00 без перезагрузки (date-remainders). */
+    function scheduleNightBoundaryRefresh(onBoundary) {
+        if (typeof onBoundary !== 'function') return () => {};
+        let timeoutId = null;
+        let cancelled = false;
+        const schedule = () => {
+            if (cancelled) return;
+            const now = new Date();
+            const next = new Date(now);
+            if (now.getHours() < NIGHT_HOUR_THRESHOLD) {
+                next.setHours(NIGHT_HOUR_THRESHOLD, 0, 0, 0);
+            } else {
+                next.setDate(next.getDate() + 1);
+                next.setHours(NIGHT_HOUR_THRESHOLD, 0, 0, 0);
+            }
+            const delay = Math.max(1000, next.getTime() - now.getTime());
+            timeoutId = setTimeout(() => {
+                if (cancelled) return;
+                try { onBoundary(); } catch (_) { /* noop */ }
+                schedule();
+            }, delay);
+        };
+        schedule();
+        return () => {
+            cancelled = true;
+            if (timeoutId) clearTimeout(timeoutId);
+        };
+    }
+
     function fmtDate(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
     function parseISO(s) { const [y, m, d] = String(s || '').split('-').map(x => parseInt(x, 10)); if (!y || !m || !d) return new Date(); const dt = new Date(y, m - 1, d); dt.setHours(12); return dt; }
     function uid(p) { return (p || 'id') + Math.random().toString(36).slice(2, 8); }
@@ -1279,7 +1317,7 @@
         return `${diffDays} дней назад`;
     }
 
-    /** Строка даты v4 в шапке: «Сегодня, 10 августа» / «Пятница, 7 августа» + relative. */
+    /** Строка даты v4 в капсуле: «Сегодня, …» / «Ночь на …» / «вт, 18 августа». */
     function formatDateHeaderRow(isoDate) {
         const d = parseISO(isoDate || todayISO());
         const effectiveToday = parseISO(todayISO());
@@ -1289,17 +1327,15 @@
         const isToday = d.toDateString() === effectiveToday.toDateString();
         const isYesterday = d.toDateString() === effectiveYesterday.toDateString();
         if (isToday) {
-            const dayOfWeek = d.getDay();
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-            if (isWeekend) {
-                const weekendAbbr = d.toLocaleDateString('ru-RU', { weekday: 'short' })
-                    .replace(/\.$/, '')
-                    .toLowerCase();
+            if (isNightWindowNow()) {
+                const nextDay = new Date(effectiveToday);
+                nextDay.setDate(nextDay.getDate() + 1);
+                const nextLong = nextDay.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
                 return {
-                    main: `${weekendAbbr}, ${longDate}`,
+                    main: `Ночь на ${nextLong}`,
                     relative: null,
                     isToday: true,
-                    weekendAbbr
+                    isNightLabel: true
                 };
             }
             return { main: `Сегодня, ${longDate}`, relative: null, isToday: true };
@@ -1307,12 +1343,16 @@
         if (isYesterday) {
             return { main: `Вчера, ${longDate}`, relative: null, isToday: false };
         }
-        const weekday = d.toLocaleDateString('ru-RU', { weekday: 'long' });
-        const wd = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+        const weekdayAbbr = d.toLocaleDateString('ru-RU', { weekday: 'short' })
+            .replace(/\.$/, '')
+            .toLowerCase();
+        const dayOfWeek = d.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         return {
-            main: `${wd}, ${longDate}`,
-            relative: formatDaysAgoRu(isoDate),
-            isToday: false
+            main: `${weekdayAbbr}, ${longDate}`,
+            relative: null,
+            isToday: false,
+            weekendAbbr: isWeekend ? weekdayAbbr : undefined
         };
     }
 
@@ -2025,7 +2065,10 @@
 
                 // 🔧 FIX: Используем сохранённую норму с долгом если есть, иначе расчётную
                 // Это позволяет показывать корректную линию нормы в sparkline для прошлых дней
-                const target = dayInfo.savedDisplayOptimum > 0 ? dayInfo.savedDisplayOptimum : calculatedTarget;
+                const resolvedTarget = (HEYS.dayNorm && typeof HEYS.dayNorm.kcal === 'function')
+                  ? HEYS.dayNorm.kcal(dayInfo, profile || {}, {})
+                  : 0;
+                const target = resolvedTarget > 0 ? resolvedTarget : calculatedTarget;
 
                 // 🔧 FIX: Используем сохранённые калории если есть, иначе пересчитанные
                 // savedEatenKcal гарантирует точное значение, которое показывалось пользователю в тот день
@@ -2266,6 +2309,28 @@
         return merged;
     }
 
+    const LEGACY_DAYV2_PREFIX = 'heys_dayv2_';
+
+    /**
+     * dayv2-ключ принадлежит текущему клиенту или unscoped legacy (инвариант 9).
+     * Отсекает foreign-scoped и pollution `heys_<cid>_<foreign>_dayv2_*`.
+     * @param {string} key
+     * @param {string|null|undefined} clientId
+     */
+    function isDayv2KeyForCurrentClient(key, clientId) {
+        if (!key || typeof key !== 'string' || !key.includes('_dayv2_') || key.includes('_dayv2_backup_')) {
+            return false;
+        }
+        if (key.startsWith(LEGACY_DAYV2_PREFIX) && key.indexOf('_heys_') === -1) {
+            const dateTail = key.slice(LEGACY_DAYV2_PREFIX.length);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateTail)) return true;
+        }
+        if (!clientId) return false;
+        const scope = String(clientId).toLowerCase();
+        const ownDayPrefix = `heys_${scope}_dayv2_`;
+        return key.toLowerCase().startsWith(ownDayPrefix);
+    }
+
     // === Exports ===
     // Всё экспортируется через HEYS.dayUtils
     // POPULAR_CACHE — приватный, не экспортируется (инкапсуляция)
@@ -2281,6 +2346,9 @@
         formatDateDisplay,
         formatDaysAgoRu,
         formatDateHeaderRow,
+        calendarTodayISO,
+        isNightWindowNow,
+        scheduleNightBoundaryRefresh,
         // Night time logic (приёмы 00:00-02:59 относятся к предыдущему дню)
         NIGHT_HOUR_THRESHOLD,
         isNightTime,
@@ -2350,6 +2418,7 @@
         // Subjective (check-in) anti-clobber
         SUBJECTIVE_DAY_FIELDS,
         mergeSubjectiveFieldsPreferFresh,
+        isDayv2KeyForCurrentClient,
         // Predicates
         isSyntheticEstimatedItem
     };

@@ -7,12 +7,13 @@
 
 Автономная проверка критичных контуров после правок auth, sync, products:
 
-| Спека                                   | Что проверяет                                 |
-| --------------------------------------- | --------------------------------------------- |
-| `curator-login-smoke.spec.ts`           | Кураторский login → dashboard                 |
-| `pin-auth.spec.ts`                      | PIN login + session restore                   |
-| `products-client-scope-smoke.spec.ts`   | `isDayv2KeyForCurrentClient` (инцидент 23.08) |
-| `products-heardfromcloud-smoke.spec.ts` | `OverlayStore.heardFromCloud` + `clear()`     |
+| Спека                                         | Что проверяет                                 |
+| --------------------------------------------- | --------------------------------------------- |
+| `curator-login-smoke.spec.ts`                 | Кураторский login → dashboard                 |
+| `pin-auth.spec.ts`                            | PIN login + session restore                   |
+| `products-client-scope-smoke.spec.ts`         | `isDayv2KeyForCurrentClient` (инцидент 23.08) |
+| `products-cascade-client-scope-smoke.spec.ts` | каскад rename → только dayv2 текущего клиента |
+| `products-heardfromcloud-smoke.spec.ts`       | `OverlayStore.heardFromCloud` + `clear()`     |
 
 ## Команды
 

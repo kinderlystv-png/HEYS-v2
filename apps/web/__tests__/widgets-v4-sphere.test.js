@@ -241,11 +241,10 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(uiSrc).not.toContain('showDashboardSkeleton');
         expect(uiSrc).not.toContain('isSyncLoading');
         expect(uiSrc).toContain('const applyWidgetsLayout = useCallback');
-        // Пунктирная «Добавить» с 22 августа стоит в сетке всегда, в обычном
-        // режиме тоже (контракт, раздел «Плитка добавления»): прежнее правило
-        // «только в расстановке» снято вместе с условием isEditMode у неё.
-        expect(uiSrc).toContain("className: 'widget-v4-add widget-v4-add--span'");
-        expect(uiSrc).not.toMatch(/isEditMode && React\.createElement\('button', \{\s*\n\s*type: 'button',\s*\n\s*className: 'widget-v4-add/);
+        // С 23 августа вход в каталог — FAB настройки, пунктирная плитка снята.
+        expect(uiSrc).toContain("className: 'widgets-settings-fab'");
+        expect(uiSrc).not.toContain("className: 'widget-v4-add");
+        expect(uiSrc).not.toContain('widgets-tab__edit-row');
     });
 
     it('динамика веса 2×1 — v4 виды и долгий тап', () => {

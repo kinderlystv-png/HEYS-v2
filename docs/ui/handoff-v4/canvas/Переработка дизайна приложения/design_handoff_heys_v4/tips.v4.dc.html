@@ -214,7 +214,7 @@
 
 <p class="lead" style="margin:30px 0 0;font:500 12.5px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.5);">Дальше: «панель оценки в свайпе» · «отмена с таймером» · «состояние не сохранено»</p>
 </div></x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2400,&quot;height&quot;:1400},&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Разбор&quot;,&quot;Только экраны&quot;,&quot;Только текст&quot;],&quot;default&quot;:&quot;Разбор&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Как смотреть&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Свободно&quot;,&quot;Плотно&quot;,&quot;Обзор&quot;],&quot;default&quot;:&quot;Свободно&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Как смотреть&quot;},&quot;ground&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Бумага&quot;,&quot;Студия&quot;,&quot;Нейтраль&quot;],&quot;default&quot;:&quot;Бумага&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Как смотреть&quot;},&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">class Component extends DCLogic {
+<script type="text/x-dc" data-dc-script data-props="{&quot;showContracts&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;$preview&quot;:{&quot;width&quot;:2400,&quot;height&quot;:1400},&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Разбор&quot;,&quot;Только экраны&quot;,&quot;Только текст&quot;],&quot;default&quot;:&quot;Разбор&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Как смотреть&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Свободно&quot;,&quot;Плотно&quot;,&quot;Обзор&quot;],&quot;default&quot;:&quot;Свободно&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Как смотреть&quot;},&quot;ground&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Бумага&quot;,&quot;Студия&quot;,&quot;Нейтраль&quot;],&quot;default&quot;:&quot;Бумага&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Как смотреть&quot;},&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">class Component extends DCLogic {
   componentDidMount() { this.applyTweaks(); }
   componentDidUpdate() { this.applyTweaks(); }
 
@@ -222,7 +222,29 @@
     const standalone = window.parent === window;
     return { all: this.props.allPalettes ?? standalone, rules: this.props.rules ?? true };
   }
+  contracts() {
+    const on = this.props.showContracts ?? false;
+    const list = [...document.querySelectorAll('[data-contract]')];
+    if (!list.length) return;
+    list.forEach(el => { el.style.display = on ? '' : 'none'; });
+    let bar = document.querySelector('[data-ctrbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-ctrbar', '');
+      bar.style.cssText = 'font:600 11px/1.6 ui-monospace,Menlo,monospace;color:#8a4a20;margin:0 0 22px;white-space:nowrap;';
+      const anchor = document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+      else list[0].parentNode.insertBefore(bar, list[0]);
+    }
+    const n = list.length, m = n % 10, h = n % 100, one = m === 1 && h !== 11;
+    const word = one ? 'контракт' : (m >= 2 && m <= 4 && (h < 12 || h > 14) ? 'контракта' : 'контрактов');
+    const rows = document.querySelectorAll('[data-contract] .spec').length;
+    const rm = rows % 10, rh = rows % 100;
+    const rw = rm === 1 && rh !== 11 ? 'строка' : (rm >= 2 && rm <= 4 && (rh < 12 || rh > 14) ? 'строки' : 'строк');
+    bar.textContent = n + ' ' + word + ' на канвасе' + (rows ? ', ' + rows + ' ' + rw : '') + ' · ' + (on ? (one ? 'показан' : 'показаны') + ' ниже' : (one ? 'скрыт' : 'скрыты') + ' твиком «Контракты»');
+  }
   applyTweaks() {
+    this.contracts();
     const t = this.tw(), hide = t.all ? '' : 'none', off = t.rules ? '' : 'none';
     const lab = /^(т[её]мная|синяя|сине-т[её]мная|синяя\s+т[её]мная)(\s+палитра)?$/i;
 

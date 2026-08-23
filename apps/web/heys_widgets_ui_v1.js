@@ -6,7 +6,7 @@
  * 
  * v1.1.0:
  * - Поддержка pointer events для drag & drop
- * - Вход в расстановку — «Изменить экран» / «Добавить» (не long press)
+ * - Вход в расстановку — FAB настройки экрана (40 px, левый нижний угол)
  * - Ghost элемент и placeholder preview
  * - Undo/Redo кнопки в header
  * - Resize handles временно выключены (WIDGET_EDIT_RESIZE_ENABLED) *
@@ -529,7 +529,16 @@
   // === Widget Card Component ===
   // Обёрнут в React.memo — изолирует от ре-рендеров родителя,
   // чтобы CSS transition на кольце калорий не перезапускался попусту.
-  const WidgetCard = React.memo(function WidgetCard({ widget, isEditMode, onRemove, onSettings, index = 0, selectedDate, dragPreviewPosition = null }) {
+  const WidgetCard = React.memo(function WidgetCard({
+    widget,
+    isEditMode,
+    onRemove,
+    onSettings,
+    index = 0,
+    selectedDate,
+    dragPreviewPosition = null,
+    removePickActive = false
+  }) {
     const registry = HEYS.Widgets.registry;
     const widgetType = registry?.getType(widget.type);
     const category = registry?.getCategory(widgetType?.category);
@@ -595,6 +604,10 @@
     }, [isEditMode, widget.id]);
 
     const handleClick = useCallback(() => {
+      if (isEditMode && removePickActive) {
+        onRemove?.(widget.id);
+        return;
+      }
       if (!isEditMode) {
         if (
           widget.type === 'crashRisk'
@@ -605,7 +618,7 @@
         }
         HEYS.Widgets.emit('widget:click', { widget });
       }
-    }, [isEditMode, widget]);
+    }, [isEditMode, removePickActive, onRemove, widget]);
 
     const hasVariantPicker = useMemo(() => {
       const catalog = HEYS.Widgets.VariantsV4?.getCatalog?.(widget.type) || [];
@@ -624,20 +637,9 @@
 
     useEffect(() => () => cancelEditLongPress(), [cancelEditLongPress]);
 
-    const handleViewPointerDown = useCallback((e) => {
-      if (isEditMode || hasVariantPicker) return;
-      const t = e?.target;
-      if (t && typeof t.closest === 'function' && t.closest('.widget-v4-tile')) return;
-      editLpStartRef.current = {
-        x: e.clientX || e.touches?.[0]?.clientX || 0,
-        y: e.clientY || e.touches?.[0]?.clientY || 0
-      };
-      cancelEditLongPress();
-      editLpTimerRef.current = setTimeout(() => {
-        HEYS.Widgets.enterEditMode?.();
-        HEYS.dayUtils?.haptic?.('light');
-      }, 350);
-    }, [isEditMode, hasVariantPicker, cancelEditLongPress]);
+    const handleViewPointerDown = useCallback(() => {
+      // Долгий тап мимо плитки / по фону не входит в расстановку (канвас v4, 23 августа).
+    }, []);
 
     const handleViewPointerMove = useCallback((e) => {
       if (!editLpTimerRef.current || !editLpStartRef.current) return;
@@ -1289,6 +1291,16 @@
         handleViewPointerDown(e);
         handlePointerDown(e);
       },
+      onPointerEnter: isEditMode && HEYS.Widgets._catalogDragType
+        ? () => { HEYS.Widgets._catalogDropTargetId = widget.id; }
+        : undefined,
+      onPointerLeave: isEditMode && HEYS.Widgets._catalogDragType
+        ? () => {
+          if (HEYS.Widgets._catalogDropTargetId === widget.id) {
+            HEYS.Widgets._catalogDropTargetId = null;
+          }
+        }
+        : undefined,
       onPointerMove: (e) => {
         handleViewPointerMove(e);
         handlePointerMove(e);
@@ -4462,8 +4474,27 @@
       );
     }
 
-    // SHORT (2×1) — низкий: число слева + стрелка/плашки справа
+    // SHORT (2×1) — «Число и неделя»: подпись слева, дельта и число справа, без спарклайна
     if (size === '2x1') {
+      if (variantId === 'number_week') {
+        const weekText = Number.isFinite(weekChange)
+          ? `${weekChange > 0 ? '+' : '−'}${formatRuDecimal(Math.abs(weekChange), 1)} за неделю`
+          : null;
+        const weekState = v4WeightDeltaState(weekChange);
+        return React.createElement('div', { className: 'widget-weight widget-weight--2x1 widget-weight--number-week' },
+          v4Kicker('Вес'),
+          React.createElement('div', { className: 'widget-weight__number-week-row' },
+            weekText
+              ? React.createElement('span', {
+                className: 'widget-weight__number-week-delta ' + v4ValueStateClass(weekState)
+              }, weekText)
+              : React.createElement('span', { className: 'widget-weight__number-week-delta is-empty' }, '—'),
+            React.createElement('span', { className: 'widget-weight__number-week-val' },
+              hasCurrent ? formatRuDecimal(current, 1) : '—'
+            )
+          )
+        );
+      }
       return React.createElement('div', { className: 'widget-weight widget-weight--2x1' },
         React.createElement('div', { className: 'widget-weight__row-h' },
           React.createElement('div', { className: 'widget-weight__left' },
@@ -8560,6 +8591,149 @@
   // ожидания»): каталог обещаний обесценивает и обещания, и сам каталог.
   const CATALOG_WAITING_LIMIT = 2;
 
+  function formatWaterCounterLiters(ml) {
+    const liters = Math.max(0, Number(ml) || 0) / 1000;
+    const norm = HEYS.Widgets.data?.getWaterData?.()?.norm
+      || HEYS.DayData?.getCurrentDay?.()?.waterNormMl
+      || 2700;
+    const normL = Math.max(0.1, Number(norm) || 2700) / 1000;
+    const fmt = (v) => v.toLocaleString('ru-RU', { maximumFractionDigits: 1, minimumFractionDigits: 0 });
+    return `${fmt(liters)} из ${fmt(normL)}`;
+  }
+
+  /** Плавающая кнопка настройки экрана — 40 px, левый нижний угол (канвас v4). */
+  function WidgetsSettingsFab({ onClick }) {
+    return React.createElement('button', {
+      type: 'button',
+      className: 'widgets-settings-fab',
+      id: 'tour-widgets-settings-fab',
+      onClick,
+      'aria-label': 'Настроить экран'
+    },
+      React.createElement('svg', {
+        width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+        stroke: 'currentColor', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round',
+        'aria-hidden': 'true'
+      },
+        React.createElement('path', { d: 'M4 20h4l10-10-4-4L4 16z' }),
+        React.createElement('path', { d: 'M14 6l4 4' })
+      )
+    );
+  }
+
+  function QuickSheetSvgIcon({ children, className }) {
+    return React.createElement('span', { className: className || 'widgets-quick-sheet__icon', 'aria-hidden': 'true' },
+      React.createElement('svg', {
+        width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+        stroke: 'currentColor', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round'
+      }, children)
+    );
+  }
+
+  /** Одна кнопка «+» 52 px с раскрывающейся карточкой быстрых действий (канвас v4). */
+  function WidgetsQuickActionsFab({
+    waterMl,
+    onAddWater,
+    onAddMeal,
+    onOpenCurator
+  }) {
+    const [open, setOpen] = useState(false);
+    const wrapRef = useRef(null);
+
+    useEffect(() => {
+      if (!open) return undefined;
+      const onKey = (event) => {
+        if (event.key === 'Escape') setOpen(false);
+      };
+      const onPointerDown = (event) => {
+        if (wrapRef.current && wrapRef.current.contains(event.target)) return;
+        setOpen(false);
+      };
+      document.addEventListener('keydown', onKey);
+      document.addEventListener('pointerdown', onPointerDown, true);
+      return () => {
+        document.removeEventListener('keydown', onKey);
+        document.removeEventListener('pointerdown', onPointerDown, true);
+      };
+    }, [open]);
+
+    const closeAnd = (fn) => (...args) => {
+      setOpen(false);
+      fn?.(...args);
+    };
+
+    return React.createElement('div', {
+      ref: wrapRef,
+      className: 'widgets-quick-fab-wrap' + (open ? ' is-open' : '')
+    },
+      open && React.createElement('button', {
+        type: 'button',
+        className: 'widgets-quick-scrim animate-always',
+        'aria-label': 'Закрыть быстрые действия',
+        onClick: () => setOpen(false)
+      }),
+      open && React.createElement('div', { className: 'widgets-quick-sheet animate-always', role: 'dialog', 'aria-label': 'Быстрые действия' },
+        React.createElement('div', { className: 'widgets-quick-sheet__section' },
+          React.createElement('div', { className: 'widgets-quick-sheet__head' },
+            React.createElement(QuickSheetSvgIcon, null,
+              React.createElement('path', { d: 'M12 3s6 6.5 6 10.5a6 6 0 01-12 0C6 9.5 12 3 12 3z' })
+            ),
+            React.createElement('span', { className: 'widgets-quick-sheet__title' }, 'Вода'),
+            React.createElement('span', { className: 'widgets-quick-sheet__meta n' }, formatWaterCounterLiters(waterMl))
+          ),
+          React.createElement('div', { className: 'widgets-quick-sheet__chips', role: 'group', 'aria-label': 'Объём воды' },
+            [200, 250, 500].map((ml) => React.createElement('button', {
+              key: ml,
+              type: 'button',
+              className: 'widgets-quick-sheet__chip n',
+              onClick: closeAnd(() => onAddWater?.(ml))
+            }, String(ml)))
+          )
+        ),
+        React.createElement('div', { className: 'widgets-quick-sheet__divider' }),
+        React.createElement('button', {
+          type: 'button',
+          className: 'widgets-quick-sheet__row',
+          onClick: closeAnd(onAddMeal)
+        },
+          React.createElement(QuickSheetSvgIcon, { className: 'widgets-quick-sheet__row-icon' },
+            React.createElement('path', { d: 'M6 3v18' }),
+            React.createElement('path', { d: 'M4 3v5a2 2 0 004 0V3' }),
+            React.createElement('path', { d: 'M16 3c-2 4-2 8 0 9v9' })
+          ),
+          React.createElement('span', { className: 'widgets-quick-sheet__row-label' }, 'Еда')
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'widgets-quick-sheet__row',
+          onClick: closeAnd(onOpenCurator)
+        },
+          React.createElement(QuickSheetSvgIcon, { className: 'widgets-quick-sheet__row-icon' },
+            React.createElement('path', { d: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z' })
+          ),
+          React.createElement('span', { className: 'widgets-quick-sheet__row-label' }, 'Куратор')
+        )
+      ),
+      React.createElement('button', {
+        type: 'button',
+        className: 'widgets-quick-fab' + (open ? ' is-open' : ''),
+        onClick: () => setOpen((v) => !v),
+        'aria-expanded': open ? 'true' : 'false',
+        'aria-label': open ? 'Закрыть быстрые действия' : 'Добавить запись'
+      },
+        React.createElement('span', {
+          className: 'widgets-quick-fab__glyph' + (open ? ' is-open' : ''),
+          'aria-hidden': 'true'
+        },
+          React.createElement('svg', {
+            width: 21, height: 21, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round'
+          }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
+        )
+      )
+    );
+  }
+
   /** «нужно 3 дня» вместо «нужно 3 дней»: число в строке живое. */
   function ruDays(n) {
     const count = Math.abs(Math.trunc(Number(n) || 0));
@@ -8590,10 +8764,63 @@
   }
 
   // === Catalog Modal Component ===
-  function CatalogStrip({ onSelect, existingTypes, selectedDate }) {
+  function CatalogStrip({
+    onSelect,
+    onReplace,
+    existingTypes,
+    selectedDate,
+    cellBudget,
+    blockedType,
+    onBlockedHint,
+    onStartRemovePick
+  }) {
     const registry = HEYS.Widgets.registry;
     const availableTypes = registry?.getAvailableTypes() || [];
     const existingTypeSet = existingTypes instanceof Set ? existingTypes : new Set(existingTypes || []);
+    const budget = cellBudget || HEYS.Widgets.getBudgetInfo?.() || { used: 0, total: 32 };
+
+    const canAddType = useCallback((type) => {
+      if (type.comingSoon || waitingHistory(type)) return true;
+      const previewVariant = HEYS.Widgets.VariantsV4?.getDefaultVariant?.(type.type);
+      const previewSize = previewVariant?.size || type.defaultSize || '2x1';
+      const previewWidget = { type: type.type, size: previewSize };
+      const need = HEYS.Widgets.widgetCellCount?.(previewWidget) || 2;
+      if (budget.isOverflow) return false;
+      return budget.used + need <= budget.total;
+    }, [budget.isOverflow, budget.total, budget.used]);
+
+    const handlePick = useCallback((type, replaceWidgetId = null) => {
+      if (type.comingSoon) return;
+      if (!canAddType(type)) {
+        const previewVariant = HEYS.Widgets.VariantsV4?.getDefaultVariant?.(type.type);
+        const previewSize = previewVariant?.size || type.defaultSize || '2x1';
+        const need = HEYS.Widgets.widgetCellCount?.({ type: type.type, size: previewSize }) || 2;
+        onBlockedHint?.(type.type, need);
+        return;
+      }
+      if (replaceWidgetId && onReplace) {
+        onReplace(type, replaceWidgetId);
+        HEYS.Widgets._catalogDragType = null;
+        return;
+      }
+      onSelect?.(type);
+      HEYS.Widgets.emit('catalog:select', { type: type.type });
+    }, [canAddType, onBlockedHint, onReplace, onSelect]);
+
+    const startCatalogDrag = useCallback((type) => (event) => {
+      if (type.comingSoon || waitingHistory(type)) return;
+      HEYS.Widgets._catalogDragType = type.type;
+      try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch (_) { /* noop */ }
+    }, []);
+
+    const finishCatalogDrag = useCallback((type) => () => {
+      const targetId = HEYS.Widgets._catalogDropTargetId;
+      HEYS.Widgets._catalogDragType = null;
+      HEYS.Widgets._catalogDropTargetId = null;
+      if (targetId) {
+        handlePick(type, targetId);
+      }
+    }, [handlePick]);
 
     // Уже стоящие на экране в каталоге не показываются: серая строка «уже
     // добавлен» заставляла искать плитку глазами (канвас v4, строка «каталог»).
@@ -8610,9 +8837,17 @@
     if (!catalogTypes.length) return null;
 
     return React.createElement('div', { className: 'widget-v4-catalog' },
+      React.createElement('div', { className: 'widget-v4-catalog__budget n' },
+        `занято ${budget.used} из ${budget.total}`
+      ),
       React.createElement('div', { className: 'widget-v4-catalog__tier' }, 'Каталог'),
       React.createElement('div', { className: 'widget-v4-catalog__grid' },
         catalogTypes.map((type) => {
+          const blocked = !canAddType(type);
+          const previewVariant = HEYS.Widgets.VariantsV4?.getDefaultVariant?.(type.type);
+          const previewSize = previewVariant?.size || type.defaultSize || '2x1';
+          const needCells = HEYS.Widgets.widgetCellCount?.({ type: type.type, size: previewSize }) || 2;
+          const showBlockedHint = blockedType === type.type || (blocked && !type.comingSoon && !waitingHistory(type));
           // «Готовится»: строка в полную яркость, пилюля «скоро» и одна строка
           // о том, что виджет покажет. Ни превью, ни даты, ни кнопки — нажатие
           // ничего не делает (строки «готовится» и «готовится · чего нет»).
@@ -8637,70 +8872,89 @@
           // встанет и покажет ту же подпись вместо графика.
           const history = waitingHistory(type);
           if (history) {
-            return React.createElement('button', {
-              key: type.type,
-              type: 'button',
-              className: 'widget-v4-catalog__item widget-v4-catalog__item--waiting',
-              onClick: () => {
-                onSelect?.(type);
-                HEYS.Widgets.emit('catalog:select', { type: type.type });
-              }
-            },
-              React.createElement('span', { className: 'widget-v4-catalog__row' },
-                React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
-                React.createElement('span', { className: 'widget-v4-catalog__need' },
-                  React.createElement('span', { className: 'widget-v4-catalog__hint' }, `нужно ${history.need} ${ruDays(history.need)}`),
-                  React.createElement('svg', {
-                    width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
-                    stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
-                    'aria-hidden': 'true'
-                  }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
-                )
+            return React.createElement('div', { key: type.type, className: 'widget-v4-catalog__slot' },
+              React.createElement('button', {
+                type: 'button',
+                className: 'widget-v4-catalog__item widget-v4-catalog__item--waiting'
+                  + (blocked ? ' widget-v4-catalog__item--blocked' : ''),
+                onClick: () => handlePick(type),
+                onPointerDown: startCatalogDrag(type),
+                onPointerUp: finishCatalogDrag(type),
+                onPointerCancel: finishCatalogDrag(type)
+              },
+                React.createElement('span', { className: 'widget-v4-catalog__row' },
+                  React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
+                  React.createElement('span', { className: 'widget-v4-catalog__need' },
+                    React.createElement('span', { className: 'widget-v4-catalog__hint' }, `нужно ${history.need} ${ruDays(history.need)}`),
+                    React.createElement('svg', {
+                      width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+                      stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+                      'aria-hidden': 'true'
+                    }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
+                  )
+                ),
+                React.createElement('span', { className: 'widget-v4-catalog__about' },
+                  `собрано ${history.have} из ${history.need}`)
               ),
-              React.createElement('span', { className: 'widget-v4-catalog__about' },
-                `собрано ${history.have} из ${history.need}`)
+              showBlockedHint && renderCatalogBlockedHint(needCells, type, onStartRemovePick)
             );
           }
 
-          // Превью в формате дефолтного вида на живых данных дня
-          // (канвас v4, строка 54).
-          const defaultVariant = HEYS.Widgets.VariantsV4?.getDefaultVariant?.(type.type);
-          const previewSize = defaultVariant?.size || type.defaultSize || '2x1';
           const previewWidget = {
             id: `catalog_preview_${type.type}`,
             type: type.type,
             size: previewSize,
-            settings: defaultVariant?.id ? { displayVariant: defaultVariant.id } : {}
+            settings: previewVariant?.id ? { displayVariant: previewVariant.id } : {}
           };
-          return React.createElement('button', {
-            key: type.type,
-            type: 'button',
-            className: 'widget-v4-catalog__item',
-            onClick: () => {
-              onSelect?.(type);
-              HEYS.Widgets.emit('catalog:select', { type: type.type });
-            }
-          },
-            React.createElement('div', {
-              className: `widget-v4-catalog__preview widget widget--${previewSize} widget--${type.type} widget-v4-catalog__preview--${previewSize}`,
-              'aria-hidden': 'true'
+          return React.createElement('div', { key: type.type, className: 'widget-v4-catalog__slot' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'widget-v4-catalog__item'
+                + (blocked ? ' widget-v4-catalog__item--blocked' : ''),
+              onClick: () => handlePick(type),
+              onPointerDown: startCatalogDrag(type),
+              onPointerUp: finishCatalogDrag(type),
+              onPointerCancel: finishCatalogDrag(type)
             },
-              React.createElement(WidgetContent, {
-                widget: previewWidget,
-                widgetType: type,
-                selectedDate
-              })
+              React.createElement('div', {
+                className: `widget-v4-catalog__preview widget widget--${previewSize} widget--${type.type} widget-v4-catalog__preview--${previewSize}`,
+                'aria-hidden': 'true'
+              },
+                React.createElement(WidgetContent, {
+                  widget: previewWidget,
+                  widgetType: type,
+                  selectedDate
+                })
+              ),
+              React.createElement('svg', {
+                width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+                stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+                className: 'widget-v4-catalog__plus',
+                'aria-hidden': 'true'
+              }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
+              React.createElement('span', { className: 'sr-only' }, type.name)
             ),
-            React.createElement('svg', {
-              width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
-              stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
-              className: 'widget-v4-catalog__plus',
-              'aria-hidden': 'true'
-            }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
-            React.createElement('span', { className: 'sr-only' }, type.name)
+            showBlockedHint && renderCatalogBlockedHint(needCells, type, onStartRemovePick)
           );
         })
       )
+    );
+  }
+
+  function renderCatalogBlockedHint(needCells, type, onStartRemovePick) {
+    const cellsWord = needCells === 1 ? 'клетка' : (needCells < 5 ? 'клетки' : 'клеток');
+    return React.createElement('div', { className: 'widget-v4-catalog__blocked' },
+      React.createElement('span', { className: 'widget-v4-catalog__blocked-text' },
+        `нужно ${needCells} ${cellsWord} — освободите место`
+      ),
+      React.createElement('button', {
+        type: 'button',
+        className: 'widget-v4-catalog__remove-btn',
+        onClick: (e) => {
+          e.stopPropagation();
+          onStartRemovePick?.(type);
+        }
+      }, 'Снять виджет')
     );
   }
 
@@ -8712,41 +8966,6 @@
    * здесь не заводим: второй механизм отмены рядом с первым — ровно то, что
    * вычищали в баре удаления.
    */
-  // Плитка добавления — раздел контракта «Плитка добавления» (22 августа).
-  // Она не виджет: в состав дефолта, в сброс и в потолок одиннадцати плиток не
-  // считается, своего места в порядке не имеет.
-  //
-  // Ширина — свободный хвост последнего ряда, но не больше двух колонок:
-  // трёх- и четырёхколоночной кнопки не бывает. Ряд занят целиком — плитка
-  // встаёт новым рядом слева на 2 колонки, а две клетки справа остаются
-  // пустыми: это конец сетки, а не дырка.
-  function addTileSpan(widgets, cols) {
-    const list = Array.isArray(widgets) ? widgets : [];
-    if (!list.length) return 2;
-
-    const grid = Number(cols) || 4;
-    let lastRow = 0;
-    list.forEach((widget) => {
-      const row = Number(widget?.position?.row) || 0;
-      const rows = Number(widget?.rows) || 1;
-      lastRow = Math.max(lastRow, row + rows - 1);
-    });
-
-    let busy = 0;
-    list.forEach((widget) => {
-      const row = Number(widget?.position?.row) || 0;
-      const rows = Number(widget?.rows) || 1;
-      // Плитка высотой в два ряда занимает клетки и в последнем из них.
-      if (row <= lastRow && row + rows - 1 >= lastRow) {
-        busy += Number(widget?.cols) || 1;
-      }
-    });
-
-    const tail = grid - busy;
-    if (tail <= 0) return 2;
-    return tail >= 2 ? 2 : 1;
-  }
-
   function RecommendedScreenBlock({ onReset }) {
     return React.createElement('div', { className: 'widget-v4-recommended' },
       React.createElement('div', { className: 'widget-v4-catalog__tier' }, 'Рекомендуемый экран'),
@@ -9141,7 +9360,10 @@
     const [isDashboardPainted, setIsDashboardPainted] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [dragPreviewPositions, setDragPreviewPositions] = useState(null);
-    const [catalogOpen, setCatalogOpen] = useState(false);
+    const [cellBudget, setCellBudget] = useState(() => HEYS.Widgets.getBudgetInfo?.() || { used: 0, total: 32 });
+    const [catalogBlockedType, setCatalogBlockedType] = useState(null);
+    const [catalogPendingAddType, setCatalogPendingAddType] = useState(null);
+    const [catalogRemovePick, setCatalogRemovePick] = useState(false);
     const [defaultHomeTab, setDefaultHomeTab] = useState(() => getCurrentDefaultTab());
     const [settingsWidget, setSettingsWidget] = useState(null);
     const [relapseDetails, setRelapseDetails] = useState(null);
@@ -9280,12 +9502,63 @@
       });
     }, []);
 
+    const refreshCellBudget = useCallback(() => {
+      setCellBudget(HEYS.Widgets.getBudgetInfo?.() || { used: 0, total: 32 });
+    }, []);
+
+    const openEditWithCatalog = useCallback(() => {
+      HEYS.Widgets.enterEditMode?.();
+    }, []);
+
+    const openCuratorMessenger = useCallback(() => {
+      HEYS.Messenger?.openModal?.();
+    }, []);
+
+    // Счётчик «занято N из 32» в шапке расстановки (канвас g2, строка «счётчик места»).
+    useEffect(() => {
+      const title = document.querySelector('.hdr-widgets-edit-title');
+      if (!title) return undefined;
+      let budgetEl = title.querySelector('.hdr-widgets-edit-budget');
+      if (!budgetEl) {
+        budgetEl = document.createElement('span');
+        budgetEl.className = 'hdr-widgets-edit-budget n';
+        title.classList.add('hdr-widgets-edit-title--stacked');
+        title.appendChild(budgetEl);
+      }
+      if (isEditMode) {
+        budgetEl.textContent = `занято ${cellBudget.used} из ${cellBudget.total}`;
+        budgetEl.hidden = false;
+      } else {
+        budgetEl.textContent = '';
+        budgetEl.hidden = true;
+      }
+      return () => {
+        if (budgetEl) {
+          budgetEl.textContent = '';
+          budgetEl.hidden = true;
+        }
+      };
+    }, [isEditMode, cellBudget.used, cellBudget.total]);
+
+    useEffect(() => {
+      refreshCellBudget();
+      const unsubLayout = HEYS.Widgets.on?.('layout:changed', refreshCellBudget);
+      const unsubBlocked = HEYS.Widgets.on?.('widget:add-blocked', (detail) => {
+        if (detail?.type) setCatalogBlockedType(detail.type);
+      });
+      return () => {
+        unsubLayout?.();
+        unsubBlocked?.();
+      };
+    }, [refreshCellBudget]);
+
     const applyWidgetsLayout = useCallback((layout) => {
       setWidgets([...(layout || [])]);
       updateHistoryInfo();
+      refreshCellBudget();
       setIsLayoutHydrated(true);
       setIsDashboardPainted(false);
-    }, [updateHistoryInfo]);
+    }, [refreshCellBudget, updateHistoryInfo]);
 
     // Mobile detection (используем существующий хук Day)
     const isMobile = (HEYS.dayHooks && typeof HEYS.dayHooks.useMobileDetection === 'function')
@@ -9555,9 +9828,21 @@
         const added = HEYS.Widgets.state.addWidget(widget);
         if (!added) {
           trackWidgetIssue('widgets_addWidget_failed', { type: widgetType?.type });
+          if (widgetType?.type) setCatalogBlockedType(widgetType.type);
+        } else {
+          setCatalogBlockedType(null);
         }
       } else {
         trackWidgetIssue('widgets_createWidget_null', { type: widgetType?.type });
+      }
+    }, []);
+
+    const handleCatalogReplace = useCallback((widgetType, targetWidgetId) => {
+      const replaced = HEYS.Widgets.replaceWidgetFromCatalog?.(targetWidgetId, widgetType.type);
+      if (!replaced && widgetType?.type) {
+        setCatalogBlockedType(widgetType.type);
+      } else {
+        setCatalogBlockedType(null);
       }
     }, []);
 
@@ -9618,10 +9903,38 @@
       }
     }, []);
 
+    const tryAddPendingCatalogType = useCallback((pendingType) => {
+      if (!pendingType?.type || !HEYS.Widgets.registry || !HEYS.Widgets.state) return false;
+      const widget = HEYS.Widgets.registry.createWidget(pendingType.type);
+      if (!widget) return false;
+      const added = HEYS.Widgets.state.addWidget(widget);
+      if (added) {
+        setCatalogBlockedType(null);
+        setCatalogPendingAddType(null);
+        setCatalogRemovePick(false);
+        return true;
+      }
+      setCatalogBlockedType(pendingType.type);
+      return false;
+    }, []);
+
+    const handleStartCatalogRemovePick = useCallback((type) => {
+      setCatalogPendingAddType(type);
+      setCatalogBlockedType(type?.type || null);
+      setCatalogRemovePick(true);
+    }, []);
+
     // Handle widget remove
     const handleRemove = useCallback((widgetId) => {
       HEYS.Widgets.state?.removeWidget(widgetId);
-    }, []);
+      if (catalogRemovePick && catalogPendingAddType) {
+        requestAnimationFrame(() => {
+          tryAddPendingCatalogType(catalogPendingAddType);
+        });
+      } else {
+        setCatalogRemovePick(false);
+      }
+    }, [catalogPendingAddType, catalogRemovePick, tryAddPendingCatalogType]);
 
     // Global pointer event handlers for DnD (работают только в режиме редактирования — гейт в handlePointerMove/Up на карточке)
     useEffect(() => {
@@ -9972,17 +10285,14 @@
     useEffect(() => {
       if (!isEditMode) {
         setShowGridOverlay(false);
-        setCatalogOpen(false);
+        setCatalogBlockedType(null);
+        HEYS.Widgets._catalogDragType = null;
+        HEYS.Widgets._catalogDropTargetId = null;
       }
     }, [isEditMode]);
 
-    // Ширина плитки добавления — хвост последнего ряда, максимум две колонки.
-    const addTileSpanValue = useMemo(
-      () => addTileSpan(widgets, 4),
-      [widgets]
-    );
+    const isLegacyOverflow = cellBudget.isOverflow;
 
-    // Количество строк для grid overlay (максимальная занятая строка + запас)
     const overlayRows = useMemo(() => {
       if (!widgets.length) return 8;
       const maxRow = widgets.reduce((max, w) => {
@@ -9992,6 +10302,21 @@
     }, [widgets]);
 
     const pullIndicatorEl = null;
+
+    const renderMobileFabs = () => {
+      if (!isMobile || isEditMode) return null;
+      return React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'widgets-fab-left' },
+          React.createElement(WidgetsSettingsFab, { onClick: openEditWithCatalog })
+        ),
+        React.createElement(WidgetsQuickActionsFab, {
+          waterMl: HEYS.Widgets?.data?.getWaterData?.()?.drunk || 0,
+          onAddWater: (ml) => handleAddWater(ml),
+          onAddMeal: () => goToDayAndRun('diary', 'addMeal', []),
+          onOpenCurator: openCuratorMessenger
+        })
+      );
+    };
 
     // До гидратации layout — пустая оболочка. Boot-знак держит кадр до paint.
     if (!isLayoutHydrated) {
@@ -10017,7 +10342,7 @@
           React.createElement('button', {
             type: 'button',
             className: 'widget-v4-empty__btn',
-            onClick: () => HEYS.Widgets.enterEditMode?.()
+            onClick: openEditWithCatalog
           },
             React.createElement('svg', {
               width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
@@ -10033,12 +10358,15 @@
             className: 'widget-v4-empty__reset',
             onClick: handleResetLayout
           }, 'Вернуть стандартный экран')
-        )
+        ),
+        renderMobileFabs()
       );
     }
 
     return React.createElement('div', {
-      className: `widgets-tab ${isEditMode ? 'widgets-tab--editing' : ''}`,
+      className: 'widgets-tab'
+        + (isEditMode ? ' widgets-tab--editing' : '')
+        + (isLegacyOverflow ? ' widgets-tab--legacy-overflow' : ''),
       ref: containerRef,
       'data-heys-visible-frame': isDashboardPainted ? 'widgets' : undefined
     },
@@ -10047,9 +10375,13 @@
 
       React.createElement('div', { className: 'widgets-header' }),
 
-      React.createElement('div', { className: 'widgets-grid-container' },
+      React.createElement('div', {
+        className: 'widgets-grid-container'
+          + (isLegacyOverflow ? ' widgets-grid-container--legacy-overflow' : '')
+      },
         React.createElement('div', {
-          className: `widgets-grid animate-always ${isEditMode ? 'widgets-grid--editing' : ''}`,
+          className: `widgets-grid animate-always ${isEditMode ? 'widgets-grid--editing' : ''}`
+            + (catalogRemovePick ? ' widgets-grid--remove-pick' : ''),
           ref: gridRef,
           style: { '--widget-motion-ms': `${widgetMotionCssMs}ms` }
         },
@@ -10062,32 +10394,9 @@
               index: idx,
               dragPreviewPosition: dragPreviewPositions?.[widget.id] || null,
               onRemove: handleRemove,
-              onSettings: setSettingsWidget
+              onSettings: setSettingsWidget,
+              removePickActive: catalogRemovePick
             })
-          ),
-          // Пунктирная плитка стоит в сетке всегда, в обычном режиме тоже, и
-          // всегда последней клеткой (контракт, раздел «Плитка добавления»).
-          // Нажатие открывает тот же каталог, что и в расстановке, но саму
-          // расстановку не включает и порядок плиток не трогает.
-          React.createElement('button', {
-            type: 'button',
-            className: 'widget-v4-add widget-v4-add--span' + addTileSpanValue
-              + (catalogOpen ? ' is-open' : ''),
-            style: { gridColumn: `span ${addTileSpanValue}` },
-            'aria-expanded': catalogOpen ? 'true' : 'false',
-            'aria-label': 'Добавить виджет',
-            onClick: () => setCatalogOpen((open) => !open)
-          },
-            React.createElement('svg', {
-              // В одну колонку слово не встаёт и не переносится — остаётся
-              // только знак, и он крупнее.
-              width: addTileSpanValue === 1 ? 18 : 14,
-              height: addTileSpanValue === 1 ? 18 : 14,
-              viewBox: '0 0 24 24', fill: 'none',
-              stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
-              'aria-hidden': 'true'
-            }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
-            addTileSpanValue === 1 ? null : React.createElement('span', null, 'Добавить')
           )
         ),
         isEditMode && showGridOverlay && React.createElement('div', {
@@ -10107,29 +10416,15 @@
         React.createElement('span', { className: 'widget-v4-hold-hint__pill' }, 'удерживайте, чтобы сменить вид')
       ),
 
-      !isEditMode && widgets.length > 0 && React.createElement('div', { className: 'widgets-tab__edit-row' },
-        React.createElement('button', {
-          type: 'button',
-          id: 'tour-widgets-edit',
-          className: 'widgets-tab__edit-btn',
-          onClick: () => HEYS.Widgets.enterEditMode?.()
-        },
-          React.createElement('svg', {
-            width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none',
-            stroke: 'currentColor', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round',
-            'aria-hidden': 'true'
-          },
-            React.createElement('path', { d: 'M4 20h4l10-10-4-4L4 16z' }),
-            React.createElement('path', { d: 'M14 6l4 4' })
-          ),
-          'Изменить экран'
-        )
-      ),
-
-      catalogOpen && React.createElement(CatalogStrip, {
+      isEditMode && React.createElement(CatalogStrip, {
         onSelect: handleCatalogSelect,
+        onReplace: handleCatalogReplace,
         existingTypes: new Set((widgets || []).map(w => w.type)),
-        selectedDate
+        selectedDate,
+        cellBudget,
+        blockedType: catalogBlockedType,
+        onBlockedHint: (type) => setCatalogBlockedType(type),
+        onStartRemovePick: handleStartCatalogRemovePick
       }),
 
       // Виден всю расстановку, а не только при раскрытом каталоге: путь назад
@@ -10215,32 +10510,7 @@
 
       React.createElement('div', { className: 'widgets-edit-controls' }),
 
-      // === FABs (mobile) ===
-      isMobile && React.createElement(React.Fragment, null,
-        // Edit FAB — в шапке (канвас g1), не дублируем слева
-        false && React.createElement('div', { className: 'widgets-fab-left' },
-          React.createElement('button', {
-            id: 'tour-widgets-edit',
-            className: `widgets-edit-fab ${isEditMode ? 'active' : ''}`,
-            onClick: toggleEdit,
-            'aria-label': isEditMode ? 'Готово' : 'Изменить'
-          }, isEditMode ? '✓' : '✏️')
-        ),
-
-        // Общий Water/Meal/Hunger/Message FAB group — тот же компонент, что в Day.
-        // В edit-mode прячем, чтобы не мешали перетаскиванию.
-        !isEditMode && React.createElement(HEYS.dayPageShell.QuickActionsFabGroup, {
-          waterMl: HEYS.Widgets?.data?.getWaterData?.()?.drunk || 0,
-          onAddWater: (ml, e) => handleAddWater(ml, e.currentTarget),
-          onRemoveWater: (ml) => handleRemoveWater(ml),
-          onAddMeal: () => goToDayAndRun('diary', 'addMeal', []),
-          onAddActivity: () => goToDayAndRun('activity'),
-          hungerContext: {
-            source: 'widgets-fab',
-            date: selectedDate || new Date().toISOString().slice(0, 10)
-          }
-        })
-      )
+      renderMobileFabs()
     );
   }
 

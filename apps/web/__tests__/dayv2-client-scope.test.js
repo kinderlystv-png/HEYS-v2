@@ -69,6 +69,8 @@ describe('dayv2 client scope · wiring', () => {
     expect(GAMIFICATION_SRC).not.toMatch(
       /typeof isOwnDayKey === 'function' && !isOwnDayKey/,
     );
+    expect(ADD_PRODUCT_SRC).toContain('debug.cascadeMealItemsOnProductUpdate');
+    expect(ADD_PRODUCT_SRC).toContain('debug.collectCascadeDayKeys');
   });
 });
 

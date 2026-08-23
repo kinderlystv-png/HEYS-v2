@@ -3868,7 +3868,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   background: var(--v4-bg, #f8f9fa);
 
   /* Padding как у карточек */
-  padding: 16px 16px 0;
+  padding: 18px 18px 0;
   max-width: 100%;
 
   /* layout-containment на .hdr создаёт containing block и ломает sticky полосы. */
@@ -3918,8 +3918,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
   flex: 0 0 auto;
   min-width: 0;
   box-sizing: border-box;
-  padding-left: 16px;
-  padding-right: 16px;
+  padding-left: 18px;
+  padding-right: 18px;
   background: transparent;
 }
 
@@ -7261,6 +7261,12 @@ color: var(--v4-sand-ink, #201e1d);
   font-weight: 600;
 }
 
+.hdr-tab-meta--curator {
+  text-align: left;
+  margin-top: 2px;
+  display: block;
+}
+
 /* Информация о клиенте */
 .hdr-client {
   display: flex;
@@ -7397,7 +7403,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .hdr-client-tab-title-text {
-  font-size: 15px;
+  font-size: 22px;
   font-weight: 700;
   color: #201e1d;
   line-height: 1;
@@ -8254,6 +8260,21 @@ body:has(.offline-banner) .wrap {
   border: none;
 }
 
+/* Ночь до 03:00 — нейтральный тон, не «сегодня» (канвас date-remainders) */
+.date-picker--v4 .date-picker-trigger--night {
+  /* v4-intentional */
+  background: var(--v4-past);
+  border: none;
+  gap: 0;
+  padding: 0 4px 0 0;
+  justify-content: flex-start;
+}
+
+.date-picker--v4 .date-picker-trigger--night .date-picker-main--past {
+  /* v4-intentional */
+  color: var(--v4-ink);
+}
+
 @media (hover: hover) {
   [data-theme$="dark"] .date-picker--v4 .date-picker-trigger--today:hover {
     /* v4-intentional */
@@ -8320,14 +8341,15 @@ body:has(.offline-banner) .wrap {
 .date-picker--v4 .date-picker-icon {
   display: block;
   flex: none;
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
   color: currentColor;
   opacity: 0.55;
 }
 
 .date-picker--v4 .date-picker-trigger--today .date-picker-icon,
-.date-picker--v4 .date-picker-trigger--not-today .date-picker-icon {
+.date-picker--v4 .date-picker-trigger--not-today .date-picker-icon,
+.date-picker--v4 .date-picker-trigger--night .date-picker-icon {
   color: currentColor;
   opacity: 0.55;
 }

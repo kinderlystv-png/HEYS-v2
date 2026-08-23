@@ -941,7 +941,7 @@
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;showProtocol&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;showContracts&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
 class Component extends DCLogic {
   pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Сине-тёмная']];
   componentDidUpdate() { this.apply(); }
@@ -1013,7 +1013,52 @@ class Component extends DCLogic {
     document.querySelectorAll('.abBtn').forEach(b => b.classList.remove('on'));
     if (btn) btn.classList.add('on');
   }
+  contracts() {
+    const on = this.props.showContracts ?? false;
+    const list = [...document.querySelectorAll('[data-contract]')];
+    if (!list.length) return;
+    list.forEach(el => { el.style.display = on ? '' : 'none'; });
+    let bar = document.querySelector('[data-ctrbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-ctrbar', '');
+      bar.style.cssText = 'font:600 11px/1.6 ui-monospace,Menlo,monospace;color:#8a4a20;margin:0 0 22px;white-space:nowrap;';
+      const anchor = document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+      else list[0].parentNode.insertBefore(bar, list[0]);
+    }
+    const n = list.length, m = n % 10, h = n % 100, one = m === 1 && h !== 11;
+    const word = one ? 'контракт' : (m >= 2 && m <= 4 && (h < 12 || h > 14) ? 'контракта' : 'контрактов');
+    const rows = document.querySelectorAll('[data-contract] .spec').length;
+    const rm = rows % 10, rh = rows % 100;
+    const rw = rm === 1 && rh !== 11 ? 'строка' : (rm >= 2 && rm <= 4 && (rh < 12 || rh > 14) ? 'строки' : 'строк');
+    bar.textContent = n + ' ' + word + ' на канвасе' + (rows ? ', ' + rows + ' ' + rw : '') + ' · ' + (on ? (one ? 'показан' : 'показаны') + ' ниже' : (one ? 'скрыт' : 'скрыты') + ' твиком «Контракты»');
+  }
+  protocols() {
+    const on = this.props.showProtocol ?? false;
+    const frames = [...document.querySelectorAll('[data-demo="protocol"]')];
+    if (!frames.length) return;
+    const hosts = [...document.querySelectorAll('div')].filter(el => {
+      const d = el.querySelectorAll('[data-demo]');
+      const stray = el.querySelectorAll('[data-screen-label]:not([data-demo])');
+      return d.length && !stray.length && [...d].every(f => f.getAttribute('data-demo') === 'protocol');
+    });
+    hosts.concat(frames).forEach(el => { el.style.display = on ? '' : 'none'; });
+    let bar = document.querySelector('[data-protobar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-protobar', '');
+      bar.style.cssText = 'font:600 11px/1.6 ui-monospace,Menlo,monospace;color:#6b5f4f;margin:-16px 0 22px;white-space:nowrap;';
+      const anchor = document.querySelector('[data-ctrbar]') || document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    const n = frames.length, m = n % 10, h = n % 100, one = m === 1 && h !== 11;
+    const w = one ? 'отвергнутый кадр' : (m >= 2 && m <= 4 && (h < 12 || h > 14) ? 'отвергнутых кадра' : 'отвергнутых кадров');
+    bar.textContent = n + ' ' + w + ' · ' + (on ? (one ? 'показан' : 'показаны') : (one ? 'скрыт' : 'скрыты') + ' твиком «Протокол»');
+  }
   apply() {
+    this.contracts();
+    this.protocols();
     const all = this.props.allPalettes ?? (window.parent === window);
     document.querySelectorAll('[data-mirdst]').forEach(dst => {
       dst.innerHTML = '';

@@ -119,6 +119,10 @@ function runCli() {
       process.exit(1);
     }
     const state = inspect(zoneId, zone);
+    if (state.fatal) {
+      console.error(state.fatal);
+      process.exit(1);
+    }
     for (const [key, value] of state.current) {
       if (!zone.rows[key]) zone.rows[key] = { v: '?', f: 'Строка добавлена дизайнером, вердикта нет' };
       zone.rows[key].h = hash(value);

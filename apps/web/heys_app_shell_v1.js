@@ -3283,9 +3283,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             const bump = () => setDiaryMetaTick((value) => value + 1);
             window.addEventListener('heys:day-updated', bump);
             window.addEventListener('heys:client-changed', bump);
+            const unscheduleNight = HEYS.dayUtils?.scheduleNightBoundaryRefresh?.(bump);
             return () => {
                 window.removeEventListener('heys:day-updated', bump);
                 window.removeEventListener('heys:client-changed', bump);
+                if (typeof unscheduleNight === 'function') unscheduleNight();
             };
         }, [tab, selectedDate, clientId]);
 
@@ -3540,7 +3542,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                 const parts = fullName.split(' ').filter(Boolean);
                                 return [
                                     React.createElement('span', { key: 'fn', className: 'hdr-client-firstname' }, parts[0] || ''),
-                                    parts.length > 1 && React.createElement('span', { key: 'ln', className: 'hdr-client-lastname' }, parts.slice(1).join(' '))
+                                    parts.length > 1 && React.createElement('span', { key: 'ln', className: 'hdr-client-lastname' }, parts.slice(1).join(' ')),
+                                    tab === 'diary' && diaryTabMetaLine && React.createElement('span', {
+                                        key: 'meta',
+                                        className: 'hdr-tab-meta hdr-tab-meta--curator'
+                                    }, diaryTabMetaLine.text)
                                 ];
                             })()
                         ),

@@ -123,6 +123,7 @@
       { id: 'month', title: 'Месяц', subtitle: '30 столбиков, среднее в день и цель', size: '2x2' }
     ],
     weight: [
+      { id: 'number_week', title: 'Число и неделя', subtitle: 'число справа, дельта за неделю', size: '2x1', isDefault: true },
       { id: 'spark', title: 'Как сейчас', subtitle: 'вес, неделя, линия', size: '2x2' },
       { id: 'delta', title: 'Только число', subtitle: '1×1, когда рядом стоит динамика', size: '1x1' },
       { id: 'scatter', title: 'Точки и среднее', subtitle: 'видно, что дельта считается по среднему', size: '2x2' }

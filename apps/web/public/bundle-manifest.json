@@ -1,35 +1,35 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.becc7ed7ae3d.js",
-    "hash": "becc7ed7ae3d",
-    "sourceFingerprint": "0b57bd03580b",
+    "file": "boot-core.bundle.cf7b69200830.js",
+    "hash": "cf7b69200830",
+    "sourceFingerprint": "fd049d0e10b2",
     "fileCount": 47,
-    "size": 1296579,
-    "builtAt": "2026-08-21T11:51:05.095Z"
+    "size": 1304716,
+    "builtAt": "2026-08-23T16:18:59.260Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.f6b22fee5f6c.js",
-    "hash": "f6b22fee5f6c",
-    "sourceFingerprint": "7c90c9c944de",
+    "file": "boot-calc.bundle.bdc4822ba0cb.js",
+    "hash": "bdc4822ba0cb",
+    "sourceFingerprint": "4115bc74baae",
     "fileCount": 22,
-    "size": 931667,
-    "builtAt": "2026-08-21T09:13:19.361Z"
+    "size": 935859,
+    "builtAt": "2026-08-23T16:19:03.868Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.12744626a575.js",
-    "hash": "12744626a575",
-    "sourceFingerprint": "112a7fd4d587",
-    "fileCount": 63,
-    "size": 962478,
-    "builtAt": "2026-08-21T09:13:20.805Z"
+    "file": "boot-day.bundle.ff3dd6b40314.js",
+    "hash": "ff3dd6b40314",
+    "sourceFingerprint": "3c20e250a2c7",
+    "fileCount": 64,
+    "size": 975499,
+    "builtAt": "2026-08-23T16:19:08.457Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.29021e7a2807.js",
-    "hash": "29021e7a2807",
-    "sourceFingerprint": "8d09a506c810",
-    "fileCount": 57,
-    "size": 1512454,
-    "builtAt": "2026-08-21T10:09:27.897Z"
+    "file": "boot-app.bundle.264d24b43fe2.js",
+    "hash": "264d24b43fe2",
+    "sourceFingerprint": "3b1e612a8544",
+    "fileCount": 58,
+    "size": 1514582,
+    "builtAt": "2026-08-23T16:19:15.625Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.70669b2d2b0b.js",
@@ -80,11 +80,11 @@
     "builtAt": "2026-08-19T22:18:55.510Z"
   },
   "postboot-3-ui-lazy": {
-    "file": "postboot-3-ui-lazy.bundle.1e37b9d2675f.js",
-    "hash": "1e37b9d2675f",
-    "sourceFingerprint": "f0650d1ed8c2",
+    "file": "postboot-3-ui-lazy.bundle.70078fc574e2.js",
+    "hash": "70078fc574e2",
+    "sourceFingerprint": "6ada8820354d",
     "fileCount": 72,
-    "size": 4770171,
-    "builtAt": "2026-08-21T12:20:51.477Z"
+    "size": 4822195,
+    "builtAt": "2026-08-23T16:19:26.170Z"
   }
 }

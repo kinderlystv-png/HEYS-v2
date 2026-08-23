@@ -83,6 +83,11 @@ body:has(.fab-group:not(.fab-group--messenger-only) .message-fab) .fab-group--me
   display: none;
 }
 
+/* Главная v4: куратор внутри карточки «+» — отдельный messenger FAB не рисуем */
+body:has(.widgets-quick-fab-wrap) .fab-group--messenger-only {
+  display: none;
+}
+
 /* ═══════════════════════════════════════════════════════════════════
  * Messenger Modal (full-screen on mobile, centered card on desktop)
  * ═══════════════════════════════════════════════════════════════════ */

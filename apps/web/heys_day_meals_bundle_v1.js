@@ -8306,7 +8306,7 @@
             if (HEYS.Undo?.runAction) {
                 return HEYS.Undo.runAction({
                     label: opts.label,
-                    duration: opts.duration,
+                    batch: opts.batch,
                     errorMessage: opts.errorMessage,
                     apply: opts.applyMutation,
                     undo: opts.undoMutation,
@@ -8337,7 +8337,7 @@
             if (HEYS.Undo) {
                 HEYS.Undo.push({
                     label: opts.label,
-                    duration: opts.duration,
+                    batch: opts.batch,
                     context,
                     onUndo: () => opts.undoMutation(context),
                     onExpire: (reason) => opts.onExpire?.(reason, context),
@@ -9074,9 +9074,11 @@
 
             runUndoableDayMutation({
                 label: mealName + ' удалён',
-                // Окно защиты записи равно видимой полосе — 5 с, невидимого
-                // запаса нет (контракт «удаление и отмена»).
-                duration: 5000,
+                // Приёмы, удалённые подряд, собираются в один бар: «Удалено
+                // 2 приёма», «Отменить» возвращает оба (контракт «подряд идущие
+                // удаления»). Окно у бара общее — 5 с, и markUndoWindow ниже
+                // перезаряжается на каждом удалении вместе с таймером.
+                batch: { key: 'meal', forms: ['приём', 'приёма', 'приёмов'] },
                 errorMessage: 'Не удалось удалить приём пищи',
                 errorAction: 'remove_meal',
                 applyMutation: () => {
@@ -9596,7 +9598,10 @@
 
             runUndoableDayMutation({
                 label: removedName + ' удалён',
-                duration: 5000,
+                // Чистка приёма от нескольких продуктов подряд — рядовой
+                // сценарий, а не край: свайп по строке и крестик в строке идут
+                // без подтверждения. Пачка держит их все.
+                batch: { key: 'meal-product', forms: ['продукт', 'продукта', 'продуктов'] },
                 errorMessage: 'Не удалось удалить продукт',
                 errorAction: 'remove_item',
                 applyMutation: () => {
@@ -9684,7 +9689,15 @@
                 day,
                 dateKey: date,
                 openPresetsCreate: true,
-                onAdd: addProductToMeal,
+                // Та же развязка объект → позиционные аргументы, что и выше.
+                onAdd: ({ product, grams, mealIndex: addMealIndex, mealId: addMealId, productCommitVerified, _origin } = {}) => {
+                    const idx = resolveMealIndex(dayRef.current || day, addMealIndex ?? mealIndex, addMealId);
+                    const withGrams = (grams != null) ? { ...product, grams } : product;
+                    return addProductToMeal(idx, withGrams, {
+                        productCommitVerified,
+                        source: _origin || 'add-product-step',
+                    });
+                },
             });
         }, [day, date, addProductToMeal]);
 
@@ -9717,7 +9730,24 @@
                 dateKey: date,
                 startWithBarcodeScanner: opts.startWithBarcodeScanner === true,
                 barcodeCameraStart: opts.barcodeCameraStart || null,
-                onAdd: addProductToMeal,
+                // Лист добавления отдаёт ОДИН объект {product, grams, mealIndex, mealId},
+                // а addProductToMeal принимает позиционные (mi, p, options). Без
+                // переходника весь объект попадал в слот номера приёма, продукт
+                // оказывался undefined, и запись падала на «Продукт не сохранён в
+                // базу» при живом и целом продукте.
+                onAdd: ({ product, grams, mealIndex: addMealIndex, mealId: addMealId, productCommitVerified, _origin } = {}) => {
+                    const idx = resolveMealIndex(
+                        dayRef.current || currentDay,
+                        addMealIndex ?? resolvedIndex,
+                        addMealId || mealId,
+                    );
+                    // Граммы едут на самом продукте — их читает buildAddProductItem.
+                    const withGrams = (grams != null) ? { ...product, grams } : product;
+                    return addProductToMeal(idx, withGrams, {
+                        productCommitVerified,
+                        source: _origin || 'add-product-step',
+                    });
+                },
                 onAddMany: async ({ entries, mealIndex: addMealIndex, mealId: addMealId } = {}) => {
                     const idx = resolveMealIndex(
                         dayRef.current || currentDay,
@@ -10411,7 +10441,6 @@
 
             return !!runUndoableDayMutation({
                 label: 'Фото удалено',
-                duration: 5000,
                 errorMessage: 'Не удалось удалить фото',
                 errorAction: 'remove_photo',
                 applyMutation: () => {
@@ -11774,16 +11803,6 @@
                         }
                     }, '+ Добавить приём')
                 ),
-                // 🎯 R-DAY-STICKY-V2 (2026-05-15): отдельный fixed-bar поверх списка.
-                // НЕ трогает шапки приёмов (sticky на них ломал layout). Один общий
-                // bar показывает данные текущего приёма в момент скролла, через
-                // scroll listener + data-meal-index lookup.
-                isMobile && HEYS.dayComponents?.MealStickyBar && React.createElement(HEYS.dayComponents.MealStickyBar, {
-                    day,
-                    pIndex,
-                    isMobile,
-                    key: 'meal-sticky-bar',
-                }),
                 mealsUI,
                 dailyWaveOverview,
                 daySummary,

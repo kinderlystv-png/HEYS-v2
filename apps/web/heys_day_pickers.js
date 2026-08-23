@@ -71,9 +71,14 @@
       console.error('[heys_day_pickers] dayUtils not loaded yet');
       return null;
     }
-    const { parseISO, todayISO, fmtDate, formatDateHeaderRow, getNextDay, getPrevDay } = utils;
+    const { parseISO, todayISO, calendarTodayISO, fmtDate, formatDateHeaderRow, getNextDay, getPrevDay, scheduleNightBoundaryRefresh } = utils;
     
     const [isOpen, setIsOpen] = React.useState(false);
+    const [, setNightBoundaryTick] = React.useState(0);
+    React.useEffect(() => {
+      if (!scheduleNightBoundaryRefresh) return undefined;
+      return scheduleNightBoundaryRefresh(() => setNightBoundaryTick((value) => value + 1));
+    }, [scheduleNightBoundaryRefresh]);
     const [cur, setCur] = React.useState(parseISO(valueISO || todayISO()));
     const [tooltip, setTooltip] = React.useState(null); // { x, y, text }
     const [monthData, setMonthData] = React.useState(null); // Данные для текущего месяца календаря
@@ -212,7 +217,11 @@
     const isTodaySelected = headerRow.isToday;
     const currentISO = valueISO || todayISO();
     const todayStr = todayISO();
-    const canGoNext = currentISO < todayStr;
+    const calendarToday = calendarTodayISO ? calendarTodayISO() : todayStr;
+    const canGoNext = currentISO < calendarToday;
+    const triggerToneClass = headerRow.isNightLabel
+      ? ' date-picker-trigger--night'
+      : (isTodaySelected ? ' date-picker-trigger--today' : ' date-picker-trigger--not-today');
 
     const handlePrevDay = (e) => {
       e.stopPropagation();
@@ -243,8 +252,8 @@
     function calendarIconSvg() {
       return React.createElement('svg', {
         className: 'date-picker-icon',
-        width: 13,
-        height: 13,
+        width: 12,
+        height: 12,
         viewBox: '0 0 24 24',
         fill: 'none',
         stroke: 'currentColor',
@@ -275,7 +284,7 @@
         }, navChevron('left')),
         React.createElement('div', {
           ref: triggerRef,
-          className: 'date-picker-trigger' + (isOpen ? ' open' : '') + (isTodaySelected ? ' date-picker-trigger--today' : ' date-picker-trigger--not-today')
+          className: 'date-picker-trigger' + (isOpen ? ' open' : '') + triggerToneClass
         },
           React.createElement('button', {
             type: 'button',
@@ -288,18 +297,15 @@
               calendarIconSvg(),
               headerRow.weekendAbbr
                 ? React.createElement('span', {
-                  className: 'date-picker-main date-picker-main--today'
+                  className: 'date-picker-main date-picker-main--past'
                 },
                   React.createElement('span', { className: 'date-picker-weekend-abbr' }, headerRow.weekendAbbr),
                   `, ${sel.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}`
                 )
                 : React.createElement('span', {
-                  className: 'date-picker-main' + (isTodaySelected ? ' date-picker-main--today' : ' date-picker-main--past')
+                  className: 'date-picker-main' + (isTodaySelected && !headerRow.isNightLabel ? ' date-picker-main--today' : ' date-picker-main--past')
                 }, headerRow.main)
-            ),
-            headerRow.relative && React.createElement('span', {
-              className: 'date-picker-sub date-picker-sub--relative'
-            }, headerRow.relative)
+            )
           ),
           !isTodaySelected && React.createElement('button', {
             type: 'button',

@@ -1729,6 +1729,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
   };
 
+  // E2E / diagnostics: вызов production-каскада без UI-модалки (см. products-cascade-client-scope-smoke.spec.ts).
+  try {
+    const root = window.HEYS = window.HEYS || {};
+    root.debug = root.debug || {};
+    root.debug.cascadeMealItemsOnProductUpdate = cascadeMealItemsOnProductUpdate;
+    root.debug.collectCascadeDayKeys = __collectCascadeDayKeys;
+  } catch (_) { /* noop */ }
+
   /**
    * 🆕 v5.0: Batch cascade update — efficiently updates MealItems for multiple products
    * Called automatically when products sync from cloud (heysProductsUpdated event)

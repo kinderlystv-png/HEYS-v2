@@ -202,6 +202,12 @@ describe('UI v4 Prompt 3b — шапка', () => {
             /body:has\(\.fab-group:not\(\.fab-group--messenger-only\) \.message-fab\) \.fab-group--messenger-only/,
         );
     });
+
+    it('standalone messenger FAB скрывается на Главной с widgets-quick-fab', () => {
+        expect(messengerCss).toMatch(
+            /body:has\(\.widgets-quick-fab-wrap\) \.fab-group--messenger-only[\s\S]*display:\s*none/,
+        );
+    });
 });
 
 describe('UI v4 — свайп между вкладками', () => {
@@ -347,11 +353,12 @@ describe('UI v4 chrome paint — рама', () => {
         expect(shellSrc).not.toContain("hdr-widgets-edit-btn--primary");
     });
 
-    it('«Изменить экран» под сеткой виджетов', () => {
+    it('вход в расстановку — FAB настройки, без строки «Изменить экран»', () => {
         const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
-        expect(uiSrc).toContain("id: 'tour-widgets-edit'");
-        expect(uiSrc).toContain('Изменить экран');
-        expect(uiSrc).toContain('widgets-tab__edit-row');
+        expect(uiSrc).toContain("id: 'tour-widgets-settings-fab'");
+        expect(uiSrc).toContain('openEditWithCatalog');
+        expect(uiSrc).not.toContain('Изменить экран');
+        expect(uiSrc).not.toContain('widgets-tab__edit-row');
     });
 
     it('v4 nav chrome — отступы и фон как в макете', () => {

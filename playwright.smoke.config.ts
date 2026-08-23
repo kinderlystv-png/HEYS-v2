@@ -5,6 +5,7 @@ export default defineHeysE2eConfig({
         'curator-login-smoke.spec.ts',
         'pin-auth.spec.ts',
         'products-client-scope-smoke.spec.ts',
+        'products-cascade-client-scope-smoke.spec.ts',
         'products-heardfromcloud-smoke.spec.ts',
     ],
     timeout: 180_000,

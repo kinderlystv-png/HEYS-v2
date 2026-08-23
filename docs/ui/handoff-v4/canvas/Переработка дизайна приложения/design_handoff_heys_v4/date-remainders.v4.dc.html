@@ -129,20 +129,20 @@
   <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label"></span></div>
 
   <div class="ctrH">Капсула даты</div>
-  <div class="spec"><b>формат</b><span data-v="слова только «Сегодня», «Вчера», «Позавчера»; дальше день недели с числом — «пт, 7 августа»"></span><i>причина не в стиле, а в ширине: рядом с датой на чужом дне стоит кнопка «Сегодня», «Три дня назад, 7 августа» в строку не влезает, а перенос ломает строку со стрелками</i></div>
+  <div class="spec"><b>формат</b><span data-v="слова только «Сегодня» и «Вчера»; дальше день недели с числом — «пт, 7 августа». Слова «Позавчера» нет, относительной подстроки «N дней назад» под датой тоже нет"></span><i>причина не в стиле, а в ширине: рядом с датой на чужом дне стоит кнопка «Сегодня», «Три дня назад, 7 августа» в строку не влезает, а перенос ломает строку со стрелками. «Позавчера» снято 23 августа: третье слово человек уже пересчитывает в дату, а относительная подстрока говорила то же самое второй строкой и сдвигала высоту капсулы</i></div>
   <div class="spec"><b>иконка календаря</b><span data-v="12 px, обводка 2,4, цвет подписи (не акцент), во всех капсулах на всех вкладках"></span><i>без неё дата читается как подпись, а не как кнопка</i></div>
   <div class="spec"><b>стрелки</b><span data-v="кружки 34 px на подложке капсулы, тач-цель 44 pt; правая на сегодня гаснет, но не исчезает"></span><i>исчезновение меняло ширину капсулы — она прыгала</i></div>
   <div class="spec"><b>тап по дате</b><span data-v="открывает месяц шторкой"></span><i>стрелка влево и есть «вчера» — отдельной кнопки не нужно</i></div>
-  <div class="spec"><b>ночь до 03:00</b><span data-v="«сегодня» остаётся вчерашним календарным днём, но капсула называет обе даты: «Сегодня, 20 августа» до полуночи и «Ночь на 21 августа» после"></span><i>правило переехало из контракта «Питания» 21 августа: капсулой владеет этот файл, там оно осталось бы несделанным</i></div>
+  <div class="spec"><b>ночь до 03:00</b><span data-v="с 00:00 до 03:00 открытым остаётся вчерашний календарный день, а капсула называет его одной строкой «Ночь на 21 августа» (переноса нет, ширина капсулы та же). Капсула нейтральная — не терракотовая, как на чужом дне; кнопки «Сегодня» в ней нет; правая стрелка живая и ведёт на 21 августа. Всё, что записывается в это окно, идёт в 20 августа, и счётчики вкладок («N приёмов») считают тот же день. В 03:00 капсула становится «Сегодня, 21 августа» без перезагрузки экрана, 20-е становится «Вчера»"></span><i>правило переехало из контракта «Питания» 21 августа: капсулой владеет этот файл. Терракота здесь была бы ложью: человек не ушёл в прошлое, он всё ещё в своём дне — кадр «Капсула · ночь»</i></div>
   <div class="spec"><b>чужой день</b><span data-v="капсула красится терракотой, обе стрелки живые, кнопка «Сегодня» внутри капсулы справа; ширина капсулы не меняется"></span><i>кнопка занимает место, которое на сегодня пустует</i></div>
-  <div class="spec"><b>выходной</b><span data-v="красится только сокращение дня недели; число и месяц в чернилах"></span></div>
+  <div class="spec"><b>выходной</b><span data-v="красится только сокращение дня недели; число и месяц в чернилах. Сегодняшний день всегда называется словом — «Сегодня, 9 августа» и в субботу, и в воскресенье: сокращения дня в нём нет, значит и красного нет"></span><i>расхождение 23 августа: код подменял «Сегодня» на красное «вс, 9 августа» — человек терял самый частый якорь ради подсветки выходного</i></div>
   <div class="spec" style="border-bottom:none"><b>плашка режима</b><span data-v="снята: предупреждение несёт сама капсула"></span><i>отдельная липкая плашка говорила то же второй раз и стоила 44 px первого экрана</i></div>
 
   <div class="ctrH">Прокрутка</div>
   <div class="spec"><b>что уезжает</b><span data-v="уровень, серия, лампочка, настройки, название вкладки — всё, что читают один раз за сессию"></span></div>
   <div class="spec"><b>что остаётся</b><span data-v="капсула со стрелками, приклеенная к верху, на бумажной подложке с тенью"></span><i>тень нужна, чтобы читалась как отдельный слой: под ней экран продолжается</i></div>
-  <div class="spec"><b>порядок липких слоёв</b><span data-v="дата → бар текущего приёма; бар всегда под датой, никогда над"></span><i>иначе при быстрой прокрутке две липкие полосы меняются местами</i></div>
-  <div class="spec" style="border-bottom:none"><b>сколько липких</b><span data-v="один слой (плюс бар приёма на Питании), не два"></span></div>
+  <div class="spec"><b>порядок липких слоёв</b><span data-v="липкий слой один — капсула даты; бар текущего приёма под ней снят 23 августа и не реализуется"></span><i>бар придуман для легаси-дневника, где один приём занимал экран; в v4 дневник — короткие строки, и бар повторяет то, что и так видно, стоя вторых 44 px первого экрана. Код: MealStickyBar не подключать</i></div>
+  <div class="spec" style="border-bottom:none"><b>сколько липких</b><span data-v="ровно один слой на всех вкладках"></span></div>
 
   <div class="ctrH">Календарь · шторка</div>
   <div class="spec"><b>клетка дня</b><span data-v="высота 44 pt фиксирована; 7 колонок в 298 px дают ширину 42 px"></span><i>высота не выводится из ширины: раздвинуть колонки некуда, а 42 px по высоте — мимо тач-цели. Шторка вырастает примерно на 40 px и укладывается</i></div>
@@ -166,7 +166,53 @@
   <div class="spec"><b>снять в коде</b><span data-v="три цветных пункта легенды («норма / мало / переел») · getGradientColor у клетки календаря · правило .day-status{display:none} вместе с расчётом статуса для этой сетки"></span><i>зоны и пороги не трогаются — они кормят Отчёты и оценку дня</i></div>
   <div class="spec"><b>кнопка действия в совете</b><span data-v="не рисуется"></span><i>все пять обработчиков шлют события, которых никто не слушает</i></div>
   <div class="spec"><b>плавающие кнопки</b><span data-v="на этих кадрах нарисована одна, группа целиком — в home-widgets"></span><i>здесь она перекрывала бы те самые числа, ради которых экран нужен</i></div>
-  <div class="spec" style="border-bottom:none"><b>открыто</b><span data-v="тумблер «Звук советов» глушит звук всего приложения — либо чинить до «только советы», либо переносить в настройки как «Звук»"></span><i>решение за дизайнером, кодеру не выбирать</i></div>
+  <div class="spec" style="border-bottom:none"><b>звук</b><span data-v="тумблера «Звук советов» нет: звук приложения один и живёт в настройках одним переключателем «Звук». Отдельного звука у советов в коде не существует, поэтому частный тумблер обещал бы точечность, которой нет"></span><i>решено 23 августа: чинить тумблер до «только советы» — значит заводить второй звуковой канал ради одной поверхности; строка «открыто» снята</i></div>
+</div>
+
+<div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:0 0 14px;">Капсула · ночь до 03:00</div>
+<p class="lead" style="margin:0 0 18px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">С полуночи до 03:00 открытым остаётся вчерашний день, и капсула называет его одной строкой — «Ночь на 21 августа». Тон нейтральный: человек не уходил в прошлое, он всё ещё в своём дне, поэтому терракоты и кнопки «Сегодня» здесь нет. Правая стрелка живая и ведёт на уже наступившее 21-е. В 03:00 строка становится «Сегодня, 21 августа» без перезагрузки экрана.</p>
+<div style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;margin-bottom:34px;">
+  <div>
+    <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:0 0 9px;">Песочная</div>
+    <div data-demo="stop" data-screen-label="Капсула · ночь на 21 августа" style="width:330px;background:#fffaf1;border-radius:20px;padding:14px 16px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="width:34px;height:34px;flex:none;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;color:rgba(0,0,0,.5);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+        <span style="flex:1;height:36px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;gap:7px;font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Ночь на 21 августа</span>
+        <span style="width:34px;height:34px;flex:none;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;color:rgba(0,0,0,.5);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+      </div>
+    </div>
+    <div style="font:600 10px/1.45 ui-monospace,Menlo,monospace;color:#6b5f4f;margin-top:9px;max-width:330px;text-wrap:pretty;">00:00–03:00 · записи идут в 20 августа<br>кнопки «Сегодня» нет, правая стрелка живая</div>
+  </div>
+  <div>
+    <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:0 0 9px;">Тёмная</div>
+    <div class="dk ph" data-demo="stop" data-screen-label="Капсула · ночь на 21 августа · тёмная" style="width:330px;background:#141210;border-radius:20px;padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="width:34px;height:34px;flex:none;border-radius:999px;background:#23201b;display:flex;align-items:center;justify-content:center;color:rgba(242,237,230,.55);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+        <span style="flex:1;height:36px;border-radius:999px;background:#23201b;display:flex;align-items:center;justify-content:center;gap:7px;font:700 12.5px/1 Figtree,sans-serif;color:#f2ede6;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.45)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Ночь на 21 августа</span>
+        <span style="width:34px;height:34px;flex:none;border-radius:999px;background:#23201b;display:flex;align-items:center;justify-content:center;color:rgba(242,237,230,.55);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:0 0 9px;">Синяя</div>
+    <div class="bl ph" data-demo="stop" data-screen-label="Капсула · ночь на 21 августа · синяя" style="width:330px;background:#ffffff;border-radius:20px;padding:14px 16px;box-shadow:0 1px 2px rgba(16,24,38,.08),0 14px 40px rgba(16,24,38,.12);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="width:34px;height:34px;flex:none;border-radius:999px;background:#eef3f9;display:flex;align-items:center;justify-content:center;color:rgba(16,24,38,.5);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+        <span style="flex:1;height:36px;border-radius:999px;background:#eef3f9;display:flex;align-items:center;justify-content:center;gap:7px;font:700 12.5px/1 Figtree,sans-serif;color:#101826;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(16,24,38,.45)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Ночь на 21 августа</span>
+        <span style="width:34px;height:34px;flex:none;border-radius:999px;background:#eef3f9;display:flex;align-items:center;justify-content:center;color:rgba(16,24,38,.5);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:0 0 9px;">Сине-тёмная</div>
+    <div class="bd ph" data-demo="stop" data-screen-label="Капсула · ночь на 21 августа · сине-тёмная" style="width:330px;background:#0d1a26;border-radius:20px;padding:14px 16px;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="width:34px;height:34px;flex:none;border-radius:999px;background:#182a3a;display:flex;align-items:center;justify-content:center;color:rgba(238,243,248,.55);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+        <span style="flex:1;height:36px;border-radius:999px;background:#182a3a;display:flex;align-items:center;justify-content:center;gap:7px;font:700 12.5px/1 Figtree,sans-serif;color:#eef3f8;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.45)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Ночь на 21 августа</span>
+        <span style="width:34px;height:34px;flex:none;border-radius:999px;background:#182a3a;display:flex;align-items:center;justify-content:center;color:rgba(238,243,248,.55);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:0 0 14px;">Строка даты</div>
@@ -391,7 +437,7 @@
 
 <p class="lead" style="margin:30px 0 0;font:500 12.5px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.5);">Дальше: «обнови дату во всех канвасах» · «синяя палитра для остатков советов» · «настройки дня с очисткой»</p>
 </div></x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2400,&quot;height&quot;:1400},&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Разбор&quot;,&quot;Только экраны&quot;,&quot;Только текст&quot;],&quot;default&quot;:&quot;Разбор&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Как смотреть&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Свободно&quot;,&quot;Плотно&quot;,&quot;Обзор&quot;],&quot;default&quot;:&quot;Свободно&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Как смотреть&quot;},&quot;ground&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Бумага&quot;,&quot;Студия&quot;,&quot;Нейтраль&quot;],&quot;default&quot;:&quot;Бумага&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Как смотреть&quot;},&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">class Component extends DCLogic {
+<script type="text/x-dc" data-dc-script data-props="{&quot;showContracts&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;$preview&quot;:{&quot;width&quot;:2400,&quot;height&quot;:1400},&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Разбор&quot;,&quot;Только экраны&quot;,&quot;Только текст&quot;],&quot;default&quot;:&quot;Разбор&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Как смотреть&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Свободно&quot;,&quot;Плотно&quot;,&quot;Обзор&quot;],&quot;default&quot;:&quot;Свободно&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Как смотреть&quot;},&quot;ground&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Бумага&quot;,&quot;Студия&quot;,&quot;Нейтраль&quot;],&quot;default&quot;:&quot;Бумага&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Как смотреть&quot;},&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">class Component extends DCLogic {
   componentDidMount() { this.applyTweaks(); }
   componentDidUpdate() { this.applyTweaks(); }
 
@@ -399,7 +445,29 @@
     const standalone = window.parent === window;
     return { all: this.props.allPalettes ?? standalone, rules: this.props.rules ?? true };
   }
+  contracts() {
+    const on = this.props.showContracts ?? false;
+    const list = [...document.querySelectorAll('[data-contract]')];
+    if (!list.length) return;
+    list.forEach(el => { el.style.display = on ? '' : 'none'; });
+    let bar = document.querySelector('[data-ctrbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-ctrbar', '');
+      bar.style.cssText = 'font:600 11px/1.6 ui-monospace,Menlo,monospace;color:#8a4a20;margin:0 0 22px;white-space:nowrap;';
+      const anchor = document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+      else list[0].parentNode.insertBefore(bar, list[0]);
+    }
+    const n = list.length, m = n % 10, h = n % 100, one = m === 1 && h !== 11;
+    const word = one ? 'контракт' : (m >= 2 && m <= 4 && (h < 12 || h > 14) ? 'контракта' : 'контрактов');
+    const rows = document.querySelectorAll('[data-contract] .spec').length;
+    const rm = rows % 10, rh = rows % 100;
+    const rw = rm === 1 && rh !== 11 ? 'строка' : (rm >= 2 && rm <= 4 && (rh < 12 || rh > 14) ? 'строки' : 'строк');
+    bar.textContent = n + ' ' + word + ' на канвасе' + (rows ? ', ' + rows + ' ' + rw : '') + ' · ' + (on ? (one ? 'показан' : 'показаны') + ' ниже' : (one ? 'скрыт' : 'скрыты') + ' твиком «Контракты»');
+  }
   applyTweaks() {
+    this.contracts();
     const t = this.tw(), hide = t.all ? '' : 'none', off = t.rules ? '' : 'none';
     const lab = /^(т[её]мная|синяя|сине-т[её]мная|синяя\s+т[её]мная)(\s+палитра)?$/i;
 
