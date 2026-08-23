@@ -17,7 +17,7 @@ beforeAll(() => {
   global.window = global;
   global.HEYS = global.HEYS || {};
   vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-08-10T12:00:00+03:00'));
+  vi.setSystemTime(new Date(2026, 7, 10, 12, 0));
 
   const utilsSrc = read('apps/web/heys_day_utils.js');
   // eslint-disable-next-line no-new-func
@@ -35,12 +35,12 @@ describe('formatDateHeaderRow (v4 date line)', () => {
   });
 
   it('today on weekend — «Сегодня, …», не красное сокращение', () => {
-    vi.setSystemTime(new Date('2026-08-09T12:00:00+03:00'));
+    vi.setSystemTime(new Date(2026, 7, 9, 12, 0));
     const row = formatDateHeaderRow('2026-08-09');
     expect(row.isToday).toBe(true);
     expect(row.weekendAbbr).toBeUndefined();
     expect(row.main).toMatch(/^Сегодня, 9 августа/);
-    vi.setSystemTime(new Date('2026-08-10T12:00:00+03:00'));
+    vi.setSystemTime(new Date(2026, 7, 10, 12, 0));
   });
 
   it('yesterday — «Вчера, …» без дублирующей подписи', () => {
@@ -56,12 +56,12 @@ describe('formatDateHeaderRow (v4 date line)', () => {
   });
 
   it('night window on effective today — «Ночь на …»', () => {
-    vi.setSystemTime(new Date('2026-08-21T01:30:00+03:00'));
+    vi.setSystemTime(new Date(2026, 7, 21, 1, 30));
     const row = formatDateHeaderRow('2026-08-20');
     expect(row.isToday).toBe(true);
     expect(row.isNightLabel).toBe(true);
     expect(row.main).toBe('Ночь на 21 августа');
     expect(row.relative).toBeNull();
-    vi.setSystemTime(new Date('2026-08-10T12:00:00+03:00'));
+    vi.setSystemTime(new Date(2026, 7, 10, 12, 0));
   });
 });

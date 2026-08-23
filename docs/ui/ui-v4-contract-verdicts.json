@@ -922,8 +922,8 @@
         },
         "вид кнопки": {
           "v": "=",
-          "f": "Заливка #c67139/#cf8144/#2e7cc0, «+» 21 px currentColor, тени 0 2px 4px + 0 10px 22px, border:none — 730-widgets-dashboard.css :2904; settings-fab — фон поверхности, не акцент",
-          "h": "435ba321e58f"
+          "f": "Заливка #c67139/#cf8144/#2e7cc0, «+» 21 px stroke 2.75 контрастным тоном палитры, тени 0 2px 4px + 0 10px 22px, border:none — 730-widgets-dashboard.css; settings-fab — фон поверхности, не акцент",
+          "h": "4fd27d0d698c"
         }
       },
       "protocol": "docs/implementation/HOME_WIDGETS_V4_CANVAS_ALIGNMENT.md"
