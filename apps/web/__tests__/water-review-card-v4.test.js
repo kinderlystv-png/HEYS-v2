@@ -1,7 +1,4 @@
-// Карточка воды в «Разборе дня» против канваса water-add.v4.dc.html.
-// Контракт [data-contract="water-add"]: строки «вид карточки», «переключатель
-// вида», «неделя в Кольце», «минус в Кольце». Вид один — «Полоса» снята ревью
-// 22 августа.
+// Карточка воды в «Разборе дня» — nutrition-tab + water-add v4.
 import fs from 'fs';
 import path from 'path';
 
@@ -18,7 +15,6 @@ function loadWaterCard() {
   return window.HEYS.dayWater;
 }
 
-// Неделя вокруг 2025-12-12: шесть прошлых дней в LS, сегодняшний — из day.
 function seedWeek(perDayMl) {
   const days = ['2025-12-06', '2025-12-07', '2025-12-08', '2025-12-09', '2025-12-10', '2025-12-11'];
   const store = {};
@@ -28,14 +24,33 @@ function seedWeek(perDayMl) {
   return vi.fn((key, fallback) => (key in store ? store[key] : fallback));
 }
 
-function renderCard(dayWater, { waterMl = 1700, waterGoal = 3000, actions = {} } = {}) {
+function renderCard(dayWater, {
+  waterMl = 1700,
+  waterGoal = 3000,
+  waterFabOn = false,
+  actions = {},
+  ctxExtra = {}
+} = {}) {
+  window.HEYS.FabVisibility = {
+    read: () => ({
+      water: waterFabOn,
+      hunger: true,
+      message: true,
+      activity: true,
+      meal: true
+    })
+  };
   const element = dayWater.render({
     React: RealReact,
     ctx: {
-      day: { date: '2025-12-12', waterMl },
+      day: { date: '2025-12-12', waterMl, lastWaterTime: waterMl > 0 ? Date.now() - 3600000 : null },
+      prof: {},
       waterGoal,
       waterGoalBreakdown: { base: 3000 },
-      waterLastDrink: null
+      waterLastDrink: waterMl > 0 ? { text: '1 ч назад', isLong: false } : null,
+      isPastDay: false,
+      isReadOnly: false,
+      ...ctxExtra
     },
     actions: {
       addWater: vi.fn(),
@@ -48,13 +63,19 @@ function renderCard(dayWater, { waterMl = 1700, waterGoal = 3000, actions = {} }
   return render(element);
 }
 
-describe('карточка воды в «Разборе дня» — канвас water-add v4', () => {
+describe('карточка воды в «Разборе дня» — nutrition-tab v4', () => {
   let dayWater;
 
   beforeEach(() => {
     localStorage.clear();
     window.HEYS = {
-      utils: { lsGet: seedWeek([2400, 2100, 1800, 2600, 1600, 2400]) }
+      utils: { lsGet: seedWeek([2400, 2100, 1800, 2600, 1600, 2400]) },
+      dayWaterState: {
+        computeWaterGoalBreakdown: () => ({ finalGoal: 3000 })
+      },
+      NutritionV4: {
+        eatingProgressK: () => 0.5
+      }
     };
     dayWater = loadWaterCard();
   });
@@ -64,107 +85,81 @@ describe('карточка воды в «Разборе дня» — канва�
     window.HEYS = originalHEYS;
   });
 
-  it('вид один — «Кольцо»; настройки вида и переключателя нет', () => {
-    const { container } = renderCard(dayWater);
-    expect(container.querySelector('#water-card').className).toContain('water-review--ring');
-    // «Полоса» снята ревью 22 августа: переключать нечего, настройка не заводится.
-    expect(container.querySelector('.water-review-switch')).toBeNull();
-    expect(container.querySelector('.water-review__view')).toBeNull();
-    expect(WATER_SRC).not.toContain('heys_water_card_view_v1');
-  });
-
-  it('утро 0 л: кольцо пусто, −200 погашен, но остаётся в ряду', () => {
-    const { container } = renderCard(dayWater, { waterMl: 0 });
+  it('полный вид при выключенной кнопке воды: 58px кольцо и четыре объёма', () => {
+    const { container } = renderCard(dayWater, { waterFabOn: false });
     const card = container.querySelector('#water-card');
-
-    expect(card.querySelector('.water-review__ring-fact').textContent).toBe('0 л');
-    expect(card.querySelector('.water-review__ring-meta').textContent).toBe('из 3,0 · осталось 3,0');
-    const [drawn] = card.querySelector('.water-review__ring-fill')
-      .getAttribute('stroke-dasharray').split(' ').map(Number);
-    expect(drawn).toBe(0);
-
-    const minus = card.querySelector('.water-review__chip--sub');
-    expect(minus.className).toContain('is-off');
-    expect(minus.disabled).toBe(true);
-    expect(minus.textContent).toBe('−200');
+    expect(card.className).toContain('water-review--full');
+    expect(card.querySelector('.water-review__ring-svg').getAttribute('width')).toBe('58');
+    expect([...card.querySelectorAll('.water-review__chip--quick')].map((el) => el.textContent))
+      .toEqual(['+100', '+200', '+330', '+500']);
+    expect(card.querySelector('.water-review__header-sub').textContent).toBe('−200');
+    expect(card.querySelector('.water-review__quick .water-review__chip--sub')).toBeNull();
   });
 
-  it('объёмы зовут addWater и removeWater с шагом из контракта', () => {
+  it('компактный вид при включённой кнопке воды: 44px кольцо без чипов', () => {
+    const { container } = renderCard(dayWater, { waterFabOn: true });
+    const card = container.querySelector('#water-card');
+    expect(card.className).toContain('water-review--compact');
+    expect(card.querySelector('.water-review__ring-svg').getAttribute('width')).toBe('44');
+    expect(card.querySelector('.water-review__quick')).toBeNull();
+    expect(card.querySelector('.water-review__last').textContent).toContain('последний раз');
+  });
+
+  it('пустой день: прочерк, тревога и подсказка внести воду', () => {
+    const { container } = renderCard(dayWater, { waterMl: 0, ctxExtra: { waterLastDrink: null } });
+    const card = container.querySelector('#water-card');
+    expect(card.className).toContain('water-review--empty');
+    expect(card.querySelector('.water-review__ring-fact').textContent).toBe('—');
+    expect(card.querySelector('.water-review__ring-tail').textContent).toBe('за день не отмечено');
+    expect(card.querySelector('.water-review__empty-note')).toBeTruthy();
+    expect(card.querySelector('.water-review__last')).toBeNull();
+  });
+
+  it('норма набрана и ссылка на расчёт открывают metric-popup', () => {
+    const openExclusivePopup = vi.fn();
+    const { container } = renderCard(dayWater, {
+      waterMl: 3000,
+      actions: { openExclusivePopup }
+    });
+    const card = container.querySelector('#water-card');
+    expect(card.querySelector('.water-review__ring-tail').textContent).toBe('норма набрана');
+    fireEvent.click(card.querySelector('.water-review__norm-link'));
+    expect(openExclusivePopup).toHaveBeenCalledWith('metric', expect.objectContaining({ type: 'water' }));
+  });
+
+  it('объёмы зовут addWater и removeWater', () => {
     const addWater = vi.fn();
     const removeWater = vi.fn();
     const { container } = renderCard(dayWater, { actions: { addWater, removeWater } });
     const card = container.querySelector('#water-card');
 
-    fireEvent.click(card.querySelector('.water-review__chip--sub'));
+    fireEvent.click(card.querySelector('.water-review__header-sub'));
     expect(removeWater).toHaveBeenCalledWith(200);
 
-    const adds = card.querySelectorAll('.water-review__chip--quick');
-    fireEvent.click(adds[3]);
+    fireEvent.click(card.querySelectorAll('.water-review__chip--quick')[3]);
     expect(addWater).toHaveBeenCalledWith(500, expect.objectContaining({
       skipScroll: true,
       source: 'water-review-card'
     }));
   });
 
-  it('вид «Кольцо»: кольцо доли нормы, четыре объёма, неделя кривой', () => {
-    // Первый день недели — выше нормы: его точка обязана быть залитой.
+  it('неделя: кривая, пунктир нормы и ряд дней', () => {
     window.HEYS.utils.lsGet = seedWeek([3200, 2100, 1800, 2600, 1600, 2400]);
     const { container } = renderCard(dayWater);
     const card = container.querySelector('#water-card');
-
-    expect(card.querySelector('.water-review__kicker').textContent).toBe('Вода · 7 дней в среднем 2,2 л');
-    expect(card.querySelector('.water-review__ring-fact').textContent).toBe('1,7 л');
-    expect(card.querySelector('.water-review__ring-meta').textContent).toBe('из 3,0 · осталось 1,3');
-
-    // Дуга = доля нормы от длины окружности r 24.
-    const ringLength = Math.round(2 * Math.PI * 24 * 10) / 10;
-    const [drawn, total] = card.querySelector('.water-review__ring-fill')
-      .getAttribute('stroke-dasharray').split(' ').map(Number);
-    expect(total).toBe(ringLength);
-    expect(drawn / total).toBeCloseTo(1700 / 3000, 3);
-
-    const quick = [...card.querySelectorAll('.water-review__chip--quick')].map((el) => el.textContent);
-    expect(quick).toEqual(['+100', '+200', '+330', '+500']);
-
-    // Контракт 47: минус — первым в том же ряду пятой пилюлей, в шапке его нет.
-    expect(card.querySelector('.water-review__top .water-review__chip')).toBeNull();
-    const row = [...card.querySelectorAll('.water-review__quick .water-review__chip')]
-      .map((el) => el.textContent);
-    expect(row).toEqual(['−200', '+100', '+200', '+330', '+500']);
-    expect(card.querySelector('.water-review__quick .water-review__chip').className)
-      .toContain('water-review__chip--sub');
-
-    // Пунктир нормы поперёк, залитая точка = норма взята, промах = контурная.
-    expect(card.querySelector('.water-review__curve-goal').getAttribute('stroke-dasharray')).toBe('3 3');
-    const dots = card.querySelectorAll('.water-review__curve-dot');
-    expect(dots.length).toBe(7);
-    expect(dots[0].getAttribute('fill')).toBe('currentColor');
-    expect(dots[2].getAttribute('fill')).toBe(null);
-    // Сегодня отмечен только ореолом.
-    expect(card.querySelectorAll('.water-review__curve-halo').length).toBe(1);
+    expect(card.querySelector('.water-review__avg').textContent).toBe('в среднем 2,2 л');
+    expect(card.querySelector('.water-review__curve-line').getAttribute('d')).toContain('C');
+    expect(card.querySelector('.water-review__curve-goal').getAttribute('d')).toContain('C');
+    expect(card.querySelectorAll('.water-review__day-done').length).toBeGreaterThan(0);
+    expect(card.querySelectorAll('.water-review__day-label').length).toBeGreaterThan(0);
   });
 
-  it('в «Кольце» при 0 л минус гаснет, но остаётся пятой пилюлей', () => {
-    const { container } = renderCard(dayWater, { waterMl: 0 });
-    const minus = container.querySelector('.water-review__quick .water-review__chip--sub');
-
-    expect(minus).toBeTruthy();
-    expect(minus.disabled).toBe(true);
-    expect(minus.className).toContain('is-off');
-    expect(container.querySelectorAll('.water-review__quick .water-review__chip').length).toBe(5);
-  });
-
-  it('applyOptimistic двигает кольцо и его подпись', () => {
-    const { container } = renderCard(dayWater, { waterMl: 0 });
+  it('applyOptimistic двигает кольцо и подпись', () => {
+    const { container } = renderCard(dayWater, { waterMl: 0, ctxExtra: { waterLastDrink: null } });
     const card = container.querySelector('#water-card');
-
     dayWater.applyOptimistic(card, 1500, 3000);
-
     expect(card.querySelector('.water-review__ring-fact').textContent).toBe('1,5 л');
-    expect(card.querySelector('.water-review__ring-meta').textContent).toBe('из 3,0 · осталось 1,5');
-    const [drawn, total] = card.querySelector('.water-review__ring-fill')
-      .getAttribute('stroke-dasharray').split(' ').map(Number);
-    expect(drawn / total).toBeCloseTo(0.5, 3);
+    expect(card.querySelector('.water-review__ring-tail').textContent).toBe('осталось 1,5');
   });
 });
 
@@ -180,9 +175,12 @@ describe('карточка воды стоит в «Разборе дня», а 
 
   it('NutritionTabV4 рендерит карточку воды и не рисует свой блок', () => {
     localStorage.clear();
-    localStorage.setItem('heys_water_card_view_v1', 'bar');
-    window.HEYS = { utils: { lsGet: seedWeek([2400, 2100, 1800, 2600, 1600, 2400]) } };
-    // renderNutritionCard берёт React из глобала, как в приложении.
+    window.HEYS = {
+      utils: { lsGet: seedWeek([2400, 2100, 1800, 2600, 1600, 2400]) },
+      FabVisibility: { read: () => ({ water: false, hunger: true, message: true, activity: true, meal: true }) },
+      dayWaterState: { computeWaterGoalBreakdown: () => ({ finalGoal: 3000 }) },
+      NutritionV4: { eatingProgressK: () => 0.5 }
+    };
     global.React = RealReact;
     eval(WATER_SRC);
     eval(CARD_SRC);
@@ -191,7 +189,7 @@ describe('карточка воды стоит в «Разборе дня», а 
     const { container } = render(window.HEYS.dayNutrition.render({
       React: RealReact,
       ctx: {
-        day: { date: '2025-12-12', waterMl: 1700, meals: [] },
+        day: { date: '2025-12-12', waterMl: 1700, meals: [], lastWaterTime: Date.now() },
         prof: {},
         pIndex: {},
         date: '2025-12-12',
@@ -206,7 +204,7 @@ describe('карточка воды стоит в «Разборе дня», а 
         waterMl: 1700,
         waterGoal: 3000,
         waterGoalBreakdown: { base: 3000 },
-        waterLastDrink: null
+        waterLastDrink: { text: '1 ч назад' }
       },
       actions: {
         addMeal: vi.fn(),
@@ -219,11 +217,6 @@ describe('карточка воды стоит в «Разборе дня», а 
     }));
 
     expect(container.querySelector('.nutrition-v4-water')).toBeNull();
-    const card = container.querySelector('#water-card');
-    expect(card).toBeTruthy();
-    // Единственный вид — «Кольцо»: доля нормы дугой и неделя кривой.
-    expect(card.querySelector('.water-review__ring-fill')).toBeTruthy();
-    expect(card.querySelectorAll('.water-review__curve-dot').length).toBe(7);
-    expect(container.querySelector('.water-review-switch')).toBeNull();
+    expect(container.querySelector('#water-card')).toBeTruthy();
   });
 });

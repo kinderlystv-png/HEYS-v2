@@ -1258,56 +1258,8 @@
     return dayData.supplementsTaken || [];
   }
 
-  /**
-   * Отметить витамин как принятый
-   */
   function markSupplementTaken(dateKey, suppId, taken = true) {
-    // 📝 Event log (plan Wave 5.3, F-EL Batch B): supplement-mark single
-    try {
-      window.HEYS?.eventLog?.write(
-        'supplement-mark',
-        `[${suppId}] taken=${taken} для ${dateKey}`,
-        { dateKey, suppId, suppIds: [suppId], count: 1 },
-        'markSupplementTaken'
-      );
-    } catch (_) { /* noop */ }
-
-    // 🪦 Diagnostic trace (2026-05-24, см. markSupplementsTaken выше).
-    try {
-      console.info('[supplements.markSupplementTaken] trace', {
-        dateKey,
-        suppId,
-        taken,
-        wallTime: new Date().toISOString(),
-        stack: (new Error().stack || '').split('\n').slice(1, 6).map(s => s.trim()).join(' <- '),
-      });
-    } catch (_) { /* noop */ }
-
-    const dayData = readStoredValue(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
-
-    let takenList = dayData.supplementsTaken || [];
-    if (taken && !takenList.includes(suppId)) {
-      takenList = [...takenList, suppId];
-    } else if (!taken) {
-      takenList = takenList.filter(id => id !== suppId);
-    }
-
-    dayData.supplementsTaken = takenList;
-    dayData.supplementsTakenAt = new Date().toISOString();
-    const mutationAt = Math.max(Date.now(), (Number(dayData.supplementsTakenUpdatedAt) || 0) + 1);
-    dayData.supplementsTakenUpdatedAt = mutationAt;
-    dayData.updatedAt = mutationAt;
-
-    saveDaySafe(dateKey, dayData, {
-      type: 'supplements',
-      field: 'supplementsTaken',
-      source: taken ? 'supplement-mark-taken' : 'supplement-unmark-taken'
-    });
-
-    // Событие для обновления UI
-    window.dispatchEvent(new CustomEvent('heys:day-updated', {
-      detail: { date: dateKey, field: 'supplementsTaken' }
-    }));
+    return markSupplementsTaken(dateKey, [suppId], taken);
   }
 
   /**
@@ -1318,7 +1270,13 @@
     const planned = dayData.supplementsPlanned || getPlannedSupplements();
 
     dayData.supplementsTaken = [...planned];
-    dayData.supplementsTakenAt = new Date().toISOString();
+    if (!dayData.supplementsTakenAt || typeof dayData.supplementsTakenAt !== 'object' || Array.isArray(dayData.supplementsTakenAt)) {
+      dayData.supplementsTakenAt = {};
+    }
+    const timeStr = new Date().toTimeString().slice(0, 5);
+    planned.forEach((id) => {
+      dayData.supplementsTakenAt[id] = timeStr;
+    });
     const mutationAt = Math.max(Date.now(), (Number(dayData.supplementsTakenUpdatedAt) || 0) + 1);
     dayData.supplementsTakenUpdatedAt = mutationAt;
     dayData.updatedAt = mutationAt;
@@ -3777,6 +3735,7 @@
     getSupplementHistory,
     updateSupplementHistory,
     markSupplementsTaken,
+    openMyCourseScreen,
     // Рендер
     renderCard: renderSupplementsCard,
   };

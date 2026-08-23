@@ -7,9 +7,12 @@
         const {
             React,
             day,
+            prof,
             waterGoal,
             waterGoalBreakdown,
             waterLastDrink,
+            isPastDay,
+            isReadOnly,
             haptic,
             openExclusivePopup,
             addWater,
@@ -20,9 +23,12 @@
 
         const waterCtx = {
             day,
+            prof,
             waterGoal,
             waterGoalBreakdown,
-            waterLastDrink
+            waterLastDrink,
+            isPastDay,
+            isReadOnly
         };
 
         const waterActions = {

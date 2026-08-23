@@ -1,30 +1,25 @@
 // heys_day_water_v1.js — карточка воды в «Разборе дня» (вкладка «Питание»)
-// Канвас: water-add.v4.dc.html, кадр «Вода · карточка · Кольцо».
-// Вид один: «Полоса» снята с продукта ревью 22 августа, её кадры остались
-// протоколом сравнения. Переключателя вида нет — переключать нечего.
-// Контракт [data-contract="water-add"]: строки 13, 35, 42–52, 55–61, 64.
+// Канвас: nutrition-tab.v4.dc.html (блок «Вода на вкладке»), вторичен water-add.
+// Компактный вид — кнопка воды на FAB включена; полный — выключена.
 
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
 
   const WEEK_DAYS = 7;
-
-  // Кольцо (контракт 44): 58 × 58, r 24, обводка 6.
-  const RING_RADIUS = 24;
-  const RING_LENGTH = Math.round(2 * Math.PI * RING_RADIUS * 10) / 10;
-
-  // Кривая недели в виде «Кольцо» (контракт 45): норма — пунктир, база — низ дорожки.
+  const RING_FULL = { size: 58, radius: 24, stroke: 6, center: 29 };
+  const RING_COMPACT = { size: 44, radius: 19, stroke: 5, center: 22 };
   const CURVE_WIDTH = 268;
-  const CURVE_HEIGHT = 34;
+  const CURVE_HEIGHT = 56;
   const CURVE_X0 = 4;
   const CURVE_X1 = 264;
-  const CURVE_BASE_Y = 30;
-  const CURVE_GOAL_Y = 12;
+  const CURVE_BASE_Y = 50;
   const CURVE_TOP_Y = 4;
-
-  // Объёмы «Кольца» — строка контракта «вид карточки»: четыре готовых.
   const RING_VOLUMES = [100, 200, 330, 500];
   const MINUS_VOLUME = 200;
+  const ALARM_LAG_SHARE = 0.25;
+  const HABIT_HINT_KEY = 'heys_water_habit_hint_week';
+  const HABIT_HINT_TEXT = 'Поставьте с утра четыре бутылки по 0,5 л на видное место — вечером не придётся вспоминать, сколько выпили.';
+  const WEEKDAY_LABELS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
   function formatIsoDate(date) {
     return date.toISOString().slice(0, 10);
@@ -32,9 +27,7 @@
 
   function getWaterLsValue(key, fallbackValue) {
     const lsGet = HEYS?.utils?.lsGet || HEYS?.dayUtils?.lsGet;
-    if (typeof lsGet === 'function') {
-      return lsGet(key, fallbackValue);
-    }
+    if (typeof lsGet === 'function') return lsGet(key, fallbackValue);
     try {
       const raw = localStorage.getItem(key);
       return raw ? JSON.parse(raw) : fallbackValue;
@@ -43,15 +36,32 @@
     }
   }
 
-  function buildWeekSeries(day, waterGoal) {
+  function readWaterFabEnabled() {
+    const visibility = HEYS.FabVisibility?.read?.();
+    return visibility ? visibility.water !== false : true;
+  }
+
+  function isWaterEmptyDay(day, waterMl) {
+    const value = Math.max(0, Number(waterMl) || 0);
+    return value <= 0 && !day?.lastWaterTime;
+  }
+
+  function resolveDayGoal(sourceDay, prof, fallbackGoal) {
+    const breakdown = HEYS.dayWaterState?.computeWaterGoalBreakdown?.({
+      day: sourceDay || {},
+      profile: prof || {}
+    });
+    return Math.max(1, Number(breakdown?.finalGoal) || Number(fallbackGoal) || 2000);
+  }
+
+  function buildWeekSeries(day, waterGoal, prof) {
     const anchorIso = (typeof day?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day.date))
       ? day.date
       : formatIsoDate(new Date());
     const anchorDate = new Date(anchorIso + 'T12:00:00');
-    const goal = Math.max(1, Number(waterGoal) || 2000);
+    const fallbackGoal = Math.max(1, Number(waterGoal) || 2000);
     const series = [];
 
-    // Сегодня всегда правый (контракт 51): идём от −6 дней к нулю.
     for (let offset = WEEK_DAYS - 1; offset >= 0; offset--) {
       const date = new Date(anchorDate);
       date.setDate(date.getDate() - offset);
@@ -59,62 +69,151 @@
       const isToday = iso === anchorIso;
       const sourceDay = isToday
         ? (day || {})
-        : (getWaterLsValue('heys_dayv2_' + iso, null) || {});
+        : (getWaterLsValue('heys_dayv2_' + iso, null) || { date: iso });
       const waterMl = Math.max(0, Number(sourceDay?.waterMl) || 0);
-      series.push({ iso, waterMl, ratio: waterMl / goal, isToday });
+      const goalMl = resolveDayGoal(sourceDay, prof, fallbackGoal);
+      series.push({
+        iso,
+        waterMl,
+        goalMl,
+        ratio: waterMl / goalMl,
+        isToday,
+        weekday: WEEKDAY_LABELS[date.getDay()]
+      });
     }
 
     const total = series.reduce((sum, item) => sum + item.waterMl, 0);
     return { series, avgMl: Math.round(total / WEEK_DAYS) };
   }
 
+  function computeCurveScaleMax(series) {
+    const peak = series.reduce((max, item) => Math.max(max, item.waterMl, item.goalMl), 0);
+    return Math.max(200, Math.ceil((peak + 200) / 200) * 200);
+  }
+
+  function eatingProgressK(day, isPastDay) {
+    if (typeof HEYS.NutritionV4?.eatingProgressK === 'function') {
+      return HEYS.NutritionV4.eatingProgressK(day, isPastDay);
+    }
+    if (isPastDay) return 1;
+    return 0.5;
+  }
+
+  function isWaterAlarm({ day, waterMl, waterGoal, isPastDay }) {
+    if (isPastDay) return false;
+    if (isWaterEmptyDay(day, waterMl)) return true;
+    const goal = Math.max(1, Number(waterGoal) || 2000);
+    const expected = goal * eatingProgressK(day, isPastDay);
+    return (expected - waterMl) > goal * ALARM_LAG_SHARE;
+  }
+
   function formatLiters(ml) {
     return ((Math.max(0, Number(ml) || 0)) / 1000).toFixed(1).replace('.', ',');
   }
 
-  // Факт: ноль пишем «0», а не «0,0».
-  function formatFact(ml) {
+  function formatFactDisplay(ml, emptyDay) {
+    if (emptyDay) return '—';
     const value = Math.max(0, Number(ml) || 0);
     return value > 0 ? formatLiters(value) : '0';
   }
 
-  function curvePoint(item, index) {
-    const step = (CURVE_X1 - CURVE_X0) / (WEEK_DAYS - 1);
-    const x = Math.round((CURVE_X0 + step * index) * 10) / 10;
-    const rawY = CURVE_BASE_Y - (CURVE_BASE_Y - CURVE_GOAL_Y) * (Number(item.ratio) || 0);
-    const y = Math.round(Math.max(CURVE_TOP_Y, Math.min(CURVE_BASE_Y, rawY)) * 10) / 10;
-    return { ...item, x, y };
+  function formatStatusTail(waterMl, goal, emptyDay) {
+    if (emptyDay) return 'за день не отмечено';
+    const value = Math.max(0, Number(waterMl) || 0);
+    const target = Math.max(1, Number(goal) || 2000);
+    if (value >= target) {
+      if (value > target) return 'сверх нормы ' + formatLiters(value - target) + ' л';
+      return 'норма набрана';
+    }
+    return 'осталось ' + formatLiters(target - value);
   }
 
-  /**
-   * Оптимистичное обновление карточки без ре-рендера React.
-   * Один вызов на addWater и removeWater — раньше этот DOM-код был скопирован дважды.
-   */
+  function formatLastDrinkLine(waterLastDrink, emptyDay) {
+    if (emptyDay || !waterLastDrink?.text) return null;
+    return 'последний раз ' + waterLastDrink.text;
+  }
+
+  function isoWeekKey(iso) {
+    const date = new Date((iso || formatIsoDate(new Date())) + 'T12:00:00');
+    const day = (date.getDay() + 6) % 7;
+    date.setDate(date.getDate() - day + 3);
+    const year = date.getFullYear();
+    const firstThursday = new Date(year, 0, 4);
+    const week = 1 + Math.round(((date - firstThursday) / 86400000 - 3 + ((firstThursday.getDay() + 6) % 7)) / 7);
+    return year + '-W' + String(week).padStart(2, '0');
+  }
+
+  function shouldShowHabitHint(prof, dateIso, isCompact) {
+    if (isCompact) return false;
+    if (prof?.water_hint_enabled === false) return false;
+    const weekKey = isoWeekKey(dateIso);
+    try {
+      return localStorage.getItem(HABIT_HINT_KEY) !== weekKey;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function markHabitHintShown(dateIso) {
+    try {
+      localStorage.setItem(HABIT_HINT_KEY, isoWeekKey(dateIso));
+    } catch (_error) { /* noop */ }
+  }
+
+  function curvePoint(item, index, scaleMaxMl) {
+    const step = (CURVE_X1 - CURVE_X0) / (WEEK_DAYS - 1);
+    const x = Math.round((CURVE_X0 + step * index) * 10) / 10;
+    const ratio = scaleMaxMl > 0 ? (Number(item.waterMl) || 0) / scaleMaxMl : 0;
+    const rawY = CURVE_BASE_Y - (CURVE_BASE_Y - CURVE_TOP_Y) * ratio;
+    const y = Math.round(Math.max(CURVE_TOP_Y, Math.min(CURVE_BASE_Y, rawY)) * 10) / 10;
+    const goalRatio = scaleMaxMl > 0 ? (Number(item.goalMl) || 0) / scaleMaxMl : 0;
+    const goalY = Math.round((CURVE_BASE_Y - (CURVE_BASE_Y - CURVE_TOP_Y) * goalRatio) * 10) / 10;
+    return { ...item, x, y, goalY };
+  }
+
+  function catmullRomPath(points) {
+    if (!points.length) return '';
+    if (points.length === 1) return 'M ' + points[0].x + ' ' + points[0].y;
+    let path = 'M ' + points[0].x + ' ' + points[0].y;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i - 1] || points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || p2;
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      path += ' C ' + cp1x + ' ' + cp1y + ', ' + cp2x + ' ' + cp2y + ', ' + p2.x + ' ' + p2.y;
+    }
+    return path;
+  }
+
+  function ringLengthFor(ring) {
+    return Math.round(2 * Math.PI * ring.radius * 10) / 10;
+  }
+
   function applyOptimistic(cardEl, waterMl, waterGoal) {
     if (!cardEl) return;
     const goal = Math.max(1, Number(waterGoal) || 2000);
     const value = Math.max(0, Number(waterMl) || 0);
     const ratio = value / goal;
-    const left = 'осталось ' + formatLiters(Math.max(0, goal - value));
+    const emptyDay = value <= 0;
+    const tail = formatStatusTail(value, goal, emptyDay);
 
-    const factEl = cardEl.querySelector('.water-review__fact-value');
-    if (factEl) factEl.textContent = formatFact(value);
+    const ringFact = cardEl.querySelector('.water-review__ring-fact');
+    if (ringFact) ringFact.textContent = formatFactDisplay(value, emptyDay) + (emptyDay ? '' : ' л');
 
-    const leftEl = cardEl.querySelector('.water-review__left');
-    if (leftEl) leftEl.textContent = left;
+    const ringTail = cardEl.querySelector('.water-review__ring-tail');
+    if (ringTail) ringTail.textContent = tail;
 
     const ringFill = cardEl.querySelector('.water-review__ring-fill');
     if (ringFill) {
-      ringFill.setAttribute('stroke-dasharray', (Math.min(1, ratio) * RING_LENGTH) + ' ' + RING_LENGTH);
+      const ring = cardEl.classList.contains('water-review--compact') ? RING_COMPACT : RING_FULL;
+      const length = ringLengthFor(ring);
+      ringFill.setAttribute('stroke-dasharray', (emptyDay ? 0 : Math.min(1, ratio) * length) + ' ' + length);
     }
 
-    const ringFact = cardEl.querySelector('.water-review__ring-fact');
-    if (ringFact) ringFact.textContent = formatFact(value) + ' л';
-
-    const ringMeta = cardEl.querySelector('.water-review__ring-meta');
-    if (ringMeta) ringMeta.textContent = 'из ' + formatLiters(goal) + ' · ' + left;
-
-    // Убавить нечего — чип гаснет, но остаётся в ряду (контракт 59).
     cardEl.querySelectorAll('.water-review__chip--sub').forEach((el) => {
       el.classList.toggle('is-off', value <= 0);
       if (value <= 0) el.setAttribute('disabled', 'disabled');
@@ -127,31 +226,58 @@
   function getWaterReviewComponent(React) {
     if (_WaterReviewCard) return _WaterReviewCard;
 
-    function VolumeChip({ ml, kind, extraClass, disabled, onPick }) {
+    function VolumeChip({ ml, kind, extraClass, disabled, onPick, readOnly }) {
       return React.createElement('button', {
         type: 'button',
         className: 'water-review__chip water-review__chip--' + kind
           + (extraClass ? ' ' + extraClass : '')
-          + (disabled ? ' is-off' : ''),
-        disabled: disabled || undefined,
+          + (disabled ? ' is-off' : '')
+          + (readOnly ? ' is-readonly' : ''),
+        disabled: disabled || readOnly || undefined,
         onClick: (event) => onPick(ml, event)
       }, (kind === 'sub' ? '−' : '+') + ml);
     }
 
+    function CheckIcon() {
+      return React.createElement('svg', {
+        width: 7, height: 7, viewBox: '0 0 24 24', fill: 'none',
+        stroke: 'currentColor', strokeWidth: 4.5, strokeLinecap: 'round', strokeLinejoin: 'round',
+        'aria-hidden': 'true'
+      }, React.createElement('path', { d: 'M5 13l4 4L19 7' }));
+    }
+
     _WaterReviewCard = function WaterReviewCard(props) {
       const {
-        day, waterGoal, waterGoalBreakdown, waterLastDrink,
-        addWater, removeWater, haptic, openExclusivePopup
+        day, prof, waterGoal, waterGoalBreakdown, waterLastDrink,
+        addWater, removeWater, haptic, openExclusivePopup,
+        isPastDay, isReadOnly
       } = props;
 
+      const [waterFabOn, setWaterFabOn] = React.useState(readWaterFabEnabled);
+      React.useEffect(() => {
+        const sync = () => setWaterFabOn(readWaterFabEnabled());
+        global.addEventListener('heys:fab-visibility-changed', sync);
+        return () => global.removeEventListener('heys:fab-visibility-changed', sync);
+      }, []);
+
+      const isCompact = waterFabOn;
       const goal = Math.max(1, Number(waterGoal) || 2000);
       const waterMl = Math.max(0, Number(day?.waterMl) || 0);
-      const ratio = waterMl / goal;
-      const week = buildWeekSeries(day, goal);
-      const canRemove = waterMl > 0;
-      const leftText = 'осталось ' + formatLiters(Math.max(0, goal - waterMl));
+      const emptyDay = isWaterEmptyDay(day, waterMl);
+      const ratio = emptyDay ? 0 : waterMl / goal;
+      const week = buildWeekSeries(day, goal, prof);
+      const scaleMaxMl = computeCurveScaleMax(week.series);
+      const points = week.series.map((item, index) => curvePoint(item, index, scaleMaxMl));
+      const alarm = isWaterAlarm({ day, waterMl, waterGoal: goal, isPastDay: !!isPastDay });
+      const ring = isCompact ? RING_COMPACT : RING_FULL;
+      const ringLength = ringLengthFor(ring);
+      const canRemove = waterMl > 0 && !isReadOnly;
+      const lastDrinkLine = formatLastDrinkLine(waterLastDrink, emptyDay);
+      const statusTail = formatStatusTail(waterMl, goal, emptyDay);
+      const showHint = shouldShowHabitHint(prof, day?.date, isCompact);
 
       const pickAdd = (ml, event) => {
+        if (isReadOnly) return;
         addWater?.(ml, {
           skipScroll: true,
           source: 'water-review-card',
@@ -164,7 +290,6 @@
         removeWater?.(MINUS_VOLUME);
       };
 
-      // Второй слой: разбор нормы и напоминание «давно не пил» — в metric-popup.
       const openDetails = (event) => {
         const rect = event.currentTarget.getBoundingClientRect();
         openExclusivePopup?.('metric', {
@@ -182,140 +307,165 @@
         haptic?.('light');
       };
 
-      const minusChip = React.createElement(VolumeChip, {
-        ml: MINUS_VOLUME,
-        kind: 'sub',
-        disabled: !canRemove,
-        onPick: pickRemove
-      });
+      const linePath = catmullRomPath(points);
+      const goalPath = catmullRomPath(points.map((point) => ({ x: point.x, y: point.goalY })));
+      const areaPath = linePath
+        + ' L ' + CURVE_X1 + ' ' + CURVE_BASE_Y
+        + ' L ' + CURVE_X0 + ' ' + CURVE_BASE_Y + ' Z';
 
       const cardProps = {
         id: 'water-card',
         className: 'water-review water-review--ring'
+          + (isCompact ? ' water-review--compact' : ' water-review--full')
+          + (alarm ? ' water-review--alarm' : '')
+          + (emptyDay ? ' water-review--empty' : '')
+          + (isReadOnly ? ' water-review--readonly' : '')
           + ' compact-card widget-shadow-diary-glass widget-outline-diary-glass',
-        'aria-label': 'Вода: ' + formatFact(waterMl) + ' л из ' + formatLiters(goal) + ' л'
+        'aria-label': 'Вода: ' + formatFactDisplay(waterMl, emptyDay)
+          + (emptyDay ? '' : ' л из ' + formatLiters(goal) + ' л')
       };
 
-      {
-        const points = week.series.map(curvePoint);
-        const linePoints = points.map((point) => point.x + ',' + point.y).join(' ');
-        const areaPath = 'M ' + points.map((point) => point.x + ' ' + point.y).join(' L ')
-          + ' L ' + CURVE_X1 + ' ' + CURVE_BASE_Y + ' L ' + CURVE_X0 + ' ' + CURVE_BASE_Y + ' Z';
-
-        const ringCard = React.createElement('div', cardProps,
-          React.createElement('div', { className: 'water-review__top' },
-            React.createElement('span', { className: 'water-review__kicker' },
-              'Вода · 7 дней в среднем ' + formatLiters(week.avgMl) + ' л'
-            )
-          ),
-          React.createElement('div', {
-            className: 'water-review__ring',
-            role: 'button',
-            tabIndex: 0,
-            onClick: openDetails
-          },
-            React.createElement('svg', {
-              className: 'water-review__ring-svg',
-              width: 58, height: 58, viewBox: '0 0 58 58', 'aria-hidden': 'true'
-            },
-              React.createElement('circle', {
-                className: 'water-review__ring-track',
-                cx: 29, cy: 29, r: RING_RADIUS, fill: 'none', strokeWidth: 6
-              }),
-              React.createElement('circle', {
-                className: 'water-review__ring-fill',
-                cx: 29, cy: 29, r: RING_RADIUS, fill: 'none', strokeWidth: 6,
-                strokeLinecap: 'round',
-                strokeDasharray: (Math.min(1, ratio) * RING_LENGTH) + ' ' + RING_LENGTH,
-                transform: 'rotate(-90 29 29)'
-              })
+      return React.createElement('div', cardProps,
+        React.createElement('div', { className: 'water-review__top' },
+          React.createElement('span', { className: 'water-review__kicker' }, 'Вода'),
+          React.createElement('span', { className: 'water-review__top-meta' },
+            React.createElement('span', { className: 'water-review__avg' },
+              'в среднем ' + formatLiters(week.avgMl) + ' л'
             ),
-            React.createElement('span', { className: 'water-review__ring-text' },
-              React.createElement('b', { className: 'water-review__ring-fact' }, formatFact(waterMl) + ' л'),
-              React.createElement('span', { className: 'water-review__ring-meta' },
-                'из ' + formatLiters(goal) + ' · ' + leftText
-              )
-            )
-          ),
-          React.createElement('div', { className: 'water-review__quick' },
-            React.createElement(VolumeChip, {
-              ml: MINUS_VOLUME,
-              kind: 'sub',
-              extraClass: 'water-review__chip--in-row',
+            !isCompact ? React.createElement('button', {
+              type: 'button',
+              className: 'water-review__header-sub'
+                + (canRemove ? '' : ' is-off'),
               disabled: !canRemove,
-              onPick: pickRemove
+              onClick: pickRemove
+            }, '−' + MINUS_VOLUME) : null
+          )
+        ),
+
+        React.createElement('div', { className: 'water-review__ring-row' },
+          React.createElement('svg', {
+            className: 'water-review__ring-svg',
+            width: ring.size, height: ring.size,
+            viewBox: '0 0 ' + ring.size + ' ' + ring.size,
+            'aria-hidden': 'true'
+          },
+            React.createElement('circle', {
+              className: 'water-review__ring-track',
+              cx: ring.center, cy: ring.center, r: ring.radius,
+              fill: 'none', strokeWidth: ring.stroke
             }),
-            RING_VOLUMES.map((ml) => React.createElement(VolumeChip, {
-              key: ml, ml, kind: 'quick', onPick: pickAdd
-            }))
+            !emptyDay ? React.createElement('circle', {
+              className: 'water-review__ring-fill',
+              cx: ring.center, cy: ring.center, r: ring.radius,
+              fill: 'none', strokeWidth: ring.stroke,
+              strokeLinecap: 'round',
+              strokeDasharray: (Math.min(1, ratio) * ringLength) + ' ' + ringLength,
+              transform: 'rotate(-90 ' + ring.center + ' ' + ring.center + ')'
+            }) : null
           ),
-          React.createElement('div', { className: 'water-review__curve' },
-            React.createElement('svg', {
-              width: CURVE_WIDTH, height: CURVE_HEIGHT,
-              viewBox: '0 0 ' + CURVE_WIDTH + ' ' + CURVE_HEIGHT,
-              fill: 'none', 'aria-hidden': 'true'
-            },
-              React.createElement('path', {
-                className: 'water-review__curve-area', d: areaPath, fill: 'currentColor', opacity: 0.16
-              }),
-              React.createElement('line', {
-                className: 'water-review__curve-goal',
-                x1: CURVE_X0, y1: CURVE_GOAL_Y, x2: CURVE_X1, y2: CURVE_GOAL_Y,
-                stroke: 'currentColor', strokeWidth: 1, strokeDasharray: '3 3', opacity: 0.5
-              }),
-              React.createElement('polyline', {
-                className: 'water-review__curve-line',
-                points: linePoints,
-                stroke: 'currentColor', strokeWidth: 2.5,
-                strokeLinecap: 'round', strokeLinejoin: 'round'
-              }),
-              points.map((point) => React.createElement('g', { key: point.iso },
-                point.isToday && React.createElement('circle', {
-                  className: 'water-review__curve-halo',
-                  cx: point.x, cy: point.y, r: 6.8, fill: 'none',
-                  stroke: 'currentColor', strokeWidth: 1.2, opacity: 0.45
-                }),
-                // Заливка означает ровно одно: норма взята. Сегодня несёт ореол, не заливку.
-                point.ratio >= 1
-                  ? React.createElement('circle', {
-                    className: 'water-review__curve-dot is-goal',
-                    cx: point.x, cy: point.y, r: point.isToday ? 3.4 : 2.6, fill: 'currentColor'
-                  })
-                  : React.createElement('circle', {
-                    className: 'water-review__curve-dot',
-                    cx: point.x, cy: point.y, r: point.isToday ? 3.4 : 2.6,
-                    stroke: 'currentColor', strokeWidth: point.isToday ? 1.8 : 1.5
-                  })
-              ))
-            )
-          ),
-        );
+          React.createElement('div', { className: 'water-review__ring-text' },
+            React.createElement('b', { className: 'water-review__ring-fact' },
+              formatFactDisplay(waterMl, emptyDay) + (emptyDay ? '' : ' л')
+            ),
+            React.createElement('span', { className: 'water-review__ring-meta' },
+              'из ',
+              React.createElement('button', {
+                type: 'button',
+                className: 'water-review__norm-link',
+                onClick: openDetails
+              }, formatLiters(goal) + ' л'),
+              ' · ',
+              React.createElement('span', { className: 'water-review__ring-tail' }, statusTail)
+            ),
+            emptyDay
+              ? React.createElement('span', { className: 'water-review__empty-note' },
+                'внесите выпитое или налейте стакан')
+              : (lastDrinkLine
+                ? React.createElement('span', { className: 'water-review__last' }, lastDrinkLine)
+                : null)
+          )
+        ),
 
-        return ringCard;
-      }
+        !isCompact ? React.createElement('div', { className: 'water-review__quick water-review__quick--grid' },
+          RING_VOLUMES.map((ml) => React.createElement(VolumeChip, {
+            key: ml, ml, kind: 'quick', readOnly: isReadOnly, onPick: pickAdd
+          }))
+        ) : null,
 
+        React.createElement('div', { className: 'water-review__curve' + (alarm ? ' is-alarm' : '') },
+          React.createElement('svg', {
+            width: CURVE_WIDTH, height: CURVE_HEIGHT,
+            viewBox: '0 0 ' + CURVE_WIDTH + ' ' + CURVE_HEIGHT,
+            fill: 'none', preserveAspectRatio: 'none', 'aria-hidden': 'true'
+          },
+            React.createElement('defs', null,
+              alarm ? React.createElement('linearGradient', {
+                id: 'water-review-alarm-gradient',
+                x1: '0%', y1: '0%', x2: '100%', y2: '0%'
+              },
+                React.createElement('stop', { offset: '0%', stopColor: 'currentColor' }),
+                React.createElement('stop', { offset: '76%', stopColor: 'currentColor' }),
+                React.createElement('stop', { offset: '100%', stopColor: 'var(--wr-alarm)' })
+              ) : null
+            ),
+            React.createElement('path', {
+              className: 'water-review__curve-area',
+              d: areaPath, fill: 'currentColor', opacity: 0.14
+            }),
+            React.createElement('path', {
+              className: 'water-review__curve-goal',
+              d: goalPath,
+              fill: 'none', stroke: 'currentColor', strokeWidth: 1,
+              strokeDasharray: '3 3', opacity: 0.5
+            }),
+            React.createElement('path', {
+              className: 'water-review__curve-line',
+              d: linePath,
+              fill: 'none',
+              stroke: alarm ? 'url(#water-review-alarm-gradient)' : 'currentColor',
+              strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round'
+            })
+          )
+        ),
+
+        React.createElement('div', { className: 'water-review__days' },
+          points.map((point) => (
+            point.waterMl >= point.goalMl && point.goalMl > 0
+              ? React.createElement('span', {
+                key: point.iso, className: 'water-review__day-done', 'aria-label': point.weekday
+              }, React.createElement(CheckIcon))
+              : React.createElement('span', {
+                key: point.iso,
+                className: 'water-review__day-label' + (point.isToday ? ' is-today' : '')
+              }, point.weekday)
+          ))
+        ),
+
+        showHint ? React.createElement('div', {
+          className: 'water-review__hint',
+          onMouseEnter: () => markHabitHintShown(day?.date)
+        }, HABIT_HINT_TEXT) : null
+      );
     };
 
     return _WaterReviewCard;
   }
 
-  /**
-   * Render water card
-   * @param {Object} params - Render parameters
-   * @param {Object} params.React - React reference
-   * @param {Object} params.ctx - day, waterGoal, waterGoalBreakdown, waterLastDrink
-   * @param {Object} params.actions - addWater, removeWater, haptic, openExclusivePopup
-   * @returns {ReactElement} Water card element
-   */
   function renderWaterCard({ React, ctx, actions }) {
-    const { day, waterGoal, waterGoalBreakdown, waterLastDrink } = ctx || {};
+    const {
+      day, prof, waterGoal, waterGoalBreakdown, waterLastDrink,
+      isPastDay, isReadOnly
+    } = ctx || {};
     const { addWater, removeWater, haptic, openExclusivePopup } = actions || {};
 
     return React.createElement(getWaterReviewComponent(React), {
       day,
+      prof,
       waterGoal,
       waterGoalBreakdown,
       waterLastDrink,
+      isPastDay,
+      isReadOnly,
       addWater,
       removeWater,
       haptic,
@@ -323,11 +473,21 @@
     });
   }
 
-  // Export
   HEYS.dayWater = {
     render: renderWaterCard,
     applyOptimistic,
-    _test: { buildWeekSeries, formatLiters, formatFact, curvePoint }
+    _test: {
+      buildWeekSeries,
+      formatLiters,
+      formatFactDisplay,
+      curvePoint,
+      catmullRomPath,
+      isWaterAlarm,
+      isWaterEmptyDay,
+      formatStatusTail,
+      readWaterFabEnabled,
+      computeCurveScaleMax
+    }
   };
 
 })(window);

@@ -15,6 +15,31 @@
   const HARM_THRESHOLD = 5;
   const MACRO_WARN_PCT = 110;
   const MACRO_RED_PCT = 130;
+  const LAG_OK_PCT = 8;
+  const LAG_WARN_PCT = 25;
+  const DEFAULT_WAKE_MIN = 8 * 60;
+  const DEFAULT_EAT_END_MIN = 21 * 60;
+  const EATING_END_BEFORE_BED_MIN = 3 * 60;
+
+  const SUPP_GROUP_ORDER = ['morning', 'withMeal', 'evening', 'anytime'];
+  const SUPP_GROUP_LABELS = {
+    morning: 'Утро',
+    withMeal: 'С едой',
+    evening: 'Вечер',
+    anytime: 'По случаю'
+  };
+  const SUPP_TIMING_TO_GROUP = {
+    morning: 'morning',
+    empty: 'morning',
+    withFood: 'withMeal',
+    withFat: 'withMeal',
+    beforeMeal: 'withMeal',
+    evening: 'evening',
+    beforeBed: 'evening',
+    anytime: 'anytime',
+    afterTrain: 'anytime'
+  };
+  const SUPP_VISIBLE_LIMIT = 6;
 
   // === Числа и форматы ===============================================
 
@@ -286,35 +311,79 @@
   // === Итоги дня =====================================================
 
   const TOTAL_ROWS = [
-    { key: 'kcal', label: 'Калории', unit: 'ккал', tone: 'act', curatorZones: true },
-    { key: 'prot', label: 'Белок', unit: 'г', tone: 'ok', noOverZone: true },
-    { key: 'fat', label: 'Жиры', unit: 'г', tone: 'act' },
-    { key: 'carbs', label: 'Углеводы', unit: 'г', tone: 'act' },
-    { key: 'fiber', label: 'Клетчатка', unit: 'г', tone: 'ok' }
+    { key: 'kcal', label: 'Калории', unit: 'ккал' },
+    { key: 'prot', label: 'Белок', unit: 'г' },
+    { key: 'fat', label: 'Жиры', unit: 'г' },
+    { key: 'carbs', label: 'Углеводы', unit: 'г' },
+    { key: 'fiber', label: 'Клетчатка', unit: 'г' }
   ];
 
-  function buildTotalRows(dayTot, normAbs, hasData) {
-    const kcalThresholds = kcalZoneThresholds();
-    const macroThresholds = { warn: MACRO_WARN_PCT, red: MACRO_RED_PCT };
+  function resolveEatingWindow(day) {
+    const wake = timeToMinutes(day?.sleepEnd || day?.wakeTime || day?.wokeAt);
+    const bed = timeToMinutes(day?.sleepStart || day?.bedTime || day?.asleepAt);
+    const wakeMinutes = wake == null ? DEFAULT_WAKE_MIN : wake;
+    let eatEndMinutes = DEFAULT_EAT_END_MIN;
+    if (bed != null) {
+      eatEndMinutes = bed - EATING_END_BEFORE_BED_MIN;
+      if (eatEndMinutes <= wakeMinutes) eatEndMinutes = DEFAULT_EAT_END_MIN;
+    }
+    return { wakeMinutes, eatEndMinutes };
+  }
+
+  function eatingProgressK(day, isPastDay, nowMinutes) {
+    if (isPastDay) return 1;
+    const { wakeMinutes, eatEndMinutes } = resolveEatingWindow(day);
+    const span = Math.max(1, eatEndMinutes - wakeMinutes);
+    const current = Number.isFinite(nowMinutes)
+      ? nowMinutes
+      : (new Date().getHours() * 60 + new Date().getMinutes());
+    return Math.min(1, Math.max(0, (current - wakeMinutes) / span));
+  }
+
+  function totalRowDeviationZone(fact, norm, progressK) {
+    if (!isNum(fact) || norm <= 0) {
+      return { zone: 'none', barClass: 'is-ok', overClass: 'is-warn' };
+    }
+    const pct = (fact / norm) * 100;
+    if (pct > 100) {
+      const zone = pct >= MACRO_RED_PCT ? 'red' : (pct >= MACRO_WARN_PCT ? 'warn' : 'none');
+      const barClass = zone === 'red' ? 'is-red' : 'is-warn';
+      return { zone, barClass, overClass: barClass };
+    }
+    const expected = norm * progressK;
+    const lagPct = ((expected - fact) / norm) * 100;
+    if (lagPct <= LAG_OK_PCT) return { zone: 'none', barClass: 'is-ok', overClass: 'is-warn' };
+    if (lagPct <= LAG_WARN_PCT) return { zone: 'warn', barClass: 'is-warn', overClass: 'is-warn' };
+    return { zone: 'red', barClass: 'is-red', overClass: 'is-red' };
+  }
+
+  function buildTotalRows(dayTot, normAbs, hasData, options) {
+    const isPastDay = !!(options && options.isPastDay);
+    const progressK = isPastDay ? 1 : (Number(options?.progressK) || 0);
+    const showTick = !isPastDay && progressK < 1;
     return TOTAL_ROWS.map((row) => {
       const norm = Number(normAbs?.[row.key]);
       const fact = hasData ? Number(dayTot?.[row.key]) : null;
       const hasFact = hasData && isNum(fact);
       const pct = hasFact && norm > 0 ? (fact / norm) * 100 : null;
-      const zone = row.noOverZone ? 'none' : zoneOf(pct, row.curatorZones ? kcalThresholds : macroThresholds);
+      const deviation = hasFact && norm > 0
+        ? totalRowDeviationZone(fact, norm, progressK)
+        : { zone: 'none', barClass: 'is-ok', overClass: 'is-warn' };
       const overShare = pct != null && pct > 100 && fact > 0 ? ((fact - norm) / fact) * 100 : 0;
       return {
         key: row.key,
         label: row.label,
         unit: row.unit,
-        tone: row.tone,
         fact: hasFact ? formatNumber(fact) : DASH,
         norm: isNum(norm) && norm > 0 ? formatNumber(norm) : DASH,
         hasBar: hasFact && norm > 0,
-        // Недобор не красный: ниже нормы — просто короткая полоса.
         fillPct: pct == null ? 0 : (pct > 100 ? 100 - overShare : Math.max(0, pct)),
         overPct: overShare,
-        zone
+        zone: deviation.zone,
+        barClass: deviation.barClass,
+        overClass: deviation.overClass,
+        showTick: showTick && !(pct > 100),
+        tickPct: Math.round(progressK * 1000) / 10
       };
     });
   }
@@ -470,7 +539,7 @@
 
   // === Чип-зависимые блоки ===========================================
 
-  function renderMealsTimelineBlock(React, insulinWaveData) {
+  function renderMealsTimelineBlock(React, insulinWaveData, day) {
     const history = Array.isArray(insulinWaveData?.waveHistory) ? insulinWaveData.waveHistory : [];
     const waves = history
       .map((wave) => ({
@@ -483,10 +552,11 @@
 
     const overlaps = Array.isArray(insulinWaveData?.overlaps) ? insulinWaveData.overlaps : [];
     const totalOverlap = overlaps.reduce((sum, item) => sum + (Number(item?.overlapMinutes) || 0), 0);
-    const rangeStart = Math.min(...waves.map((w) => w.startMin));
-    const rangeEnd = Math.max(...waves.map((w) => w.endMin));
+    const { wakeMinutes, eatEndMinutes } = resolveEatingWindow(day);
+    const rangeStart = wakeMinutes;
+    const rangeEnd = eatEndMinutes;
     const span = Math.max(1, rangeEnd - rangeStart);
-    const pos = (minutes) => ((minutes - rangeStart) / span) * 100;
+    const pos = (minutes) => Math.min(100, Math.max(0, ((minutes - rangeStart) / span) * 100));
 
     return blockShell(React, 'mealsTimeline', 'Приёмы за день',
       totalOverlap > 0 ? 'нахлёст ' + formatDurationShort(totalOverlap) : 'без пересечений',
@@ -565,11 +635,11 @@
   // Карточка называется тем, что измеряется: метрики «энергия» в данных нет,
   // ближайшая шкала 1–10 того же смысла — самочувствие (контракт «голод и
   // самочувствие», уточнён дизайном 21.08).
-  function renderHungerBlock(React, day, date) {
+  function renderHungerBlock(React, day, date, onOpenCheckin) {
     const hunger = HEYS.HungerEnergyStatusModal?.getLatestHungerLevel?.(date) ?? null;
     const wellbeingRaw = Number(day?.wellbeingAvg) || Number(day?.wellbeingMorning) || null;
     const wellbeing = isNum(wellbeingRaw) && wellbeingRaw > 0 ? Math.round(wellbeingRaw) : null;
-    if (hunger == null && wellbeing == null) return null;
+    const empty = hunger == null && wellbeing == null;
 
     const scale = (value, tone) => React.createElement('div', { className: 'nutrition-v4-scale', 'aria-hidden': 'true' },
       Array.from({ length: 10 }, (_, i) => React.createElement('i', {
@@ -578,7 +648,12 @@
       }))
     );
 
-    const card = (key, label, value, tone) => React.createElement('div', { key, className: 'nutrition-v4-mini' },
+    const card = (key, label, value, tone) => React.createElement('button', {
+      key,
+      type: 'button',
+      className: 'nutrition-v4-mini',
+      onClick: () => onOpenCheckin?.()
+    },
       React.createElement('b', null, label),
       React.createElement('s', null,
         value == null ? DASH : value,
@@ -588,9 +663,12 @@
     );
 
     return blockShell(React, 'hunger', 'Голод и самочувствие', null, null,
-      React.createElement('div', { className: 'nutrition-v4-mini-row' },
-        card('hunger', 'Голод', hunger, 'act'),
-        card('wellbeing', 'Самочувствие', wellbeing, 'ok')
+      React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'nutrition-v4-mini-row' },
+          card('hunger', 'Голод', hunger, 'act'),
+          card('wellbeing', 'Самочувствие', wellbeing, 'ok')
+        ),
+        empty ? React.createElement('div', { className: 'nutrition-v4-why' }, 'отмечается в утреннем чек-ине') : null
       )
     );
   }
@@ -657,35 +735,184 @@
     );
   }
 
-  // Подписи времени свои: групповые метки каталога несут эмодзи, а на вкладке
-  // их нет ни в заголовках блоков, ни в системных сообщениях.
-  const SUPPLEMENT_TIME_LABELS = {
-    morning: 'утром',
-    withMeal: 'с едой',
-    evening: 'вечером',
-    anytime: 'в любое время'
-  };
-
-  function renderSupplementsBlock(React) {
-    const api = HEYS.Supplements;
-    // getPlanned отдаёт массив идентификаторов каталога, а не объектов.
-    const planned = typeof api?.getPlanned === 'function' ? api.getPlanned() : null;
-    if (!Array.isArray(planned) || !planned.length) return null;
-    const groups = typeof api.groupByTimeOfDay === 'function' ? api.groupByTimeOfDay(planned) : null;
-    const catalog = api.CATALOG || {};
-
-    const rows = [];
-    Object.keys(SUPPLEMENT_TIME_LABELS).forEach((groupKey) => {
-      const ids = groups ? groups[groupKey] : (groupKey === 'anytime' ? planned : []);
-      if (!Array.isArray(ids) || !ids.length) return;
-      const names = ids.map((id) => catalog[id]?.name || id).filter(Boolean);
-      if (!names.length) return;
-      rows.push({ key: groupKey, label: names.join(', '), value: SUPPLEMENT_TIME_LABELS[groupKey] });
+  function groupSupplementsForTab(planned, catalog) {
+    const groups = { morning: [], withMeal: [], evening: [], anytime: [] };
+    (planned || []).forEach((id) => {
+      const timing = catalog?.[id]?.timing;
+      const groupKey = SUPP_TIMING_TO_GROUP[timing] || 'anytime';
+      groups[groupKey].push(id);
     });
-    if (!rows.length) return null;
+    return groups;
+  }
 
-    // Отметки «выпил» здесь нет: факт приёма живёт в дневнике.
-    return blockShell(React, 'supplements', 'Добавки за день', null, null, listRows(React, rows));
+  function SupplementsBlockV4(props) {
+    const { React, date, day, haptic } = props;
+    const api = HEYS.Supplements;
+    const [, bump] = React.useReducer((value) => value + 1, 0);
+    const [expandedGroups, setExpandedGroups] = React.useState({});
+
+    React.useEffect(() => {
+      const sync = (event) => {
+        if (!event?.detail?.date || event.detail.date === date) bump();
+      };
+      global.addEventListener('heys:day-updated', sync);
+      return () => global.removeEventListener('heys:day-updated', sync);
+    }, [date]);
+
+    const catalog = api?.CATALOG || {};
+    const planned = Array.isArray(day?.supplementsPlanned) && day.supplementsPlanned.length
+      ? day.supplementsPlanned
+      : (typeof api?.getPlanned === 'function' ? api.getPlanned() : []);
+    const taken = Array.isArray(day?.supplementsTaken) ? day.supplementsTaken : [];
+    const plannedSet = new Set(planned || []);
+    const staleTaken = taken.filter((id) => !plannedSet.has(id));
+
+    const openCourse = () => {
+      if (typeof api?.openMyCourseScreen === 'function') api.openMyCourseScreen(date, bump);
+      else if (typeof api?.renderCard === 'function') api.renderCard({ dateKey: date, onForceUpdate: bump });
+      haptic?.('light');
+    };
+
+    const toggleSupplement = (id, nextTaken) => {
+      if (typeof api?.markSupplementsTaken === 'function') {
+        api.markSupplementsTaken(date, [id], nextTaken);
+      } else if (typeof api?.markTaken === 'function') {
+        api.markTaken(date, id, nextTaken);
+      }
+      bump();
+      haptic?.('light');
+    };
+
+    const toggleMany = (ids, nextTaken) => {
+      if (!ids.length) return;
+      if (typeof api?.markSupplementsTaken === 'function') {
+        api.markSupplementsTaken(date, ids, nextTaken);
+      } else {
+        ids.forEach((id) => api?.markTaken?.(date, id, nextTaken));
+      }
+      bump();
+      haptic?.('light');
+    };
+
+    if (!Array.isArray(planned) || planned.length === 0) {
+      return React.createElement('section', { className: 'nutrition-v4-block', 'data-block': 'supplements' },
+        React.createElement('div', { className: 'nutrition-v4-block__head' },
+          React.createElement('b', null, 'Добавки')
+        ),
+        React.createElement('div', { className: 'nutrition-v4-supplements__empty' },
+          'Курс не заведён — отметки появятся после настройки.'
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'nutrition-v4-cta nutrition-v4-supplements__setup',
+          onClick: openCourse
+        }, 'Настроить курс')
+      );
+    }
+
+    const groups = groupSupplementsForTab(planned, catalog);
+    const allIds = planned.slice();
+    const takenCount = allIds.filter((id) => taken.includes(id)).length;
+    const allTaken = allIds.length > 0 && takenCount === allIds.length;
+    const headerMeta = allTaken
+      ? React.createElement('span', { className: 'nutrition-v4-block__meta is-ok' }, 'всё принято')
+      : React.createElement('span', { className: 'nutrition-v4-block__meta' },
+        takenCount > 0 ? React.createElement('em', null, takenCount) : null,
+        (takenCount > 0 ? ' ' : '') + 'из ' + allIds.length
+      );
+
+    const renderChip = (id, options) => {
+      const name = catalog[id]?.name || id;
+      const isTaken = taken.includes(id);
+      const isStale = options?.stale;
+      return React.createElement('button', {
+        key: id + (isStale ? '-stale' : ''),
+        type: 'button',
+        className: 'nutrition-v4-supplements__chip'
+          + (isTaken ? ' is-on' : '')
+          + (isStale ? ' is-stale' : ''),
+        onClick: () => toggleSupplement(id, !isTaken)
+      },
+        isTaken ? React.createElement('span', { className: 'nutrition-v4-supplements__chip-check', 'aria-hidden': 'true' },
+          svgIcon(React, { width: 11, height: 11, strokeWidth: 3.5 }, 'M5 13l4 4L19 7')) : null,
+        name,
+        isStale ? React.createElement('span', { className: 'nutrition-v4-supplements__chip-note' }, '· не в курсе') : null
+      );
+    };
+
+    const renderGroup = (groupKey) => {
+      const ids = groups[groupKey] || [];
+      const groupIds = ids.slice();
+      const staleInGroup = staleTaken.filter((id) => (SUPP_TIMING_TO_GROUP[catalog[id]?.timing] || 'anytime') === groupKey);
+      if (!groupIds.length && !staleInGroup.length) return null;
+      const groupTaken = groupIds.filter((id) => taken.includes(id)).length;
+      const allGroupTaken = groupIds.length > 0 && groupTaken === groupIds.length;
+      const expanded = !!expandedGroups[groupKey];
+      const visible = expanded ? groupIds : groupIds.slice(0, SUPP_VISIBLE_LIMIT);
+      const hiddenCount = Math.max(0, groupIds.length - visible.length);
+      const notTaken = groupIds.filter((id) => !taken.includes(id));
+
+      return React.createElement('div', { key: groupKey, className: 'nutrition-v4-supplements__group' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'nutrition-v4-supplements__group-pill' + (allGroupTaken ? ' is-done' : ''),
+          onClick: () => {
+            if (allGroupTaken) {
+              toggleMany(groupIds, false);
+            } else {
+              toggleMany(notTaken, true);
+            }
+          }
+        },
+          React.createElement('b', null, SUPP_GROUP_LABELS[groupKey]),
+          allGroupTaken
+            ? React.createElement('i', { className: 'is-done', 'aria-hidden': 'true' },
+              svgIcon(React, { width: 11, height: 11, strokeWidth: 3.5 }, 'M5 13l4 4L19 7'))
+            : React.createElement('i', null,
+              groupTaken > 0 ? React.createElement('em', null, groupTaken) : null,
+              (groupTaken > 0 ? ' ' : '') + 'из ' + groupIds.length
+            )
+        ),
+        React.createElement('div', { className: 'nutrition-v4-supplements__chips' },
+          visible.map((id) => renderChip(id)),
+          hiddenCount > 0 ? React.createElement('button', {
+            type: 'button',
+            className: 'nutrition-v4-supplements__chip is-more',
+            onClick: () => setExpandedGroups((state) => ({ ...state, [groupKey]: true }))
+          }, 'ещё ' + hiddenCount) : null,
+          staleInGroup.map((id) => renderChip(id, { stale: true }))
+        )
+      );
+    };
+
+    return React.createElement('section', { className: 'nutrition-v4-block', 'data-block': 'supplements' },
+      React.createElement('div', { className: 'nutrition-v4-block__head nutrition-v4-supplements__head' },
+        React.createElement('b', null, 'Добавки'),
+        React.createElement('div', { className: 'nutrition-v4-supplements__actions' },
+          headerMeta,
+          React.createElement('button', {
+            type: 'button',
+            className: 'nutrition-v4-supplements__pill is-course',
+            onClick: openCourse
+          }, 'Курс'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'nutrition-v4-supplements__pill',
+            onClick: () => {
+              if (allTaken) toggleMany(allIds, false);
+              else toggleMany(allIds.filter((id) => !taken.includes(id)), true);
+            }
+          }, allTaken ? 'Снять всё' : 'Всё сразу')
+        )
+      ),
+      React.createElement('div', { className: 'nutrition-v4-supplements__groups' },
+        SUPP_GROUP_ORDER.map((groupKey) => renderGroup(groupKey)).filter(Boolean)
+      )
+    );
+  }
+
+  function renderSupplementsBlock(React, params) {
+    return React.createElement(SupplementsBlockV4, params);
   }
 
   function renderRefeedBlock(React, params) {
@@ -1074,7 +1301,8 @@
 
     const hero = buildHeroState({ eatenKcal, budgetKcal, hasData, isPastDay });
     const windowState = buildWindowState(insulinWaveData);
-    const totalRows = buildTotalRows(dayTot, normAbs, hasData);
+    const progressK = eatingProgressK(day, isPastDay);
+    const totalRows = buildTotalRows(dayTot, normAbs, hasData, { isPastDay, progressK });
     const streak = hasData ? buildMealStreak(meals, pIndex, budgetKcal) : null;
 
     const allMeals = Array.isArray(day?.meals) ? day.meals : [];
@@ -1100,15 +1328,25 @@
 
     // Порядок чип-зависимых блоков задан контрактом и от порядка чипов не
     // зависит: выключенный чип убирает блок, порядок остальных не меняется.
+    const openMorningCheckin = React.useCallback(() => {
+      const ui = HEYS.ui;
+      if (ui && typeof ui.openMorningCheckin === 'function') {
+        ui.openMorningCheckin(date);
+      } else if (HEYS.MorningCheckin && typeof HEYS.MorningCheckin.open === 'function') {
+        HEYS.MorningCheckin.open({ date });
+      }
+      haptic?.('light');
+    }, [date, haptic]);
+
     const optionalBlocks = [
-      chipState.mealsTimeline && renderMealsTimelineBlock(React, insulinWaveData),
-      chipState.hunger && renderHungerBlock(React, day, date),
+      chipState.mealsTimeline && renderMealsTimelineBlock(React, insulinWaveData, day),
+      chipState.hunger && renderHungerBlock(React, day, date, openMorningCheckin),
       chipState.fiber && renderFiberBlock(React, {
         dayTot, normAbs, day, pIndex, hasData,
         expanded: fiberExpanded,
         onToggle: () => { setFiberExpanded((value) => !value); haptic?.('light'); }
       }),
-      chipState.supplements && renderSupplementsBlock(React),
+      chipState.supplements && renderSupplementsBlock(React, { React, date, day, haptic }),
       chipState.refeed && renderRefeedBlock(React, { day, optimum, budgetKcal }),
       chipState.scoreRisk && renderScoreRiskBlock(React, { day, prof, dayTot, normAbs, pIndex }),
       chipState.wave && renderWaveNowBlock(React, insulinWaveData)
@@ -1256,12 +1494,16 @@
           ),
           row.hasBar ? React.createElement('div', { className: 'nutrition-v4-bar' },
             React.createElement('i', {
-              className: row.tone === 'ok' ? 'is-ok' : 'is-act',
+              className: row.barClass,
               style: { width: row.fillPct + '%' }
             }),
             row.overPct > 0 ? React.createElement('i', {
-              className: 'is-' + (row.zone === 'red' ? 'red' : 'warn'),
+              className: row.overClass,
               style: { width: row.overPct + '%' }
+            }) : null,
+            row.showTick ? React.createElement('u', {
+              className: 'nutrition-v4-bar__tick',
+              style: { left: row.tickPct + '%' }
             }) : null
           ) : null
         ))
@@ -1304,9 +1546,12 @@
       global.HEYS?.dayWaterCard?.buildWaterCard?.({
         React,
         day: { ...(day || {}), waterMl: waterCurrent },
+        prof,
         waterGoal: waterTarget,
         waterGoalBreakdown,
         waterLastDrink,
+        isPastDay,
+        isReadOnly,
         haptic,
         openExclusivePopup,
         addWater,
@@ -1373,6 +1618,9 @@
     buildMealStreak,
     giStepLabel,
     kcalZoneThresholds,
+    resolveEatingWindow,
+    eatingProgressK,
+    totalRowDeviationZone,
     readChipState,
     writeChipState
   };

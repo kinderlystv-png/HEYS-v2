@@ -240,10 +240,13 @@ describe('HEYS.dayDayHandlers water persistence', () => {
   });
 
   it('чип объёма в карточке зовёт addWater сразу', () => {
-    // Вид один — «Кольцо»: «Полоса» снята ревью 22 августа.
+    // Полный вид (FAB water off) — четыре чипа +200…+500.
     global.HEYS = {
       utils: { lsGet: vi.fn(() => null) },
-      dayUtils: { lsGet: vi.fn(() => null) }
+      dayUtils: { lsGet: vi.fn(() => null) },
+      FabVisibility: { read: () => ({ water: false, hunger: true, message: true, activity: true, meal: true }) },
+      dayWaterState: { computeWaterGoalBreakdown: () => ({ finalGoal: 2000 }) },
+      NutritionV4: { eatingProgressK: () => 0.5 }
     };
 
     loadWaterCardModule();

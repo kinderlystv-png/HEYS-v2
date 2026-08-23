@@ -144,20 +144,31 @@ describe('вкладка «Питание» v4 — состояния', () => {
     expect(hero.right).not.toContain('%');
   });
 
-  it('зоны калорий берут пороги куратора, у макросов пороги — константы', () => {
+  it('зоны итогов дня: отставание от ожидаемого и перебор по дневной норме', () => {
     window.HEYS.ratioZones = {
       getZones: () => ([
         { id: 'over', from: 1.05, to: 1.2 },
         { id: 'binge', from: 1.2, to: Infinity }
       ])
     };
+    // Кураторские пороги влияют только на героя, не на итоги.
     expect(api.kcalZoneThresholds()).toEqual({ warn: 105, red: 120 });
 
     const norms = { kcal: 1000, prot: 100, fat: 100, carbs: 100, fiber: 100 };
-    const rows = api.buildTotalRows({ kcal: 1080, prot: 100, fat: 108, carbs: 100, fiber: 100 }, norms, true);
-    // Калории на 108 % уже в зоне предупреждения куратора, жиры на 108 % — ещё нет.
-    expect(rows.find((row) => row.key === 'kcal').zone).toBe('warn');
-    expect(rows.find((row) => row.key === 'fat').zone).toBe('over');
+    const rows = api.buildTotalRows(
+      { kcal: 200, prot: 95, fat: 115, carbs: 100, fiber: 140 },
+      norms,
+      true,
+      { isPastDay: false, progressK: 0.5 }
+    );
+    const kcal = rows.find((row) => row.key === 'kcal');
+    expect(kcal.zone).toBe('red');
+    expect(kcal.barClass).toBe('is-red');
+    expect(kcal.showTick).toBe(true);
+    expect(kcal.tickPct).toBe(50);
+    expect(rows.find((row) => row.key === 'prot').zone).toBe('none');
+    expect(rows.find((row) => row.key === 'fat').zone).toBe('warn');
+    expect(rows.find((row) => row.key === 'fiber').zone).toBe('red');
   });
 
   it('нахлёст волн старше «окна открыто»', () => {
@@ -187,18 +198,22 @@ describe('вкладка «Питание» v4 — состояния', () => {
     expect(api.buildWindowState({ rangeStatus: 'settling', rangeRemaining: 80 }).tone).toBe('ok');
   });
 
-  it('недобор без окраски, перебор берёт тон зоны', () => {
+  it('недобор без окраски факта, перебор берёт тон зоны', () => {
     const norms = { kcal: 1000, prot: 100, fat: 100, carbs: 100, fiber: 100 };
-    const rows = api.buildTotalRows({ kcal: 500, prot: 140, fat: 115, carbs: 100, fiber: 140 }, norms, true);
+    const rows = api.buildTotalRows(
+      { kcal: 500, prot: 50, fat: 115, carbs: 100, fiber: 50 },
+      norms,
+      true,
+      { isPastDay: true, progressK: 1 }
+    );
     const kcal = rows.find((row) => row.key === 'kcal');
-    expect(kcal.zone).toBe('none');
+    expect(kcal.zone).toBe('red');
     expect(kcal.overPct).toBe(0);
     expect(Math.round(kcal.fillPct)).toBe(50);
-    // Белок «чем больше, тем лучше» — зон перебора у него нет вовсе.
-    expect(rows.find((row) => row.key === 'prot').zone).toBe('none');
-    // У жиров и клетчатки пороги 110 / 130 — константы дизайна.
+    expect(rows.find((row) => row.key === 'prot').zone).toBe('red');
     expect(rows.find((row) => row.key === 'fat').zone).toBe('warn');
     expect(rows.find((row) => row.key === 'fiber').zone).toBe('red');
+    expect(rows.find((row) => row.key === 'fiber').showTick).toBe(false);
   });
 
   it('единицы стоят в строке итогов, а не в заголовке столбца', () => {
