@@ -124,6 +124,7 @@ export const LEGACY_BUNDLES = {
         'heys_day_hero_metrics.js',
         'heys_day_water_state.js',
         'heys_day_water_v1.js',
+        'heys_water_custom_volume_v1.js',
         'heys_day_daily_table.js',
         'heys_day_steps_ui.js',
         'heys_day_sparkline_state.js',

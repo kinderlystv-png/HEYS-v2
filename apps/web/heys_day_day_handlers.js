@@ -242,18 +242,18 @@
                 }
 
                 function waterTileIsVisible() {
-                    const el = document.querySelector('.widget-water--v4');
-                    // Меряем карточку целиком — заливка живёт на ней, а не на
-                    // внутреннем контейнере.
-                    const card = el && typeof el.closest === 'function'
-                        ? (el.closest('.widget') || el)
-                        : el;
-                    if (!card || typeof card.getBoundingClientRect !== 'function') return false;
-                    const rect = card.getBoundingClientRect();
-                    if (!rect.height) return false;
+                    const cards = document.querySelectorAll('.widget--water');
+                    if (!cards.length) return false;
                     const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
-                    const visible = Math.min(rect.bottom, viewportH) - Math.max(rect.top, 0);
-                    return visible / rect.height >= WATER_TILE_VISIBLE_RATIO;
+                    for (let i = 0; i < cards.length; i++) {
+                        const card = cards[i];
+                        if (!card || typeof card.getBoundingClientRect !== 'function') continue;
+                        const rect = card.getBoundingClientRect();
+                        if (!rect.height) continue;
+                        const visible = Math.min(rect.bottom, viewportH) - Math.max(rect.top, 0);
+                        if (visible / rect.height >= WATER_TILE_VISIBLE_RATIO) return true;
+                    }
+                    return false;
                 }
 
                 /** Якорь столбика: плитка на Главной → сама; иначе видимая кнопка воды (FAB). */

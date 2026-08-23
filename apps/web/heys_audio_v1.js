@@ -255,6 +255,23 @@
     return _waterSoundTapTimes.length > 4;
   }
 
+  let _waterToneStep = 0;
+  let _waterToneDay = null;
+
+  function nextWaterToneCents(dateKey) {
+    const today = (typeof dateKey === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateKey))
+      ? dateKey
+      : new Date().toISOString().slice(0, 10);
+    if (_waterToneDay !== today) {
+      _waterToneDay = today;
+      _waterToneStep = 0;
+    }
+    const cents = (_waterToneStep % 4) * 30;
+    _waterToneStep += 1;
+    if (_waterToneStep >= 4) _waterToneStep = 0;
+    return cents;
+  }
+
   function isThrottled(category) {
     const now = Date.now();
     const last = _lastPlayTime[category] || 0;
@@ -428,9 +445,10 @@
     osc.stop(ctx.currentTime + 0.2);
   }
 
-  function synthWater(ctx, vol) {
+  function synthWater(ctx, vol, detuneCents = 0) {
     // Soft premium water drip: smooth transient, rounded body, tasteful depth
     const now = ctx.currentTime;
+    const detune = Number(detuneCents) || 0;
 
     // ── Soft room wash: a small premium tail without audible echoes ──────────
     const rvDelay = ctx.createDelay(0.08);
@@ -491,6 +509,7 @@
 
     const bodyOsc = ctx.createOscillator();
     bodyOsc.type = 'sine';
+    bodyOsc.detune.setValueAtTime(detune, now);
     bodyOsc.frequency.setValueAtTime(760, now);
     bodyOsc.frequency.exponentialRampToValueAtTime(330, now + 0.14);
     bodyOsc.connect(bodyFilter);
@@ -506,6 +525,7 @@
 
     const silkOsc = ctx.createOscillator();
     silkOsc.type = 'sine';
+    silkOsc.detune.setValueAtTime(detune, now + 0.004);
     silkOsc.frequency.setValueAtTime(1100, now + 0.004);
     silkOsc.frequency.exponentialRampToValueAtTime(820, now + 0.10);
     silkOsc.connect(silkGain);
@@ -521,6 +541,7 @@
 
     const lowOsc = ctx.createOscillator();
     lowOsc.type = 'sine';
+    lowOsc.detune.setValueAtTime(detune, now);
     lowOsc.frequency.setValueAtTime(265, now);
     lowOsc.frequency.exponentialRampToValueAtTime(185, now + 0.12);
     lowOsc.connect(lowGain);
@@ -671,7 +692,12 @@
       if (ctx) {
         const vol = typeof options?.volume === 'number' ? options.volume : s.volume;
         try {
-          SYNTH[cat](ctx, vol);
+          if (cat === 'water') {
+            const detuneCents = nextWaterToneCents(options?.dateKey);
+            SYNTH[cat](ctx, vol, detuneCents);
+          } else {
+            SYNTH[cat](ctx, vol);
+          }
         } catch (e) {
           console.warn('[HEYS.audio] Synthesis error:', cat, e);
         }

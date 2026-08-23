@@ -17,6 +17,7 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { prependLocalToolsBin } from './ensure-local-toolchain.mjs';
 import { isGeneratedFile, isReleaseFile } from './legacy-bundle-config.mjs';
 import { getChangedFilesBetween } from './pre-push-vitest-cache.mjs';
 
@@ -65,7 +66,7 @@ function run(command, commandArgs, options = {}) {
     stdio: options.stdio || 'inherit',
     encoding: options.encoding || 'utf8',
     shell: false,
-    env: process.env,
+    env: prependLocalToolsBin(process.env),
   });
   return Number.isInteger(result.status) ? result.status : 1;
 }
@@ -76,7 +77,7 @@ function runCaptured(command, commandArgs, options = {}) {
     stdio: 'pipe',
     encoding: 'utf8',
     shell: false,
-    env: process.env,
+    env: prependLocalToolsBin(process.env),
   });
   return {
     status: Number.isInteger(result.status) ? result.status : 1,
@@ -178,7 +179,7 @@ function runGitleaksGate() {
   const version = runCaptured('gitleaks', ['version']);
   if (version.status !== 0) {
     writeError('   FAILED: gitleaks is not installed; secret scan was not started.');
-    writeError('   Next command (macOS): brew install gitleaks');
+    writeError('   Next command: pnpm ensure:local');
     return false;
   }
   return runGate(

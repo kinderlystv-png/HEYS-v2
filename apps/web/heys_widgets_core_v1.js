@@ -368,7 +368,6 @@
         // Старые раскладки хранили правду в координатах — переводим их в
         // порядок чтения один раз, дальше порядок ведёт сам массив.
         this._sortWidgetsByReadingOrder();
-        this._autoPackWidgets();
       } else {
         this._widgets = this._createDefaultLayout();
         this._autoPackWidgets();
@@ -2922,7 +2921,6 @@
 
     if (widgets.length > 0) {
       state._widgets = widgets.map(w => state._normalizeWidget(w));
-      state._autoPackWidgets();
       // Принятое из облака — уже сохранённое состояние. Без этого вкладка при
       // ближайшем скрытии отправила бы его обратно со свежим updatedAt.
       state._rememberSavedFingerprint();

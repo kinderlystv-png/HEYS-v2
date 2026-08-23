@@ -44,10 +44,10 @@ describe('Nutrition tab v4 structure', () => {
       'nutrition-v4-window',
       'nutrition-v4-diary',
       'nutrition-v4-cta',
-      'nutrition-v4-totals',
-      'nutrition-v4-quality',
-      'optionalBlocks',
+      "className: 'nutrition-v4-totals'",
       'dayWaterCard?.buildWaterCard',
+      "className: 'nutrition-v4-quality'",
+      'optionalBlocks',
       'nutrition-v4-config',
     ];
     const positions = order.map((marker) => nutritionSource.lastIndexOf(marker));

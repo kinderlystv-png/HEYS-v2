@@ -235,9 +235,9 @@ export async function dismissPostLoginOverlays(page: Page, options: DismissOverl
     }
 }
 
-/** Кнопка «добавить приём» на дашборде (v4 CTA + legacy FAB). */
+/** Кнопка «добавить запись» на дашборде (виджеты FAB + v4 CTA + legacy meal-fab). */
 export function dashboardMealButton(page: Page) {
-    return page.locator('#nutrition-v4-cta, .meal-fab').first();
+    return page.locator('.widgets-quick-fab, #nutrition-v4-cta, .meal-fab').first();
 }
 
 export async function expectDashboardReady(page: Page, timeout = 60_000): Promise<void> {

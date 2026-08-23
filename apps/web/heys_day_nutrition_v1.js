@@ -3,9 +3,8 @@
 // Единственный владелец содержимого вкладки: порядок блоков задан строкой
 // контракта «порядок блоков» канваса nutrition-tab.v4.dc.html. Ярусов
 // «Сейчас / Дневник / Разбор дня» больше нет — блоки разделены воздухом и
-// своими подписями. Чип-зависимые блоки живут здесь же, между «Качеством еды»
-// и водой: page shell рендерит diarySection после карточки и после воды, туда
-// порядок контракта не укладывается.
+// своими подписями. Вода — сразу после «Итогов дня», затем «Качество еды» и
+// чип-зависимые блоки; page shell рендерит diarySection после карточки.
 
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
@@ -340,6 +339,26 @@
     return Math.min(1, Math.max(0, (current - wakeMinutes) / span));
   }
 
+  // Тревога воды: окно до отбоя минус 1 ч (контракт water-add / nutrition-tab).
+  const WATER_ALARM_END_BEFORE_BED_MIN = 60;
+
+  function waterAlarmProgressK(day, isPastDay, nowMinutes) {
+    if (isPastDay) return 1;
+    const wake = timeToMinutes(day?.sleepEnd || day?.wakeTime || day?.wokeAt);
+    const bed = timeToMinutes(day?.sleepStart || day?.bedTime || day?.asleepAt);
+    const wakeMinutes = wake == null ? DEFAULT_WAKE_MIN : wake;
+    let endMinutes = DEFAULT_EAT_END_MIN;
+    if (bed != null) {
+      endMinutes = bed - WATER_ALARM_END_BEFORE_BED_MIN;
+      if (endMinutes <= wakeMinutes) endMinutes = DEFAULT_EAT_END_MIN;
+    }
+    const span = Math.max(1, endMinutes - wakeMinutes);
+    const current = Number.isFinite(nowMinutes)
+      ? nowMinutes
+      : (new Date().getHours() * 60 + new Date().getMinutes());
+    return Math.min(1, Math.max(0, (current - wakeMinutes) / span));
+  }
+
   function totalRowDeviationZone(fact, norm, progressK) {
     if (!isNum(fact) || norm <= 0) {
       return { zone: 'none', barClass: 'is-ok', overClass: 'is-warn' };
@@ -347,7 +366,7 @@
     const pct = (fact / norm) * 100;
     if (pct > 100) {
       const zone = pct >= MACRO_RED_PCT ? 'red' : (pct >= MACRO_WARN_PCT ? 'warn' : 'none');
-      const barClass = zone === 'red' ? 'is-red' : 'is-warn';
+      const barClass = zone === 'red' ? 'is-red' : (zone === 'warn' ? 'is-warn' : 'is-ok');
       return { zone, barClass, overClass: barClass };
     }
     const expected = norm * progressK;
@@ -1509,38 +1528,6 @@
         ))
       ),
 
-      React.createElement('section', { className: 'nutrition-v4-quality' },
-        React.createElement('div', { className: 'nutrition-v4-totals__title' }, 'Качество еды'),
-        React.createElement('div', { className: 'nutrition-v4-quality__row' },
-          React.createElement('div', {
-            className: 'nutrition-v4-quality__card' + (harmValue != null && harmGood ? ' is-ok' : '')
-          },
-            React.createElement('div', { className: 'nutrition-v4-quality__label' }, 'Вредность'),
-            React.createElement('div', { className: 'nutrition-v4-quality__value' },
-              React.createElement('b', null, harmValue == null ? DASH : formatDecimal(harmValue, 1)),
-              React.createElement('i', null, 'из 10')
-            ),
-            React.createElement('div', { className: 'nutrition-v4-quality__hint' + (harmValue != null && !harmGood ? ' is-bad' : '') },
-              harmValue != null && harmGood
-                ? React.createElement('span', { className: 'nutrition-v4-quality__check', 'aria-hidden': 'true' },
-                  svgIcon(React, { width: 11, height: 11, strokeWidth: 3.5 }, 'M5 13l4 4L19 7'))
-                : null,
-              'порог ' + HARM_THRESHOLD + ' · ' + (harmValue == null ? 'нет данных' : (harmGood ? 'в норме' : 'выше порога'))
-            )
-          ),
-          React.createElement('div', { className: 'nutrition-v4-quality__card' },
-            React.createElement('div', { className: 'nutrition-v4-quality__label' }, 'Гликемический'),
-            React.createElement('div', { className: 'nutrition-v4-quality__value' },
-              React.createElement('b', null, giValue == null || giValue <= 0 ? DASH : Math.round(giValue)),
-              React.createElement('i', null, giStepLabel(giValue))
-            ),
-            React.createElement('div', { className: 'nutrition-v4-quality__hint' }, 'взвешен по углеводам')
-          )
-        )
-      ),
-
-      optionalBlocks,
-
       // Карточка воды рисуется своим канвасом water-add.v4.dc.html; здесь она
       // вторична и показывается всегда — чипа у неё нет.
       global.HEYS?.dayWaterCard?.buildWaterCard?.({
@@ -1557,6 +1544,38 @@
         addWater,
         removeWater
       }),
+
+      React.createElement('section', { className: 'nutrition-v4-quality' },
+        React.createElement('div', { className: 'nutrition-v4-totals__title' }, 'Качество еды'),
+        React.createElement('div', { className: 'nutrition-v4-quality__row' },
+          React.createElement('div', {
+            className: 'nutrition-v4-quality__card' + (harmValue != null && harmGood ? ' is-ok' : '')
+          },
+            React.createElement('div', { className: 'nutrition-v4-quality__label' }, 'Вредность'),
+            React.createElement('div', { className: 'nutrition-v4-quality__value' },
+              React.createElement('b', null, harmValue == null ? DASH : formatDecimal(harmValue, 1)),
+              harmValue == null ? null : React.createElement('i', null, 'из 10')
+            ),
+            harmValue == null ? null : React.createElement('div', { className: 'nutrition-v4-quality__hint' + (!harmGood ? ' is-bad' : '') },
+              harmGood
+                ? React.createElement('span', { className: 'nutrition-v4-quality__check', 'aria-hidden': 'true' },
+                  svgIcon(React, { width: 11, height: 11, strokeWidth: 3.5 }, 'M5 13l4 4L19 7'))
+                : null,
+              'порог ' + HARM_THRESHOLD + ' · ' + (harmGood ? 'в норме' : 'выше порога')
+            )
+          ),
+          React.createElement('div', { className: 'nutrition-v4-quality__card' },
+            React.createElement('div', { className: 'nutrition-v4-quality__label' }, 'Гликемический'),
+            React.createElement('div', { className: 'nutrition-v4-quality__value' },
+              React.createElement('b', null, giValue == null || giValue <= 0 ? DASH : Math.round(giValue)),
+              (giValue == null || giValue <= 0) ? null : React.createElement('i', null, giStepLabel(giValue))
+            ),
+            (giValue == null || giValue <= 0) ? null : React.createElement('div', { className: 'nutrition-v4-quality__hint' }, 'взвешен по углеводам')
+          )
+        )
+      ),
+
+      optionalBlocks,
 
       sheetMealData ? React.createElement(MealEditSheet, {
         React,
@@ -1620,6 +1639,7 @@
     kcalZoneThresholds,
     resolveEatingWindow,
     eatingProgressK,
+    waterAlarmProgressK,
     totalRowDeviationZone,
     readChipState,
     writeChipState

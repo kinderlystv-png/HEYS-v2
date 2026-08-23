@@ -120,6 +120,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     const WATER_FAB_VOL_CHIP_MS = 180;
+    const WaterCustomVolumeHost = HEYS.WaterCustomVolume?.WaterCustomVolumeHost;
+    const useWaterLongPress = HEYS.WaterCustomVolume.useLongPress350;
+
+    function WaterFabVolButton({ className, disabled, onShortClick, onLongPress, children, 'aria-disabled': ariaDisabled }) {
+        const press = useWaterLongPress(onLongPress, { onShortClick, disabled });
+        return React.createElement('button', {
+            type: 'button',
+            className,
+            disabled,
+            'aria-disabled': ariaDisabled,
+            onPointerDown: press.onPointerDown,
+            onPointerMove: press.onPointerMove,
+            onPointerUp: press.onPointerUp,
+            onClick: press.onClick
+        }, children);
+    }
 
     function WaterFabButton({ onAddWater, onRemoveWater, waterMl: waterMlProp }) {
         const [chipsOpen, setChipsOpen] = React.useState(false);
@@ -173,6 +189,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             onRemoveWater?.(ml, event);
         };
 
+        const openCustomVolume = React.useCallback((event) => {
+            event?.stopPropagation?.();
+            HEYS.waterFeedback?.markVolumeChipsClosing?.(WATER_FAB_VOL_CHIP_MS);
+            setChipsOpen(false);
+            HEYS.WaterCustomVolume?.open?.({
+                onAdd: (ml) => onAddWater(ml, event)
+            });
+        }, [onAddWater]);
+
+        const fabLongPress = useWaterLongPress(openCustomVolume, {
+            onShortClick: (event) => {
+                event.stopPropagation();
+                setChipsOpen((open) => !open);
+            }
+        });
+
         return React.createElement('div', {
             ref: wrapRef,
             className: 'water-fab-wrap' + (chipsOpen ? ' is-chips-open' : ''),
@@ -182,33 +214,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 role: 'group',
                 'aria-label': 'Объём воды',
             },
-                React.createElement('button', {
-                    type: 'button',
+                React.createElement(WaterFabVolButton, {
                     className: 'water-fab-vol water-fab-vol--minus',
-                    onClick: pickRemove(200),
                     disabled: waterMl <= 0,
                     'aria-disabled': waterMl <= 0 ? 'true' : 'false',
+                    onShortClick: pickRemove(200),
+                    onLongPress: openCustomVolume
                 }, '−200'),
-                React.createElement('button', {
-                    type: 'button',
+                React.createElement(WaterFabVolButton, {
                     className: 'water-fab-vol',
-                    onClick: pickVolume(200),
+                    onShortClick: pickVolume(200),
+                    onLongPress: openCustomVolume
                 }, '+200'),
-                React.createElement('button', {
-                    type: 'button',
+                React.createElement(WaterFabVolButton, {
                     className: 'water-fab-vol',
-                    onClick: pickVolume(500),
+                    onShortClick: pickVolume(500),
+                    onLongPress: openCustomVolume
                 }, '+500')
             ),
             React.createElement('button', {
                 type: 'button',
                 className: 'water-fab',
-                onClick: (event) => {
-                    event.stopPropagation();
-                    setChipsOpen((open) => !open);
-                },
                 'aria-label': chipsOpen ? 'Скрыть объёмы воды' : 'Добавить воду',
                 'aria-expanded': chipsOpen ? 'true' : 'false',
+                onPointerDown: fabLongPress.onPointerDown,
+                onPointerMove: fabLongPress.onPointerMove,
+                onPointerUp: fabLongPress.onPointerUp,
+                onClick: fabLongPress.onClick
             }, renderFabNavIcon('water', '🥛', 18))
         );
     }
@@ -274,7 +306,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return null;
     }
 
-    function QuickActionsFabGroup({ id, onAddWater, onRemoveWater, waterMl, onAddMeal, onAddActivity, hungerContext = {} }) {
+    function QuickActionsFabGroup({ id, onAddWater, onRemoveWater, waterMl, onAddMeal, onAddActivity, hungerContext = {}, hideMealFab = false }) {
         const { fabVisibility, layoutAnimate } = useFabVisibilityState();
 
         return React.createElement('div', {
@@ -283,6 +315,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             ...(id ? { id } : {}),
         },
             FAB_SLOT_KEYS.map((key) => {
+                if (hideMealFab && key === 'meal') return null;
                 const on = fabVisibility[key] !== false;
                 return React.createElement('div', {
                     key,
@@ -661,6 +694,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 isMobile && isTabActive && (mobileSubTab === 'stats' || mobileSubTab === 'diary' || mobileSubTab === 'activity') && !offlineColdStart && React.createElement(QuickActionsFabGroup, {
                     id: 'tour-fab-buttons',
+                    hideMealFab: mobileSubTab === 'diary',
                     waterMl: day?.waterMl || 0,
                     onAddWater: (ml, e) => addWater(ml, {
                         source: 'day-fab',
@@ -954,7 +988,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 optimum,
                 getMealType,
                 getMealQualityScore
-            })
+            }),
+            WaterCustomVolumeHost ? React.createElement(WaterCustomVolumeHost) : null
         );
     }
 

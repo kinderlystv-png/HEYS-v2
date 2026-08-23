@@ -22,8 +22,8 @@ pids
 coverage/
 *.lcov
 
-# Local pre-push test cache (per-developer; tracks SHA of last green vitest)
-.husky/.test-cache-last-pass
+# Local agent toolchain binaries (gitleaks etc.)
+.tools/
 .husky/.test-cache-last-pass-*
 # sync-local-workspace HEAD stamp (dedupes post-merge + pnpm pull)
 .heys/
@@ -179,6 +179,7 @@ dist/
 
 # Test results
 test-results/
+test-results-reports/
 
 # Temporary files
 temp/
@@ -226,6 +227,7 @@ docs/archive/reports-*/
 
 # Test results
 test-results/
+test-results-reports/
 coverage/
 playwright-report/
 

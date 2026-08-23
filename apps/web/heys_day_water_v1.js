@@ -96,9 +96,9 @@
     return Math.max(200, Math.ceil((peak + 200) / 200) * 200);
   }
 
-  function eatingProgressK(day, isPastDay) {
-    if (typeof HEYS.NutritionV4?.eatingProgressK === 'function') {
-      return HEYS.NutritionV4.eatingProgressK(day, isPastDay);
+  function waterAlarmProgressK(day, isPastDay) {
+    if (typeof HEYS.NutritionV4?.waterAlarmProgressK === 'function') {
+      return HEYS.NutritionV4.waterAlarmProgressK(day, isPastDay);
     }
     if (isPastDay) return 1;
     return 0.5;
@@ -108,7 +108,7 @@
     if (isPastDay) return false;
     if (isWaterEmptyDay(day, waterMl)) return true;
     const goal = Math.max(1, Number(waterGoal) || 2000);
-    const expected = goal * eatingProgressK(day, isPastDay);
+    const expected = goal * waterAlarmProgressK(day, isPastDay);
     return (expected - waterMl) > goal * ALARM_LAG_SHARE;
   }
 
@@ -230,6 +230,19 @@
     if (_WaterReviewCard) return _WaterReviewCard;
 
     function VolumeChip({ ml, kind, extraClass, disabled, onPick, readOnly }) {
+      const openCustomVolume = React.useCallback((event) => {
+        if (readOnly) return;
+        HEYS.WaterCustomVolume?.open?.({
+          onAdd: (volume) => onPick(volume, event)
+        });
+      }, [onPick, readOnly]);
+
+      const useWaterLongPress = HEYS.WaterCustomVolume.useLongPress350;
+      const press = useWaterLongPress(openCustomVolume, {
+        disabled: disabled || readOnly,
+        onShortClick: (event) => onPick(ml, event)
+      });
+
       return React.createElement('button', {
         type: 'button',
         className: 'water-review__chip water-review__chip--' + kind
@@ -237,7 +250,10 @@
           + (disabled ? ' is-off' : '')
           + (readOnly ? ' is-readonly' : ''),
         disabled: disabled || readOnly || undefined,
-        onClick: (event) => onPick(ml, event)
+        onPointerDown: press.onPointerDown,
+        onPointerMove: press.onPointerMove,
+        onPointerUp: press.onPointerUp,
+        onClick: press.onClick
       }, (kind === 'sub' ? '−' : '+') + ml);
     }
 

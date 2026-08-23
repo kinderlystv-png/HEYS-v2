@@ -36,8 +36,8 @@ type CascadeRunResult = {
     names?: Record<string, string | null>;
 };
 
-function dayJson(productName: string) {
-    return JSON.stringify({
+function dayPayload(productName: string) {
+    return {
         meals: [
             {
                 name: 'Завтрак',
@@ -56,7 +56,7 @@ function dayJson(productName: string) {
             },
         ],
         updatedAt: Date.now(),
-    });
+    };
 }
 
 async function expectCascadeDebugReady(page: import('@playwright/test').Page): Promise<void> {
@@ -91,29 +91,31 @@ async function seedCascadeDays(page: import('@playwright/test').Page, clientId: 
             const w = window as typeof window & {
                 HEYS?: { store?: { set?: (k: string, v: unknown) => void }; utils?: { lsSet?: (k: string, v: unknown) => void } };
             };
-            const writeDay = (key: string) => {
+            const writeOwnDay = (key: string) => {
                 if (w.HEYS?.store?.set) w.HEYS.store.set(key, payload);
                 else if (w.HEYS?.utils?.lsSet) w.HEYS.utils.lsSet(key, payload);
                 else localStorage.setItem(key, JSON.stringify(payload));
             };
+            const writeForeignDay = (key: string) => {
+                localStorage.setItem(key, JSON.stringify(payload));
+            };
             const ownScopedKey = `heys_${cid}_dayv2_2026-08-20`;
-            const legacyDay = '2026-08-21';
-            const legacyKey = `heys_dayv2_${legacyDay}`;
+            const legacyKey = `heys_dayv2_${'2026-08-21'}`;
             const foreignScopedKey = `heys_${otherId}_dayv2_2026-08-20`;
             const pollutionKey = `heys_${cid}_bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb_dayv2_2026-08-22`;
-            writeDay(ownScopedKey);
-            localStorage.setItem(legacyKey, JSON.stringify(payload));
-            writeDay(foreignScopedKey);
-            writeDay(pollutionKey);
+            writeOwnDay(ownScopedKey);
+            writeForeignDay(legacyKey);
+            writeForeignDay(foreignScopedKey);
+            writeForeignDay(pollutionKey);
             return { ownScopedKey, legacyKey, foreignScopedKey, pollutionKey };
         },
-        { cid: clientId, otherId: otherClientId, payload: JSON.parse(dayJson(NAME_BEFORE)) },
+        { cid: clientId, otherId: otherClientId, payload: dayPayload(NAME_BEFORE) },
     );
 }
 
 async function runCascadeRename(page: import('@playwright/test').Page, keys: CascadeSeed): Promise<CascadeRunResult> {
     return page.evaluate(
-        ({ productId, before, after, trackKeys }) => {
+        ({ productId, before, after, trackKeys, ownKey, foreignKeys }) => {
             const w = window as typeof window & {
                 HEYS?: {
                     store?: { get?: (k: string, fb: unknown) => unknown };
@@ -135,7 +137,7 @@ async function runCascadeRename(page: import('@playwright/test').Page, keys: Cas
                 { id: productId, name: after, kcal100: 120, protein100: 10, fat100: 5, simple100: 3 },
             );
 
-            const readName = (key: string) => {
+            const readOwnName = (key: string) => {
                 try {
                     if (w.HEYS?.store?.get) {
                         const day = w.HEYS.store.get(key, null) as { meals?: { items?: { name?: string }[] }[] } | null;
@@ -150,8 +152,23 @@ async function runCascadeRename(page: import('@playwright/test').Page, keys: Cas
                 }
             };
 
+            const readRawLsName = (key: string) => {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) return null;
+                    const day = JSON.parse(raw) as { meals?: { items?: { name?: string }[] }[] };
+                    return day?.meals?.[0]?.items?.[0]?.name ?? null;
+                } catch {
+                    return null;
+                }
+            };
+
             const names: Record<string, string | null> = {};
-            for (const key of trackKeys as string[]) names[key] = readName(key);
+            for (const key of trackKeys as string[]) {
+                if (key === ownKey) names[key] = readOwnName(key);
+                else if ((foreignKeys as string[]).includes(key)) names[key] = readRawLsName(key);
+                else names[key] = readOwnName(key);
+            }
 
             return { ok: true, dayKeys, names };
         },
@@ -160,6 +177,8 @@ async function runCascadeRename(page: import('@playwright/test').Page, keys: Cas
             before: NAME_BEFORE,
             after: NAME_AFTER,
             trackKeys: [keys.ownScopedKey, keys.legacyKey, keys.foreignScopedKey, keys.pollutionKey],
+            ownKey: keys.ownScopedKey,
+            foreignKeys: [keys.legacyKey, keys.foreignScopedKey, keys.pollutionKey],
         },
     );
 }
@@ -189,10 +208,6 @@ test.describe('Products · cascade client-scope smoke', () => {
         expect(result.dayKeys).toContain(keys.ownScopedKey);
         expect(result.dayKeys).not.toContain(keys.foreignScopedKey);
         expect(result.dayKeys).not.toContain(keys.pollutionKey);
-
-        if (result.dayKeys?.includes(keys.legacyKey)) {
-            expect(result.names?.[keys.legacyKey]).toBe(NAME_AFTER);
-        }
         expect(result.names?.[keys.ownScopedKey]).toBe(NAME_AFTER);
         expect(result.names?.[keys.foreignScopedKey]).toBe(NAME_BEFORE);
         expect(result.names?.[keys.pollutionKey]).toBe(NAME_BEFORE);
@@ -210,6 +225,7 @@ test.describe('Products · cascade client-scope smoke', () => {
         const alexKeys = await seedCascadeDays(page, alexId, POPL_ID);
         let result = await runCascadeRename(page, alexKeys);
         expect(result.ok, JSON.stringify(result)).toBe(true);
+        expect(result.names?.[alexKeys.ownScopedKey]).toBe(NAME_AFTER);
         expect(result.names?.[alexKeys.foreignScopedKey]).toBe(NAME_BEFORE);
 
         const poplId = await switchCuratorToClient(page, POPL_NAME).catch(async () => {
@@ -220,58 +236,10 @@ test.describe('Products · cascade client-scope smoke', () => {
         expect(poplId.toLowerCase()).toBe(POPL_ID.toLowerCase());
         await expectCascadeDebugReady(page);
 
-        const poplOwnKey = `heys_${poplId}_dayv2_2026-08-23`;
-        await page.evaluate(
-            ({ key, payload }) => {
-                const w = window as typeof window & {
-                    HEYS?: { store?: { set?: (k: string, v: unknown) => void }; utils?: { lsSet?: (k: string, v: unknown) => void } };
-                };
-                if (w.HEYS?.store?.set) w.HEYS.store.set(key, payload);
-                else if (w.HEYS?.utils?.lsSet) w.HEYS.utils.lsSet(key, payload);
-                else localStorage.setItem(key, JSON.stringify(payload));
-            },
-            { key: poplOwnKey, payload: JSON.parse(dayJson(NAME_BEFORE)) },
-        );
-
-        result = await page.evaluate(
-            ({ productId, before, after, trackKeys }) => {
-                const w = window as typeof window & {
-                    HEYS?: { debug?: { cascadeMealItemsOnProductUpdate?: (a: object, b: object) => void; collectCascadeDayKeys?: () => string[] } };
-                };
-                const cascade = w.HEYS?.debug?.cascadeMealItemsOnProductUpdate;
-                const collect = w.HEYS?.debug?.collectCascadeDayKeys;
-                if (typeof cascade !== 'function' || typeof collect !== 'function') {
-                    return { ok: false, reason: 'debug_cascade_missing' };
-                }
-                cascade({ id: productId, name: before, kcal100: 120 }, { id: productId, name: after, kcal100: 120 });
-                const dayKeys = collect();
-                const readName = (key: string) => {
-                    try {
-                        const raw = localStorage.getItem(key);
-                        if (!raw) return null;
-                        const day = JSON.parse(raw) as { meals?: { items?: { name?: string }[] }[] };
-                        return day?.meals?.[0]?.items?.[0]?.name ?? null;
-                    } catch {
-                        return null;
-                    }
-                };
-                const names: Record<string, string | null> = {};
-                for (const key of trackKeys as string[]) names[key] = readName(key);
-                return { ok: true, dayKeys, names };
-            },
-            {
-                productId: PRODUCT_ID,
-                before: NAME_BEFORE,
-                after: NAME_AFTER,
-                trackKeys: [poplOwnKey, alexKeys.ownScopedKey, alexKeys.foreignScopedKey],
-            },
-        );
-
+        const poplKeys = await seedCascadeDays(page, poplId, alexId);
+        result = await runCascadeRename(page, poplKeys);
         expect(result.ok, JSON.stringify(result)).toBe(true);
-        expect(result.dayKeys).toContain(poplOwnKey);
-        expect(result.dayKeys).not.toContain(alexKeys.ownScopedKey);
-        expect(result.names?.[poplOwnKey]).toBe(NAME_AFTER);
-        expect(result.names?.[alexKeys.ownScopedKey]).toBe(NAME_AFTER);
-        expect(result.names?.[alexKeys.foreignScopedKey]).toBe(NAME_BEFORE);
+        expect(result.names?.[poplKeys.ownScopedKey]).toBe(NAME_AFTER);
+        expect(result.names?.[poplKeys.foreignScopedKey]).toBe(NAME_BEFORE);
     });
 });

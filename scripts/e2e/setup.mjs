@@ -23,7 +23,7 @@ const E2E_MIGRATIONS = [
   'scripts/db/migrations/2026-08-23_e2e_test_clients_login_v2.sql',
   'scripts/db/migrations/2026-08-23_e2e_test_clients_consents.sql',
   'scripts/db/migrations/2026-08-23_e2e_test_clients_day_seed.sql',
-  'scripts/db/migrations/2026-08-23_dev_cleanup_smoke_clients.sql',
+  // dev_cleanup_smoke_clients.sql — manual only (destructive DELETE); see migration header.
 ];
 
 function log(step, msg) {
@@ -126,22 +126,34 @@ function installPlaywrightBrowsers() {
 
 async function verifyCuratorApi() {
   const api = process.env.HEYS_E2E_API_URL || 'http://localhost:4001';
-  const email = process.env.HEYS_TEST_CURATOR_EMAIL;
-  const password = process.env.HEYS_TEST_CURATOR_PASSWORD;
+  const email = process.env.HEYS_TEST_CURATOR_EMAIL?.trim();
+  const password = process.env.HEYS_TEST_CURATOR_PASSWORD?.trim();
+  if (!email || !password) {
+    log('api', 'curator login probe skipped (HEYS_TEST_CURATOR_* unset — PIN smokes still run)');
+    return true;
+  }
   try {
     const res = await fetch(`${api}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    if (!res.ok) {
-      fail(`curator login probe ${api}/auth/login → HTTP ${res.status} (start pnpm dev:local for local probe)`);
+    if (res.ok) {
+      log('api', 'curator login probe ok');
+      return true;
+    }
+    if (res.status === 401) {
+      fail(`curator login probe ${api}/auth/login → HTTP 401 (invalid HEYS_TEST_CURATOR_* in .env.local)`);
       return false;
     }
-    log('api', 'curator login probe ok (dev:local must be running for this check)');
-    return true;
+    if (res.status >= 500) {
+      log('api', `curator login probe skipped (API HTTP ${res.status}) — start pnpm dev:local, then node scripts/e2e/verify.mjs`);
+      return true;
+    }
+    fail(`curator login probe ${api}/auth/login → HTTP ${res.status} (is pnpm dev:local running on ${api}?)`);
+    return false;
   } catch (e) {
-    log('api', `curator login probe skipped (${e.message}) — run node scripts/e2e/verify.mjs after pnpm dev:local`);
+    log('api', `curator login probe skipped (${e.message}) — start pnpm dev:local, then node scripts/e2e/verify.mjs`);
     return true;
   }
 }

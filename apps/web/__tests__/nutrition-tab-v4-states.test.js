@@ -198,6 +198,22 @@ describe('вкладка «Питание» v4 — состояния', () => {
     expect(api.buildWindowState({ rangeStatus: 'settling', rangeRemaining: 80 }).tone).toBe('ok');
   });
 
+  it('перебор 100–110 %: полоса шалфейная, цифра без зоны', () => {
+    const norms = { kcal: 1000, prot: 100, fat: 100, carbs: 100, fiber: 100 };
+    const rows = api.buildTotalRows(
+      { kcal: 1050, prot: 50, fat: 50, carbs: 50, fiber: 50 },
+      norms,
+      true,
+      { isPastDay: true, progressK: 1 }
+    );
+    const kcal = rows.find((row) => row.key === 'kcal');
+    expect(kcal.zone).toBe('none');
+    expect(kcal.barClass).toBe('is-ok');
+    expect(kcal.overClass).toBe('is-ok');
+    expect(kcal.overPct).toBeGreaterThan(0);
+    expect(kcal.showTick).toBe(false);
+  });
+
   it('недобор без окраски факта, перебор берёт тон зоны', () => {
     const norms = { kcal: 1000, prot: 100, fat: 100, carbs: 100, fiber: 100 };
     const rows = api.buildTotalRows(
@@ -220,6 +236,19 @@ describe('вкладка «Питание» v4 — состояния', () => {
     const rows = api.buildTotalRows({ kcal: 1289, prot: 96 }, { kcal: 1931, prot: 128 }, true);
     expect(rows.map((row) => row.unit)).toEqual(['ккал', 'г', 'г', 'г', 'г']);
     expect(rows.map((row) => row.label)).toEqual(['Калории', 'Белок', 'Жиры', 'Углеводы', 'Клетчатка']);
+  });
+
+  it('пустой день · качество: прочерки без ступени и подсказок', () => {
+    const view = renderTab(renderFn, {
+      ctx: {
+        day: { date: '2026-08-20', meals: [] },
+        eatenKcal: 0,
+        dayTot: {}
+      }
+    });
+    expect(view.getAllByText(DASH).length).toBeGreaterThan(0);
+    expect(view.queryByText('взвешен по углеводам')).toBeNull();
+    expect(view.queryByText(/порог 5/)).toBeNull();
   });
 
   it('качество еды: порог вредности — константа 5, ГИ словом', () => {
@@ -318,6 +347,20 @@ describe('вкладка «Питание» v4 — состояния', () => {
     window.HEYS.getMealType = () => ({ name: 'Завтрак' });
     expect(api.mealTypeLabel({ name: 'Ужин', mealType: 'dinner' })).toBe('Завтрак');
     expect(api.mealTypeLabel({ name: 'Ужин', mealType: 'dinner', mealTypePinned: true })).toBe('Ужин');
+  });
+
+  it('порядок блоков: вода сразу после итогов дня', () => {
+    window.HEYS.dayWaterCard = {
+      buildWaterCard: ({ React }) => React.createElement('div', { className: 'water-review', 'data-testid': 'water-card' })
+    };
+    const view = renderTab(renderFn);
+    const root = view.container.querySelector('.nutrition-v4');
+    const indexOf = (selector) => Array.from(root.querySelectorAll('*')).indexOf(root.querySelector(selector));
+    expect(indexOf('.nutrition-v4-totals')).toBeGreaterThan(-1);
+    expect(indexOf('.water-review')).toBeGreaterThan(-1);
+    expect(indexOf('.nutrition-v4-quality')).toBeGreaterThan(-1);
+    expect(indexOf('.nutrition-v4-totals')).toBeLessThan(indexOf('.water-review'));
+    expect(indexOf('.water-review')).toBeLessThan(indexOf('.nutrition-v4-quality'));
   });
 
   it('мета-строка шапки не обещает синхронизацию', () => {

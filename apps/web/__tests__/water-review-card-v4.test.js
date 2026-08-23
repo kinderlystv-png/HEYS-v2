@@ -10,7 +10,20 @@ const WATER_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_water_v1.
 const originalHEYS = global.HEYS;
 const originalReact = global.React;
 
+function stubWaterCustomVolume() {
+  global.HEYS.WaterCustomVolume = {
+    useLongPress350: (_onLongPress, { onShortClick, disabled } = {}) => ({
+      onPointerDown: () => {},
+      onPointerMove: () => {},
+      onPointerUp: (event) => { if (!disabled) onShortClick?.(event); },
+      onClick: (event) => { if (!disabled) onShortClick?.(event); }
+    }),
+    open: vi.fn()
+  };
+}
+
 function loadWaterCard() {
+  stubWaterCustomVolume();
   eval(WATER_SRC);
   return window.HEYS.dayWater;
 }
@@ -182,6 +195,7 @@ describe('карточка воды стоит в «Разборе дня», а 
       NutritionV4: { eatingProgressK: () => 0.5 }
     };
     global.React = RealReact;
+    stubWaterCustomVolume();
     eval(WATER_SRC);
     eval(CARD_SRC);
     eval(NUTRITION_SRC);

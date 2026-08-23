@@ -15,7 +15,12 @@ import { formatSecretsActionBlock, hasCuratorSecrets, printSecretsActionBlock } 
 loadEnv({ path: path.join(E2E_REPO_ROOT, '.env.local'), override: false });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const JSON_REPORT = path.join(E2E_REPO_ROOT, 'test-results', 'smoke-last.json');
+const JSON_REPORT = path.join(E2E_REPO_ROOT, 'test-results-reports', 'smoke-last.json');
+let smokePlaywrightStartedAt = 0;
+
+function ensureJsonReportDir() {
+  fs.mkdirSync(path.dirname(JSON_REPORT), { recursive: true });
+}
 
 function run(cmd, args, label, extraEnv = {}) {
   console.log(`\n[e2e:smoke] ${label}`);
@@ -36,9 +41,24 @@ function run(cmd, args, label, extraEnv = {}) {
 }
 
 function printSmokeSummary() {
+  if (!smokePlaywrightStartedAt) return;
   if (!fs.existsSync(JSON_REPORT)) return;
+  if (smokePlaywrightStartedAt) {
+    const reportMtime = fs.statSync(JSON_REPORT).mtimeMs;
+    if (reportMtime + 500 < smokePlaywrightStartedAt) {
+      console.warn('[e2e:smoke] JSON report predates this run — skipping summary (stale artifact)');
+      return;
+    }
+  }
   try {
     const report = JSON.parse(fs.readFileSync(JSON_REPORT, 'utf8'));
+    if (smokePlaywrightStartedAt && report?.stats?.startTime) {
+      const reportStart = Date.parse(report.stats.startTime);
+      if (Number.isFinite(reportStart) && reportStart + 500 < smokePlaywrightStartedAt) {
+        console.warn('[e2e:smoke] JSON report stats.startTime predates this run — skipping summary');
+        return;
+      }
+    }
     let passed = 0;
     let failed = 0;
     let skipped = 0;
@@ -68,9 +88,11 @@ function printSmokeSummary() {
 
 run('node', [path.join(__dirname, 'setup.mjs')], 'bootstrap (setup.mjs)');
 
+ensureJsonReportDir();
+smokePlaywrightStartedAt = Date.now();
 run(
   'pnpm',
-  ['exec', 'playwright', 'test', '-c', 'playwright.smoke.config.ts', '--reporter=list', '--reporter=json'],
+  ['exec', 'playwright', 'test', '-c', 'playwright.smoke.config.ts', '--reporter=list,json'],
   'playwright smoke suite',
   { PLAYWRIGHT_JSON_OUTPUT_NAME: JSON_REPORT },
 );

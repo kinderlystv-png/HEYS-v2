@@ -365,7 +365,7 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: 52px;
+  min-height: 48px;
   margin-top: 16px;
   padding: 0 22px;
   border: none;
@@ -502,7 +502,7 @@
 }
 
 .nutrition-v4-bar i.is-warn {
-  background: var(--v4-warn-text, #92400e);
+  background: var(--v4-warn-soft, #eab308);
 }
 
 .nutrition-v4-bar i.is-red {
@@ -711,7 +711,7 @@
 .nutrition-v4-timeline__track {
   position: relative;
   flex: 1;
-  height: 8px;
+  height: 6px;
   border-radius: 999px;
   background: var(--v4-line, #e5e7eb);
   overflow: hidden;
@@ -721,7 +721,7 @@
   position: absolute;
   top: 0;
   display: block;
-  height: 8px;
+  height: 6px;
   border-radius: 999px;
   background: var(--v4-act, #2563eb);
 }

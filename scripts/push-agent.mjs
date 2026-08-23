@@ -26,6 +26,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isWhatsNewEnabled } from './release-features.mjs';
+import { prependLocalToolsBin } from './ensure-local-toolchain.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const requireFromHere = createRequire(import.meta.url);
@@ -104,7 +105,7 @@ function run(command, commandArgs, options = {}) {
     stdio: options.stdio || 'inherit',
     encoding: options.encoding || 'utf8',
     shell: false,
-    env: options.env ? { ...process.env, ...options.env } : process.env,
+    env: prependLocalToolsBin(options.env ? { ...process.env, ...options.env } : process.env),
   });
   return result;
 }
@@ -850,6 +851,9 @@ function push() {
   }
 
   if (shouldRunPreflight()) {
+    writeLine('Ensuring local toolchain (packages, node_modules, gitleaks)…');
+    const ensure = runNode('scripts/ensure-local-toolchain.mjs', ['--fix', '--stop-dev']);
+    if (ensure.status !== 0) process.exit(ensure.status || 1);
     writeLine('Running push preflight before git push...');
     const target = getPushTarget();
     const preflightArgs = buildPreflightCommandArgs({

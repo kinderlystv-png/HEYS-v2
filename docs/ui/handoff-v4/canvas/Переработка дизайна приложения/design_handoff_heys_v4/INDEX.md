@@ -43,10 +43,10 @@ grep-ом ничего включать не нужно.
 контракта или два канваса спорят без пометки `источник` — остановитесь и
 спросите дизайнера.
 
-Образец формата — `water-add.v4.dc.html`. Контракт есть у **17** канвасов, 852
-строки `data-v` всего: `nutrition-tab` (187 строк), `home-widgets` (183),
+Образец формата — `water-add.v4.dc.html`. Контракт есть у **17** канвасов, 858
+строк `data-v` всего: `nutrition-tab` (189 строк), `home-widgets` (185),
 `water-add` (72), `login` (42), `checkin-morning` (39), `tips` (39),
-`gamification` (39), `date-remainders` (35), `spinners` (35), `registration`
+`gamification` (39), `date-remainders` (36), `spinners` (35), `registration`
 (34), `pwa-update` (29), `questionnaire` (28), `settings-system` (23),
 `undo-bar` (22), `curator-edits` (21), `app-splash` (16), `tab-insights` (6 —
 только ярус «Питание», охват назван в контракте). Без контракта остались

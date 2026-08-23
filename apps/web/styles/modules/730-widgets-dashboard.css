@@ -314,20 +314,20 @@ body:has(.page-reports) .hdr::after {
 .widgets-tab,
 .page-day {
   position: relative;
-  /* Контент определяет высоту + большой отступ для воздуха снизу */
   padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
-  /* navbar + safe area + воздух */
-  /* Минимальная высота чтобы был скролл */
   min-height: calc(100vh - 60px);
-  /* Отступы для контента. Главная: горизонталь только у сетки (канвас g1 = 16px). */
   padding-left: 18px;
   padding-right: 18px;
   padding-top: 0;
-  /* Минимальный отступ сверху */
   box-sizing: border-box;
-  /* Предотвращаем горизонтальный overflow */
   width: 100%;
   overflow-x: hidden;
+}
+
+/* Главная: сетка целиком на экране ≥740 px — без принудительного скролла страницы. */
+.widgets-tab:not(.widgets-tab--legacy-overflow):not(.widgets-tab--editing) {
+  min-height: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Виджеты и день: плоский v4-фон */
@@ -2708,25 +2708,28 @@ body:has(.page-reports) .hdr::after {
   border: none;
   padding: 0;
   margin: 0;
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  background: rgba(43, 22, 8, 0.34);
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   z-index: 0;
 }
 
 [data-theme$="dark"] .widgets-quick-scrim {
-  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
+  background: rgba(0, 0, 0, 0.5);
 }
 
-[data-theme-id="blue"] .widgets-quick-scrim,
-[data-theme-id="blue-dark"] .widgets-quick-scrim {
+[data-theme-id="blue"] .widgets-quick-scrim {
   background: rgba(16, 24, 38, 0.34);
+}
+
+[data-theme-id="blue-dark"] .widgets-quick-scrim {
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .widgets-quick-sheet {
   position: relative;
   z-index: 1;
-  width: min(calc(100vw - 28px), 320px);
+  width: min(232px, calc(100vw - 28px));
   border-radius: 20px;
   background: var(--v4-bg, #fffaf1);
   box-shadow:
@@ -2734,13 +2737,14 @@ body:has(.page-reports) .hdr::after {
     0 14px 34px rgba(80, 50, 20, 0.26);
   padding: 13px 14px;
   margin-bottom: 8px;
+  transform-origin: bottom right;
   animation: widgets-quick-sheet-in 180ms ease-out;
 }
 
 @keyframes widgets-quick-sheet-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(40%);
   }
 
   to {

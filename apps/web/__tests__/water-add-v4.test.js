@@ -179,24 +179,24 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(dayUtilsSrc).toContain('HEYS.vibration?.impactLight');
   });
 
-  it('новый «звук капли» не реализован — семпла ещё нет, прежний звук цел', () => {
-    // Канвас: «пока файла нет, анимацию можно отдавать в разработку, звук — нет».
-    // Прежний звук добавления при этом не трогаем — его удаление никто не просил.
+  it('звук капли: синтез WebAudio с вариацией +30¢', () => {
+    const audioSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_audio_v1.js'), 'utf8');
     expect(handlersSrc).toContain("HEYS.audio.play('waterAdded'");
-    // Задержка звука привязана к анимации плитки, а не к настройке ОС:
-    // подъём уровня функционален и не гаснет (docs/implementation/MOTION_POLICY.md).
     expect(handlersSrc).toMatch(/waterTileIsVisible\(\)\) \{[\s\S]*?setTimeout\(playSound, 240\)/);
-    // Карточка в «Разборе дня» отвечает сама (контракт 52): один общий апдейт
-    // вместо двух копий DOM-кода по селекторам старого кольца.
     expect(handlersSrc).toContain('HEYS.dayWater?.applyOptimistic?.');
-    expect(handlersSrc).not.toContain('.water-ring-fill');
-    expect(handlersSrc).not.toContain('waterDropSound');
-    expect(handlersSrc).not.toContain('30 центов');
+    expect(audioSrc).toContain('function nextWaterToneCents');
+    expect(audioSrc).toContain('(_waterToneStep % 4) * 30');
   });
 
   it('быстрые объёмы FAB — столбик после ухода чипов, якорь не трогаем', () => {
     const dayShellSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_day_page_shell.js'), 'utf8');
+    const customSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_water_custom_volume_v1.js'), 'utf8');
     expect(dayShellSrc).toContain('function WaterFabButton');
+    expect(dayShellSrc).toContain('WaterFabVolButton');
+    expect(dayShellSrc).toContain('HEYS.WaterCustomVolume?.open');
+    expect(customSrc).toContain('const LONG_PRESS_MS = 350');
+    expect(customSrc).toContain('PRESETS_ML = [330, 500, 750, 1000]');
+    expect(customSrc).toContain('heys:water-custom-volume-open');
     expect(dayShellSrc).toContain('water-fab-vol');
     expect(dayShellSrc).toContain('pickVolume(200)');
     expect(dayShellSrc).toContain('pickVolume(500)');
