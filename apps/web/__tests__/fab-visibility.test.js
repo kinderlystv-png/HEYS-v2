@@ -116,11 +116,40 @@ describe('settings sheet FAB chips markup', () => {
         expect(dayShellSrc).toContain("fab-slot--' + key");
     });
 
-    it('defers FAB visibility update until layout-animate paints', () => {
+    // Тест раньше назывался «defers FAB visibility update until layout-animate
+    // paints» и держался за строку 'fab-group--layout-animate animate-always' в
+    // heys_day_page_shell.js. Охранял он отложенный коммит видимости, но сам
+    // предмет охраны исчез: прогон перестройки стопки снят пакетом дизайна 24
+    // августа (строки контракта settings-system «когда применяется» и «снятый
+    // прогон»), правила .fab-group--layout-animate для этой группы ушли из
+    // продуктового CSS, и класс перестал что-либо анимировать. Откладывать
+    // коммит стало не под что: слоты меняют состояние мгновенно, как требует
+    // контракт. Поэтому проверка переписана на то, что теперь действительно
+    // должно быть верным для стопки, — никакого мёртвого класса и никакой
+    // выдержки под него, — а отложенный коммит проверяется там, где он остался
+    // живым: у одиночной кнопки мессенджера, где класс всё ещё включает
+    // единственное разрешённое контрактом движение.
+    it('quick-actions stack commits FAB visibility without the removed layout run', () => {
         const dayShellPath = path.resolve(__dirname, '../heys_day_page_shell.js');
         const dayShellSrc = fs.readFileSync(dayShellPath, 'utf8');
-        expect(dayShellSrc).toContain('fab-group--layout-animate animate-always');
-        expect(dayShellSrc).toContain('requestAnimationFrame(() => {');
-        expect(dayShellSrc).not.toMatch(/setFabVisibility\(visibility\);\s*if \(event\?\.detail\?\.animated\)/);
+        const markup = dayShellSrc.slice(dayShellSrc.indexOf('function QuickActionsFabGroup'));
+        expect(markup).not.toContain('fab-group--layout-animate');
+        expect(dayShellSrc).not.toContain('FAB_LAYOUT_ANIM_MS');
+        expect(dayShellSrc).not.toContain('FAB_SLOT_STAGGER_MS');
+        expect(dayShellSrc).toContain("window.addEventListener('heys:fab-visibility-changed'");
+    });
+
+    it('messenger-only FAB keeps the deferred commit and holds the class only for its 220ms', () => {
+        const shellPath = path.resolve(__dirname, '../heys_app_shell_v1.js');
+        const shellSrc = fs.readFileSync(shellPath, 'utf8');
+        // Класс должен лечь в разметку раньше, чем сменится состояние слота,
+        // иначе переход не с чего запускать — за это и отвечает двойной rAF.
+        expect(shellSrc).toContain('fab-group--layout-animate animate-always');
+        expect(shellSrc).toContain('requestAnimationFrame(() => {');
+        expect(shellSrc).not.toMatch(/setMessengerFabOn\(next\);\s*if \(event\?\.detail\?\.animated\)/);
+        // Выдержка равна самой длинной оставшейся анимации (появление 220 мс),
+        // а не снятому прогону стопки 52×4 + 400 + 80 = 688 мс.
+        expect(shellSrc).toContain('const FAB_MESSENGER_ANIM_MS = 220;');
+        expect(shellSrc).not.toContain('FAB_SLOT_STAGGER_MAX');
     });
 });

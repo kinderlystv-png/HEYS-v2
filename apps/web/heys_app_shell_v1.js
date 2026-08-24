@@ -6050,10 +6050,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const shouldRenderContent = !!clientId;
         const hideProductHeader = tab === 'tasks' || tab === 'board';
         const MessageFabButton = HEYS.Messenger?.FabButton;
-        const FAB_SLOT_ANIM_MS = 400;
-        const FAB_SLOT_STAGGER_MS = 52;
-        const FAB_SLOT_STAGGER_MAX = 4;
-        const FAB_LAYOUT_ANIM_MS = FAB_SLOT_STAGGER_MS * FAB_SLOT_STAGGER_MAX + FAB_SLOT_ANIM_MS + 80;
+        // Строки контракта settings-system «когда применяется» и «снятый прогон»:
+        // прогон перестройки стопки снят, остаётся только появление и
+        // исчезновение самой кнопки. В CSS это 220 мс на появление (перелёт до
+        // 1,06) и 160 мс на исчезновение, поэтому класс держится 220 мс, а не
+        // 688 мс от снятого стаггера 52×4 + 400 + 80.
+        const FAB_MESSENGER_ANIM_MS = 220;
         const readMessengerFabVisible = React.useCallback(() => (
             HEYS.FabVisibility?.isVisible?.('message') !== false
         ), []);
@@ -6089,7 +6091,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         }, [readMessengerFabVisible]);
         React.useEffect(() => {
             if (!messengerFabAnimating) return undefined;
-            const timer = window.setTimeout(() => setMessengerFabAnimating(false), FAB_LAYOUT_ANIM_MS);
+            const timer = window.setTimeout(() => setMessengerFabAnimating(false), FAB_MESSENGER_ANIM_MS);
             return () => window.clearTimeout(timer);
         }, [messengerFabAnimating]);
         const showMessengerFabGroup = messengerFabOn || messengerFabAnimating;
