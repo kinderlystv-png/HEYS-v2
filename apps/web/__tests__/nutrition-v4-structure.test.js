@@ -172,8 +172,11 @@ describe('Nutrition tab v4 structure', () => {
     expect(cssSource).toMatch(/var\(--v4-act-text[,)]/);
     expect(cssSource).toMatch(/var\(--v4-warn-text[,)]/);
     expect(cssSource).toMatch(/var\(--v4-bad-text[,)]/);
-    // Неопределённых переменных на вкладке нет.
-    expect(cssSource).not.toContain('--v4-chip');
+    // Неопределённых ролей на вкладке нет. `--v4-chip` был в этом списке,
+    // пока роль не была задана ни в одной палитре и подставляла литерал;
+    // 24.08 она заведена в четырёх v4-наборах (002-ui-v4-palette-roles.css)
+    // и держится тестом v4-palette-roles-contract, поэтому запрет снят.
+    expect(cssSource).not.toContain('--v4-undefined-role');
     expect(cssSource).not.toContain('--v4-surface-strong');
     expect(cssSource).not.toContain('--v4-surface-2');
     // Новые роли объявлены во всех шести наборах.

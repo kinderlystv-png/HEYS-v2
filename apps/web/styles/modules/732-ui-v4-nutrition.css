@@ -310,7 +310,9 @@
   width: 15px;
   height: 15px;
   margin-bottom: 1px;
-  color: var(--nut-dim-icon);
+  /* Строка «вид списка приёмов»: шеврон тем же тоном, что состав строки —
+     отдельного тона у иконки в этой строке нет. */
+  color: var(--nut-dim);
 }
 
 /* «+ ещё» у непустого приёма — обводкой, «+ продукт» у пустого — заливкой. */
@@ -453,9 +455,10 @@
   color: var(--v4-ink, #111827);
 }
 
-.nutrition-v4-total-row__head span[data-zone='warn'] em {
-  color: var(--v4-warn-text, #92400e);
-}
+/* Строка «цвет цифры»: факт краснеет ТОЛЬКО в красной зоне. В
+   предупреждающей цвет несёт полоса, а число остаётся чернилами —
+   иначе два сигнала об одном и том же, и красная зона перестаёт
+   отличаться от жёлтой. */
 
 .nutrition-v4-total-row__head span[data-zone='red'] em {
   color: var(--v4-bad-text, #a8382b);
@@ -1399,4 +1402,26 @@
 
 .nutrition-v4-supplements__setup {
   margin-top: 0;
+}
+
+/* Строка «вид «только чтение»»: плашка режима чтения. У .readonly-banner не
+   было ни одного правила во всём проекте — блок рендерился голым, без
+   заливки и полей, и причина висела текстом на фоне вкладки. */
+.readonly-banner {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--v4-chip, #efe3cf);
+}
+
+.readonly-banner-title {
+  font: 600 12px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #111827);
+}
+
+.readonly-banner-text {
+  margin-top: 4px;
+  font: 500 11px/1.45 Figtree, system-ui, sans-serif;
+  color: var(--nut-dim);
+  text-wrap: pretty;
 }
