@@ -277,10 +277,12 @@
   min-width: 0;
 }
 
+/* Глиф стоит по центру круга 40 px: контракт «вид шапки листа» задаёт круг с
+   иконкой, а не иконку, прижатую к его краю. */
 .ios-home-install-modal__phone {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   width: 40px;
   height: 40px;
   flex: none;
@@ -325,8 +327,11 @@
   min-height: 44px;
   padding: 10px 13px;
   border-radius: 16px;
-  background: #faf7f2;
-  border: 1px solid rgba(32, 30, 29, 0.04);
+  /* Первая поверхность (--c1 канваса). Было #faf7f2 — ни фон экрана, ни первая
+     поверхность, плюс обводка 1 px, которой в контракте нет. Литерал, а не
+     роль: соседний номер шага набран так же (#efe3cf — вторая поверхность),
+     лист песочный на любой теме. */
+  background: #f7efe2;
 }
 
 /* Номер — круг 24 фоном второй поверхности, цифра 11/800 акцентным тоном. */
@@ -714,10 +719,12 @@
   content: none;
 }
 
+/* Контракт «вид шага»: прокручиваемое содержимое — поля 16/18/0, у шага веса
+   14 сверху. Низ нулевой: нижнее поле держит футер (12/18/20). */
 .mc-modal--daily .mc-step-content {
   flex: 1;
   overflow: auto;
-  padding: 14px 18px 12px;
+  padding: 16px 18px 0;
   min-height: 0;
 }
 
@@ -902,6 +909,10 @@
 
 .mc-progress-dots--pills .mc-progress-dot.active {
   width: 18px;
+  /* Контракт «вид полосы прогресса»: текущая — ширина 18 при той же высоте.
+     Увеличения он не знает, а базовое `.mc-progress-dot.active` (600-й модуль,
+     грузится позже) даёт scale(1.2). */
+  transform: none;
   background: var(--v4-sand-act, #c67139);
 }
 
@@ -950,9 +961,14 @@
   padding: 16px 17px;
 }
 
+/* Контракт «вид карточки шага»: радиус 20, поля 16/17 — одна форма у всех
+   карточек шага «Остальное». Кадры «Чек-ин · остальное» и «замеры просрочены»
+   рисуют вторую форму (радиус 16, поля 12–13/14) у добавок и рутины; контракт
+   старше кадра, поэтому карточки сведены к одной форме — той, что кадр даёт
+   холодному душу. */
 .mc-rest-card {
-  border-radius: 16px;
-  padding: 12px 14px;
+  border-radius: 20px;
+  padding: 16px 17px;
 }
 
 .mc-scale-head {
@@ -1010,30 +1026,36 @@
   gap: 6px;
   margin-top: 12px;
   font: 700 12px/1 Figtree, system-ui, sans-serif;
-  color: #5c6a45;
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .mc-weight-week-delta--down {
-  color: #5c6a45;
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .mc-weight-week-delta--up {
-  color: #a1471c;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 .mc-weight-week-delta svg {
   flex: none;
 }
 
+/* Контракт «капсула веса»: ширина 212, радиус 22, поля 13/12/16, отступ сверху
+   38 от строки динамики (36 там, где строки динамики нет — первое утро). */
 .mc-weight-kilo-card {
-  width: 186px;
+  width: 212px;
   max-width: 100%;
-  margin: 24px auto 0;
+  margin: 38px auto 0;
   background: var(--v4-sand-surface, #f7efe2);
-  border-radius: 20px !important;
-  padding: 12px 10px 14px;
+  border-radius: 22px !important;
+  padding: 13px 12px 16px;
   overflow: hidden;
   box-sizing: border-box;
+}
+
+.mc-weight-hero:not(:has(.mc-weight-week-delta)) + .mc-weight-kilo-card {
+  margin-top: 36px;
 }
 
 .mc-kilo-label,
@@ -1177,9 +1199,15 @@
   font-size: 12px;
 }
 
+/* Контракт «минимальная область нажатия»: строки-ответы внутри карточек шага
+   42–44 px, и ни один нажимаемый элемент не ниже 44. Берём 44 — единственное
+   число, которое закрывает оба требования сразу. Кадры дают 42 у ответов рутины
+   и 38 у «Да/Нет» загрузочного дня; контракт старше кадра.
+   36 px с прозрачным припуском — исключение только для чипов каталога добавок
+   (`.mc-supp-flow-chip`), где контракт «вид чипа добавки» фиксирует высоту. */
 .mc-pill--mini {
   min-width: 52px;
-  min-height: 36px;
+  min-height: 44px;
   font-size: 11.5px;
   padding: 0 14px;
 }
@@ -1326,28 +1354,24 @@
   margin-top: 12px;
 }
 
-.mc-rest-row--overdue {
+/* Два класса, а не один: базовое `.mc-rest-row` стоит ниже по файлу и при
+   равной силе перебивало и фон, и поля просроченной строки — тинта на экране
+   не было вовсе. */
+.mc-rest-row.mc-rest-row--overdue {
   background: var(--v4-sand-tint, #f6e6dd);
-  box-shadow: inset 0 0 0 1.5px #a1471c;
+  box-shadow: inset 0 0 0 1.5px var(--v4-warn-text, #a1471c);
   padding: 12px 14px 13px;
 }
 
-.mc-rest-overdue-kicker {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font: 700 9.5px/1 Figtree, system-ui, sans-serif;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #a1471c;
-  margin-bottom: 6px;
-}
-
-.mc-rest-overdue-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: #a1471c;
+/* Контракт «вид просроченной строки»: метка числом дней стоит СПРАВА, 10 px/700.
+   Кадр «Чек-ин · замеры просрочены» рисует её кикером слева над строкой
+   (9,5 px/700 с точкой) — контракт старше кадра, поэтому метка справа, а точка
+   и кикер сняты. */
+.mc-rest-overdue-badge {
+  margin-left: auto;
+  font: 700 10px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-warn-text, #a1471c);
+  white-space: nowrap;
   flex: none;
 }
 
@@ -1507,7 +1531,9 @@
 
 .mc-rest-cold-streak {
   font: 700 10px/1.2 Figtree, system-ui, sans-serif;
-  color: #5c6b42;
+  /* Роль --gr канваса. Модуль чек-ина песочный на всех темах, поэтому
+     --v4-sand-ok-text, а не --v4-ok-text: у последнего в классике #16a34a. */
+  color: var(--v4-sand-ok-text, #5c6a45);
   white-space: nowrap;
   flex: none;
 }
@@ -1743,7 +1769,7 @@
 }
 
 .mc-rest-chevron--accent {
-  color: #a1471c;
+  color: var(--v4-warn-text, #a1471c);
   font: 700 15px/1 Figtree, system-ui, sans-serif;
 }
 
@@ -2087,6 +2113,7 @@
 }
 
 .mc-supp-flow-chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2099,6 +2126,17 @@
   color: rgba(0, 0, 0, 0.62);
   cursor: pointer;
   box-shadow: none;
+}
+
+/* Контракт «минимальная область нажатия»: чипы 36 с прозрачными полями до 44.
+   Видимая высота остаётся 36 («вид чипа добавки»), нажимается 44. */
+.mc-supp-flow-chip::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -4px;
+  bottom: -4px;
 }
 
 .mc-supp-flow-chip.is-on {
@@ -5507,7 +5545,9 @@
   align-items: center;
   gap: 10px;
   min-height: 44px;
-  margin: 0 0 12px;
+  /* Контракт nutrition-tab, «плашка куратора»: отступ СВЕРХУ 12 — плашка стоит
+     первым блоком карточки, над героем. Было `0 0 12px` — отступ снизу. */
+  margin: 12px 0 0;
   padding: 11px 13px;
   border: none;
   border-radius: 16px;
@@ -5529,11 +5569,18 @@
 }
 .ca-day-entry__sub {
   display: block;
-  margin-top: 2px;
+  /* Контракт: «N изменений · посмотреть» 11 px/500 тоном --dim через 3 px.
+     --dim вкладки — это --nut-dim (сплошной тон под порог 4,5:1), а не
+     --v4-ink-2 (чернила 55 %). Плашка стоит внутри .nutrition-v4, роль до неё
+     доходит; фолбэк оставлен на случай отрисовки вне вкладки.
+     Заодно `.ca-day-entry__sub` снят из палеточных списков ниже (тёмные .5,
+     синяя .52) — они перебивали роль везде, кроме песочной; списки остались за
+     `.ca-modal__*`, это лист правок куратора и чужая строка контракта. */
+  margin-top: 3px;
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  color: var(--nut-dim, rgba(0, 0, 0, 0.5));
 }
 /* v4-intentional */
 .ca-day-entry .ca-modal__chevron { color: var(--v4-act-text); }
@@ -5625,19 +5672,15 @@ html[data-theme-id="classic-dark"] .ca-day-entry__title,
 html[data-theme-id="sand-dark"] .ca-modal__header-subtitle,
 html[data-theme-id="sand-dark"] .ca-modal__item-sub,
 html[data-theme-id="sand-dark"] .ca-modal__meal-product,
-html[data-theme-id="sand-dark"] .ca-day-entry__sub,
 html[data-theme-id="classic-dark"] .ca-modal__header-subtitle,
 html[data-theme-id="classic-dark"] .ca-modal__item-sub,
 html[data-theme-id="classic-dark"] .ca-modal__meal-product,
-html[data-theme-id="classic-dark"] .ca-day-entry__sub,
 [data-theme="sand-dark"] .ca-modal__header-subtitle,
 [data-theme="sand-dark"] .ca-modal__item-sub,
 [data-theme="sand-dark"] .ca-modal__meal-product,
-[data-theme="sand-dark"] .ca-day-entry__sub,
 [data-theme="dark"][data-palette="classic"] .ca-modal__header-subtitle,
 [data-theme="dark"][data-palette="classic"] .ca-modal__item-sub,
-[data-theme="dark"][data-palette="classic"] .ca-modal__meal-product,
-[data-theme="dark"][data-palette="classic"] .ca-day-entry__sub {
+[data-theme="dark"][data-palette="classic"] .ca-modal__meal-product {
   color: rgba(242, 237, 230, 0.5);
 }
 html[data-theme-id="sand-dark"] .ca-modal__close,
@@ -5731,11 +5774,9 @@ html[data-theme-id="blue"] .ca-day-entry__title,
 html[data-theme-id="blue"] .ca-modal__header-subtitle,
 html[data-theme-id="blue"] .ca-modal__item-sub,
 html[data-theme-id="blue"] .ca-modal__meal-product,
-html[data-theme-id="blue"] .ca-day-entry__sub,
 [data-theme="blue"][data-palette="blue"] .ca-modal__header-subtitle,
 [data-theme="blue"][data-palette="blue"] .ca-modal__item-sub,
-[data-theme="blue"][data-palette="blue"] .ca-modal__meal-product,
-[data-theme="blue"][data-palette="blue"] .ca-day-entry__sub {
+[data-theme="blue"][data-palette="blue"] .ca-modal__meal-product {
   color: rgba(16, 24, 38, 0.52);
 }
 html[data-theme-id="blue"] .ca-modal__close,
@@ -5807,11 +5848,9 @@ html[data-theme-id="blue-dark"] .ca-day-entry__title,
 html[data-theme-id="blue-dark"] .ca-modal__header-subtitle,
 html[data-theme-id="blue-dark"] .ca-modal__item-sub,
 html[data-theme-id="blue-dark"] .ca-modal__meal-product,
-html[data-theme-id="blue-dark"] .ca-day-entry__sub,
 [data-theme="blue-dark"][data-palette="blue"] .ca-modal__header-subtitle,
 [data-theme="blue-dark"][data-palette="blue"] .ca-modal__item-sub,
-[data-theme="blue-dark"][data-palette="blue"] .ca-modal__meal-product,
-[data-theme="blue-dark"][data-palette="blue"] .ca-day-entry__sub {
+[data-theme="blue-dark"][data-palette="blue"] .ca-modal__meal-product {
   color: rgba(232, 238, 246, 0.5);
 }
 html[data-theme-id="blue-dark"] .ca-modal__close,
@@ -5933,11 +5972,11 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 }
 
 .mc-modal--daily .mc-weight-kilo-card {
-  width: 186px;
+  width: 212px;
   max-width: 100%;
   margin-left: auto;
   margin-right: auto;
-  padding: 12px 10px 14px;
+  padding: 13px 12px 16px;
 }
 
 .mc-modal--daily .mc-weight-kilo-card,
@@ -5947,6 +5986,12 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   overflow: hidden;
 }
 
+/* Радиус капсулы веса — 22 по контракту; у блока сна своя строка контракта и
+   свой радиус, поэтому общее правило выше не трогаем. */
+.mc-modal--daily .mc-weight-kilo-card {
+  border-radius: 22px !important;
+}
+
 .mc-modal--daily .mc-scale-card {
   background: var(--v4-sand-surface, #f7efe2) !important;
   border-radius: 18px !important;
@@ -5954,15 +5999,15 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 }
 
 /* Верх шага стоит на одной высоте на всех экранах мастера: разные отступы
-   заставляли заголовок прыгать при переходе (сон 22px против 14px у остальных).
-   Исключения со своей геометрией — «Записано» (центрируется) и слои курса
-   добавок с собственной шапкой. */
-.mc-modal--daily .mc-step-content:has(.mc-weight-step),
-.mc-modal--daily .mc-step-content:has(.mc-sleep-combined),
-.mc-modal--daily .mc-step-content:has(.mc-mood-step),
-.mc-modal--daily .mc-step-content:has(.mc-steps-step),
-.mc-modal--daily .mc-step-content:has(.mc-rest-step) {
-  padding-top: 24px;
+   заставляли заголовок прыгать при переходе. Единый верх задаёт
+   .mc-step-content (16 px по контракту), здесь остаётся единственное
+   исключение контракта — шаг веса с 14 сверху. Кадры мастера рисуют разброс
+   14–34 px (вес 14, сон 22, самочувствие и шаги 24, остальное 14); контракт
+   старше кадра, поэтому разброс снят.
+   Другие исключения со своей геометрией — «Записано» (центрируется) и слои
+   курса добавок с собственной шапкой (раздел «Добавки» этого же канваса). */
+.mc-modal--daily .mc-step-content:has(.mc-weight-step) {
+  padding-top: 14px;
 }
 
 /* Расчётный вес открывается без приветствия — на старом хроме шаг опускался
@@ -6037,6 +6082,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 
 .mc-modal--daily .mc-weight-kilo-card .mc-wheel-value {
   min-width: 0;
+  height: auto;
 }
 
 .mc-modal--daily .mc-btn.mc-daily-footer-secondary,
@@ -6106,6 +6152,30 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   font: 700 24px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   padding: 0 1px;
+}
+
+/* Контракт «капсула веса»: выбранное число 36 px/700 акцентом с трекингом
+   −.025em, соседние 16 px/600 тоном чернил 24 %, запятая 32 px/700 акцентом.
+   Правила адресные — у колёс сна и холодного душа свои строки контракта, и
+   общий дневной размер 27/12/24 остаётся за ними. Высота колеса при 36 px не
+   помещается в 72 px фиксированной дорожки, поэтому здесь она по содержимому. */
+.mc-modal--daily .mc-weight-kilo-card .mc-wheel-picker--compact .mc-wheel-values {
+  height: auto;
+}
+
+.mc-modal--daily .mc-weight-kilo-card .mc-wheel-value--current {
+  font: 700 36px/1.2 Figtree, system-ui, sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.mc-modal--daily .mc-weight-kilo-card .mc-wheel-value--prev,
+.mc-modal--daily .mc-weight-kilo-card .mc-wheel-value--next {
+  font: 600 16px/1.45 Figtree, system-ui, sans-serif;
+}
+
+.mc-modal--daily .mc-weight-comma {
+  font: 700 32px/1 Figtree, system-ui, sans-serif;
+  padding: 0 2px;
 }
 
 [data-theme$="dark"] .mc-modal--daily .mc-daily-streak-text {

@@ -1825,7 +1825,8 @@
       ),
       React.createElement('div', {
         className: 'mc-weight-kilo-card',
-        style: { borderRadius: 20, overflow: 'hidden' }
+        // Контракт «капсула веса»: радиус 22.
+        style: { borderRadius: 22, overflow: 'hidden' }
       },
         React.createElement('div', { className: 'mc-kilo-label' }, 'Килограммы'),
         React.createElement('div', { className: 'mc-weight-pickers' },
@@ -4315,12 +4316,26 @@
     return Number.isFinite(daysAgo) && daysAgo >= 7;
   }
 
-  function formatMeasurementsOverdueKicker(lastMeasurements) {
-    if (!lastMeasurements?.measuredAt) return 'Ещё не было замеров';
+  // «21 день», а не «21 дней»: русское склонение считается по последним двум
+  // разрядам, и без этого метка просрочки врала на 21, 22, 31, 32 и далее.
+  function pluralDays(count) {
+    const abs = Math.abs(Number(count));
+    const tail100 = abs % 100;
+    if (tail100 >= 11 && tail100 <= 14) return 'дней';
+    const tail10 = abs % 10;
+    if (tail10 === 1) return 'день';
+    if (tail10 >= 2 && tail10 <= 4) return 'дня';
+    return 'дней';
+  }
+
+  // Контракт checkin-morning, «вид просроченной строки»: метка числом дней стоит
+  // справа, 10 px/700. Это именно число дней — когда замеров не было ни разу,
+  // числа нет и метки нет: про «ещё не было» говорит подпись самой строки.
+  function formatMeasurementsOverdueBadge(lastMeasurements) {
+    if (!lastMeasurements?.measuredAt) return null;
     const daysAgo = Number(lastMeasurements.daysAgo);
     if (!Number.isFinite(daysAgo) || daysAgo < 7) return null;
-    const dayWord = daysAgo === 1 ? 'день' : (daysAgo >= 2 && daysAgo <= 4 ? 'дня' : 'дней');
-    return `${daysAgo} ${dayWord} без замеров`;
+    return `${daysAgo} ${pluralDays(daysAgo)}`;
   }
 
   function MeasurementsStepComponent({ data, onChange }) {
@@ -6565,14 +6580,12 @@
     const formatMeasurementDaysAgo = (daysAgo) => {
       if (!Number.isFinite(daysAgo)) return '';
       if (daysAgo === 0) return 'Сегодня уже были';
-      const dayWord = daysAgo === 1 ? 'день' : (daysAgo >= 2 && daysAgo <= 4 ? 'дня' : 'дней');
-      return `Прошло ${daysAgo} ${dayWord} с прошлых`;
+      return `Прошло ${daysAgo} ${pluralDays(daysAgo)} с прошлых`;
     };
     const formatMeasurementDaysAgoWords = (daysAgo) => {
       if (!Number.isFinite(daysAgo)) return '';
       if (daysAgo === 0) return 'Сегодня уже были';
-      const dayWord = daysAgo === 1 ? 'день' : (daysAgo >= 2 && daysAgo <= 4 ? 'дня' : 'дней');
-      return `Прошло ${spellDaysCount(daysAgo)} ${dayWord} с прошлых`;
+      return `Прошло ${spellDaysCount(daysAgo)} ${pluralDays(daysAgo)} с прошлых`;
     };
     const measurementRowHint = isMeasurementsOverdue(lastMeasurements)
       ? 'Без обхвата виден только вес'
@@ -6583,8 +6596,8 @@
       ? 'Ещё не было замеров'
       : formatMeasurementDaysAgoWords(lastMeasurements.daysAgo);
     const measurementsOverdue = showMeasurements && isMeasurementsOverdue(lastMeasurements);
-    const measurementsOverdueKicker = measurementsOverdue
-      ? formatMeasurementsOverdueKicker(lastMeasurements)
+    const measurementsOverdueBadge = measurementsOverdue
+      ? formatMeasurementsOverdueBadge(lastMeasurements)
       : null;
     const sparseNote = buildMorningRestSparseNote({
       showSupplementsCard,
@@ -6804,13 +6817,12 @@
         onClick: openMeasurementsLayer
       },
         React.createElement('div', null,
-          measurementsOverdueKicker && React.createElement('div', { className: 'mc-rest-overdue-kicker' },
-            React.createElement('span', { className: 'mc-rest-overdue-dot', 'aria-hidden': 'true' }),
-            measurementsOverdueKicker
-          ),
           React.createElement('div', { className: 'mc-rest-card-title' }, 'Замеры'),
           React.createElement('div', { className: 'mc-rest-card-hint' }, measurementRowHint)
         ),
+        measurementsOverdueBadge && React.createElement('span', {
+          className: 'mc-rest-overdue-badge'
+        }, measurementsOverdueBadge),
         React.createElement('span', {
           className: 'mc-rest-chevron' + (measurementsOverdue ? ' mc-rest-chevron--accent' : ''),
           'aria-hidden': 'true'
@@ -7122,7 +7134,7 @@
     getLastMeasurements,
     shouldShowMeasurements,
     isMeasurementsOverdue,
-    formatMeasurementsOverdueKicker,
+    formatMeasurementsOverdueBadge,
     shouldShowCycleStep
   };
 

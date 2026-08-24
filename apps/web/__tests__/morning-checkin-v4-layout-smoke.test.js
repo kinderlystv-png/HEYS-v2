@@ -25,7 +25,10 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(DAILY_CSS).toMatch(/\.mc-modal--daily \.mc-daily-greeting-date[\s\S]*text-align:\s*center/);
     expect(DAILY_CSS).toMatch(/mc-daily-streak-banner[\s\S]*--v4-sand-surface, #f7efe2/);
     expect(DAILY_CSS).toContain('padding: 16px 18px 0');
-    expect(DAILY_CSS).toContain('padding: 14px 18px 12px');
+    // Было `padding: 14px 18px 12px` — прежние поля содержимого шага. Контракт
+    // «вид шага» задаёт 16/18/0 (низ держит футер 12/18/20), поэтому проверка
+    // переехала на контрактное значение выше и на футер 12/18/20.
+    expect(DAILY_CSS).toMatch(/\.mc-daily-footer \{[\s\S]*?padding: 12px 18px calc\(20px/);
     expect(DAILY_CSS).toContain('border-radius: 28px');
     expect(DAILY_CSS).toContain('.mc-backdrop:has(.mc-modal--daily)');
     expect(STEPS_SRC).toContain('borderRadius: 20');
@@ -46,7 +49,11 @@ describe('morning check-in v4 layout vs canvas', () => {
   it('weight screens: greeting, kilo card, week delta, first morning, estimate copy', () => {
     expect(STEPS_SRC).toContain('Вес на утро');
     expect(STEPS_SRC).toContain('Килограммы');
-    expect(DAILY_CSS).toMatch(/\.mc-weight-kilo-card \{[\s\S]*?width:\s*186px/);
+    // Было 186px — ширина с кадра. Контракт «капсула веса»: 212 px, радиус 22,
+    // поля 13/12/16; кадр «Чек-ин · вес» рисует то же самое.
+    expect(DAILY_CSS).toMatch(/\.mc-weight-kilo-card \{[\s\S]*?width:\s*212px/);
+    expect(DAILY_CSS).toMatch(/\.mc-weight-kilo-card \{[\s\S]*?border-radius:\s*22px/);
+    expect(DAILY_CSS).toMatch(/\.mc-weight-kilo-card \{[\s\S]*?padding:\s*13px 12px 16px/);
     expect(STEPS_SRC).toContain('кг за неделю');
     expect(STEPS_SRC).toContain('первый день недели');
     expect(STEPS_SRC).toContain('Динамика появится через неделю взвешиваний.');
@@ -77,14 +84,21 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(STEPS_SRC).toMatch(/CombinedSleepStepComponent[\s\S]*mc-sleep-norm[\s\S]*mc-scale-card[\s\S]*mc-sleep-times mc-sleep-times--split/);
     expect(STEPS_SRC).toMatch(/CombinedSleepStepComponent[\s\S]*className: 'mc-scale-value'[\s\S]*React\.createElement\('b'/);
     expect(DAILY_CSS).toContain('.mc-modal--daily .mc-sleep-combined .mc-wheel-value--current');
-    expect(DAILY_CSS).toContain('.mc-modal--daily .mc-step-content:has(.mc-sleep-combined)');
-    // один верхний отступ на всех шагах мастера — заголовок не прыгает между переходами
-    const stepTopRule = DAILY_CSS.match(
-      /\.mc-modal--daily \.mc-step-content:has\(\.mc-weight-step\),[\s\S]*?\{\s*padding-top: 24px;/
+    // Раньше верх шага держало общее правило со списком из пяти :has(...) и
+    // padding-top 24px. Контракт «вид шага» даёт 16 сверху всем и 14 шагу веса,
+    // поэтому общий верх задаёт .mc-step-content, а исключение осталось одно.
+    expect(DAILY_CSS).toMatch(
+      /\.mc-modal--daily \.mc-step-content \{[\s\S]*?padding: 16px 18px 0;/
     );
-    expect(stepTopRule).toBeTruthy();
+    expect(DAILY_CSS).toMatch(
+      /\.mc-modal--daily \.mc-step-content:has\(\.mc-weight-step\) \{\s*padding-top: 14px;/
+    );
+    // Заголовок не должен прыгать между шагами: своего верха ни у одного из
+    // остальных шагов мастера больше нет.
     ['mc-sleep-combined', 'mc-mood-step', 'mc-steps-step', 'mc-rest-step'].forEach((cls) => {
-      expect(stepTopRule[0]).toContain(`:has(.${cls})`);
+      expect(DAILY_CSS).not.toMatch(
+        new RegExp(`\\.mc-step-content:has\\(\\.${cls}\\)[^{]*\\{[^}]*padding-top`)
+      );
     });
     expect(DAILY_CSS).not.toMatch(/:has\(\.mc-sleep-combined\)\s*\{\s*padding-top: 22px/);
     expect(STEPS_SRC).toContain('mc-weight-step mc-weight-step--estimated');
@@ -172,14 +186,19 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(STEPS_SRC).toContain('setColdClock');
     expect(STEPS_SRC).toMatch(/applyHeaderBack:[\s\S]*?next\.supplementsLayer === 'dose'[\s\S]*?next\.supplementsLayer === 'add'/);
     expect(STEPS_SRC).toMatch(/applyHeaderBack:[\s\S]*?next\.supplementsOpen = false/);
-    expect(STEPS_SRC).toContain('mc-rest-overdue-kicker');
+    // Было `mc-rest-overdue-kicker` — метка слева над строкой, как на кадре
+    // «Чек-ин · замеры просрочены». Контракт «вид просроченной строки» ставит её
+    // справа 10 px/700 и старше кадра, поэтому кикер с точкой снят.
+    expect(STEPS_SRC).toContain('mc-rest-overdue-badge');
     expect(STEPS_SRC).toContain('mc-rest-consent-card');
     expect(STEPS_SRC).toContain('isMorningRestHealthConsentComplete');
     expect(STEPS_SRC).toContain('isMorningRestMeasurementsConsentOn');
     expect(STEPS_SRC).toContain('getMorningRestConsentBannerCopy');
     expect(DAILY_CSS).toContain('.mc-rest-routine-actions');
     expect(DAILY_CSS).toContain('.mc-rest-row--overdue');
-    expect(DAILY_CSS).toContain('.mc-rest-overdue-dot');
+    // Точки у метки больше нет: контракт описывает метку числом дней справа,
+    // без иконок. См. комментарий у `mc-rest-overdue-badge` выше.
+    expect(DAILY_CSS).toContain('.mc-rest-overdue-badge');
     expect(DAILY_CSS).toContain('.mc-rest-chevron--down');
     expect(DAILY_CSS).toMatch(/\.mc-rest-consent-primary[\s\S]*flex:\s*1\.5/);
     expect(DAILY_CSS).toContain('.mc-steps-info-card');

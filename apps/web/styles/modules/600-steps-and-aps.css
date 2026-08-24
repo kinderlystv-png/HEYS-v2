@@ -1278,14 +1278,25 @@
   padding: 0;
 }
 
-.mc-progress-dots--in-header .mc-progress-dot {
+/* :not(--pills) — не косметика. Дневной мастер вешает на один узел и
+   `--in-header`, и `--pills`; правила равной силы, но 600-й модуль грузится
+   после 500-го (styles/main.css), поэтому 6×6 и scale(1.3) перебивали контракт
+   чек-ина «вид полосы прогресса» (точки 7×7, текущая шириной 18 при той же
+   высоте, увеличения нет). Компактный вариант остаётся за остальными мастерами
+   — они рисуют `--in-header` без `--pills`. */
+.mc-progress-dots--in-header:not(.mc-progress-dots--pills) .mc-progress-dot {
   width: 6px;
   height: 6px;
   padding: 0;
   border: none;
 }
 
-.mc-progress-dots--in-header .mc-progress-dot.active {
+.mc-progress-dots--in-header .mc-progress-dot {
+  padding: 0;
+  border: none;
+}
+
+.mc-progress-dots--in-header:not(.mc-progress-dots--pills) .mc-progress-dot.active {
   transform: scale(1.3);
 }
 

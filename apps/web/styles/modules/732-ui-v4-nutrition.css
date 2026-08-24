@@ -813,7 +813,10 @@
   flex: 1;
   height: 4px;
   border-radius: 999px;
-  background: var(--v4-line, #e5e7eb);
+  /* Строка «вид мини-карточек»: пустой сегмент — чернила 12 %. Роль --v4-line
+     тут не годится: она даёт 8 % и обслуживает ещё две строки контракта с
+     другими процентами. */
+  background: var(--v4-ink-12, #e5e7eb);
 }
 
 .nutrition-v4-scale i.is-on.is-act {
