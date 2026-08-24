@@ -616,10 +616,20 @@
     actions.appendChild(laterBtn);
     actions.appendChild(okBtn);
 
+    // Строка «вид шапки листа»: слева круг с иконкой, справа заголовок и
+    // подпись — одной строкой, а не столбиком. Прежде иконка стояла над
+    // заголовком отдельным блоком, и шапка занимала лишнюю высоту.
+    const head = document.createElement('div');
+    head.className = 'ios-home-install-modal__head';
+    const headCopy = document.createElement('div');
+    headCopy.className = 'ios-home-install-modal__head-copy';
+    headCopy.appendChild(title);
+    headCopy.appendChild(lead);
+    head.appendChild(phone);
+    head.appendChild(headCopy);
+
     modal.appendChild(closeBtn);
-    modal.appendChild(phone);
-    modal.appendChild(title);
-    modal.appendChild(lead);
+    modal.appendChild(head);
     modal.appendChild(stepsWrap);
     modal.appendChild(footnote);
     modal.appendChild(actions);

@@ -75,14 +75,18 @@ describe('heys_fab_visibility_v1', () => {
         expect(payload?.visibility?.message).toBe(false);
     });
 
-    it('uses canvas labels for chips', () => {
+    // Строка контракта «что чипуется»: порядок чипов совпадает с порядком в
+    // карточке быстрых действий снизу вверх. Прежний порядок в тесте был
+    // зафиксирован до того, как карточка стала строиться из этих же ключей,
+    // и не совпадал ни с чем. Пятый чип назван «Еда», как строка карточки.
+    it('uses canvas labels and card order for chips', () => {
         const FabVisibility = loadFabVisibilityModule();
         expect(FabVisibility.OPTIONS.map((item) => item.label)).toEqual([
             'Вода',
+            'Еда',
             'Голод и энергия',
-            'Мессенджер',
             'Активность',
-            'Добавить еду',
+            'Мессенджер',
         ]);
     });
 });

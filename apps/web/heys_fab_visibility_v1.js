@@ -7,12 +7,17 @@
     const KEYS = ['water', 'hunger', 'message', 'activity', 'meal'];
     const DEFAULT = { water: true, hunger: true, message: true, activity: true, meal: true };
 
+    // Строка контракта settings-system «что чипуется»: порядок чипов совпадает
+    // с порядком в карточке быстрых действий снизу вверх — вода у самой
+    // кнопки, мессенджер на макушке. Прежний порядок (вода, голод,
+    // мессенджер, активность, еда) не совпадал ни с чем: человек включал
+    // чипы в одном порядке, а получал список в другом.
     const OPTIONS = [
         { key: 'water', label: 'Вода', icon: 'water' },
+        { key: 'meal', label: 'Еда', icon: 'meal' },
         { key: 'hunger', label: 'Голод и энергия', icon: 'hunger' },
-        { key: 'message', label: 'Мессенджер', icon: 'message' },
         { key: 'activity', label: 'Активность', icon: 'activity' },
-        { key: 'meal', label: 'Добавить еду', icon: 'meal' },
+        { key: 'message', label: 'Мессенджер', icon: 'message' },
     ];
 
     let draftActive = false;

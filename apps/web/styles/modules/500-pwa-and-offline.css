@@ -249,8 +249,8 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -264,32 +264,48 @@
   background: rgba(26, 23, 20, 0.06);
 }
 
+/* Строка «вид шапки листа»: поля 17/16/12, слева круг 40 с иконкой 19,
+   зазор 11, справа заголовок и подпись. */
+.ios-home-install-modal__head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0 0 16px;
+}
+
+.ios-home-install-modal__head-copy {
+  min-width: 0;
+}
+
 .ios-home-install-modal__phone {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  width: 36px;
-  height: 36px;
-  margin: 2px 0 14px;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--v4-sand-tint, #f6e6dd);
+  margin: 0;
   color: #c67139;
 }
 
 .ios-home-install-modal__title {
-  margin: 0 0 8px;
-  padding-right: 28px;
-  font-size: 22px;
-  font-weight: 800;
+  margin: 0;
+  padding-right: 0;
+  font-size: 15.5px;
+  font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.02em;
   color: #1a1714;
 }
 
 .ios-home-install-modal__lead {
-  margin: 0 0 16px;
-  font-size: 14px;
+  margin: 4px 0 0;
+  font-size: 11.5px;
   font-weight: 500;
   line-height: 1.4;
-  color: rgba(26, 23, 20, 0.55);
+  color: rgba(26, 23, 20, 0.5);
 }
 
 .ios-home-install-modal__steps {
