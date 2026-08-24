@@ -791,6 +791,16 @@ color: var(--v4-sand-ink-slate, #1f2937);
   transform: scale(0.99);
 }
 
+/* Контракт nutrition-tab, «границы блока воды»: карточка целиком — «фон,
+   радиус 18, внутренние поля 12/14/13 px». Своей геометрии у .water-review не
+   было, её давал .compact-card (16 и 14/16). Правило живёт здесь, а не в
+   400-water-and-hydration.css: там описано только содержимое карточки, а
+   внешний контейнер — карточка дневника. */
+.water-review.compact-card {
+  border-radius: 18px;
+  padding: 12px 14px 13px;
+}
+
 /* Без «нажатия» scale: вода/статистика исторически; тренировки, сон, быт — те же карточки-дневник */
 .compact-stats.compact-card:active,
 .water-review.compact-card:active,
@@ -3894,8 +3904,11 @@ color: var(--v4-sand-ink-slate, #1f2937);
   flex: 0 0 auto;
 }
 
+/* Отступ до липкой полосы теперь даёт её собственное верхнее поле 16 px
+   (контракт date-remainders, «вид липкой капсулы»): второй раз тот же зазор
+   не набирается. */
 .hdr--date-collapse .hdr-chrome {
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .hdr-chrome__inner {
@@ -3912,35 +3925,60 @@ color: var(--v4-sand-ink-slate, #1f2937);
   visibility: hidden;
 }
 
+/* Контракт date-remainders, «вид липкой капсулы»: при прокрутке остаётся ряд
+   капсулы НА ПОДЛОЖКЕ во всю ширину — поля 16/18/10, тень 0 6px 18px тона тени
+   10 %. Кадр «Дата · сегодня, прокручено» рисует другое: капсулу без подложки,
+   с полями 12 и собственной тенью. Верен контракт (тень принадлежит слою, а не
+   капсуле — иначе содержимое проезжает между капсулой и стрелками). */
 .hdr-sticky-strip {
   display: flex;
   flex-direction: column;
   flex: 0 0 auto;
   min-width: 0;
   box-sizing: border-box;
-  padding-left: 18px;
-  padding-right: 18px;
-  background: transparent;
+  padding: 16px 18px 10px;
+  /* v4-intentional */
+  background: var(--v4-bg);
+  box-shadow: none;
+  transition: box-shadow 0.15s ease;
+}
+
+/* Тон тени набора — роль канваса --shadow (v4-canvas.css). Держим на корне:
+   шторка календаря уезжает порталом в body и наследует оттуда же. */
+html {
+  --dp-shadow-rgb: 17, 24, 39;
+}
+
+html[data-theme-id="sand"] {
+  --dp-shadow-rgb: 80, 50, 20;
+}
+
+html[data-theme-id="blue"] {
+  --dp-shadow-rgb: 16, 24, 38;
+}
+
+html[data-theme-id="sand-dark"],
+html[data-theme-id="blue-dark"],
+html[data-theme-id="classic-dark"] {
+  --dp-shadow-rgb: 0, 0, 0;
 }
 
 /* Прямой ребёнок скроллера — иначе sticky клипается высотой .hdr.
-   top с safe-area сразу: is-pinned не меняет layout (без padding-top). */
+   top с safe-area сразу: is-pinned не меняет layout (без padding-top).
+   Зазор 8 px убран вместе с переездом тени на подложку: полоса теперь —
+   бумага во всю ширину, и щель над ней показывала бы уезжающий контент. */
 .tab-active-viewport > .hdr-sticky-strip {
   position: sticky;
-  top: calc(8px + env(safe-area-inset-top, 0px));
+  top: env(safe-area-inset-top, 0px);
   z-index: 11;
 }
 
 /* is-pinned — только визуал (тень). Layout не трогаем: иначе капсула
-   сначала липнет, потом IO добавляет padding и «опускается». */
-.hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-day-nav,
-.hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-trigger:not(.open) {
-  box-shadow: 0 4px 14px rgba(17, 24, 39, 0.12);
-}
-
-[data-theme$="dark"] .hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-day-nav,
-[data-theme$="dark"] .hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-trigger:not(.open) {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+   сначала липнет, потом IO добавляет padding и «опускается».
+   Тень висит на подложке, а не на капсуле и кружках: контракт «вид липкой
+   капсулы» — «сама капсула геометрию не меняет». */
+.hdr-sticky-strip.is-pinned {
+  box-shadow: 0 6px 18px rgba(var(--dp-shadow-rgb), 0.1);
 }
 
 .hdr-sticky-strip .past-day-banner-wrap {
@@ -3951,9 +3989,9 @@ color: var(--v4-sand-ink-slate, #1f2937);
   margin-top: 12px;
 }
 
+/* Контракт «уменьшенное движение»: тень липкого слоя появляется без перехода. */
 @media (prefers-reduced-motion: reduce) {
-  .hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-day-nav,
-  .hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-trigger:not(.open) {
+  .hdr-sticky-strip {
     transition: none;
   }
 }
@@ -7938,9 +7976,13 @@ body:has(.offline-banner) .wrap {
   transform: scale(0.96);
 }
 
+/* Контракт nutrition-tab, «капсула даты»: «вперёд с сегодняшнего дня
+   недоступна и гаснет до 40 %». date-remainders владеет капсулой, но числа не
+   называет («гаснет, но не исчезает») — спора между канвасами нет, число
+   берётся оттуда, где оно есть. Стояло 0.35. */
 .date-picker--v4 .date-picker-day-nav--disabled,
 .date-picker--v4 .date-picker-day-nav:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: default;
   pointer-events: none;
 }
@@ -7997,14 +8039,16 @@ body:has(.offline-banner) .wrap {
   border: none;
 }
 
-/* Ночь до 03:00 — нейтральный тон, не «сегодня» (канвас date-remainders) */
+/* Ночь до 03:00 — нейтральный тон, тот же грунт, что у «сегодня»
+   (контракт date-remainders, «ночь до 03:00»: «капсула нейтральная — не
+   терракотовая, как на чужом дне»; кадр «Капсула · ночь» рисует --c1).
+   Прежний --v4-past красил ночь ровно тем же тоном, что чужой день.
+   Кнопки «Сегодня» в ночной капсуле нет, поэтому и раскладка обычная —
+   текст по центру. */
 .date-picker--v4 .date-picker-trigger--night {
   /* v4-intentional */
-  background: var(--v4-past);
+  background: var(--v4-surface);
   border: none;
-  gap: 0;
-  padding: 0 4px 0 0;
-  justify-content: flex-start;
 }
 
 .date-picker--v4 .date-picker-trigger--night .date-picker-main--past {
@@ -8091,21 +8135,33 @@ body:has(.offline-banner) .wrap {
   opacity: 0.55;
 }
 
+/* Контракт «вид чужого дня»: «Сегодня» 11 px/700 ТОНОМ --ac с областью нажатия
+   44 px. Кадр «Дата · чужой день» рисует залитую терракотой пилюлю 10,5 px —
+   верен контракт: залитая кнопка внутри тинтованной капсулы даёт третий тон
+   подряд, а тач-цели 44 у неё всё равно не было. Область нажатия добирается
+   прозрачным припуском ::after, чтобы капсула осталась 36 px. */
 .date-picker--v4 .date-picker-inline-today {
+  position: relative;
   flex: none;
   height: 28px;
   margin: 0;
   padding: 0 12px;
   border: none;
   border-radius: 999px;
+  background: transparent;
   /* v4-intentional */
-  background: var(--v4-act);
-  color: var(--v4-btn-on-act, #2b1608);
+  color: var(--v4-act-text);
   font-family: inherit;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+}
+
+.date-picker--v4 .date-picker-inline-today::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
 }
 
 @media (hover: hover) {
@@ -8114,11 +8170,15 @@ body:has(.offline-banner) .wrap {
   }
 }
 
-[data-theme$="dark"] .date-picker--v4 .date-picker-inline-today {
-  color: var(--v4-btn-on-act, #1a0f04);
+.hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
+  /* v4-intentional */
+  background: var(--v4-past);
 }
 
-.hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
+/* Контракт «вид чужого дня»: заливка капсулы И ОБОИХ КРУЖКОВ меняется на тинт.
+   Кружки — соседи капсулы, поэтому тон ставится модификатором корня
+   (.date-picker--past из heys_day_pickers.js), а не селектором на капсуле. */
+.date-picker--v4.date-picker--past .date-picker-day-nav {
   /* v4-intentional */
   background: var(--v4-past);
 }
@@ -8130,9 +8190,14 @@ body:has(.offline-banner) .wrap {
   }
 }
 
+/* Контракт «вид чужого дня»: «текст остаётся чернилами» — и «выходной»:
+   «красится только сокращение дня недели; число и месяц в чернилах».
+   Кадр «Дата · чужой день» набирает всю строку акцентом — верен контракт:
+   тинт капсулы и есть весь запас тревоги, второй сигнал тем же цветом
+   съедает разницу между «чужой день» и «выходной». */
 .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
   /* v4-intentional */
-  color: var(--v4-act-text);
+  color: var(--v4-ink);
 }
 
 .date-picker--v4 .date-picker-sub--relative {
@@ -8167,39 +8232,38 @@ body:has(.offline-banner) .wrap {
   max-width: 100%;
 }
 
-/* Month picker v4 — popover-карточка как лист настроек (inset 14px, тень на card). */
+/* Month picker v4 — НИЖНИЙ ЛИСТ (контракт date-remainders, «вид шторки
+   календаря»): «лист прижат к низу: фон --bg, радиус 26 сверху, поля
+   18/16/16 px, ручка 38×4 px тоном чернил 14 %». Прежде это был popover под
+   строкой даты: карточка радиусом 22, поля 16/16/12, ручка display:none. */
 .date-picker-sheet {
   min-width: 0;
   max-width: none !important;
 }
 
 .date-picker-sheet__card {
-  padding: 16px 16px 12px;
-  border-radius: 22px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  background: var(--v4-bg, #fffaf1);
+  padding: 18px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 26px 26px 0 0;
+  border: none;
+  /* v4-intentional */
+  background: var(--v4-bg);
   box-shadow:
-    0 22px 54px rgba(15, 23, 42, 0.16),
-    0 8px 22px rgba(15, 23, 42, 0.08),
-    0 1px 0 rgba(255, 255, 255, 0.65) inset;
-  max-height: min(
-    calc(100dvh - var(--date-picker-sheet-top, calc(env(safe-area-inset-top, 0px) + 120px)) - 20px),
-    72vh
-  );
+    0 -8px 30px rgba(var(--dp-shadow-rgb), 0.16),
+    0 -1px 0 rgba(var(--dp-shadow-rgb), 0.06);
+  max-height: min(calc(100dvh - 56px), 88vh);
   overflow-x: hidden;
   overflow-y: auto;
 }
 
-[data-theme$="dark"] .date-picker-sheet__card {
-  border-color: rgba(242, 237, 230, 0.1);
-  background: #141210;
-  box-shadow:
-    0 22px 54px rgba(0, 0, 0, 0.42),
-    0 8px 22px rgba(0, 0, 0, 0.28);
-}
-
+/* Ручка листа 38×4, тон чернил 14 % — раньше была спрятана вместе с popover. */
 .date-picker-sheet-handle {
-  display: none;
+  display: block;
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  margin: 0 auto 16px;
+  /* v4-intentional */
+  background: color-mix(in srgb, var(--v4-ink) 14%, transparent);
 }
 
 /* Sheet calendar · вариант А (канвас «Дата и остатки» 2026-08-11):
@@ -8209,6 +8273,38 @@ body:has(.offline-banner) .wrap {
   gap: 4px;
 }
 
+/* Контракт «вид шторки календаря»: над сеткой ряд сокращений дней
+   9,5 px/700 ПРОПИСНЫМИ тоном чернил 40 %; зазор ряда тот же, что у сетки. */
+.date-picker-sheet .date-picker-weekdays {
+  gap: 4px;
+  margin-bottom: 0;
+}
+
+.date-picker-sheet .date-picker-weekday {
+  padding: 0 0 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  /* v4-intentional */
+  color: color-mix(in srgb, var(--v4-ink) 40%, transparent);
+}
+
+/* Контракт «тон метки»: общего процента нет — подложка клетки в каждом наборе
+   своя, поэтому тон подобран измерением. песочная 45 · синяя 50 · тёмная 42 ·
+   сине-тёмная 42. Классика контрактом не покрыта — остаётся на песочных 45. */
+.date-picker-sheet {
+  --dp-mark-alpha: 45%;
+}
+
+html[data-theme-id="blue"] .date-picker-sheet {
+  --dp-mark-alpha: 50%;
+}
+
+html[data-theme-id="sand-dark"] .date-picker-sheet,
+html[data-theme-id="blue-dark"] .date-picker-sheet {
+  --dp-mark-alpha: 42%;
+}
+
 .date-picker-sheet .date-picker-day {
   position: relative;
   overflow: hidden;
@@ -8216,7 +8312,8 @@ body:has(.offline-banner) .wrap {
   gap: 3px;
   border-radius: 14px;
   font-weight: 600;
-  color: #201e1d;
+  /* v4-intentional */
+  color: var(--v4-ink);
   background: transparent;
   animation: none;
   /* Строка «клетка дня»: высота 44 pt фиксирована, ширина 42 — семь
@@ -8226,37 +8323,46 @@ body:has(.offline-banner) .wrap {
   min-height: 44px;
 }
 
-.date-picker-sheet .date-picker-day.has-data:not(.today):not(.selected) {
-  background: #f7efe2;
-  color: #201e1d;
+/* Контракт «вид клетки»: «число 12,5 px/600 чернилами по центру». Кадры
+   «Календарь · легенда» набирают 13 — верен контракт. */
+.date-picker-sheet .day-number {
+  font-size: 12.5px;
 }
 
-.date-picker-sheet .date-picker-day.selected:not(.today) {
-  background: #efe3cf;
-  color: #201e1d;
+.date-picker-sheet .date-picker-day.has-data:not(.selected) {
+  /* v4-intentional */
+  background: var(--v4-surface);
+}
+
+/* Контракт «вид клетки»: «выбранный день — заливка --c2». Обводка 2 px
+   акцентом, которую рисует кадр, снята: она спорила с сегодняшним днём —
+   два кольца навигации на одной сетке читались как одно состояние. */
+.date-picker-sheet .date-picker-day.selected {
+  /* Роль второй поверхности в каноничных наборах намеренно не задана —
+     запасное значение там срабатывает по-настоящему и держит классику. */
+  background: var(--v4-chip-2, #efe3cf);
   font-weight: 600;
-  box-shadow: inset 0 0 0 2px #c67139;
+  box-shadow: none;
 }
 
+/* Каноничные тёмные наборы вторую поверхность не объявляют: там срабатывает
+   запасное значение, и светлое дало бы светлую заливку под светлыми чернилами. */
+[data-theme$="dark"] .date-picker-sheet .date-picker-day.selected,
+[data-theme$="dark"] .date-picker-sheet .legend-swatch--selected {
+  background: var(--v4-chip-2, #2f2820);
+}
+
+/* Контракт «вид клетки»: «сегодняшнее — 700 тоном --ac», без заливки.
+   Кадры красят сегодня терракотовой плашкой — верен контракт: заливка
+   акцентом и заливка --c2 у выбранного дня давали два одинаково громких
+   состояния навигации на одной сетке. */
 .date-picker-sheet .date-picker-day.today,
 .date-picker-sheet .date-picker-day.selected.today {
-  background: var(--v4-sand-act, #c67139);
-  color: var(--v4-act-ink, #2b1608);
   font-weight: 700;
+  /* v4-intentional */
+  color: var(--v4-act-text);
   border: none;
-  box-shadow: none;
   animation: none;
-}
-
-[data-theme-id="blue"] .date-picker-sheet .date-picker-day.today,
-[data-theme-id="blue"] .date-picker-sheet .date-picker-day.selected.today,
-[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-day.today,
-[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-day.selected.today,
-[data-theme-id="classic"] .date-picker-sheet .date-picker-day.today,
-[data-theme-id="classic"] .date-picker-sheet .date-picker-day.selected.today,
-[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-day.today,
-[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-day.selected.today {
-  color: #ffffff;
 }
 
 .date-picker-sheet .date-picker-day.future.disabled {
@@ -8272,11 +8378,6 @@ body:has(.offline-banner) .wrap {
   flex-shrink: 0;
 }
 
-.date-picker-sheet .date-picker-day.today .day-data-dot,
-.date-picker-sheet .date-picker-day.selected.today .day-data-dot {
-  background: currentColor;
-}
-
 .date-picker-sheet .date-picker-day.has-cycle::before {
   content: '';
   position: absolute;
@@ -8285,7 +8386,8 @@ body:has(.offline-banner) .wrap {
   bottom: 6px;
   width: 3px;
   border-radius: 999px;
-  background: color-mix(in srgb, #201e1d 45%, transparent);
+  /* v4-intentional */
+  background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent);
   pointer-events: none;
 }
 
@@ -8297,34 +8399,9 @@ body:has(.offline-banner) .wrap {
   bottom: 2px;
   height: 3px;
   border-radius: 999px;
-  background: color-mix(in srgb, #201e1d 45%, transparent);
+  /* v4-intentional */
+  background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent);
   pointer-events: none;
-}
-
-.date-picker-sheet .date-picker-day.today.has-cycle::before,
-.date-picker-sheet .date-picker-day.today.has-refeed::after,
-.date-picker-sheet .date-picker-day.selected.today.has-cycle::before,
-.date-picker-sheet .date-picker-day.selected.today.has-refeed::after {
-  background: color-mix(in srgb, var(--v4-act-ink, #2b1608) 42%, transparent);
-}
-
-[data-theme-id="blue"] .date-picker-sheet .date-picker-day.today.has-cycle::before,
-[data-theme-id="blue"] .date-picker-sheet .date-picker-day.today.has-refeed::after,
-[data-theme-id="blue"] .date-picker-sheet .date-picker-day.selected.today.has-cycle::before,
-[data-theme-id="blue"] .date-picker-sheet .date-picker-day.selected.today.has-refeed::after,
-[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-day.today.has-cycle::before,
-[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-day.today.has-refeed::after,
-[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-day.selected.today.has-cycle::before,
-[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-day.selected.today.has-refeed::after,
-[data-theme-id="classic"] .date-picker-sheet .date-picker-day.today.has-cycle::before,
-[data-theme-id="classic"] .date-picker-sheet .date-picker-day.today.has-refeed::after,
-[data-theme-id="classic"] .date-picker-sheet .date-picker-day.selected.today.has-cycle::before,
-[data-theme-id="classic"] .date-picker-sheet .date-picker-day.selected.today.has-refeed::after,
-[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-day.today.has-cycle::before,
-[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-day.today.has-refeed::after,
-[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-day.selected.today.has-cycle::before,
-[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-day.selected.today.has-refeed::after {
-  background: rgba(255, 255, 255, 0.42);
 }
 
 .date-picker-sheet .date-picker-legend {
@@ -8369,40 +8446,50 @@ body:has(.offline-banner) .wrap {
   box-sizing: border-box;
 }
 
+/* Легенда обязана показывать ровно то, что нарисовано в сетке, иначе она врёт
+   глазу (контракт «снять в коде»). Поэтому «цикл» и «загрузка» взяли толщину
+   3 px и «тон метки» набора, «сегодня» — это теперь начертание 700 тоном --ac,
+   а не плашка, «выбран» — заливка --c2 без обводки. */
 .date-picker-sheet .legend-swatch--dot {
   width: 4px;
   height: 4px;
   border-radius: 999px;
-  background: #7a8a5e;
+  background: var(--v4-good, #7a8a5e);
 }
 
 .date-picker-sheet .legend-swatch--cycle {
-  width: 2px;
+  width: 3px;
   height: 11px;
   border-radius: 999px;
-  background: color-mix(in srgb, #201e1d 32%, transparent);
+  /* v4-intentional */
+  background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent);
 }
 
 .date-picker-sheet .legend-swatch--refeed {
   width: 11px;
   height: 3px;
   border-radius: 999px;
-  background: color-mix(in srgb, #201e1d 45%, transparent);
+  /* v4-intentional */
+  background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent);
 }
 
 .date-picker-sheet .legend-swatch--today {
-  width: 11px;
-  height: 11px;
-  border-radius: 4px;
-  background: #c67139;
+  min-width: 11px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  background: none;
+  /* v4-intentional */
+  color: var(--v4-act-text);
 }
 
 .date-picker-sheet .legend-swatch--selected {
   width: 11px;
   height: 11px;
   border-radius: 4px;
-  background: #efe3cf;
-  box-shadow: inset 0 0 0 1.5px #c67139;
+  box-shadow: none;
+  background: var(--v4-chip-2, #efe3cf);
 }
 
 .date-picker-day.future.disabled {
@@ -8411,15 +8498,17 @@ body:has(.offline-banner) .wrap {
   cursor: default;
 }
 
+/* Нижний лист выезжает снизу (контракт «вид шторки календаря»); прежний
+   вариант ехал вниз из-под строки даты вместе с translateX(-50%). */
 @keyframes datePickerSheetModalIn {
   from {
     opacity: 0;
-    transform: translate(-50%, -8px);
+    transform: translateY(14px);
   }
 
   to {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translateY(0);
   }
 }
 
@@ -8643,20 +8732,20 @@ svg.date-picker-icon {
   animation: datePickerSlide 0.2s ease;
 }
 
-/* Sheet v4 — popover под строкой даты, как tab-settings-menu--v4-sheet. */
+/* Sheet v4 — НИЖНИЙ ЛИСТ (контракт date-remainders, «вид шторки календаря»:
+   «лист прижат к низу»). До 24 августа это был popover, привязанный к низу
+   строки даты через --date-picker-sheet-top: на 375 px сетка месяца упиралась
+   в нижнюю навигацию, а лист висел посреди экрана. */
 .date-picker-dropdown.date-picker-sheet {
   position: fixed;
-  top: var(--date-picker-sheet-top, calc(env(safe-area-inset-top, 0px) + 120px));
-  left: 50%;
-  right: auto;
-  bottom: auto;
-  width: min(360px, calc(100vw - 28px));
+  top: auto;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
   min-width: 0;
   max-width: none !important;
-  max-height: min(
-    calc(100dvh - var(--date-picker-sheet-top, calc(env(safe-area-inset-top, 0px) + 120px)) - 20px),
-    72vh
-  );
+  max-height: min(calc(100dvh - 56px), 88vh);
   margin: 0;
   padding: 0;
   border: none;
@@ -8664,8 +8753,8 @@ svg.date-picker-icon {
   background: transparent;
   box-shadow: none;
   overflow: visible;
-  transform: translateX(-50%);
-  transform-origin: top center;
+  transform: none;
+  transform-origin: bottom center;
   animation: datePickerSheetModalIn 0.18s ease;
   z-index: 1205;
 }
@@ -8682,18 +8771,21 @@ svg.date-picker-icon {
   animation: fadeIn 0.15s ease;
 }
 
-/* v4 popover — без dim, как tab-settings-backdrop--v4-popover */
+/* Контракт «вид шторки календаря»: под листом затемнение. Прежде подложка была
+   прозрачной по правилу popover'а — у нижнего листа оно не работает: месяц
+   занимает половину экрана, и без затемнения непонятно, что под ним ждёт.
+   Отступление от контракта названо вслух: он просит «чернил 34 % БЕЗ блюра»,
+   а продуктовый инвариант scrim'а (CLAUDE.md, «подложка product-модалок») —
+   единый blur 2.5 px и dim из токенов набора. Держим инвариант. */
 .date-picker-backdrop.date-picker-backdrop--v4-modal {
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+  -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   z-index: 1200;
 }
 
 [data-theme$="dark"] .date-picker-backdrop.date-picker-backdrop--v4-modal {
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
 }
 
 @keyframes fadeIn {
@@ -9174,8 +9266,9 @@ svg.date-picker-icon {
     line-height: 1;
   }
 
+  /* Контракт «вид чужого дня»: «Сегодня» 11 px/700 — тот же кегль и на узком. */
   .date-picker--v4 .date-picker-inline-today {
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1;
   }
@@ -9237,7 +9330,7 @@ svg.date-picker-icon {
   }
 
   .date-picker-dropdown.date-picker-sheet {
-    width: min(360px, calc(100vw - 28px));
+    width: auto;
     padding: 0;
     animation: datePickerSheetModalIn 0.18s ease;
   }
@@ -9252,6 +9345,18 @@ svg.date-picker-icon {
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
+  }
+}
+
+/* Контракт «уменьшенное движение»: «раскрытие шторки календаря становится
+   мгновенным». Блок стоит НИЖЕ адаптивного @media выше — иначе тот вернул бы
+   анимацию листа обратно. */
+@media (prefers-reduced-motion: reduce) {
+  .date-picker-dropdown,
+  .date-picker-dropdown.date-picker-sheet,
+  .date-picker-backdrop,
+  .date-picker-backdrop.date-picker-backdrop--v4-modal {
+    animation: none;
   }
 }
 
@@ -10299,13 +10404,16 @@ body:has(:is(
   color: var(--v4-ink-1, #201e1d);
 }
 
+/* Контракт settings-system, «шапка шторки»: крестик — круг 34 px фоном ПЕРВОЙ
+   поверхности (--c1). Стоял #f6e6dd — это --tint, подложка-подсказка. */
 .hdr-settings-sheet__close {
   flex: none;
   width: 34px;
   height: 34px;
   border: 0;
   border-radius: 999px;
-  background: #f6e6dd;
+  /* v4-intentional */
+  background: var(--v4-surface);
   color: rgba(32, 30, 29, 0.5);
   display: inline-flex;
   align-items: center;
@@ -10561,8 +10669,11 @@ body:has(:is(
   margin-top: 16px;
 }
 
+/* Контракт settings-system, «границы блока чипов»: карточка яруса — фон ВТОРОЙ
+   поверхности (--c2). Стоял #f7efe2, то есть первая поверхность, и чипы на ней
+   тем же тоном (:fab-chip) просто пропадали. Радиус и поля контракту совпали. */
 .hdr-settings-sheet__fab-card {
-  background: #f7efe2;
+  background: var(--v4-chip-2, #efe3cf);
   border-radius: 18px;
   padding: 13px 14px 15px;
 }
@@ -10589,7 +10700,12 @@ body:has(:is(
   border-radius: 999px;
   padding: 0 16px;
   min-height: 30px;
-  background: #f7efe2;
+  /* Чип — ПЕРВАЯ поверхность на карточке яруса второй: пока карточка была
+     первой (см. .hdr-settings-sheet__fab-card), чип совпадал с ней тоном и
+     пропадал. Литерал заменён ролью, иначе в тёмных наборах чип оставался
+     кремовым. */
+  /* v4-intentional */
+  background: var(--v4-surface);
   color: rgba(0, 0, 0, 0.55);
   cursor: pointer;
   display: inline-flex;
@@ -10803,7 +10919,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-card {
-  background: #2f2820;
+  background: var(--v4-chip-2, #2f2820);
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-lead {
@@ -10811,7 +10927,6 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-chip {
-  background: #2f2820;
   color: rgba(242, 237, 230, 0.55);
 }
 
@@ -11182,10 +11297,17 @@ body:has(:is(
   justify-content: center;
 }
 
-/* Критичное содержимое — заливка внимания (та же строка контракта). */
+/* Критичное содержимое — заливка --red (та же строка контракта «вид бейджа
+   счётчика»). Была роль --v4-warn-2, а в песочном наборе она равна #c67139 —
+   ровно тон обычного бейджа: критичный счётчик был визуально неотличим от
+   обычного. Красный, который в продукте определён во всех шести наборах, —
+   --v4-bad-text; он на волос темнее канвасного --red (#a8382b против #b4442a,
+   это канвасный --val-bad), своей роли под --red в палитре нет.
+   Классика при этом меняет тон с #dc2626 на #a8382b — названо вслух. */
 .hdr-header-icon-btn--advice-critical .tab-advice-badge,
 .tab-advice-badge.is-critical {
-  background: var(--v4-warn-2, #dc2626);
+  /* v4-intentional */
+  background: var(--v4-bad-text);
   color: #ffffff;
 }
 

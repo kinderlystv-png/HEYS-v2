@@ -26,12 +26,18 @@ describe('DatePicker v4 капсула', () => {
         expect(baseCss).toContain('.date-picker--v4 .date-picker-trigger-lbl');
     });
 
-    it('CSS — кегли как в канвасе dcap (12.5 / 10.5 / 10)', () => {
+    // 2026-08-24: контракт date-remainders, «вид чужого дня» — «Сегодня»
+    // 11 px/700 тоном --ac. 10,5 px пришли из старого кадра dcap, где кнопка
+    // была залитой пилюлей; контракт старше кадра, поэтому кегль поднят.
+    it('CSS — кегли по контракту (12.5 / 11 / 10)', () => {
         expect(baseCss).toMatch(
             /\.date-picker--v4 \.date-picker-lbl-inner \.date-picker-main[\s\S]{0,120}font-size:\s*12\.5px/,
         );
         expect(baseCss).toMatch(
-            /\.date-picker--v4 \.date-picker-inline-today[\s\S]{0,160}font-size:\s*10\.5px/,
+            /\.date-picker--v4 \.date-picker-inline-today \{[\s\S]{0,260}font-size:\s*11px/,
+        );
+        expect(baseCss).not.toMatch(
+            /\.date-picker--v4 \.date-picker-inline-today \{[\s\S]{0,260}font-size:\s*10\.5px/,
         );
         expect(baseCss).toMatch(
             /\.date-picker--v4 \.date-picker-sub--relative[\s\S]{0,120}font-size:\s*10px/,

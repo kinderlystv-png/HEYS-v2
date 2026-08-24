@@ -54,12 +54,22 @@ describe('hdr date collapse — разметка', () => {
 });
 
 describe('hdr date collapse — CSS', () => {
+  // 2026-08-24, сведение с контрактом date-remainders, строка «вид липкой
+  // капсулы»: «остаётся ряд капсулы НА ПОДЛОЖКЕ --bg во всю ширину с полями
+  // 16/18/10 px и тенью 0 6px 18px тона тени 10 %; сама капсула геометрию не
+  // меняет». Прежние три проверки охраняли противоположное — прозрачную полосу,
+  // зазор 8 px сверху и тень на самой капсуле. Это была геометрия старого кадра,
+  // а не отдельное решение, поэтому проверки переписаны под подложку.
+  // Инвариант, ради которого тест жив, не тронут: полоса остаётся sticky,
+  // is-pinned не меняет layout (никакого padding-top).
   it('полоса sticky, contain не убивает', () => {
     expect(baseCss).toMatch(/\.tab-active-viewport > \.hdr-sticky-strip\s*\{[^}]*position:\s*sticky/);
-    expect(baseCss).toMatch(/\.tab-active-viewport > \.hdr-sticky-strip\s*\{[^}]*top:\s*calc\(8px \+ env\(safe-area-inset-top/);
+    expect(baseCss).toMatch(/\.tab-active-viewport > \.hdr-sticky-strip\s*\{[^}]*top:\s*env\(safe-area-inset-top/);
     expect(baseCss).not.toMatch(/\.hdr-sticky-strip\.is-pinned\s*\{[^}]*padding-top/);
-    expect(baseCss).toMatch(/\.hdr-sticky-strip\s*\{[^}]*background:\s*transparent/);
-    expect(baseCss).toMatch(/\.hdr-sticky-strip\.is-pinned[\s\S]*?\.date-picker-trigger:not\(\.open\)[\s\S]*?box-shadow/);
+    expect(baseCss).toMatch(/\.hdr-sticky-strip\s*\{[^}]*padding:\s*16px 18px 10px/);
+    expect(baseCss).toMatch(/\.hdr-sticky-strip\s*\{[^}]*background:\s*var\(--v4-bg\)/);
+    expect(baseCss).toMatch(/\.hdr-sticky-strip\.is-pinned\s*\{[^}]*box-shadow:\s*0 6px 18px/);
+    expect(baseCss).not.toMatch(/\.hdr-sticky-strip\.is-pinned[^{]*\.date-picker-trigger:not\(\.open\)\s*\{[^}]*box-shadow/);
     expect(baseCss).toContain('.hdr-sticky-sentinel');
     expect(baseCss).toMatch(/\.tab-active-viewport > \.hdr:not\(\.hdr--date-collapse\)\s*\{[^}]*position:\s*sticky/);
     expect(baseCss).not.toMatch(/\.hdr\s*\{[^}]*contain:\s*layout/);

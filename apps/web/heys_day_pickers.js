@@ -154,27 +154,11 @@
     
     React.useEffect(() => { setCur(parseISO(valueISO || todayISO())); }, [valueISO]);
 
-    React.useEffect(() => {
-      if (!isOpen) {
-        document.documentElement.style.removeProperty('--date-picker-sheet-top');
-        return undefined;
-      }
-      const syncSheetAnchor = () => {
-        const anchor = wrapperRef.current || document.querySelector('.hdr-date-row');
-        if (!anchor) return;
-        const rect = anchor.getBoundingClientRect();
-        document.documentElement.style.setProperty('--date-picker-sheet-top', `${Math.round(rect.bottom + 10)}px`);
-      };
-      syncSheetAnchor();
-      window.addEventListener('resize', syncSheetAnchor);
-      window.addEventListener('scroll', syncSheetAnchor, true);
-      return () => {
-        window.removeEventListener('resize', syncSheetAnchor);
-        window.removeEventListener('scroll', syncSheetAnchor, true);
-        document.documentElement.style.removeProperty('--date-picker-sheet-top');
-      };
-    }, [isOpen]);
-    
+    // Контракт date-remainders, «вид шторки календаря»: лист прижат к низу
+    // экрана. Прежде это был popover, и CSS-переменная якоря вела его за низом
+    // строки даты при прокрутке и ресайзе — нижнему листу якорь не нужен,
+    // поэтому синхронизации (resize + scroll capture) больше нет.
+
     const first = new Date(y, m, 1), start = (first.getDay() + 6) % 7;
     const dim = new Date(y, m + 1, 0).getDate();
     const cells = [];
@@ -280,7 +264,14 @@
       setIsOpen(false);
     };
 
-    return React.createElement('div', { className: 'date-picker date-picker--v4', ref: wrapperRef },
+    // Контракт «вид чужого дня»: тинт берут капсула И ОБА КРУЖКА. Кружки —
+    // соседи капсулы, поэтому состояние поднимается на корень модификатором.
+    const isPastDay = !isTodaySelected && !headerRow.isNightLabel;
+
+    return React.createElement('div', {
+      className: 'date-picker date-picker--v4' + (isPastDay ? ' date-picker--past' : ''),
+      ref: wrapperRef
+    },
       React.createElement('div', { className: 'date-picker-row' },
         React.createElement('button', {
           type: 'button',
@@ -352,6 +343,9 @@
             className: 'date-picker-dropdown date-picker-sheet',
           },
         React.createElement('div', { className: 'date-picker-sheet__card' },
+        // Контракт «вид шторки календаря»: ручка 38×4 тоном чернил 14 %.
+        // У popover'а её не было — нижний лист без неё не читается как лист.
+        React.createElement('div', { className: 'date-picker-sheet-handle', 'aria-hidden': 'true' }),
         React.createElement('div', { className: 'date-picker-header' },
           React.createElement('button', {
             type: 'button',
@@ -390,7 +384,12 @@
             const dayData = daysDataMap.get(dateStr);
             const isSel = same(dt, sel);
             const isToday = same(dt, today);
-            const isFuture = dateStr > todayStr;
+            // Граница «будущего» — КАЛЕНДАРНОЕ сегодня, как у правой стрелки.
+            // По эффективному (todayISO, до 03:00 = вчера) ночью гасла клетка
+            // уже наступившего дня: стрелка вперёд на него вела, а календарь
+            // его же не отдавал (контракт «ночь до 03:00»: «правая стрелка
+            // живая и ведёт на 21 августа»).
+            const isFuture = dateStr > calendarToday;
             const hasCycle = dayData?.cycleDay != null;
             const hasRefeed = dayData?.isRefeedDay === true;
             const hasRealData = dayData && dayData.kcal > 0; // Есть реальные данные (еда)
@@ -451,8 +450,11 @@
             React.createElement('span', { className: 'legend-swatch legend-swatch--refeed', 'aria-hidden': 'true' }),
             'загрузка'
           ),
+          // «сегодня» в сетке — это начертание 700 тоном --ac, а не плашка
+          // (контракт «вид клетки»), поэтому образец легенды показывает цифру,
+          // а не квадрат: иначе легенда обещала бы заливку, которой нет.
           React.createElement('span', { className: 'legend-item today' },
-            React.createElement('span', { className: 'legend-swatch legend-swatch--today', 'aria-hidden': 'true' }),
+            React.createElement('span', { className: 'legend-swatch legend-swatch--today', 'aria-hidden': 'true' }, '7'),
             'сегодня'
           ),
           React.createElement('span', { className: 'legend-item selected' },

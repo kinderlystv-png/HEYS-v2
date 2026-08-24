@@ -45,31 +45,48 @@ describe('Date picker sheet v4 · вариант А', () => {
 
   it('sheet CSS paints today/selected and edge strips', () => {
     expect(sheetCss).toContain('.date-picker-sheet .date-picker-day.today');
-    expect(sheetCss).toContain('.date-picker-sheet .date-picker-day.selected:not(.today)');
+    // 2026-08-24: контракт «вид клетки» — «выбранный день — заливка --c2»,
+    // без исключения для сегодняшнего. Прежний :not(.today) существовал, пока
+    // сегодня было залито акцентом и перекрывало выбор.
+    expect(sheetCss).toContain('.date-picker-sheet .date-picker-day.selected {');
     expect(sheetCss).toContain('.date-picker-sheet .date-picker-day.has-cycle::before');
     expect(sheetCss).toContain('.date-picker-sheet .date-picker-day.has-refeed::after');
     expect(sheetCss).toContain('.date-picker-sheet .legend-swatch--dot');
     expect(sheetCss).not.toContain('.date-picker-sheet .day-status');
   });
 
-  it('sheet opens as v4 modal card under date row', () => {
+  // 2026-08-24, контракт date-remainders, «вид шторки календаря»: «лист прижат
+  // к низу: фон --bg, радиус 26 сверху, поля 18/16/16 px, ручка 38×4 px тоном
+  // чернил 14 %». Тест охранял предыдущее решение — popover под строкой даты с
+  // якорем --date-picker-sheet-top и без ручки. Решение отменено контрактом,
+  // поэтому проверки переписаны на нижний лист.
+  it('sheet opens as v4 bottom sheet with handle', () => {
     expect(sheetBlock).toContain('date-picker-sheet__card');
     expect(pickersSource).toContain('date-picker-backdrop--v4-modal');
-    expect(pickersSource).toContain('--date-picker-sheet-top');
-    expect(sheetBlock).not.toContain('date-picker-sheet-handle');
+    expect(pickersSource).not.toContain('--date-picker-sheet-top');
+    expect(sheetBlock).toContain('date-picker-sheet-handle');
+    expect(sheetCss).toMatch(/\.date-picker-sheet__card\s*\{[^}]*border-radius:\s*26px 26px 0 0/);
+    expect(sheetCss).toMatch(/\.date-picker-sheet__card\s*\{[^}]*padding:\s*18px 16px calc\(16px/);
+    expect(sheetCss).toMatch(/\.date-picker-sheet-handle\s*\{[^}]*width:\s*38px/);
   });
 
+  // Инвариант этого теста — «лист не наследует legacy datePickerSlide», иначе
+  // он на кадр вспыхивает у левого края. Он и остался. Позиционирование же
+  // переехало с popover'а на нижний лист (контракт «вид шторки календаря»),
+  // поэтому left/width/--date-picker-sheet-top заменены на bottom: 0.
+  // Подложка перестала быть прозрачной по тому же контракту («под ним
+  // затемнение»); тон и блюр берутся из общих токенов scrim'а — отступление от
+  // «34 % без блюра» названо в комментарии у самого правила.
   it('sheet не наследует legacy datePickerSlide (anti left-flash)', () => {
     const sheetRule = sheetCss.match(
       /\.date-picker-dropdown\.date-picker-sheet\s*\{[^}]+\}/,
     )?.[0] || '';
     expect(sheetRule).toContain('animation: datePickerSheetModalIn');
-    expect(sheetRule).toContain('left: 50%');
-    expect(sheetRule).toContain('width: min(360px');
-    expect(sheetRule).toContain('--date-picker-sheet-top');
-    expect(sheetRule).not.toContain('bottom: 0');
+    expect(sheetRule).toContain('bottom: 0');
+    expect(sheetRule).toContain('left: 0');
+    expect(sheetRule).not.toContain('--date-picker-sheet-top');
     expect(sheetRule).not.toContain('datePickerSlide');
-    expect(sheetCss).toMatch(/\.date-picker-backdrop\.date-picker-backdrop--v4-modal[\s\S]*?background:\s*transparent/);
+    expect(sheetCss).toMatch(/\.date-picker-backdrop\.date-picker-backdrop--v4-modal[\s\S]*?background:\s*var\(--v4-modal-backdrop-dim/);
   });
 
   it('sheet month nav uses v4 sand arrows, not legacy date-picker-nav', () => {
