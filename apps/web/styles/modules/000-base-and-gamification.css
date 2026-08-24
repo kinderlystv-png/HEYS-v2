@@ -8165,7 +8165,7 @@ body:has(.offline-banner) .wrap {
 .date-picker-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
 }
 
@@ -8180,6 +8180,7 @@ body:has(.offline-banner) .wrap {
   padding: 0;
   border: none;
   border-radius: 999px;
+  position: relative;
   /* v4-intentional */
   background: var(--v4-surface);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
@@ -8188,6 +8189,15 @@ body:has(.offline-banner) .wrap {
   align-items: center;
   justify-content: center;
   transition: opacity 0.15s ease;
+}
+
+/* Цель касания 44 pt при рисунке 34 — прозрачным припуском (строка
+   «стрелки»). Припуск вертикальный и горизонтальный: стрелки стоят по
+   краям ряда, соседей у них с внешней стороны нет. */
+.date-picker--v4 .date-picker-day-nav::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
 }
 
 @media (hover: hover) {
@@ -8232,7 +8242,7 @@ body:has(.offline-banner) .wrap {
   /* v4-intentional */
   background: var(--v4-surface);
   border: none;
-  border-radius: 16px;
+  border-radius: 999px;
   cursor: pointer;
   box-shadow: none;
   transition: box-shadow 0.15s ease;
@@ -8477,11 +8487,16 @@ body:has(.offline-banner) .wrap {
   overflow: hidden;
   flex-direction: column;
   gap: 3px;
-  border-radius: 12px;
+  border-radius: 14px;
   font-weight: 600;
   color: #201e1d;
   background: transparent;
   animation: none;
+  /* Строка «клетка дня»: высота 44 pt фиксирована, ширина 42 — семь
+     колонок в 298 px. Прежний aspect-ratio 1 давал квадрат 42×42 и
+     ронял высоту вместе с шириной экрана. */
+  aspect-ratio: auto;
+  min-height: 44px;
 }
 
 .date-picker-sheet .date-picker-day.has-data:not(.today):not(.selected) {
@@ -8541,9 +8556,9 @@ body:has(.offline-banner) .wrap {
   left: 0;
   top: 6px;
   bottom: 6px;
-  width: 2px;
+  width: 3px;
   border-radius: 999px;
-  background: color-mix(in srgb, #201e1d 32%, transparent);
+  background: color-mix(in srgb, #201e1d 45%, transparent);
   pointer-events: none;
 }
 
@@ -8553,9 +8568,9 @@ body:has(.offline-banner) .wrap {
   left: 7px;
   right: 7px;
   bottom: 2px;
-  height: 2px;
+  height: 3px;
   border-radius: 999px;
-  background: color-mix(in srgb, #201e1d 32%, transparent);
+  background: color-mix(in srgb, #201e1d 45%, transparent);
   pointer-events: none;
 }
 
@@ -8643,9 +8658,9 @@ body:has(.offline-banner) .wrap {
 
 .date-picker-sheet .legend-swatch--refeed {
   width: 11px;
-  height: 2px;
+  height: 3px;
   border-radius: 999px;
-  background: color-mix(in srgb, #201e1d 32%, transparent);
+  background: color-mix(in srgb, #201e1d 45%, transparent);
 }
 
 .date-picker-sheet .legend-swatch--today {
