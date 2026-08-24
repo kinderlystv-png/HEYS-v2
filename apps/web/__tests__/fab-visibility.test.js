@@ -93,7 +93,12 @@ describe('settings sheet FAB chips markup', () => {
         const shellSrc = fs.readFileSync(shellPath, 'utf8');
         expect(shellSrc).toContain("sheetExtra === 'theme'");
         expect(shellSrc).toContain('hdr-settings-sheet__fab-card');
-        expect(shellSrc).toContain('Плавающие кнопки');
+        // Контракт settings-system, строка «где живёт раздел»: ярус называется
+        // «Быстрые действия»; «Плавающие кнопки» — прежнее имя, и оно в тексте
+        // не должно остаться, иначе настройка и карточка на Главной снова
+        // разъедутся по названиям.
+        expect(shellSrc).toContain('Быстрые действия');
+        expect(shellSrc).not.toContain('Плавающие кнопки');
         expect(shellSrc).toContain('Кнопки перестроятся, когда закроете настройки');
         expect(shellSrc).not.toContain("sheetExtra === 'fabs'");
     });

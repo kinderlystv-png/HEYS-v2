@@ -5291,11 +5291,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             ),
                             React.createElement('div', {
                                 className: 'hdr-settings-sheet__tier hdr-settings-sheet__tier--fab',
-                            }, 'Плавающие кнопки'),
+                            }, 'Быстрые действия'),
                             React.createElement('div', {
                                 className: 'hdr-settings-sheet__fab-card',
                                 role: 'group',
-                                'aria-label': 'Плавающие кнопки',
+                                'aria-label': 'Быстрые действия',
                                 onClick: (e) => e.stopPropagation(),
                             },
                                 React.createElement('p', {
