@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { readKeyframes, readReducedMotionBlock, readRule } from './boot-mark-css-helpers.js';
+
 const webRoot = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(webRoot, 'index.html'), 'utf8');
 const loading = fs.readFileSync(path.join(webRoot, 'heys_loading_progress_v1.js'), 'utf8');
@@ -221,11 +223,41 @@ describe('cold-start spinner mark', () => {
   it('spinner rotates via html wrapper span', () => {
     expect(css).toMatch(/\.heys-boot-mark__spin[\s\S]*?display:\s*inline-flex/);
     expect(css).toContain('transform-origin: center center');
-    expect(css).toContain('animation: heys-boot-spin 1.1s linear infinite !important');
+    // Вращение без !important. Флаг animate-always уже выводит дугу из-под
+    // глобального гашения, а лишний !important тут только заставлял бы
+    // правило дыхания перекрикивать вращение (контракт «без анимации»).
+    expect(css).toContain('animation: heys-boot-spin 1.1s linear infinite;');
+    expect(css).not.toContain('heys-boot-spin 1.1s linear infinite !important');
+    // Флаг остаётся и проверяется дальше: он и выводит дугу из-под
+    // глобального *:not(.animate-always), и входит в селектор дыхания
+    // (0,3,0). Снять его — значит разом погасить дугу и промахнуться
+    // мимо правила, которое возвращает ей движение.
     expect(html).toContain('heys-boot-mark__spin animate-always');
-    expect(css).not.toMatch(/prefers-reduced-motion: reduce[\s\S]*heys-boot-breathe[\s\S]*heys-boot-mark__spin/);
     expect(loading).toContain("className: 'heys-wait-mark__spin animate-always'");
     expect(loading).toContain("return h('span', { className: 'heys-wait-mark__spin animate-always'");
+  });
+
+  // Раньше на этом месте стоял not.toMatch(/prefers-reduced-motion: reduce
+  // [\s\S]*heys-boot-breathe[\s\S]*heys-boot-mark__spin/) — он был зелёным
+  // вхолостую: в удалённом коммитом e68e327c коде селектор шёл ПЕРЕД именем
+  // кадров, а выражение требовало обратный порядок, так что не находило даже
+  // то, что якобы запрещало. Ниже — проверка, которая читает сам блок
+  // @media и падает, если дыхание убрать или подменить.
+  it('breathes the arc instead of spinning under reduced motion', () => {
+    const reduced = readReducedMotionBlock(css);
+    const rule = readRule(reduced, '.heys-boot-mark__spin');
+
+    expect(rule.selector).toContain('.heys-boot-mark .heys-boot-mark__spin.animate-always');
+    expect(rule.selector).toContain('.heys-wait-mark .heys-wait-mark__spin.animate-always');
+    expect(rule.body).toMatch(
+      /animation:\s*heys-boot-breathe\s+1\.6s\s+ease-in-out\s+infinite\s*!important/,
+    );
+    expect(rule.body).not.toContain('heys-boot-spin');
+
+    // Кадры дыхания живые, а не мёртвый код: гоняют только прозрачность.
+    const breathe = readKeyframes(css, 'heys-boot-breathe');
+    expect(breathe).toContain('opacity');
+    expect(breathe).not.toContain('transform');
   });
 
   it('applies canvas wait thresholds for user actions', () => {

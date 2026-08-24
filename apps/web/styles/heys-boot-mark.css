@@ -254,7 +254,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     align-items: center;
     justify-content: center;
     flex: none;
-    animation: heys-boot-spin 1.1s linear infinite !important;
+    animation: heys-boot-spin 1.1s linear infinite;
     transform-origin: center center;
     will-change: transform;
 }
@@ -480,6 +480,26 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     background-color: var(--bg, #fffaf1);
 }
 @media (prefers-reduced-motion: reduce) {
+    /* Контракт spinners, строка «без анимации»: вращение выключается, дуга
+       дышит прозрачностью 1,6 с — «замерший круг читается как сломанный
+       элемент». Гасить дугу насовсем нельзя, поэтому здесь замена движения,
+       а не его снятие.
+       Каскад. Этот файл стоит в шапке документа, а глобальное гашение
+       (*:not(.animate-always):not(.animate-always *) в heys-components.css и
+       в modules/300-modals-and-day.css) приезжает позже с основным стилем и
+       весит (0,2,0) при !important. Дыхание переживает его приход двумя
+       вещами разом: флаг animate-always на дуге выводит её из-под самого
+       правила (селектор просто перестаёт совпадать), а вес (0,3,0) —
+       корень знака + класс дуги + тот же флаг — оставляет дыхание сильнее
+       глобального даже при равном !important и более поздней позиции в
+       каскаде. Флаг тут работает дважды, поэтому он и остаётся на знаке.
+       На успехе и на отказе дуга уходит целиком: display: none в правилах
+       ниже, конкурирующего display здесь нет. */
+    .heys-boot-mark .heys-boot-mark__spin.animate-always,
+    .heys-wait-mark .heys-wait-mark__spin.animate-always {
+        animation: heys-boot-breathe 1.6s ease-in-out infinite !important;
+        will-change: opacity;
+    }
     .heys-boot-mark__sign,
     .heys-wait-mark__sign { animation: none; opacity: 1; }
     .heys-wait-mark.is-ok .heys-wait-mark__spin,
