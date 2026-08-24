@@ -57,21 +57,25 @@
   };
 
   const shellStyle = {
-    minHeight: '100vh', background: '#f6f7f5', padding: '24px 16px 48px',
+    // Роли набора вместо легаси-литералов: экран анкеты был единственным,
+    // который не был сведён на v4 и жил на легаси-палитре.
+    minHeight: '100vh', background: 'var(--v4-chip, #efe3cf)', padding: '24px 16px 48px',
     boxSizing: 'border-box', color: '#17202a', fontFamily: 'inherit',
   };
   const cardStyle = {
-    maxWidth: 680, margin: '0 auto', background: '#fff', borderRadius: 24,
-    border: '1px solid #e6e9e5', boxShadow: '0 18px 50px rgba(24, 39, 30, 0.08)',
+    maxWidth: 680, margin: '0 auto', background: 'var(--v4-bg, #fffaf1)', borderRadius: 24,
+    border: 'none', boxShadow: '0 18px 50px rgba(40, 24, 8, 0.08)',
     padding: 'clamp(20px, 5vw, 38px)', boxSizing: 'border-box',
   };
   const inputStyle = {
-    width: '100%', boxSizing: 'border-box', border: '1px solid #cfd6d0',
-    borderRadius: 12, padding: '12px 14px', fontSize: 16, lineHeight: 1.45,
-    color: '#17202a', background: '#fff', outline: 'none',
+    // Строка «вид карточки вопроса»: поле внутри карточки — фон --bg,
+    // радиус 14, высота не меньше 44.
+    width: '100%', boxSizing: 'border-box', border: '1px solid rgba(32, 30, 29, 0.12)',
+    borderRadius: 14, minHeight: 44, padding: '12px 14px', fontSize: 16, lineHeight: 1.45,
+    color: '#17202a', background: 'var(--v4-bg, #fffaf1)', outline: 'none',
   };
-  const labelStyle = { display: 'grid', gap: 7, fontSize: 14, fontWeight: 650, color: '#25332a' };
-  const hintStyle = { fontSize: 13, lineHeight: 1.45, color: '#657168', fontWeight: 400 };
+  const labelStyle = { display: 'grid', gap: 7, fontSize: 12.5, fontWeight: 600, color: '#25332a' };
+  const hintStyle = { fontSize: 11.5, lineHeight: 1.45, color: 'var(--v4-ink-2, rgba(32, 30, 29, 0.55))', fontWeight: 500 };
 
   function unwrapRpc(res, fn) {
     if (res?.error) return { success: false, error: res.error?.code || res.error, message: res.error?.message };
@@ -288,8 +292,12 @@
           key: 'warning-text',
           role: 'note',
           style: {
-            padding: 16, borderRadius: 12, background: '#fff7e8',
-            color: '#754b00', fontSize: 14, lineHeight: 1.55,
+            // Строка «вид блока предупреждения»: своя область 186 px с
+            // настоящей прокруткой — иначе четыре абзаца выталкивают
+            // чекбокс за экран, и подтвердить нечем.
+            maxHeight: 186, overflowY: 'auto',
+            padding: '14px 16px', borderRadius: 18, background: 'var(--v4-card, #f7efe2)',
+            color: '#17202a', fontSize: 12, lineHeight: 1.6,
             display: 'grid', gap: 10,
           },
         },
@@ -677,7 +685,7 @@
           type: 'button', onClick: onPrimary, disabled: saveState === 'saving',
           style: {
             ...inputStyle, width: 'auto', flex: '1 1 140px', minHeight: 46, cursor: saveState === 'saving' ? 'wait' : 'pointer',
-            background: '#434587', color: '#fff', border: 0, fontWeight: 700,
+            background: 'var(--v4-sand-act, #c67139)', color: 'var(--v4-btn-on-act, #2b1608)', border: 0, fontWeight: 700,
             opacity: saveState === 'saving' ? 0.65 : 1,
           },
         }, primaryLabel)
@@ -693,7 +701,7 @@
     if (error && !hydrated) return React.createElement('div', shellProps, React.createElement('div', { style: cardStyle },
       React.createElement('h1', { style: { marginTop: 0 } }, 'Не удалось открыть анкету'),
       React.createElement('p', null, error),
-      React.createElement('button', { type: 'button', onClick: () => global.location.reload(), style: { ...inputStyle, background: '#434587', color: '#fff', border: 0, fontWeight: 700 } }, 'Повторить')
+      React.createElement('button', { type: 'button', onClick: () => global.location.reload(), style: { ...inputStyle, background: 'var(--v4-sand-act, #c67139)', color: 'var(--v4-btn-on-act, #2b1608)', border: 0, fontWeight: 700 } }, 'Повторить')
     ));
 
     if (status === 'not_invited') return React.createElement('div', shellProps, React.createElement('div', { style: cardStyle },
@@ -738,7 +746,7 @@
           }, done ? '✓' : '·'),
           label
         ))),
-        React.createElement('button', { type: 'button', onClick: leaveIntake, style: { ...inputStyle, minHeight: 46, background: '#434587', color: '#fff', border: 0, fontWeight: 700, cursor: 'pointer' } }, 'Вернуться в приложение')
+        React.createElement('button', { type: 'button', onClick: leaveIntake, style: { ...inputStyle, minHeight: 46, background: 'var(--v4-sand-act, #c67139)', color: 'var(--v4-btn-on-act, #2b1608)', border: 0, fontWeight: 700, cursor: 'pointer' } }, 'Вернуться в приложение')
       ));
     }
 
@@ -772,7 +780,7 @@
         React.createElement('button', { type: 'button', onClick: closeSafely, disabled: saveState === 'saving', style: { border: 0, background: 'transparent', color: '#657168', cursor: saveState === 'saving' ? 'wait' : 'pointer', fontSize: 14 } }, 'Закрыть')
       ),
       React.createElement('div', { style: { height: 5, borderRadius: 8, background: '#e8ece9', overflow: 'hidden', marginBottom: 28 } },
-        React.createElement('div', { style: { height: '100%', width: `${((step + 1) / STEPS.length) * 100}%`, background: '#434587', transition: 'width .2s ease' } })
+        React.createElement('div', { style: { height: '100%', width: `${((step + 1) / STEPS.length) * 100}%`, background: 'var(--v4-sand-act, #c67139)', transition: 'width .2s ease' } })
       ),
       status === 'needs_clarification' ? React.createElement('div', {
         role: 'status',
@@ -801,7 +809,7 @@
             },
             style: {
               minHeight: 44, marginTop: 12, padding: '9px 12px',
-              borderRadius: 10, border: 0, background: '#434587',
+              borderRadius: 10, border: 0, background: 'var(--v4-sand-act, #c67139)',
               color: '#fff', fontWeight: 700, cursor: 'pointer',
             }
           }, 'Перейти к нужному разделу')
@@ -839,14 +847,25 @@
           : ['health_consent_required', 'intake_locked'].includes(saveErrorCode)
             ? 'Обновить состояние'
             : 'Повторить сохранение') : null,
-      React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 30 } },
+      // Строки «одно правило», «шаги 1 и 3», «отправка»: недоступное действие
+      // называет причину заранее — строкой над кнопкой, а сама кнопка не
+      // нажимается. Прежде «Продолжить» была всегда активна, и человек узнавал
+      // о незаполненном поле только после нажатия.
+      missingRequired ? React.createElement('div', {
+        key: 'blocked-reason',
+        style: { marginTop: 22, fontSize: 11.5, fontWeight: 500, lineHeight: 1.4,
+          color: 'var(--v4-ink-2, rgba(32, 30, 29, 0.55))' },
+      }, step === STEPS.length - 1 ? 'Поставьте галочку выше' : 'Заполните поля со звёздочкой') : null,
+      React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: missingRequired ? 10 : 30 } },
         step > 0 ? React.createElement('button', {
           type: 'button', onClick: () => { setError(''); setStep((value) => Math.max(0, value - 1)); },
           style: { ...inputStyle, width: 'auto', minWidth: 108, cursor: 'pointer', fontWeight: 650 },
         }, 'Назад') : null,
         React.createElement('button', {
-          type: 'button', onClick: next, disabled: saveState === 'saving',
-          style: { ...inputStyle, minHeight: 46, flex: 1, background: '#434587', color: '#fff', border: 0, cursor: 'pointer', fontWeight: 750, opacity: saveState === 'saving' ? 0.65 : 1 },
+          type: 'button', onClick: next, disabled: saveState === 'saving' || missingRequired,
+          style: { ...inputStyle, minHeight: 48, flex: 1, background: 'var(--v4-sand-act, #c67139)', color: 'var(--v4-btn-on-act, #2b1608)', border: 0,
+            cursor: (saveState === 'saving' || missingRequired) ? 'default' : 'pointer', fontWeight: 700,
+            opacity: (saveState === 'saving' || missingRequired) ? 0.45 : 1 },
         }, HEYS.WaitMark?.button?.(React, {
           busy: saveState === 'saving',
           ok: saveState === 'saved',
