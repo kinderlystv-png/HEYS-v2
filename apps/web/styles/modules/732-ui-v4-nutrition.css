@@ -1175,8 +1175,10 @@
 
 /* Обратимое — тинтом, необратимое — сплошной заливкой: цвет говорит, что
    вернуть можно, а что нет. */
+/* Тинт --sage, а не подложка --gr-bg: совпадают они только в песочной
+   (контракт «цвет свайп-действий»). */
 .nutrition-v4-sheet__swipe-actions button.is-copy {
-  background: var(--v4-ok-bg, #f0fdf4);
+  background: var(--v4-ok-tint, #f0fdf4);
   color: var(--v4-on-ok, #3f4a2e);
 }
 
@@ -1380,9 +1382,11 @@
   bottom: -7px;
 }
 
+/* Сплошная заливка — значит тон --on-gr, а не тон тинта --sageTx
+   (контракт «цвета» блока добавок). */
 .nutrition-v4-supplements__chip.is-on {
   background: var(--v4-ok-fill, #22c55e);
-  color: var(--v4-on-ok, #3f4a2e);
+  color: var(--v4-on-ok-fill, #3f4a2e);
 }
 
 .nutrition-v4-supplements__chip.is-more {
@@ -1392,6 +1396,10 @@
   font-weight: 700;
 }
 
+/* Снятая с курса позиция: подложка --gr-bg с обводкой --gr2. Текст остаётся на
+   --v4-on-ok (тон тинта): контракт цвет этой подписи не называет, а кадр
+   .suCh.gh просит --gr (=--v4-ok-text) — развести это нельзя без перекраски
+   каноничной палитры (#3f4a2e → #16a34a), см. отчёт по зоне. */
 .nutrition-v4-supplements__chip.is-stale {
   background: var(--v4-ok-bg, #eaefe0);
   box-shadow: inset 0 0 0 1.5px var(--v4-ok-fill, #22c55e);
