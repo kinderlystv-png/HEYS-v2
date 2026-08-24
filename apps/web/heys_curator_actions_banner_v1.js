@@ -51,6 +51,9 @@
   let _previousFocus = null;
   let _bodyOverflowBeforeModal = '';
   let _modalKeydownHandler = null;
+  let _curatorEditsSuppressPopState = false;
+  let _curatorEditsPopStateBound = false;
+  let _curatorEditsCloseAction = null;
   let _ackQueueCache = null;
   let _filterDate = null;
   let _expandedDates = new Set();
@@ -1603,10 +1606,51 @@
     return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   }
 
-  function removeExistingModal() {
+  // Контракт curator-edits, «safe-area и кнопка назад»: аппаратная кнопка
+  // назад закрывает лист так же, как крестик, «позже» пишется тем же путём.
+  // Идиома — heys_widgets_ui_v1.js (карточка «Ещё») и heys_day_pickers.js
+  // (шторка календаря): pushState-метка при открытии, popstate закрывает
+  // лист; при закрытии из UI сами уводим историю на шаг назад, чтобы не
+  // оставлять «пустую» запись за собой.
+  //
+  // Отличие от React-варианта: там слушатель живёт в useEffect на [open] и
+  // пересоздаётся вместе с компонентом. Здесь один и тот же module-level
+  // слушатель стоит на window один раз за всю жизнь страницы — навешивать и
+  // снимать его на каждое renderModal() нельзя: history.back() бросает
+  // popstate асинхронно, и «эхо» от собственного back() может дойти уже
+  // после того, как лист успели переоткрыть — тогда попытка снять и заново
+  // навесить слушатель на каждое открытие потеряла бы это эхо или спутала
+  // бы его с настоящим нажатием «назад». Вместо этого слушатель живёт,
+  // проверяет актуальность через `_modalEl` (лист правда открыт сейчас?) и
+  // suppress-флаг (это не эхо от нашего же back()?).
+  function handleCuratorEditsPopState() {
+    if (_curatorEditsSuppressPopState) {
+      _curatorEditsSuppressPopState = false;
+      return;
+    }
+    if (!_modalEl) return;
+    const closeFn = _curatorEditsCloseAction;
+    _curatorEditsCloseAction = null;
+    if (typeof closeFn === 'function') closeFn();
+  }
+
+  // preserveHistoryGuard=true — вызов изнутри renderModal() перед пересборкой
+  // уже открытого листа (разворот даты/приёма, обновление данных): лист не
+  // закрывается для пользователя, поэтому историю не трогаем — иначе каждый
+  // разворот двигал бы историю браузера.
+  function removeExistingModal(preserveHistoryGuard) {
     if (_modalKeydownHandler) {
       try { document.removeEventListener('keydown', _modalKeydownHandler); } catch (_) {}
       _modalKeydownHandler = null;
+    }
+    if (!preserveHistoryGuard) {
+      _curatorEditsCloseAction = null;
+      try {
+        if (window.history.state?.heysCuratorEdits) {
+          _curatorEditsSuppressPopState = true;
+          window.history.back();
+        }
+      } catch (_) { _curatorEditsSuppressPopState = false; }
     }
     if (_modalEl && _modalEl.parentNode) {
       _modalEl.parentNode.removeChild(_modalEl);
@@ -1743,7 +1787,10 @@
     if (_filterDate) groups = groups.filter((g) => g.date === _filterDate);
     if (groups.length === 0) return false;
 
-    removeExistingModal();
+    // preserveHistoryGuard=true: этот вызов — пересборка уже открытого листа
+    // (или первое открытие, когда guard ещё не активен и снимать нечего), не
+    // закрытие. Кнопка «назад» продолжает закрывать этот же лист.
+    removeExistingModal(true);
     _renderedEntries = unique;
     const targetRegistry = Object.create(null);
     const pairRegistry = Object.create(null);
@@ -1941,6 +1988,31 @@
     });
     document.addEventListener('keydown', _modalKeydownHandler);
     _modalEl = backdrop;
+    // Держим действие закрытия свежим на каждой перерисовке — closeAsLater
+    // пересоздаётся при каждом renderModal(), а слушатель popstate вечный.
+    _curatorEditsCloseAction = closeAsLater;
+    if (!_curatorEditsPopStateBound) {
+      _curatorEditsPopStateBound = true;
+      // Эвикция «эхо»-слушателя от предыдущего инстанса модуля (agent test
+      // harness перезагружает файл через eval() на общий window между
+      // тестами) — гарантирует, что на window висит не больше одного нашего
+      // слушателя. В проде инстанс всего один, эвикция — no-op.
+      try {
+        if (window.__heysCuratorEditsPopStateHandler) {
+          window.removeEventListener('popstate', window.__heysCuratorEditsPopStateHandler);
+        }
+      } catch (_) {}
+      window.__heysCuratorEditsPopStateHandler = handleCuratorEditsPopState;
+      window.addEventListener('popstate', handleCuratorEditsPopState);
+    }
+    // Пушим метку, только если на вершине истории её ещё нет: при пересборке
+    // уже открытого листа (разворот даты/приёма, обновление данных) метка
+    // остаётся с прошлого раза — повторный pushState не нужен.
+    if (!(window.history.state && window.history.state.heysCuratorEdits)) {
+      try {
+        window.history.pushState({ heysCuratorEdits: true }, '');
+      } catch (_) { /* история недоступна — остальные пути закрытия работают */ }
+    }
     const primary = backdrop.querySelector('.ca-modal__ack-btn');
     if (primary && typeof primary.focus === 'function') {
       setTimeout(() => {
