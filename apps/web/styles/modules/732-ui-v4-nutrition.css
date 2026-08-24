@@ -1346,6 +1346,7 @@
 }
 
 .nutrition-v4-supplements__chip {
+  position: relative;
   flex: 0 0 auto;
   min-height: 30px;
   max-width: 100%;
@@ -1363,6 +1364,17 @@
   overflow-wrap: anywhere;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Контракт «состав чипа»: область нажатия расширена до 44 pt невидимым
+   припуском, а не высотой самого чипа — сам чип остаётся 30 px. */
+.nutrition-v4-supplements__chip::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -7px;
+  bottom: -7px;
 }
 
 .nutrition-v4-supplements__chip.is-on {

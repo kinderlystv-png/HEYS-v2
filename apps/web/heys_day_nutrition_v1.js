@@ -488,7 +488,7 @@
   async function writeChipState(chip, nextEnabled) {
     const U = HEYS.utils;
     const profile = U?.lsGet?.('heys_profile', {}) || {};
-    const updated = { ...profile };
+    let updated = { ...profile };
 
     // «Добавки» включаются через запрос согласия: до согласия чип выключен.
     if (chip.needsConsent && nextEnabled) {
@@ -499,6 +499,20 @@
       }
       updated.supplementsTrackingEnabled = true;
       updated[chip.field] = true;
+    } else if (chip.needsConsent) {
+      // Контракт «согласие»: выключение чипа удаляет отметки и поля профиля —
+      // тот же путь отзыва, что в настройках (heys_user_v12.js). Раньше чип
+      // прятал блок, а отметки и курс оставались лежать.
+      const hf = HEYS.healthFeatures;
+      if (typeof hf?.requestHealthFeatureToggle === 'function') {
+        const allowed = await hf.requestHealthFeatureToggle('supplementsTrackingEnabled', false);
+        if (!allowed) return false;
+      }
+      const purgeProfile = hf?.FEATURE_TOGGLES?.supplementsTrackingEnabled?.purgeProfile;
+      updated = typeof purgeProfile === 'function'
+        ? purgeProfile(updated)
+        : { ...updated, supplementsTrackingEnabled: false };
+      updated[chip.field] = false;
     } else {
       updated[chip.field] = nextEnabled !== false;
     }
@@ -558,6 +572,34 @@
 
   // === Чип-зависимые блоки ===========================================
 
+  // Контракт «нахлёст»: пересечение красится в ОБЕИХ строках. Прежний код рисовал
+  // тревожный сегмент только у ранней волны, поздняя оставалась спокойной.
+  function overlapRange(wave, neighbour) {
+    if (!wave || !neighbour) return null;
+    const from = Math.max(wave.startMin, neighbour.startMin);
+    const to = Math.min(wave.endMin, neighbour.endMin);
+    return to > from ? { from, to } : null;
+  }
+
+  function timelineRow(React, keyPrefix, waves, idx, pos) {
+    const wave = waves[idx];
+    const segments = [overlapRange(wave, waves[idx - 1]), overlapRange(wave, waves[idx + 1])].filter(Boolean);
+    return React.createElement('div', { key: keyPrefix + idx, className: 'nutrition-v4-timeline__row' },
+      React.createElement('b', null, formatMinutesClock(wave.startMin)),
+      React.createElement('span', { className: 'nutrition-v4-timeline__track' },
+        React.createElement('i', {
+          style: { left: pos(wave.startMin) + '%', width: (pos(wave.endMin) - pos(wave.startMin)) + '%' }
+        }),
+        segments.map((segment, segIdx) => React.createElement('i', {
+          key: 'ov-' + segIdx,
+          className: 'is-overlap',
+          style: { left: pos(segment.from) + '%', width: (pos(segment.to) - pos(segment.from)) + '%' }
+        }))
+      ),
+      React.createElement('s', null, formatMinutesClock(wave.endMin))
+    );
+  }
+
   function renderMealsTimelineBlock(React, insulinWaveData, day) {
     const history = Array.isArray(insulinWaveData?.waveHistory) ? insulinWaveData.waveHistory : [];
     const waves = history
@@ -577,32 +619,78 @@
     const span = Math.max(1, rangeEnd - rangeStart);
     const pos = (minutes) => Math.min(100, Math.max(0, ((minutes - rangeStart) / span) * 100));
 
+    // Контракт «нахлёст»: пересечений нет — подписи нет вовсе. «Без пересечений»
+    // было своей выдумкой кода.
     return blockShell(React, 'mealsTimeline', 'Приёмы за день',
-      totalOverlap > 0 ? 'нахлёст ' + formatDurationShort(totalOverlap) : 'без пересечений',
-      totalOverlap > 0 ? 'warn' : 'ok',
+      totalOverlap > 0 ? 'нахлёст ' + formatDurationShort(totalOverlap) : null,
+      totalOverlap > 0 ? 'warn' : null,
       React.createElement('div', { className: 'nutrition-v4-timeline' },
-        waves.map((wave, idx) => {
-          const next = waves[idx + 1];
-          const overlapEnd = next && next.startMin < wave.endMin ? wave.endMin : null;
-          return React.createElement('div', { key: 'wave-' + idx, className: 'nutrition-v4-timeline__row' },
-            React.createElement('b', null, formatMinutesClock(wave.startMin)),
-            React.createElement('span', { className: 'nutrition-v4-timeline__track' },
-              React.createElement('i', {
-                style: { left: pos(wave.startMin) + '%', width: (pos(wave.endMin) - pos(wave.startMin)) + '%' }
-              }),
-              overlapEnd ? React.createElement('i', {
-                className: 'is-overlap',
-                style: { left: pos(next.startMin) + '%', width: (pos(overlapEnd) - pos(next.startMin)) + '%' }
-              }) : null
-            ),
-            React.createElement('s', null, formatMinutesClock(wave.endMin))
-          );
-        })
+        waves.map((wave, idx) => timelineRow(React, 'wave-', waves, idx, pos))
       )
     );
   }
 
-  function renderWaveNowBlock(React, insulinWaveData) {
+  // Контракт «трассировка расчёта»: расчёт признаёт, чего не знает. На первом
+  // слое — три крупнейших вклада и строка неопределённости с диапазоном; полный
+  // список вкладов открывается «Весь расчёт», иначе семь строк по «+0,2 мин»
+  // прячут главное.
+  const TRACE_TOP_LIMIT = 3;
+
+  function signedMinutesLabel(minutes) {
+    const value = Math.round((Number(minutes) || 0) * 10) / 10;
+    if (value === 0) return '0 мин';
+    const abs = Math.abs(value);
+    // Контракт «формат чисел»: дробные с запятой; у целых хвост «,0» не пишем.
+    const body = Number.isInteger(abs) ? formatNumber(abs) : formatDecimal(abs, 1);
+    return (value > 0 ? '+' : '−') + body + ' мин';
+  }
+
+  function buildWaveTrace(insulinWaveData) {
+    const calc = insulinWaveData?.estimatedWindow?.calculation;
+    if (!calc) return null;
+    const contributions = (Array.isArray(calc.contributions) ? calc.contributions : [])
+      .filter((item) => item && Number.isFinite(Number(item.minutes)))
+      .slice()
+      .sort((a, b) => Math.abs(Number(b.minutes)) - Math.abs(Number(a.minutes)));
+    if (!contributions.length) return null;
+    const uncertainty = Number(calc.uncertaintyPercent);
+    const lower = Number(calc.lowerMinutes);
+    const upper = Number(calc.upperMinutes);
+    return {
+      contributions,
+      hasMore: contributions.length > TRACE_TOP_LIMIT,
+      uncertaintyLine: Number.isFinite(lower) && Number.isFinite(upper)
+        ? (Number.isFinite(uncertainty) ? '±' + uncertainty + ' % · ' : '')
+          + formatDurationShort(lower) + ' – ' + formatDurationShort(upper)
+        : null
+    };
+  }
+
+  function renderWaveTrace(React, trace, expanded, onToggle) {
+    if (!trace) return null;
+    const shown = expanded ? trace.contributions : trace.contributions.slice(0, TRACE_TOP_LIMIT);
+    return React.createElement(React.Fragment, null,
+      listRows(React, shown.map((item, idx) => ({
+        key: item.code || item.label || idx,
+        label: item.label || item.code || '—',
+        value: signedMinutesLabel(item.minutes)
+      }))),
+      trace.uncertaintyLine ? React.createElement('div', { className: 'nutrition-v4-why' },
+        'Неопределённость расчёта ' + trace.uncertaintyLine
+      ) : null,
+      trace.hasMore ? React.createElement('button', {
+        type: 'button',
+        className: 'nutrition-v4-disclose' + (expanded ? ' is-open' : ''),
+        'aria-expanded': expanded ? 'true' : 'false',
+        onClick: onToggle
+      },
+        React.createElement('span', null, expanded ? 'Свернуть расчёт' : 'Весь расчёт'),
+        chevron(React, 15)
+      ) : null
+    );
+  }
+
+  function renderWaveNowBlock(React, insulinWaveData, options) {
     if (!insulinWaveData || insulinWaveData.isPastDay || insulinWaveData.isOvernightEstimate) return null;
     const remaining = Number(insulinWaveData.rangeRemaining ?? insulinWaveData.remaining);
     if (!Number.isFinite(remaining)) return null;
@@ -629,24 +717,9 @@
             : 'окно открыто')
         ),
         active.length ? React.createElement('div', { className: 'nutrition-v4-timeline' },
-          active.map((wave, idx) => {
-            const next = active[idx + 1];
-            const overlapEnd = next && next.startMin < wave.endMin ? wave.endMin : null;
-            return React.createElement('div', { key: 'now-' + idx, className: 'nutrition-v4-timeline__row' },
-              React.createElement('b', null, formatMinutesClock(wave.startMin)),
-              React.createElement('span', { className: 'nutrition-v4-timeline__track' },
-                React.createElement('i', {
-                  style: { left: pos(wave.startMin) + '%', width: (pos(wave.endMin) - pos(wave.startMin)) + '%' }
-                }),
-                overlapEnd ? React.createElement('i', {
-                  className: 'is-overlap',
-                  style: { left: pos(next.startMin) + '%', width: (pos(overlapEnd) - pos(next.startMin)) + '%' }
-                }) : null
-              ),
-              React.createElement('s', null, formatMinutesClock(wave.endMin))
-            );
-          })
-        ) : null
+          active.map((wave, idx) => timelineRow(React, 'now-', active, idx, pos))
+        ) : null,
+        renderWaveTrace(React, buildWaveTrace(insulinWaveData), !!options?.traceExpanded, options?.onToggleTrace)
       )
     );
   }
@@ -705,7 +778,7 @@
   }
 
   function renderFiberBlock(React, params) {
-    const { dayTot, normAbs, day, pIndex, expanded, onToggle, hasData } = params;
+    const { dayTot, normAbs, day, pIndex, expanded, onToggle, hasData, progressK } = params;
     const eaten = hasData ? Math.max(0, Number(dayTot?.fiber) || 0) : null;
     const target = Math.max(1, Math.round(Number(normAbs?.fiber) || 0));
     if (!target) return null;
@@ -713,31 +786,37 @@
     const pct = eaten == null ? 0 : Math.max(0, Math.min(100, (eaten / target) * 100));
     const sources = expanded ? (HEYS.dayDiarySection?.getFiberSources?.() || []) : [];
     const best = expanded ? bestFiberSource(day?.date, pIndex) : null;
+    // Контракт «клетчатка · блок»: дорожка по той же шкале зон, что у итогов дня
+    // (раньше была вечно is-ok). Число красным не красится никогда — тон шапки
+    // остаётся вторичным.
+    const barClass = eaten == null
+      ? 'is-ok'
+      : totalRowDeviationZone(eaten, target, Number(progressK) || 0).barClass;
 
     return blockShell(React, 'fiber', 'Клетчатка',
       (eaten == null ? DASH : formatNumber(eaten)) + ' из ' + formatNumber(target) + ' г', null,
       React.createElement(React.Fragment, null,
-        eaten == null ? null : React.createElement('div', { className: 'nutrition-v4-bar' },
-          React.createElement('i', { className: 'is-ok', style: { width: pct + '%' } })
+        // Пустой день: прочерк вместо числа, дорожка и строка «добрать» не рисуются.
+        eaten == null ? null : React.createElement(React.Fragment, null,
+          React.createElement('div', { className: 'nutrition-v4-bar' },
+            React.createElement('i', { className: barClass, style: { width: pct + '%' } })
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'nutrition-v4-disclose' + (expanded ? ' is-open' : ''),
+            'aria-expanded': expanded ? 'true' : 'false',
+            onClick: onToggle
+          },
+            React.createElement('span', null,
+              remaining > 0 ? 'добрать ' + remaining + ' г' : 'норма закрыта'),
+            chevron(React, 15)
+          )
         ),
-        React.createElement('button', {
-          type: 'button',
-          className: 'nutrition-v4-disclose' + (expanded ? ' is-open' : ''),
-          'aria-expanded': expanded ? 'true' : 'false',
-          onClick: onToggle
-        },
-          React.createElement('span', null, remaining == null
-            ? 'чем добрать клетчатку'
-            : (remaining > 0 ? 'добрать ' + remaining + ' г' : 'норма закрыта')),
-          chevron(React, 15)
-        ),
-        expanded ? React.createElement(React.Fragment, null,
+        expanded && eaten != null ? React.createElement(React.Fragment, null,
           React.createElement('div', { className: 'nutrition-v4-why' },
-            remaining == null
-              ? 'Норма дня — ' + formatNumber(target) + ' г. Добирать лучше постепенно: резкая прибавка тяжело переносится.'
-              : (remaining > 0
-                ? 'Не хватает ' + remaining + ' г. Добирать лучше постепенно — резкая прибавка тяжело переносится.'
-                : 'Сегодня клетчатка в норме. Дальше достаточно не перегружать день.')
+            remaining > 0
+              ? 'Не хватает ' + remaining + ' г. Добирать лучше постепенно — резкая прибавка тяжело переносится.'
+              : 'Сегодня клетчатка в норме. Дальше достаточно не перегружать день.'
           ),
           sources.length ? listRows(React, sources.map((source) => ({
             key: source.title,
@@ -760,6 +839,17 @@
       const timing = catalog?.[id]?.timing;
       const groupKey = SUPP_TIMING_TO_GROUP[timing] || 'anytime';
       groups[groupKey].push(id);
+    });
+    // Контракт «порядок чипов»: внутри группы — порядок каталога, а не порядок
+    // добавления в курс. Ключи каталога и задают этот порядок; позиции вне
+    // каталога уходят в конец, сохраняя свой относительный порядок.
+    const catalogOrder = new Map(Object.keys(catalog || {}).map((id, idx) => [id, idx]));
+    const rank = (id) => (catalogOrder.has(id) ? catalogOrder.get(id) : Number.MAX_SAFE_INTEGER);
+    Object.keys(groups).forEach((groupKey) => {
+      groups[groupKey] = groups[groupKey]
+        .map((id, idx) => ({ id, idx }))
+        .sort((a, b) => (rank(a.id) - rank(b.id)) || (a.idx - b.idx))
+        .map((entry) => entry.id);
     });
     return groups;
   }
@@ -1304,6 +1394,8 @@
     }, [prof]);
 
     const [fiberExpanded, setFiberExpanded] = React.useState(false);
+    // «Весь расчёт» — второй слой трассировки окна сжигания жира.
+    const [traceExpanded, setTraceExpanded] = React.useState(false);
 
     // Только чтение: кнопки записи гаснут до 40 %, но остаются на месте —
     // спрятать кнопку значит сделать вид, что действия нет.
@@ -1361,14 +1453,17 @@
       chipState.mealsTimeline && renderMealsTimelineBlock(React, insulinWaveData, day),
       chipState.hunger && renderHungerBlock(React, day, date, openMorningCheckin),
       chipState.fiber && renderFiberBlock(React, {
-        dayTot, normAbs, day, pIndex, hasData,
+        dayTot, normAbs, day, pIndex, hasData, progressK,
         expanded: fiberExpanded,
         onToggle: () => { setFiberExpanded((value) => !value); haptic?.('light'); }
       }),
       chipState.supplements && renderSupplementsBlock(React, { React, date, day, haptic }),
       chipState.refeed && renderRefeedBlock(React, { day, optimum, budgetKcal }),
       chipState.scoreRisk && renderScoreRiskBlock(React, { day, prof, dayTot, normAbs, pIndex }),
-      chipState.wave && renderWaveNowBlock(React, insulinWaveData)
+      chipState.wave && renderWaveNowBlock(React, insulinWaveData, {
+        traceExpanded,
+        onToggleTrace: () => { setTraceExpanded((value) => !value); haptic?.('light'); }
+      })
     ].filter(Boolean);
 
     return React.createElement('div', {

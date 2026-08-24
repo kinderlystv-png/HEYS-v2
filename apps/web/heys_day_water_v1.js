@@ -443,7 +443,21 @@
               fill: 'none',
               stroke: alarm ? 'url(#water-review-alarm-gradient)' : 'currentColor',
               strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round'
-            })
+            }),
+            // Контракт «неделя в «Кольце»»: попадание в норму — залитая точка,
+            // промах — контурная (фон карточки внутри); сегодня — только ореол,
+            // заливку точки он не меняет.
+            points.map((point) => React.createElement(React.Fragment, { key: point.iso },
+              point.isToday ? React.createElement('circle', {
+                className: 'water-review__curve-today',
+                cx: point.x, cy: point.y, r: 6.8
+              }) : null,
+              React.createElement('circle', {
+                className: 'water-review__curve-dot'
+                  + (point.goalMl > 0 && point.waterMl >= point.goalMl ? '' : ' water-review__curve-dot--miss'),
+                cx: point.x, cy: point.y, r: 2.6
+              })
+            ))
           )
         ),
 

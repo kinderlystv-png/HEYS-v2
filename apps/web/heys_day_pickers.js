@@ -267,6 +267,13 @@
       );
     }
 
+    // Контракт date-remainders, строка «доступность»: капсула озвучивает полную дату
+    // («воскресенье, 16 августа»), а не слово «Сегодня» — слово остаётся видимым,
+    // но экранному диктору нужна дата. Ночная капсула сама себя называет одной строкой.
+    const fullDateSpeech = headerRow.isNightLabel
+      ? headerRow.main
+      : sel.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+
     const handleInlineToday = (e) => {
       e.stopPropagation();
       if ((valueISO || todayStr) !== todayStr) onSelect(todayStr);
@@ -291,7 +298,8 @@
             className: 'date-picker-trigger-lbl',
             onClick: () => setIsOpen(!isOpen),
             'aria-expanded': isOpen,
-            'aria-haspopup': 'dialog'
+            'aria-haspopup': 'dialog',
+            'aria-label': fullDateSpeech
           },
             React.createElement('span', { className: 'date-picker-lbl-inner' },
               calendarIconSvg(),
@@ -315,11 +323,15 @@
         ),
         React.createElement('button', {
           type: 'button',
+          // Контракт «доступность»: погашенная стрелка помечается aria-disabled и
+          // сохраняет подпись «Следующий день» — прежние disabled + «Уже сегодня»
+          // выбрасывали её из дерева доступности и подменяли название состоянием.
+          // Гашение и защита от нажатия остаются на классе (opacity + pointer-events).
           className: 'date-picker-day-nav' + (canGoNext ? '' : ' date-picker-day-nav--disabled'),
           onClick: handleNextDay,
-          disabled: !canGoNext,
-          title: canGoNext ? 'Следующий день' : 'Уже сегодня',
-          'aria-label': canGoNext ? 'Следующий день' : 'Уже сегодня'
+          'aria-disabled': canGoNext ? undefined : 'true',
+          title: 'Следующий день',
+          'aria-label': 'Следующий день'
         }, navChevron('right'))
       ),
       // Backdrop и Dropdown через portal в body
@@ -372,7 +384,7 @@
         React.createElement('div', { className: 'date-picker-days' },
           cells.map((dt, i) => {
             if (dt == null) {
-              return React.createElement('div', { key: 'e' + i, className: 'date-picker-day empty' });
+              return React.createElement('div', { key: 'e' + i, className: 'date-picker-day empty', 'aria-hidden': 'true' });
             }
             const dateStr = fmtDate(dt);
             const dayData = daysDataMap.get(dateStr);
@@ -386,6 +398,13 @@
             // и emoji статуса/цикл/refeed из сетки убраны. Цикл/загрузка —
             // полосы по краю клетки (CSS ::before/::after на has-cycle/has-refeed).
 
+            // Контракт date-remainders, строка «доступность»: клетка озвучивает дату и
+            // наличие записи словом. Прежде это был немой div — диктор читал только
+            // число, а факт записи нёс лишь цвет точки (она декоративна, aria-hidden).
+            const pickDay = () => { onSelect(dateStr); setIsOpen(false); setTooltip(null); };
+            const daySpeech = dt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+              + (hasRealData ? ', есть записи' : '');
+
             return React.createElement('div', {
               key: dt.toISOString(),
               className: [
@@ -397,7 +416,15 @@
                 hasCycle ? 'has-cycle' : '',
                 hasRefeed ? 'has-refeed' : ''
               ].join(' ').trim(),
-              onClick: isFuture ? undefined : () => { onSelect(dateStr); setIsOpen(false); setTooltip(null); },
+              role: 'button',
+              tabIndex: isFuture ? -1 : 0,
+              'aria-label': daySpeech,
+              'aria-disabled': isFuture ? 'true' : undefined,
+              'aria-current': isToday ? 'date' : undefined,
+              onClick: isFuture ? undefined : pickDay,
+              onKeyDown: isFuture ? undefined : (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickDay(); }
+              },
               onMouseEnter: (e) => handleDayHover(e, dayData, dateStr),
               onMouseLeave: () => setTooltip(null)
             },
