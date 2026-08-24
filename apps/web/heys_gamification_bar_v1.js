@@ -535,11 +535,13 @@
                 setDailyMissions(e?.detail || (HEYS.game?.getDailyMissions ? HEYS.game.getDailyMissions() : null));
             };
 
-            window.addEventListener('heysXpGained', handleXpGained);
+            // Слушателя heysXpGained здесь больше нет: его обработчик рисовал
+            // летящие XP, а празднования сняты строкой контракта gamification
+            // «уменьшенное движение». Ссылки на удалённый обработчик роняли
+            // монтирование шапки целиком.
             window.addEventListener('heysDailyMissionsUpdate', handleDailyMissionsUpdate);
 
             return () => {
-                window.removeEventListener('heysXpGained', handleXpGained);
                 window.removeEventListener('heysDailyMissionsUpdate', handleDailyMissionsUpdate);
             };
         }, []);
