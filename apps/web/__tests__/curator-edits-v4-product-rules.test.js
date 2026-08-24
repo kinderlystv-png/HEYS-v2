@@ -191,4 +191,40 @@ describe('лист правок куратора · правила продук�
       expect(window.HEYS.YandexAPI.ackCuratorChangelog).toHaveBeenCalledTimes(1);
     });
   });
+
+  // ── Свёртка дня по типам (строка «очень много правок за день») ──
+
+  it('строки свёртки по типам и раскрытые под ними правки держат правило «область нажатия ≥ 44»', () => {
+    mountCss();
+    const banner = loadBanner();
+    const actions = [
+      ...Array.from({ length: 12 }, (_, i) => ({
+        type: 'meal_added',
+        meal_id: `meal_${i}`,
+        meal_label: `Приём ${i + 1}`,
+        time: `0${(i % 9) + 1}:1${i % 9}`,
+        items: [{ name: `Продукт ${i + 1}` }],
+      })),
+      { type: 'training_added', kind: 'силовая', duration_min: 45, time: '08:30' },
+    ];
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(
+      response([createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', actions)]),
+    );
+
+    return banner.checkAndShow().then(() => {
+      const toggle = document.querySelector('[data-ca-expand-type]');
+      expect(toggle).toBeTruthy();
+      expect(getComputedStyle(toggle).minHeight).toBe('44px');
+      expect(getComputedStyle(toggle).borderRadius).toBe('16px');
+
+      toggle.click();
+      const member = document.querySelector('.ca-modal__type-members > li > .ca-modal__item');
+      expect(member).toBeTruthy();
+      // Отступ вложенности есть, но высота тач-таргета не съедена.
+      expect(getComputedStyle(member).minHeight).toBe('44px');
+      expect(getComputedStyle(member).paddingLeft).toBe('24px');
+      // Список раскрылся внутри того же листа.
+      expect(document.querySelectorAll('.ca-modal-backdrop')).toHaveLength(1);
+    });
+  });
 });

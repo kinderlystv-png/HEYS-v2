@@ -206,6 +206,110 @@ describe('Canvas frames: curator review sheet', () => {
     expect(bodyText()).toMatch(/Обновлены нормы/);
   });
 
+  // Контракт curator-edits, «очень много правок за день» (12-я сборка):
+  // «Больше десяти правок в одном дне сворачиваются по типам: „Приёмы · 12“,
+  // „Вода · 3“, тап раскрывает список внутри листа».
+  it('Куратор · больше десяти правок за день — свёртка по типам, тап раскрывает список в листе', async () => {
+    const date = '2026-07-05';
+    const meals = Array.from({ length: 12 }, (_, i) => ({
+      type: 'meal_added',
+      date,
+      meal_id: `meal_${i}`,
+      meal_label: `Приём ${i + 1}`,
+      time: `0${(i % 9) + 1}:1${i % 9}`,
+      kcal: 120 + i,
+      items: [{ name: `Продукт ${i + 1}`, grams: 100 + i }],
+    }));
+    const trainings = [
+      { type: 'training_added', kind: 'силовая', duration_min: 45, time: '08:30' },
+      { type: 'training_added', kind: 'кардио', duration_min: 30, time: '12:30' },
+      { type: 'training_added', kind: 'растяжка', duration_min: 15, time: '20:30' },
+    ];
+    const row = entry(
+      '11111111-1111-4111-8111-111111111111',
+      '2026-07-05T09:00:00.000Z',
+      date,
+      [...meals, ...trainings],
+    );
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([row]));
+
+    await banner.checkAndShow();
+
+    // Формат подписи — из строки контракта дословно: существительное, «·», число.
+    expect(itemTitles()).toContain('Приёмы · 12');
+    expect(itemTitles()).toContain('Тренировки · 3');
+    // Пока не раскрыли — самих правок в листе нет.
+    expect(bodyText()).not.toContain('Продукт 1');
+    expect(bodyText()).not.toContain('Тренировка: силовая');
+    expect(document.querySelectorAll('.ca-modal__type-members')).toHaveLength(0);
+
+    const mealsToggle = Array.from(document.querySelectorAll('[data-ca-expand-type]'))
+      .find((el) => el.textContent.includes('Приёмы · 12'));
+    expect(mealsToggle?.getAttribute('aria-expanded')).toBe('false');
+    mealsToggle.click();
+
+    // Раскрылось внутри того же листа: одна модалка, счётчик в шапке тот же.
+    expect(document.querySelectorAll('.ca-modal-backdrop')).toHaveLength(1);
+    expect(subtitle()).toBe('15 изменений за сегодня');
+    const members = document.querySelectorAll('.ca-modal__type-members > li');
+    expect(members).toHaveLength(12);
+    expect(bodyText()).toContain('Продукт 1');
+    // Другой тип остался свёрнутым.
+    expect(bodyText()).not.toContain('Тренировка: силовая');
+    expect(itemTitles()).toContain('Тренировки · 3');
+
+    // Повторный тап сворачивает обратно.
+    Array.from(document.querySelectorAll('[data-ca-expand-type]'))
+      .find((el) => el.textContent.includes('Приёмы · 12'))
+      .click();
+    expect(document.querySelectorAll('.ca-modal__type-members')).toHaveLength(0);
+    expect(itemTitles()).toContain('Приёмы · 12');
+  });
+
+  it('Куратор · ровно десять правок за день — обычный список, свёртки по типам нет', async () => {
+    const date = '2026-07-05';
+    const meals = Array.from({ length: 10 }, (_, i) => ({
+      type: 'meal_added',
+      date,
+      meal_id: `meal_${i}`,
+      meal_label: `Приём ${i + 1}`,
+      time: `0${(i % 9) + 1}:1${i % 9}`,
+      items: [{ name: `Продукт ${i + 1}`, grams: 100 + i }],
+    }));
+    const row = entry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', date, meals);
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([row]));
+
+    await banner.checkAndShow();
+
+    expect(banner._test.constants.DAY_TYPE_COLLAPSE_MIN).toBe(10);
+    expect(document.querySelectorAll('[data-ca-expand-type]')).toHaveLength(0);
+    expect(bodyText()).toContain('Продукт 1');
+    expect(bodyText()).toContain('Продукт 10');
+  });
+
+  it('свёртка по типам не выдумывает категорий и не прячет серверную обрезку', () => {
+    const banner = loadBanner();
+    const pair = (action) => ({ entry: { id: 'e1' }, action });
+    const plan = banner._test.planDayTypeGroups('2026-07-05', [
+      pair({ type: 'meal_added', meal_label: 'Обед' }),
+      pair({ type: 'meal_item_changed', meal_label: 'Обед' }),
+      pair({ type: 'water_set', to: 300 }),
+      pair({ type: 'steps_set', to: 8000 }),
+      pair({ type: 'truncated', count: 40 }),
+    ]);
+
+    expect(plan.groups.map((g) => banner._test.dayTypeGroupLabel(g.label, g.pairs.length))).toEqual([
+      'Приёмы · 2',
+      'Вода · 1',
+      'Шаги · 1',
+    ]);
+    // «…и ещё N изменений» — обрезка сервера, а не тип правки: остаётся строкой.
+    expect(plan.loose).toHaveLength(1);
+    expect(plan.loose[0].action.type).toBe('truncated');
+  });
+
   it('Куратор · две даты — свежий день раскрыт, прошлый свёрнут', async () => {
     const head = entry(
       '11111111-1111-4111-8111-111111111111',

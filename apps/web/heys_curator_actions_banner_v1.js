@@ -34,6 +34,10 @@
   const MAX_AUTO_SHOWS_PER_SESSION = 2;
   const MEAL_PRODUCTS_PREVIEW = 3;
   const COLLAPSED_DAY_CAP = 2;
+  // Контракт curator-edits, «очень много правок за день» (12-я сборка):
+  // «Больше десяти правок в одном дне сворачиваются по типам». Порог —
+  // строго больше, то есть ровно десять строк ещё показываются списком.
+  const DAY_TYPE_COLLAPSE_MIN = 10;
 
   // ─── State ────────────────────────────────────────────────────────
 
@@ -58,7 +62,12 @@
   let _filterDate = null;
   let _expandedDates = new Set();
   let _expandedMeals = new Set();
+  let _expandedDayTypes = new Set();
   let _expandedTail = false;
+  // Контракт curator-edits, «правки, пришедшие пока лист открыт»: правки,
+  // приехавшие с сервера, пока лист был открыт. В открытый лист они не
+  // подмешиваются — ждут его закрытия. См. queueEntriesWhileSheetOpen().
+  let _pendingWhileSheetOpen = [];
   let _hiddenActionKeys = null;
   let _reviewedByDate = null;
   let _cuesTimer = null;
@@ -404,6 +413,30 @@
     `;
   }
 
+  // Строка свёртки по типу внутри дня: «Приёмы · 12». Тап раскрывает список
+  // здесь же, лист не закрывается и не перелистывается.
+  function renderDayTypeGroupHtml(typeGroup, renderPair) {
+    const expanded = _expandedDayTypes.has(typeGroup.key);
+    const count = typeGroup.pairs.length;
+    const membersHtml = expanded ? typeGroup.pairs.map(renderPair).join('') : '';
+    const spoken = `${typeGroup.label}: ${changesLabel(count)}, ${expanded ? 'свернуть' : 'развернуть'}`;
+    return `
+      <li class="ca-modal__type-group">
+        <button class="ca-modal__item" type="button"
+          data-ca-expand-type="${escapeHtml(typeGroup.key)}"
+          aria-expanded="${expanded ? 'true' : 'false'}"
+          aria-label="${escapeHtml(spoken)}">
+          ${renderRowCopyHtml({
+            title: dayTypeGroupLabel(typeGroup.label, count),
+            subtitle: expanded ? 'Свернуть' : 'Развернуть',
+          })}
+          ${chevronSvg(true)}
+        </button>
+        ${membersHtml ? `<ul class="ca-modal__type-members">${membersHtml}</ul>` : ''}
+      </li>
+    `;
+  }
+
   function renderCollapsedGroupHtml(group, expandAttr, expandLabel) {
     const kcal = aggregateDayKcal(group.date, group.entries);
     const kcalHtml = kcal
@@ -427,7 +460,7 @@
       : '';
     const rawPairs = group.pairs || [];
     const displayPairs = groupIdenticalMealPairs(rawPairs);
-    const itemsHtml = displayPairs.map(({ entry, action }) => {
+    const renderPair = ({ entry, action }) => {
       const targetId = registerTarget(entry, action);
       if (action.type === 'meal_repeat_group') return renderRepeatGroupHtml(action, registerTarget, entry);
       if (action.type === 'meal_item_removed_group') return renderRemovalGroupHtml(action, registerTarget);
@@ -435,7 +468,17 @@
         return renderMealCardHtml(action, targetId, entry);
       }
       return renderActionRowHtml(action, targetId, entry);
-    }).join('');
+    };
+    // Контракт «очень много правок за день»: больше десяти строк в одном дне
+    // — вместо списка идут строки типов, тап раскрывает список внутри листа.
+    let itemsHtml;
+    if (displayPairs.length > DAY_TYPE_COLLAPSE_MIN) {
+      const plan = planDayTypeGroups(group.date, displayPairs);
+      itemsHtml = plan.groups.map((typeGroup) => renderDayTypeGroupHtml(typeGroup, renderPair)).join('')
+        + plan.loose.map(renderPair).join('');
+    } else {
+      itemsHtml = displayPairs.map(renderPair).join('');
+    }
     if (!itemsHtml) return '';
     return `
       <div class="ca-modal__group">
@@ -1129,6 +1172,53 @@
       || type === 'meal_item_removed' || type === 'meal_removed';
   }
 
+  // Контракт curator-edits, «очень много правок за день»: подпись группы —
+  // существительное, разделитель «·», число («Приёмы · 12», «Вода · 3»).
+  // Категории — только те типы, что реально приходят в actions; новых не
+  // выдумываем, неизвестный тип остаётся обычной строкой.
+  const DAY_TYPE_GROUPS = [
+    { key: 'meals', label: 'Приёмы', match: isMealAction },
+    { key: 'water', label: 'Вода', match: (a) => a.type === 'water_set' },
+    { key: 'training', label: 'Тренировки', match: (a) => a.type === 'training_added' || a.type === 'training_removed' },
+    { key: 'weight', label: 'Вес', match: (a) => a.type === 'weight_set' },
+    { key: 'sleep', label: 'Сон', match: (a) => a.type === 'sleep_set' },
+    { key: 'steps', label: 'Шаги', match: (a) => a.type === 'steps_set' },
+    { key: 'norms', label: 'Нормы', match: (a) => a.type === 'norms_changed' },
+    { key: 'profile', label: 'Профиль', match: (a) => a.type === 'profile_changed' },
+    { key: 'planning', label: 'План', match: (a) => a.type === 'planning_changed' },
+  ];
+
+  function dayTypeGroupFor(action) {
+    // «…и ещё N изменений» — это серверная обрезка, а не тип правки: она не
+    // раскрывается тапом и в свёртку по типам не уходит.
+    if (!action || action.type === 'truncated') return null;
+    return DAY_TYPE_GROUPS.find((g) => g.match(action)) || null;
+  }
+
+  function dayTypeGroupLabel(label, count) {
+    return `${label} · ${count}`;
+  }
+
+  // Число в подписи — ровно столько строк, сколько раскроет тап: одинаковые
+  // правки к этому месту уже сложены строкой «×N» (правило «одинаковые
+  // правки»), и подпись считает именно строки, а не исходные нажатия.
+  function planDayTypeGroups(date, displayPairs) {
+    const buckets = new Map();
+    const loose = [];
+    for (const pair of (displayPairs || [])) {
+      const type = dayTypeGroupFor(pair && pair.action);
+      if (!type) {
+        loose.push(pair);
+        continue;
+      }
+      if (!buckets.has(type.key)) {
+        buckets.set(type.key, { key: `${date}|${type.key}`, label: type.label, pairs: [] });
+      }
+      buckets.get(type.key).pairs.push(pair);
+    }
+    return { groups: Array.from(buckets.values()), loose };
+  }
+
   function sheetSubtitle(groups) {
     const dates = (groups || []).map((g) => g.date);
     const actionCount = (groups || []).reduce((sum, g) => sum + dayActionCount(g), 0);
@@ -1551,6 +1641,10 @@
       }));
     } catch (_) {}
     scrollToTargetWhenReady(target || {});
+    // Лист закрылся переходом — очередь вливается в общий состав; новый лист
+    // поверх дневника здесь не открываем, человек только что ушёл смотреть
+    // правку. Он придёт штатным расписанием.
+    releaseQueuedSheetEntries();
     emitCueChange();
   }
 
@@ -1592,7 +1686,9 @@
     _filterDate = null;
     _expandedDates = new Set();
     _expandedMeals = new Set();
+    _expandedDayTypes = new Set();
     _expandedTail = false;
+    _pendingWhileSheetOpen = [];
     _hiddenActionKeys = null;
     _reviewedByDate = null;
     clearReviewTimer();
@@ -1772,6 +1868,52 @@
     return hasUnackedVisible() && getShowCount() >= MAX_AUTO_SHOWS_PER_SESSION;
   }
 
+  // ─── Очередь правок, пришедших пока лист открыт ───────────────────
+  //
+  // ОСОЗНАННЫЙ РАЗВОРОТ РЕШЕНИЯ, 12-я сборка контрактов, НЕ РЕГРЕСС.
+  // Раньше строка «правки, пришедшие пока лист открыт» была помечена как
+  // нерешённая, и код выбрал противоположный вариант: открытый лист
+  // дописывался живыми данными прямо под пальцем (checkAndShow сравнивал
+  // id отрисованных и свежих записей и звал renderModal()). Владелец решил
+  // в другую сторону: «открытый лист не дополняется: новые правки встают в
+  // очередь и показываются следующим листом после закрытия текущего.
+  // Счётчик в шапке при этом не меняется на глазах».
+  //
+  // Поэтому пока `_modalEl` жив, свежие записи не попадают ни в
+  // `_reviewEntries` (состав листа), ни в `_entries` (счётчик строки входа
+  // и точка на «Питании») — они ждут здесь. Пересборка листа на месте
+  // (разворот даты, приёма, типа) этой очереди не касается: она перерисовывает
+  // тот же состав из `_reviewEntries` и ходит через removeExistingModal(true).
+  function queueEntriesWhileSheetOpen(entries) {
+    const known = new Set([
+      ...entryIds(_entries),
+      ...entryIds(_reviewEntries),
+      ...entryIds(_pendingWhileSheetOpen),
+    ]);
+    for (const entry of (entries || [])) {
+      if (!entry || !entry.id || known.has(entry.id)) continue;
+      known.add(entry.id);
+      _pendingWhileSheetOpen.push(entry);
+    }
+  }
+
+  // Вызывается на настоящем закрытии листа (Понятно / Позже / переход по
+  // строке; аппаратная «назад» приходит сюда же через closeAsLater).
+  // Возвращает число правок, которые лист ещё не показывал.
+  function releaseQueuedSheetEntries() {
+    if (_pendingWhileSheetOpen.length === 0) return 0;
+    const acked = pendingAckIdSet();
+    const known = new Set(entryIds(_entries));
+    const fresh = _pendingWhileSheetOpen.filter(
+      (entry) => entry && entry.id && !acked.has(entry.id) && !known.has(entry.id),
+    );
+    _pendingWhileSheetOpen = [];
+    if (fresh.length === 0) return 0;
+    _entries = _entries.concat(fresh);
+    _reviewEntries = _reviewEntries.concat(fresh);
+    return fresh.length;
+  }
+
   function renderModal() {
     const sourceEntries = _filterDate
       ? _reviewEntries.filter((entry) => groupVisibleByDate([entry]).some((g) => g.date === _filterDate))
@@ -1870,6 +2012,10 @@
       _filterDate = null;
       _titleNameOverride = null;
       removeExistingModal();
+      // Лист закрыт — очередь можно влить: счётчик обновится уже после
+      // закрытия, а не на глазах. Следующий лист придёт штатным «Позже»
+      // через 15 минут, отдельного показа тут не нужно.
+      releaseQueuedSheetEntries();
       emitCueChange();
       if (getShowCount() < MAX_AUTO_SHOWS_PER_SESSION) scheduleReviewAttempt(SNOOZE_MS);
     };
@@ -1885,10 +2031,15 @@
       _filterDate = null;
       _titleNameOverride = null;
       removeExistingModal();
+      // Контракт: правки из очереди «показываются следующим листом после
+      // закрытия текущего». Открываем обычным путём — защиты «не больше двух
+      // показов за сессию», snooze и «утро важнее правок» продолжают работать.
+      const queued = releaseQueuedSheetEntries();
       emitCueChange();
       flushPendingAcks().catch((err) => {
         console.warn('[HEYS.curatorReview] ack retry failed:', err?.message);
       });
+      if (queued > 0) attemptOpenReview();
     };
     backdrop.querySelector('.ca-modal__close').addEventListener('click', closeAsLater);
     backdrop.querySelector('.ca-modal__later-btn').addEventListener('click', closeAsLater);
@@ -1926,6 +2077,16 @@
         const key = expandRepeat.getAttribute('data-ca-expand-repeat');
         if (_expandedMeals.has(key)) _expandedMeals.delete(key);
         else _expandedMeals.add(key);
+        renderModal();
+        return;
+      }
+      const expandType = e.target && e.target.closest ? e.target.closest('[data-ca-expand-type]') : null;
+      if (expandType) {
+        e.preventDefault();
+        e.stopPropagation();
+        const key = expandType.getAttribute('data-ca-expand-type') || '';
+        if (_expandedDayTypes.has(key)) _expandedDayTypes.delete(key);
+        else _expandedDayTypes.add(key);
         renderModal();
         return;
       }
@@ -2119,6 +2280,8 @@
     };
     push(_reviewEntries);
     push(_entries);
+    // Правки из очереди «пока лист открыт» — тоже часть последнего листа.
+    push(_pendingWhileSheetOpen);
     const reviewed = reviewedByDateMap();
     for (const date of Object.keys(reviewed)) {
       const snap = reviewed[date];
@@ -2189,6 +2352,7 @@
     _expandedTail = false;
     _expandedDates = new Set();
     _expandedMeals = new Set();
+    _expandedDayTypes = new Set();
     // Иначе после тапов по строкам / «Понятно» groupVisibleByDate даёт 0 пар.
     _hiddenActionKeys = new Set();
     try {
@@ -2297,6 +2461,22 @@
       const reconciled = reconcileEntriesWithCurrentDays(filtered);
       const split = splitVisibleEntries(reconciled);
 
+      // ОСОЗНАННЫЙ РАЗВОРОТ РЕШЕНИЯ, 12-я сборка контрактов, НЕ РЕГРЕСС.
+      // До неё здесь (ниже по функции) стояло сравнение id отрисованных и
+      // свежих записей с повторным renderModal() — открытый лист дописывался
+      // живыми данными. Контракт «правки, пришедшие пока лист открыт» теперь
+      // требует обратного: открытый лист не дополняется, новые правки встают
+      // в очередь и показываются следующим листом после закрытия текущего, а
+      // счётчик в шапке не меняется на глазах. Поэтому выходим до записи в
+      // `_entries`/`_reviewEntries` и до emitCueChange(): состав листа и
+      // счётчик остаются ровно теми, что человек читает сейчас.
+      // Пересборка листа на месте (разворот даты/приёма/типа) идёт другим
+      // путём — из обработчиков клика, и этой веткой не затрагивается.
+      if (_modalEl) {
+        queueEntriesWhileSheetOpen(split.visible);
+        return;
+      }
+
       if (split.invisible.length > 0) {
         await autoAckInvisibleEntries(split.invisible);
       }
@@ -2316,13 +2496,6 @@
       _hasMore = res.has_more === true;
       maybeAckFullyHiddenEntries(split.visible);
       emitCueChange();
-
-      if (_modalEl) {
-        const renderedIds = entryIds(_renderedEntries).sort().join(',');
-        const nextIds = entryIds(_reviewEntries).sort().join(',');
-        if (renderedIds !== nextIds) renderModal();
-        return;
-      }
 
       if (_forceOpenOnce) {
         _forceOpenOnce = false;
@@ -2417,6 +2590,8 @@
       aggregateDayKcal,
       groupVisibleByDate,
       planDateLayout,
+      planDayTypeGroups,
+      dayTypeGroupLabel,
       getDayCue,
       getVisibleCue,
       shouldShowNutritionDot,
@@ -2447,6 +2622,7 @@
         HIDDEN_ACTIONS_KEY,
         REVIEWED_BY_DATE_KEY,
         MAX_AUTO_SHOWS_PER_SESSION,
+        DAY_TYPE_COLLAPSE_MIN,
       },
     },
     _verify: VERIFY_MARK,

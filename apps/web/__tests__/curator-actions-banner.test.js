@@ -230,7 +230,11 @@ describe('CuratorActionsBanner review modal', () => {
     expect(document.querySelector('.ca-modal-backdrop')).toBeTruthy();
   });
 
-  it('adds entries arriving during the 30 minute live window to the same modal', async () => {
+  // 12-я сборка контрактов, строка «правки, пришедшие пока лист открыт»:
+  // накопительное окно осталось, но оно работает ДО показа листа — лист ещё
+  // не открыт, дописывать человеку нечего. Формулировка теста подправлена,
+  // чтобы её не путали с дописыванием открытого листа (см. тест ниже).
+  it('merges entries arriving during the 30 minute window before the sheet is shown', async () => {
     const first = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T10:00:00.000Z', [
       { type: 'meal_item_added', meal_label: 'Обед', count: 1 },
     ]);
@@ -247,12 +251,27 @@ describe('CuratorActionsBanner review modal', () => {
     await banner.checkAndShow();
     await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
     await banner.checkAndShow();
+    // Пока копится окно, листа на экране нет — дописывать нечего.
+    expect(document.querySelector('.ca-modal-backdrop')).toBeFalsy();
     await vi.advanceTimersByTimeAsync(20 * 60 * 1000);
 
     expect(document.querySelector('.ca-modal__header-subtitle')?.textContent).toBe('Проверьте, что изменилось по вашим данным');
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Обед');
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Ужин');
   });
 
-  it('updates an open modal and acknowledges newly rendered entries', async () => {
+  // 12-я сборка контрактов, строка «правки, пришедшие пока лист открыт»:
+  // «открытый лист не дополняется: новые правки встают в очередь и
+  // показываются следующим листом после закрытия текущего. Счётчик в шапке
+  // при этом не меняется на глазах».
+  //
+  // ЭТО ОСОЗНАННЫЙ РАЗВОРОТ, НЕ РЕГРЕСС. Прежняя редакция теста называлась
+  // «updates an open modal and acknowledges newly rendered entries» и
+  // закрепляла противоположное: пришедшая при открытом листе правка тут же
+  // дописывалась в список и уезжала в «Понятно» вместе с прочитанным. Строка
+  // контракта была помечена как нерешённая; владелец решил её в другую
+  // сторону — «Понятно» должно подтверждать ровно то, что человек читал.
+  it('не дополняет открытый лист: новые правки ждут очереди и приходят следующим листом', async () => {
     const breakfast = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
       { type: 'meal_added', meal_id: 'breakfast', meal_label: 'Завтрак', time: '09:30', items: [{ name: 'Овсянка' }] },
     ]);
@@ -265,23 +284,89 @@ describe('CuratorActionsBanner review modal', () => {
       .mockResolvedValueOnce(response([lunch, breakfast]));
 
     await banner.checkAndShow();
+    const subtitleWhileOpen = document.querySelector('.ca-modal__header-subtitle')?.textContent;
     expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Завтрак');
     expect(document.querySelector('.ca-modal__content')?.textContent).not.toContain('Обед');
+    expect(banner.getDayCue('2026-07-05')?.actionCount).toBe(1);
 
+    // Правка пришла, пока лист открыт: состав листа и счётчики не двинулись.
     await banner.checkAndShow();
-    expect(document.querySelector('.ca-modal__header-subtitle')?.textContent).toBe('Проверьте, что изменилось по вашим данным');
-    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Обед');
+    expect(document.querySelectorAll('.ca-modal-backdrop')).toHaveLength(1);
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Завтрак');
+    expect(document.querySelector('.ca-modal__content')?.textContent).not.toContain('Обед');
+    expect(document.querySelector('.ca-modal__header-subtitle')?.textContent).toBe(subtitleWhileOpen);
+    expect(banner.getDayCue('2026-07-05')?.actionCount).toBe(1);
 
+    // «Понятно» подтверждает ровно прочитанное, без записи из очереди.
     document.querySelector('.ca-modal__ack-btn').click();
     await flushMicrotasks();
 
     expect(window.HEYS.YandexAPI.ackCuratorChangelog).toHaveBeenCalledWith({
-      entryIds: [
-        '33333333-3333-4333-8333-333333333333',
-        '11111111-1111-4111-8111-111111111111',
-      ],
-      untilTs: '2026-07-05T09:05:00.000Z',
+      entryIds: ['11111111-1111-4111-8111-111111111111'],
+      untilTs: '2026-07-05T09:00:00.000Z',
     });
+
+    // Очередь показана следующим листом после закрытия текущего.
+    expect(document.querySelectorAll('.ca-modal-backdrop')).toHaveLength(1);
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Обед');
+    expect(document.querySelector('.ca-modal__content')?.textContent).not.toContain('Завтрак');
+    expect(banner.getDayCue('2026-07-05')?.actionCount).toBe(1);
+  });
+
+  it('очередь пережидает «Позже» и не открывает лист поверх закрытого', async () => {
+    const breakfast = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
+      { type: 'meal_added', meal_id: 'breakfast', meal_label: 'Завтрак', time: '09:30', items: [{ name: 'Овсянка' }] },
+    ]);
+    const lunch = createEntry('33333333-3333-4333-8333-333333333333', '2026-07-05T09:05:00.000Z', [
+      { type: 'meal_added', meal_id: 'lunch', meal_label: 'Обед', time: '13:30', items: [{ name: 'Суп' }] },
+    ]);
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince
+      .mockResolvedValueOnce(response([breakfast]))
+      .mockResolvedValueOnce(response([lunch, breakfast]));
+
+    await banner.checkAndShow();
+    await banner.checkAndShow();
+    expect(document.querySelector('.ca-modal__content')?.textContent).not.toContain('Обед');
+
+    document.querySelector('.ca-modal__later-btn').click();
+    // «Позже» — лист ушёл, счётчик догнал очередь уже после закрытия.
+    expect(document.querySelector('.ca-modal-backdrop')).toBeFalsy();
+    expect(banner.getDayCue('2026-07-05')?.actionCount).toBe(2);
+
+    await vi.advanceTimersByTimeAsync(15 * 60 * 1000);
+    expect(document.querySelector('.ca-modal-backdrop')).toBeTruthy();
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Завтрак');
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Обед');
+  });
+
+  it('пересборка открытого листа не считается дополнением: разворот дня работает', async () => {
+    const day5 = createDatedEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', '2026-07-05', [
+      { type: 'meal_added', meal_id: 'breakfast', meal_label: 'Завтрак', time: '09:30', items: [{ name: 'Овсянка' }] },
+    ]);
+    const day4 = createDatedEntry('44444444-4444-4444-8444-444444444444', '2026-07-04T09:00:00.000Z', '2026-07-04', [
+      { type: 'meal_added', meal_id: 'lunch', meal_label: 'Обед', time: '13:30', items: [{ name: 'Суп' }] },
+    ]);
+    const late = createDatedEntry('33333333-3333-4333-8333-333333333333', '2026-07-05T09:05:00.000Z', '2026-07-05', [
+      { type: 'meal_added', meal_id: 'dinner', meal_label: 'Ужин', time: '19:30', items: [{ name: 'Рис' }] },
+    ]);
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince
+      .mockResolvedValueOnce(response([day5, day4]))
+      .mockResolvedValueOnce(response([late, day5, day4]));
+
+    await banner.checkAndShow();
+    await banner.checkAndShow();
+
+    const expandDate = document.querySelector('[data-ca-expand-date]');
+    expect(expandDate).toBeTruthy();
+    expandDate.click();
+
+    // Разворот перерисовал тот же состав, лист остался открытым…
+    expect(document.querySelectorAll('.ca-modal-backdrop')).toHaveLength(1);
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Обед');
+    // …и не подмешал правку из очереди.
+    expect(document.querySelector('.ca-modal__content')?.textContent).not.toContain('Ужин');
   });
 
   it('keeps changes for different days in one modal grouped by date', async () => {
