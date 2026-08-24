@@ -614,10 +614,21 @@ describe('protected trial intake contract', () => {
     (0, eval)(intakeSource);
 
     render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    // Канвас questionnaire.v4, строка «место»: сводка уехала на отдельный
+    // экран, а на шаге 5 от неё осталась строка-вход. Проверка была написана
+    // под старое МЕСТО экрана (сводка внутри шага 5) — само поведение
+    // «без галочки отправить нельзя» ниже проверяется как раньше, уже на том
+    // экране, где сводка теперь живёт.
     expect(await screen.findByText('Проверьте ответы перед отправкой')).toBeTruthy();
-    expect(screen.getByText('Подтвердите предупреждение перед отправкой')).toBeTruthy();
-    const editWarning = screen.getByRole('button', { name: 'Изменить подтверждение предупреждения' });
-    fireEvent.click(editWarning);
+    expect(screen.getByText('Поставьте галочку выше')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Проверьте ответы перед отправкой'));
+    expect(screen.getByText('Ваши ответы')).toBeTruthy();
+    expect(screen.getByText('Вернитесь к шагу 5 и подтвердите предупреждение')).toBeTruthy();
+    const submit = screen.getByRole('button', { name: /Отправить куратору/ });
+    expect(submit.disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Назад к шагу 5' }));
     expect(screen.getByText('Шаг 5 из 5')).toBeTruthy();
   });
 
@@ -637,11 +648,69 @@ describe('protected trial intake contract', () => {
     (0, eval)(intakeSource);
 
     render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    // Та же причина правки, что и выше: сводка — отдельный экран (строка
+    // «место»), вход в неё — строка на полке шага 5, отметка о подтверждении
+    // осталась на полке рядом с ней (кадр «Анкета · шаг 5 · подтверждено»).
     expect(await screen.findByText('Проверьте ответы перед отправкой')).toBeTruthy();
     expect(screen.getByText('Предупреждение подтверждено')).toBeTruthy();
-    const editWarning = screen.getByRole('button', { name: 'Изменить подтверждение предупреждения' });
-    fireEvent.click(editWarning);
+
+    fireEvent.click(screen.getByText('Проверьте ответы перед отправкой'));
+    expect(screen.getByText('Ваши ответы')).toBeTruthy();
+    // Содержимое сводки видно именно здесь, а не обрезано полкой шага 5.
+    expect(screen.getByText('Главная цель')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Отправить куратору/ }).disabled).toBe(false);
+
+    // «Правки» уводят к первому шагу, стрелка назад — обратно на шаг 5.
+    fireEvent.click(screen.getByRole('button', { name: 'Правки' }));
+    expect(screen.getByText('Шаг 1 из 5')).toBeTruthy();
+  });
+
+  // Стык, который руками не собрать: сводка стала отдельным экраном (канвас
+  // questionnaire.v4, строка «место»), и возврат с неё не должен ни терять
+  // несохранённый ответ, ни оставлять строку-вход на чужих шагах.
+  it('returns from the standalone review without losing an unsaved answer', async () => {
+    const answers = {
+      ...completedAnswers,
+      collaboration: { ...completedAnswers.collaboration, expectations_from_curator: '' },
+    };
+    const rpc = vi.fn(async (fn) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: { status: 'in_progress', current_step: 3, answers },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
+    });
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    // Экран возврата («Продолжим с шага 4») стоит поверх шага — снимаем его.
+    await screen.findByText('Продолжим с шага 4');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Продолжить' })[0]);
+
+    const expectations = screen.getByLabelText(/Чего вы ждёте от куратора/);
+    // Шаг 4 — не последний: строки-входа в сводку здесь быть не должно.
+    expect(screen.queryByText('Проверьте ответы перед отправкой')).toBeNull();
+    fireEvent.change(expectations, { target: { value: 'Разбор ужинов' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Продолжить/ }));
+    await screen.findByText('Шаг 5 из 5');
+
+    fireEvent.click(screen.getByText('Проверьте ответы перед отправкой'));
+    expect(screen.getByText('Разбор ужинов')).toBeTruthy();
+    expect(screen.getByText('Чего ждёте от куратора')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Назад к шагу 5' }));
     expect(screen.getByText('Шаг 5 из 5')).toBeTruthy();
+    expect(screen.getByText('Важная информация')).toBeTruthy();
+
+    // Ответ, набранный до захода в сводку, на месте после возврата на шаг 4.
+    fireEvent.click(screen.getByRole('button', { name: 'Назад' }));
+    expect(screen.getByDisplayValue('Разбор ужинов')).toBeTruthy();
   });
 
   it('uses the real sharing action, one autosave status and the supported unsure option', () => {

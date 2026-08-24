@@ -479,19 +479,22 @@
     ['collaboration', 'expectations_from_curator', 'Чего ждёте от куратора'],
   ]);
 
-  function ReviewSummary({ answers, onEdit }) {
+  // Строка «вид сводки»: пояснение 12/500 тоном чернил 55 %, через 14 карточка
+  // --c1 радиусом 20 с полями 2/16; внутри строки — подпись 9,5/700 прописными
+  // тоном чернил 40 %, ответ 12,5/600 чернилами, поля 11 по вертикали,
+  // разделитель 1 px тоном чернил 7 %.
+  // Отступления от кадра «Анкета · сводка» (верен контракт): кадр красит
+  // подпись тоном чернил 55 % — здесь 40 %; кадр даёт ответ 12 px — здесь 12,5.
+  // Шапка со стрелкой назад и «Ваши ответы» живёт в ClientScreen: она обрамляет
+  // экран, а не сводку, и footer сводки собирается из состояния отправки.
+  function ReviewSummary({ answers }) {
     const rows = SUMMARY_ROWS
       .map(([section, key, label]) => [label, answers[section]?.[key]])
       .filter(([, value]) => String(value || '').trim());
-    const warningConfirmed = Boolean(String(answers.warning?.acknowledged_at || '').trim());
 
     return React.createElement('section', { style: { display: 'grid', gap: 14 } },
-      React.createElement('div', null,
-        React.createElement('div', { style: { fontSize: 15, fontWeight: 700, lineHeight: 1.2, color: INK } }, 'Проверьте ответы перед отправкой'),
-        React.createElement('div', { style: { marginTop: 9, color: INK_55, fontSize: 12, fontWeight: 500, lineHeight: 1.55 } },
-          'Цель, опыт, готовность присылать данные. Куратор разберёт анкету вручную, любой ответ можно поправить до отправки.')
-      ),
-      // Строка «вид сводки»: карточка --c1 радиусом 20 с полями 2/16.
+      React.createElement('div', { style: { fontSize: 12, fontWeight: 500, lineHeight: 1.55, color: INK_55 } },
+        'Куратор разберёт анкету вручную. Любой ответ можно поправить до отправки.'),
       React.createElement('div', {
         style: { background: SURFACE_1, borderRadius: 20, padding: '2px 16px' },
       }, rows.map(([label, value], index) => React.createElement('div', {
@@ -509,33 +512,7 @@
         }, reviewValue(value))
       ))),
       React.createElement('div', { style: { fontSize: 11, fontWeight: 500, lineHeight: 1.5, color: INK_55 } },
-        'Все заполненные ответы. Пропущенные необязательные поля в список не попадают — их и не отправляем.'),
-      React.createElement('div', {
-        role: 'status',
-        style: {
-          display: 'grid', gap: 5, borderRadius: 16, padding: '12px 14px',
-          background: warningConfirmed ? OK_BG : TINT,
-          color: warningConfirmed ? OK_TEXT : WARN_TEXT,
-        }
-      },
-        React.createElement('div', { style: { fontSize: 11.5, fontWeight: 600, lineHeight: 1.4 } },
-          warningConfirmed ? 'Предупреждение подтверждено' : 'Подтвердите предупреждение перед отправкой'),
-        React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, lineHeight: 1.45, color: INK_55 } },
-          warningConfirmed ? 'Вы подтвердили, что прочитали предупреждение перед анкетой.' : 'Вернитесь к шагу с предупреждением и поставьте галочку подтверждения.')
-      ),
-      React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
-        React.createElement('button', {
-          type: 'button', onClick: () => onEdit('goals'),
-          style: { ...secondaryPill, flex: '0 0 auto' },
-        }, 'Правки'),
-        React.createElement('button', {
-          type: 'button', onClick: () => onEdit('warning'),
-          style: {
-            ...pillStyle, flex: '1 1 200px', fontSize: 12.5,
-            background: 'transparent', color: ACCENT_TEXT,
-          },
-        }, 'Изменить подтверждение предупреждения')
-      )
+        'Все заполненные ответы. Пропущенные необязательные поля в список не попадают — их и не отправляем.')
     );
   }
 
@@ -553,6 +530,8 @@
     const [closeConfirmOpen, setCloseConfirmOpen] = React.useState(false);
     const [resumeGateOpen, setResumeGateOpen] = React.useState(false);
     const [restartConfirmOpen, setRestartConfirmOpen] = React.useState(false);
+    // Строка «место»: сводка — отдельный экран, а не блок внутри шага 5.
+    const [reviewOpen, setReviewOpen] = React.useState(false);
     // Строка «ошибка отправки»: обещать «ответы сохранены» можно только когда
     // упала именно отправка — при упавшем автосохранении это было бы ложью.
     const [submitFailed, setSubmitFailed] = React.useState(false);
@@ -674,6 +653,17 @@
       ? current.required.filter((key) => !String(answers[current.id]?.[key] || '').trim())
       : [];
     const missingRequired = missingKeys.length > 0;
+    const warningConfirmed = Boolean(String(answers.warning?.acknowledged_at || '').trim());
+
+    // Уводит на шаг с нужным разделом и закрывает сводку: она отдельный экран,
+    // и оставаться на ней поверх правок нечему.
+    const goToSection = (sectionId) => {
+      const target = STEPS.findIndex((item) => item.id === sectionId);
+      if (target < 0) return;
+      setReviewOpen(false);
+      setError('');
+      setStep(target);
+    };
 
     const next = async () => {
       if (missingRequired) {
@@ -870,6 +860,7 @@
       const fresh = mergeAnswers(null);
       setAnswers(fresh);
       answersRef.current = fresh;
+      setReviewOpen(false);
       setStep(0);
       setHasEdited(false);
       setError('');
@@ -961,6 +952,111 @@
           ? React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, lineHeight: 1.5, color: INK_55, textAlign: 'center' } },
             'Приложение откроется после согласования даты старта.')
           : React.createElement('button', { type: 'button', onClick: leaveIntake, style: primaryPill }, 'Вернуться в приложение')
+      ));
+    }
+
+    // Строка «ошибка отправки»: не выбрасывает из анкеты — заголовок называет
+    // причину, отдельная строка подтверждает, что сохранены и ответы, и
+    // подтверждение предупреждения, а вторым выходом остаётся тот же чат, где
+    // приходил код. Блок общий для шагов и сводки: отправка есть в обоих
+    // местах, значит и её отказ должен читаться в обоих.
+    const errorBlock = error ? React.createElement('div', {
+      role: 'alert',
+      style: { marginTop: 14, padding: 15, borderRadius: 18, background: TINT, display: 'grid', gap: 7 },
+    },
+      submitFailed
+        ? React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, lineHeight: 1.35, color: WARN_TEXT } }, 'Анкета не отправилась')
+        : null,
+      React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, lineHeight: 1.55, color: INK_55 } }, error),
+      submitFailed ? React.createElement('div', {
+        style: { display: 'flex', alignItems: 'center', gap: 9, fontSize: 12, fontWeight: 600, lineHeight: 1.4, color: OK_TEXT },
+      }, '✓', 'Ответы и подтверждение предупреждения сохранены') : null,
+      submitFailed ? React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, lineHeight: 1.5, color: INK_55 } },
+        'Если не получается несколько раз — напишите в тот же чат, где приходил код: куратор откроет анкету вручную.') : null
+    ) : null;
+
+    const retryButton = saveState === 'error' ? React.createElement('button', {
+      type: 'button', onClick: retrySave,
+      style: { ...secondaryPill, marginTop: 10, minHeight: 44, background: SURFACE_1, color: INK },
+    }, saveErrorCode === 'stale_draft'
+      ? 'Загрузить актуальную версию'
+      : saveErrorCode === 'invalid_session'
+        ? 'Войти снова'
+        : ['health_consent_required', 'intake_locked'].includes(saveErrorCode)
+          ? 'Обновить состояние'
+          : submitFailed
+            ? 'Отправить ещё раз'
+            : 'Повторить сохранение') : null;
+
+    // Роль набора здесь развёрнута, а не константой: на неё смотрит тест
+    // intake-v4-blocked-action.
+    const submitOrContinueButton = () => React.createElement('button', {
+      type: 'button', onClick: next, disabled: saveState === 'saving' || missingRequired,
+      'aria-describedby': missingRequired ? 'intake-blocked-reason' : undefined,
+      style: { ...primaryPill, minHeight: 48,
+        background: missingRequired ? SURFACE_1 : 'var(--v4-sand-act, #c67139)',
+        color: missingRequired ? INK : ON_ACCENT,
+        cursor: (saveState === 'saving' || missingRequired) ? 'default' : 'pointer',
+        opacity: (saveState === 'saving' || missingRequired) ? 0.45 : 1 },
+    }, HEYS.WaitMark?.button?.(React, {
+      busy: saveState === 'saving',
+      ok: saveState === 'saved',
+      fail: saveState === 'error',
+      idle: step === STEPS.length - 1 ? 'Отправить куратору' : 'Продолжить',
+      busyLabel: step === STEPS.length - 1 ? 'Отправляем' : 'Сохраняем',
+      okLabel: 'Отправлено',
+      failLabel: 'Не удалось',
+    }) || (saveState === 'saving'
+      ? (step === STEPS.length - 1 ? 'Отправляем' : 'Сохраняем')
+      : (step === STEPS.length - 1 ? 'Отправить куратору' : 'Продолжить')));
+
+    // Строка «место»: сводка — отдельный экран. Шапка со стрелкой назад и
+    // «Ваши ответы» 15/700; отправка живёт и здесь, и на шаге 5 (строка
+    // «отправка»), поэтому футер повторяет ту же кнопку.
+    if (reviewOpen) {
+      return React.createElement('div', shellProps, React.createElement('main', { style: cardStyle },
+        React.createElement('button', {
+          type: 'button',
+          onClick: () => { setError(''); setReviewOpen(false); },
+          'aria-label': `Назад к шагу ${STEPS.length}`,
+          style: {
+            display: 'flex', alignItems: 'center', gap: 12, minHeight: 44,
+            border: 0, background: 'transparent', padding: 0, margin: 0,
+            color: INK, fontSize: 15, fontWeight: 700, lineHeight: 1, cursor: 'pointer',
+          },
+        },
+          React.createElement('span', {
+            'aria-hidden': 'true',
+            style: { fontSize: 17, fontWeight: 700, lineHeight: 1, color: INK_55 },
+          }, '‹'),
+          'Ваши ответы'
+        ),
+        React.createElement('div', { style: { marginTop: 16 } },
+          React.createElement(ReviewSummary, { answers })),
+        errorBlock,
+        retryButton,
+        // Строка «отправка»: отправка заблокирована и здесь, пока галочка не
+        // поставлена. Отступление от контракта: он диктует строку «Поставьте
+        // галочку выше», но на этом экране галочки выше нет — берём
+        // формулировку кадра «Анкета · сводка», чтобы причина не указывала на
+        // несуществующий контрол.
+        missingRequired ? React.createElement('div', {
+          key: 'blocked-reason-review',
+          id: 'intake-blocked-reason',
+          style: {
+            marginTop: 20, marginBottom: 10, borderRadius: 16, background: TINT,
+            padding: '11px 14px', fontSize: 11, fontWeight: 600, lineHeight: 1.45,
+            color: WARN_TEXT,
+          },
+        }, `Вернитесь к шагу ${STEPS.length} и подтвердите предупреждение`) : null,
+        React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: missingRequired ? 0 : 20 } },
+          // Строка «содержимое»: кнопка «Правки» уводит к первому шагу; стрелка
+          // назад в шапке возвращает на шаг 5, откуда сводку открыли.
+          React.createElement('button', {
+            type: 'button', onClick: () => goToSection('goals'), style: secondaryPill,
+          }, 'Правки'),
+          submitOrContinueButton()
+        )
       ));
     }
 
@@ -1076,45 +1172,47 @@
         answers[current.id] || {},
         (key, value) => setSectionValue(current.id, key, value)
       )),
-      step === STEPS.length - 1 ? React.createElement('div', { style: { marginTop: 16 } },
-        React.createElement(ReviewSummary, {
-          answers,
-          onEdit: (sectionId) => {
-            const target = STEPS.findIndex((item) => item.id === sectionId);
-            if (target >= 0) setStep(target);
-          },
-        })
-      ) : null,
-      // Строка «ошибка отправки»: не выбрасывает из анкеты — заголовок
-      // называет причину, отдельная строка подтверждает, что сохранены и
-      // ответы, и подтверждение предупреждения, а вторым выходом остаётся тот
-      // же чат, где приходил код.
-      error ? React.createElement('div', {
-        role: 'alert',
-        style: { marginTop: 14, padding: 15, borderRadius: 18, background: TINT, display: 'grid', gap: 7 },
+      errorBlock,
+      retryButton,
+      // Строка «место»: на шаге 5 от сводки остаётся строка-вход на
+      // закреплённой полке. Предупреждение, галочка и отправка сами по себе
+      // занимают целый экран, и сводка внутри него обрезалась ровно на
+      // строках, ради которых существует.
+      step === STEPS.length - 1 ? React.createElement('button', {
+        type: 'button',
+        onClick: () => { setError(''); setReviewOpen(true); },
+        style: {
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          width: '100%', minHeight: 44, marginTop: 16, padding: 0,
+          border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer',
+        },
       },
-        submitFailed
-          ? React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, lineHeight: 1.35, color: WARN_TEXT } }, 'Анкета не отправилась')
-          : null,
-        React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, lineHeight: 1.55, color: INK_55 } }, error),
-        submitFailed ? React.createElement('div', {
-          style: { display: 'flex', alignItems: 'center', gap: 9, fontSize: 12, fontWeight: 600, lineHeight: 1.4, color: OK_TEXT },
-        }, '✓', 'Ответы и подтверждение предупреждения сохранены') : null,
-        submitFailed ? React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, lineHeight: 1.5, color: INK_55 } },
-          'Если не получается несколько раз — напишите в тот же чат, где приходил код: куратор откроет анкету вручную.') : null
+        React.createElement('span', null,
+          React.createElement('span', {
+            style: { display: 'block', fontSize: 12.5, fontWeight: 700, lineHeight: 1.35, color: INK },
+          }, 'Проверьте ответы перед отправкой'),
+          React.createElement('span', {
+            style: { display: 'block', marginTop: 5, fontSize: 11.5, fontWeight: 500, lineHeight: 1.45, color: INK_55 },
+          }, 'Цель, опыт, готовность присылать данные')
+        ),
+        React.createElement('span', {
+          'aria-hidden': 'true',
+          style: { flex: 'none', fontSize: 15, fontWeight: 700, lineHeight: 1, color: ACCENT_TEXT },
+        }, '›')
       ) : null,
-      saveState === 'error' ? React.createElement('button', {
-        type: 'button', onClick: retrySave,
-        style: { ...secondaryPill, marginTop: 10, minHeight: 44, background: SURFACE_1, color: INK },
-      }, saveErrorCode === 'stale_draft'
-        ? 'Загрузить актуальную версию'
-        : saveErrorCode === 'invalid_session'
-          ? 'Войти снова'
-          : ['health_consent_required', 'intake_locked'].includes(saveErrorCode)
-            ? 'Обновить состояние'
-            : submitFailed
-              ? 'Отправить ещё раз'
-              : 'Повторить сохранение') : null,
+      // Кадр «Анкета · шаг 5 · подтверждено»: в том же месте полки, где у
+      // незаполненного шага стоит причина отказа, у подтверждённого стоит
+      // отметка о подтверждении.
+      step === STEPS.length - 1 && warningConfirmed ? React.createElement('div', {
+        style: {
+          display: 'flex', alignItems: 'center', gap: 9, marginTop: 10,
+          borderRadius: 16, background: OK_BG, padding: '12px 14px',
+          fontSize: 11.5, fontWeight: 600, lineHeight: 1.4, color: OK_TEXT,
+        },
+      },
+        React.createElement('span', { 'aria-hidden': 'true' }, '✓'),
+        React.createElement('span', null, 'Предупреждение подтверждено')
+      ) : null,
       // Строки «одно правило», «шаги 1 и 3», «отправка»: недоступное действие
       // называет причину заранее — строкой над кнопкой, а сама кнопка не
       // нажимается. Прежде «Продолжить» была всегда активна, и человек узнавал
@@ -1132,27 +1230,7 @@
           type: 'button', onClick: () => { setError(''); setStep((value) => Math.max(0, value - 1)); },
           style: secondaryPill,
         }, 'Назад') : null,
-        // Роль набора здесь развёрнута, а не константой: на неё смотрит тест
-        // intake-v4-blocked-action.
-        React.createElement('button', {
-          type: 'button', onClick: next, disabled: saveState === 'saving' || missingRequired,
-          'aria-describedby': missingRequired ? 'intake-blocked-reason' : undefined,
-          style: { ...primaryPill, minHeight: 48,
-            background: missingRequired ? SURFACE_1 : 'var(--v4-sand-act, #c67139)',
-            color: missingRequired ? INK : ON_ACCENT,
-            cursor: (saveState === 'saving' || missingRequired) ? 'default' : 'pointer',
-            opacity: (saveState === 'saving' || missingRequired) ? 0.45 : 1 },
-        }, HEYS.WaitMark?.button?.(React, {
-          busy: saveState === 'saving',
-          ok: saveState === 'saved',
-          fail: saveState === 'error',
-          idle: step === STEPS.length - 1 ? 'Отправить куратору' : 'Продолжить',
-          busyLabel: step === STEPS.length - 1 ? 'Отправляем' : 'Сохраняем',
-          okLabel: 'Отправлено',
-          failLabel: 'Не удалось',
-        }) || (saveState === 'saving'
-          ? (step === STEPS.length - 1 ? 'Отправляем' : 'Сохраняем')
-          : (step === STEPS.length - 1 ? 'Отправить куратору' : 'Продолжить')))
+        submitOrContinueButton()
       )
     ));
   }

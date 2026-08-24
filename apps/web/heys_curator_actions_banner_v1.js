@@ -186,25 +186,34 @@
         // training-summary / month-trainings-card gone after Activity v4 tiers.
         target.selectors.push('[data-curator-target="activity"]');
         break;
+      // Строка «адреса переходов»: еда, вес, вода, сон — дневник нужного дня.
+      // Вес и сон живут на странице дня (heys_day_main_block_v1.js,
+      // heys_day_side_block_v1.js), а не во вкладке «Статистика»: прежний
+      // адрес уводил туда, где помеченного элемента нет, и вспышка не
+      // срабатывала вовсе.
       case 'weight_set':
-        target.tab = 'stats';
+        target.tab = 'diary';
         target.selectors.push('[data-curator-target="weight"]', '.vio-row.total-kcal');
         break;
       case 'sleep_set':
-        target.tab = 'stats';
+        target.tab = 'diary';
         target.selectors.push('[data-curator-target="sleep"]', '.sleep-card');
         break;
+      // Строка «адреса переходов»: нормы, профиль, план — дневник по умолчанию.
+      // Дата не назначается: правка не привязана к дню, и переключать день
+      // под неё нечем. Подсвечивается сводка дневника — место, где изменение
+      // норм и профиля видно человеку числом.
       case 'profile_changed':
-        target.tab = 'user';
-        target.selectors.push('[data-curator-target="profile"]', '.page-user');
+        target.date = null;
+        target.selectors.push('[data-curator-target="nutrition"]', '#diary-heading');
         break;
       case 'norms_changed':
-        target.tab = 'user';
-        target.selectors.push('#profile-section-norms', '[data-curator-target="profile"]', '.page-user');
+        target.date = null;
+        target.selectors.push('[data-curator-target="nutrition"]', '#diary-heading');
         break;
       case 'planning_changed':
-        target.tab = 'tasks';
-        target.selectors.push('[data-curator-target="planning"]', '.planning-tasks-screen', '.planning-tab');
+        target.date = null;
+        target.selectors.push('[data-curator-target="nutrition"]', '#diary-heading');
         break;
       case 'meal_removed':
         target.tab = 'diary';

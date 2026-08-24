@@ -436,6 +436,12 @@ describe('CuratorActionsBanner review modal', () => {
     expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
   });
 
+  // Канвас curator-edits.v4, строка «адреса переходов»: «еда, вес, вода, сон —
+  // дневник нужного дня · шаги и тренировки — „Актив“ · нормы, профиль, план —
+  // дневник по умолчанию». Прежняя таблица закрепляла адреса, которых контракт
+  // не называет (вес и сон → «Статистика», нормы и профиль → «Профиль», план →
+  // «Задачи»); для веса и сна это ещё и вело туда, где помеченного элемента
+  // нет, — вспышка не срабатывала. Таблица приведена к контракту.
   it('routes every curator action to a real product surface', () => {
     const banner = loadBanner();
     const build = banner._test.buildActionTarget;
@@ -448,17 +454,71 @@ describe('CuratorActionsBanner review modal', () => {
       [{ type: 'steps_set' }, 'activity', '[data-curator-target="steps"]'],
       [{ type: 'training_added', kind: 'Зарядка', training_index: 2 }, 'activity', '[data-training-index="2"]'],
       [{ type: 'training_removed', training_index: 1 }, 'activity', '[data-curator-target="activity"]'],
-      [{ type: 'weight_set' }, 'stats', '[data-curator-target="weight"]'],
-      [{ type: 'sleep_set' }, 'stats', '[data-curator-target="sleep"]'],
-      [{ type: 'profile_changed' }, 'user', '[data-curator-target="profile"]'],
-      [{ type: 'norms_changed' }, 'user', '#profile-section-norms'],
-      [{ type: 'planning_changed' }, 'tasks', '[data-curator-target="planning"]'],
+      [{ type: 'weight_set' }, 'diary', '[data-curator-target="weight"]'],
+      [{ type: 'sleep_set' }, 'diary', '[data-curator-target="sleep"]'],
+      [{ type: 'profile_changed' }, 'diary', '[data-curator-target="nutrition"]'],
+      [{ type: 'norms_changed' }, 'diary', '[data-curator-target="nutrition"]'],
+      [{ type: 'planning_changed' }, 'diary', '[data-curator-target="nutrition"]'],
     ];
 
     for (const [action, tab, selector] of cases) {
       const target = build(entry, action);
       expect(target.tab).toBe(tab);
       expect(target.selectors[0]).toBe(selector);
+    }
+  });
+
+  // Смоук по каждому виду правки: таблица адресов проверяет чистую функцию, а
+  // здесь нажимается реальная строка реального листа — руками такой набор не
+  // собрать, для этого куратору пришлось бы девять раз править чужой день.
+  it('sends every kind of edit to its contract address from the real sheet', async () => {
+    const cases = [
+      [{ type: 'meal_item_added', meal_label: 'Обед', count: 1 }, 'diary', '2026-07-05'],
+      [{ type: 'water_set', from: 1000, to: 1800 }, 'diary', '2026-07-05'],
+      [{ type: 'weight_set', from: 82, to: 81.5 }, 'diary', '2026-07-05'],
+      [{ type: 'sleep_set', from: 6, to: 8 }, 'diary', '2026-07-05'],
+      [{ type: 'steps_set', from: 3000, to: 9000 }, 'activity', '2026-07-05'],
+      [{ type: 'training_added', kind: 'Силовая' }, 'activity', '2026-07-05'],
+      [{ type: 'norms_changed', fields: ['Калории'] }, 'diary', null],
+      [{ type: 'profile_changed', fields: ['Рост'] }, 'diary', null],
+      [{ type: 'planning_changed' }, 'diary', null],
+    ];
+
+    for (const [action, tab, date] of cases) {
+      document.body.innerHTML = '';
+      localStorage.clear();
+      sessionStorage.clear();
+      const banner = loadBanner();
+      window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([
+        createDatedEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', '2026-07-05', [action]),
+      ]));
+
+      await banner.checkAndShow();
+      const row = document.querySelector('[data-ca-target-id]');
+      expect(row, `нет строки для ${action.type}`).toBeTruthy();
+      row.click();
+      await flushMicrotasks();
+      await vi.advanceTimersByTimeAsync(300);
+
+      expect(window.HEYS.ui.switchTab, action.type).toHaveBeenCalledWith(tab);
+      if (date) expect(window.HEYS.ui.setSelectedDate, action.type).toHaveBeenCalledWith(date);
+      else expect(window.HEYS.ui.setSelectedDate, action.type).not.toHaveBeenCalled();
+    }
+  });
+
+  // «Дневник нужного дня» против «дневника по умолчанию»: правка дня несёт
+  // дату и переключает день, правка норм/профиля/плана — нет, потому что к дню
+  // она не привязана и переключать день под неё нечем.
+  it('carries the day date only for day-scoped actions', () => {
+    const banner = loadBanner();
+    const build = banner._test.buildActionTarget;
+    const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z');
+
+    for (const type of ['meal_added', 'water_set', 'weight_set', 'sleep_set']) {
+      expect(build(entry, { type, date: '2026-07-05' }).date).toBe('2026-07-05');
+    }
+    for (const type of ['norms_changed', 'profile_changed', 'planning_changed']) {
+      expect(build(entry, { type, date: '2026-07-05' }).date).toBe(null);
     }
   });
 
@@ -470,8 +530,7 @@ describe('CuratorActionsBanner review modal', () => {
       '../heys_day_main_block_v1.js',
       '../heys_day_side_block_v1.js',
       '../heys_day_diary_section.js',
-      '../heys_user_tab_impl_v1.js',
-      '../heys_planning_tasks_v1.js',
+      '../heys_day_nutrition_v1.js',
     ].map((relativePath) => fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8')).join('\n');
 
     for (const marker of [
@@ -482,9 +541,7 @@ describe('CuratorActionsBanner review modal', () => {
       "'data-curator-target': 'weight'",
       "'data-curator-target': 'sleep'",
       "id: 'diary-heading'",
-      "'data-curator-target': 'profile'",
-      "id: 'norms'",
-      "'data-curator-target': 'planning'",
+      "'data-curator-target': 'nutrition'",
     ]) {
       expect(sources).toContain(marker);
     }
