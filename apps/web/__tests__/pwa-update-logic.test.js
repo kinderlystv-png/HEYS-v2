@@ -9,7 +9,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
 const UPDATE_COOLDOWN_MS = 60000; // 1 минута
 const MAX_UPDATE_ATTEMPTS = 3;
@@ -446,12 +446,28 @@ describe('PWA update protection', () => {
         : join(process.cwd(), 'apps/web/heys_modal_manager_v1.js');
       const managerSource = readFileSync(managerPath, 'utf8');
 
-      expect(platformSource).toContain('runWhenManagedModalsClose(finishUpdate');
-      expect(platformSource).toContain('runWhenManagedModalsClose(scheduleReload');
+      expect(platformSource).toContain('runWhenScreenIsFree(finishUpdate');
+      expect(platformSource).toContain('runWhenScreenIsFree(scheduleReload');
       expect(platformSource).toContain('const waitForStableIdle = () =>');
-      expect(platformSource).toContain('modalManager.getOpenCount() === 0');
-      expect(platformSource).toContain("document.addEventListener('heys:modal-stack-idle', waitForStableIdle, { once: true })");
+      expect(platformSource).toContain('if (!isUpdateBlockedByScreen())');
+      expect(platformSource).toContain("document.addEventListener('heys:modal-stack-idle', onIdle, { once: true })");
       expect(managerSource).toContain("document.dispatchEvent(new CustomEvent('heys:modal-stack-idle'))");
+    });
+
+    it('ждёт свободного экрана и на пути сверки версий, а не только в SW-цикле', () => {
+      const webCwdPath = join(process.cwd(), 'heys_platform_apis_v1.js');
+      const platformPath = existsSync(webCwdPath)
+        ? webCwdPath
+        : join(process.cwd(), 'apps/web/heys_platform_apis_v1.js');
+      const platformSource = readFileSync(platformPath, 'utf8');
+
+      // Этот путь (возврат после 30 минут простоя) сам показывал кадры и через
+      // 3,6 с уводил страницу, ничего не спрашивая у экрана.
+      expect(platformSource).toContain("runWhenScreenIsFree(startVersionUpdate, 'server-version')");
+      // Строка «аварийный предел»: 10 с в SW-цикле и 12 с при сверке версии
+      // остаются — они ограничивают кадр загрузки, а не ожидание формы.
+      expect(platformSource).toContain('}, 12000);');
+      expect(platformSource).toContain('}, 10000);');
     });
   });
 
@@ -799,6 +815,143 @@ describe('PWA update protection', () => {
       updateBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
       expect(effectCount).toBe(2);
       vi.useRealTimers();
+    });
+  });
+
+  // Строка контракта pwa-update «обновление во время записи» (решение владельца
+  // 24 августа): перезагрузка ждёт, пока на экране не останется заполненной
+  // формы — чек-ин, добавление еды и лист правки приёма задерживают её даже без
+  // открытой модалки, и своего предела ожидания у слоя нет.
+  //
+  // Здесь исполняется настоящий heys_platform_apis_v1.js: без
+  // window.__heysPostbootDone его SW-регистрация только опрашивает флаг и ничего
+  // не делает, так что модуль в happy-dom безопасен. Публичный вход в гейт —
+  // runUpdateRecoveryCheck: он проходит ровно через runWhenScreenIsFree.
+  describe('обновление во время записи: гейт заполненной формы', () => {
+    const OLD_VERSION = '2026.08.01.1200.aaaaaaa';
+    const NEW_VERSION = '2026.08.24.1200.bbbbbbb';
+    let platformApis;
+
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const promptOnScreen = () => !!document.getElementById('heys-update-modal');
+
+    beforeAll(() => {
+      const webCwdPath = join(process.cwd(), 'heys_platform_apis_v1.js');
+      const platformPath = existsSync(webCwdPath)
+        ? webCwdPath
+        : join(process.cwd(), 'apps/web/heys_platform_apis_v1.js');
+      const platformSource = readFileSync(platformPath, 'utf8');
+
+      window.APP_VERSION = OLD_VERSION;
+      // eslint-disable-next-line no-new-func
+      new Function(platformSource)();
+      platformApis = window.HEYS.PlatformAPIs;
+    });
+
+    beforeEach(() => {
+      document.getElementById('heys-update-modal')?.remove();
+      platformApis.getUpdateFormDrafts().forEach((id) => platformApis.releaseUpdateFormDraft(id));
+      delete window.HEYS.ModalManager;
+      // Три неудачных попытки подряд на той же сборке — состояние, из которого
+      // слой хочет показать страховку прямо сейчас.
+      localStorage.setItem(
+        'heys_update_recovery',
+        JSON.stringify({ fromVersion: OLD_VERSION, count: 3, lastAttemptAt: Date.now() })
+      );
+      vi.stubGlobal('fetch', vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ version: NEW_VERSION }),
+      })));
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      localStorage.removeItem('heys_update_recovery');
+      document.getElementById('heys-update-modal')?.remove();
+    });
+
+    it('считает экран занятым по заполненной форме, даже когда открытых модалок нет', () => {
+      window.HEYS.ModalManager = { getOpenCount: () => 0 };
+
+      expect(platformApis.isUpdateBlockedByScreen()).toBe(false);
+      platformApis.setUpdateFormDraft('checkin-morning', true);
+      expect(platformApis.isUpdateBlockedByScreen()).toBe(true);
+      expect(platformApis.getUpdateFormDrafts()).toEqual(['checkin-morning']);
+
+      platformApis.setUpdateFormDraft('checkin-morning', false);
+      expect(platformApis.isUpdateBlockedByScreen()).toBe(false);
+    });
+
+    it('держит слой, пока стоит признак, и пропускает его после снятия', async () => {
+      window.HEYS.ModalManager = { getOpenCount: () => 0 };
+      platformApis.setUpdateFormDraft('food-add', true);
+
+      await platformApis.runUpdateRecoveryCheck();
+      expect(promptOnScreen()).toBe(false);
+
+      // Своего предела ожидания у слоя нет: ждём заметно дольше и 300 мс
+      // паузы стабильности, и 12-секундного аварийного предела кадра загрузки.
+      await wait(700);
+      expect(promptOnScreen()).toBe(false);
+
+      platformApis.setUpdateFormDraft('food-add', false);
+      await wait(400);
+      expect(promptOnScreen()).toBe(true);
+    });
+
+    it('не пропускает слой, пока держит хотя бы одна из двух форм', async () => {
+      window.HEYS.ModalManager = { getOpenCount: () => 0 };
+      const releaseMeal = platformApis.holdUpdateForFormDraft('meal-edit-sheet');
+      platformApis.setUpdateFormDraft('checkin-morning', true);
+
+      await platformApis.runUpdateRecoveryCheck();
+      expect(promptOnScreen()).toBe(false);
+
+      releaseMeal();
+      await wait(400);
+      expect(promptOnScreen()).toBe(false);
+
+      platformApis.setUpdateFormDraft('checkin-morning', false);
+      await wait(400);
+      expect(promptOnScreen()).toBe(true);
+    });
+
+    it('не пропускает слой, когда форму сняли, но открылась модалка', async () => {
+      let openModals = 0;
+      window.HEYS.ModalManager = { getOpenCount: () => openModals };
+      platformApis.setUpdateFormDraft('checkin-morning', true);
+
+      await platformApis.runUpdateRecoveryCheck();
+      expect(promptOnScreen()).toBe(false);
+
+      openModals = 1;
+      platformApis.setUpdateFormDraft('checkin-morning', false);
+      await wait(400);
+      expect(promptOnScreen()).toBe(false);
+
+      openModals = 0;
+      document.dispatchEvent(new window.CustomEvent('heys:modal-stack-idle'));
+      await wait(400);
+      expect(promptOnScreen()).toBe(true);
+    });
+
+    it('показывает слой сразу, когда на экране ничего не заполнено', async () => {
+      window.HEYS.ModalManager = { getOpenCount: () => 0 };
+
+      await platformApis.runUpdateRecoveryCheck();
+      expect(promptOnScreen()).toBe(true);
+    });
+
+    it('снимает признак идемпотентно — повторное снятие не будит слой второй раз', async () => {
+      window.HEYS.ModalManager = { getOpenCount: () => 0 };
+      platformApis.setUpdateFormDraft('checkin-morning', true);
+
+      await platformApis.runUpdateRecoveryCheck();
+      expect(platformApis.releaseUpdateFormDraft('checkin-morning')).toBe(true);
+      expect(platformApis.releaseUpdateFormDraft('checkin-morning')).toBe(false);
+      await wait(400);
+      expect(promptOnScreen()).toBe(true);
+      expect(document.querySelectorAll('#heys-update-modal').length).toBe(1);
     });
   });
 

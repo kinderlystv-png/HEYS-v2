@@ -4029,6 +4029,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [quickList, setQuickList] = useState('frequent');
 
+    // Контракт pwa-update, «обновление во время записи»: шаг добавления еды
+    // держит набранное прямо на экране, без открытой модалки, — счётчик
+    // модалок его не видит. Признак снимается при уходе с шага.
+    useEffect(() => window.HEYS?.PlatformAPIs?.holdUpdateForFormDraft?.('add-product-step'), []);
+
     // v25.8.6.7: Sync searchQuery from StepModal's getInitialData
     // useState initializer runs only once at mount, but stepData is set via useEffect
     // (after first render), so data?.searchQuery may be empty on mount.

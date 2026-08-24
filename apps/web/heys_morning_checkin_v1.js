@@ -2499,6 +2499,15 @@
    * @param {string} [mode] - 'daily' форсирует дневной план (после handoff с регистрации)
    */
   function MorningCheckin({ onComplete, mode }) {
+    // Контракт pwa-update, «обновление во время записи»: пока мастер
+    // чек-ина на экране, набранное в нём держит перезагрузку — счётчик
+    // открытых модалок его не видит. Признак снимается тем же эффектом
+    // при уходе с экрана.
+    if (window.React && typeof window.React.useEffect === 'function') {
+      window.React.useEffect(function () {
+        return window.HEYS?.PlatformAPIs?.holdUpdateForFormDraft?.('morning-checkin');
+      }, []);
+    }
     // 🛡️ Замораживаем список шагов на время сессии визарда.
     // Без заморозки: WeightStepComponent immediate-write (500ms debounce) кладёт
     // dayv2.weightMorning в LS до того как пользователь нажмёт «Далее». На любом

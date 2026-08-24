@@ -128,23 +128,88 @@
   let _updateAvailable = false;
   let _updateVersion = null;
 
-  function runWhenManagedModalsClose(callback, source = 'unknown') {
+  // === Реестр заполненных форм (строка контракта pwa-update «обновление во
+  // время записи», решение владельца 24 августа) ===
+  // Счётчик открытых модалок ловит только флоу, поднятые через ModalManager.
+  // Чек-ин, добавление еды и лист правки приёма держат набранный текст прямо на
+  // экране, без открытой модалки, — для них счётчик равен нулю, и перезагрузка
+  // сносила несохранённый ввод. Экран объявляет своё состояние сам: одна
+  // строка в эффекте, снимается тем же эффектом при очистке или уходе с экрана.
+  const FORM_DRAFT_IDLE_EVENT = 'heys:form-draft-idle';
+  const _formDrafts = new Set();
+
+  function releaseUpdateFormDraft(formId) {
+    const id = String(formId || '').trim();
+    if (!id || !_formDrafts.delete(id)) return false;
+    if (_formDrafts.size === 0 && typeof document !== 'undefined') {
+      document.dispatchEvent(new CustomEvent(FORM_DRAFT_IDLE_EVENT));
+    }
+    return true;
+  }
+
+  function holdUpdateForFormDraft(formId) {
+    const id = String(formId || '').trim();
+    if (!id) return () => { };
+    _formDrafts.add(id);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      releaseUpdateFormDraft(id);
+    };
+  }
+
+  // Идемпотентная форма для React-эффекта: setUpdateFormDraft(id, hasDraft).
+  function setUpdateFormDraft(formId, hasDraft) {
+    if (hasDraft) {
+      holdUpdateForFormDraft(formId);
+      return true;
+    }
+    return releaseUpdateFormDraft(formId);
+  }
+
+  function getUpdateFormDrafts() {
+    return Array.from(_formDrafts);
+  }
+
+  function isUpdateBlockedByScreen() {
+    if (_formDrafts.size > 0) return true;
     const modalManager = HEYS.ModalManager;
-    if (!modalManager?.getOpenCount || modalManager.getOpenCount() === 0) return false;
+    return !!modalManager?.getOpenCount && modalManager.getOpenCount() > 0;
+  }
+
+  function runWhenScreenIsFree(callback, source = 'unknown') {
+    if (!isUpdateBlockedByScreen()) return false;
 
     console.info(`[SW] ⏸️ Update deferred until the active flow closes (${source})`);
+    // Своего предела ожидания у слоя нет: обновление не срочное, а незакрытая
+    // форма закрывается сама, когда человек уходит с экрана.
+    const armIdleListeners = () => {
+      document.addEventListener('heys:modal-stack-idle', onIdle, { once: true });
+      document.addEventListener(FORM_DRAFT_IDLE_EVENT, onIdle, { once: true });
+    };
+    const disarmIdleListeners = () => {
+      document.removeEventListener('heys:modal-stack-idle', onIdle);
+      document.removeEventListener(FORM_DRAFT_IDLE_EVENT, onIdle);
+    };
     const waitForStableIdle = () => {
       // Step flows briefly have an empty modal stack while replacing one modal
       // with the next. Do not treat that transition frame as the end of the flow.
       setTimeout(() => {
-        if (modalManager.getOpenCount() === 0) {
+        if (!isUpdateBlockedByScreen()) {
           callback();
           return;
         }
-        document.addEventListener('heys:modal-stack-idle', waitForStableIdle, { once: true });
+        armIdleListeners();
       }, 300);
     };
-    document.addEventListener('heys:modal-stack-idle', waitForStableIdle, { once: true });
+    const onIdle = () => {
+      // Обе половины гейта шлют свой сигнал независимо: снимаем парный
+      // слушатель, иначе второй сигнал завёл бы ещё одно окно ожидания.
+      disarmIdleListeners();
+      waitForStableIdle();
+    };
+    armIdleListeners();
     return true;
   }
 
@@ -374,7 +439,7 @@
     }
 
     const show = () => showManualRefreshPrompt(targetVersion);
-    if (!runWhenManagedModalsClose(show, 'update-recovery')) show();
+    if (!runWhenScreenIsFree(show, 'update-recovery')) show();
 
     return verdict;
   }
@@ -783,19 +848,26 @@
         // «Установка» больше нет. Этот путь (возврат после долгого простоя)
         // показывает те же кадры, что и живой SW-цикл: Загрузка → Перезагрузка.
         // «Готово!» здесь не рисуем — воркер о готовности не сообщал.
-        showUpdateModal('downloading');
-        setTimeout(() => {
-          updateModalStage('reloading');
-          forceUpdateAndReload(false);
-        }, 3600);
+        // Строка «обновление во время записи»: перезагрузка здесь такая же
+        // необратимая, поэтому путь ждёт свободного экрана наравне с SW-циклом.
+        // Аварийный предел 12 с отсчитывается от старта кадров, а не от
+        // решения обновиться, — ожидание формы своего предела не имеет.
+        const startVersionUpdate = () => {
+          showUpdateModal('downloading');
+          setTimeout(() => {
+            updateModalStage('reloading');
+            forceUpdateAndReload(false);
+          }, 3600);
 
-        setTimeout(() => {
-          const modal = document.getElementById('heys-update-modal');
-          if (modal) {
-            hideUpdateModal();
-            clearUpdateLock();
-          }
-        }, 12000);
+          setTimeout(() => {
+            const modal = document.getElementById('heys-update-modal');
+            if (modal) {
+              hideUpdateModal();
+              clearUpdateLock();
+            }
+          }, 12000);
+        };
+        if (!runWhenScreenIsFree(startVersionUpdate, 'server-version')) startVersionUpdate();
 
         return true;
       } else if (data.version && data.version !== currentVersion) {
@@ -1130,8 +1202,9 @@
           sessionStorage.setItem('heys_pending_update', 'true');
           setUpdateLock();
 
-          // Не перекрываем незавершённую пользовательскую форму обновлением.
-          const updateUiDeferred = HEYS.ModalManager?.getOpenCount?.() > 0;
+          // Не перекрываем незавершённую пользовательскую форму обновлением —
+          // ни открытую модалку, ни заполненную форму прямо на экране.
+          const updateUiDeferred = isUpdateBlockedByScreen();
           if (!updateUiDeferred) showUpdateModal('downloading');
           transitionSwUpdateState(SW_UPDATE_STATES.DOWNLOADING, 'updatefound-modal');
 
@@ -1164,7 +1237,7 @@
                   forceUpdateAndReload(false);
                 }, 800);
               };
-              if (!runWhenManagedModalsClose(finishUpdate, 'sw-installed')) finishUpdate();
+              if (!runWhenScreenIsFree(finishUpdate, 'sw-installed')) finishUpdate();
             }
           });
         });
@@ -1239,7 +1312,7 @@
           showUpdateModal('reloading');
           setTimeout(doReload, 500);
         };
-        if (!runWhenManagedModalsClose(scheduleReload, 'controllerchange')) scheduleReload();
+        if (!runWhenScreenIsFree(scheduleReload, 'controllerchange')) scheduleReload();
       } else {
         // Первичная или незапрошенная активация SW — НЕ прерываем текущую загрузку.
         console.log('[SW] Controller activation outside update lifecycle, no reload needed');
@@ -3264,6 +3337,14 @@
     evaluateUpdateRecovery: evaluateUpdateRecovery,
     clearUpdateRecovery: clearUpdateRecovery,
     runUpdateRecoveryCheck: runUpdateRecoveryCheck,
+    // Гейт «не перебивать запись»: экран объявляет, что на нём есть
+    // заполненная форма, и перезагрузка ждёт, пока признак не снимут.
+    // См. строку контракта pwa-update «обновление во время записи».
+    setUpdateFormDraft: setUpdateFormDraft,
+    holdUpdateForFormDraft: holdUpdateForFormDraft,
+    releaseUpdateFormDraft: releaseUpdateFormDraft,
+    getUpdateFormDrafts: getUpdateFormDrafts,
+    isUpdateBlockedByScreen: isUpdateBlockedByScreen,
     getSwUpdateState: getSwUpdateState,
     getSwUpdateStateLog: getSwUpdateStateLog,
     showUpdateModal: showUpdateModal,
