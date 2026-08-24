@@ -1,7 +1,15 @@
 # E2E agent smoke
 
-> **Статус:** проверено 2026-08-23 · локальный Playwright smoke для агентов (без
-> участия человека в UI).
+> **Статус:** проверено 2026-08-24 · локальный Playwright smoke для агентов (без
+> участия человека в UI).  
+> **Охват:** команды `pnpm test:e2e:*`, `setup.mjs` / `verify.mjs` / Lockbox,
+> Playwright smoke (5 спек / 6 тестов), 4 фикстурные миграции и prod-БД policy,
+> хелперы PIN/куратор/cleanup, скрытие dev-fixture в кураторской панели, отчёт
+> `smoke-last.json`  
+> **Не подтверждено:** CI/husky gate для smoke, RuStore/mobile-клиент,
+> prod-runtime вне фикстур `E2E-TestAlex` / `E2E-TestPopl`,
+> `reuseExistingServer` только по `:3001` без живого `:4001`, отдельный
+> `test:e2e:curator-switch`
 
 ## Назначение
 
@@ -106,3 +114,16 @@ Idempotent миграции (через `scripts/e2e/setup.mjs`):
 - [`PRODUCTS_AND_SEARCH.md`](PRODUCTS_AND_SEARCH.md) — контракты products/sync
 - [`TESTS/e2e/README.md`](../../../TESTS/e2e/README.md) — isolation,
   curator-switch
+
+## Facts Table
+
+| ID  | Утверждение                                                                | Проверка                                                      | Статус               |
+| --- | -------------------------------------------------------------------------- | ------------------------------------------------------------- | -------------------- |
+| E1  | `pnpm test:e2e:smoke` = setup → Playwright → summary с guard stale-отчёта  | `scripts/e2e/run-smoke.mjs`, `package.json`                   | проверено 2026-08-24 |
+| E2  | Smoke = 5 спек / 6 тестов, mobile, `workers: 1`, `webServer: dev:local`    | `playwright.smoke.config.ts`, `TESTS/e2e/README.md`           | проверено 2026-08-24 |
+| E3  | Setup применяет 4 idempotent миграции; destructive cleanup только вручную  | `scripts/e2e/setup.mjs`, `scripts/db/migrations/2026-08-23_*` | проверено 2026-08-24 |
+| E4  | Bootstrap пишет в `heys_production` через `scripts/db/psql.sh`             | `scripts/e2e/setup.mjs`, `scripts/db/psql.sh`                 | проверено 2026-08-24 |
+| E5  | PIN `1357`/`9753` и UUID в `.env.local.example`; куратор — Lockbox/`.env`  | `.env.local.example`, `scripts/e2e/env-secrets.mjs`           | проверено 2026-08-24 |
+| E6  | Пустые кураторские креды → skip probe; 401 → fail                          | `scripts/e2e/setup.mjs` (`verifyCuratorApi`)                  | проверено 2026-08-24 |
+| E7  | Отчёт в `test-results-reports/smoke-last.json`, вне Playwright `outputDir` | `playwright.smoke.config.ts`, `.gitignore`                    | проверено 2026-08-24 |
+| E8  | Полный smoke 6/6 на `825be21d` (105s, старт 12:35 МСК)                     | `test-results-reports/smoke-last.json`, `pnpm test:e2e:smoke` | проверено 2026-08-24 |
