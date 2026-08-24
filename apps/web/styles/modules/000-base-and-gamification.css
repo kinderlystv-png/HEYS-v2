@@ -17546,23 +17546,24 @@ html.heys-bg-paused *::after {
 .game-v4-sheet__tier {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--v4-sand-act-mid, #a75c2b);
-  margin: 8px 0 2px;
+  margin: 18px 0 10px;
 }
 
 .game-v4-sheet__hero--cream {
   background: var(--v4-sand-hero, #efe3cf);
-  border-radius: 22px;
-  padding: 20px 18px 18px;
+  border-radius: 26px;
+  padding: 24px 20px 20px;
+  margin-top: 14px;
 }
 
 .game-v4-sheet__eyebrow {
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
 }
 
 .game-v4-sheet__hero-metric {
@@ -17615,7 +17616,7 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__streak-bars {
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .game-v4-sheet__streak-bar-row {
@@ -17702,7 +17703,7 @@ html.heys-bg-paused *::after {
 .game-v4-sheet__bar {
   height: 6px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(32, 30, 29, 0.09);
   margin-top: 12px;
   overflow: hidden;
 }
@@ -17713,7 +17714,7 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__bar--thin {
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .game-v4-sheet__bar-fill {

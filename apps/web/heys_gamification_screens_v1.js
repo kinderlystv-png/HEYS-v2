@@ -125,6 +125,33 @@
             return parts.join(' · ');
         }
 
+        /** Остаток до выполнения: по нему контракт упорядочивает закрытые. */
+        function remainingOf(ach) {
+            const p = ach && ach.progress;
+            if (!p || !(p.target > 0)) return Number.POSITIVE_INFINITY;
+            return Math.max(0, p.target - (p.current || 0));
+        }
+
+        /**
+         * Порядок внутри группы: сначала открытые в порядке каталога, затем
+         * закрытые по остатку до выполнения (строка «порядок закрытых»).
+         */
+        function orderAchievements(cat, achievementsById) {
+            const ids = cat.achievements || [];
+            const isOpen = (id) => {
+                const ach = achievementsById[id];
+                return !!(ach && ach.unlocked) || !!HEYS.game?.isAchievementUnlocked?.(id);
+            };
+            const opened = ids.filter(isOpen);
+            const locked = ids.filter((id) => !isOpen(id))
+                .sort((a, b) => remainingOf(achievementsById[a]) - remainingOf(achievementsById[b]));
+            return [...opened, ...locked];
+        }
+
+        function remainingSort(list) {
+            return [...list].sort((a, b) => remainingOf(a) - remainingOf(b));
+        }
+
         function categoryActivityScore(cat, achievementsById) {
             let unlocked = 0;
             let inProgress = 0;
@@ -134,8 +161,15 @@
                 if (ach.unlocked) unlocked += 1;
                 else if (ach.progress && ach.progress.current > 0) inProgress += 1;
             });
-            if (unlocked === 0 && inProgress === 0) return -1;
-            return unlocked * 10 + inProgress * 5 + unlocked + inProgress;
+            // Строка «пустых групп нет»: группа появляется при первом открытом в
+            // ней — не «0 из 5» серым, а отсутствие. Один только прогресс её не
+            // показывает.
+            if (unlocked === 0) return -1;
+            // Строка «порядок групп»: наверх та, где сейчас идёт продвижение.
+            // Поэтому вес несёт незакрытое в работе, а не число закрытых —
+            // иначе полностью пройденная группа встаёт первой, чего контракт
+            // прямо не хочет.
+            return inProgress * 10 + unlocked;
         }
 
         function countCategoryStats(cat, achievementsById) {
@@ -384,7 +418,10 @@
             const stats = HEYS.game?.getStats?.() || { unlockedCount: 0, totalAchievements: 36 };
             const achievements = HEYS.game?.getAchievements?.() || [];
             const categories = HEYS.game?.getAchievementCategories?.() || [];
-            const nearList = (HEYS.game?.getInProgressAchievements?.() || []).slice(0, 3);
+            // Строка «Ближе всего»: одно достижение с наименьшим остатком до
+            // выполнения. Движок отдаёт список по проценту — процент и остаток
+            // расходятся, когда цели разного размера: 9 из 10 ближе, чем 90 из 100.
+            const nearList = remainingSort(HEYS.game?.getInProgressAchievements?.() || []).slice(0, 1);
             const achievementsById = useMemo(() => {
                 const map = {};
                 achievements.forEach((a) => { map[a.id] = a; });
@@ -404,7 +441,8 @@
                     .map((row) => row.cat);
             }, [categories, achievementsById, firstDay]);
 
-            const VISIBLE_INITIAL = 2;
+            // Строка «на экране»: три группы, остальные за строкой «ещё N групп».
+            const VISIBLE_INITIAL = 3;
             const hiddenCount = expandedAll ? 0 : Math.max(0, visibleCategories.length - VISIBLE_INITIAL);
             const shownCategories = expandedAll
                 ? visibleCategories
@@ -444,7 +482,9 @@
                             `${catLabel} · ${unlocked} из ${total}`
                         ),
                         React.createElement('div', { className: 'game-v4-sheet__list-card' },
-                            (cat.achievements || []).map((achId) => {
+                            // Строка «порядок закрытых»: по остатку до выполнения, не по
+                            // номеру в каталоге. Открытые идут первыми — они уже свершились.
+                            orderAchievements(cat, achievementsById).map((achId) => {
                                 const ach = achievementsById[achId] || HEYS.game?.ACHIEVEMENTS?.[achId];
                                 if (!ach) return null;
                                 const unlockedAch = ach.unlocked || HEYS.game?.isAchievementUnlocked?.(achId);
@@ -507,11 +547,20 @@
                 [stats.level, isMax]
             );
 
+            const [xpTableExpanded, setXpTableExpanded] = useState(false);
             const xpActions = HEYS.game?.XP_ACTIONS || {};
             const breakdownItems = HEYS.game?.getXPBreakdown?.()?.items || [];
             const countMap = {};
             breakdownItems.forEach((item) => { countMap[item.reason] = item.count; });
-            const xpRows = XP_TABLE_ORDER.filter((key) => xpActions[key]);
+            // Строка «длина таблицы»: восемь строк по убыванию номинала, остальные
+            // раскрытием. Порядок берётся из номинала, а не из порядка каталога —
+            // иначе сон и вес по 5 стоят выше чек-ина на 10.
+            const xpRowsAll = XP_TABLE_ORDER
+                .filter((key) => xpActions[key])
+                .sort((a, b) => (xpActions[b].xp || 0) - (xpActions[a].xp || 0));
+            const XP_ROWS_VISIBLE = 8;
+            const xpHidden = Math.max(0, xpRowsAll.length - XP_ROWS_VISIBLE);
+            const xpRows = xpTableExpanded ? xpRowsAll : xpRowsAll.slice(0, XP_ROWS_VISIBLE);
 
             return React.createElement('div', { className: 'game-v4-sheet__panel' },
                 React.createElement('div', { className: 'game-v4-sheet__hero game-v4-sheet__hero--cream' },
@@ -580,6 +629,11 @@
                         );
                     })
                 ),
+                xpHidden > 0 && !xpTableExpanded && React.createElement('button', {
+                    type: 'button',
+                    className: 'game-v4-sheet__more-groups',
+                    onClick: () => setXpTableExpanded(true)
+                }, `Ещё ${xpHidden}`),
                 React.createElement('div', { className: 'game-v4-sheet__footnote' }, XP_FOOTNOTE)
             );
         }
