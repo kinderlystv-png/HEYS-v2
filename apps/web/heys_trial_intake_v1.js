@@ -211,6 +211,112 @@
     return merged;
   }
 
+  // ── Локальная копия черновика ────────────────────────────────────────────
+  // Строка «что пишется» (questionnaire.v4, переписана 25 августа): ответы
+  // пишутся в черновик на сервере после каждого шага И дублируются локально,
+  // чтобы анкета открывалась и заполнялась без сети; локальная копия удаляется
+  // после отправки. То же поведение описывает строка «офлайн» той же зоны.
+  //
+  // ОТСТУПЛЕНИЕ, названное вслух: строка «хранение» того же контракта всё ещё
+  // запрещает браузерное хранилище целиком — это прежняя редакция, с которой
+  // «что пишется» и «офлайн» спорят вдвоём. Реализовано по двум переписанным
+  // строкам; «хранение» ждёт правки у дизайнера.
+  const DRAFT_LOCAL_KEY_NAME = 'trial_intake_draft_v1';
+  const DRAFT_LOCAL_VERSION = 1;
+  // Кандидат ещё не клиент: `clientId` у него нет по построению — гейт открывает
+  // анкету по ветке `!clientId && hasCandidateSessionHint` (heys_app_gate_flow_v1
+  // ~:3003), а клиентская ветка требует `clientId` (`consentEligible`). Поэтому
+  // два пространства имён никогда не пересекаются, и кандидатский черновик не
+  // может быть прочитан под клиентским ключом.
+  const DRAFT_CANDIDATE_SCOPE = 'candidate';
+
+  function draftScope() {
+    const clientId = String(global.HEYS?.currentClientId || '').trim().toLowerCase();
+    if (clientId) return clientId;
+    return api.isCandidate() ? DRAFT_CANDIDATE_SCOPE : '';
+  }
+
+  // Ключ всегда привязан к текущему владельцу: `heys_<scope>_trial_intake_draft_v1`.
+  // Скана по localStorage здесь нет вовсе — читается ровно один вычисленный
+  // ключ, поэтому чужой черновик недостижим по построению, а не по фильтру.
+  // Без владельца (ни клиента, ни кандидата) локальная копия не пишется: писать
+  // ответы «неизвестно чей анкеты» опаснее, чем остаться без офлайна.
+  function draftKey() {
+    const scope = draftScope();
+    return scope ? `heys_${scope}_${DRAFT_LOCAL_KEY_NAME}` : '';
+  }
+
+  function readLocalDraft() {
+    const key = draftKey();
+    if (!key) return null;
+    try {
+      const raw = global.localStorage?.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.v !== DRAFT_LOCAL_VERSION) return null;
+      // Вторая линия к ключу: значение помнит свой scope, и чужое не читается,
+      // даже если ключ каким-то образом пережил смену владельца сессии.
+      if (String(parsed.scope || '') !== draftScope()) return null;
+      return {
+        answers: mergeAnswers(parsed.answers),
+        step: Math.max(0, Math.min(STEPS.length - 1, Number(parsed.step) || 0)),
+        owner: String(parsed.owner || ''),
+        baseUpdatedAt: parsed.baseUpdatedAt || null,
+        dirty: parsed.dirty === true,
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writeLocalDraft(draft) {
+    const key = draftKey();
+    if (!key) return;
+    try {
+      // Через штатный `localStorage.setItem`: перехватчик heys_storage_supabase
+      // маршрутизирует облако сам, и обходить его сохранённой копией
+      // оригинального метода нельзя.
+      // В облако этот ключ при этом не уезжает: его базовое имя не числится
+      // client-specific (`needsClientStorage` → false), а user-level путь
+      // `cloud.saveKey` останавливается на `!user` — supabase-пользователя ни у
+      // кандидатской, ни у PIN-сессии нет. Так и задумано: ответы анкеты живут
+      // на сервере только шифрованными, в trial_intakes/trial_candidates.
+      global.localStorage?.setItem(key, JSON.stringify({
+        v: DRAFT_LOCAL_VERSION,
+        scope: draftScope(),
+        owner: draft.owner || '',
+        step: draft.step,
+        answers: draft.answers,
+        baseUpdatedAt: draft.baseUpdatedAt || null,
+        dirty: draft.dirty === true,
+        savedAt: new Date().toISOString(),
+      }));
+    } catch (_) {
+      // Приватный режим или переполненная квота: анкета продолжает работать
+      // по сети, просто без офлайна.
+    }
+  }
+
+  function clearLocalDraft() {
+    const key = draftKey();
+    if (!key) return;
+    try { global.localStorage?.removeItem(key); } catch (_) { /* нечего чистить */ }
+  }
+
+  // Отказ сети или вердикт сервера. Вердикт (устаревший черновик, закрытая
+  // анкета, истёкшая сессия, невалидные ответы) локальной копией не лечится:
+  // шаг не переводим и ошибку показываем как раньше. Транспортный отказ —
+  // наоборот: строка «офлайн» требует, чтобы шаги заполнялись и без сети.
+  function isNetworkFailure(code) {
+    const value = String(code || '');
+    if (!value) return false;
+    if (['NETWORK_ERROR', 'request_failed', 'api_not_ready'].includes(value)) return true;
+    // HTTP-статус приходит числом (heys_yandex_api_v1 rpc): 5xx и 0 — это не
+    // вердикт анкеты, а недоступный сервер.
+    const status = Number(value);
+    return Number.isFinite(status) && (status === 0 || status >= 500);
+  }
+
   // `fieldId` нужен, чтобы к незаполненному полю можно было прокрутить и
   // поставить в него фокус: на шаге «Здоровье и ограничения» полей восемь,
   // часть появляется по условию, и сообщение «заполните обязательные поля» без
@@ -544,6 +650,14 @@
     // Строка «ошибка отправки»: обещать «ответы сохранены» можно только когда
     // упала именно отправка — при упавшем автосохранении это было бы ложью.
     const [submitFailed, setSubmitFailed] = React.useState(false);
+    // Строка «офлайн»: ответы уже лежат локально, но ещё не доехали на сервер.
+    const [localOnly, setLocalOnly] = React.useState(false);
+    const localOnlyRef = React.useRef(false);
+    const stepRef = React.useRef(0);
+    // Владелец черновика по версии сервера: candidate_id у кандидата, scope
+    // клиента — у клиентской сессии. Нужен, чтобы локальная копия чужой анкеты
+    // не подмешалась к своей.
+    const draftOwnerRef = React.useRef('');
     const saveTimerRef = React.useRef(null);
     const saveQueueRef = React.useRef(Promise.resolve());
     const answersRef = React.useRef(answers);
@@ -569,6 +683,22 @@
     };
 
     React.useEffect(() => { answersRef.current = answers; }, [answers]);
+    React.useEffect(() => { stepRef.current = step; }, [step]);
+    React.useEffect(() => { localOnlyRef.current = localOnly; }, [localOnly]);
+
+    // Строка «что пишется»: локальная копия снимается тем же составом, что
+    // уходит на сервер, и помнит, с какой серверной отметки она снята —
+    // иначе при возврате сети её нечем сверить с чужой правкой из другой
+    // вкладки (строка «две вкладки»).
+    const persistLocalDraft = React.useCallback((nextAnswers, nextStep, dirty) => {
+      writeLocalDraft({
+        owner: draftOwnerRef.current,
+        step: nextStep,
+        answers: nextAnswers,
+        baseUpdatedAt: serverUpdatedAtRef.current,
+        dirty,
+      });
+    }, []);
 
     const enqueueSave = React.useCallback((nextAnswers, nextStep, complete) => {
       const run = async () => {
@@ -591,28 +721,93 @@
 
     React.useEffect(() => {
       let active = true;
+      // Строка «что пишется»: локальная копия читается ДО ответа сервера —
+      // именно она открывает анкету, когда сети нет.
+      const local = readLocalDraft();
+
+      // Строка «офлайн»: без сети анкета открывается и заполняется дальше, а
+      // экран «Не удалось открыть анкету» остаётся только для случая, когда
+      // поднимать нечего.
+      const openFromLocalDraft = () => {
+        setStatus('in_progress');
+        setStep(local.step);
+        setAnswers(local.answers);
+        draftOwnerRef.current = local.owner;
+        serverUpdatedAtRef.current = local.baseUpdatedAt;
+        setLocalOnly(local.dirty);
+        setSaveState(local.dirty ? 'pending' : 'idle');
+        setError('');
+        if (local.step > 0) setResumeGateOpen(true);
+        setHydrated(true);
+        setLoading(false);
+      };
+
       api.get().then((result) => {
         if (!active) return;
         if (!result.success) {
+          if (local && result.error !== 'invalid_session') { openFromLocalDraft(); return; }
+          // Незагруженная анкета не пускает в заполнение: `hydrated` остаётся
+          // false, и вместо шагов показывается экран «Не удалось открыть
+          // анкету». Иначе человек заполнял бы пустую форму поверх уже
+          // существующего серверного черновика — и первое же автосохранение с
+          // `p_expected_updated_at: null` затёрло бы его ответы.
           setError(result.error === 'invalid_session' ? 'Сессия истекла. Войдите ещё раз.' : 'Не удалось загрузить анкету.');
+          setLoading(false);
+          return;
         } else if (!result.intake) {
+          // Сервер ответил, что анкеты нет: локальная копия либо чужая, либо
+          // от стёртого черновика — держать её нельзя.
+          clearLocalDraft();
           setStatus('not_invited');
         } else {
           const nextStatus = result.intake.status || 'invited';
           const nextStep = Math.max(0, Math.min(STEPS.length - 1, Number(result.intake.current_step) || 0));
+          const serverUpdatedAt = result.intake.updated_at || null;
+          // Кандидатская RPC отдаёт candidate_id; у клиентской сессии владелец
+          // и так равен scope клиента.
+          const owner = String(result.intake.candidate_id || draftScope());
           setStatus(nextStatus);
-          setStep(nextStep);
-          setAnswers(mergeAnswers(result.intake.answers));
           setClarification({
             text: result.intake.clarification_request || '',
             sections: Array.isArray(result.intake.clarification_sections)
               ? result.intake.clarification_sections
               : [],
           });
-          serverUpdatedAtRef.current = result.intake.updated_at || null;
+          serverUpdatedAtRef.current = serverUpdatedAt;
+          draftOwnerRef.current = owner;
+
+          // Локальная копия принимается, только если она снята с ЭТОГО же
+          // черновика (тот же владелец и та же серверная отметка) и содержит
+          // не доехавшие правки. Иначе выигрывает сервер, а копия стирается:
+          // так черновик прежнего кандидата не может подмешаться к новому —
+          // вход по одноразовому коду всегда идёт через сеть, и эта сверка
+          // случается раньше, чем человек увидит шаги.
+          const localAhead = !!local && local.dirty
+            && local.owner === owner
+            && String(local.baseUpdatedAt || '') === String(serverUpdatedAt || '');
+
+          if (localAhead) {
+            setStep(local.step);
+            setAnswers(local.answers);
+            setLocalOnly(true);
+            // Правки уже есть — автосохранение подхватит их и отправит.
+            setHasEdited(true);
+            setSaveState('pending');
+          } else {
+            setStep(nextStep);
+            setAnswers(mergeAnswers(result.intake.answers));
+            if (local) clearLocalDraft();
+          }
+
+          // Строка «первый раз»: у отправленной или закрытой анкеты локальной
+          // копии быть не должно.
+          if (!['invite_sent', 'invited', 'in_progress', 'needs_clarification'].includes(nextStatus)) {
+            clearLocalDraft();
+          }
+
           if (
             ['in_progress', 'needs_clarification'].includes(nextStatus)
-            && nextStep > 0
+            && (localAhead ? local.step : nextStep) > 0
           ) {
             setResumeGateOpen(true);
           }
@@ -620,7 +815,10 @@
         setHydrated(true);
         setLoading(false);
       }).catch(() => {
-        if (active) { setError('Не удалось загрузить анкету.'); setLoading(false); }
+        if (!active) return;
+        if (local) { openFromLocalDraft(); return; }
+        setError('Не удалось загрузить анкету.');
+        setLoading(false);
       });
       return () => { active = false; };
     }, []);
@@ -632,12 +830,25 @@
       saveTimerRef.current = setTimeout(async () => {
         setSaveState('saving');
         const snapshot = answersRef.current;
+        // Локальная копия пишется ДО сети: иначе правки, сделанные в офлайне,
+        // не переживут закрытие вкладки.
+        persistLocalDraft(snapshot, step, true);
         const result = await enqueueSave(snapshot, step, false);
+        const stillSame = answersRef.current === snapshot;
         if (result.success) {
           setStatus(result.status || 'in_progress');
           setSaveState('saved');
           setSaveErrorCode('');
-          if (answersRef.current === snapshot) setHasEdited(false);
+          setLocalOnly(false);
+          persistLocalDraft(answersRef.current, step, !stillSame);
+          if (stillSame) setHasEdited(false);
+        } else if (isNetworkFailure(result.error)) {
+          // Строка «офлайн»: без сети падает только отправка. Автосохранение
+          // легло на локальную копию — для человека это не ошибка, а «ещё не
+          // доехало»; доезд берёт на себя обработчик `online`.
+          setLocalOnly(true);
+          setSaveState('pending');
+          setSaveErrorCode('');
         } else {
           if (result.status && result.error === 'intake_locked') setStatus(result.status);
           setSaveState('error');
@@ -646,7 +857,7 @@
         }
       }, 700);
       return () => clearTimeout(saveTimerRef.current);
-    }, [answers, step, hydrated, hasEdited, status, enqueueSave]);
+    }, [answers, step, hydrated, hasEdited, status, enqueueSave, persistLocalDraft]);
 
     const setSectionValue = (section, key, value) => {
       setHasEdited(true);
@@ -718,8 +929,21 @@
         const nextStep = step + 1;
         setSaveState('saving');
         const snapshot = answersRef.current;
+        // Строка «что пишется»: ответы дублируются локально после каждого шага.
+        persistLocalDraft(snapshot, step, true);
         const result = await enqueueSave(snapshot, nextStep, false);
         if (!result.success) {
+          if (isNetworkFailure(result.error)) {
+            // Строка «офлайн»: шаги заполняются и в офлайне — сеть нужна
+            // только отправке. Шаг переводим, черновик держит локальная копия.
+            persistLocalDraft(snapshot, nextStep, true);
+            setLocalOnly(true);
+            setSaveState('pending');
+            setSaveErrorCode('');
+            setStep(nextStep);
+            global.scrollTo?.({ top: 0 });
+            return;
+          }
           if (result.status && result.error === 'intake_locked') setStatus(result.status);
           setSaveState('error');
           setSaveErrorCode(result.error || 'request_failed');
@@ -729,7 +953,9 @@
         if (answersRef.current === snapshot) setHasEdited(false);
         setSaveState('saved');
         setSaveErrorCode('');
+        setLocalOnly(false);
         setStatus(result.status || 'in_progress');
+        persistLocalDraft(snapshot, nextStep, answersRef.current !== snapshot);
         setStep(nextStep);
         // Строка «анимаций нет»: переход между шагами — мгновенная смена
         // состояния, без плавной прокрутки.
@@ -743,6 +969,9 @@
       if (tapAt - submitTapLockRef.current < 350) return;
       submitTapLockRef.current = tapAt;
       setSaveState('saving');
+      // Строка «ошибка отправки»: она обещает, что ответы и подтверждение
+      // сохранены. Локальная копия делает обещание правдой и в офлайне.
+      persistLocalDraft(answersRef.current, step, true);
       const result = await enqueueSave(answersRef.current, step, true);
       const tapElapsed = Date.now() - tapAt;
       if (tapElapsed < 350) await new Promise((resolve) => setTimeout(resolve, 350 - tapElapsed));
@@ -751,11 +980,19 @@
         setSaveState('saved');
         setSaveErrorCode('');
         setSubmitFailed(false);
+        setLocalOnly(false);
+        // Строка «что пишется»: локальная копия удаляется после отправки —
+        // отправленная анкета уже неизменяемая запись на сервере.
+        clearLocalDraft();
       } else {
         if (result.status && result.error === 'intake_locked') setStatus(result.status);
         setSaveState('error');
         setSaveErrorCode(result.error || 'request_failed');
         setSubmitFailed(true);
+        // Отправка не прошла из-за сети: сами ответы ещё должны доехать в
+        // черновик, поэтому помечаем их не доехавшими — обработчик `online`
+        // досохранит их, а отправку человек повторит сам.
+        if (isNetworkFailure(result.error)) setLocalOnly(true);
         setError(saveErrorCopy(result, true));
       }
     };
@@ -780,11 +1017,14 @@
       setSaveState('saving');
       const snapshot = answersRef.current;
       const result = await enqueueSave(snapshot, step, false);
+      const stillSame = answersRef.current === snapshot;
       if (result.success) {
         setStatus(result.status || 'in_progress');
         setSaveState('saved');
         setSaveErrorCode('');
-        if (answersRef.current === snapshot) setHasEdited(false);
+        setLocalOnly(false);
+        persistLocalDraft(answersRef.current, step, !stillSame);
+        if (stillSame) setHasEdited(false);
         return;
       }
       if (result.status && result.error === 'intake_locked') setStatus(result.status);
@@ -792,6 +1032,39 @@
       setSaveErrorCode(result.error || 'request_failed');
       setError(saveErrorCopy(result));
     };
+
+    // Строка «офлайн»: черновик синхронизируется при связи. Механизм — тот же,
+    // что у остального продукта (heys_day_offline_sync_v1, heys_messenger_v1):
+    // событие `online` повторяет отправку накопленного. Своей очереди анкета
+    // не заводит — доехать ответы должны именно в свой черновик на сервере,
+    // а туда ведёт только её RPC.
+    const flushLocalDraft = React.useCallback(async () => {
+      if (!localOnlyRef.current) return;
+      setSaveState('saving');
+      const snapshot = answersRef.current;
+      const targetStep = stepRef.current;
+      const result = await enqueueSave(snapshot, targetStep, false);
+      const stillSame = answersRef.current === snapshot;
+      if (result.success) {
+        setStatus(result.status || 'in_progress');
+        setSaveState('saved');
+        setSaveErrorCode('');
+        setLocalOnly(false);
+        setError('');
+        persistLocalDraft(answersRef.current, targetStep, !stillSame);
+        if (stillSame) setHasEdited(false);
+        return;
+      }
+      if (isNetworkFailure(result.error)) {
+        // Сеть отвалилась снова — остаёмся на локальной копии молча.
+        setSaveState('pending');
+        return;
+      }
+      if (result.status && result.error === 'intake_locked') setStatus(result.status);
+      setSaveState('error');
+      setSaveErrorCode(result.error || 'request_failed');
+      setError(saveErrorCopy(result));
+    }, [enqueueSave, persistLocalDraft]);
 
     const performClose = async () => {
       setCloseConfirmOpen(false);
@@ -801,8 +1074,16 @@
       }
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       setSaveState('saving');
-      const result = await enqueueSave(answersRef.current, step, false);
+      const snapshot = answersRef.current;
+      persistLocalDraft(snapshot, step, true);
+      const result = await enqueueSave(snapshot, step, false);
       if (result.success) {
+        persistLocalDraft(snapshot, step, false);
+        leaveIntake();
+      } else if (isNetworkFailure(result.error)) {
+        // Строка «офлайн»: без сети выход не запирается — ответы уже лежат
+        // локально и уедут при следующем открытии со связью.
+        setLocalOnly(true);
         leaveIntake();
       } else {
         setSaveState('error');
@@ -859,6 +1140,15 @@
         } catch (_) { /* ignore */ }
       };
     }, [showsSteps]);
+
+    // Строка «офлайн»: вернулась связь — накопленное локально доезжает на
+    // сервер само, без действий человека.
+    React.useEffect(() => {
+      if (!showsSteps) return undefined;
+      const onOnline = () => { flushLocalDraft(); };
+      global.addEventListener('online', onOnline);
+      return () => global.removeEventListener('online', onOnline);
+    }, [showsSteps, flushLocalDraft]);
 
     const storageNotice = (title, body, primaryLabel, onPrimary, secondaryLabel, onSecondary) => React.createElement('div', {
       role: 'dialog',
@@ -950,10 +1240,19 @@
       setHasEdited(false);
       setError('');
       setSaveState('saving');
+      // «Начать заново» стирает десять минут работы — локальная копия старых
+      // ответов не должна их пережить и вернуться при следующем открытии.
+      persistLocalDraft(fresh, 0, true);
       const result = await enqueueSave(fresh, 0, false);
       if (result.success) {
         setStatus(result.status || 'in_progress');
         setSaveState('saved');
+        setSaveErrorCode('');
+        setLocalOnly(false);
+        persistLocalDraft(fresh, 0, false);
+      } else if (isNetworkFailure(result.error)) {
+        setLocalOnly(true);
+        setSaveState('pending');
         setSaveErrorCode('');
       } else {
         setSaveState('error');
@@ -1187,7 +1486,11 @@
                 marginTop: 6, fontSize: 11, fontWeight: 500, lineHeight: 1,
                 color: saveState === 'error' ? WARN_TEXT : OK_TEXT,
               },
-            }, saveState === 'saving' || saveState === 'pending' ? 'Сохраняем…' : saveState === 'saved' ? 'Ответы сохранены' : 'Ошибка сохранения')
+            }, localOnly && saveState !== 'saving'
+              // Строка «офлайн»: пока ответы лежат только на устройстве,
+              // «Ответы сохранены» было бы обещанием сервера, которого не было.
+              ? 'Сохранено на устройстве'
+              : saveState === 'saving' || saveState === 'pending' ? 'Сохраняем…' : saveState === 'saved' ? 'Ответы сохранены' : 'Ошибка сохранения')
             : null
         ),
         React.createElement('button', {

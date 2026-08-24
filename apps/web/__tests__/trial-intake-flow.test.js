@@ -223,14 +223,41 @@ describe('protected trial intake contract', () => {
     expect(sql).toContain('revoked_at IS NULL');
   });
 
-  it('autosaves only to the session RPC and keeps answers out of browser storage', () => {
+  // Канвас questionnaire.v4, строка «что пишется» (переписана 25 августа):
+  // ответы пишутся в черновик на сервере после каждого шага И дублируются
+  // локально, чтобы анкета открывалась и заполнялась без сети; локальная копия
+  // удаляется после отправки. Прежняя редакция запрещала браузерное хранилище
+  // целиком — вместе с ней уходит и запрет в этой проверке.
+  it('autosaves to the session RPC and mirrors the draft into a client-scoped local key', () => {
     expect(intakeSource).toContain("'save_trial_intake_by_session'");
     expect(intakeSource).toContain("'save_trial_candidate_intake_by_candidate_session'");
     expect(intakeSource).toContain('setTimeout(async () =>');
     expect(intakeSource).toContain('p_complete: !!complete');
-    expect(intakeSource).not.toContain('localStorage');
     expect(intakeSource).not.toContain('sessionStorage');
     expect(intakeSource).not.toContain('ym(');
+
+    // Ключ привязан к владельцу и собирается ровно одним способом.
+    expect(intakeSource).toContain('`heys_${scope}_${DRAFT_LOCAL_KEY_NAME}`');
+    expect(intakeSource).toContain("const DRAFT_LOCAL_KEY_NAME = 'trial_intake_draft_v1'");
+    expect(intakeSource).toContain("String(global.HEYS?.currentClientId || '').trim().toLowerCase()");
+    // Перехватчик heys_storage_supabase не обходится: ни originalSetItem, ни
+    // Storage.prototype в анкете нет.
+    expect(intakeSource).not.toContain('originalSetItem');
+    expect(intakeSource).not.toContain('Storage.prototype');
+    // Скана по localStorage нет вовсе — читается один вычисленный ключ.
+    expect(intakeSource).not.toContain('Object.keys(localStorage)');
+    expect(intakeSource).not.toContain('localStorage.length');
+    // Ключи авторизации анкета не трогает.
+    expect(intakeSource).not.toContain('heys_supabase_auth_token');
+    expect(intakeSource).not.toContain('heys_pin_auth_client');
+    // Ключ клиентский, поэтому обязан уходить при выходе: он не в белом списке
+    // heys_storage_supabase_v1 (NON_CLIENT_DATA_BLACKLIST).
+    const storageSource = fs.readFileSync(path.join(webDir, 'heys_storage_supabase_v1.js'), 'utf8');
+    const blacklist = storageSource.slice(
+      storageSource.indexOf('const NON_CLIENT_DATA_BLACKLIST = ['),
+      storageSource.indexOf('/** Префиксы для client-specific данных */'),
+    );
+    expect(blacklist).not.toContain('trial_intake_draft');
   });
 
   it('keeps candidates accountless until an explicit curator approval', () => {
@@ -841,7 +868,11 @@ describe('protected trial intake contract', () => {
     expect(rpcSource).toContain("'p_new_value': '::jsonb'");
   });
 
-  it('does not advance after a failed save and offers a clear retry', async () => {
+  // Вердикт сервера, а не отказ сети: строка «офлайн» (questionnaire.v4)
+  // требует, чтобы шаги заполнялись без связи, поэтому транспортный отказ
+  // теперь шаг переводит — см. describe «trial intake offline draft». Не
+  // переводит его именно вердикт: сервер ответил и ответы не принял.
+  it('does not advance after a rejected save and offers a clear retry', async () => {
     const rpc = vi.fn(async (fn) => {
       if (fn === 'get_trial_intake_by_session') {
         return { data: { get_trial_intake_by_session: {
@@ -853,7 +884,7 @@ describe('protected trial intake contract', () => {
         } } };
       }
       return { data: { save_trial_intake_by_session: {
-        success: false, error: 'request_failed',
+        success: false, error: 'invalid_answers',
       } } };
     });
     window.React = React;
@@ -943,5 +974,306 @@ describe('protected trial intake contract', () => {
     expect(queueSource).toContain('Показать в ответах');
     expect(queueSource).toContain('trial-intake-answer-${section}-${key}');
     expect(queueSource).not.toContain("section === 'safety' && value === true");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Канвас questionnaire.v4, строки «что пишется» и «офлайн»: черновик
+// дублируется локально, анкета открывается и заполняется без сети, ответы
+// доезжают на сервер при связи, локальная копия удаляется после отправки.
+// Всё это стыки, которые человек руками не соберёт: сеть отваливается
+// посередине шага, возвращается через минуту, а на том же устройстве до этого
+// сидел другой кандидат.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('trial intake offline draft', () => {
+  const CLIENT_A = '11111111-1111-4111-8111-111111111111';
+  const CLIENT_B = '22222222-2222-4222-8222-222222222222';
+  const draftKeyFor = (scope) => `heys_${scope}_trial_intake_draft_v1`;
+
+  const originalHEYS = window.HEYS;
+  const originalReact = window.React;
+
+  function localDraft({ scope, owner, step, answers, baseUpdatedAt = null, dirty = true }) {
+    return JSON.stringify({
+      v: 1, scope, owner, step, answers, baseUpdatedAt, dirty,
+      savedAt: '2026-08-25T10:00:00.000Z',
+    });
+  }
+
+  function readDraft(scope) {
+    const raw = window.localStorage.getItem(draftKeyFor(scope));
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  function mount({ clientId, rpc }) {
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc }, currentClientId: clientId };
+    window.scrollTo = vi.fn();
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+    return render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+  }
+
+  const networkError = { data: null, error: { message: 'Failed to fetch', code: 'NETWORK_ERROR' } };
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    window.localStorage.clear();
+    window.HEYS = originalHEYS;
+    window.React = originalReact;
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('opens from the local copy when the server is unreachable', async () => {
+    window.localStorage.setItem(draftKeyFor(CLIENT_A), localDraft({
+      scope: CLIENT_A, owner: CLIENT_A, step: 2, answers: completedAnswers,
+      baseUpdatedAt: '2026-08-25T09:00:00.000Z',
+    }));
+    const rpc = vi.fn(async () => networkError);
+
+    mount({ clientId: CLIENT_A, rpc });
+
+    // Экран «Не удалось открыть анкету» — то, что было до правки; теперь на
+    // его месте сам шаг, поднятый из локальной копии.
+    await screen.findByText('Продолжим с шага 3');
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Продолжить' }));
+    await screen.findByText('Шаг 3 из 5');
+    expect(screen.getByDisplayValue('Рабочий день')).toBeTruthy();
+    expect(screen.queryByText('Не удалось открыть анкету')).toBeNull();
+    expect(screen.getByText('Сохранено на устройстве')).toBeTruthy();
+  });
+
+  it('shows the failure screen offline only when there is nothing local to open', async () => {
+    const rpc = vi.fn(async () => networkError);
+    mount({ clientId: CLIENT_A, rpc });
+    await screen.findByText('Не удалось открыть анкету');
+  });
+
+  it('advances a step without network and keeps the answers in the local copy', async () => {
+    let online = true;
+    const rpc = vi.fn(async (fn, params) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: {
+            status: 'in_progress', current_step: 2, answers: completedAnswers,
+            updated_at: '2026-08-25T09:00:00.000Z',
+          },
+        } } };
+      }
+      if (!online) return networkError;
+      return { data: { save_trial_intake_by_session: {
+        success: true, status: 'in_progress', current_step: params.p_current_step,
+        updated_at: '2026-08-25T09:30:00.000Z',
+      } } };
+    });
+
+    mount({ clientId: CLIENT_A, rpc });
+    await screen.findByText('Продолжим с шага 3');
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Продолжить' }));
+    await screen.findByText('Шаг 3 из 5');
+
+    online = false;
+    fireEvent.change(screen.getByDisplayValue('Рабочий день'), {
+      target: { value: 'Работа по сменам' },
+    });
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Продолжить' })));
+
+    // Шаг переведён, экран ошибки не показан, ответ лежит локально.
+    await screen.findByText('Шаг 4 из 5');
+    expect(screen.queryByText(/Не удалось сохранить/)).toBeNull();
+    expect(screen.getByText('Сохранено на устройстве')).toBeTruthy();
+    const draft = readDraft(CLIENT_A);
+    expect(draft.answers.lifestyle.schedule).toBe('Работа по сменам');
+    expect(draft.step).toBe(3);
+    expect(draft.dirty).toBe(true);
+    expect(draft.scope).toBe(CLIENT_A);
+  });
+
+  it('sends the locally kept answers when the network returns', async () => {
+    let online = true;
+    const rpc = vi.fn(async (fn, params) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: {
+            status: 'in_progress', current_step: 2, answers: completedAnswers,
+            updated_at: '2026-08-25T09:00:00.000Z',
+          },
+        } } };
+      }
+      if (!online) return networkError;
+      return { data: { save_trial_intake_by_session: {
+        success: true, status: 'in_progress', current_step: params.p_current_step,
+        updated_at: '2026-08-25T09:30:00.000Z',
+      } } };
+    });
+
+    mount({ clientId: CLIENT_A, rpc });
+    await screen.findByText('Продолжим с шага 3');
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Продолжить' }));
+    await screen.findByText('Шаг 3 из 5');
+
+    online = false;
+    fireEvent.change(screen.getByDisplayValue('Рабочий день'), {
+      target: { value: 'Работа по сменам' },
+    });
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Продолжить' })));
+    await screen.findByText('Шаг 4 из 5');
+    const sentBeforeOnline = rpc.mock.calls.filter(([fn]) => fn === 'save_trial_intake_by_session').length;
+
+    online = true;
+    await act(async () => { window.dispatchEvent(new Event('online')); });
+
+    await waitFor(() => {
+      expect(rpc.mock.calls.filter(([fn]) => fn === 'save_trial_intake_by_session').length)
+        .toBeGreaterThan(sentBeforeOnline);
+    });
+    const delivered = rpc.mock.calls
+      .filter(([fn]) => fn === 'save_trial_intake_by_session')
+      .pop();
+    expect(delivered[1].p_answers.lifestyle.schedule).toBe('Работа по сменам');
+    expect(delivered[1].p_current_step).toBe(3);
+    expect(delivered[1].p_complete).toBe(false);
+    await screen.findByText('Ответы сохранены');
+    expect(readDraft(CLIENT_A).dirty).toBe(false);
+  });
+
+  it('deletes the local copy after a successful submit', async () => {
+    window.localStorage.setItem(draftKeyFor(CLIENT_A), localDraft({
+      scope: CLIENT_A, owner: CLIENT_A, step: 4, answers: completedAnswers,
+      baseUpdatedAt: '2026-08-25T09:00:00.000Z',
+    }));
+    const rpc = vi.fn(async (fn) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: {
+            status: 'in_progress', current_step: 4, answers: completedAnswers,
+            updated_at: '2026-08-25T09:00:00.000Z',
+          },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: { success: true, status: 'completed' } } };
+    });
+
+    mount({ clientId: CLIENT_A, rpc });
+    await screen.findByText('Продолжим с шага 5');
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Продолжить' }));
+    const submit = await screen.findByRole('button', { name: 'Отправить куратору' });
+    await act(async () => fireEvent.click(submit));
+
+    await screen.findByText('Анкета отправлена');
+    expect(window.localStorage.getItem(draftKeyFor(CLIENT_A))).toBeNull();
+  });
+
+  it('never reads another client draft, online or offline', async () => {
+    window.localStorage.setItem(draftKeyFor(CLIENT_A), localDraft({
+      scope: CLIENT_A, owner: CLIENT_A, step: 2, answers: completedAnswers,
+      baseUpdatedAt: '2026-08-25T09:00:00.000Z',
+    }));
+
+    // Клиент B без сети: чужой черновик не поднимается, вместо него честный
+    // экран отказа.
+    const offlineRpc = vi.fn(async () => networkError);
+    mount({ clientId: CLIENT_B, rpc: offlineRpc });
+    await screen.findByText('Не удалось открыть анкету');
+    expect(screen.queryByDisplayValue('Рабочий день')).toBeNull();
+    cleanup();
+
+    // Клиент B со связью: видит только свои ответы, а ключ клиента A остаётся
+    // нетронутым — чужое не читается и не стирается.
+    const onlineRpc = vi.fn(async (fn) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: {
+            status: 'in_progress',
+            current_step: 2,
+            answers: { ...completedAnswers, lifestyle: { schedule: 'Свой ритм B', sleep: 'Семь часов' } },
+            updated_at: '2026-08-25T09:00:00.000Z',
+          },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
+    });
+    mount({ clientId: CLIENT_B, rpc: onlineRpc });
+    await screen.findByText('Продолжим с шага 3');
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Продолжить' }));
+    await screen.findByText('Шаг 3 из 5');
+    expect(screen.getByDisplayValue('Свой ритм B')).toBeTruthy();
+    expect(screen.queryByDisplayValue('Рабочий день')).toBeNull();
+    expect(JSON.parse(window.localStorage.getItem(draftKeyFor(CLIENT_A))).answers.lifestyle.schedule)
+      .toBe('Рабочий день');
+  });
+
+  it('drops a local copy left by a previous candidate on the same device', async () => {
+    // Кандидат ещё не клиент: его scope — «candidate», а владелец — candidate_id
+    // с сервера. Вход по одноразовому коду всегда идёт через сеть, поэтому
+    // сверка владельца случается раньше, чем новый кандидат увидит шаги.
+    window.localStorage.setItem(draftKeyFor('candidate'), localDraft({
+      scope: 'candidate',
+      owner: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      step: 2,
+      answers: completedAnswers,
+      baseUpdatedAt: '2026-08-25T09:00:00.000Z',
+    }));
+
+    const rpc = vi.fn(async (fn) => {
+      if (fn === 'get_trial_candidate_intake_by_candidate_session') {
+        return { data: { get_trial_candidate_intake_by_candidate_session: {
+          success: true,
+          intake: {
+            candidate_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+            status: 'in_progress',
+            current_step: 0,
+            answers: {},
+            updated_at: '2026-08-25T11:00:00.000Z',
+          },
+        } } };
+      }
+      return { data: { save_trial_candidate_intake_by_candidate_session: { success: true, status: 'in_progress' } } };
+    });
+
+    window.React = React;
+    window.HEYS = {
+      YandexAPI: { rpc, hasCandidateSessionHint: () => true },
+      currentClientId: '',
+    };
+    window.scrollTo = vi.fn();
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+
+    await screen.findByText('Шаг 1 из 5');
+    expect(screen.queryByDisplayValue('Наладить регулярное питание')).toBeNull();
+    expect(window.localStorage.getItem(draftKeyFor('candidate'))).toBeNull();
+  });
+
+  it('writes nothing local when neither a client nor a candidate owns the screen', async () => {
+    const rpc = vi.fn(async (fn, params) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: { status: 'in_progress', current_step: 0, answers: {}, updated_at: null },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: {
+        success: true, status: 'in_progress', current_step: params.p_current_step,
+      } } };
+    });
+
+    mount({ clientId: '', rpc });
+    await screen.findByText('Шаг 1 из 5');
+    fireEvent.change(screen.getByPlaceholderText('Что вы хотите изменить и почему это важно сейчас?'), {
+      target: { value: 'Цель без владельца' },
+    });
+    await waitFor(() => {
+      expect(rpc.mock.calls.some(([fn]) => fn === 'save_trial_intake_by_session')).toBe(true);
+    }, { timeout: 1800 });
+
+    const stray = Object.keys(window.localStorage).filter((key) => key.includes('trial_intake_draft'));
+    expect(stray).toEqual([]);
   });
 });
