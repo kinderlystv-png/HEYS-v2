@@ -11,12 +11,28 @@ html[data-theme="dark"], html[data-theme="classic-dark"] { background: #141210; 
 html[data-theme="blue"], html[data-theme-id="blue"] { background: #ffffff; }
 html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1a26; }
 
+/* Знак загрузчика набран Caprasimo (контракт app-splash «вид диска»: в иконке
+   Figtree, в загрузчике внутри приложения — Caprasimo). Роли v4 сюда не годятся:
+   этот файл — критический стиль до первого пейнта, а 002-ui-v4-palette-roles.css
+   приезжает со стилями приложения, поэтому набор задан литералами палитр
+   v4-canvas.css. */
+@font-face {
+    font-family: Caprasimo;
+    src: url('/fonts/Caprasimo-Regular.ttf') format('truetype');
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
 .heys-boot-mark,
 .heys-wait-mark {
     --boot-disc: #efe3cf;
     --boot-stroke: #c67139;
+    --boot-letter: #8a4a20;
     --boot-ink: #201e1d;
     --boot-muted: rgba(0, 0, 0, .55);
+    --boot-ink-50: rgba(0, 0, 0, .5);
+    --boot-ink-58: rgba(0, 0, 0, .58);
     --boot-fail-disc: #f6e6dd;
     --boot-fail-stroke: #a1471c;
     --boot-ok-disc: #eaefe0;
@@ -89,8 +105,11 @@ html[data-theme="sand-dark"] .heys-wait-mark,
 html[data-theme="classic-dark"] .heys-wait-mark {
     --boot-disc: #2f2820;
     --boot-stroke: #cf8144;
+    --boot-letter: #e2a468;
     --boot-ink: #f2ede6;
     --boot-muted: rgba(242, 237, 230, .55);
+    --boot-ink-50: rgba(242, 237, 230, .5);
+    --boot-ink-58: rgba(242, 237, 230, .58);
     --boot-fail-disc: #3a241a;
     --boot-fail-stroke: #d07d4e;
     --boot-ok-disc: #2a3224;
@@ -104,10 +123,15 @@ html[data-theme-id="blue"] .heys-boot-mark,
 html[data-theme-id="blue"] .heys-wait-mark,
 html[data-theme="blue"] .heys-boot-mark,
 html[data-theme="blue"] .heys-wait-mark {
-    --boot-disc: #e2edf7;
-    --boot-stroke: #2e7cc0;
+    /* --c2 / --acs синего набора по v4-canvas.css: #e2ecf6 и #1d5e96.
+       Раньше стояли #e2edf7 и #2e7cc0 — знак в синей палитре был чужого тона. */
+    --boot-disc: #e2ecf6;
+    --boot-stroke: #1d5e96;
+    --boot-letter: #1d5e96;
     --boot-ink: #101826;
     --boot-muted: rgba(16, 24, 38, .55);
+    --boot-ink-50: rgba(16, 24, 38, .5);
+    --boot-ink-58: rgba(16, 24, 38, .58);
     --boot-fail-disc: #fbe6e2;
     --boot-fail-stroke: #b03a24;
     --boot-ok-disc: #e6efe4;
@@ -121,10 +145,14 @@ html[data-theme-id="blue-dark"] .heys-boot-mark,
 html[data-theme-id="blue-dark"] .heys-wait-mark,
 html[data-theme="blue-dark"] .heys-boot-mark,
 html[data-theme="blue-dark"] .heys-wait-mark {
-    --boot-disc: #13222f;
+    /* --c2 сине-тёмного набора — #1e3448 (было #13222f). */
+    --boot-disc: #1e3448;
     --boot-stroke: #3f8fd0;
+    --boot-letter: #7fbceb;
     --boot-ink: #e8eef6;
     --boot-muted: rgba(232, 238, 246, .55);
+    --boot-ink-50: rgba(232, 238, 246, .5);
+    --boot-ink-58: rgba(232, 238, 246, .58);
     --boot-fail-disc: #35211c;
     --boot-fail-stroke: #d97b62;
     --boot-ok-disc: #1b2a1e;
@@ -169,6 +197,25 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     justify-content: center;
     flex: none;
     pointer-events: none;
+}
+/* Буква знака в загрузчике (контракт app-splash «вид диска»). Кадр «Стык ·
+   загрузчик» рисует на её месте сразу дугу; контракт старше кадра, поэтому
+   буква стоит до порога 300 мс, а дальше её сменяет знак ожидания — так же
+   описывает стык подпись кадра «дуга на месте буквы».
+   29 px на диске 64 из канваса = 25 px на продуктовом диске 56. */
+.heys-boot-mark__letter {
+    position: absolute;
+    font: 400 25px/1 Caprasimo, Georgia, serif;
+    color: var(--boot-letter);
+    padding-bottom: 2.5px;
+    animation: heys-boot-letter-out 1ms linear 300ms forwards;
+}
+.heys-boot-mark.is-fail .heys-boot-mark__letter,
+.heys-boot-mark.is-slow .heys-boot-mark__letter { display: none; }
+/* До 300 мс знака ожидания нет вовсе (контракт «до 300 мс»). */
+.heys-boot-mark__disc .heys-boot-mark__spin > svg {
+    opacity: 0;
+    animation: heys-boot-fadein 150ms ease-out 300ms forwards;
 }
 .heys-boot-mark.is-fail .heys-boot-mark__disc,
 .heys-wait-mark.is-fail .heys-wait-mark__disc {
@@ -235,69 +282,62 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     align-items: center;
     width: 100%;
 }
+/* Ступень 2 несёт одну строку — по контракту «вид подписи» это заголовок, а не
+   причина: «причина без заголовка — нет». Кадр «Спиннер · долгий старт» набирал
+   её 12,5/600 вторичным; контракт старше кадра. Отступ 18 px от круга уже задан
+   якорем .heys-boot-mark__sign, поэтому margin-top здесь 0. */
 .heys-boot-mark__slow-text {
     margin-top: 0;
-    font: 600 12.5px/1.55 Figtree, system-ui, sans-serif;
-    color: var(--boot-muted);
+    font: 700 15px/1.35 Figtree, system-ui, sans-serif;
     text-align: center;
+    text-wrap: pretty;
 }
 .heys-boot-mark__title {
     margin-top: 0;
-    font: 700 17px/1.3 Figtree, system-ui, sans-serif;
+    font: 700 15px/1.35 Figtree, system-ui, sans-serif;
     text-align: center;
     text-wrap: pretty;
 }
 .heys-boot-mark__text {
-    margin-top: 9px;
-    font: 500 12.5px/1.55 Figtree, system-ui, sans-serif;
-    color: var(--boot-muted);
+    margin-top: 7px;
+    font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+    color: var(--boot-ink-50);
     text-align: center;
     text-wrap: pretty;
 }
+/* Контракт «вид ступеней холодного старта»: кнопка «Повторить» на фоне --c2,
+   текст чернилами 58 %, 13/700, высота 48, радиус 999, отступ сверху 22.
+   Кадры «долгий старт» и «не удалось запустить» рисуют её ghost-текстом 44 и
+   акцентной заливкой — контракт старше кадра. */
 .heys-boot-mark__btn {
-    margin-top: 24px;
+    margin-top: 22px;
     width: 100%;
     min-height: 48px;
     border: 0;
     border-radius: 999px;
-    background: var(--boot-btn);
-    color: var(--boot-btn-ink);
+    background: var(--boot-disc);
+    color: var(--boot-ink-58);
     font: 700 13px/1 Figtree, system-ui, sans-serif;
     cursor: pointer;
     text-align: center;
     text-decoration: none;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
 }
-.heys-boot-mark.is-fail:not(.is-fail-again) .heys-boot-mark__retry--fail,
-.heys-boot-mark.is-fail-again .heys-boot-mark__curator {
-    display: flex;
-}
-.heys-boot-mark__retry--ghost {
-    margin-top: 6px;
-    min-height: 44px;
-    border: 0;
-    background: transparent;
-    color: var(--boot-stroke);
-    font: 700 12px/1 Figtree, system-ui, sans-serif;
-    cursor: pointer;
-}
-.heys-boot-mark.is-fail-again .heys-boot-mark__retry--ghost {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* Строка про куратора приходит под кнопкой на второй неудаче (контракт
+   «вторая неудача» + «вид ступеней»): 11,5/500 вторичным. Ссылкой, а не
+   текстом — см. «НУЖНО РЕШЕНИЕ» по строке «области нажатия». */
+.heys-boot-mark__curator {
+    margin-top: 12px;
+    font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
     color: var(--boot-muted);
+    text-align: center;
+    text-decoration: underline;
+    display: none;
 }
-.heys-boot-mark.is-slow:not(.is-fail) .heys-boot-mark__slow .heys-boot-mark__retry--ghost {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--boot-stroke);
-}
-.heys-boot-mark:not(.is-fail-again):not(.is-slow) .heys-boot-mark__retry--ghost { display: none; }
-.heys-boot-mark.is-fail:not(.is-fail-again) .heys-boot-mark__retry--ghost { display: none; }
+.heys-boot-mark.is-fail-again .heys-boot-mark__curator { display: block; }
 .heys-boot-mark__status {
     margin-top: 12px;
     font: 500 12px/1.4 Figtree, system-ui, sans-serif;
@@ -306,6 +346,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
 }
 .heys-boot-mark.is-fail .heys-boot-mark__status { display: block; }
 @keyframes heys-boot-spin { 100% { transform: rotate(360deg); } }
+@keyframes heys-boot-letter-out { to { opacity: 0; } }
 @keyframes heys-boot-fadein { from { opacity: 0; } to { opacity: 1; } }
 @keyframes heys-boot-breathe {
     0%, 100% { opacity: .35; }
@@ -374,16 +415,18 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     overflow: hidden;
     clip: rect(0 0 0 0);
 }
+/* Контракт «вид подписи»: 18 px до заголовка 15/700 чернилами, 7 px до причины
+   12/500 тоном чернил 50 %. */
 .heys-wait-mark__title {
     margin-top: 18px;
-    font: 700 16px/1.35 Figtree, system-ui, sans-serif;
+    font: 700 15px/1.35 Figtree, system-ui, sans-serif;
     text-align: center;
     text-wrap: pretty;
 }
 .heys-wait-mark__text {
-    margin-top: 8px;
-    font: 500 12.5px/1.55 Figtree, system-ui, sans-serif;
-    color: var(--boot-muted);
+    margin-top: 7px;
+    font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+    color: var(--boot-ink-50);
     text-align: center;
     text-wrap: pretty;
 }

@@ -117,7 +117,10 @@
     LazyPill = function LazyPill(props) {
       const setState = React.useState(0)[1];
       React.useEffect(function () {
-        lazyLoad();
+        // .catch обязателен: раньше отказ загрузки бандла всплывал
+        // unhandled rejection'ом. Строка просто не появится — своего экрана
+        // ожидания у неё нет (контракт «поблочной загрузки нет»).
+        lazyLoad().catch(function () { /* silent */ });
         // Race-guard: между render и этим useEffect bundle мог догрузиться
         // (script.onload fires async). В этом окне READY_EVENT уже прозвенел —
         // addEventListener ниже его не поймает. Проверяем ссылку и форс-обновляем.
@@ -133,32 +136,12 @@
       if (Fingers.renderPreviewPill !== stubRenderPreviewPill) {
         return Fingers.renderPreviewPill(props);
       }
-      // Скелетон в стиле обычного pill'а. Дневник продолжает работать,
-      // пользователь видит «загрузка» вместо пропавшей строки.
-      const T = (props && props.training) || {};
-      const fl = T.fingersLog || {};
-      const programName = fl.programId
-        ? String(fl.programId).replace(/_/g, ' ')
-        : 'Тренировка пальцев';
-      return h('div', {
-        className: 'fingers-fs-pill-skeleton',
-        style: {
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '12px 16px', minHeight: 60,
-          borderRadius: 12,
-          border: '1px solid rgba(0,0,0,0.06)',
-          background: 'rgba(0,0,0,0.02)',
-          opacity: 0.7,
-          cursor: 'wait'
-        },
-        'aria-label': 'Тренировка пальцев — загружается'
-      },
-        h('span', { style: { fontSize: 28, lineHeight: 1 } }, '🤚'),
-        h('div', { style: { flex: 1, minWidth: 0 } },
-          h('div', { style: { fontWeight: 600, fontSize: 14 } }, programName),
-          h('div', { style: { fontSize: 12, opacity: 0.6 } }, 'Загрузка…')
-        )
-      );
+      // Пока бандл едет — не рисуем ничего. Контракт «Спиннеры»:
+      // «скелетонов нет — ни одного, нигде» и «поблочной загрузки нет: блок,
+      // который ещё думает, — дефект, а не состояние». Компонент остаётся
+      // смонтированным, поэтому lazyLoad и подписка на READY_EVENT работают;
+      // строка появляется сразу готовой.
+      return null;
     };
   }
 

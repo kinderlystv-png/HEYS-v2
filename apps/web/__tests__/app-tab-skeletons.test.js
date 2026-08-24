@@ -55,4 +55,14 @@ describe('HEYS loading surfaces do not use tab skeletons', () => {
         expect(widgets).not.toContain('widgets-tab--loading');
         expect(gate).toContain("'data-heys-visible-frame': 'subscription-loading'");
     });
+
+    it('keeps no skeleton in the fingers lazy stub and no dead sparkline skeleton css', () => {
+        // Контракт spinners: «скелетонов нет — ни одного, нигде» и «поблочной
+        // загрузки нет: блок, который ещё думает, — дефект, а не состояние».
+        const fingersStub = read('heys_fingers_boot_stub_v1.js');
+        expect(fingersStub).not.toContain('fingers-fs-pill-skeleton');
+        expect(fingersStub).not.toContain('Загрузка…');
+        const metrics = read('styles/modules/100-metrics-and-graphs.css');
+        expect(metrics).not.toMatch(/\.sparkline-skeleton[a-z-]*\s*\{/);
+    });
 });

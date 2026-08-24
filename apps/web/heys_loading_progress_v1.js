@@ -13,10 +13,23 @@
 
     const WAIT_SHOW_MS = 300;
     const WAIT_LABEL_MS = 2000;
+    // Контракт «дольше 2 с»: сначала подпись, «ещё позже» — причина задержки.
+    // Числа для второй ступени контракт не называет; берём 5 с — заголовок
+    // успевает прочитаться, а причина приходит там, где ожидание уже заметное.
+    const WAIT_REASON_MS = 5000;
     const WAIT_MIN_VISIBLE_MS = 400;
 
+    // Контракт «вид знака»: дуга 26 обводкой 2,75. В кнопке — 18 и 2,5
+    // (контракт «вид знака в кнопке»); кадр «Спиннер · в кнопке» рисует 15/3,
+    // контракт старше кадра.
+    const WAIT_GLYPH_PX = 26;
+    const WAIT_GLYPH_BUTTON_PX = 18;
+    function waitStroke(size) {
+        return size <= WAIT_GLYPH_BUTTON_PX ? '2.5' : '2.75';
+    }
+
     function waitGlyph(h, size, phase) {
-        const sw = size <= 16 ? '3' : '2.75';
+        const sw = waitStroke(size);
         const paths = [
             h('path', { d: 'M21 12a9 9 0 11-9-9', opacity: '.22' }),
             h('path', { d: 'M12 3a9 9 0 019 9' }),
@@ -45,7 +58,7 @@
         return h('svg', {
             className: 'heys-wait-mark__icon',
             width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
-            stroke: 'currentColor', strokeWidth: '2.75', strokeLinecap: 'round',
+            stroke: 'currentColor', strokeWidth: waitStroke(size), strokeLinecap: 'round',
             'aria-hidden': 'true',
         }, h('path', { d: 'M12 7v6M12 17h.01' }), h('circle', { cx: '12', cy: '12', r: '9' }));
     }
@@ -60,9 +73,10 @@
         const label = opts && opts.label;
         const sr = (opts && opts.sr) || 'Загружаем';
         const phase = state === 'ok' ? 'ok' : state === 'fail' ? 'fail' : 'wait';
+        const glyphPx = mode === 'button' ? WAIT_GLYPH_BUTTON_PX : WAIT_GLYPH_PX;
         const glyph = phase === 'fail'
-            ? waitFailSvg(h, mode === 'button' ? 15 : 26)
-            : waitGlyph(h, mode === 'button' ? 15 : 26, phase === 'ok' ? 'ok' : 'wait');
+            ? waitFailSvg(h, glyphPx)
+            : waitGlyph(h, glyphPx, phase === 'ok' ? 'ok' : 'wait');
         if (mode === 'button') {
             return h('span', {
                 className: 'heys-wait-mark heys-wait-mark--button is-' + phase,
@@ -110,6 +124,7 @@
                         setPhase('glyph');
                     }, WAIT_SHOW_MS));
                     timers.current.push(setTimeout(() => setPhase('labeled'), WAIT_LABEL_MS));
+                    timers.current.push(setTimeout(() => setPhase('reasoned'), WAIT_REASON_MS));
                 } else if (glyphAt.current) {
                     const remain = Math.max(0, WAIT_MIN_VISIBLE_MS - (Date.now() - glyphAt.current));
                     timers.current.push(setTimeout(() => {
@@ -127,6 +142,11 @@
 
             return { phase, glyphAt };
         }
+
+        // Контракт «дольше 2 с»: заголовок приходит на 2 с, причина — позже.
+        // Раньше оба приезжали одним порогом.
+        const hasTitle = (phase) => phase === 'labeled' || phase === 'reasoned';
+        const hasReason = (phase) => phase === 'reasoned';
 
         function useDeferredResult(result, waiting, glyphAt) {
             const [shown, setShown] = useState(false);
@@ -163,7 +183,7 @@
             } else if (showOk) {
                 state = 'ok';
                 label = props.okLabel || props.idle;
-            } else if (phase === 'labeled') {
+            } else if (hasTitle(phase)) {
                 label = props.busyLabel || props.idle;
             } else if (phase === 'idle' && waiting) {
                 return props.idle || '';
@@ -185,8 +205,8 @@
                     mode: 'screen',
                     state: 'wait',
                     sr: props.sr,
-                    title: phase === 'labeled' ? props.title : null,
-                    text: phase === 'labeled' ? props.text : null,
+                    title: hasTitle(phase) ? props.title : null,
+                    text: hasReason(phase) ? props.text : null,
                     actions: null,
                 });
             }
@@ -202,8 +222,8 @@
                     mode: 'screen',
                     state: 'wait',
                     sr: props.sr,
-                    title: phase === 'labeled' ? props.title : null,
-                    text: phase === 'labeled' ? props.text : null,
+                    title: hasTitle(phase) ? props.title : null,
+                    text: hasReason(phase) ? props.text : null,
                     actions: null,
                 });
             }
@@ -229,6 +249,7 @@
         thresholds: {
             showMs: WAIT_SHOW_MS,
             labelMs: WAIT_LABEL_MS,
+            reasonMs: WAIT_REASON_MS,
             minVisibleMs: WAIT_MIN_VISIBLE_MS,
         },
         render: renderWaitMark,

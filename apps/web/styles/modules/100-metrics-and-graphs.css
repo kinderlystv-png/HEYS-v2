@@ -549,37 +549,9 @@
   }
 }
 
-/* Skeleton loader для графиков */
-.sparkline-skeleton {
-  height: 60px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 16px;
-}
-
-.sparkline-skeleton-line {
-  height: 2px;
-  background: linear-gradient(90deg, var(--color-slate-200) 25%, var(--color-slate-100) 50%, var(--color-slate-200) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 2px;
-}
-
-.sparkline-skeleton-dots {
-  display: flex;
-  justify-content: space-between;
-}
-
-.sparkline-skeleton-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: linear-gradient(90deg, var(--color-slate-200) 25%, var(--color-slate-100) 50%, var(--color-slate-200) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
+/* Скелетон графиков снят: контракт «Спиннеры» → «скелетонов нет — ни одного,
+   нигде». Разметка .sparkline-skeleton* уже не собиралась ни одним
+   вызывающим (heys_day_sparklines_v1.js), стиль оставался мёртвым. */
 
 @keyframes shimmer {
   0% {
