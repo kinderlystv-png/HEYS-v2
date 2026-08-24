@@ -6337,10 +6337,9 @@ color: var(--v4-sand-ink, #201e1d);
   }
 }
 
-.game-notification.level_up {
-  background: linear-gradient(135deg, #065f46 0%, #047857 100%);
-  border: 1px solid rgba(52, 211, 153, 0.3);
-}
+/* Строка «когда играет» канваса gamification.v4: тоста на новый уровень нет —
+   уровень отмечает тихая минута на карточке героя, поэтому правило зелёного
+   тоста уровня отсюда снято вместе с самим тостом. */
 
 .game-notification.achievement {
   background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
@@ -11314,6 +11313,7 @@ body:has(:is(
   font-size: 22px;
 }
 
+.tab-advice-badge {
   /* Строка «вид бейджа счётчика»: кружок 14 px в углу лампочки, заливка
      --acs при обычном содержимом, цифра 8,5 px/700 тоном --on-acs, обводка
      2 px фоном экрана — иначе бейдж сливается с иконкой. Строка «ноль»:
@@ -17894,4 +17894,146 @@ html.heys-bg-paused *::after {
   line-height: 1.5;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
   margin-top: 4px;
+}
+
+/* === Новый уровень · «тихая минута» ===
+   Канвас gamification.v4.dc.html, блок «Новый уровень · тихая минута».
+   Строка «ход по времени»: 0 мс — всё, кроме карточки уровня, гаснет до 20 % за
+   200 мс · 200–620 мс — число перекатывается · 300–1200 мс — вокруг карточки
+   рисуется линия от верхнего центра по часовой · 1200–1500 мс — линия гаснет,
+   экран возвращается к полной яркости. Всего 1,5 с.
+   Числа здесь и в CEREMONY_TIMELINE (heys_gamification_screens_v1.js) держит
+   сверкой отдельный тест. */
+
+/* Правила живут только на время минуты: без её классов у листа не появляется
+   ни одного лишнего перехода. */
+.game-v4-sheet.is-quiet-minute .game-v4-sheet__header,
+.game-v4-sheet.is-quiet-minute .game-v4-sheet__tabs,
+.game-v4-sheet.is-quiet-minute .game-v4-sheet__panel > *:not(.game-v4-sheet__hero) {
+  opacity: 0.2;
+  transition: opacity 200ms ease;
+}
+
+.game-v4-sheet.is-quiet-minute-return .game-v4-sheet__header,
+.game-v4-sheet.is-quiet-minute-return .game-v4-sheet__tabs,
+.game-v4-sheet.is-quiet-minute-return .game-v4-sheet__panel > *:not(.game-v4-sheet__hero) {
+  transition: opacity 300ms ease;
+}
+
+/* Строка «вид линии»: линия живёт внутри карточки. Заливка, тени и геометрия
+   карточки не меняются — добавлена только система координат для линии.
+   Отступление от кадра «· 1200 мс»: он вешает на карточку ещё и
+   `overflow: hidden`, а мы нет. Путь отступает от края на половину толщины и
+   идёт радиусом 25,3 — за скругление карточки он выйти не может, а обрезка
+   съела бы внешнюю половину штриха, и линия читалась бы тоньше обещанных
+   1,4 px. Уходящее число тоже остаётся внутри: оно поднимается на 0,5 em при
+   отступе сверху в 47 px. */
+.game-v4-sheet__hero--cream.is-quiet-minute {
+  position: relative;
+}
+
+.game-v4-sheet__hero-ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 300ms linear;
+}
+
+.game-v4-sheet__hero-ring.is-fading {
+  opacity: 0;
+}
+
+/* Тон --acs канваса. Карточка листа геймификации заперта на песочный набор
+   решением владельца 2026-08-12, поэтому в синих наборах линия ложится
+   синим по песочной карточке — отступление названо в протоколе. */
+.game-v4-sheet__hero-ring-path {
+  fill: none;
+  stroke: var(--v4-act, #c67139); /* v4-intentional */
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-dasharray: var(--ring-len);
+  stroke-dashoffset: var(--ring-len);
+  animation: gameV4QuietRing 900ms cubic-bezier(0.33, 0, 0.2, 1) 300ms forwards;
+}
+
+/* Один проход: штрих длиной во весь путь уезжает до нуля и на этом всё —
+   второго круга нет. */
+@keyframes gameV4QuietRing {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Строка «ход по времени»: старое число уходит вверх и растворяется, новое
+   приходит снизу, пружина с перелётом до 1,04. Титул под числом сменяется без
+   движения — у него анимации нет вовсе. */
+.game-v4-sheet__hero-num--roll {
+  position: relative;
+  display: inline-block;
+}
+
+.game-v4-sheet__hero-num-out {
+  position: absolute;
+  inset: 0;
+  animation: gameV4QuietNumOut 420ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.game-v4-sheet__hero-num-in {
+  display: inline-block;
+  animation: gameV4QuietNumIn 420ms cubic-bezier(0.22, 1.2, 0.36, 1) forwards;
+}
+
+@keyframes gameV4QuietNumOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-0.5em);
+  }
+}
+
+@keyframes gameV4QuietNumIn {
+  0% {
+    opacity: 0;
+    transform: translateY(0.5em) scale(1);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateY(0) scale(1.04);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Строка «уменьшенное движение · тихая минута»: гашение экрана и линия не
+   проигрываются вовсе, число меняется мгновенно. Момент остаётся в том, что
+   число другое, — экран «Уровни» открывается и с этой настройкой. Разметка
+   церемонии при ней не появляется вовсе (см. useLevelCeremony); правило ниже —
+   вторая защёлка на случай, когда настройку включили посреди минуты. */
+@media (prefers-reduced-motion: reduce) {
+  .game-v4-sheet.is-quiet-minute .game-v4-sheet__header,
+  .game-v4-sheet.is-quiet-minute .game-v4-sheet__tabs,
+  .game-v4-sheet.is-quiet-minute .game-v4-sheet__panel > *:not(.game-v4-sheet__hero) {
+    opacity: 1;
+    transition: none;
+  }
+
+  .game-v4-sheet__hero-ring {
+    display: none;
+  }
+
+  .game-v4-sheet__hero-num-out {
+    display: none;
+  }
+
+  .game-v4-sheet__hero-num-in {
+    animation: none;
+  }
 }

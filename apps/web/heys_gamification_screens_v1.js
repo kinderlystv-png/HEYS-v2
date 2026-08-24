@@ -5,7 +5,7 @@
 
     HEYS.GamificationScreens = (function () {
         const React = window.React;
-        const { useState, useEffect, useMemo, useCallback } = React;
+        const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
         const TAB_PROGRESS = 'progress';
         const TAB_ACHIEVEMENTS = 'achievements';
@@ -53,6 +53,153 @@
             'morning_activation_streak_7',
             'morning_activation_streak_14'
         ];
+
+        // ===== Новый уровень · «тихая минута» =====
+        // Строка «ход по времени» канваса gamification.v4 (блок «Новый уровень ·
+        // тихая минута»): 0 мс — всё, кроме карточки уровня, гаснет до 20 % за
+        // 200 мс · 200–620 мс — число перекатывается · 300–1200 мс — вокруг
+        // карточки рисуется линия от верхнего центра по часовой · 1200–1500 мс —
+        // линия гаснет, экран возвращается к полной яркости. Всего 1,5 с.
+        // Таблица — единственный источник этих чисел: CSS берёт их же.
+        const CEREMONY_TIMELINE = {
+            dimMs: 200,
+            rollStartMs: 200,
+            rollMs: 420,
+            lineStartMs: 300,
+            lineMs: 900,
+            returnStartMs: 1200,
+            returnMs: 300,
+            totalMs: 1500
+        };
+
+        // Строка «вид линии»: обводка карточки героя изнутри — 1,4 px, радиус тот
+        // же, что у карточки (26), концы скруглены. Штрих рисуется по центру
+        // пути, поэтому путь отступает от края на половину толщины: внешний край
+        // обводки ложится ровно на край карточки и не сдвигает её.
+        const CEREMONY_LINE_WIDTH = 1.4;
+        const CEREMONY_CARD_RADIUS = 26;
+
+        function ceremonyRingBox(width, height) {
+            const inset = CEREMONY_LINE_WIDTH / 2;
+            const w = Math.max(0, width - inset * 2);
+            const h = Math.max(0, height - inset * 2);
+            const r = Math.max(0, Math.min(CEREMONY_CARD_RADIUS - inset, w / 2, h / 2));
+            return { x: inset, y: inset, w, h, r };
+        }
+
+        /**
+         * Путь обводки: один проход от верхнего центра по часовой стрелке,
+         * второго круга нет. Собственный путь, а не <rect>, именно ради точки
+         * старта — у прямоугольника SVG она в левом верхнем углу.
+         */
+        function buildCeremonyRingPath(width, height) {
+            const { x, y, w, h, r } = ceremonyRingBox(width, height);
+            const midX = x + w / 2;
+            return [
+                `M ${midX} ${y}`,
+                `L ${x + w - r} ${y}`,
+                `A ${r} ${r} 0 0 1 ${x + w} ${y + r}`,
+                `L ${x + w} ${y + h - r}`,
+                `A ${r} ${r} 0 0 1 ${x + w - r} ${y + h}`,
+                `L ${x + r} ${y + h}`,
+                `A ${r} ${r} 0 0 1 ${x} ${y + h - r}`,
+                `L ${x} ${y + r}`,
+                `A ${r} ${r} 0 0 1 ${x + r} ${y}`,
+                `L ${midX} ${y}`
+            ].join(' ');
+        }
+
+        /** Длина того же пути — она же и штрих, и начальный сдвиг штриха. */
+        function ceremonyRingLength(width, height) {
+            const { w, h, r } = ceremonyRingBox(width, height);
+            return 2 * Math.max(0, w - 2 * r) + 2 * Math.max(0, h - 2 * r) + 2 * Math.PI * r;
+        }
+
+        function prefersReducedMotion() {
+            try {
+                return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+            } catch (_) {
+                return false;
+            }
+        }
+
+        /**
+         * Состояние тихой минуты.
+         *
+         * Строка «уменьшенное движение · тихая минута»: настройка снимает именно
+         * движение, а не празднование — гашение и линия не проигрываются вовсе,
+         * число меняется мгновенно, и момент остаётся в том, что число другое.
+         * Поэтому при уменьшенном движении фаз нет ни одной, но экран «Уровни»
+         * всё равно открывается — это делает вызывающая сторона.
+         *
+         * Строка «прерывание»: ушёл с экрана или в фон посреди минуты — она не
+         * доигрывается и второй раз не показывается. Второго показа не бывает по
+         * построению: движок отдаёт церемонию ровно один раз.
+         */
+        function useLevelCeremony(pending, onEnd, alive) {
+            const [state, setState] = useState(null);
+            const timersRef = useRef([]);
+            const endRef = useRef(onEnd);
+            endRef.current = onEnd;
+
+            const clearTimers = useCallback(() => {
+                timersRef.current.forEach((id) => clearTimeout(id));
+                timersRef.current = [];
+            }, []);
+
+            const stop = useCallback(() => {
+                clearTimers();
+                setState(null);
+                if (endRef.current) endRef.current();
+            }, [clearTimers]);
+
+            useEffect(() => {
+                if (!pending) return undefined;
+                if (prefersReducedMotion()) {
+                    const id = setTimeout(() => { if (endRef.current) endRef.current(); }, 0);
+                    return () => clearTimeout(id);
+                }
+
+                // Первый кадр карточка стоит нетронутой: иначе экран открылся бы
+                // уже погасшим и «гаснет за 200 мс» не случилось бы вовсе.
+                setState({ ...pending, phase: 'arm', rolled: false });
+                let raf1 = 0;
+                let raf2 = 0;
+                const start = () => {
+                    setState({ ...pending, phase: 'play', rolled: false });
+                    timersRef.current = [
+                        setTimeout(() => setState((s) => (s ? { ...s, rolled: true } : s)), CEREMONY_TIMELINE.rollStartMs),
+                        setTimeout(() => setState((s) => (s ? { ...s, phase: 'return' } : s)), CEREMONY_TIMELINE.returnStartMs),
+                        setTimeout(stop, CEREMONY_TIMELINE.totalMs)
+                    ];
+                };
+                if (typeof window.requestAnimationFrame === 'function') {
+                    raf1 = window.requestAnimationFrame(() => {
+                        raf2 = window.requestAnimationFrame(start);
+                    });
+                } else {
+                    start();
+                }
+
+                const onVisibility = () => {
+                    if (document.hidden) stop();
+                };
+                document.addEventListener('visibilitychange', onVisibility);
+                return () => {
+                    document.removeEventListener('visibilitychange', onVisibility);
+                    if (raf1 && window.cancelAnimationFrame) window.cancelAnimationFrame(raf1);
+                    if (raf2 && window.cancelAnimationFrame) window.cancelAnimationFrame(raf2);
+                    clearTimers();
+                };
+            }, [pending, stop, clearTimers]);
+
+            // Ушёл с экрана (закрыл лист, переключил вкладку) — минута обрывается.
+            useEffect(() => {
+                if (!alive && state) stop();
+            }, [alive, state, stop]);
+
+            return state;
+        }
 
         function safeGetStreak() {
             return HEYS.utils?.safeGetStreak?.() || 0;
@@ -654,7 +801,7 @@
             return Array.from(levels).sort((a, b) => a - b);
         }
 
-        function LevelsTab() {
+        function LevelsTab({ ceremony }) {
             const stats = HEYS.game?.getStats?.() || { level: 1, totalXP: 0, title: {} };
             const progress = stats.progress || HEYS.game?.getProgress?.() || {};
             const isMax = progress.isMax === true;
@@ -688,17 +835,70 @@
             const xpHidden = Math.max(0, xpRowsAll.length - XP_ROWS_VISIBLE);
             const xpRows = xpTableExpanded ? xpRowsAll : xpRowsAll.slice(0, XP_ROWS_VISIBLE);
 
+            // ===== Тихая минута на карточке героя =====
+            const heroRef = useRef(null);
+            const [ringSize, setRingSize] = useState(null);
+            const ceremonyOn = !!ceremony;
+            useEffect(() => {
+                if (!ceremonyOn) {
+                    setRingSize(null);
+                    return;
+                }
+                const el = heroRef.current;
+                const rect = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+                if (rect && rect.width > 0 && rect.height > 0) {
+                    setRingSize({ w: rect.width, h: rect.height });
+                }
+            }, [ceremonyOn]);
+
+            // До 200 мс на карточке ещё старый уровень: без этого «старое уходит
+            // вверх» было бы нечему. Титул под числом сменяется вместе с ним и
+            // без движения — строка «ход по времени».
+            const showOld = ceremonyOn && !ceremony.rolled;
+            const heroLevel = showOld ? ceremony.from : stats.level;
+            const heroTitle = showOld ? (ceremony.fromTitle || '') : (stats.title?.title || '');
+            const rolling = ceremonyOn && ceremony.rolled;
+            // Строка «чего нет»: полоса прогресса не анимируется отдельно — она
+            // просто начинается с новой ступени, когда экран вернулся. Пока
+            // минута идёт, полоса стоит на прежней ступени.
+            const heroPercent = ceremonyOn
+                ? (ceremony.fromPercent || 0)
+                : (isMax ? 100 : (progress.percent || 0));
+
             return React.createElement('div', { className: 'game-v4-sheet__panel' },
-                React.createElement('div', { className: 'game-v4-sheet__hero game-v4-sheet__hero--cream' },
+                React.createElement('div', {
+                    ref: heroRef,
+                    className: `game-v4-sheet__hero game-v4-sheet__hero--cream${ceremonyOn ? ' is-quiet-minute' : ''}`
+                },
+                    ceremonyOn && ringSize && ceremony.phase !== 'arm' && React.createElement('svg', {
+                        className: `game-v4-sheet__hero-ring${ceremony.phase === 'return' ? ' is-fading' : ''}`,
+                        viewBox: `0 0 ${ringSize.w} ${ringSize.h}`,
+                        width: ringSize.w,
+                        height: ringSize.h,
+                        'aria-hidden': 'true',
+                        focusable: 'false'
+                    },
+                        React.createElement('path', {
+                            className: 'game-v4-sheet__hero-ring-path',
+                            d: buildCeremonyRingPath(ringSize.w, ringSize.h),
+                            style: { '--ring-len': ceremonyRingLength(ringSize.w, ringSize.h) }
+                        })
+                    ),
                     React.createElement('div', { className: 'game-v4-sheet__eyebrow' }, 'Уровень'),
-                    // Строка «доступность»: герой озвучивается одной фразой.
+                    // Строка «доступность»: герой озвучивается одной фразой —
+                    // и во время минуты это уже новый уровень, а не старый.
                     React.createElement('div', {
                         className: 'game-v4-sheet__hero-metric',
                         role: 'img',
                         'aria-label': `уровень ${stats.level}${stats.title?.title ? `, ${stats.title.title}` : ''}`
                     },
-                        React.createElement('span', { className: 'game-v4-sheet__hero-num' }, stats.level),
-                        React.createElement('span', { className: 'game-v4-sheet__hero-unit' }, stats.title?.title || '')
+                        rolling
+                            ? React.createElement('span', { className: 'game-v4-sheet__hero-num game-v4-sheet__hero-num--roll' },
+                                React.createElement('span', { className: 'game-v4-sheet__hero-num-out' }, ceremony.from),
+                                React.createElement('span', { className: 'game-v4-sheet__hero-num-in' }, ceremony.to)
+                            )
+                            : React.createElement('span', { className: 'game-v4-sheet__hero-num' }, heroLevel),
+                        React.createElement('span', { className: 'game-v4-sheet__hero-unit' }, heroTitle)
                     ),
                     React.createElement('div', {
                         className: 'game-v4-sheet__bar game-v4-sheet__bar--thin',
@@ -710,7 +910,7 @@
                     },
                         React.createElement('div', {
                             className: 'game-v4-sheet__bar-fill',
-                            style: { width: `${isMax ? 100 : (progress.percent || 0)}%` }
+                            style: { width: `${heroPercent}%` }
                         })
                     ),
                     React.createElement('div', { className: 'game-v4-sheet__level-hero-meta' },
@@ -782,11 +982,23 @@
             );
         }
 
-        function GamificationSheet({ onClose, initialTab }) {
+        function GamificationSheet({ onClose, initialTab, levelCeremony, onLevelCeremonyEnd }) {
             const firstDay = isFirstDayBranch();
             const defaultTab = initialTab || TAB_PROGRESS;
             const [tab, setTab] = useState(defaultTab);
             const [, bump] = useState(0);
+
+            // Тихая минута идёт на карточке героя, а она живёт на «Уровнях»:
+            // новый уровень открывает лист именно там. Признак не сбрасывается,
+            // пока лист открыт: иначе на первом дне человека выкинуло бы с
+            // «Уровней» ровно в тот момент, когда число стало новым.
+            const [hadCeremony, setHadCeremony] = useState(!!levelCeremony);
+            useEffect(() => {
+                if (!levelCeremony) return;
+                setHadCeremony(true);
+                setTab(TAB_LEVELS);
+            }, [levelCeremony]);
+            const ceremony = useLevelCeremony(levelCeremony, onLevelCeremonyEnd, tab === TAB_LEVELS);
 
             const refresh = useCallback(() => bump((n) => n + 1), []);
 
@@ -802,16 +1014,28 @@
             }, [refresh]);
 
             useEffect(() => {
-                if (firstDay && tab === TAB_LEVELS) setTab(TAB_PROGRESS);
-            }, [firstDay, tab]);
+                if (firstDay && tab === TAB_LEVELS && !hadCeremony) setTab(TAB_PROGRESS);
+            }, [firstDay, tab, hadCeremony]);
 
             const tabs = [
                 { id: TAB_PROGRESS, label: 'Прогресс' },
                 { id: TAB_ACHIEVEMENTS, label: 'Достижения' }
             ];
-            if (!firstDay) tabs.push({ id: TAB_LEVELS, label: 'Уровни' });
+            // Строка «когда играет»: минута положена каждому новому уровню, в том
+            // числе второму, который случается ещё в первый день. Поэтому на
+            // время церемонии «Уровни» доступны и в первой ветке.
+            if (!firstDay || hadCeremony) tabs.push({ id: TAB_LEVELS, label: 'Уровни' });
 
-            return React.createElement('div', { className: 'game-v4-sheet' },
+            // Гашение и возврат — два разных класса: у возврата своя длительность
+            // (300 мс против 200 мс), и переход должен быть объявлен на элементе
+            // в тот момент, когда яркость уже возвращается.
+            const quietClass = ceremony && ceremony.phase === 'play'
+                ? ' is-quiet-minute'
+                : ceremony && ceremony.phase === 'return'
+                    ? ' is-quiet-minute-return'
+                    : '';
+
+            return React.createElement('div', { className: `game-v4-sheet${quietClass}` },
                 React.createElement('div', { className: 'game-v4-sheet__header' },
                     React.createElement('button', {
                         type: 'button',
@@ -837,10 +1061,22 @@
                 ),
                 tab === TAB_PROGRESS && React.createElement(ProgressTab, { firstDay }),
                 tab === TAB_ACHIEVEMENTS && React.createElement(AchievementsTab, { firstDay }),
-                tab === TAB_LEVELS && !firstDay && React.createElement(LevelsTab)
+                tab === TAB_LEVELS && (!firstDay || hadCeremony) && React.createElement(LevelsTab, { ceremony })
             );
         }
 
-        return { GamificationSheet, TAB_PROGRESS, TAB_ACHIEVEMENTS, TAB_LEVELS };
+        return {
+            GamificationSheet,
+            TAB_PROGRESS,
+            TAB_ACHIEVEMENTS,
+            TAB_LEVELS,
+            // Открыто для смока: церемонию руками не набрать, а числа хода по
+            // времени и геометрия линии должны сверяться с контрактом.
+            CEREMONY_TIMELINE,
+            CEREMONY_LINE_WIDTH,
+            CEREMONY_CARD_RADIUS,
+            buildCeremonyRingPath,
+            ceremonyRingLength
+        };
     })();
 })();

@@ -3224,9 +3224,11 @@
     setStoredValue('heys_sound_settings', SOUND_SETTINGS);
   }
 
-  function playXPSound(isLevelUp = false) {
+  // Строка «чего нет» канваса gamification.v4: у нового уровня звука и вибрации
+  // нет — остаётся только обычный звук начисления XP.
+  function playXPSound() {
     if (HEYS.audio) {
-      HEYS.audio.play(isLevelUp ? 'levelUp' : 'xpGained');
+      HEYS.audio.play('xpGained');
     }
   }
 
@@ -3413,12 +3415,40 @@
       detail: { type, data }
     }));
 
-    // Auto-hide через 3-4 секунды
-    const duration = type === 'level_up' ? 4000 : 3000;
+    // Auto-hide через 3 секунды
     setTimeout(() => {
       _isShowingNotification = false;
       processNotificationQueue();
-    }, duration);
+    }, 3000);
+  }
+
+  // ========== НОВЫЙ УРОВЕНЬ · «тихая минута» ==========
+  // Строка «когда играет» канваса gamification.v4: празднование одно и только
+  // на новом уровне — двадцать пять раз за всё время. Поэтому уровень больше
+  // не идёт через очередь уведомлений (там он ждал бы своей очереди за
+  // достижениями и выезжал бы тостом через несколько секунд после события).
+  //
+  // Строка «прерывание»: церемония живёт ровно тот момент, когда случилась.
+  // Экран забирает её один раз (`consumeLevelCeremony`), и она протухает, если
+  // за LEVEL_CEREMONY_FRESH_MS её никто не забрал: догоняющая церемония через
+  // час читается как сбой, а не как поздравление.
+  const LEVEL_CEREMONY_FRESH_MS = 10000;
+  let _pendingLevelCeremony = null;
+
+  function armLevelCeremony(detail) {
+    if (_isLoadingPhase) return;
+    _pendingLevelCeremony = Object.assign({ armedAt: Date.now() }, detail);
+    window.dispatchEvent(new CustomEvent('heysLevelCeremony', {
+      detail: _pendingLevelCeremony
+    }));
+  }
+
+  function consumeLevelCeremony() {
+    const pending = _pendingLevelCeremony;
+    _pendingLevelCeremony = null;
+    if (!pending) return null;
+    if (Date.now() - pending.armedAt > LEVEL_CEREMONY_FRESH_MS) return null;
+    return pending;
   }
 
   // ========== CONFETTI ==========
@@ -3956,8 +3986,9 @@
         firstInCategory: !hasCategoryUnlocked
       });
 
-      // Звук при получении достижения!
-      playXPSound(true); // Level-up мелодия для достижений
+      // Звук при получении достижения! Категория `triumph` — та же, что была у
+      // снятого звука уровня, поэтому достижение звучит ровно как звучало.
+      playAchievementSound();
 
       // Confetti для rare+ достижений
       if (['rare', 'epic', 'legendary', 'mythic'].includes(ach.rarity)) {
@@ -4132,6 +4163,9 @@
 
     // Notification
     showNotification,
+
+    // Новый уровень · «тихая минута»: экран забирает церемонию один раз.
+    consumeLevelCeremony,
 
     // День выполнен (вызывается при ratio 0.75-1.1)
     checkDayCompleted(ratio, dateStr) {
@@ -5615,7 +5649,7 @@
     }
 
     // XP Sound
-    playXPSound(false);
+    playXPSound();
 
     const newProgress = game.getProgress();
     if (oldLevel === data.level) {
@@ -5664,20 +5698,18 @@
         }
       });
 
-      // Level-up sound!
-      playXPSound(true);
-
-      showNotification('level_up', {
-        newLevel: data.level,
-        title: title.title,
-        icon: title.icon,
-        color: title.color
+      // Строки «когда играет» и «чего нет» канваса gamification.v4: у нового
+      // уровня одно празднование — тихая минута на карточке героя. Тоста на
+      // каждый уровень, торжественного звука и вибрации у него больше нет
+      // (звук `levelUp` в heys_audio_v1.js несёт haptic категории triumph —
+      // снимается вместе с вызовом).
+      armLevelCeremony({
+        from: oldLevel,
+        to: data.level,
+        fromTitle: getLevelTitle(oldLevel).title,
+        toTitle: title.title,
+        fromPercent: Math.round(oldProgress.percent || 0)
       });
-
-      // Confetti на уровнях кратных 5
-      if (data.level % 5 === 0) {
-        celebrate();
-      }
     }
 
     // Проверяем достижения

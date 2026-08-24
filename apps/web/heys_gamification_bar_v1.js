@@ -181,8 +181,11 @@
             // eslint-disable-next-line react-hooks/exhaustive-deps
         }, []);
         const [storyAchId, setStoryAchId] = useState(null);
-        const [levelUpModal, setLevelUpModal] = useState(null);
-        const levelUpTimerRef = useRef(null);
+        // Строка «когда играет» канваса gamification.v4: новый уровень открывает
+        // экран «Уровни» и там играет тихая минута. Прежняя модалка «Новый
+        // уровень!» со значком и кнопкой «Продолжить» снята — она и была тем
+        // громким празднованием, которое строка «чего нет» запрещает.
+        const [levelCeremony, setLevelCeremony] = useState(null);
         const [streakCelebration, setStreakCelebration] = useState(null);
         const streakMilestoneRef = useRef(0);
         const streakToastTimerRef = useRef(null);
@@ -338,27 +341,10 @@
                     const isSyncUpdate = isInitialLoad || SYNC_REASONS.includes(reason) || (!hasXpGained && !hasReason);
 
                     if (newStats.level > prevLevel) {
-                        if (!isSyncUpdate) {
-                            console.info('[🎮 GamificationBar] 🎉 LEVEL UP modal! level:', prevLevel, '→', newStats.level,
-                                '| xpGained:', e?.detail?.xpGained, '| reason:', reason, '| isInitialLoad:', isInitialLoad,
-                                '| isSyncUpdate:', isSyncUpdate);
-
-                            setLevelUpModal({
-                                level: newStats.level,
-                                title: newStats.title?.title || 'Новый уровень',
-                                icon: newStats.title?.icon || '🎉',
-                                color: newStats.title?.color || '#22c55e'
-                            });
-
-                            if (levelUpTimerRef.current) clearTimeout(levelUpTimerRef.current);
-                            levelUpTimerRef.current = setTimeout(() => {
-                                setLevelUpModal(null);
-                            }, 2600);
-                        } else {
+                        if (isSyncUpdate) {
                             console.info('[🎮 GamificationBar] 🔒 Level up SUPPRESSED:', prevLevel, '→', newStats.level,
                                 '| reason:', reason, '| isInitialLoad:', isInitialLoad, '| isSyncUpdate:', isSyncUpdate);
                         }
-
                         prevLevelRef.current = newStats.level;
                     }
 
@@ -407,11 +393,24 @@
                 }
             };
 
+            // Строка «когда играет» канваса gamification.v4: единственное
+            // празднование уровня — тихая минута на карточке героя, поэтому лист
+            // открывается на «Уровнях» и церемония играет там. Событие приходит
+            // только с настоящего начисления XP (движок не шлёт его во время
+            // загрузки и при пересборке XP), а `consumeLevelCeremony` отдаёт её
+            // один раз и не отдаёт протухшую — строка «прерывание».
+            const handleLevelCeremony = () => {
+                const ceremony = HEYS.game?.consumeLevelCeremony?.();
+                if (!ceremony) return;
+                setLevelCeremony(ceremony);
+                setExpanded(true);
+            };
+
             const handleNotification = (e) => {
                 // Строка «уменьшенное движение»: новое достижение появляется мгновенно —
                 // пульсации, конфетти и церемония слияния онбординга сняты.
                 setNotification(e.detail);
-                setTimeout(() => setNotification(null), e.detail.type === 'level_up' ? 4000 : 3000);
+                setTimeout(() => setNotification(null), 3000);
             };
 
             const handleDailyMultiplierUpdate = (e) => {
@@ -452,6 +451,7 @@
             window.addEventListener('heysGameUpdate', handleUpdate);
 
             window.addEventListener('heysGameNotification', handleNotification);
+            window.addEventListener('heysLevelCeremony', handleLevelCeremony);
             window.addEventListener('heysProductAdded', handleUpdate);
             window.addEventListener('heysWaterAdded', handleUpdate);
             window.addEventListener('heysDailyMultiplierUpdate', handleDailyMultiplierUpdate);
@@ -460,6 +460,7 @@
             return () => {
                 window.removeEventListener('heysGameUpdate', handleUpdate);
                 window.removeEventListener('heysGameNotification', handleNotification);
+                window.removeEventListener('heysLevelCeremony', handleLevelCeremony);
                 window.removeEventListener('heysProductAdded', handleUpdate);
                 window.removeEventListener('heysWaterAdded', handleUpdate);
                 window.removeEventListener('heysDailyMultiplierUpdate', handleDailyMultiplierUpdate);
@@ -1012,8 +1013,13 @@
             const Screens = HEYS.GamificationScreens;
             if (Screens && Screens.GamificationSheet) {
                 return React.createElement(Screens.GamificationSheet, {
-                    onClose: () => setExpanded(false),
-                    initialTab: 'progress'
+                    onClose: () => {
+                        setLevelCeremony(null);
+                        setExpanded(false);
+                    },
+                    initialTab: levelCeremony ? 'levels' : 'progress',
+                    levelCeremony,
+                    onLevelCeremonyEnd: () => setLevelCeremony(null)
                 });
             }
             return React.createElement('div', { className: 'game-v4-sheet-fallback' },
@@ -1251,15 +1257,9 @@
                     if (deltaY > 50) { setNotification(null); } // swipe up to dismiss
                 }
             },
-                notification.type === 'level_up'
-                    ? React.createElement(React.Fragment, null,
-                        React.createElement('span', { className: 'notif-icon' }, notification.data.icon),
-                        React.createElement('div', { className: 'notif-content' },
-                            React.createElement('div', { className: 'notif-title' }, `🎉 Уровень ${notification.data.newLevel}!`),
-                            React.createElement('div', { className: 'notif-subtitle' }, `Ты теперь ${notification.data.title}`)
-                        )
-                    )
-                    : notification.type === 'achievement'
+                // Строка «когда играет»: тоста на новый уровень нет — уровень
+                // отмечает только тихая минута на карточке героя.
+                notification.type === 'achievement'
                         ? React.createElement(React.Fragment, null,
                             React.createElement('span', { className: 'notif-icon' }, notification.data.achievement.icon),
                             React.createElement('div', { className: 'notif-content' },
@@ -1361,32 +1361,13 @@
                         }, 'Понятно')
                     )
                 )
-            ),
-
-            levelUpModal && portalToBody(
-                React.createElement('div', {
-                    className: 'level-up-modal',
-                    onClick: () => setLevelUpModal(null)
-                },
-                    React.createElement('div', { className: 'level-up-modal__backdrop' }),
-                    React.createElement('div', {
-                        className: 'level-up-modal__card',
-                        style: { '--level-color': levelUpModal.color },
-                        onClick: (e) => e.stopPropagation()
-                    },
-                        React.createElement('div', { className: 'level-up-modal__badge' }, levelUpModal.icon),
-                        React.createElement('div', { className: 'level-up-modal__title' }, 'Новый уровень!'),
-                        React.createElement('div', { className: 'level-up-modal__level' }, `Уровень ${levelUpModal.level}`),
-                        React.createElement('div', { className: 'level-up-modal__subtitle' }, levelUpModal.title),
-                        React.createElement('button', {
-                            className: 'level-up-modal__btn',
-                            onClick: () => setLevelUpModal(null)
-                        }, 'Продолжить')
-                    )
-                )
             )
+
             // Строка «уменьшенное движение»: церемонии недельного челленджа и
             // слияния онбординга сняты — о выполнении сообщает обычное уведомление.
+            // Строка «чего нет»: модалка нового уровня со значком, вспышкой и
+            // кнопкой «Продолжить» снята — уровень отмечает тихая минута на
+            // карточке героя в листе «Уровни».
         );
     }
 
