@@ -69,7 +69,6 @@ const BASELINE = {
     'styles/modules/000-base-and-gamification.css',
     'styles/modules/400-water-and-hydration.css',
   ],
-  'v4-good': ['styles/modules/000-base-and-gamification.css'],
   'v4-ink-1': ['styles/modules/000-base-and-gamification.css'],
   'v4-macro-over-offset': ['styles/modules/730-widgets-dashboard.css'],
   'v4-ok': [

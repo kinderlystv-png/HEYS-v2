@@ -75,6 +75,19 @@ describe('контракт ролей палитры v4', () => {
     expect(pals[id]['--v4-chip-2']).toBe(C2[id]);
   });
 
+  // Роль канваса --val-good — метка «факт есть» (точка записи в сетке
+  // календаря и её пара в легенде). До 24.08 роль не была задана нигде, и
+  // `var(--v4-good, #7a8a5e)` подставлял песочный шалфей во все четыре набора.
+  it('--v4-good задан во всех четырёх наборах значениями --val-good', () => {
+    const good = {
+      sand: '#7a8a5e',
+      'sand-dark': '#8faa6d',
+      blue: '#3e9a6b',
+      'blue-dark': '#4caf7d',
+    };
+    for (const id of V4) expect(pals[id]['--v4-good']).toBe(good[id]);
+  });
+
   it('--v4-tint остаётся ролью тинта во всех четырёх наборах', () => {
     const tint = { sand: '#f6e6dd', 'sand-dark': '#3a241a', blue: '#fbe6e2', 'blue-dark': '#33242a' };
     for (const id of V4) expect(pals[id]['--v4-tint']).toBe(tint[id]);
