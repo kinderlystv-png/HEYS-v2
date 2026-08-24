@@ -138,7 +138,10 @@
     return Math.max(a, Math.min(b, v));
   }
 
-  // Форматирует 10 цифр в (XXX) XXX-XX-XX
+  // Строка контракта «пределы и формат»: телефон — 10 цифр после кода страны,
+  // маска «+7 (962) 455-61-11» ставится по мере ввода (скобки у кода города,
+  // дефисы в последних четырёх цифрах). Префикс «+7» рисуется отдельным
+  // элементом поля, здесь — только тело номера: (XXX) XXX-XX-XX.
   function formatPhoneBody(digits) {
     const d = (digits || '').slice(0, 10);
     if (!d) return '';
@@ -1463,6 +1466,8 @@
 
   LoginScreen.isTrialIntakeLogin = isTrialIntakeLogin;
   LoginScreen.getClientLoginCopy = getClientLoginCopy;
+  LoginScreen.getNewDeviceLoginCopy = () => NEW_DEVICE_LOGIN_COPY;
+  LoginScreen.formatPhoneBody = formatPhoneBody;
   LoginScreen.getAuthLogoHtml = getAuthLogoHtml;
   LoginScreen.readLoginMaintenanceFlag = readLoginMaintenanceFlag;
   LoginScreen.resolveLoginMaintenanceFlag = resolveLoginMaintenanceFlag;

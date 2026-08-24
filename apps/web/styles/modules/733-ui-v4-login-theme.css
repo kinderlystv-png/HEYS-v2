@@ -281,14 +281,18 @@
   color: #a1471c;
 }
 
+/* Строка «вид карточки и боксов кода» (двенадцатая сборка): поле телефона —
+   тот же фон и радиус, что у боксов кода, высота 44, текст 13 px/600.
+   Прежние 52 px и 20/17 px пришли из кадров; строка их сняла. */
 .heys-auth-field {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
-  min-height: 52px;
-  padding: 16px 18px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 18px;
   border: 0;
   border-radius: 16px;
   background: #f7efe2;
@@ -318,7 +322,7 @@
 .heys-auth-prefix {
   flex: 0 0 auto;
   color: rgba(0, 0, 0, 0.4);
-  font-size: 17px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1;
   user-select: none;
@@ -338,7 +342,7 @@
   flex: 0 0 auto;
   height: auto !important;
   min-height: 0 !important;
-  font-size: 17px !important;
+  font-size: 13px !important;
   font-weight: 600 !important;
   line-height: 1 !important;
   letter-spacing: 0 !important;
@@ -364,7 +368,7 @@
   background: transparent !important;
   box-shadow: none !important;
   outline: none !important;
-  font-size: 20px !important;
+  font-size: 13px !important;
   font-weight: 600 !important;
   letter-spacing: 0 !important;
   line-height: 1 !important;
@@ -588,11 +592,15 @@
   display: none !important;
 }
 
+/* Строка «вид карточки и боксов кода» (двенадцатая сборка): клавиша своей
+   клавиатуры 46 px. Прежние 48 держались строкой «вид своей клавиатуры»
+   («высота не меньше 48») — она осталась в контракте и с новой строкой
+   спорит; отступление названо в отчёте по сведению. */
 .heys-auth-key,
 .heys-auth-key-spacer {
   width: 100%;
-  min-height: 48px;
-  height: 48px;
+  min-height: 46px;
+  height: 46px;
 }
 
 .heys-auth-key {

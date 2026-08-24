@@ -13,13 +13,25 @@ const consents = fs.readFileSync(path.join(webDir, 'heys_consents_v1.js'), 'utf8
 const shellCss = fs.readFileSync(path.join(webDir, 'styles/modules/000-base-and-gamification.css'), 'utf8');
 
 describe('login v4 canvas structure', () => {
-  // Клавиша 46 -> 48 и радиус 16: строка контракта «вид своей клавиатуры»
-  // требует высоту не меньше 48. Тест держал прежнее число.
-  it('keeps PIN cells at 56×64 with 8px gap and 48px keys', () => {
+  // Клавиша 48 -> 46: двенадцатая сборка назвала число в строке «вид карточки
+  // и боксов кода» и тем сняла спор, который прежде держал 48 по строке «вид
+  // своей клавиатуры» («высота не меньше 48»). Старая строка в контракте
+  // осталась и с новой спорит — отступление названо вслух.
+  it('keeps PIN cells at 56×64 with 8px gap and 46px keys', () => {
     expect(css).toMatch(/\.heys-auth-pin-box\s*\{[\s\S]*?width:\s*56px/);
     expect(css).toMatch(/\.heys-auth-pin-box\s*\{[\s\S]*?height:\s*64px/);
+    expect(css).toMatch(/\.heys-auth-pin-box\s*\{[\s\S]*?border-radius:\s*16px|\.heys-auth-pin-input\s*\{[\s\S]*?border-radius:\s*16px/);
+    expect(css).toMatch(/\.heys-auth-pin-input,\s*\n\.heys-auth-pin-overlay\s*\{[\s\S]*?font-size:\s*26px/);
     expect(css).toMatch(/\.heys-auth-pin-grid\s*\{[\s\S]*?gap:\s*8px/);
-    expect(css).toMatch(/\.heys-auth-key,\s*\n\.heys-auth-key-spacer\s*\{[\s\S]*?height:\s*48px/);
+    expect(css).toMatch(/\.heys-auth-key,\s*\n\.heys-auth-key-spacer\s*\{[\s\S]*?height:\s*46px/);
+  });
+
+  // Строка «вид карточки и боксов кода»: заполненный бокс показывает точку,
+  // а не цифру. Точка — 9 px, и она живёт на самом боксе, а не в input.
+  it('settles a filled code box on a dot', () => {
+    expect(css).toMatch(/\.heys-auth-pin-box\.is-filled::after[\s\S]*?width:\s*9px/);
+    expect(css).toMatch(/\.heys-auth-pin-input\s*\{[\s\S]*?-webkit-text-security:\s*disc/);
+    expect(css).toMatch(/\.heys-auth-pin-input\s*\{[\s\S]*?color:\s*transparent/);
   });
 
   it('reserves the error slot in flow instead of a fixed overlay', () => {
@@ -67,12 +79,17 @@ describe('login v4 canvas structure', () => {
     expect(css).toMatch(/backdrop-filter:\s*none/);
   });
 
-  it('keeps login phone type at 20/600 against phone-input-large', () => {
-    expect(css).toMatch(/\.heys-auth-shell input\.phone-input-large[\s\S]*?font-size:\s*20px\s*!important/);
+  // Строка «вид карточки и боксов кода» (двенадцатая сборка): поле телефона —
+  // высота 44, текст 13 px/600. Прежние 52/20/17 держались кадрами; строка
+  // старше кадра, и трёхсторонний спор закрыт её числами.
+  it('keeps login phone type at 13/600 in a 44px field against phone-input-large', () => {
+    expect(css).toMatch(/\.heys-auth-shell input\.phone-input-large[\s\S]*?font-size:\s*13px\s*!important/);
     expect(css).toMatch(/\.heys-auth-shell input\.phone-input-large[\s\S]*?font-weight:\s*600\s*!important/);
     expect(css).toMatch(/\.heys-auth-shell input\.phone-input-large[\s\S]*?width:\s*auto\s*!important/);
-    expect(css).toMatch(/\.heys-auth-shell \.phone-prefix-large[\s\S]*?font-size:\s*17px\s*!important/);
-    expect(css).toMatch(/\.heys-auth-field[\s\S]*?min-height:\s*52px/);
+    expect(css).toMatch(/\.heys-auth-shell \.phone-prefix-large[\s\S]*?font-size:\s*13px\s*!important/);
+    expect(css).toMatch(/\.heys-auth-field\s*\{[\s\S]*?height:\s*44px/);
+    expect(css).toMatch(/\.heys-auth-field\s*\{[\s\S]*?min-height:\s*44px/);
+    expect(css).toMatch(/\.heys-auth-field\s*\{[\s\S]*?border-radius:\s*16px/);
     expect(css).toMatch(/\.heys-auth-field[\s\S]*?justify-content:\s*center/);
     expect(login).not.toMatch(/heys-auth-shell[^"]*px-5/);
     expect(login).not.toMatch(/className:\s*'heys-auth-shell z-\[9999\][^']*justify-center/);
