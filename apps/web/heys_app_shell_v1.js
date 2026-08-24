@@ -946,24 +946,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const syncFadeTimerRef = React.useRef(null);
         const SYNC_BADGE_MIN_PENDING = 2;
         const [checkinStatus, setCheckinStatus] = React.useState(null);
-        const readHeaderDarkMode = React.useCallback(() => {
-            try {
-                const themeAttr = document.documentElement.getAttribute('data-theme') || '';
-                if (themeAttr.endsWith('-dark')) return true;
-                const stored = HEYS?.Theme?.readStoredThemeId?.();
-                return HEYS?.Theme?.resolveResolvedMode?.(stored) === 'dark';
-            } catch (_) {
-                return false;
-            }
-        }, []);
-        const [headerDarkMode, setHeaderDarkMode] = React.useState(readHeaderDarkMode);
-
-        React.useEffect(() => {
-            const refreshThemeMode = () => setHeaderDarkMode(readHeaderDarkMode());
-            refreshThemeMode();
-            window.addEventListener('heys:theme-change', refreshThemeMode);
-            return () => window.removeEventListener('heys:theme-change', refreshThemeMode);
-        }, [readHeaderDarkMode]);
+        // Слежение за текущим режимом снято вместе с тумблером свет/тьма в
+        // шапке: солнце/луну больше некому рисовать, а текущий режим показывает
+        // строка «Оформление» в шторке настроек.
 
         React.useEffect(() => {
             if (!showClientDropdown) return;
@@ -3427,24 +3412,15 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
                     )
                 ),
-                React.createElement('button', {
-                    key: 'theme-mode',
-                    type: 'button',
-                    className: 'hdr-header-icon-btn hdr-header-icon-btn--theme',
-                    title: headerDarkMode ? 'Светлая тема' : 'Тёмная тема',
-                    'aria-label': headerDarkMode ? 'Переключить на светлую тему' : 'Переключить на тёмную тему',
-                    onClick: (e) => {
-                        e.stopPropagation();
-                        HEYS?.Theme?.toggleModePreference?.();
-                    },
-                },
-                    HEYS.AppNavIcons?.NavIcon
-                        ? React.createElement(HEYS.AppNavIcons.NavIcon, {
-                            name: headerDarkMode ? 'sun' : 'moon',
-                            size: 18,
-                        })
-                        : React.createElement('span', { 'aria-hidden': 'true' }, headerDarkMode ? '☀' : '☽')
-                ),
+                // Строка «что в шапке» (tips.v4.dc.html — владелец группы иконок):
+                // ровно два адреса, лампочка советов и ползунки настроек. Тумблер
+                // свет/тьма отсюда снят: строка «шторка в приложении»
+                // (login.v4.dc.html) отдаёт смену оформления шторке настроек —
+                // «тап всегда открывает шторку», иначе нажатие при «Как в системе»
+                // молча снимает слежение за настройкой телефона. Обе оси —
+                // палитра и режим — живут в строке «Оформление» этой шторки.
+                // Облако синхронизации остаётся третьим боксом и в покое скрыто
+                // (строка «третий бокс»).
         ];
 
         return React.createElement(
