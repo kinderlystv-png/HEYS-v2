@@ -5108,6 +5108,20 @@
   pointer-events: auto;
 }
 
+/* Строка «уменьшенное движение»: выезд листа снизу становится мгновенным
+   появлением, затемнение остаётся, блюр снимается — размытие на каждом
+   открытии утомляет так же, как движение. */
+@media (prefers-reduced-motion: reduce) {
+  .ca-modal-backdrop {
+    transition: none;
+  }
+
+  .ca-modal-backdrop--visible {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 .ca-modal {
   width: 100%;
   max-width: 420px;

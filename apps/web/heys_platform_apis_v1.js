@@ -498,7 +498,7 @@
       rootClass: 'heys-update-modal',
       backdropClass: 'heys-update-modal__backdrop',
       cardClass: 'heys-update-modal__card',
-      cardAttrs: 'role="dialog" aria-modal="true" aria-labelledby="heys-update-title" aria-describedby="heys-update-subtitle"',
+      cardAttrs: 'role="alertdialog" aria-modal="true" aria-labelledby="heys-update-title" aria-describedby="heys-update-subtitle"',
       iconHtml,
       titleId: 'heys-update-title',
       titleClass: 'heys-update-modal__title',
@@ -586,7 +586,7 @@
       rootClass: 'heys-update-prompt',
       backdropClass: 'heys-update-prompt__backdrop',
       cardClass: 'heys-update-prompt__card',
-      cardAttrs: 'role="dialog" aria-modal="true" aria-labelledby="heys-update-prompt-title" aria-describedby="heys-update-prompt-text"',
+      cardAttrs: 'role="alertdialog" aria-modal="true" aria-labelledby="heys-update-prompt-title" aria-describedby="heys-update-prompt-text"',
       iconHtml,
       titleId: 'heys-update-prompt-title',
       titleClass: 'heys-update-prompt__title',
@@ -645,8 +645,11 @@
       modal.dataset.updateDialog = dialogType;
     }
 
+    // Строка «доступность»: смена стадии объявляется. Заголовок и подпись
+    // меняются на месте (updateModalStage), и без aria-live экранный
+    // диктор молчит — человек не знает, что «Загрузка» стала «Готово».
     const titleHtml = title
-      ? `<h2 id="${titleId}" class="${titleClass}">${title}</h2>`
+      ? `<h2 id="${titleId}" class="${titleClass}" aria-live="polite">${title}</h2>`
       : '';
     const textHtml = text
       ? `<p id="${textId}" class="${textClass}">${text}</p>`
@@ -928,6 +931,9 @@
     createSystemBanner({
       id: OFFLINE_BANNER_ID,
       className: 'heys-system-banner heys-system-banner--offline',
+      // Строка «доступность»: баннер сообщает о состоянии, а не требует
+      // действия — role="status" объявляет его, не забирая фокус.
+      role: 'status',
       icon: 'wifiOff',
       text: 'Офлайн режим — данные сохраняются локально',
       actions: []

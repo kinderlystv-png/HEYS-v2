@@ -394,7 +394,9 @@
 
   function renderCollapsedGroupHtml(group, expandAttr, expandLabel) {
     const kcal = aggregateDayKcal(group.date, group.entries);
-    const kcalHtml = kcal ? `<span class="ca-modal__date-kcal">${escapeHtml(kcal)}</span>` : '';
+    const kcalHtml = kcal
+      ? `<span class="ca-modal__date-kcal" aria-label="${escapeHtml(kcal.spoken)}">${escapeHtml(kcal.text)}</span>`
+      : '';
     return `
       <div class="ca-modal__group">
         <div class="ca-modal__date"><span class="ca-modal__date-label">${escapeHtml(ymdLabel(group.date))}</span>${kcalHtml}</div>
@@ -408,7 +410,9 @@
 
   function renderExpandedGroupHtml(group, registerTarget) {
     const kcal = aggregateDayKcal(group.date, group.entries);
-    const kcalHtml = kcal ? `<span class="ca-modal__date-kcal">${escapeHtml(kcal)}</span>` : '';
+    const kcalHtml = kcal
+      ? `<span class="ca-modal__date-kcal" aria-label="${escapeHtml(kcal.spoken)}">${escapeHtml(kcal.text)}</span>`
+      : '';
     const rawPairs = group.pairs || [];
     const displayPairs = groupIdenticalMealPairs(rawPairs);
     const itemsHtml = displayPairs.map(({ entry, action }) => {
@@ -1035,7 +1039,12 @@
       if (isFiniteNumber(pair.after)) lastAfter = pair.after;
     }
     if (!isFiniteNumber(firstBefore) || !isFiniteNumber(lastAfter)) return null;
-    return `${formatKcal(firstBefore)} → ${formatKcal(lastAfter)} ккал`;
+    // Строка «доступность»: глазами стрелка читается, диктором — нет.
+    // Возвращаем и знак для экрана, и фразу для озвучивания.
+    return {
+      text: `${formatKcal(firstBefore)} → ${formatKcal(lastAfter)} ккал`,
+      spoken: `было ${formatKcal(firstBefore)}, стало ${formatKcal(lastAfter)} килокалорий`,
+    };
   }
 
   function visibleCollapsedActions(entry) {
