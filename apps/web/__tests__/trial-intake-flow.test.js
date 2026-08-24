@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const webDir = path.resolve(__dirname, '..');
@@ -711,6 +711,98 @@ describe('protected trial intake contract', () => {
     // Ответ, набранный до захода в сводку, на месте после возврата на шаг 4.
     fireEvent.click(screen.getByRole('button', { name: 'Назад' }));
     expect(screen.getByDisplayValue('Разбор ужинов')).toBeTruthy();
+  });
+
+  // Контракт questionnaire.v4, строка «safe-area и кнопка назад»: аппаратная
+  // кнопка/жест устройства на шагах ведут на предыдущий шаг — стык не собрать
+  // руками, popstate симулирует нажатие.
+  it('sends the hardware back gesture to the same step as the "Назад" button', async () => {
+    const rpc = vi.fn(async (fn, params) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: { status: 'in_progress', current_step: 2, answers: completedAnswers },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: {
+        success: true, status: 'in_progress', current_step: params.p_current_step,
+      } } };
+    });
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    // Экран возврата стоит поверх шага 3 — снимаем его тем же «Продолжить».
+    await screen.findByText('Продолжим с шага 3');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Продолжить' })[0]);
+    expect(screen.getByText('Шаг 3 из 5')).toBeTruthy();
+
+    act(() => { window.dispatchEvent(new window.PopStateEvent('popstate')); });
+    expect(screen.getByText('Шаг 2 из 5')).toBeTruthy();
+  });
+
+  // Тот же контракт: на первом шаге аппаратная кнопка/жест спрашивают
+  // подтверждение выхода — тем же диалогом, что и «Закрыть» в шапке.
+  it('asks the same exit confirmation as "Закрыть" when back fires on the first step', async () => {
+    const rpc = vi.fn(async (fn) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: { status: 'in_progress', current_step: 0, answers: completedAnswers },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
+    });
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    await screen.findByText('Шаг 1 из 5');
+    expect(screen.queryByText('Закрыть анкету?')).toBeNull();
+
+    act(() => { window.dispatchEvent(new window.PopStateEvent('popstate')); });
+    // Тот же диалог, что открывает «Закрыть» в шапке — не новый текст.
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Закрыть анкету?')).toBeTruthy();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Остаться' }));
+    expect(screen.queryByText('Закрыть анкету?')).toBeNull();
+    expect(screen.getByText('Шаг 1 из 5')).toBeTruthy();
+  });
+
+  // Общее правило порядка слоёв (home-widgets.v4.dc.html): назад закрывает
+  // верхний открытый слой раньше, чем переходит между шагами — сводка не
+  // должна пропускаться при аппаратном назад.
+  it('closes the open review layer on back instead of skipping past it', async () => {
+    const rpc = vi.fn(async (fn) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: { status: 'in_progress', current_step: 4, answers: completedAnswers },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
+    });
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    // Экран возврата стоит поверх шага 5 — снимаем его тем же «Продолжить»,
+    // иначе он же (а не сводка) окажется верхним слоем для аппаратного назад.
+    await screen.findByText('Продолжим с шага 5');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Продолжить' })[0]);
+    fireEvent.click(screen.getByText('Проверьте ответы перед отправкой'));
+    expect(screen.getByText('Ваши ответы')).toBeTruthy();
+
+    act(() => { window.dispatchEvent(new window.PopStateEvent('popstate')); });
+    expect(screen.queryByText('Ваши ответы')).toBeNull();
+    expect(screen.getByText('Шаг 5 из 5')).toBeTruthy();
   });
 
   it('uses the real sharing action, one autosave status and the supported unsure option', () => {

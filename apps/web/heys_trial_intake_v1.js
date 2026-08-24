@@ -678,6 +678,21 @@
       setStep(target);
     };
 
+    // Строка «safe-area и кнопка назад»: «Назад»-кнопка на шаге и аппаратная
+    // кнопка/жест устройства ведут на предыдущий шаг одной и той же функцией.
+    const goBackStep = React.useCallback(() => {
+      setError('');
+      setStep((value) => Math.max(0, value - 1));
+    }, []);
+
+    // Строка «место»: закрывает сводку и возвращает на шаг, с которого её
+    // открыли — общая функция для стрелки в шапке сводки и для аппаратной
+    // кнопки назад.
+    const closeReview = React.useCallback(() => {
+      setError('');
+      setReviewOpen(false);
+    }, []);
+
     const next = async () => {
       if (missingRequired) {
         const firstKey = missingKeys[0];
@@ -800,6 +815,50 @@
       if (closeConfirmOpen) return;
       setCloseConfirmOpen(true);
     };
+
+    // Строка «safe-area и кнопка назад»: аппаратная кнопка/жест назад на
+    // шагах ведут на предыдущий шаг, а на первом шаге спрашивают
+    // подтверждение выхода — тем же диалогом, что и «Закрыть» в шапке
+    // (черновик сохранён, но пройденное терять жалко). Общий порядок слоёв —
+    // home-widgets.v4.dc.html, «аппаратная кнопка назад · правило продукта»:
+    // сначала закрывается верхний открытый слой (сводка, модалки), и только
+    // когда слоёв нет — шаг назад. Строка «порядок слоёв и два устройства»:
+    // на самих шагах анкеты вложенных слоёв нет, поэтому шаг назад — предел.
+    // Паттерн pushState/popstate — heys_widgets_ui_v1.js (карточка «Ещё») и
+    // heys_day_pickers.js: одна метка-ловушка в истории, которую popstate
+    // потребляет и сразу восстанавливает, чтобы следующее «назад» снова
+    // доходило до обработчика, а не выкидывало из анкеты или из приложения.
+    const showsSteps = !loading && !(error && !hydrated) && status !== 'not_invited' && !STATUS_COPY[status];
+    const backLayersRef = React.useRef({});
+    React.useEffect(() => {
+      backLayersRef.current = { step, reviewOpen, resumeGateOpen, restartConfirmOpen, closeConfirmOpen };
+    });
+
+    React.useEffect(() => {
+      if (!showsSteps) return undefined;
+      const pushBackTrap = () => {
+        try { global.history.pushState({ heysIntakeBack: true }, ''); } catch (_) { /* история недоступна — остальные пути закрытия работают */ }
+      };
+      const onPopState = () => {
+        const layers = backLayersRef.current;
+        if (layers.restartConfirmOpen) { setRestartConfirmOpen(false); pushBackTrap(); return; }
+        if (layers.closeConfirmOpen) { setCloseConfirmOpen(false); pushBackTrap(); return; }
+        if (layers.resumeGateOpen) { setResumeGateOpen(false); pushBackTrap(); return; }
+        if (layers.reviewOpen) { closeReview(); pushBackTrap(); return; }
+        if (layers.step > 0) { goBackStep(); pushBackTrap(); return; }
+        // Первый шаг: тот же confirm-диалог, что у «Закрыть» в шапке.
+        setCloseConfirmOpen(true);
+        pushBackTrap();
+      };
+      global.addEventListener('popstate', onPopState);
+      pushBackTrap();
+      return () => {
+        global.removeEventListener('popstate', onPopState);
+        try {
+          if (global.history.state?.heysIntakeBack) global.history.back();
+        } catch (_) { /* ignore */ }
+      };
+    }, [showsSteps]);
 
     const storageNotice = (title, body, primaryLabel, onPrimary, secondaryLabel, onSecondary) => React.createElement('div', {
       role: 'dialog',
@@ -1043,7 +1102,7 @@
       return React.createElement('div', shellProps, React.createElement('main', { style: cardStyle },
         React.createElement('button', {
           type: 'button',
-          onClick: () => { setError(''); setReviewOpen(false); },
+          onClick: closeReview,
           'aria-label': `Назад к шагу ${STEPS.length}`,
           style: {
             display: 'flex', alignItems: 'center', gap: 12, minHeight: 44,
@@ -1253,7 +1312,7 @@
       }, step === STEPS.length - 1 ? 'Поставьте галочку выше' : 'Заполните поля со звёздочкой') : null,
       React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: missingRequired ? 9 : 20 } },
         step > 0 ? React.createElement('button', {
-          type: 'button', onClick: () => { setError(''); setStep((value) => Math.max(0, value - 1)); },
+          type: 'button', onClick: goBackStep,
           style: secondaryPill,
         }, 'Назад') : null,
         submitOrContinueButton()

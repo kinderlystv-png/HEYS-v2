@@ -673,6 +673,59 @@
   // React компоненты
   // =====================================================
 
+  // Контракт registration, «safe-area и кнопка назад»: аппаратная кнопка/жест
+  // на Android закрывают верхний открытый слой — сначала модалку полного
+  // текста документа, потом шторку подписи под ней, — а не оба сразу и не
+  // экран целиком. Слоёв может быть несколько одновременно (документ читают
+  // прямо из шторки подписи), поэтому вместо отдельного popstate-слушателя на
+  // каждый слой (порядок срабатывания у DOM-событий — по порядку подписки, а
+  // не по видимой глубине) держим один общий стек: слой при открытии кладёт
+  // себя наверх и делает pushState, единственный слушатель всегда закрывает
+  // верхний. suppressCount гасит popstate, которым мы сами же откатываем
+  // историю при закрытии слоя не через аппаратную кнопку (например, крестиком
+  // модалки) — иначе этот самослужебный back() ошибочно закрыл бы ещё и
+  // соседний слой под ним.
+  let heysConsentBackStack = [];
+  let heysConsentBackListenerAttached = false;
+  let heysConsentBackSuppressCount = 0;
+
+  function handleConsentBackPopState() {
+    if (heysConsentBackSuppressCount > 0) {
+      heysConsentBackSuppressCount -= 1;
+      return;
+    }
+    const top = heysConsentBackStack[heysConsentBackStack.length - 1];
+    if (top) top.close();
+  }
+
+  function pushConsentBackLayer(close) {
+    if (typeof window === 'undefined') return () => {};
+    const layer = { close };
+    heysConsentBackStack.push(layer);
+    if (!heysConsentBackListenerAttached) {
+      window.addEventListener('popstate', handleConsentBackPopState);
+      heysConsentBackListenerAttached = true;
+    }
+    const depth = heysConsentBackStack.length;
+    try {
+      window.history.pushState({ heysConsentBackDepth: depth }, '');
+    } catch (_e) { /* история недоступна — остальные пути закрытия работают */ }
+    return function popConsentBackLayer() {
+      const idx = heysConsentBackStack.indexOf(layer);
+      if (idx !== -1) heysConsentBackStack.splice(idx, 1);
+      if (heysConsentBackStack.length === 0 && heysConsentBackListenerAttached) {
+        window.removeEventListener('popstate', handleConsentBackPopState);
+        heysConsentBackListenerAttached = false;
+      }
+      try {
+        if (window.history.state?.heysConsentBackDepth === depth) {
+          heysConsentBackSuppressCount += 1;
+          window.history.back();
+        }
+      } catch (_e) { /* ignore */ }
+    };
+  }
+
   /**
    * Экран согласий (полноэкранный, блокирующий)
    * @param {string} clientId - ID клиента
@@ -825,6 +878,26 @@
       setError(null);
     }, [step, accessSignPinApi]);
 
+    // Отмена шага подписи — общая для Escape, клика по подложке, кнопки
+    // «Отмена» и аппаратной кнопки «назад»: пока идёт запрос или подпись уже
+    // получена, отменять нечего — дальше ведёт только «Продолжить».
+    const cancelSignSheet = useCallback(() => {
+      if (loading || signSuccess || typeof onCancel !== 'function') return;
+      onCancel();
+    }, [loading, signSuccess, onCancel]);
+
+    // Контракт registration, «safe-area и кнопка назад»: шторка подписи —
+    // отдельный слой в общем стеке (см. pushConsentBackLayer выше файла).
+    // Push/pop привязаны только к шагу — если завязать их на cancelSignSheet
+    // (меняется вместе с loading), каждое переключение спиннера лишний раз
+    // толкало бы историю; свежую версию функции берём через ref.
+    const cancelSignSheetRef = useRef(cancelSignSheet);
+    cancelSignSheetRef.current = cancelSignSheet;
+    useEffect(() => {
+      if (step !== 'access_code_sign') return undefined;
+      return pushConsentBackLayer(() => cancelSignSheetRef.current());
+    }, [step]);
+
     // Строка «доступность»: шторка подписи — модальный диалог с запертым
     // фокусом. Первый Tab уводит внутрь листа, дальше обход ходит по кругу и
     // не уходит на экран согласий под подложкой; на выходе фокус возвращается
@@ -857,9 +930,8 @@
         const sheet = signSheetRef.current;
         if (!sheet) return;
         if (event.key === 'Escape') {
-          if (loading || signSuccess || typeof onCancel !== 'function') return;
           event.preventDefault();
-          onCancel();
+          cancelSignSheet();
           return;
         }
         if (event.key !== 'Tab') return;
@@ -886,7 +958,7 @@
       };
       document.addEventListener('keydown', onKeyDown, true);
       return () => document.removeEventListener('keydown', onKeyDown, true);
-    }, [step, showFullText, loading, signSuccess, onCancel]);
+    }, [step, showFullText, cancelSignSheet]);
 
     useEffect(() => {
       if (step !== 'access_code_sign') {
@@ -2424,6 +2496,17 @@
     const [hasScrolledToEnd, setHasScrolledToEnd] = useState(false);
     const [scrollProgress, setScrollProgress] = useState(0);
     const contentRef = useRef(null);
+
+    // Контракт registration, «safe-area и кнопка назад»: модалка полного
+    // текста — отдельный слой общего стека (pushConsentBackLayer выше файла).
+    // Мод открывается и поверх экрана согласий, и поверх шторки подписи —
+    // стек сам разбирает, кто сейчас верхний, эффект здесь ничего не решает.
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
+    useEffect(() => {
+      return pushConsentBackLayer(() => onCloseRef.current?.());
+    }, []);
+
     const screenLabel = CONSENT_TEXTS.checkboxes[type]?.screenLabel
       || CONSENT_TEXTS.checkboxes[type]?.label
       || type;
