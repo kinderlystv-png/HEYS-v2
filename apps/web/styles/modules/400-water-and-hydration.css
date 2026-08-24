@@ -31,6 +31,12 @@
 .water-review {
   display: block;
   background: var(--v4-surface, #ffffff);
+  /* Выделение и копирование · правило продукта (water-add.v4.dc.html,
+     строка «язык, выделение, часовой пояс»): весь текст карточки — служебные
+     подписи и числа («осталось …», «за день не отмечено», «внесите выпитое
+     или налейте стакан»), своего текста человека здесь нет. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 [data-theme$="dark"] .water-review {
@@ -1050,6 +1056,9 @@ body.planning-tab-active .fab-group {
   color: var(--text-tertiary, var(--color-gray-400));
   padding: 8px 12px 4px;
   margin-top: 4px;
+  /* Контракт «язык, выделение, часовой пояс» (tips): подписи категорий не
+     выделяются — это подпись группы, не текст, который пишет человек. */
+  user-select: none;
 }
 
 .advice-group:first-child .advice-group-header {
@@ -1377,6 +1386,10 @@ body.planning-tab-active .fab-group {
   font-size: 14px;
   line-height: 1.5;
   color: var(--text-primary, #1f2937);
+  /* Контракт «язык, выделение, часовой пояс» (tips): заголовок карточки
+     совета не выделяется — делиться можно только текстом в детали
+     (.advice-v4-detail__title), см. соседнюю строку контракта. */
+  user-select: none;
 }
 
 .advice-list-details {
@@ -2493,7 +2506,11 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   box-shadow:
     0 1px 2px rgba(80, 50, 20, 0.09),
     0 -8px 40px rgba(80, 50, 20, 0.12);
-  padding: 18px 16px 16px;
+  /* Контракт «safe-area · правило продукта»: оверлей выше (:has(.advice-list-container--v4))
+     намеренно зануляет свой padding — нижний лист советов прижат к краям
+     экрана, а не к рамке overlay. Врезка поэтому переезжает сюда, на низ
+     самого контейнера, иначе контент уходит под домашний индикатор. */
+  padding: 18px 16px calc(16px + env(safe-area-inset-bottom, 0px));
 }
 
 .advice-list-handle {
@@ -3196,6 +3213,9 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   font: 600 13px/1.45 Figtree, sans-serif;
   color: #201e1d;
   text-wrap: pretty;
+  /* Контракт «язык, выделение, часовой пояс» (tips): тот же текст совета,
+     что и заголовок карточки в шторке — не выделяется вне детали. */
+  user-select: none;
 }
 
 .advice-v4-toast-card__meta {

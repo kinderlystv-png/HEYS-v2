@@ -2296,6 +2296,12 @@
         const [toastDetailsOpen, setToastDetailsOpen] = useState(false);
         const toastTouchStart = useRef(0);
         const toastInteractionTrackedRef = useRef(false);
+        // Контракт «повторный тап · правило продукта»: второе нажатие оценки
+        // совета в течение 350 мс после первого игнорируется — иначе дребезг
+        // пальца или гонка событий на тач-устройстве засчитывает вторую оценку
+        // за то же прочтение (см. tips.v4.dc.html, «safe-area и кнопка назад»
+        // соседняя строка «повторный тап»).
+        const toastRateLockRef = useRef(0);
         const autoSuppressionTrackedRef = useRef(new Set());
 
         const [adviceTrigger, setAdviceTrigger] = useState(null);
@@ -3452,6 +3458,9 @@
 
         const handleToastRate = (isPositive, e) => {
             e && e.stopPropagation();
+            const now = Date.now();
+            if (now - toastRateLockRef.current < 350) return;
+            toastRateLockRef.current = now;
             if (displayedAdvice && rateAdvice) {
                 rateAdvice(displayedAdvice, isPositive);
                 setToastRatedState(isPositive ? 'positive' : 'negative');
