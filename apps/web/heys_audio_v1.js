@@ -620,8 +620,12 @@
     if (!cat || !SYNTH[cat]) return false;
     if (isDocumentHidden() && options?.allowInBackground !== true) return false;
     if (isQuietHours() && options?.ignoreQuietHours !== true) return false;
+    // Завязка звука нажатия на «уменьшить прозрачность»: решения за ней нет ни в
+    // одном коммите, ни в MOTION_POLICY.md — как и у снятой отсюда завязки на
+    // «уменьшить движение». Оставлена до решения владельца и намеренно не
+    // повторена в play(): сегодня canPlay() не вызывает никто, кроме тестов.
     if (prefersReducedTransparency() && cat === 'interaction') return false;
-    return !prefersReducedMotion();
+    return true;
   }
 
   // ─── Core play ────────────────────────────────────────────────────────────
@@ -663,8 +667,12 @@
       triggerHaptic(HAPTIC_PATTERN[cat] || [20]);
     }
 
-    // Sound — muted in quiet hours and when prefers-reduced-motion
-    if ((!isQuietHours() || options?.ignoreQuietHours === true) && !prefersReducedMotion()) {
+    // Звук глушат только тихие часы (плюс общий выключатель, фоновая вкладка и
+    // защита от частых повторов выше). Системная настройка движения на звук не
+    // распространяется: «меньше движения» — про движение, а настройки «меньше
+    // звука» в ОС нет. Кому нужна тишина — глушит устройство или наш
+    // переключатель. См. docs/implementation/MOTION_POLICY.md, раздел «Звук».
+    if (!isQuietHours() || options?.ignoreQuietHours === true) {
       const ctx = getCtx();
       if (ctx) {
         const vol = typeof options?.volume === 'number' ? options.volume : s.volume;
@@ -705,15 +713,14 @@
       triggerHaptic(HAPTIC_PATTERN[cat] || [20]);
     }
 
-    // Play sound regardless of quiet hours
-    if (!prefersReducedMotion()) {
-      const ctx = getCtx();
-      if (ctx) {
-        try {
-          SYNTH[cat](ctx, s.volume);
-        } catch (e) {
-          console.warn('[HEYS.audio] Preview error:', cat, e);
-        }
+    // Play sound regardless of quiet hours (и независимо от настройки движения:
+    // превью в настройках звука обязано звучать, иначе переключатель немой)
+    const ctx = getCtx();
+    if (ctx) {
+      try {
+        SYNTH[cat](ctx, s.volume);
+      } catch (e) {
+        console.warn('[HEYS.audio] Preview error:', cat, e);
       }
     }
 
