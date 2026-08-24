@@ -6759,14 +6759,16 @@
                             return { ...existing, meals, updatedAt: Date.now() };
                         }, 'undo_move_item_source');
                     }
-                    HEYS.Toast?.info?.('Возвращено');
+                    // Подтверждающего тоста после возврата нет — строка «тоста подтверждения нет».
                 };
 
-                HEYS.Toast?.show?.({
-                    type: 'success',
-                    message: mode === 'move' ? 'Перемещено в новый приём' : 'Скопировано в новый приём',
-                    duration: 4000,
-                    action: { label: 'Отменить', onClick: undo },
+                // Строка контракта «тоста подтверждения нет»: возврат живёт в баре
+                // отмены, а не в зелёном тосте со своей кнопкой. Два места, где
+                // можно нажать «Отменить», — это два разных таймера и две разные
+                // формы одного действия.
+                HEYS.Undo?.push?.({
+                    label: mode === 'move' ? 'Перемещено в новый приём' : 'Скопировано в новый приём',
+                    onUndo: undo,
                 });
 
                 window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
@@ -6915,14 +6917,13 @@
                             });
                             return { ...existing, meals, updatedAt: Date.now() };
                         }, 'undo_move_item_source');
-                        HEYS.Toast?.info?.('Возвращено');
+                        // Подтверждающего тоста после возврата нет — строка «тоста подтверждения нет».
                     };
 
-                    HEYS.Toast?.show?.({
-                        type: 'success',
-                        message: `Переместили в ${dstLabel}`,
-                        duration: 4000,
-                        action: { label: 'Отменить', onClick: undo },
+                    // Строка «тоста подтверждения нет»: возврат — через бар отмены.
+                    HEYS.Undo?.push?.({
+                        label: `Переместили в ${dstLabel}`,
+                        onUndo: undo,
                     });
                 },
             });
@@ -7072,14 +7073,13 @@
                     const meals = sortMealsByTime([...(existing.meals || []), srcMealClone]);
                     return { ...existing, meals, updatedAt: Date.now() };
                 }, 'undo_move_meal_source');
-                HEYS.Toast?.info?.('Приём возвращён');
+                // Подтверждающего тоста после возврата нет — строка «тоста подтверждения нет».
             };
 
-            HEYS.Toast?.show?.({
-                type: 'success',
-                message: `Приём перемещён в ${dstLabel}`,
-                duration: 4000,
-                action: { label: 'Отменить', onClick: undo },
+            // Строка «тоста подтверждения нет»: возврат — через бар отмены.
+            HEYS.Undo?.push?.({
+                label: `Приём перемещён в ${dstLabel}`,
+                onUndo: undo,
             });
         }, [date, haptic, buildDaysWithMeals, writeDay, ensureDiaryItemsReadyForDayWrite]);
 
