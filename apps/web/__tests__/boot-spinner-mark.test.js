@@ -165,7 +165,11 @@ describe('cold-start spinner mark', () => {
     expect(iconSvg).toContain('fill="#fffaf1"');
     expect(iconSvg).toContain('Figtree');
     expect(iconSvg).toContain('font-size="72"');
-    expect(iconSvg).toContain('font-weight="700"');
+    // Строка контракта app-splash «что в круге» (девятая сборка): H в Figtree
+    // весом 800. Тест писался под сборку иконки коммитами 9ac24876/fcd0a106,
+    // когда вес был 700; остальные его утверждения — Figtree, размер 72,
+    // отсутствие Caprasimo — совпадают с той же строкой, разошёлся только вес.
+    expect(iconSvg).toContain('font-weight="800"');
     expect(iconSvg).not.toContain('Caprasimo');
     expect(iconSvg).not.toContain('fill="#efe3cf"');
     expect(iconSvg).not.toContain('cy="44"');

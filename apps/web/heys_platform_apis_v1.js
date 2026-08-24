@@ -75,7 +75,6 @@
   // ============================================================================
 
   // === Service Worker Registration (Production only) ===
-  const UPDATE_BANNER_ID = 'heys-sw-update-banner';
   const OFFLINE_BANNER_ID = 'heys-offline-banner';
   const UPDATE_LOCK_KEY = 'heys_update_in_progress';
   const DROP_FENCE_SESSION_PREFIX = 'heys_drop_fence_';
@@ -375,43 +374,10 @@
     return verdict;
   }
 
-  function showUpdateBadge(version) {
-    _updateAvailable = true;
-    _updateVersion = version;
-
-    document.getElementById('heys-update-badge')?.remove();
-
-    const badge = document.createElement('div');
-    badge.id = 'heys-update-badge';
-    badge.className = 'heys-update-badge';
-
-    const button = document.createElement('button');
-    button.id = 'heys-update-badge-btn';
-    button.type = 'button';
-    button.className = 'heys-update-badge__btn';
-    button.innerHTML = `
-      <span class="heys-update-badge__emoji">🆕</span>
-      <span class="heys-update-badge__label">Обновить HEYS</span>
-      <span class="heys-update-badge__version">v${version?.split('.').slice(0, 3).join('.') || 'new'}</span>
-    `;
-    button.addEventListener('click', () => installUpdate());
-
-    badge.appendChild(button);
-    document.body.appendChild(badge);
-
-    if (navigator.vibrate) navigator.vibrate(50);
-  }
-
-  function hideUpdateBadge() {
-    _updateAvailable = false;
-    _updateVersion = null;
-
-    const badge = document.getElementById('heys-update-badge');
-    if (badge) {
-      badge.classList.add('heys-update-badge--hide');
-      setTimeout(() => badge.remove(), 300);
-    }
-  }
+  // Строка «мягкие уведомления»: бейдж «Обновить HEYS» и системный баннер
+  // «Доступно обновление» сняты вместе с их точками входа (installUpdate,
+  // smartVersionCheck, SW-сообщение UPDATE_AVAILABLE) — решение 2026-08-19:
+  // обновление применяется само, спрашивать разрешения нечем.
 
   // === Системный слой обновления (макет v4 2026-08-19) ===
   // Один визуальный язык на модалку, страховку и офлайн-баннер: линейные иконки
@@ -433,13 +399,11 @@
   }
 
   // dot — позиция кадра в живой последовательности Загрузка → Готово →
-  // Перезагрузка. Стадии checking/found/installing недостижимы в продукте
-  // (мёртвый код, удаляется отдельной задачей) и своих кадров в макете не имеют.
+  // Перезагрузка. Стадий checking/found/installing больше нет: строка
+  // «мягкие уведомления» их прямо запрещает, а своих кадров в макете они
+  // не имели. Неизвестная стадия падает на «Загрузка» — первый живой кадр.
   const UPDATE_STAGES = {
-    checking: { title: 'Проверка обновлений', subtitle: 'Подождите…', icon: 'download', spinner: true, dot: 0 },
-    found: { title: 'Найдено обновление!', subtitle: 'Загружаем новую версию…', icon: 'download', spinner: true, dot: 0 },
     downloading: { title: 'Загрузка', subtitle: 'Это займёт пару секунд…', icon: 'download', spinner: true, dot: 0 },
-    installing: { title: 'Установка', subtitle: 'Почти готово…', icon: 'download', spinner: true, dot: 1 },
     ready: { title: 'Готово!', subtitle: 'Приложение обновлено', icon: 'check', spinner: false, dot: 1, done: true },
     reloading: { title: 'Перезагрузка', subtitle: 'Применяем изменения…', icon: 'refresh', spinner: true, dot: 2 },
   };
@@ -447,7 +411,7 @@
   // Кольцо крутится только там, где ожидание действительно неопределённое.
   // «Готово!» — вспышка на 0.8 с, ничего не грузится, движения нет.
   function renderStageIcon(stage) {
-    const s = UPDATE_STAGES[stage] || UPDATE_STAGES.checking;
+    const s = UPDATE_STAGES[stage] || UPDATE_STAGES.downloading;
     const ring = s.spinner
       ? '<svg class="heys-update-modal__spinner" width="52" height="52" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
       + '<circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,0.16)" stroke-width="2.2"/>'
@@ -466,10 +430,10 @@
       .join('');
   }
 
-  function showUpdateModal(stage = 'checking') {
+  function showUpdateModal(stage = 'downloading') {
     document.getElementById('heys-update-modal')?.remove();
 
-    const key = UPDATE_STAGES[stage] ? stage : 'checking';
+    const key = UPDATE_STAGES[stage] ? stage : 'downloading';
     const s = UPDATE_STAGES[key];
     // Второй живой путь (controllerchange — новый worker активировался сам)
     // приходит одним кадром «Перезагрузка»: последовательности не было, поэтому
@@ -745,17 +709,6 @@
       .filter((el) => el instanceof HTMLElement && !el.hasAttribute('disabled'));
   }
 
-  function installUpdate() {
-    hideUpdateBadge();
-    showUpdateModal('found');
-    setTimeout(() => updateModalStage('downloading'), 800);
-    setTimeout(() => updateModalStage('installing'), 1600);
-    setTimeout(() => {
-      updateModalStage('reloading');
-      forceUpdateAndReload(false);
-    }, 2400);
-  }
-
   function getNetworkQuality() {
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     if (!connection) return { type: 'unknown', quality: 'good' };
@@ -774,24 +727,6 @@
     return { type: effectiveType || 'unknown', downlink, rtt, quality, saveData: connection.saveData };
   }
 
-  async function smartVersionCheck() {
-    const network = getNetworkQuality();
-
-    if (network.quality === 'poor' || network.saveData) {
-      return;
-    }
-
-    try {
-      const hasUpdate = await checkServerVersion(true);
-
-      if (hasUpdate) {
-        showUpdateBadge(_updateVersion);
-      }
-    } catch (e) {
-      return;
-    }
-  }
-
   async function checkServerVersion(silent = true) {
     try {
       const cacheBust = Date.now();
@@ -806,6 +741,7 @@
       const currentVersion = getAppVersion();
 
       if (data.version && isNewerVersion(data.version, currentVersion)) {
+        _updateAvailable = true;
         _updateVersion = data.version;
 
         const attempt = JSON.parse(localStorage.getItem(UPDATE_ATTEMPT_KEY) || '{}');
@@ -834,9 +770,11 @@
         }
         setUpdateLock();
 
-        showUpdateModal('found');
-        setTimeout(() => updateModalStage('downloading'), 1200);
-        setTimeout(() => updateModalStage('installing'), 2400);
+        // Строка «мягкие уведомления»: кадров «Найдено обновление» и
+        // «Установка» больше нет. Этот путь (возврат после долгого простоя)
+        // показывает те же кадры, что и живой SW-цикл: Загрузка → Перезагрузка.
+        // «Готово!» здесь не рисуем — воркер о готовности не сообщал.
+        showUpdateModal('downloading');
         setTimeout(() => {
           updateModalStage('reloading');
           forceUpdateAndReload(false);
@@ -861,12 +799,15 @@
     }
   }
 
-  function createSystemBanner({ id, className, text, actions, icon }) {
+  function createSystemBanner({ id, className, role, text, icon }) {
     if (!document?.body || document.getElementById(id)) return;
 
     const banner = document.createElement('div');
     banner.id = id;
     banner.className = className;
+    // Строка «доступность»: роль передаётся вызовом и должна доехать до узла —
+    // без этого офлайн-баннер был для диктора обычным <div>.
+    if (role) banner.setAttribute('role', role);
 
     if (icon) {
       const iconEl = document.createElement('span');
@@ -881,50 +822,7 @@
     textEl.textContent = text;
     banner.appendChild(textEl);
 
-    if (Array.isArray(actions) && actions.length > 0) {
-      const actionsEl = document.createElement('div');
-      actionsEl.className = 'heys-system-banner__actions';
-      actions.forEach((action) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = action.className;
-        btn.textContent = action.label;
-        btn.addEventListener('click', action.onClick);
-        actionsEl.appendChild(btn);
-      });
-      banner.appendChild(actionsEl);
-    }
-
     document.body.appendChild(banner);
-  }
-
-  function showUpdateNotification() {
-    createSystemBanner({
-      id: UPDATE_BANNER_ID,
-      className: 'heys-system-banner heys-system-banner--update',
-      text: 'Доступно обновление приложения',
-      actions: [
-        {
-          label: '🔄 Обновить',
-          className: 'heys-system-banner__btn heys-system-banner__btn--primary',
-          onClick: () => {
-            triggerSkipWaiting({
-              fallbackMs: 5000,
-              showModal: true,
-              source: 'update-banner',
-            });
-          }
-        },
-        {
-          label: '✕',
-          className: 'heys-system-banner__btn heys-system-banner__btn--ghost',
-          onClick: () => {
-            const banner = document.getElementById(UPDATE_BANNER_ID);
-            if (banner) banner.remove();
-          }
-        }
-      ]
-    });
   }
 
   function showOfflineNotification() {
@@ -936,7 +834,6 @@
       role: 'status',
       icon: 'wifiOff',
       text: 'Офлайн режим — данные сохраняются локально',
-      actions: []
     });
   }
 
@@ -1009,11 +906,9 @@
         if (!t) return;
 
         if (t === 'UPDATE_AVAILABLE') {
-          deferSwPortWork(() => {
-            console.log('[SW] 🆕 Background update detected:', event.data.version);
-            showUpdateBadge(event.data.version);
-            showUpdateNotification();
-          });
+          // Строка «мягкие уведомления»: сообщение только логируем — бейдж и
+          // баннер сняты, а обновление приезжает своим SW-циклом (updatefound).
+          console.log('[SW] 🆕 Background update detected:', event.data.version);
           return;
         }
 
@@ -1247,7 +1142,14 @@
               transitionSwUpdateState(SW_UPDATE_STATES.READY, 'sw-installed');
               clearTimeout(swUpdateTimeout); // Отменяем fallback
               const finishUpdate = () => {
-                showUpdateModal('ready');
+                // Строка «высота карточки»: стадии сменяются на месте.
+                // showUpdateModal удаляет узел и собирает карточку заново —
+                // на живом пути «Загрузка → Готово!» это давало прыжок.
+                // Пересоздаём только если своей карточки нет (показ был
+                // отложен открытой формой) или на экране страховка.
+                const open = document.getElementById('heys-update-modal');
+                if (open?.dataset.updateDialog === 'modal') updateModalStage('ready');
+                else showUpdateModal('ready');
                 setTimeout(() => {
                   updateModalStage('reloading');
                   forceUpdateAndReload(false);
@@ -3355,15 +3257,11 @@
     runUpdateRecoveryCheck: runUpdateRecoveryCheck,
     getSwUpdateState: getSwUpdateState,
     getSwUpdateStateLog: getSwUpdateStateLog,
-    showUpdateBadge: showUpdateBadge,
-    hideUpdateBadge: hideUpdateBadge,
     showUpdateModal: showUpdateModal,
     updateModalStage: updateModalStage,
     hideUpdateModal: hideUpdateModal,
     showManualRefreshPrompt: showManualRefreshPrompt,
-    installUpdate: installUpdate,
     getNetworkQuality: getNetworkQuality,
-    smartVersionCheck: smartVersionCheck,
     checkServerVersion: checkServerVersion,
     getUpdateState: () => ({ available: _updateAvailable, version: _updateVersion }),
 
@@ -3384,7 +3282,6 @@
   window.isUpdateLocked = window.isUpdateLocked || isUpdateLocked;
   window.setUpdateLock = window.setUpdateLock || setUpdateLock;
   window.clearUpdateLock = window.clearUpdateLock || clearUpdateLock;
-  window.showUpdateBadge = window.showUpdateBadge || showUpdateBadge;
   window.hideUpdateModal = window.hideUpdateModal || hideUpdateModal;
   window.showUpdateModal = window.showUpdateModal || showUpdateModal;
   window.updateModalStage = window.updateModalStage || updateModalStage;

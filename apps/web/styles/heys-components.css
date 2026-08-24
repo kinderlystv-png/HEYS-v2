@@ -4620,7 +4620,9 @@ body.tour-active .ios-pwa-banner {
   color: #9ca3af;
 }
 
-/* === System banners (offline/update) === */
+/* === System banner (офлайн) ===
+   Строка «мягкие уведомления»: баннера обновления в v4 нет — его позиция,
+   кнопки действий и зелёная «Обновить» сняты вместе с showUpdateNotification. */
 .heys-system-banner {
   position: fixed;
   z-index: 10050;
@@ -4634,12 +4636,6 @@ body.tour-active .ios-pwa-banner {
   font-size: 13px;
   font-weight: 500;
   box-shadow: 0 12px 30px -20px rgba(15, 23, 42, 0.55);
-}
-
-.heys-system-banner--update {
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
 }
 
 /* Офлайн-баннер говорит на языке системного слоя обновления: тёплый тёмный
@@ -4667,35 +4663,6 @@ body.tour-active .ios-pwa-banner {
 
 .heys-system-banner__text {
   line-height: 1.4;
-}
-
-.heys-system-banner__actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.heys-system-banner__btn {
-  border: none;
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.heys-system-banner__btn--primary {
-  background: #10b981;
-  color: var(--v4-bg, #ffffff);
-}
-
-.heys-system-banner__btn--primary:active {
-  transform: scale(0.98);
-}
-
-.heys-system-banner__btn--ghost {
-  background: transparent;
-  color: var(--v4-line, #e5e7eb);
 }
 
 /* Строка «палитра»: системный слой живёт вне четырёх наборов — один тёплый
@@ -5840,86 +5807,6 @@ body.tour-active .ios-pwa-banner {
 [data-theme$="dark"] .onboarding-medal__tooltip {
   background: rgba(2, 6, 23, 0.95);
   color: #e2e8f0;
-}
-
-/* === Update badge === */
-.heys-update-badge {
-  position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 12px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 99998;
-  animation: heys-update-badge-slide 0.4s ease-out;
-}
-
-.heys-update-badge--hide {
-  opacity: 0;
-  transform: translate(-50%, -50px);
-  transition: all 0.3s ease;
-}
-
-.heys-update-badge__btn {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: var(--v4-bg, #ffffff);
-  border: none;
-  border-radius: 999px;
-  padding: 10px 20px;
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-  animation: heys-update-badge-pulse 2s ease-in-out infinite;
-  transition: all 0.2s ease;
-}
-
-@media (hover: hover) {
-  .heys-update-badge__btn:hover {
-  transform: scale(1.02);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-}
-}
-
-.heys-update-badge__btn:active {
-  transform: scale(0.98);
-}
-
-.heys-update-badge__emoji {
-  font-size: 16px;
-}
-
-.heys-update-badge__version {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 2px 8px;
-  border-radius: 20px;
-  font-size: 11px;
-}
-
-@keyframes heys-update-badge-pulse {
-
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
-  }
-
-  50% {
-    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
-  }
-}
-
-@keyframes heys-update-badge-slide {
-  from {
-    transform: translate(-50%, -100px);
-    opacity: 0;
-  }
-
-  to {
-    transform: translate(-50%, 0);
-    opacity: 1;
-  }
 }
 
 /* === Update modal + страховка (системный тёмный слой, макет v4 2026-08-19) ===
