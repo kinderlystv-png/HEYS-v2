@@ -3422,11 +3422,11 @@
 
   // ========== CONFETTI ==========
 
-  function celebrate(payload = null) {
-    if (_isLoadingPhase) return;
-    window.dispatchEvent(new CustomEvent('heysCelebrate', {
-      detail: payload || undefined
-    }));
+  // Строка «уменьшенное движение» канваса gamification.v4: празднований и
+  // вспышек в продукте нет и без настройки. Единственная точка запуска конфетти
+  // оставлена как no-op — вызовы из дня и движка ничего не показывают.
+  function celebrate() {
+    return;
   }
 
   // ========== STREAK SHIELD ==========

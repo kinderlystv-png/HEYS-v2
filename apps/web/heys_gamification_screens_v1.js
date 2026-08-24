@@ -12,7 +12,8 @@
         const TAB_LEVELS = 'levels';
 
         const STREAK_CORRIDOR_HINT = 'Держите калории в коридоре — серия продолжится';
-        const FORGIVEN_HINT = 'Вчера пропуск — серия сохранена, второй пропуск её прервёт';
+        // Строка «строка состояния»: дословный текст контракта.
+        const FORGIVEN_HINT = 'Вчера пропуск — серия сохранена, второй её прервёт';
         const XP_FOOTNOTE = 'работают 17 из 17';
 
         // Display-only mirror of LEVEL_THRESHOLDS in heys_gamification_v1.js (ladder labels)
@@ -31,14 +32,6 @@
             levels: 'Уровни',
             habits: 'Привычки',
             metabolic: 'Метаболизм'
-        };
-
-        const RARITY_LABELS = {
-            common: 'обычное',
-            rare: 'редкое',
-            epic: 'эпическое',
-            legendary: 'легендарное',
-            mythic: 'мифическое'
         };
 
         const XP_TABLE_ORDER = [
@@ -72,6 +65,25 @@
         function formatXp(n) {
             const v = Number(n) || 0;
             return v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
+        }
+
+        function pluralDays(n) {
+            const abs = Math.abs(Number(n) || 0) % 100;
+            const tail = abs % 10;
+            if (abs > 10 && abs < 20) return 'дней';
+            if (tail > 1 && tail < 5) return 'дня';
+            if (tail === 1) return 'день';
+            return 'дней';
+        }
+
+        // Строка «вид ряда дней»: правая подпись — сколько дней до ближайшей
+        // награды за серию. Пороги — streak-достижения каталога (1/2/3/5/7).
+        const STREAK_REWARD_STEPS = [1, 2, 3, 5, 7];
+
+        function streakRewardCaption(streakCount) {
+            const next = STREAK_REWARD_STEPS.find((step) => step > streakCount);
+            if (!next) return '';
+            return `до награды ${next - streakCount}`;
         }
 
         function isFirstDayBranch() {
@@ -148,6 +160,29 @@
             return [...opened, ...locked];
         }
 
+        /**
+         * Строка «состав группы»: показываются все открытые и два ближайших
+         * закрытых; дальние закрытые — по тапу на группу. Порядок уже задан
+         * orderAchievements: сначала открытые, потом закрытые по остатку.
+         */
+        const LOCKED_VISIBLE = 2;
+
+        function selectGroupAchievements(orderedIds, achievementsById, expanded) {
+            if (expanded) return orderedIds;
+            const out = [];
+            let lockedShown = 0;
+            orderedIds.forEach((id) => {
+                const ach = achievementsById[id];
+                const isOpen = !!(ach && ach.unlocked) || !!HEYS.game?.isAchievementUnlocked?.(id);
+                if (isOpen) { out.push(id); return; }
+                if (lockedShown < LOCKED_VISIBLE) {
+                    out.push(id);
+                    lockedShown += 1;
+                }
+            });
+            return out;
+        }
+
         function remainingSort(list) {
             return [...list].sort((a, b) => remainingOf(a) - remainingOf(b));
         }
@@ -182,21 +217,44 @@
             return { unlocked, total };
         }
 
+        function formatMult(v) {
+            return String(v).replace('.', ',');
+        }
+
+        // Ступени множителя серии — зеркало getXPMultiplier в heys_gamification_v1.js.
+        const STREAK_MULT_STEPS = [
+            { streak: 3, multiplier: 2 },
+            { streak: 7, multiplier: 2.5 },
+            { streak: 14, multiplier: 3 }
+        ];
+
         function buildStreakMultiplierReason(streak, multiplier) {
             if (multiplier <= 1) return '';
-            if (streak >= 14) return `серия ×${multiplier}`;
-            if (streak >= 7) return `серия ×${multiplier}`;
-            if (streak >= 3) return `серия ×${multiplier}`;
-            return `серия ×${multiplier}`;
+            return `серия ×${formatMult(multiplier)}`;
         }
 
         function buildDailyMultiplierReason(info) {
             if (!info || info.multiplier <= 1) return '';
             const actions = info.actions || 0;
-            const next = info.nextThreshold != null && info.nextMultiplier != null
-                ? ` через ${Math.max(0, info.nextThreshold - actions)} действ.`
-                : '';
-            return `${actions} действий ×${info.multiplier}${next}`;
+            return `${actions} действий ×${formatMult(info.multiplier)}`;
+        }
+
+        /**
+         * Строка «множитель»: кроме значения и причины строка обязана называть,
+         * что даст следующая ступень — по обеим осям произведения.
+         */
+        function buildMultiplierNextHint(streak, info) {
+            const parts = [];
+            const nextStreak = STREAK_MULT_STEPS.find((s) => s.streak > streak);
+            if (nextStreak) {
+                const days = nextStreak.streak - streak;
+                parts.push(`ещё ${days} ${pluralDays(days)} серии — ×${formatMult(nextStreak.multiplier)}`);
+            }
+            if (info && info.nextThreshold != null && info.nextMultiplier != null) {
+                const left = Math.max(0, info.nextThreshold - (info.actions || 0));
+                parts.push(`ещё ${left} действ. за день — ×${formatMult(info.nextMultiplier)}`);
+            }
+            return parts.join(' · ');
         }
 
         function xpRowStatus(used, max) {
@@ -235,19 +293,35 @@
             const bars = [];
             for (let i = 0; i < barCount; i++) {
                 let cls = 'game-v4-sheet__streak-bar';
-                if (i < streakCount) cls += ' is-earned';
-                else if (yesterdayForgiven && i === streakCount) cls += ' is-forgiven';
+                // Строка «доступность»: у каждого из семи сегментов своя подпись словом.
+                let label = 'впереди';
+                if (i < streakCount) { cls += ' is-earned'; label = 'заработан'; }
+                else if (yesterdayForgiven && i === streakCount) { cls += ' is-forgiven'; label = 'прощён'; }
                 else if (i === streakCount + (yesterdayForgiven ? 1 : 0)) cls += ' is-today';
-                bars.push(React.createElement('span', { key: i, className: cls }));
+                bars.push(React.createElement('span', {
+                    key: i,
+                    className: cls,
+                    role: 'listitem',
+                    'aria-label': label
+                }));
             }
             const captionLeft = yesterdayForgiven && streakCount > 0
                 ? `${streakCount} заработанных · вчера прощено`
                 : streakCount > 0
                     ? `${streakCount} заработанных`
                     : '';
+            // Строка «вид ряда дней»: слева состав серии, справа — сколько до награды.
+            const captionRight = streakRewardCaption(streakCount);
             return React.createElement('div', { className: 'game-v4-sheet__streak-bars' },
-                React.createElement('div', { className: 'game-v4-sheet__streak-bar-row' }, bars),
-                captionLeft && React.createElement('div', { className: 'game-v4-sheet__streak-bar-caption' }, captionLeft)
+                React.createElement('div', {
+                    className: 'game-v4-sheet__streak-bar-row',
+                    role: 'list',
+                    'aria-label': 'Ряд дней серии'
+                }, bars),
+                (captionLeft || captionRight) && React.createElement('div', { className: 'game-v4-sheet__streak-bar-caption' },
+                    React.createElement('span', null, captionLeft),
+                    React.createElement('span', null, captionRight)
+                )
             );
         }
 
@@ -282,28 +356,8 @@
         function renderOnboardingAchievements(achievementsById) {
             const cat = (HEYS.game?.getAchievementCategories?.() || []).find((c) => c.id === 'onboarding');
             if (!cat) return null;
-            const { unlocked, total } = countCategoryStats(cat, achievementsById);
             return React.createElement(React.Fragment, null,
-                React.createElement('div', { className: 'game-v4-sheet__tier' },
-                    `Первые шаги · ${unlocked} из ${total}`
-                ),
-                React.createElement('div', { className: 'game-v4-sheet__list-card' },
-                    (cat.achievements || []).map((achId) => {
-                        const ach = achievementsById[achId] || HEYS.game?.ACHIEVEMENTS?.[achId];
-                        if (!ach) return null;
-                        const unlockedAch = ach.unlocked || HEYS.game?.isAchievementUnlocked?.(achId);
-                        return React.createElement('div', {
-                            key: achId,
-                            className: `game-v4-sheet__list-row${unlockedAch ? ' is-unlocked' : ' is-locked'}`
-                        },
-                            React.createElement('span', { className: 'game-v4-sheet__list-icon' }, unlockedAch ? '✓' : '🔒'),
-                            React.createElement('div', { className: 'game-v4-sheet__list-body' },
-                                React.createElement('div', { className: 'game-v4-sheet__list-title' }, ach.name),
-                                React.createElement('div', { className: 'game-v4-sheet__list-sub' }, ach.desc)
-                            )
-                        );
-                    })
-                ),
+                React.createElement(AchievementGroup, { cat, achievementsById, label: 'Первые шаги' }),
                 React.createElement('div', { className: 'game-v4-sheet__footnote' },
                     'Остальные группы появятся, когда в них будет что показать.'
                 )
@@ -329,30 +383,63 @@
                 return map;
             }, [achievements]);
 
-            if (firstDay && firstMission) {
-                const pct = missionProgressPct(firstMission);
-                return React.createElement('div', { className: 'game-v4-sheet__panel' },
-                    React.createElement('div', { className: 'game-v4-sheet__hero game-v4-sheet__hero--cream' },
-                        React.createElement('div', { className: 'game-v4-sheet__eyebrow' }, 'Первая миссия'),
-                        React.createElement('div', { className: 'game-v4-sheet__hero-mission-title' }, firstMission.name || firstMission.id),
-                        missionSubtitle(firstMission) && React.createElement('div', { className: 'game-v4-sheet__hero-muted' },
-                            `${missionSubtitle(firstMission)} · +${firstMission.xp || 0} XP`
-                        ),
-                        React.createElement('div', { className: 'game-v4-sheet__bar game-v4-sheet__bar--hero' },
-                            React.createElement('div', {
-                                className: 'game-v4-sheet__bar-fill',
-                                style: { width: `${pct}%` }
-                            })
-                        ),
-                        React.createElement('div', { className: 'game-v4-sheet__card-meta' },
-                            firstMission.target > 1 && !firstMission.completed
-                                ? `${firstMission.progress || 0} из ${firstMission.target}`
-                                : `${pct} %`
-                        )
+            // Строка «правило»: герой зависит от стажа, а не от того, первый это
+            // день или сорванная серия давнего. Серия 0 — героем первая миссия дня,
+            // серия > 0 — героем серия. Раскладка остального экрана по-прежнему
+            // выбирается веткой первого дня (строка «первый день»).
+            const heroMission = streakCount > 0 ? null : firstMission;
+            const restMissions = heroMission ? missions.slice(1) : missions;
+            const showForgiveness = streakDetails.yesterdayForgiven && streakCount > 0;
+
+            let hero;
+            if (heroMission) {
+                const pct = missionProgressPct(heroMission);
+                hero = React.createElement('div', { className: 'game-v4-sheet__hero game-v4-sheet__hero--cream' },
+                    React.createElement('div', { className: 'game-v4-sheet__eyebrow' }, 'Первая миссия'),
+                    React.createElement('div', { className: 'game-v4-sheet__hero-mission-title' }, heroMission.name || heroMission.id),
+                    missionSubtitle(heroMission) && React.createElement('div', { className: 'game-v4-sheet__hero-muted' },
+                        `${missionSubtitle(heroMission)} · +${heroMission.xp || 0} XP`
                     ),
-                    missions.length > 1 && React.createElement(React.Fragment, null,
+                    React.createElement('div', { className: 'game-v4-sheet__bar game-v4-sheet__bar--hero' },
+                        React.createElement('div', {
+                            className: 'game-v4-sheet__bar-fill',
+                            style: { width: `${pct}%` }
+                        })
+                    ),
+                    React.createElement('div', { className: 'game-v4-sheet__card-meta' },
+                        heroMission.target > 1 && !heroMission.completed
+                            ? `${heroMission.progress || 0} из ${heroMission.target}`
+                            : `${pct} %`
+                    )
+                );
+            } else {
+                hero = React.createElement('div', { className: 'game-v4-sheet__hero game-v4-sheet__hero--cream' },
+                    React.createElement('div', { className: 'game-v4-sheet__eyebrow' }, 'Серия'),
+                    // Строка «доступность»: герой озвучивается одной фразой с состоянием словом.
+                    React.createElement('div', {
+                        className: 'game-v4-sheet__hero-metric',
+                        role: 'img',
+                        'aria-label': `серия ${streakCount} ${pluralDays(streakCount)}${showForgiveness ? ', вчера прощено' : ''}`
+                    },
+                        React.createElement('span', { className: 'game-v4-sheet__hero-num' }, streakCount),
+                        React.createElement('span', { className: 'game-v4-sheet__hero-unit' }, 'дней')
+                    ),
+                    // Строка «строка состояния»: в обычном случае «5 дней подряд»,
+                    // при израсходованном запасе — текст про прощённый день.
+                    (showForgiveness || streakCount > 0) && React.createElement('div', { className: 'game-v4-sheet__hero-accent' },
+                        showForgiveness ? FORGIVEN_HINT : `${streakCount} ${pluralDays(streakCount)} подряд`
+                    ),
+                    React.createElement('div', { className: 'game-v4-sheet__hero-muted' }, STREAK_CORRIDOR_HINT),
+                    streakCount > 0 && renderStreakBars(streakCount, streakDetails.yesterdayForgiven)
+                );
+            }
+
+            if (firstDay) {
+                return React.createElement('div', { className: 'game-v4-sheet__panel' },
+                    hero,
+                    restMissions.length > 0 && React.createElement(React.Fragment, null,
                         React.createElement('div', { className: 'game-v4-sheet__tier' }, 'Ещё сегодня'),
-                        missions.slice(1).map((m, i) => renderMissionCard(m, i + 1))
+                        restMissions.map((m, i) => renderMissionCard(m, i + 1))
                     ),
                     renderOnboardingAchievements(achievementsById),
                     React.createElement('div', { className: 'game-v4-sheet__level-line' },
@@ -364,22 +451,11 @@
                 );
             }
 
-            const showForgiveness = streakDetails.yesterdayForgiven && streakCount > 0;
-
             return React.createElement('div', { className: 'game-v4-sheet__panel' },
-                React.createElement('div', { className: 'game-v4-sheet__hero game-v4-sheet__hero--cream' },
-                    React.createElement('div', { className: 'game-v4-sheet__eyebrow' }, 'Серия'),
-                    React.createElement('div', { className: 'game-v4-sheet__hero-metric' },
-                        React.createElement('span', { className: 'game-v4-sheet__hero-num' }, streakCount),
-                        React.createElement('span', { className: 'game-v4-sheet__hero-unit' }, 'дней')
-                    ),
-                    showForgiveness && React.createElement('div', { className: 'game-v4-sheet__hero-accent' }, FORGIVEN_HINT),
-                    React.createElement('div', { className: 'game-v4-sheet__hero-muted' }, STREAK_CORRIDOR_HINT),
-                    streakCount > 0 && renderStreakBars(streakCount, streakDetails.yesterdayForgiven)
-                ),
-                missions.length > 0 && React.createElement(React.Fragment, null,
-                    React.createElement('div', { className: 'game-v4-sheet__tier' }, 'Миссии дня'),
-                    missions.map((m, i) => renderMissionCard(m, i))
+                hero,
+                restMissions.length > 0 && React.createElement(React.Fragment, null,
+                    React.createElement('div', { className: 'game-v4-sheet__tier' }, heroMission ? 'Ещё сегодня' : 'Миссии дня'),
+                    restMissions.map((m, i) => renderMissionCard(m, i))
                 ),
                 React.createElement('div', { className: 'game-v4-sheet__tier' }, 'Уровень'),
                 renderLevelFloor(stats, progress, isMax)
@@ -409,6 +485,70 @@
                 target > 0 && React.createElement('div', { className: 'game-v4-sheet__streak-bar-row' }, bars),
                 React.createElement('div', { className: 'game-v4-sheet__card-meta game-v4-sheet__card-meta--ok' },
                     target > 1 ? remainText : `${current} из ${target}`
+                )
+            );
+        }
+
+        /**
+         * Строка «вид карточки достижения»: карточка --c1, шапка «название +
+         * награда», под шапкой условие. Замок и приглушённый текст закрытого —
+         * строка «закрытое».
+         */
+        function renderAchievementCard(achId, ach, unlockedAch) {
+            const progress = ach.progress;
+            const progressLine = !unlockedAch && progress && progress.target > 1
+                ? ` · ${progress.current} из ${progress.target}`
+                : '';
+            return React.createElement('div', {
+                key: achId,
+                className: `game-v4-sheet__card game-v4-sheet__ach-card${unlockedAch ? ' is-unlocked' : ' is-locked'}`
+            },
+                React.createElement('div', { className: 'game-v4-sheet__card-head' },
+                    React.createElement('span', { className: 'game-v4-sheet__card-title' },
+                        React.createElement('span', {
+                            className: 'game-v4-sheet__ach-mark',
+                            'aria-hidden': 'true'
+                        }, unlockedAch ? '✓' : '🔒'),
+                        ach.name
+                    ),
+                    React.createElement('span', { className: 'game-v4-sheet__card-xp' }, `+${ach.xp || 0} XP`)
+                ),
+                React.createElement('div', { className: 'game-v4-sheet__card-sub' },
+                    `${ach.desc || ''}${progressLine}`
+                )
+            );
+        }
+
+        /**
+         * Группа достижений: заголовок + карточки. Строка «состав группы» —
+         * все открытые и два ближайших закрытых, дальние закрытые по тапу на
+         * заголовок группы.
+         */
+        function AchievementGroup({ cat, achievementsById, label }) {
+            const [expanded, setExpanded] = useState(false);
+            const { unlocked, total } = countCategoryStats(cat, achievementsById);
+            // Строка «порядок закрытых»: по остатку до выполнения, не по номеру
+            // в каталоге. Открытые идут первыми — они уже свершились.
+            const orderedIds = orderAchievements(cat, achievementsById);
+            const shownIds = selectGroupAchievements(orderedIds, achievementsById, expanded);
+            const restCount = orderedIds.length - shownIds.length;
+            const headText = `${label} · ${unlocked} из ${total}`;
+            return React.createElement(React.Fragment, null,
+                restCount > 0 || expanded
+                    ? React.createElement('button', {
+                        type: 'button',
+                        className: 'game-v4-sheet__tier game-v4-sheet__tier--tap',
+                        'aria-expanded': expanded,
+                        onClick: () => setExpanded((v) => !v)
+                    }, expanded ? headText : `${headText} · ещё ${restCount}`)
+                    : React.createElement('div', { className: 'game-v4-sheet__tier' }, headText),
+                React.createElement('div', { className: 'game-v4-sheet__ach-list' },
+                    shownIds.map((achId) => {
+                        const ach = achievementsById[achId] || HEYS.game?.ACHIEVEMENTS?.[achId];
+                        if (!ach) return null;
+                        const unlockedAch = ach.unlocked || HEYS.game?.isAchievementUnlocked?.(achId);
+                        return renderAchievementCard(achId, ach, unlockedAch);
+                    })
                 )
             );
         }
@@ -455,7 +595,12 @@
             return React.createElement('div', { className: 'game-v4-sheet__panel' },
                 !firstDay && React.createElement('div', { className: 'game-v4-sheet__hero game-v4-sheet__hero--cream' },
                     React.createElement('div', { className: 'game-v4-sheet__eyebrow' }, 'Открыто'),
-                    React.createElement('div', { className: 'game-v4-sheet__hero-metric' },
+                    // Строка «доступность»: герой — одна фраза, полоса — progressbar с «20 из 36».
+                    React.createElement('div', {
+                        className: 'game-v4-sheet__hero-metric',
+                        role: 'img',
+                        'aria-label': `открыто ${stats.unlockedCount} из ${stats.totalAchievements || 36}`
+                    },
                         React.createElement('span', { className: 'game-v4-sheet__hero-num game-v4-sheet__hero-num--md' },
                             stats.unlockedCount
                         ),
@@ -463,7 +608,14 @@
                             `из ${stats.totalAchievements || 36}`
                         )
                     ),
-                    React.createElement('div', { className: 'game-v4-sheet__bar game-v4-sheet__bar--thin' },
+                    React.createElement('div', {
+                        className: 'game-v4-sheet__bar game-v4-sheet__bar--thin',
+                        role: 'progressbar',
+                        'aria-valuemin': 0,
+                        'aria-valuemax': stats.totalAchievements || 36,
+                        'aria-valuenow': stats.unlockedCount || 0,
+                        'aria-valuetext': `${stats.unlockedCount || 0} из ${stats.totalAchievements || 36}`
+                    },
                         React.createElement('div', {
                             className: 'game-v4-sheet__bar-fill',
                             style: { width: `${openedPct}%` }
@@ -474,43 +626,16 @@
                     React.createElement('div', { className: 'game-v4-sheet__tier' }, 'Ближе всего'),
                     nearList.map((ach) => React.createElement('div', { key: ach.id }, renderNearAchievement(ach)))
                 ),
-                shownCategories.map((cat) => {
-                    const { unlocked, total } = countCategoryStats(cat, achievementsById);
-                    const catLabel = ACH_CAT_LABELS[cat.id] || cat.name;
-                    return React.createElement('div', { key: cat.id, className: 'game-v4-sheet__ach-cat' },
-                        React.createElement('div', { className: 'game-v4-sheet__tier' },
-                            `${catLabel} · ${unlocked} из ${total}`
-                        ),
-                        React.createElement('div', { className: 'game-v4-sheet__list-card' },
-                            // Строка «порядок закрытых»: по остатку до выполнения, не по
-                            // номеру в каталоге. Открытые идут первыми — они уже свершились.
-                            orderAchievements(cat, achievementsById).map((achId) => {
-                                const ach = achievementsById[achId] || HEYS.game?.ACHIEVEMENTS?.[achId];
-                                if (!ach) return null;
-                                const unlockedAch = ach.unlocked || HEYS.game?.isAchievementUnlocked?.(achId);
-                                const progress = ach.progress;
-                                const progressLine = !unlockedAch && progress && progress.target > 1
-                                    ? ` · ${progress.current} из ${progress.target}`
-                                    : '';
-                                return React.createElement('div', {
-                                    key: achId,
-                                    className: `game-v4-sheet__list-row${unlockedAch ? ' is-unlocked' : ' is-locked'}`
-                                },
-                                    React.createElement('span', { className: 'game-v4-sheet__list-icon' }, unlockedAch ? '✓' : '🔒'),
-                                    React.createElement('div', { className: 'game-v4-sheet__list-body' },
-                                        React.createElement('div', { className: 'game-v4-sheet__list-title' }, ach.name),
-                                        React.createElement('div', { className: 'game-v4-sheet__list-sub' },
-                                            `${ach.desc || ''}${progressLine}`
-                                        ),
-                                        React.createElement('div', { className: 'game-v4-sheet__ach-rarity' },
-                                            RARITY_LABELS[ach.rarity] || ach.rarity || ''
-                                        )
-                                    )
-                                );
-                            })
-                        )
-                    );
-                }),
+                shownCategories.map((cat) => React.createElement('div', {
+                    key: cat.id,
+                    className: 'game-v4-sheet__ach-cat'
+                },
+                    React.createElement(AchievementGroup, {
+                        cat,
+                        achievementsById,
+                        label: ACH_CAT_LABELS[cat.id] || cat.name
+                    })
+                )),
                 hiddenCount > 0 && React.createElement('button', {
                     type: 'button',
                     className: 'game-v4-sheet__more-groups',
@@ -539,6 +664,7 @@
             const combinedMult = Math.round(streakMult * dailyMult.multiplier * 10) / 10;
             const streakReason = buildStreakMultiplierReason(streak, streakMult);
             const dailyReason = buildDailyMultiplierReason(dailyMult);
+            const multNextHint = buildMultiplierNextHint(streak, dailyMult);
             const nextLevel = stats.level + 1;
             const xpToNext = isMax ? 0 : Math.max(0, progress.required - progress.current);
 
@@ -565,11 +691,23 @@
             return React.createElement('div', { className: 'game-v4-sheet__panel' },
                 React.createElement('div', { className: 'game-v4-sheet__hero game-v4-sheet__hero--cream' },
                     React.createElement('div', { className: 'game-v4-sheet__eyebrow' }, 'Уровень'),
-                    React.createElement('div', { className: 'game-v4-sheet__hero-metric' },
+                    // Строка «доступность»: герой озвучивается одной фразой.
+                    React.createElement('div', {
+                        className: 'game-v4-sheet__hero-metric',
+                        role: 'img',
+                        'aria-label': `уровень ${stats.level}${stats.title?.title ? `, ${stats.title.title}` : ''}`
+                    },
                         React.createElement('span', { className: 'game-v4-sheet__hero-num' }, stats.level),
                         React.createElement('span', { className: 'game-v4-sheet__hero-unit' }, stats.title?.title || '')
                     ),
-                    React.createElement('div', { className: 'game-v4-sheet__bar game-v4-sheet__bar--thin' },
+                    React.createElement('div', {
+                        className: 'game-v4-sheet__bar game-v4-sheet__bar--thin',
+                        role: 'progressbar',
+                        'aria-valuemin': 0,
+                        'aria-valuemax': 100,
+                        'aria-valuenow': isMax ? 100 : Math.round(progress.percent || 0),
+                        'aria-valuetext': isMax ? 'максимальный уровень' : `до ${nextLevel}-го ${formatXp(xpToNext)} XP`
+                    },
                         React.createElement('div', {
                             className: 'game-v4-sheet__bar-fill',
                             style: { width: `${isMax ? 100 : (progress.percent || 0)}%` }
@@ -587,9 +725,11 @@
                         const isCurrent = lvl === stats.level;
                         const isPast = lvl < stats.level;
                         const threshold = LEVEL_XP_THRESHOLDS[lvl - 1] ?? 0;
+                        // Строка «вид строки уровня в списке»: гаснут пройденные,
+                        // текущий — чернилами с весом 700, будущие в обычном тоне.
                         return React.createElement('div', {
                             key: lvl,
-                            className: `game-v4-sheet__ladder-row${isCurrent ? ' is-current' : ''}${!isPast && !isCurrent ? ' is-future' : ''}`
+                            className: `game-v4-sheet__ladder-row${isCurrent ? ' is-current' : ''}${isPast ? ' is-past' : ''}`
                         },
                             React.createElement('span', { className: 'game-v4-sheet__ladder-num' }, lvl),
                             React.createElement('span', { className: 'game-v4-sheet__ladder-title' },
@@ -599,12 +739,12 @@
                         );
                     })
                 ),
-                (streakReason || dailyReason || combinedMult > 1) && React.createElement(React.Fragment, null,
+                React.createElement(React.Fragment, null,
                     React.createElement('div', { className: 'game-v4-sheet__tier' }, 'Множитель'),
                     React.createElement('div', { className: 'game-v4-sheet__card game-v4-sheet__mult-card' },
                         React.createElement('div', { className: 'game-v4-sheet__card-head' },
                             React.createElement('span', { className: 'game-v4-sheet__card-title' },
-                                combinedMult > 1 ? `Сейчас ×${combinedMult}` : 'Сейчас ×1'
+                                `Сейчас ×${formatMult(combinedMult)}`
                             ),
                             (streakReason || dailyReason) && React.createElement('span', { className: 'game-v4-sheet__card-xp game-v4-sheet__card-xp--ok' },
                                 [streakReason, dailyReason].filter(Boolean).join(' · ')
@@ -612,6 +752,10 @@
                         ),
                         React.createElement('div', { className: 'game-v4-sheet__card-sub' },
                             'Множители серии и активности за день перемножаются — итоговая награда может быть выше номинала в таблице.'
+                        ),
+                        // Строка «множитель»: что даст следующая ступень.
+                        multNextHint && React.createElement('div', { className: 'game-v4-sheet__card-meta game-v4-sheet__card-meta--ok' },
+                            `Дальше: ${multNextHint}`
                         )
                     )
                 ),
