@@ -8795,6 +8795,38 @@
    */
   const QUICK_ACTION_ORDER = ['message', 'activity', 'hunger', 'meal'];
 
+  /**
+   * Строка «появление и исчезновение кнопки» (канвас settings-system):
+   * «при переходе через один включённый пункт кнопка меняет иконку и тон за
+   * 220 мс; при нуле — сжимается за 160 мс, при первом включённом вырастает
+   * за 220 мс с перелётом до 1,06». Те же 220/160, что у смены вида виджета
+   * (home-widgets, строка «смена») — одна пружина на весь продукт.
+   */
+  const QUICK_FAB_GROW_MS = 220;
+  const QUICK_FAB_SHRINK_MS = 160;
+  const QUICK_FAB_PHASE_CLASS = {
+    enter: ' is-entering',
+    leave: ' is-leaving',
+    swap: ' is-swapping',
+  };
+
+  /**
+   * Строка «уменьшенное движение»: появление и исчезновение кнопки при
+   * переходе через один и ноль включённых становятся мгновенной сменой
+   * состояния. Правило безусловно — animate-always его не перебивает.
+   */
+  function quickFabReducedMotion() {
+    const policy = HEYS.motion;
+    if (policy && typeof policy.prefersReducedMotion === 'function') {
+      return policy.prefersReducedMotion();
+    }
+    try {
+      return !!(global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (_e) {
+      return false;
+    }
+  }
+
   function readFabVisibility() {
     const api = HEYS.FabVisibility;
     return api && typeof api.read === 'function'
@@ -8887,8 +8919,12 @@
     // Строка «тайминги правки»: строка сжимается по высоте 160 мс, и только
     // потом уходит из списка — иначе соседи смыкаются рывком.
     const [hidingKey, setHidingKey] = useState(null);
+    // Строка «появление и исчезновение кнопки»: 'enter' | 'leave' | 'swap'.
+    const [fabPhase, setFabPhase] = useState(null);
     const wrapRef = useRef(null);
     const visibility = useFabVisibility();
+    // Прошлое состояние кнопки: первая отрисовка переходом не считается.
+    const fabPrevRef = useRef(null);
 
     const handlers = {
       meal: onAddMeal,
@@ -8901,6 +8937,15 @@
     const navKeys = QUICK_ACTION_ORDER.filter((key) => visibility[key] !== false);
     const waterOn = visibility.water !== false;
     const enabledCount = navKeys.length + (waterOn ? 1 : 0);
+    // Строка «включён один пункт»: стопки нет — кнопка становится действием и
+    // носит его иконку вместо «+». Навигационный пункт уводит одним тапом,
+    // вода раскрывает карточку с одними чипами.
+    const soleNavKey = !waterOn && navKeys.length === 1 ? navKeys[0] : null;
+    const soleWater = waterOn && !navKeys.length;
+    // Чем кнопка стала: собственное действие при одном включённом пункте или
+    // «плюс» при нескольких. Переход через эту границу — та самая смена иконки
+    // и тона из строки «появление и исчезновение кнопки».
+    const fabIdentity = soleNavKey || (soleWater ? 'water' : 'plus');
     // Порядок списка фиксирован кодом («набор действий»): чип возвращает пункт
     // на его место в этом порядке, а не в конец.
     const hiddenKeys = ['water', ...QUICK_ACTION_ORDER]
@@ -8995,8 +9040,52 @@
       setHideOrder((prev) => prev.filter((k) => k !== key));
     }, []);
 
-    // Строка «не включено ни одного»: кнопки в углу нет вовсе.
-    if (!enabledCount) return null;
+    /**
+     * Строка «появление и исчезновение кнопки» (канвас settings-system): при
+     * переходе через один включённый пункт кнопка меняет иконку и тон за
+     * 220 мс; при нуле — сжимается за 160 мс, при первом включённом вырастает
+     * за 220 мс с перелётом до 1,06. Это единственное движение, которое
+     * строка «когда применяется» оставляет после закрытия шторки настроек:
+     * перестройка стопки снята («снятый прогон»).
+     *
+     * Первая отрисовка не анимируется: кнопка уже стоит на экране, а
+     * контракт называет переходы, а не открытие вкладки.
+     *
+     * Строка «уменьшенное движение»: оба перехода становятся мгновенной
+     * сменой состояния. Флаг animate-always здесь не ставится, и отложенный
+     * размонтаж под системной настройкой не заводится — иначе кнопка висела
+     * бы 160 мс без анимации.
+     */
+    useEffect(() => {
+      const prev = fabPrevRef.current || { count: enabledCount, identity: fabIdentity };
+      fabPrevRef.current = { count: enabledCount, identity: fabIdentity };
+      if (prev.count === enabledCount && prev.identity === fabIdentity) return undefined;
+      if (quickFabReducedMotion()) {
+        setFabPhase(null);
+        return undefined;
+      }
+      let phase = null;
+      if (prev.count === 0 && enabledCount > 0) phase = 'enter';
+      else if (prev.count > 0 && enabledCount === 0) phase = 'leave';
+      else if (prev.identity !== fabIdentity) phase = 'swap';
+      if (!phase) return undefined;
+      setFabPhase(phase);
+      const timer = setTimeout(
+        () => setFabPhase(null),
+        phase === 'leave' ? QUICK_FAB_SHRINK_MS : QUICK_FAB_GROW_MS,
+      );
+      return () => clearTimeout(timer);
+    }, [enabledCount, fabIdentity]);
+
+    // Пункты кончились, пока карточка была раскрыта: показывать нечего.
+    useEffect(() => {
+      if (enabledCount) return;
+      closeSheet();
+    }, [enabledCount, closeSheet]);
+
+    // Строка «не включено ни одного»: кнопки в углу нет вовсе. Уходящая
+    // кнопка доживает на экране ровно своё сжатие.
+    if (!enabledCount && fabPhase !== 'leave') return null;
 
     const closeAnd = (fn) => (...args) => {
       closeSheet();
@@ -9037,12 +9126,6 @@
         }, React.createElement('path', { d: 'M6 12h12' }))
       );
     };
-
-    // Строка «включён один пункт»: стопки нет — кнопка становится действием и
-    // носит его иконку вместо «+». Навигационный пункт уводит одним тапом,
-    // вода раскрывает карточку с одними чипами.
-    const soleNavKey = !waterOn && navKeys.length === 1 ? navKeys[0] : null;
-    const soleWater = waterOn && !navKeys.length;
 
     const renderNavRow = (key) => React.createElement('div', {
       key,
@@ -9161,6 +9244,13 @@
     return React.createElement('div', {
       ref: wrapRef,
       className: 'widgets-quick-fab-wrap' + (open ? ' is-open' : '')
+        // Строка «появление и исчезновение кнопки»: 220 мс с перелётом до
+        // 1,06 на первом включённом, 160 мс сжатия на нуле, 220 мс на смену
+        // иконки и тона у одиночной кнопки.
+        + (QUICK_FAB_PHASE_CLASS[fabPhase] || ''),
+      // Уходящая кнопка — уже картинка: список пуст, нажимать нечего, и в
+      // обходе с клавиатуры и для скринридера её быть не должно.
+      'aria-hidden': fabPhase === 'leave' ? 'true' : undefined
     },
       // Строка «уменьшенное движение»: правило действует безусловно — перебить
       // его флагом animate-always нельзя. Затемнение остаётся, блюр и выезд
@@ -9190,6 +9280,7 @@
           + (soleWater ? ' widgets-quick-fab--water' : '')
           + (open ? ' is-open' : ''),
         onClick: fabAction ? () => fabAction() : () => (open ? closeSheet() : setOpen(true)),
+        tabIndex: fabPhase === 'leave' ? -1 : undefined,
         'aria-expanded': fabAction ? undefined : (open ? 'true' : 'false'),
         'aria-label': fabAction
           ? labels[soleNavKey]
@@ -11069,6 +11160,35 @@
   HEYS.Widgets.v4PaceState = v4PaceState;
   HEYS.Widgets.SettingsModal = SettingsModal;
   HEYS.Widgets.RelapseRiskDetailsModal = RelapseRiskDetailsModal;
+  /**
+   * Строка «значение справа» (канвас settings-system): в строке шторки
+   * настроек стоит текущее значение — «палитра тремя кружками, „Главная“,
+   * число, „6 из 7 блоков“». Счёт блоков живёт здесь, рядом с раскладкой и
+   * каталогом: шторка про виджеты ничего не знает и знать не должна.
+   *
+   * «Блок» — плитка Главной. По строке home-widgets «один экземпляр» один
+   * виджет даёт ровно одну плитку, поэтому видимое считается по типам.
+   * Знаменатель — каталог доступных типов плюс те, что уже стоят на экране:
+   * снятый с каталога, но ещё стоящий блок человек видит, и вычитать его из
+   * знаменателя значило бы показать «7 из 6».
+   *
+   * Саму строку шторки рисует heys_app_shell_v1.js — там её ещё нет.
+   */
+  HEYS.Widgets.getVisibleBlocksSummary = function getVisibleBlocksSummary() {
+    const placed = HEYS.Widgets.state?.getWidgets?.() || [];
+    const catalog = HEYS.Widgets.registry?.getAvailableTypes?.() || [];
+    const visibleTypes = new Set(
+      placed.map((widget) => widget && widget.type).filter(Boolean),
+    );
+    const allTypes = new Set(visibleTypes);
+    catalog.forEach((type) => {
+      const id = type && (type.id || type.type);
+      if (id) allTypes.add(id);
+    });
+    const visible = visibleTypes.size;
+    const total = allTypes.size;
+    return { visible, total, text: `${visible} из ${total} блоков` };
+  };
 
   if (widgetsDebugEnabled() && widgetsOnce('widgets_ui_loaded')) {
     trackWidgetIssue('widgets_ui_loaded', { version: '1.1.0' });

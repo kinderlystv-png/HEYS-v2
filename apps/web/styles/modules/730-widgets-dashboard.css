@@ -3212,6 +3212,74 @@ body:has(.page-reports) .hdr::after {
     0 2px 4px rgba(80, 50, 20, 0.14),
     0 10px 22px rgba(120, 60, 20, 0.28);
   cursor: pointer;
+  /* Строка «появление и исчезновение кнопки» (settings-system): «при переходе
+     через один включённый пункт кнопка меняет иконку и тон за 220 мс».
+     Тон — это заливка, знак и тень: у одиночной воды свой набор
+     (.widgets-quick-fab--water), и подмена без перехода читалась бы сбоем. */
+  transition:
+    background-color 220ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    color 220ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* «при первом включённом вырастает за 220 мс с перелётом до 1,06» — та же
+   пружина, что у смены вида виджета (home-widgets, строка «смена»). */
+.widgets-quick-fab-wrap.is-entering .widgets-quick-fab {
+  animation: widgets-quick-fab-grow 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* «при нуле — сжимается за 160 мс». Уходящая кнопка уже ничего не открывает:
+   список пуст, и нажатие по ней было бы нажатием в никуда. */
+.widgets-quick-fab-wrap.is-leaving {
+  pointer-events: none;
+}
+
+.widgets-quick-fab-wrap.is-leaving .widgets-quick-fab {
+  animation: widgets-quick-fab-shrink 160ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+/* «кнопка меняет иконку … за 220 мс»: знак проявляется, а не подменяется. */
+.widgets-quick-fab-wrap.is-swapping .widgets-quick-fab__glyph {
+  animation: widgets-quick-fab-glyph-in 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes widgets-quick-fab-grow {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+
+  58% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes widgets-quick-fab-shrink {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+}
+
+@keyframes widgets-quick-fab-glyph-in {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }
 
 .widgets-quick-fab__glyph {

@@ -452,53 +452,48 @@ html[data-theme-id="blue-dark"] .water-review {
   justify-content: flex-end;
 }
 
-.fab-group--layout-animate {
-  gap: 9px;
-  --fab-slot-anim-ms: 400ms;
-  --fab-slot-stagger-ms: 52ms;
-  --fab-slot-stagger-max: 4;
-  --fab-slot-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --fab-slot-ease-pop: cubic-bezier(0.34, 1.18, 0.64, 1);
-}
+/* Строки контракта settings-system «когда применяется» и «снятый прогон».
+ *
+ * Прогон перестройки стопки — появление 400 мс с перелётом до 1,045, стаггер
+ * 52 мс сверху вниз и обратно — снят пакетом дизайна 24 августа вместе с самой
+ * стопкой: «Анимации перестройки на экране нет — кнопка одна, меняется только
+ * содержимое закрытой карточки». Кадр прогона остался в канвасе с пометкой
+ * data-demo="protocol", то есть как объяснение, почему анимации нет, а не как
+ * задание. Вердикт по строке — «—», реализации не требует.
+ *
+ * Легаси-столбик из пяти кнопок на «Питании», «Активе» и «Отчётах» пока живёт
+ * (heys_day_page_shell.js), и класс .fab-group--layout-animate вместе с
+ * animate-always на нём остаётся: снимает их не эта задача. Здесь снят сам
+ * прогон — у стопки класс больше ничего не анимирует, слоты меняют состояние
+ * мгновенно, как требует контракт.
+ */
 
-/* Функциональная анимация стопки — как ккал/БЖУ у виджетов: не гасим при prefers-reduced-motion (класс animate-always на группе). */
-.fab-group--layout-animate .fab-slot {
+/* Единственное движение, которое контракт оставляет («когда применяется»:
+ * «исключение — появление и исчезновение самой кнопки при переходе через один
+ * и ноль включённых»). У .fab-group--messenger-only слот ровно один, и его
+ * включение-выключение — это и есть появление и исчезновение кнопки.
+ * Тайминги — строка «появление и исчезновение кнопки»: 220 мс с перелётом до
+ * 1,06 на появление, 160 мс на исчезновение. */
+.fab-group--messenger-only.fab-group--layout-animate .fab-slot {
   transition:
-    grid-template-rows var(--fab-slot-anim-ms) var(--fab-slot-ease-pop),
-    opacity calc(var(--fab-slot-anim-ms) * 0.72) ease,
-    transform var(--fab-slot-anim-ms) var(--fab-slot-ease-pop),
-    max-height var(--fab-slot-anim-ms) var(--fab-slot-ease-pop);
+    grid-template-rows 160ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 160ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 160ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    max-height 160ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-.fab-group--layout-animate .fab-slot--on {
-  transition-delay:
-    calc(var(--fab-slot-i, 0) * var(--fab-slot-stagger-ms)),
-    calc(var(--fab-slot-i, 0) * var(--fab-slot-stagger-ms)),
-    calc(var(--fab-slot-i, 0) * var(--fab-slot-stagger-ms)),
-    calc(var(--fab-slot-i, 0) * var(--fab-slot-stagger-ms));
-}
-
-.fab-group--layout-animate .fab-slot--off {
-  transition-delay:
-    calc((var(--fab-slot-stagger-max) - var(--fab-slot-i, 0)) * var(--fab-slot-stagger-ms)),
-    calc((var(--fab-slot-stagger-max) - var(--fab-slot-i, 0)) * var(--fab-slot-stagger-ms)),
-    calc((var(--fab-slot-stagger-max) - var(--fab-slot-i, 0)) * var(--fab-slot-stagger-ms)),
-    calc((var(--fab-slot-stagger-max) - var(--fab-slot-i, 0)) * var(--fab-slot-stagger-ms));
-}
-
-.fab-group--layout-animate .fab-slot--on .fab-slot__inner > * {
-  animation: fab-slot-pop-in var(--fab-slot-anim-ms) var(--fab-slot-ease-pop) both;
-  animation-delay: calc(var(--fab-slot-i, 0) * var(--fab-slot-stagger-ms));
+.fab-group--messenger-only.fab-group--layout-animate .fab-slot--on .fab-slot__inner > * {
+  animation: fab-slot-pop-in 220ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
 @keyframes fab-slot-pop-in {
   0% {
-    transform: scale(0.42);
+    transform: scale(0.35);
     opacity: 0;
   }
 
   58% {
-    transform: scale(1.045);
+    transform: scale(1.06);
     opacity: 1;
   }
 
@@ -508,29 +503,39 @@ html[data-theme-id="blue-dark"] .water-review {
   }
 }
 
+/* Строка «уменьшенное движение»: «появление и исчезновение плавающей кнопки
+ * при переходе через один и ноль включённых становятся мгновенной сменой
+ * состояния». Правило безусловно, и флаг animate-always его не перебивает —
+ * группу помечает им чужой JS, поэтому глобальный killer сюда не достаёт и
+ * гашение приходится писать здесь. */
+@media (prefers-reduced-motion: reduce) {
+
+  .fab-group--messenger-only.fab-group--layout-animate .fab-slot,
+  .fab-group--messenger-only.fab-group--layout-animate .fab-slot--on .fab-slot__inner > * {
+    transition: none;
+    animation: none;
+  }
+}
+
 /* Канвас g1: снизу вверх плюс → вода → голод → мессенджер → активность. */
 .fab-group:not(.fab-group--messenger-only) .fab-slot--activity,
 .fab-group:not(.fab-group--messenger-only) .activity-fab {
   order: 1;
-  --fab-slot-i: 4;
 }
 
 .fab-group:not(.fab-group--messenger-only) .fab-slot--message,
 .fab-group:not(.fab-group--messenger-only) .message-fab {
   order: 2;
-  --fab-slot-i: 3;
 }
 
 .fab-group:not(.fab-group--messenger-only) .fab-slot--hunger,
 .fab-group:not(.fab-group--messenger-only) .hunger-energy-fab {
   order: 3;
-  --fab-slot-i: 2;
 }
 
 .fab-group:not(.fab-group--messenger-only) .fab-slot--water,
 .fab-group:not(.fab-group--messenger-only) .water-fab {
   order: 4;
-  --fab-slot-i: 1;
 }
 
 .fab-slot--water.fab-slot--on:has(.water-fab-wrap.is-chips-open),
@@ -541,12 +546,6 @@ html[data-theme-id="blue-dark"] .water-review {
 .fab-group:not(.fab-group--messenger-only) .fab-slot--meal,
 .fab-group:not(.fab-group--messenger-only) .meal-fab {
   order: 5;
-  --fab-slot-i: 0;
-}
-
-.fab-group--messenger-only .fab-slot--message {
-  --fab-slot-i: 0;
-  --fab-slot-stagger-max: 0;
 }
 
 body:has(.iw-response-card.expanded) .fab-group,
