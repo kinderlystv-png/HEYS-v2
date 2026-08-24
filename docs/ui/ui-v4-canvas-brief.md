@@ -89,9 +89,9 @@ gamification — разведены `порог дня` / `подпись усл
 <th>Зона</th><th>Канвас / пакет</th><th>Макет</th><th>Контракт</th><th>Порядок</th><th>Статус</th>
 </tr></thead>
 <tbody>
-<tr><td><strong>Питание</strong></td><td><code>tab-food.v4.dc.html</code></td><td>🟡 4 (1)</td><td>⬜</td><td><strong>1</strong> контракт вкладки</td><td>🔒</td></tr>
+<tr><td><strong>Питание</strong></td><td><code>nutrition-tab.v4.dc.html</code><br><small>(<code>tab-food</code> уехал в <code>history/</code> 24.08)</small></td><td>✅</td><td>✅ 203</td><td>—</td><td><strong>снят</strong></td></tr>
 <tr><td><strong>Отчёты</strong></td><td><code>tab-reports.v4.dc.html</code></td><td>🟡 8 (2)</td><td>⬜</td><td><strong>1</strong> контракт вкладки</td><td>🔒</td></tr>
-<tr><td><strong>Инсайты</strong></td><td><code>tab-insights.v4.dc.html</code></td><td>🟡 8 (2)</td><td>⬜</td><td><strong>1</strong> контракт вкладки</td><td>🔒</td></tr>
+<tr><td><strong>Инсайты</strong></td><td><code>tab-insights.v4.dc.html</code></td><td>🟡 8 (2)</td><td>🟡 6</td><td><strong>1</strong> контракт остальной вкладки</td><td>🔒 частично</td></tr>
 <tr><td><strong>Актив</strong></td><td><code>tab-activity.v4.dc.html</code></td><td>🟡 4 (1)</td><td>⬜</td><td><strong>1</strong> контракт вкладки</td><td>🔒</td></tr>
 <tr><td><strong>Добавление еды</strong></td><td><code>food-add.v4.dc.html</code></td><td>🟡 33</td><td>⬜</td><td><strong>2</strong> контракт → APS</td><td>🔒</td></tr>
 <tr><td><strong>Цикл</strong></td><td><code>cycle.v4.dc.html</code></td><td>🟡 14 (7)</td><td>⬜</td><td><strong>3</strong> контракт или removal</td><td>🔒</td></tr>
@@ -101,7 +101,16 @@ gamification — разведены `порог дня` / `подпись усл
 **Не заблокировано** (контракт ✅ — можно кодить по `[data-contract]` /
 протоколам): Главная, вода, регистрация/чек-ин, вход, рама, спиннеры, куратор
 sheet, PWA update, сплэш, анкета, настройки, даты, **советы** (контракт ✅;
-**код** — после «Открыто до передачи»), **геймификация**.
+**код** — после «Открыто до передачи»), **геймификация**, **Питание**
+(`nutrition-tab`, 203 строки).
+
+**Уточнение 24.08 (сверка §11).** Таблица выше отражала пакет 20.08 и в двух
+строках устарела. «Питание» разблокировано: вкладка описана канвасом
+`nutrition-tab` на 203 строки, а старый `tab-food` уехал в `history/`. У
+«Инсайтов» контракт появился, но **частичный** — 6 строк, только ярус «Питание»
+(охват назван в самом контракте); остальная вкладка по-прежнему 🔒.
+`tab-reports`, `tab-activity`, `food-add`, `food-add-short` и `cycle` остаются
+без контракта.
 
 _Приёмка расхождений:_ `ACCEPTANCE.md` — сначала home / water / checkin (141
 строк); tips/gamification — после кода.\_

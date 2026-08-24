@@ -96,15 +96,16 @@
 <th scope="col">Зона</th><th scope="col">Канвас / пакет</th><th scope="col" class="xs">Макет</th><th scope="col" class="xs">Контракт</th><th scope="col">Порядок</th><th scope="col" class="xs">Статус</th>
 </tr></thead>
 <tbody>
-<tr><td><strong>Питание</strong></td><td><code>tab-food.v4.dc.html</code></td><td class="xs">🟡 4 (1)</td><td class="xs">⬜</td><td><strong>1</strong> контракт вкладки</td><td class="xs">🔒</td></tr>
+<tr><td><strong>Питание</strong></td><td><code>nutrition-tab.v4.dc.html</code><br><small>(<code>tab-food</code> уехал в <code>history/</code> 24.08)</small></td><td class="xs">✅</td><td class="xs">✅ 203</td><td>—</td><td class="xs"><strong>снят</strong></td></tr>
 <tr><td><strong>Отчёты</strong></td><td><code>tab-reports.v4.dc.html</code></td><td class="xs">🟡 8 (2)</td><td class="xs">⬜</td><td><strong>1</strong> контракт вкладки</td><td class="xs">🔒</td></tr>
-<tr><td><strong>Инсайты</strong></td><td><code>tab-insights.v4.dc.html</code></td><td class="xs">🟡 8 (2)</td><td class="xs">⬜</td><td><strong>1</strong> контракт вкладки</td><td class="xs">🔒</td></tr>
+<tr><td><strong>Инсайты</strong></td><td><code>tab-insights.v4.dc.html</code></td><td class="xs">🟡 8 (2)</td><td class="xs">🟡 6</td><td><strong>1</strong> контракт остальной вкладки</td><td class="xs">🔒 частично</td></tr>
 <tr><td><strong>Актив</strong></td><td><code>tab-activity.v4.dc.html</code></td><td class="xs">🟡 4 (1)</td><td class="xs">⬜</td><td><strong>1</strong> контракт вкладки</td><td class="xs">🔒</td></tr>
 <tr><td><strong>Добавление еды</strong></td><td><code>food-add.v4.dc.html</code></td><td class="xs">🟡 33</td><td class="xs">⬜</td><td><strong>2</strong> контракт → APS</td><td class="xs">🔒</td></tr>
 <tr><td><strong>Цикл</strong></td><td><code>cycle.v4.dc.html</code></td><td class="xs">🟡 14 (7)</td><td class="xs">⬜</td><td><strong>3</strong> контракт или removal</td><td class="xs">🔒</td></tr>
 </tbody>
 </table></div>
-<p><strong>Не заблокировано</strong> (контракт ✅ — можно кодить по <code>[data-contract]</code> / протоколам): Главная, вода, регистрация/чек-ин, вход, рама, спиннеры, куратор sheet, PWA update, сплэш, анкета, настройки, даты, <strong>советы</strong> (контракт ✅; <strong>код</strong> — после «Открыто до передачи»), <strong>геймификация</strong>.</p>
+<p><strong>Не заблокировано</strong> (контракт ✅ — можно кодить по <code>[data-contract]</code> / протоколам): Главная, вода, регистрация/чек-ин, вход, рама, спиннеры, куратор sheet, PWA update, сплэш, анкета, настройки, даты, <strong>советы</strong> (контракт ✅; <strong>код</strong> — после «Открыто до передачи»), <strong>геймификация</strong>, <strong>Питание</strong> (<code>nutrition-tab</code>, 203 строки).</p>
+<p><strong>Уточнение 24.08 (сверка §11).</strong> Таблица выше отражала пакет 20.08 и в двух строках устарела. «Питание» разблокировано: вкладка описана канвасом <code>nutrition-tab</code> на 203 строки, а старый <code>tab-food</code> уехал в <code>history/</code>. У «Инсайтов» контракт появился, но <strong>частичный</strong> — 6 строк, только ярус «Питание» (охват назван в самом контракте); остальная вкладка по-прежнему 🔒. <code>tab-reports</code>, <code>tab-activity</code>, <code>food-add</code>, <code>food-add-short</code> и <code>cycle</code> остаются без контракта.</p>
 <p><em>Приёмка расхождений:</em> <code>ACCEPTANCE.md</code> — сначала home / water / checkin (141 строк); tips/gamification — после кода.\_</p>
 <p><em>Исключение:</em> UI карточки воды на вкладке «Питание» — контракт <code>water-add</code>, не <code>tab-food</code> (§3.1).\_</p>
 <h2 id="s1">1. Инфраструктура (общая)</h2>
