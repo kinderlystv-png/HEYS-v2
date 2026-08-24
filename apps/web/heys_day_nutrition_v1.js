@@ -485,34 +485,34 @@
     }, {});
   }
 
+  // Решение владельца 24.08: чип «Добавки» только прячет и показывает блок.
+  // Отзыв согласия — отдельная строка в настройках («Мои согласия и данные»),
+  // на вкладке его нет: выключение чипа не спрашивает подтверждения и не трогает
+  // ни курс, ни отметки, ни поля профиля — они остаются лежать до отзыва.
+  // Согласие спрашивается один раз, при первом включении: если трекинг уже
+  // разрешён, повторный показ уже согласованного блока идёт без листа согласия.
+  // Отступление от строки контракта «согласие» в nutrition-tab (там выключение
+  // чипа удаляет отметки и поля профиля) — по прямому решению владельца.
   async function writeChipState(chip, nextEnabled) {
     const U = HEYS.utils;
     const profile = U?.lsGet?.('heys_profile', {}) || {};
-    let updated = { ...profile };
+    const updated = { ...profile };
+    let consentAsked = false;
 
-    // «Добавки» включаются через запрос согласия: до согласия чип выключен.
     if (chip.needsConsent && nextEnabled) {
       const hf = HEYS.healthFeatures;
-      if (typeof hf?.requestHealthFeatureToggle === 'function') {
-        const allowed = await hf.requestHealthFeatureToggle('supplementsTrackingEnabled', true);
-        if (!allowed) return false;
+      const trackingOn = typeof hf?.isSupplementsTrackingEnabled === 'function'
+        ? hf.isSupplementsTrackingEnabled(profile)
+        : profile.supplementsTrackingEnabled === true;
+      if (!trackingOn) {
+        if (typeof hf?.requestHealthFeatureToggle === 'function') {
+          const allowed = await hf.requestHealthFeatureToggle('supplementsTrackingEnabled', true);
+          if (!allowed) return false;
+        }
+        updated.supplementsTrackingEnabled = true;
+        consentAsked = true;
       }
-      updated.supplementsTrackingEnabled = true;
       updated[chip.field] = true;
-    } else if (chip.needsConsent) {
-      // Контракт «согласие»: выключение чипа удаляет отметки и поля профиля —
-      // тот же путь отзыва, что в настройках (heys_user_v12.js). Раньше чип
-      // прятал блок, а отметки и курс оставались лежать.
-      const hf = HEYS.healthFeatures;
-      if (typeof hf?.requestHealthFeatureToggle === 'function') {
-        const allowed = await hf.requestHealthFeatureToggle('supplementsTrackingEnabled', false);
-        if (!allowed) return false;
-      }
-      const purgeProfile = hf?.FEATURE_TOGGLES?.supplementsTrackingEnabled?.purgeProfile;
-      updated = typeof purgeProfile === 'function'
-        ? purgeProfile(updated)
-        : { ...updated, supplementsTrackingEnabled: false };
-      updated[chip.field] = false;
     } else {
       updated[chip.field] = nextEnabled !== false;
     }
@@ -524,7 +524,7 @@
     global.dispatchEvent(new CustomEvent('heys:profile-updated', {
       detail: {
         field: chip.field,
-        fields: chip.needsConsent ? [chip.field, 'supplementsTrackingEnabled'] : [chip.field],
+        fields: consentAsked ? [chip.field, 'supplementsTrackingEnabled'] : [chip.field],
         source: 'nutrition-tab-chips'
       }
     }));

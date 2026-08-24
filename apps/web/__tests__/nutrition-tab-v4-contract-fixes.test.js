@@ -1,10 +1,11 @@
 // Смоук-симуляция строк контракта nutrition-tab.v4.dc.html, сведённых в коде:
 // «клетчатка · блок» (шкала зон + пустой день), «нахлёст» (обе строки, нет
 // подписи без пересечений), «трассировка расчёта» (три вклада, неопределённость,
-// «Весь расчёт»), «порядок чипов» (каталог), «согласие» (отзыв чистит данные).
+// «Весь расчёт»), «порядок чипов» (каталог), «согласие» (первое включение идёт
+// через лист согласия; выключение чипа только прячет блок).
 //
 // Живьём эти стыки человек не соберёт: нахлёст волн, глубокий недобор клетчатки
-// и отзыв согласия на добавки по заказу не воспроизводятся.
+// и лист согласия на добавки по заказу не воспроизводятся.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -182,7 +183,13 @@ describe('nutrition-tab · правки зоны', () => {
     expect(chips).toEqual(['D3', 'Омега-3', 'Магний']);
   });
 
-  it('согласие: выключение чипа «Добавки» чистит отметки и поля профиля', async () => {
+  // Прежде здесь стояли два теста, закреплявшие правку 24.08: выключение чипа
+  // «Добавки» шло через подтверждение отзыва и чистило поля профиля, а отказ в
+  // подтверждении оставлял чип включённым. Владелец решение отменил в тот же
+  // день («да разделить, чип только прятать должен»): чип отвечает за показ,
+  // отзыв согласия живёт отдельной строкой в настройках. Тесты переписаны под
+  // возврат, а не сняты, — чтобы путь отзыва не уехал на вкладку заново.
+  it('чип «Добавки»: выключение прячет блок и не трогает курс с отметками', async () => {
     const store = seedHEYS({
       supplementsTrackingEnabled: true,
       showDiarySupplementsPanel: true,
@@ -190,45 +197,92 @@ describe('nutrition-tab · правки зоны', () => {
       supplementSettings: { d3: { dose: 1 } }
     });
     const loaded = loadModule();
-    const purgeDay = vi.fn((day) => day);
     const requestToggle = vi.fn(async () => true);
+    const purgeProfile = vi.fn((p) => p);
     window.HEYS.healthFeatures = {
       isSupplementsTrackingEnabled: (p) => p?.supplementsTrackingEnabled === true,
       requestHealthFeatureToggle: requestToggle,
-      FEATURE_TOGGLES: {
-        supplementsTrackingEnabled: {
-          purgeDay,
-          purgeProfile: (profile) => ({
-            ...profile,
-            supplementsTrackingEnabled: false,
-            showDiarySupplementsPanel: false,
-            plannedSupplements: [],
-            supplementSettings: {}
-          })
-        }
-      }
+      FEATURE_TOGGLES: { supplementsTrackingEnabled: { purgeDay: vi.fn(), purgeProfile } }
     };
     const chip = loaded.api.CHIPS.find((c) => c.key === 'supplements');
     const ok = await loaded.api.writeChipState(chip, false);
     expect(ok).toBe(true);
-    expect(requestToggle).toHaveBeenCalledWith('supplementsTrackingEnabled', false);
-    expect(store.heys_profile.supplementsTrackingEnabled).toBe(false);
+    // Ни подтверждения, ни чистки: жест отвечает только за показ.
+    expect(requestToggle).not.toHaveBeenCalled();
+    expect(purgeProfile).not.toHaveBeenCalled();
     expect(store.heys_profile.showDiarySupplementsPanel).toBe(false);
-    expect(store.heys_profile.plannedSupplements).toEqual([]);
+    expect(store.heys_profile.supplementsTrackingEnabled).toBe(true);
+    expect(store.heys_profile.plannedSupplements).toEqual(['d3']);
+    expect(store.heys_profile.supplementSettings).toEqual({ d3: { dose: 1 } });
+    // Спрятанный блок пропал из вкладки, остальные на местах.
+    expect(loaded.api.readChipState(store.heys_profile).supplements).toBe(false);
   });
 
-  it('согласие: отказ в подтверждении отзыва оставляет чип включённым', async () => {
-    const store = seedHEYS({ supplementsTrackingEnabled: true, showDiarySupplementsPanel: true });
+  it('чип «Добавки»: обратное включение возвращает блок без листа согласия', async () => {
+    const store = seedHEYS({
+      supplementsTrackingEnabled: true,
+      showDiarySupplementsPanel: false,
+      plannedSupplements: ['d3'],
+      supplementSettings: { d3: { dose: 1 } }
+    });
     const loaded = loadModule();
+    const requestToggle = vi.fn(async () => true);
     window.HEYS.healthFeatures = {
       isSupplementsTrackingEnabled: (p) => p?.supplementsTrackingEnabled === true,
-      requestHealthFeatureToggle: vi.fn(async () => false),
+      requestHealthFeatureToggle: requestToggle,
       FEATURE_TOGGLES: { supplementsTrackingEnabled: { purgeProfile: (p) => p } }
     };
     const chip = loaded.api.CHIPS.find((c) => c.key === 'supplements');
-    const ok = await loaded.api.writeChipState(chip, false);
-    expect(ok).toBe(false);
+    const ok = await loaded.api.writeChipState(chip, true);
+    expect(ok).toBe(true);
+    // Согласие уже дано — второй раз его не спрашивают.
+    expect(requestToggle).not.toHaveBeenCalled();
+    expect(store.heys_profile.showDiarySupplementsPanel).toBe(true);
+    expect(store.heys_profile.plannedSupplements).toEqual(['d3']);
+    expect(loaded.api.readChipState(store.heys_profile).supplements).toBe(true);
+  });
+
+  it('чип «Добавки»: первое включение по-прежнему идёт через согласие', async () => {
+    const store = seedHEYS({});
+    const loaded = loadModule();
+    const requestToggle = vi.fn(async () => false);
+    window.HEYS.healthFeatures = {
+      isSupplementsTrackingEnabled: (p) => p?.supplementsTrackingEnabled === true,
+      requestHealthFeatureToggle: requestToggle,
+      FEATURE_TOGGLES: { supplementsTrackingEnabled: { purgeProfile: (p) => p } }
+    };
+    const chip = loaded.api.CHIPS.find((c) => c.key === 'supplements');
+    const refused = await loaded.api.writeChipState(chip, true);
+    expect(refused).toBe(false);
+    expect(requestToggle).toHaveBeenCalledWith('supplementsTrackingEnabled', true);
+    expect(store.heys_profile.supplementsTrackingEnabled).toBeUndefined();
+
+    requestToggle.mockImplementation(async () => true);
+    const granted = await loaded.api.writeChipState(chip, true);
+    expect(granted).toBe(true);
     expect(store.heys_profile.supplementsTrackingEnabled).toBe(true);
     expect(store.heys_profile.showDiarySupplementsPanel).toBe(true);
+  });
+
+  it('чип «Добавки»: спрятанный блок остаётся спрятанным после перерисовки', () => {
+    seedHEYS({ supplementsTrackingEnabled: true, showDiarySupplementsPanel: false });
+    const loaded = loadModule();
+    window.HEYS.healthFeatures = {
+      isSupplementsTrackingEnabled: (p) => p?.supplementsTrackingEnabled === true
+    };
+    window.HEYS.Supplements = {
+      CATALOG: { d3: { name: 'D3', timing: 'morning' } },
+      getPlanned: () => ['d3'],
+      markSupplementsTaken: vi.fn()
+    };
+    const ctx = {
+      prof: { supplementsTrackingEnabled: true, showDiarySupplementsPanel: false },
+      day: { date: '2026-08-20', meals: MEALS, supplementsPlanned: ['d3'], supplementsTaken: [] }
+    };
+    const first = renderTab(loaded.render, { ctx });
+    expect(first.container.querySelector('[data-block="supplements"]')).toBeNull();
+    // Перерисовка читает профиль заново — состояние показа живёт не в React.
+    const second = renderTab(loaded.render, { ctx });
+    expect(second.container.querySelector('[data-block="supplements"]')).toBeNull();
   });
 });
