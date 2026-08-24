@@ -128,7 +128,8 @@ pricing). Это evidence прошедших работ, не очередь з�
   [`ui/UI_V4_FINDINGS_HISTORY.md`](ui/UI_V4_FINDINGS_HISTORY.md); архив не
   переписывают задним числом.
 - [`ui/ui-v4-canvas-brief.md`](ui/ui-v4-canvas-brief.md) — живой трекер
-  контрактов канвасов (§0–§3, часы, 🔒); html-таблицы:
+  контрактов канвасов (§0–§3, часы, 🔒); §11 — аудит соответствия контракта коду
+  по экранам (срез на дату сверки, не живой статус); html-таблицы:
   [`ui-v4-canvas-brief.html`](ui/ui-v4-canvas-brief.html) через
   `pnpm docs:ui-v4-brief`.
 - [`UI_V4_IMPLEMENTATION_PLAN_2026-08-10`](implementation/UI_V4_IMPLEMENTATION_PLAN_2026-08-10.md)
