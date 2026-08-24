@@ -10611,12 +10611,13 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
   animation: widgetWaterShine 3.4s linear infinite;
 }
 
-/* Крупный слой уезжает на свой шаг (16 px), мелкий — на два своих (22 px):
-   отсюда «мелкий вдвое быстрее». Оба сдвига целые, поэтому на стыке петли
-   шва не видно. */
+/* Строка «блики»: сдвиг ровно на шаг — 16 px и 11 px. Прежде мелкий слой
+   уезжал на два своих шага (22 px), чтобы двигаться вдвое быстрее; в
+   контракте такого нет, а шва на стыке петли не видно и так — 11 тоже
+   целый шаг своего слоя. */
 @keyframes widgetWaterShine {
   to {
-    background-position: 16px 0, 22px 0;
+    background-position: 16px 0, 11px 0;
   }
 }
 

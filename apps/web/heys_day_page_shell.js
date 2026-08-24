@@ -137,6 +137,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }, children);
     }
 
+    /**
+     * Подпись кнопки воды для диктора — строка «доступность»:
+     * «Вода, 1,7 из 2,7 литра». Норма берётся оттуда же, откуда её берёт
+     * плитка; если её нет, называем только выпитое, а не выдумываем цель.
+     */
+    function waterAriaValue(ml) {
+        const liters = (n) => (Math.round(n / 100) / 10).toFixed(1).replace('.', ',');
+        const drunk = liters(Number(ml) || 0);
+        const target = Number(HEYS.Widgets?.data?.getWaterData?.()?.target) || 0;
+        return target > 0 ? `${drunk} из ${liters(target)} литра` : `${drunk} литра`;
+    }
+
     function WaterFabButton({ onAddWater, onRemoveWater, waterMl: waterMlProp }) {
         const [chipsOpen, setChipsOpen] = React.useState(false);
         const [waterMl, setWaterMl] = React.useState(() => (
@@ -218,16 +230,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     className: 'water-fab-vol water-fab-vol--minus',
                     disabled: waterMl <= 0,
                     'aria-disabled': waterMl <= 0 ? 'true' : 'false',
+                    'aria-label': 'убрать 200 миллилитров',
                     onShortClick: pickRemove(200),
                     onLongPress: openCustomVolume
                 }, '−200'),
                 React.createElement(WaterFabVolButton, {
                     className: 'water-fab-vol',
+                    'aria-label': 'добавить 200 миллилитров',
                     onShortClick: pickVolume(200),
                     onLongPress: openCustomVolume
                 }, '+200'),
                 React.createElement(WaterFabVolButton, {
                     className: 'water-fab-vol',
+                    'aria-label': 'добавить 500 миллилитров',
                     onShortClick: pickVolume(500),
                     onLongPress: openCustomVolume
                 }, '+500')
@@ -235,7 +250,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             React.createElement('button', {
                 type: 'button',
                 className: 'water-fab',
-                'aria-label': chipsOpen ? 'Скрыть объёмы воды' : 'Добавить воду',
+                // Строка «доступность»: кнопка озвучивается со значением —
+                // «Вода, 1,7 из 2,7 литра». Без него диктор называет действие,
+                // но не состояние, ради которого на кнопку и смотрят.
+                'aria-label': chipsOpen
+                    ? 'Скрыть объёмы воды'
+                    : `Вода, ${waterAriaValue(waterMl)}`,
                 'aria-expanded': chipsOpen ? 'true' : 'false',
                 onPointerDown: fabLongPress.onPointerDown,
                 onPointerMove: fabLongPress.onPointerMove,
