@@ -84,6 +84,12 @@
     const [monthData, setMonthData] = React.useState(null); // Данные для текущего месяца календаря
     const wrapperRef = React.useRef(null);
     const triggerRef = React.useRef(null);
+    // Контракт «повторный тап и поворот» → home-widgets «повторный тап · правило
+    // продукта»: 350 мс защиты там, где повтор создаёт лишнюю сущность. Местное
+    // отличие явно исключает стрелки даты («защиты у стрелок нет — быстрое
+    // листание… частыми тапами»), поэтому окно ставится только на выбор клетки
+    // календаря — единственное действие в этом компоненте без такого исключения.
+    const lastDayPickRef = React.useRef(0);
     
     const y = cur.getFullYear(), m = cur.getMonth();
     
@@ -153,6 +159,26 @@
     }, [daysDataMap, fmtDate]);
     
     React.useEffect(() => { setCur(parseISO(valueISO || todayISO())); }, [valueISO]);
+
+    // Контракт date-remainders, «safe-area и кнопка назад»: аппаратная кнопка
+    // назад / жест на Android закрывают шторку календаря, а не уводят с экрана.
+    // Паттерн — heys_widgets_ui_v1.js (карточка «Ещё»): pushState-метка при
+    // открытии, popstate закрывает лист; при закрытии из UI сами же уводим
+    // историю на шаг назад, чтобы не оставлять «пустую» запись за собой.
+    React.useEffect(() => {
+      if (!isOpen) return undefined;
+      const onPopState = () => { setIsOpen(false); setTooltip(null); };
+      window.addEventListener('popstate', onPopState);
+      try {
+        window.history.pushState({ heysDateSheet: true }, '');
+      } catch (_e) { /* история недоступна — остальные пути закрытия работают */ }
+      return () => {
+        window.removeEventListener('popstate', onPopState);
+        try {
+          if (window.history.state?.heysDateSheet) window.history.back();
+        } catch (_e) { /* ignore */ }
+      };
+    }, [isOpen]);
 
     // Контракт date-remainders, «вид шторки календаря»: лист прижат к низу
     // экрана. Прежде это был popover, и CSS-переменная якоря вела его за низом
@@ -400,7 +426,12 @@
             // Контракт date-remainders, строка «доступность»: клетка озвучивает дату и
             // наличие записи словом. Прежде это был немой div — диктор читал только
             // число, а факт записи нёс лишь цвет точки (она декоративна, aria-hidden).
-            const pickDay = () => { onSelect(dateStr); setIsOpen(false); setTooltip(null); };
+            const pickDay = () => {
+              const now = Date.now();
+              if (now - lastDayPickRef.current < 350) return;
+              lastDayPickRef.current = now;
+              onSelect(dateStr); setIsOpen(false); setTooltip(null);
+            };
             const daySpeech = dt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
               + (hasRealData ? ', есть записи' : '');
 

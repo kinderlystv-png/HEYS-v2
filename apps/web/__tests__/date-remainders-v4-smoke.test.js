@@ -227,6 +227,81 @@ describe('date-remainders · шторка календаря', () => {
   });
 });
 
+describe('date-remainders · правила продукта', () => {
+  function openSheet(host) {
+    act(() => {
+      host.querySelector('.date-picker-trigger-lbl').dispatchEvent(
+        new window.MouseEvent('click', { bubbles: true }),
+      );
+    });
+    return document.querySelector('.date-picker-sheet');
+  }
+
+  function cellByDay(sheet, day) {
+    return [...sheet.querySelectorAll('.date-picker-day')]
+      .find((el) => (el.querySelector('.day-number') || {}).textContent === day);
+  }
+
+  // Контракт «safe-area и кнопка назад»: аппаратная кнопка/жест назад
+  // закрывают шторку календаря, а не выходят с экрана.
+  it('аппаратная кнопка назад закрывает шторку календаря', () => {
+    vi.setSystemTime(new Date(2026, 7, 21, 12, 0, 0));
+    const { host } = renderPicker({ valueISO: '2026-08-21' });
+    const sheet = openSheet(host);
+    expect(sheet).not.toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new window.PopStateEvent('popstate', { state: null }));
+    });
+
+    expect(document.querySelector('.date-picker-sheet')).toBeNull();
+  });
+
+  // Контракт «повторный тап и поворот»: у клетки календаря нет местного
+  // исключения (в отличие от стрелок), поэтому действует общее окно 350 мс —
+  // повторный тап на том же нажатии игнорируется, следующий осознанный проходит.
+  it('клетка календаря: повторный тап в 350 мс не удваивает выбор, следующий тап проходит', () => {
+    vi.setSystemTime(new Date(2026, 7, 21, 12, 0, 0));
+    const onSelect = vi.fn();
+    let sheet = openSheet(renderPicker({ valueISO: '2026-08-21', onSelect }).host);
+
+    const cell15 = cellByDay(sheet, '15');
+    act(() => {
+      cell15.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      cell15.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    });
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith('2026-08-15');
+
+    // Выбор закрыл шторку — открываем заново уже после окна защиты.
+    act(() => { vi.advanceTimersByTime(400); });
+    sheet = document.querySelector('.date-picker-sheet');
+    expect(sheet).toBeNull();
+    const { host } = roots[roots.length - 1];
+    sheet = openSheet(host);
+    const cell10 = cellByDay(sheet, '10');
+    act(() => { cell10.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
+    expect(onSelect).toHaveBeenCalledTimes(2);
+    expect(onSelect).toHaveBeenLastCalledWith('2026-08-10');
+  });
+
+  // Местное отличие контракта: у стрелок даты защиты нет вовсе — быстрое
+  // листание на неделю назад делают именно частыми тапами, каждый засчитан.
+  it('стрелки даты: защиты нет — каждый быстрый тап засчитывается', () => {
+    vi.setSystemTime(new Date(2026, 7, 21, 12, 0, 0));
+    const onSelect = vi.fn();
+    const { host } = renderPicker({ valueISO: '2026-08-21', onSelect });
+    const prevBtn = host.querySelectorAll('.date-picker-day-nav')[0];
+
+    act(() => {
+      prevBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      prevBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      prevBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    });
+    expect(onSelect).toHaveBeenCalledTimes(3);
+  });
+});
+
 // Тон метки календаря контракт задаёт ЧЕТЫРЬМЯ разными процентами — по одному
 // на набор («тон метки»: песочная 45 · синяя 50 · тёмная 42 · сине-тёмная 42),
 // потому что подложка клетки в каждом наборе своя. Одного числа тут быть не
@@ -278,5 +353,15 @@ describe('date-remainders · CSS, палитро-зависимые строки
     expect(baseCss).toMatch(
       /\.date-picker--v4 \.date-picker-day-nav--disabled,[\s\S]{0,120}opacity: 0\.4;/,
     );
+  });
+
+  // Контракт «язык, выделение, часовой пояс» → home-widgets «выделение и
+  // копирование · правило продукта»: капсула и шторка календаря — системные
+  // подписи, не текст человека, поэтому не выделяются нигде по умолчанию.
+  it('«выделение и копирование» — капсула и шторка календаря не выделяются', () => {
+    const capsuleRule = baseCss.match(/\.date-picker \{[^}]+\}/)?.[0] || '';
+    expect(capsuleRule).toContain('user-select: none');
+    const sheetRule = baseCss.match(/\.date-picker-sheet \{[^}]+\}/)?.[0] || '';
+    expect(sheetRule).toContain('user-select: none');
   });
 });

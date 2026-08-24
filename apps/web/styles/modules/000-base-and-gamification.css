@@ -7922,9 +7922,15 @@ body:has(.offline-banner) .wrap {
 }
 
 /* === 30. MODERN DATE PICKER === */
+/* Контракт date-remainders, «язык, выделение, часовой пояс» → home-widgets
+   «выделение и копирование · правило продукта»: капсула и её стрелки —
+   системные подписи, не текст, написанный человеком, поэтому не выделяются
+   и не открывают системное «Скопировать» поверх шторки. */
 .date-picker {
   position: relative;
   flex-shrink: 0;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .date-picker-row {
@@ -8236,9 +8242,14 @@ body:has(.offline-banner) .wrap {
    календаря»): «лист прижат к низу: фон --bg, радиус 26 сверху, поля
    18/16/16 px, ручка 38×4 px тоном чернил 14 %». Прежде это был popover под
    строкой даты: карточка радиусом 22, поля 16/16/12, ручка display:none. */
+/* Портал в document.body — вне дерева .date-picker, поэтому запрет
+   выделения (см. «выделение и копирование · правило продукта» выше)
+   ставится заново для шторки: та же системная подпись, не текст человека. */
 .date-picker-sheet {
   min-width: 0;
   max-width: none !important;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .date-picker-sheet__card {
