@@ -76,8 +76,10 @@ const PAIRS = [
   ['.k', '.widget-v4-kicker'],
   ['.v', '.widget-v4-mini__value'],
   ['.u', '.widget-v4-unit'],
-  // Вход в расстановку
-  ['.editRow > span', '.widgets-tab__edit-btn'],
+  // Вход в расстановку кадром не сводится: дизайнер подтвердил, что строка
+  // «Изменить экран» была ошибкой контракта, вход — кнопка настройки экрана.
+  // Пара ['.editRow > span', '.widgets-tab__edit-btn'] снята вместе с мёртвым
+  // продуктовым CSS этой строки.
   // Лист смены вида
   ['.sheet', '.widget-wd-sheet'],
   ['.sh1', '.widget-wd-sheet__title'],
