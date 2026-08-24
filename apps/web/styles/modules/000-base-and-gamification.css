@@ -7763,13 +7763,13 @@ body:has(.offline-banner) .wrap {
   color: #f59e0b;
 }
 
-/* Строка «третий бокс»: индикатор появляется только при проблеме — не
-   сохранилось, нет сети, идёт отправка. В покое его нет вовсе: постоянно
-   видимое облако сообщает «всё хорошо» каждую секунду, и человек
-   перестаёт его замечать ровно тогда, когда оно понадобится. */
-.cloud-sync-indicator.idle {
-  display: none;
-}
+/* Решение владельца 24 августа: в покое индикатор виден — примета «данные
+   уходят в облако» для части людей и есть подтверждение, что записанное не
+   потеряется. Это ОТСТУПЛЕНИЕ от строки контракта «третий бокс» (tips): она
+   просит показывать облако только при проблеме, и правки дизайнера в пакет на
+   диске ещё не приехали. Не возвращать сюда `display: none` по строке —
+   решение принято поверх неё. Приглушение покоя живёт ниже, в блоке иконок
+   шапки (цвет ролью + opacity), само присутствие — здесь. */
 
 .cloud-sync-indicator.queued svg.cloud-icon {
   display: block;
@@ -17146,10 +17146,17 @@ body:has(:is(
 }
 }
 
-/* Cloud sync — icon color = state */
-.cloud-sync-indicator.syncing { color: var(--v4-ink-2, #64748b); border-color: rgba(100, 116, 139, 0.18) !important; }
-.cloud-sync-indicator.problem { color: var(--v4-warn-2, #dc2626); border-color: rgba(220, 38, 38, 0.22) !important; }
-.cloud-sync-indicator.idle    { color: var(--v4-ink-2, #64748b); }
+/* Cloud sync — icon color = state.
+   `!important` здесь не украшение: общая пилюля выше объявляет
+   `color: #475569 !important`, и без него цвет состояния не доезжает вовсе —
+   облако одного тона и в покое, и при проблеме, а красный не виден. */
+.cloud-sync-indicator.syncing { color: var(--v4-ink-2, #64748b) !important; border-color: rgba(100, 116, 139, 0.18) !important; }
+.cloud-sync-indicator.problem { color: var(--v4-warn-2, #dc2626) !important; border-color: rgba(220, 38, 38, 0.22) !important; }
+/* Покой — на ступень бледнее работы (ink-3 против ink-2) и без движения:
+   фоновая примета, а не третье действие рядом с лампочкой советов и
+   ползунками настроек. «Идёт синхронизация» и «проблема» остаются заметнее —
+   тоном и мерцанием. */
+.cloud-sync-indicator.idle    { color: var(--v4-ink-3, #94a3b8) !important; opacity: 0.75; }
 
 /* EWS warning — red accent через цвет иконки/бордера, фон остаётся нейтральным */
 .ews-badge--high   { color: var(--v4-warn-2, #dc2626); border-color: rgba(220, 38, 38, 0.24) !important; }
@@ -17236,6 +17243,13 @@ body:has(:is(
     box-shadow: none !important;
     transform: none !important;
   }
+}
+
+/* Покой в тёмных наборах — тот же шаг вниз от активных иконок. Общая тёмная
+   плашка выше красит облако одним тоном для всех состояний; пассивной примете
+   он слишком ярок, поэтому покой берёт ink-3 своей темы. */
+[data-theme$="dark"] .cloud-sync-indicator.idle {
+  color: var(--v4-ink-3, #64748b) !important;
 }
 
 /* Push-badge slot в GamificationBar — display: contents чтобы пустой span
