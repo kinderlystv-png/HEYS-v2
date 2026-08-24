@@ -6135,7 +6135,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .heys-update-prompt__btn--ghost {
-  min-height: 40px;
+  min-height: 48px;
   margin-top: 8px;
   background: none;
   font: 600 12.5px/1 Figtree, system-ui, sans-serif;

@@ -544,7 +544,7 @@
 .heys-auth-keypad {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 7px;
   width: 100%;
   max-width: 276px;
   margin: 18px auto 0 !important;
@@ -571,13 +571,13 @@
 .heys-auth-key,
 .heys-auth-key-spacer {
   width: 100%;
-  min-height: 46px;
-  height: 46px;
+  min-height: 48px;
+  height: 48px;
 }
 
 .heys-auth-key {
   border: 0;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #f7efe2;
   box-shadow: none;
   color: #201e1d;
@@ -599,15 +599,15 @@
 .heys-auth-key--muted,
 html .heys-auth-key.heys-auth-key--delete,
 html .heys-auth-key.heys-auth-key--delete.is-available {
-  background: #efe3cf;
+  background: #f7efe2;
   border: 0;
   box-shadow: none;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
   font-size: 17px;
 }
 
 html .heys-auth-key.heys-auth-key--delete.is-available:active {
-  background: color-mix(in srgb, #efe3cf 82%, #201e1d);
+  background: color-mix(in srgb, #f7efe2 82%, #201e1d);
 }
 
 .heys-auth-footer-row {
