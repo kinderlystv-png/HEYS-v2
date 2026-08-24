@@ -7,6 +7,19 @@
   // === Контекст для передачи данных между шагами ===
   const StepModalContext = createContext({});
 
+  // «сохранение»: растущий интервал автоповтора записи профиля в облако,
+  // последний шаг повторяется бесконечно — профиль сохранён только когда
+  // облако подтвердило запись.
+  const PROFILE_RETRY_DELAYS_SEC = [4, 8, 16, 30, 60];
+
+  function pluralSeconds(count) {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'секунду';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'секунды';
+    return 'секунд';
+  }
+
   // === Общие утилиты (переиспользуемые в steps/meal_step) ===
 
   // Обёртка для localStorage с поддержкой clientId namespace
@@ -520,6 +533,14 @@
     const [savingStep, setSavingStep] = useState(false);
     const [profileSaveFail, setProfileSaveFail] = useState(false);
     const [profileSaveOk, setProfileSaveOk] = useState(false);
+    // «сохранение»: копия обещает автоматический повтор с растущим интервалом и
+    // видимый номер попытки — значит это должно быть механикой, а не словами.
+    const [profileRetryAttempt, setProfileRetryAttempt] = useState(0);
+    const [profileRetryCountdown, setProfileRetryCountdown] = useState(0);
+    const handleNextRef = useRef(null);
+    // «клавиатура»: 100dvh на iOS не сжимается под системной клавиатурой —
+    // высоту берём из visualViewport, иначе футер уезжает под клавиши.
+    const [keyboardViewportHeight, setKeyboardViewportHeight] = useState(0);
     const [slideInDirection, setSlideInDirection] = useState(() =>
       initialSlideInDirection === 'from-right' || initialSlideInDirection === 'from-left'
         ? initialSlideInDirection
@@ -552,6 +573,50 @@
       const timer = setTimeout(() => setSlideInDirection(null), 250);
       return () => clearTimeout(timer);
     }, []);
+
+    // «клавиатура»: экран сжимается до видимой части viewport, футер с
+    // «Дальше» остаётся над клавиатурой.
+    useEffect(() => {
+      const viewport = typeof window !== 'undefined' ? window.visualViewport : null;
+      if (!viewport) return undefined;
+      const sync = () => {
+        const inset = Math.round(window.innerHeight - viewport.height - viewport.offsetTop);
+        // Порог отсекает адресную строку и мелкие сдвиги — реагируем на клавиатуру.
+        setKeyboardViewportHeight(inset > 80 ? Math.round(viewport.height) : 0);
+      };
+      sync();
+      viewport.addEventListener('resize', sync);
+      viewport.addEventListener('scroll', sync);
+      return () => {
+        viewport.removeEventListener('resize', sync);
+        viewport.removeEventListener('scroll', sync);
+      };
+    }, []);
+
+    // «сохранение»: растущий интервал повтора; кнопка «Повторить сейчас»
+    // просто опережает таймер, снимая profileSaveFail и убивая его в cleanup.
+    useEffect(() => {
+      if (!profileSaveFail) {
+        setProfileRetryCountdown(0);
+        return undefined;
+      }
+      const delays = PROFILE_RETRY_DELAYS_SEC;
+      const index = Math.min(Math.max(profileRetryAttempt - 1, 0), delays.length - 1);
+      let left = delays[index];
+      setProfileRetryCountdown(left);
+      const timer = setInterval(() => {
+        left -= 1;
+        if (left > 0) {
+          setProfileRetryCountdown(left);
+          return;
+        }
+        clearInterval(timer);
+        setProfileRetryCountdown(0);
+        const retry = handleNextRef.current;
+        if (typeof retry === 'function') Promise.resolve(retry()).catch(() => null);
+      }, 1000);
+      return () => clearInterval(timer);
+    }, [profileSaveFail, profileRetryAttempt]);
 
     const contextKey = useMemo(() => JSON.stringify(context), [context]);
     const forceVisibleStepIdsKey = Array.isArray(forceVisibleStepIds)
@@ -829,6 +894,8 @@
       } catch (e) {
         console.error('[StepModal] step save failed:', config.id, e);
         if (config.id === 'profile-metabolism') {
+          // Номер попытки виден человеку и задаёт следующий интервал повтора.
+          setProfileRetryAttempt((attempt) => attempt + 1);
           setProfileSaveFail(true);
           return false;
         }
@@ -938,6 +1005,7 @@
         await waitForSavingPaint();
         const holdProfileSaveOk = async () => {
           if (currentConfig?.id !== 'profile-metabolism') return;
+          setProfileRetryAttempt(0);
           setProfileSaveOk(true);
           await new Promise((resolve) => setTimeout(resolve, 400));
         };
@@ -997,6 +1065,9 @@
         setSavingStep(false);
       }
     }, [savingStep, animating, currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete, saveStepConfig, showSaveError, requireStepAck, normalizeValidationResult, getUserFacingCompletionError, waitForSavingPaint, isStepDataPatch]);
+
+    // Автоповтор сохранения профиля бьёт в ту же кнопку, что и человек.
+    handleNextRef.current = handleNext;
 
     const handlePrev = useCallback(() => {
       if (visibleStepConfigs[currentStepIndex]?.disableBack) return;
@@ -1255,6 +1326,16 @@
       },
         React.createElement('div', {
           className: `mc-modal${modalClassName ? ` ${modalClassName}` : ''}${isDailyLayout ? ' mc-modal--daily' : ''}`,
+          // «клавиатура»: пока клавиатура открыта, модалка живёт в высоте
+          // visualViewport — контент сжимается, футер поднимается над клавишами.
+          style: keyboardViewportHeight > 0
+            ? (() => {
+              const available = `${Math.max(280, keyboardViewportHeight - 24)}px`;
+              return isDailyLayout
+                ? { maxHeight: available, height: available }
+                : { maxHeight: available };
+            })()
+            : undefined,
           'data-heys-step-modal': 'true',
           'data-heys-step-id': currentConfig.id,
           'data-heys-saving': savingStep ? 'true' : 'false',
@@ -1446,6 +1527,20 @@
               ? 'Ответы на месте, они на устройстве. Повторяем автоматически, пока облако не подтвердит запись.'
               : profileSaveOk ? 'Профиль обновлён.' : 'Пара секунд.',
             actions: profileSaveFail ? [
+              // «сохранение»: номер попытки и время до следующей — иначе
+              // «повторяем автоматически» остаётся обещанием без доказательства.
+              React.createElement('div', {
+                key: 'attempt',
+                className: 'mc-profile-retry-status',
+                style: {
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  minHeight: 44, padding: '14px 16px', borderRadius: 20,
+                  background: '#f7efe2', color: 'rgba(0,0,0,.55)',
+                  font: '600 11.5px/1.4 Figtree, system-ui, sans-serif', textAlign: 'center',
+                },
+              }, profileRetryCountdown > 0
+                ? `Попытка ${profileRetryAttempt} · следующая через ${profileRetryCountdown} ${pluralSeconds(profileRetryCountdown)}`
+                : `Попытка ${profileRetryAttempt} · повторяем`),
               React.createElement('button', {
                 key: 'retry', type: 'button', className: 'heys-wait-mark__btn', onClick: handleNext,
               }, 'Повторить сейчас'),

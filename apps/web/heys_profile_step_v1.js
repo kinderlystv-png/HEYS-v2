@@ -49,6 +49,18 @@
     { id: 'active', label: 'Высокая' },
   ];
 
+  // Строка «активность»: ответ спрашивается один раз и должен кормить прогноз
+  // «недель до цели». Множители те же, что у теоретического TDEE в настройках
+  // (FAO/WHO/UNU 2001, heys_user_tab_impl_v1.js), нормированные на «лёгкую» —
+  // иначе два экрана называли бы человеку разные сроки.
+  const ACTIVITY_TDEE_MULTIPLIERS = { sedentary: 1.2, light: 1.375, active: 1.725 };
+
+  function activityRateFactor(activityLevel) {
+    const multiplier = ACTIVITY_TDEE_MULTIPLIERS[String(activityLevel || '')];
+    if (!multiplier) return 1;
+    return multiplier / ACTIVITY_TDEE_MULTIPLIERS.light;
+  }
+
   function goalDirectionFromPct(pct) {
     const n = Number(pct);
     if (!(Number.isFinite(n))) return null;
@@ -446,7 +458,7 @@
   }
 
   // Расчёт времени до цели
-  function calcTimeToGoal(currentWeight, goalWeight, deficitPct) {
+  function calcTimeToGoal(currentWeight, goalWeight, deficitPct, activityLevel) {
     // Защита от undefined/NaN значений
     const cw = Number(currentWeight) || 70;
     const gw = Number(goalWeight) || cw;
@@ -461,6 +473,9 @@
     if (absPct >= 15) weeklyRate = 0.8;
     else if (absPct >= 10) weeklyRate = 0.6;
     else weeklyRate = 0.4;
+    // Активность двигает расход, а значит и скорость: сидячая тормозит прогноз,
+    // высокая ускоряет. Без этого ответ шага 3 никуда не вёл.
+    weeklyRate *= activityRateFactor(activityLevel);
 
     const weeks = Math.ceil(diff / weeklyRate);
     if (!isFinite(weeks) || weeks <= 0) return 'уже на цели';
@@ -552,8 +567,12 @@
 
     const nameError = givenNameError(firstName);
     const under18 = age > 0 && age < 18;
+    // ref-callback вместо useRef: компонент рендерится и в тестовых мок-React
+    // без хуков, а узел нужен только внутри текущего рендера.
+    let lastNameNode = null;
 
-    return React.createElement('div', { className: 'flex flex-col gap-4 p-4' },
+    // «вид шага»: поля экрана общие для слоя (.mc-step-content 18px) — свой p-4/p-3 давал 34px по бокам
+    return React.createElement('div', { className: 'flex flex-col gap-4' },
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
       }, 'Расскажите о себе'),
@@ -568,6 +587,14 @@
           onChange: (e) => onChange({ ...data, firstName: e.target.value }),
           placeholder: 'Имя',
           autoComplete: 'given-name',
+          // «клавиатура»: клавиша ввода подписана тем же словом, что и кнопка,
+          // и действительно ведёт дальше — к фамилии.
+          enterKeyHint: 'next',
+          onKeyDown: (e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            if (lastNameNode) lastNameNode.focus();
+          },
           className: 'w-full',
           style: {
             minHeight: 44,
@@ -602,6 +629,15 @@
           onChange: (e) => onChange({ ...data, lastName: e.target.value }),
           placeholder: 'Фамилия',
           autoComplete: 'family-name',
+          ref: (node) => { lastNameNode = node; },
+          // «клавиатура»: последнее поле шага — ввод закрывает клавиатуру,
+          // футер с «Дальше» возвращается на экран.
+          enterKeyHint: 'next',
+          onKeyDown: (e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            e.currentTarget.blur();
+          },
           className: 'w-full',
           style: {
             minHeight: 44,
@@ -655,6 +691,29 @@
             React.createElement('span', { style: { color: '#8a4a20' } }, '*')
           )
         ),
+        // «вид шага профиля»: герой 44/600 тоном --ac с единицей 12/600 ink38
+        // по baseline — и он стоит НАД капсулой колёс. Кадр канваса рисует
+        // возраст 24/700 под капсулой; контракт старше кадра (отступление
+        // названо в протоколе экрана).
+        React.createElement('div', {
+          style: {
+            display: 'flex', alignItems: 'baseline', justifyContent: 'center',
+            gap: 6, marginTop: 8
+          }
+        },
+          React.createElement('span', {
+            style: {
+              font: '600 44px/1 Figtree, system-ui, sans-serif',
+              color: under18 ? '#a1471c' : '#8a4a20'
+            }
+          }, String(age)),
+          React.createElement('span', {
+            style: {
+              font: '600 12px/1 Figtree, system-ui, sans-serif',
+              color: 'rgba(0,0,0,.38)'
+            }
+          }, 'лет')
+        ),
         // WheelPickers: День / Месяц / Год
         WheelPicker ? React.createElement('div', {
           className: 'flex justify-center gap-2',
@@ -696,10 +755,6 @@
           max: `${minAdultBirthYear()}-12-31`,
           className: 'w-full px-4 py-3 border border-gray-300 rounded-xl'
         }),
-        React.createElement('div', {
-          className: 'text-center font-bold',
-          style: { fontSize: 24, color: under18 ? '#a1471c' : '#8a4a20', marginTop: 14 }
-        }, `${age} лет`),
         under18 && React.createElement('div', {
           className: 'rounded-2xl p-3 mt-3',
           style: { background: '#f6e6dd' }
@@ -860,7 +915,8 @@
       })
     );
 
-    return React.createElement('div', { className: 'flex flex-col gap-3 p-3' },
+    // «вид шага»: поля экрана общие для слоя (.mc-step-content 18px) — свой p-4/p-3 давал 34px по бокам
+    return React.createElement('div', { className: 'flex flex-col gap-3' },
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
       }, 'Рост и вес'),
@@ -965,7 +1021,8 @@
       });
     };
 
-    return React.createElement('div', { className: 'flex flex-col gap-6 p-4' },
+    // «вид шага»: поля экрана общие для слоя (.mc-step-content 18px) — свой p-4/p-3 давал 34px по бокам
+    return React.createElement('div', { className: 'flex flex-col gap-6' },
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
       }, 'Цель и активность'),
@@ -988,10 +1045,12 @@
             key: tempo.id,
             type: 'button',
             onClick: () => onChange({ ...data, goalDirection: direction.id, deficitPctTarget: tempo.value }),
-            className: 'px-4 py-2 rounded-full text-sm font-semibold',
-            style: deficitPctTarget === tempo.value
-              ? { background: '#c67139', color: '#2b1608' }
-              : { background: '#f7efe2', color: 'rgba(0,0,0,.55)' }
+            className: 'px-4 rounded-full text-sm font-semibold',
+            // «цель касания»: чип держит 44 pt даже при тексте в одну строку
+            style: Object.assign({ minHeight: 44, display: 'inline-flex', alignItems: 'center' },
+              deficitPctTarget === tempo.value
+                ? { background: '#c67139', color: '#2b1608' }
+                : { background: '#f7efe2', color: 'rgba(0,0,0,.55)' })
           }, tempo.label))
         ),
         selectedTempo && React.createElement('p', { className: 'text-xs text-gray-500' }, selectedTempo.hint)
@@ -1002,10 +1061,12 @@
           key: item.id,
           type: 'button',
           onClick: () => onChange({ ...data, activityLevel: item.id }),
-          className: 'px-4 py-2 rounded-full text-sm font-semibold',
-          style: activityLevel === item.id
-            ? { background: '#c67139', color: '#2b1608' }
-            : { background: '#f7efe2', color: 'rgba(0,0,0,.55)' }
+          className: 'px-4 rounded-full text-sm font-semibold',
+          // «цель касания»: чип держит 44 pt даже при тексте в одну строку
+          style: Object.assign({ minHeight: 44, display: 'inline-flex', alignItems: 'center' },
+            activityLevel === item.id
+              ? { background: '#c67139', color: '#2b1608' }
+              : { background: '#f7efe2', color: 'rgba(0,0,0,.55)' })
         }, item.label))
       ),
       React.createElement('p', { className: 'text-xs text-gray-500' },
@@ -1084,7 +1145,8 @@
       onChange({ ...data, sleepHours: next });
     };
 
-    return React.createElement('div', { className: 'flex flex-col gap-6 p-4' },
+    // «вид шага»: поля экрана общие для слоя (.mc-step-content 18px) — свой p-4/p-3 давал 34px по бокам
+    return React.createElement('div', { className: 'flex flex-col gap-6' },
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
       }, 'Сон и инсулиновая волна'),
@@ -1111,18 +1173,22 @@
           React.createElement('button', {
             type: 'button',
             onClick: () => nudgeSleep(-0.5),
-            className: 'px-4 py-2 rounded-full text-sm font-semibold',
-            style: { background: '#f7efe2', color: 'rgba(0,0,0,.55)', minWidth: 52 }
+            className: 'px-4 rounded-full text-sm font-semibold',
+            // «цель касания»: 44 pt у обоих шагов и у значения между ними
+            style: { background: '#f7efe2', color: 'rgba(0,0,0,.55)', minWidth: 52, minHeight: 44 }
           }, '−'),
           React.createElement('div', {
-            className: 'px-4 py-2 rounded-full text-sm font-semibold',
-            style: { background: '#c67139', color: '#2b1608', minWidth: 84, textAlign: 'center' }
+            className: 'px-4 rounded-full text-sm font-semibold',
+            style: {
+              background: '#c67139', color: '#2b1608', minWidth: 84, minHeight: 44,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
+            }
           }, sleepLabel),
           React.createElement('button', {
             type: 'button',
             onClick: () => nudgeSleep(0.5),
-            className: 'px-4 py-2 rounded-full text-sm font-semibold',
-            style: { background: '#f7efe2', color: 'rgba(0,0,0,.55)', minWidth: 52 }
+            className: 'px-4 rounded-full text-sm font-semibold',
+            style: { background: '#f7efe2', color: 'rgba(0,0,0,.55)', minWidth: 52, minHeight: 44 }
           }, '+')
         )
       ),
@@ -1559,23 +1625,54 @@
     }
 
     const calculatedNorms = calcNormsFromGoal(deficitPctTarget, gender, age);
-    const weeks = calcTimeToGoal(weight, weightGoal, deficitPctTarget);
+    const activityLevel = step3.activityLevel || profile.activityLevel || '';
+    const weeks = calcTimeToGoal(weight, weightGoal, deficitPctTarget, activityLevel);
     const protPct = calculatedNorms.proteinPct || 25;
     const carbsPct = calculatedNorms.carbsPct || 50;
     const fatPct = 100 - protPct - carbsPct;
 
+    // «вид карточки итогов»: строки 12/600, шаг 11, значение справа
+    // табличными цифрами.
     const row = (label, value, valueStyle) => React.createElement('div', {
       style: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 12,
-        fontSize: 13,
+        marginTop: 11,
+        fontSize: 12,
         fontWeight: 600
       }
     },
       React.createElement('span', { style: { color: 'rgba(0,0,0,.55)', fontWeight: 600 } }, label),
-      React.createElement('span', { style: valueStyle || { color: '#201e1d' } }, value)
+      React.createElement('span', {
+        style: Object.assign({ fontVariantNumeric: 'tabular-nums' }, valueStyle || { color: '#201e1d' })
+      }, value)
+    );
+
+    // «вид финального экрана»: круг 60 px, тон подложки и обводки — свой у
+    // каждого из трёх концов.
+    const endingDisc = (bg, stroke, size, strokeWidth, paths) => React.createElement('div', {
+      style: {
+        width: 60,
+        height: 60,
+        borderRadius: 999,
+        background: bg,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }
+    },
+      React.createElement('svg', {
+        width: size,
+        height: size,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke,
+        strokeWidth,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        'aria-hidden': 'true'
+      }, ...paths)
     );
 
     const primaryBtn = (label, onClick) => React.createElement('button', {
@@ -1616,13 +1713,13 @@
       onClick
     }, label);
 
+    // «вид карточки итогов»: фон --c2, радиус 20, поля 14/16, во всю колонку.
     const cardShell = (children) => React.createElement('div', {
       style: {
         width: '100%',
-        maxWidth: 320,
-        background: '#f7efe2',
+        background: '#efe3cf',
         borderRadius: 20,
-        padding: '16px 18px',
+        padding: '14px 16px',
         marginTop: 20,
         textAlign: 'left'
       }
@@ -1635,27 +1732,21 @@
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          padding: '20px',
+          paddingTop: 34,
           textAlign: 'center'
         }
       },
-        React.createElement('div', {
-          style: {
-            width: 60,
-            height: 60,
-            borderRadius: 999,
-            background: '#efe3cf',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 28
-          }
-        }, '⏱'),
+        // ожидание куратора: круг --tint с тоном --ac (контракт; кадр канваса
+        // рисует --c2/--acs — отступление названо в протоколе экрана)
+        endingDisc('#f6e6dd', '#8a4a20', 27, 2.75, [
+          React.createElement('path', { key: 'h', d: 'M12 7v5l3 2' }),
+          React.createElement('circle', { key: 'c', cx: '12', cy: '12', r: '9' })
+        ]),
         React.createElement('h2', {
           style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 18, marginBottom: 0 }
         }, 'Профиль сохранён'),
         React.createElement('p', {
-          style: { fontSize: 13, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55, maxWidth: 320 }
+          style: { fontSize: 12.5, fontWeight: 500, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55 }
         }, 'Куратор назначит дату начала недели и откроет дневник.'),
         cardShell([
           curatorName ? row('Куратор', curatorName) : null,
@@ -1686,27 +1777,20 @@
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          padding: '20px',
+          paddingTop: 34,
           textAlign: 'center'
         }
       },
-        React.createElement('div', {
-          style: {
-            width: 60,
-            height: 60,
-            borderRadius: 999,
-            background: '#efe3cf',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 28
-          }
-        }, '📅'),
+        // неделя позже: тот же тинт, что у ожидания
+        endingDisc('#f6e6dd', '#8a4a20', 27, 2.75, [
+          React.createElement('rect', { key: 'r', x: '3', y: '5', width: '18', height: '16', rx: '3' }),
+          React.createElement('path', { key: 'p', d: 'M8 3v4M16 3v4M3 11h18' })
+        ]),
         React.createElement('h2', {
           style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 18, marginBottom: 0, textWrap: 'pretty' }
         }, `Неделя начнётся ${startLabel}`),
         React.createElement('p', {
-          style: { fontSize: 13, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55, maxWidth: 320 }
+          style: { fontSize: 12.5, fontWeight: 500, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55 }
         }, 'Профиль готов. До этого дня дневник закрыт — считать нечего.'),
         cardShell([
           curatorName ? row('Куратор', curatorName) : null,
@@ -1744,29 +1828,19 @@
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: '20px',
+        paddingTop: 34,
         textAlign: 'center'
       }
     },
-      React.createElement('div', {
-        style: {
-          width: 60,
-          height: 60,
-          borderRadius: 999,
-          background: '#eaefe0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 28,
-          color: '#5c6a45',
-          fontWeight: 700
-        }
-      }, '✓'),
+      // доступ открыт: шалфей — круг --gr-bg, галочка 28 обводкой 3 тоном --gr
+      endingDisc('#eaefe0', '#5c6a45', 28, 3, [
+        React.createElement('path', { key: 'v', d: 'M5 13l4 4L19 7' })
+      ]),
       React.createElement('h2', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 18, marginBottom: 0 }
       }, firstName ? `Профиль готов, ${firstName}` : 'Профиль готов'),
       React.createElement('p', {
-        style: { fontSize: 13, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55, maxWidth: 320 }
+        style: { fontSize: 12.5, fontWeight: 500, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55 }
       }, 'Дальше — утренний чек-ин: полминуты, и день начнёт считаться.'),
       cardShell([
         row('Целевой вес', `${weightGoal} кг`),
@@ -1915,7 +1989,7 @@
     const weightGoal = Number(profile.weightGoal) || weight;
     const weightDiff = weightGoal - weight;
     const diffSign = weightDiff > 0 ? '+' : '';
-    const weeks = calcTimeToGoal(profile.weight, profile.weightGoal, profile.deficitPctTarget);
+    const weeks = calcTimeToGoal(profile.weight, profile.weightGoal, profile.deficitPctTarget, profile.activityLevel);
 
     // Простая модалка с поздравлением
     const modalHTML = `
@@ -2166,6 +2240,7 @@
     bmiCategoryWord,
     minNormalWeightKg,
     formatWeeksForecast,
+    calcTimeToGoal,
     showCongratulationsModal
   };
 
