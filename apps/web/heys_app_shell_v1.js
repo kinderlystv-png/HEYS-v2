@@ -4909,6 +4909,27 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             };
         }, [settingsMenuOpen, sheetPushAccessOpen, dismissSettingsFromOutside]);
 
+        // Контракт settings-system, «safe-area и кнопка назад»: аппаратная
+        // кнопка назад / жест на Android закрывает лист настроек, а не уводит
+        // с экрана. Паттерн — heys_widgets_ui_v1.js (карточка «Ещё») и
+        // heys_day_pickers.js (шторка календаря): pushState-метка при
+        // открытии, popstate закрывает лист; при закрытии из UI сами же
+        // уводим историю на шаг назад, чтобы не оставлять «пустую» запись.
+        React.useEffect(() => {
+            if (!settingsMenuOpen || sheetPushAccessOpen) return undefined;
+            const onPopState = () => setSettingsMenuOpen(false);
+            window.addEventListener('popstate', onPopState);
+            try {
+                window.history.pushState({ heysSettingsSheet: true }, '');
+            } catch (_e) { /* история недоступна — остальные пути закрытия работают */ }
+            return () => {
+                window.removeEventListener('popstate', onPopState);
+                try {
+                    if (window.history.state?.heysSettingsSheet) window.history.back();
+                } catch (_e) { /* ignore */ }
+            };
+        }, [settingsMenuOpen, sheetPushAccessOpen]);
+
         React.useEffect(() => {
             if (!sheetPushAccessOpen) return undefined;
 
