@@ -14,6 +14,7 @@ import * as RealReact from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const NUTRITION_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_nutrition_v1.js'), 'utf8');
+const NUTRITION_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/732-ui-v4-nutrition.css'), 'utf8');
 
 function loadModule() {
   eval(NUTRITION_SRC);
@@ -284,5 +285,100 @@ describe('nutrition-tab · правки зоны', () => {
     // Перерисовка читает профиль заново — состояние показа живёт не в React.
     const second = renderTab(loaded.render, { ctx });
     expect(second.container.querySelector('[data-block="supplements"]')).toBeNull();
+  });
+});
+
+describe('nutrition-tab · повторный тап · правило продукта — добавки', () => {
+  let renderFn;
+
+  function seedSupplements(planned, taken) {
+    seedHEYS({ supplementsTrackingEnabled: true });
+    const loaded = loadModule();
+    renderFn = loaded.render;
+    window.HEYS.Supplements = {
+      CATALOG: {
+        d3: { name: 'D3', timing: 'morning' },
+        mg: { name: 'Магний', timing: 'morning' }
+      },
+      getPlanned: () => planned,
+      markSupplementsTaken: vi.fn()
+    };
+    return renderTab(renderFn, {
+      ctx: {
+        prof: { supplementsTrackingEnabled: true },
+        day: { date: '2026-08-20', meals: MEALS, supplementsPlanned: planned, supplementsTaken: taken }
+      }
+    });
+  }
+
+  // Контракт «повторный тап и поворот» (nutrition-tab.v4.dc.html): «защита
+  // стоит на чипах добавок, на пилюле группы и на «Всё сразу»; на чипах
+  // блоков вкладки её нет». 350 мс дребезга пальца человек и тест
+  // воспроизводят по-разному: вживую — не собрать одинаково дважды, в jsdom —
+  // двумя синхронными click подряд.
+  it('чип добавки: второй тап за 350 мс не создаёт вторую отметку', () => {
+    const { container } = seedSupplements(['d3'], []);
+    const chip = container.querySelector('.nutrition-v4-supplements__chip');
+    expect(chip).toBeTruthy();
+    fireEvent.click(chip);
+    fireEvent.click(chip);
+    expect(window.HEYS.Supplements.markSupplementsTaken).toHaveBeenCalledTimes(1);
+  });
+
+  it('чип добавки: тап через 400 мс проходит как новое нажатие', () => {
+    const { container } = seedSupplements(['d3'], []);
+    const chip = container.querySelector('.nutrition-v4-supplements__chip');
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValueOnce(now).mockReturnValueOnce(now + 400);
+    fireEvent.click(chip);
+    fireEvent.click(chip);
+    expect(window.HEYS.Supplements.markSupplementsTaken).toHaveBeenCalledTimes(2);
+    vi.restoreAllMocks();
+  });
+
+  it('пилюля группы: второй тап за 350 мс не дублирует групповую отметку', () => {
+    const { container } = seedSupplements(['d3', 'mg'], []);
+    const pill = container.querySelector('.nutrition-v4-supplements__group-pill');
+    expect(pill).toBeTruthy();
+    fireEvent.click(pill);
+    fireEvent.click(pill);
+    expect(window.HEYS.Supplements.markSupplementsTaken).toHaveBeenCalledTimes(1);
+  });
+
+  it('«Всё сразу»: второй тап за 350 мс не дублирует отметку дня', () => {
+    const { container } = seedSupplements(['d3', 'mg'], []);
+    const pill = container.querySelector('.nutrition-v4-supplements__pill:not(.is-course)');
+    expect(pill).toBeTruthy();
+    expect(pill.textContent).toBe('Всё сразу');
+    fireEvent.click(pill);
+    fireEvent.click(pill);
+    expect(window.HEYS.Supplements.markSupplementsTaken).toHaveBeenCalledTimes(1);
+  });
+
+  it('разные чипы за 350 мс — это не повтор по тому же элементу, обе отметки проходят', () => {
+    const { container } = seedSupplements(['d3', 'mg'], []);
+    const chips = container.querySelectorAll('.nutrition-v4-supplements__chip');
+    expect(chips).toHaveLength(2);
+    fireEvent.click(chips[0]);
+    fireEvent.click(chips[1]);
+    expect(window.HEYS.Supplements.markSupplementsTaken).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('nutrition-tab · выделение и копирование · правило продукта', () => {
+  // Контракт «язык, выделение, часовой пояс» (nutrition-tab.v4.dc.html):
+  // «названия своих продуктов и заметки к приёму выделяются и копируются,
+  // числа итогов и подписи блоков — нет». Проверено по исходнику CSS — само
+  // выделение мышью/пальцем в jsdom не воспроизводится.
+  it('вкладка и лист правки приёма не выделяются по умолчанию', () => {
+    const match = NUTRITION_CSS.match(/\.nutrition-v4,\s*\.nutrition-v4-sheet-backdrop\s*\{[^}]*\}/);
+    expect(match).toBeTruthy();
+    expect(match[0]).toContain('user-select: none;');
+  });
+
+  it('названия своих продуктов остаются выделяемыми — явное исключение', () => {
+    const match = NUTRITION_CSS.match(/\.nutrition-v4-meal-row__items,\s*\.nutrition-v4-sheet__row--product b\s*\{[^}]*\}/);
+    expect(match).toBeTruthy();
+    expect(match[0]).toContain('user-select: text;');
   });
 });

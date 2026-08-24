@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const MORNING_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_morning_checkin_v1.js'), 'utf8');
 const STEPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_steps_v1.js'), 'utf8');
 const SYNC_MERGE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_sync_merge_v1.js'), 'utf8');
+const STEP_MODAL_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_step_modal_v1.js'), 'utf8');
+const PWA_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/500-pwa-and-offline.css'), 'utf8');
 
 const DATE_KEY = '2026-08-16';
 const CLIENT_ID = 'client-v4';
@@ -219,5 +221,54 @@ describe('morning check-in v4 plan', () => {
     expect(plan.steps).toContain('sleep');
     expect(plan.steps).not.toContain('sleepTime');
     expect(plan.steps).not.toContain('sleepQuality');
+  });
+});
+
+describe('checkin-morning · три сквозных правила продукта', () => {
+  it('safe-area: футер прижат к нижней врезке (поля 12/18/20 контракта)', () => {
+    // Контракт «safe-area и кнопка назад» (checkin-morning.v4.dc.html):
+    // «футер прижат к нижней врезке». Уже реализовано — .mc-daily-footer
+    // берёт готовую переменную --safe-area-bottom (000-base-and-gamification.css:135
+    // = env(safe-area-inset-bottom, 0px)), своего env() заводить не нужно.
+    const idx = PWA_CSS.indexOf('.mc-daily-footer {');
+    expect(idx).toBeGreaterThan(-1);
+    const block = PWA_CSS.slice(idx, idx + 200);
+    expect(block).toContain('padding: 12px 18px calc(20px + var(--safe-area-bottom));');
+  });
+
+  it('выделение: заметка о сне выделяется, вопрос и подписи оценок — нет', () => {
+    // Контракт «язык, выделение, часовой пояс»: «свои заметки о сне
+    // выделяются и копируются; вопросы и подписи оценок — нет».
+    expect(PWA_CSS).not.toMatch(/\.mc-note-input\s*\{[^}]*user-select:\s*none/);
+    const titleMatch = PWA_CSS.match(/\.mc-step-title,\s*\.mc-step-hint\s*\{[^}]*\}/);
+    expect(titleMatch).toBeTruthy();
+    expect(titleMatch[0]).toContain('user-select: none;');
+    const kickerIdx = PWA_CSS.indexOf('.mc-step-kicker {');
+    expect(kickerIdx).toBeGreaterThan(-1);
+    expect(PWA_CSS.slice(kickerIdx, kickerIdx + 250)).toContain('user-select: none;');
+    const scaleIdx = PWA_CSS.indexOf('.mc-scale-head {');
+    expect(scaleIdx).toBeGreaterThan(-1);
+    expect(PWA_CSS.slice(scaleIdx, scaleIdx + 350)).toContain('user-select: none;');
+    const qualityIdx = PWA_CSS.indexOf('.mc-quality-label {');
+    expect(qualityIdx).toBeGreaterThan(-1);
+    expect(PWA_CSS.slice(qualityIdx, qualityIdx + 250)).toContain('user-select: none;');
+  });
+
+  it('повторный тап на «Дальше»: re-entrancy guard в StepModal уже блокирует двойное нажатие', () => {
+    // Контракт «повторный тап и поворот»: «защита стоит на кнопке «Дальше» —
+    // двойное нажатие не проскакивает шаг». Кнопка живёт в heys_step_modal_v1.js
+    // (общий для всех step-flow модуль, вне зоны this-агента: checkin-morning,
+    // но не сам StepModal). handleNext уже синхронно блокирует повторный вызов
+    // через actionInFlightRef ДО первого await и до setSavingStep — второй
+    // клик из того же тика return'ится немедленно, а кнопка вдобавок physically
+    // disabled на время сохранения/анимации. Это закрывает контракт без
+    // отдельного 350-мс таймера; фиксируем этим тестом, чтобы будущий рефактор
+    // StepModal не потерял guard молча.
+    expect(STEP_MODAL_SRC).toMatch(
+      /const handleNext = useCallback\(async \(maybePatch\) => \{\s*\n\s*if \(actionInFlightRef\.current \|\| transitionInFlightRef\.current \|\| savingStep \|\| animating\) return;/,
+    );
+    expect(STEP_MODAL_SRC).toContain('actionInFlightRef.current = true;');
+    expect(STEP_MODAL_SRC).toMatch(/dailyPrimaryDisabled = savingStep \|\| animating \|\| liveInvalidReason/);
+    expect(STEP_MODAL_SRC).toMatch(/className: 'mc-btn mc-btn--primary mc-daily-footer-primary',\s*\n\s*onClick: handleNext,\s*\n\s*disabled: dailyPrimaryDisabled/);
   });
 });

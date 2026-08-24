@@ -40,6 +40,21 @@
   };
   const SUPP_VISIBLE_LIMIT = 6;
 
+  // Повторный тап · правило продукта (nutrition-tab.v4.dc.html, строка
+  // «повторный тап и поворот»): 350 мс защиты на чипах добавок, пилюле
+  // группы и «Всё сразу» — второе нажатие внутри окна не создаёт лишнюю
+  // отметку. На чипах блоков вкладки такой защиты нет (второй тап выключает
+  // блок), поэтому этот guard применяется только внутри SupplementsBlockV4.
+  const REPEAT_TAP_GUARD_MS = 350;
+  const repeatTapGuardMap = new Map();
+  function passRepeatTapGuard(key) {
+    const now = Date.now();
+    const last = repeatTapGuardMap.get(key) || 0;
+    if (now - last < REPEAT_TAP_GUARD_MS) return false;
+    repeatTapGuardMap.set(key, now);
+    return true;
+  }
+
   // === Числа и форматы ===============================================
 
   function isNum(value) {
@@ -940,7 +955,10 @@
         className: 'nutrition-v4-supplements__chip'
           + (isTaken ? ' is-on' : '')
           + (isStale ? ' is-stale' : ''),
-        onClick: () => toggleSupplement(id, !isTaken)
+        onClick: () => {
+          if (!passRepeatTapGuard(date + ':supp-chip:' + id)) return;
+          toggleSupplement(id, !isTaken);
+        }
       },
         isTaken ? React.createElement('span', { className: 'nutrition-v4-supplements__chip-check', 'aria-hidden': 'true' },
           svgIcon(React, { width: 11, height: 11, strokeWidth: 3.5 }, 'M5 13l4 4L19 7')) : null,
@@ -966,6 +984,7 @@
           type: 'button',
           className: 'nutrition-v4-supplements__group-pill' + (allGroupTaken ? ' is-done' : ''),
           onClick: () => {
+            if (!passRepeatTapGuard(date + ':supp-group:' + groupKey)) return;
             if (allGroupTaken) {
               toggleMany(groupIds, false);
             } else {
@@ -1008,6 +1027,7 @@
             type: 'button',
             className: 'nutrition-v4-supplements__pill',
             onClick: () => {
+              if (!passRepeatTapGuard(date + ':supp-all')) return;
               if (allTaken) toggleMany(allIds, false);
               else toggleMany(allIds.filter((id) => !taken.includes(id)), true);
             }

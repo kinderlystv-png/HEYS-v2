@@ -8,6 +8,7 @@ const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8
 const handlersSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_day_day_handlers.js'), 'utf8');
 const widgetsCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8');
 const waterCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/400-water-and-hydration.css'), 'utf8');
+const waterReviewSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_day_water_v1.js'), 'utf8');
 
 describe('добавление воды — канвас water-add v4, ветка В₃', () => {
   it('полноэкранной заливки и летящей капли больше нет', () => {
@@ -249,5 +250,51 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(handlersSrc).toMatch(/deltaMl < 0[\s\S]*?−/);
     expect(uiSrc).toMatch(/detail\.ml < 0\) return/);
     expect(uiSrc).toContain('handleRemoveWater');
+  });
+
+  it('врезка столбика: без своего env(), позиция целиком идёт от rect кнопки', () => {
+    // Контракт «safe-area и кнопка назад» (water-add.v4.dc.html): «столбик
+    // объёмов у кнопки вне Главной поднимается от нижней врезки». Столбик не
+    // читает env(safe-area-inset-bottom) сам — он наследует врезку через
+    // getBoundingClientRect() кнопки, а .fab-group уже отсчитывает bottom от
+    // env(safe-area-inset-bottom). Если это когда-нибудь разойдётся —
+    // добавлять свой env() в JS не нужно, чинить нужно позицию .fab-group.
+    expect(handlersSrc).not.toContain('safe-area-inset-bottom');
+    expect(handlersSrc).toMatch(/showWaterColumn[\s\S]*?anchor\.getBoundingClientRect\(\)/);
+    expect(waterCss).toMatch(/\.fab-group \{[\s\S]*?bottom: calc\(76px \+ env\(safe-area-inset-bottom, 0px\)\)/);
+  });
+
+  it('выделение и копирование: карточка воды не выделяется — весь текст служебный', () => {
+    // Контракт «язык, выделение, часовой пояс» (water-add.v4.dc.html):
+    // местная строка «выделять нечего» неточна буквально (на карточке есть
+    // текст — «осталось …», «за день не отмечено», подсказка пустого дня),
+    // но по общему правилу (home-widgets.v4.dc.html) весь этот текст —
+    // служебные подписи и числа, не написанное человеком, поэтому вывод
+    // контракта верен: выделения на карточке нет.
+    const idx = waterCss.indexOf('.water-review {\n  display: block;');
+    expect(idx).toBeGreaterThan(-1);
+    const block = waterCss.slice(idx, idx + 400);
+    expect(block).toContain('user-select: none;');
+  });
+
+  it('повторный тап: контракт явно исключает чипы объёмов воды — guard на них не заводим', () => {
+    // Контракт «повторный тап и поворот» (water-add.v4.dc.html) и общее
+    // правило (home-widgets.v4.dc.html, строка «повторный тап · правило
+    // продукта») прямо называют чипы объёмов воды исключением: «Защита не
+    // ставится на аддитивный ввод, где повтор осмыслен по замыслу — чипы
+    // объёмов воды…». Роль защиты у чипов выполняет перезапуск анимации
+    // (столбик/плитка не встают в очередь), а частый тап отдельно гасится
+    // только по звуку (isWaterSoundFlooded, >4 тапов/2с) — это другая защита,
+    // от заливания звуком, не от дублирования записи, и её мы не трогаем.
+    expect(waterReviewSrc).toMatch(/onShortClick: \(event\) => onPick\(ml, event\)/);
+    expect(waterReviewSrc).not.toMatch(/passRepeatTapGuard|REPEAT_TAP_GUARD_MS|guardEntityQuickAction/);
+    // Долгое нажатие (открытие листа «свой объём») уже не даёт дублей другим
+    // путём: onClick листа при триггере long-press глотает клик (stopEvent),
+    // а после подтверждения лист уходит в состояние `closing` на 400 мс —
+    // это дольше 350 мс контракта и перекрывает кнопку/сцену блокером.
+    const customSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_water_custom_volume_v1.js'), 'utf8');
+    expect(customSrc).toContain('const SHEET_CLOSE_MS = 400;');
+    expect(customSrc).toMatch(/dismiss\(\);\s*\n\s*onAddRef\.current\?\.\(volume\);/);
+    expect(customSrc).toMatch(/className: 'water-custom-sheet__blocker',[\s\S]*?onPointerDown: stopEvent,[\s\S]*?onPointerUp: stopEvent,[\s\S]*?onClick: stopEvent/);
   });
 });
