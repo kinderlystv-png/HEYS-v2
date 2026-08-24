@@ -347,6 +347,25 @@ html[data-theme-id="blue-dark"] .water-review {
   height: 56px;
 }
 
+/* Точки по дням (контракт «неделя в «Кольце»»): норма взята — залитая,
+   промах — контурная с фоном карточки внутри; сегодня несёт только ореол. */
+.water-review__curve-dot {
+  fill: currentColor;
+}
+
+.water-review__curve-dot--miss {
+  fill: var(--v4-surface, #ffffff);
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.water-review__curve-today {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
+  opacity: 0.45;
+}
+
 .water-review__days {
   display: flex;
   justify-content: space-between;
@@ -2516,6 +2535,12 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   font: 700 11.5px/1 Figtree, sans-serif;
 }
 
+/* Строка «вид шапки шторки»: ряд выравнивается по baseline — «Прочитать все»
+   садится на базовую линию заголовка, а не по центру ряда. */
+.advice-list-container--v4 .advice-list-header-top {
+  align-items: baseline;
+}
+
 /* Строка «вид шапки шторки»: счётчик тем же кеглем весом 600 тоном чернил
    42 % табличными цифрами, через пробел от заголовка. */
 .advice-list-container--v4 .advice-list-title__count {
@@ -2581,26 +2606,29 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: #201e1d;
 }
 
-.advice-list-container--v4 .advice-card-footnote-link {
+/* Строка «вид карточки совета»: под заголовком через 8 строка-вход «Детали»
+   с шевроном 14 px через 6. Пояснения вторичным тоном в карточке нет — оно
+   живёт в детали, поэтому и раскрытия в карточке больше нет. */
+.advice-list-container--v4 .advice-list-content {
+  gap: 0;
+}
+
+.advice-list-container--v4 .advice-list-card-actions {
   margin-top: 8px;
+}
+
+.advice-list-container--v4 .advice-card-footnote-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  opacity: 1;
+  text-decoration: none;
   font: 700 10.5px/1 Figtree, sans-serif;
   color: #8a4a20;
   padding: 0;
   border: none;
   background: transparent;
-}
-
-.advice-list-container--v4 .advice-expand-arrow {
-  display: none;
-}
-
-.advice-list-container--v4 .advice-list-details {
-  background: #efe3cf;
-  border-radius: 14px;
-  padding: 12px 13px;
-  margin-top: 11px;
-  font: 500 11.5px/1.5 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.55);
 }
 
 .advice-list-container--v4 .advice-list-hints {
@@ -2657,6 +2685,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .advice-v4-detail__close {
+  position: relative;
   width: 30px;
   height: 30px;
   flex: none;
@@ -2668,6 +2697,14 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+/* Строка «области нажатия»: крестик — круг 30 px с областью 44. Припуск
+   прозрачный, чтобы не раздувать сам кружок; приём как у «Прочитать все». */
+.advice-v4-detail__close::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
 }
 
 .advice-v4-detail__body {
@@ -2792,11 +2829,6 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 
 [data-theme$='dark'] .advice-list-container--v4 .advice-list-text {
   color: var(--v4-ink, #f2ede6);
-}
-
-[data-theme$='dark'] .advice-list-container--v4 .advice-list-details {
-  background: #2f2820;
-  color: rgba(242, 237, 230, 0.62);
 }
 
 [data-theme$='dark'] .advice-v4-detail-overlay {
@@ -3212,15 +3244,37 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: #2b1608;
 }
 
-.advice-list-container--empty {
-  min-height: 220px;
+/* Строка «пустое состояние»: не шторка, а всплывающая плашка над нижним
+   меню — те же 88 px снизу, что у всплывающего совета. */
+.advice-v4-empty-toast {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 22px;
+  background: #eaefe0;
+  padding: 16px 18px;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    0 14px 30px rgba(0, 0, 0, 0.16);
+  color: #5c6a45;
+  cursor: pointer;
 }
 
-.advice-v4-empty-copy {
-  padding: 28px 6px 12px;
-  text-align: center;
-  font: 600 13px/1.45 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.45);
+.advice-v4-empty-toast .advice-v4-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.advice-v4-empty-toast__text {
+  flex: 1;
+  font: 600 12.5px/1.4 Figtree, sans-serif;
+  color: #5c6a45;
 }
 
 .advice-v4-panel--toast-confirm {
@@ -3258,6 +3312,15 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: rgba(242, 237, 230, 0.62);
 }
 
+[data-theme$='dark'] .advice-v4-empty-toast {
+  background: #242c20;
+  color: #9fb981;
+}
+
+[data-theme$='dark'] .advice-v4-empty-toast__text {
+  color: #9fb981;
+}
+
 [data-theme$='dark'] .advice-v4-science__source {
   background: #23201b;
 }
@@ -3267,10 +3330,6 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 [data-theme$='dark'] .advice-v4-toast-card__primary {
   background: #cf8144;
   color: #1a0f04;
-}
-
-[data-theme$='dark'] .advice-v4-empty-copy {
-  color: rgba(242, 237, 230, 0.45);
 }
 
 /* MODULE 05 — Water & Hydration
