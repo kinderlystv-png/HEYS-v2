@@ -2472,9 +2472,11 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-list-overlay:has(.advice-list-container--v4) {
   padding: 0;
   align-items: flex-end;
+  /* Строка «вид шторки»: затемнение чернил 34 % БЕЗ блюра — шторку советов
+     открывают часто, и размытие на каждом открытии утомляет. Это названное
+     самим контрактом исключение из инварианта scrim, а не забытый токен.
+     Настройки и научный слой советов блюр держат — там он к месту. */
   background: rgba(32, 30, 29, 0.34);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
 }
 
 .advice-list-container--v4 {
@@ -2512,6 +2514,14 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-list-container--v4 .advice-list-header-link--read-all {
   color: #8a4a20;
   font: 700 11.5px/1 Figtree, sans-serif;
+}
+
+/* Строка «вид шапки шторки»: счётчик тем же кеглем весом 600 тоном чернил
+   42 % табличными цифрами, через пробел от заголовка. */
+.advice-list-container--v4 .advice-list-title__count {
+  font-weight: 600;
+  color: rgba(32, 30, 29, 0.42);
+  font-variant-numeric: tabular-nums;
 }
 
 .advice-list-container--v4 .advice-list-items {
@@ -2553,9 +2563,13 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   flex: none;
 }
 
-.advice-list-container--v4 .advice-list-item-wrapper[data-advice-category='training'] .advice-list-item-v4::before,
-.advice-list-container--v4 .advice-list-item-wrapper[data-advice-category='activity'] .advice-list-item-v4::before {
-  background: #7a8a5e;
+/* Строка «полоса слева»: полоса несёт ТОЛЬКО состояние — --acs требует
+   внимания, --gr2 идёт хорошо. Прежнее правило красило по категории:
+   тренировки и активность зелёным, остальное терракотой. Из-за этого
+   благополучный совет о тренировке выглядел тревожным, а тревожный о
+   питании — спокойным. Состояние несёт advice.type. */
+.advice-list-container--v4 .advice-list-item-v4.advice-list-item-success::before {
+  background: var(--v4-sand-ok-fill, #7a8a5e);
 }
 
 .advice-list-container--v4 .advice-list-icon {

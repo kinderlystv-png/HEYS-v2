@@ -11421,21 +11421,33 @@ body:has(:is(
   font-size: 22px;
 }
 
-.tab-advice-badge {
+  /* Строка «вид бейджа счётчика»: кружок 14 px в углу лампочки, заливка
+     --acs при обычном содержимом, цифра 8,5 px/700 тоном --on-acs, обводка
+     2 px фоном экрана — иначе бейдж сливается с иконкой. Строка «ноль»:
+     при нуле бейджа нет вовсе, display включает скрипт. */
   position: absolute;
   top: 4px;
   right: 4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
-  background: #fbbf24;
-  color: #78350f;
-  font-size: 10px;
-  font-weight: 600;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--v4-sand-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
+  box-shadow: 0 0 0 2px var(--v4-bg, #fffaf1);
+  font-size: 8.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   display: none;
   align-items: center;
   justify-content: center;
+}
+
+/* Критичное содержимое — заливка внимания (та же строка контракта). */
+.hdr-header-icon-btn--advice-critical .tab-advice-badge,
+.tab-advice-badge.is-critical {
+  background: var(--v4-warn-2, #dc2626);
+  color: #ffffff;
 }
 
 /* === Бейдж модерации на ⚙️-иконке (только для куратора, pendingCount > 0) === */

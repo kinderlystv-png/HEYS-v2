@@ -1836,7 +1836,14 @@
                 React.createElement('div', { className: 'advice-list-handle', 'aria-hidden': true }),
                 React.createElement('div', { className: 'advice-list-header advice-list-header--v4' },
                     React.createElement('div', { className: 'advice-list-header-top' },
-                        React.createElement('span', { className: 'advice-list-title' }, 'Советы'),
+                        React.createElement('span', { className: 'advice-list-title' }, 'Советы',
+                            // Строка «вид шапки шторки»: через пробел счётчик тем же
+                            // кеглем весом 600 тоном чернил 42 % табличными цифрами.
+                            displayAdviceCount > 0 && React.createElement('span', {
+                                className: 'advice-list-title__count n',
+                                'aria-hidden': 'true',
+                            }, ' ' + displayAdviceCount)
+                        ),
                         React.createElement('div', { className: 'advice-list-header-actions' },
                             _isCurator && (adviceTraceAvailable || adviceDiagnostics) && React.createElement('button', {
                                 className: 'advice-list-header-link advice-list-header-link--service',
@@ -1860,7 +1867,7 @@
                         className: 'advice-group advice-group--ews'
                     },
                         React.createElement('div', { className: 'advice-group-header advice-group-header--ews' },
-                            '🚨 Предупреждения'
+                            'Предупреждения'
                         ),
                         safeEwsWarnings.map((warning, idx) =>
                             HEYS.EWSWarningCard
