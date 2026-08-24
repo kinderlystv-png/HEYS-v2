@@ -2916,6 +2916,284 @@ body:has(.page-reports) .hdr::after {
   cursor: pointer;
 }
 
+/* ── Режим правки списка быстрых действий ──────────────────────────────
+   Строки контракта «правка списка», «два состояния карандаша», «режим
+   правки», «скрытые чипами», «области нажатия в карточке» и «тайминги
+   правки». До этого правки списка в карточке не существовало вовсе:
+   состав можно было менять только в настройках. */
+
+.widgets-quick-sheet__row-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  max-height: 120px;
+  opacity: 1;
+  /* «Скрытие строки 160 мс: строка сжимается по высоте, соседние смыкаются». */
+  transition:
+    max-height 160ms ease,
+    opacity 160ms ease;
+}
+
+.widgets-quick-sheet__row-wrap.is-hiding {
+  max-height: 0;
+  opacity: 0;
+}
+
+.widgets-quick-sheet__row-wrap > .widgets-quick-sheet__row,
+.widgets-quick-sheet__row-wrap > .widgets-quick-sheet__head {
+  flex: 1;
+  min-width: 0;
+  /* «Вход в режим 180 мс: строки сдвигаются на 31 px»; выход — те же 180 мс. */
+  transition: transform 180ms ease;
+}
+
+.widgets-quick-sheet.is-editing .widgets-quick-sheet__row-wrap > .widgets-quick-sheet__row,
+.widgets-quick-sheet.is-editing .widgets-quick-sheet__row-wrap > .widgets-quick-sheet__head {
+  transform: translateX(31px);
+}
+
+/* «шевроны и счётчик воды гаснут за 120 мс». */
+.widgets-quick-sheet__fade {
+  display: inline-flex;
+  align-items: center;
+  opacity: 1;
+  transition: opacity 120ms ease;
+}
+
+.widgets-quick-sheet.is-editing .widgets-quick-sheet__fade {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* «круг 22 px с минусом: заливка оттенка акцента, минус 12 px обводкой 3,2
+   акцентным тоном». Минусы выезжают слева за 180 мс. */
+.widgets-quick-minus {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  margin-top: -11px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #f6e6dd;
+  color: #8a4a20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  animation: widgets-quick-minus-in 180ms ease-out;
+}
+
+/* «круг минуса и чип возврата — не меньше 44×44 за счёт прозрачных полей
+   вокруг видимого круга 22 и чипа 28» (строка «области нажатия в карточке»). */
+.widgets-quick-minus::before {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
+@keyframes widgets-quick-minus-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* «Чипы идут в ряд справа налево по порядку скрытия», слева от карандаша. */
+.widgets-quick-chips {
+  position: absolute;
+  right: 106px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 6px;
+  z-index: 2;
+}
+
+.widgets-quick-chip {
+  position: relative;
+  height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-bg, #fffaf1);
+  color: #8a4a20;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow:
+    0 1px 2px rgba(80, 50, 20, 0.1),
+    0 6px 16px rgba(80, 50, 20, 0.14);
+  animation: widgets-quick-chip-in 140ms ease-out;
+}
+
+.widgets-quick-chip::before {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
+.widgets-quick-chip__label {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+@keyframes widgets-quick-chip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* «слева от «×» круг 40 px с тенью малых кнопок; правый край на 72 px от края
+   экрана, низ на 20 — центр совпадает с центром кнопки». Обёртка стоит на
+   right: 14px и bottom: nav + 14px, поэтому здесь 58 и 6. */
+.widgets-quick-pencil {
+  position: absolute;
+  right: 58px;
+  bottom: 6px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #efe3cf;
+  color: #8a4a20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  box-shadow:
+    0 1px 2px rgba(80, 50, 20, 0.1),
+    0 6px 16px rgba(80, 50, 20, 0.14);
+  /* «Переход 140 мс» между спокойным и активным состоянием карандаша. */
+  transition:
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.widgets-quick-pencil.is-editing {
+  background: #f6e6dd;
+  box-shadow:
+    inset 0 0 0 2px #c67139,
+    0 1px 2px rgba(80, 50, 20, 0.1),
+    0 6px 16px rgba(80, 50, 20, 0.14);
+}
+
+[data-theme$="dark"] .widgets-quick-pencil {
+  background: #2f2820;
+  color: #e2a468;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme$="dark"] .widgets-quick-pencil.is-editing {
+  background: #3a241a;
+  box-shadow:
+    inset 0 0 0 2px #cf8144,
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme$="dark"] .widgets-quick-minus {
+  background: #3a241a;
+  color: #e2a468;
+}
+
+[data-theme$="dark"] .widgets-quick-chip {
+  background: #23201b;
+  color: #e2a468;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme-id="blue"] .widgets-quick-pencil {
+  background: #e2ecf6;
+  color: #1d5e96;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 38, 0.1),
+    0 6px 16px rgba(16, 24, 38, 0.14);
+}
+
+[data-theme-id="blue"] .widgets-quick-pencil.is-editing {
+  background: #fbe6e2;
+  box-shadow:
+    inset 0 0 0 2px #1d5e96,
+    0 1px 2px rgba(16, 24, 38, 0.1),
+    0 6px 16px rgba(16, 24, 38, 0.14);
+}
+
+[data-theme-id="blue"] .widgets-quick-minus {
+  background: #fbe6e2;
+  color: #1d5e96;
+}
+
+[data-theme-id="blue"] .widgets-quick-chip {
+  background: #ffffff;
+  color: #1d5e96;
+}
+
+[data-theme-id="blue-dark"] .widgets-quick-pencil {
+  background: #1e3448;
+  color: #7fbceb;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme-id="blue-dark"] .widgets-quick-pencil.is-editing {
+  background: #33242a;
+  box-shadow:
+    inset 0 0 0 2px #3f8fd0,
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 6px 16px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme-id="blue-dark"] .widgets-quick-minus {
+  background: #33242a;
+  color: #7fbceb;
+}
+
+[data-theme-id="blue-dark"] .widgets-quick-chip {
+  background: #182a3a;
+  color: #7fbceb;
+}
+
+/* Строка «карандаш и кнопка настройки»: пока карточка раскрыта, кнопка
+   настройки экрана внизу слева скрыта. */
+.widgets-fab-left.is-hidden {
+  display: none;
+}
+
+/* Строка «уменьшенное движение»: правило безусловно — выезд карточки, поворот
+   «+» в «×», выезд минусов и появление чипов не проигрываются, состояния
+   сменяются мгновенно. Затемнение остаётся, блюр снимается. Общее правило
+   reduce-motion гасит длительности, но blur — не анимация, его снимаем здесь. */
+@media (prefers-reduced-motion: reduce) {
+  .widgets-quick-scrim {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
 .widgets-quick-fab {
   position: relative;
   z-index: 2;
@@ -2971,6 +3249,43 @@ body:has(.page-reports) .hdr::after {
     0 10px 22px rgba(0, 0, 0, 0.5);
 }
 
+/* Строка контракта «тон одиночной кнопки»: кнопка красится тоном своего
+   действия, если он у действия есть. Сегодня свой тон есть только у воды —
+   --wat, знак тоном --on-wat. Прежде одиночная кнопка всегда оставалась
+   акцентом палитры, и вода ничем не отличалась от еды. Тень — тона заливки,
+   обводки нет. Правила стоят после палитровых, чтобы перебить акцент. */
+.widgets-quick-fab--water {
+  background: #5e808f;
+  color: #ffffff;
+  box-shadow:
+    0 2px 4px rgba(40, 60, 70, 0.16),
+    0 10px 22px rgba(40, 60, 70, 0.3);
+}
+
+[data-theme$="dark"] .widgets-quick-fab--water {
+  background: #8fb3c2;
+  color: #101a1f;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.45),
+    0 10px 22px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme-id="blue"] .widgets-quick-fab--water {
+  background: #3d7f9e;
+  color: #ffffff;
+  box-shadow:
+    0 2px 4px rgba(16, 24, 38, 0.12),
+    0 10px 22px rgba(16, 24, 38, 0.28);
+}
+
+[data-theme-id="blue-dark"] .widgets-quick-fab--water {
+  background: #7fb6d0;
+  color: #0b1621;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 10px 22px rgba(0, 0, 0, 0.5);
+}
+
 /* Счётчик бюджета в шапке расстановки */
 .hdr-widgets-edit-title--stacked {
   display: flex;
@@ -2979,12 +3294,16 @@ body:has(.page-reports) .hdr::after {
   gap: 3px;
 }
 
+/* Строка контракта «вид счётчика места»: 11 px/600 тоном чернил 45 % с
+   табличными цифрами. Прежние 9.5 px моноширинным шрифтом и чернила 42 % —
+   не кегль и не тон канваса; табличные цифры даёт font-variant-numeric, а не
+   подмена гарнитуры на ui-monospace. */
 .hdr-widgets-edit-budget {
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  font-family: ui-monospace, Menlo, monospace;
-  color: rgba(0, 0, 0, 0.42);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  font-variant-numeric: tabular-nums;
 }
 
 [data-theme$="dark"] .hdr-widgets-edit-budget {
@@ -2994,16 +3313,23 @@ body:has(.page-reports) .hdr::after {
 .widget-v4-catalog__budget {
   display: block;
   margin-bottom: 8px;
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  font-family: ui-monospace, Menlo, monospace;
-  color: rgba(0, 0, 0, 0.42);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  font-variant-numeric: tabular-nums;
   text-align: center;
 }
 
 [data-theme$="dark"] .widget-v4-catalog__budget {
   color: rgba(242, 237, 230, 0.5);
+}
+
+/* «при полном экране N красится тоном --val-bad» — красится только число,
+   слова «занято» и «из 32» остаются чернилами. */
+.hdr-widgets-edit-budget__num.is-full,
+.widget-v4-catalog__budget__num.is-full {
+  color: var(--v4-bad-text, #a8382b);
 }
 
 /* Бюджет экрана — прокрутка сетки (канвас «Бюджет экрана», 23 августа) */
@@ -4653,6 +4979,36 @@ body:has(.page-reports) .hdr::after {
   background: var(--widget-surface-soft);
 }
 
+/* Строка контракта «тепловая карта»: клетка 1×1 тоже идёт по шкале плотности
+   в одном тоне, а не по ролям состояния. Правило нарочно узкое — базовые
+   зелёный/жёлтый/красный ниже принадлежат классической тепловой карте. */
+.widget-heatmap--micro .widget-heatmap__cell--red {
+  background: rgba(32, 30, 29, 0.18);
+  box-shadow: none;
+}
+
+.widget-heatmap--micro .widget-heatmap__cell--yellow {
+  background: rgba(32, 30, 29, 0.36);
+  box-shadow: none;
+}
+
+.widget-heatmap--micro .widget-heatmap__cell--green {
+  background: rgba(32, 30, 29, 0.58);
+  box-shadow: none;
+}
+
+[data-theme$="dark"] .widget-heatmap--micro .widget-heatmap__cell--red {
+  background: rgba(242, 237, 230, 0.2);
+}
+
+[data-theme$="dark"] .widget-heatmap--micro .widget-heatmap__cell--yellow {
+  background: rgba(242, 237, 230, 0.4);
+}
+
+[data-theme$="dark"] .widget-heatmap--micro .widget-heatmap__cell--green {
+  background: rgba(242, 237, 230, 0.62);
+}
+
 .widget-heatmap__cell--green {
   background: linear-gradient(135deg, #22c55e, #10b981);
   box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
@@ -5957,19 +6313,34 @@ body:has(.page-reports) .hdr::after {
   border-radius: 5px;
 }
 
-.widget-heatmap__cell--2x2.widget-heatmap__cell--green {
-  background: linear-gradient(135deg, #22c55e, #10b981);
-  box-shadow: 0 2px 6px rgba(34, 197, 94, 0.3);
+/* Строка контракта «тепловая карта»: у клеток 2×2 та же шкала плотности в
+   одном тоне. Прежние зелёный/жёлтый/красный градиенты были прямой
+   раскраской клетки ролями состояния. */
+.widget-heatmap__cell--2x2.widget-heatmap__cell--red {
+  background: rgba(32, 30, 29, 0.18);
+  box-shadow: none;
 }
 
 .widget-heatmap__cell--2x2.widget-heatmap__cell--yellow {
-  background: linear-gradient(135deg, #eab308, #fbbf24);
-  box-shadow: 0 2px 6px rgba(234, 179, 8, 0.3);
+  background: rgba(32, 30, 29, 0.36);
+  box-shadow: none;
 }
 
-.widget-heatmap__cell--2x2.widget-heatmap__cell--red {
-  background: linear-gradient(135deg, #ef4444, #f87171);
-  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+.widget-heatmap__cell--2x2.widget-heatmap__cell--green {
+  background: rgba(32, 30, 29, 0.58);
+  box-shadow: none;
+}
+
+[data-theme$="dark"] .widget-heatmap__cell--2x2.widget-heatmap__cell--red {
+  background: rgba(242, 237, 230, 0.2);
+}
+
+[data-theme$="dark"] .widget-heatmap__cell--2x2.widget-heatmap__cell--yellow {
+  background: rgba(242, 237, 230, 0.4);
+}
+
+[data-theme$="dark"] .widget-heatmap__cell--2x2.widget-heatmap__cell--green {
+  background: rgba(242, 237, 230, 0.62);
 }
 
 .widget-heatmap__cell--training {
@@ -9878,6 +10249,37 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
+/* Строка контракта «длинное значение в узком формате»: число не сжимается
+   кеглем и не переносится. Лестница ступенями — сначала уходит единица, потом
+   сокращается подпись, дальше число обрезается краем плитки (overflow: hidden
+   у .widget). Ступени ставит сама плитка по замеру ширины. */
+.widget-v4-hero-num__val,
+.widget-v4-mini__value,
+.widget-v4-row__value {
+  white-space: nowrap;
+}
+
+.widget--value-tight .widget-v4-unit {
+  display: none;
+}
+
+.widget--value-tight-2 .widget-v4-kicker {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Строка контракта «что под ней»: зона 48×48 в левом нижнем углу сетки занята
+   кнопкой настройки экрана — у плитки, которая туда попадает, число прижато к
+   правому краю. Полосы этой плитки остаются открытым вопросом дизайна:
+   индент на 48 px съедает половину 1×1, поэтому здесь двигаются только числа. */
+.widget--corner-bl .widget-v4-mini__value,
+.widget--corner-bl .widget-v4-row__value,
+.widget--corner-bl .widget-v4-hero-num {
+  align-self: flex-end;
+  text-align: right;
+}
+
 /* Calories 2×2 hero — bar layout (canvas g1) */
 .widget-calories--v4-hero {
   display: flex;
@@ -10070,6 +10472,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 
 .widget-v4-row__value.widget-v4-val--good,
 .widget-v4-row__value.widget-v4-val--bad,
+.widget-v4-row__value.widget-v4-val--warn,
 .widget-v4-row__value.widget-v4-val--act,
 .widget-v4-row__value.widget-v4-val--neutral {
   font-size: 21px;
@@ -10079,6 +10482,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 
 .widget-v4-row__value--sm.widget-v4-val--good,
 .widget-v4-row__value--sm.widget-v4-val--bad,
+.widget-v4-row__value--sm.widget-v4-val--warn,
 .widget-v4-row__value--sm.widget-v4-val--act,
 .widget-v4-row__value--sm.widget-v4-val--neutral {
   font-size: 14px;
@@ -10086,6 +10490,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 
 .widget-v4-row__meta.widget-v4-val--good,
 .widget-v4-row__meta.widget-v4-val--bad,
+.widget-v4-row__meta.widget-v4-val--warn,
 .widget-v4-row__meta.widget-v4-val--act,
 .widget-v4-row__meta.widget-v4-val--neutral {
   font-size: 9.5px;
@@ -10095,6 +10500,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 
 .widget-v4-stack__footer .widget-v4-val--good,
 .widget-v4-stack__footer .widget-v4-val--bad,
+.widget-v4-stack__footer .widget-v4-val--warn,
 .widget-v4-stack__footer .widget-v4-val--act,
 .widget-v4-stack__footer .widget-v4-val--neutral {
   font-size: 10px;
@@ -10105,6 +10511,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 .widget-v4-delta.widget-v4-val--good,
 .widget-v4-delta.widget-v4-val--bad,
 .widget-v4-delta.widget-v4-val--neutral,
+.widget-v4-delta.widget-v4-val--warn,
 .widget-v4-delta.widget-v4-val--act {
   font-size: 10px;
   font-weight: 600;
@@ -10175,6 +10582,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 .widget-v4-mini__value.widget-v4-val--good,
 .widget-v4-mini__value.widget-v4-val--bad,
 .widget-v4-mini__value.widget-v4-val--neutral,
+.widget-v4-mini__value.widget-v4-val--warn,
 .widget-v4-mini__value.widget-v4-val--act {
   font-size: 21px;
   font-weight: 600;
@@ -10183,6 +10591,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 .widget-v4-hero-num__val.widget-v4-val--good,
 .widget-v4-hero-num__val.widget-v4-val--bad,
 .widget-v4-hero-num__val.widget-v4-val--neutral,
+.widget-v4-hero-num__val.widget-v4-val--warn,
 .widget-v4-hero-num__val.widget-v4-val--act {
   font-size: 26px;
   font-weight: 600;
@@ -10205,6 +10614,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 
 .widget-v4-kv__row .widget-v4-val--good,
 .widget-v4-kv__row .widget-v4-val--bad,
+.widget-v4-kv__row .widget-v4-val--warn,
 .widget-v4-kv__row .widget-v4-val--act {
   font-size: 10px;
   font-weight: 600;
@@ -10912,6 +11322,10 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   width: 100%;
 }
 
+/* Строка контракта «тепловая карта»: отдельные клетки не красятся ролями
+   состояния — у них своя шкала плотности в одном тоне; ролью красится только
+   итоговое число над картой. Прежние --ok (#7a8a5e) и --warn (#d99a63) были
+   ровно ролями состояния, то есть вторым, чужим прочтением дня. */
 .widget-v4-heat__bar {
   flex: 1;
   height: 9px;
@@ -10919,12 +11333,28 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
-.widget-v4-heat__bar--ok {
-  background: #7a8a5e;
+.widget-v4-heat__bar--d1 {
+  background: rgba(32, 30, 29, 0.18);
 }
 
-.widget-v4-heat__bar--warn {
-  background: #d99a63;
+.widget-v4-heat__bar--d2 {
+  background: rgba(32, 30, 29, 0.36);
+}
+
+.widget-v4-heat__bar--d3 {
+  background: rgba(32, 30, 29, 0.58);
+}
+
+[data-theme$="dark"] .widget-v4-heat__bar--d1 {
+  background: rgba(242, 237, 230, 0.2);
+}
+
+[data-theme$="dark"] .widget-v4-heat__bar--d2 {
+  background: rgba(242, 237, 230, 0.4);
+}
+
+[data-theme$="dark"] .widget-v4-heat__bar--d3 {
+  background: rgba(242, 237, 230, 0.62);
 }
 
 .widget-v4-kv {
@@ -11202,14 +11632,24 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   padding: 0 2px;
 }
 
+/* Строка контракта «вид строки нехватки»: текст 11 px/500 тоном --val-bad.
+   Прежние 10.5 px/600 — не кегль и не вес канваса. */
 .widget-v4-catalog__blocked-text {
   flex: 1;
   min-width: 0;
-  font-size: 10.5px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   line-height: 1.4;
   color: #a8382b;
   text-wrap: pretty;
+}
+
+/* Та же строка: «сама карточка гаснет до 45 % и не нажимается, кроме этой
+   строки». Строка нехватки и кнопка «Снять виджет» лежат рядом с карточкой,
+   а не внутри неё, поэтому остаются живыми. */
+.widget-v4-catalog__item--blocked {
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .widget-v4-catalog__remove-btn {
@@ -12441,10 +12881,36 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   background: rgba(0, 0, 0, 0.08);
 }
 
+/* Строка контракта «тепловая карта»: клетка не носит роль состояния — только
+   ступень плотности в одном тоне. Прежний --v4-ok красил клетку ролью. */
+.widget-heatmap__cell--month.widget-heatmap__cell--red {
+  background: rgba(32, 30, 29, 0.18);
+}
+
+.widget-heatmap__cell--month.widget-heatmap__cell--yellow,
+.widget-heatmap__cell--month.widget-heatmap__cell--warn {
+  background: rgba(32, 30, 29, 0.36);
+}
+
 .widget-heatmap__cell--month.widget-heatmap__cell--green,
 .widget-heatmap__cell--month.widget-heatmap__cell--good,
 .widget-heatmap__cell--month.widget-heatmap__cell--ok {
-  background: var(--v4-ok, #5a9a6e);
+  background: rgba(32, 30, 29, 0.58);
+}
+
+[data-theme$="dark"] .widget-heatmap__cell--month.widget-heatmap__cell--red {
+  background: rgba(242, 237, 230, 0.2);
+}
+
+[data-theme$="dark"] .widget-heatmap__cell--month.widget-heatmap__cell--yellow,
+[data-theme$="dark"] .widget-heatmap__cell--month.widget-heatmap__cell--warn {
+  background: rgba(242, 237, 230, 0.4);
+}
+
+[data-theme$="dark"] .widget-heatmap__cell--month.widget-heatmap__cell--green,
+[data-theme$="dark"] .widget-heatmap__cell--month.widget-heatmap__cell--good,
+[data-theme$="dark"] .widget-heatmap__cell--month.widget-heatmap__cell--ok {
+  background: rgba(242, 237, 230, 0.62);
 }
 
 /* Риск-радар 2×1 «Главный риск» — уровень подписью справа в шапке,
@@ -12676,9 +13142,17 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   color: var(--v4-bad-text, #a8382b);
 }
 
+/* Зона предупреждения общей шкалы («одна шкала на весь продукт»): тёплый
+   акцент набора между шалфеем и красным. Правило стоит после раскраски по
+   --act, иначе терракота героя перекрыла бы предупреждение. */
 .widget-v4-val--warn,
 .widget-v4-row__value.widget-v4-val--warn,
+.widget-v4-row__value--sm.widget-v4-val--warn,
 .widget-v4-row__meta.widget-v4-val--warn,
+.widget-v4-hero-num__val.widget-v4-val--warn,
+.widget-v4-stack__footer .widget-v4-val--warn,
+.widget-v4-delta.widget-v4-val--warn,
+.widget-v4-kv__row .widget-v4-val--warn,
 .widget-v4-mini__value.widget-v4-val--warn {
   color: var(--v4-warn, #d99a63);
 }

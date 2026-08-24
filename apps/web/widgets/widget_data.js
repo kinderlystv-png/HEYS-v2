@@ -52,6 +52,8 @@
       trend: -0.08,
       weekChange: -0.56,
       monthChange: -2.4,
+      windowDeltaKg: -0.56,
+      windowLabel: 'неделю',
       daysToGoal: 31,
       weeksToGoal: 4,
       progressPct: 62,
@@ -709,6 +711,16 @@
       const weekChange = trend ? parseFloat((trend * 7).toFixed(2)) : null;
       const monthChange = trend ? parseFloat((trend * 30).toFixed(1)) : null;
 
+      // Строка контракта «вес»: направление берётся из окна спарклайна
+      // (растущее: с 7 дней, затем 2, 3, 4 недели, дальше месяц), а не из
+      // разницы с прошлым взвешиванием и не из weekChange = trend × 7 —
+      // недельный прогноз это другая величина и на коротких историях он
+      // разворачивается быстрее самого веса. Окно уже считает «Динамика
+      // веса»; второго расчёта у «Веса» быть не должно.
+      const dynamicsV4 = HEYS.Widgets?.WeightDynamicsV4?.compute?.({ profile: prof }) || null;
+      const windowDeltaKg = Number.isFinite(dynamicsV4?.deltaKg) ? dynamicsV4.deltaKg : null;
+      const windowLabel = dynamicsV4?.window?.shortLabel || null;
+
       // Дней до цели (если тренд в нужном направлении)
       let daysToGoal = null;
       let weeksToGoal = null;
@@ -741,6 +753,8 @@
         trend,                    // кг/день
         weekChange,               // −0.5 кг/неделю
         monthChange,              // −2.1 кг/месяц
+        windowDeltaKg,            // изменение за окно спарклайна — им и красим
+        windowLabel,              // «неделю» / «2 недели» / «месяц»
         daysToGoal,               // 98 (дней)
         weeksToGoal,              // 14 (недель)
         progressPct,              // 45%

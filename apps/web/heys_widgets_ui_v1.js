@@ -537,7 +537,8 @@
     index = 0,
     selectedDate,
     dragPreviewPosition = null,
-    removePickActive = false
+    removePickActive = false,
+    isCornerBottomLeft = false
   }) {
     const registry = HEYS.Widgets.registry;
     const widgetType = registry?.getType(widget.type);
@@ -1268,11 +1269,49 @@
     const scaleMetrics = useMemo(() => getElementScaleMetrics(effectiveElementScales), [effectiveElementScales]);
     const hasScales = scaleMetrics.hasScales;
 
+    // Строка контракта «озвучивание плитки»: плитка читается одной фразой.
+    // Фраза снимается с отрисованной плитки после каждого её обновления —
+    // раньше подпись и число уходили в озвучку отдельными узлами, а состояние
+    // не называлось вовсе, потому что жило только цветом.
+    const [spokenLabel, setSpokenLabel] = useState(null);
+    useEffect(() => {
+      if (isEditMode) return;
+      const next = v4TileSpokenLabel(elementRef.current, widgetType?.name);
+      setSpokenLabel((prev) => (prev === next ? prev : next));
+    });
+
+    /**
+     * Строка контракта «длинное значение в узком формате»: число не сжимается
+     * кеглем и не переносится — первой уходит единица, затем сокращается
+     * подпись, и только потом число обрезается краем плитки. Раньше лестницы
+     * не было вовсе: на длинном числе работал только overflow: hidden.
+     */
+    const [tightStep, setTightStep] = useState(0);
+    useEffect(() => {
+      setTightStep(0);
+    }, [spokenLabel, effectiveWidget.size]);
+    useEffect(() => {
+      if (isEditMode || tightStep >= 2) return;
+      const valueNode = elementRef.current?.querySelector(
+        '.widget-v4-hero-num__val, .widget-v4-mini__value, .widget-v4-row__value'
+      );
+      if (!valueNode) return;
+      if (valueNode.scrollWidth > valueNode.clientWidth + 1) setTightStep((step) => step + 1);
+    });
+    const tightClass = tightStep >= 2
+      ? ' widget--value-tight widget--value-tight-2'
+      : (tightStep === 1 ? ' widget--value-tight' : '');
+
     return React.createElement('div', {
       ref: elementRef,
-      className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''} ${isResizing ? 'widget--resizing' : ''} ${isResizing && isResizeSnap ? 'widget--resize-snap' : ''} ${hasScales ? 'widget--has-scales' : ''}`,
+      className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''} ${isResizing ? 'widget--resizing' : ''} ${isResizing && isResizeSnap ? 'widget--resize-snap' : ''} ${hasScales ? 'widget--has-scales' : ''}${tightClass}${isCornerBottomLeft ? ' widget--corner-bl' : ''}`,
       'data-widget-id': widget.id,
       'data-widget-type': widget.type,
+      // role=img закрывает внутренние узлы от обхода: иначе фраза распадается
+      // на подпись и число. В расстановке роль снимается — там у карточки есть
+      // свои кнопки «убрать» и «настроить».
+      role: !isEditMode && spokenLabel ? 'img' : undefined,
+      'aria-label': !isEditMode && spokenLabel ? spokenLabel : undefined,
       style: (() => {
         const s = {
           // 1-based линии в CSS Grid
@@ -1663,6 +1702,44 @@
     return React.createElement('div', { className: 'widget-v4-kicker' }, text);
   }
 
+  /**
+   * Строка контракта «озвучивание плитки»: плитка читается одной фразой
+   * «название, значение, единица, состояние» — «Вес, 91,1 килограмма, идёт
+   * хорошо». Состояние называется словом, а не цветом; подпись и число
+   * отдельными узлами не читаются.
+   *
+   * Фраза собирается из уже отрисованной плитки, а не из данных: видов у
+   * виджета много, и второй генератор текста разошёлся бы с тем, что человек
+   * видит. Роль состояния берётся с самого узла значения — там она и живёт.
+   */
+  const V4_STATE_WORD = {
+    good: 'идёт хорошо',
+    warn: 'требует внимания',
+    bad: 'обрати внимание',
+    overlap: 'волны наложились'
+  };
+
+  function v4TileSpokenLabel(root, fallbackName) {
+    if (!root) return fallbackName || null;
+    const clean = (node) => (node?.textContent || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const name = clean(root.querySelector('.widget-v4-kicker')) || fallbackName || '';
+    const valueNode = root.querySelector(
+      '.widget-v4-hero-num__val, .widget-v4-mini__value, .widget-v4-row__value, .widget-v4-delta'
+    );
+    if (!valueNode) return name || null;
+    const unitNode = valueNode.querySelector('.widget-v4-unit');
+    const unit = clean(unitNode);
+    let value = clean(valueNode);
+    if (unit && value.endsWith(unit)) value = value.slice(0, value.length - unit.length).trim();
+    const stateKey = Object.keys(V4_STATE_WORD)
+      .find((key) => valueNode.classList.contains(`widget-v4-val--${key}`));
+    return [name, value, unit, stateKey ? V4_STATE_WORD[stateKey] : '']
+      .filter(Boolean)
+      .join(', ');
+  }
+
   // Нет данных за день: на месте числа прочерк, подпись остаётся, графики не
   // рисуются, ноль не подставляется (канвас v4, строки 43 и 44). Отдельный
   // случай — виду не хватает истории: тогда вместо графика подпись «нужно N
@@ -1883,9 +1960,24 @@
 
   const V4_VAL_DEAD_ZONE_KG = 0.2;
   const V4_SLEEP_GOOD_MARGIN_H = 0.5;
-  const V4_WATER_TOLERANCE = 0.15;
+  /**
+   * Общая шкала темпа («одна шкала на весь продукт», строки «вода» и «одна
+   * шкала на весь продукт»): ожидаемое = дневная норма × k, отклонение вниз
+   * считается разностью, делённой на дневную норму, а не на ожидаемое.
+   * Зоны 8 / 25 % вниз и 110 / 130 % вверх — константы дизайна, общие для еды
+   * и воды; различается только конец окна (у воды отбой минус 1 ч).
+   * Прежний код знал один допуск 15 % от ожидаемого, не знал шалфея и верха
+   * и обрывал окно за 2 ч до отбоя.
+   */
+  const V4_PACE_BEHIND_WARN = 0.08;
+  const V4_PACE_BEHIND_BAD = 0.25;
+  const V4_PACE_OVER_WARN = 1.10;
+  const V4_PACE_OVER_BAD = 1.30;
   const V4_WATER_GRACE_MIN = 60;
-  const V4_WATER_PREBED_MIN = 120;
+  const V4_WATER_PREBED_MIN = 60;
+  // Подъёма и отбоя из чек-ина нет — окно 08:00–21:00 (строка «одна шкала»).
+  const V4_PACE_FALLBACK_WAKE_MIN = 8 * 60;
+  const V4_PACE_FALLBACK_BED_MIN = 21 * 60;
 
   function parseHmToMinutes(hm) {
     if (!hm || typeof hm !== 'string') return null;
@@ -1953,7 +2045,11 @@
     let elapsed = atMinutes - wakeMinutes;
     if (elapsed < 0) elapsed += 1440;
     elapsed = Math.max(0, Math.min(awakeSpan, elapsed));
-    const share = Math.min(1, elapsed / awakeSpan);
+    // Конец окна у воды — отбой минус 1 ч (строки «вода» и «одна шкала»):
+    // ожидаемое должно упираться в норму там же, где её ждёт раскраска,
+    // иначе метка «к этому часу» и цвет числа говорят разное.
+    const windowSpan = Math.max(1, awakeSpan - V4_WATER_PREBED_MIN);
+    const share = Math.min(1, elapsed / windowSpan);
     const h = Math.floor(atMinutes / 60) % 24;
     const min = atMinutes % 60;
     return {
@@ -1997,6 +2093,8 @@
     if (state === 'good') return 'widget-v4-val--good';
     if (state === 'bad') return 'widget-v4-val--bad';
     if (state === 'act') return 'widget-v4-val--act';
+    // Зона предупреждения общей шкалы темпа (строка «одна шкала на весь продукт»).
+    if (state === 'warn') return 'widget-v4-val--warn';
     if (state === 'overlap') return 'widget-v4-val--overlap';
     return 'widget-v4-val--neutral';
   }
@@ -2025,42 +2123,69 @@
     return v4WeightDeltaState(pts[pts.length - 1].weight - pts[0].weight);
   }
 
+  /**
+   * Строка контракта «вес»: мёртвая зона ±0,2 кг считается за окно, а
+   * направление берётся из окна спарклайна (растущее: неделя, 2, 3, 4 недели,
+   * дальше месяц). Прежде плитка красилась по weekChange = trend × 7 — это
+   * недельный прогноз, а не изменение за окно. Запасной вариант — фиксированные
+   * семь дней спарклайна: он нужен, пока «Динамика веса» не набрала окно.
+   */
+  function v4WeightWindowState(data) {
+    const windowDelta = Number(data?.windowDeltaKg);
+    if (Number.isFinite(windowDelta)) return v4WeightDeltaState(windowDelta);
+    return v4WeightSparkTrendState(data?.sparkline);
+  }
+
   function v4RiskLevelState(level) {
     if (!level || level === 'low') return 'good';
     return 'bad';
   }
 
-  function v4WaterValueState(drunk, target, ctx = {}) {
-    const tgt = Number(target) || 0;
-    const ml = Number(drunk) || 0;
-    if (tgt <= 0) return 'neutral';
+  /**
+   * Общая шкала темпа: k = (сейчас − подъём) / (конец окна − подъём), зажат
+   * в 0…1; ожидаемое = норма × k; отклонение вниз = (ожидаемое − факт) / норма.
+   * Конец окна задаётся вызывающим: у воды отбой минус 1 ч, у еды минус 3 ч.
+   */
+  function v4PaceState(fact, dailyNorm, ctx = {}, prebedMin = V4_WATER_PREBED_MIN) {
+    const norm = Number(dailyNorm) || 0;
+    const value = Number(fact) || 0;
+    if (norm <= 0) return 'neutral';
 
-    const wakeMinutes = parseHmToMinutes(ctx.sleepEnd) ?? (Number.isFinite(ctx.medianWakeMinutes) ? ctx.medianWakeMinutes : null);
-    if (!wakeMinutes) return 'neutral';
+    // Вверх шкала работает от дневной нормы и от окна не зависит.
+    if (value > norm * V4_PACE_OVER_BAD) return 'bad';
+    if (value > norm * V4_PACE_OVER_WARN) return 'warn';
+
+    const wakeMinutes = parseHmToMinutes(ctx.sleepEnd)
+      ?? (Number.isFinite(ctx.medianWakeMinutes) ? ctx.medianWakeMinutes : V4_PACE_FALLBACK_WAKE_MIN);
 
     const nowMinutes = Number.isFinite(ctx.nowMinutes) ? ctx.nowMinutes : moscowNowMinutes();
     if (nowMinutes < wakeMinutes) return 'neutral';
     const minsSinceWake = nowMinutes - wakeMinutes;
+    // «Первый час после подъёма не красим».
     if (minsSinceWake < V4_WATER_GRACE_MIN) return 'neutral';
 
     const bedMinutes = parseHmToMinutes(ctx.sleepStart);
-    const profileSleepH = Number(ctx.profileSleepHours) || 8;
     const awakeSpan = bedMinutes != null
       ? minutesSpan(wakeMinutes, bedMinutes)
-      : Math.round((24 - profileSleepH) * 60);
+      : minutesSpan(wakeMinutes, V4_PACE_FALLBACK_BED_MIN);
     if (!awakeSpan || awakeSpan <= 0) return 'neutral';
 
-    const bedCap = wakeMinutes + awakeSpan - V4_WATER_PREBED_MIN;
-    let elapsed = minsSinceWake;
-    if (nowMinutes > bedCap) {
-      elapsed = Math.max(0, bedCap - wakeMinutes);
-    }
+    // Конец окна: отбой минус запас. Окно короче запаса шкалу не даёт.
+    const windowSpan = awakeSpan - prebedMin;
+    if (windowSpan <= 0) return 'neutral';
 
-    const expectedShare = Math.min(1, Math.max(0, elapsed / awakeSpan));
-    const expectedMl = tgt * expectedShare;
-    const threshold = expectedMl * (1 - V4_WATER_TOLERANCE);
-    if (ml < threshold) return 'bad';
-    return 'neutral';
+    const k = Math.min(1, Math.max(0, minsSinceWake / windowSpan));
+    const expected = norm * k;
+    // Разностью и от дневной нормы — не от ожидаемого: под вечер деление на
+    // ожидаемое давало бы всё более мягкий порог там, где он должен быть строже.
+    const behind = (expected - value) / norm;
+    if (behind > V4_PACE_BEHIND_BAD) return 'bad';
+    if (behind > V4_PACE_BEHIND_WARN) return 'warn';
+    return 'good';
+  }
+
+  function v4WaterValueState(drunk, target, ctx = {}) {
+    return v4PaceState(drunk, target, ctx, V4_WATER_PREBED_MIN);
   }
 
   const V4_MACRO_DEVIATION_PCT = 0.05;
@@ -3873,7 +3998,15 @@
       const deficitLabel = deficitMl === 0
         ? 'в графике'
         : `${deficitMl > 0 ? '+' : '−'}${Math.abs(deficitMl)}`;
-      const waterState = deficitMl >= 0 ? 'neutral' : 'bad';
+      // Строки «вода» и «одна шкала на весь продукт»: свой порог «в минусе =
+      // красный» Главная заводить не вправе — зоны 8 / 25 % вниз и
+      // 110 / 130 % вверх приходят из общей шкалы темпа.
+      const waterState = v4WaterValueState(drunk, target, {
+        sleepEnd: data.sleepEnd,
+        sleepStart: data.sleepStart,
+        medianWakeMinutes: data.medianWakeMinutes,
+        nowMinutes: atMinutes
+      });
       const checkLabel = data.checkHourLabel || schedule.checkLabel;
       return React.createElement('div', { className: 'widget-water widget-water--2x1 widget-v4-stack' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
@@ -4234,6 +4367,7 @@
   function WeightWidgetV4_2x2({
     current,
     weekChange,
+    windowState = 'neutral',
     hasCurrent,
     hasSparkline,
     sparklinePoints
@@ -4263,8 +4397,10 @@
       }).join(' ')
       : '4,14 26,24 48,24 70,6 92,14 114,18 126,19';
     const last = sparkPoints.split(' ').pop().split(',');
-    const weightHeroState = v4WeightSparkTrendState(pts);
-    const weekState = v4WeightDeltaState(weekChange);
+    // Строка «вес»: и герой, и дельта красятся окном спарклайна, а не
+    // фиксированной неделей и не weekChange.
+    const weightHeroState = windowState;
+    const weekState = windowState;
 
     return React.createElement('div', { className: 'widget-weight widget-weight--2x2 widget-v4-stack' },
       v4Kicker('Вес'),
@@ -4468,7 +4604,8 @@
     if (size === '1x1') {
       if (variantId === 'delta') {
         const wc = formatWeekChange();
-        const trendCls = v4ValueStateClass(v4WeightDeltaState(weekChange));
+        // Строка «вес»: направление из окна спарклайна, не из trend × 7.
+        const trendCls = v4ValueStateClass(v4WeightWindowState(data));
         return React.createElement('div', { className: 'widget-weight widget-weight--1x1 widget-v4-mini' },
           v4Kicker('Вес'),
           React.createElement('div', { className: 'widget-v4-mini__value ' + trendCls }, wc || '—')
@@ -4486,7 +4623,9 @@
         const weekText = Number.isFinite(weekChange)
           ? `${weekChange > 0 ? '+' : '−'}${formatRuDecimal(Math.abs(weekChange), 1)} за неделю`
           : null;
-        const weekState = v4WeightDeltaState(weekChange);
+        // Строка «вес»: текст остаётся недельным (строка «состав дефолта»),
+        // а цвет идёт от окна спарклайна.
+        const weekState = v4WeightWindowState(data);
         return React.createElement('div', { className: 'widget-weight widget-weight--2x1 widget-weight--number-week' },
           v4Kicker('Вес'),
           React.createElement('div', { className: 'widget-weight__number-week-row' },
@@ -4640,6 +4779,7 @@
       return React.createElement(WeightWidgetV4_2x2, {
         current,
         weekChange,
+        windowState: v4WeightWindowState(data),
         hasCurrent,
         hasSparkline,
         sparklinePoints
@@ -6108,9 +6248,13 @@
       const week = days.slice(-7);
       while (week.length < 7) week.unshift(null);
       const filled = week.filter((day) => day?.status && day.status !== 'empty').length;
+      // Строка контракта «тепловая карта»: у клеток своя шкала плотности в
+      // одном тоне, а не роли состояния. Роль остаётся только у итогового
+      // числа над картой.
       const barTone = (status) => {
-        if (status === 'green' || status === 'good' || status === 'ok') return 'ok';
-        if (status === 'yellow' || status === 'warn' || status === 'red') return 'warn';
+        if (status === 'green' || status === 'good' || status === 'ok') return 'd3';
+        if (status === 'yellow' || status === 'warn') return 'd2';
+        if (status === 'red') return 'd1';
         return 'empty';
       };
       return React.createElement('div', { className: `widget-heatmap widget-heatmap--${size} widget-v4-stack` },
@@ -6136,9 +6280,11 @@
         const filled28 = data.monthFilledCount ?? monthDays.filter((day) =>
           day?.status === 'green' || day?.status === 'good' || day?.status === 'ok'
         ).length;
+        // Та же строка «тепловая карта»: шкала плотности, не роли состояния.
         const barTone = (status) => {
-          if (status === 'green' || status === 'good' || status === 'ok') return 'ok';
-          if (status === 'yellow' || status === 'warn' || status === 'red') return 'warn';
+          if (status === 'green' || status === 'good' || status === 'ok') return 'd3';
+          if (status === 'yellow' || status === 'warn') return 'd2';
+          if (status === 'red') return 'd1';
           return 'empty';
         };
         const lastWeek = monthDays.slice(-7);
@@ -8679,6 +8825,24 @@
     return [...new Set(list)].filter((ml) => Number.isFinite(ml) && ml > 0).slice(0, 4);
   }
 
+  /**
+   * Живая область для вспомогательных технологий. Та же, что у смены вида
+   * (heys_widgets_variants_v4.js): вторая на экране спорила бы с первой.
+   */
+  function quickAnnounce(text) {
+    if (typeof document === 'undefined' || !text) return;
+    let node = document.getElementById('heys-widgets-live');
+    if (!node) {
+      node = document.createElement('div');
+      node.id = 'heys-widgets-live';
+      node.className = 'sr-only';
+      node.setAttribute('role', 'status');
+      node.setAttribute('aria-live', 'polite');
+      document.body.appendChild(node);
+    }
+    node.textContent = text;
+  }
+
   function QuickChevron() {
     return React.createElement('svg', {
       className: 'widgets-quick-sheet__chevron',
@@ -8710,9 +8874,19 @@
     onAddMeal,
     onOpenCurator,
     onOpenHunger,
-    onOpenActivity
+    onOpenActivity,
+    onOpenChange
   }) {
     const [open, setOpen] = useState(false);
+    // Строка «правка списка»: режим правки живёт только внутри раскрытой
+    // карточки — карандаш переключает его, закрытие карточки из него выводит.
+    const [editing, setEditing] = useState(false);
+    // Строка «скрытые чипами»: чипы идут по порядку скрытия, а не по порядку
+    // списка, поэтому порядок держим отдельно от самого набора видимости.
+    const [hideOrder, setHideOrder] = useState([]);
+    // Строка «тайминги правки»: строка сжимается по высоте 160 мс, и только
+    // потом уходит из списка — иначе соседи смыкаются рывком.
+    const [hidingKey, setHidingKey] = useState(null);
     const wrapRef = useRef(null);
     const visibility = useFabVisibility();
 
@@ -8727,30 +8901,141 @@
     const navKeys = QUICK_ACTION_ORDER.filter((key) => visibility[key] !== false);
     const waterOn = visibility.water !== false;
     const enabledCount = navKeys.length + (waterOn ? 1 : 0);
+    // Порядок списка фиксирован кодом («набор действий»): чип возвращает пункт
+    // на его место в этом порядке, а не в конец.
+    const hiddenKeys = ['water', ...QUICK_ACTION_ORDER]
+      .filter((key) => visibility[key] === false);
+    const hiddenOrdered = [
+      ...hideOrder.filter((key) => hiddenKeys.includes(key)),
+      ...hiddenKeys.filter((key) => !hideOrder.includes(key))
+    ];
+
+    // Строка «правка списка»: карандаш появляется вместе с карточкой, когда
+    // есть что править — включённых больше одного или есть хотя бы один
+    // скрытый пункт. В закрытом состоянии карандаша нет никогда.
+    const canEditList = enabledCount > 1 || hiddenOrdered.length > 0;
+
+    const closeSheet = useCallback(() => {
+      setOpen(false);
+      // Строка «режим правки»: закрытие карточки выходит из режима.
+      setEditing(false);
+    }, []);
+
+    useEffect(() => {
+      onOpenChange?.(open);
+    }, [open, onOpenChange]);
 
     useEffect(() => {
       if (!open) return undefined;
       const onKey = (event) => {
-        if (event.key === 'Escape') setOpen(false);
+        if (event.key === 'Escape') {
+          closeSheet();
+          return;
+        }
+        // Строка «порядок обхода»: в раскрытой карточке обход заперт внутри
+        // неё — за пределы карточки фокус не уходит.
+        if (event.key !== 'Tab') return;
+        const scope = wrapRef.current;
+        if (!scope) return;
+        const items = [...scope.querySelectorAll(
+          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )].filter((el) => el.offsetParent !== null || el === document.activeElement);
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
       };
       const onPointerDown = (event) => {
         if (wrapRef.current && wrapRef.current.contains(event.target)) return;
-        setOpen(false);
+        closeSheet();
       };
+      // Строка «закрытие»: системная кнопка назад закрывает карточку.
+      const onPopState = () => closeSheet();
       document.addEventListener('keydown', onKey);
       document.addEventListener('pointerdown', onPointerDown, true);
+      window.addEventListener('popstate', onPopState);
+      try {
+        window.history.pushState({ heysQuickActions: true }, '');
+      } catch (_e) { /* история недоступна — остальные пути закрытия работают */ }
       return () => {
         document.removeEventListener('keydown', onKey);
         document.removeEventListener('pointerdown', onPointerDown, true);
+        window.removeEventListener('popstate', onPopState);
+        try {
+          if (window.history.state?.heysQuickActions) window.history.back();
+        } catch (_e) { /* ignore */ }
       };
-    }, [open]);
+    }, [open, closeSheet]);
+
+    /** Строка «озвучивание режима правки»: вход в режим объявляется. */
+    useEffect(() => {
+      if (!editing) return;
+      quickAnnounce('правка списка включена');
+    }, [editing]);
+
+    const QUICK_ROW_HIDE_MS = 160;
+
+    const hideAction = useCallback((key) => {
+      setHidingKey(key);
+      setTimeout(() => {
+        HEYS.FabVisibility?.setVisible?.(key, false);
+        setHideOrder((prev) => [...prev.filter((k) => k !== key), key]);
+        setHidingKey(null);
+      }, QUICK_ROW_HIDE_MS);
+    }, []);
+
+    const restoreAction = useCallback((key) => {
+      HEYS.FabVisibility?.setVisible?.(key, true);
+      setHideOrder((prev) => prev.filter((k) => k !== key));
+    }, []);
 
     // Строка «не включено ни одного»: кнопки в углу нет вовсе.
     if (!enabledCount) return null;
 
     const closeAnd = (fn) => (...args) => {
-      setOpen(false);
+      closeSheet();
       fn?.(...args);
+    };
+
+    const labelOf = (key) => (key === 'water' ? 'Вода' : labels[key]);
+
+    /**
+     * Строка «режим правки»: слева у каждой строки выезжает круг 22 px с
+     * минусом, область нажатия 44×44 за счёт прозрачных полей вокруг
+     * видимого круга (строка «области нажатия в карточке»).
+     * Строка «нижняя граница правки»: у последней оставшейся строки минуса нет.
+     */
+    const renderMinus = (key) => {
+      if (!editing || enabledCount <= 1) return null;
+      return React.createElement('span', {
+        className: 'widgets-quick-minus',
+        role: 'button',
+        tabIndex: 0,
+        'aria-label': `Убрать ${labelOf(key)}`,
+        onClick: (event) => {
+          event.stopPropagation();
+          hideAction(key);
+        },
+        onKeyDown: (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          event.stopPropagation();
+          hideAction(key);
+        }
+      },
+        React.createElement('svg', {
+          className: 'widgets-quick-minus__glyph',
+          width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none',
+          stroke: 'currentColor', strokeWidth: 3.2, strokeLinecap: 'round',
+          'aria-hidden': 'true'
+        }, React.createElement('path', { d: 'M6 12h12' }))
+      );
     };
 
     // Строка «включён один пункт»: стопки нет — кнопка становится действием и
@@ -8759,24 +9044,45 @@
     const soleNavKey = !waterOn && navKeys.length === 1 ? navKeys[0] : null;
     const soleWater = waterOn && !navKeys.length;
 
-    const renderNavRow = (key) => React.createElement('button', {
+    const renderNavRow = (key) => React.createElement('div', {
       key,
-      type: 'button',
-      className: 'widgets-quick-sheet__row',
-      onClick: closeAnd(handlers[key])
+      className: 'widgets-quick-sheet__row-wrap' + (hidingKey === key ? ' is-hiding' : '')
     },
-      React.createElement(QuickActionIcon, { action: key, className: 'widgets-quick-sheet__row-icon' }),
-      React.createElement('span', { className: 'widgets-quick-sheet__row-label' }, labels[key]),
-      React.createElement(QuickChevron, null)
+      renderMinus(key),
+      React.createElement('button', {
+        type: 'button',
+        className: 'widgets-quick-sheet__row',
+        onClick: closeAnd(handlers[key])
+      },
+        React.createElement(QuickActionIcon, { action: key, className: 'widgets-quick-sheet__row-icon' }),
+        React.createElement('span', { className: 'widgets-quick-sheet__row-label' }, labels[key]),
+        // Строка «режим правки»: шевроны на время правки убираются — гаснут
+        // за 120 мс (строка «тайминги правки»), а не исчезают рывком.
+        React.createElement('span', {
+          className: 'widgets-quick-sheet__fade',
+          'aria-hidden': 'true'
+        }, React.createElement(QuickChevron, null))
+      )
     );
 
     const waterSection = React.createElement('div', { className: 'widgets-quick-sheet__section' },
-      React.createElement('div', { className: 'widgets-quick-sheet__head' },
-        React.createElement(QuickActionIcon, { action: 'water' }),
-        React.createElement('span', { className: 'widgets-quick-sheet__title' }, 'Вода'),
-        React.createElement('span', { className: 'widgets-quick-sheet__meta n' }, formatWaterCounterLiters(waterMl))
+      React.createElement('div', {
+        className: 'widgets-quick-sheet__row-wrap' + (hidingKey === 'water' ? ' is-hiding' : '')
+      },
+        renderMinus('water'),
+        React.createElement('div', { className: 'widgets-quick-sheet__head' },
+          React.createElement(QuickActionIcon, { action: 'water' }),
+          React.createElement('span', { className: 'widgets-quick-sheet__title' }, 'Вода'),
+          // Строка «режим правки»: счётчик воды на это время убирается —
+          // гаснет за 120 мс вместе с шевронами.
+          React.createElement('span', {
+            className: 'widgets-quick-sheet__meta widgets-quick-sheet__fade n',
+            'aria-hidden': editing ? 'true' : undefined
+          }, formatWaterCounterLiters(waterMl))
+        )
       ),
-      React.createElement('div', { className: 'widgets-quick-sheet__chips', role: 'group', 'aria-label': 'Объём воды' },
+      // Строка «режим правки»: чипы объёмов в режиме правки не показываются.
+      editing ? null : React.createElement('div', { className: 'widgets-quick-sheet__chips', role: 'group', 'aria-label': 'Объём воды' },
         waterChipVolumes().map((ml) => React.createElement('button', {
           key: ml,
           type: 'button',
@@ -8786,27 +9092,104 @@
       )
     );
 
+    /**
+     * Строка «скрытые чипами»: скрытый пункт ложится чипом слева от карандаша
+     * и виден только в режиме правки. Чипы идут справа налево по порядку
+     * скрытия (ряд перевёрнут в CSS), тап возвращает пункт на его место в
+     * фиксированном порядке списка.
+     */
+    const chipsRow = editing && hiddenOrdered.length
+      ? React.createElement('div', {
+        className: 'widgets-quick-chips',
+        role: 'list',
+        'aria-label': 'Скрытые пункты'
+      },
+        hiddenOrdered.map((key) => React.createElement('button', {
+          key,
+          type: 'button',
+          role: 'listitem',
+          className: 'widgets-quick-chip',
+          'aria-label': `Вернуть в список: ${labelOf(key)}`,
+          onClick: () => restoreAction(key)
+        },
+          React.createElement('svg', {
+            className: 'widgets-quick-chip__plus',
+            width: 10, height: 10, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
+          React.createElement('span', { className: 'widgets-quick-chip__label' }, labelOf(key))
+        ))
+      )
+      : null;
+
+    /**
+     * Строки «правка списка» и «карандаш и кнопка настройки»: круг 40 px
+     * слева от «×», зазор 6 px, центры на одной горизонтали. Карандаш
+     * карточку не закрывает никогда — он только переключает режим правки
+     * (строка «закрытие»).
+     *
+     * Отступление названо вслух: строка «правка списка» ставит правый край на
+     * 75 px, строка «карандаш и кнопка настройки» — на 72 px. Взято 72:
+     * кнопка 52 px при отступе 14 px даёт левый край на 66 px, и только 72
+     * даёт названный там же зазор 6 px.
+     */
+    const pencil = open && canEditList
+      ? React.createElement('button', {
+        type: 'button',
+        className: 'widgets-quick-pencil' + (editing ? ' is-editing' : ''),
+        'aria-pressed': editing ? 'true' : 'false',
+        'aria-label': editing ? 'Выйти из правки списка' : 'Править список',
+        onClick: (event) => {
+          event.stopPropagation();
+          setEditing((v) => !v);
+        }
+      },
+        React.createElement('svg', {
+          width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+          stroke: 'currentColor', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round',
+          'aria-hidden': 'true'
+        },
+          React.createElement('path', { d: 'M4 20h4l10-10-4-4L4 16z' }),
+          React.createElement('path', { d: 'M14 6l4 4' })
+        )
+      )
+      : null;
+
     const fabAction = soleNavKey ? handlers[soleNavKey] : null;
 
     return React.createElement('div', {
       ref: wrapRef,
       className: 'widgets-quick-fab-wrap' + (open ? ' is-open' : '')
     },
+      // Строка «уменьшенное движение»: правило действует безусловно — перебить
+      // его флагом animate-always нельзя. Затемнение остаётся, блюр и выезд
+      // снимаются (правило под prefers-reduced-motion в CSS).
       open && React.createElement('button', {
         type: 'button',
-        className: 'widgets-quick-scrim animate-always',
+        className: 'widgets-quick-scrim',
         'aria-label': 'Закрыть быстрые действия',
-        onClick: () => setOpen(false)
+        onClick: closeSheet
       }),
-      open && React.createElement('div', { className: 'widgets-quick-sheet animate-always', role: 'dialog', 'aria-label': 'Быстрые действия' },
+      open && React.createElement('div', {
+        className: 'widgets-quick-sheet' + (editing ? ' is-editing' : ''),
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-label': 'Быстрые действия'
+      },
         navKeys.map(renderNavRow),
         navKeys.length > 0 && waterOn && React.createElement('div', { className: 'widgets-quick-sheet__divider', key: 'divider' }),
         waterOn && waterSection
       ),
+      chipsRow,
+      pencil,
       React.createElement('button', {
         type: 'button',
-        className: 'widgets-quick-fab' + (open ? ' is-open' : ''),
-        onClick: fabAction ? () => fabAction() : () => setOpen((v) => !v),
+        // Строка «тон одиночной кнопки»: свой тон сегодня есть только у воды.
+        className: 'widgets-quick-fab'
+          + (soleWater ? ' widgets-quick-fab--water' : '')
+          + (open ? ' is-open' : ''),
+        onClick: fabAction ? () => fabAction() : () => (open ? closeSheet() : setOpen(true)),
         'aria-expanded': fabAction ? undefined : (open ? 'true' : 'false'),
         'aria-label': fabAction
           ? labels[soleNavKey]
@@ -8930,8 +9313,15 @@
     if (!catalogTypes.length) return null;
 
     return React.createElement('div', { className: 'widget-v4-catalog' },
+      // Строка контракта «вид счётчика места»: при полном экране красится
+      // само число, а не вся строка — поэтому N вынесен отдельным узлом.
       React.createElement('div', { className: 'widget-v4-catalog__budget n' },
-        `занято ${budget.used} из ${budget.total}`
+        'занято ',
+        React.createElement('span', {
+          className: 'widget-v4-catalog__budget__num'
+            + (budget.used >= budget.total ? ' is-full' : '')
+        }, String(budget.used)),
+        ` из ${budget.total}`
       ),
       React.createElement('div', { className: 'widget-v4-catalog__tier' }, 'Каталог'),
       React.createElement('div', { className: 'widget-v4-catalog__grid' },
@@ -9619,7 +10009,16 @@
         title.appendChild(budgetEl);
       }
       if (isEditMode) {
-        budgetEl.textContent = `занято ${cellBudget.used} из ${cellBudget.total}`;
+        // «при полном экране N красится тоном --val-bad» — красится число,
+        // а не вся строка, поэтому N живёт отдельным узлом.
+        budgetEl.textContent = '';
+        budgetEl.appendChild(document.createTextNode('занято '));
+        const numEl = document.createElement('span');
+        numEl.className = 'hdr-widgets-edit-budget__num'
+          + (cellBudget.used >= cellBudget.total ? ' is-full' : '');
+        numEl.textContent = String(cellBudget.used);
+        budgetEl.appendChild(numEl);
+        budgetEl.appendChild(document.createTextNode(` из ${cellBudget.total}`));
         budgetEl.hidden = false;
       } else {
         budgetEl.textContent = '';
@@ -10396,15 +10795,57 @@
 
     const pullIndicatorEl = null;
 
+    // Карточка быстрых действий раскрыта — см. «карандаш и кнопка настройки».
+    const [quickSheetOpen, setQuickSheetOpen] = useState(false);
+
+    /**
+     * Строка контракта «что под ней»: зона 48×48 в левом нижнем углу сетки
+     * занята кнопкой настройки экрана — у плитки, которая туда попадает,
+     * число прижато к правому краю. Раньше угол не резервировался вовсе:
+     * у «Веса» 2×1 число стояло справа по своей вёрстке, а не по правилу.
+     */
+    const cornerBottomLeftId = useMemo(() => {
+      const list = widgets || [];
+      let bottomRow = -1;
+      list.forEach((w) => {
+        const row = Number(w?.position?.row);
+        if (!Number.isFinite(row)) return;
+        bottomRow = Math.max(bottomRow, row + (Number(w?.rows) || 1) - 1);
+      });
+      if (bottomRow < 0) return null;
+      const hit = list.find((w) => {
+        const row = Number(w?.position?.row);
+        if (!Number.isFinite(row)) return false;
+        if (Number(w?.position?.col) !== 0) return false;
+        return row <= bottomRow && row + (Number(w?.rows) || 1) - 1 >= bottomRow;
+      });
+      return hit?.id || null;
+    }, [widgets]);
+
     const renderMobileFabs = () => {
       if (!isMobile || isEditMode) return null;
       return React.createElement(React.Fragment, null,
-        React.createElement('div', { className: 'widgets-fab-left' },
+        // Строка «карандаш и кнопка настройки»: пока карточка раскрыта, кнопка
+        // настройки экрана внизу слева скрыта — на затемнённом слое остаются
+        // только карточка, «×» и карандаш правки.
+        React.createElement('div', {
+          className: 'widgets-fab-left' + (quickSheetOpen ? ' is-hidden' : '')
+        },
           React.createElement(WidgetsSettingsFab, { onClick: openEditWithCatalog })
         ),
         React.createElement(WidgetsQuickActionsFab, {
+          onOpenChange: setQuickSheetOpen,
           waterMl: HEYS.Widgets?.data?.getWaterData?.()?.drunk || 0,
-          onAddWater: (ml) => handleAddWater(ml),
+          // Строка контракта «ошибочный глоток»: убавления в стопке нет —
+          // сразу после тапа глоток снимается полосой отмены
+          // (undo-bar.v4.dc.html), позже — чипом убавления на «Питании».
+          onAddWater: (ml) => {
+            handleAddWater(ml);
+            HEYS.Undo?.push?.({
+              label: `Записано ${ml} мл`,
+              onUndo: () => handleRemoveWater(ml)
+            });
+          },
           onAddMeal: () => goToDayAndRun('diary', 'addMeal', []),
           onOpenCurator: openCuratorMessenger,
           // Голод и активность открываются тем же способом, что и в легаси-стопке
@@ -10493,7 +10934,8 @@
               dragPreviewPosition: dragPreviewPositions?.[widget.id] || null,
               onRemove: handleRemove,
               onSettings: setSettingsWidget,
-              removePickActive: catalogRemovePick
+              removePickActive: catalogRemovePick,
+              isCornerBottomLeft: widget.id === cornerBottomLeftId
             })
           )
         ),
@@ -10621,6 +11063,10 @@
   // порядок и чипы воды руками не собрать (строки «включён один пункт»,
   // «не включено ни одного», «порядок в карточке»).
   HEYS.Widgets.QuickActionsFab = WidgetsQuickActionsFab;
+  // Экспорт ради смоука общей шкалы темпа (строки «вода» и «одна шкала на весь
+  // продукт»): зоны 8 / 25 % вниз и 110 / 130 % вверх, первый час после
+  // подъёма и конец окна руками на живом дне не собрать.
+  HEYS.Widgets.v4PaceState = v4PaceState;
   HEYS.Widgets.SettingsModal = SettingsModal;
   HEYS.Widgets.RelapseRiskDetailsModal = RelapseRiskDetailsModal;
 

@@ -151,3 +151,174 @@ describe('быстрые действия: состав и порядок', () =
     expect(container.querySelector('.widgets-quick-sheet')).toBeNull();
   });
 });
+
+/**
+ * Правка списка в карточке (строки «правка списка», «два состояния
+ * карандаша», «режим правки», «скрытые чипами», «нижняя граница правки»,
+ * «области нажатия в карточке», «закрытие»).
+ *
+ * Почему смоуком. Режим правки — это стык трёх состояний: раскрытая карточка,
+ * включённый карандаш и набор скрытых пунктов. Человек в проде не соберёт
+ * «остался один включённый и два скрытых»: надо раскрыть карточку, войти в
+ * правку, снять три строки и посмотреть, что стало с минусами и чипами.
+ */
+describe('быстрые действия: правка списка', () => {
+  beforeEach(() => {
+    globalThis.React = RealReact;
+  });
+
+  afterEach(() => {
+    globalThis.React = originalReact;
+    globalThis.ReactDOM = originalReactDOM;
+    window.HEYS = originalHEYS;
+  });
+
+  /** Живой набор видимости: правка в карточке пишет в то же поле настроек. */
+  function openEditable(initial = ALL_ON, props = {}) {
+    const state = { ...initial };
+    const Fab = loadFab(state);
+    window.HEYS.FabVisibility = {
+      EVENT: 'heys:fab-visibility-changed',
+      read: () => ({ ...state }),
+      setVisible: (key, value) => {
+        state[key] = !!value;
+        window.dispatchEvent(new CustomEvent('heys:fab-visibility-changed'));
+      },
+    };
+    const out = render(RealReact.createElement(Fab, { waterMl: 1700, ...props }));
+    fireEvent.click(out.container.querySelector('.widgets-quick-fab'));
+    return { ...out, state };
+  }
+
+  const pencil = (c) => c.querySelector('.widgets-quick-pencil');
+
+  it('карандаш есть только у раскрытой карточки', () => {
+    const Fab = loadFab(ALL_ON);
+    const { container } = render(RealReact.createElement(Fab, { waterMl: 0 }));
+    expect(pencil(container)).toBeNull();
+    fireEvent.click(container.querySelector('.widgets-quick-fab'));
+    expect(pencil(container)).toBeTruthy();
+  });
+
+  it('карандаш карточку не закрывает — только переключает режим правки', () => {
+    const { container } = openEditable();
+    expect(container.querySelectorAll('.widgets-quick-minus').length).toBe(0);
+    fireEvent.click(pencil(container));
+    expect(container.querySelector('.widgets-quick-sheet')).toBeTruthy();
+    expect(pencil(container).getAttribute('aria-pressed')).toBe('true');
+    // Пять включённых пунктов — пять минусов (четыре навигационных и вода).
+    expect(container.querySelectorAll('.widgets-quick-minus').length).toBe(5);
+    fireEvent.click(pencil(container));
+    expect(container.querySelector('.widgets-quick-sheet')).toBeTruthy();
+    expect(container.querySelectorAll('.widgets-quick-minus').length).toBe(0);
+  });
+
+  it('в режиме правки шевроны гаснут, а не читаются', () => {
+    const { container } = openEditable();
+    fireEvent.click(pencil(container));
+    expect(container.querySelector('.widgets-quick-sheet').className).toContain('is-editing');
+    expect(container.querySelector('.widgets-quick-sheet__meta').getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('скрытый пункт уходит из списка и возвращается чипом на своё место', async () => {
+    const { container, state } = openEditable();
+    fireEvent.click(pencil(container));
+    const minus = [...container.querySelectorAll('.widgets-quick-minus')]
+      .find((el) => el.getAttribute('aria-label') === 'Убрать Активность');
+    expect(minus).toBeTruthy();
+    fireEvent.click(minus);
+    // Строка сначала сжимается 160 мс и только потом уходит из набора.
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    expect(state.activity).toBe(false);
+    expect(rowLabels(container)).toEqual(['Мессенджер', 'Голод и энергия', 'Еда']);
+    const chip = container.querySelector('.widgets-quick-chip');
+    expect(chip.getAttribute('aria-label')).toBe('Вернуть в список: Активность');
+    fireEvent.click(chip);
+    expect(state.activity).toBe(true);
+    // Порядок списка фиксирован кодом: пункт встаёт на своё место, не в конец.
+    expect(rowLabels(container)).toEqual(['Мессенджер', 'Активность', 'Голод и энергия', 'Еда']);
+  });
+
+  it('чипы скрытых живут только внутри режима правки', async () => {
+    const { container } = openEditable();
+    fireEvent.click(pencil(container));
+    fireEvent.click([...container.querySelectorAll('.widgets-quick-minus')]
+      .find((el) => el.getAttribute('aria-label') === 'Убрать Мессенджер'));
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    expect(container.querySelectorAll('.widgets-quick-chip').length).toBe(1);
+    fireEvent.click(pencil(container));
+    expect(container.querySelectorAll('.widgets-quick-chip').length).toBe(0);
+    // Карандаш остаётся: скрытый пункт вернуть больше неоткуда.
+    expect(pencil(container)).toBeTruthy();
+  });
+
+  it('нижняя граница правки: у последней оставшейся строки минуса нет', () => {
+    const { container } = openEditable({
+      water: true, hunger: false, message: false, activity: false, meal: false,
+    });
+    fireEvent.click(pencil(container));
+    expect(container.querySelectorAll('.widgets-quick-minus').length).toBe(0);
+  });
+});
+
+/**
+ * Общая шкала темпа (строки «вода» и «одна шкала на весь продукт»).
+ *
+ * Почему смоуком. Зоны 8 / 25 % вниз и 110 / 130 % вверх, первый час после
+ * подъёма и конец окна «отбой минус час» человек в проде не соберёт: нужно
+ * подделать время суток и чек-ин. Таблица случаев — ровно то, что не
+ * проверяется глазами на локалке.
+ */
+describe('общая шкала темпа: вода на Главной', () => {
+  let pace;
+
+  beforeEach(() => {
+    loadFab(ALL_ON);
+    pace = window.HEYS.Widgets.v4PaceState;
+  });
+
+  afterEach(() => {
+    globalThis.React = originalReact;
+    globalThis.ReactDOM = originalReactDOM;
+    window.HEYS = originalHEYS;
+  });
+
+  // Подъём 07:00, отбой 23:00 → бодрствование 16 ч, окно воды 15 ч.
+  const ctx = (hhmm) => ({
+    sleepEnd: '07:00',
+    sleepStart: '23:00',
+    nowMinutes: Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3)),
+  });
+
+  it('первый час после подъёма не красим', () => {
+    expect(pace(0, 2700, ctx('07:30'))).toBe('neutral');
+  });
+
+  it('в графике — шалфей, а не «нейтрально»', () => {
+    // 15:00 → прошло 8 ч из 15 ч окна, ожидаемое ≈ 1440 мл.
+    expect(pace(1440, 2700, ctx('15:00'))).toBe('good');
+  });
+
+  it('отставание до 8 % нормы — ещё шалфей', () => {
+    // 8 % от 2700 = 216 мл; берём 200 мл отставания.
+    expect(pace(1240, 2700, ctx('15:00'))).toBe('good');
+  });
+
+  it('отставание 8–25 % нормы — предупреждение', () => {
+    expect(pace(1000, 2700, ctx('15:00'))).toBe('warn');
+  });
+
+  it('отставание больше 25 % нормы — красный', () => {
+    expect(pace(500, 2700, ctx('15:00'))).toBe('bad');
+  });
+
+  it('конец окна — отбой минус час: к 22:00 ждём всю норму', () => {
+    expect(pace(2700, 2700, ctx('22:00'))).toBe('good');
+    expect(pace(1800, 2700, ctx('22:00'))).toBe('bad');
+  });
+
+  it('перебор: больше 110 % — предупреждение, больше 130 % — красный', () => {
+    expect(pace(3000, 2700, ctx('15:00'))).toBe('warn');
+    expect(pace(3600, 2700, ctx('15:00'))).toBe('bad');
+  });
+});

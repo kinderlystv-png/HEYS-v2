@@ -502,7 +502,7 @@
     }, []);
 
     const onPointerDown = useCallback((event) => {
-      if (disabled || !hasVariants) return;
+      if (disabled) return;
       if (sheetOpen || sheetClosing) return;
       lpTriggeredRef.current = false;
       lpStartRef.current = {
@@ -510,13 +510,25 @@
         y: event.clientY || event.touches?.[0]?.clientY || 0
       };
       cancelLongPress();
-      lpHintTimerRef.current = setTimeout(() => {
-        if (!sheetOpen && !sheetClosing) setVariantHoldHintActive(true);
-      }, HOLD_HINT_MS);
+      // Подсказка «удерживайте, чтобы сменить вид» — только там, где есть что
+      // менять: у плитки без вариантов удержание ведёт в расстановку.
+      if (hasVariants) {
+        lpHintTimerRef.current = setTimeout(() => {
+          if (!sheetOpen && !sheetClosing) setVariantHoldHintActive(true);
+        }, HOLD_HINT_MS);
+      }
       lpTimerRef.current = setTimeout(() => {
         lpTriggeredRef.current = true;
         clickGuard.block(widget?.id);
         setVariantHoldHintActive(false);
+        // Строка контракта «плитка без вариантов»: пустой лист не открываем —
+        // если у виджета один вид и один формат, удержание уводит в режим
+        // расстановки. Раньше такое удержание не делало ничего.
+        if (!hasVariants) {
+          HEYS.dayUtils?.haptic?.('light');
+          HEYS.Widgets?.enterEditMode?.();
+          return;
+        }
         setHolding(true);
         setSheetOpen(true);
         HEYS.dayUtils?.haptic?.('light');
@@ -589,7 +601,9 @@
       animPhase === 'enter' ? 'widget-v4-tile--enter' : ''
     ].filter(Boolean).join(' ');
 
-    const tileProps = hasVariants && !disabled ? {
+    // Обработчики удержания нужны и плитке без вариантов — она уводит в
+    // расстановку (строка «плитка без вариантов»).
+    const tileProps = !disabled ? {
       className: tileClass,
       onPointerDown,
       onPointerMove,
