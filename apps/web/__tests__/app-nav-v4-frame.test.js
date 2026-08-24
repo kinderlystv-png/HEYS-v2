@@ -183,6 +183,27 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(userTabSrc).toContain('React.createElement(SoundSettingsCard, null)');
     });
 
+    // Контракт settings-system, «вид диагностики»: створка стоит вне ярусов,
+    // ниже последнего, но карточка у неё первой поверхности и радиус 18 — те
+    // же, что у ярусов. Тише основного её делает тон чернил, а не другая
+    // поверхность: до сведения створка была на второй (#efe3cf) и читалась
+    // отдельным блоком, а не продолжением списка.
+    it('диагностика: карточка той же поверхности и радиуса, что ярусы', () => {
+        const rule = (css, selector) => {
+            const at = css.indexOf(selector + ' {');
+            expect(at, selector + ' должен существовать').toBeGreaterThan(-1);
+            return css.slice(at, css.indexOf('}', at));
+        };
+        const tier = rule(baseCss, '.hdr-settings-sheet__group');
+        const diag = rule(baseCss, '.hdr-settings-sheet__diag-panel');
+        const bg = (block) => block.match(/background:s*([^;]+);/)?.[1]?.trim();
+        const radius = (block) => block.match(/border-radius:s*([^;]+);/)?.[1]?.trim();
+        expect(bg(diag)).toBe(bg(tier));
+        expect(radius(diag)).toBe(radius(tier));
+        const tierDark = rule(baseCss, '[data-theme$="dark"] .hdr-settings-sheet__group');
+        const diagDark = rule(baseCss, '[data-theme$="dark"] .hdr-settings-sheet__diag-panel');
+        expect(bg(diagDark)).toBe(bg(tierDark));
+    });
     it('меню «Ещё»: фон под карточкой — v4 blur 2.5px, не blur аккаунта', () => {
         expect(shellSrc).toContain('function syncDropdownBlurActive');
         expect(shellSrc).toContain('tab-settings-backdrop--v4-popover');

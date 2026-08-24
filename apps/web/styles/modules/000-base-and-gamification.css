@@ -10835,11 +10835,15 @@ body:has(:is(
   color: #8a4a20;
 }
 
+/* Контракт settings-system, «вид диагностики»: створка стоит вне ярусов,
+   ниже последнего, но карточка у неё первой поверхности и радиус 18 — те же,
+   что у ярусов (.hdr-settings-sheet__group). Тише основного её делает тон
+   чернил заголовка и содержимого, а не другая поверхность. */
 .hdr-settings-sheet__diag-panel {
   margin-top: 2px;
   padding: 14px 15px;
   border-radius: 18px;
-  background: #efe3cf;
+  background: #f7efe2;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -10993,7 +10997,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__diag-panel {
-  background: #2c231c;
+  background: #23201b;
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__diag-btn {
