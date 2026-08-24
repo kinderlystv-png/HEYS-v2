@@ -8923,6 +8923,24 @@
     message: [{ d: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z' }]
   };
 
+  /**
+   * повторный тап · правило продукта: «Еда» и «Активность» в карточке быстрых
+   * действий заводят новую запись (HEYS.Day.addMeal / addActivity) — второй тап
+   * внутри 350 мс создал бы вторую пустую запись, тот самый «второй приём еды»
+   * из контракта. Мессенджер и «Голод и энергия» — навигация (открывают экран,
+   * ничего не пишут), вода — аддитивный ввод: их защита не касается.
+   */
+  const ENTITY_QUICK_ACTION_GUARD_MS = 350;
+  let lastEntityQuickActionAt = 0;
+  function guardEntityQuickAction(fn) {
+    return (...args) => {
+      const now = Date.now();
+      if (now - lastEntityQuickActionAt < ENTITY_QUICK_ACTION_GUARD_MS) return;
+      lastEntityQuickActionAt = now;
+      return fn?.(...args);
+    };
+  }
+
   function QuickActionIcon({ action, className }) {
     return React.createElement(QuickSheetSvgIcon, { className },
       ...(QUICK_ACTION_ICONS[action] || []).map((path, i) =>
@@ -8958,9 +8976,9 @@
     const fabPrevRef = useRef(null);
 
     const handlers = {
-      meal: onAddMeal,
+      meal: guardEntityQuickAction(onAddMeal),
       hunger: onOpenHunger,
-      activity: onOpenActivity,
+      activity: guardEntityQuickAction(onOpenActivity),
       message: onOpenCurator
     };
     const labels = { meal: 'Еда', hunger: 'Голод и энергия', activity: 'Активность', message: 'Мессенджер' };

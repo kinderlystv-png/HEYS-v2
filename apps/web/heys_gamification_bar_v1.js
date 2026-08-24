@@ -74,6 +74,31 @@
         );
     }
 
+    /**
+     * safe-area · правило продукта (home-widgets.v4.dc.html, строка «safe-area»;
+     * gamification.v4.dc.html, строка «safe-area и кнопка назад» — то же правило
+     * без местных отличий): лист достижений раньше не оставлял места под
+     * системную полосу жестов внизу экрана — панель считала maxHeight от края
+     * viewport, а не от врезки. Значение читаем один раз через DOM-пробник
+     * (тот же приём, что у heys_supplements_v1.js), а не хардкодим — на устройствах
+     * без выреза env() вернёт 0.
+     */
+    let _gameSafeAreaBottomPxCache = null;
+    function readGameSafeAreaInsetBottomPx() {
+        if (_gameSafeAreaBottomPxCache !== null) return _gameSafeAreaBottomPxCache;
+        try {
+            const el = document.createElement('div');
+            el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;height:0;padding-bottom:env(safe-area-inset-bottom, 0px);pointer-events:none;visibility:hidden;';
+            document.body.appendChild(el);
+            const px = parseFloat(window.getComputedStyle(el).paddingBottom) || 0;
+            el.remove();
+            _gameSafeAreaBottomPxCache = Math.max(0, Math.round(px));
+        } catch (_e) {
+            _gameSafeAreaBottomPxCache = 0;
+        }
+        return _gameSafeAreaBottomPxCache;
+    }
+
     function GamificationBar(props) {
         const leadingHeaderActions = props?.leadingHeaderActions || null;
         const React = window.React;
@@ -605,7 +630,11 @@
                 Math.round((barRect?.bottom || 0) + 12),
                 viewportOffsetTop + 72
             );
-            const maxHeight = Math.max(220, Math.round(viewportHeight - (anchorTop - viewportOffsetTop) - 24));
+            // safe-area · правило продукта: панель прижимается к нижней врезке,
+            // а не к краю стекла — без вычета выреза нижний край листа
+            // достижений уходил под системную полосу жестов.
+            const safeBottom = readGameSafeAreaInsetBottomPx();
+            const maxHeight = Math.max(220, Math.round(viewportHeight - (anchorTop - viewportOffsetTop) - 24 - safeBottom));
 
             setExpandedPanelLayout((prev) => {
                 if (

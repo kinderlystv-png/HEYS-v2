@@ -17401,6 +17401,13 @@ html.heys-bg-paused *::after {
   gap: 14px;
   min-height: 0;
   font-variant-numeric: tabular-nums;
+  /* выделение и копирование · правило продукта (home-widgets.v4.dc.html,
+     наследуется без местных отличий — gamification.v4.dc.html, строка «язык,
+     выделение, часовой пояс»): в листе достижений нет ничего, что написал
+     человек или куратор сам — названия и условия достижений это продуктовый
+     каталог, как подписи и числа на плитках, поэтому не выделяются. */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .game-v4-sheet-fallback {

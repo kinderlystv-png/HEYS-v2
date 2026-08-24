@@ -136,6 +136,32 @@ describe('быстрые действия: состав и порядок', () =
     expect(container.querySelector('.widgets-quick-sheet')).toBeNull();
   });
 
+  it('повторный тап · правило продукта: второй тап по «Еда» внутри 350 мс не заводит вторую запись', () => {
+    const calls = [];
+    const Fab = loadFab({ water: false, hunger: false, message: false, activity: false, meal: true });
+    const { container } = render(
+      RealReact.createElement(Fab, { waterMl: 0, onAddMeal: () => calls.push('meal') }),
+    );
+    const button = container.querySelector('.widgets-quick-fab');
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(calls).toEqual(['meal']);
+  });
+
+  it('повторный тап · правило продукта: мессенджер — навигация, защиты нет', () => {
+    const calls = [];
+    const Fab = loadFab({ water: false, hunger: false, message: true, activity: false, meal: false });
+    const { container } = render(
+      RealReact.createElement(Fab, { waterMl: 0, onOpenCurator: () => calls.push('message') }),
+    );
+    const button = container.querySelector('.widgets-quick-fab');
+    fireEvent.click(button);
+    fireEvent.click(button);
+    // Контракт («повторный тап · правило продукта»): у навигации защиты нет —
+    // оба тапа засчитываются, второй просто открывает мессенджер повторно.
+    expect(calls).toEqual(['message', 'message']);
+  });
+
   it('включена одна вода — карточка с одними чипами, без списка', () => {
     const { container } = open({ water: true, hunger: false, message: false, activity: false, meal: false });
     expect(rowLabels(container)).toEqual([]);

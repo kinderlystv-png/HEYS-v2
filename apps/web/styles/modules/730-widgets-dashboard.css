@@ -7322,6 +7322,10 @@ body:has(.page-reports) .hdr::after {
   align-items: flex-end;
   justify-content: center;
   padding: 16px;
+  /* safe-area · правило продукта: лист прижимается к нижней врезке, а не к
+     краю стекла — иначе кнопка закрытия/содержимое встаёт под системную
+     полосу жестов (Динамика веса, Оценка дня, Риск-радар — общий модал). */
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   background: rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -7854,6 +7858,7 @@ body:has(.page-reports) .hdr::after {
 @media (max-width: 520px) {
   .widget-relapse-risk__modal-overlay {
     padding: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   }
 
   .widget-relapse-risk__modal {
@@ -12772,6 +12777,13 @@ html[data-theme-id="blue-dark"] .widget-wd-sheet__opt.is-active {
   flex-direction: column;
   min-height: 0;
   transition: transform 180ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* выделение и копирование · правило продукта: долгое нажатие на плитке
+     открывает наш лист смены вида, а не системное меню копирования —
+     user-select здесь уже гасит выделение текста, но без touch-callout
+     iOS всё равно предлагает системное «Скопировать» поверх жеста. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
