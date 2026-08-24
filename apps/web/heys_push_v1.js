@@ -432,10 +432,13 @@
     return node;
   }
 
+  // Строка «вид шапки листа»: телефон 19 px акцентным тоном в круге 40.
+  // Прежние 28 px переполняли круг: у иконок шага рядом — 16, и телефон
+  // выбивался из ряда.
   function iconPhone() {
     return svgEl('svg', {
-      width: '28', height: '28', viewBox: '0 0 24 24', fill: 'none',
-      stroke: 'currentColor', 'stroke-width': '1.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      width: '19', height: '19', viewBox: '0 0 24 24', fill: 'none',
+      stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
       'aria-hidden': 'true',
     }, [
       svgEl('rect', { x: '7', y: '2', width: '10', height: '20', rx: '2' }),
