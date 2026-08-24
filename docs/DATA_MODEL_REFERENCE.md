@@ -1027,7 +1027,7 @@ TEF = prot_g × 0 + carbs_g × 4 × 0.075 + fat_g × 9 × 0.015
 | `heys_pending_client_sync_queue` | Общая durable-очередь; каждая запись содержит свой `client_id`            | ❌ глобальный | `heys_pending_queue_pure_v1.js` |
 | `heys_widget_layout_v1`          | Layout виджетов Dashboard ([см. APP_SYSTEMS](./APP_SYSTEMS_REFERENCE.md)) | ✅ clientId   | `heys_widgets_core_v1.js`       |
 | `heys_widget_layout_meta_v1`     | Метаданные grid (версия, дата)                                            | ✅ clientId   | `heys_widgets_core_v1.js`       |
-| `heys_water_history`             | История воды (compressed)                                                 | ✅ clientId   | `heys_day_hooks.js`             |
+| `heys_water_history`             | Мёртвый ключ: пишется только восстановлением бэкапа, не читается нигде    | ✅ clientId   | `heys_app_backup_import_v1.js`  |
 | `heys_grams_history`             | История порций в граммах (автоподстановка)                                | ✅ clientId   | `heys_core_v12.js`              |
 | `heys_scheduled_advices`         | Запланированные советы/напоминания                                        | ✅ clientId   | `heys_advice_bundle_v1.js`      |
 
