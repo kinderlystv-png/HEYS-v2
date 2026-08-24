@@ -703,6 +703,10 @@
     const [error, setError] = useState(null);
     const [showFullText, setShowFullText] = useState(null);
     const screenRef = useRef(null);
+    // Строка «повторный тап и поворот»: минимум 350 мс между попытками
+    // подписи документов — вторая подпись пишет вторую запись в журнал
+    // согласий, а сеть иногда отвечает быстрее защитного окна.
+    const signTapLockRef = useRef(0);
     // Замороженная копия (stable.heyslab.ru): экран открыт для скринов, запись
     // согласий заблокирована на уровне API — «Продолжить» только закрывает UI.
     const isReadonlyHost = !!(typeof window !== 'undefined'
@@ -1042,6 +1046,12 @@
       // Для health-data юридическая достаточность ПЭП подтверждается отдельно.
       if (!SMS_VERIFICATION_ENABLED || !HEYS.sms || !phone) {
         console.log('[Consents] ✅ Сохраняем согласия (чекбокс + логирование, без SMS)');
+        // Строка «повторный тап и поворот»: 350 мс минимальной защиты поверх
+        // блокировки на время операции — без последующего экрана подписи
+        // именно это нажатие пишет согласия в журнал.
+        const proceedTapAt = Date.now();
+        if (proceedTapAt - signTapLockRef.current < 350) return;
+        signTapLockRef.current = proceedTapAt;
         // Сохраняем без верификации
         setLoading(true);
         try {
@@ -1055,6 +1065,8 @@
           setError(err.message || 'Неизвестная ошибка');
           onError?.(err);
         } finally {
+          const proceedElapsed = Date.now() - proceedTapAt;
+          if (proceedElapsed < 350) await new Promise((resolve) => setTimeout(resolve, 350 - proceedElapsed));
           setLoading(false);
         }
         return;
@@ -1128,6 +1140,13 @@
         return;
       }
 
+      // Строка «повторный тап и поворот»: 350 мс минимальной защиты поверх
+      // блокировки на время операции — вторая подпись пишет вторую запись
+      // в журнал согласий, а сеть иногда отвечает быстрее защитного окна.
+      const signTapAt = Date.now();
+      if (signTapAt - signTapLockRef.current < 350) return;
+      signTapLockRef.current = signTapAt;
+
       setLoading(true);
       setError(null);
       setSignPinError(false);
@@ -1163,6 +1182,8 @@
         setError(err.message);
         onError?.(err);
       } finally {
+        const signTapElapsed = Date.now() - signTapAt;
+        if (signTapElapsed < 350) await new Promise((resolve) => setTimeout(resolve, 350 - signTapElapsed));
         setLoading(false);
       }
     }, [accessSignCode, clientId, consents, signAttemptsRemaining, signSuccess, signedConsentList, finishConsentFlow, isReadonlyHost, isDiagnosticReplay, completeWithoutWrite, onComplete, onError, accessSignPinApi, buildConsentList]);

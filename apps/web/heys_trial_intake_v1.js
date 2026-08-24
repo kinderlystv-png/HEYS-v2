@@ -96,7 +96,12 @@
   const shellStyle = {
     // Роли набора вместо легаси-литералов: экран анкеты был единственным,
     // который не был сведён на v4 и жил на легаси-палитре.
-    minHeight: '100vh', background: SURFACE_2, padding: '24px 16px 48px',
+    minHeight: '100vh', background: SURFACE_2,
+    // Строка «safe-area и кнопка назад»: верх/низ экрана прижаты к краю —
+    // базовые 24/48 остаются, врезки добавляются поверх них.
+    padding: '24px 16px 48px',
+    paddingTop: 'calc(24px + env(safe-area-inset-top, 0px))',
+    paddingBottom: 'calc(48px + env(safe-area-inset-bottom, 0px))',
     boxSizing: 'border-box', color: INK, fontFamily: 'inherit',
   };
   const cardStyle = {
@@ -365,6 +370,9 @@
             padding: '14px 16px', borderRadius: 18, background: SURFACE_1,
             color: INK, fontSize: 12, lineHeight: 1.6,
             display: 'grid', gap: 10,
+            // Строка «язык, выделение, часовой пояс»: текст предупреждения
+            // служебный и не выделяется — в отличие от ответов кандидата.
+            userSelect: 'none',
           },
         },
           React.createElement('div', { style: { fontWeight: 700, fontSize: 12, lineHeight: 1.35, color: WARN_TEXT } }, WARNING_TEXT_TITLE),
@@ -541,6 +549,10 @@
     const answersRef = React.useRef(answers);
     const serverUpdatedAtRef = React.useRef(null);
     const screenRef = React.useRef(null);
+    // Строка «повторный тап и поворот»: минимум 350 мс между тапами по
+    // «Отправить» — вторая отправка создала бы вторую анкету, а сеть
+    // иногда отвечает быстрее защитного окна.
+    const submitTapLockRef = React.useRef(0);
 
     React.useEffect(() => {
       HEYS.BlankScreenGuard?.reportVisibleFrame?.({
@@ -709,8 +721,16 @@
         global.scrollTo?.({ top: 0 });
         return;
       }
+      // Строка «повторный тап и поворот»: 350 мс минимальной защиты поверх
+      // блокировки на время операции — вторая отправка создала бы вторую
+      // анкету, а сеть иногда отвечает быстрее защитного окна.
+      const tapAt = Date.now();
+      if (tapAt - submitTapLockRef.current < 350) return;
+      submitTapLockRef.current = tapAt;
       setSaveState('saving');
       const result = await enqueueSave(answersRef.current, step, true);
+      const tapElapsed = Date.now() - tapAt;
+      if (tapElapsed < 350) await new Promise((resolve) => setTimeout(resolve, 350 - tapElapsed));
       if (result.success) {
         setStatus('completed');
         setSaveState('saved');
@@ -786,7 +806,12 @@
       'aria-modal': 'true',
       style: {
         position: 'fixed', inset: 0, zIndex: 40, display: 'grid', placeItems: 'center',
-        padding: 16, background: 'rgba(23, 32, 42, 0.42)',
+        // Строка «safe-area и кнопка назад»: модалка во весь экран — базовые
+        // 16 остаются, врезки сверху/снизу добавляются поверх них.
+        padding: 16,
+        paddingTop: 'calc(16px + env(safe-area-inset-top, 0px))',
+        paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+        background: 'rgba(23, 32, 42, 0.42)',
       },
     }, React.createElement('div', {
       style: {

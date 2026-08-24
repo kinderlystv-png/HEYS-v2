@@ -552,6 +552,12 @@
     const touchStartActive = useRef(false);
     const actionInFlightRef = useRef(false);
     const transitionInFlightRef = useRef(false);
+    // Строка «повторный тап и поворот»: минимум 350 мс между тапами по
+    // «Дальше» поверх actionInFlightRef — тот снимается сразу, как только
+    // операция завершилась, а сеть иногда отвечает быстрее защитного окна.
+    // Лок ключуется по id шага: повтор ТОГО ЖЕ шага в окне блокируется,
+    // переход к следующему шагу — нет (это разные действия, не дубликат).
+    const nextTapLockRef = useRef({ id: null, at: 0 });
     const savedStepSigsRef = useRef({});
     const shownStepSigRef = useRef('');
     const frozenVisibleStepConfigsRef = useRef(null);
@@ -994,6 +1000,20 @@
       // синхронный, goToStep уже сам управляет анимацией через свой
       // setTimeout(200), второй внешний wrapper избыточен.
       actionInFlightRef.current = true;
+      // Строка «повторный тап и поворот»: 350 мс минимальной защиты поверх
+      // actionInFlightRef — тот снимается сразу по завершении операции, а
+      // сеть иногда отвечает быстрее защитного окна. Лок стоит на моменте
+      // тапа и не продлевает savingStep: продление ломает остальных
+      // потребителей общей StepModal (приёмы пищи, вода, сон и т. д.),
+      // которые не под этим контрактом, — 2026-08-25 так и нашли по красным
+      // тестам morning-checkin-flow-resume.
+      const tapNow = Date.now();
+      const tapKey = currentConfig?.id ?? currentStepIndex;
+      if (nextTapLockRef.current.id === tapKey && tapNow - nextTapLockRef.current.at < 350) {
+        actionInFlightRef.current = false;
+        return;
+      }
+      nextTapLockRef.current = { id: tapKey, at: tapNow };
       if (currentConfig?.id === 'profile-metabolism') {
         setProfileSaveFail(false);
         setProfileSaveOk(false);
