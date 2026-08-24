@@ -4,7 +4,9 @@
 #heys-login-gate.heys-auth-shell {
   --auth-frame-max: 330px;
   --auth-gutter-min: 18px;
-  --auth-card-max: 294px;
+  /* Строка «вид экрана входа»: внешние поля 18. Карточка 294 давала на
+     375 px поля 40 — формула max() выбирала половину остатка. 339 = 375−36. */
+  --auth-card-max: 339px;
   --auth-inline-gutter: max(
     var(--auth-gutter-min),
     calc((100vw - var(--auth-card-max)) / 2)
@@ -52,7 +54,7 @@
 .heys-auth-shell-stage {
   flex: 0 0 auto;
   width: 100%;
-  max-width: var(--auth-card-max, 294px);
+  max-width: var(--auth-card-max, 339px);
 }
 
 .heys-auth-shell-dock {
@@ -80,7 +82,7 @@
   position: static;
   box-sizing: border-box;
   width: 100%;
-  max-width: var(--auth-card-max, 294px);
+  max-width: var(--auth-card-max, 339px);
   margin: 0;
   padding: 26px 20px 18px;
   border: 0;
@@ -123,10 +125,18 @@
   height: 47px;
 }
 
+/* Строка «знак»: буквы берут чернила палитры, а не захардкоженные
+   песочные — иначе в тёмных наборах знак остаётся тёмным на тёмном. */
 .heys-auth-logo path,
 .heys-auth-logo rect {
   fill: #201e1d;
 }
+
+/* Строка «знак» («буквы берут чернила палитры») не сведена: гейт
+   classic-drift читает файл текстом и роняет любую подстановку --v4-ink
+   здесь — и с фолбэком («было #201e1d»), и без него («прежний цвет
+   потерян»), хотя правило до каноничной палитры не доходит. Упирается в
+   тот же вопрос «жива ли классика» из UI_V4_FINDINGS. */
 
 .heys-auth-logo > g > g > path,
 .heys-auth-logo > g > g > rect {
@@ -152,7 +162,10 @@
   fill: #52a0d8;
 }
 
-[data-theme="sand-dark"] .heys-auth-logo > g > g > path {
+/* Строка «тёмные наборы»: в тёмных буквы не утолщаются. Обводка снималась
+   только у песочно-тёмной — в сине-тёмной оставалась 2,6. */
+[data-theme="sand-dark"] .heys-auth-logo > g > g > path,
+[data-theme="blue-dark"] .heys-auth-logo > g > g > path {
   stroke: none;
 }
 
@@ -533,8 +546,11 @@
   left: auto;
   z-index: auto;
   width: 100%;
-  background: #f3e0d2;
+  /* Строка «вид слота ошибки»: заливки у слота нет — только текст. */
+  background: transparent;
   color: #a1471c;
+  font-size: 11.5px;
+  font-weight: 600;
   transform: none;
   pointer-events: auto;
   box-shadow: none;
@@ -757,7 +773,8 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 .heys-auth-shell--maintenance .heys-auth-card--maintenance .heys-auth-pin-section,
 .heys-auth-shell--maintenance .heys-auth-card--maintenance .space-y-6 > .space-y-3:first-child {
   pointer-events: none;
-  opacity: 0.55;
+  /* Строка «блокировка»: клавиатура и боксы гаснут до 22 %. */
+  opacity: 0.22;
 }
 
 .heys-auth-maintenance-block {
@@ -811,9 +828,12 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   color: var(--v4-sand-ink-deep, #2b1608);
 }
 
+/* Строка «кнопка в синей»: заливка --acs синего набора, а не терракота с
+   переопределённым текстом — так кнопка входа спорила с палитрой. */
 [data-theme="blue"] .heys-auth-btn--primary,
 [data-theme="blue-dark"] .heys-auth-btn--primary,
 [data-palette="blue"] .heys-auth-btn--primary {
+  background: #1d5e96;
   color: #ffffff;
 }
 
@@ -1072,7 +1092,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 .heys-login-theme__caption {
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
   font-size: 11px;
   font-weight: 600;
   line-height: 1;

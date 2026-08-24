@@ -13,11 +13,13 @@ const consents = fs.readFileSync(path.join(webDir, 'heys_consents_v1.js'), 'utf8
 const shellCss = fs.readFileSync(path.join(webDir, 'styles/modules/000-base-and-gamification.css'), 'utf8');
 
 describe('login v4 canvas structure', () => {
-  it('keeps PIN cells at 56×64 with 8px gap and 46px keys', () => {
+  // Клавиша 46 -> 48 и радиус 16: строка контракта «вид своей клавиатуры»
+  // требует высоту не меньше 48. Тест держал прежнее число.
+  it('keeps PIN cells at 56×64 with 8px gap and 48px keys', () => {
     expect(css).toMatch(/\.heys-auth-pin-box\s*\{[\s\S]*?width:\s*56px/);
     expect(css).toMatch(/\.heys-auth-pin-box\s*\{[\s\S]*?height:\s*64px/);
     expect(css).toMatch(/\.heys-auth-pin-grid\s*\{[\s\S]*?gap:\s*8px/);
-    expect(css).toMatch(/\.heys-auth-key,\s*\n\.heys-auth-key-spacer\s*\{[\s\S]*?height:\s*46px/);
+    expect(css).toMatch(/\.heys-auth-key,\s*\n\.heys-auth-key-spacer\s*\{[\s\S]*?height:\s*48px/);
   });
 
   it('reserves the error slot in flow instead of a fixed overlay', () => {
@@ -28,7 +30,8 @@ describe('login v4 canvas structure', () => {
     expect(css).toMatch(/\.heys-auth-error-slot:not\(:empty\)[\s\S]*?min-height:\s*38px/);
     expect(css).toMatch(/\.heys-auth-error-slot:not\(:empty\)[\s\S]*?height:\s*38px/);
     expect(css).toMatch(/\.heys-auth-error-slot:not\(:empty\)[\s\S]*?max-height:\s*38px/);
-    expect(css).toMatch(/\.heys-auth-error-slot:not\(:empty\)[\s\S]*?background:\s*#f3e0d2/);
+    // Строка «вид слота ошибки»: заливки у слота нет — только текст.
+    expect(css).toMatch(/\.heys-auth-error-slot:not\(:empty\)[\s\S]*?background:\s*transparent/);
     expect(css).not.toMatch(/#hlg-client-err\.is-pin-error\s*\{[\s\S]*?position:\s*fixed/);
     expect(html).toMatch(/hlg-client-err[\s\S]*?hlg-pin-keypad/);
     expect(login.indexOf('heys-auth-error-slot')).toBeLessThan(login.indexOf('heys-auth-keypad'));
@@ -53,11 +56,11 @@ describe('login v4 canvas structure', () => {
     expect(css).toContain('.heys-auth-shell--curator');
     expect(css).toMatch(/\.heys-auth-logo \.lab path[\s\S]*rgba\(0,\s*0,\s*0,\s*0\.42\)/);
     expect(css).toMatch(/\.heys-auth-shell[\s\S]*?background:\s*#efe3cf/);
-    expect(css).toMatch(/--auth-card-max:\s*294px/);
+    expect(css).toMatch(/--auth-card-max:\s*339px/);
     expect(css).toMatch(/--auth-inline-gutter:\s*max\(/);
     expect(css).toMatch(/padding:\s*28px var\(--auth-inline-gutter\) 0\s*!important/);
     expect(css).toMatch(/\.heys-auth-card\s*\{[\s\S]*?width:\s*100%/);
-    expect(css).toMatch(/\.heys-auth-card\s*\{[\s\S]*?max-width:\s*var\(--auth-card-max,\s*294px\)/);
+    expect(css).toMatch(/\.heys-auth-card\s*\{[\s\S]*?max-width:\s*var\(--auth-card-max,\s*339px\)/);
     expect(css).not.toMatch(/\.heys-auth-shell-client[\s\S]*?max-width:\s*330px/);
     expect(css).toMatch(/\.heys-auth-card\s*\{[\s\S]*?border-radius:\s*26px/);
     expect(css).toMatch(/\.heys-auth-card\s*\{[\s\S]*?background:\s*var\(--v4-bg/);
@@ -145,7 +148,7 @@ describe('login v4 frame groups', () => {
     expect(setup).not.toContain('Подпись документов в приложении');
     expect(setup).not.toContain('собственноручную подпись');
     expect(setup).toContain('heys-auth-error-slot');
-    expect(css).toMatch(/\.heys-auth-card\s*\{[\s\S]*?max-width:\s*var\(--auth-card-max,\s*294px\)/);
+    expect(css).toMatch(/\.heys-auth-card\s*\{[\s\S]*?max-width:\s*var\(--auth-card-max,\s*339px\)/);
   });
 
   it('uses v4 bottom sheet for access-code document signing', () => {
