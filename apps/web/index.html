@@ -971,9 +971,18 @@
     <!-- Login gate имеет inline стили и не зависит от Tailwind -->
     <link rel="stylesheet" href="/styles/tailwind.css" />
 
+    <!-- Буква знака загрузчика набрана Figtree весом 800 (контракт app-splash
+         «вид диска в загрузчике») и рисуется до первого пейнта. Без preload
+         запрос за шрифтом стартует только когда до буквы дойдёт вёрстка, и она
+         успевает мигнуть системным шрифтом: у @font-face стоит font-display:
+         swap, а сама буква живёт всего 300 мс. crossorigin обязателен — шрифты
+         грузятся в CORS-режиме даже со своего домена, без него запрос был бы
+         второй, мимо кэша preload'а. -->
+    <link rel="preload" href="/fonts/figtree/Figtree-Variable.ttf" as="font" type="font/ttf" crossorigin />
+
     <!-- Critical CSS for instant rendering -->
     <link rel="stylesheet" href="styles/critical.css?v=14" />
-    <link rel="stylesheet" href="styles/heys-boot-mark.css?v=8" />
+    <link rel="stylesheet" href="styles/heys-boot-mark.css?v=9" />
     <link rel="stylesheet" href="styles/modules/002-ui-v4-palette-roles.css" />
     <link rel="stylesheet" href="styles/modules/733-ui-v4-login-theme.css?v=14" />
 
@@ -989,10 +998,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.fc1f39fd2d27.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.b96b85940332.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.c890f0f5f4e5.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.b1c22d54468c.js" as="script" />
     <link rel="preload" href="boot-day.bundle.70664faae0ea.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.264d24b43fe2.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.4f03b00bafea.js" as="script" />
     <link rel="preload" href="boot-init.bundle.70669b2d2b0b.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
@@ -1531,7 +1540,8 @@
         <div class="heys-boot-mark" data-heys-boot-mark="true" role="status" aria-live="polite" aria-busy="true">
             <span class="heys-boot-mark__disc" aria-hidden="true">
                 <!-- Загрузчик: буква знака до порога 300 мс (контракт app-splash
-                     «вид диска»), дальше на её месте дуга знака ожидания. -->
+                     «вид диска в загрузчике» — H, Figtree 800, тон --ac),
+                     дальше на её месте дуга знака ожидания. -->
                 <span class="heys-boot-mark__letter" aria-hidden="true">H</span>
                 <span class="heys-boot-mark__spin animate-always" aria-hidden="true">
                     <!-- Контракт «вид знака»: дуга 26 обводкой 2,75, хвост той же
@@ -3258,10 +3268,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.fc1f39fd2d27.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.b96b85940332.js"></script>
+    <script defer src="boot-core.bundle.c890f0f5f4e5.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.b1c22d54468c.js"></script>
     <script defer src="boot-day.bundle.70664faae0ea.js"></script>
-    <script defer src="boot-app.bundle.264d24b43fe2.js"></script>
+    <script defer src="boot-app.bundle.4f03b00bafea.js"></script>
     <script defer src="boot-init.bundle.70669b2d2b0b.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 

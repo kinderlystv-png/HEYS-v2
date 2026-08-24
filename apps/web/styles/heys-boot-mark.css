@@ -18,16 +18,20 @@ html[data-theme="dark"], html[data-theme="classic-dark"] { background: #141210; 
 html[data-theme="blue"], html[data-theme-id="blue"] { background: #ffffff; }
 html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1a26; }
 
-/* Знак загрузчика набран Caprasimo (контракт app-splash «вид диска»: в иконке
-   Figtree, в загрузчике внутри приложения — Caprasimo). Роли v4 сюда не годятся:
-   этот файл — критический стиль до первого пейнта, а 002-ui-v4-palette-roles.css
-   приезжает со стилями приложения, поэтому набор задан литералами палитр
-   v4-canvas.css. */
+/* Знак загрузчика набран Figtree весом 800 — тем же шрифтом, что буква в иконке
+   приложения (контракт app-splash «вид диска в загрузчике»: «Caprasimo в продукте
+   не используется нигде»). Прежняя редакция контракта обещала здесь Caprasimo, и
+   файл держал под него собственный @font-face; теперь он ссылается на Figtree.
+   Объявление продублировано здесь намеренно и слово в слово повторяет то, что
+   стоит в 002-ui-v4-palette-roles.css: этот файл — критический стиль до первого
+   пейнта, и буква не должна зависеть от того, дойдёт ли до браузера чужой файл.
+   Один и тот же URL — значит один запрос за шрифтом, а не два. Роли v4 сюда всё
+   так же не годятся, поэтому цвета заданы литералами палитр v4-canvas.css. */
 @font-face {
-    font-family: Caprasimo;
-    src: url('/fonts/Caprasimo-Regular.ttf') format('truetype');
+    font-family: Figtree;
+    src: url('/fonts/figtree/Figtree-Variable.ttf') format('truetype');
     font-style: normal;
-    font-weight: 400;
+    font-weight: 300 900;
     font-display: swap;
 }
 
@@ -209,16 +213,20 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     flex: none;
     pointer-events: none;
 }
-/* Буква знака в загрузчике (контракт app-splash «вид диска»). Кадр «Стык ·
-   загрузчик» рисует на её месте сразу дугу; контракт старше кадра, поэтому
-   буква стоит до порога 300 мс, а дальше её сменяет знак ожидания — так же
-   описывает стык подпись кадра «дуга на месте буквы».
-   29 px на диске 64 из канваса = 25 px на продуктовом диске 56. */
+/* Буква знака в загрузчике (контракт app-splash «вид диска в загрузчике»):
+   H тоном --ac (--boot-letter) на диске --c2, Figtree весом 800; обводки, тени
+   и второго цвета у диска нет. Кадр «Стык · загрузчик» рисует на её месте сразу
+   дугу; контракт старше кадра, поэтому буква стоит до порога 300 мс, а дальше её
+   сменяет знак ожидания — так же описывает стык подпись кадра «дуга на месте
+   буквы».
+   25px/1 с нижним отступом 2 px — набор класса .bml из самого канваса
+   app-splash (в кадрах диск увеличен до 64 «только для наглядности», буква там
+   29 px, но продуктовый диск 56 и буква на нём та же 25). */
 .heys-boot-mark__letter {
     position: absolute;
-    font: 400 25px/1 Caprasimo, Georgia, serif;
+    font: 800 25px/1 Figtree, system-ui, sans-serif;
     color: var(--boot-letter);
-    padding-bottom: 2.5px;
+    padding-bottom: 2px;
     animation: heys-boot-letter-out 1ms linear 300ms forwards;
 }
 .heys-boot-mark.is-fail .heys-boot-mark__letter,

@@ -10,13 +10,15 @@
     </style>
   </defs>
   <rect width="100" height="100" fill="#fffaf1" />
+  <!-- Базовая линия та же, что в icon-v4.svg: 75,4 ставит центр прописной
+       ровно на середину плитки (было 80 — центр на 54,6 % высоты). -->
   <text
     x="50"
-    y="80"
+    y="75.4"
     text-anchor="middle"
     font-family="Figtree, system-ui, sans-serif"
     font-size="72"
     font-weight="800"
-    fill="#a8481c"
+    fill="#a1471c"
   >H</text>
 </svg>

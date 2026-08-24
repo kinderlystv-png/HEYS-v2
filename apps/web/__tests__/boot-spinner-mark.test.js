@@ -201,19 +201,60 @@ describe('cold-start spinner mark', () => {
     expect(css).not.toMatch(/font: 700 1[67]px/);
   });
 
-  it('puts the loader letter under the wait sign, Caprasimo on --ac', () => {
-    // Контракт app-splash «вид диска»: в загрузчике буква H тоном --ac,
-    // набранная Caprasimo. Кадр «Стык · загрузчик» рисует на её месте сразу
-    // дугу — контракт старше кадра, буква живёт до порога 300 мс.
+  it('puts the loader letter under the wait sign, Figtree 800 on --ac', () => {
+    // Строка контракта app-splash «вид диска в загрузчике» (двенадцатая сборка):
+    // буква H тоном --ac, набранная Figtree весом 800, — «тот же шрифт, что в
+    // иконке приложения; Caprasimo в продукте не используется нигде». Прежняя
+    // редакция обещала здесь Caprasimo, и тест закреплял его как правильный;
+    // дизайнер назвал это ошибкой, поэтому проверка переписана под новую строку.
+    // Кадр «Стык · загрузчик» рисует на месте буквы сразу дугу — контракт старше
+    // кадра, буква живёт до порога 300 мс.
     expect(html).toContain('<span class="heys-boot-mark__letter" aria-hidden="true">H</span>');
-    expect(css).toContain("font-family: Caprasimo;");
-    expect(css).toMatch(/\.heys-boot-mark__letter \{[\s\S]*?Caprasimo[\s\S]*?var\(--boot-letter\)/);
+    expect(css).toContain('font-family: Figtree;');
+    expect(css).toContain("src: url('/fonts/figtree/Figtree-Variable.ttf') format('truetype');");
+    expect(css).toMatch(
+      /\.heys-boot-mark__letter \{[\s\S]*?font: 800 25px\/1 Figtree[\s\S]*?var\(--boot-letter\)/,
+    );
     expect(css).toContain('--boot-letter: #8a4a20;');
     expect(css).toMatch(/heys-boot-letter-out 1ms linear 300ms forwards/);
+    // Caprasimo снят целиком: и объявление шрифта, и его имя в наборе буквы.
+    // Комментарии вычищены — в них имя остаётся намеренно, как история решения.
+    expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toContain('Caprasimo');
+    expect(html).not.toContain('Caprasimo');
     // Знака ожидания до 300 мс нет вовсе.
     expect(css).toMatch(
       /\.heys-boot-mark__disc \.heys-boot-mark__spin > svg \{[\s\S]*?opacity: 0;[\s\S]*?heys-boot-fadein 150ms ease-out 300ms/,
     );
+  });
+
+  it('preloads Figtree so the loader letter is not drawn by a system font', () => {
+    // Буква рисуется до первого пейнта, а @font-face стоит на font-display:
+    // swap: без preload запрос за файлом стартует только когда вёрстка дойдёт
+    // до буквы, и она успевает мигнуть системным шрифтом за те 300 мс, что
+    // живёт. crossorigin обязателен — иначе preload не попадает в тот же кэш,
+    // что CORS-запрос шрифта, и файл качается дважды.
+    expect(html).toMatch(
+      /<link rel="preload" href="\/fonts\/figtree\/Figtree-Variable\.ttf" as="font" type="font\/ttf" crossorigin \/>/,
+    );
+    // Preload обязан стоять до стилей знака, иначе он ничего не ускоряет.
+    expect(html.indexOf('Figtree-Variable.ttf')).toBeLessThan(
+      html.indexOf('styles/heys-boot-mark.css'),
+    );
+  });
+
+  it('leaves the loader disc without stroke, shadow or a second colour', () => {
+    // «диск 56 px радиусом 999, заливка --c2 <…>; обводки, тени и второго цвета
+    // нет». --c2 песочного набора = #efe3cf = --boot-disc.
+    const disc = readRule(css, '.heys-boot-mark__disc');
+    expect(disc.selector).toBe('.heys-boot-mark__disc');
+    expect(disc.body).toContain('width: var(--heys-splash-disc-size)');
+    expect(disc.body).toContain('border-radius: 999px');
+    expect(disc.body).toContain('background: var(--boot-disc)');
+    expect(disc.body).not.toContain('box-shadow');
+    expect(disc.body).not.toContain('filter');
+    expect(disc.body).not.toMatch(/(^|[;\s])border\s*:/);
+    expect(disc.body).not.toMatch(/(^|[;\s])outline\s*:/);
+    expect(css).toContain('--boot-disc: #efe3cf;');
   });
 
   it('splits the caption threshold from the reason threshold', () => {
@@ -303,20 +344,53 @@ describe('cold-start spinner mark', () => {
     expect(manifest.background_color).toBe('#fffaf1');
     expect(manifest.theme_color).toBe('#fffaf1');
     expect(manifest.description).toContain('Nutrition Tracker');
-    expect(iconSvg).toContain('fill="#fffaf1"');
-    expect(iconSvg).toContain('Figtree');
-    expect(iconSvg).toContain('font-size="72"');
-    // Строка контракта app-splash «что в круге» (девятая сборка): H в Figtree
-    // весом 800. Тест писался под сборку иконки коммитами 9ac24876/fcd0a106,
-    // когда вес был 700; остальные его утверждения — Figtree, размер 72,
-    // отсутствие Caprasimo — совпадают с той же строкой, разошёлся только вес.
-    expect(iconSvg).toContain('font-weight="800"');
-    expect(iconSvg).not.toContain('Caprasimo');
-    expect(iconSvg).not.toContain('fill="#efe3cf"');
-    expect(iconSvg).not.toContain('cy="44"');
-    expect(appleSvg).toContain('fill="#fffaf1"');
-    expect(appleSvg).toContain('Figtree');
-    expect(appleSvg).toContain('font-size="72"');
+    // Строка контракта app-splash «что в иконке» (двенадцатая сборка): H
+    // рубленая, Figtree весом 800, тоном --ac2 (#a1471c) прямо на фоне #fffaf1 — фон
+    // заливает весь квадрат, подложки под буквой нет ни круга, ни скруглённого
+    // квадрата, ни обводки. Прежде эта строка звалась «что в круге»; круга в
+    // ней больше нет, поэтому отсутствие подложки проверяется явно.
+    for (const [name, svg] of [
+      ['icon-v4.svg', iconSvg],
+      ['icon-v4-apple.svg', appleSvg],
+    ]) {
+      expect(svg, name).toContain('<rect width="100" height="100" fill="#fffaf1" />');
+      expect(svg, name).toContain('Figtree');
+      expect(svg, name).toContain('font-size="72"');
+      expect(svg, name).toContain('font-weight="800"');
+      expect(svg, name).toContain('fill="#a1471c"');
+      expect(svg, name).not.toContain('Caprasimo');
+      // Подложки нет: ни круга, ни скруглённого квадрата, ни обводки.
+      expect(svg, name).not.toContain('<circle');
+      expect(svg, name).not.toContain('<ellipse');
+      expect(svg, name).not.toContain('rx=');
+      expect(svg, name).not.toContain('stroke=');
+      expect(svg, name).not.toContain('fill="#efe3cf"');
+      expect(svg, name).not.toContain('cy="44"');
+      // Одна заливка на весь квадрат и один текст — второй фигуры быть не должно.
+      expect(svg.match(/<rect/g), name).toHaveLength(1);
+      expect(svg.match(/<text/g), name).toHaveLength(1);
+    }
+    // «буква стоит по центру и занимает больше половины плитки»: считаем от
+    // самого файла — высота прописной у Figtree около 0,72 кегля, так что на
+    // квадрате 100 половину перекрывает уже кегль 70.
+    for (const [name, svg] of [
+      ['icon-v4.svg', iconSvg],
+      ['icon-v4-apple.svg', appleSvg],
+    ]) {
+      const box = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
+      expect(box, name).not.toBeNull();
+      const side = Number(box[1]);
+      expect(Number(box[2]), name).toBe(side);
+      const size = Number(svg.match(/font-size="(\d+)"/)[1]);
+      expect(size * 0.72, name).toBeGreaterThan(side / 2);
+      expect(svg, name).toContain('text-anchor="middle"');
+      expect(Number(svg.match(/\bx="(\d+)"\s/)[1]), name).toBe(side / 2);
+      // По вертикали центрирует базовая линия. 80 досталось от времён, когда
+      // растеризатор молча подставлял вместо Figtree системный шрифт: по обмеру
+      // готового PNG центр прописной стоял на 54,6 % высоты. 75,4 ставит его на
+      // 50,1 % — обмер повторяется скриптом генератора.
+      expect(svg, name).toContain('y="75.4"');
+    }
     expect(fs.existsSync(path.join(webRoot, 'public/apple-touch-icon.png'))).toBe(true);
     expect(html).toContain('rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"');
     expect(html).toContain('apple-mobile-web-app-capable" content="yes"');
