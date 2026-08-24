@@ -10,6 +10,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const UNDO_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_undo_v1.js'), 'utf8');
+const UNDO_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/heys-components.css'), 'utf8');
 
 // Строка «длительность»: 5 с на все места вызова, невидимого запаса нет.
 const UNDO_WINDOW_MS = 5000;
@@ -55,6 +56,17 @@ function bottomPx() {
   if (!el) return NaN;
   const match = /(-?[\d.]+)px/.exec(el.style.bottom || '');
   return match ? parseFloat(match[1]) : NaN;
+}
+
+/** Кладёт настоящий CSS модуля в документ — getComputedStyle отвечает то же,
+ * что ответил бы браузер (для свойств, которые happy-dom умеет считать;
+ * calc(env(...)) он не резолвит, поэтому safe-area всё ещё сверяется текстом
+ * ниже). */
+function mountCss() {
+  const style = document.createElement('style');
+  style.textContent = UNDO_CSS;
+  document.head.appendChild(style);
+  return style;
 }
 
 function mountTabs(height = TABS_HEIGHT) {
@@ -404,5 +416,62 @@ describe('бар отмены · контракт undo-bar.v4.dc.html', () => {
 
     advance(2000);
     expect(undoBtn().getAttribute('aria-label')).toBe('Отменить, осталось 3 секунд');
+  });
+
+  // ── Правило продукта: выделение текста ──
+
+  it('текст бара не выделяется — он живёт пять секунд (строка «язык, выделение, часовой пояс»)', () => {
+    mountCss();
+    Undo.push({ label: 'Перекус удалён', onUndo: () => {} });
+
+    // Правило стоит на контейнере .heys-undo-bar__content и наследуется на
+    // подпись и кнопку в настоящем браузере; happy-dom инициализм наследования
+    // для getComputedStyle не считает, поэтому проверяем сам узел с правилом —
+    // ровно тот, что оборачивает и label, и btn.
+    const content = document.querySelector('.heys-undo-bar__content');
+    expect(getComputedStyle(content).userSelect).toBe('none');
+    expect(content.contains(document.querySelector('.heys-undo-bar__label'))).toBe(true);
+    expect(content.contains(undoBtn())).toBe(true);
+  });
+
+  // ── Правило продукта: врезка снизу ──
+
+  it('врезка снизу реально применяется через настоящий CSS-каскад', () => {
+    mountCss();
+    Undo.push({ label: 'Перекус удалён', onUndo: () => {} });
+
+    // Без навигации инлайн пуст — отступ берёт правило .heys-undo-bar,
+    // и раз оно совпало с элементом, остальные его свойства тоже читаются:
+    // подтверждает, что именно это правило, а не случайный текст в файле,
+    // применяется к настоящему бару.
+    expect(bar().style.bottom).toBe('');
+    const cs = getComputedStyle(bar());
+    expect(cs.position).toBe('fixed');
+    expect(cs.borderRadius).toBe('22px');
+
+    // calc(env(...)) happy-dom не резолвит в число, поэтому нижняя врезка
+    // сверяется текстом объявления — вместе с проверкой выше это и есть
+    // «прочитан вычисленный стиль» настолько, насколько это возможно в jsdom/
+    // happy-dom без реального движка рендеринга.
+    const block = UNDO_CSS.slice(UNDO_CSS.indexOf('.heys-undo-bar {'), UNDO_CSS.indexOf('@keyframes heysUndoBarIn'));
+    expect(block).toMatch(/bottom:\s*calc\(12px \+ env\(safe-area-inset-bottom, 0px\)\)/);
+  });
+
+  // ── Правило продукта: повторный тап ──
+
+  it('второй клик по «Отменить» уже не находит бар — защита конструктивная, не таймером', () => {
+    const onUndo = vi.fn();
+    Undo.push({ label: 'Перекус удалён', onUndo });
+
+    const btn = undoBtn();
+    btn.click();
+    btn.click(); // тот же узел, второй клик — на кнопке, которую логика уже отпустила
+    // Второй клик синхронно бьёт в тот же обработчик: onUndoClick — currentUndo
+    // уже null, ранний выход не даёт повторно провести onUndo.
+    expect(onUndo).toHaveBeenCalledTimes(1);
+
+    advance(HIDE_MS);
+    // Бар пересоздаваться не должен — второй клик ничего не запустил повторно.
+    expect(bar()).toBeNull();
   });
 });

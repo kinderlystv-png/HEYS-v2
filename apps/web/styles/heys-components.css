@@ -5835,7 +5835,13 @@ body.tour-active .ios-pwa-banner {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  /* Контракт pwa-update «safe-area и кнопка назад»: карточка центруется
+     между врезками. env() внутри max() держит поле 20px прежним там, где
+     врезки нет — там env() возвращает 0. */
+  padding:
+    max(20px, calc(20px + env(safe-area-inset-top, 0px)))
+    20px
+    max(20px, calc(20px + env(safe-area-inset-bottom, 0px)));
   animation: heys-update-fade-in 0.3s ease-out;
 }
 
@@ -5863,6 +5869,9 @@ body.tour-active .ios-pwa-banner {
   text-align: center;
   box-shadow: 0 22px 48px rgba(0, 0, 0, 0.4);
   font-family: Figtree, system-ui, -apple-system, sans-serif;
+  /* Контракт pwa-update «язык, выделение, часовой пояс»: текст слоя не
+     выделяется. Номер версии — исключение, см. .heys-update-modal__version. */
+  user-select: none;
 }
 
 .heys-update-modal__icon {
@@ -5957,6 +5966,10 @@ body.tour-active .ios-pwa-banner {
   margin: 15px 0 0;
   font: 600 10px/1.4 ui-monospace, Menlo, monospace;
   color: rgba(245, 237, 225, 0.38);
+  /* Местное отличие контракта: номер версии выделяется и копируется — его
+     диктуют поддержке при жалобе на баг. Единственное исключение из запрета
+     выделения на этом слое. */
+  user-select: text;
 }
 
 /* Одиночный кадр перезагрузки: последовательности не было, точек нет —
@@ -6034,6 +6047,14 @@ body.tour-active .ios-pwa-banner {
 .heys-update-prompt__btn:active,
 .heys-update-modal__close-btn:active {
   transform: scale(0.98);
+}
+
+/* Контракт pwa-update «повторный тап»: 350 мс защиты от случайного двойного
+   тапа на «Обновить сейчас» — видимый признак блокировки, не только
+   функциональный. */
+.heys-update-prompt__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @keyframes heys-update-spin {
@@ -11453,6 +11474,10 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   align-items: center;
   gap: 11px;
   padding: 11px 13px;
+  /* Строка «язык, выделение, часовой пояс»: текст бара не выделяется — он
+     живёт пять секунд. Кнопка «Отменить» такая же одноразовая. */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .heys-undo-bar__ring {

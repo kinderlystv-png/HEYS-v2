@@ -5306,6 +5306,10 @@
   gap: 8px;
   margin-top: 5px;
   line-height: 1;
+  /* Строка «язык, выделение, часовой пояс»: сводка даты не выделяется —
+     выделяется только комментарий куратора (его в этом листе нет). */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .ca-modal__date-label {
@@ -5362,6 +5366,10 @@
 .ca-modal__item-copy {
   flex: 1;
   min-width: 0;
+  /* Строка «язык, выделение, часовой пояс»: названия правок не выделяются —
+     выделяется только комментарий куратора (его в этом листе нет). */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .ca-modal__item-title {
