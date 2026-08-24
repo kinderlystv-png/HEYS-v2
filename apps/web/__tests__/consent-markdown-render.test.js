@@ -135,7 +135,15 @@ describe('PEP: обязательные согласия только после
 
   it('кнопка «Ознакомлен» в полном тексте только после прокрутки', () => {
     expect(source).toContain('!loading && !error && React.createElement(\'button\'');
-    expect(source).toContain('disabled: !!busy || !hasScrolledToEnd');
+    // Проверка сторожила запрет действия до дочитывания, а не атрибут disabled.
+    // Строка контракта «доступность» требует, чтобы до дочитывания причина была
+    // названа словами (aria-disabled + описание), — из обхода кнопка выпадать не
+    // должна. Запрет теперь держит guard в onClick, disabled остался только на
+    // время запроса. Поведение проверяется рендером:
+    // __tests__/consent-v4-accessibility-smoke.test.js.
+    expect(source).toContain('if (busy || !hasScrolledToEnd) return;');
+    expect(source).toContain('disabled: !!busy,');
+    expect(source).toContain("'aria-disabled': (!!busy || !hasScrolledToEnd) ? 'true' : undefined");
     expect(source).toContain("idle: (acceptLabel || 'Ознакомлен, принимаю')");
   });
 });

@@ -134,7 +134,12 @@ describe('registration canvas parity', () => {
       expect(CONSENTS_SRC).toContain("'Выйти без регистрации'");
       expect(CONSENTS_SRC).not.toContain('← Выйти без регистрации');
       expect(CONSENTS_SRC).toContain("inset 0 0 0 2px rgba(0,0,0,.18)");
-      expect(CONSENTS_SRC).toContain('minHeight: 40');
+      // Проверка сторожила высоту 40 из кадров «Регистрация · согласия»
+      // («Читать полностью →» и «Выйти без регистрации»). Строка контракта
+      // «цель касания» требует минимум 44, и контракт старше кадра — поэтому
+      // ждём 44 и следим, что 40 в файл не вернулось.
+      expect(CONSENTS_SRC).toContain('minHeight: 44');
+      expect(CONSENTS_SRC).not.toContain('minHeight: 40');
       expect(CONSENTS_SRC).toContain("color: allRequiredAccepted && !loading ? '#2b1608'");
       expect(CONSENTS_SRC).toContain("padding: '16px 18px 0'");
       expect(CONSENTS_SRC).toContain('!allRequiredAccepted && onCancel');

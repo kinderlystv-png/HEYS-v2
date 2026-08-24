@@ -113,13 +113,57 @@
     pointerEvents: 'auto',
   };
 
+  const SIGN_SHEET_FOCUSABLE_SELECTOR = [
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    'a[href]',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
+
+  // Строка «доступность»: ловушка фокуса шторки подписи обходит только то, что
+  // внутри листа. Скрытые с глаз, но доступные клавиатуре поля PIN сюда входят.
+  function getSignSheetFocusables(sheet) {
+    if (!sheet || typeof sheet.querySelectorAll !== 'function') return [];
+    return Array.from(sheet.querySelectorAll(SIGN_SHEET_FOCUSABLE_SELECTOR))
+      .filter((el) => el && el.getAttribute && el.getAttribute('aria-hidden') !== 'true');
+  }
+
+  // Строка «после подписи»: в журнал вместе с подписью уходит navigator.userAgent
+  // (logConsentsBySession / logConsents), поэтому человеку показываем то же
+  // устройство — короткой парой «система · браузер», а не строкой агента.
+  function describeSignDevice() {
+    const ua = String((typeof navigator !== 'undefined' && navigator.userAgent) || '');
+    if (!ua) return 'это устройство';
+    const os = /iPhone/i.test(ua) ? 'iPhone'
+      : /iPad/i.test(ua) ? 'iPad'
+        : /Android/i.test(ua) ? 'Android'
+          : /Windows/i.test(ua) ? 'Windows'
+            : /Macintosh|Mac OS X/i.test(ua) ? 'Mac'
+              : /Linux/i.test(ua) ? 'Linux'
+                : '';
+    // Порядок важен: YaBrowser и Edge несут в агенте и Chrome, CriOS — и Safari.
+    const browser = /YaBrowser/i.test(ua) ? 'Яндекс Браузер'
+      : /Edg\//i.test(ua) ? 'Edge'
+        : /OPR\/|Opera/i.test(ua) ? 'Opera'
+          : /Firefox|FxiOS/i.test(ua) ? 'Firefox'
+            : /Chrome|CriOS/i.test(ua) ? 'Chrome'
+              : /Safari/i.test(ua) ? 'Safari'
+                : '';
+    if (os && browser) return `${os} · ${browser}`;
+    return os || browser || 'это устройство';
+  }
+
   function formatAccessCodeSignMeta(signedAt) {
     const date = signedAt instanceof Date ? signedAt : new Date();
     const day = date.getDate();
     const month = date.toLocaleString('ru-RU', { month: 'long' });
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `Подпись — код доступа, ${day} ${month} в ${hours}:${minutes}`;
+    // Строка «после подписи»: документ и версия стоят в карточке ниже, здесь —
+    // способ подписи, дата, время и устройство.
+    return `Подпись — код доступа, ${day} ${month} в ${hours}:${minutes}, ${describeSignDevice()}`;
   }
 
   function renderConsentSignDoneIcon() {
@@ -755,6 +799,11 @@
     const [signedConsentList, setSignedConsentList] = useState(null);
     const [signedAt, setSignedAt] = useState(null);
     const prevConsentStepRef = useRef(step);
+    const signSheetRef = useRef(null);
+    // «клавиатура»: та же механика, что у мастера регистрации
+    // (heys_step_modal_v1.js) — пока клавиатура открыта, шторка живёт в высоте
+    // visualViewport, и полка с «Подписать» не уезжает под клавиши.
+    const [signKeyboardViewportHeight, setSignKeyboardViewportHeight] = useState(0);
 
     useEffect(() => {
       if (step !== 'access_code_sign' || !accessSignPinApi) {
@@ -771,6 +820,90 @@
       setSignedAt(null);
       setError(null);
     }, [step, accessSignPinApi]);
+
+    // Строка «доступность»: шторка подписи — модальный диалог с запертым
+    // фокусом. Первый Tab уводит внутрь листа, дальше обход ходит по кругу и
+    // не уходит на экран согласий под подложкой; на выходе фокус возвращается
+    // туда, откуда шторку открыли.
+    useEffect(() => {
+      // Полный текст документа открывается поверх шторки и живёт вне листа —
+      // пока он на экране, ловушка молчит, иначе Tab выдёргивало бы фокус из него.
+      if (step !== 'access_code_sign' || showFullText) return undefined;
+      if (typeof document === 'undefined') return undefined;
+      const sheet = signSheetRef.current;
+      if (!sheet) return undefined;
+      const restoreTo = document.activeElement;
+      if (!sheet.contains(document.activeElement)) {
+        const first = getSignSheetFocusables(sheet)[0] || sheet;
+        try { first.focus(); } catch (_) { /* фокус не критичен */ }
+      }
+      return () => {
+        try {
+          if (restoreTo && typeof restoreTo.focus === 'function' && restoreTo.isConnected !== false) {
+            restoreTo.focus();
+          }
+        } catch (_) { /* элемент мог исчезнуть вместе с экраном */ }
+      };
+    }, [step, showFullText]);
+
+    useEffect(() => {
+      if (step !== 'access_code_sign' || showFullText) return undefined;
+      if (typeof document === 'undefined') return undefined;
+      const onKeyDown = (event) => {
+        const sheet = signSheetRef.current;
+        if (!sheet) return;
+        if (event.key === 'Escape') {
+          if (loading || signSuccess || typeof onCancel !== 'function') return;
+          event.preventDefault();
+          onCancel();
+          return;
+        }
+        if (event.key !== 'Tab') return;
+        const items = getSignSheetFocusables(sheet);
+        if (!items.length) {
+          event.preventDefault();
+          return;
+        }
+        const first = items[0];
+        const last = items[items.length - 1];
+        const active = document.activeElement;
+        if (!sheet.contains(active)) {
+          event.preventDefault();
+          (event.shiftKey ? last : first).focus();
+          return;
+        }
+        if (event.shiftKey && active === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && active === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      };
+      document.addEventListener('keydown', onKeyDown, true);
+      return () => document.removeEventListener('keydown', onKeyDown, true);
+    }, [step, showFullText, loading, signSuccess, onCancel]);
+
+    useEffect(() => {
+      if (step !== 'access_code_sign') {
+        setSignKeyboardViewportHeight(0);
+        return undefined;
+      }
+      const viewport = typeof global !== 'undefined' ? global.visualViewport : null;
+      if (!viewport) return undefined;
+      const sync = () => {
+        const inset = Math.round(global.innerHeight - viewport.height - viewport.offsetTop);
+        // Порог отсекает адресную строку и мелкие сдвиги — реагируем на клавиатуру.
+        setSignKeyboardViewportHeight(inset > 80 ? Math.round(viewport.height) : 0);
+      };
+      sync();
+      viewport.addEventListener('resize', sync);
+      viewport.addEventListener('scroll', sync);
+      return () => {
+        viewport.removeEventListener('resize', sync);
+        viewport.removeEventListener('scroll', sync);
+      };
+    }, [step]);
 
     const allRequiredAccepted = REQUIRED_CONSENTS.every(type => consents[type]);
     const requiredConsentReason = (() => {
@@ -1078,14 +1211,22 @@
         }),
         React.createElement('div', {
           className: 'heys-consent-sign-frame',
-          style: CONSENT_SIGN_FRAME_STYLE,
+          // «клавиатура»: пока клавиатура открыта, рама шторки живёт в высоте
+          // visualViewport — лист сжимается, полка поднимается над клавишами.
+          style: signKeyboardViewportHeight > 0
+            ? { ...CONSENT_SIGN_FRAME_STYLE, bottom: 'auto', height: `${signKeyboardViewportHeight}px` }
+            : CONSENT_SIGN_FRAME_STYLE,
         },
           React.createElement('div', {
             className: 'heys-consent-sign-sheet'
               + (signSuccess ? ' heys-consent-sign-sheet--done' : ' heys-consent-sign-sheet--sign'),
             style: CONSENT_SIGN_SHEET_STYLE,
+            ref: signSheetRef,
             role: 'dialog',
             'aria-modal': 'true',
+            // Строка «доступность»: лист сам принимает фокус, когда внутри ещё
+            // некуда его поставить, — иначе ловушка осталась бы без якоря.
+            tabIndex: -1,
             'aria-label': signSuccess ? 'Документы подписаны' : 'Подписание',
           },
           // Строка «вид шторки подписи»: ручка 38×4 сверху листа.
@@ -1177,7 +1318,19 @@
                 + (signSuccess ? ' heys-consent-sign-sheet__primary--continue' : ''),
               disabled: !!loading || (!signSuccess && !accessSignPinApi?.isComplete),
               onClick: handleAccessCodeSign,
-            }, signSuccess ? 'Готово' : 'Подписать'),
+            },
+              // Спиннеры, строка «когда есть»: подписание документа — одно из
+              // четырёх мест с ответом сервера, значит дуга не исчезает, а
+              // досчитывается до галочки на том же месте.
+              // Строка «после подписи»: подпись регистрацию не заканчивает —
+              // кнопка ведёт дальше словом «Продолжить», а не «Готово».
+              HEYS.WaitMark?.button?.(React, {
+                busy: !!loading && !signSuccess,
+                ok: !!signSuccess,
+                idle: signSuccess ? 'Продолжить' : 'Подписать',
+                busyLabel: 'Подписываем',
+                okLabel: 'Продолжить',
+              }) || (signSuccess ? 'Продолжить' : (loading ? 'Подписываем…' : 'Подписать'))),
             !signSuccess && typeof onCancel === 'function' && React.createElement('button', {
               type: 'button',
               className: 'heys-consent-sign-sheet__cancel',
@@ -1564,7 +1717,8 @@
               disabled: loading,
               type: 'button',
               style: {
-                minHeight: 40,
+                // Строка «цель касания»: минимум 44 — кадр рисует 40, верен контракт.
+                minHeight: 44,
                 border: 'none',
                 background: 'transparent',
                 display: 'flex',
@@ -1731,9 +1885,16 @@
           className: canvasCard ? undefined : 'text-sm'
         }, title),
 
-        config.required && !compact && React.createElement('span', {
-          style: { color: canvasCard ? '#8a4a20' : '#ef4444', marginLeft: 4 }
-        }, '*'),
+        // Строка «доступность»: обязательность названа словом, а не звёздочкой —
+        // скринридер читает «звёздочка» и смысла не передаёт. Звёздочка кадра
+        // остаётся на экране («вид пункта согласия»), но уходит из озвучки.
+        config.required && !compact && React.createElement(React.Fragment, null,
+          React.createElement('span', {
+            style: { color: canvasCard ? '#8a4a20' : '#ef4444', marginLeft: 4 },
+            'aria-hidden': 'true',
+          }, '*'),
+          React.createElement('span', { className: 'sr-only' }, ' — обязательно')
+        ),
 
         !compact && (config.required || !useScreenCopy) && disclosure && React.createElement('div', {
           style: {
@@ -1776,7 +1937,8 @@
             ? {
               display: 'flex',
               alignItems: 'center',
-              minHeight: 40,
+              // Строка «цель касания»: минимум 44 — кадр рисует 40, верен контракт.
+              minHeight: 44,
               marginTop: 0,
               padding: 0,
               border: 'none',
@@ -2370,9 +2532,23 @@
               )
             ),
             React.createElement('span', { className: 'consent-fulltext__screen-label' }, screenLabel),
-            React.createElement('span', { className: 'consent-fulltext__progress-label' }, `${progressPct} %`)
+            React.createElement('span', {
+              className: 'consent-fulltext__progress-label',
+              // Процент уже озвучен полосой ниже — второй раз читать его незачем.
+              'aria-hidden': 'true',
+            }, `${progressPct} %`)
           ),
-          React.createElement('div', { className: 'consent-fulltext__progress-track' },
+          // Строка «доступность»: полоса чтения — progressbar с процентом,
+          // прогресс озвучен, а не только нарисован.
+          React.createElement('div', {
+            className: 'consent-fulltext__progress-track',
+            role: 'progressbar',
+            'aria-label': 'Прочитано документа',
+            'aria-valuemin': 0,
+            'aria-valuemax': 100,
+            'aria-valuenow': progressPct,
+            'aria-valuetext': `${progressPct} % документа прочитано`,
+          },
             React.createElement('div', {
               className: 'consent-fulltext__progress-fill',
               style: { width: `${progressPct}%` }
@@ -2422,12 +2598,23 @@
           role: 'alert',
         }, externalError),
         !loading && !error && !hasScrolledToEnd && React.createElement('p', {
+          // Строка «доступность»: причина недоступности кнопки названа словами
+          // и привязана к ней через aria-describedby.
+          id: 'consent-fulltext-accept-reason',
           className: 'consent-fulltext__scroll-hint'
         }, 'Долистайте до конца, чтобы принять'),
         !loading && !error && React.createElement('button', {
           type: 'button',
-          onClick: onAccept,
-          disabled: !!busy || !hasScrolledToEnd,
+          // Строка «доступность»: до дочитывания кнопка не выключается атрибутом
+          // disabled — иначе она выпадает из обхода и молчит о причине. Остаётся
+          // фокусируемой с aria-disabled, а нажатие не проходит.
+          onClick: () => {
+            if (busy || !hasScrolledToEnd) return;
+            onAccept?.();
+          },
+          disabled: !!busy,
+          'aria-disabled': (!!busy || !hasScrolledToEnd) ? 'true' : undefined,
+          'aria-describedby': !hasScrolledToEnd ? 'consent-fulltext-accept-reason' : undefined,
           className: 'consent-fulltext__accept'
             + (hasScrolledToEnd ? ' is-ready' : '')
             + (busy ? ' is-busy' : ''),
