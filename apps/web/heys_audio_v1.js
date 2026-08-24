@@ -275,7 +275,11 @@
   function isThrottled(category) {
     const now = Date.now();
     const last = _lastPlayTime[category] || 0;
-    if (now - last < (COOLDOWN[category] || 800)) return true;
+    // `??`, а не `||`: у воды пауза намеренно нулевая, и `||` читал этот ноль
+    // как «не задано» и подставлял 800 мс. Из-за этого второй быстрый тап
+    // молчал, а правило контракта water-add «более 4 тапов за 2 с — звук
+    // молчит» не могло сработать ни разу: до пятого тапа дело не доходило.
+    if (now - last < (COOLDOWN[category] ?? 800)) return true;
     _lastPlayTime[category] = now;
     return false;
   }

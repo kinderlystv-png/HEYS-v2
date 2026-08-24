@@ -227,17 +227,25 @@ describe('звук и системная настройка движения', (
     expect(audio.canPlay('waterAdded')).toBe(false);
   });
 
-  it('защита от частых повторов по-прежнему работает — и для воды тоже', () => {
+  it('вода звучит первые четыре тапа и молчит с пятого — строка «частые тапы»', () => {
     const audio = loadAudio();
+    // Прежняя редакция этой проверки закрепляла дефект: `COOLDOWN.water = 0`
+    // читался через `||` как «не задано» и подставлял 800 мс, поэтому молчал
+    // уже второй быстрый тап, а предел «более 4 за 2 с» не достигался ни разу.
+    // Теперь пауза у воды действительно нулевая, и работает именно предел.
     audio.play('waterAdded');
     const afterFirst = log.nodes.length;
     expect(afterFirst).toBeGreaterThan(0);
-    // Частые тапы подряд молчат. Гасит их пауза между повторами категории:
-    // `COOLDOWN.water = 0` не отключает её, потому что `COOLDOWN[cat] || 800`
-    // читает ноль как «не задано» и подставляет 800 мс. Отдельный предел «не
-    // больше 4 за 2 с» при такой паузе просто не достижим.
-    for (let i = 0; i < 4; i += 1) audio.play('waterAdded');
-    expect(log.nodes.length).toBe(afterFirst);
+
+    // Тапы со второго по четвёртый звучат — каждый добавляет узлы.
+    for (let i = 0; i < 3; i += 1) audio.play('waterAdded');
+    const afterFourth = log.nodes.length;
+    expect(afterFourth).toBeGreaterThan(afterFirst);
+
+    // Пятый и дальше в том же окне двух секунд молчат.
+    audio.play('waterAdded');
+    audio.play('waterAdded');
+    expect(log.nodes.length).toBe(afterFourth);
   });
 
   it('пауза между звуками одной категории по-прежнему работает', () => {
