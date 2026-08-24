@@ -45,12 +45,6 @@ const BASELINE = {
     'styles/modules/000-base-and-gamification.css',
     'styles/modules/400-water-and-hydration.css',
   ],
-  'v4-chip': [
-    'heys_steps_v1.js',
-    'styles/modules/500-pwa-and-offline.css',
-    'styles/modules/715-yesterday-verify.css',
-  ],
-  'v4-chip-2': ['styles/modules/500-pwa-and-offline.css'],
   'v4-good': ['styles/modules/000-base-and-gamification.css'],
   'v4-ink-1': ['styles/modules/000-base-and-gamification.css'],
   'v4-macro-over-offset': ['styles/modules/730-widgets-dashboard.css'],
