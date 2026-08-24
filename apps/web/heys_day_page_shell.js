@@ -4,6 +4,47 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
 
+    // ─── Знак ожидания в жесте обновления ──────────────────────────────────
+    // Форма одна на весь продукт (контракт «Спиннеры» → «форма» и «вид знака»):
+    // viewBox 24, дуга 26 px обводкой 2,75, скругление концов, хвост той же дуги
+    // под .22. Исходов три — ожидание, успех, ошибка; таймаут показывается тем же
+    // знаком ошибки, разводит их только строка под знаком.
+    const PULL_ARC = [
+        { key: 'tail', d: 'M21 12a9 9 0 11-9-9', opacity: 0.22 },
+        { key: 'arc', d: 'M12 3a9 9 0 019 9' },
+    ];
+
+    function pullSign(refreshStatus, pullProgress, pullThreshold) {
+        const svg = (extra, tone, children, style) => React.createElement('svg', {
+            className: 'pull-spinner-ring' + (extra ? ' ' + extra : ''),
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            style: Object.assign({}, tone ? { stroke: tone } : null, style || null),
+        }, children);
+        const arc = () => PULL_ARC.map((p) => React.createElement('path', p));
+
+        if (refreshStatus === 'success') {
+            return svg('ready', 'var(--success)',
+                React.createElement('path', { d: 'M5 13l4 4L19 7' }));
+        }
+        if (refreshStatus === 'error' || refreshStatus === 'timeout') {
+            return svg(null, 'var(--err, #ef4444)', [
+                React.createElement('path', { key: 'bang', d: 'M12 7v6M12 17h.01' }),
+                React.createElement('circle', { key: 'ring', cx: 12, cy: 12, r: 9 }),
+            ]);
+        }
+        if (refreshStatus === 'syncing') {
+            return svg('spinning', null, arc());
+        }
+        // Тяга: знак не меняет форму и тон, он доворачивается вслед за жестом —
+        // половина оборота к порогу. Определённого кольца-прогресса больше нет:
+        // это была вторая форма ожидания.
+        return svg(null, null, arc(), {
+            transform: `rotate(${-90 + Math.min(pullProgress / pullThreshold, 1) * 180}deg)`,
+            transition: 'transform 0.1s ease-out',
+        });
+    }
+
     // Offline cold-start overlay: warns user when today has no local cache and no network
     function OfflineNoDataOverlay() {
         const [dismissed, setDismissed] = React.useState(false);
@@ -629,79 +670,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     }
                 },
                     React.createElement('div', { className: 'pull-spinner' },
-                        refreshStatus === 'success'
-                            ? React.createElement('svg', {
-                                className: 'pull-spinner-ring ready',
-                                viewBox: '0 0 28 28',
-                                style: { stroke: 'var(--success)' }
-                            },
-                                React.createElement('path', {
-                                    d: 'M7 14l5 5 9-9',
-                                    strokeWidth: 3,
-                                    fill: 'none',
-                                    strokeLinecap: 'round',
-                                    strokeLinejoin: 'round'
-                                })
-                            )
-                            : refreshStatus === 'error'
-                                ? React.createElement('svg', {
-                                    className: 'pull-spinner-ring',
-                                    viewBox: '0 0 28 28',
-                                    style: { stroke: 'var(--err, #ef4444)' }
-                                },
-                                    React.createElement('path', {
-                                        d: 'M8 8l12 12M20 8l-12 12',
-                                        strokeWidth: 3,
-                                        fill: 'none',
-                                        strokeLinecap: 'round'
-                                    })
-                                )
-                                : refreshStatus === 'timeout'
-                                    ? React.createElement('svg', {
-                                        className: 'pull-spinner-ring',
-                                        viewBox: '0 0 28 28',
-                                        style: { stroke: 'var(--warn, #f59e0b)' }
-                                    },
-                                        React.createElement('path', {
-                                            d: 'M14 7v8m0 4h.01',
-                                            strokeWidth: 3,
-                                            fill: 'none',
-                                            strokeLinecap: 'round',
-                                            strokeLinejoin: 'round'
-                                        }),
-                                        React.createElement('circle', {
-                                            cx: 14,
-                                            cy: 14,
-                                            r: 10,
-                                            strokeWidth: 2,
-                                            fill: 'none'
-                                        })
-                                    )
-                                    : refreshStatus === 'syncing'
-                                        ? React.createElement('svg', {
-                                            className: 'pull-spinner-ring spinning',
-                                            viewBox: '0 0 28 28'
-                                        },
-                                            React.createElement('circle', {
-                                                cx: 14, cy: 14, r: 10,
-                                                strokeDasharray: '45 20',
-                                                strokeDashoffset: 0
-                                            })
-                                        )
-                                        : React.createElement('svg', {
-                                            className: 'pull-spinner-ring' + (refreshStatus === 'ready' ? ' ready' : ''),
-                                            viewBox: '0 0 28 28',
-                                            style: {
-                                                transform: `rotate(${-90 + Math.min(pullProgress / pullThreshold, 1) * 180}deg)`,
-                                                transition: 'transform 0.1s ease-out'
-                                            }
-                                        },
-                                            React.createElement('circle', {
-                                                cx: 14, cy: 14, r: 10,
-                                                strokeDasharray: 63,
-                                                strokeDashoffset: 63 - (Math.min(pullProgress / pullThreshold, 1) * 63)
-                                            })
-                                        )
+                        // Один знак ожидания на весь продукт (контракт «Спиннеры» →
+                        // «форма»). Свои фигуры жеста сняты: кольцо-гейдж со своей
+                        // дугой 45/20, крест ошибки, треугольник таймаута. Осталась
+                        // геометрия знака — дуга 26 обводкой 2,75 с хвостом .22,
+                        // и его же глифы галочки и ошибки.
+                        // Отступление названо вслух: контракт «жест обновления»
+                        // просит системное кольцо платформы, но его здесь нет —
+                        // см. отчёт, строка «жест обновления».
+                        pullSign(refreshStatus, pullProgress, pullThreshold)
                     ),
                     React.createElement('span', {
                         className: 'pull-text'

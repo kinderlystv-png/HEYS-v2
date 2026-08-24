@@ -78,10 +78,12 @@
             ? waitFailSvg(h, glyphPx)
             : waitGlyph(h, glyphPx, phase === 'ok' ? 'ok' : 'wait');
         if (mode === 'button') {
-            return h('span', {
-                className: 'heys-wait-mark heys-wait-mark--button is-' + phase,
-                role: 'status',
-            }, glyph, label || null);
+            // silent — знак встаёт внутрь чужой живой области (её role='status'
+            // уже озвучивает стадию). Вложенный второй role='status' даёт
+            // двойное объявление, поэтому здесь его не ставим.
+            const attrs = { className: 'heys-wait-mark heys-wait-mark--button is-' + phase };
+            if (!(opts && opts.silent)) attrs.role = 'status';
+            return h('span', attrs, glyph, label || null);
         }
         const showCaption = !!(title || text);
         return h('div', {

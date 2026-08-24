@@ -165,11 +165,21 @@
                 React.createElement('div', { className: 'cso-name' }, clientName),
 
                 // Stage indicator
+                // Знак ожидания один на весь продукт (контракт «Спиннеры» →
+                // «форма»): свой cso-spinner на 18/2,5 в чужом синем и своя
+                // текстовая галочка сняты, стадия несёт HEYS.WaitMark.
+                // Отступление названо вслух: это не круг 56, а строчная форма
+                // «знак в кнопке» — знак стоит в одной строке с текстом стадии;
+                // тон исхода задаёт .cso-sign, знак его наследует.
                 React.createElement('div', { className: 'cso-stage', key: stage.key },
-                    stage.key !== 'done'
-                        && stage.key !== 'error'
-                        ? React.createElement('span', { className: 'cso-spinner' })
-                        : React.createElement('span', { className: 'cso-check' }, stage.key === 'error' ? '!' : '✓'),
+                    React.createElement('span', {
+                        className: 'cso-sign cso-sign--' + (stage.key === 'error' ? 'fail' : stage.key === 'done' ? 'ok' : 'wait'),
+                        'aria-hidden': 'true',
+                    }, HEYS.WaitMark?.render?.(React, {
+                        mode: 'button',
+                        silent: true,
+                        state: stage.key === 'error' ? 'fail' : stage.key === 'done' ? 'ok' : 'wait',
+                    }) || null),
                     React.createElement('span', { className: 'cso-stage-text' }, stage.label)
                 ),
 
