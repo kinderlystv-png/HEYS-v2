@@ -11609,11 +11609,22 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   border-radius: 999px;
   background: var(--v4-line, #e5e7eb);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
   color: var(--v4-act-text, #1d4ed8);
   cursor: pointer;
+  position: relative;
 }
+
+/* Строка контракта «вид текста и действия»: нажатие во всю высоту плашки.
+   Содержимое имеет поля 11 px сверху и снизу, поэтому припуск ровно на них —
+   34 + 22 = 56, высота бара. */
+.heys-undo-bar__btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px 0;
+}
+
 
 .heys-undo-bar__btn:active {
   opacity: 0.7;

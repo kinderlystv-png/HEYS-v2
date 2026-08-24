@@ -10569,7 +10569,17 @@ body:has(:is(
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  position: relative;
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.hdr-settings-sheet__close::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push {
   margin: 0 0 2px;

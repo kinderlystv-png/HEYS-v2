@@ -2665,7 +2665,17 @@ body:has(.page-reports) .hdr::after {
     0 1px 2px rgba(80, 50, 20, 0.1),
     0 6px 16px rgba(80, 50, 20, 0.14);
   cursor: pointer;
+  position: relative;
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.widgets-settings-fab::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+}
+
 
 .widgets-settings-fab:active {
   transform: translateY(1px) scale(0.98);

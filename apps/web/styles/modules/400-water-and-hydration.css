@@ -866,7 +866,17 @@ body.planning-tab-active .fab-group {
   letter-spacing: 0;
   white-space: nowrap;
   cursor: pointer;
+  position: relative;
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.advice-list-header-link::after {
+  content: '';
+  position: absolute;
+  inset: -16px 0;
+}
+
 
 .advice-list-header-link--read-all {
   color: var(--color-emerald-700, #047857);
