@@ -4861,26 +4861,6 @@ color: var(--v4-sand-ink, #201e1d);
   }
 }
 
-/* Level up rainbow flash */
-.game-bar-container.level-up-flash {
-  animation: rainbowFlash 1s ease-out;
-}
-
-@keyframes rainbowFlash {
-  0% {
-    background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #9b59b6);
-    background-size: 400% 100%;
-  }
-
-  50% {
-    background-position: 100% 0;
-  }
-
-  100% {
-    background: transparent;
-  }
-}
-
 /* Ripple effect on progress bar tap */
 .game-progress {
   position: relative;
@@ -5239,265 +5219,6 @@ color: var(--v4-sand-ink, #201e1d);
   100% {
     transform: scale(1);
     box-shadow: 0 0 0 rgba(245, 158, 11, 0.0);
-  }
-}
-
-/* Confetti overlay (gamification) */
-.game-confetti {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 6;
-}
-
-.game-confetti__piece {
-  position: absolute;
-  top: -10px;
-  width: 6px;
-  height: 12px;
-  border-radius: 2px;
-  animation: confettiFall 1.6s ease-out forwards;
-  opacity: 0.9;
-}
-
-@keyframes confettiFall {
-  0% {
-    transform: translateY(0) rotate(0deg);
-    opacity: 1;
-  }
-
-  100% {
-    transform: translateY(140px) rotate(180deg);
-    opacity: 0;
-  }
-}
-
-.game-confetti--rare .game-confetti__piece:nth-child(n+13) {
-  display: none;
-}
-
-.game-confetti--epic .game-confetti__piece:nth-child(n+19) {
-  display: none;
-}
-
-.game-confetti--legendary .game-confetti__piece:nth-child(n+23) {
-  display: none;
-}
-
-.game-confetti--mythic .game-confetti__piece {
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.7));
-}
-
-.game-confetti--rare .game-confetti__piece {
-  background: #60a5fa;
-}
-
-.game-confetti--epic .game-confetti__piece {
-  background: #c084fc;
-}
-
-.game-confetti--legendary .game-confetti__piece {
-  background: #fbbf24;
-}
-
-.game-confetti--mythic .game-confetti__piece {
-  background: linear-gradient(135deg, #f97316 0%, #ec4899 50%, #60a5fa 100%);
-}
-
-.game-confetti__piece:nth-child(1) {
-  left: 8%;
-  animation-delay: 0.02s;
-}
-
-.game-confetti__piece:nth-child(2) {
-  left: 14%;
-  animation-delay: 0.08s;
-}
-
-.game-confetti__piece:nth-child(3) {
-  left: 22%;
-  animation-delay: 0.04s;
-}
-
-.game-confetti__piece:nth-child(4) {
-  left: 28%;
-  animation-delay: 0.12s;
-}
-
-.game-confetti__piece:nth-child(5) {
-  left: 35%;
-  animation-delay: 0.06s;
-}
-
-.game-confetti__piece:nth-child(6) {
-  left: 42%;
-  animation-delay: 0.1s;
-}
-
-.game-confetti__piece:nth-child(7) {
-  left: 48%;
-  animation-delay: 0.14s;
-}
-
-.game-confetti__piece:nth-child(8) {
-  left: 54%;
-  animation-delay: 0.03s;
-}
-
-.game-confetti__piece:nth-child(9) {
-  left: 60%;
-  animation-delay: 0.09s;
-}
-
-.game-confetti__piece:nth-child(10) {
-  left: 66%;
-  animation-delay: 0.05s;
-}
-
-.game-confetti__piece:nth-child(11) {
-  left: 72%;
-  animation-delay: 0.13s;
-}
-
-.game-confetti__piece:nth-child(12) {
-  left: 78%;
-  animation-delay: 0.07s;
-}
-
-.game-confetti__piece:nth-child(13) {
-  left: 84%;
-  animation-delay: 0.11s;
-}
-
-.game-confetti__piece:nth-child(14) {
-  left: 90%;
-  animation-delay: 0.15s;
-}
-
-.game-confetti__piece:nth-child(15) {
-  left: 12%;
-  animation-delay: 0.16s;
-}
-
-.game-confetti__piece:nth-child(16) {
-  left: 26%;
-  animation-delay: 0.18s;
-}
-
-.game-confetti__piece:nth-child(17) {
-  left: 38%;
-  animation-delay: 0.2s;
-}
-
-.game-confetti__piece:nth-child(18) {
-  left: 50%;
-  animation-delay: 0.22s;
-}
-
-.game-confetti__piece:nth-child(19) {
-  left: 62%;
-  animation-delay: 0.19s;
-}
-
-.game-confetti__piece:nth-child(20) {
-  left: 74%;
-  animation-delay: 0.17s;
-}
-
-.game-confetti__piece:nth-child(21) {
-  left: 86%;
-  animation-delay: 0.21s;
-}
-
-.game-confetti__piece:nth-child(22) {
-  left: 18%;
-  animation-delay: 0.24s;
-}
-
-.game-confetti__piece:nth-child(23) {
-  left: 46%;
-  animation-delay: 0.26s;
-}
-
-.game-confetti__piece:nth-child(24) {
-  left: 68%;
-  animation-delay: 0.28s;
-}
-
-/* Weekly ceremony modal */
-.weekly-ceremony-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 1400;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.weekly-ceremony-modal__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(3px);
-}
-
-.weekly-ceremony-modal__card {
-  position: relative;
-  background: #111827;
-  color: var(--v4-bg, #fff);
-  border-radius: 16px;
-  padding: 18px 20px;
-  width: min(92vw, 360px);
-  text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
-  animation: weeklyModalIn 0.35s ease-out;
-}
-
-.weekly-ceremony-modal__icon {
-  font-size: 32px;
-  margin-bottom: 6px;
-}
-
-.weekly-ceremony-modal__title {
-  font-weight: 700;
-  font-size: 16px;
-}
-
-.weekly-ceremony-modal__subtitle {
-  margin-top: 4px;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.78);
-}
-
-.weekly-ceremony-modal__reward {
-  margin-top: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #fbbf24;
-}
-
-.weekly-ceremony-modal__btn {
-  margin-top: 12px;
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  border: none;
-  color: var(--v4-bg, #fff);
-  font-weight: 600;
-  padding: 8px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-@keyframes weeklyModalIn {
-  0% {
-    transform: scale(0.95) translateY(10px);
-    opacity: 0;
-  }
-
-  100% {
-    transform: scale(1) translateY(0);
-    opacity: 1;
   }
 }
 
@@ -10567,7 +10288,7 @@ body:has(:is(
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  flex: none;
+  /* Контракт «прокрутка»: шапка внутри скроллера и едет со списком — не липкая */
   padding: 18px 18px 12px;
   background: var(--v4-bg, #fffaf1);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
@@ -10855,13 +10576,19 @@ body:has(:is(
 
 .hdr-settings-sheet__chips--fab {
   margin-top: 11px;
+  /* Контракт «области нажатия · чипы»: видимый зазор 6 (кадр рисует 8) */
+  gap: 6px;
 }
 
+/* Контракт «области нажатия · чипы»: видимая высота 30, цель касания 44 pt —
+   прозрачным припуском ::after, как у .nutrition-v4-chip. Кадр канваса рисует
+   min-height 44 у самого чипа — верен контракт. */
 .hdr-settings-sheet__fab-chip {
+  position: relative;
   border: 0;
   border-radius: 999px;
   padding: 0 16px;
-  min-height: 44px;
+  min-height: 30px;
   background: #f7efe2;
   color: rgba(0, 0, 0, 0.55);
   cursor: pointer;
@@ -10869,6 +10596,12 @@ body:has(:is(
   align-items: center;
   gap: 7px;
   font: 600 12px/1 Figtree, system-ui, sans-serif;
+}
+
+.hdr-settings-sheet__fab-chip::after {
+  content: '';
+  position: absolute;
+  inset: -7px 0;
 }
 
 .hdr-settings-sheet__fab-chip-label {
@@ -17652,9 +17385,11 @@ html.heys-bg-paused *::after {
   margin-top: 18px;
 }
 
+/* Строка «области нажатия»: сегменты ряда дней не нажимаются вовсе. */
 .game-v4-sheet__streak-bar-row {
   display: flex;
   gap: 5px;
+  pointer-events: none;
 }
 
 .game-v4-sheet__streak-bar {
@@ -17718,6 +17453,8 @@ html.heys-bg-paused *::after {
   flex: none;
   font-size: 11.5px;
   font-weight: 700;
+  /* Строка «вид карточки достижения»: награда справа без переноса. */
+  white-space: nowrap;
   color: var(--v4-sand-act-text, #8a4a20);
 }
 
@@ -17733,12 +17470,14 @@ html.heys-bg-paused *::after {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
 }
 
+/* Строка «области нажатия»: полоса прогресса не нажимается вовсе. */
 .game-v4-sheet__bar {
   height: 6px;
   border-radius: 999px;
   background: rgba(32, 30, 29, 0.09);
   margin-top: 12px;
   overflow: hidden;
+  pointer-events: none;
 }
 
 .game-v4-sheet__bar--hero {
@@ -17817,65 +17556,45 @@ html.heys-bg-paused *::after {
   padding: 2px 14px;
 }
 
-.game-v4-sheet__list-row {
+/* Строка «вид карточки достижения»: карточка --c1 радиусом 20, поля 14/16,
+   зазор между карточками 8; условие под шапкой через 5. */
+.game-v4-sheet__ach-list {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  flex-direction: column;
+  gap: 8px;
 }
 
-.game-v4-sheet__list-row:last-child {
-  border-bottom: 0;
+.game-v4-sheet__ach-card {
+  border-radius: 20px;
 }
 
-.game-v4-sheet__list-icon {
-  width: 34px;
-  height: 34px;
-  flex: none;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  background: var(--v4-sand-hero, #efe3cf);
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.35));
+.game-v4-sheet__ach-card .game-v4-sheet__card-sub {
+  margin-top: 5px;
 }
 
-.game-v4-sheet__list-row.is-unlocked .game-v4-sheet__list-icon {
-  background: var(--v4-ok-bg, #eaefe0);
-  color: var(--v4-sand-ok-text, #5c6a45);
+.game-v4-sheet__ach-mark {
+  margin-right: 6px;
 }
 
-.game-v4-sheet__list-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.game-v4-sheet__list-title {
-  font-size: 12.5px;
-  font-weight: 700;
-  line-height: 1.3;
-  color: var(--v4-sand-ink, #201e1d);
-}
-
-.game-v4-sheet__list-row.is-locked .game-v4-sheet__list-title {
+/* Строка «закрытое»: замок и приглушённый текст, условие видно всегда. */
+.game-v4-sheet__ach-card.is-locked .game-v4-sheet__card-title {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
 }
 
-.game-v4-sheet__list-sub {
-  margin-top: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.4;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+.game-v4-sheet__ach-card.is-locked .game-v4-sheet__card-xp {
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
 }
 
-.game-v4-sheet__ach-rarity {
-  margin-top: 4px;
-  font-size: 10.5px;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.4));
-  text-transform: capitalize;
+/* Строка «состав группы»: заголовок группы раскрывает дальние закрытые. */
+.game-v4-sheet__tier--tap {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .game-v4-sheet__near-card {
@@ -17895,11 +17614,16 @@ html.heys-bg-paused *::after {
   text-align: left;
 }
 
+/* Строка «вид строки уровня в списке»: номер и титул слева 12,5/600, порог XP
+   справа 11,5/600 тоном чернил 45 % табличными цифрами; пройденные гаснут до
+   45 %, текущий — чернилами с весом 700. Разделитель — 1 px чернил 7 %.
+   Строка «области нажатия»: вся ширина на высоту не меньше 44. */
 .game-v4-sheet__ladder-row {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 0;
+  min-height: 44px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.07);
 }
 
@@ -17908,37 +17632,27 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__ladder-num {
-  width: 34px;
-  height: 34px;
   flex: none;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  background: var(--v4-sand-hero, #efe3cf);
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.38));
-}
-
-.game-v4-sheet__ladder-row.is-current .game-v4-sheet__ladder-num {
-  background: var(--v4-sand-act, #c67139);
-  color: #2b1608;
-}
-
-.game-v4-sheet__ladder-row:not(.is-future):not(.is-current) .game-v4-sheet__ladder-num {
-  background: var(--v4-ok-bg, #eaefe0);
-  color: var(--v4-sand-ok-text, #5c6a45);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .game-v4-sheet__ladder-title {
   flex: 1;
   font-size: 12.5px;
+  font-weight: 600;
+  color: var(--v4-sand-ink, #201e1d);
+}
+
+.game-v4-sheet__ladder-row.is-current .game-v4-sheet__ladder-num,
+.game-v4-sheet__ladder-row.is-current .game-v4-sheet__ladder-title {
   font-weight: 700;
   color: var(--v4-sand-ink, #201e1d);
 }
 
-.game-v4-sheet__ladder-row.is-future .game-v4-sheet__ladder-title {
+.game-v4-sheet__ladder-row.is-past .game-v4-sheet__ladder-num,
+.game-v4-sheet__ladder-row.is-past .game-v4-sheet__ladder-title {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
 }
 
@@ -17946,7 +17660,8 @@ html.heys-bg-paused *::after {
   flex: none;
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.38));
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
 }
 
 .game-v4-sheet__mult-card {

@@ -194,7 +194,7 @@ apps/web/heys_simple_analytics.js:130
 apps/web/heys_smart_search_v2.js:809
 apps/web/heys_smart_search_v2.js:888
 apps/web/heys_smart_search_v2.js:959
-apps/web/heys_step_modal_v1.js:29
+apps/web/heys_step_modal_v1.js:42
 apps/web/heys_steps_v1.js:58
 apps/web/heys_storage_layer_v1.js:169
 apps/web/heys_storage_layer_v1.js:200
