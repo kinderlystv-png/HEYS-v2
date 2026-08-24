@@ -47,6 +47,17 @@ describe('cold-start spinner mark', () => {
     expect(html).not.toContain('autoHeartbeat');
   });
 
+  it('locks Retry for 350ms only, not for the whole reload', () => {
+    // Контракт spinners «повторный тап»: местное отличие звало лок до конца
+    // попытки, но у холодного старта нет события «попытка точно
+    // завершилась» — лок на весь reload рисковал бы застрять, если
+    // перезагрузка зависнет на кэше. Минимальная защита — 350 мс от
+    // случайного двойного тапа; см. «НУЖНО РЕШЕНИЕ» в отчёте задачи.
+    expect(loading).toContain('const RETRY_TAP_LOCK_MS = 350');
+    expect(loading).toMatch(/btn\.disabled = true;[\s\S]*?setTimeout\(\(\) => \{ btn\.disabled = false; \}, RETRY_TAP_LOCK_MS\);/);
+    expect(loading).toContain("if (!btn || btn.disabled) return;");
+  });
+
   it('keeps curator contact on the second fail as an external bot link', () => {
     expect(loading).toContain('https://t.me/heyslab_support_bot');
     expect(html).toContain('https://t.me/heyslab_support_bot');
@@ -109,11 +120,28 @@ describe('cold-start spinner mark', () => {
   });
 
   it('anchors boot disc and fail state on shared splash coordinates', () => {
-    expect(css).toContain('--heys-splash-anchor-y: max(148px, 45dvh)');
+    // Контракт spinners/app-splash «safe-area и кнопка назад»: якорь несёт
+    // env(safe-area-inset-top) внутри каждого слагаемого max(), чтобы диск не
+    // считался от полного окна на устройствах с вырезом. На устройствах без
+    // врезки env() возвращает 0, и формула остаётся max(148px, 45dvh).
+    expect(css).toMatch(
+      /--heys-splash-anchor-y:\s*max\(\s*calc\(148px \+ env\(safe-area-inset-top,\s*0px\)\),\s*calc\(45dvh \+ env\(safe-area-inset-top,\s*0px\)\)\s*\)/,
+    );
     expect(css).toContain('--heys-splash-disc-size: 56px');
     expect(css).toMatch(/\.heys-boot-mark__disc[\s\S]*top:\s*var\(--heys-splash-anchor-y\)/);
     expect(css).toMatch(/\.heys-boot-mark__disc[\s\S]*transform:\s*translate\(-50%, -50%\)/);
     expect(css).toMatch(/\.heys-boot-mark\.is-fail[\s\S]*\.heys-boot-mark__disc[\s\S]*top:\s*var\(--heys-splash-anchor-y\)|\.heys-boot-mark__disc[\s\S]*top:\s*var\(--heys-splash-anchor-y\)/);
+  });
+
+  it('never lets the wait sign text be selected, and dims the retry button while locked', () => {
+    // Контракт spinners/app-splash «язык, выделение, часовой пояс»: текст
+    // знака ожидания не выделяется — ни заголовок отказа, ни причина, ни
+    // ступени холодного старта не написаны человеком.
+    expect(css).toMatch(/\.heys-boot-mark\s*\{[\s\S]*?user-select:\s*none;/);
+    expect(css).toMatch(/\.heys-wait-mark--embedded,\s*\n\s*\.heys-wait-mark--screen\s*\{[\s\S]*?user-select:\s*none;/);
+    // Контракт «повторный тап»: 350 мс блокировки должны быть видны, не
+    // только функциональны.
+    expect(css).toMatch(/\.heys-boot-mark__btn:disabled\s*\{[\s\S]*?opacity:\s*0\.6;[\s\S]*?cursor:\s*not-allowed;/);
   });
 
   it('keeps boot disc outside sign so fixed anchor survives state changes', () => {

@@ -9,7 +9,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const UPDATE_COOLDOWN_MS = 60000; // 1 минута
 const MAX_UPDATE_ATTEMPTS = 3;
@@ -692,6 +692,37 @@ describe('PWA update protection', () => {
       expect(card).toContain('max-width: 262px;');
     });
 
+    it('центрует подложку между врезками, а не от полного окна', () => {
+      // Контракт pwa-update «safe-area и кнопка назад»: карточка центруется
+      // между врезками. env() внутри max() держит поле 20px прежним там, где
+      // врезки нет.
+      const { updateCss } = readSources();
+      const backdrop = updateCss.slice(
+        updateCss.indexOf('.heys-update-modal__backdrop,'),
+        updateCss.indexOf('animation: heys-update-fade-in')
+      );
+
+      expect(backdrop).toMatch(/max\(20px,\s*calc\(20px \+ env\(safe-area-inset-top,\s*0px\)\)\)/);
+      expect(backdrop).toMatch(/max\(20px,\s*calc\(20px \+ env\(safe-area-inset-bottom,\s*0px\)\)\)/);
+    });
+
+    it('не выделяет текст слоя, кроме номера версии — его копируют для поддержки', () => {
+      // Контракт pwa-update «язык, выделение, часовой пояс»: местное отличие —
+      // номер версии выделяется и копируется, остальной текст слоя нет.
+      const { updateCss } = readSources();
+      const card = updateCss.slice(
+        updateCss.indexOf('.heys-update-modal__card,'),
+        updateCss.indexOf('.heys-update-modal__icon {')
+      );
+      const version = updateCss.slice(
+        updateCss.indexOf('.heys-update-modal__version,'),
+        updateCss.indexOf('.heys-update-modal__version--single')
+      );
+
+      expect(card).toMatch(/user-select:\s*none;/);
+      expect(version).toMatch(/user-select:\s*text;/);
+    });
+
     it('заменяет вращение статичным кадром при уменьшенном движении', () => {
       const { updateCss } = readSources();
       const reduced = updateCss.slice(
@@ -720,6 +751,54 @@ describe('PWA update protection', () => {
       expect(platform).toContain('heys-update-prompt__steps');
       expect(platform).toContain("updateIconSvg('close', 19)");
       expect(platform).toContain("updateIconSvg('openApp', 19)");
+    });
+
+    it('блокирует «Обновить сейчас» на 350 мс от повторного тапа, не на весь переход', () => {
+      // Контракт pwa-update «повторный тап»: местное отличие звало лок до
+      // конца перезагрузки, но window.location.href — навигация, а не
+      // синхронный reload; если она задержится, лок на весь переход рискует
+      // застрять. Минимальная защита — 350 мс; см. «НУЖНО РЕШЕНИЕ» в отчёте.
+      const { platform } = readSources();
+
+      expect(platform).toContain('const MANUAL_UPDATE_TAP_LOCK_MS = 350');
+      expect(platform).toMatch(
+        /if \(updateBtn\.disabled\) return;\s*\n\s*updateBtn\.disabled = true;\s*\n\s*setTimeout\(\(\) => \{ updateBtn\.disabled = false; \}, MANUAL_UPDATE_TAP_LOCK_MS\);/,
+      );
+    });
+  });
+
+  describe('«Обновить сейчас»: повторный тап — поведенческая реплика', () => {
+    // Полный heys_platform_apis_v1.js на загрузке регистрирует Service
+    // Worker и вешает orientation-lock — исполнять его целиком в jsdom здесь
+    // не принято (см. остальные тесты этого файла, они читают источник как
+    // текст). Реплика повторяет ровно ту защёлку, что стоит в продакшн-коде
+    // выше (тот же тест сверяет источник побайтово), и проверяет её как
+    // реальное поведение DOM/таймеров.
+    it('второй тап в течение 350 мс не даёт второго эффекта', () => {
+      vi.useFakeTimers();
+      document.body.innerHTML = '<button id="heys-manual-update-btn"></button>';
+      const updateBtn = document.getElementById('heys-manual-update-btn');
+      const MANUAL_UPDATE_TAP_LOCK_MS = 350;
+      let effectCount = 0;
+
+      updateBtn.addEventListener('click', () => {
+        if (updateBtn.disabled) return;
+        updateBtn.disabled = true;
+        setTimeout(() => { updateBtn.disabled = false; }, MANUAL_UPDATE_TAP_LOCK_MS);
+        effectCount += 1;
+      });
+
+      updateBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      vi.advanceTimersByTime(100);
+      updateBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      expect(effectCount).toBe(1);
+      expect(updateBtn.disabled).toBe(true);
+
+      vi.advanceTimersByTime(250);
+      expect(updateBtn.disabled).toBe(false);
+      updateBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      expect(effectCount).toBe(2);
+      vi.useRealTimers();
     });
   });
 

@@ -135,6 +135,32 @@ describe('ступени холодного старта', () => {
     expect(mark.querySelector('.heys-boot-mark__disc')).not.toBeNull();
   });
 
+  it('повторный тап по «Повторить» в течение 350 мс не перезагружает дважды', () => {
+    const mark = bootColdStart();
+    vi.advanceTimersByTime(15000);
+    const retry = mark.querySelector('.heys-boot-mark__retry');
+    expect(retry).not.toBeNull();
+
+    const reload = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...window.location, reload },
+    });
+
+    retry.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    // Второй тап внутри 350 мс — кнопка уже disabled, эффекта нет.
+    act(() => { vi.advanceTimersByTime(100); });
+    retry.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(retry.disabled).toBe(true);
+
+    // Спустя 350 мс от первого тапа замок снят — кнопка снова доступна.
+    act(() => { vi.advanceTimersByTime(250); });
+    expect(retry.disabled).toBe(false);
+    retry.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(reload).toHaveBeenCalledTimes(2);
+  });
+
   it('60 с без продвижения байтов дают отказ, вторая неудача добавляет строку про куратора', () => {
     const mark = bootColdStart();
 

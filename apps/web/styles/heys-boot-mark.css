@@ -2,7 +2,14 @@ html, body { background: #fffaf1; }
 html {
     /* Центр диска 56px — якорь сплэша PWA и heys-boot-mark (handoff app-splash.v4). */
     --heys-splash-disc-size: 56px;
-    --heys-splash-anchor-y: max(148px, 45dvh);
+    /* Контракт spinners/app-splash «safe-area и кнопка назад»: знак центруется
+       в области между врезками, а не от полного окна. env() внутри каждого
+       слагаемого max() держит формулу прежней на устройствах без выреза —
+       там env() возвращает 0, и якорь остаётся max(148px, 45dvh). */
+    --heys-splash-anchor-y: max(
+        calc(148px + env(safe-area-inset-top, 0px)),
+        calc(45dvh + env(safe-area-inset-top, 0px))
+    );
 }
 html[data-theme="sand"], html[data-theme-id="sand"],
 html[data-theme="light"], html[data-theme="classic"] { background: #fffaf1; }
@@ -55,6 +62,10 @@ html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1
     color: var(--boot-ink);
     background: inherit;
     pointer-events: auto;
+    /* Контракт spinners/app-splash «язык, выделение, часовой пояс»: текст
+       знака ожидания не выделяется — ни заголовок, ни причина, ни ступени
+       отказа не написаны человеком. */
+    user-select: none;
 }
 /* Ошибка — диск остаётся на том же якоре, текст уезжает вниз отдельным слоем. */
 .heys-boot-mark.is-fail {
@@ -326,6 +337,12 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     justify-content: center;
     box-sizing: border-box;
 }
+/* Контракт spinners «повторный тап»: 350 мс защиты от случайного двойного
+   тапа — видимый признак блокировки, не только функциональный. */
+.heys-boot-mark__btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 /* Строка про куратора приходит под кнопкой на второй неудаче (контракт
    «вторая неудача» + «вид ступеней»): 11,5/500 вторичным. Ссылкой, а не
    текстом — см. «НУЖНО РЕШЕНИЕ» по строке «области нажатия». */
@@ -381,6 +398,8 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     flex: 1;
     font-family: Figtree, system-ui, -apple-system, sans-serif;
     color: var(--boot-ink);
+    /* Тот же знак ожидания, то же правило: текст не выделяется. */
+    user-select: none;
 }
 .heys-wait-mark__sign {
     display: flex;

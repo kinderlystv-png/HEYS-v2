@@ -281,6 +281,12 @@
     const SLOW_MS = 15000;
     const STALL_MS = 60000;
     const HIDE_FADE_MS = 120;
+    // Контракт spinners «повторный тап»: 350 мс защиты от случайного двойного
+    // тапа, не на всё время перезагрузки — у холодного старта нет события
+    // «попытка точно завершилась», и лок на весь reload рисковал бы застрять,
+    // если сама перезагрузка зависнет на кэше. location.reload() уводит
+    // страницу сам по себе, поэтому дальше защита не нужна.
+    const RETRY_TAP_LOCK_MS = 350;
     const BOOT_RES = /\/(react-bundle|boot-(init|core|calc|day|app)\.bundle\.)/;
     const FAIL_COUNT_KEY = 'heys_boot_fail_count';
     const SUPPORT_URL = 'https://t.me/heyslab_support_bot';
@@ -432,8 +438,10 @@
 
     function onRetryClick(ev) {
         const btn = ev.target && ev.target.closest && ev.target.closest('.heys-boot-mark__retry');
-        if (!btn) return;
+        if (!btn || btn.disabled) return;
         ev.preventDefault();
+        btn.disabled = true;
+        setTimeout(() => { btn.disabled = false; }, RETRY_TAP_LOCK_MS);
         location.reload();
     }
 

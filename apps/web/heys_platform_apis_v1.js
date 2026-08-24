@@ -109,6 +109,11 @@
   const UPDATE_ATTEMPT_KEY = 'heys_update_attempt';
   const MAX_UPDATE_ATTEMPTS = 2;
   const UPDATE_COOLDOWN_MS = 60000;
+  // Контракт pwa-update «повторный тап»: 350 мс защиты от случайного двойного
+  // тапа на «Обновить сейчас», не на всё время перезагрузки — навигация сама
+  // уводит страницу, а лок на весь переход рисковал бы застрять, если она
+  // задержится.
+  const MANUAL_UPDATE_TAP_LOCK_MS = 350;
 
   // === Update recovery: страховка от «молча застряли на старой версии» ===
   // Автообновление живёт целиком в SW-цикле (updatefound → skipWaiting → reload).
@@ -565,6 +570,9 @@
     const updateBtn = document.getElementById('heys-manual-update-btn');
     if (updateBtn) {
       updateBtn.addEventListener('click', () => {
+        if (updateBtn.disabled) return;
+        updateBtn.disabled = true;
+        setTimeout(() => { updateBtn.disabled = false; }, MANUAL_UPDATE_TAP_LOCK_MS);
         localStorage.removeItem(UPDATE_ATTEMPT_KEY);
         // Счётчик не сбрасываем: если ручная перезагрузка тоже не поможет,
         // prompt должен вернуться, а не начинать отсчёт заново. Короткая пауза
