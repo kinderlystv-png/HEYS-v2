@@ -108,11 +108,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     const FAB_SLOT_KEYS = ['activity', 'message', 'hunger', 'water', 'meal'];
-    const FAB_SLOT_ANIM_MS = 400;
-    const FAB_SLOT_STAGGER_MS = 52;
-    const FAB_SLOT_STAGGER_MAX = 4;
-    const FAB_LAYOUT_ANIM_MS = FAB_SLOT_STAGGER_MS * FAB_SLOT_STAGGER_MAX + FAB_SLOT_ANIM_MS + 80;
 
+    // Строки контракта settings-system «когда применяется» и «снятый прогон»:
+    // «Анимации перестройки на экране нет», прогон стопки снят 24 августа и
+    // помечен data-demo="protocol" — то есть не реализуется. Вместе с ним из
+    // продуктового CSS ушли правила .fab-group--layout-animate для этой группы:
+    // класс перестал что-либо анимировать, а выдержка 688 мс (52×4 + 400 + 80)
+    // держала его впустую и отодвигала смену состояния на два кадра.
+    // Единственное оставшееся движение — появление и исчезновение самой кнопки,
+    // и оно живёт у .fab-group--messenger-only (heys_app_shell_v1.js).
     function useFabVisibilityState() {
         const readFabVisibility = () => (
             HEYS.FabVisibility && typeof HEYS.FabVisibility.read === 'function'
@@ -120,44 +124,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 : { water: true, hunger: true, message: true, activity: true, meal: true }
         );
         const [fabVisibility, setFabVisibility] = React.useState(readFabVisibility);
-        const [layoutAnimate, setLayoutAnimate] = React.useState(false);
 
         React.useEffect(() => {
-            let pendingRaf = 0;
             const onCommitted = (event) => {
-                const visibility = event?.detail?.visibility || readFabVisibility();
-                if (event?.detail?.animated) {
-                    setLayoutAnimate(true);
-                    pendingRaf = requestAnimationFrame(() => {
-                        pendingRaf = requestAnimationFrame(() => {
-                            pendingRaf = 0;
-                            setFabVisibility(visibility);
-                        });
-                    });
-                    return;
-                }
-                if (pendingRaf) {
-                    cancelAnimationFrame(pendingRaf);
-                    pendingRaf = 0;
-                }
-                setLayoutAnimate(false);
-                setFabVisibility(visibility);
+                setFabVisibility(event?.detail?.visibility || readFabVisibility());
             };
             window.addEventListener('heys:fab-visibility-changed', onCommitted);
-            return () => {
-                if (pendingRaf) cancelAnimationFrame(pendingRaf);
-                window.removeEventListener('heys:fab-visibility-changed', onCommitted);
-            };
+            return () => window.removeEventListener('heys:fab-visibility-changed', onCommitted);
         }, []);
 
-        React.useEffect(() => {
-            if (!layoutAnimate) return undefined;
-            const timer = window.setTimeout(() => setLayoutAnimate(false), FAB_LAYOUT_ANIM_MS);
-            return () => window.clearTimeout(timer);
-        }, [layoutAnimate]);
-
         const isFabVisible = (key) => fabVisibility[key] !== false;
-        return { fabVisibility, isFabVisible, layoutAnimate };
+        return { fabVisibility, isFabVisible };
     }
 
     const WATER_FAB_VOL_CHIP_MS = 180;
@@ -368,11 +345,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     function QuickActionsFabGroup({ id, onAddWater, onRemoveWater, waterMl, onAddMeal, onAddActivity, hungerContext = {}, hideMealFab = false }) {
-        const { fabVisibility, layoutAnimate } = useFabVisibilityState();
+        const { fabVisibility } = useFabVisibilityState();
 
         return React.createElement('div', {
-            className: 'fab-group'
-                + (layoutAnimate ? ' fab-group--layout-animate animate-always' : ''),
+            className: 'fab-group',
             ...(id ? { id } : {}),
         },
             FAB_SLOT_KEYS.map((key) => {
@@ -474,6 +450,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             adviceDetailModalAdvice,
             openAdviceDetailModal,
             closeAdviceDetailModal,
+            markAdviceDetailRead,
+            hideAdviceDetailUntilTomorrow,
             adviceTechnicalDetails,
             adviceTechnicalDetailsOpen,
             openAdviceTechnicalDetails,
@@ -822,6 +800,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     adviceDetailModalAdvice,
                     openAdviceDetailModal,
                     closeAdviceDetailModal,
+                    // Строка контракта tips «доступность»: действия «прочитано»
+                    // и «скрыть до завтра» дублируют свайпы внутри детали совета.
+                    markAdviceDetailRead,
+                    hideAdviceDetailUntilTomorrow,
                     adviceTechnicalDetails,
                     adviceTechnicalDetailsOpen,
                     openAdviceTechnicalDetails,

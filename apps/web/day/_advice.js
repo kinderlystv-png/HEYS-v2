@@ -1200,6 +1200,8 @@
         advice,
         onClose,
         onOpenTechnicalDetails,
+        onMarkRead,
+        onHideUntilTomorrow,
         ADVICE_CATEGORY_NAMES,
     }) {
         if (!advice) return null;
@@ -1218,11 +1220,15 @@
                 onClose && onClose();
             }
         },
-            React.createElement('div', {
+            // Тот же запертый фокус, что у шторки. Без него строка «доступность»
+            // не закрывается: деталь рисуется соседом шторки, фокус остаётся на
+            // карточке внутри шторки, а ловушка шторки не выпускает Tab наружу —
+            // и до новых кнопок «Прочитано» и «Скрыть до завтра» с клавиатуры
+            // просто не дойти. Компонент ещё и возвращает фокус на строку-вход
+            // «Детали», когда деталь закрывают.
+            React.createElement(AdviceModalDialog, {
                 className: 'advice-v4-detail',
-                role: 'dialog',
-                'aria-modal': 'true',
-                'aria-label': 'Детали совета',
+                label: 'Детали совета',
                 onClick: (e) => e.stopPropagation()
             },
                 React.createElement('div', { className: 'advice-v4-detail__header' },
@@ -1262,6 +1268,41 @@
                     }, 'Технические детали', renderAdviceV4Icon(React, 'chevron-right'))
                 ),
                 React.createElement('div', { className: 'advice-v4-detail__footer' },
+                    // Строка контракта tips «доступность»: «жесты влево и вправо
+                    // дублируются действиями в детали совета — свайп не
+                    // единственный способ». Свайпнуть нельзя с клавиатуры и со
+                    // скринридером, поэтому здесь настоящие <button> в потоке
+                    // фокуса с подписями жестов из строки «жесты» (влево —
+                    // прочитано, вправо — скрыть до завтра), а не div с
+                    // обработчиком. Кадр «Совет · деталь» рисует в подвале одну
+                    // «Понятно» — отступление от кадра в пользу контракта.
+                    (typeof onMarkRead === 'function' || typeof onHideUntilTomorrow === 'function')
+                    && React.createElement('div', {
+                        className: 'advice-v4-detail__actions',
+                        // Геометрия инлайном: строка «вид детали совета» подвал
+                        // не описывает, а править продуктовый CSS эта задача не
+                        // может. Цвет и высота 44 — из общего класса кнопки.
+                        style: { display: 'flex', gap: '8px', marginBottom: '10px' },
+                    },
+                        typeof onMarkRead === 'function' && React.createElement('button', {
+                            key: 'read',
+                            type: 'button',
+                            className: 'advice-v4-panel__btn advice-v4-panel__btn--miss advice-v4-detail__action advice-v4-detail__action--read',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                onMarkRead(advice, e);
+                            },
+                        }, renderAdviceV4Icon(React, 'check'), 'Прочитано'),
+                        typeof onHideUntilTomorrow === 'function' && React.createElement('button', {
+                            key: 'hide',
+                            type: 'button',
+                            className: 'advice-v4-panel__btn advice-v4-panel__btn--miss advice-v4-detail__action advice-v4-detail__action--hide',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                onHideUntilTomorrow(advice, e);
+                            },
+                        }, renderAdviceV4Icon(React, 'thumb-down'), 'Скрыть до завтра')
+                    ),
                     React.createElement('button', {
                         type: 'button',
                         className: 'advice-v4-detail__primary',
@@ -1273,12 +1314,12 @@
     }
 
     // Строка «доступность»: шторка советов — модальный диалог с запертым
-    // фокусом. Отдельный компонент нужен ради хука: renderManualAdviceList —
-    // обычная функция, хуки в ней недопустимы.
+    // фокусом; деталь совета берёт ту же ловушку. Отдельный компонент нужен ради
+    // хука: renderManualAdviceList — обычная функция, хуки в ней недопустимы.
     const ADVICE_FOCUSABLE_SELECTOR =
         'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-    function AdviceDrawerDialog({ className, label, onClick, onTouchStart, onTouchMove, onTouchEnd, children }) {
+    function AdviceModalDialog({ className, label, onClick, onTouchStart, onTouchMove, onTouchEnd, children }) {
         const nodeRef = React.useRef(null);
 
         React.useEffect(() => {
@@ -1788,6 +1829,8 @@
         adviceDetailModalAdvice,
         openAdviceDetailModal,
         closeAdviceDetailModal,
+        markAdviceDetailRead,
+        hideAdviceDetailUntilTomorrow,
         adviceTechnicalDetails,
         adviceTechnicalDetailsOpen,
         openAdviceTechnicalDetails,
@@ -1842,7 +1885,7 @@
             // 🚀 PERF R32: defer dismissToast — 15 setState calls cascade (115ms → ~0ms click)
             onClick: () => setTimeout(dismissToast, 0),
         },
-            React.createElement(AdviceDrawerDialog, {
+            React.createElement(AdviceModalDialog, {
                 className: `advice-list-container advice-list-container--v4${dismissAllAnimation ? ' shake-warning' : ''}${showSwipeFeedback ? ' advice-list-container--feedback-open' : ''}`,
                 label: displayAdviceCount > 0 ? `Советы, ${displayAdviceCount}` : 'Советы',
                 onClick: e => e.stopPropagation(),
@@ -2012,6 +2055,9 @@
                 advice: adviceDetailModalAdvice,
                 onClose: closeAdviceDetailModal,
                 onOpenTechnicalDetails: openAdviceTechnicalDetails,
+                // Строка «доступность»: свайп не единственный способ.
+                onMarkRead: markAdviceDetailRead,
+                onHideUntilTomorrow: hideAdviceDetailUntilTomorrow,
                 ADVICE_CATEGORY_NAMES,
             }),
             adviceDiagnosticsOpen && React.createElement(AdviceDiagnosticsModal, {
@@ -3487,6 +3533,106 @@
             } catch (_) { }
         }, [HEYSRef]);
 
+        // Строка контракта tips «доступность»: «жесты влево и вправо дублируются
+        // действиями в детали совета — свайп не единственный способ». Тела обоих
+        // жестов вынесены сюда, чтобы кнопка в детали приводила ровно к тому же
+        // состоянию (LS, markRead/markHidden, звук, отмена с таймером), а не к
+        // своей копии логики, которая со временем разъедется со свайпом.
+        const applyAdviceRead = useCallback((adviceId) => {
+            if (!adviceId) return;
+            if (lastDismissedAdvice?.hideTimeout) clearTimeout(lastDismissedAdvice.hideTimeout);
+
+            setDismissedAdvices(prev => {
+                const newSet = new Set([...prev, adviceId]);
+                const saveData = {
+                    date: new Date().toISOString().slice(0, 10),
+                    ids: [...newSet],
+                };
+                try {
+                    setStoredValue('heys_advice_read_today', saveData);
+                } catch (e) { }
+                return newSet;
+            });
+
+            if (HEYSRef?.game?.addXP) {
+                const cardEl = adviceCardRefs.current[adviceId];
+                HEYSRef.game.addXP(0, 'advice_read', cardEl);
+            }
+
+            const advice = safeAdviceRelevant.find(item => item?.id === adviceId) || safeBadgeAdvices.find(item => item?.id === adviceId);
+            if (advice && markRead) markRead(advice);
+
+            playAdviceSound();
+            haptic('light');
+
+            setUndoFading(false);
+            const hideTimeout = setTimeout(() => {
+                setLastDismissedAdvice(null);
+                setUndoFading(false);
+            }, 3000);
+            setLastDismissedAdvice({ id: adviceId, action: 'read', hideTimeout });
+        }, [HEYSRef, haptic, lastDismissedAdvice, playAdviceSound, safeAdviceRelevant, safeBadgeAdvices, markRead, setStoredValue]);
+
+        const applyAdviceHideUntilTomorrow = useCallback((adviceId) => {
+            if (!adviceId) return;
+            if (lastDismissedAdvice?.hideTimeout) clearTimeout(lastDismissedAdvice.hideTimeout);
+
+            setHiddenUntilTomorrow(prev => {
+                const newSet = new Set([...prev, adviceId]);
+                try {
+                    const saveData = {
+                        date: new Date().toISOString().slice(0, 10),
+                        ids: [...newSet],
+                    };
+                    setStoredValue('heys_advice_hidden_today', saveData);
+                } catch (e) { }
+                return newSet;
+            });
+            setDismissedAdvices(prev => {
+                const newSet = new Set([...prev, adviceId]);
+                try {
+                    const saveData = {
+                        date: new Date().toISOString().slice(0, 10),
+                        ids: [...newSet],
+                    };
+                    setStoredValue('heys_advice_read_today', saveData);
+                } catch (e) { }
+                return newSet;
+            });
+
+            const advice = safeAdviceRelevant.find(item => item?.id === adviceId) || safeBadgeAdvices.find(item => item?.id === adviceId);
+            if (advice && markHidden) markHidden(advice);
+
+            playAdviceHideSound();
+            haptic('medium');
+
+            setUndoFading(false);
+            const hideTimeout = setTimeout(() => {
+                setLastDismissedAdvice(null);
+                setUndoFading(false);
+            }, 3000);
+            setLastDismissedAdvice({ id: adviceId, action: 'hidden', hideTimeout });
+        }, [haptic, lastDismissedAdvice, playAdviceHideSound, safeAdviceRelevant, safeBadgeAdvices, markHidden, setStoredValue]);
+
+        // Деталь совета закрывается после действия: карточка уходит из списка, а
+        // отмена живёт панелью в самой шторке (строка «отмена с таймером») — под
+        // открытой деталью её не видно и не нажать.
+        const markAdviceDetailRead = useCallback((advice, e) => {
+            e?.stopPropagation?.();
+            const adviceId = typeof advice === 'string' ? advice : advice?.id;
+            if (!adviceId) return;
+            applyAdviceRead(adviceId);
+            closeAdviceDetailModal();
+        }, [applyAdviceRead, closeAdviceDetailModal]);
+
+        const hideAdviceDetailUntilTomorrow = useCallback((advice, e) => {
+            e?.stopPropagation?.();
+            const adviceId = typeof advice === 'string' ? advice : advice?.id;
+            if (!adviceId) return;
+            applyAdviceHideUntilTomorrow(adviceId);
+            closeAdviceDetailModal();
+        }, [applyAdviceHideUntilTomorrow, closeAdviceDetailModal]);
+
         const handleAdviceSwipeEnd = useCallback((adviceId) => {
             const gesture = adviceSwipeStart.current[adviceId];
             if (gesture?.lock === 'vertical') {
@@ -3501,77 +3647,14 @@
             if (lastDismissedAdvice?.hideTimeout) clearTimeout(lastDismissedAdvice.hideTimeout);
 
             if (swipeX < -100) {
-                setDismissedAdvices(prev => {
-                    const newSet = new Set([...prev, adviceId]);
-                    const saveData = {
-                        date: new Date().toISOString().slice(0, 10),
-                        ids: [...newSet],
-                    };
-                    try {
-                        setStoredValue('heys_advice_read_today', saveData);
-                    } catch (e) { }
-                    return newSet;
-                });
-
-                if (HEYSRef?.game?.addXP) {
-                    const cardEl = adviceCardRefs.current[adviceId];
-                    HEYSRef.game.addXP(0, 'advice_read', cardEl);
-                }
-
-                const advice = safeAdviceRelevant.find(item => item?.id === adviceId) || safeBadgeAdvices.find(item => item?.id === adviceId);
-                if (advice && markRead) markRead(advice);
-
-                playAdviceSound();
-                haptic('light');
-
-                setUndoFading(false);
-                const hideTimeout = setTimeout(() => {
-                    setLastDismissedAdvice(null);
-                    setUndoFading(false);
-                }, 3000);
-                setLastDismissedAdvice({ id: adviceId, action: 'read', hideTimeout });
-
+                applyAdviceRead(adviceId);
             } else if (swipeX > 100) {
-                setHiddenUntilTomorrow(prev => {
-                    const newSet = new Set([...prev, adviceId]);
-                    try {
-                        const saveData = {
-                            date: new Date().toISOString().slice(0, 10),
-                            ids: [...newSet],
-                        };
-                        setStoredValue('heys_advice_hidden_today', saveData);
-                    } catch (e) { }
-                    return newSet;
-                });
-                setDismissedAdvices(prev => {
-                    const newSet = new Set([...prev, adviceId]);
-                    try {
-                        const saveData = {
-                            date: new Date().toISOString().slice(0, 10),
-                            ids: [...newSet],
-                        };
-                        setStoredValue('heys_advice_read_today', saveData);
-                    } catch (e) { }
-                    return newSet;
-                });
-
-                const advice = safeAdviceRelevant.find(item => item?.id === adviceId) || safeBadgeAdvices.find(item => item?.id === adviceId);
-                if (advice && markHidden) markHidden(advice);
-
-                playAdviceHideSound();
-                haptic('medium');
-
-                setUndoFading(false);
-                const hideTimeout = setTimeout(() => {
-                    setLastDismissedAdvice(null);
-                    setUndoFading(false);
-                }, 3000);
-                setLastDismissedAdvice({ id: adviceId, action: 'hidden', hideTimeout });
+                applyAdviceHideUntilTomorrow(adviceId);
             }
 
             setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
             delete adviceSwipeStart.current[adviceId];
-        }, [adviceSwipeState, haptic, lastDismissedAdvice, playAdviceSound, playAdviceHideSound, safeAdviceRelevant, safeBadgeAdvices, markRead, markHidden, setStoredValue]);
+        }, [adviceSwipeState, lastDismissedAdvice, applyAdviceRead, applyAdviceHideUntilTomorrow]);
 
         const adviceLongPressTimer = useRef(null);
         const handleAdviceLongPressStart = useCallback((adviceId) => {
@@ -3733,6 +3816,9 @@
             adviceDetailModalAdvice,
             openAdviceDetailModal,
             closeAdviceDetailModal,
+            // Строка «доступность»: дубли свайпов внутри детали совета.
+            markAdviceDetailRead,
+            hideAdviceDetailUntilTomorrow,
             adviceTechnicalDetails,
             adviceTechnicalDetailsOpen,
             openAdviceTechnicalDetails,

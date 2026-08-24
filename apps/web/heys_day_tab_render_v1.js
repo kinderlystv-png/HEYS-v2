@@ -132,6 +132,8 @@
             adviceDetailModalAdvice: adviceState.adviceDetailModalAdvice,
             openAdviceDetailModal: adviceState.openAdviceDetailModal,
             closeAdviceDetailModal: adviceState.closeAdviceDetailModal,
+            markAdviceDetailRead: adviceState.markAdviceDetailRead,
+            hideAdviceDetailUntilTomorrow: adviceState.hideAdviceDetailUntilTomorrow,
             adviceTechnicalDetails: adviceState.adviceTechnicalDetails,
             adviceTechnicalDetailsOpen: adviceState.adviceTechnicalDetailsOpen,
             openAdviceTechnicalDetails: adviceState.openAdviceTechnicalDetails,
