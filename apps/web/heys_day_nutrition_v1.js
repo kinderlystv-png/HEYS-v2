@@ -1220,6 +1220,27 @@
       if (dragY > 90) { setDragY(0); onClose?.(); } else setDragY(0);
     };
 
+    // Контракт nutrition-tab, «safe-area и кнопка назад»: аппаратная кнопка
+    // назад / жест на Android закрывают лист правки приёма, а не уводят с
+    // экрана. Паттерн — heys_widgets_ui_v1.js (карточка «Ещё») и
+    // heys_day_pickers.js (шторка календаря): pushState-метка при монтировании
+    // листа, popstate закрывает его через тот же onClose, которым закрываются
+    // и остальные пути (подложка, свайп вниз); при размонтировании — снять
+    // слушатель и увести историю на шаг назад, если запись ещё наша.
+    React.useEffect(() => {
+      const onPopState = () => { onClose?.(); };
+      window.addEventListener('popstate', onPopState);
+      try {
+        window.history.pushState({ heysMealEditSheet: true }, '');
+      } catch (_e) { /* история недоступна — остальные пути закрытия работают */ }
+      return () => {
+        window.removeEventListener('popstate', onPopState);
+        try {
+          if (window.history.state?.heysMealEditSheet) window.history.back();
+        } catch (_e) { /* ignore */ }
+      };
+    }, []);
+
     // Строка продукта — залитая карточка, действие — строка без заливки на
     // грунте листа: иконка акцентом слева, подпись, шеврон, волосяной
     // разделитель (контракт «продукт против действия»).
