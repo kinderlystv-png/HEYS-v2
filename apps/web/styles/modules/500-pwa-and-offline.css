@@ -1332,7 +1332,10 @@
   margin-top: 12px;
   padding: 13px 14px;
   border-radius: 16px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  /* Первая поверхность через --v4-card: в каноничной палитре роль намеренно
+     не задана, там остаётся литерал. --v4-surface тут не годится — в
+     классике он #ffffff и перекрашивает её (гейт classic-drift). */
+  background: var(--v4-card, #f7efe2);
   box-shadow: inset 0 0 0 1.5px rgba(198, 113, 57, 0.28);
 }
 
@@ -1364,13 +1367,13 @@
 .mc-rest-consent-actions {
   display: flex;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .mc-rest-consent-primary,
 .mc-rest-consent-secondary {
   flex: 1;
-  min-height: 40px;
+  min-height: 44px;
   border: none;
   border-radius: 999px;
   font: 700 12px/1 Figtree, system-ui, sans-serif;
@@ -2035,7 +2038,7 @@
 }
 
 .mc-supp-flow-search-input::placeholder {
-  color: rgba(0, 0, 0, 0.38);
+  color: rgba(32, 30, 29, 0.3);
 }
 
 .mc-supp-flow-groups {
@@ -2043,8 +2046,8 @@
 }
 
 .mc-supp-flow-tier {
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
-  letter-spacing: 0.16em;
+  font: 700 9px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--v4-sand-act-text, #8a4a20);
   margin: 13px 0 7px;
@@ -4455,9 +4458,10 @@
 .mc-steps-slider-labels {
   display: flex;
   justify-content: space-between;
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--color-gray-400);
+  margin-top: 8px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: rgba(32, 30, 29, 0.3);
 }
 
 .mc-steps-slider-label-health {

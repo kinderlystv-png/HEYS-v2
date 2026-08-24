@@ -761,7 +761,10 @@
 }
 
 .yv-food-card {
-  background: var(--v4-sand-hero, #f7efe2);
+  /* Первая поверхность. Прежний --v4-sand-hero — это --c2 (#efe3cf), а
+     фолбэк #f7efe2 вводил в заблуждение: в песочной карточка выглядела
+     правильной, в остальных наборах уезжала на вторую поверхность. */
+  background: var(--v4-card, #f7efe2);
   border-radius: 20px;
   padding: 14px 16px;
   margin-top: 16px;
