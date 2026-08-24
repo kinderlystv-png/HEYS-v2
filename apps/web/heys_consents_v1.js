@@ -1685,11 +1685,14 @@
       },
         step === 'consents' ? (
           React.createElement(React.Fragment, null,
+            // Строка «неактивная кнопка»: причина 11,5 px/500 тоном чернил 55 %
+            // — она поясняет запрет, а не объявляет его. Кадр рисует 600 и 50 %,
+            // верен контракт.
             requiredConsentReason && React.createElement('div', {
               style: {
                 textAlign: 'center',
-                font: '600 11.5px/1.45 Figtree, system-ui, sans-serif',
-                color: 'rgba(0,0,0,.5)',
+                font: '500 11.5px/1.45 Figtree, system-ui, sans-serif',
+                color: 'rgba(0,0,0,.55)',
               }
             }, requiredConsentReason),
             React.createElement('button', {
@@ -1703,8 +1706,15 @@
                 borderRadius: 999,
                 border: 'none',
                 font: '700 13px/1 Figtree, system-ui, sans-serif',
-                backgroundColor: allRequiredAccepted && !loading ? '#c67139' : '#f7efe2',
-                color: allRequiredAccepted && !loading ? '#2b1608' : 'rgba(0,0,0,.3)',
+                // Строка «неактивная кнопка»: кнопка гаснет до 45 % и не
+                // нажимается — своей заливки у выключенного состояния нет. Кадр
+                // вместо гашения перекрашивал её в песочную с текстом 30 %,
+                // верен контракт; так же гаснет полка шторки подписи
+                // (733-ui-v4-login-theme.css: .heys-consent-sign-sheet__primary:disabled).
+                // Пока идёт запрос — 60 % по строке «вид знака в кнопке» зоны spinners.
+                backgroundColor: '#c67139',
+                color: '#2b1608',
+                opacity: loading ? 0.6 : (allRequiredAccepted ? 1 : 0.45),
                 cursor: allRequiredAccepted && !loading ? 'pointer' : 'not-allowed',
               }
             }, HEYS.WaitMark?.button?.(React, {

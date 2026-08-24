@@ -5878,11 +5878,9 @@ body.tour-active .ios-pwa-banner {
   background: rgba(217, 138, 79, 0.14);
 }
 
-/* «Готово!» — кольцо заливается акцентом, глиф темнеет. */
-.heys-update-modal__icon--done {
-  background: #d98a4f;
-}
-
+/* Инверсия «Готово!» снята: контракт даёт один вид иконки стадии — заливка
+   акцента под 14 % и глиф самим акцентом, — а отдельной строки про последнюю
+   стадию в нём нет. */
 .heys-update-modal__glyph {
   position: absolute;
   inset: 0;
@@ -5890,10 +5888,6 @@ body.tour-active .ios-pwa-banner {
   align-items: center;
   justify-content: center;
   color: #d98a4f;
-}
-
-.heys-update-modal__icon--done .heys-update-modal__glyph {
-  color: #241207;
 }
 
 .heys-update-modal__spinner {

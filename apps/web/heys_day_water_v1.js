@@ -444,7 +444,7 @@
             ),
             React.createElement('path', {
               className: 'water-review__curve-area',
-              d: areaPath, fill: 'currentColor', opacity: 0.14
+              d: areaPath, fill: 'currentColor', opacity: 0.16
             }),
             React.createElement('path', {
               className: 'water-review__curve-goal',

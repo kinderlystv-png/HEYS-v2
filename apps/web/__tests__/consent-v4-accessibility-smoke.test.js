@@ -231,6 +231,22 @@ describe('согласия · вид шага и подпись обязател
     expect(word.textContent).toContain('обязательно');
   });
 
+  it('неактивная кнопка гаснет до 45 %, причина — 11,5/500 тоном 55 %', () => {
+    const host = renderScreen();
+    const reason = findByText(host, 'div', 'Откройте и дочитайте оба документа');
+    expect(reason.style.font).toContain('500');
+    expect(reason.style.font).toContain('11.5px');
+    expect(reason.style.color.replace(/\s/g, '')).toContain('.55');
+
+    const primary = Array.from(host.querySelectorAll('button'))
+      .find((el) => (el.textContent || '').includes('Подписать'));
+    expect(primary.disabled).toBe(true);
+    // Гашение, а не перекраска: заливка и тон текста те же, что у активной.
+    expect(primary.style.opacity).toBe('0.45');
+    expect(primary.style.backgroundColor).toBe('#c67139');
+    expect(primary.style.cursor).toBe('not-allowed');
+  });
+
   it('цель касания «Читать полностью» — 44, не 40', () => {
     const host = renderScreen();
     const link = findByText(host, 'button', 'Читать полностью');

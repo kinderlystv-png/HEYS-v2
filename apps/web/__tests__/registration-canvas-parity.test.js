@@ -140,7 +140,15 @@ describe('registration canvas parity', () => {
       // ждём 44 и следим, что 40 в файл не вернулось.
       expect(CONSENTS_SRC).toContain('minHeight: 44');
       expect(CONSENTS_SRC).not.toContain('minHeight: 40');
-      expect(CONSENTS_SRC).toContain("color: allRequiredAccepted && !loading ? '#2b1608'");
+      // Проверка сторожила заливку выключенной кнопки из кадра «Регистрация ·
+      // согласия»: песочный фон --c1 и текст чернилами 30 %. Строка контракта
+      // «неактивная кнопка» говорит другое — кнопка не перекрашивается, а
+      // гаснет до 45 %; своей заливки у выключенного состояния нет. Контракт
+      // старше кадра, поэтому ждём гашение и постоянную заливку.
+      expect(CONSENTS_SRC).toContain('opacity: loading ? 0.6 : (allRequiredAccepted ? 1 : 0.45)');
+      expect(CONSENTS_SRC).not.toContain("color: allRequiredAccepted && !loading ? '#2b1608'");
+      // Причина над кнопкой — 11,5 px/500 тоном чернил 55 % (кадр рисует 600/50 %).
+      expect(CONSENTS_SRC).toContain("font: '500 11.5px/1.45 Figtree, system-ui, sans-serif'");
       expect(CONSENTS_SRC).toContain("padding: '16px 18px 0'");
       expect(CONSENTS_SRC).toContain('!allRequiredAccepted && onCancel');
       expect(CONSENTS_SRC).toContain('Необязательное отмечается тапом');

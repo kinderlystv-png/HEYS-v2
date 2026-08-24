@@ -419,8 +419,9 @@
       + '</svg><span class="heys-update-modal__still"></span>'
       : '';
     // Строка «вид иконки стадии»: глиф 24 px обводкой 2,5 — у всех стадий
-    // одинаково. «Готово!» отличалось не размером, а толщиной 3.
-    const glyph = s.done ? updateIconSvg('check', 24, 3) : updateIconSvg(s.icon, 24, 2.5);
+    // одинаково, и «Готово!» тут не исключение. Отдельного вида у последней
+    // стадии контракт не знает, а строка «иконки» просит один цвет на все.
+    const glyph = updateIconSvg(s.done ? 'check' : s.icon, 24, 2.5);
     return { ring, glyph, done: !!s.done };
   }
 
