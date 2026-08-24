@@ -72,8 +72,14 @@ function canvasHygiene() {
     const empty = rows.filter((row) => !row.value.trim()).map((row) => row.key);
     if (empty.length) warnings.push(`${file}: пустое значение — ${empty.join(', ')}`);
 
+    // Кадр — тот, у кого есть `data-screen-label`: по метке его адресуют и по
+    // ней же грепают разметку. Без этого условия сюда попадали распорки вида
+    // `<div class="ph" style="height:734px">` — в home-widgets их 30, и они
+    // давали ложное «кадров без data-demo — 30» на канвасе, где непомеченных
+    // кадров нет вовсе. Ложная тревога стоила рекомендации «не сверять здесь
+    // геометрию»; проверка должна считать кадры, а не вёрстку вокруг них.
     const framesNoDemo = [...html.matchAll(/<div class="s?[Pp]h[^"]*"[^>]*>/g)].filter(
-      (m) => !m[0].includes('data-demo='),
+      (m) => m[0].includes('data-screen-label=') && !m[0].includes('data-demo='),
     ).length;
     if (framesNoDemo) warnings.push(`${file}: кадров без data-demo — ${framesNoDemo}`);
   }
