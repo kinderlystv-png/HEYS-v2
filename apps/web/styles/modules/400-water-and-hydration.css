@@ -3575,3 +3575,14 @@ html[data-theme-id="blue-dark"] .water-column__target {
   transform: scale(0.96);
 }
 
+/* Строка «уменьшенное движение»: выезд шторки и появление всплывающего
+   совета становятся мгновенными, свайп карточки — без доводки. Затемнение
+   остаётся: оно отделяет слой, а не двигается. */
+@media (prefers-reduced-motion: reduce) {
+  .advice-list-container--v4,
+  .advice-v4-toast-wrap,
+  .advice-list-item-wrapper {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1449,7 +1449,7 @@
                             'aria-label': 'Советы',
                         },
                             HEYS.AppNavIcons?.NavIcon
-                                ? React.createElement(HEYS.AppNavIcons.NavIcon, { name: 'advice', size: 18 })
+                                ? React.createElement(HEYS.AppNavIcons.NavIcon, { name: 'advice', size: 17 })
                                 : React.createElement('span', { 'aria-hidden': 'true' }, '💡'),
                             React.createElement('span', {
                                 className: 'tab-advice-badge hdr-advice-badge',
@@ -1474,7 +1474,7 @@
                             'aria-label': 'Настройки',
                         },
                             HEYS.AppNavIcons?.NavIcon
-                                ? React.createElement(HEYS.AppNavIcons.NavIcon, { name: 'sliders', size: 18 })
+                                ? React.createElement(HEYS.AppNavIcons.NavIcon, { name: 'sliders', size: 17 })
                                 : React.createElement('span', { 'aria-hidden': 'true' }, '⚙️')
                         ),
                     ),

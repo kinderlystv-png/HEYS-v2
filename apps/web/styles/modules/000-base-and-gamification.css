@@ -4333,9 +4333,11 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .hdr-header-icon-btn {
   position: relative;
-  width: 44px;
+  /* Строка «иконки»: бокс 34 × 44. Цель 44 pt держится по вертикали высотой,
+     по горизонтали — невидимыми полями припуска ниже: 34 + 5 + 5 = 44. */
+  width: 34px;
   height: 44px;
-  min-width: 44px;
+  min-width: 34px;
   padding: 0;
   border: 0;
   border-radius: 10px;
@@ -4346,6 +4348,12 @@ color: var(--v4-sand-ink-slate, #1f2937);
   justify-content: center;
   cursor: pointer;
   touch-action: manipulation;
+}
+
+.hdr-header-icon-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0 -5px;
 }
 
 .hdr-header-icon-btn--advice {
@@ -7996,14 +8004,12 @@ body:has(.offline-banner) .wrap {
   color: #f59e0b;
 }
 
+/* Строка «третий бокс»: индикатор появляется только при проблеме — не
+   сохранилось, нет сети, идёт отправка. В покое его нет вовсе: постоянно
+   видимое облако сообщает «всё хорошо» каждую секунду, и человек
+   перестаёт его замечать ровно тогда, когда оно понадобится. */
 .cloud-sync-indicator.idle {
-  background: rgba(59, 130, 246, 0.15);
-  color: var(--color-blue-500);
-  opacity: 1;
-}
-
-.cloud-sync-indicator.idle svg.cloud-icon {
-  display: block;
+  display: none;
 }
 
 .cloud-sync-indicator.queued svg.cloud-icon {
