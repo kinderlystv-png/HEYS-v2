@@ -351,13 +351,6 @@
             React.createElement('span', { className: 'water-review__avg' },
               'в среднем ' + formatLiters(week.avgMl) + ' л'
             ),
-            !isCompact ? React.createElement('button', {
-              type: 'button',
-              className: 'water-review__header-sub'
-                + (canRemove ? '' : ' is-off'),
-              disabled: !canRemove,
-              onClick: pickRemove
-            }, '−' + MINUS_VOLUME) : null
           )
         ),
 
@@ -405,7 +398,29 @@
           )
         ),
 
-        !isCompact ? React.createElement('div', { className: 'water-review__quick water-review__quick--grid' },
+        // Строка контракта «минус в «Кольце»» (water-add): в ряду четырёх
+        // объёмов минуса нет — он стоит первым в том же ряду пятой пилюлей
+        // обводкой, зазор 12 px до первого плюса (gap 6 px ряда + свои 6 px у
+        // --in-row); в шапке карточки ему места нет.
+        //
+        // Отступление от кадра названо вслух: кадр «Вода · карточка · Кольцо»
+        // (data-demo="stop") рисует минус в .bTop, то есть в шапке, а ряд .bChips
+        // держит ровно четыре плюса. Контракт старше кадра. Строка
+        // «чип −200 в шапке» в nutrition-tab тоже говорит про шапку, но там же
+        // сказано: «карточка воды здесь для контекста — при расхождении верен
+        // water-add.v4.dc.html».
+        !isCompact ? React.createElement('div', { className: 'water-review__quick' },
+          // Длинного нажатия у минуса нет намеренно: лист своего объёма умеет
+          // только добавлять (строка «свой объём»), на убавляющем чипе он
+          // сработал бы в обратную сторону.
+          React.createElement('button', {
+            type: 'button',
+            key: 'sub',
+            className: 'water-review__chip water-review__chip--sub water-review__chip--in-row'
+              + (canRemove ? '' : ' is-off'),
+            disabled: !canRemove || undefined,
+            onClick: pickRemove
+          }, '−' + MINUS_VOLUME),
           RING_VOLUMES.map((ml) => React.createElement(VolumeChip, {
             key: ml, ml, kind: 'quick', readOnly: isReadOnly, onPick: pickAdd
           }))

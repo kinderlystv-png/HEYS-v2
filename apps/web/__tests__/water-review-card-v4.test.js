@@ -98,15 +98,37 @@ describe('карточка воды в «Разборе дня» — nutrition-t
     window.HEYS = originalHEYS;
   });
 
-  it('полный вид при выключенной кнопке воды: 58px кольцо и четыре объёма', () => {
+  // Прежняя проверка требовала минус в шапке (.water-review__header-sub) и
+  // прямо запрещала его в ряду. Она описывала кадр «Вода · карточка · Кольцо»,
+  // где минус нарисован в .bTop, а строка контракта «минус в «Кольце»» говорит
+  // обратное: минус стоит первым в самом ряду пятой пилюлей, «в шапке карточки
+  // ему места нет». Контракт старше кадра — проверка переписана под него, а не
+  // снята: ряд по-прежнему сторожится поимённо.
+  it('полный вид при выключенной кнопке воды: 58px кольцо, минус первым в ряду', () => {
     const { container } = renderCard(dayWater, { waterFabOn: false });
     const card = container.querySelector('#water-card');
     expect(card.className).toContain('water-review--full');
     expect(card.querySelector('.water-review__ring-svg').getAttribute('width')).toBe('58');
     expect([...card.querySelectorAll('.water-review__chip--quick')].map((el) => el.textContent))
       .toEqual(['+100', '+200', '+330', '+500']);
-    expect(card.querySelector('.water-review__header-sub').textContent).toBe('−200');
-    expect(card.querySelector('.water-review__quick .water-review__chip--sub')).toBeNull();
+    expect(card.querySelector('.water-review__header-sub')).toBeNull();
+    const row = [...card.querySelectorAll('.water-review__quick > *')];
+    expect(row.map((el) => el.textContent)).toEqual(['−200', '+100', '+200', '+330', '+500']);
+    expect(row[0].className).toContain('water-review__chip--sub');
+    expect(row[0].className).toContain('water-review__chip--in-row');
+    // Ряд — flex, а не сетка из четырёх: пятая пилюля в repeat(4, 1fr) уехала бы
+    // на вторую строку.
+    expect(card.querySelector('.water-review__quick').className)
+      .not.toContain('water-review__quick--grid');
+  });
+
+  it('убавить нечего: минус гаснет, но остаётся в ряду', () => {
+    const { container } = renderCard(dayWater, { waterMl: 0, ctxExtra: { waterLastDrink: null } });
+    const card = container.querySelector('#water-card');
+    const sub = card.querySelector('.water-review__quick .water-review__chip--sub');
+    expect(sub).toBeTruthy();
+    expect(sub.className).toContain('is-off');
+    expect(sub.disabled).toBe(true);
   });
 
   it('компактный вид при включённой кнопке воды: 44px кольцо без чипов', () => {
@@ -146,7 +168,7 @@ describe('карточка воды в «Разборе дня» — nutrition-t
     const { container } = renderCard(dayWater, { actions: { addWater, removeWater } });
     const card = container.querySelector('#water-card');
 
-    fireEvent.click(card.querySelector('.water-review__header-sub'));
+    fireEvent.click(card.querySelector('.water-review__quick .water-review__chip--sub'));
     expect(removeWater).toHaveBeenCalledWith(200);
 
     fireEvent.click(card.querySelectorAll('.water-review__chip--quick')[3]);
@@ -173,6 +195,23 @@ describe('карточка воды в «Разборе дня» — nutrition-t
     dayWater.applyOptimistic(card, 1500, 3000);
     expect(card.querySelector('.water-review__ring-fact').textContent).toBe('1,5 л');
     expect(card.querySelector('.water-review__ring-tail').textContent).toBe('осталось 1,5');
+  });
+
+  // applyOptimistic всегда искал .water-review__chip--sub, но минус жил в шапке
+  // под классом .water-review__header-sub — запрос не находил ничего, и после
+  // мгновенной правки объёма минус оставался в прежнем состоянии до перерисовки.
+  // С переездом минуса в ряд запрос попадает в цель.
+  it('applyOptimistic гасит и зажигает минус в ряду', () => {
+    const { container } = renderCard(dayWater, { waterMl: 0, ctxExtra: { waterLastDrink: null } });
+    const card = container.querySelector('#water-card');
+    const sub = () => card.querySelector('.water-review__quick .water-review__chip--sub');
+    expect(sub().classList.contains('is-off')).toBe(true);
+    dayWater.applyOptimistic(card, 500, 3000);
+    expect(sub().classList.contains('is-off')).toBe(false);
+    expect(sub().hasAttribute('disabled')).toBe(false);
+    dayWater.applyOptimistic(card, 0, 3000);
+    expect(sub().classList.contains('is-off')).toBe(true);
+    expect(sub().hasAttribute('disabled')).toBe(true);
   });
 });
 

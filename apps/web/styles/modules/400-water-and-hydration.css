@@ -103,22 +103,8 @@ html[data-theme-id="blue-dark"] .water-review {
   white-space: nowrap;
 }
 
-.water-review__header-sub {
-  height: 26px;
-  padding: 0 10px;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  box-shadow: inset 0 0 0 2px var(--wr-deep);
-  font: 700 10.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--wr-ink);
-  cursor: pointer;
-}
-
-.water-review__header-sub.is-off {
-  opacity: 0.32;
-  pointer-events: none;
-}
+/* Строки .water-review__header-sub сняты: по строке контракта «минус в
+   «Кольце»» минус ушёл из шапки в ряд объёмов, см. .water-review__chip--in-row. */
 
 .water-review__norm {
   font: 600 9.5px/1 Figtree, system-ui, sans-serif;
@@ -301,8 +287,10 @@ html[data-theme-id="blue-dark"] .water-review {
   color: var(--wr-deep);
 }
 
-/* Ряд объёмов «Кольца»: минус первым, пятой пилюлей, зазор 12 px до плюса
-   (контракт 47) — в шапке карточки минусу места нет. */
+/* Ряд объёмов «Кольца», строка контракта «минус в «Кольце»» (water-add):
+   минус первым, пятой пилюлей обводкой, зазор 12 px до первого плюса — в шапке
+   карточки минусу места нет. Кадр «Вода · карточка · Кольцо» рисует минус в
+   шапке (.bTop) и ряд из четырёх — контракт старше кадра. */
 .water-review__quick {
   display: flex;
   align-items: center;
@@ -310,18 +298,18 @@ html[data-theme-id="blue-dark"] .water-review {
   margin-top: 10px;
 }
 
-.water-review__quick--grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-}
-
+/* Минус в ряду: своя ширина по тексту, зазор до первого плюса — 12 px
+   (6 px gap ряда + 6 px здесь). Обводка 2 px тем же тоном, что заливка
+   добавляющих в этом ряду (--wr-deep), — строка «обводка убавляющего»;
+   у .water-review__chip--sub обводка взята от --wr-chip-fill, а это тон
+   чипов у кнопки воды, и в тёмных наборах он другой. */
 .water-review__chip--in-row {
   flex: none;
   margin-right: 6px;
   height: 30px;
   padding: 0 12px;
   border-radius: 12px;
+  box-shadow: inset 0 0 0 2px var(--wr-deep);
   font: 700 11px/1 Figtree, system-ui, sans-serif;
 }
 
@@ -401,8 +389,7 @@ html[data-theme-id="blue-dark"] .water-review {
   text-wrap: pretty;
 }
 
-.water-review--readonly .water-review__chip,
-.water-review--readonly .water-review__header-sub {
+.water-review--readonly .water-review__chip {
   opacity: 0.4;
   pointer-events: none;
 }
