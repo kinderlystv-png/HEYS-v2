@@ -62,6 +62,20 @@
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
   }
 
+  // Контракт checkin-morning, строка «чек-ин не пройден до вечера»: незакрытый
+  // чек-ин вечером предлагается целиком, но вопросы про план дня спрашиваются
+  // как про факт. Порог вечера не изобретается: 18:00 — тот же рубеж, что уже
+  // стоит в приветствии входа (heys_login_screen_v1.js) и в getTimePeriod
+  // советов (heys_advice_bundle_v1.js). Часовых поясов в продукте нет — час
+  // берётся с устройства, как и дата.
+  const EVENING_CHECKIN_HOUR = 18;
+
+  function getCheckinDaypart(now) {
+    const date = now instanceof Date ? now : new Date();
+    const hour = date.getHours();
+    return hour >= EVENING_CHECKIN_HOUR ? 'evening' : 'morning';
+  }
+
   function readStoredValue(key, fallback = null) {
     if (HEYS.store?.readSafe) return HEYS.store.readSafe(key, fallback);
     // Минимальный fallback на случай вызова до загрузки storage layer.
@@ -2297,6 +2311,9 @@
       isProfileOnlyRegistration,
       forceReplay,
       forceCheckinReplay,
+      daypart: opts.daypart === 'evening' || opts.daypart === 'morning'
+        ? opts.daypart
+        : getCheckinDaypart(),
       mode: wantRegistration ? 'registration' : 'daily'
     };
   }
@@ -2643,6 +2660,7 @@
         layout: 'daily',
         context: {
           dateKey: plan.dateKey,
+          daypart: plan.daypart,
           registrationMode: plan.mode === 'registration',
           dailyCheckin: plan.mode !== 'registration',
           onStartDailyCheckin: startDailyCheckin,
@@ -2711,6 +2729,8 @@
   HEYS.MorningCheckinUtils.getMorningCheckinStatus = getMorningCheckinStatus;
   HEYS.MorningCheckinUtils.ensureFinalMorningRequirements = ensureFinalMorningRequirements;
   HEYS.MorningCheckinUtils.markMorningProgressCloudSynced = markMorningProgressCloudSynced;
+  HEYS.MorningCheckinUtils.getCheckinDaypart = getCheckinDaypart;
+  HEYS.MorningCheckinUtils.EVENING_CHECKIN_HOUR = EVENING_CHECKIN_HOUR;
   HEYS.MorningCheckinUtils.requiredDecisionModules = ['YesterdayVerify'];
   HEYS.MorningCheckinUtils.isYesterdayVerifyDecisionReady = isYesterdayVerifyDecisionReady;
 
@@ -2878,7 +2898,7 @@
           allowSwipe: false,
           showTip: false,
           layout: 'daily',
-          context: { dateKey: plan.dateKey, dailyCheckin: !plan.isRegistrationCheckin },
+          context: { dateKey: plan.dateKey, daypart: plan.daypart, dailyCheckin: !plan.isRegistrationCheckin },
           freezeVisibleSteps: true,
           forceVisibleStepIds: steps.includes('yesterdayVerify') ? ['yesterdayVerify'] : [],
           requireStepAck: true,

@@ -1615,7 +1615,7 @@
     return Math.round(delta * 10) / 10;
   }
 
-  function buildDailyCheckinGreeting({ firstMorning } = {}) {
+  function buildDailyCheckinGreeting({ firstMorning, evening } = {}) {
     const profile = lsGet('heys_profile', {}) || {};
     const firstName = String(profile.firstName || '').trim();
     const now = new Date();
@@ -1623,7 +1623,10 @@
     const capWeekday = weekday ? weekday.charAt(0).toUpperCase() + weekday.slice(1) : '';
     const dateLine = firstMorning && capWeekday ? `${capWeekday} — первый день недели` : capWeekday;
     const streak = firstMorning ? 0 : Number(HEYS.Day?.getStreak?.() || 0);
-    const title = firstName ? `Доброе утро, ${firstName}` : 'Доброе утро';
+    // Шапка первого вопроса — не вопрос чек-ина, но «Доброе утро» в 20:00 врёт.
+    // Берём уже существующее в продукте вечернее приветствие (login-экран).
+    const hello = evening ? 'Добрый вечер' : 'Доброе утро';
+    const title = firstName ? `${hello}, ${firstName}` : hello;
     return React.createElement('div', { className: 'mc-daily-greeting' },
       React.createElement('div', { className: 'mc-daily-greeting-title' }, title),
       React.createElement('div', { className: 'mc-daily-greeting-date' }, dateLine),
@@ -1654,7 +1657,10 @@
     const weekDelta = !estimated && !isFirstMorning ? getWeekWeightDelta(currentWeight) : null;
     const weightLabel = currentWeight.toFixed(1).replace('.', ',');
     const greeting = context?.dailyCheckin && !estimated
-      ? buildDailyCheckinGreeting({ firstMorning: isFirstMorning })
+      ? buildDailyCheckinGreeting({
+        firstMorning: isFirstMorning,
+        evening: context?.daypart === 'evening'
+      })
       : null;
 
     const kgValues = useMemo(() => Array.from({ length: 101 }, (_, i) => 40 + i), []);
@@ -3091,6 +3097,13 @@
   }
 
   function StepsGoalStepComponent({ data, onChange, stepData, context }) {
+    // Контракт checkin-morning, «чек-ин не пройден до вечера»: две вечерние
+    // переформулировки этого экрана НЕ сделаны намеренно. Ответ отсюда уходит
+    // в profile.stepsGoal (см. save ниже) — это план, а вечерний вопрос
+    // «сколько прошли за день» собирает факт. Переименовать подпись, не сменив
+    // приёмник, значит записать факт как идеально выполненный план. Куда класть
+    // факт (day.steps) и чем тогда отмечать пройденность шага — контракт
+    // молчит, это решение владельца. Вопрос в UI_V4_FINDINGS.
     const profile = useMemo(() => lsGet('heys_profile', {}), []);
     const weight = stepData?.weight?.weightKg ? (stepData.weight.weightKg + (stepData.weight.weightG || 0) / 10) : profile.weight || 70;
     const stepsStats = useMemo(

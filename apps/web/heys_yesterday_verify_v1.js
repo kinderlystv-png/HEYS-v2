@@ -40,6 +40,11 @@
   const lsGet = (k, d) => storeGet(k, d);
   const lsSet = (k, v) => storeSet(k, v);
   const YESTERDAY_VERIFY_MARKER_VERSION = 1;
+  // Контракт checkin-morning, строка «пропущенные дни подряд»: развилка разбора
+  // предлагает пачку не больше семи дней, остальные закрываются без разбора.
+  // Семь — предел, за которым разбор превращается в угадывание.
+  const PENDING_REVIEW_PACK_MAX = 7;
+  const OUT_OF_REVIEW_WINDOW_ACTION = 'out_of_review_window';
   const DayRealDataActions = HEYS.DayRealDataActions || {};
 
   function readDayDataScoped(dateKey, fallback = null) {
@@ -197,7 +202,11 @@
     //   • estimatedDayFill из morning-checkin (квик-заполнение)
     if (dayData.isFastingDay === true) return true;
     const action = dayData.yesterdayVerifyAction;
+    //   • out_of_review_window — день вышел за пачку разбора (контракт
+    //     checkin-morning, «пропущенные дни подряд»): закрыт без разбора,
+    //     числа дня при этом не тронуты
     if (action === 'confirm_real_data' || action === 'clear_day' || action === 'estimated_fill') return true;
+    if (action === OUT_OF_REVIEW_WINDOW_ACTION) return true;
     if (dayData.estimatedDayFill?.source === 'morning-checkin') return true;
     // Soft marker 'fill_later' закрывает текущий чек-ин, но не скрывает день
     // навсегда: на следующее утро дата решения станет прошлой и день снова
@@ -257,6 +266,16 @@
   }
 
   const RECENT_PENDING_FALLBACK_DAYS = 2;
+
+  /** Делит собранные пропуски на пачку (последние N) и хвост за её пределами. */
+  function splitPendingPackByLimit(missingDays, limit = PENDING_REVIEW_PACK_MAX) {
+    const list = Array.isArray(missingDays) ? missingDays : [];
+    if (list.length <= limit) return { packDays: list, overflowDays: [] };
+    return {
+      packDays: list.slice(list.length - limit),
+      overflowDays: list.slice(0, list.length - limit)
+    };
+  }
 
   /**
    * Получить данные дня для проверки
@@ -596,10 +615,11 @@
   }
 
   /**
-   * Проверить, нужно ли показывать шаг верификации
-   * @returns {boolean}
+   * Собрать все незакрытые прошлые дни с последнего заполненного.
+   * Без ограничения пачки — его накладывает getPendingPastDays.
+   * @returns {{ lastFilledDate: string|null, missingDays: Object[], totalPendingDays: number }}
    */
-  function getPendingPastDays() {
+  function collectPendingPastDays() {
     const yesterdayKey = getYesterdayKey();
     const trackedDays = listTrackedDayKeys().filter((dateKey) => dateKey <= yesterdayKey);
     const reviewCache = new Map();
@@ -684,6 +704,57 @@
       missingDays,
       totalPendingDays: missingDays.length
     };
+  }
+
+  /**
+   * Пропуски для развилки разбора, уже урезанные до пачки контракта.
+   * `overflowDays` — то, что за пачку не влезло: их разбор не предлагается,
+   * они закрываются маркером без разбора (closePendingDaysOutsideReviewWindow),
+   * а числа этих дней остаются как есть.
+   */
+  function getPendingPastDays() {
+    const collected = collectPendingPastDays();
+    const { packDays, overflowDays } = splitPendingPackByLimit(collected.missingDays);
+    return {
+      lastFilledDate: collected.lastFilledDate,
+      missingDays: packDays,
+      overflowDays,
+      totalPendingDays: packDays.length,
+      totalPendingDaysUncapped: (collected.missingDays || []).length
+    };
+  }
+
+  /**
+   * Дни за пределами пачки закрываются без разбора: пишется только маркер,
+   * ни одно число дня не трогается — «дыр» в истории не появляется.
+   * Идемпотентна: уже закрытые дни в overflow не попадают.
+   */
+  function closePendingDaysOutsideReviewWindow(source = 'pack-limit') {
+    const { overflowDays } = getPendingPastDays();
+    if (!overflowDays.length) return [];
+    const nowTs = Date.now();
+    const closed = [];
+    overflowDays.forEach((dayInfo) => {
+      const dateKey = dayInfo && dayInfo.date;
+      if (!dateKey) return;
+      const dayData = readDayDataScoped(dateKey, { date: dateKey }) || { date: dateKey };
+      if (isExplicitlyVerified(dayData)) return;
+      // Пишется только маркер: ни meals, ни isFastingDay, ни isIncomplete,
+      // ни одно число дня не трогается.
+      markYesterdayVerified(dayData, OUT_OF_REVIEW_WINDOW_ACTION, nowTs);
+      dayData.date = dayData.date || dateKey;
+      dayData.updatedAt = nowTs;
+      writeDayDataScoped(dateKey, dayData);
+      closed.push(dateKey);
+    });
+    if (closed.length) {
+      console.info('[HEYS.yesterdayVerify] ✅ Days outside review pack closed without review:', {
+        source,
+        packLimit: PENDING_REVIEW_PACK_MAX,
+        closed
+      });
+    }
+    return closed;
   }
 
   function shouldShowYesterdayVerify() {
@@ -2648,6 +2719,12 @@
 
       getInitialData: (context) => {
         const diagnosticPreview = !!context?.diagnosticPreview;
+        // Пачка ограничена семью днями (контракт «пропущенные дни подряд»):
+        // всё, что за неё вышло, закрывается здесь без разбора — иначе эти дни
+        // вернулись бы развилкой завтра.
+        if (!diagnosticPreview) {
+          try { closePendingDaysOutsideReviewWindow('step-open'); } catch (_) { /* закрытие хвоста не должно ронять мастер */ }
+        }
         return {
           diagnosticPreview,
           incompleteAction: null,
@@ -2710,6 +2787,11 @@
     getYesterdayData,
     getDayReviewInfo,
     getPendingPastDays,
+    collectPendingPastDays,
+    splitPendingPackByLimit,
+    closePendingDaysOutsideReviewWindow,
+    PENDING_REVIEW_PACK_MAX,
+    OUT_OF_REVIEW_WINDOW_ACTION,
     shouldShow: shouldShowYesterdayVerify,
     isExplicitlyVerified,
     isEmptyFoodDay,
