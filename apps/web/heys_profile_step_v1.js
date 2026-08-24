@@ -1883,6 +1883,11 @@
         hideHeaderNext: true,
         hideDailyFooter: true,
         hideProgressDots: true,
+        // Строка «счёт шагов»: точек четыре — итог ими не считается.
+        // hideProgressDots прячет точки НА этом экране, а из счёта шаг
+        // выбрасывает только hiddenFromProgress (heys_step_modal_v1.js:605).
+        // Без него на шагах 1–4 рисовалось пять точек.
+        hiddenFromProgress: true,
         getInitialData: () => ({}),
         validate: () => true,
         save: () => { }

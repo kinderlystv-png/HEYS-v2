@@ -454,7 +454,9 @@
       + '<circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/>'
       + '</svg><span class="heys-update-modal__still"></span>'
       : '';
-    const glyph = s.done ? updateIconSvg('check', 24, 3) : updateIconSvg(s.icon, 22);
+    // Строка «вид иконки стадии»: глиф 24 px обводкой 2,5 — у всех стадий
+    // одинаково. «Готово!» отличалось не размером, а толщиной 3.
+    const glyph = s.done ? updateIconSvg('check', 24, 3) : updateIconSvg(s.icon, 24, 2.5);
     return { ring, glyph, done: !!s.done };
   }
 

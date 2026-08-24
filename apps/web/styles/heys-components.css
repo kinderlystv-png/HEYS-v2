@@ -6055,7 +6055,10 @@ body.tour-active .ios-pwa-banner {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(245, 237, 225, 0.2);
+  /* Строка «вид точек прогресса»: будущие — акцент слоя под 20 %, а не
+     кремовый. Кремовый под прозрачностью читался как выцветший текст, а
+     не как «ещё не пройдено». */
+  background: rgba(217, 138, 79, 0.2);
 }
 
 .heys-update-modal__dot--on {
