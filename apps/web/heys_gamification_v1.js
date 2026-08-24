@@ -361,7 +361,8 @@
     if (!m) return null;
     const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
     d.setDate(d.getDate() + deltaDays);
-    return d.toISOString().slice(0, 10);
+    // Дата локальная: toISOString() восточнее UTC откатил бы день назад.
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   function normalizeMorningActivationStreak(raw) {
