@@ -8354,6 +8354,13 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   background: var(--v4-chip-2, #efe3cf);
   font-weight: 600;
   box-shadow: none;
+  /* Контракт «вид клетки»: число всегда чернилами, выбор меняет только
+     заливку. Базовое `.date-picker-day.selected` legacy-пикера лежит ниже по
+     файлу и красит число в white — на песочной --c2 оно почти исчезало.
+     У сегодняшнего дня тон перебивает правило `.today` ниже: оно того же
+     веса и стоит позже, поэтому 700 тоном --ac остаётся за ним. */
+  /* v4-intentional */
+  color: var(--v4-ink);
 }
 
 /* Каноничные тёмные наборы вторую поверхность не объявляют: там срабатывает
@@ -8376,16 +8383,32 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   animation: none;
 }
 
+/* Заливки у сегодняшнего дня нет — контракт «вид клетки» оставляет ему только
+   начертание 700 и тон --ac. Правило `background: transparent` у
+   `.date-picker-sheet .date-picker-day` этого не удерживало: базовое
+   `.date-picker-day.today` legacy-пикера того же веса и стоит ниже по файлу,
+   поэтому сегодняшний день без записей приезжал синим градиентом навигации.
+   Гасим адресно, не задевая две законные заливки: с записями клетка берёт
+   --c1 у `.has-data`, выбранная — --c2 у `.selected`. */
+.date-picker-sheet .date-picker-day.today:not(.has-data):not(.selected) {
+  background: transparent;
+}
+
 .date-picker-sheet .date-picker-day.future.disabled {
   background: transparent;
   opacity: 0.38;
 }
 
+/* Контракт «вид клетки» (12-я сборка): «Точка факта 4 px под числом через 3,
+   тон --gr2». Роль --gr2 в продукте — --v4-ok-fill (#7a8a5e / #8a9a6a /
+   #4f9a78 / #6fbf9a). Кадры «Календарь · легенда» красят точку ролью
+   --val-good (#7a8a5e / #8faa6d / #3e9a6b / #4caf7d) — совпадают только в
+   песочной; контракт старше кадра, отступление названо в протоколе экрана. */
 .date-picker-sheet .day-data-dot {
   width: 4px;
   height: 4px;
   border-radius: 999px;
-  background: var(--v4-good, #7a8a5e);
+  background: var(--v4-ok-fill, #7a8a5e);
   flex-shrink: 0;
 }
 
@@ -8465,7 +8488,8 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   width: 4px;
   height: 4px;
   border-radius: 999px;
-  background: var(--v4-good, #7a8a5e);
+  /* Тон тот же, что у точки в сетке — --gr2 (см. .day-data-dot выше). */
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .date-picker-sheet .legend-swatch--cycle {

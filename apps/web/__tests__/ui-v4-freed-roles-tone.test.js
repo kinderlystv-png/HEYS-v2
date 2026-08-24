@@ -11,12 +11,12 @@
  * атрибуты набора и читается вычисленный стиль — jsdom подставляет var().
  *
  * Ожидаемые значения — из блока [data-contract] и v4-canvas.css пакета
- * дизайна (роли --tx, --gr, --tint, --ac, --c1, --val-good).
+ * дизайна (роли --tx, --gr, --tint, --ac, --c1, --gr2).
  */
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const WEB = path.resolve(__dirname, '..');
 
@@ -44,11 +44,16 @@ const ICON_WAS = {
   blue: '#e2ecf6',
   'blue-dark': '#1e3448',
 };
-const VAL_GOOD = {
+// Точка факта в календаре. Двенадцатая сборка контракта date-remainders
+// назвала её тон прямо: строка «вид клетки» — «Точка факта 4 px под числом
+// через 3, тон --gr2». Прежде тон брали с кадров «Календарь · легенда», где
+// нарисована роль --val-good (#7a8a5e / #8faa6d / #3e9a6b / #4caf7d);
+// совпадает она только в песочной. Контракт старше кадра — здесь --gr2.
+const GR2 = {
   sand: '#7a8a5e',
-  'sand-dark': '#8faa6d',
-  blue: '#3e9a6b',
-  'blue-dark': '#4caf7d',
+  'sand-dark': '#8a9a6a',
+  blue: '#4f9a78',
+  'blue-dark': '#6fbf9a',
 };
 
 /** `#RRGGBB` / `rgb(r, g, b)` → канонический `#rrggbb`. */
@@ -129,6 +134,19 @@ describe('UI v4 — освобождённые роли дают тон набо
     document.head.appendChild(style);
   });
 
+  // Файл переписывает `document.body` и атрибуты набора на `<html>` целиком, а
+  // прогон идёт одним форком (vitest.config.ts, `singleFork`). Оставленная за
+  // собой разметка травит движок селекторов следующего файла: соседний смоук
+  // шторки календаря переставал находить составной `.date-picker-day.selected
+  // .today` — при том, что по отдельности оба класса на клетке были. Отсюда
+  // уборка: проверено парой `date-remainders-v4-smoke` + этот файл.
+  afterAll(() => {
+    document.body.innerHTML = '';
+    document.documentElement.removeAttribute('data-theme-id');
+    document.documentElement.removeAttribute('data-theme');
+    document.documentElement.removeAttribute('data-palette');
+  });
+
   it.each(SETS)('%s: знак входа берёт чернила набора (строка «знак»)', (id) => {
     applySet(id);
     expect(tone('#mark-letter', 'fill')).toBe(TX[id]);
@@ -174,10 +192,10 @@ describe('UI v4 — освобождённые роли дают тон набо
     expect(tone('.mc-rest-consent-card', 'background-color')).toBe(C1[id]);
   });
 
-  it.each(SETS)('%s: точка факта в календаре — роль --val-good набора', (id) => {
+  it.each(SETS)('%s: точка факта в календаре — роль --gr2 набора', (id) => {
     applySet(id);
-    expect(tone('.day-data-dot', 'background-color')).toBe(VAL_GOOD[id]);
-    expect(tone('.legend-swatch--dot', 'background-color')).toBe(VAL_GOOD[id]);
+    expect(tone('.day-data-dot', 'background-color')).toBe(GR2[id]);
+    expect(tone('.legend-swatch--dot', 'background-color')).toBe(GR2[id]);
   });
 
   // Анкета кандидата красится инлайновыми стилями из JS, поэтому её чернила

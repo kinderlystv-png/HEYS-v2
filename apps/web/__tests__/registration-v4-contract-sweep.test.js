@@ -113,6 +113,54 @@ describe('registration · сведение с контрактом v4', () => {
     expect(PROFILE_SRC).not.toContain("style: { fontSize: 24, color: under18 ? '#a1471c' : '#8a4a20', marginTop: 14 }");
   });
 
+  // Строка «герой» (12-я сборка): «герой есть только на первом шаге профиля —
+  // там значение одно и очевидно. На шагах 2–4 героя нет: на втором два равных
+  // числа, на третьем и четвёртом чисел нет вовсе, и выносить нечего».
+  // Прежняя редакция требовала героя на каждом шаге и не называла, какое число
+  // выносить на 2–4; расхождение снято самим контрактом.
+  it('«герой» — крупное значение только на шаге 1, на шагах 2–4 его нет', () => {
+    const { steps } = loadProfileSteps(createMockStorage({ heys_profile: '{}' }));
+    const render = (id, data) => steps[id].component({ data, onChange: vi.fn() });
+
+    // Кегль узла: и раскладка `font:`, и отдельный fontSize.
+    const sizes = (tree) => flatten(tree).map((n) => {
+      const style = n.props?.style || {};
+      if (typeof style.fontSize === 'number') return style.fontSize;
+      const shorthand = String(style.font || '').match(/^\d+\s+([\d.]+)px/);
+      return shorthand ? Number(shorthand[1]) : 0;
+    }).filter((size) => size > 0);
+
+    const step1 = render('profile-personal', {
+      firstName: 'Александра', lastName: '', gender: 'Женский',
+      birthDay: 1, birthMonth: 1, birthYear: 2001,
+    });
+    const step2 = render('profile-body', { height: 170, weight: 74, weightGoal: 64 });
+    const step3 = render('profile-goals', { goalDirection: 'lose', deficitPctTarget: -15, activityLevel: 'light' });
+    const step4 = render('profile-metabolism', { sleepHours: 8, insulinWaveHours: 3 });
+
+    // Шаг 1: герой 44 и единственный — второго крупного числа на экране нет.
+    expect(sizes(step1).filter((size) => size === 44).length).toBe(1);
+    expect(Math.max(...sizes(step1))).toBe(44);
+
+    // Шаги 2–4: выше заголовка 20 px ничего не поднимается. Пустой список
+    // кеглей засчитался бы как «прошло», поэтому он проверяется отдельно —
+    // иначе тест сторожил бы собственную слепоту.
+    for (const tree of [step2, step3, step4]) {
+      expect(sizes(tree).length).toBeGreaterThan(0);
+      expect(Math.max(...sizes(tree))).toBeLessThanOrEqual(20);
+    }
+
+    // На втором — ровно два равных числа (ИМТ сейчас и «До цели»), а не герой.
+    const twins = flatten(step2).filter((n) => n.props?.style?.fontSize === 18
+      && n.props?.style?.fontWeight === 700);
+    expect(twins.length).toBe(2);
+
+    // На третьем и четвёртом крупных чисел нет вовсе: выносить нечего.
+    for (const tree of [step3, step4]) {
+      expect(sizes(tree).filter((size) => size > 20).length).toBe(0);
+    }
+  });
+
   it('«цель касания» — чипы темпа, активности и сна держат 44 pt', () => {
     const { steps } = loadProfileSteps(createMockStorage({ heys_profile: '{}' }));
     const goals = styles(steps['profile-goals'].component({
