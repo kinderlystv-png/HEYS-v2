@@ -57,14 +57,28 @@
       const digits = phase === 'code' ? codeDigits : confirmDigits;
       const pinOverlay = phase === 'code' ? codeOverlay : confirmOverlay;
       const setPinOverlay = phase === 'code' ? setCodeOverlay : setConfirmOverlay;
-      const pinLabel = phase === 'code' ? 'Придумайте код доступа' : 'Повторите код';
+      const pinLabel = phase === 'code' ? 'Новый код' : 'Повторите код';
+
+      // Строки «создание кода» и «после сброса»: экран объясняет, зачем нужен
+      // код, а после сброса — что прежний код и другие входы уже не работают.
+      // Раньше на первом шаге стоял только заголовок с подписью поля.
+      const screenTitle = phase === 'confirm'
+        ? 'Повторите код'
+        : (skipPepAgreement ? 'Придумайте новый код' : 'Придумайте свой код');
+      const screenSubtitle = phase === 'confirm'
+        ? 'Ещё раз, чтобы не ошибиться. Восстановить его нельзя — только выпустить новый через куратора.'
+        : (skipPepAgreement
+          ? 'Куратор выдал код для входа, вы им вошли. Соглашение подписано ранее — заново принимать не нужно.'
+          : 'Дальше вы входите своим кодом — код куратора для входа больше не нужен.');
 
       const code = useMemo(() => codeDigits.join(''), [codeDigits]);
       const confirm = useMemo(() => confirmDigits.join(''), [confirmDigits]);
-      const confirmValid = auth && auth.validatePinStrict(confirm) && code === confirm;
+      // Строка «отказы кода»: «Продолжить» доступна, как только повтор набран.
+      // Пока кнопка гасла до совпадения кодов, отказ «Коды не совпали» был
+      // недостижим — человек молча тыкал в мёртвую кнопку.
       const canContinue = phase === 'code'
         ? code.length === 4
-        : confirmValid && (skipPepAgreement || pepAccepted);
+        : confirm.length === 4 && (skipPepAgreement || pepAccepted);
 
       function getActiveDigits() {
         return phase === 'code' ? codeDigitsRef.current : confirmDigitsRef.current;
@@ -229,8 +243,9 @@
         const confirmNow = (confirmDigitsRef.current || []).join('');
         if (phase === 'code') {
           if (!auth.validatePinStrict(codeNow)) {
+            // Строка «отказы кода»: «Код слишком простой» перечисляет требования.
             setErr(codeNow.length === 4
-              ? 'Код слишком простой. Придумайте другой из 4 цифр.'
+              ? 'Код слишком простой. Не подходят подряд идущие цифры, одна цифра четыре раза и код, который выдал куратор.'
               : 'Введите код из 4 цифр');
             return;
           }
@@ -244,7 +259,16 @@
           return;
         }
         if (!auth.validatePinStrict(confirmNow) || confirmNow !== codeNow) {
-          setErr('Коды не совпали. Введите тот же код ещё раз.');
+          // Строка «отказы кода»: «Коды не совпали» отправляет с первого шага,
+          // а не оставляет повторять ввод поверх забытого кода.
+          setErr('Коды не совпали. Введите новый код заново — с первого шага.');
+          setPhase('code');
+          codeDigitsRef.current = ['', '', '', ''];
+          confirmDigitsRef.current = ['', '', '', ''];
+          setCodeDigits(['', '', '', '']);
+          setConfirmDigits(['', '', '', '']);
+          resetOverlayState(setCodeOverlay);
+          resetOverlayState(setConfirmOverlay);
           return;
         }
         if (!skipPepAgreement && !pepAccepted) {
@@ -316,23 +340,23 @@
           React.createElement(
             'div',
             { className: 'heys-auth-title' },
-            phase === 'code' ? 'Придумайте код' : 'Повторите код',
+            screenTitle,
           ),
-          phase === 'confirm' && skipPepAgreement
-            ? React.createElement(
-              'div',
-              { className: 'heys-auth-subtitle' },
-              'Код доступа уже был принят раньше — подтвердите новый.',
-            )
-            : null,
+          React.createElement(
+            'div',
+            { className: 'heys-auth-subtitle' },
+            screenSubtitle,
+          ),
         ),
         React.createElement(
           'div',
           { className: 'heys-auth-pin-section space-y-3 is-active' },
           React.createElement('div', { className: 'heys-auth-label' }, pinLabel),
+          // Строка «доступность»: боксы — одно поле для скринридера с подписью
+          // «<подпись>, N из 4»; точки в боксах декоративны.
           React.createElement(
             'div',
-            { className: 'heys-auth-pin-grid' },
+            { className: 'heys-auth-pin-grid', role: 'group', 'aria-label': pinLabel },
             [0, 1, 2, 3].map((i) => {
               const digit = (digits && digits[i]) || '';
               const isFilled = Boolean(digit);
@@ -353,6 +377,7 @@
                   ref: (el) => { pinRefs.current[i] = el; },
                   id: 'heys-access-code-' + phase + '-' + (i + 1),
                   name: 'access-code-' + phase + '-' + (i + 1),
+                  'aria-label': pinLabel + ', ' + (i + 1) + ' из 4',
                   type: 'text',
                   inputMode: 'numeric',
                   pattern: '[0-9]*',
@@ -426,6 +451,7 @@
                     'span',
                     {
                       key: 'ac_pin_overlay_' + phase + '_' + i + '_' + overlay.k,
+                      'aria-hidden': 'true',
                       className: 'pin-digit-overlay absolute inset-0 flex items-center justify-center heys-auth-pin-overlay pointer-events-none',
                       onAnimationEnd: () => {
                         setPinOverlay((prev) => {
@@ -452,12 +478,22 @@
             }),
           ),
         ),
+        // Строка «после сброса»: вместо соглашения — строка о том, что прежний
+        // код перестал работать и другие входы завершены.
+        skipPepAgreement && phase === 'code'
+          ? React.createElement(
+            'div',
+            { className: 'heys-auth-reset-note' },
+            'Прежний код перестал работать, и все входы на других устройствах завершены. Никому не сообщайте новый код, в том числе куратору.',
+          )
+          : null,
         React.createElement(
           'div',
           {
             className: 'heys-auth-keypad',
             ref: keypadRef,
-            'aria-label': 'Цифровая клавиатура PIN',
+            // Строка «слово»: в подписях только «код», без «PIN».
+            'aria-label': 'Цифровая клавиатура кода',
           },
           [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) =>
             React.createElement(
@@ -521,9 +557,11 @@
           { className: 'heys-auth-error heys-auth-error-slot is-pin-error', role: 'alert' },
           err,
         ),
+        // Строка «полка»: кнопка и обязательная строка закреплены внизу и не
+        // уезжают с содержимым карточки. Прежде они шли потоком внутри неё.
         React.createElement(
           'div',
-          { className: 'mt-5 space-y-2' },
+          { className: 'heys-auth-pep-dock' },
           React.createElement(
             'button',
             {
@@ -550,11 +588,11 @@
             },
             'Изменить код',
           ),
-        ),
-        !skipPepAgreement && phase === 'confirm' && React.createElement(
-          'p',
-          { className: 'heys-auth-meta mt-3 text-xs text-center' },
-          'Нажимая «Продолжить», вы заключаете соглашение и создаёте код доступа',
+          !skipPepAgreement && phase === 'confirm' && React.createElement(
+            'p',
+            { className: 'heys-auth-meta' },
+            'Нажимая «Продолжить», вы заключаете соглашение и создаёте код доступа',
+          ),
         ),
       );
     };

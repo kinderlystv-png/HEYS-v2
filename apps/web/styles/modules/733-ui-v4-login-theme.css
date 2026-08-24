@@ -29,7 +29,8 @@
   color: #201e1d;
   font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  transition: background 0.24s ease;
+  /* Строка «уменьшенное движение»: перекраска при выборе палитры — мгновенно,
+     переходов на этом экране нет и без системной настройки. */
 }
 
 .heys-auth-shell--curator {
@@ -793,6 +794,15 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   line-height: 1.35;
 }
 
+/* Строка «заглушка на время работ»: срок отдельной строкой под причиной. */
+.heys-auth-maintenance-block__eta {
+  margin-top: 7px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 .heys-auth-maintenance-block__body {
   margin-top: 9px;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
@@ -1013,7 +1023,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 .heys-login-theme {
   width: 100%;
   margin: 0 auto;
-  transition: opacity 0.2s ease;
+  /* Строка «уменьшенное движение»: раскрытие панели оформления — мгновенно. */
 }
 
 .heys-auth-shell-dock .heys-login-theme,
@@ -1115,6 +1125,14 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   padding: 16px 14px 14px;
   border-radius: 20px;
   background: #f7efe2;
+}
+
+/* Строки «вид выбора оформления» и «раскрытое»: панель встаёт на место
+   клавиатуры и держит её высоту (4×48 + 3 зазора по 7 = 213). Панель была
+   ниже клавиатуры, карточка пересчитывала центр — телефон и боксы съезжали. */
+.heys-auth-theme-panel-slot .heys-login-theme--login-only.is-expanded .heys-login-theme__panel {
+  box-sizing: border-box;
+  min-height: 213px;
 }
 
 .heys-login-theme--login-only .heys-login-theme__head {
@@ -1496,6 +1514,31 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   text-align: left;
 }
 
+/* Строки «создание кода» и «после сброса»: объяснение стоит под заголовком. */
+.heys-auth-card--pep .heys-auth-heading .heys-auth-subtitle {
+  text-align: center;
+}
+
+.heys-auth-card--pep .heys-auth-reset-note {
+  width: 100%;
+  margin-top: 16px;
+  padding: 15px 17px;
+  border-radius: 20px;
+  background: #efe3cf;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+[data-theme="dark"] .heys-auth-card--pep .heys-auth-reset-note,
+[data-theme="classic-dark"] .heys-auth-card--pep .heys-auth-reset-note,
+[data-theme="sand-dark"] .heys-auth-card--pep .heys-auth-reset-note,
+[data-theme="blue-dark"] .heys-auth-card--pep .heys-auth-reset-note {
+  background: #23201b;
+}
+
 .heys-auth-card--pep .heys-auth-label {
   margin: 0 0 12px;
   color: #c67139;
@@ -1571,7 +1614,8 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   justify-content: center;
   width: 100%;
   min-height: 48px;
-  margin-top: 18px;
+  /* Строка «полка»: кнопка живёт в закреплённой полке, свой отступ ей не нужен. */
+  margin-top: 0;
   padding: 17px 22px;
   border: none;
   border-radius: 999px;
@@ -1607,6 +1651,42 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   margin-top: 12px;
 }
 
+/* Строка «полка»: кнопка и обязательная строка закреплены внизу экрана и не
+   уезжают с содержимым карточки — прежде они шли потоком внутри карточки. */
+.heys-auth-shell--pep {
+  padding-bottom: max(112px, calc(env(safe-area-inset-bottom, 0px) + 112px)) !important;
+  overflow-y: auto;
+}
+
+.heys-auth-pep-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 12px 18px 20px;
+  padding-bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 20px));
+  background: #efe3cf;
+}
+
+.heys-auth-pep-dock > * {
+  max-width: var(--auth-card-max, 339px);
+  margin-inline: auto;
+}
+
+
+.heys-auth-pep-dock .heys-auth-meta {
+  margin-top: 9px;
+  text-align: center;
+}
+
+[data-theme="dark"] .heys-auth-pep-dock,
+[data-theme="classic-dark"] .heys-auth-pep-dock,
+[data-theme="sand-dark"] .heys-auth-pep-dock,
+[data-theme="blue-dark"] .heys-auth-pep-dock {
+  background: #2f2820;
+}
+
 .heys-auth-card--pep .heys-auth-error-slot.is-pin-error {
   visibility: visible;
 }
@@ -1628,26 +1708,31 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   pointer-events: auto;
 }
 
+/* Строка «вид шторки подписи»: лист прижат к низу во всю ширину — рамки
+   в 12 px вокруг листа быть не должно. */
 .heys-consent-sign-frame {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 12px;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: 0;
   box-sizing: border-box;
   pointer-events: none;
 }
 
 .heys-consent-sign-sheet {
   position: relative;
+  box-sizing: border-box;
   width: 100%;
+  max-height: 92dvh;
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 20px 18px 18px;
-  border-radius: 26px;
+  /* Строка «вид шторки подписи»: поля 18/18/22, радиус 26 только сверху. */
+  padding: 18px 18px 22px;
+  padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  border-radius: 26px 26px 0 0;
   background: var(--v4-sand-surface-soft, #fffaf1);
   color: #201e1d;
   font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
@@ -1655,22 +1740,85 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   pointer-events: auto;
 }
 
+/* Строка «вид шторки подписи»: ручка 38×4 тоном чернил 14 %. */
 .heys-consent-sign-sheet__handle {
-  display: none;
+  flex: none;
+  width: 38px;
+  height: 4px;
+  margin: 0 auto 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+/* Строка «вид полки с кнопкой»: содержимое листа прокручивается, полка стоит. */
+.heys-consent-sign-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.heys-consent-sign-sheet__dock {
+  flex: none;
+  padding-top: 12px;
+}
+
+/* Строка «вид шторки подписи»: надзаголовок «Подписание» 10/700 прописными
+   с разрядкой .14em тоном --ac, через 9 — название документа 16/700. */
+.heys-consent-sign-sheet__kicker {
+  color: #8a4a20;
+  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .heys-consent-sign-sheet__title {
-  margin: 0;
-  font: 700 15px/1.35 Figtree, system-ui, sans-serif;
+  margin: 9px 0 0;
+  font: 700 16px/1.35 Figtree, system-ui, sans-serif;
   color: #201e1d;
-  text-align: center;
+  text-align: left;
+  text-wrap: pretty;
 }
 
-.heys-consent-sign-sheet__hint {
-  margin: 7px 0 0;
+/* Строка «подпись документа»: ссылка на документ рядом с его редакцией. */
+.heys-consent-sign-sheet__doc-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 0 15px;
+  border-radius: 16px;
+  background: #f7efe2;
+}
+
+.heys-consent-sign-sheet__doc-link-row + .heys-consent-sign-sheet__doc-link-row {
+  margin-top: 8px;
+}
+
+.heys-consent-sign-sheet__doc-edition {
   color: rgba(0, 0, 0, 0.55);
-  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  text-align: center;
+  font: 600 12px/1.3 Figtree, system-ui, sans-serif;
+}
+
+.heys-consent-sign-sheet__doc-link {
+  flex: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: #8a4a20;
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+/* Строка «вид полки с кнопкой»: обязательная строка 11/500 тоном чернил 55 %
+   над кнопкой через 10. */
+.heys-consent-sign-sheet__hint {
+  margin: 0 0 10px;
+  color: rgba(0, 0, 0, 0.55);
+  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  text-align: left;
   text-wrap: pretty;
 }
 
@@ -1821,11 +1969,17 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   text-wrap: pretty;
 }
 
+/* Строка «вид полки с кнопкой»: заливка --acs, высота не меньше 48, радиус 999. */
 .heys-consent-sign-sheet__primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   width: 100%;
+  min-height: 48px;
   border: 0;
   border-radius: 999px;
-  padding: 16px;
+  padding: 14px 16px;
   background: #c67139;
   color: #2b1608;
   font-family: inherit;
@@ -1835,8 +1989,22 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   cursor: pointer;
 }
 
-.heys-consent-sign-sheet__primary--continue {
-  margin-top: 14px;
+.heys-consent-sign-sheet__cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: rgba(0, 0, 0, 0.55);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .heys-consent-sign-sheet__primary:disabled {
@@ -1880,8 +2048,23 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   background: #23201b;
 }
 
-[data-theme$="dark"] .heys-consent-sign-sheet__doc-version {
+[data-theme$="dark"] .heys-consent-sign-sheet__doc-version,
+[data-theme$="dark"] .heys-consent-sign-sheet__kicker,
+[data-theme$="dark"] .heys-consent-sign-sheet__doc-link {
   color: #e2a468;
+}
+
+[data-theme$="dark"] .heys-consent-sign-sheet__handle {
+  background: rgba(242, 237, 230, 0.14);
+}
+
+[data-theme$="dark"] .heys-consent-sign-sheet__doc-link-row {
+  background: #23201b;
+}
+
+[data-theme$="dark"] .heys-consent-sign-sheet__doc-edition,
+[data-theme$="dark"] .heys-consent-sign-sheet__cancel {
+  color: rgba(242, 237, 230, 0.55);
 }
 
 [data-theme$="dark"] .heys-consent-sign-sheet__doc-divider {

@@ -63,6 +63,13 @@
         themeApi.setModePreference(modePref);
     }
 
+    // Строка «доступность»: выбор оформления — группа с подписью текущей
+    // палитры; раньше скринридер слышал только «Выбор оформления» без неё.
+    function paletteGroupLabel(palette) {
+        const variant = PALETTE_VARIANTS.find((item) => item.id === palette) || PALETTE_VARIANTS[0];
+        return COPY.title + ', ' + variant.label;
+    }
+
     function paletteSwatch(palette) {
         if (palette === 'blue') return { act: '#2e7cc0', ok: '#3e9a6b' };
         return { act: '#c67139', ok: '#7a8a5e' };
@@ -95,6 +102,8 @@
 
         const root = document.createElement('div');
         root.className = 'heys-login-theme';
+        root.setAttribute('role', 'group');
+        root.setAttribute('aria-label', paletteGroupLabel(palette));
 
         const dots = document.createElement('button');
         dots.type = 'button';
@@ -226,6 +235,8 @@
                     slot.appendChild(slotRoot);
                 }
                 slotRoot.className = root.className + ' is-expanded';
+                slotRoot.setAttribute('role', 'group');
+                slotRoot.setAttribute('aria-label', paletteGroupLabel(palette));
                 slotRoot.classList.toggle('is-dimmed', dimmed);
                 if (panel.parentNode !== slotRoot) slotRoot.appendChild(panel);
                 root.classList.remove('is-expanded');
@@ -261,6 +272,7 @@
 
             root.classList.toggle('is-expanded', expanded);
             root.classList.toggle('is-dimmed', dimmed);
+            root.setAttribute('aria-label', paletteGroupLabel(palette));
             dots.setAttribute('aria-expanded', expanded ? 'true' : 'false');
             panel.hidden = !expanded;
             dots.hidden = expanded;
@@ -481,7 +493,11 @@
 
             const dockRoot = React.createElement(
                 'div',
-                { className: rootClassName },
+                {
+                    className: rootClassName,
+                    role: 'group',
+                    'aria-label': paletteGroupLabel(palette),
+                },
                 !(dockLayout && panelSlotEl) ? panel : null,
                 dots,
             );
@@ -494,6 +510,8 @@
                             + (loginOnly ? ' heys-login-theme--login-only' : '')
                             + ' is-expanded'
                             + (dimmed ? ' is-dimmed' : ''),
+                        role: 'group',
+                        'aria-label': paletteGroupLabel(palette),
                     },
                     panel,
                 );

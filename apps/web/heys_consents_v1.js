@@ -92,14 +92,15 @@
     pointerEvents: 'auto',
   };
 
+  // Строка «вид шторки подписи»: лист прижат к низу во всю ширину — рамки
+  // в 12 px вокруг него нет, радиус 26 только сверху.
   const CONSENT_SIGN_FRAME_STYLE = {
     position: 'absolute',
     inset: 0,
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'flex-end',
-    padding: 12,
-    paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+    padding: 0,
     boxSizing: 'border-box',
     pointerEvents: 'none',
   };
@@ -107,7 +108,7 @@
   const CONSENT_SIGN_SHEET_STYLE = {
     position: 'relative',
     width: '100%',
-    borderRadius: 26,
+    borderRadius: '26px 26px 0 0',
     boxSizing: 'border-box',
     pointerEvents: 'auto',
   };
@@ -1011,9 +1012,11 @@
             setSignAttemptsRemaining(nextAttempts);
             setSignPinError(true);
             accessSignPinApi.resetDigits();
+            // Строка «ошибка при подписании»: называем цену — что будет,
+            // когда попытки кончатся. Прежде счётчик стоял без последствий.
             throw new Error(nextAttempts > 0
-              ? `Код не подошёл. Осталось ${nextAttempts} ${nextAttempts === 1 ? 'попытка' : (nextAttempts < 5 ? 'попытки' : 'попыток')}.`
-              : 'Код не подошёл. Попробуйте позже или напишите куратору.');
+              ? `Код не подошёл. Осталось ${nextAttempts} ${nextAttempts === 1 ? 'попытка' : (nextAttempts < 5 ? 'попытки' : 'попыток')}, дальше вход закроется и понадобится куратор.`
+              : 'Код не подошёл. Вход закрыт — напишите куратору, он откроет доступ.');
           }
           throw new Error(errCode || 'Не удалось подписать документы');
         }
@@ -1053,6 +1056,15 @@
           version: CURRENT_VERSIONS[type] || '1.0',
         }));
 
+      // Строка «подпись документа»: в шторке видно, что подписывается, и есть
+      // ссылка на документ. Раньше стоял только заголовок «Подпишите документы».
+      const signDocName = (type) => CONSENT_TEXTS.checkboxes[type]?.screenLabel
+        || CONSENT_TEXTS.checkboxes[type]?.label
+        || type;
+      const signSheetTitle = signedDocsForDisplay.length === 1
+        ? signDocName(signedDocsForDisplay[0].type)
+        : 'Подпишите документы';
+
       return React.createElement('div', {
         ref: screenRef,
         'data-heys-visible-frame': signSuccess ? 'consent-signed' : 'consent-sign',
@@ -1076,6 +1088,28 @@
             'aria-modal': 'true',
             'aria-label': signSuccess ? 'Документы подписаны' : 'Подписание',
           },
+          // Строка «вид шторки подписи»: ручка 38×4 сверху листа.
+          React.createElement('div', {
+            className: 'heys-consent-sign-sheet__handle',
+            'aria-hidden': 'true',
+          }),
+          React.createElement('div', { className: 'heys-consent-sign-sheet__body' },
+          React.createElement('div', { className: 'heys-consent-sign-sheet__kicker' }, 'Подписание'),
+          React.createElement('div', { className: 'heys-consent-sign-sheet__title' }, signSheetTitle),
+          signedDocsForDisplay.map((item) => React.createElement('div', {
+            key: 'sign_doc_' + item.type,
+            className: 'heys-consent-sign-sheet__doc-link-row',
+          },
+            React.createElement('span', { className: 'heys-consent-sign-sheet__doc-edition' },
+              (signedDocsForDisplay.length === 1 ? 'Редакция ' : signDocName(item.type) + ', редакция ')
+              + (item.version || CURRENT_VERSIONS[item.type] || '1.0')
+            ),
+            React.createElement('button', {
+              type: 'button',
+              className: 'heys-consent-sign-sheet__doc-link',
+              onClick: () => setShowFullText(item.type),
+            }, 'Читать')
+          )),
           signSuccess
             ? React.createElement(React.Fragment, null,
               React.createElement('div', { className: 'heys-consent-sign-sheet__done', role: 'status' },
@@ -1107,25 +1141,17 @@
                   );
                 })
               ),
+              // Строка «после подписи»: запись — документ, версия, время и
+              // устройство, тот же список, что в журнале.
               React.createElement('p', { className: 'heys-consent-sign-sheet__done-note' },
-                'Копия подписи хранится в профиле — её видно в настройках'
-              ),
-              React.createElement('button', {
-                type: 'button',
-                className: 'heys-consent-sign-sheet__primary heys-consent-sign-sheet__primary--continue',
-                disabled: !!loading,
-                onClick: handleAccessCodeSign,
-              }, 'Продолжить')
+                'Запись о подписании сохранена: документ, версия, время и устройство. Копию можно запросить у куратора.'
+              )
             )
             : React.createElement(React.Fragment, null,
-              React.createElement('div', { className: 'heys-consent-sign-sheet__title' }, 'Подпишите документы'),
-              React.createElement('p', { className: 'heys-consent-sign-sheet__hint' },
-                'Введите код доступа — он заменяет собственноручную подпись.',
-              ),
               pinKeypadKit
                 ? pinKeypadKit.renderPinKeypadSection({
                   pin: accessSignPinApi,
-                  label: '',
+                  label: 'Код доступа',
                   labelClassName: 'heys-auth-label',
                   sectionClassName: 'heys-auth-pin-section space-y-3 is-active'
                     + (signPinError ? ' is-error' : ''),
@@ -1138,6 +1164,27 @@
                 role: 'alert',
               }, error)
             )
+          ),
+          // Строка «вид полки с кнопкой»: строка и кнопка закреплены внизу листа
+          // и не уезжают с содержимым; в фазе ввода кнопки прежде не было вовсе.
+          React.createElement('div', { className: 'heys-consent-sign-sheet__dock' },
+            !signSuccess && React.createElement('p', { className: 'heys-consent-sign-sheet__hint' },
+              'Код вводится каждый раз при подписании — даже на запомненном устройстве. Так подпись не зависит от того, у кого в руках телефон.'
+            ),
+            React.createElement('button', {
+              type: 'button',
+              className: 'heys-consent-sign-sheet__primary'
+                + (signSuccess ? ' heys-consent-sign-sheet__primary--continue' : ''),
+              disabled: !!loading || (!signSuccess && !accessSignPinApi?.isComplete),
+              onClick: handleAccessCodeSign,
+            }, signSuccess ? 'Готово' : 'Подписать'),
+            !signSuccess && typeof onCancel === 'function' && React.createElement('button', {
+              type: 'button',
+              className: 'heys-consent-sign-sheet__cancel',
+              disabled: !!loading,
+              onClick: () => onCancel(),
+            }, 'Отмена')
+          )
           )
         ),
         showFullText && React.createElement(FullTextModal, {

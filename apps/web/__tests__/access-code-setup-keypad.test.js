@@ -99,7 +99,9 @@ describe('ClientAccessCodeSetup keypad', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
 
     expect(screen.getByRole('alert').textContent).toMatch(/слишком простой/i);
-    expect(screen.getByText('Придумайте код доступа')).toBeTruthy();
+    // Подпись поля — «Новый код» (кадры nc1/nc4 канваса login); прежняя
+    // строка «Придумайте код доступа» дублировала заголовок экрана.
+    expect(screen.getByText('Новый код')).toBeTruthy();
     expect(window.HEYS.auth.setClientAccessCode).not.toHaveBeenCalled();
   });
 
@@ -113,7 +115,9 @@ describe('ClientAccessCodeSetup keypad', () => {
     }));
 
     expect(document.querySelector('.heys-auth-card--pep')).toBeTruthy();
-    expect(screen.getByText('Придумайте код доступа')).toBeTruthy();
+    // Подпись поля — «Новый код» (кадры nc1/nc4 канваса login); прежняя
+    // строка «Придумайте код доступа» дублировала заголовок экрана.
+    expect(screen.getByText('Новый код')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Далее' })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: '2' }));

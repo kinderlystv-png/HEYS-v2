@@ -17,7 +17,11 @@ describe('PEP access-code setup v4 structure', () => {
     expect(setupSource).toContain('heys-auth-card--pep');
     expect(setupSource).toContain('heys-auth-heading');
     expect(setupSource).toContain('heys-auth-mark');
-    expect(setupSource).toContain('Придумайте код доступа');
+    // Подпись поля «Придумайте код доступа» -> «Новый код»: кадры nc1 и nc4
+    // канваса login дают именно её, а прежняя строка дублировала заголовок
+    // экрана. Заголовок и объяснение проверяются ниже.
+    expect(setupSource).toContain("'Новый код'");
+    expect(setupSource).toContain('Придумайте свой код');
     expect(setupSource).toContain('Повторите код');
     expect(setupSource).toContain("'Далее'");
     expect(setupSource).toContain("'Продолжить'");

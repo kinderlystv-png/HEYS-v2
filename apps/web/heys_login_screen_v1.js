@@ -55,6 +55,10 @@
   const LOGIN_MAINTENANCE_COPY = Object.freeze({
     title: 'Вход временно закрыт',
     body: 'Идут технические работы. Данные на месте, ничего делать не нужно.',
+    // Строка «заглушка на время работ» просит назвать срок. Точный срок знает
+    // оператор (login_closed_eta), поэтому по умолчанию говорим, когда зайти
+    // снова, а не обещаем, что к этому моменту закончим.
+    eta: 'Попробуйте зайти через полчаса.',
   });
 
   function readLoginMaintenanceFlag() {
@@ -66,6 +70,7 @@
           closed: true,
           title: boot.title || LOGIN_MAINTENANCE_COPY.title,
           body: boot.body || boot.message || LOGIN_MAINTENANCE_COPY.body,
+          eta: boot.eta || LOGIN_MAINTENANCE_COPY.eta,
         };
       }
     } catch (_) { }
@@ -101,6 +106,7 @@
           closed: true,
           title: payload.login_closed_title || LOGIN_MAINTENANCE_COPY.title,
           body: payload.login_closed_message || LOGIN_MAINTENANCE_COPY.body,
+          eta: payload.login_closed_eta || LOGIN_MAINTENANCE_COPY.eta,
         };
       }
     } catch (_) { }
@@ -486,7 +492,8 @@
               ? `Слишком много попыток. Подождите ${sec}с и попробуйте снова.`
               : (serverMessage || 'Слишком много попыток. Попробуйте позже или напишите куратору.'));
           } else if (code === 'pin_login_disabled') {
-            setErr(serverMessage || 'Вход по PIN временно отключён. Куратор откроет доступ после обновления входа.');
+            // контракт login «слово»: в пользовательских текстах только «код», без «PIN»
+            setErr(serverMessage || 'Вход по коду временно отключён. Куратор откроет доступ после обновления входа.');
           } else if (code === 'access_code_login_required') {
             setErr(serverMessage || 'Используйте код доступа или вход с зарегистрированного устройства.');
           } else if (code === 'access_code_required') {
@@ -524,11 +531,11 @@
           } else if (code === 'invalid_phone') {
             setErr('Введите телефон в формате +7');
           } else if (code === 'invalid_pin') {
-            setErr('PIN должен быть из 4 цифр');
+            setErr('Код должен быть из 4 цифр');
             resetPinToFirstSlot();
           } else {
             // Незнакомый серверный код показываем словами сервера. Молча
-            // сводить его к «PIN не подошёл» нельзя: клиент решит, что забыл
+            // сводить его к «код не подошёл» нельзя: клиент решит, что забыл
             // код, и уйдёт в поддержку с несуществующей проблемой. Технические
             // тексты (сообщения исключений) сюда не попадают — они живут в
             // _debug.
@@ -698,7 +705,7 @@
 	            '×',
 	          ),
 	          React.createElement('div', { id: 'heys-auth-support-title', className: 'heys-auth-support-title' }, 'Поддержка HEYS'),
-	          React.createElement('div', { className: 'heys-auth-support-text' }, 'Если PIN не подходит или его нужно сбросить, напишите нам или позвоните.'),
+	          React.createElement('div', { className: 'heys-auth-support-text' }, 'Если код не подходит или его нужно сбросить, напишите нам или позвоните.'),
 	          React.createElement(
 	            'a',
 	            {
@@ -942,6 +949,7 @@
       };
 
       const handleKeypadDigit = (digit) => {
+        if (loginBlocked) return;
         if (isNewDeviceLogin) {
           appendPinDigit(digit);
           return;
@@ -951,6 +959,7 @@
       };
 
       const handleKeypadBackspace = () => {
+        if (loginBlocked) return;
         if (isNewDeviceLogin) {
           erasePinDigit();
           return;
@@ -1014,7 +1023,10 @@
                 inputMode: 'numeric',
                 autoComplete: 'tel',
                 autoFocus: false,
-                readOnly: touchKeypad || loginBlocked,
+                // Строка «клавиатура»: телефон — обычное поле с системной
+                // клавиатурой. readOnly на touch её не открывал, и ввод был
+                // возможен только через свою клавиатуру.
+                readOnly: loginBlocked,
                 placeholder: '(999) 123-45-67',
                 value: formatPhoneBody(phoneDigits),
                 onChange: handlePhoneInput,
@@ -1040,8 +1052,13 @@
           // PIN ввод — 4 отдельных поля (как в модных приложениях)
 	          React.createElement('div', { className: 'heys-auth-pin-section space-y-3 ' + ((!clientPhoneValid && !isNewDeviceLogin) ? 'is-muted ' : '') + (activeEntry === 'pin' ? 'is-active' : '') },
 	            React.createElement('div', { className: 'heys-auth-label' }, pinFieldLabel),
+            // Строка «доступность»: боксы кода — одно поле для скринридера
+            // с подписью «<подпись поля>, N из 4»; раньше это были четыре
+            // безымянных input подряд.
             React.createElement('div', {
-              className: 'heys-auth-pin-grid'
+              className: 'heys-auth-pin-grid',
+              role: 'group',
+              'aria-label': pinFieldLabel,
             },
 	              [0, 1, 2, 3].map((i) => {
 	                const digit = (pinDigits && pinDigits[i]) || '';
@@ -1060,6 +1077,7 @@
 	                    ref: (el) => { pinRefs.current[i] = el; },
 	                    id: 'heys-client-pin-' + (i + 1),
 	                    name: 'pin-' + (i + 1),
+	                    'aria-label': pinFieldLabel + ', ' + (i + 1) + ' из 4',
 	                    type: 'text',
 	                    inputMode: 'numeric',
 	                    pattern: '[0-9]*',
@@ -1156,6 +1174,8 @@
                       'span',
                       {
                         key: 'pin_overlay_' + i + '_' + overlay.k,
+                        // Строка «доступность»: точки в боксах декоративны.
+                        'aria-hidden': 'true',
                         className: 'pin-digit-overlay absolute inset-0 flex items-center justify-center heys-auth-pin-overlay pointer-events-none',
                         onAnimationEnd: () => {
                           // Сбрасываем только если это тот же overlay
@@ -1180,6 +1200,8 @@
             { className: 'heys-auth-maintenance-block', role: 'status' },
             React.createElement('div', { className: 'heys-auth-maintenance-block__title' }, loginMaintenance.title || LOGIN_MAINTENANCE_COPY.title),
             React.createElement('div', { className: 'heys-auth-maintenance-block__body' }, loginMaintenance.body || LOGIN_MAINTENANCE_COPY.body),
+            // Строка «заглушка на время работ»: срок отдельной строкой.
+            React.createElement('div', { className: 'heys-auth-maintenance-block__eta' }, loginMaintenance.eta || LOGIN_MAINTENANCE_COPY.eta),
           ),
 
           React.createElement(
@@ -1192,9 +1214,12 @@
             err || null,
           ),
 
-          !loginBlocked && !isNewDeviceLogin && React.createElement(
+          // Строка «блокировка»: клавиатура остаётся на экране и гаснет до 22 %
+          // (.heys-auth-shell--maintenance). Прежде её не рендерили вовсе —
+          // карточка схлопывалась, и плашка оказывалась в пустоте.
+          !isNewDeviceLogin && React.createElement(
             'div',
-            { className: 'heys-auth-keypad', ref: keypadRef, 'aria-label': 'Цифровая клавиатура PIN' },
+            { className: 'heys-auth-keypad', ref: keypadRef, 'aria-label': 'Цифровая клавиатура кода' },
             [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) =>
               React.createElement(
                 'button',
@@ -1225,7 +1250,7 @@
 	                type: 'button',
 	                className: 'heys-auth-key heys-auth-key--muted heys-auth-key--delete' + (canEraseKeypadDigit ? ' is-available' : ''),
 	                disabled: !canEraseKeypadDigit,
-	                'aria-label': 'Удалить цифру PIN',
+	                'aria-label': 'Удалить цифру кода',
 	                onClick: handleKeypadBackspace,
 	              },
               '⌫',
@@ -1401,7 +1426,9 @@
           + (mode === 'curator' ? ' heys-auth-shell--curator' : '')
           + (isIntakeLogin ? ' heys-auth-shell--intake' : '')
           + (isNewDeviceLogin ? ' heys-auth-shell--new-device' : '')
-          + (loginBlocked ? ' heys-auth-shell--maintenance' : ''),
+          + (loginBlocked ? ' heys-auth-shell--maintenance' : '')
+          // Строка «полка»: экран создания кода отдаёт низ закреплённой полке.
+          + (accessSetup && AccessCodeSetup ? ' heys-auth-shell--pep' : ''),
       },
       accessSetup && AccessCodeSetup
         ? React.createElement(AccessCodeSetup, {

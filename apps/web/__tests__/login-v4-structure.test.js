@@ -167,8 +167,12 @@ describe('login v4 frame groups', () => {
     expect(css).toContain('.heys-consent-sign-sheet__done');
     expect(css).toContain('.heys-consent-sign-frame');
     expect(css).toContain('var(--v4-modal-backdrop-blur');
-    expect(css).toMatch(/\.heys-consent-sign-sheet\s*\{[\s\S]*?padding:\s*20px 18px 18px/);
-    expect(css).toMatch(/\.heys-consent-sign-sheet\s*\{[\s\S]*?border-radius:\s*26px/);
+    // Поля 20/18/18 -> 18/18/22 и радиус только сверху: строка контракта
+    // «вид шторки подписи» (новая в восьмой сборке) и кадр nc5 требуют лист,
+    // прижатый к низу во всю ширину. Тест держал прежние числа.
+    expect(css).toMatch(/\.heys-consent-sign-sheet\s*\{[\s\S]*?padding:\s*18px 18px 22px/);
+    expect(css).toMatch(/\.heys-consent-sign-sheet\s*\{[\s\S]*?border-radius:\s*26px 26px 0 0/);
+    expect(css).toMatch(/\.heys-consent-sign-sheet__handle\s*\{[\s\S]*?width:\s*38px/);
   });
 
   it('restyles in-app settings theme sheet as header popover ad5a', () => {
