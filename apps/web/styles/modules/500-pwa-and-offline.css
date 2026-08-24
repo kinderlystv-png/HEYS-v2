@@ -215,9 +215,9 @@
   align-items: flex-end;
   justify-content: center;
   padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
-  background: rgba(24, 20, 16, 0.42);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+  -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
   animation: iosHomeInstallFadeIn 0.18s ease-out;
 }
@@ -232,11 +232,11 @@
   width: min(100%, 420px);
   max-height: min(88vh, 720px);
   overflow: auto;
-  padding: 18px 16px 14px;
-  border-radius: 28px;
+  padding: 17px 16px 12px;
+  border-radius: 26px;
   background: #ffffff;
   color: #1a1714;
-  box-shadow: 0 12px 40px rgba(40, 24, 8, 0.18);
+  box-shadow: 0 18px 50px rgba(40, 24, 8, 0.34);
   animation: iosHomeInstallSlideUp 0.24s cubic-bezier(0.34, 1.15, 0.64, 1);
 }
 
