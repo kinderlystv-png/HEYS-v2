@@ -657,12 +657,14 @@
         );
     }
 
+    // Контракт date-remainders, строка «звук»: отдельного тумблера «Звук советов»
+    // здесь нет — звук приложения один и живёт в настройках профиля одним
+    // переключателем «Звук». Частный тумблер обещал бы точечность, которой в коде нет:
+    // HEYS.sounds — мост в HEYS.audio, а тот гасится общим masterEnabled.
     function renderAdviceSettingsScreen(React, {
         onClose,
         toastsEnabled,
-        adviceSoundEnabled,
         onToggleToasts,
-        onToggleSound,
         categorySettings,
         onToggleCategoryGroup,
     }) {
@@ -704,20 +706,6 @@
                             className: 'advice-v4-settings__toggle' + (toastsEnabled ? ' is-on' : ''),
                             onClick: onToggleToasts,
                             'aria-pressed': toastsEnabled ? 'true' : 'false',
-                        }, React.createElement('span', { className: 'advice-v4-settings__toggle-thumb' }))
-                    ),
-                    React.createElement('div', { className: 'advice-v4-settings__row' },
-                        React.createElement('div', { className: 'advice-v4-settings__row-copy' },
-                            React.createElement('span', { className: 'advice-v4-settings__row-title' }, 'Звук'),
-                            React.createElement('span', { className: 'advice-v4-settings__row-hint' },
-                                'Только у советов. Остальные звуки приложения не затрагивает.'
-                            )
-                        ),
-                        React.createElement('button', {
-                            type: 'button',
-                            className: 'advice-v4-settings__toggle' + (adviceSoundEnabled ? ' is-on' : ''),
-                            onClick: onToggleSound,
-                            'aria-pressed': adviceSoundEnabled ? 'true' : 'false',
                         }, React.createElement('span', { className: 'advice-v4-settings__toggle-thumb' }))
                     ),
                     React.createElement('div', { className: 'advice-v4-settings__section-label' }, 'О чём'),
@@ -1284,6 +1272,61 @@
         );
     }
 
+    // Строка «доступность»: шторка советов — модальный диалог с запертым
+    // фокусом. Отдельный компонент нужен ради хука: renderManualAdviceList —
+    // обычная функция, хуки в ней недопустимы.
+    const ADVICE_FOCUSABLE_SELECTOR =
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    function AdviceDrawerDialog({ className, label, onClick, onTouchStart, onTouchMove, onTouchEnd, children }) {
+        const nodeRef = React.useRef(null);
+
+        React.useEffect(() => {
+            const node = nodeRef.current;
+            if (!node) return undefined;
+            const previouslyFocused = document.activeElement;
+            try { node.focus({ preventScroll: true }); } catch (_) { /* noop */ }
+
+            const handleKeyDown = (e) => {
+                if (e.key !== 'Tab') return;
+                const items = Array.from(node.querySelectorAll(ADVICE_FOCUSABLE_SELECTOR))
+                    .filter((el) => el.offsetParent !== null);
+                if (items.length === 0) { e.preventDefault(); return; }
+                const first = items[0];
+                const last = items[items.length - 1];
+                const active = document.activeElement;
+                if (e.shiftKey && (active === first || active === node || !node.contains(active))) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && (active === last || !node.contains(active))) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            };
+
+            node.addEventListener('keydown', handleKeyDown);
+            return () => {
+                node.removeEventListener('keydown', handleKeyDown);
+                if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+                    try { previouslyFocused.focus({ preventScroll: true }); } catch (_) { /* noop */ }
+                }
+            };
+        }, []);
+
+        return React.createElement('div', {
+            ref: nodeRef,
+            className,
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-label': label,
+            tabIndex: -1,
+            onClick,
+            onTouchStart,
+            onTouchMove,
+            onTouchEnd,
+        }, children);
+    }
+
     // --- AdviceCard component ---
     const AdviceCard = React.memo(function AdviceCard({
         advice,
@@ -1297,7 +1340,6 @@
         onUndo,
         onClearLastDismissed,
         onSchedule,
-        onToggleExpand,
         trackClick,
         onRate,
         onSwipeStart,
@@ -1307,7 +1349,6 @@
         onLongPressEnd,
         registerCardRef,
         onOpenDetails,
-        onOpenTechnicalDetails,
     }) {
         const adviceDescription = getAdviceScienceSummary(advice);
         const hasTechnicalDetails = hasExpertContent(advice);
@@ -1376,40 +1417,22 @@
                 React.createElement('span', { className: 'advice-list-icon' }, advice.icon),
                 React.createElement('div', { className: 'advice-list-content' },
                     React.createElement('span', { className: 'advice-list-text' }, advice.text),
+                    // Строка «вид карточки совета»: «Детали» — строка-вход с
+                    // шевроном 14 px, а не раскрытие пояснения в карточке.
+                    // Пояснение и «Технические детали» живут в детали совета.
                     hasExpandedContent && React.createElement('div', { className: 'advice-list-card-actions' },
                         React.createElement('button', {
                             type: 'button',
                             className: 'advice-card-footnote-link',
                             onClick: (e) => {
                                 e.stopPropagation();
-                                onToggleExpand && onToggleExpand(advice.id, e);
+                                // 🚀 PERF R38: тот же отложенный вход, что и по тапу карточки
+                                setTimeout(() => {
+                                    if (trackClick) trackClick(advice);
+                                    onOpenDetails && onOpenDetails(advice, e);
+                                }, 0);
                             }
-                        }, 'Детали'),
-                        React.createElement('span', {
-                            className: 'advice-expand-arrow',
-                            'aria-hidden': 'true',
-                            style: {
-                                marginLeft: 'auto',
-                                fontSize: '10px',
-                                opacity: 0.5,
-                                transition: 'transform 0.2s',
-                                display: 'inline-block',
-                                transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-                            },
-                        }, '›')
-                    ),
-                    isExpanded && React.createElement('div', { className: 'advice-list-details' },
-                        adviceDescription && React.createElement('div', { className: 'advice-list-details__description' }, adviceDescription),
-                        hasTechnicalDetails && React.createElement('div', { className: 'advice-list-details__actions advice-list-details__actions--subtle' },
-                            React.createElement('button', {
-                                type: 'button',
-                                className: 'advice-technical-trigger',
-                                onClick: (e) => {
-                                    e.stopPropagation();
-                                    onOpenTechnicalDetails && onOpenTechnicalDetails(advice, e);
-                                }
-                            }, 'Тех. детали')
-                        )
+                        }, 'Детали', renderAdviceV4Icon(React, 'chevron-right'))
                     ),
                     // 🎯 Phase B.3 (2026-05-31): in-card action buttons в drawer.
                     // Если rule имеет advice.action.primary — render 2 кнопки
@@ -1694,8 +1717,6 @@
         closeAdviceSettings,
         toastsEnabled,
         toggleToastsEnabled,
-        adviceSoundEnabled,
-        toggleAdviceSoundEnabled,
         adviceCategorySettings,
         toggleAdviceCategoryGroup,
     }) {
@@ -1717,9 +1738,7 @@
             adviceSettingsOpen && renderAdviceSettingsScreen(React, {
                 onClose: closeAdviceSettings,
                 toastsEnabled,
-                adviceSoundEnabled,
                 onToggleToasts: toggleToastsEnabled,
-                onToggleSound: toggleAdviceSoundEnabled,
                 categorySettings: adviceCategorySettings,
                 onToggleCategoryGroup: toggleAdviceCategoryGroup,
             })
@@ -1741,7 +1760,6 @@
         adviceSwipeState,
         expandedAdviceId,
         trackClick,
-        handleAdviceToggleExpand,
         rateAdvice,
         handleAdviceSwipeStart,
         handleAdviceSwipeMove,
@@ -1756,8 +1774,6 @@
         dismissAllAnimation,
         toastsEnabled,
         toggleToastsEnabled,
-        adviceSoundEnabled,
-        toggleAdviceSoundEnabled,
         scheduleAdvice,
         undoLastDismiss,
         clearLastDismissed,
@@ -1826,8 +1842,9 @@
             // 🚀 PERF R32: defer dismissToast — 15 setState calls cascade (115ms → ~0ms click)
             onClick: () => setTimeout(dismissToast, 0),
         },
-            React.createElement('div', {
+            React.createElement(AdviceDrawerDialog, {
                 className: `advice-list-container advice-list-container--v4${dismissAllAnimation ? ' shake-warning' : ''}${showSwipeFeedback ? ' advice-list-container--feedback-open' : ''}`,
+                label: displayAdviceCount > 0 ? `Советы, ${displayAdviceCount}` : 'Советы',
                 onClick: e => e.stopPropagation(),
                 onTouchStart: handleAdviceListTouchStart,
                 onTouchMove: handleAdviceListTouchMove,
@@ -1899,7 +1916,6 @@
                                         onUndo: undoLastDismiss,
                                         onClearLastDismissed: clearLastDismissed,
                                         onSchedule: scheduleAdvice,
-                                        onToggleExpand: handleAdviceToggleExpand,
                                         trackClick,
                                         onRate: rateAdvice,
                                         onSwipeStart: handleAdviceSwipeStart,
@@ -1909,7 +1925,6 @@
                                         onLongPressEnd: handleAdviceLongPressEnd,
                                         registerCardRef: registerAdviceCardRef,
                                         onOpenDetails: openAdviceDetailModal,
-                                        onOpenTechnicalDetails: openAdviceTechnicalDetails,
                                     })
                                 )
                             );
@@ -1928,7 +1943,6 @@
                             onUndo: undoLastDismiss,
                             onClearLastDismissed: clearLastDismissed,
                             onSchedule: scheduleAdvice,
-                            onToggleExpand: handleAdviceToggleExpand,
                             trackClick,
                             onRate: rateAdvice,
                             onSwipeStart: handleAdviceSwipeStart,
@@ -1938,7 +1952,6 @@
                             onLongPressEnd: handleAdviceLongPressEnd,
                             registerCardRef: registerAdviceCardRef,
                             onOpenDetails: openAdviceDetailModal,
-                            onOpenTechnicalDetails: openAdviceTechnicalDetails,
                         }))
                 ),
                 displayAdviceCount > 0 && React.createElement('div', { className: 'advice-list-hints' },
@@ -2031,21 +2044,19 @@
         }
         if (!(adviceTrigger === 'manual_empty' && toastVisible)) return null;
 
+        // Строка «пустое состояние»: шторка не открывается — показывается
+        // всплывающая плашка над нижним меню. Гаснет по тапу: таймер здесь
+        // запрещён тестом advice-menu-open «keeps empty advice drawer open
+        // until user dismisses it».
         return React.createElement('div', {
-            className: 'advice-list-overlay',
+            className: 'advice-v4-empty-toast',
+            role: 'status',
+            'aria-live': 'polite',
             onClick: () => setTimeout(dismissToast, 0),
         },
-            React.createElement('div', {
-                className: 'advice-list-container advice-list-container--v4 advice-list-container--empty',
-                onClick: (e) => e.stopPropagation(),
-            },
-                React.createElement('div', { className: 'advice-list-handle', 'aria-hidden': true }),
-                React.createElement('div', { className: 'advice-list-header advice-list-header--v4' },
-                    React.createElement('span', { className: 'advice-list-title' }, 'Советы')
-                ),
-                React.createElement('div', { className: 'advice-v4-empty-copy' },
-                    'Пока всё по плану — советов нет'
-                )
+            renderAdviceV4Icon(React, 'check'),
+            React.createElement('span', { className: 'advice-v4-empty-toast__text' },
+                'Пока всё по плану — советов нет'
             )
         );
     };
@@ -2304,16 +2315,6 @@
             console.info('[HEYS.advice] readAdviceSettings: no settings found, returning {}');
             return {};
         }, [HEYSRef.store, getCurrentAdviceClientId, readRawAdviceSettings, utils.lsGet]);
-        const getAdviceSoundEnabled = useCallback((settings) => {
-            if (Object.prototype.hasOwnProperty.call(settings, 'adviceSoundEnabled')) {
-                return settings.adviceSoundEnabled !== false;
-            }
-            if (Object.prototype.hasOwnProperty.call(settings, 'soundEnabled')) {
-                return settings.soundEnabled !== false;
-            }
-            return null;
-        }, []);
-
         const [toastsEnabled, setToastsEnabled] = useState(() => {
             try {
                 const settings = readAdviceSettings();
@@ -2338,25 +2339,10 @@
                 return true;
             }
         });
-        const [adviceSoundEnabled, setAdviceSoundEnabled] = useState(() => {
-            try {
-                const settings = readAdviceSettings();
-                const soundVal = getAdviceSoundEnabled(settings);
-                if (soundVal !== null) return soundVal;
-                // Аналогично toastsEnabled: returning user → false до прихода sync.
-                let isReturning = false;
-                try {
-                    isReturning = !!localStorage.getItem('heys_pin_auth_client') ||
-                                  !!localStorage.getItem('heys_session_token') ||
-	                                  !!localStorage.getItem('heys_last_client_id') ||
-	                                  !!localStorage.getItem('heys_curator_cookie_session_hint');
-                } catch (_) { }
-                if (isReturning) return false;
-                return true;
-            } catch (e) {
-                return true;
-            }
-        });
+        // Контракт date-remainders, строка «звук»: своего состояния звука у советов нет.
+        // Прежде здесь жил adviceSoundEnabled — второй выключатель поверх общего,
+        // который у вернувшегося пользователя стартовал с false и без своего тумблера
+        // молча глушил бы советы. Гашение целиком на HEYS.audio.masterEnabled.
         const [adviceTraceCopyState, setAdviceTraceCopyState] = useState('idle');
         const [adviceDiagnosticsOpen, setAdviceDiagnosticsOpen] = useState(false);
         const [adviceDetailModalOpen, setAdviceDetailModalOpen] = useState(false);
@@ -2371,16 +2357,13 @@
             const newToastsEnabled = Object.prototype.hasOwnProperty.call(settings, 'toastsEnabled')
                 ? settings.toastsEnabled !== false
                 : null;
-            const newSoundEnabled = getAdviceSoundEnabled(settings);
             console.info('[HEYS.advice] 🔍 mount useEffect: settings read', {
                 settings,
                 newToastsEnabled,
-                newSoundEnabled,
                 hasStore: !!HEYSRef.store?.get,
                 hasLsGet: !!utils.lsGet,
             });
             if (newToastsEnabled !== null) setToastsEnabled(newToastsEnabled);
-            if (newSoundEnabled !== null) setAdviceSoundEnabled(newSoundEnabled);
             // eslint-disable-next-line react-hooks/exhaustive-deps
         }, []);
 
@@ -2391,11 +2374,6 @@
                     setToastsEnabled((prev) => {
                         if (!Object.prototype.hasOwnProperty.call(settings, 'toastsEnabled')) return prev;
                         const cloudVal = settings.toastsEnabled !== false;
-                        return prev !== cloudVal ? cloudVal : prev;
-                    });
-                    setAdviceSoundEnabled((prev) => {
-                        const cloudVal = getAdviceSoundEnabled(settings);
-                        if (cloudVal === null) return prev;
                         return prev !== cloudVal ? cloudVal : prev;
                     });
                 } catch (e) {
@@ -2411,7 +2389,7 @@
                 window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
                 window.removeEventListener('heysAdviceSettingsChanged', handleAdviceSettingsChanged);
             };
-        }, [HEYSRef.analytics, getAdviceSoundEnabled, readAdviceSettings]);
+        }, [HEYSRef.analytics, readAdviceSettings]);
 
         const [dismissedAdvices, setDismissedAdvices] = useState(() => {
             try {
@@ -2567,23 +2545,23 @@
             setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: diff, direction } }));
         }, []);
 
+        // Контракт «звук»: гейт один — общий звук приложения (HEYS.audio.masterEnabled),
+        // своей проверки у советов нет.
         const playAdviceSound = useCallback(() => {
-            if (!adviceSoundEnabled) return;
             if (HEYS.audio) {
                 HEYS.audio.play('adviceAppear');
             } else if (HEYSRef?.sounds) {
                 HEYSRef.sounds.ding();
             }
-        }, [adviceSoundEnabled, HEYSRef]);
+        }, [HEYSRef]);
 
         const playAdviceHideSound = useCallback(() => {
-            if (!adviceSoundEnabled) return;
             if (HEYS.audio) {
                 HEYS.audio.play('adviceDismiss');
             } else if (HEYSRef?.sounds) {
                 HEYSRef.sounds.whoosh();
             }
-        }, [adviceSoundEnabled, HEYSRef]);
+        }, [HEYSRef]);
 
         const toggleToastsEnabled = useCallback(() => {
             setToastsEnabled(prev => {
@@ -2591,26 +2569,6 @@
                 try {
                     const settings = readAdviceSettings();
                     settings.toastsEnabled = newVal;
-                    settings.updatedAt = Date.now();
-                    if (HEYSRef.store?.set) {
-                        HEYSRef.store.set('heys_advice_settings', settings);
-                    } else if (utils.lsSet) {
-                        utils.lsSet('heys_advice_settings', settings);
-                    }
-                    window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: settings }));
-                } catch (e) { }
-                if (typeof haptic === 'function') haptic('light');
-                return newVal;
-            });
-        }, [HEYSRef.store, haptic, readAdviceSettings, utils.lsSet]);
-
-        const toggleAdviceSoundEnabled = useCallback(() => {
-            setAdviceSoundEnabled(prev => {
-                const newVal = !prev;
-                try {
-                    const settings = readAdviceSettings();
-                    settings.adviceSoundEnabled = newVal;
-                    settings.soundEnabled = newVal;
                     settings.updatedAt = Date.now();
                     if (HEYSRef.store?.set) {
                         HEYSRef.store.set('heys_advice_settings', settings);
@@ -2896,6 +2854,16 @@
             if (badge) {
                 badge.textContent = totalAdviceCount > 0 ? totalAdviceCount : '';
                 badge.style.display = totalAdviceCount > 0 ? 'flex' : 'none';
+                // Строка «доступность»: счётчик не читается отдельным узлом —
+                // лампочка и число озвучиваются одной фразой «Советы, 5».
+                // Число живёт здесь, поэтому имя кнопки ставит тот же владелец.
+                const lampButton = badge.closest('button');
+                if (lampButton) {
+                    lampButton.setAttribute(
+                        'aria-label',
+                        totalAdviceCount > 0 ? `Советы, ${totalAdviceCount}` : 'Советы'
+                    );
+                }
             }
         }, [totalAdviceCount]);
 
@@ -3211,7 +3179,7 @@
             setToastDetailsOpen(false);
             setToastRatedState(null);
 
-            if (adviceSoundEnabled && HEYSRef?.sounds) {
+            if (HEYSRef?.sounds) {
                 if (advicePrimary.type === 'achievement' || advicePrimary.showConfetti) {
                     HEYSRef.sounds.success();
                 } else if (advicePrimary.type === 'warning') {
@@ -3232,7 +3200,7 @@
             }
 
             if (!isManualTrigger && markShown) markShown(advicePrimary);
-        }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, hiddenUntilTomorrow, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, safeAdviceRelevant, date]);
+        }, [advicePrimary?.id, adviceTrigger, dismissedAdvices, hiddenUntilTomorrow, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, safeAdviceRelevant, date]);
 
         useEffect(() => {
             setAdviceTrigger(null);
@@ -3800,8 +3768,6 @@
             handleDismissAll,
             toggleToastsEnabled,
             toastsEnabled,
-            toggleAdviceSoundEnabled,
-            adviceSoundEnabled,
             undoLastDismiss,
             clearLastDismissed,
             undoCountdownSeconds,

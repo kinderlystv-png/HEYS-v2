@@ -783,13 +783,15 @@
 }
 
 .yv-food-value {
-  color: #a1471c;
+  /* --ac2 ролью, а не литералом: в остальных наборах литерал не переезжал. */
+  color: var(--v4-warn-text, #a1471c);
   font-variant-numeric: tabular-nums;
 }
 
 .yv-food-muted {
-  color: rgba(0, 0, 0, 0.42);
-  font-weight: 500;
+  /* Контракт «вид карточки сводки»: значение справа у ВСЕХ строк — тон --ac2
+     и 12,5/600. Прежние чернила 42 % и вес 500 делали третью строку особой. */
+  color: var(--v4-warn-text, #a1471c);
   font-variant-numeric: tabular-nums;
 }
 
