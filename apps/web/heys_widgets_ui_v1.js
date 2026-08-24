@@ -1629,7 +1629,11 @@
     // Loading state
     if (loading) {
       return React.createElement('div', { className: 'widget__loading' },
-        React.createElement('div', { className: 'widget__spinner' })
+        // Знак ожидания — обратная связь, а не украшение: остановленный он
+        // читается как «зависло». Тот же приём, что у знака загрузки в
+        // index.html и heys_loading_progress_v1.js — свой animate-always на
+        // вращающемся элементе. Раньше его укрывал флаг на корне сетки.
+        React.createElement('div', { className: 'widget__spinner animate-always' })
       );
     }
 
@@ -3092,11 +3096,22 @@
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   }
 
+  // Строки «без анимации» и «меньше движения» (канвас home-widgets): при
+  // системной настройке новая раскладка появляется сразу и значения стоят на
+  // месте. Числа, кольца и полосы интерполируются здесь, в JS, поэтому CSS их
+  // не останавливает — решение принимается в этой функции. Раньше она звала
+  // functionalAnimationsEnabled(), который по контракту всегда true, то есть
+  // не возвращала true никогда.
   function widgetMotionDisabled() {
-    const enabled = (typeof HEYS !== 'undefined' && HEYS.motion?.functionalAnimationsEnabled)
-      ? HEYS.motion.functionalAnimationsEnabled()
-      : true;
-    return !enabled;
+    const policy = (typeof HEYS !== 'undefined') ? HEYS.motion : null;
+    if (policy && typeof policy.prefersReducedMotion === 'function') {
+      return policy.prefersReducedMotion();
+    }
+    try {
+      return !!(global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (_e) {
+      return false;
+    }
   }
 
   // Состояние анимации в модульном store, а не в useState виджета: при смене дня
@@ -11010,7 +11025,13 @@
           + (isLegacyOverflow ? ' widgets-grid-container--legacy-overflow' : '')
       },
         React.createElement('div', {
-          className: `widgets-grid animate-always ${isEditMode ? 'widgets-grid--editing' : ''}`
+          // Строки «без анимации» и «меньше движения» (канвас home-widgets):
+          // при системной настройке пересборка мгновенная, значения на месте.
+          // Флага animate-always здесь нет: он родился в 8de305b9 (11.2025) как
+          // обход настройки ради отрисовки спарклайнов, а спарклайны с тех пор
+          // носят свой флаг на .sparkline-svg. На корне сетки флаг выводил
+          // из-под гашения всё поддерево — плитки, кольца, полосы, пульсы.
+          className: `widgets-grid ${isEditMode ? 'widgets-grid--editing' : ''}`
             + (catalogRemovePick ? ' widgets-grid--remove-pick' : ''),
           ref: gridRef,
           style: { '--widget-motion-ms': `${widgetMotionCssMs}ms` }

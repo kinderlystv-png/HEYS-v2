@@ -104,18 +104,39 @@ describe('добавление воды — канвас water-add v4, ветк�
     // это рекомендация макета, а не контракт рантайма: вода — функциональный
     // ярус и живёт на animate-always вместе с кольцами БЖУ
     // (docs/implementation/MOTION_POLICY.md), поэтому kill-правил в reduce-блоках
-    // не должно быть ни на одном элементе плитки воды.
+    // не должно быть на функциональных элементах плитки воды.
+    //
+    // Блики под этот запрет попали ошибочно. Проверка была написана по имени
+    // `.widget-water__shine` — класса, которого в продукте нет: блики живут на
+    // псевдоэлементе `.widget-water__fill::before`, и запрет на `.widget-water__fill`
+    // накрывал их заодно. Решения оставить блики нет ни в одном коммите: автор
+    // ac25bb47 (19.08) писал «блики останавливаются», а 38c2f763 снёс блок
+    // гашения воды целиком, не упомянув их. Бесконечная петля украшения —
+    // ровно то, что настройка «уменьшить движение» и должна останавливать.
     const blocks = widgetsCss.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g) || [];
+    // Смотрим правило целиком, а не «где-то в блоке»: иначе гашение соседнего
+    // селектора засчитывается тому, кто просто оказался в том же блоке.
+    // Обёртку `@media … {` снимаем: иначе она сама читается как первый
+    // селектор и все пары «селектор → тело» съезжают на одну.
+    const rules = blocks.flatMap((block) =>
+      [
+        ...block
+          .slice(block.indexOf('{') + 1, block.lastIndexOf('}'))
+          .matchAll(/([^{}]+)\{([^}]*)\}/g),
+      ].map(([, selector, body]) => ({ selector: selector.trim(), body })),
+    );
     const killsWater = (selector) =>
-      blocks.some(
-        (block) =>
-          block.includes(selector) &&
-          (block.includes('display: none') || block.includes('animation: none')),
+      rules.some(
+        ({ selector: sel, body }) =>
+          new RegExp(`${selector}\\s*(,|$)`, 'm').test(sel) &&
+          (/display:\s*none/.test(body) || /animation:\s*none/.test(body)),
       );
-    expect(killsWater('.widget-water__fill')).toBe(false);
-    expect(killsWater('.widget-water__shine')).toBe(false);
-    expect(killsWater('.widget-water__drop')).toBe(false);
-    expect(killsWater('.widget-water__ripple')).toBe(false);
+    expect(killsWater('\\.widget-water--v4 \\.widget-water__fill')).toBe(false);
+    expect(killsWater('\\.widget-water__drop')).toBe(false);
+    expect(killsWater('\\.widget-water__ripple')).toBe(false);
+    // А декоративная петля бликов — гасится, и адресно по псевдоэлементу:
+    // снятие флага с родителя обнулило бы вместе с ними подъём уровня.
+    expect(killsWater('\\.widget-water__fill::before')).toBe(true);
   });
 
   it('тон воды один на все палитры, новых оттенков нет', () => {

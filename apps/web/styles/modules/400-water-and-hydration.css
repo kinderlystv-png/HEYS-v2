@@ -3481,6 +3481,15 @@ html[data-theme-id="blue-dark"] .water-column__target {
   .water-column__fill {
     transition-duration: 160ms;
   }
+
+  /* Блики поверхности — бесконечная петля украшения, а не ответ на жест.
+     Флаг animate-always стоит на корне .water-column (heys_day_day_handlers.js)
+     и укрывает всё поддерево, включая этот псевдоэлемент; снять флаг с корня
+     нельзя — вместе с бликами встал бы подъём уровня. Гасим адресно.
+     !important — чтобы правило не зависело от порядка блоков в файле. */
+  .water-column__fill::before {
+    animation: none !important;
+  }
 }
 
 /* === Лист «свой объём» (water-add v4) === */

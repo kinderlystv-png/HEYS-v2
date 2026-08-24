@@ -19,9 +19,28 @@ function reduceMotionBlocks(css) {
   return css.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g) || [];
 }
 
+/** Правила блока: селектор → тело. Обёртку `@media … {` снимаем, иначе она
+ *  сама читается как первый селектор и все пары съезжают на одну. */
+function ruleEntries(block) {
+  const inner = block.slice(block.indexOf('{') + 1, block.lastIndexOf('}'));
+  return [...inner.matchAll(/([^{}]+)\{([^}]*)\}/g)].map(([, selector, body]) => ({
+    selector: selector.trim(),
+    body,
+  }));
+}
+
+// Прежняя версия искала `animation: none` где угодно в блоке, где встретилось
+// `.widget-water` — и потому запрещала гасить что угодно рядом, включая блики
+// на псевдоэлементе. Смотрим на правила поимённо.
+const FUNCTIONAL_WATER = /\.widget-water(__fill|__drop|__ripple|--v4)(?!.*::before)/;
+
 function blockKillsFunctionalWater(block) {
-  if (!/\.widget-water/.test(block)) return false;
-  return /display:\s*none/.test(block) || /\.widget-water[\s\S]*?animation:\s*none/.test(block);
+  return ruleEntries(block).some(
+    ({ selector, body }) =>
+      FUNCTIONAL_WATER.test(selector) &&
+      !/::before|::after/.test(selector) &&
+      (/display:\s*none/.test(body) || /animation:\s*none/.test(body)),
+  );
 }
 
 describe('motion policy — глобальные правила', () => {
@@ -36,9 +55,35 @@ describe('motion policy — глобальные правила', () => {
     expect(policySrc).toContain('withFunctionalClass');
   });
 
-  it('виджеты делегируют functional motion в HEYS.motion', () => {
-    expect(uiSrc).toContain('HEYS.motion?.functionalAnimationsEnabled');
-    expect(uiSrc).toContain('return !enabled');
+  it('виджеты спрашивают настройку, а не functionalAnimationsEnabled', () => {
+    // Проверка была неверной по построению: widgetMotionDisabled() звал
+    // functionalAnimationsEnabled(), который по контракту возвращает true
+    // всегда — значит функция не возвращала true ни при какой настройке ОС,
+    // и интерполяция чисел/колец/полос шла в JS даже при «уменьшить движение».
+    // Гейт замораживал именно это. Канвас home-widgets, строки «без анимации»
+    // и «меньше движения»: при настройке значения стоят на месте, а CSS-гашение
+    // JS-интерполяцию не останавливает — решение принимается в JS.
+    expect(uiSrc).toContain('HEYS.motion : null');
+    expect(uiSrc).toMatch(/function widgetMotionDisabled\(\)[\s\S]{0,400}policy\.prefersReducedMotion\(\)/);
+    expect(uiSrc).not.toContain('HEYS.motion?.functionalAnimationsEnabled');
+  });
+
+  it('сетка Главной не выведена из-под настройки флагом', () => {
+    // Флаг на корне .widgets-grid стоял безусловно (8de305b9, 11.2025 — обход
+    // ради отрисовки спарклайнов) и укрывал всё поддерево. Спарклайны носят
+    // свой animate-always на .sparkline-svg, поэтому обход больше не нужен.
+    expect(uiSrc).not.toMatch(/widgets-grid animate-always/);
+    expect(uiSrc).toMatch(/className: `widgets-grid \$\{isEditMode/);
+    // Guard `:not(.animate-always)` в правиле гашения сетки был мёртвым:
+    // флаг стоял всегда. Вернуть guard — значит снова выключить правило молча.
+    expect(widgetsCss).not.toMatch(/\.widgets-grid:not\(\.animate-always\)/);
+  });
+
+  it('знак ожидания в плитке держит свой флаг', () => {
+    // Единственное функциональное, что жило под флагом сетки: остановленный
+    // знак ожидания читается как «зависло». Тот же приём, что у знака загрузки
+    // в index.html и heys_loading_progress_v1.js.
+    expect(uiSrc).toContain("className: 'widget__spinner animate-always'");
   });
 
   it('вода — handlers не читают prefers-reduced-motion для звука/плитки', () => {
@@ -53,14 +98,43 @@ describe('motion policy — глобальные правила', () => {
     expect(componentsCss).toContain('.animate-always');
   });
 
-  it('функциональная вода — animate-always, без отдельного reduce-kill в CSS', () => {
+  it('функциональная вода остаётся, декоративные блики гасятся', () => {
     expect(uiSrc).toContain("className: 'widget-water__fill animate-always'");
     expect(uiSrc).toContain("className: 'widget-water__drop animate-always'");
+
+    // Прежняя проверка запрещала любое гашение в reduce-блоке, где встретился
+    // `.widget-water`, и отдельно запрещала гашение `.water-column__fill::before`.
+    // Она была неверной: под запрет попадал не только функциональный ярус
+    // (капля, круг, подъём уровня — решение владельца), но и блики поверхности,
+    // которых это решение никогда не касалось. Автор ac25bb47 (19.08) писал
+    // прямо: «блики останавливаются». Через день 38c2f763 снёс блок гашения
+    // воды целиком, блики уехали прицепом и в сообщении коммита не упомянуты —
+    // отдельного решения оставить их нет ни в одном коммите. Гейт заморозил
+    // случайность. Теперь проверяем по существу: функциональное живо, декор гаснет.
     const widgetBlocks = reduceMotionBlocks(widgetsCss);
     const waterBlocks = reduceMotionBlocks(waterCss);
     expect(widgetBlocks.some(blockKillsFunctionalWater)).toBe(false);
     expect(waterBlocks.some(blockKillsFunctionalWater)).toBe(false);
-    expect(waterBlocks.some((block) => /\.water-column__fill::before[\s\S]*?animation:\s*none/.test(block)))
-      .toBe(false);
+  });
+
+  it('бесконечные петли бликов гасятся адресно, без снятия флага с родителя', () => {
+    // Флаг стоит на .widget-water__fill и на корне .water-column, а
+    // `:not(.animate-always *)` укрывает всё поддерево, включая псевдоэлементы.
+    // Снять флаг с родителя нельзя — вместе с бликами встал бы подъём уровня.
+    // Поэтому нужно адресное правило по самому псевдоэлементу, и с !important:
+    // базовое правило бликов в 730 стоит ниже по файлу и при равной
+    // специфичности выиграло бы порядком.
+    const widgetBlocks = reduceMotionBlocks(widgetsCss);
+    const waterBlocks = reduceMotionBlocks(waterCss);
+    const killsShine = (blocks, selector) =>
+      blocks.some((block) =>
+        new RegExp(`${selector}\\s*\\{[^}]*animation:\\s*none\\s*!important`).test(block),
+      );
+    expect(killsShine(widgetBlocks, '\\.widget-water__fill::before')).toBe(true);
+    expect(killsShine(waterBlocks, '\\.water-column__fill::before')).toBe(true);
+
+    // Флаг с родителей не снят — подъём уровня и капля остаются решением.
+    expect(widgetsCss).toContain('.widget-water--v4 .widget-water__fill');
+    expect(handlersSrc).toContain("col.className = 'water-column animate-always'");
   });
 });

@@ -3684,13 +3684,17 @@ body:has(.page-reports) .hdr::after {
   outline-offset: 2px;
 }
 
-/* Reduced motion — декоративные эффекты; ккал/БЖУ в .widgets-grid.animate-always не трогаем */
+/* Reduced motion — строка «меньше движения»: пересборка сетки, рост и сжатие
+   плитки идут мгновенной сменой состояния.
+   Guard `:not(.animate-always)` снят: флаг стоял на .widgets-grid безусловно,
+   поэтому правило не могло сработать ни разу. Флага там больше нет, а вернуть
+   его — значит снова выключить это правило молча. */
 @media (prefers-reduced-motion: reduce) {
 
-  .widgets-grid:not(.animate-always) .widget,
+  .widgets-grid .widget,
   .widget--editing,
-  .widgets-grid:not(.animate-always) .widget--streak .widget__flame,
-  .widgets-grid:not(.animate-always) .widget--water .widget__wave {
+  .widgets-grid .widget--streak .widget__flame,
+  .widgets-grid .widget--water .widget__wave {
     animation: none !important;
     transition: none !important;
   }
@@ -10997,7 +11001,17 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 
 /* Капля, рябь и подъём уровня — функциональный ярус (docs/implementation/MOTION_POLICY.md):
    гасить их отдельным reduce-правилом нельзя, они живут на animate-always вместе
-   с кольцами БЖУ. Здесь остаётся только «короче, но остаётся». */
+   с кольцами БЖУ. Здесь остаётся только «короче, но остаётся».
+
+   Блики — исключение внутри исключения. Флаг animate-always стоит на самом
+   .widget-water__fill и по правилу `:not(.animate-always *)` укрывает всё его
+   поддерево, включая псевдоэлемент бликов. Но блики — не ответ на жест, а
+   бесконечная петля украшения: коммит ac25bb47 (19.08) прямо писал
+   «блики останавливаются», а 38c2f763 снёс блок гашения воды целиком и увёл
+   их прицепом, без отдельного решения. Снимать флаг с родителя нельзя — вместе
+   с бликами обнулился бы подъём уровня. Поэтому декор гасится адресно, по
+   самому псевдоэлементу, и !important нужен: базовое правило .widget-water__fill::before
+   стоит ниже по файлу и при равной специфичности выиграло бы порядком. */
 @media (prefers-reduced-motion: reduce) {
   .widget-water--v4 .widget-water__fill {
     transition: height 160ms ease-out !important;
@@ -11006,6 +11020,10 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   .widget-water--v4 .widget-water__num-in,
   .widget-water--v4 .widget-water__num-out {
     transition-duration: 160ms !important;
+  }
+
+  .widget-water__fill::before {
+    animation: none !important;
   }
 }
 
