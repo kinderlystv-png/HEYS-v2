@@ -188,82 +188,18 @@ describe('tips: защита от повторного тапа на оценк�
   });
 });
 
-describe('tips: панель «Прочитано» после свайпа — защита исчезновением панели, не таймером', () => {
-  const advice = { id: 'swipe-1', type: 'tip', text: 'Белок после тренировки', category: 'training', icon: '💡' };
-
-  function renderListWithPanel(props) {
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    act(() => {
-      root.render(
-        window.HEYS.dayAdviceListUI.renderManualAdviceList({
-          React,
-          adviceTrigger: 'manual',
-          adviceRelevant: [advice],
-          badgeAdvices: [advice],
-          totalAdviceCount: 1,
-          toastVisible: true,
-          dismissToast: () => {},
-          getSortedGroupedAdvices: () => ({ sorted: [advice], groups: { training: [advice] } }),
-          dismissedAdvices: new Set(),
-          hiddenUntilTomorrow: new Set(),
-          adviceSwipeState: {},
-          expandedAdviceId: null,
-          trackClick: () => {},
-          handleAdviceSwipeStart: () => {},
-          handleAdviceSwipeMove: () => {},
-          handleAdviceSwipeEnd: () => {},
-          handleAdviceLongPressStart: () => {},
-          handleAdviceLongPressEnd: () => {},
-          registerAdviceCardRef: () => {},
-          handleAdviceListTouchStart: () => {},
-          handleAdviceListTouchMove: () => {},
-          handleAdviceListTouchEnd: () => {},
-          handleDismissAll: () => {},
-          dismissAllAnimation: false,
-          toastsEnabled: true,
-          toggleToastsEnabled: () => {},
-          scheduleAdvice: () => {},
-          undoLastDismiss: () => {},
-          adviceDetailModalOpen: false,
-          adviceDetailModalAdvice: null,
-          openAdviceDetailModal: () => {},
-          closeAdviceDetailModal: () => {},
-          openAdviceTechnicalDetails: () => {},
-          closeAdviceTechnicalDetails: () => {},
-          ADVICE_CATEGORY_NAMES: { training: 'Тренировки' },
-          ewsWarnings: [],
-          AdviceCard: window.HEYS.dayComponents.AdviceCard,
-          retryAdviceMarksSync: () => {},
-          medicalDisclaimerSessionDismissed: true,
-          ...props,
-        })
-      );
-    });
-    return host;
-  }
-
-  it('тап «Полезно» после реального (не в тот же тик) повторного тапа не создаёт вторую оценку', async () => {
-    const calls = [];
-    let cleared = 0;
-    const host = renderListWithPanel({
-      lastDismissedAdvice: { id: advice.id, action: 'read' },
-      rateAdvice: (a, positive) => calls.push([a.id, positive]),
-      clearLastDismissed: () => { cleared += 1; },
-    });
-
-    const useful = host.querySelector('.advice-v4-panel__btn--useful');
-    expect(useful).toBeTruthy();
-    await act(async () => {
-      useful.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
-      // rateAdvice/clearLastDismissed в handler'е отложены на setTimeout(0) —
-      // ждём реальный макротаск, как это происходит между двумя настоящими
-      // тапами человека (там между ними всегда есть хотя бы один тик).
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    });
-
-    expect(calls).toEqual([[advice.id, true]]);
-    expect(cleared).toBe(1);
+// Двенадцатая сборка контракта переписала строку «панель оценки»: оценка живёт
+// не нижней панелью «Прочитано» после свайпа, а двумя кнопками под самой
+// карточкой, и панель по ответу не исчезает мгновенно (карточка возвращается
+// 180 мс). Поэтому защита от повторного тапа здесь уже не «исчезновением
+// панели», а окном 350 мс — тем же, что у всплывающего совета выше. Сам стык
+// проверяется рендером в advice-v4-tips-behaviour.test.js («второй тап по
+// кнопке в течение 350 мс второй оценки не создаёт»); здесь остаётся сверка
+// исходника, чтобы окно не пропало из кода вместе с рефакторингом.
+describe('tips: защита от повторного тапа на оценке карточки (панель оценки)', () => {
+  it('оценка карточки закрыта тем же окном 350 мс, что и всплывающий совет', () => {
+    const src = fs.readFileSync(ADVICE_SRC_PATH, 'utf8');
+    expect(src).toContain('ADVICE_RATE_REPEAT_GUARD_MS = 350');
+    expect(src).toMatch(/now - rateLockRef\.current < ADVICE_RATE_REPEAT_GUARD_MS/);
   });
 });

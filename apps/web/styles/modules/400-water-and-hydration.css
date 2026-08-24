@@ -1158,12 +1158,6 @@ body.planning-tab-active .fab-group {
   transition: opacity 0.1s ease;
 }
 
-.advice-list-item-bg-left {
-  background: linear-gradient(90deg, var(--color-emerald-500) 0%, #059669 100%);
-  justify-content: flex-end;
-  color: var(--color-white);
-}
-
 .advice-list-item-bg-right {
   background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
   justify-content: flex-start;
@@ -1173,11 +1167,6 @@ body.planning-tab-active .fab-group {
 .advice-list-container--v4 .advice-list-item-bg {
   border-radius: 18px;
   font: 700 12px/1 Figtree, sans-serif;
-}
-
-.advice-list-container--v4 .advice-list-item-bg-left {
-  background: #eaefe0;
-  color: #5c6a45;
 }
 
 .advice-list-container--v4 .advice-list-item-bg-right {
@@ -2028,11 +2017,30 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: #5c6a45;
 }
 
+/* Строка «не сохранено»: плашка --tint радиусом 18 с полями 13/15 px, внутри
+   ряд «иконка облака 19 px тоном --red · текст». Она стоит В ПОТОКЕ шторки над
+   списком, а не всплывает над ней, поэтому базовые поля, радиус 22 и тень
+   плавающей панели здесь сняты. Кнопки «Повторить» у плашки нет. */
 .advice-v4-panel--sync {
-  background: #f3e0d2;
-  box-shadow:
-    0 2px 6px rgba(80, 50, 20, 0.1),
-    0 14px 32px rgba(80, 50, 20, 0.16);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 0 2px 8px;
+  padding: 13px 15px;
+  border-radius: 18px;
+  background: var(--v4-tint, #f6e6dd);
+  box-shadow: none;
+}
+
+.advice-v4-panel--sync .advice-v4-panel__title {
+  font: 600 12.5px/1.35 Figtree, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.advice-v4-panel--sync .advice-v4-panel__hint--sync {
+  margin-top: 4px;
+  font: 500 11px/1.4 Figtree, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.5));
 }
 
 .advice-v4-panel__head {
@@ -2045,10 +2053,6 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   flex: 1;
   font: 700 12.5px/1.35 Figtree, sans-serif;
   color: #201e1d;
-}
-
-.advice-v4-panel__title--accent {
-  color: #8a4a20;
 }
 
 .advice-v4-panel__hint {
@@ -2110,8 +2114,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   width: 100%;
 }
 
-.advice-v4-panel__skip,
-.advice-v4-panel__retry {
+.advice-v4-panel__skip {
   margin-top: 14px;
   min-height: 44px;
   display: flex;
@@ -2125,20 +2128,10 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   width: 100%;
 }
 
-.advice-v4-panel__retry {
-  color: #8a4a20;
-  margin-top: 12px;
-}
-
-.advice-v4-sync-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
+/* Строка «не сохранено»: иконка облака тоном --red. */
 .advice-v4-icon--cloud-off {
   flex: none;
-  color: #8a4a20;
+  color: var(--v4-bad-text, #b4442a);
 }
 
 .advice-v4-sync-copy {
@@ -2396,16 +2389,6 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
     0 16px 36px rgba(0, 0, 0, 0.45);
 }
 
-[data-theme$="dark"] .advice-v4-panel--sync {
-  background: #3a2f28;
-}
-
-[data-theme$="dark"] .advice-v4-panel__title--accent,
-[data-theme$="dark"] .advice-v4-icon--cloud-off,
-[data-theme$="dark"] .advice-v4-panel__retry {
-  color: #e8b48a;
-}
-
 [data-theme$="dark"] .advice-v4-panel--read .advice-v4-icon--check {
   color: #d5e0c4;
 }
@@ -2569,6 +2552,93 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-list-container--v4 .advice-list-item-wrapper {
   border-radius: 18px;
   margin-top: 8px;
+}
+
+/* Строка «панель оценки»: ряд кнопок и строка-пояснение живут ПОД карточкой,
+   снаружи её скруглённой рамки. Обрезку на время ответа снимаем с обёртки —
+   она переезжает на .advice-list-item-frame; вне этого состояния обёртка
+   продолжает обрезать себя сама, иначе уход карточки из списка (.dismissed,
+   height: 0 + сдвиг влево) начал бы вылезать за свои границы. */
+.advice-list-container--v4 .advice-list-item-wrapper--rating {
+  overflow: visible;
+}
+
+/* Рамка карточки: внутри неё панель оценки, фон свайпа «скрыть» и сама
+   карточка. Обрезка нужна здесь, чтобы панель не выезжала за скруглённый угол
+   при сужении карточки. */
+.advice-list-item-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+/* Строка «панель оценки»: в освободившемся месте открывается панель шириной 96
+   с подписью «Полезно?» 9,5 px/700 прописными тоном чернил 45 %. Панель стоит
+   на месте, карточка над ней сужается — сдвига карточки нет. */
+.advice-v4-rate-panel {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Углы не скругляем: панель встык к правому краю карточки, а внешние углы
+     обрезает рамка. Скруглённая слева панель оставила бы просвет фона шторки
+     между ней и карточкой. */
+  background: var(--v4-chip, #efe3cf);
+}
+
+.advice-v4-rate-panel__label {
+  font: 700 9.5px/1 Figtree, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* Строка «панель оценки»: ряд из двух кнопок высотой 44 и радиусом 999 —
+   «Помогло» заливкой --gr2 с текстом --on-gr (flex 1) и «Не показывать такие»
+   фоном --c2 с текстом --ac (flex 1,5). */
+.advice-v4-rate-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.advice-v4-rate-btn {
+  min-height: 44px;
+  /* Горизонтальных полей нет намеренно: при box-sizing: border-box поля дают
+     каждой кнопке ненулевую базу, и доли перестают быть 1 и 1,5 — ряд уезжает
+     от кадра на несколько пикселей. В кадре полей у кнопок тоже нет. */
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 11.5px/1 Figtree, sans-serif;
+  cursor: pointer;
+}
+
+.advice-v4-rate-btn--helped {
+  flex: 1;
+  background: var(--v4-ok-fill, #7a8a5e);
+  color: var(--v4-on-ok-fill, #171d0d);
+}
+
+.advice-v4-rate-btn--mute {
+  flex: 1.5;
+  background: var(--v4-chip, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+}
+
+/* Строка «панель оценки»: ниже строка 11 px/500 тоном чернил 50 %. */
+.advice-v4-rate-note {
+  margin-top: 12px;
+  font: 500 11px/1.4 Figtree, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.5));
+  text-wrap: pretty;
 }
 
 .advice-list-container--v4 .advice-list-item-v4 {
@@ -2818,11 +2888,6 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 
 [data-theme$='dark'] .advice-list-container--v4 .advice-list-item-v4 {
   background: #23201b;
-}
-
-[data-theme$='dark'] .advice-list-container--v4 .advice-list-item-bg-left {
-  background: rgba(92, 106, 69, 0.35);
-  color: #d5e0c4;
 }
 
 [data-theme$='dark'] .advice-list-container--v4 .advice-list-item-bg-right {
@@ -3652,10 +3717,14 @@ html[data-theme-id="blue-dark"] .water-column__target {
 /* Строка «уменьшенное движение»: выезд шторки и появление всплывающего
    совета становятся мгновенными, свайп карточки — без доводки. Затемнение
    остаётся: оно отделяет слой, а не двигается. */
+/* Возврат карточки после ответа (180 мс) задан инлайном на самой карточке —
+   важность в этом блоке его перебивает: панель оценки открывается и
+   закрывается мгновенной сменой состояния, сам жест продолжает работать. */
 @media (prefers-reduced-motion: reduce) {
   .advice-list-container--v4,
   .advice-v4-toast-wrap,
-  .advice-list-item-wrapper {
+  .advice-list-item-wrapper,
+  .advice-list-item-wrapper .advice-list-item {
     animation: none !important;
     transition: none !important;
   }

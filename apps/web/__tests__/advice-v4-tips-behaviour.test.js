@@ -3,7 +3,7 @@
 // «шторка = диалог с запертым фокусом» иначе не воспроизвести руками.
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it, beforeAll, beforeEach } from 'vitest';
+import { describe, expect, it, afterEach, beforeAll, beforeEach } from 'vitest';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
@@ -305,20 +305,42 @@ describe('tips v4: действия детали дублируют свайпы
     window.localStorage.clear();
   });
 
-  it('«Прочитано» из детали даёт то же состояние, что свайп влево', () => {
+  // Двенадцатая сборка контракта переписала строку «панель оценки»: свайп влево
+  // теперь открывает панель оценки, а не помечает совет прочитанным. Строка
+  // «жесты» («влево — прочитано») осталась от прежней редакции и с новой строкой
+  // спорит; верна новая, потому что она полная и объясняет себя, а «жесты»
+  // только перечисляет. «Прочитано» при этом не пропало — оно живёт кнопкой в
+  // детали совета и строкой «Прочитать все», и этот тест держит именно это.
+  it('свайп влево открывает панель оценки и совет остаётся в списке', () => {
     const bySwipe = mountAdviceState();
     swipe(() => bySwipe.api, swipeAdvice.id, -140);
-    const swipeResult = snapshot(() => bySwipe.api);
+    const result = snapshot(() => bySwipe.api);
+    const state = bySwipe.api.adviceSwipeState[swipeAdvice.id];
 
-    window.localStorage.clear();
+    expect(state).toEqual({ x: -96, direction: 'left', rating: true });
+    // Совет остаётся в списке: ни прочитанным, ни скрытым он не стал.
+    expect(result.dismissed).toEqual([]);
+    expect(result.hidden).toEqual([]);
+    expect(result.lastAction).toBe(null);
+    expect(result.readLs).toBe(null);
+  });
 
+  it('повторный конец жеста закрывает панель оценки, не пряча совет', () => {
+    const box = mountAdviceState();
+    swipe(() => box.api, swipeAdvice.id, -140);
+    act(() => { box.api.handleAdviceSwipeEnd(swipeAdvice.id); });
+
+    expect(box.api.adviceSwipeState[swipeAdvice.id]).toEqual({ x: 0, direction: null });
+    expect(snapshot(() => box.api).dismissed).toEqual([]);
+  });
+
+  it('«Прочитано» из детали помечает совет прочитанным', () => {
     const byButton = mountAdviceState();
     act(() => { byButton.api.markAdviceDetailRead(swipeAdvice); });
     const buttonResult = snapshot(() => byButton.api);
 
-    expect(swipeResult.dismissed).toEqual([swipeAdvice.id]);
-    expect(swipeResult.lastAction).toBe('read');
-    expect(buttonResult).toEqual(swipeResult);
+    expect(buttonResult.dismissed).toEqual([swipeAdvice.id]);
+    expect(buttonResult.lastAction).toBe('read');
   });
 
   it('«Скрыть до завтра» из детали даёт то же состояние, что свайп вправо', () => {
@@ -410,5 +432,142 @@ describe('tips v4: действия детали дублируют свайпы
     expect(src).toContain(
       'hideAdviceDetailUntilTomorrow: adviceState.hideAdviceDetailUntilTomorrow',
     );
+  });
+});
+
+// Строка контракта tips «панель оценки» (двенадцатая сборка): свайп влево сужает
+// карточку на 96 px справа — сама она не сдвигается; в освободившемся месте
+// панель «Полезно?»; под карточкой ровно две кнопки; после ответа карточка
+// возвращается на место, а совет остаётся в списке. Проверяется рендером: у
+// строки главное — геометрия и то, что ничего не исчезает, а исходником этого
+// не увидеть.
+describe('tips v4: панель оценки по свайпу влево', () => {
+  const rated = { ...advice, id: 'rate-1' };
+
+  function renderCardWithRating(extra) {
+    return renderNode(
+      window.HEYS.dayAdviceListUI.renderManualAdviceList(
+        detailProps({
+          adviceRelevant: [rated],
+          badgeAdvices: [rated],
+          getSortedGroupedAdvices: () => ({ sorted: [rated], groups: { training: [rated] } }),
+          adviceDetailModalOpen: false,
+          adviceDetailModalAdvice: null,
+          adviceSwipeState: { [rated.id]: { x: -96, direction: 'left', rating: true } },
+          ...extra,
+        }),
+      ),
+    );
+  }
+
+  it('карточка сужается на 96 px и не сдвигается, панель встаёт справа', () => {
+    const host = renderCardWithRating();
+
+    const card = host.querySelector('.advice-list-item-v4');
+    expect(card.style.marginRight).toBe('96px');
+    // Сдвига нет: полоса состояния и текст остаются на своих местах.
+    expect(card.style.transform).toBe('translateX(0px)');
+
+    const panel = host.querySelector('.advice-v4-rate-panel');
+    expect(panel).toBeTruthy();
+    expect(panel.textContent).toBe('Полезно?');
+  });
+
+  it('под карточкой ровно две кнопки и строка-пояснение', () => {
+    const host = renderCardWithRating();
+
+    const actions = host.querySelector('.advice-v4-rate-actions');
+    const buttons = actions.querySelectorAll('button');
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].textContent).toBe('Помогло');
+    expect(buttons[1].textContent).toBe('Не показывать такие');
+    // Ряд кнопок живёт вне рамки карточки — иначе её обрезка съедала бы углы.
+    expect(actions.closest('.advice-list-item-frame')).toBeNull();
+
+    expect(host.querySelector('.advice-v4-rate-note').textContent).toBe(
+      'Оба ответа меняют, что вы увидите дальше. Совет остаётся в списке.',
+    );
+  });
+
+  it('без свайпа ни панели, ни кнопок нет', () => {
+    const host = renderCardWithRating({ adviceSwipeState: {} });
+    expect(host.querySelector('.advice-v4-rate-panel')).toBeNull();
+    expect(host.querySelector('.advice-v4-rate-actions')).toBeNull();
+    expect(host.querySelector('.advice-list-item-v4').style.marginRight).toBe('0px');
+  });
+
+  it('оба ответа пишут оценку и закрывают панель, совет из списка не уходит', () => {
+    for (const [index, positive] of [[0, true], [1, false]]) {
+      const rates = [];
+      const closed = [];
+      const host = renderCardWithRating({
+        rateAdvice: (item, value) => rates.push([item.id, value]),
+        handleAdviceSwipeEnd: (id) => closed.push(id),
+      });
+      const btn = host.querySelectorAll('.advice-v4-rate-actions button')[index];
+      act(() => { btn.click(); });
+
+      expect(rates).toEqual([[rated.id, positive]]);
+      expect(closed).toEqual([rated.id]);
+      // Карточка на месте: ни «Помогло», ни «Не показывать такие» её не убирают.
+      expect(host.querySelector('.advice-list-item-v4')).toBeTruthy();
+    }
+  });
+
+  // Строка «повторный тап»: защита стоит на оценке совета. Панель уходит не
+  // мгновенно (карточка возвращается 180 мс), и второй тап по той же кнопке
+  // успевает пройти — окно 350 мс его гасит.
+  it('второй тап по кнопке в течение 350 мс второй оценки не создаёт', () => {
+    const rates = [];
+    const host = renderCardWithRating({
+      rateAdvice: (item, value) => rates.push([item.id, value]),
+      handleAdviceSwipeEnd: () => {},
+    });
+    const helped = host.querySelectorAll('.advice-v4-rate-actions button')[0];
+    act(() => { helped.click(); });
+    act(() => { helped.click(); });
+    expect(rates).toEqual([[rated.id, true]]);
+  });
+});
+
+// Строка контракта tips «не сохранено»: плашка встаёт в шторке над списком, без
+// кнопки «Повторить». Поднимает её очередь оценок — список советов локальный
+// (строка «офлайн»), «не ушедшей» бывает только оценка.
+describe('tips v4: плашка «оценка не ушла»', () => {
+  function renderDrawer() {
+    return renderNode(
+      window.HEYS.dayAdviceListUI.renderManualAdviceList(
+        detailProps({ adviceDetailModalOpen: false, adviceDetailModalAdvice: null }),
+      ),
+    );
+  }
+
+  afterEach(() => { delete window.HEYS.cloud; });
+
+  it('очередь с оценкой поднимает плашку над списком и без кнопки', () => {
+    window.HEYS.cloud = {
+      getPendingItemsDetail: () => ({ queue: [{ k: 'heys_advice_outcomes_v1' }], inflight: [] }),
+    };
+    const host = renderDrawer();
+
+    const plate = host.querySelector('.advice-v4-panel--sync');
+    expect(plate).toBeTruthy();
+    expect(plate.getAttribute('role')).toBe('status');
+    expect(plate.querySelector('.advice-v4-panel__title').textContent)
+      .toBe('Оценка не ушла — нет связи');
+    expect(plate.querySelector('.advice-v4-panel__hint--sync').textContent)
+      .toBe('Она сохранена на телефоне и отправится сама. Ничего делать не нужно.');
+    expect(plate.querySelector('button')).toBeNull();
+
+    // Над списком, а не под ним.
+    const list = host.querySelector('.advice-list-items');
+    expect(plate.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('очередь без оценок плашку не поднимает', () => {
+    window.HEYS.cloud = {
+      getPendingItemsDetail: () => ({ queue: [{ k: 'heys_advice_read_today' }], inflight: [] }),
+    };
+    expect(renderDrawer().querySelector('.advice-v4-panel--sync')).toBeNull();
   });
 });

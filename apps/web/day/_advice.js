@@ -233,9 +233,29 @@
     }
 
     const ADVICE_UNDO_SECONDS = 3;
-    const ADVICE_MARK_SYNC_KEYS = ['heys_advice_read_today', 'heys_advice_hidden_today'];
 
-    function getAdvicePendingMarkSyncCount(dismissedAdvices, hiddenUntilTomorrow) {
+    // Строка «панель оценки»: свайп влево сужает карточку на 96 px справа — сама
+    // она не сдвигается, и в освободившемся месте встаёт панель «Полезно?».
+    // Порог открытия — половина панели: карточка уже сузилась настолько, что
+    // намерение видно, а до конца жест дотягивать не нужно.
+    const ADVICE_RATING_PANEL_WIDTH = 96;
+    const ADVICE_RATING_OPEN_THRESHOLD = ADVICE_RATING_PANEL_WIDTH / 2;
+    // Строка «повторный тап»: защита стоит на оценке совета; на «прочитано» и
+    // «скрыть» её нет — эти состояния идемпотентны.
+    const ADVICE_RATE_REPEAT_GUARD_MS = 350;
+    // Строка «панель оценки»: после ответа кнопки исчезают, карточка
+    // возвращается на место за 180 мс.
+    const ADVICE_RATING_RETURN_MS = 180;
+
+    // Строка «офлайн»: советы считаются на устройстве, поэтому отдельного
+    // состояния «нет связи» у списка нет. Пропадает только оценка совета — она
+    // уходит на сервер и в офлайне копится. Копится она в heys_advice_outcomes_v1
+    // (advice/_core.js rateAdvice → advice/_outcomes.js), поэтому плашку
+    // «не сохранено» поднимает именно этот ключ в очереди облака, а не отметки
+    // прочтения: они локальные и «не ушедшими» для человека не бывают.
+    const ADVICE_RATING_SYNC_KEY = 'heys_advice_outcomes_v1';
+
+    function hasPendingAdviceRatingSync() {
         try {
             const cloud = (typeof HEYS !== 'undefined' && HEYS?.cloud) || window.HEYS?.cloud;
             const detail = cloud?.getPendingItemsDetail?.();
@@ -243,16 +263,9 @@
                 ...(Array.isArray(detail?.queue) ? detail.queue : []),
                 ...(Array.isArray(detail?.inflight) ? detail.inflight : []),
             ];
-            const hasPendingAdviceMarks = queue.some((item) => {
-                const key = String(item?.k || '');
-                return ADVICE_MARK_SYNC_KEYS.some((markKey) => key.includes(markKey));
-            });
-            if (!hasPendingAdviceMarks) return 0;
-            const dismissedCount = dismissedAdvices instanceof Set ? dismissedAdvices.size : 0;
-            const hiddenCount = hiddenUntilTomorrow instanceof Set ? hiddenUntilTomorrow.size : 0;
-            return Math.max(dismissedCount + hiddenCount, 1);
+            return queue.some((item) => String(item?.k || '').includes(ADVICE_RATING_SYNC_KEY));
         } catch (_) {
-            return 0;
+            return false;
         }
     }
 
@@ -297,8 +310,8 @@
             return React.createElement('svg', {
                 ...common,
                 className: 'advice-v4-icon advice-v4-icon--cloud-off',
-                width: 18,
-                height: 18,
+                width: 19,
+                height: 19,
                 viewBox: '0 0 24 24',
                 strokeWidth: 2.5,
             },
@@ -339,14 +352,6 @@
         return null;
     }
 
-    function formatAdviceSyncCountLabel(pendingCount) {
-        const count = Math.max(1, Number(pendingCount) || 1);
-        if (count === 1) return 'Один совет отмечен';
-        if (count === 2) return 'Два совета отмечены';
-        if (count >= 5) return `${count} советов отмечено`;
-        return `${count} совета отмечены`;
-    }
-
     function renderAdviceHideRing(React, secondsLeft) {
         const radius = 15;
         const circumference = 2 * Math.PI * radius;
@@ -375,6 +380,11 @@
         );
     }
 
+    // Панель оценки всплывающего совета (свайп по плашке на Главной). Оценка
+    // карточки в шторке живёт не здесь: строка «панель оценки» описывает её как
+    // две кнопки под самой карточкой (см. AdviceCard). Эту, тостовую, контракт
+    // не описывает — строка «всплывающий совет и тосты» отдаёт дизайну только
+    // вид плашки, — поэтому она оставлена как была.
     function renderAdviceReadFeedbackPanel(React, {
         onRatePositive,
         onRateNegative,
@@ -429,28 +439,24 @@
         );
     }
 
-    function renderAdviceSyncBanner(React, {
-        pendingCount,
-        onRetry,
-    }) {
-        if (!pendingCount) return null;
-        const countLabel = formatAdviceSyncCountLabel(pendingCount);
+    // Строка «не сохранено»: плашка --tint радиусом 18 с полями 13/15 px, иконка
+    // облака 19 px тоном --red, заголовок «Оценка не ушла — нет связи» и под ним
+    // успокаивающая строка. Кнопки «Повторить» у плашки нет намеренно: повтор
+    // ничего не ускорит — отправка уже в очереди, — а её наличие заставляет
+    // человека решать задачу, которой у него нет.
+    function renderAdviceSyncBanner(React, { pending }) {
+        if (!pending) return null;
 
         return React.createElement('div', { className: 'advice-v4-panel advice-v4-panel--sync', role: 'status' },
-            React.createElement('div', { className: 'advice-v4-sync-head' },
-                renderAdviceV4Icon(React, 'cloud-off'),
-                React.createElement('div', { className: 'advice-v4-sync-copy' },
-                    React.createElement('div', { className: 'advice-v4-panel__title advice-v4-panel__title--accent' }, 'Отметки не сохранились'),
-                    React.createElement('div', { className: 'advice-v4-panel__hint advice-v4-panel__hint--sync' },
-                        `${countLabel} прочитанными только на этом устройстве. Отправим, как появится связь — ничего делать не нужно.`
-                    )
+            renderAdviceV4Icon(React, 'cloud-off'),
+            React.createElement('div', { className: 'advice-v4-sync-copy' },
+                React.createElement('div', { className: 'advice-v4-panel__title' },
+                    'Оценка не ушла — нет связи'
+                ),
+                React.createElement('div', { className: 'advice-v4-panel__hint advice-v4-panel__hint--sync' },
+                    'Она сохранена на телефоне и отправится сама. Ничего делать не нужно.'
                 )
-            ),
-            typeof onRetry === 'function' && React.createElement('button', {
-                type: 'button',
-                className: 'advice-v4-panel__retry',
-                onClick: onRetry,
-            }, 'Попробовать сейчас')
+            )
         );
     }
 
@@ -1277,7 +1283,15 @@
                         React.createElement('div', { className: 'advice-v4-detail__section-title' }, 'Научное описание'),
                         React.createElement('div', { className: 'advice-v4-detail__science-box' }, scienceBlurb)
                     ),
-                    hasEvidence && React.createElement('button', {
+                    // Строка «служебные модалки»: техлог, диагностика и
+                    // технические детали клиенту недоступны — их вход живёт в
+                    // служебной створке настроек, «которая открывается только с
+                    // ролью куратора или разработчика». Строка «деталь» держит
+                    // вход в технические детали в ярусе «Научное описание»,
+                    // поэтому он не удалён, а закрыт ролью: обе строки сходятся
+                    // ровно на этом. Роли разработчика в коде нет — гейт пока
+                    // только кураторский.
+                    hasEvidence && isCuratorReadOnlyMode() && React.createElement('button', {
                         type: 'button',
                         className: 'advice-v4-detail__tech-link',
                         onClick: (e) => {
@@ -1419,43 +1433,82 @@
         const swipeProgress = Math.min(1, Math.abs(swipeX) / 100);
         const showUndo = isLastDismissed && (isDismissed || isHidden);
 
+        // Строка «панель оценки»: свайп влево сужает карточку на 96 px справа —
+        // сама она не сдвигается. Поэтому влево едет только правая граница
+        // (margin-right), а translateX остаётся жестом «скрыть» вправо: если
+        // сдвинуть карточку, первые 96 px уходят под край и человек оценивает
+        // совет, которого не видит. Полоса состояния и текст этим не двигаются
+        // вовсе — они привязаны к левому краю карточки (15 px и 30 px).
+        const ratingOpen = !!swipeState?.rating;
+        const ratingWidth = ratingOpen
+            ? ADVICE_RATING_PANEL_WIDTH
+            : Math.min(ADVICE_RATING_PANEL_WIDTH, Math.max(0, -swipeX));
+        const isDraggingCard = !ratingOpen && !!swipeDirection;
+        const rateLockRef = React.useRef(0);
+
         if ((isDismissed || isHidden) && !showUndo) return null;
         if (showUndo) return null;
 
+        const rate = (isPositive, e) => {
+            e?.stopPropagation?.();
+            // Строка «повторный тап»: 350 мс защиты там, где повтор создаёт
+            // лишнюю сущность. Вторая оценка того же совета — именно такой
+            // случай, поэтому окно закрывается до того, как панель успеет уйти.
+            const now = Date.now();
+            if (now - rateLockRef.current < ADVICE_RATE_REPEAT_GUARD_MS) return;
+            rateLockRef.current = now;
+            if (onRate) onRate(advice, isPositive, e);
+            // Строка «панель оценки»: после ответа кнопки исчезают, карточка
+            // возвращается на место. Совет остаётся в списке — ни «Помогло», ни
+            // «Не показывать такие» его отсюда не убирают.
+            onSwipeEnd(advice.id);
+        };
+
         return React.createElement('div', {
-            className: 'advice-list-item-wrapper',
+            className: 'advice-list-item-wrapper' + (ratingOpen ? ' advice-list-item-wrapper--rating' : ''),
             'data-advice-category': advice.category || advice.ruleCategory || 'general',
             style: {
                 animationDelay: `${globalIndex * 50}ms`,
                 '--stagger-delay': `${globalIndex * 50}ms`,
                 position: 'relative',
-                overflow: 'hidden',
             },
         },
-            React.createElement('div', {
-                className: 'advice-list-item-bg advice-list-item-bg-left',
-                style: { opacity: swipeDirection === 'left' ? swipeProgress : 0 },
-            }, React.createElement('span', { className: 'advice-list-item-bg__label' },
-                renderAdviceV4Icon(React, 'check'),
-                'Прочитано'
-            )),
-            React.createElement('div', {
-                className: 'advice-list-item-bg advice-list-item-bg-right',
-                style: { opacity: swipeDirection === 'right' ? swipeProgress : 0 },
-            }, React.createElement('span', { className: 'advice-list-item-bg__label' },
-                renderAdviceV4Icon(React, 'thumb-down'),
-                'Скрыть'
-            )),
-            React.createElement('div', {
-                ref: (el) => registerCardRef(advice.id, el),
-                className: `advice-list-item advice-list-item-v4 advice-list-item-${advice.type}${isExpanded ? ' expanded' : ''}`,
-                style: {
-                    transform: `translateX(${swipeX}px)`,
-                    touchAction: 'pan-y',
-                },
-                onClick: (e) => {
-                    if (Math.abs(swipeX) > 10) return;
-                    e.stopPropagation();
+            React.createElement('div', { className: 'advice-list-item-frame' },
+                // Строка «панель оценки»: в освободившемся месте открывается
+                // панель шириной 96 с подписью «Полезно?».
+                ratingWidth > 0 && React.createElement('div', {
+                    className: 'advice-v4-rate-panel',
+                    'aria-hidden': !ratingOpen,
+                }, React.createElement('span', { className: 'advice-v4-rate-panel__label' }, 'Полезно?')),
+                React.createElement('div', {
+                    className: 'advice-list-item-bg advice-list-item-bg-right',
+                    style: { opacity: swipeDirection === 'right' ? swipeProgress : 0 },
+                }, React.createElement('span', { className: 'advice-list-item-bg__label' },
+                    renderAdviceV4Icon(React, 'thumb-down'),
+                    'Скрыть'
+                )),
+                React.createElement('div', {
+                    ref: (el) => registerCardRef(advice.id, el),
+                    className: `advice-list-item advice-list-item-v4 advice-list-item-${advice.type}${isExpanded ? ' expanded' : ''}`,
+                    style: {
+                        transform: `translateX(${Math.max(0, swipeX)}px)`,
+                        marginRight: `${ratingWidth}px`,
+                        transition: isDraggingCard
+                            ? 'none'
+                            : `margin-right ${ADVICE_RATING_RETURN_MS}ms ease, transform ${ADVICE_RATING_RETURN_MS}ms ease`,
+                        touchAction: 'pan-y',
+                    },
+                    onClick: (e) => {
+                        // Панель оценки открыта — тап по карточке её закрывает, а
+                        // не проваливается в деталь: иначе единственный способ
+                        // отказаться от ответа это свайп обратно.
+                        if (ratingOpen) {
+                            e.stopPropagation();
+                            onSwipeEnd(advice.id);
+                            return;
+                        }
+                        if (Math.abs(swipeX) > 10) return;
+                        e.stopPropagation();
                     // 🚀 PERF R38: defer heavy details open (167–184ms → ~0ms click)
                     setTimeout(() => {
                         if (trackClick) trackClick(advice);
@@ -1545,6 +1598,28 @@
                         }, advice.action.snooze.label || '⏰ Позже')
                     )
                 )
+                )
+            ),
+            // Строка «панель оценки»: под карточкой ряд из двух кнопок высотой 44
+            // и радиусом 999 — «Помогло» заливкой --gr2 (flex 1) и «Не показывать
+            // такие» фоном --c2 (flex 1,5). Третьей кнопки нет: «Нет» было бы
+            // кнопкой в никуда, а главный полезный ответ здесь — «не советуй мне
+            // это». Кнопки живут снаружи рамки карточки, поэтому и вынесены из
+            // .advice-list-item-frame с его overflow.
+            ratingOpen && React.createElement('div', { className: 'advice-v4-rate-actions' },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'advice-v4-rate-btn advice-v4-rate-btn--helped',
+                    onClick: (e) => rate(true, e),
+                }, 'Помогло'),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'advice-v4-rate-btn advice-v4-rate-btn--mute',
+                    onClick: (e) => rate(false, e),
+                }, 'Не показывать такие')
+            ),
+            ratingOpen && React.createElement('div', { className: 'advice-v4-rate-note' },
+                'Оба ответа меняют, что вы увидите дальше. Совет остаётся в списке.'
             )
         );
     });
@@ -1842,8 +1917,6 @@
         undoLastDismiss,
         clearLastDismissed,
         copyAdviceTrace,
-        adviceTraceAvailable,
-        adviceTraceCopyState,
         adviceDiagnostics,
         adviceDiagnosticsOpen,
         openAdviceDiagnostics,
@@ -1863,12 +1936,10 @@
         AdviceCard,
         undoCountdownSeconds,
         adviceServiceOpen,
-        openAdviceService,
         closeAdviceService,
         openAdviceRulesPool,
         closeAdviceRulesPool,
         adviceRulesPoolOpen,
-        retryAdviceMarksSync,
         medicalDisclaimerSessionDismissed,
     }) {
         // 2026-05-31: Кураторская сессия видит советы так же как клиент при
@@ -1901,7 +1972,7 @@
                 || null)
             : null;
         const showSwipeFeedback = !!lastDismissedAdvice && !!feedbackAdvice;
-        const pendingAdviceMarksCount = getAdvicePendingMarkSyncCount(dismissedAdvices, hiddenUntilTomorrow);
+        const adviceRatingSyncPending = hasPendingAdviceRatingSync();
 
         return React.createElement('div', {
             className: 'advice-list-overlay',
@@ -1928,6 +1999,14 @@
                             }, ' ' + displayAdviceCount)
                         ),
                         React.createElement('div', { className: 'advice-list-header-actions' },
+                            // Строка «служебные модалки» просит унести техлог и
+                            // диагностику в служебную створку настроек. Клиенту
+                            // они и сейчас недоступны — вход всегда стоял под
+                            // признаком куратора. Створки в настройках пока нет,
+                            // поэтому вход оставлен здесь: снять его раньше, чем
+                            // появится замена, значит отобрать инструмент у
+                            // куратора и ничего не дать клиенту. Названное
+                            // отступление, вопрос дизайнеру в UI_V4_FINDINGS.
                             _isCurator && (adviceTraceAvailable || adviceDiagnostics) && React.createElement('button', {
                                 className: 'advice-list-header-link advice-list-header-link--service',
                                 onClick: openAdviceService,
@@ -1942,6 +2021,11 @@
                         )
                     )
                 ),
+                // Строка «не сохранено»: плашка встаёт в шторке НАД списком.
+                // Кадр «Советы · не сохранено» рисует её сразу под ручкой, без
+                // шапки шторки вовсе; верна строка — шапка остаётся, плашка
+                // садится между ней и списком.
+                renderAdviceSyncBanner(React, { pending: adviceRatingSyncPending }),
                 React.createElement('div', { className: 'advice-list-items' },
                     // Группа предупреждений EWS — первой, до всех категорий советов,
                     // визуально плотнее и не сворачивается (UI v4, 2026-08-10).
@@ -2020,33 +2104,17 @@
                             onOpenDetails: openAdviceDetailModal,
                         }))
                 ),
+                // Строка «жесты» отдаёт текст этой строки коду («дословно из
+                // кода, без эмодзи»), поэтому она следует за жестом, а не за
+                // прежней подписью: свайп влево теперь открывает панель оценки
+                // (строка «панель оценки»), а не помечает прочитанным.
                 displayAdviceCount > 0 && React.createElement('div', { className: 'advice-list-hints' },
-                    React.createElement('span', { className: 'advice-list-hint-item' }, '← прочитано'),
+                    React.createElement('span', { className: 'advice-list-hint-item' }, '← оценить'),
                     React.createElement('span', { className: 'advice-list-hint-divider' }, '•'),
                     React.createElement('span', { className: 'advice-list-hint-item' }, 'скрыть →'),
                     React.createElement('span', { className: 'advice-list-hint-divider' }, '•'),
                     React.createElement('span', { className: 'advice-list-hint-item' }, 'тап — открыть')
                 ),
-                renderAdviceSyncBanner(React, {
-                    pendingCount: pendingAdviceMarksCount,
-                    onRetry: retryAdviceMarksSync,
-                }),
-                showSwipeFeedback && lastDismissedAdvice.action === 'read' && renderAdviceReadFeedbackPanel(React, {
-                    onRatePositive: (e) => {
-                        e?.stopPropagation?.();
-                        if (navigator.vibrate) navigator.vibrate(30);
-                        setTimeout(() => { rateAdvice && rateAdvice(feedbackAdvice, true); clearLastDismissed(); }, 0);
-                    },
-                    onRateNegative: (e) => {
-                        e?.stopPropagation?.();
-                        if (navigator.vibrate) navigator.vibrate(30);
-                        setTimeout(() => { rateAdvice && rateAdvice(feedbackAdvice, false); clearLastDismissed(); }, 0);
-                    },
-                    onSkip: (e) => {
-                        e?.stopPropagation?.();
-                        clearLastDismissed();
-                    },
-                }),
                 showSwipeFeedback && lastDismissedAdvice.action === 'hidden' && renderAdviceHideUndoPanel(React, {
                     advice: feedbackAdvice,
                     secondsLeft: undoCountdownSeconds,
@@ -3621,13 +3689,6 @@
             setAdviceRulesPoolOpen(false);
         }, []);
 
-        const retryAdviceMarksSync = useCallback(async (e) => {
-            e?.stopPropagation?.();
-            try {
-                await HEYSRef?.cloud?.flushPendingQueue?.(5000);
-            } catch (_) { }
-        }, [HEYSRef]);
-
         // Строка контракта tips «доступность»: «жесты влево и вправо дублируются
         // действиями в детали совета — свайп не единственный способ». Тела обоих
         // жестов вынесены сюда, чтобы кнопка в детали приводила ровно к тому же
@@ -3730,26 +3791,48 @@
 
         const handleAdviceSwipeEnd = useCallback((adviceId) => {
             const gesture = adviceSwipeStart.current[adviceId];
-            if (gesture?.lock === 'vertical') {
+            const state = adviceSwipeState[adviceId];
+            const closeCard = () => {
                 setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
                 delete adviceSwipeStart.current[adviceId];
+            };
+
+            if (gesture?.lock === 'vertical') {
+                closeCard();
                 return;
             }
 
-            const state = adviceSwipeState[adviceId];
+            // Панель оценки уже открыта: этот вызов — ответ на кнопку или тап по
+            // карточке, и он её закрывает. Карточка возвращается на место
+            // (переход 180 мс живёт на самой карточке), совет остаётся в списке.
+            if (state?.rating) {
+                closeCard();
+                return;
+            }
+
             const swipeX = state?.x || 0;
 
             if (lastDismissedAdvice?.hideTimeout) clearTimeout(lastDismissedAdvice.hideTimeout);
 
-            if (swipeX < -100) {
-                applyAdviceRead(adviceId);
-            } else if (swipeX > 100) {
+            // Строка «панель оценки»: свайп влево открывает панель оценки, а не
+            // помечает совет прочитанным. Само «прочитано» никуда не делось —
+            // оно живёт кнопкой в детали совета и строкой «Прочитать все».
+            if (swipeX < -ADVICE_RATING_OPEN_THRESHOLD) {
+                setAdviceSwipeState(prev => ({
+                    ...prev,
+                    [adviceId]: { x: -ADVICE_RATING_PANEL_WIDTH, direction: 'left', rating: true },
+                }));
+                delete adviceSwipeStart.current[adviceId];
+                haptic('light');
+                return;
+            }
+
+            if (swipeX > 100) {
                 applyAdviceHideUntilTomorrow(adviceId);
             }
 
-            setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
-            delete adviceSwipeStart.current[adviceId];
-        }, [adviceSwipeState, lastDismissedAdvice, applyAdviceRead, applyAdviceHideUntilTomorrow]);
+            closeCard();
+        }, [adviceSwipeState, haptic, lastDismissedAdvice, applyAdviceHideUntilTomorrow]);
 
         const adviceLongPressTimer = useRef(null);
         const handleAdviceLongPressStart = useCallback((adviceId) => {
@@ -3960,7 +4043,6 @@
             openAdviceRulesPool,
             closeAdviceRulesPool,
             adviceRulesPoolOpen,
-            retryAdviceMarksSync,
             totalAdviceCount,
             dismissToast,
             ADVICE_CATEGORY_NAMES,

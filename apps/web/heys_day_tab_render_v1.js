@@ -120,7 +120,6 @@
             openAdviceRulesPool: adviceState.openAdviceRulesPool,
             closeAdviceRulesPool: adviceState.closeAdviceRulesPool,
             adviceRulesPoolOpen: adviceState.adviceRulesPoolOpen,
-            retryAdviceMarksSync: adviceState.retryAdviceMarksSync,
             copyAdviceTrace: adviceState.copyAdviceTrace,
             adviceTraceAvailable: adviceState.adviceTraceAvailable,
             adviceTraceCopyState: adviceState.adviceTraceCopyState,
