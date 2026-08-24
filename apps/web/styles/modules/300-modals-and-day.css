@@ -4867,16 +4867,11 @@
   }
 }
 
-.pull-refresh-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-}
-
-.pull-refresh-spinner.spinning {
-  animation: spin 0.8s linear infinite;
-}
+/* Второй pull-to-refresh снят вместе со своим спиннером: apps/web/heys_pull_refresh.js
+   экспортировал HEYS.PullToRefresh, но его никто не монтировал (живой жест —
+   HEYS.dayPullRefresh). Это был третий вид ожидания в продукте, контракт
+   «Спиннеры» → «форма» знает один. @keyframes spin выше оставлен: тем же именем
+   пользуется animate-spin из tailwind.css. */
 
 /* Utility classes для замены inline стилей (modals/day scope) */
 .dev-positive {

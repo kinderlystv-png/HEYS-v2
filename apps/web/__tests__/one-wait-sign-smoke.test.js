@@ -137,3 +137,92 @@ describe('иконка запуска не рисует своё скругле�
     expect(apple).not.toContain('rx=');
   });
 });
+
+describe('кнопка отправки в чате несёт тот же знак', () => {
+  const messenger = fs.readFileSync(path.join(WEB_DIR, 'heys_messenger_v1.js'), 'utf8');
+  const css = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/1000-messenger.css'), 'utf8');
+
+  it('своё кольцо 16/2 снято, знак берётся у HEYS.WaitMark', () => {
+    expect(messenger).not.toContain('messenger-send__spinner');
+    expect(css).not.toMatch(/\.messenger-send__spinner\s*\{/);
+    expect(css).not.toMatch(/^@keyframes messenger-send-spin/m);
+    expect(css).not.toContain('animation: messenger-send-spin');
+    expect(messenger).toContain("mode: 'button', state: 'wait', silent: true");
+  });
+
+  it('кнопка сохраняет заливку и гаснет до 60 %, а не сереет как «нечего отправить»', () => {
+    expect(messenger).toContain("'messenger-send' + (sending ? ' messenger-send--busy' : '')");
+    expect(css).toMatch(/\.messenger-send--busy:disabled \{[\s\S]*?background: #1d70b7;[\s\S]*?opacity: 0\.6;/);
+    // Правило должно стоять ПОСЛЕ :disabled — специфичность равна, побеждает поздний.
+    expect(css.indexOf('.messenger-send--busy:disabled')).toBeGreaterThan(css.indexOf('.messenger-send:disabled'));
+  });
+
+  it('знак в кнопке — дуга 18 обводкой 2,5 без второй живой области', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    act(() => {
+      root.render(window.HEYS.WaitMark.render(React, { mode: 'button', state: 'wait', silent: true }));
+    });
+    const svg = host.querySelector('svg');
+    expect(svg.getAttribute('width')).toBe('18');
+    expect(svg.getAttribute('stroke-width')).toBe('2.5');
+    expect([...svg.querySelectorAll('path')].map((p) => p.getAttribute('d'))).toEqual([ARC_TAIL, ARC_HEAD]);
+    expect(host.querySelectorAll('[role="status"]').length).toBe(0);
+  });
+});
+
+describe('кольцо загрузки фото сведено к тому же знаку', () => {
+  const base = fs.readFileSync(
+    path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8',
+  );
+
+  it('18 px, обводка 2,5, хвост .22, оборот 1,1 с', () => {
+    const rule = /\.meal-photo-thumb\.uploading::after \{[^}]*\}/.exec(base)[0];
+    expect(rule).toContain('width: 18px;');
+    expect(rule).toContain('border: 2.5px solid rgba(255, 255, 255, 0.22);');
+    expect(rule).toContain('border-radius: 999px;');
+    expect(rule).toContain('animation: spin 1.1s linear infinite;');
+    expect(rule).toContain('box-sizing: border-box;');
+    // Было 24/3 с хвостом .3 и оборотом 0,8 с.
+    expect(rule).not.toContain('width: 24px;');
+    expect(rule).not.toContain('0.8s');
+  });
+});
+
+describe('мёртвый второй pull-to-refresh снят', () => {
+  it('модуля, стиля и записи в конфиге бандлов больше нет', () => {
+    expect(fs.existsSync(path.join(WEB_DIR, 'heys_pull_refresh.js'))).toBe(false);
+    const modals = fs.readFileSync(
+      path.join(WEB_DIR, 'styles/modules/300-modals-and-day.css'), 'utf8',
+    );
+    expect(modals).not.toContain('.pull-refresh-indicator {');
+    expect(modals).not.toContain('.pull-refresh-spinner.spinning');
+    const bundles = fs.readFileSync(
+      path.resolve(WEB_DIR, '../../scripts/legacy-bundle-config.mjs'), 'utf8',
+    );
+    expect(bundles).not.toContain('heys_pull_refresh.js');
+  });
+
+  it('живым остаётся один жест — HEYS.dayPullRefresh', () => {
+    const impl = fs.readFileSync(path.join(WEB_DIR, 'heys_day_tab_impl_v1.js'), 'utf8');
+    expect(impl).toContain('HEYS.dayPullRefresh?.usePullToRefresh?.(');
+    expect(fs.existsSync(path.join(WEB_DIR, 'heys_day_pull_refresh_v1.js'))).toBe(true);
+  });
+});
+
+describe('слой обновления PWA живёт по своей зоне и не сводится сюда', () => {
+  // Правило 3: pwa-update.v4.dc.html даёт слою собственный знак — круг 60,
+  // заливка акцента слоя под 14 %, глиф 24 обводкой 2,5 тоном #d98a4f, палитра
+  // «вне четырёх тем продукта». Строка spinners «форма» просит один знак на всё.
+  // Пока владелец не выбрал, слой остаётся как есть — тест это фиксирует, чтобы
+  // никто не «свёл» его молча.
+  it('иконка стадии остаётся по контракту своей зоны', () => {
+    const components = fs.readFileSync(path.join(WEB_DIR, 'styles/heys-components.css'), 'utf8');
+    const platform = fs.readFileSync(path.join(WEB_DIR, 'heys_platform_apis_v1.js'), 'utf8');
+    expect(components).toMatch(/\.heys-update-modal__icon \{[\s\S]*?width: 60px;/);
+    expect(components).toContain('background: rgba(217, 138, 79, 0.14);');
+    expect(components).toContain('animation: heys-update-spin 1.1s linear infinite;');
+    expect(platform).toContain("updateIconSvg(s.done ? 'check' : s.icon, 24, 2.5)");
+  });
+});

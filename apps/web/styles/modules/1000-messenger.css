@@ -2034,17 +2034,17 @@ button.messenger-day-checklist__chip:active {
   transform: scale(0.96);
 }
 
-.messenger-send__spinner {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: var(--v4-bg, #ffffff);
-  animation: messenger-send-spin 0.7s linear infinite;
-}
-
-@keyframes messenger-send-spin {
-  to { transform: rotate(360deg); }
+/* Отправка: кнопка сохраняет размер, радиус и заливку, гаснет до 60 % и не
+   нажимается — контракт «Спиннеры», строка «вид знака в кнопке». Сам знак несёт
+   HEYS.WaitMark, он берёт тон текста кнопки; своё кольцо .messenger-send__spinner
+   (16/2, хвост .35) и @keyframes messenger-send-spin сняты как второй знак
+   ожидания. Правило идёт после :disabled, чтобы серая заливка «нечего
+   отправлять» не съедала белый знак на время запроса. */
+.messenger-send--busy:disabled {
+  background: #1d70b7;
+  color: var(--v4-bg, #fff);
+  opacity: 0.6;
+  box-shadow: none;
 }
 
 @media (hover: hover) {

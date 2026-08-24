@@ -4458,7 +4458,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement(
             'button',
             {
-              className: 'messenger-send',
+              className: 'messenger-send' + (sending ? ' messenger-send--busy' : ''),
               onClick: handleSend,
               disabled: sending ||
                 recordingState !== 'idle' ||
@@ -4468,8 +4468,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   pendingAudio?.status !== 'done'),
               'aria-label': 'Отправить',
             },
+            // Знак ожидания один на весь продукт (контракт «Спиннеры» → «форма»).
+            // Место — кнопка действия с запросом к серверу, поэтому берётся форма
+            // «вид знака в кнопке»: дуга 18 обводкой 2,5 тоном текста кнопки,
+            // кнопка сохраняет размер и радиус и гаснет до 60 %. Своё кольцо 16/2
+            // с хвостом .35 снято. silent — у кнопки уже есть aria-label,
+            // вложенный role='status' озвучил бы её второй раз.
             sending
-              ? React.createElement('span', { className: 'messenger-send__spinner', 'aria-hidden': 'true' })
+              ? (window.HEYS?.WaitMark?.render?.(React, { mode: 'button', state: 'wait', silent: true }) || null)
               : React.createElement(Icon, { name: 'send', size: 20, strokeWidth: 1.9 }),
           ),
         ),

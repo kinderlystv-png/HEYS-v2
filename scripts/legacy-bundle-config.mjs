@@ -59,7 +59,6 @@ export const LEGACY_BUNDLES = {
         'heys_dayv2_cache_v1.js',
         'heys_wheel_picker.js',
         'heys_swipeable.js',
-        'heys_pull_refresh.js',
         'heys_toast_v1.js',
     ],
     'boot-calc': [

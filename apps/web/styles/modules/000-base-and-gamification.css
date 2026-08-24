@@ -14481,18 +14481,25 @@ body:has(:is(
     z-index: 3;
   }
 
+  /* Один знак ожидания на весь продукт (контракт «Спиннеры» → «форма»). Своё
+     кольцо 24 обводкой 3, хвост .3, оборот 0,8 с приведено к форме «вид знака
+     в кнопке»: 18 px, обводка 2,5, хвост той же дуги под .22, оборот 1,1 с;
+     тон — чернила подложки, как у знака в кнопке. Отступление названо вслух:
+     концы дуги не скруглены — знак рисуется рамкой псевдоэлемента, SVG в
+     ::after не вставить. */
   .meal-photo-thumb.uploading::after {
     content: '';
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 24px;
-    height: 24px;
-    margin: -12px 0 0 -12px;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    box-sizing: border-box;
+    width: 18px;
+    height: 18px;
+    margin: -9px 0 0 -9px;
+    border: 2.5px solid rgba(255, 255, 255, 0.22);
+    border-top-color: #fff;
+    border-radius: 999px;
+    animation: spin 1.1s linear infinite;
     z-index: 4;
   }
 
