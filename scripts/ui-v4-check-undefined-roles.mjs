@@ -1,15 +1,27 @@
 #!/usr/bin/env node
-// ui-v4-check-undefined-roles.mjs — гейт неопределённых ролей палитры v4.
+// ui-v4-check-undefined-roles.mjs — гейт ролей палитры v4, которые молча не
+// следуют набору. Держит две проверки.
 //
-// `var(--v4-роль, #литерал)` выглядит безопасно, но если роль не определена
-// НИГДЕ, запасное значение срабатывает всегда — цвет молча перестаёт следовать
-// набору. Ровно так на вкладке «Питание» жили `--v4-chip` и `--v4-surface-strong`:
-// во всех шести палитрах показывался один песочный литерал, и синие наборы
-// оставались непокрытыми. Глазами это не ловится: цвет-то есть.
+// 1. Неопределённая роль. `var(--v4-роль, #литерал)` выглядит безопасно, но
+// если роль не определена НИГДЕ, запасное значение срабатывает всегда — цвет
+// молча перестаёт следовать набору. Ровно так на вкладке «Питание» жили
+// `--v4-chip` и `--v4-surface-strong`: во всех палитрах показывался один
+// песочный литерал, и синие наборы оставались непокрытыми. Глазами это не
+// ловится: цвет-то есть.
 //
-// Гейт работает храповиком: список известных мест заморожен и может только
-// уменьшаться. Новая неопределённая роль — падение. Исчезнувшая запись —
-// тоже падение, чтобы список не превращался в вечную свалку.
+// Эта проверка работает храповиком: список известных мест заморожен и может
+// только уменьшаться. Новая неопределённая роль — падение. Исчезнувшая
+// запись — тоже падение, чтобы список не превращался в вечную свалку.
+//
+// 2. Голая `var(--v4-роль)` без запасного значения. Перенесена сюда 2026-08-24
+// из снятого гейта `ui-v4-check-classic-drift.mjs`: тот сверял подстановку
+// роли с каноничной палитрой, а каноничной палитры больше нет (решение
+// владельца — канон живёт только на зеркале stable.heyslab.ru). Правило про
+// голую `var()` к каноничной палитре отношения не имело и снятию не подлежит:
+// без запасного значения прежний цвет в коде не сохранён вовсе, и потерять
+// его можно молча. Иногда это правильно — намеренная смена вида, как
+// расформирование категорийной палитры, — но тогда рядом должен стоять маркер
+// намеренности, а не «так получилось».
 //
 // Использование:
 //   node scripts/ui-v4-check-undefined-roles.mjs                    # проверить
@@ -25,6 +37,18 @@ const WEB = path.join(ROOT, 'apps/web');
 
 const SKIP_DIRS = new Set(['public', 'dist', 'node_modules', '__tests__', '.next']);
 const SKIP_FILE = /(bundle|\.min)\.[cm]?js$/i;
+
+// Файлы, где var(--v4-*) живёт в данных, а не в стиле элемента, — исключены из
+// проверки голой var() (список перенесён из снятого гейта classic-drift).
+const BARE_SKIP_FILES = new Set([
+  '002-ui-v4-palette-roles.css', // сами определения ролей
+  // Скомпилированный Tailwind-артефакт: index.html грузит styles/tailwind.css,
+  // не src/tailwind.css; prebuild/CI/dev не пересобирают.
+  'tailwind.css',
+  // Карты подмены этапа 2: применяются только на песочной и синей палитрах
+  // (usesV4PaletteRoles), значения там — данные, а не объявления стиля.
+  'heys_dark_theme_interceptor.js',
+]);
 
 // Замороженный список: роль → файлы, где она сейчас используется без объявления.
 // Каждая строка — незакрытый долг. Убирать записи можно и нужно; добавлять —
@@ -121,6 +145,51 @@ function scanUndefinedRoles() {
   return found;
 }
 
+// --- Проверка 2: голая var(--v4-роль) без запасного значения ----------------
+
+const BARE_VAR_RE = /var\(\s*(--v4-[a-z0-9-]+)\s*\)/g;
+const INTENT_MARK = /v4-(?:intentional|mark-\d)|расформиров/i;
+
+// Маркер ищем в окне «две строки выше — до конца текущей»: столько занимает
+// обычная оговорка перед объявлением.
+function hasIntentNearby(src, index) {
+  const from = src.lastIndexOf('\n', src.lastIndexOf('\n', index - 1) - 1);
+  const to = src.indexOf('\n', index);
+  return INTENT_MARK.test(src.slice(Math.max(0, from), to === -1 ? src.length : to));
+}
+
+// Скоуп не фиксирован списком: каждый следующий батч перекраски добавляет свои
+// файлы, и гейт должен ловить их без правки скрипта. Берём всё, где уже есть
+// роли v4, кроме сборок и копий.
+function collectBareScope(dir = WEB, acc = [], base = '') {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith('.')) continue;
+    const rel = base ? `${base}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      if (SKIP_DIRS.has(entry.name)) continue;
+      collectBareScope(path.join(dir, entry.name), acc, rel);
+      continue;
+    }
+    if (!/\.(css|js)$/.test(entry.name)) continue;
+    if (BARE_SKIP_FILES.has(entry.name)) continue;
+    const src = fs.readFileSync(path.join(dir, entry.name), 'utf8');
+    if (src.includes('var(--v4-')) acc.push(rel);
+  }
+  return acc;
+}
+
+function scanBareRoles() {
+  const out = [];
+  for (const rel of collectBareScope()) {
+    const src = fs.readFileSync(path.join(WEB, rel), 'utf8');
+    for (const m of src.matchAll(BARE_VAR_RE)) {
+      if (hasIntentNearby(src, m.index)) continue;
+      out.push({ file: rel, line: src.slice(0, m.index).split('\n').length, role: m[1] });
+    }
+  }
+  return out;
+}
+
 function compare(found) {
   const added = [];
   const resolved = [];
@@ -176,16 +245,31 @@ function runCli() {
     return;
   }
 
+  const bare = scanBareRoles();
+
   if (process.argv.includes('--list')) {
     console.log(`Неопределённых ролей v4 сейчас: ${found.size}`);
     for (const [role, files] of [...found].sort()) {
       console.log(`  --${role}: ${[...files].sort().join(', ')}`);
     }
+    console.log(`Голых var() без запасного значения и без маркера: ${bare.length}`);
+    for (const item of bare) console.log(`  ${item.file}:${item.line} ${item.role}`);
     return;
   }
 
   const { added, resolved, moved } = compare(found);
   let failed = false;
+
+  if (bare.length) {
+    failed = true;
+    console.error('\n❌ var(--v4-роль) без запасного значения — прежний цвет потерян:');
+    for (const item of bare.slice(0, 20)) {
+      console.error(`  ${item.file}:${item.line} ${item.role}`);
+    }
+    if (bare.length > 20) console.error(`  … ещё ${bare.length - 20}`);
+    console.error('\nЛибо дописать запасное значение var(--роль, #прежний),');
+    console.error('либо поставить рядом маркер намеренности (v4-intentional / v4-mark-N).');
+  }
 
   if (added.length) {
     failed = true;
@@ -193,7 +277,7 @@ function runCli() {
     for (const item of added) {
       console.error(`  --${item.role} → ${item.files.join(', ')}`);
     }
-    console.error('\nЛибо объявить роль во всех шести наборах');
+    console.error('\nЛибо объявить роль во всех четырёх наборах');
     console.error('(apps/web/styles/modules/002-ui-v4-palette-roles.css),');
     console.error('либо взять существующую роль с нужным смыслом.');
   }
@@ -216,6 +300,7 @@ function runCli() {
   if (failed) process.exit(1);
 
   console.log(`Неопределённых ролей v4: ${found.size} — все известны и не расползлись.`);
+  console.log('Голых var(--v4-*) без запасного значения и без маркера нет.');
 }
 
 // Модуль импортируется тестом, поэтому отчёт печатается только при прямом

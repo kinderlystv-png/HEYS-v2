@@ -105,20 +105,35 @@ aws s3 cp dist/bundle-manifest.json s3://${BUCKET}/bundle-manifest.json \
 # оставить boot-core.bundle.3b5581270022.js. После upload каждый boot-*.js = 200.
 # Бандл boot-app обязан содержать tab-advice / 💡 и НЕ содержать renderNavIcon.
 
-# 4b. Если index всё же из d75ec593d (v4 login shell) — обязательно залить
-# статику, иначе после PIN пустой экран (404 на theme + v4 CSS):
-aws s3 cp apps/web/heys_theme_v1.js s3://${BUCKET}/heys_theme_v1.js \
-  --endpoint-url=$ENDPOINT --content-type "application/javascript" \
-  --cache-control "public, max-age=31536000, immutable"
-aws s3 cp apps/web/heys_login_theme_picker_v1.js s3://${BUCKET}/heys_login_theme_picker_v1.js \
-  --endpoint-url=$ENDPOINT --content-type "application/javascript" \
-  --cache-control "public, max-age=31536000, immutable"
-aws s3 cp apps/web/styles/modules/002-ui-v4-palette-roles.css s3://${BUCKET}/styles/modules/002-ui-v4-palette-roles.css \
-  --endpoint-url=$ENDPOINT --content-type "text/css" \
-  --cache-control "public, max-age=31536000, immutable"
-aws s3 cp apps/web/styles/modules/733-ui-v4-login-theme.css s3://${BUCKET}/styles/modules/733-ui-v4-login-theme.css \
-  --endpoint-url=$ENDPOINT --content-type "text/css" \
-  --cache-control "public, max-age=31536000, immutable"
+# 4b. ⛔ ВЕТКА НЕ ИСПОЛЬЗОВАНА И НЕ ДОЛЖНА БЫТЬ ИСПОЛЬЗОВАНА (2026-08-24).
+# Проверено по живому index.html, скачанному с зеркала: в нём ноль упоминаний
+# 002-ui-v4-palette-roles.css, heys_theme_v1.js, 733-ui-v4-login-theme.css,
+# атрибутов data-theme-id / data-palette и токенов --v4-*. CSS зеркала —
+# дореспличный монолит styles/main.css?v=57. Значит index взят НЕ из d75ec593d,
+# и v4-статики на зеркале нет.
+# Заливать её теперь нельзя: это разморозит эталон. Эталон собран вручную из
+# 36df9ce3 (10 августа 02:48), а 002-ui-v4-palette-roles.css появился на семь
+# часов позже — на базе эталона этого файла не существует. Каноничная палитра
+# из рабочей ветки снята 2026-08-24 (решение владельца: канон живёт только
+# здесь, на зеркале), поэтому файл из main принёс бы на stable четыре чужих
+# набора вместо канона.
+# Блок оставлен как запись о разобранной развилке, а не как шаг. Если когда-то
+# понадобится v4 login shell на зеркале — это отдельное решение владельца и
+# новая пересборка эталона, а не выполнение этих строк.
+#
+# Команды развилки оставлены закомментированными — копировать их целиком нельзя:
+# aws s3 cp apps/web/heys_theme_v1.js s3://${BUCKET}/heys_theme_v1.js \
+#   --endpoint-url=$ENDPOINT --content-type "application/javascript" \
+#   --cache-control "public, max-age=31536000, immutable"
+# aws s3 cp apps/web/heys_login_theme_picker_v1.js s3://${BUCKET}/heys_login_theme_picker_v1.js \
+#   --endpoint-url=$ENDPOINT --content-type "application/javascript" \
+#   --cache-control "public, max-age=31536000, immutable"
+# aws s3 cp apps/web/styles/modules/002-ui-v4-palette-roles.css s3://${BUCKET}/styles/modules/002-ui-v4-palette-roles.css \
+#   --endpoint-url=$ENDPOINT --content-type "text/css" \
+#   --cache-control "public, max-age=31536000, immutable"
+# aws s3 cp apps/web/styles/modules/733-ui-v4-login-theme.css s3://${BUCKET}/styles/modules/733-ui-v4-login-theme.css \
+#   --endpoint-url=$ENDPOINT --content-type "text/css" \
+#   --cache-control "public, max-age=31536000, immutable"
 
 # 5. Smoke
 curl -fsS https://stable.heyslab.ru/version.json

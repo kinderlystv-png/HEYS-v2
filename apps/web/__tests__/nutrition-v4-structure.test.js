@@ -162,8 +162,9 @@ describe('Nutrition tab v4 structure', () => {
     const mainCss = fs.readFileSync(path.resolve(__dirname, '../styles/main.css'), 'utf8');
     expect(mainCss).toContain('732-ui-v4-nutrition.css');
     // Литералов как значений нет: цвет берётся ролью. Запасные значения ролей —
-    // запись того, что покажет каноничная палитра (гейт
-    // scripts/ui-v4-check-classic-drift.mjs), а не самостоятельная краска.
+    // страховка на случай неопределённой роли, а не самостоятельная краска.
+    // (До 24.08 они были записью того, что покажет каноничная палитра, и это
+    // сторожил снятый гейт scripts/ui-v4-check-classic-drift.mjs.)
     const bareLiterals = cssSource
       .split(/\r?\n/)
       .filter((line) => /:\s*#[0-9a-fA-F]{3,8}\s*;/.test(line) && !/--nut-dim/.test(line))
@@ -179,9 +180,12 @@ describe('Nutrition tab v4 structure', () => {
     expect(cssSource).not.toContain('--v4-undefined-role');
     expect(cssSource).not.toContain('--v4-surface-strong');
     expect(cssSource).not.toContain('--v4-surface-2');
-    // Новые роли объявлены во всех шести наборах.
+    // Новые роли объявлены во всех наборах. Наборов четыре, а не шесть:
+    // каноничная палитра и её тёмная убраны из 002-ui-v4-palette-roles.css
+    // 24.08 (канон живёт только на зеркале stable.heyslab.ru, а миграция в
+    // heys_theme_v1.js переписывает сохранённое `classic` на `sand`).
     ['--v4-warn-text', '--v4-tint', '--v4-past'].forEach((token) => {
-      expect((paletteSource.match(new RegExp(token + ':', 'g')) || []).length, token).toBe(6);
+      expect((paletteSource.match(new RegExp(token + ':', 'g')) || []).length, token).toBe(4);
     });
   });
 
