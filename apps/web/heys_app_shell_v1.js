@@ -4792,10 +4792,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             })));
         };
 
-        const renderSettingsRow = ({ key, label, meta, metaNode, metaTone, expanded, danger, onClick, scrollAnchorKey }) =>
-            React.createElement('button', {
+        // Контракт «доступность»: строка яруса — кнопка с фразой «название, текущее значение».
+        // valueText нужен там, где значение нарисовано (кружки палитры aria-hidden).
+        const renderSettingsRow = ({ key, label, meta, metaNode, metaTone, valueText, expanded, danger, onClick, scrollAnchorKey }) => {
+            const spokenValue = valueText || meta || '';
+            return React.createElement('button', {
                 key,
                 type: 'button',
+                'aria-label': spokenValue ? `${label}, ${spokenValue}` : undefined,
                 className: 'hdr-settings-sheet__row'
                     + (danger ? ' hdr-settings-sheet__row--exit' : '')
                     + (expanded ? ' is-expanded' : ''),
@@ -4820,6 +4824,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     !danger && renderSettingsChevron(!!expanded)
                 )
             );
+        };
 
         // UI-гейт: цель — найти настройку по группе; главное — выбрать строку / закрыть;
         // слой 1 — ярусы + тумблер уведомлений; слой 2 — раскрытия; критическое не скрывать — выход/данные.
@@ -5161,6 +5166,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         'aria-label': 'Настройки',
                     },
                     React.createElement('div', { className: 'hdr-settings-sheet__card', ref: settingsSheetCardRef },
+                    React.createElement('div', {
+                        className: 'hdr-settings-sheet__scroll animate-always',
+                        ref: settingsSheetScrollRef,
+                    },
+                    // Контракт «прокрутка»: шапка не липкая — уезжает вместе со списком
                     React.createElement('div', { className: 'hdr-settings-sheet__head' },
                         React.createElement('span', { className: 'hdr-settings-sheet__title' }, 'Настройки'),
                         React.createElement('button', {
@@ -5184,10 +5194,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             }, React.createElement('path', { d: 'M18 6L6 18M6 6l12 12' }))
                         )
                     ),
-                    React.createElement('div', {
-                        className: 'hdr-settings-sheet__scroll animate-always',
-                        ref: settingsSheetScrollRef,
-                    },
                     React.createElement('div', {
                         className: 'hdr-settings-sheet__push',
                         onClick: (e) => e.stopPropagation(),
@@ -5243,6 +5249,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             scrollAnchorKey: 'theme',
                             label: 'Оформление',
                             metaNode: renderPaletteDots(settingsPalette),
+                            // кружки палитры aria-hidden — значение проговариваем словом
+                            valueText: settingsPalette === 'blue' ? 'Синяя' : 'Бежево-зелёная',
                             expanded: sheetExtra === 'theme',
                             onClick: () => toggleSheetExtra('theme'),
                         }),
@@ -5295,7 +5303,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             React.createElement('div', {
                                 className: 'hdr-settings-sheet__fab-card',
                                 role: 'group',
-                                'aria-label': 'Быстрые действия',
+                                // Контракт «доступность»: счётчик — в подписи группы, а не отдельным узлом
+                                'aria-label': 'В быстрых действиях: включено '
+                                    + fabVisibilityDraftCount
+                                    + ' из '
+                                    + FAB_VISIBILITY_OPTIONS.length,
                                 onClick: (e) => e.stopPropagation(),
                             },
                                 React.createElement('p', {
@@ -5310,7 +5322,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                             key: option.key,
                                             type: 'button',
                                             className: 'hdr-settings-sheet__fab-chip' + (enabled ? ' is-on' : ''),
-                                            'aria-pressed': enabled ? 'true' : 'false',
+                                            // Контракт «доступность»: чипы — чекбоксы, не кнопки-переключатели
+                                            role: 'checkbox',
+                                            'aria-checked': enabled ? 'true' : 'false',
                                             onClick: () => {
                                                 window.HEYS?.FabVisibility?.toggleDraftVisible?.(option.key);
                                                 HEYS.dayUtils?.haptic?.('light');
@@ -5324,7 +5338,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                     })
                                 ),
                                 React.createElement('div', { className: 'hdr-settings-sheet__fab-meta' },
-                                    React.createElement('span', { className: 'hdr-settings-sheet__fab-count' },
+                                    React.createElement('span', {
+                                        className: 'hdr-settings-sheet__fab-count',
+                                        'aria-hidden': 'true', // счётчик уже прочитан в подписи группы
+                                    },
                                         'Включено '
                                         + fabVisibilityDraftCount
                                         + ' из '

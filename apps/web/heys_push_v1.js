@@ -443,10 +443,11 @@
     ]);
   }
 
+  // Строка «вид шага»: иконка того, что искать глазами, — 16 px обводкой 2,4.
   function iconShare() {
     return svgEl('svg', {
-      width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none',
-      stroke: 'currentColor', 'stroke-width': '1.9', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none',
+      stroke: 'currentColor', 'stroke-width': '2.4', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
       'aria-hidden': 'true',
     }, [
       svgEl('path', { d: 'M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8' }),
@@ -457,8 +458,8 @@
 
   function iconAddHome() {
     return svgEl('svg', {
-      width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none',
-      stroke: 'currentColor', 'stroke-width': '1.9', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none',
+      stroke: 'currentColor', 'stroke-width': '2.4', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
       'aria-hidden': 'true',
     }, [
       svgEl('rect', { x: '4', y: '4', width: '16', height: '16', rx: '4' }),
@@ -469,8 +470,8 @@
 
   function iconOpen() {
     return svgEl('svg', {
-      width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none',
-      stroke: 'currentColor', 'stroke-width': '1.9', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none',
+      stroke: 'currentColor', 'stroke-width': '2.4', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
       'aria-hidden': 'true',
     }, [
       svgEl('line', { x1: '5', y1: '12', x2: '19', y2: '12' }),
