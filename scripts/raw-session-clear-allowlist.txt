@@ -8,10 +8,10 @@
 # Каждая запись — намеренный raw clear с обоснованием:
 
 # Helper sam — preserve логика реализована вокруг этого clear (L83-L114 файла).
-apps/web/heys_platform_apis_v1.js:98
+apps/web/heys_platform_apis_v1.js:97
 
 # Account deletion flow — пользователь удалён, фенс уже не нужен.
-apps/web/heys_consents_v1.js:495
+apps/web/heys_consents_v1.js:496
 
 # Recovery preserve pattern в RecoveryScreen.handleClearCache — clear после
 # сбора `heys_drop_fence_*` в `preserved`, затем restore. L50 — clear фазы
