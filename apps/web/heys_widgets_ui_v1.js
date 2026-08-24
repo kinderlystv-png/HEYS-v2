@@ -8631,14 +8631,96 @@
   }
 
   /** Одна кнопка «+» 52 px с раскрывающейся карточкой быстрых действий (канвас v4). */
+  /**
+   * Быстрые действия: состав, порядок и крайние случаи — строки контракта
+   * «набор действий», «порядок в карточке», «настройка состава»,
+   * «включён один пункт», «не включено ни одного».
+   *
+   * Порядок задан снизу вверх по частоте: вода у самой кнопки, мессенджер на
+   * макушке. В разметке карточка растёт сверху вниз, поэтому список
+   * навигационных строк идёт в обратном порядке, а вода стоит последней —
+   * ближе всего к кнопке.
+   */
+  const QUICK_ACTION_ORDER = ['message', 'activity', 'hunger', 'meal'];
+
+  function readFabVisibility() {
+    const api = HEYS.FabVisibility;
+    return api && typeof api.read === 'function'
+      ? api.read()
+      : { water: true, hunger: true, message: true, activity: true, meal: true };
+  }
+
+  /** Слушать и штатное сохранение состава, и черновик из шторки настроек. */
+  function useFabVisibility() {
+    const [visibility, setVisibility] = useState(readFabVisibility);
+    useEffect(() => {
+      const sync = () => setVisibility(readFabVisibility());
+      const api = HEYS.FabVisibility;
+      const events = [api?.EVENT, api?.DRAFT_EVENT].filter(Boolean);
+      events.forEach((name) => window.addEventListener(name, sync));
+      return () => events.forEach((name) => window.removeEventListener(name, sync));
+    }, []);
+    return visibility;
+  }
+
+  /**
+   * Чипы воды: 200 и 500 по умолчанию, дальше — объёмы человека из настроек
+   * воды (строка «чипы воды»). Чипа 250 нет: контракт называет его прямо.
+   */
+  function waterChipVolumes() {
+    const presets = HEYS.WaterCustomVolume?.PRESETS_ML;
+    const list = Array.isArray(presets) && presets.length ? presets : [200, 500];
+    return [...new Set(list)].filter((ml) => Number.isFinite(ml) && ml > 0).slice(0, 4);
+  }
+
+  function QuickChevron() {
+    return React.createElement('svg', {
+      className: 'widgets-quick-sheet__chevron',
+      width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+      stroke: 'currentColor', strokeWidth: 2.2, strokeLinecap: 'round', strokeLinejoin: 'round',
+      'aria-hidden': 'true'
+    }, React.createElement('path', { d: 'M9 6l6 6-6 6' }));
+  }
+
+  const QUICK_ACTION_ICONS = {
+    water: [{ d: 'M12 3s6 6.5 6 10.5a6 6 0 01-12 0C6 9.5 12 3 12 3z' }],
+    meal: [{ d: 'M6 3v18' }, { d: 'M4 3v5a2 2 0 004 0V3' }, { d: 'M16 3c-2 4-2 8 0 9v9' }],
+    hunger: [{ d: 'M12 3.5a8.5 8.5 0 100 17 8.5 8.5 0 000-17z' }, { d: 'M12 12v-4' }, { d: 'M12 12l3 2' }],
+    activity: [{ d: 'M3 17l5-6 4 4 5-8 4 5' }],
+    message: [{ d: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z' }]
+  };
+
+  function QuickActionIcon({ action, className }) {
+    return React.createElement(QuickSheetSvgIcon, { className },
+      ...(QUICK_ACTION_ICONS[action] || []).map((path, i) =>
+        React.createElement('path', { key: i, d: path.d })
+      )
+    );
+  }
+
   function WidgetsQuickActionsFab({
     waterMl,
     onAddWater,
     onAddMeal,
-    onOpenCurator
+    onOpenCurator,
+    onOpenHunger,
+    onOpenActivity
   }) {
     const [open, setOpen] = useState(false);
     const wrapRef = useRef(null);
+    const visibility = useFabVisibility();
+
+    const handlers = {
+      meal: onAddMeal,
+      hunger: onOpenHunger,
+      activity: onOpenActivity,
+      message: onOpenCurator
+    };
+    const labels = { meal: 'Еда', hunger: 'Голод и энергия', activity: 'Активность', message: 'Мессенджер' };
+
+    const navKeys = QUICK_ACTION_ORDER.filter((key) => visibility[key] !== false);
+    const waterOn = visibility.water !== false;
+    const enabledCount = navKeys.length + (waterOn ? 1 : 0);
 
     useEffect(() => {
       if (!open) return undefined;
@@ -8657,10 +8739,48 @@
       };
     }, [open]);
 
+    // Строка «не включено ни одного»: кнопки в углу нет вовсе.
+    if (!enabledCount) return null;
+
     const closeAnd = (fn) => (...args) => {
       setOpen(false);
       fn?.(...args);
     };
+
+    // Строка «включён один пункт»: стопки нет — кнопка становится действием и
+    // носит его иконку вместо «+». Навигационный пункт уводит одним тапом,
+    // вода раскрывает карточку с одними чипами.
+    const soleNavKey = !waterOn && navKeys.length === 1 ? navKeys[0] : null;
+    const soleWater = waterOn && !navKeys.length;
+
+    const renderNavRow = (key) => React.createElement('button', {
+      key,
+      type: 'button',
+      className: 'widgets-quick-sheet__row',
+      onClick: closeAnd(handlers[key])
+    },
+      React.createElement(QuickActionIcon, { action: key, className: 'widgets-quick-sheet__row-icon' }),
+      React.createElement('span', { className: 'widgets-quick-sheet__row-label' }, labels[key]),
+      React.createElement(QuickChevron, null)
+    );
+
+    const waterSection = React.createElement('div', { className: 'widgets-quick-sheet__section' },
+      React.createElement('div', { className: 'widgets-quick-sheet__head' },
+        React.createElement(QuickActionIcon, { action: 'water' }),
+        React.createElement('span', { className: 'widgets-quick-sheet__title' }, 'Вода'),
+        React.createElement('span', { className: 'widgets-quick-sheet__meta n' }, formatWaterCounterLiters(waterMl))
+      ),
+      React.createElement('div', { className: 'widgets-quick-sheet__chips', role: 'group', 'aria-label': 'Объём воды' },
+        waterChipVolumes().map((ml) => React.createElement('button', {
+          key: ml,
+          type: 'button',
+          className: 'widgets-quick-sheet__chip n',
+          onClick: closeAnd(() => onAddWater?.(ml))
+        }, String(ml)))
+      )
+    );
+
+    const fabAction = soleNavKey ? handlers[soleNavKey] : null;
 
     return React.createElement('div', {
       ref: wrapRef,
@@ -8673,62 +8793,29 @@
         onClick: () => setOpen(false)
       }),
       open && React.createElement('div', { className: 'widgets-quick-sheet animate-always', role: 'dialog', 'aria-label': 'Быстрые действия' },
-        React.createElement('div', { className: 'widgets-quick-sheet__section' },
-          React.createElement('div', { className: 'widgets-quick-sheet__head' },
-            React.createElement(QuickSheetSvgIcon, null,
-              React.createElement('path', { d: 'M12 3s6 6.5 6 10.5a6 6 0 01-12 0C6 9.5 12 3 12 3z' })
-            ),
-            React.createElement('span', { className: 'widgets-quick-sheet__title' }, 'Вода'),
-            React.createElement('span', { className: 'widgets-quick-sheet__meta n' }, formatWaterCounterLiters(waterMl))
-          ),
-          React.createElement('div', { className: 'widgets-quick-sheet__chips', role: 'group', 'aria-label': 'Объём воды' },
-            [200, 250, 500].map((ml) => React.createElement('button', {
-              key: ml,
-              type: 'button',
-              className: 'widgets-quick-sheet__chip n',
-              onClick: closeAnd(() => onAddWater?.(ml))
-            }, String(ml)))
-          )
-        ),
-        React.createElement('div', { className: 'widgets-quick-sheet__divider' }),
-        React.createElement('button', {
-          type: 'button',
-          className: 'widgets-quick-sheet__row',
-          onClick: closeAnd(onAddMeal)
-        },
-          React.createElement(QuickSheetSvgIcon, { className: 'widgets-quick-sheet__row-icon' },
-            React.createElement('path', { d: 'M6 3v18' }),
-            React.createElement('path', { d: 'M4 3v5a2 2 0 004 0V3' }),
-            React.createElement('path', { d: 'M16 3c-2 4-2 8 0 9v9' })
-          ),
-          React.createElement('span', { className: 'widgets-quick-sheet__row-label' }, 'Еда')
-        ),
-        React.createElement('button', {
-          type: 'button',
-          className: 'widgets-quick-sheet__row',
-          onClick: closeAnd(onOpenCurator)
-        },
-          React.createElement(QuickSheetSvgIcon, { className: 'widgets-quick-sheet__row-icon' },
-            React.createElement('path', { d: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z' })
-          ),
-          React.createElement('span', { className: 'widgets-quick-sheet__row-label' }, 'Куратор')
-        )
+        navKeys.map(renderNavRow),
+        navKeys.length > 0 && waterOn && React.createElement('div', { className: 'widgets-quick-sheet__divider', key: 'divider' }),
+        waterOn && waterSection
       ),
       React.createElement('button', {
         type: 'button',
         className: 'widgets-quick-fab' + (open ? ' is-open' : ''),
-        onClick: () => setOpen((v) => !v),
-        'aria-expanded': open ? 'true' : 'false',
-        'aria-label': open ? 'Закрыть быстрые действия' : 'Добавить запись'
+        onClick: fabAction ? () => fabAction() : () => setOpen((v) => !v),
+        'aria-expanded': fabAction ? undefined : (open ? 'true' : 'false'),
+        'aria-label': fabAction
+          ? labels[soleNavKey]
+          : (open ? 'Закрыть быстрые действия' : (soleWater ? 'Добавить воду' : 'Добавить запись'))
       },
         React.createElement('span', {
           className: 'widgets-quick-fab__glyph' + (open ? ' is-open' : ''),
           'aria-hidden': 'true'
         },
-          React.createElement('svg', {
-            width: 21, height: 21, viewBox: '0 0 24 24', fill: 'none',
-            stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round'
-          }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
+          soleNavKey
+            ? React.createElement(QuickActionIcon, { action: soleNavKey })
+            : React.createElement('svg', {
+              width: 21, height: 21, viewBox: '0 0 24 24', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round'
+            }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
         )
       )
     );
@@ -10313,7 +10400,12 @@
           waterMl: HEYS.Widgets?.data?.getWaterData?.()?.drunk || 0,
           onAddWater: (ml) => handleAddWater(ml),
           onAddMeal: () => goToDayAndRun('diary', 'addMeal', []),
-          onOpenCurator: openCuratorMessenger
+          onOpenCurator: openCuratorMessenger,
+          // Голод и активность открываются тем же способом, что и в легаси-стопке
+          // на дневных вкладках — состав действий у них общий (строка «набор
+          // действий»), различается только оболочка.
+          onOpenHunger: () => HEYS.HungerEnergyStatusModal?.show?.({}),
+          onOpenActivity: () => goToDayAndRun('activity', 'addActivity', [])
         })
       );
     };
@@ -10519,6 +10611,10 @@
   HEYS.Widgets.WidgetCard = WidgetCard;
   HEYS.Widgets.CatalogModal = CatalogModal;
   HEYS.Widgets.CatalogStrip = CatalogStrip;
+  // Экспорт ради смоука крайних случаев состава: ноль пунктов, один пункт,
+  // порядок и чипы воды руками не собрать (строки «включён один пункт»,
+  // «не включено ни одного», «порядок в карточке»).
+  HEYS.Widgets.QuickActionsFab = WidgetsQuickActionsFab;
   HEYS.Widgets.SettingsModal = SettingsModal;
   HEYS.Widgets.RelapseRiskDetailsModal = RelapseRiskDetailsModal;
 

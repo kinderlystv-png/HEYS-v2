@@ -552,6 +552,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             M
         } = params || {};
 
+        // Экспорт addActivity — тем же приёмом, что HEYS.Day.addMeal в
+        // heys_day_effects.js. Нужен карточке быстрых действий на Главной:
+        // строка контракта «набор действий» требует, чтобы «Активность»
+        // открывала добавление активности, а сам подборщик живёт здесь и
+        // наружу выведен не был.
+        React.useEffect(() => {
+            if (typeof openHouseholdPicker !== 'function') return undefined;
+            const addActivity = () => openHouseholdPicker('add');
+            HEYS.Day = HEYS.Day || {};
+            HEYS.Day.addActivity = addActivity;
+            return () => {
+                if (HEYS.Day && HEYS.Day.addActivity === addActivity) {
+                    delete HEYS.Day.addActivity;
+                }
+            };
+        }, [openHouseholdPicker]);
+
         // Detect offline cold-start: today + offline + sync not done + no local snapshot
         const today = new Date().toISOString().slice(0, 10);
         const isToday = date === today;
