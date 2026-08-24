@@ -445,37 +445,33 @@
     osc.stop(ctx.currentTime + 0.2);
   }
 
+  /**
+   * Звук капли воды — строки контракта water-add «чем сделан», «характер»,
+   * «тон», «огибающая», «громкость».
+   *
+   * Синтез в WebAudio, не семпл. Числа заданы контрактом, и все они прежде
+   * расходились: тон падал 760 → 330 вместо восходящего 400 → 540, спад тянулся
+   * 230 мс при разрешённых 200, а поверх стоял room wash — та самая
+   * реверберация, которую строка «характер» запрещает прямо. Громкость шла
+   * через 0,74 от общего уровня вместо 0,22.
+   *
+   * Мягкое контактное «ток» — короткий фильтрованный шум — остаётся: без него
+   * капля звучит синтетическим свистком, а строка просит именно контакт.
+   */
   function synthWater(ctx, vol, detuneCents = 0) {
-    // Soft premium water drip: smooth transient, rounded body, tasteful depth
     const now = ctx.currentTime;
     const detune = Number(detuneCents) || 0;
 
-    // ── Soft room wash: a small premium tail without audible echoes ──────────
-    const rvDelay = ctx.createDelay(0.08);
-    const rvFb = ctx.createGain();
-    const rvLp = ctx.createBiquadFilter();
-    const rvOut = ctx.createGain();
-    rvDelay.delayTime.setValueAtTime(0.030, now);
-    rvFb.gain.setValueAtTime(0.28, now);
-    rvLp.type = 'lowpass';
-    rvLp.frequency.setValueAtTime(2200, now);
-    rvOut.gain.setValueAtTime(0.18, now);
-    rvDelay.connect(rvLp);
-    rvLp.connect(rvFb);
-    rvFb.connect(rvDelay);
-    rvLp.connect(rvOut);
-    rvOut.connect(ctx.destination);
+    // Строка «громкость»: 0,22 от общего уровня — тише системного тапа.
+    const level = vol * 0.22;
 
-    // ── Dry path ─────────────────────────────────────────────────────────────
-    const dry = ctx.createGain();
-    dry.gain.setValueAtTime(0.80, now);
-    dry.connect(ctx.destination);
+    // Строка «характер»: без пузырей и реверберации. Прямой путь, без delay и
+    // обратной связи — прежний room wash снят целиком.
+    const out = ctx.createGain();
+    out.gain.setValueAtTime(1, now);
+    out.connect(ctx.destination);
 
-    const src = ctx.createGain();
-    src.connect(dry);
-    src.connect(rvDelay);
-
-    // ── Soft contact: tiny filtered noise so the drip feels real, not clicky ─
+    // ── Контактное «ток»: 2 мс фильтрованного шума ──────────────────────────
     const clickLen = Math.floor(ctx.sampleRate * 0.002);
     const clickBuf = ctx.createBuffer(1, clickLen, ctx.sampleRate);
     const clickData = clickBuf.getChannelData(0);
@@ -487,66 +483,47 @@
     clickFilter.frequency.setValueAtTime(1650, now);
     clickFilter.Q.setValueAtTime(1.0, now);
     const clickGain = ctx.createGain();
-    clickGain.gain.setValueAtTime(vol * 0.05, now);
+    clickGain.gain.setValueAtTime(level * 0.22, now);
     clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.007);
     clickSrc.connect(clickFilter);
     clickFilter.connect(clickGain);
-    clickGain.connect(src);
+    clickGain.connect(out);
     clickSrc.start(now);
     clickSrc.stop(now + 0.008);
 
-    // ── Main body: rounded pitch-drop, softer and more refined ──────────────
-    const bodyFilter = ctx.createBiquadFilter();
-    bodyFilter.type = 'bandpass';
-    bodyFilter.frequency.setValueAtTime(670, now);
-    bodyFilter.Q.setValueAtTime(1.8, now);
+    // ── Основной тон: 400 → 540 Гц восходящим глайдом ───────────────────────
+    // Строка «огибающая»: атака 4 мс, спад 140 мс, без сустейна.
     const bodyGain = ctx.createGain();
-    bodyFilter.connect(bodyGain);
-    bodyGain.connect(src);
     bodyGain.gain.setValueAtTime(0.0001, now);
-    bodyGain.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol * 0.74), now + 0.005);
-    bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.23);
+    bodyGain.gain.exponentialRampToValueAtTime(Math.max(0.0002, level), now + 0.004);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.144);
+    bodyGain.connect(out);
 
     const bodyOsc = ctx.createOscillator();
     bodyOsc.type = 'sine';
     bodyOsc.detune.setValueAtTime(detune, now);
-    bodyOsc.frequency.setValueAtTime(760, now);
-    bodyOsc.frequency.exponentialRampToValueAtTime(330, now + 0.14);
-    bodyOsc.connect(bodyFilter);
+    bodyOsc.frequency.setValueAtTime(400, now);
+    bodyOsc.frequency.exponentialRampToValueAtTime(540, now + 0.14);
+    bodyOsc.connect(bodyGain);
     bodyOsc.start(now);
-    bodyOsc.stop(now + 0.24);
+    bodyOsc.stop(now + 0.15);
 
-    // ── Silky top: minimal sheen to make the drop feel premium, not musical ─
-    const silkGain = ctx.createGain();
-    silkGain.gain.setValueAtTime(0.0001, now + 0.004);
-    silkGain.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol * 0.08), now + 0.012);
-    silkGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
-    silkGain.connect(src);
+    // ── Обертон ×2 на −12 дБ: та же кривая, вдвое выше, вчетверо тише ───────
+    // −12 дБ по амплитуде = 10^(−12/20) ≈ 0,251.
+    const overGain = ctx.createGain();
+    overGain.gain.setValueAtTime(0.0001, now);
+    overGain.gain.exponentialRampToValueAtTime(Math.max(0.0002, level * 0.251), now + 0.004);
+    overGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.144);
+    overGain.connect(out);
 
-    const silkOsc = ctx.createOscillator();
-    silkOsc.type = 'sine';
-    silkOsc.detune.setValueAtTime(detune, now + 0.004);
-    silkOsc.frequency.setValueAtTime(1100, now + 0.004);
-    silkOsc.frequency.exponentialRampToValueAtTime(820, now + 0.10);
-    silkOsc.connect(silkGain);
-    silkOsc.start(now + 0.004);
-    silkOsc.stop(now + 0.12);
-
-    // ── Low body: tiny tactile foundation, no sub-bass boom ────────────────
-    const lowGain = ctx.createGain();
-    lowGain.gain.setValueAtTime(0.0001, now);
-    lowGain.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol * 0.10), now + 0.007);
-    lowGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
-    lowGain.connect(src);
-
-    const lowOsc = ctx.createOscillator();
-    lowOsc.type = 'sine';
-    lowOsc.detune.setValueAtTime(detune, now);
-    lowOsc.frequency.setValueAtTime(265, now);
-    lowOsc.frequency.exponentialRampToValueAtTime(185, now + 0.12);
-    lowOsc.connect(lowGain);
-    lowOsc.start(now);
-    lowOsc.stop(now + 0.17);
+    const overOsc = ctx.createOscillator();
+    overOsc.type = 'sine';
+    overOsc.detune.setValueAtTime(detune, now);
+    overOsc.frequency.setValueAtTime(800, now);
+    overOsc.frequency.exponentialRampToValueAtTime(1080, now + 0.14);
+    overOsc.connect(overGain);
+    overOsc.start(now);
+    overOsc.stop(now + 0.15);
   }
 
   // ─── Category registry ────────────────────────────────────────────────────
