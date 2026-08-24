@@ -657,14 +657,19 @@
         );
     }
 
-    // Контракт date-remainders, строка «звук»: отдельного тумблера «Звук советов»
-    // здесь нет — звук приложения один и живёт в настройках профиля одним
-    // переключателем «Звук». Частный тумблер обещал бы точечность, которой в коде нет:
-    // HEYS.sounds — мост в HEYS.audio, а тот гасится общим masterEnabled.
+    // Решение владельца 24.08.2026: частный тумблер «Звук советов» остаётся.
+    // Человеку, которому мешают советы, не нужно ради этого глушить воду и всё
+    // остальное. Общий переключатель звука в профиле работает поверх: он гасит
+    // HEYS.audio.masterEnabled, а этот — только советы (гейты в playAdviceSound /
+    // playAdviceHideSound / показе тоста). Место временное: в новом пакете макета
+    // оба тумблера звука собираются в ярус «Звуки» внутри «Оформления», но пакет
+    // ещё не пересобран, поэтому ряд стоит там же, где стоял.
     function renderAdviceSettingsScreen(React, {
         onClose,
         toastsEnabled,
+        adviceSoundEnabled,
         onToggleToasts,
+        onToggleSound,
         categorySettings,
         onToggleCategoryGroup,
     }) {
@@ -706,6 +711,20 @@
                             className: 'advice-v4-settings__toggle' + (toastsEnabled ? ' is-on' : ''),
                             onClick: onToggleToasts,
                             'aria-pressed': toastsEnabled ? 'true' : 'false',
+                        }, React.createElement('span', { className: 'advice-v4-settings__toggle-thumb' }))
+                    ),
+                    React.createElement('div', { className: 'advice-v4-settings__row' },
+                        React.createElement('div', { className: 'advice-v4-settings__row-copy' },
+                            React.createElement('span', { className: 'advice-v4-settings__row-title' }, 'Звук'),
+                            React.createElement('span', { className: 'advice-v4-settings__row-hint' },
+                                'Только у советов. Остальные звуки приложения не затрагивает.'
+                            )
+                        ),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'advice-v4-settings__toggle' + (adviceSoundEnabled ? ' is-on' : ''),
+                            onClick: onToggleSound,
+                            'aria-pressed': adviceSoundEnabled ? 'true' : 'false',
                         }, React.createElement('span', { className: 'advice-v4-settings__toggle-thumb' }))
                     ),
                     React.createElement('div', { className: 'advice-v4-settings__section-label' }, 'О чём'),
@@ -1758,6 +1777,8 @@
         closeAdviceSettings,
         toastsEnabled,
         toggleToastsEnabled,
+        adviceSoundEnabled,
+        toggleAdviceSoundEnabled,
         adviceCategorySettings,
         toggleAdviceCategoryGroup,
     }) {
@@ -1779,7 +1800,9 @@
             adviceSettingsOpen && renderAdviceSettingsScreen(React, {
                 onClose: closeAdviceSettings,
                 toastsEnabled,
+                adviceSoundEnabled,
                 onToggleToasts: toggleToastsEnabled,
+                onToggleSound: toggleAdviceSoundEnabled,
                 categorySettings: adviceCategorySettings,
                 onToggleCategoryGroup: toggleAdviceCategoryGroup,
             })
@@ -2361,6 +2384,20 @@
             console.info('[HEYS.advice] readAdviceSettings: no settings found, returning {}');
             return {};
         }, [HEYSRef.store, getCurrentAdviceClientId, readRawAdviceSettings, utils.lsGet]);
+        // Два имени поля намеренно: `adviceSoundEnabled` пишет этот тумблер,
+        // `soundEnabled` — исторический ключ (и галочка «Звук» в профиле →
+        // «Настройки советов»). Терять запасное имя нельзя: у людей со старым
+        // сохранённым значением тумблер иначе сбросится в дефолт.
+        const getAdviceSoundEnabled = useCallback((settings) => {
+            if (Object.prototype.hasOwnProperty.call(settings, 'adviceSoundEnabled')) {
+                return settings.adviceSoundEnabled !== false;
+            }
+            if (Object.prototype.hasOwnProperty.call(settings, 'soundEnabled')) {
+                return settings.soundEnabled !== false;
+            }
+            return null;
+        }, []);
+
         const [toastsEnabled, setToastsEnabled] = useState(() => {
             try {
                 const settings = readAdviceSettings();
@@ -2385,10 +2422,25 @@
                 return true;
             }
         });
-        // Контракт date-remainders, строка «звук»: своего состояния звука у советов нет.
-        // Прежде здесь жил adviceSoundEnabled — второй выключатель поверх общего,
-        // который у вернувшегося пользователя стартовал с false и без своего тумблера
-        // молча глушил бы советы. Гашение целиком на HEYS.audio.masterEnabled.
+        const [adviceSoundEnabled, setAdviceSoundEnabled] = useState(() => {
+            try {
+                const settings = readAdviceSettings();
+                const soundVal = getAdviceSoundEnabled(settings);
+                if (soundVal !== null) return soundVal;
+                // Аналогично toastsEnabled: returning user → false до прихода sync.
+                let isReturning = false;
+                try {
+                    isReturning = !!localStorage.getItem('heys_pin_auth_client') ||
+                                  !!localStorage.getItem('heys_session_token') ||
+	                                  !!localStorage.getItem('heys_last_client_id') ||
+	                                  !!localStorage.getItem('heys_curator_cookie_session_hint');
+                } catch (_) { }
+                if (isReturning) return false;
+                return true;
+            } catch (e) {
+                return true;
+            }
+        });
         const [adviceTraceCopyState, setAdviceTraceCopyState] = useState('idle');
         const [adviceDiagnosticsOpen, setAdviceDiagnosticsOpen] = useState(false);
         const [adviceDetailModalOpen, setAdviceDetailModalOpen] = useState(false);
@@ -2403,13 +2455,16 @@
             const newToastsEnabled = Object.prototype.hasOwnProperty.call(settings, 'toastsEnabled')
                 ? settings.toastsEnabled !== false
                 : null;
+            const newSoundEnabled = getAdviceSoundEnabled(settings);
             console.info('[HEYS.advice] 🔍 mount useEffect: settings read', {
                 settings,
                 newToastsEnabled,
+                newSoundEnabled,
                 hasStore: !!HEYSRef.store?.get,
                 hasLsGet: !!utils.lsGet,
             });
             if (newToastsEnabled !== null) setToastsEnabled(newToastsEnabled);
+            if (newSoundEnabled !== null) setAdviceSoundEnabled(newSoundEnabled);
             // eslint-disable-next-line react-hooks/exhaustive-deps
         }, []);
 
@@ -2420,6 +2475,11 @@
                     setToastsEnabled((prev) => {
                         if (!Object.prototype.hasOwnProperty.call(settings, 'toastsEnabled')) return prev;
                         const cloudVal = settings.toastsEnabled !== false;
+                        return prev !== cloudVal ? cloudVal : prev;
+                    });
+                    setAdviceSoundEnabled((prev) => {
+                        const cloudVal = getAdviceSoundEnabled(settings);
+                        if (cloudVal === null) return prev;
                         return prev !== cloudVal ? cloudVal : prev;
                     });
                 } catch (e) {
@@ -2435,7 +2495,7 @@
                 window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
                 window.removeEventListener('heysAdviceSettingsChanged', handleAdviceSettingsChanged);
             };
-        }, [HEYSRef.analytics, readAdviceSettings]);
+        }, [HEYSRef.analytics, getAdviceSoundEnabled, readAdviceSettings]);
 
         const [dismissedAdvices, setDismissedAdvices] = useState(() => {
             try {
@@ -2591,23 +2651,26 @@
             setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: diff, direction } }));
         }, []);
 
-        // Контракт «звук»: гейт один — общий звук приложения (HEYS.audio.masterEnabled),
-        // своей проверки у советов нет.
+        // Гейтов два, и они складываются: этот — частный («Звук» в настройках
+        // советов), общий — HEYS.audio.masterEnabled из профиля. Без локальной
+        // проверки тумблер был бы декоративным: HEYS.audio про советы не знает.
         const playAdviceSound = useCallback(() => {
+            if (!adviceSoundEnabled) return;
             if (HEYS.audio) {
                 HEYS.audio.play('adviceAppear');
             } else if (HEYSRef?.sounds) {
                 HEYSRef.sounds.ding();
             }
-        }, [HEYSRef]);
+        }, [adviceSoundEnabled, HEYSRef]);
 
         const playAdviceHideSound = useCallback(() => {
+            if (!adviceSoundEnabled) return;
             if (HEYS.audio) {
                 HEYS.audio.play('adviceDismiss');
             } else if (HEYSRef?.sounds) {
                 HEYSRef.sounds.whoosh();
             }
-        }, [HEYSRef]);
+        }, [adviceSoundEnabled, HEYSRef]);
 
         const toggleToastsEnabled = useCallback(() => {
             setToastsEnabled(prev => {
@@ -2615,6 +2678,29 @@
                 try {
                     const settings = readAdviceSettings();
                     settings.toastsEnabled = newVal;
+                    settings.updatedAt = Date.now();
+                    if (HEYSRef.store?.set) {
+                        HEYSRef.store.set('heys_advice_settings', settings);
+                    } else if (utils.lsSet) {
+                        utils.lsSet('heys_advice_settings', settings);
+                    }
+                    window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: settings }));
+                } catch (e) { }
+                if (typeof haptic === 'function') haptic('light');
+                return newVal;
+            });
+        }, [HEYSRef.store, haptic, readAdviceSettings, utils.lsSet]);
+
+        // Пишем оба имени поля: `adviceSoundEnabled` читает этот тумблер,
+        // `soundEnabled` — галочка «Звук» в профиле → «Настройки советов»,
+        // чтобы два экрана не расходились.
+        const toggleAdviceSoundEnabled = useCallback(() => {
+            setAdviceSoundEnabled(prev => {
+                const newVal = !prev;
+                try {
+                    const settings = readAdviceSettings();
+                    settings.adviceSoundEnabled = newVal;
+                    settings.soundEnabled = newVal;
                     settings.updatedAt = Date.now();
                     if (HEYSRef.store?.set) {
                         HEYSRef.store.set('heys_advice_settings', settings);
@@ -3225,7 +3311,7 @@
             setToastDetailsOpen(false);
             setToastRatedState(null);
 
-            if (HEYSRef?.sounds) {
+            if (adviceSoundEnabled && HEYSRef?.sounds) {
                 if (advicePrimary.type === 'achievement' || advicePrimary.showConfetti) {
                     HEYSRef.sounds.success();
                 } else if (advicePrimary.type === 'warning') {
@@ -3246,7 +3332,7 @@
             }
 
             if (!isManualTrigger && markShown) markShown(advicePrimary);
-        }, [advicePrimary?.id, adviceTrigger, dismissedAdvices, hiddenUntilTomorrow, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, safeAdviceRelevant, date]);
+        }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, hiddenUntilTomorrow, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, safeAdviceRelevant, date]);
 
         useEffect(() => {
             setAdviceTrigger(null);
@@ -3854,6 +3940,8 @@
             handleDismissAll,
             toggleToastsEnabled,
             toastsEnabled,
+            toggleAdviceSoundEnabled,
+            adviceSoundEnabled,
             undoLastDismiss,
             clearLastDismissed,
             undoCountdownSeconds,
