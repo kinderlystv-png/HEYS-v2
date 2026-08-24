@@ -1997,6 +1997,7 @@
     if (state === 'good') return 'widget-v4-val--good';
     if (state === 'bad') return 'widget-v4-val--bad';
     if (state === 'act') return 'widget-v4-val--act';
+    if (state === 'overlap') return 'widget-v4-val--overlap';
     return 'widget-v4-val--neutral';
   }
 
@@ -2097,8 +2098,13 @@
   // волн — красный, остальное — чернила.
   const V4_INSULIN_CALM_MIN = 180;
 
+  /**
+   * Строка «инсулиновая волна»: наложение волн — тёплый акцент палитры, а не
+   * красный. Строка «волна · пересечение» говорит прямо: нахлёст не ошибка,
+   * а факт про день, и красным не красится.
+   */
   function v4InsulinWaveState(v4) {
-    if (Number(v4?.overlapCount) > 0) return 'bad';
+    if (Number(v4?.overlapCount) > 0) return 'overlap';
     if (Number(v4?.calmWindowMinutes) > V4_INSULIN_CALM_MIN) return 'good';
     return 'neutral';
   }

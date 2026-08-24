@@ -2903,7 +2903,8 @@ body:has(.page-reports) .hdr::after {
   position: relative;
   z-index: 1;
   width: 100%;
-  min-height: 38px;
+  /* Строка «состав карточки»: навигационные строки по 44 px. */
+  min-height: 44px;
   padding: 0;
   border: none;
   border-radius: 0;
@@ -10154,6 +10155,13 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 
 .widget-v4-val--bad {
   color: var(--v4-bad-text, #a8382b);
+}
+
+/* Наложение волн — тёплый акцент набора (--v4-wave-overlap), не красный:
+   строка «волна · пересечение» называет нахлёст фактом про день, а не
+   ошибкой. */
+.widget-v4-val--overlap {
+  color: var(--v4-wave-overlap, #d99a63);
 }
 
 .widget-v4-val--act {
