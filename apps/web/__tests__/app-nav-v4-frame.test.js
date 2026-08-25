@@ -170,6 +170,8 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(shellSrc).toContain('HEYS 4.0');
         expect(shellSrc).toContain("openUserSection('consents', 'settings-sheet-export')");
         expect(shellSrc).toContain("openUserSection('notifications', 'settings-sheet-notify')");
+        expect(shellSrc).toContain("openUserSection('subscription', 'settings-sheet-subscription')");
+        expect(shellSrc).toContain("openUserSection('system', 'settings-sheet-system')");
         expect(shellSrc).not.toContain("closeSettingsAndSwitch('overview'");
         expect(baseCss).toContain('.hdr-settings-sheet__tier');
         expect(baseCss).toContain('.hdr-settings-sheet__diag-panel');
@@ -177,7 +179,9 @@ describe('UI v4 Prompt 3b — шапка', () => {
         const userTabSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_user_tab_impl_v1.js'), 'utf8');
         expect(userTabSrc).toContain('heys:open-user-section');
         expect(userTabSrc).toContain("title: 'Уведомления и звук'");
-        expect(userTabSrc).toContain('isCuratorSession && React.createElement(ProfileSection');
+        expect(userTabSrc).toContain('profile-v4-external');
+        expect(userTabSrc).toContain("title: 'Медицинское'");
+        expect(userTabSrc).toContain('PIN клиента');
         expect(userTabSrc).toContain('normalizeExclusiveSections');
         expect(userTabSrc).toMatch(/const next = isOpen \? \{\} : \{ \[id\]: true \}/);
         expect(userTabSrc).toContain('React.createElement(SoundSettingsCard, null)');
@@ -284,8 +288,8 @@ describe('UI v4 — иконки', () => {
         const iconsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_app_nav_icons_v1.js'), 'utf8');
         expect(iconsSrc).toContain('person:');
         expect(iconsSrc).toContain('heart:');
-        expect(userSrc).toContain("profileSvg('person')");
         expect(userSrc).toContain("profileSvg('bell')");
+        expect(userSrc).toContain("profileSvg('gem')");
         expect(userSrc).not.toMatch(/icon: '👤'/);
         expect(userSrc).not.toMatch(/icon: '🔔'/);
     });

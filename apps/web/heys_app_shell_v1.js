@@ -5409,6 +5409,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             label: 'Данные и выгрузка',
                             onClick: () => openUserSection('consents', 'settings-sheet-export'),
                         }),
+                        renderSettingsRow({
+                            key: 'subscription',
+                            label: 'Подписка',
+                            onClick: () => openUserSection('subscription', 'settings-sheet-subscription'),
+                        }),
                     ]),
                     renderSettingsGroup('app', 'Приложение', [
                         // Контракт «вход в лист»: строка стоит под общим
@@ -5666,6 +5671,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             key: 'notify',
                             label: 'Звук и время напоминаний',
                             onClick: () => openUserSection('notifications', 'settings-sheet-notify'),
+                        }),
+                        renderSettingsRow({
+                            key: 'system',
+                            label: 'Система',
+                            onClick: () => openUserSection('system', 'settings-sheet-system'),
                         }),
                     ]),
                     renderSettingsGroup('support', 'Сопровождение', [

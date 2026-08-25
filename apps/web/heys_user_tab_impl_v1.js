@@ -380,6 +380,32 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         );
     }
 
+    // === Profile v4: три группы вместо аккордеонов (settings-system контракт) ===
+    function ProfileV4Tier({ id, title, children }) {
+        return React.createElement('section', {
+            className: 'profile-v4__tier',
+            id: id ? ('profile-v4-' + id) : undefined,
+            'data-profile-tier': id || undefined
+        },
+            React.createElement('h2', { className: 'profile-v4__tier-title' }, title),
+            children
+        );
+    }
+
+    function ProfileV4Subtier({ id, title, children }) {
+        return React.createElement('div', {
+            className: 'profile-v4__subtier',
+            id: id ? ('profile-v4-' + id) : undefined,
+        },
+            React.createElement('h3', { className: 'profile-v4__subtier-title' }, title),
+            children
+        );
+    }
+
+    function ProfileV4Card({ children }) {
+        return React.createElement('div', { className: 'profile-v4__card' }, children);
+    }
+
     function UserTabBase() {
         const isCuratorSession = (() => {
             try {
@@ -480,7 +506,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             });
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    const el = document.getElementById('profile-section-' + sectionId);
+                    const el = document.getElementById('profile-v4-' + sectionId)
+                        || document.getElementById('profile-section-' + sectionId);
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 });
             });
@@ -857,23 +884,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         };
 
         return React.createElement('div', { className: 'page page-user', 'data-curator-target': 'profile' },
-            React.createElement('div', { className: 'profile-accordion' },
+            React.createElement('div', { className: 'profile-v4' },
 
-                // === СЕКЦИЯ 1: Базовые параметры ===
-                React.createElement(ProfileSection, {
-                    id: 'basic',
-                    icon: profileSvg('person'),
-                    title: 'Базовые параметры',
-                    subtitle: 'Рост, вес, возраст, цели',
-                    tone: 'blue',
-                    expanded: expandedSections.basic,
-                    onToggle: () => toggleSection('basic')
-                },
-                    React.createElement('div', { className: 'profile-section__fields' },
-
-                        // === ГРУППА 1: Личные данные ===
-                        React.createElement(ProfileFieldGroup, { icon: profileSvg('person', 16), title: 'Личные данные' },
-                            React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Имя'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { value: profile.firstName, onChange: e => updateProfileField('firstName', e.target.value) }), React.createElement(FieldStatus, { fieldKey: 'firstName' })),
+                // === ГРУППА 1: Обо мне ===
+                React.createElement(ProfileV4Tier, { id: 'basic', title: 'Обо мне' },
+                    React.createElement(ProfileV4Card, null,
+                            React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Имя'), React.createElement('input', { value: profile.firstName, onChange: e => updateProfileField('firstName', e.target.value) }), React.createElement(FieldStatus, { fieldKey: 'firstName' })),
                             React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Фамилия'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { value: profile.lastName, onChange: e => updateProfileField('lastName', e.target.value) }), React.createElement(FieldStatus, { fieldKey: 'lastName' })),
                             React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Пол'), React.createElement('span', { className: 'sep' }, '-'),
                                 React.createElement('select', { value: profile.gender, onChange: e => updateProfileField('gender', e.target.value) },
@@ -889,11 +905,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 profile.birthDate && React.createElement('span', { style: { marginLeft: '8px', color: 'var(--gray-600)' } }, `(${calcAgeFromBirthDate(profile.birthDate)} лет)`)
                             ),
                             !profile.birthDate && React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Возраст (лет)'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', value: profile.age, onChange: e => updateProfileField('age', Number(e.target.value) || 0), onFocus: e => e.target.select() }), React.createElement(FieldStatus, { fieldKey: 'age' })),
-                            // Трекинг цикла снят с релиза (prompt-cycle-removal): экран включения отсутствует.
-                        ),
-
-                        // === ГРУППА 2: Параметры тела ===
-                        React.createElement(ProfileFieldGroup, { icon: profileSvg('ruler', 16), title: 'Параметры тела' },
                             React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Рост (см)'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', value: profile.height, onChange: e => updateProfileField('height', Number(e.target.value) || 0), onFocus: e => e.target.select() }), React.createElement(FieldStatus, { fieldKey: 'height' })),
                             React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Базовый вес (кг)'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', step: '1', value: profile.baseWeight || profile.weight, onChange: e => updateProfileField('baseWeight', Number(e.target.value) || 0), onFocus: e => e.target.select() }), React.createElement(FieldStatus, { fieldKey: 'baseWeight' })),
                             // Текущий вес (из последнего чек-ина)
@@ -917,22 +928,28 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 const diff = currentWeight && baseWeight ? round1(currentWeight - baseWeight) : null;
                                 return React.createElement('div', { className: 'inline-field' },
                                     React.createElement('label', null, 'Текущий вес'),
-                                    React.createElement('span', { className: 'sep' }, '-'),
                                     currentWeight
-                                        ? React.createElement('span', { style: { fontWeight: 600 } },
+                                        ? React.createElement('span', { className: 'profile-v4__value--readonly' },
                                             `${currentWeight} кг`,
                                             diff !== null && diff !== 0 && React.createElement('span', {
-                                                className: diff < 0 ? 'profile-weight-diff--down' : 'profile-weight-diff--up'
+                                                className: diff < 0 ? 'profile-weight-diff--down' : 'profile-weight-diff--up',
+                                                style: { marginLeft: '6px', fontSize: '12px' }
                                             },
                                                 diff > 0 ? `+${diff}` : diff, ' от базы'
                                             )
                                         )
-                                        : React.createElement('span', { style: { color: 'var(--gray-400)', fontStyle: 'italic' } }, 'нет данных'),
+                                        : React.createElement('span', { className: 'profile-v4__value--readonly', style: { fontStyle: 'italic' } }, 'нет данных'),
                                     weightDate && React.createElement('span', { style: { marginLeft: '8px', fontSize: '12px', color: 'var(--gray-400)' } },
                                         `(${new Date(weightDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })})`
                                     )
                                 );
-                            })(),
+                            })()
+                    )
+                ),
+
+                React.createElement(ProfileV4Tier, { id: 'norms-goals', title: 'Нормы и цели' },
+                    React.createElement(ProfileV4Subtier, { title: 'Цель' },
+                        React.createElement(ProfileV4Card, null,
                             React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Целевой вес (кг)'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', step: '1', value: profile.weightGoal || 0, onChange: e => updateProfileField('weightGoal', Number(e.target.value) || 0), placeholder: '0 = не задан', onFocus: e => e.target.select() }), React.createElement(FieldStatus, { fieldKey: 'weightGoal' })),
 
                             // === ПРОДВИНУТЫЙ РАСЧЁТ ДОСТИЖЕНИЯ ЦЕЛИ ===
@@ -1193,13 +1210,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                         `Жир 7700 ккал/кг, мышцы 1100 ккал/кг.`
                                     )
                                 );
-                            })()
-                        ),
+                            })(),
 
-                        // === ГРУППА 3: Цели и метаболизм ===
-                        React.createElement(ProfileFieldGroup, { icon: profileSvg('target', 16), title: 'Цели и метаболизм' },
-                            // Целевой дефицит: пресеты + своё значение
-                            (() => {
+                        // Дефицит и метаболизм — подгруппа «Цель»
+                        (() => {
                                 const currentVal = toNum(profile.deficitPctTarget || 0);
                                 const isCustom = !DEFICIT_PRESETS.some(p => p.value === currentVal);
                                 const info = getDeficitInfo(currentVal);
@@ -1238,67 +1252,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     React.createElement(FieldStatus, { fieldKey: 'deficitPctTarget' })
                                 );
                             })(),
-                            // Инсулиновая волна: предустановки + своё значение
-                            (() => {
-                                const INSULIN_PRESETS = [
-                                    { value: 2.5, label: 'Быстрый метаболизм', desc: 'спортсмены, низкоуглеводка' },
-                                    { value: 3, label: 'Нормальный', desc: 'большинство людей' },
-                                    { value: 4, label: 'Медленный', desc: 'склонность к полноте' },
-                                    { value: 4.5, label: 'Инсулинорезистентность', desc: 'преддиабет, СПКЯ' }
-                                ];
-                                const currentVal = toNum(profile.insulinWaveHours || 3);
-                                const isCustom = !INSULIN_PRESETS.some(p => p.value === currentVal);
-                                const currentPreset = INSULIN_PRESETS.find(p => p.value === currentVal);
-
-                                return React.createElement('div', { className: 'inline-field', style: { flexWrap: 'wrap', gap: '8px' } },
-                                    React.createElement('label', null, 'Инсулиновая волна'),
-                                    React.createElement('span', { className: 'sep' }, '-'),
-                                    React.createElement('select', {
-                                        value: isCustom ? 'custom' : String(currentVal),
-                                        onChange: e => {
-                                            if (e.target.value === 'custom') {
-                                                // Оставляем текущее значение, просто переключаем на custom
-                                            } else {
-                                                updateProfileField('insulinWaveHours', Number(e.target.value));
-                                            }
-                                        },
-                                        style: { width: '180px' }
-                                    },
-                                        ...INSULIN_PRESETS.map(p =>
-                                            React.createElement('option', { key: p.value, value: String(p.value) }, `${p.value} ч — ${p.label}`)
-                                        ),
-                                        React.createElement('option', { value: 'custom' }, 'Своё значение...')
-                                    ),
-                                    isCustom && React.createElement('input', {
-                                        type: 'number',
-                                        step: '0.5',
-                                        min: '1',
-                                        max: '8',
-                                        value: currentVal,
-                                        onChange: e => updateProfileField('insulinWaveHours', Number(e.target.value) || 3),
-                                        style: { width: '60px', marginLeft: '4px' }
-                                    }),
-                                    React.createElement('span', { style: { color: 'var(--gray-500)', fontSize: '12px', marginLeft: '4px' } },
-                                        currentPreset ? `(${currentPreset.desc})` : `(${currentVal} ч — своё)`
-                                    ),
-                                    React.createElement(FieldStatus, { fieldKey: 'insulinWaveHours' })
-                                );
-                            })(),
-                            // Норма сна: авторасчёт с расшифровкой
-                            (() => {
-                                const age = profile.birthDate ? calcAgeFromBirthDate(profile.birthDate) : toNum(profile.age || 30);
-                                const sleepNorm = calcSleepNorm(age, profile.gender);
-                                return React.createElement('div', { className: 'inline-field' },
-                                    React.createElement('label', null, 'Норма сна'),
-                                    React.createElement('span', { className: 'sep' }, '-'),
-                                    React.createElement('span', { style: { fontWeight: 600, minWidth: '50px' } }, `${sleepNorm.hours} ч`),
-                                    React.createElement('span', { style: { marginLeft: '8px', color: 'var(--gray-500)', fontSize: '13px' } },
-                                        `(${sleepNorm.explanation})`
-                                    )
-                                );
-                            })(),
-                            React.createElement(EmojiStyleSelector, null)
-                        ),
                         // BMI/BMR расчёт + норма воды + прогресс к цели
                         (() => {
                             const w = toNum(profile.weight || 70);
@@ -1372,25 +1325,78 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         React.createElement('div', { className: 'muted', style: { marginTop: '6px' } },
                             'Все значения сохраняются автоматически.'
                         )
-                    ) // end profile-section__fields
-                ), // end ProfileSection basic
+                    ) // end ProfileV4Card Цель
+                ), // end ProfileV4Subtier Цель
 
-                // === СЕКЦИЯ 2: Пульсовые зоны ===
-                React.createElement(ProfileSection, {
-                    id: 'hrZones',
-                    icon: profileSvg('heart'),
-                    title: 'Пульсовые зоны',
-                    subtitle: 'Настройка зон для тренировок',
-                    badge: `${zones.length} зон`,
-                    tone: 'rose',
-                    expanded: expandedSections.hrZones,
-                    onToggle: () => toggleSection('hrZones')
-                },
-                    React.createElement('div', { className: 'profile-section__fields' },
+                React.createElement(ProfileV4Subtier, { id: 'norms', title: 'Нормы' },
+                    React.createElement(ProfileV4Card, null,
+                        // Инсулиновая волна
+                        (() => {
+                            const INSULIN_PRESETS = [
+                                { value: 2.5, label: 'Быстрый метаболизм', desc: 'спортсмены, низкоуглеводка' },
+                                { value: 3, label: 'Нормальный', desc: 'большинство людей' },
+                                { value: 4, label: 'Медленный', desc: 'склонность к полноте' },
+                                { value: 4.5, label: 'Инсулинорезистентность', desc: 'преддиабет, СПКЯ' }
+                            ];
+                            const currentVal = toNum(profile.insulinWaveHours || 3);
+                            const isCustom = !INSULIN_PRESETS.some(p => p.value === currentVal);
+                            const currentPreset = INSULIN_PRESETS.find(p => p.value === currentVal);
+
+                            return React.createElement('div', { className: 'inline-field', style: { flexWrap: 'wrap', gap: '8px' } },
+                                React.createElement('label', null, 'Инсулиновая волна'),
+                                React.createElement('span', { className: 'sep' }, '-'),
+                                React.createElement('select', {
+                                    value: isCustom ? 'custom' : String(currentVal),
+                                    onChange: e => {
+                                        if (e.target.value !== 'custom') {
+                                            updateProfileField('insulinWaveHours', Number(e.target.value));
+                                        }
+                                    },
+                                    style: { width: '180px' }
+                                },
+                                    ...INSULIN_PRESETS.map(p =>
+                                        React.createElement('option', { key: p.value, value: String(p.value) }, `${p.value} ч — ${p.label}`)
+                                    ),
+                                    React.createElement('option', { value: 'custom' }, 'Своё значение...')
+                                ),
+                                isCustom && React.createElement('input', {
+                                    type: 'number',
+                                    step: '0.5',
+                                    min: '1',
+                                    max: '8',
+                                    value: currentVal,
+                                    onChange: e => updateProfileField('insulinWaveHours', Number(e.target.value) || 3),
+                                    style: { width: '60px', marginLeft: '4px' }
+                                }),
+                                React.createElement('span', { style: { color: 'var(--gray-500)', fontSize: '12px', marginLeft: '4px' } },
+                                    currentPreset ? `(${currentPreset.desc})` : `(${currentVal} ч — своё)`
+                                ),
+                                React.createElement(FieldStatus, { fieldKey: 'insulinWaveHours' })
+                            );
+                        })(),
+                        // Норма сна
+                        (() => {
+                            const age = profile.birthDate ? calcAgeFromBirthDate(profile.birthDate) : toNum(profile.age || 30);
+                            const sleepNorm = calcSleepNorm(age, profile.gender);
+                            return React.createElement('div', { className: 'inline-field' },
+                                React.createElement('label', null, 'Норма сна'),
+                                React.createElement('span', { className: 'sep' }, '-'),
+                                React.createElement('span', { style: { fontWeight: 600, minWidth: '50px' } }, `${sleepNorm.hours} ч`),
+                                React.createElement('span', { style: { marginLeft: '8px', color: 'var(--gray-500)', fontSize: '13px' } },
+                                    `(${sleepNorm.explanation})`
+                                )
+                            );
+                        })(),
+                        React.createElement(HEYS_RatioZonesCard, null),
+                        React.createElement(HEYS_NormsCard, null)
+                    )
+                ),
+
+                React.createElement(ProfileV4Subtier, { id: 'hrZones', title: 'Пульсовые зоны' },
+                    React.createElement(ProfileV4Card, null,
                         React.createElement('div', { className: 'row', style: { justifyContent: 'flex-end', marginBottom: '8px' } },
                             React.createElement('button', { className: 'btn btn-sm', onClick: resetZones }, 'Сбросить')
                         ),
-                        // Карточки пульсовых зон
                         React.createElement('div', { className: 'hr-zones-list' },
                             zones.map((z, i) => {
                                 const calPerMin = round1((toNum(z.MET || 0) * calPerMinPerMET) - 1);
@@ -1431,27 +1437,94 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             zonesPending && profileHint('pending', 'Сохраняется...'),
                             zonesSaved && profileHint('saved', 'Сохранено')
                         )
-                    ) // end profile-section__fields
-                ), // end ProfileSection hrZones
-
-                // === СЕКЦИЯ 3: Нормы и зоны ===
-                React.createElement(ProfileSection, {
-                    id: 'norms',
-                    icon: profileSvg('stats'),
-                    title: 'Нормы питания',
-                    subtitle: 'Зоны калорийности и распределение БЖУ',
-                    tone: 'violet',
-                    expanded: expandedSections.norms,
-                    onToggle: () => toggleSection('norms')
-                },
-                    React.createElement('div', { className: 'profile-section__fields' },
-                        // Зоны калорийности (ratio zones)
-                        React.createElement(HEYS_RatioZonesCard, null),
-                        React.createElement(HEYS_NormsCard, null)
                     )
-                ), // end ProfileSection norms
+                )
+            ), // end ProfileV4Tier Нормы и цели
 
-                // === СЕКЦИЯ: Уведомления (push) ===
+            React.createElement(ProfileV4Tier, { id: 'consents', title: 'Медицинское' },
+                React.createElement(ProfileV4Card, null,
+                    React.createElement(MyConsentsAndDataCard, null),
+                    React.createElement(PrivacySettingsCard, null),
+                    isCuratorSession && React.createElement('div', { className: 'profile-field-group', id: 'profile-section-security' },
+                        React.createElement('div', { className: 'profile-field-group__header', style: { alignItems: 'center', gap: '8px' } },
+                            React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('phone', 16)),
+                            React.createElement('span', { className: 'profile-field-group__title' }, 'PIN клиента'),
+                            React.createElement('span', { className: 'profile-field-group__badge' }, `Client ID: ${getShortClientId(getCurrentClientId())}`)
+                        ),
+                        React.createElement('div', { className: 'muted', style: { marginBottom: '8px' } }, 'Новый PIN должен состоять из 4 цифр. Старый PIN не требуется — изменение доступно только куратору.'),
+                        pinKeypadKit
+                            ? React.createElement('div', { className: 'space-y-4' },
+                                pinKeypadKit.renderPinKeypadSection({
+                                    pin: newPinField,
+                                    label: 'Новый PIN',
+                                    sectionClassName: 'heys-auth-pin-section space-y-3 is-active',
+                                    keypadRef: newPinKeypadRef,
+                                }),
+                                pinKeypadKit.renderPinKeypadSection({
+                                    pin: confirmPinField,
+                                    label: 'Подтверждение',
+                                    sectionClassName: 'heys-auth-pin-section space-y-3 is-active',
+                                    keypadRef: confirmPinKeypadRef,
+                                })
+                            )
+                            : React.createElement('div', { className: 'field-list' },
+                                React.createElement('div', { className: 'inline-field' },
+                                    React.createElement('label', null, 'Новый PIN'),
+                                    React.createElement('span', { className: 'sep' }, '-'),
+                                    React.createElement('input', {
+                                        type: 'password',
+                                        inputMode: 'numeric',
+                                        pattern: '\\d*',
+                                        maxLength: 4,
+                                        value: newPinField.pinValue,
+                                        onChange: e => newPinField.applyPinDigits?.((e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4).split('').concat(['', '', '', '']).slice(0, 4)),
+                                        placeholder: '4 цифры',
+                                        style: { width: '120px' }
+                                    })
+                                ),
+                                React.createElement('div', { className: 'inline-field' },
+                                    React.createElement('label', null, 'Подтверждение'),
+                                    React.createElement('span', { className: 'sep' }, '-'),
+                                    React.createElement('input', {
+                                        type: 'password',
+                                        inputMode: 'numeric',
+                                        pattern: '\\d*',
+                                        maxLength: 4,
+                                        value: confirmPinField.pinValue,
+                                        onChange: e => confirmPinField.applyPinDigits?.((e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4).split('').concat(['', '', '', '']).slice(0, 4)),
+                                        placeholder: 'Ещё раз',
+                                        style: { width: '120px' }
+                                    })
+                                )
+                            ),
+                        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' } },
+                            React.createElement('button', {
+                                className: 'btn',
+                                onClick: handlePinUpdate,
+                                disabled: pinStatus === 'pending',
+                                style: { minWidth: '140px' }
+                            }, window.HEYS?.WaitMark?.button?.(React, {
+                                busy: pinStatus === 'pending',
+                                ok: pinStatus === 'success',
+                                fail: pinStatus === 'error',
+                                idle: 'Обновить PIN',
+                                busyLabel: 'Сохраняем',
+                                okLabel: 'Сохранено',
+                                failLabel: 'Не удалось',
+                            }) || (pinStatus === 'pending' ? 'Сохраняем…' : 'Обновить PIN')),
+                        ),
+                        pinMessage && React.createElement('div', {
+                            className: 'muted',
+                            style: { marginTop: '6px', color: pinStatus === 'error' ? '#a1471c' : undefined }
+                        }, pinMessage)
+                    )
+                )
+            )
+
+            ), // end profile-v4
+
+            // Вынесено из профиля — открывается из листа настроек (контракт settings-system)
+            React.createElement('div', { className: 'profile-v4-external' },
                 React.createElement(ProfileSection, {
                     id: 'notifications',
                     icon: profileSvg('bell'),
@@ -1467,109 +1540,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     )
                 ),
 
-                // === СЕКЦИЯ 4: Безопасность (PIN) — только куратор ===
-                isCuratorSession && React.createElement(ProfileSection, {
-                    id: 'security',
-                    icon: profileSvg('lock'),
-                    title: 'Безопасность',
-                    subtitle: 'Смена PIN для входа',
-                    tone: 'amber',
-                    expanded: expandedSections.security,
-                    onToggle: () => toggleSection('security')
-                },
-                    React.createElement('div', { className: 'profile-section__fields' },
-                        React.createElement('div', { className: 'profile-field-group' },
-                            React.createElement('div', { className: 'profile-field-group__header', style: { alignItems: 'center', gap: '8px' } },
-                                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('phone', 16)),
-                                React.createElement('span', { className: 'profile-field-group__title' }, 'PIN клиента'),
-                                React.createElement('span', { className: 'profile-field-group__badge' }, `Client ID: ${getShortClientId(getCurrentClientId())}`)
-                            ),
-                            React.createElement('div', { className: 'muted', style: { marginBottom: '8px' } }, 'Новый PIN должен состоять из 4 цифр. Старый PIN не требуется — изменение доступно только куратору.'),
-                            pinKeypadKit
-                                ? React.createElement('div', { className: 'space-y-4' },
-                                    pinKeypadKit.renderPinKeypadSection({
-                                        pin: newPinField,
-                                        label: 'Новый PIN',
-                                        sectionClassName: 'heys-auth-pin-section space-y-3 is-active',
-                                        keypadRef: newPinKeypadRef,
-                                    }),
-                                    pinKeypadKit.renderPinKeypadSection({
-                                        pin: confirmPinField,
-                                        label: 'Подтверждение',
-                                        sectionClassName: 'heys-auth-pin-section space-y-3 is-active',
-                                        keypadRef: confirmPinKeypadRef,
-                                    })
-                                )
-                                : React.createElement('div', { className: 'field-list' },
-                                    React.createElement('div', { className: 'inline-field' },
-                                        React.createElement('label', null, 'Новый PIN'),
-                                        React.createElement('span', { className: 'sep' }, '-'),
-                                        React.createElement('input', {
-                                            type: 'password',
-                                            inputMode: 'numeric',
-                                            pattern: '\\d*',
-                                            maxLength: 4,
-                                            value: newPinField.pinValue,
-                                            onChange: e => newPinField.applyPinDigits?.((e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4).split('').concat(['', '', '', '']).slice(0, 4)),
-                                            placeholder: '4 цифры',
-                                            style: { width: '120px' }
-                                        })
-                                    ),
-                                    React.createElement('div', { className: 'inline-field' },
-                                        React.createElement('label', null, 'Подтверждение'),
-                                        React.createElement('span', { className: 'sep' }, '-'),
-                                        React.createElement('input', {
-                                            type: 'password',
-                                            inputMode: 'numeric',
-                                            pattern: '\\d*',
-                                            maxLength: 4,
-                                            value: confirmPinField.pinValue,
-                                            onChange: e => confirmPinField.applyPinDigits?.((e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4).split('').concat(['', '', '', '']).slice(0, 4)),
-                                            placeholder: 'Ещё раз',
-                                            style: { width: '120px' }
-                                        })
-                                    )
-                                ),
-                            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' } },
-                                React.createElement('button', {
-                                    className: 'btn',
-                                    onClick: handlePinUpdate,
-                                    disabled: pinStatus === 'pending',
-                                    style: { minWidth: '140px' }
-                                }, window.HEYS?.WaitMark?.button?.(React, {
-                                    busy: pinStatus === 'pending',
-                                    ok: pinStatus === 'success',
-                                    fail: pinStatus === 'error',
-                                    idle: 'Обновить PIN',
-                                    busyLabel: 'Сохраняем',
-                                    okLabel: 'Сохранено',
-                                    failLabel: 'Не удалось',
-                                }) || (pinStatus === 'pending' ? 'Сохраняем…' : 'Обновить PIN')),
-                            ),
-                            pinMessage && React.createElement('div', {
-                                className: 'muted',
-                                style: { marginTop: '6px', color: pinStatus === 'error' ? '#a1471c' : undefined }
-                            }, pinMessage)
-                        )
-                    )
-                ), // end ProfileSection security
-
-                // === СЕКЦИЯ 4.5: Мои согласия и данные (152-ФЗ ст.14/21, GDPR Art.15-18) ===
-                React.createElement(ProfileSection, {
-                    id: 'consents',
-                    icon: profileSvg('document'),
-                    title: 'Мои согласия и данные',
-                    subtitle: 'Просмотр, отзыв, экспорт по 152-ФЗ',
-                    tone: 'blue',
-                    expanded: !!expandedSections.consents,
-                    onToggle: () => toggleSection('consents')
-                },
-                    React.createElement('div', { className: 'profile-section__fields' },
-                        React.createElement(MyConsentsAndDataCard, null)
-                    )
-                ),
-
-                // === СЕКЦИЯ 5: Подписка (новый модуль HEYS.Subscription) ===
                 React.createElement(ProfileSection, {
                     id: 'subscription',
                     icon: profileSvg('gem'),
@@ -1579,11 +1549,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     expanded: expandedSections.subscription,
                     onToggle: () => toggleSection('subscription')
                 },
-                    // Простой компонент статуса подписки
                     React.createElement(SubscriptionStatusSection)
                 ),
 
-                // === СЕКЦИЯ 6: Система и аналитика ===
                 React.createElement(ProfileSection, {
                     id: 'system',
                     icon: profileSvg('settings'),
@@ -1619,7 +1587,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             )
                         ),
                         React.createElement(LeaderboardSharingCard, null),
-                        // Обучение временно выключено до актуализации тура.
                         React.createElement('div', { className: 'profile-field-group' },
                             React.createElement('div', { className: 'profile-field-group__header' },
                                 React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('cap', 16)),
@@ -1629,12 +1596,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 'Обучение временно выключено'
                             )
                         ),
-
-                        // Статистика советов
                         React.createElement(HEYS_AdviceStatsCard, null),
-                        // Настройки советов
                         React.createElement(HEYS_AdviceSettingsCard, null),
-                        // Аналитика (перенесено из hdr-top)
+                        React.createElement(EmojiStyleSelector, null),
                         window.HEYS.analyticsUI
                             ? React.createElement('div', { className: 'profile-field-group' },
                                 React.createElement('div', { className: 'profile-field-group__header' },
@@ -1645,14 +1609,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
                                 )
                             )
-                            : null,
+                            : null
+                    )
+                )
+            )
 
-                        // 🔒 Конфиденциальность (152-ФЗ ст. 21): отзыв согласия + удаление аккаунта
-                        React.createElement(PrivacySettingsCard, null)
-                    ) // end profile-section__fields
-                ) // end ProfileSection system
-
-            ) // end profile-accordion
         );
     }
 
