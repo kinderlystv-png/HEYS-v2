@@ -222,20 +222,12 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
    25px/1 с нижним отступом 2 px — набор класса .bml из самого канваса
    app-splash (в кадрах диск увеличен до 64 «только для наглядности», буква там
    29 px, но продуктовый диск 56 и буква на нём та же 25). */
-.heys-boot-mark__letter {
-    position: absolute;
-    font: 800 25px/1 Figtree, system-ui, sans-serif;
-    color: var(--boot-letter);
-    padding-bottom: 2px;
-    animation: heys-boot-letter-out 1ms linear 300ms forwards;
-}
-.heys-boot-mark.is-fail .heys-boot-mark__letter,
-.heys-boot-mark.is-slow .heys-boot-mark__letter { display: none; }
-/* До 300 мс знака ожидания нет вовсе (контракт «до 300 мс»). */
-.heys-boot-mark__disc .heys-boot-mark__spin > svg {
-    opacity: 0;
-    animation: heys-boot-fadein 150ms ease-out 300ms forwards;
-}
+/* Буквы знака в загрузчике нет: решение владельца 25 августа — вернуть вид к
+   состоянию до 24 августа. Вместе с буквой снят и порог 300 мс: дуга стоит с
+   первого кадра, а не проявляется на её месте. Отступление от строки
+   контракта «вид диска в загрузчике», обновление контракта у дизайнера.
+   Figtree при этом остался у знака в иконке приложения — там шрифт менялся
+   по другой строке и решение владельца его не отменяет. */
 .heys-boot-mark.is-fail .heys-boot-mark__disc,
 .heys-wait-mark.is-fail .heys-wait-mark__disc {
     background: var(--boot-fail-disc);
@@ -371,7 +363,6 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
 }
 .heys-boot-mark.is-fail .heys-boot-mark__status { display: block; }
 @keyframes heys-boot-spin { 100% { transform: rotate(360deg); } }
-@keyframes heys-boot-letter-out { to { opacity: 0; } }
 @keyframes heys-boot-fadein { from { opacity: 0; } to { opacity: 1; } }
 @keyframes heys-boot-breathe {
     0%, 100% { opacity: .35; }

@@ -978,7 +978,6 @@
          swap, а сама буква живёт всего 300 мс. crossorigin обязателен — шрифты
          грузятся в CORS-режиме даже со своего домена, без него запрос был бы
          второй, мимо кэша preload'а. -->
-    <link rel="preload" href="/fonts/figtree/Figtree-Variable.ttf" as="font" type="font/ttf" crossorigin />
 
     <!-- Critical CSS for instant rendering -->
     <link rel="stylesheet" href="styles/critical.css?v=14" />
@@ -998,10 +997,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.c890f0f5f4e5.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.b1c22d54468c.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.70664faae0ea.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.4f03b00bafea.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.4f2cb0f81cdb.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.90debbe072ce.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.d42f1c91001f.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.280da0df8a3e.js" as="script" />
     <link rel="preload" href="boot-init.bundle.70669b2d2b0b.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
@@ -1539,17 +1538,18 @@
         <!-- Холодный старт: грунт палитры + круг 56. Без шапки и меню. -->
         <div class="heys-boot-mark" data-heys-boot-mark="true" role="status" aria-live="polite" aria-busy="true">
             <span class="heys-boot-mark__disc" aria-hidden="true">
-                <!-- Загрузчик: буква знака до порога 300 мс (контракт app-splash
-                     «вид диска в загрузчике» — H, Figtree 800, тон --ac),
-                     дальше на её месте дуга знака ожидания. -->
-                <span class="heys-boot-mark__letter" aria-hidden="true">H</span>
+                <!-- Буквы знака здесь нет: решение владельца 25 августа —
+                     вернуть вид загрузчика к состоянию до 24.08. Дуга стоит с
+                     первого кадра, без порога 300 мс. Контракт app-splash
+                     «вид диска в загрузчике» пока просит букву — отступление
+                     названо, обновление контракта у дизайнера. -->
                 <span class="heys-boot-mark__spin animate-always" aria-hidden="true">
                     <!-- Контракт «вид знака»: дуга 26 обводкой 2,75, хвост той же
                          дуги под .22. Кадр «Стык · загрузчик» рисует 58/2,6/.13 —
                          контракт старше кадра. -->
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" aria-hidden="true">
-                        <path d="M21 12a9 9 0 11-9-9" opacity=".22"></path>
-                        <path d="M12 3a9 9 0 019 9"></path>
+                    <svg width="50" height="50" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="2.6" opacity="0.28"></circle>
+                        <path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
                     </svg>
                 </span>
                 <svg class="heys-boot-mark__warn" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round">
@@ -3268,10 +3268,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.c890f0f5f4e5.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.b1c22d54468c.js"></script>
-    <script defer src="boot-day.bundle.70664faae0ea.js"></script>
-    <script defer src="boot-app.bundle.4f03b00bafea.js"></script>
+    <script defer src="boot-core.bundle.4f2cb0f81cdb.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.90debbe072ce.js"></script>
+    <script defer src="boot-day.bundle.d42f1c91001f.js"></script>
+    <script defer src="boot-app.bundle.280da0df8a3e.js"></script>
     <script defer src="boot-init.bundle.70669b2d2b0b.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 

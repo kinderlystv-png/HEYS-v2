@@ -18,14 +18,15 @@ describe('cold-start spinner mark', () => {
   it('puts the 56 mark in #root instead of a chrome skeleton', () => {
     expect(html).toContain('data-heys-boot-mark="true"');
     expect(html).toContain('heys-boot-mark__spin');
-    // Раньше здесь стояли svg 50 и r="9.2" — геометрия кадра «Стык · загрузчик»
-    // (58/2,6 на диске 64). Строка контракта «вид знака» задаёт дугу 26 px
-    // обводкой 2,75 с хвостом .22, и контракт старше кадра: проверка
-    // переписана под неё, а не снята.
-    expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?<svg width="26" height="26"/);
-    expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?stroke-width="2\.75"/);
-    expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?opacity="\.22"/);
-    expect(html).not.toMatch(/heys-boot-mark__spin[\s\S]*?<svg width="50"/);
+    // Решение владельца 25 августа: вид загрузчика возвращён к состоянию до
+    // 24 августа — дуга 50 обводкой 2,6 с полным кругом фоном. Строка
+    // контракта «вид знака» пока просит 26/2,75 с хвостом .22; отступление
+    // названное, обновление контракта у дизайнера. Проверка сторожит именно
+    // возвращённый вид, чтобы следующий проход не «починил» его обратно молча.
+    expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?<svg width="50" height="50"/);
+    expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?stroke-width="2\.6"/);
+    expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?r="9\.2"/);
+    expect(html).not.toMatch(/heys-boot-mark__spin[\s\S]*?<svg width="26"/);
     expect(html).toContain('role="status"');
     expect(html).toContain('Загружаем');
     expect(html).not.toMatch(/id="root"[\s\S]*heys-skeleton/);
@@ -201,45 +202,30 @@ describe('cold-start spinner mark', () => {
     expect(css).not.toMatch(/font: 700 1[67]px/);
   });
 
-  it('puts the loader letter under the wait sign, Figtree 800 on --ac', () => {
-    // Строка контракта app-splash «вид диска в загрузчике» (двенадцатая сборка):
-    // буква H тоном --ac, набранная Figtree весом 800, — «тот же шрифт, что в
-    // иконке приложения; Caprasimo в продукте не используется нигде». Прежняя
-    // редакция обещала здесь Caprasimo, и тест закреплял его как правильный;
-    // дизайнер назвал это ошибкой, поэтому проверка переписана под новую строку.
-    // Кадр «Стык · загрузчик» рисует на месте буквы сразу дугу — контракт старше
-    // кадра, буква живёт до порога 300 мс.
-    expect(html).toContain('<span class="heys-boot-mark__letter" aria-hidden="true">H</span>');
-    expect(css).toContain('font-family: Figtree;');
-    expect(css).toContain("src: url('/fonts/figtree/Figtree-Variable.ttf') format('truetype');");
-    expect(css).toMatch(
-      /\.heys-boot-mark__letter \{[\s\S]*?font: 800 25px\/1 Figtree[\s\S]*?var\(--boot-letter\)/,
-    );
-    expect(css).toContain('--boot-letter: #8a4a20;');
-    expect(css).toMatch(/heys-boot-letter-out 1ms linear 300ms forwards/);
-    // Caprasimo снят целиком: и объявление шрифта, и его имя в наборе буквы.
-    // Комментарии вычищены — в них имя остаётся намеренно, как история решения.
-    expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toContain('Caprasimo');
-    expect(html).not.toContain('Caprasimo');
-    // Знака ожидания до 300 мс нет вовсе.
-    expect(css).toMatch(
-      /\.heys-boot-mark__disc \.heys-boot-mark__spin > svg \{[\s\S]*?opacity: 0;[\s\S]*?heys-boot-fadein 150ms ease-out 300ms/,
-    );
-  });
+  // Решение владельца 25 августа: вид загрузчика возвращён к состоянию до
+  // 24 августа — буквы знака нет, дуга стоит с первого кадра. Здесь раньше
+  // стояли два теста: «буква под знаком, Figtree 800» и «preload шрифта,
+  // чтобы буква не мигнула системным». Оба сторожили механику, которой
+  // больше нет; вместо них — сторож возвращённого вида, чтобы следующий
+  // проход не вернул букву молча «по контракту».
+  it('в загрузчике нет буквы знака и нет порога 300 мс', () => {
+    expect(html).not.toContain('heys-boot-mark__letter');
+    expect(css).not.toContain('heys-boot-mark__letter');
+    expect(css).not.toContain('heys-boot-letter-out');
 
-  it('preloads Figtree so the loader letter is not drawn by a system font', () => {
-    // Буква рисуется до первого пейнта, а @font-face стоит на font-display:
-    // swap: без preload запрос за файлом стартует только когда вёрстка дойдёт
-    // до буквы, и она успевает мигнуть системным шрифтом за те 300 мс, что
-    // живёт. crossorigin обязателен — иначе preload не попадает в тот же кэш,
-    // что CORS-запрос шрифта, и файл качается дважды.
-    expect(html).toMatch(
-      /<link rel="preload" href="\/fonts\/figtree\/Figtree-Variable\.ttf" as="font" type="font\/ttf" crossorigin \/>/,
+    // Дуга видна сразу, а не проявляется на месте буквы.
+    expect(css).not.toMatch(
+      /\.heys-boot-mark__disc \.heys-boot-mark__spin > svg \{[\s\S]*?heys-boot-fadein 150ms ease-out 300ms/,
     );
-    // Preload обязан стоять до стилей знака, иначе он ничего не ускоряет.
-    expect(html.indexOf('Figtree-Variable.ttf')).toBeLessThan(
-      html.indexOf('styles/heys-boot-mark.css'),
-    );
+
+    // Preload шрифта ставился ради буквы и ушёл вместе с ней: качать файл
+    // до первого пейнта больше незачем.
+    expect(html).not.toContain('Figtree-Variable.ttf');
+
+    // Caprasimo при этом не возвращается: решение владельца касается вида
+    // знака, а не шрифта. В иконке приложения Figtree остаётся.
+    expect(html).not.toContain('Caprasimo');
+    expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toContain('Caprasimo');
   });
 
   it('leaves the loader disc without stroke, shadow or a second colour', () => {
