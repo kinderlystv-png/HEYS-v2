@@ -5063,11 +5063,8 @@
     },
 
     // 📊 Achievement progress API
-    getAchievementProgress(achId) {
-      const data = loadData();
-      return data.achievementProgress?.[achId] || null;
-    },
-
+    // getAchievementProgress объявлен выше по литералу и делегирует внутренней
+    // функции — вторая копия здесь была дословным повтором её тела.
     getAllAchievementProgress() {
       const data = loadData();
       return data.achievementProgress || {};
@@ -5148,28 +5145,8 @@
     calculateBehaviorMetrics,
 
     // Achievement Progress (используем функцию напрямую)
-    getInProgressAchievements() {
-      const data = loadData();
-      const achievements = [];
-
-      for (const [achId, progress] of Object.entries(data.achievementProgress || {})) {
-        if (!data.unlockedAchievements.includes(achId) && progress.current > 0) {
-          const achDef = ACHIEVEMENTS[achId];
-          if (achDef) {
-            achievements.push({
-              ...achDef,
-              progress: {
-                current: progress.current,
-                target: progress.target,
-                percent: Math.round((progress.current / progress.target) * 100)
-              }
-            });
-          }
-        }
-      }
-
-      return achievements.sort((a, b) => b.progress.percent - a.progress.percent);
-    },
+    // getInProgressAchievements объявлен выше по литералу — вторая копия здесь
+    // была дословным повтором, вплоть до сортировки по проценту.
 
     // Floating XP
     showFloatingXP,
