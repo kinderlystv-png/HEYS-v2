@@ -351,8 +351,23 @@
     }
   }
 
+  // Единственная граница суток геймификации — продуктовое правило дня из
+  // heys_day_utils.js: NIGHT_HOUR_THRESHOLD = 3, приём в 00:00–02:59 пишется во
+  // вчерашний день (getEffectiveDate), «эффективное сегодня» отдаёт todayISO().
+  // Раньше здесь стоял new Date().toISOString().slice(0,10): в UTC+3 он даёт
+  // ровно то же самое (сдвиг пояса равен порогу), поэтому в Москве ошибки не
+  // было видно — а в любом другом поясе день XP уезжал на границу пояса.
+  // Локальный порог ниже — только fail-safe на случай, если dayUtils ещё не
+  // загружен (тот же приём, что у isDayKeyForCurrentClient выше).
+  const NIGHT_HOUR_THRESHOLD_FALLBACK = 3;
+
   function getToday() {
-    return new Date().toISOString().slice(0, 10);
+    const sharedTodayISO = HEYS.dayUtils?.todayISO;
+    if (typeof sharedTodayISO === 'function') return sharedTodayISO();
+    const d = new Date();
+    if (d.getHours() < NIGHT_HOUR_THRESHOLD_FALLBACK) d.setDate(d.getDate() - 1);
+    // Дата локальная: toISOString() увёл бы её на границу пояса.
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   /** Сдвиг календарной даты YYYY-MM-DD на deltaDays (локальная полуночь). */
@@ -2259,22 +2274,14 @@
     { actions: 30, multiplier: 3.0, label: '💎' }      // 30+ = 3x (max)
   ];
 
-  // Порог ночи: до 3:00 — это ещё "вчера"
-  const NIGHT_HOUR_THRESHOLD = 3;
-
-  function getTodayDate() {
-    const d = new Date();
-    const hour = d.getHours();
-    // До 3:00 — это ещё "вчера" (день продолжается)
-    if (hour < NIGHT_HOUR_THRESHOLD) {
-      d.setDate(d.getDate() - 1);
-    }
-    return d.toISOString().slice(0, 10);
-  }
+  // Множитель живёт на той же границе суток, что XP и миссии — getToday().
+  // Своя копия порога здесь сдвигала дату дважды: setDate(-1) по локальным
+  // часам, а потом toISOString() уводил её ещё на сдвиг пояса. В Москве с 00:00
+  // до 03:00 множитель поэтому писался под позавчерашний ключ.
 
   function getDailyMultiplier() {
     const data = loadData();
-    const today = getTodayDate();
+    const today = getToday();
 
     // Миграция или новый день
     if (!data.dailyActions || data.dailyActions.date !== today) {
@@ -2304,7 +2311,7 @@
 
   function incrementDailyActions() {
     const data = loadData();
-    const today = getTodayDate();
+    const today = getToday();
 
     // Миграция или новый день — сбрасываем
     if (!data.dailyActions || data.dailyActions.date !== today) {

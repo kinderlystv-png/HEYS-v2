@@ -10,6 +10,19 @@
         return getActiveDaysForMonth(d.getFullYear(), d.getMonth(), prof, products);
     }
 
+    // «Эффективное сегодня» продуктового правила дня (heys_day_utils.js: до
+    // 03:00 это ещё вчера). Записи дня уже живут по нему — приём в 01:00 уходит
+    // во вчерашний heys_dayv2_*. Серия, отсчитывавшая от календарной полуночи,
+    // с 00:00 до 03:00 смотрела на день, в который ничего не пишется, видела
+    // его пустым и тратила «прощённый» пропуск. История не пересчитывается —
+    // меняется только то, какой день считается текущим.
+    function effectiveTodayDate() {
+        const dayUtils = HEYS.dayUtils || {};
+        const iso = typeof dayUtils.todayISO === 'function' ? dayUtils.todayISO() : null;
+        const parsed = iso && typeof dayUtils.parseISO === 'function' ? dayUtils.parseISO(iso) : null;
+        return parsed || new Date();
+    }
+
     // computeStreakDetails — тот же цикл по дням, что и раньше в
     // computeCurrentStreak, но дополнительно сообщает, был ли использован
     // «прощённый» пропуск: i===0 (по умолчанию это вчера, includeToday=false)
@@ -22,7 +35,7 @@
         try {
             let count = 0;
             let yesterdayForgiven = false;
-            let checkDate = new Date();
+            let checkDate = effectiveTodayDate();
             checkDate.setHours(12);
 
             // По умолчанию НЕ учитываем сегодня (день ещё может измениться)
@@ -125,7 +138,9 @@
 
         // computeStreakDetails читает до 30 ключей localStorage, а шапка
         // геймификации опрашивает серию раз в 30 секунд — держим короткий кэш.
-        const cacheKey = `${fmtDate(new Date())}|${includeToday ? 1 : 0}`;
+        // Ключ кэша — тот же эффективный день, от которого идёт отсчёт: иначе
+        // кэш сбрасывался бы в полночь, а результат менялся в 03:00.
+        const cacheKey = `${fmtDate(effectiveTodayDate())}|${includeToday ? 1 : 0}`;
         const now = Date.now();
         if (streakCache.key === cacheKey && now - streakCache.at < STREAK_CACHE_MS && streakCache.details) {
             return streakCache.details;
