@@ -4662,6 +4662,68 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         ? 'Включены'
                         : 'Выключены';
         const sheetPushOn = !!(sheetPushStatus && sheetPushStatus.subscribed);
+        // ── Лист «Настроить подробно» ─────────────────────────────────────
+        // Контракт settings-system, «состав листа»: шесть видов ровно в этом
+        // порядке. Ключи — те же, что гейтят рассылку в heys-cron-reminders,
+        // поэтому лист и старая карточка «Уведомления и звук» правят одно поле
+        // heys_push_prefs. Исключение — сообщения куратора: их шлёт
+        // heys-api-messages, который prefs не читает вовсе, и ключ ждёт гейта
+        // на стороне отправки.
+        const NOTIFY_KIND_ROWS = [
+            { key: 'curator_messages_enabled', label: 'Сообщения от куратора' },
+            { key: 'morning_checkin_enabled', label: 'Утренний чек-ин' },
+            { key: 'water_hint_enabled', label: 'Вода в пищевом окне' },
+            { key: 'evening_summary_enabled', label: 'Итог дня' },
+            { key: 'streak_celebration_enabled', label: 'Серия — седьмой день' },
+            { key: 'curator_actions_enabled', label: 'Правки куратора' },
+        ];
+        // Контракт «тихие часы»: диапазон от и до, шаг капсул 30 мин,
+        // по умолчанию 22:00–08:00.
+        const QUIET_HOURS_DEFAULT = { quiet_start: '22:00', quiet_end: '08:00' };
+        const QUIET_TIME_OPTIONS = React.useMemo(() => {
+            const out = [];
+            for (let minutes = 0; minutes < 24 * 60; minutes += 30) {
+                const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
+                const mm = String(minutes % 60).padStart(2, '0');
+                out.push(`${hh}:${mm}`);
+            }
+            return out;
+        }, []);
+        const readNotifyPrefs = React.useCallback(() => {
+            let stored = null;
+            try { stored = U && U.lsGet ? U.lsGet('heys_push_prefs', null) : null; } catch (_) { stored = null; }
+            return { ...QUIET_HOURS_DEFAULT, ...(stored && typeof stored === 'object' ? stored : {}) };
+        // QUIET_HOURS_DEFAULT — литерал в этом же теле рендера, зависимостью не является
+        }, []); // eslint-disable-line react-hooks/exhaustive-deps
+        const [notifyDetailOpen, setNotifyDetailOpen] = React.useState(false);
+        const [notifyPrefs, setNotifyPrefs] = React.useState(readNotifyPrefs);
+        const notifyQuietStart = notifyPrefs.quiet_start || QUIET_HOURS_DEFAULT.quiet_start;
+        const notifyQuietEnd = notifyPrefs.quiet_end || QUIET_HOURS_DEFAULT.quiet_end;
+        // В heys_push_prefs кладём только выбранное человеком: дефолт тихих
+        // часов подмешан к показу, но в хранилище не уезжает — иначе локально
+        // стояло бы 22:00, а отправка считала бы своё, ей никто патча не слал.
+        const updateNotifyPrefs = (patch) => {
+            let stored = null;
+            try { stored = U && U.lsGet ? U.lsGet('heys_push_prefs', null) : null; } catch (_) { stored = null; }
+            const nextStored = { ...(stored && typeof stored === 'object' ? stored : {}), ...patch };
+            try { if (U && U.lsSet) U.lsSet('heys_push_prefs', nextStored); } catch (_) { /* сервер получит патч всё равно */ }
+            setNotifyPrefs({ ...QUIET_HOURS_DEFAULT, ...nextStored });
+            if (sheetPushOn && window.HEYS?.push?.savePrefs) {
+                window.HEYS.push.savePrefs(patch).catch(() => { /* уедет со следующей правкой */ });
+            }
+        };
+        // Лист живёт над шторкой (контракт «порядок слоёв»): закрытие шторки и
+        // выключение общего тумблера закрывают и его — настраивать состав того,
+        // что выключено целиком, нечего.
+        React.useEffect(() => {
+            if (!notifyDetailOpen) return undefined;
+            if (!settingsMenuOpen || !sheetPushOn) {
+                setNotifyDetailOpen(false);
+                return undefined;
+            }
+            setNotifyPrefs(readNotifyPrefs());
+            return undefined;
+        }, [notifyDetailOpen, settingsMenuOpen, sheetPushOn, readNotifyPrefs]);
         const refreshSheetPushStatus = async () => {
             if (!window.HEYS?.push?.getStatus) return;
             try {
@@ -4761,6 +4823,28 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 : (expanded ? 'M6 9l6 6 6-6' : 'M9 6l6 6-6 6'),
         }));
 
+        // Контракт «тихие часы»: шаг капсул 30 мин. Видимая капсула держит
+        // геометрию контракта, а выбор отдан системному списку — он же
+        // закрывает клавиатуру и скринридер. Прозрачный select лежит поверх
+        // капсулы, поэтому число остаётся ровно тем, что рисует кадр.
+        const renderQuietCapsule = (prefKey, value, label) => React.createElement('span', {
+            className: 'notify-detail__capsule',
+        },
+            React.createElement('span', {
+                className: 'notify-detail__capsule-value',
+                'aria-hidden': 'true',
+            }, value),
+            React.createElement('select', {
+                className: 'notify-detail__capsule-select',
+                'aria-label': label,
+                value,
+                onChange: (event) => updateNotifyPrefs({ [prefKey]: event.target.value }),
+            }, QUIET_TIME_OPTIONS.map((option) => React.createElement('option', {
+                key: option,
+                value: option,
+            }, option)))
+        );
+
         const renderPaletteDots = (paletteId) => {
             const dots = paletteId === 'blue'
                 ? ['#2e7cc0', '#3e9a6b', '#e2edf7']
@@ -4778,14 +4862,16 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
         // Контракт «доступность»: строка яруса — кнопка с фразой «название, текущее значение».
         // valueText нужен там, где значение нарисовано (кружки палитры aria-hidden).
-        const renderSettingsRow = ({ key, label, meta, metaNode, metaTone, valueText, expanded, danger, onClick, scrollAnchorKey }) => {
+        const renderSettingsRow = ({ key, label, meta, metaNode, metaTone, valueText, expanded, danger, disabled, onClick, scrollAnchorKey }) => {
             const spokenValue = valueText || meta || '';
             return React.createElement('button', {
                 key,
                 type: 'button',
+                disabled: !!disabled,
                 'aria-label': spokenValue ? `${label}, ${spokenValue}` : undefined,
                 className: 'hdr-settings-sheet__row'
                     + (danger ? ' hdr-settings-sheet__row--exit' : '')
+                    + (disabled ? ' is-disabled' : '')
                     + (expanded ? ' is-expanded' : ''),
                 ref: scrollAnchorKey ? (node) => {
                     if (node) settingsExtraRowRefs.current[scrollAnchorKey] = node;
@@ -4794,6 +4880,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 onClick: (event) => {
                     event.preventDefault();
                     event.stopPropagation();
+                    if (disabled) return;
                     if (typeof onClick === 'function') onClick(event);
                 },
             },
@@ -4900,6 +4987,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 if (target && typeof target.closest === 'function') {
                     if (target.closest('.hdr-header-icon-btn--settings')) return;
                     if (target.closest('.sheet-push-access-sign')) return;
+                    // Лист «Настроить подробно» стоит НАД шторкой и живёт вне
+                    // её обёртки: без этой развилки любой тап по листу читался
+                    // бы как «мимо настроек» и закрывал бы обе поверхности.
+                    if (target.closest('.notify-detail-backdrop')) return;
                     if (target.closest('.tab-settings-backdrop')) {
                         dismissSettingsFromOutside(event);
                         return;
@@ -4907,6 +4998,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 }
                 const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
                 if (path.some((node) => node?.classList?.contains?.('sheet-push-access-sign'))) return;
+                if (path.some((node) => node?.classList?.contains?.('notify-detail-backdrop'))) return;
                 const wrap = settingsWrapRef.current;
                 if (!wrap) return;
                 if (path.includes(wrap) || wrap.contains(event.target)) return;
@@ -4914,7 +5006,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             };
 
             const handleEscape = (event) => {
-                if (event.key === 'Escape') setSettingsMenuOpen(false);
+                if (event.key !== 'Escape') return;
+                // Контракт «safe-area и кнопка назад»: сначала закрывается
+                // лист, и только потом шторка под ним.
+                if (notifyDetailOpen) {
+                    setNotifyDetailOpen(false);
+                    return;
+                }
+                setSettingsMenuOpen(false);
             };
 
             document.addEventListener('pointerdown', handleOutsidePointer, true);
@@ -4923,7 +5022,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 document.removeEventListener('pointerdown', handleOutsidePointer, true);
                 document.removeEventListener('keydown', handleEscape, true);
             };
-        }, [settingsMenuOpen, sheetPushAccessOpen, dismissSettingsFromOutside]);
+        }, [settingsMenuOpen, sheetPushAccessOpen, notifyDetailOpen, dismissSettingsFromOutside]);
 
         // Контракт settings-system, «safe-area и кнопка назад»: аппаратная
         // кнопка назад / жест на Android закрывает лист настроек, а не уводит
@@ -4945,6 +5044,24 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 } catch (_e) { /* ignore */ }
             };
         }, [settingsMenuOpen, sheetPushAccessOpen]);
+
+        // Тот же паттерн для листа «Настроить подробно»: своя метка поверх
+        // метки шторки, поэтому кнопка назад закрывает сперва лист, потом
+        // шторку — контракт «safe-area и кнопка назад».
+        React.useEffect(() => {
+            if (!notifyDetailOpen) return undefined;
+            const onPopState = () => setNotifyDetailOpen(false);
+            window.addEventListener('popstate', onPopState);
+            try {
+                window.history.pushState({ heysNotifyDetailSheet: true }, '');
+            } catch (_e) { /* история недоступна — крестик и подложка работают */ }
+            return () => {
+                window.removeEventListener('popstate', onPopState);
+                try {
+                    if (window.history.state?.heysNotifyDetailSheet) window.history.back();
+                } catch (_e) { /* ignore */ }
+            };
+        }, [notifyDetailOpen]);
 
         React.useEffect(() => {
             if (!sheetPushAccessOpen) return undefined;
@@ -5257,6 +5374,15 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         }),
                     ]),
                     renderSettingsGroup('app', 'Приложение', [
+                        // Контракт «вход в лист»: строка стоит под общим
+                        // тумблером и открывается только когда он включён;
+                        // при выключенном гаснет до 40 % и не нажимается.
+                        renderSettingsRow({
+                            key: 'notify-detail',
+                            label: 'Настроить подробно',
+                            disabled: !sheetPushOn,
+                            onClick: () => setNotifyDetailOpen(true),
+                        }),
                         renderSettingsRow({
                             key: 'theme',
                             scrollAnchorKey: 'theme',
@@ -5717,6 +5843,89 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                 color: '#fff', fontWeight: 600,
                             },
                         }, pushBusy ? '…' : 'Подписать')
+                    )
+                )
+            ),
+            // Лист «Настроить подробно» — контракт settings-system, строки
+            // «вид листа „Настроить подробно“», «состав листа», «тихие часы».
+            // UI-гейт: цель — сузить поток уведомлений; главное действие —
+            // тумблер вида; слой 1 — шесть видов и диапазон тишины; слой 2 —
+            // системный выбор времени в капсуле; критическое не скрывать —
+            // общий тумблер и оговорка про сообщения куратора видны сразу.
+            settingsMenuOpen && notifyDetailOpen && React.createElement('div', {
+                className: 'notify-detail-backdrop',
+                onPointerDown: (e) => {
+                    if (e.target !== e.currentTarget) return;
+                    const dismiss = () => setNotifyDetailOpen(false);
+                    if (window.HEYS?.ModalDismiss?.dismissFromBackdrop) {
+                        window.HEYS.ModalDismiss.dismissFromBackdrop(e, dismiss);
+                        return;
+                    }
+                    e.preventDefault();
+                    dismiss();
+                },
+            },
+                React.createElement('div', {
+                    className: 'notify-detail',
+                    role: 'dialog',
+                    'aria-modal': 'true',
+                    'aria-label': 'Уведомления',
+                    onPointerDown: (e) => e.stopPropagation(),
+                    onClick: (e) => e.stopPropagation(),
+                },
+                    React.createElement('span', { className: 'notify-detail__handle', 'aria-hidden': 'true' }),
+                    React.createElement('div', { className: 'notify-detail__head' },
+                        React.createElement('span', { className: 'notify-detail__title' }, 'Уведомления'),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'notify-detail__close',
+                            'aria-label': 'Закрыть',
+                            onClick: () => setNotifyDetailOpen(false),
+                        },
+                            React.createElement('svg', {
+                                width: 14,
+                                height: 14,
+                                viewBox: '0 0 24 24',
+                                fill: 'none',
+                                stroke: 'currentColor',
+                                strokeWidth: 2.75,
+                                strokeLinecap: 'round',
+                                'aria-hidden': 'true',
+                            }, React.createElement('path', { d: 'M18 6L6 18M6 6l12 12' }))
+                        )
+                    ),
+                    React.createElement('div', { className: 'notify-detail__tier' }, 'Что присылать'),
+                    React.createElement('div', { className: 'notify-detail__card' },
+                        NOTIFY_KIND_ROWS.map((kind) => {
+                            const kindOn = notifyPrefs[kind.key] !== false;
+                            return React.createElement('button', {
+                                key: kind.key,
+                                type: 'button',
+                                className: 'notify-detail__row',
+                                role: 'switch',
+                                'aria-checked': kindOn ? 'true' : 'false',
+                                'aria-label': `${kind.label}, ${kindOn ? 'включено' : 'выключено'}`,
+                                onClick: () => updateNotifyPrefs({ [kind.key]: !kindOn }),
+                            },
+                                React.createElement('span', { className: 'notify-detail__row-label' }, kind.label),
+                                React.createElement('span', {
+                                    className: 'notify-detail__switch' + (kindOn ? ' is-on' : ''),
+                                    'aria-hidden': 'true',
+                                }, React.createElement('span', { className: 'notify-detail__knob' }))
+                            );
+                        })
+                    ),
+                    React.createElement('div', { className: 'notify-detail__tier' }, 'Тихие часы'),
+                    React.createElement('div', { className: 'notify-detail__card notify-detail__card--quiet' },
+                        React.createElement('div', { className: 'notify-detail__quiet-row' },
+                            React.createElement('span', { className: 'notify-detail__quiet-prep' }, 'с'),
+                            renderQuietCapsule('quiet_start', notifyQuietStart, 'Тихие часы с'),
+                            React.createElement('span', { className: 'notify-detail__quiet-prep' }, 'до'),
+                            renderQuietCapsule('quiet_end', notifyQuietEnd, 'Тихие часы до')
+                        ),
+                        React.createElement('p', { className: 'notify-detail__quiet-note' },
+                            'В это время ничего не приходит. Сообщения от куратора тихие часы не глушат.'
+                        )
                     )
                 )
             ),
