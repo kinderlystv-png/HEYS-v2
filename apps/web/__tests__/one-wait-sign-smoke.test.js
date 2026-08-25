@@ -354,6 +354,24 @@ describe('замок синхронизации взял общий знак о�
     );
   });
 
+  it('подсветка карточки идёт от роли акцента, а не голубым числом', () => {
+    // Голубой ореол сверху рисовался под голубой круг с облаком. Знак стал
+    // общим — песочная подложка с дугой в акценте, — и прежний голубой спорил
+    // бы с ним в каждом наборе палитры. Проверено вживую на трёх наборах:
+    // тон ореола совпадает с тоном дуги (песочный светлый rgb(198,113,57),
+    // песочный тёмный rgb(207,129,68), синий rgb(29,94,150)).
+    const components = fs.readFileSync(path.join(WEB_DIR, 'styles/heys-components.css'), 'utf8');
+    const card = components.slice(
+      components.indexOf('.sync-lock-overlay__card {'),
+      components.indexOf('.sync-lock-overlay__spinner {'),
+    );
+    expect(card).toContain('color-mix(in srgb, var(--v4-act, #c67139) 16%, transparent)');
+    expect(card).not.toContain('rgba(96, 165, 250, 0.18)');
+    const dark = components.slice(components.indexOf('[data-theme$="dark"] .sync-lock-overlay__card {'));
+    expect(dark.slice(0, 400)).toContain('color-mix(in srgb, var(--v4-act, #cf8144) 18%, transparent)');
+    expect(dark.slice(0, 400)).not.toContain('rgba(59, 130, 246, 0.2)');
+  });
+
   it('знак не выпирает из карточки 320 px и не ждёт лишние 300 мс', () => {
     const components = fs.readFileSync(path.join(WEB_DIR, 'styles/heys-components.css'), 'utf8');
     // Своя раскладка знака рассчитана на свободную область: 96 px сверху и
