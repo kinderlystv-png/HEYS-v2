@@ -73,7 +73,22 @@
     };
 
     merged.steps = Math.max(local.steps || 0, remote.steps || 0);
-    merged.waterMl = Math.max(local.waterMl || 0, remote.waterMl || 0);
+    // Вода: журнал глотков сливается по id (см. mergeWaterJournal в
+    // heys_sync_merge_v1.js — там же живёт боевой merge), waterMl остаётся
+    // производным. max() ниже — путь для доджурнальных дней, где журнала нет
+    // ни у одной стороны.
+    const hasWaterJournal = Array.isArray(local.waterEntries) || Array.isArray(remote.waterEntries);
+    const mergeWaterJournal = HEYS.sync && HEYS.sync.mergeWaterJournal;
+    const waterJournal = (hasWaterJournal && typeof mergeWaterJournal === 'function')
+      ? mergeWaterJournal(local, remote)
+      : null;
+    if (waterJournal) {
+      if (waterJournal.waterEntries.length > 0) merged.waterEntries = waterJournal.waterEntries;
+      else delete merged.waterEntries;
+      merged.waterMl = waterJournal.waterMl;
+    } else {
+      merged.waterMl = Math.max(local.waterMl || 0, remote.waterMl || 0);
+    }
 
     if ((local.updatedAt || 0) >= (remote.updatedAt || 0)) {
       merged.householdMin = local.householdMin ?? remote.householdMin ?? 0;

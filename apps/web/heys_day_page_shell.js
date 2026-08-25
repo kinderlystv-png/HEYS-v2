@@ -138,6 +138,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     const WATER_FAB_VOL_CHIP_MS = 180;
+    // −200 / +200 / +500 из строки контракта «чипы стопки» — пока журнал воды
+    // не набрал своих объёмов этого человека.
+    const WATER_FAB_DEFAULT_VOLUMES = [200, 500];
     const WaterCustomVolumeHost = HEYS.WaterCustomVolume?.WaterCustomVolumeHost;
     const useWaterLongPress = HEYS.WaterCustomVolume.useLongPress350;
 
@@ -205,6 +208,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             return () => document.removeEventListener('pointerdown', onPointerDown, true);
         }, [chipsOpen]);
 
+        // Строка контракта water-add «объёмы человека и чипы стопки»: в стопке
+        // быстрых действий стоят два самых частых объёма этого человека за
+        // последний месяц, пересчёт раз в неделю. Пока своих объёмов не
+        // набралось, остаются −200 / +200 / +500 из строки «чипы стопки».
+        // Шаг убавления равен шагу добавления, поэтому минус берёт первый объём.
+        const volumes = React.useMemo(() => {
+            const picked = HEYS.dayWater?.getFrequentVolumes?.();
+            return (Array.isArray(picked) && picked.length === 2)
+                ? picked
+                : WATER_FAB_DEFAULT_VOLUMES;
+        }, []);
+
         const pickVolume = (ml) => (event) => {
             event.stopPropagation();
             HEYS.waterFeedback?.markVolumeChipsClosing?.(WATER_FAB_VOL_CHIP_MS);
@@ -248,22 +263,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     className: 'water-fab-vol water-fab-vol--minus',
                     disabled: waterMl <= 0,
                     'aria-disabled': waterMl <= 0 ? 'true' : 'false',
-                    'aria-label': 'убрать 200 миллилитров',
-                    onShortClick: pickRemove(200),
+                    'aria-label': 'убрать ' + volumes[0] + ' миллилитров',
+                    onShortClick: pickRemove(volumes[0]),
                     onLongPress: openCustomVolume
-                }, '−200'),
+                }, '−' + volumes[0]),
                 React.createElement(WaterFabVolButton, {
                     className: 'water-fab-vol',
-                    'aria-label': 'добавить 200 миллилитров',
-                    onShortClick: pickVolume(200),
+                    'aria-label': 'добавить ' + volumes[0] + ' миллилитров',
+                    onShortClick: pickVolume(volumes[0]),
                     onLongPress: openCustomVolume
-                }, '+200'),
+                }, '+' + volumes[0]),
                 React.createElement(WaterFabVolButton, {
                     className: 'water-fab-vol',
-                    'aria-label': 'добавить 500 миллилитров',
-                    onShortClick: pickVolume(500),
+                    'aria-label': 'добавить ' + volumes[1] + ' миллилитров',
+                    onShortClick: pickVolume(volumes[1]),
                     onLongPress: openCustomVolume
-                }, '+500')
+                }, '+' + volumes[1])
             ),
             React.createElement('button', {
                 type: 'button',

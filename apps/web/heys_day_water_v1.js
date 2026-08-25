@@ -163,6 +163,66 @@
     setWaterLsValue(HABIT_HINT_KEY, isoWeekKey(dateIso));
   }
 
+  // ─── Два самых частых объёма за месяц ────────────────────────────────────
+  // Строка контракта water-add: «в карточку быстрых действий попадают два самых
+  // частых объёма за последний месяц; пересчёт раз в неделю, не после каждого
+  // глотка». Считается по журналу воды (waterEntries): без него частоту объёмов
+  // взять неоткуда — одно число за день её не хранит.
+  //
+  // Кеш привязан к клиенту: ключ идёт через HEYS.utils.lsGet/lsSet, которые
+  // добавляют heys_<clientId>_ сами (инв. №9 — чужой клиент свой кеш не видит).
+  const FREQ_VOLUMES_KEY = 'heys_water_freq_volumes';
+  const FREQ_VOLUMES_DAYS = 30;
+  const FREQ_VOLUMES_DEFAULT = [200, 500];
+
+  function countWaterVolumes(dateIso) {
+    const counts = new Map();
+    const anchor = new Date((dateIso || formatIsoDate(new Date())) + 'T12:00:00');
+    for (let offset = 0; offset < FREQ_VOLUMES_DAYS; offset++) {
+      const date = new Date(anchor);
+      date.setDate(date.getDate() - offset);
+      const sourceDay = getWaterLsValue('heys_dayv2_' + formatIsoDate(date), null);
+      const entries = Array.isArray(sourceDay?.waterEntries) ? sourceDay.waterEntries : [];
+      entries.forEach((entry) => {
+        // Убавление (ml < 0) объёмом не является, а seed старого дня
+        // (kind:'legacy') — не глоток, а перенесённая сумма без времени.
+        if (!entry || entry.kind === 'legacy') return;
+        const ml = Math.round(Number(entry.ml) || 0);
+        if (ml <= 0) return;
+        counts.set(ml, (counts.get(ml) || 0) + 1);
+      });
+    }
+    return counts;
+  }
+
+  function computeFrequentVolumes(dateIso) {
+    const counts = countWaterVolumes(dateIso);
+    const top = Array.from(counts.entries())
+      .sort((a, b) => (b[1] - a[1]) || (a[0] - b[0]))
+      .slice(0, 2)
+      .map((pair) => pair[0]);
+    // Меньше двух своих объёмов — недостаточно данных, а не «объёмов нет»:
+    // недостающие места занимают значения по умолчанию из контракта.
+    FREQ_VOLUMES_DEFAULT.forEach((ml) => {
+      if (top.length < 2 && !top.includes(ml)) top.push(ml);
+    });
+    return top.slice(0, 2).sort((a, b) => a - b);
+  }
+
+  function getFrequentVolumes(dateIso) {
+    const iso = (typeof dateIso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateIso))
+      ? dateIso
+      : formatIsoDate(new Date());
+    const weekKey = isoWeekKey(iso);
+    const cached = getWaterLsValue(FREQ_VOLUMES_KEY, null);
+    if (cached && cached.week === weekKey && Array.isArray(cached.volumes) && cached.volumes.length === 2) {
+      return cached.volumes.map((ml) => Number(ml) || 0).sort((a, b) => a - b);
+    }
+    const volumes = computeFrequentVolumes(iso);
+    setWaterLsValue(FREQ_VOLUMES_KEY, { week: weekKey, volumes });
+    return volumes;
+  }
+
   function curvePoint(item, index, scaleMaxMl) {
     const step = (CURVE_X1 - CURVE_X0) / (WEEK_DAYS - 1);
     const x = Math.round((CURVE_X0 + step * index) * 10) / 10;
@@ -524,7 +584,12 @@
   HEYS.dayWater = {
     render: renderWaterCard,
     applyOptimistic,
+    getFrequentVolumes,
     _test: {
+      countWaterVolumes,
+      computeFrequentVolumes,
+      getFrequentVolumes,
+      FREQ_VOLUMES_KEY,
       buildWeekSeries,
       formatLiters,
       formatFactDisplay,

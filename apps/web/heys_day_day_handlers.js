@@ -412,6 +412,31 @@
         ensureSharedWaterFeedback();
 
         /**
+         * Пишет глоток (или убавление) в журнал воды дня.
+         *
+         * Журнал — источник правды по воде: записи { id, ml, ts } сливаются
+         * между устройствами по id, поэтому два глотка с двух устройств
+         * складываются, а не превращаются в максимум двух чисел. waterMl
+         * остаётся производным полем и всегда равен сумме журнала.
+         *
+         * Общие чистые помощники живут в heys_sync_merge_v1.js (HEYS.sync):
+         * тот же код считает журнал и на слиянии, в том числе на сервере.
+         * Если модуль ещё не поднялся — возвращаем null, и вызывающий считает
+         * воду прежней арифметикой по числу. Хуже прежнего не станет.
+         *
+         * @returns {{waterEntries: Array, waterMl: number}|null}
+         */
+        function applyWaterJournalDelta(liveDay, ml, ts) {
+            const append = HEYS.sync && HEYS.sync.appendWaterEntry;
+            if (typeof append !== 'function') return null;
+            try {
+                return append(liveDay, ml, { ts });
+            } catch (_error) {
+                return null;
+            }
+        }
+
+        /**
          * Add water with animation
          * @param {number} ml - Milliliters to add
          * @param {boolean} skipScroll - Skip scroll to water card
@@ -447,14 +472,16 @@
         function runWaterAnimation(ml, options = {}) {
             const liveDay = getLatestDaySnapshot();
             const prevWater = liveDay.waterMl || 0;
-            const newWater = prevWater + ml;
-            const hitGoal = waterGoal && newWater >= waterGoal && prevWater < waterGoal;
             const newUpdatedAt = Math.max(Date.now(), (Number(liveDay.waterUpdatedAt) || 0) + 1);
+            const journal = applyWaterJournalDelta(liveDay, ml, newUpdatedAt);
+            const newWater = journal ? journal.waterMl : prevWater + ml;
+            const hitGoal = waterGoal && newWater >= waterGoal && prevWater < waterGoal;
             const blockUntil = newUpdatedAt + 3000;
             const nextDaySnapshot = {
                 ...liveDay,
                 date,
                 waterMl: newWater,
+                ...(journal ? { waterEntries: journal.waterEntries } : null),
                 lastWaterTime: newUpdatedAt,
                 waterUpdatedAt: newUpdatedAt,
                 updatedAt: newUpdatedAt
@@ -469,6 +496,7 @@
             setDay(prev => ({
                 ...prev,
                 waterMl: newWater,
+                ...(journal ? { waterEntries: journal.waterEntries } : null),
                 lastWaterTime: newUpdatedAt,
                 waterUpdatedAt: newUpdatedAt,
                 updatedAt: newUpdatedAt
@@ -487,6 +515,9 @@
             const waterDetail = {
                 ml,
                 total: newWater,
+                // Ключ дня, к которому относится действие (YYYY-MM-DD): гейт
+                // геймификации на прошлый день смотрит именно сюда.
+                date,
                 source: options.source || 'day-water',
                 sourceEl: options.sourceEl || null,
                 playSound: options.playSound !== false,
@@ -525,8 +556,12 @@
             }
 
             const liveDay = getLatestDaySnapshot();
-            const newWater = Math.max(0, (liveDay.waterMl || 0) - ml);
             const newUpdatedAt = Math.max(Date.now(), (Number(liveDay.waterUpdatedAt) || 0) + 1);
+            // Убавление — такая же запись журнала, только с отрицательным ml.
+            // Записи не удаляются: удалённую запись при слиянии не отличить от
+            // «её нет на этом устройстве», а на старом дне удалять нечего.
+            const journal = applyWaterJournalDelta(liveDay, -ml, newUpdatedAt);
+            const newWater = journal ? journal.waterMl : Math.max(0, (liveDay.waterMl || 0) - ml);
 
             if (typeof HEYS?.Day?.setBlockCloudUpdates === 'function') {
                 HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
@@ -536,13 +571,20 @@
                 ...liveDay,
                 date,
                 waterMl: newWater,
+                ...(journal ? { waterEntries: journal.waterEntries } : null),
                 waterUpdatedAt: newUpdatedAt,
                 updatedAt: newUpdatedAt
             });
 
             HEYS.dayWater?.applyOptimistic?.(document.getElementById('water-card'), newWater, waterGoal);
 
-            setDay(prev => ({ ...prev, waterMl: newWater, waterUpdatedAt: newUpdatedAt, updatedAt: newUpdatedAt }));
+            setDay(prev => ({
+                ...prev,
+                waterMl: newWater,
+                ...(journal ? { waterEntries: journal.waterEntries } : null),
+                waterUpdatedAt: newUpdatedAt,
+                updatedAt: newUpdatedAt
+            }));
 
             scheduleDayFlush();
 
@@ -551,6 +593,9 @@
             const waterDetail = {
                 ml: -ml,
                 total: newWater,
+                // Ключ дня, к которому относится действие (YYYY-MM-DD): гейт
+                // геймификации на прошлый день смотрит именно сюда.
+                date,
                 source: 'day-water-remove',
                 playSound: false,
                 targetMl: Number(HEYS.Widgets?.data?.getWaterData?.()?.target) || 0
@@ -559,7 +604,13 @@
             window.dispatchEvent(new CustomEvent('heys:day-updated', {
                 detail: {
                     date,
-                    dayData: { ...liveDay, waterMl: newWater, waterUpdatedAt: newUpdatedAt, updatedAt: newUpdatedAt },
+                    dayData: {
+                        ...liveDay,
+                        waterMl: newWater,
+                        ...(journal ? { waterEntries: journal.waterEntries } : null),
+                        waterUpdatedAt: newUpdatedAt,
+                        updatedAt: newUpdatedAt
+                    },
                     source: 'water-remove'
                 }
             }));

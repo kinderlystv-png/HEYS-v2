@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { createRequire } from 'module';
 import path from 'path';
 
 import { fireEvent, render } from '@testing-library/react';
@@ -250,6 +251,59 @@ describe('HEYS.dayDayHandlers water persistence', () => {
     expect(savedDay.date).toBe('2025-12-12');
     expect(savedDay.waterMl).toBe(100);
     expect(savedDay.meals).toBeUndefined();
+  });
+
+  it('пишет журнал воды и кладёт дату дня в событие геймификации', () => {
+    const require_ = createRequire(import.meta.url);
+    const { appendWaterEntry } = require_(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs')
+    );
+    global.HEYS.sync = { appendWaterEntry };
+
+    // Старый день одним числом: журнал подхватывает его seed-записью.
+    let currentDay = { date: '2025-12-12', waterMl: 500, updatedAt: 1734000000000 };
+    global.HEYS.Day.getDay.mockImplementation(() => currentDay);
+    global.HEYS.dayUtils.lsGet.mockImplementation(() => currentDay);
+
+    const setDay = vi.fn((updater) => {
+      currentDay = updater(currentDay);
+      return currentDay;
+    });
+
+    const handlers = global.HEYS.dayDayHandlers.createDayHandlers({
+      setDay,
+      day: currentDay,
+      date: '2025-12-12',
+      prof: {},
+      showConfetti: false,
+      setShowConfetti: vi.fn(),
+      waterGoal: 2000,
+      setEditGramsTarget: vi.fn(),
+      setEditGramsValue: vi.fn(),
+      setGrams: vi.fn()
+    });
+
+    handlers.addWater(200, { skipScroll: true, playSound: false });
+
+    expect(currentDay.waterMl).toBe(700);
+    expect(currentDay.waterEntries.map((e) => e.ml)).toEqual([500, 200]);
+    expect(currentDay.waterEntries[0]).toMatchObject({ kind: 'legacy' });
+
+    const addedEvent = dispatchEventSpy.mock.calls
+      .map((call) => call[0])
+      .find((event) => event.type === 'heysWaterAdded');
+    expect(addedEvent.detail).toMatchObject({ ml: 200, total: 700, date: '2025-12-12' });
+
+    handlers.removeWater(200);
+
+    expect(currentDay.waterMl).toBe(500);
+    expect(currentDay.waterEntries.map((e) => e.ml)).toEqual([500, 200, -200]);
+
+    const removedEvent = dispatchEventSpy.mock.calls
+      .map((call) => call[0])
+      .filter((event) => event.type === 'heysWaterAdded')
+      .pop();
+    expect(removedEvent.detail).toMatchObject({ ml: -200, total: 500, date: '2025-12-12' });
   });
 
   it('чип объёма в карточке зовёт addWater сразу', () => {

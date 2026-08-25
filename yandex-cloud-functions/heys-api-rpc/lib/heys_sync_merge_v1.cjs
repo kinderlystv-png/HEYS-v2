@@ -31,7 +31,11 @@
   // whether a clear/decrease/toggle is newer than the value on another device.
   const DAY_USER_MUTATION_GROUPS = [
     { timestamp: 'stepsUpdatedAt', fields: ['steps'] },
-    { timestamp: 'waterUpdatedAt', fields: ['waterMl', 'lastWaterTime'] },
+    // waterEntries едет в группе вместе с waterMl, чтобы производное число и
+    // журнал не разъезжались на откате guardExplicitMutationGroups. В самом
+    // mergeDayData журнал сливается по id уже ПОСЛЕ этой группы и её результат
+    // для воды перекрывает (см. mergeWaterJournal).
+    { timestamp: 'waterUpdatedAt', fields: ['waterMl', 'lastWaterTime', 'waterEntries'] },
     { timestamp: 'weightUpdatedAt', fields: ['weightMorning'] },
     { timestamp: 'householdUpdatedAt', fields: ['householdActivities', 'householdMin', 'householdTime'] },
     { timestamp: 'cycleUpdatedAt', fields: ['cycleDay', 'cycleStatus', 'cycleAnsweredAt'] },
@@ -75,6 +79,108 @@
       }
     }
     return result;
+  }
+
+  // ─── Журнал воды (waterEntries) ──────────────────────────────────────────
+  //
+  // Контракт water-add.v4: «глоток пишет объём в миллилитрах и время в
+  // waterEntries дня; сумма за день считается из записей». Журнал сливается по
+  // id — так же, как приёмы еды, — поэтому глотки с двух устройств
+  // складываются, а не берётся максимум двух чисел.
+  //
+  // day.waterMl остаётся производным полем: его продолжают читать десятки
+  // потребителей (виджеты, инсайты, разбор, sparkline), и он всегда равен
+  // сумме журнала после любой записи или слияния.
+  //
+  // Форма записи: { id, ml, ts } — ml < 0 у убавления. Отступление от строки
+  // контракта «убавление удаляет последнюю запись, а не пишет отрицательную»
+  // названо вслух: физическое удаление записи нельзя отличить при слиянии от
+  // «её просто нет на этом устройстве», а на старом дне (одно число, журнала
+  // нет) удалять нечего вовсе. Отрицательная запись аддитивна, поэтому слияние
+  // по id остаётся независимым от порядка, и убавление не может пропасть.
+  const WATER_SEED_ID = 'w-seed';
+
+  function readWaterEntries(day) {
+    const list = day && Array.isArray(day.waterEntries) ? day.waterEntries : [];
+    return list.filter((e) => e && typeof e === 'object' && e.id != null && Number.isFinite(Number(e.ml)));
+  }
+
+  function sumWaterEntries(entries) {
+    return (entries || []).reduce((sum, e) => sum + (Number(e && e.ml) || 0), 0);
+  }
+
+  // Материализует непрослеженный журналом остаток дня в одну seed-запись.
+  // Это единственный мост к старым дням (waterMl без журнала) и к записям мимо
+  // журнала (плитка Главной пишет waterMl напрямую). Запись помечена
+  // kind:'legacy' и её ts может быть 0: время этой воды нам неизвестно, и
+  // выдавать её за глоток в почасовом разборе нельзя.
+  // Отсутствие журнала — незнание, а не «воды не было»: seed сохраняет число.
+  function normalizeWaterEntries(day) {
+    const entries = readWaterEntries(day);
+    const tracked = sumWaterEntries(entries);
+    const total = Math.max(0, Number(day && day.waterMl) || 0);
+    const untracked = total - tracked;
+    if (untracked <= 0) return entries.slice();
+    const out = entries.slice();
+    const seedIndex = out.findIndex((e) => e.id === WATER_SEED_ID);
+    if (seedIndex >= 0) {
+      out[seedIndex] = { ...out[seedIndex], ml: (Number(out[seedIndex].ml) || 0) + untracked };
+    } else {
+      out.unshift({
+        id: WATER_SEED_ID,
+        ml: untracked,
+        ts: Number(day && day.lastWaterTime) || 0,
+        kind: 'legacy',
+      });
+    }
+    return out;
+  }
+
+  function resolveWaterMl(day) {
+    return Math.max(0, sumWaterEntries(normalizeWaterEntries(day)));
+  }
+
+  // Добавляет запись в журнал дня и возвращает новое состояние воды.
+  // Убавление ограничено текущей суммой: журнал не уходит в минус.
+  function appendWaterEntry(day, ml, options) {
+    const opts = options || {};
+    const entries = normalizeWaterEntries(day);
+    const base = Math.max(0, sumWaterEntries(entries));
+    const delta = Number(ml) || 0;
+    const applied = delta < 0 ? -Math.min(-delta, base) : delta;
+    const ts = Number(opts.ts) || Date.now();
+    const id = opts.id || ('w-' + ts.toString(36) + '-' + Math.random().toString(36).slice(2, 8));
+    return {
+      waterEntries: applied === 0 ? entries : entries.concat([{ id: id, ml: applied, ts: ts }]),
+      waterMl: Math.max(0, base + applied),
+      appliedMl: applied,
+      entryId: applied === 0 ? null : id,
+    };
+  }
+
+  // Слияние двух журналов: объединение по id, ничего не удаляется.
+  // Отсутствие записи на второй стороне не считается удалением — удаление
+  // выражено отдельной отрицательной записью, у которой свой id.
+  // Исключение — seed непрослеженного остатка: он у каждой стороны свой и
+  // описывает одну и ту же воду, поэтому берётся больший. Это ровно прежнее
+  // поведение max() для доджурнальных дней, то есть без регрессии.
+  function mergeWaterJournal(local, remote) {
+    const map = new Map();
+    normalizeWaterEntries(remote).forEach((e) => map.set(e.id, e));
+    normalizeWaterEntries(local).forEach((e) => {
+      const existing = map.get(e.id);
+      if (!existing) {
+        map.set(e.id, e);
+        return;
+      }
+      if (e.id === WATER_SEED_ID) {
+        map.set(e.id, (Number(e.ml) || 0) >= (Number(existing.ml) || 0) ? e : existing);
+      }
+      // Обычная запись журнала неизменяема: тот же id — та же запись.
+    });
+    const waterEntries = Array.from(map.values())
+      .sort((a, b) => (Number(a.ts) || 0) - (Number(b.ts) || 0));
+    return { waterEntries: waterEntries, waterMl: Math.max(0, sumWaterEntries(waterEntries)) };
   }
 
   // ─── mergeItemsById ──────────────────────────────────────────────────────
@@ -797,6 +903,18 @@
     // above. Exact property copying is intentional: 0, '', false, [] and a
     // missing property are all valid outcomes of a newer user action.
     applyExplicitMutationGroups(merged, local, remote);
+
+    // ─── Вода: журнал сливается по id, waterMl — производное ───────────────
+    // Калитка сознательная: журнальный путь включается только когда хотя бы у
+    // одной стороны журнал реально есть. День, который обе стороны писали
+    // старым способом (одно число), проходит прежней дорогой — группа
+    // waterUpdatedAt плюс max() выше, — и его поведение не меняется.
+    if (Array.isArray(local.waterEntries) || Array.isArray(remote.waterEntries)) {
+      const water = mergeWaterJournal(local, remote);
+      if (water.waterEntries.length > 0) merged.waterEntries = water.waterEntries;
+      else delete merged.waterEntries;
+      merged.waterMl = water.waterMl;
+    }
 
     // ─── Meals: merge by id with deletion detection ────────────────────────
     const localMeals = local.meals || [];
@@ -1605,6 +1723,14 @@
     mergeHungerStatusEvents,
     mergeInsightsFeedback,
     mergeItemsById,
+    // Журнал воды: чистые помощники, общие для записи (day handlers) и слияния.
+    readWaterEntries,
+    sumWaterEntries,
+    normalizeWaterEntries,
+    resolveWaterMl,
+    appendWaterEntry,
+    mergeWaterJournal,
+    WATER_SEED_ID,
     mergeScalarKv,
     mergeScalarKvWithOutcome,
     mergeMorningCheckinProgress,
