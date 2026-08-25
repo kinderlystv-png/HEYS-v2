@@ -2638,7 +2638,7 @@ body:has(.page-reports) .hdr::after {
   position: fixed;
   left: 14px;
   bottom: calc(76px + 18px + env(safe-area-inset-bottom, 0px));
-  z-index: 1001;
+  z-index: var(--v4-z-fab, 1001);
 }
 
 /* Кнопка настройки экрана — 40 px, карандаш (канвас home-widgets v4) */
@@ -2698,7 +2698,7 @@ body:has(.page-reports) .hdr::after {
   position: fixed;
   right: 14px;
   bottom: calc(76px + 14px + env(safe-area-inset-bottom, 0px));
-  z-index: 1001;
+  z-index: var(--v4-z-fab, 1001);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -9349,7 +9349,7 @@ body.reports-fullscreen-open {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   overscroll-behavior: none;
-  z-index: 1200;
+  z-index: var(--v4-z-sheet-scrim, 1200);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -12728,10 +12728,13 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
+/* Показывается только в кадре закрытия, когда самого листа в DOM уже нет
+   (heys_widgets_variants_v4.js: при closing рисуется один блокировщик), так
+   что его ступень ниже затемнения ничего не перекрывает. */
 .widget-wd-sheet__blocker {
   position: fixed;
   inset: 0;
-  z-index: 1202;
+  z-index: var(--v4-z-sheet-blocker, 1199);
   background: transparent;
   touch-action: none;
 }
@@ -12739,7 +12742,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
 .widget-wd-sheet__scrim {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: var(--v4-z-sheet-scrim, 1200);
   border: none;
   /* Подложка product-модалки: dim и блюр берутся из токенов набора.
      Канвас рисует blur(2px), инвариант продукта — 2.5px из
@@ -12760,7 +12763,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1201;
+  z-index: var(--v4-z-sheet, 1205);
   padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px));
   border-radius: 26px 26px 0 0;
   background: var(--heys-bg, #fffaf1);

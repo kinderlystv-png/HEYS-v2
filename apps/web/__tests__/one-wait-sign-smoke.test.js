@@ -279,3 +279,90 @@ describe('слой обновления PWA взял общий знак ожи�
     expect(platform).toContain("const glyph = s.done ? updateIconSvg('check', UPDATE_ARC_PX, UPDATE_ARC_STROKE) : '';");
   });
 });
+
+describe('замок синхронизации взял общий знак ожидания', () => {
+  // Экран блокирует приложение и приходит через 10 с обычной синхронизации и
+  // через 15 с на PIN-прокси — руками его не поймать, а видит его человек
+  // дольше любого другого ожидания. Держал свой круг 74 px с облаком внутри и
+  // оборотом 0,9 с: второй знак в продукте против строки spinners «форма»,
+  // голубой числами вместо роли, и — главное — замирал совсем при системном
+  // «уменьшить движение», что строка «уменьшенное движение · дыхание»
+  // запрещает дословно: «Полностью статичной дуги не бывает ни в одном режиме».
+  const overlays = () => fs.readFileSync(path.join(WEB_DIR, 'heys_app_overlays_v1.js'), 'utf8');
+
+  it('своего круга с облаком больше нет', () => {
+    const src = overlays();
+    expect(src).not.toContain("className: 'sync-lock-overlay__spinner'");
+    expect(src).not.toContain("className: 'sync-lock-overlay__cloud'");
+    expect(src).not.toContain('☁');
+  });
+
+  it('карточка зовёт общий знак, и в режиме без своих ступеней', () => {
+    const src = overlays();
+    expect(src).toContain('HEYS.WaitMark.render(React, {');
+    // embedded, а не screen: ступени знака (300 мс до появления, 2 с до
+    // подписи) отсчитались бы заново после 10–15 с ожидания.
+    expect(src).toMatch(/HEYS\.WaitMark\.render\(React, \{[\s\S]{0,120}mode: 'embedded'/);
+  });
+
+  it('слов «пожалуйста подождите» на экране нет', () => {
+    const src = overlays();
+    expect(src).not.toMatch(/Пожалуйста,?\s*подождите/i);
+    // Голос ожидания в продукте один — множественное число, как «Загружаем».
+    expect(src).not.toContain('Синхронизирую данные');
+    expect(src).not.toContain('Сохраняю последние изменения');
+    expect(src).toContain("title: 'Синхронизируем'");
+  });
+
+  it('живая область одна: знак несёт её сам', () => {
+    const src = overlays();
+    const card = src.slice(src.indexOf("className: 'sync-lock-overlay',"), src.indexOf('pwa-install-banner'));
+    // На самом слое role/aria-live сняты — иначе два вложенных role='status'
+    // дают двойное объявление.
+    expect(card).not.toMatch(/className: 'sync-lock-overlay',[\s\S]{0,400}?role: 'status'/);
+    expect(card).toContain("'aria-busy': 'true'");
+    // Подсказка о медленной сети приходит отдельно и позже — своя область.
+    expect(card).toContain("className: 'sync-lock-overlay__hint', role: 'status'");
+  });
+
+  it('знак дышит в тихом режиме, а не замирает', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    act(() => {
+      root.render(window.HEYS.WaitMark.render(React, {
+        mode: 'embedded',
+        state: 'wait',
+        title: 'Синхронизируем',
+        text: 'Забираем данные из облака',
+        sr: 'Синхронизируем',
+      }));
+    });
+    // animate-always выводит дугу из-под глобального гашения анимаций, и в
+    // тихом режиме она получает дыхание вместо вращения.
+    const spin = host.querySelector('.heys-wait-mark__spin');
+    expect(spin).toBeTruthy();
+    expect(spin.classList.contains('animate-always')).toBe(true);
+    expect(host.querySelector('svg path[d="' + ARC_TAIL + '"]')).toBeTruthy();
+    expect(host.querySelector('svg path[d="' + ARC_HEAD + '"]')).toBeTruthy();
+    expect(host.querySelectorAll('[role="status"]').length).toBe(1);
+    act(() => { root.unmount(); });
+
+    const boot = fs.readFileSync(path.join(WEB_DIR, 'styles/heys-boot-mark.css'), 'utf8');
+    expect(boot).toMatch(
+      /\.heys-wait-mark \.heys-wait-mark__spin\.animate-always \{\s*animation: heys-boot-breathe 1\.6s ease-in-out infinite !important;/,
+    );
+  });
+
+  it('знак не выпирает из карточки 320 px и не ждёт лишние 300 мс', () => {
+    const components = fs.readFileSync(path.join(WEB_DIR, 'styles/heys-components.css'), 'utf8');
+    // Своя раскладка знака рассчитана на свободную область: 96 px сверху и
+    // 240 px высоты выдавили бы подпись за край карточки.
+    expect(components).toMatch(
+      /\.sync-lock-overlay__card \.heys-wait-mark--embedded \{[\s\S]*?padding: 0;[\s\S]*?min-height: 0;/,
+    );
+    expect(components).toMatch(
+      /\.sync-lock-overlay__card \.heys-wait-mark--embedded \.heys-wait-mark__sign \{\s*animation-delay: 0s;/,
+    );
+  });
+});

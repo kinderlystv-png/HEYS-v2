@@ -336,23 +336,39 @@
                 'div',
                 {
                     className: 'sync-lock-overlay',
-                    role: 'status',
-                    'aria-live': 'polite',
+                    // role/aria-live сняты намеренно: знак ожидания внутри —
+                    // сам живая область, а вложенные два role='status' дают
+                    // двойное объявление. Подсказка о медленной сети получила
+                    // свою область: она приходит отдельно и позже.
                     'aria-busy': 'true',
                 },
                 React.createElement('div', { className: 'sync-lock-overlay__card' },
-                    React.createElement('div', { className: 'sync-lock-overlay__spinner', 'aria-hidden': 'true' },
-                        React.createElement('span', { className: 'sync-lock-overlay__cloud' }, '☁')
-                    ),
-                    React.createElement('div', { className: 'sync-lock-overlay__title' }, 'Синхронизирую данные'),
-                    React.createElement('div', { className: 'sync-lock-overlay__subtitle' },
-                        pendingCount > 0
-                            ? 'Сохраняю последние изменения в облако'
-                            : 'Пожалуйста, подождите пару секунд'
-                    ),
+                    // Строки «источник» и «форма» канваса знака ожидания: знак
+                    // в продукте один. Здесь был свой круг 74 px с облаком
+                    // внутри и оборотом 0,9 с — второй знак ожидания на самом
+                    // заметном экране, к тому же голубой числами, а не ролью.
+                    // Под «уменьшить движение» он замирал совсем, а строка
+                    // «уменьшенное движение · дыхание» запрещает это дословно:
+                    // общий знак несёт animate-always и в этом режиме дышит.
+                    //
+                    // Режим embedded, а не screen: экран показывают после 10–15 с
+                    // ожидания, и ступени знака (300 мс до появления, 2 с до
+                    // подписи) отсчитались бы заново — человек смотрел бы в пустую
+                    // карточку ещё две секунды.
+                    (HEYS.WaitMark && HEYS.WaitMark.render)
+                        ? HEYS.WaitMark.render(React, {
+                            mode: 'embedded',
+                            state: 'wait',
+                            title: 'Синхронизируем',
+                            text: pendingCount > 0
+                                ? 'Отправляем последние изменения в облако'
+                                : 'Забираем данные из облака',
+                            sr: 'Синхронизируем',
+                        })
+                        : React.createElement('div', { className: 'sync-lock-overlay__title', role: 'status' }, 'Синхронизируем'),
                     shouldShowSlowInternetHint && React.createElement(
                         'div',
-                        { className: 'sync-lock-overlay__hint' },
+                        { className: 'sync-lock-overlay__hint', role: 'status' },
                         'Похоже, интернет нестабильный — приложению просто нужно чуть больше времени на синхронизацию.'
                     ),
                     shouldShowSlowInternetHint && React.createElement(

@@ -382,7 +382,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-sheet-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 12000;
+  z-index: var(--v4-z-sheet-scrim, 1200);
   background: rgba(15, 23, 42, 0.35);
 }
 
@@ -391,7 +391,7 @@ body:has(.activity-v4) .hdr::after {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 12001;
+  z-index: var(--v4-z-sheet, 1205);
   padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
   border-radius: 20px 20px 0 0;
   background: var(--v4-bg, #ffffff);

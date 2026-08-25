@@ -7528,7 +7528,7 @@ color: var(--v4-sand-ink, #201e1d);
   top: 0;
   left: 0;
   right: 0;
-  z-index: 9999;
+  z-index: var(--v4-z-offline-banner, 9999);
   background: linear-gradient(135deg, var(--color-red-500) 0%, #dc2626 100%);
   color: white;
   padding: 8px 16px;
@@ -7635,7 +7635,7 @@ color: var(--v4-sand-ink, #201e1d);
   top: 0;
   left: 0;
   right: 0;
-  z-index: 9999;
+  z-index: var(--v4-z-offline-banner, 9999);
   background: linear-gradient(135deg, var(--color-emerald-500) 0%, #059669 100%);
   color: white;
   padding: 8px 16px;
@@ -8822,7 +8822,7 @@ svg.date-picker-icon {
   transform: none;
   transform-origin: bottom center;
   animation: datePickerSheetModalIn 0.18s ease;
-  z-index: 1205;
+  z-index: var(--v4-z-sheet, 1205);
 }
 
 /* Backdrop для календаря */
@@ -8847,7 +8847,7 @@ svg.date-picker-icon {
   background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
-  z-index: 1200;
+  z-index: var(--v4-z-sheet-scrim, 1200);
 }
 
 [data-theme$="dark"] .date-picker-backdrop.date-picker-backdrop--v4-modal {
@@ -9788,7 +9788,7 @@ svg.date-picker-icon {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: var(--v4-z-nav, 1000);
   box-shadow: 0 -1px 20px rgba(0, 0, 0, 0.06);
   padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   min-height: 58px;
@@ -9951,7 +9951,7 @@ body:has([data-heys-visible-frame="consent"]) .tabs {
   right: 0;
   height: 3px;
   isolation: isolate;
-  z-index: 1002;
+  z-index: var(--v4-z-nav-progress, 1002);
   pointer-events: none;
   overflow: visible;
   background: rgba(148, 163, 184, 0.22);
@@ -10412,7 +10412,7 @@ body:has(:is(
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   gap: 0;
-  z-index: 1205;
+  z-index: var(--v4-z-sheet, 1205);
   transform: translateX(-50%);
   transform-origin: top center;
   animation: settingsMenuSlideDown 0.18s ease;
@@ -11064,9 +11064,12 @@ body:has(:is(
 .notify-detail-backdrop {
   position: fixed;
   inset: 0;
-  /* Над шторкой настроек (1205) и над плавающей кнопкой Главной (1300):
-     контракт «порядок слоёв» — лист встаёт над шторкой. */
-  z-index: 1310;
+  /* Второй лист над шторкой настроек — контракт settings-system, «шторка
+     настроек и лист „на домашний экран“ — два слоя, лист встаёт над шторкой».
+     Затемнение и лист здесь один элемент, поэтому ступень — затемнение
+     второго уровня. Прежнее число 1310 подбиралось на глаз и ссылалось на
+     несуществующую плавающую кнопку «(1300)». */
+  z-index: var(--v4-z-sheet-2, 1210);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -11469,7 +11472,7 @@ body:has(:is(
   background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
-  z-index: 1200;
+  z-index: var(--v4-z-sheet-scrim, 1200);
 }
 
 [data-theme$="dark"] .tab-settings-backdrop {
@@ -12130,7 +12133,7 @@ body:has(:is(
 }
 
 .tabs.tabs--settings-open .tab-settings-menu {
-  z-index: 1205;
+  z-index: var(--v4-z-sheet, 1205);
 }
 
 /* v4 popover: подложка и FAB остаются видимыми, как на канвасе g1 */

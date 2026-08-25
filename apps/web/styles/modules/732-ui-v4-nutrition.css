@@ -1002,10 +1002,12 @@
    (--v4-modal-backdrop-*), тот же слой, что у чек-ина, кураторского листа и
    меню «Ещё». Запасных значений у них нет намеренно: blur и затемнение
    одинаковы во всех наборах. */
+/* Затемнение и лист — один элемент: .nutrition-v4-sheet внутри едет без
+   своего числа, поэтому вся шторка стоит на ступени затемнения. */
 .nutrition-v4-sheet-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1400;
+  z-index: var(--v4-z-sheet-scrim, 1200);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;

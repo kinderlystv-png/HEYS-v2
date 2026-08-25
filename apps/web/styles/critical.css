@@ -861,7 +861,7 @@ body.board-dark-nav .heys-tab-skeleton {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: var(--v4-z-nav, 1000);
   box-shadow: 0 -1px 20px rgba(0, 0, 0, 0.06);
   padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   min-height: 58px;

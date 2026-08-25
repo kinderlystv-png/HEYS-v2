@@ -211,7 +211,7 @@
 .ios-home-install-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 13000;
+  z-index: var(--v4-z-install, 13000);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -5175,7 +5175,7 @@
 .ca-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 10001;
+  z-index: var(--v4-z-curator-sheet, 10001);
   background: rgba(0, 0, 0, 0);
   -webkit-backdrop-filter: blur(0);
   backdrop-filter: blur(0);
