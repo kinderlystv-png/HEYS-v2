@@ -3214,6 +3214,27 @@
     }
   };
 
+  // Действующее подписанное согласие на уведомления, если оно есть. Тумблер
+  // уведомлений — настройка, а согласие — юридический факт: пока подпись
+  // действует, тумблер включается и выключается сколько угодно раз без новой
+  // подписи. Отозванное согласие сервер помечает revoked_at и granted = false,
+  // поэтому оно сюда уже не попадёт и подпись потребуется снова.
+  async function findActivePushConsent(version) {
+    try {
+      const mine = await consentsAPI.getMyConsents();
+      if (!mine?.success) return null;
+      return (mine.consents || []).find(
+        (row) => row
+          && row.type === 'push_notifications'
+          && row.granted
+          && !row.revoked_at
+          && String(row.version || '') === String(version)
+      ) || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   consentsAPI.setPushConsent = async function (granted, accessCode) {
     try {
       if (!granted) {
@@ -3221,6 +3242,11 @@
       }
       const versions = getCurrentLegalVersions();
       const version = versions.push_notifications || '1.0';
+      // Подпись спрашивается один раз: при действующем согласии второй записи
+      // в журнал не пишем и код доступа не просим.
+      if (!accessCode && await findActivePushConsent(version)) {
+        return { success: true, alreadySigned: true };
+      }
       const result = await consentsAPI.logConsents(null, [{
         type: 'push_notifications',
         granted: true,
@@ -3229,15 +3255,6 @@
       }]);
       if (result.needsAccessCode) {
         if (!accessCode) {
-          try {
-            const mine = await consentsAPI.getMyConsents();
-            const active = (mine?.consents || []).find(
-              (row) => row.type === 'push_notifications' && row.granted && !row.revoked_at
-            );
-            if (active && String(active.version || '') === version) {
-              return { success: true, alreadySigned: true };
-            }
-          } catch (_) { /* noop */ }
           return {
             success: false,
             needsAccessCode: true,

@@ -4681,7 +4681,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             setSheetPushAccessError('');
             try {
                 if (sheetPushOn) {
-                    await window.HEYS.push.setEnabled(false);
+                    // Выключение тумблера — не отзыв согласия: согласие
+                    // спрашивается один раз при регистрации, а отзывается
+                    // явным действием на экране «Мои согласия». Иначе
+                    // следующее включение снова просило бы подпись кодом.
+                    await window.HEYS.push.setEnabled(false, { revokeConsent: false });
                     await refreshSheetPushStatus();
                     return;
                 }
@@ -4821,6 +4825,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 if (h === 'app.heyslab.ru') return true;
                 return /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h);
             })();
+
+        // Строка «служебные модалки»: служебное — кураторский вход, отдельной
+        // роли «разработчик» в продукте нет. Створка диагностики и есть та
+        // служебная створка, поэтому вход в служебный экран советов стоит в ней
+        // и дополнительно закрыт признаком куратора.
+        const isCuratorSettingsSession = (() => {
+            try { return !!window.HEYS?.auth?.isCuratorSession?.(); } catch (_) { return false; }
+        })();
 
         const settingsBuildLine = (() => {
             const version = String(window.HEYS?.version || window.APP_VERSION || '');
@@ -5588,7 +5600,22 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                     console.warn('[Диагностика] правки куратора:', err?.message || err);
                                 });
                             },
-                        }, 'Правки куратора (снова)')
+                        }, 'Правки куратора (снова)'),
+                        isCuratorSettingsSession && React.createElement('button', {
+                            type: 'button',
+                            className: 'hdr-settings-sheet__diag-btn',
+                            title: 'Служебные инструменты советов: техлог, диагностика, пул правил',
+                            onClick: () => {
+                                setSettingsMenuOpen(false);
+                                setSheetExtra(null);
+                                // Слушатель живёт в DayTab, а он смонтирован
+                                // всегда (см. комментарий у tab-active-viewport),
+                                // и служебный экран position:fixed — открывается
+                                // поверх любой вкладки. Переключать вкладку не
+                                // нужно.
+                                window.dispatchEvent(new CustomEvent('heys:open-advice-service'));
+                            },
+                        }, 'Служебное — советы')
                     ),
                     React.createElement('div', {
                         key: 'settings-build',

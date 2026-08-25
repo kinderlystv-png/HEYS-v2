@@ -2326,7 +2326,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             if (!confirm('Отключить уведомления полностью?')) return;
             setBusy(true);
             try {
-                if (HEYS.push.setEnabled) await HEYS.push.setEnabled(false);
+                // Пользовательский тумблер, а не отзыв согласия: выключение
+                // снимает подписку устройства и оставляет подписанное согласие
+                // действующим — иначе следующее включение снова просило бы
+                // подпись кодом. Кнопка отзыва на экране согласий ниже зовёт
+                // setEnabled(false) без опции и отзывает по-настоящему.
+                if (HEYS.push.setEnabled) await HEYS.push.setEnabled(false, { revokeConsent: false });
                 else await HEYS.push.unsubscribe();
             } finally {
                 setBusy(false);

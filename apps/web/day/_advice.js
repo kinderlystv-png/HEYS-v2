@@ -1949,7 +1949,6 @@
         // убрано чтобы курaтор видел текущие live-карточки точно как клиент.
         // Курaтор всё равно не пишет outcomes (гейчено в advice/_core.js
         // recordAdviceOutcomeEvent + track*).
-        const _isCurator = isCuratorReadOnlyMode();
         const drawerAdvices = Array.isArray(badgeAdvices) && badgeAdvices.length > 0
             ? badgeAdvices
             : adviceRelevant;
@@ -1962,7 +1961,45 @@
             medicalDisclaimerSessionDismissed
         );
         if (showDisclaimer) return null;
-        if (!(adviceTrigger === 'manual' && toastVisible && (drawerAdvices?.length > 0 || safeEwsWarnings.length > 0))) return null;
+
+        // Строка «служебные модалки»: вход в служебное живёт в служебной
+        // створке настроек, а не в шапке шторки советов. Значит служебные слои
+        // должны открываться и при закрытой шторке — рисуем их отдельным
+        // куском, общим для обеих веток.
+        const serviceOverlays = React.createElement(React.Fragment, { key: 'advice-service-layers' },
+            adviceServiceOpen && renderAdviceServiceScreen(React, {
+                onClose: closeAdviceService,
+                onOpenTechLog: (e) => {
+                    e?.stopPropagation?.();
+                    closeAdviceService();
+                    copyAdviceTrace();
+                },
+                onOpenDiagnostics: (e) => {
+                    e?.stopPropagation?.();
+                    closeAdviceService();
+                    openAdviceDiagnostics(e);
+                },
+                onOpenRulesPool: (e) => {
+                    e?.stopPropagation?.();
+                    openAdviceRulesPool(e);
+                },
+            }),
+            adviceDiagnosticsOpen && React.createElement(AdviceDiagnosticsModal, {
+                React,
+                diagnostics: adviceDiagnostics,
+                onClose: closeAdviceDiagnostics
+            }),
+            adviceRulesPoolOpen && React.createElement(AdviceRulesPoolModal, {
+                React,
+                diagnostics: adviceDiagnostics,
+                onClose: closeAdviceRulesPool,
+            })
+        );
+        const serviceLayersOpen = !!(adviceServiceOpen || adviceDiagnosticsOpen || adviceRulesPoolOpen);
+
+        if (!(adviceTrigger === 'manual' && toastVisible && (drawerAdvices?.length > 0 || safeEwsWarnings.length > 0))) {
+            return serviceLayersOpen ? serviceOverlays : null;
+        }
 
         const { sorted, groups } = getSortedGroupedAdvices(drawerAdvices);
         const groupKeys = Object.keys(groups);
@@ -1999,19 +2036,13 @@
                             }, ' ' + displayAdviceCount)
                         ),
                         React.createElement('div', { className: 'advice-list-header-actions' },
-                            // Строка «служебные модалки» просит унести техлог и
-                            // диагностику в служебную створку настроек. Клиенту
-                            // они и сейчас недоступны — вход всегда стоял под
-                            // признаком куратора. Створки в настройках пока нет,
-                            // поэтому вход оставлен здесь: снять его раньше, чем
-                            // появится замена, значит отобрать инструмент у
-                            // куратора и ничего не дать клиенту. Названное
-                            // отступление, вопрос дизайнеру в UI_V4_FINDINGS.
-                            _isCurator && (adviceTraceAvailable || adviceDiagnostics) && React.createElement('button', {
-                                className: 'advice-list-header-link advice-list-header-link--service',
-                                onClick: openAdviceService,
-                                title: 'Служебные инструменты советов',
-                            }, 'Служебное'),
+                            // Строка «служебные модалки»: вход в служебное унесён
+                            // в служебную створку настроек — створку диагностики
+                            // (см. hdr-settings-sheet__diag-panel в
+                            // heys_app_shell_v1.js). Здесь, рядом с клиентским
+                            // «Прочитать все», его больше нет; гейт остался
+                            // кураторским, а сам экран открывается событием
+                            // heys:open-advice-service.
                             displayAdviceCount > 1 && React.createElement('button', {
                                 className: 'advice-list-header-link advice-list-header-link--read-all',
                                 onClick: handleDismissAll,
@@ -2124,23 +2155,7 @@
                     },
                 })
             ),
-            adviceServiceOpen && renderAdviceServiceScreen(React, {
-                onClose: closeAdviceService,
-                onOpenTechLog: (e) => {
-                    e?.stopPropagation?.();
-                    closeAdviceService();
-                    copyAdviceTrace();
-                },
-                onOpenDiagnostics: (e) => {
-                    e?.stopPropagation?.();
-                    closeAdviceService();
-                    openAdviceDiagnostics(e);
-                },
-                onOpenRulesPool: (e) => {
-                    e?.stopPropagation?.();
-                    openAdviceRulesPool(e);
-                },
-            }),
+            serviceOverlays,
             adviceDetailModalOpen && React.createElement(AdviceDetailModal, {
                 React,
                 advice: adviceDetailModalAdvice,
@@ -2151,16 +2166,8 @@
                 onHideUntilTomorrow: hideAdviceDetailUntilTomorrow,
                 ADVICE_CATEGORY_NAMES,
             }),
-            adviceDiagnosticsOpen && React.createElement(AdviceDiagnosticsModal, {
-                React,
-                diagnostics: adviceDiagnostics,
-                onClose: closeAdviceDiagnostics
-            }),
-            adviceRulesPoolOpen && React.createElement(AdviceRulesPoolModal, {
-                React,
-                diagnostics: adviceDiagnostics,
-                onClose: closeAdviceRulesPool,
-            }),
+            // Диагностика и пул правил живут в serviceOverlays выше: они
+            // открываются и из служебного экрана при закрытой шторке.
             adviceTechnicalDetailsOpen && React.createElement(AdviceTechnicalModal, {
                 React,
                 advice: adviceTechnicalDetails,
@@ -3634,6 +3641,18 @@
             const handleOpenAdviceSettings = () => setAdviceSettingsOpen(true);
             window.addEventListener('heys:open-advice-settings', handleOpenAdviceSettings);
             return () => window.removeEventListener('heys:open-advice-settings', handleOpenAdviceSettings);
+        }, []);
+
+        // Строка «служебные модалки»: вход в служебное живёт в служебной створке
+        // настроек. Створка кураторская, но гейт держим и здесь — событие
+        // глобальное, и клиентская сессия не должна открывать служебный экран.
+        useEffect(() => {
+            const handleOpenAdviceService = () => {
+                if (!isCuratorReadOnlyMode()) return;
+                setAdviceServiceOpen(true);
+            };
+            window.addEventListener('heys:open-advice-service', handleOpenAdviceService);
+            return () => window.removeEventListener('heys:open-advice-service', handleOpenAdviceService);
         }, []);
 
         useEffect(() => {

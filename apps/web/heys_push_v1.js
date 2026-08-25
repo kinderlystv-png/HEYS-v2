@@ -310,10 +310,19 @@
     return { success: false, error: 'consents_not_ready' };
   }
 
-  // Один пользовательский рубильник: согласие 1.2 + подписка устройства.
-  // Низкоуровневые subscribe/unsubscribe остаются для restore и тестов.
+  // Согласие и тумблер — две разные сущности, и раньше они были склеены.
+  //   Согласие — юридический факт: запись в журнале с подписью. Спрашивается
+  //     один раз и отзывается только явным действием на экране «Мои согласия».
+  //   Тумблер — настройка человека: включается и выключается сколько угодно
+  //     раз и означает только подписку этого устройства.
+  // Выключение тумблера отзывало согласие, из-за чего следующее включение
+  // снова просило подпись кодом доступа. Поэтому тумблер зовёт
+  // setEnabled(false, { revokeConsent: false }) — подписка снимается, согласие
+  // остаётся действующим. Явный отзыв со страницы согласий зовёт
+  // setEnabled(false) без опций и работает как раньше.
   async function setEnabled(enabled, options) {
     const accessCode = options && options.accessCode ? String(options.accessCode) : null;
+    const revokeConsent = !(options && options.revokeConsent === false);
     if (enabled) {
       const consent = await writeClientPushConsent(true, accessCode);
       if (!consent?.success) {
@@ -330,7 +339,7 @@
       return { ok: !!sub?.ok, reason: sub?.reason, consent, subscribe: sub };
     }
     const sub = await unsubscribe();
-    const consent = await writeClientPushConsent(false);
+    const consent = revokeConsent ? await writeClientPushConsent(false) : null;
     notifyEnabledChanged({ enabled: false, subscribe: sub, consent });
     return {
       ok: true,

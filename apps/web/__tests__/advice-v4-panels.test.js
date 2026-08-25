@@ -37,21 +37,55 @@ describe('advice v4 panels from canvas', () => {
   });
 
   // Строка «служебные модалки»: техлог, диагностика и технические детали
-  // клиенту недоступны. Эта половина держится и проверяется здесь: вход стоит
-  // под признаком куратора, клиенту он не рисуется ни при каком состоянии.
-  // Вторая половина строки — «их вход живёт в служебной створке настроек» —
-  // пока не выполнима: створки в настройках нет. Названное отступление: вход
-  // оставлен в шапке шторки, потому что снять его раньше замены значит
-  // отобрать инструмент у куратора и ничего не дать клиенту.
-  it('вход в служебное закрыт клиенту и стоит под признаком куратора', () => {
-    const gate = '_isCurator && (adviceTraceAvailable || adviceDiagnostics)';
-    const at = adviceUiSource.indexOf(gate);
-    expect(at, 'вход в служебное должен стоять под _isCurator').toBeGreaterThan(-1);
-    const entry = adviceUiSource.slice(at, at + 420);
-    expect(entry).toContain('onClick: openAdviceService');
-    expect(entry).toContain('Служебное');
-    // Экран жив и остаётся целью для служебной створки настроек.
+  // клиенту недоступны, а их вход живёт в служебной створке настроек. Обе
+  // половины строки закрыты: из шапки шторки советов вход снят, в служебной
+  // створке (створка диагностики листа настроек) он стоит под признаком
+  // куратора. Прежнее отступление — «створки в настройках нет, вход оставлен
+  // в шапке» — снято 2026-08-25 вместе с самим входом из шапки.
+  it('входа в служебное больше нет в шапке шторки советов', () => {
+    const header = adviceUiSource.slice(
+      adviceUiSource.indexOf("className: 'advice-list-header-actions'"),
+      adviceUiSource.indexOf('advice-list-header-link--read-all'),
+    );
+    expect(header).not.toContain('advice-list-header-link--service');
+    expect(header).not.toContain('onClick: openAdviceService');
+    // Экран жив: он остаётся целью служебной створки.
     expect(adviceUiSource).toContain('renderAdviceServiceScreen');
+  });
+
+  it('служебный экран открывается событием и только куратору', () => {
+    const at = adviceUiSource.indexOf("'heys:open-advice-service'");
+    expect(at, 'служебный экран должен слушать событие створки').toBeGreaterThan(-1);
+    const handler = adviceUiSource.slice(at - 700, at);
+    expect(handler).toContain('if (!isCuratorReadOnlyMode()) return;');
+    expect(handler).toContain('setAdviceServiceOpen(true)');
+  });
+
+  it('служебные слои рисуются и при закрытой шторке советов', () => {
+    // Вход теперь в настройках: если бы служебный экран остался внутри
+    // раннего return шторки, кнопка в створке ничего бы не открывала.
+    expect(adviceUiSource).toContain('const serviceOverlays = React.createElement');
+    expect(adviceUiSource).toMatch(
+      /serviceLayersOpen\s*\?\s*serviceOverlays\s*:\s*null/,
+    );
+  });
+
+  it('вход в служебное в створке настроек стоит под признаком куратора', () => {
+    const shellSource = fs.readFileSync(
+      path.join(process.cwd(), 'heys_app_shell_v1.js'),
+      'utf8',
+    );
+    // Служебная створка — это створка диагностики листа настроек.
+    expect(shellSource).toContain("className: 'hdr-settings-sheet__diag-panel'");
+    const at = shellSource.indexOf('isCuratorSettingsSession && React.createElement');
+    expect(at, 'вход должен стоять под признаком куратора').toBeGreaterThan(-1);
+    const entry = shellSource.slice(at, at + 1400);
+    expect(entry).toContain("hdr-settings-sheet__diag-btn");
+    expect(entry).toContain("'heys:open-advice-service'");
+    expect(entry).toContain('Служебное — советы');
+    expect(shellSource).toContain(
+      "const isCuratorSettingsSession",
+    );
   });
 
 
@@ -155,5 +189,107 @@ describe('advice v4 panels from canvas', () => {
     expect(adviceUiSource).toContain('Научное описание');
     expect(adviceUiSource).toContain('heys:open-advice-settings');
     expect(adviceUiSource).toMatch(/renderMedicalDisclaimer\(\) \{\s*return null;/);
+  });
+});
+
+// Поведение, а не текст: вход в служебное переехал в служебную створку
+// настроек, значит служебный экран обязан открываться при закрытой шторке
+// советов. Раньше он лежал за ранним `return null` шторки — из настроек
+// кнопка ничего бы не открыла.
+describe('служебный экран советов рисуется без шторки', () => {
+  // Хуки не вызываются: renderManualAdviceList — обычная функция. Заглушки
+  // нужны только чтобы модуль загрузился (React.memo на уровне модуля).
+  const fakeReact = {
+    Fragment: 'Fragment',
+    createElement: (type, props, ...children) => ({ type, props, children }),
+    memo: (fn) => fn,
+    forwardRef: (fn) => fn,
+    useState: () => [undefined, () => {}],
+    useEffect: () => {},
+    useLayoutEffect: () => {},
+    useCallback: (fn) => fn,
+    useMemo: (fn) => fn(),
+    useRef: () => ({ current: null }),
+  };
+
+  const baseProps = {
+    React: fakeReact,
+    adviceTrigger: 'auto',
+    toastVisible: false,
+    adviceRelevant: [],
+    badgeAdvices: [],
+    totalAdviceCount: 0,
+    ewsWarnings: [],
+    medicalDisclaimerSessionDismissed: true,
+    getSortedGroupedAdvices: () => ({ sorted: [], groups: {} }),
+    adviceDiagnostics: null,
+    adviceDiagnosticsOpen: false,
+    adviceRulesPoolOpen: false,
+    closeAdviceService: () => {},
+    closeAdviceDiagnostics: () => {},
+    closeAdviceRulesPool: () => {},
+    openAdviceDiagnostics: () => {},
+    openAdviceRulesPool: () => {},
+    copyAdviceTrace: () => {},
+  };
+
+  const loadUi = () => {
+    window.React = fakeReact;
+    window.HEYS = {};
+    new Function(adviceUiSource)();
+    return window.HEYS.dayAdviceListUI;
+  };
+
+  const flatten = (node, acc = []) => {
+    if (node === null || node === undefined || node === false) return acc;
+    if (Array.isArray(node)) {
+      node.forEach((n) => flatten(n, acc));
+      return acc;
+    }
+    if (typeof node !== 'object') {
+      acc.push(String(node));
+      return acc;
+    }
+    if (node.props?.className) acc.push(String(node.props.className));
+    flatten(node.children, acc);
+    return acc;
+  };
+
+  it('закрытая шторка без служебных слоёв ничего не рисует', () => {
+    const ui = loadUi();
+    expect(ui.renderManualAdviceList({ ...baseProps, adviceServiceOpen: false })).toBeNull();
+  });
+
+  it('закрытая шторка со служебным экраном рисует именно его', () => {
+    const ui = loadUi();
+    const tree = ui.renderManualAdviceList({ ...baseProps, adviceServiceOpen: true });
+    expect(tree).not.toBeNull();
+    const classes = flatten(tree);
+    expect(classes).toContain('advice-service-overlay');
+    // Шторка советов при этом не разворачивается.
+    expect(classes).not.toContain('advice-list-overlay');
+  });
+  it('открытая шторка советов по-прежнему рисуется', () => {
+    const ui = loadUi();
+    const advices = [{ id: 'a1', category: 'nutrition', text: 'x' }];
+    const tree = ui.renderManualAdviceList({
+      ...baseProps,
+      adviceTrigger: 'manual',
+      toastVisible: true,
+      adviceRelevant: advices,
+      totalAdviceCount: 1,
+      adviceServiceOpen: false,
+      dismissedAdvices: new Set(),
+      hiddenUntilTomorrow: new Set(),
+      adviceSwipeState: {},
+      expandedAdviceId: null,
+      lastDismissedAdvice: null,
+      AdviceCard: () => null,
+      ADVICE_CATEGORY_NAMES: { nutrition: 'Питание' },
+      getSortedGroupedAdvices: (list) => ({ sorted: list, groups: { nutrition: list } }),
+    });
+    const classes = flatten(tree);
+    expect(classes).toContain('advice-list-overlay');
+    expect(classes).not.toContain('advice-service-overlay');
   });
 });
