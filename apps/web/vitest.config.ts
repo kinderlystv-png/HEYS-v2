@@ -42,6 +42,13 @@ export default defineConfig({
     // но это вызывало flake-тесты из-за shared global.HEYS между файлами
     // (восстановлено 2026-05-22, см. plan 1-5-cheeky-micali.md → Item 3).
     pool: 'forks',
+    // Кросс-рантаймовые тесты сверяют web-расчёт с серверным: импортируют
+    // модули облачных функций абсолютным путём выше корня vite. Vite пытался
+    // их трансформировать как свои и падал на «Does the file exist?» — файл
+    // существует и лежит в git, но за пределами корня. Из-за этого не
+    // загружались вовсе curator-authorship (зеркало heys_sync_merge_v1.cjs)
+    // и recipe-nutrients-parity: два сторожа расхождения рантаймов молчали.
+    server: { deps: { external: [/yandex-cloud-functions/] } },
     // Доп. ограничения
     passWithNoTests: true,
     reporters: ['basic'],
