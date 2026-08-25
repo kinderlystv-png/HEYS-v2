@@ -8,7 +8,7 @@
  * Phase 1 features:
  * - Undo/Redo history stack
  * - Ghost element + placeholder preview
- * - Long press detection (500ms)
+ * - Long press detection (edit mode only; threshold HEYS.longPress.MS)
  * - Improved collision detection
  * - Debounced persistence
  * 
@@ -57,6 +57,7 @@
   // === Constants ===
   const STORAGE_KEY = 'heys_widget_layout_v1';
   const STORAGE_META_KEY = 'heys_widget_layout_meta_v1';
+  const LAYOUT_CLOUD_MIGRATION_META = 'layoutCloudMigrationV2';
   const GRID_COLS = 4; // 4 колонки: 1 колонка/ряд = базовая единица
   const GRID_VERSION = 2;
   const LAYOUT_PRESET_VERSION = 4;
@@ -217,7 +218,8 @@
     'redo',               // шаг вперёд
     'edit-done',          // «Готово» фиксирует то, что человек собрал
     'edit-cancel',        // «Отмена» возвращает снимок входа в расстановку
-    'retired-migration'   // одноразовое снятие типов с продукта
+    'retired-migration',   // одноразовое снятие типов с продукта
+    'layout-cloud-diverged' // две расходящиеся копии → разовый дефолт
   ]);
 
   // Отпечаток состава — только то, что делает раскладку раскладкой. updatedAt
@@ -234,6 +236,42 @@
     }
   }
 
+  function normalizeLayoutRecord(raw) {
+    if (!raw) return null;
+    if (Array.isArray(raw)) return { widgets: raw, updatedAt: 0 };
+    if (raw && Array.isArray(raw.widgets)) return raw;
+    return null;
+  }
+
+  function readRawLayoutRecord(rawKey) {
+    if (!rawKey) return null;
+    try {
+      const raw = localStorage.getItem(rawKey);
+      if (!raw) return null;
+      return normalizeLayoutRecord(JSON.parse(raw));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function layoutRecordFingerprint(record) {
+    return layoutFingerprint(record?.widgets);
+  }
+
+  function scopedLayoutRawKey(clientId) {
+    if (!clientId) return STORAGE_KEY;
+    return `heys_${clientId}_widget_layout_v1`;
+  }
+
+  function scopedLayoutMetaRawKey(clientId) {
+    if (!clientId) return STORAGE_META_KEY;
+    return `heys_${clientId}_widget_layout_meta_v1`;
+  }
+
+  function isWidgetLayoutRawKey(key) {
+    return typeof key === 'string' && /_widget_layout_(?:meta_)?v1$/i.test(key);
+  }
+
   // === State Manager with Undo/Redo ===
   const state = {
     _widgets: [],
@@ -247,6 +285,129 @@
     _lastSavedFingerprint: null,
     // Причина ближайшей записи; ставится операцией, читается и гасится saveLayout.
     _pendingSaveReason: null,
+    _widgetsTabOpen: false,
+    _pendingCloudLayout: null,
+
+    _normalizeLayoutRecord(raw) {
+      return normalizeLayoutRecord(raw);
+    },
+
+    _getLocalLayoutUpdatedAt() {
+      try {
+        if (HEYS.store?.get) {
+          const stored = HEYS.store.get(STORAGE_KEY, null);
+          return stored?.updatedAt || 0;
+        }
+      } catch (e) { /* noop */ }
+      return 0;
+    },
+
+  /**
+   * Миграция device-only → облако под ключом аккаунта.
+   * Две расходящиеся копии → разовый дефолт без слияния; одна → каноническая.
+   */
+    _runLayoutCloudStorageMigration(writeMeta, storedMeta) {
+      if (storedMeta?.[LAYOUT_CLOUD_MIGRATION_META]) {
+        return { forceDefault: false };
+      }
+
+      const cid = String(window.HEYS?.currentClientId || '').toLowerCase();
+      const legacy = readRawLayoutRecord(STORAGE_KEY);
+      const scoped = cid ? readRawLayoutRecord(scopedLayoutRawKey(cid)) : null;
+      const copies = [];
+      if (legacy?.widgets?.length) copies.push(legacy);
+      if (scoped?.widgets?.length) copies.push(scoped);
+
+      const finish = (tag) => {
+        writeMeta({
+          ...(storedMeta || {}),
+          [LAYOUT_CLOUD_MIGRATION_META]: tag,
+          layoutCloudMigratedAt: Date.now()
+        });
+      };
+
+      if (copies.length >= 2) {
+        const a = layoutRecordFingerprint(copies[0]);
+        const b = layoutRecordFingerprint(copies[1]);
+        if (a && b && a !== b) {
+          try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* noop */ }
+          if (cid) {
+            try { localStorage.removeItem(scopedLayoutRawKey(cid)); } catch (e) { /* noop */ }
+            try { localStorage.removeItem(scopedLayoutMetaRawKey(cid)); } catch (e) { /* noop */ }
+          }
+          try { localStorage.removeItem(STORAGE_META_KEY); } catch (e) { /* noop */ }
+          if (HEYS.store?.invalidate) {
+            HEYS.store.invalidate(STORAGE_KEY);
+            HEYS.store.invalidate(STORAGE_META_KEY);
+          }
+          finish('diverged-default');
+          return { forceDefault: true };
+        }
+      }
+
+      const canonical = scoped || legacy;
+      if (canonical && HEYS.store?.set) {
+        HEYS.store.set(STORAGE_KEY, canonical);
+        if (legacy && cid) {
+          try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* noop */ }
+        }
+      }
+
+      finish('done');
+      return { forceDefault: false };
+    },
+
+    setWidgetsTabOpen(open) {
+      this._widgetsTabOpen = !!open;
+    },
+
+    stageCloudLayoutUpdate(cloudLayout) {
+      const record = normalizeLayoutRecord(cloudLayout);
+      if (!record?.widgets?.length) return;
+      // Свежая раскладка ждёт следующего открытия Главной — не подменяем экран.
+      this._pendingCloudLayout = record;
+      log('Cloud layout staged for next Home open, updatedAt=', record.updatedAt || 0);
+    },
+
+    applyPendingCloudLayoutIfAllowed() {
+      if (!this._initialized || this._editMode || !this._pendingCloudLayout) return false;
+
+      const pending = this._pendingCloudLayout;
+      const localUpdatedAt = this._getLocalLayoutUpdatedAt();
+      const cloudUpdatedAt = pending.updatedAt || 0;
+      if (cloudUpdatedAt <= localUpdatedAt) {
+        this._pendingCloudLayout = null;
+        return false;
+      }
+
+      const widgets = pending.widgets || [];
+      if (!widgets.length) {
+        this._pendingCloudLayout = null;
+        return false;
+      }
+
+      this._widgets = widgets.map((w) => this._normalizeWidget(w));
+      this._rememberSavedFingerprint();
+      const layoutData = { widgets: pending.widgets, updatedAt: cloudUpdatedAt };
+      if (HEYS.store?.set) {
+        HEYS.store.set(STORAGE_KEY, layoutData);
+      } else if (HEYS.utils?.lsSet) {
+        HEYS.utils.lsSet(STORAGE_KEY, layoutData);
+      } else {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(layoutData)); } catch (e) { /* noop */ }
+      }
+      this.saveLayoutMeta({
+        ...(this.loadLayoutMeta() || {}),
+        gridVersion: GRID_VERSION,
+        gridCols: GRID_COLS,
+        layoutPresetVersion: LAYOUT_PRESET_VERSION,
+        cloudHydratedAt: Date.now()
+      });
+      this._pendingCloudLayout = null;
+      HEYS.Widgets.emit('layout:changed', { layout: this._widgets, source: 'cloud-sync-deferred' });
+      log('Applied staged cloud layout on Home open');
+      return true;
+    },
 
     /**
      * Инициализация state manager
@@ -265,7 +426,9 @@
         storedMeta = next;
         this.saveLayoutMeta(next);
       };
-      let saved = this.loadLayout() || [];
+
+      const cloudMigration = this._runLayoutCloudStorageMigration(writeMeta, storedMeta);
+      let saved = cloudMigration.forceDefault ? [] : (this.loadLayout() || []);
       const hasSavedLayout = Array.isArray(saved) && saved.length > 0;
       const needsPresetMigration = !meta || meta.layoutPresetVersion !== LAYOUT_PRESET_VERSION;
 
@@ -302,6 +465,7 @@
         saved = presetLayoutData;
 
         writeMeta({
+          ...(storedMeta || {}),
           gridVersion: GRID_VERSION,
           gridCols: GRID_COLS,
           layoutPresetVersion: LAYOUT_PRESET_VERSION,
@@ -3035,53 +3199,9 @@
   // 🧩 Слушатель cloud sync — НЕ перезагружаем layout если он свежий локально
   // Это предотвращает "мерцание" виджетов после cloud sync
   window.addEventListener('heys:widget-layout-updated', (e) => {
-    const { layout: cloudLayout, source } = e.detail || {};
-
-    // Если не инициализирован — игнорируем
-    if (!state._initialized) {
-      return;
-    }
-
-    // Читаем текущий local layout с updatedAt
-    const localRaw = state.loadLayout();
-    const localUpdatedAt = (() => {
-      try {
-        if (HEYS.store?.get) {
-          const stored = HEYS.store.get('heys_widget_layout_v1', null);
-          return stored?.updatedAt || 0;
-        }
-        return 0;
-      } catch { return 0; }
-    })();
-
-    const cloudUpdatedAt = cloudLayout?.updatedAt || 0;
-
-    log(`Cloud sync event: localUpdatedAt=${localUpdatedAt}, cloudUpdatedAt=${cloudUpdatedAt}`);
-
-    // Если локальный layout новее или равен — игнорируем cloud update
-    if (localUpdatedAt >= cloudUpdatedAt) {
-      log('Cloud update skipped: local is newer or same');
-      return;
-    }
-
-    // Облачный layout новее — перезагружаем
-    warn('Cloud layout is newer, reloading...');
-    const widgets = cloudLayout?.widgets || (Array.isArray(cloudLayout) ? cloudLayout : []);
-
-    if (widgets.length > 0) {
-      state._widgets = widgets.map(w => state._normalizeWidget(w));
-      // Принятое из облака — уже сохранённое состояние. Без этого вкладка при
-      // ближайшем скрытии отправила бы его обратно со свежим updatedAt.
-      state._rememberSavedFingerprint();
-      state.saveLayoutMeta({
-        ...(state.loadLayoutMeta() || {}),
-        gridVersion: GRID_VERSION,
-        gridCols: GRID_COLS,
-        layoutPresetVersion: LAYOUT_PRESET_VERSION,
-        cloudHydratedAt: Date.now()
-      });
-      HEYS.Widgets.emit('layout:changed', { layout: state._widgets, source: 'cloud-sync' });
-    }
+    const { layout: cloudLayout } = e.detail || {};
+    if (!state._initialized) return;
+    state.stageCloudLayoutUpdate(cloudLayout);
   });
 
   // === Exports ===
@@ -3104,6 +3224,10 @@
   HEYS.Widgets.canUndo = () => state.canUndo();
   HEYS.Widgets.canRedo = () => state.canRedo();
   HEYS.Widgets.resetLayout = () => state.resetLayout();
+  HEYS.Widgets.setWidgetsTabOpen = (open) => state.setWidgetsTabOpen(open);
+  HEYS.Widgets.applyPendingCloudLayout = () => state.applyPendingCloudLayoutIfAllowed();
+  HEYS.Widgets.stageCloudLayoutUpdate = (layout) => state.stageCloudLayoutUpdate(layout);
+  HEYS.Widgets.isWidgetLayoutRawKey = isWidgetLayoutRawKey;
   HEYS.Widgets.SCREEN_CELL_BUDGET = SCREEN_CELL_BUDGET;
   HEYS.Widgets.SCREEN_ROW_BUDGET = SCREEN_ROW_BUDGET;
   HEYS.Widgets.widgetCellCount = widgetCellCount;

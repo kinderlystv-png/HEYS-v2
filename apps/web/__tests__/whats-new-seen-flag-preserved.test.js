@@ -40,7 +40,7 @@ describe('whats-new seen flag is a browser-global key', () => {
 
 describe('clearNamespace() full-wipe preserves browser-global UI keys', () => {
   it('full-wipe branch guards removal with !isNonClientDataKey(k)', () => {
-    const marker = 'Full wipe removes our client/session keys';
+    const marker = 'Full wipe: browser-global UI keys survive';
     const start = storageSrc.indexOf(marker);
     if (start < 0) {
       throw new Error('Test setup: clearNamespace full-wipe marker not found');
@@ -73,7 +73,6 @@ describe('behavioural: combined wipe rule keeps whats-new, drops client data', (
     'heys_whats_new_last_seen',
     'heys_whats_new_last_acknowledged',
     'heys_push_onboarded',
-    'heys_widget_layout_v1',
   ];
   const isOurKey = (k) => typeof k === 'string' && k.indexOf('heys_') === 0;
   const isNonClientDataKey = (k) => NON_CLIENT_DATA_BLACKLIST.includes(k);

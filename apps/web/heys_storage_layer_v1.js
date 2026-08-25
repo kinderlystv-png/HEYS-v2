@@ -1661,7 +1661,7 @@
     'heys_docs_cache_version', 'heys_update_in_progress', 'heys_boot_perf_baseline_v1',
     'heys_last_client_id', 'heys_theme', 'heys_theme_pref', 'heys_theme_explicit',
     'heys_whats_new_last_seen', 'heys_whats_new_last_acknowledged', 'heys_push_onboarded',
-    'heys_widget_layout_v1', 'heys_widget_layout_meta_v1', 'heys_shared_harm_backfill_v1',
+    'heys_shared_harm_backfill_v1',
   ];
   try {
     if (typeof localStorage !== 'undefined' && localStorage.getItem(CLEANUP_MARKER) !== '1') {

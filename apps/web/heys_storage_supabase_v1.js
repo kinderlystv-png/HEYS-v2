@@ -345,6 +345,10 @@
 
     // Reading toolbar preferences (font size, theme and semantic marker).
     'heys_reading_preferences_v1',
+
+    // Главная: раскладка одна на аккаунт, в client_kv_store (home-widgets «два устройства»).
+    'heys_widget_layout_v1',
+    'heys_widget_layout_meta_v1',
   ];
 
   /** Префиксы ключей, требующих client-specific storage */
@@ -389,8 +393,6 @@
     'heys_whats_new_last_seen',
     'heys_whats_new_last_acknowledged',
     'heys_push_onboarded',
-    'heys_widget_layout_v1',
-    'heys_widget_layout_meta_v1',
     'heys_shared_harm_backfill_v1',
   ];
 
@@ -5026,7 +5028,9 @@
           const dayClientPrefix = (CLIENT_KEY_PATTERNS.DAY_CLIENT + clientId + '_').toLowerCase();
 
           if (lower.indexOf(heysClientPrefix) === 0) {
-            ls.removeItem(k);
+            if (!/_widget_layout_(?:meta_)?v1$/i.test(k)) {
+              ls.removeItem(k);
+            }
             continue;
           }
           if (lower.indexOf(dayClientPrefix) === 0) {
@@ -5040,10 +5044,12 @@
             continue;
           }
         } else {
-          // Full wipe removes our client/session keys, but browser-global UI keys
-          // (whats-new seen/acknowledged, theme, push-onboarded, widget layout)
-          // are not tied to a client and must survive logout/update resets.
-          if (isOurKey(k) && !isNonClientDataKey(k)) ls.removeItem(k);
+          // Full wipe: browser-global UI keys survive; раскладка Главной — кеш
+          // первого кадра под ключом аккаунта (home-widgets «выход», вариант B).
+          if (isOurKey(k) && !isNonClientDataKey(k)) {
+            if (/_widget_layout_(?:meta_)?v1$/i.test(k)) continue;
+            ls.removeItem(k);
+          }
         }
       }
     } catch (e) {

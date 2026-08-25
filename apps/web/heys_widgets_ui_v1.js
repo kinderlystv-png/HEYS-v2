@@ -10573,6 +10573,9 @@
 
       HEYS.Widgets.state?.init?.();
 
+      HEYS.Widgets.setWidgetsTabOpen?.(true);
+      HEYS.Widgets.applyPendingCloudLayout?.();
+
       if (HEYS.Widgets.state?._initialized) {
         applyWidgetsLayout(HEYS.Widgets.state?.getWidgets?.() || []);
       }
@@ -10616,6 +10619,7 @@
       window.addEventListener('heys:default-tab-changed', handleDefaultTabChanged);
 
       return () => {
+        HEYS.Widgets.setWidgetsTabOpen?.(false);
         clearTimeout(tourTimer);
         unsubLoaded?.();
         unsubLayout?.();
