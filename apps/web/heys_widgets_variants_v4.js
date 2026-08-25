@@ -637,6 +637,701 @@
     };
   }
 
+  // ─── Разбор плитки (batch 1: 12 с данными, batch 2: 6 stub «за сегодня») ───
+  const BREAKDOWN_BATCH1 = [
+    'calories', 'water', 'weight', 'sleep', 'steps', 'insulinWave', 'macros',
+    'dayScore', 'relapseRisk', 'healthTrend', 'heatmap', 'crashRisk'
+  ];
+  const BREAKDOWN_STUB_TYPES = new Set([
+    'fiber', 'protein', 'sleepWindow', 'foodQuality', 'mealRhythm', 'sleepReady'
+  ]);
+  const BREAKDOWN_ALL_TYPES = [...BREAKDOWN_BATCH1, ...BREAKDOWN_STUB_TYPES];
+
+  function resolveBreakdownType(widget) {
+    if (!widget?.type) return null;
+    if (widget.type === 'status') return 'dayScore';
+    return widget.type;
+  }
+
+  function opensBreakdown(widgetType) {
+    const t = widgetType === 'status' ? 'dayScore' : widgetType;
+    return BREAKDOWN_ALL_TYPES.includes(t);
+  }
+
+  function bdLayer() {
+    return HEYS.Widgets.data || {};
+  }
+
+  function bdFormatNum(value, frac) {
+    if (HEYS.Widgets?.formatRuNumber) {
+      return HEYS.Widgets.formatRuNumber(value, { maximumFractionDigits: frac ?? 0 });
+    }
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return n.toLocaleString('ru-RU', { maximumFractionDigits: frac ?? 0 });
+  }
+
+  function bdMedian(values) {
+    const nums = values.filter((v) => Number.isFinite(v)).sort((a, b) => a - b);
+    if (!nums.length) return null;
+    const mid = Math.floor(nums.length / 2);
+    return nums.length % 2 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+  }
+
+  function bdDaySeries(daysBack) {
+    const d = bdLayer();
+    const rows = [];
+    const today = new Date();
+    for (let i = daysBack - 1; i >= 0; i -= 1) {
+      const dt = new Date(today);
+      dt.setDate(dt.getDate() - i);
+      const iso = typeof d._formatDate === 'function'
+        ? d._formatDate(dt)
+        : dt.toISOString().slice(0, 10);
+      const day = i === 0 && typeof d._getDay === 'function'
+        ? d._getDay()
+        : (typeof d._getDayByDate === 'function' ? d._getDayByDate(iso) : null);
+      rows.push({ iso, day, isToday: i === 0 });
+    }
+    return rows;
+  }
+
+  function bdSplinePath(points, width, height, padY) {
+    if (!points.length) return '';
+    const xs = points.map((_, i) => (i / Math.max(1, points.length - 1)) * width);
+    const max = Math.max(...points, 1);
+    const ys = points.map((v) => height - padY - (v / max) * (height - padY * 2));
+    if (points.length < 2) return `M ${xs[0]} ${ys[0]}`;
+    let d = `M ${xs[0]} ${ys[0]}`;
+    for (let i = 0; i < xs.length - 1; i += 1) {
+      const x0 = xs[i - 1] ?? xs[i];
+      const y0 = ys[i - 1] ?? ys[i];
+      const x1 = xs[i];
+      const y1 = ys[i];
+      const x2 = xs[i + 1];
+      const y2 = ys[i + 1];
+      const x3 = xs[i + 2] ?? x2;
+      const y3 = ys[i + 2] ?? y2;
+      const cp1x = x1 + (x2 - x0) / 6;
+      const cp1y = y1 + (y2 - y0) / 6;
+      const cp2x = x2 - (x3 - x1) / 6;
+      const cp2y = y2 - (y3 - y1) / 6;
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
+    }
+    return d;
+  }
+
+  function buildStubBreakdown(type, title, widget) {
+    const d = bdLayer();
+    const base = typeof d.getDataForWidget === 'function'
+      ? d.getDataForWidget(widget)
+      : {};
+    let heroKicker = 'Сегодня';
+    let heroValue = '—';
+    let heroUnit = '';
+    if (type === 'fiber' || type === 'protein') {
+      heroKicker = type === 'fiber' ? 'Клетчатка' : 'Белок';
+      heroValue = base.fiber != null ? bdFormatNum(base.fiber || base.protein) : bdFormatNum(base.value);
+      heroUnit = ' г';
+      if (base.norm) heroValue = `${heroValue} из ${bdFormatNum(base.norm)}`;
+    } else if (type === 'sleepWindow') {
+      heroKicker = 'Окно до сна';
+      heroValue = base.label || base.windowLabel || '—';
+    } else if (type === 'foodQuality') {
+      heroKicker = 'Качество еды';
+      heroValue = base.score != null ? bdFormatNum(base.score, 1) : '—';
+      heroUnit = ' / 10';
+    } else if (type === 'mealRhythm') {
+      heroKicker = 'Приёмы';
+      heroValue = bdFormatNum(base.mealCount || base.count || 0);
+    } else if (type === 'sleepReady') {
+      heroKicker = 'Готовность';
+      heroValue = base.score != null ? bdFormatNum(base.score) : '—';
+      heroUnit = ' / 10';
+    }
+    return {
+      type,
+      title,
+      stubOnly: true,
+      heroKicker,
+      heroValue,
+      heroUnit,
+      insight: null,
+      chartLabel: null,
+      chart: null,
+      stats: [],
+      norm: null,
+      action: { kind: 'addMeal', label: 'Добавить приём' },
+      waterChips: false
+    };
+  }
+
+  function buildCaloriesBreakdown(title, widget) {
+    const d = bdLayer();
+    const today = typeof d.getCaloriesData === 'function' ? d.getCaloriesData() : {};
+    const target = today.target || 2000;
+    const series = bdDaySeries(7).map(({ iso, day, isToday }) => {
+      const tot = typeof d._calculateDayTotals === 'function' ? d._calculateDayTotals(day) : null;
+      const kcal = Math.round(Number(tot?.kcal) || 0);
+      return { iso, kcal, isToday, hit: kcal > 0 };
+    });
+    const eatenValues = series.filter((s) => s.hit).map((s) => s.kcal);
+    const med = bdMedian(eatenValues);
+    const min = eatenValues.length ? Math.min(...eatenValues) : null;
+    const max = eatenValues.length ? Math.max(...eatenValues) : null;
+    const now = new Date();
+    const hourShare = Math.min(1, Math.max(0, (now.getHours() * 60 + now.getMinutes()) / (21 * 60)));
+    const typicalNow = med != null ? Math.round(med * hourShare) : null;
+    const dinnerLeft = today.dinnerBudgetKcal || Math.round(target * 0.28);
+    return {
+      type: 'calories',
+      title,
+      heroKicker: 'Осталось',
+      heroValue: bdFormatNum(Math.max(0, target - (today.eaten || 0))),
+      heroUnit: ' ккал',
+      insight: typicalNow != null
+        ? `Обычно к этому часу вы съедаете ${bdFormatNum(typicalNow)}`
+        : null,
+      chartLabel: 'Съедено за 7 дней',
+      chart: { kind: 'bars7', series, targetLine: target },
+      stats: [
+        med != null ? { label: 'Типичный день', value: `${bdFormatNum(Math.round(med))} ккал` } : null,
+        min != null && max != null
+          ? { label: 'Разброс', value: `от ${bdFormatNum(min)} до ${bdFormatNum(max)}` }
+          : null,
+        { label: 'Обычно на ужин остаётся', value: `${bdFormatNum(dinnerLeft)} ккал` }
+      ].filter(Boolean),
+      norm: `Норма ${bdFormatNum(target)} ккал — расчёт куратора от веса, цели и активности`,
+      action: { kind: 'addMeal', label: 'Добавить приём' },
+      waterChips: false
+    };
+  }
+
+  function buildWaterBreakdown(title) {
+    const d = bdLayer();
+    const water = typeof d.getWaterData === 'function' ? d.getWaterData() : {};
+    const target = water.target || 2000;
+    const bins = Array.isArray(water.rhythmBins) ? water.rhythmBins : [];
+    const weekHits = bdDaySeries(7).filter(({ day }) => (day?.waterMl || 0) >= target).length;
+    const insight = water.checkHourLabel
+      ? `Норму вы обычно набираете ${water.checkHourLabel}`
+      : null;
+    return {
+      type: 'water',
+      title,
+      heroKicker: 'Выпито за день',
+      heroValue: bdFormatNum(Math.round((water.drunk || 0) / 100) / 10, 1),
+      heroUnit: ' л',
+      insight,
+      chartLabel: 'Ритм дня',
+      chart: { kind: 'bins', bins, todayLine: bins },
+      stats: [
+        { label: 'Норма набирается', value: `${weekHits} дня из 7` },
+        { label: 'Сейчас', value: `${bdFormatNum(water.drunk || 0)} мл` }
+      ],
+      norm: `Норма ${bdFormatNum(Math.round(target / 100) / 10, 1)} л — 30 мл на килограмм плюс поправка на активность`,
+      action: { kind: 'waterChips', label: 'Добавить воду' },
+      waterChips: true
+    };
+  }
+
+  function buildWeightBreakdown(title) {
+    const d = bdLayer();
+    const w = typeof d.getWeightData === 'function' ? d.getWeightData() : {};
+    const prof = typeof d._getProfile === 'function' ? d._getProfile() : {};
+    const spark = Array.isArray(w.sparkline) ? w.sparkline : [];
+    const points = spark.slice(-30).map((p) => Number(p.weight)).filter(Number.isFinite);
+    const delta30 = points.length >= 2 ? points[points.length - 1] - points[0] : null;
+    const tempoWeek = w.trend != null ? (w.trend * 7) : w.weekChange;
+    const goal = w.goal || prof.weightGoal;
+    let insight = null;
+    if (tempoWeek != null && w.daysToGoal) {
+      insight = `Темп ${tempoWeek > 0 ? '+' : ''}${bdFormatNum(tempoWeek, 1)} кг в неделю — к цели через ${bdFormatNum(w.weeksToGoal || Math.ceil(w.daysToGoal / 7))} нед.`;
+    }
+    return {
+      type: 'weight',
+      title,
+      heroKicker: 'Утром',
+      heroValue: w.current != null ? bdFormatNum(w.current, 1) : '—',
+      heroUnit: ' кг',
+      insight,
+      chartLabel: '30 дней',
+      chart: { kind: 'weightCurve', spark: spark.slice(-30) },
+      stats: [
+        delta30 != null ? { label: 'За 30 дней', value: `${delta30 > 0 ? '+' : ''}${bdFormatNum(delta30, 1)} кг` } : null,
+        { label: 'Замеров', value: `${spark.length} из 30` }
+      ].filter(Boolean),
+      norm: goal ? `Цель ${bdFormatNum(goal, 1)} кг — из вашего профиля` : 'Цель задаётся с куратором',
+      action: { kind: 'recordWeight', label: 'Записать вес' },
+      waterChips: false
+    };
+  }
+
+  function buildSleepBreakdown(title) {
+    const d = bdLayer();
+    const sleep = typeof d.getSleepData === 'function' ? d.getSleepData() : {};
+    const bars = sleep.sleepWeekBars || [];
+    const durations = bars.map((b) => b.hours).filter((h) => h > 0);
+    const avg = durations.length
+      ? durations.reduce((a, b) => a + b, 0) / durations.length
+      : null;
+    const normHits = bars.filter((b) => b.hours >= (sleep.target || 8)).length;
+    return {
+      type: 'sleep',
+      title,
+      heroKicker: 'Этой ночью',
+      heroValue: sleep.hours ? bdFormatNum(sleep.hours, 1) : '—',
+      heroUnit: ' ч',
+      insight: sleep.weekDebtHours > 0
+        ? `Долг за неделю — ${bdFormatNum(sleep.weekDebtHours, 1)} ч`
+        : null,
+      chartLabel: '7 ночей',
+      chart: { kind: 'bars7hours', series: bars, target: sleep.target || 8 },
+      stats: [
+        avg != null ? { label: 'Средняя длительность', value: `${bdFormatNum(avg, 1)} ч` } : null,
+        { label: 'Норму набрали', value: `${normHits} дня из 7` }
+      ].filter(Boolean),
+      norm: `Норма ${bdFormatNum(sleep.target || 8, 1)} ч — из вашего профиля`,
+      action: { kind: 'fixSleep', label: 'Поправить время' },
+      waterChips: false
+    };
+  }
+
+  function buildStepsBreakdown(title) {
+    const d = bdLayer();
+    const steps = typeof d.getStepsData === 'function' ? d.getStepsData() : {};
+    const week = steps.week || [];
+    const goal = steps.goal || 10000;
+    const weekdayNames = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+    const byWd = Array.from({ length: 7 }, () => ({ sum: 0, n: 0 }));
+    week.forEach((row) => {
+      if (!row.hasData) return;
+      const wd = new Date(`${row.iso}T12:00:00`).getDay();
+      byWd[wd].sum += row.value;
+      byWd[wd].n += 1;
+    });
+    const wdAvg = byWd.map((b, i) => ({
+      wd: i,
+      label: weekdayNames[i],
+      avg: b.n ? Math.round(b.sum / b.n) : null
+    })).filter((r) => r.avg != null);
+    wdAvg.sort((a, b) => a.avg - b.avg);
+    const weakest = wdAvg[0];
+    const hits = week.filter((r) => r.hasData && r.value >= goal).length;
+    return {
+      type: 'steps',
+      title,
+      heroKicker: 'За день',
+      heroValue: steps.hasData ? bdFormatNum(steps.steps) : '—',
+      heroUnit: '',
+      insight: weakest ? `${weakest.label} — самый слабый день недели` : null,
+      chartLabel: '7 дней',
+      chart: { kind: 'bars7', series: week.map((r) => ({ kcal: r.value || 0, isToday: r.isToday, hit: r.hasData })), targetLine: goal },
+      stats: wdAvg.slice(0, 3).map((r) => ({
+        label: r.label,
+        value: `${bdFormatNum(r.avg)} шагов`,
+        tone: r === weakest ? 'bad' : null
+      })).concat([{ label: 'Цель закрыта', value: `${hits} дня из 7` }]),
+      norm: `Цель ${bdFormatNum(goal)} шагов — вы поставили её в чек-ине`,
+      action: { kind: 'addActivity', label: 'Добавить активность' },
+      waterChips: false
+    };
+  }
+
+  function buildInsulinWaveBreakdown(title, widget) {
+    const d = bdLayer();
+    const wave = typeof d.getInsulinWaveData === 'function' ? d.getInsulinWaveData() : {};
+    const v4 = wave.v4 || {};
+    const freeMin = v4.freeWindowMinutes ?? wave.remaining ?? null;
+    const heroKicker = wave.isOvernightAssessment ? 'Оценка по вчерашнему дню' : 'Свободное окно';
+    return {
+      type: 'insulinWave',
+      title,
+      heroKicker,
+      heroValue: freeMin != null ? `${Math.floor(freeMin / 60)} ч ${freeMin % 60} мин` : '—',
+      heroUnit: '',
+      insight: wave.endTime ? `Последняя волна закрывается в ${wave.endTime}` : null,
+      chartLabel: 'Сегодня',
+      chart: { kind: 'waveDay', wave },
+      stats: [
+        { label: 'Волн сегодня', value: bdFormatNum(wave.waveCount || 0) }
+      ],
+      norm: 'Волна считается от углеводов приёма — 3 ч на приём, дольше при нахлёсте',
+      action: { kind: 'addMeal', label: 'Добавить приём' },
+      waterChips: false
+    };
+  }
+
+  function buildMacrosBreakdown(title) {
+    const d = bdLayer();
+    const today = typeof d.getMacrosData === 'function' ? d.getMacrosData() : {};
+    const series = bdDaySeries(7).map(({ day, isToday }) => {
+      const tot = typeof d._calculateDayTotals === 'function' ? d._calculateDayTotals(day) : {};
+      const p = Number(tot?.protein) || 0;
+      const f = Number(tot?.fat) || 0;
+      const c = Number(tot?.carbs) || 0;
+      const pt = today.proteinTarget || 1;
+      const ft = today.fatTarget || 1;
+      const ct = today.carbsTarget || 1;
+      return {
+        isToday,
+        proteinOk: p >= pt * 0.9 && p <= pt * 1.1,
+        fatOk: f <= ft * 1.05,
+        carbsOk: c <= ct * 1.05 && c >= ct * 0.85
+      };
+    });
+    const missProtein = series.filter((s) => !s.proteinOk).length;
+    return {
+      type: 'macros',
+      title,
+      heroKicker: 'Сегодня',
+      heroValue: `${bdFormatNum(today.protein || 0)}/${bdFormatNum(today.proteinTarget || 0)}`,
+      heroUnit: ' г белка',
+      insight: missProtein ? `Белок недобираете ${missProtein} дня из 7` : null,
+      chartLabel: 'Попадания за 7 дней',
+      chart: { kind: 'grid3x7', series },
+      stats: [
+        { label: 'Белок в среднем', value: `${bdFormatNum(Math.round(((today.protein || 0) / (today.proteinTarget || 1)) * 100))} % нормы` }
+      ],
+      norm: 'Нормы БЖУ — расчёт куратора от калорий и цели',
+      action: { kind: 'addMeal', label: 'Добавить приём' },
+      waterChips: false
+    };
+  }
+
+  function buildDayScoreBreakdown(title) {
+    const d = bdLayer();
+    const ds = typeof d.getDayScoreData === 'function' ? d.getDayScoreData() : {};
+    const week = ds.weekScores || [];
+    const factorBars = ds.factorBars || [];
+    const weakest = [...factorBars].sort((a, b) => a.score - b.score)[0];
+    const avg = week.length
+      ? week.reduce((s, r) => s + (r.score || 0), 0) / week.length
+      : null;
+    return {
+      type: 'dayScore',
+      title,
+      heroKicker: 'Оценка',
+      heroValue: bdFormatNum(Math.round(ds.score || 0)),
+      heroUnit: ' / 10',
+      insight: weakest ? `Чаще всего вниз тянет ${weakest.label}` : null,
+      chartLabel: '7 дней',
+      chart: { kind: 'bars7score', series: week },
+      stats: [
+        avg != null ? { label: 'Средняя за неделю', value: bdFormatNum(avg, 1) } : null,
+        { label: 'Ниже 6', value: `${week.filter((w) => w.score < 60).length} дня из 7` }
+      ].filter(Boolean),
+      factorBars,
+      norm: 'Оценка складывается из пяти частей, вес каждой — в справочнике',
+      action: { kind: 'checkin', label: 'Заполнить чек-ин' },
+      waterChips: false
+    };
+  }
+
+  function buildRelapseBreakdown(title, widget) {
+    const d = bdLayer();
+    const snap = typeof d.getRelapseRiskData === 'function'
+      ? d.getRelapseRiskData(widget)
+      : {};
+    const score = Math.round(Number(snap.score) || 0);
+    const drivers = Array.isArray(snap.primaryDrivers) ? snap.primaryDrivers.slice(0, 3) : [];
+    return {
+      type: 'relapseRisk',
+      title,
+      heroKicker: 'Уровень',
+      heroValue: snap.levelLabel || `${score}%`,
+      heroUnit: '',
+      insight: snap.recommendation || (drivers[0]?.label ? `Главный фактор — ${drivers[0].label}` : null),
+      chartLabel: 'Сегодня',
+      chart: { kind: 'riskScale', score, level: snap.level },
+      stats: [
+        { label: 'Риск', value: `${score}%` },
+        { label: 'Дней без риска', value: snap.daysWithoutRisk != null ? String(snap.daysWithoutRisk) : '—' }
+      ],
+      drivers,
+      norm: 'Риск считается по отклонениям дня от ваших норм — шкала в Инсайтах',
+      action: { kind: 'insights', label: 'Что делать' },
+      waterChips: false
+    };
+  }
+
+  function buildHealthTrendBreakdown(title, widget) {
+    const d = bdLayer();
+    const ht = typeof d.getHealthTrendData === 'function'
+      ? d.getHealthTrendData({ ...(widget.settings || {}), periodDays: 30 })
+      : {};
+    const cats = ht.categories || [];
+    const top = [...cats].sort((a, b) => (b.score || 0) - (a.score || 0))[0];
+    const low = [...cats].sort((a, b) => (a.score || 0) - (b.score || 0))[0];
+    const insight = top && low ? `Тренд тянет вверх ${top.label?.toLowerCase() || 'сон'}, вниз — ${low.label?.toLowerCase() || 'вода'}` : null;
+    return {
+      type: 'healthTrend',
+      title,
+      heroKicker: 'За 30 дней',
+      heroValue: ht.score > 0 ? `+${bdFormatNum(ht.score)}` : bdFormatNum(ht.score || 0),
+      heroUnit: '',
+      insight,
+      chartLabel: '30 дней',
+      chart: { kind: 'spline30', score: ht.score, delta: ht.delta },
+      stats: [
+        ht.delta != null ? { label: 'Прошлый месяц', value: `${ht.delta > 0 ? '+' : ''}${bdFormatNum(ht.delta)}` } : null,
+        { label: 'Дней с данными', value: `${ht.daysWithData || 0} из 30` }
+      ].filter(Boolean),
+      contributions: cats.slice(0, 3).map((c) => ({
+        label: c.label,
+        value: c.score != null ? (c.score >= 0 ? `+${c.score}` : String(c.score)) : '—'
+      })),
+      norm: 'Тренд — сглаженное среднее по вашим дням, порог в Инсайтах',
+      action: { kind: 'insightsTab', label: 'Открыть Инсайты' },
+      waterChips: false
+    };
+  }
+
+  function buildHeatmapBreakdown(title) {
+    const d = bdLayer();
+    const prof = typeof d._getProfile === 'function' ? d._getProfile() : {};
+    const normMin = prof.activityMinutesGoal || prof.activityGoal || 30;
+    const cells = bdDaySeries(35).map(({ iso, day }) => {
+      const trainMin = (day?.trainings || []).reduce((s, t) => s + (Number(t.duration) || 0), 0);
+      const mins = Math.round(Number(day?.householdMin) || 0) + trainMin;
+      return { iso, mins, ratio: normMin > 0 ? mins / normMin : 0 };
+    });
+    const filled = cells.filter((c) => c.mins > 0);
+    const avg = filled.length
+      ? Math.round(filled.reduce((s, c) => s + c.mins, 0) / filled.length)
+      : null;
+    const inNorm = cells.filter((c) => c.mins >= normMin).length;
+    let streak = 0;
+    let best = 0;
+    let cur = 0;
+    cells.forEach((c) => {
+      if (c.mins >= normMin) { cur += 1; best = Math.max(best, cur); }
+      else { cur = 0; }
+    });
+    streak = best;
+    const todayMins = cells[cells.length - 1]?.mins || 0;
+    return {
+      type: 'heatmap',
+      title,
+      heroKicker: 'Активные минуты',
+      heroValue: bdFormatNum(todayMins),
+      heroUnit: ' мин',
+      insight: streak >= 5 ? `${streak} дней подряд в норме` : null,
+      chartLabel: '5 недель',
+      chart: { kind: 'grid7x5', cells, normMin },
+      stats: [
+        avg != null ? { label: 'Средние минуты', value: `${bdFormatNum(avg)}` } : null,
+        { label: 'Дней в норме', value: `${inNorm} из 35` },
+        { label: 'Самая длинная серия', value: `${streak} дней` }
+      ].filter(Boolean),
+      norm: `Норма ${bdFormatNum(normMin)} минут в день — из вашего профиля`,
+      action: { kind: 'addActivity', label: 'Добавить активность' },
+      waterChips: false
+    };
+  }
+
+  function buildCrashRiskBreakdown(title, widget) {
+    const dyn = HEYS.Widgets.WeightDynamicsV4?.compute?.() || {};
+    const monthRate = dyn.monthRateKg;
+    return {
+      type: 'crashRisk',
+      title,
+      heroKicker: 'За месяц',
+      heroValue: dyn.delta || (monthRate != null ? `${monthRate > 0 ? '+' : ''}${bdFormatNum(monthRate, 1)}` : '—'),
+      heroUnit: ' кг',
+      insight: dyn.placeholder || null,
+      chartLabel: '90 дней',
+      chart: { kind: 'weightCurve', spark: (dyn.windowSeries || []).map((p) => ({ weight: p.smoothed, date: p.date })) },
+      stats: (dyn.weeklyBars || []).slice(-4).map((b, i) => ({
+        label: `Неделя ${i + 1}`,
+        value: b.label || b.delta || '—'
+      })),
+      norm: dyn.remainderLabel || 'Здоровый темп — до 1 % веса в неделю',
+      action: { kind: 'recordWeight', label: 'Записать вес' },
+      waterChips: false
+    };
+  }
+
+  function buildBreakdownModel(widget) {
+    const type = resolveBreakdownType(widget);
+    if (!type) return null;
+    const title = WIDGET_TYPE_LABELS[type] || widget.type;
+    if (BREAKDOWN_STUB_TYPES.has(type)) return buildStubBreakdown(type, title, widget);
+    switch (type) {
+      case 'calories': return buildCaloriesBreakdown(title, widget);
+      case 'water': return buildWaterBreakdown(title);
+      case 'weight': return buildWeightBreakdown(title);
+      case 'sleep': return buildSleepBreakdown(title);
+      case 'steps': return buildStepsBreakdown(title);
+      case 'insulinWave': return buildInsulinWaveBreakdown(title, widget);
+      case 'macros': return buildMacrosBreakdown(title);
+      case 'dayScore': return buildDayScoreBreakdown(title);
+      case 'relapseRisk': return buildRelapseBreakdown(title, widget);
+      case 'healthTrend': return buildHealthTrendBreakdown(title, widget);
+      case 'heatmap': return buildHeatmapBreakdown(title);
+      case 'crashRisk': return buildCrashRiskBreakdown(title, widget);
+      default: return null;
+    }
+  }
+
+  function WidgetBreakdownChart({ chart }) {
+    if (!chart) return null;
+    if (chart.kind === 'bars7' || chart.kind === 'bars7hours' || chart.kind === 'bars7score') {
+      const rows = chart.series || [];
+      const max = Math.max(...rows.map((r) => r.kcal ?? r.hours ?? r.score ?? 0), chart.targetLine || 1, 1);
+      return React.createElement('div', { className: 'widget-bd-sheet__bars' },
+        rows.map((row, i) => {
+          const val = row.kcal ?? row.hours ?? (row.score != null ? row.score / 10 : 0);
+          const h = Math.max(4, Math.round((val / max) * 100));
+          return React.createElement('span', {
+            key: i,
+            className: 'widget-bd-sheet__bar' + (row.isToday ? ' is-today' : '')
+          }, React.createElement('i', { style: { height: `${h}%` } }));
+        }),
+        chart.targetLine ? React.createElement('span', { className: 'widget-bd-sheet__bar-target' }) : null
+      );
+    }
+    if (chart.kind === 'bins') {
+      const bins = chart.bins || [];
+      const max = Math.max(...bins, 1);
+      return React.createElement('div', { className: 'widget-bd-sheet__bars widget-bd-sheet__bars--bins' },
+        bins.map((v, i) => React.createElement('span', {
+          key: i,
+          className: 'widget-bd-sheet__bar'
+        }, React.createElement('i', { style: { height: `${Math.max(8, (v / max) * 100)}%` } })))
+      );
+    }
+    if (chart.kind === 'grid3x7') {
+      const labels = ['Б', 'Ж', 'У'];
+      const keys = ['proteinOk', 'fatOk', 'carbsOk'];
+      return React.createElement('div', { className: 'widget-bd-sheet__grid3x7' },
+        keys.map((key, ri) => React.createElement('div', { key: key, className: 'widget-bd-sheet__grid-row' },
+          React.createElement('span', { className: 'widget-bd-sheet__grid-label' }, labels[ri]),
+          (chart.series || []).map((cell, ci) => React.createElement('span', {
+            key: ci,
+            className: 'widget-bd-sheet__grid-cell' + (cell[key] ? ' is-ok' : '')
+          }))
+        ))
+      );
+    }
+    if (chart.kind === 'grid7x5') {
+      const cells = chart.cells || [];
+      return React.createElement('div', { className: 'widget-bd-sheet__grid7x5' },
+        cells.map((c, i) => React.createElement('span', {
+          key: i,
+          className: 'widget-bd-sheet__heat-cell' + (c.ratio >= 1 ? ' is-ok' : c.ratio >= 0.5 ? ' is-mid' : '')
+        }))
+      );
+    }
+    if (chart.kind === 'weightCurve' || chart.kind === 'spline30') {
+      const spark = chart.spark || [];
+      const pts = spark.map((p) => Number(p.weight ?? p.smoothed)).filter(Number.isFinite);
+      const path = bdSplinePath(pts.length ? pts : [0], 300, 72, 6);
+      return React.createElement('svg', {
+        className: 'widget-bd-sheet__spline',
+        viewBox: '0 0 300 72',
+        preserveAspectRatio: 'none'
+      },
+      React.createElement('path', { d: path, fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }));
+    }
+    if (chart.kind === 'waveDay') {
+      return React.createElement('div', { className: 'widget-bd-sheet__wave-placeholder' }, 'Волны дня');
+    }
+    if (chart.kind === 'riskScale') {
+      const pct = Math.min(100, Math.max(0, chart.score || 0));
+      return React.createElement('div', { className: 'widget-bd-sheet__risk-track' },
+        React.createElement('span', { className: 'widget-bd-sheet__risk-fill', style: { width: `${pct}%` } })
+      );
+    }
+    return null;
+  }
+
+  function WidgetBreakdownSheet({ open, closing, model, onClose, onAction, onWaterChip }) {
+    const portalRoot = typeof document !== 'undefined' ? document.body : null;
+    if (!open && !closing) return null;
+    if (!portalRoot || !ReactDOM?.createPortal) return null;
+    if (!model) return null;
+
+    const sheet = React.createElement(React.Fragment, null,
+      React.createElement('button', {
+        type: 'button',
+        className: 'widget-bd-sheet__scrim',
+        'aria-label': 'Закрыть разбор',
+        onClick: onClose
+      }),
+      React.createElement('div', {
+        className: 'widget-bd-sheet' + (closing ? ' is-closing' : ''),
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-label': model.title
+      },
+        React.createElement('span', { className: 'widget-bd-sheet__grab' }),
+        React.createElement('div', { className: 'widget-bd-sheet__head' },
+          React.createElement('span', { className: 'widget-bd-sheet__title' }, model.title),
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-bd-sheet__close',
+            'aria-label': 'Закрыть',
+            onClick: onClose
+          }, React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round' },
+            React.createElement('path', { d: 'M18 6L6 18M6 6l12 12' })))
+        ),
+        model.stubOnly
+          ? React.createElement('p', { className: 'widget-bd-sheet__stub' }, 'за сегодня')
+          : null,
+        React.createElement('div', { className: 'widget-bd-sheet__kicker' }, model.heroKicker),
+        React.createElement('div', { className: 'widget-bd-sheet__hero' },
+          React.createElement('span', { className: 'widget-bd-sheet__hero-val' }, model.heroValue),
+          model.heroUnit ? React.createElement('span', { className: 'widget-bd-sheet__hero-unit' }, model.heroUnit) : null
+        ),
+        model.insight ? React.createElement('p', { className: 'widget-bd-sheet__insight' }, model.insight) : null,
+        model.chartLabel ? React.createElement('div', { className: 'widget-bd-sheet__chart-label' }, model.chartLabel) : null,
+        React.createElement(WidgetBreakdownChart, { chart: model.chart }),
+        model.factorBars?.length ? React.createElement('div', { className: 'widget-bd-sheet__factors' },
+          model.factorBars.map((f) => React.createElement('div', { key: f.key, className: 'widget-bd-sheet__factor-row' },
+            React.createElement('span', null, f.label),
+            React.createElement('span', { className: 'widget-bd-sheet__factor-bar' },
+              React.createElement('i', { style: { width: `${f.score}%` } })),
+            React.createElement('span', null, `${f.score}%`)
+          ))
+        ) : null,
+        model.stats?.length ? React.createElement('div', { className: 'widget-bd-sheet__stats' },
+          model.stats.map((row, i) => React.createElement('div', {
+            key: i,
+            className: 'widget-bd-sheet__stat-row' + (row.tone === 'bad' ? ' is-bad' : row.tone === 'good' ? ' is-good' : '')
+          },
+            React.createElement('span', { className: 'widget-bd-sheet__stat-label' }, row.label),
+            React.createElement('span', { className: 'widget-bd-sheet__stat-value' }, row.value)
+          ))
+        ) : null,
+        model.contributions?.length ? React.createElement('div', { className: 'widget-bd-sheet__stats widget-bd-sheet__stats--contrib' },
+          model.contributions.map((row, i) => React.createElement('div', { key: i, className: 'widget-bd-sheet__stat-row' },
+            React.createElement('span', { className: 'widget-bd-sheet__stat-label' }, row.label),
+            React.createElement('span', { className: 'widget-bd-sheet__stat-value' }, row.value)
+          ))
+        ) : null,
+        model.drivers?.length ? React.createElement('div', { className: 'widget-bd-sheet__drivers' },
+          model.drivers.map((dr, i) => React.createElement('div', { key: i, className: 'widget-bd-sheet__driver' }, dr.label || dr.text))
+        ) : null,
+        model.norm ? React.createElement('p', { className: 'widget-bd-sheet__norm' }, model.norm) : null,
+        model.waterChips
+          ? React.createElement('div', { className: 'widget-bd-sheet__chips', role: 'group', 'aria-label': 'Объём воды' },
+            [200, 300, 500].map((ml) => React.createElement('button', {
+              key: ml,
+              type: 'button',
+              className: 'widget-bd-sheet__chip',
+              onClick: () => onWaterChip?.(ml)
+            }, `${ml} мл`)))
+          : React.createElement('button', {
+            type: 'button',
+            className: 'widget-bd-sheet__action',
+            onClick: () => onAction?.(model.action)
+          }, model.action?.label || 'Готово')
+      )
+    );
+    return ReactDOM.createPortal(sheet, portalRoot);
+  }
+
   function buildRegistryDisplayVariant(widgetType) {
     const catalog = getCatalog(widgetType);
     if (!catalog.length) return null;
@@ -687,7 +1382,14 @@
     buildRegistryDisplayVariant,
     applyCatalogToRegistry,
     WIDGET_TYPE_LABELS,
-    WIDGET_TILE_BG
+    WIDGET_TILE_BG,
+    BREAKDOWN_BATCH1,
+    BREAKDOWN_STUB_TYPES,
+    BREAKDOWN_ALL_TYPES,
+    resolveBreakdownType,
+    opensBreakdown,
+    buildBreakdownModel,
+    WidgetBreakdownSheet
   };
 
   // Совместимость с динамикой веса

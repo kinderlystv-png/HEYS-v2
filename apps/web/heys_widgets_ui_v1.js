@@ -10212,9 +10212,9 @@
     const [catalogRemovePick, setCatalogRemovePick] = useState(false);
     const [defaultHomeTab, setDefaultHomeTab] = useState(() => getCurrentDefaultTab());
     const [settingsWidget, setSettingsWidget] = useState(null);
-    const [relapseDetails, setRelapseDetails] = useState(null);
-    const [dayScoreDetails, setDayScoreDetails] = useState(null);
-    const [crashRiskDetails, setCrashRiskDetails] = useState(null);
+    const [breakdownPayload, setBreakdownPayload] = useState(null);
+    const [breakdownClosing, setBreakdownClosing] = useState(false);
+    const breakdownCloseTimerRef = useRef(null);
     const [variantSavedToast, setVariantSavedToast] = useState(false);
     const [variantHoldHint, setVariantHoldHint] = useState(false);
     const variantToastTimerRef = useRef(null);
@@ -10710,54 +10710,36 @@
       HEYS.Widgets.state?.updateWidget(widgetId, { settings });
     }, []);
 
-    const openRelapseDetails = useCallback((widget) => {
-      if (!widget || widget.type !== 'relapseRisk') return;
-      try {
-        const snapshot = resolveRelapseSnapshot(widget, getRelapseSelectedProfileKey());
-
-        setRelapseDetails({ widget, snapshot, openedAt: Date.now() });
-        HEYS.dayUtils?.haptic?.('light');
-      } catch (e) {
-        trackWidgetIssue('widgets_relapse_modal_open_failed', {
-          widgetId: widget?.id,
-          widgetType: widget?.type,
-          message: e?.message
-        });
-      }
+    const dismissBreakdownSheet = useCallback(() => {
+      setBreakdownClosing(true);
+      if (breakdownCloseTimerRef.current) clearTimeout(breakdownCloseTimerRef.current);
+      breakdownCloseTimerRef.current = setTimeout(() => {
+        setBreakdownPayload(null);
+        setBreakdownClosing(false);
+        breakdownCloseTimerRef.current = null;
+      }, HEYS.Widgets.VariantsV4?.SHEET_CLOSE_MS ?? 400);
     }, []);
 
-    const openDayScoreDetails = useCallback((widget) => {
-      if (!widget) return;
-      try {
-        // For 'status' widget, get dayScore data instead (merged)
-        const effectiveWidget = widget.type === 'status'
-          ? { ...widget, type: 'dayScore' }
-          : widget;
-        const data = HEYS.Widgets.data?.getDayScoreData?.() || {};
-        setDayScoreDetails({ widget: effectiveWidget, data, openedAt: Date.now() });
-        HEYS.dayUtils?.haptic?.('light');
-      } catch (e) {
-        trackWidgetIssue('widgets_dayscore_modal_open_failed', {
-          widgetId: widget?.id, message: e?.message
-        });
-      }
-    }, []);
-
-    const openCrashRiskDetails = useCallback((widget) => {
-      if (!widget || widget.type !== 'crashRisk') return;
+    const openBreakdownSheet = useCallback((widget) => {
+      if (!widget || !HEYS.Widgets.VariantsV4?.opensBreakdown?.(widget.type)) return;
       if (
-        widget.size === '2x1'
+        widget.type === 'crashRisk'
+        && widget.size === '2x1'
         && HEYS.Widgets.weightDynamicsClickGuard?.isBlocked?.(widget.id)
       ) {
         return;
       }
       try {
-        const data = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
-        setCrashRiskDetails({ widget, data, openedAt: Date.now() });
+        const model = HEYS.Widgets.VariantsV4.buildBreakdownModel(widget);
+        if (!model) return;
+        setBreakdownClosing(false);
+        setBreakdownPayload({ widget, model, openedAt: Date.now() });
         HEYS.dayUtils?.haptic?.('light');
       } catch (e) {
-        trackWidgetIssue('widgets_crashrisk_modal_open_failed', {
-          widgetId: widget?.id, message: e?.message
+        trackWidgetIssue('widgets_breakdown_open_failed', {
+          widgetId: widget?.id,
+          widgetType: widget?.type,
+          message: e?.message
         });
       }
     }, []);
@@ -10894,19 +10876,13 @@
     useEffect(() => {
       const unsubWidgetClick = HEYS.Widgets.on?.('widget:click', ({ widget }) => {
         if (isEditMode || !widget) return;
-        if (widget.type === 'relapseRisk') {
-          openRelapseDetails(widget);
-        } else if (widget.type === 'dayScore' || widget.type === 'status') {
-          openDayScoreDetails(widget);
-        } else if (widget.type === 'crashRisk') {
-          openCrashRiskDetails(widget);
-        }
+        openBreakdownSheet(widget);
       });
 
       return () => {
         unsubWidgetClick?.();
       };
-    }, [isEditMode, openRelapseDetails, openDayScoreDetails, openCrashRiskDetails]);
+    }, [isEditMode, openBreakdownSheet]);
 
     // Toggle edit mode
     const toggleEdit = useCallback(() => {
@@ -11038,6 +11014,43 @@
         persistWaterLocally();
       }
     }, [selectedDate]);
+
+    const handleBreakdownAction = useCallback((action) => {
+      if (!action?.kind) {
+        dismissBreakdownSheet();
+        return;
+      }
+      dismissBreakdownSheet();
+      switch (action.kind) {
+        case 'addMeal':
+          goToDayAndRun('day', 'openAddMeal');
+          break;
+        case 'addActivity':
+          goToDayAndRun('day', 'openActivityPicker');
+          break;
+        case 'recordWeight':
+          goToDayAndRun('day', 'openWeightEditor');
+          break;
+        case 'fixSleep':
+          goToDayAndRun('day', 'openSleepEditor');
+          break;
+        case 'checkin':
+          goToDayAndRun('day', 'openMorningCheckin');
+          break;
+        case 'insights':
+        case 'insightsTab':
+          if (typeof setTab === 'function') setTab('insights');
+          break;
+        case 'waterChips':
+          break;
+        default:
+          break;
+      }
+    }, [dismissBreakdownSheet, goToDayAndRun, setTab]);
+
+    const handleBreakdownWaterChip = useCallback((ml) => {
+      handleAddWater(ml);
+    }, [handleAddWater]);
 
     const handleRemoveWater = useCallback((ml = 200) => {
       try {
@@ -11418,26 +11431,16 @@
         onClose: () => setSettingsWidget(null),
         onSave: handleSettingsSave
       }),
-      React.createElement(RelapseRiskDetailsModal, {
-        payload: relapseDetails,
-        isOpen: !!relapseDetails,
-        onClose: () => setRelapseDetails(null)
-      }),
-      React.createElement(DayScoreDetailsModal, {
-        payload: dayScoreDetails,
-        isOpen: !!dayScoreDetails,
-        onClose: () => setDayScoreDetails(null)
-      }),
-      React.createElement(CrashRiskDetailsModal, {
-        payload: crashRiskDetails,
-        isOpen: !!crashRiskDetails,
-        onClose: () => setCrashRiskDetails(null),
-        onPeriodChange: (newPeriod) => {
-          const w = crashRiskDetails?.widget;
-          if (!w) return;
-          HEYS.Widgets.state?.updateWidget(w.id, { settings: { ...(w.settings || {}), periodDays: newPeriod } }, true);
-        }
-      }),
+      HEYS.Widgets.VariantsV4?.WidgetBreakdownSheet
+        ? React.createElement(HEYS.Widgets.VariantsV4.WidgetBreakdownSheet, {
+          open: !!breakdownPayload,
+          closing: breakdownClosing,
+          model: breakdownPayload?.model,
+          onClose: dismissBreakdownSheet,
+          onAction: handleBreakdownAction,
+          onWaterChip: handleBreakdownWaterChip
+        })
+        : null,
       variantSavedToast && React.createElement('div', {
         className: 'widget-wd-toast',
         role: 'status'
