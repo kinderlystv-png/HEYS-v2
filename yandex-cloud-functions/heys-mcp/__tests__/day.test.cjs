@@ -1483,6 +1483,55 @@ test('assignTraining не даёт назначить план поверх уж
   assert.match(res.error, /не пустой слот/);
 });
 
+test('assignTraining правит свой черновик, пока клиент его не открыл', () => {
+  const first = day.assignTraining(day.emptyDay('2026-08-11', CLIENT, 1000), undefined, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }] }],
+    assignedBy: 'Артём',
+    time: '18:00',
+    dayLabel: 'День А',
+    programId: 'pr_1',
+    weekIndex: 2,
+  }, { nowMs: 1000, clientId: CLIENT });
+
+  const second = day.assignTraining(first.day, first.index, {
+    exercises: [
+      { name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }] },
+      { name: 'Тяга', approaches: [{ reps: 6, weight_kg: 80 }] },
+    ],
+    assignedBy: 'Артём',
+  }, { nowMs: 2000, clientId: CLIENT });
+
+  assert.equal(second.error, null);
+  assert.equal(second.replaced, true);
+  const t = second.day.trainings[second.index];
+  assert.equal(t.workoutLog.exercises.length, 2);
+  assert.equal(t.planSnapshot.exercises.length, 2, 'снимок задания едет за правкой');
+  assert.equal(t.workoutLog.exercises[0].approaches[0].done, false, 'план остаётся невыполненным');
+  assert.equal(t.plan.status, 'assigned');
+  // Не переданное поле значит «оставь как было»: иначе правка упражнений молча
+  // стирала бы время, метку дня и связь с программой.
+  assert.equal(t.plan.id, first.planId, 'для приложения это тот же план, а не новый');
+  assert.equal(t.time, '18:00');
+  assert.equal(t.plan.dayLabel, 'День А');
+  assert.equal(t.plan.programId, 'pr_1');
+  assert.equal(t.plan.weekIndex, 2);
+});
+
+test('assignTraining не пишет поверх плана, который клиент уже открыл', () => {
+  const assigned = day.assignTraining(day.emptyDay('2026-08-11', CLIENT, 1000), undefined, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }] }],
+    assignedBy: 'Артём',
+  }, { nowMs: 1000, clientId: CLIENT });
+  const opened = JSON.parse(JSON.stringify(assigned.day));
+  opened.trainings[assigned.index].plan.status = 'started';
+
+  const res = day.assignTraining(opened, assigned.index, {
+    exercises: [{ name: 'Тяга', approaches: [{ reps: 6, weight_kg: 80 }] }],
+    assignedBy: 'Артём',
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(res.error, /heys_propose_training_edit/);
+});
+
 // --- Слой 5: правка плана, который клиент уже открыл --------------------
 //
 // Дизайн-хэндофф «Правка куратора после старта» (2026-08-09). Прямая запись

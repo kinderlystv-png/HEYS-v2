@@ -797,25 +797,41 @@ function assignTraining(day, index, { exercises, time, dayLabel, assignedBy, wee
   }
   const isNew = i === list.length;
   const prev = list[i] || {};
-  if (!isNew && isRealTraining(prev)) {
-    return { day, error: `Тренировка ${i} уже существует и это факт, не пустой слот. Не передавай index, чтобы назначить новую, замени план явно через отдельный index на существующий план, или сначала heys_delete_training.` };
+  // Свой же нетронутый черновик куратор переписывает поверх: клиент его ещё не
+  // открывал, терять нечего. Всё остальное в слоте — чужая работа.
+  const prevIsDraft = !isNew && prev.plan && prev.plan.status === 'assigned';
+  if (!isNew && !prevIsDraft && isRealTraining(prev)) {
+    if (prev.plan && prev.plan.status) {
+      return { day, error: `Тренировка ${i} — план со статусом «${prev.plan.status}»: клиент уже открыл его в приложении. Прямая запись поверх заменила бы его работу; отправь правку предложением через heys_propose_training_edit.` };
+    }
+    return { day, error: `Тренировка ${i} уже существует и это факт клиента, не пустой слот. Не передавай index, чтобы назначить новую, или сначала heys_delete_training.` };
   }
   if (isNew && list.filter(isRealTraining).length >= MAX_TRAININGS_PER_DAY) {
     return { day, error: `В дне уже ${MAX_TRAININGS_PER_DAY} тренировки — больше приложение не показывает.` };
   }
 
+  const prevPlan = prevIsDraft ? prev.plan : null;
   const plan = {
-    id: makeId('pl_'),
-    programId: typeof programId === 'string' && programId.trim() ? programId.trim() : null,
-    weekIndex: Number.isInteger(weekIndex) && weekIndex > 0 ? weekIndex : null,
-    dayLabel: typeof dayLabel === 'string' && dayLabel.trim() ? dayLabel.trim() : null,
+    // Тот же слот и тот же черновик — id сохраняется, иначе правка выглядела бы
+    // для приложения новым заданием. Программа и неделя наследуются, чтобы
+    // правка одного дня не выбивала его из отчёта по программе.
+    id: prevPlan && prevPlan.id ? prevPlan.id : makeId('pl_'),
+    programId: typeof programId === 'string' && programId.trim()
+      ? programId.trim()
+      : (prevPlan && prevPlan.programId) || null,
+    weekIndex: Number.isInteger(weekIndex) && weekIndex > 0
+      ? weekIndex
+      : (prevPlan && Number.isInteger(prevPlan.weekIndex) ? prevPlan.weekIndex : null),
+    dayLabel: typeof dayLabel === 'string' && dayLabel.trim()
+      ? dayLabel.trim()
+      : (prevPlan && prevPlan.dayLabel) || null,
     assignedBy: assignedBy.trim(),
     assignedAt: nowMs,
     status: 'assigned',
   };
 
   const training = {
-    id: makeId('tr_'),
+    id: prevIsDraft && prev.id ? prev.id : makeId('tr_'),
     z: [0, 0, 0, 0],
     type: 'strength',
     strengthEntryMode: 'workout_builder',
@@ -827,11 +843,14 @@ function assignTraining(day, index, { exercises, time, dayLabel, assignedBy, wee
     source: 'curator_mcp',
     updatedAt: nowMs,
   };
+  // Не переданное поле при правке черновика значит «оставь как было», а не
+  // «сотри»: куратор правит упражнения, не отменяя время и метку дня.
   if (typeof time === 'string' && time.trim()) training.time = time.trim();
+  else if (prevIsDraft && typeof prev.time === 'string' && prev.time.trim()) training.time = prev.time;
 
   const trainings = list.slice();
   trainings[i] = training;
-  return { day: touch({ ...day, trainings }, nowMs, clientId), index: i, planId: plan.id, error: null };
+  return { day: touch({ ...day, trainings }, nowMs, clientId), index: i, planId: plan.id, replaced: !!prevIsDraft, error: null };
 }
 
 /**
