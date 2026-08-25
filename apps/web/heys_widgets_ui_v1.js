@@ -11015,43 +11015,6 @@
       }
     }, [selectedDate]);
 
-    const handleBreakdownAction = useCallback((action) => {
-      if (!action?.kind) {
-        dismissBreakdownSheet();
-        return;
-      }
-      dismissBreakdownSheet();
-      switch (action.kind) {
-        case 'addMeal':
-          goToDayAndRun('day', 'openAddMeal');
-          break;
-        case 'addActivity':
-          goToDayAndRun('day', 'openActivityPicker');
-          break;
-        case 'recordWeight':
-          goToDayAndRun('day', 'openWeightEditor');
-          break;
-        case 'fixSleep':
-          goToDayAndRun('day', 'openSleepEditor');
-          break;
-        case 'checkin':
-          goToDayAndRun('day', 'openMorningCheckin');
-          break;
-        case 'insights':
-        case 'insightsTab':
-          if (typeof setTab === 'function') setTab('insights');
-          break;
-        case 'waterChips':
-          break;
-        default:
-          break;
-      }
-    }, [dismissBreakdownSheet, goToDayAndRun, setTab]);
-
-    const handleBreakdownWaterChip = useCallback((ml) => {
-      handleAddWater(ml);
-    }, [handleAddWater]);
-
     const handleRemoveWater = useCallback((ml = 200) => {
       try {
         const dateKey = selectedDate || new Date().toISOString().slice(0, 10);
@@ -11123,6 +11086,43 @@
         // silent
       }
     }, [selectedDate]);
+
+    const handleBreakdownAction = useCallback((action) => {
+      if (!action?.kind) {
+        dismissBreakdownSheet();
+        return;
+      }
+      dismissBreakdownSheet();
+      switch (action.kind) {
+        case 'addMeal':
+          goToDayAndRun('day', 'openAddMeal');
+          break;
+        case 'addActivity':
+          goToDayAndRun('day', 'openActivityPicker');
+          break;
+        case 'recordWeight':
+          goToDayAndRun('day', 'openWeightEditor');
+          break;
+        case 'fixSleep':
+          goToDayAndRun('day', 'openSleepEditor');
+          break;
+        case 'checkin':
+          goToDayAndRun('day', 'openMorningCheckin');
+          break;
+        case 'insights':
+        case 'insightsTab':
+          if (typeof setTab === 'function') setTab('insights');
+          break;
+        case 'waterChips':
+          break;
+        default:
+          break;
+      }
+    }, [dismissBreakdownSheet, goToDayAndRun, setTab]);
+
+    const handleBreakdownWaterChip = useCallback((ml) => {
+      handleAddWater(ml);
+    }, [handleAddWater]);
 
     // Undo/Redo handlers
     const handleUndo = useCallback(() => {
