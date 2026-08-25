@@ -27,7 +27,7 @@ body {
     Arial;
   background: var(--bg);
   color: var(--text);
-  font-size: 13px;
+  font-size: 81.25%;
   line-height: 1.35;
 }
 

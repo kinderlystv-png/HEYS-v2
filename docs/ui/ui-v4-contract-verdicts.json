@@ -2310,8 +2310,8 @@
           "h": "f511fdb07410"
         },
         "доступность": {
-          "v": "≠",
-          "f": "Частично. Сделано: daily-полоса — role='progressbar' с подписью «Шаг N из 5» (heys_step_modal_v1.js:1415-1423, morning-checkin-v4-a11y-smoke.test.js); шкала настроения — role='slider' (heys_steps_v1.js:239-244). Нет: капсула времени сна одной фразой и дорожка шагов с меткой «Совет · N»",
+          "v": "=",
+          "f": "heys_step_modal_v1.js:1415-1423 progressbar «Шаг N из 5»; heys_steps_v1.js buildScaleSliderAriaLabel — ползунки «название, N из 10»; buildSleepCapsuleAriaLabel — капсула сна одной фразой; buildStepsTrackAriaLabel — дорожка шагов с меткой «Совет · N»; morning-checkin-v4-a11y-smoke.test.js",
           "h": "bc34b0618349"
         },
         "уменьшенное движение": {
@@ -2320,8 +2320,8 @@
           "h": "001f1f673cb7"
         },
         "особый период в стопке": {
-          "v": "≠",
-          "f": "MorningRestStepComponent heys_steps_v1.js:6399+ без cycle-row; registerStep('cycle') :4116 — отдельный шаг, не строка 66px с чипом «Отметить»",
+          "v": "?",
+          "f": "heys_steps_v1.js renderMorningRestCycleRow — только a11y-оболочка строки в morningRest; полное место в стопке, высота 66 px и перестановка с душом — отдельный cycle-трек",
           "h": "d3b84d4904d8"
         },
         "замеры на неделе периода": {
@@ -2335,8 +2335,8 @@
           "h": "789083381a5b"
         },
         "доступность · период в стопке": {
-          "v": "≠",
-          "f": "Чип «Отметить особые дни» и radiogroup ряда 1–7 в morningRest не реализованы",
+          "v": "=",
+          "f": "heys_steps_v1.js renderMorningRestCycleRow — чип aria-label «Отметить особые дни»; radiogroup «Какой день»; radio «День N» с aria-checked и стрелками",
           "h": "53bf101137ab"
         }
       }
@@ -2798,7 +2798,7 @@
         },
         "дефолт": {
           "v": "=",
-          "f": "Значение по умолчанию — включено (field !== false). Три новых поля профиля showDiaryHungerPanel, showDiaryRefeedPanel и showDiaryMealsTimelinePanel пишутся writeChipState и читаются readChipState — heys_day_nutrition_v1.js:512-548, :1522-1528",
+          "f": "Значение по умолчанию включено (field !== false). Три поля профиля showDiaryHungerPanel, showDiaryRefeedPanel, showDiaryMealsTimelinePanel — heys_day_nutrition_v1.js:513-548, :1522-1528",
           "h": "de05cf70d34b"
         },
         "вид чипа": {
@@ -3423,12 +3423,12 @@
         },
         "доступность": {
           "v": "=",
-          "f": "Герой — aria-label одной фразой со словом состояния (buildHeroAriaLabel, :83-101, :1590). Строка приёма — aria-label «время, название, N ккал, N продуктов» (:1635). Полоса «Приёмы за день» — track и сегменты aria-hidden (:646-658). Чипы блоков — role=switch + aria-label «название, включено/выключено» (:105-107, :1795). Прочерк DASH — dashNode со sr-only «нет данных» (:66-71) в строке приёма, итогах, качестве и мини-карточках голода",
+          "f": "buildHeroAriaLabel :83-101, buildMealRowAriaLabel :101-104, chipAriaLabel :106-108, dashNode sr-only :66-71, timeline aria-hidden :649-658, role=switch :1801-1803",
           "h": "95a94d45ec28"
         },
         "уменьшенное движение": {
           "v": "=",
-          "f": "Мгновенность — общий гейт heys-components.css:13139-13147. Блюр под листом правки приёма снимается локально: 732-ui-v4-nutrition.css:1027-1033 @media (prefers-reduced-motion: reduce) на .nutrition-v4-sheet-backdrop — backdrop-filter: none, по образцу 730-widgets:3203-3208",
+          "f": "732-ui-v4-nutrition.css:1027-1033 @media (prefers-reduced-motion: reduce) backdrop-filter none на .nutrition-v4-sheet-backdrop",
           "h": "488e88ddf474"
         },
         "слова на экране": {

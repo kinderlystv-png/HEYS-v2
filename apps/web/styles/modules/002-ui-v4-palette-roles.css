@@ -803,3 +803,11 @@
 body:has(.confirm-modal-backdrop) #heys-toast-container {
   display: none;
 }
+
+/* ── Крупный системный шрифт (home-widgets.v4.dc.html) ─────────────────────
+ * tailwind base ставит -webkit-text-size-adjust:100% и гасит Android «Масштаб
+ * текста». Файл грузится в index.html сразу после tailwind и снова из main.css. */
+html {
+  -webkit-text-size-adjust: auto;
+  text-size-adjust: auto;
+}
