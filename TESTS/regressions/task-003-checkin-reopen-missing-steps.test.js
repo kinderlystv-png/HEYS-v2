@@ -12,7 +12,16 @@
  *    качество/настроение). Session-флаг подавляет повтор ТОЛЬКО когда данные на месте.
  *  - getCheckinSteps(..., { requiredOnly: true }) — при переоткрытии для
  *    восстановления показываем только недостающие обязательные шаги, без
- *    опционального хвоста (cold/supplements/routine) и без регистрации.
+ *    хвоста (morningRest / checkinRecorded) и без регистрации.
+ *
+ * Состав шагов v4 (docs/implementation/MORNING_CHECKIN_V4_PROTOCOL.md, §2):
+ * полное утро = [yesterdayVerify?], weight, sleep, morning_mood, stepsGoal,
+ * morningRest, checkinRecorded. Пара `sleepTime`/`sleepQuality` схлопнута в
+ * один экран `sleep` (пишет sleepStart/sleepEnd + sleepQuality одним ack),
+ * а хвост cold_exposure/supplements/morningRoutine — в `morningRest`.
+ * Здесь проверяется не набор id сам по себе, а инвариант сторожа: недостающий
+ * сон обязан попасть в план переоткрытия — в том числе когда заполнена только
+ * половина сна (время без качества или качество без времени).
  */
 import fs from 'fs';
 import path from 'path';
@@ -103,11 +112,16 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
       requiredOnly: true,
     });
 
-    expect(steps).toEqual(['sleepTime', 'sleepQuality', 'morning_mood']);
-    // никакого опционального хвоста / финального шага
+    expect(steps).toEqual(['sleep', 'morning_mood']);
+    // никакого хвоста / финального шага
+    expect(steps).not.toContain('morningRest');
+    expect(steps).not.toContain('checkinRecorded');
+    // legacy-id хвоста и пары сна не должны вернуться в план
     expect(steps).not.toContain('cold_exposure');
     expect(steps).not.toContain('supplements');
     expect(steps).not.toContain('morningRoutine');
+    expect(steps).not.toContain('sleepTime');
+    expect(steps).not.toContain('sleepQuality');
     expect(steps).not.toContain('weight'); // уже заполнен
   });
 
@@ -130,10 +144,31 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
     });
 
     expect(missing(kv[`heys_${CID}_dayv2_${TODAY}`])).toBe(true);
-    expect(steps).toEqual(['sleepTime', 'sleepQuality', 'morning_mood']);
+    expect(steps).toEqual(['sleep', 'morning_mood']);
   });
 
-  it('обычный режим (без requiredOnly) сохраняет опциональный хвост', () => {
+  // Цена склейки пары в один экран: half-filled сон не должен считаться
+  // пройденным. Иначе сторож молчит ровно там, где данные пропали частично —
+  // а именно так их и теряет недокачанное облако.
+  it.each([
+    ['время без качества', { sleepStart: '23:00', sleepEnd: '07:00' }],
+    ['качество без времени', { sleepQuality: 7 }],
+    ['время наполовину', { sleepStart: '23:00', sleepQuality: 7 }],
+  ])('половина сна (%s) → шаг sleep всё равно в плане переоткрытия', (_label, sleepPart) => {
+    setDay({ weightMorning: 90.9, moodMorning: 6, ...sleepPart });
+    const profile = confirmedStepsProfile();
+
+    const missing = window.HEYS.MorningCheckinUtils.coreCheckinDataMissing;
+    const steps = window.HEYS.MorningCheckinUtils.getCheckinSteps(profile, {
+      filterCompleted: true,
+      requiredOnly: true,
+    });
+
+    expect(missing(kv[`heys_${CID}_dayv2_${TODAY}`])).toBe(true);
+    expect(steps).toEqual(['sleep']);
+  });
+
+  it('обычный режим (без requiredOnly) сохраняет хвост', () => {
     setDay({ weightMorning: 90.9 });
     const profile = confirmedStepsProfile();
 
@@ -141,9 +176,9 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
       filterCompleted: true,
     });
 
-    expect(steps).toEqual(expect.arrayContaining(['sleepTime', 'sleepQuality', 'morning_mood']));
-    // хвост на месте (supplements — только при supplementsTrackingEnabled)
-    expect(steps).toEqual(expect.arrayContaining(['cold_exposure', 'morningRoutine']));
+    expect(steps).toEqual(expect.arrayContaining(['sleep', 'morning_mood']));
+    // хвост v4: пятый обязательный экран + «Записано»
+    expect(steps).toEqual(expect.arrayContaining(['morningRest', 'checkinRecorded']));
     expect(steps).not.toContain('weight'); // заполнен → отфильтрован
   });
 
@@ -187,13 +222,15 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
     setDay({});
     const profile = { stepsGoal: 6000 }; // вчерашняя цель без stepsGoalConfirmedDate
 
+    // daypart явно: слот шагов утром — stepsGoal, вечером — stepsFact.
     const steps = window.HEYS.MorningCheckinUtils.getCheckinSteps(profile, {
       filterCompleted: true,
       dateKey: TODAY,
+      daypart: 'morning',
     });
 
     expect(steps).toEqual(expect.arrayContaining([
-      'weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal',
+      'weight', 'sleep', 'morning_mood', 'stepsGoal',
     ]));
   });
 
@@ -206,12 +243,13 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
       source: 'MorningCheckin',
       dateKey: TODAY,
       clientId: CID,
+      daypart: 'morning',
     });
 
-    expect(plan.steps).toEqual(expect.arrayContaining([
-      'weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal',
-      'cold_exposure', 'morningRoutine',
-    ]));
+    expect(plan.steps).toEqual([
+      'weight', 'sleep', 'morning_mood', 'stepsGoal',
+      'morningRest', 'checkinRecorded',
+    ]);
   });
 
   it('частично заполненный день → requiredOnly без опционального хвоста', () => {
@@ -223,9 +261,12 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
       source: 'MorningCheckin',
       dateKey: TODAY,
       clientId: CID,
+      daypart: 'morning',
     });
 
-    expect(plan.steps).toEqual(['sleepTime', 'sleepQuality', 'morning_mood']);
+    expect(plan.steps).toEqual(['sleep', 'morning_mood']);
+    expect(plan.steps).not.toContain('morningRest');
+    expect(plan.steps).not.toContain('checkinRecorded');
     expect(plan.steps).not.toContain('morningRoutine');
     expect(plan.steps).not.toContain('cold_exposure');
   });
