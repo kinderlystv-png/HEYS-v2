@@ -63,8 +63,7 @@ apps/web/heys_app_tabs_v1.js:699
 apps/web/heys_app_tabs_v1.js:698
 apps/web/heys_app_tabs_v1.js:697
 apps/web/heys_app_update_notifications_v1.js:17
-apps/web/heys_audio_v1.js:15
-apps/web/heys_audio_v1.js:75
+apps/web/heys_audio_v1.js::localStorage.setItem(key, JSON.stringify(value))
 # [auth bootstrap] Session hints + PIN client id + pending name — before OverlayStore is ready;
 # not diary KV. Prefer path::needle so edits to heys_auth_v1.js do not re-break push.
 apps/web/heys_auth_v1.js::JSON.stringify(v)
@@ -230,7 +229,7 @@ apps/web/heys_widgets_ui_v1.js::localStorage.setItem(scopedKey, JSON.stringify(d
 apps/web/heys_yesterday_verify_v1.js:1267
 apps/web/heys_yesterday_verify_v1.js:1265
 apps/web/heys_yesterday_verify_v1.js:36
-apps/web/heys_yesterday_verify_v1.js:495
+apps/web/heys_yesterday_verify_v1.js::heys_debug_yesterday_zero_payload
 apps/web/insights/pi_early_warning.js:1269
 apps/web/insights/pi_early_warning.js:1823
 apps/web/insights/pi_early_warning.js:843
