@@ -231,6 +231,44 @@
     return merged;
   }
 
+  // Строка «порядок: согласие раньше данных» (questionnaire.v4): предупреждение
+  // и барьер 18+ — первый шаг; черновик и поля открываются только после обеих
+  // отметок.
+  const STEP_ORDER_FLAG = 'consent-first';
+
+  function isConsentComplete(answers) {
+    return Boolean(
+      String(answers?.warning?.acknowledged_at || '').trim()
+      && String(answers?.warning?.age_confirmed_at || '').trim()
+    );
+  }
+
+  function normalizeLoadedStep(serverStep, answers) {
+    if (!isConsentComplete(answers)) return 0;
+    const step = Math.max(0, Math.min(STEPS.length - 1, Number(serverStep) || 0));
+    if (String(answers?.meta?.step_order || '') === STEP_ORDER_FLAG) return step;
+    // Legacy: warning был пятым (index 4), контент — 0..3.
+    if (step === 4) return 4;
+    return Math.min(STEPS.length - 1, step + 1);
+  }
+
+  function withStepOrderMeta(answers) {
+    return {
+      ...answers,
+      meta: {
+        ...(answers.meta || {}),
+        schema_version: '1.2',
+        step_order: STEP_ORDER_FLAG,
+      },
+    };
+  }
+
+  function hasContentAnswers(answers) {
+    return ['goals', 'experience', 'lifestyle', 'collaboration'].some((section) => (
+      Object.values(answers?.[section] || {}).some((value) => String(value || '').trim())
+    ));
+  }
+
   // ── Локальная копия черновика ────────────────────────────────────────────
   // Строка «что пишется» (questionnaire.v4, переписана 25 августа): ответы
   // пишутся в черновик на сервере после каждого шага И дублируются локально,
@@ -277,6 +315,10 @@
       // Вторая линия к ключу: значение помнит свой scope, и чужое не читается,
       // даже если ключ каким-то образом пережил смену владельца сессии.
       if (String(parsed.scope || '') !== draftScope()) return null;
+      const mergedAnswers = mergeAnswers(parsed.answers);
+      // Строка «порядок: согласие раньше данных»: до галочки черновика быть
+      // не должно — отбрасываем локальную копию с полями, но без согласия.
+      if (!isConsentComplete(mergedAnswers) && hasContentAnswers(mergedAnswers)) return null;
       return {
         answers: mergeAnswers(parsed.answers),
         step: Math.max(0, Math.min(STEPS.length - 1, Number(parsed.step) || 0)),
@@ -445,6 +487,68 @@
 
   const STEPS = [
     {
+      id: 'warning', title: 'Важная информация',
+      subtitle: 'Прочитайте предупреждение и подтвердите, что готовы продолжить.',
+      // Строка «вид блока предупреждения»: обе отметки блокируют отправку.
+      required: ['acknowledged_at', 'age_confirmed_at'],
+      render: (value, set) => [
+        React.createElement('div', {
+          key: 'warning-text',
+          id: 'intake-warning-text',
+          role: 'region',
+          'aria-label': WARNING_TEXT_TITLE,
+          // Строка «доступность»: область прокручивается клавиатурой, значит
+          // должна получать фокус сама по себе.
+          tabIndex: 0,
+          style: {
+            // Строка «вид блока предупреждения»: своя область 186 px с
+            // настоящей прокруткой — иначе четыре абзаца выталкивают
+            // чекбокс за экран, и подтвердить нечем.
+            maxHeight: 186, overflowY: 'auto',
+            padding: '14px 16px', borderRadius: 18, background: SURFACE_1,
+            color: INK, fontSize: 12, lineHeight: 1.6,
+            display: 'grid', gap: 10,
+            // Строка «вид блока предупреждения» (переписана 25 августа): текст
+            // предупреждения выделяется и копируется — человек имеет право
+            // сохранить или показать то, что подтверждает. Это названное
+            // исключение из строки «язык, выделение, часовой пояс», которая
+            // всё ещё зовёт его служебным: она прежней редакции.
+            userSelect: 'text',
+            WebkitUserSelect: 'text',
+          },
+        },
+          React.createElement('div', { style: { fontWeight: 700, fontSize: 12, lineHeight: 1.35, color: WARN_TEXT } }, WARNING_TEXT_TITLE),
+          ...WARNING_TEXT_PARAGRAPHS.map((paragraph, index) => React.createElement('p', {
+            key: `warning-p-${index}`,
+            style: { margin: 0 },
+          }, paragraph)),
+        ),
+        // Строка «вид блока предупреждения»: под областью две отметки подряд —
+        // подтверждение предупреждения и «Мне есть 18». Обе блокируют отправку.
+        // Обе живут в одном контейнере: шаг между ними 10, а не зазор сетки 8.
+        React.createElement('div', {
+          key: 'warning-marks',
+          style: { display: 'grid', gap: 10, marginTop: 8 },
+        },
+          warningMark({
+            field: 'acknowledged_at',
+            label: WARNING_CHECKBOX_LABEL,
+            checked: Boolean(value.acknowledged_at),
+            onToggle: (checked) => {
+              set('acknowledged_at', checked ? new Date().toISOString() : '');
+              set('text_version', checked ? WARNING_TEXT_VERSION : '');
+            },
+          }),
+          warningMark({
+            field: 'age_confirmed_at',
+            label: AGE_CONFIRM_CHECKBOX_LABEL,
+            checked: Boolean(value.age_confirmed_at),
+            onToggle: (checked) => set('age_confirmed_at', checked ? new Date().toISOString() : ''),
+          })
+        ),
+      ],
+    },
+    {
       id: 'goals', title: 'Цели и ожидания',
       subtitle: 'Опишите желаемый результат своими словами — здесь нет правильных ответов.',
       required: ['primary_goal', 'success_definition'],
@@ -514,68 +618,6 @@
           options: [['concise', 'Коротко и по делу'], ['detailed', 'Подробно с объяснениями'], ['gentle', 'Мягко и постепенно'], ['direct', 'Прямо и требовательно']] }),
         React.createElement(Field, { key: 'expectations_from_curator', fieldId: 'intake-expectations_from_curator', label: 'Чего вы ждёте от куратора?', textarea: true,
           value: value.expectations_from_curator, onChange: (next) => set('expectations_from_curator', next) }),
-      ],
-    },
-    {
-      id: 'warning', title: 'Важная информация',
-      subtitle: 'Прочитайте предупреждение и подтвердите, что готовы продолжить.',
-      // Строка «вид блока предупреждения»: обе отметки блокируют отправку.
-      required: ['acknowledged_at', 'age_confirmed_at'],
-      render: (value, set) => [
-        React.createElement('div', {
-          key: 'warning-text',
-          id: 'intake-warning-text',
-          role: 'region',
-          'aria-label': WARNING_TEXT_TITLE,
-          // Строка «доступность»: область прокручивается клавиатурой, значит
-          // должна получать фокус сама по себе.
-          tabIndex: 0,
-          style: {
-            // Строка «вид блока предупреждения»: своя область 186 px с
-            // настоящей прокруткой — иначе четыре абзаца выталкивают
-            // чекбокс за экран, и подтвердить нечем.
-            maxHeight: 186, overflowY: 'auto',
-            padding: '14px 16px', borderRadius: 18, background: SURFACE_1,
-            color: INK, fontSize: 12, lineHeight: 1.6,
-            display: 'grid', gap: 10,
-            // Строка «вид блока предупреждения» (переписана 25 августа): текст
-            // предупреждения выделяется и копируется — человек имеет право
-            // сохранить или показать то, что подтверждает. Это названное
-            // исключение из строки «язык, выделение, часовой пояс», которая
-            // всё ещё зовёт его служебным: она прежней редакции.
-            userSelect: 'text',
-            WebkitUserSelect: 'text',
-          },
-        },
-          React.createElement('div', { style: { fontWeight: 700, fontSize: 12, lineHeight: 1.35, color: WARN_TEXT } }, WARNING_TEXT_TITLE),
-          ...WARNING_TEXT_PARAGRAPHS.map((paragraph, index) => React.createElement('p', {
-            key: `warning-p-${index}`,
-            style: { margin: 0 },
-          }, paragraph)),
-        ),
-        // Строка «вид блока предупреждения»: под областью две отметки подряд —
-        // подтверждение предупреждения и «Мне есть 18». Обе блокируют отправку.
-        // Обе живут в одном контейнере: шаг между ними 10, а не зазор сетки 8.
-        React.createElement('div', {
-          key: 'warning-marks',
-          style: { display: 'grid', gap: 10, marginTop: 8 },
-        },
-          warningMark({
-            field: 'acknowledged_at',
-            label: WARNING_CHECKBOX_LABEL,
-            checked: Boolean(value.acknowledged_at),
-            onToggle: (checked) => {
-              set('acknowledged_at', checked ? new Date().toISOString() : '');
-              set('text_version', checked ? WARNING_TEXT_VERSION : '');
-            },
-          }),
-          warningMark({
-            field: 'age_confirmed_at',
-            label: AGE_CONFIRM_CHECKBOX_LABEL,
-            checked: Boolean(value.age_confirmed_at),
-            onToggle: (checked) => set('age_confirmed_at', checked ? new Date().toISOString() : ''),
-          })
-        ),
       ],
     },
   ];
@@ -737,10 +779,11 @@
     // иначе при возврате сети её нечем сверить с чужой правкой из другой
     // вкладки (строка «две вкладки»).
     const persistLocalDraft = React.useCallback((nextAnswers, nextStep, dirty) => {
+      if (!isConsentComplete(nextAnswers)) return;
       writeLocalDraft({
         owner: draftOwnerRef.current,
         step: nextStep,
-        answers: nextAnswers,
+        answers: withStepOrderMeta(nextAnswers),
         baseUpdatedAt: serverUpdatedAtRef.current,
         dirty,
       });
@@ -775,9 +818,19 @@
       // экран «Не удалось открыть анкету» остаётся только для случая, когда
       // поднимать нечего.
       const openFromLocalDraft = () => {
+        const mergedAnswers = mergeAnswers(local.answers);
+        if (!isConsentComplete(mergedAnswers) && hasContentAnswers(mergedAnswers)) {
+          clearLocalDraft();
+          setStatus('in_progress');
+          setStep(0);
+          setAnswers(mergeAnswers(null));
+          setHydrated(true);
+          setLoading(false);
+          return;
+        }
         setStatus('in_progress');
-        setStep(local.step);
-        setAnswers(local.answers);
+        setStep(normalizeLoadedStep(local.step, mergedAnswers));
+        setAnswers(mergedAnswers);
         draftOwnerRef.current = local.owner;
         serverUpdatedAtRef.current = local.baseUpdatedAt;
         setLocalOnly(local.dirty);
@@ -807,7 +860,11 @@
           setStatus('not_invited');
         } else {
           const nextStatus = result.intake.status || 'invited';
-          const nextStep = Math.max(0, Math.min(STEPS.length - 1, Number(result.intake.current_step) || 0));
+          const mergedServerAnswers = mergeAnswers(result.intake.answers);
+          const nextStep = normalizeLoadedStep(
+            Number(result.intake.current_step) || 0,
+            mergedServerAnswers,
+          );
           const serverUpdatedAt = result.intake.updated_at || null;
           // Кандидатская RPC отдаёт candidate_id; у клиентской сессии владелец
           // и так равен scope клиента.
@@ -833,15 +890,15 @@
             && String(local.baseUpdatedAt || '') === String(serverUpdatedAt || '');
 
           if (localAhead) {
-            setStep(local.step);
-            setAnswers(local.answers);
+            setStep(normalizeLoadedStep(local.step, local.answers));
+            setAnswers(mergeAnswers(local.answers));
             setLocalOnly(true);
             // Правки уже есть — автосохранение подхватит их и отправит.
             setHasEdited(true);
             setSaveState('pending');
           } else {
             setStep(nextStep);
-            setAnswers(mergeAnswers(result.intake.answers));
+            setAnswers(mergedServerAnswers);
             if (local) clearLocalDraft();
           }
 
@@ -870,12 +927,13 @@
     }, []);
 
     React.useEffect(() => {
-      if (!hydrated || !hasEdited || !['invite_sent', 'invited', 'in_progress', 'needs_clarification'].includes(status)) return undefined;
+      if (!hydrated || !hasEdited || !isConsentComplete(answersRef.current)) return undefined;
+      if (!['invite_sent', 'invited', 'in_progress', 'needs_clarification'].includes(status)) return undefined;
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       setSaveState('pending');
       saveTimerRef.current = setTimeout(async () => {
         setSaveState('saving');
-        const snapshot = answersRef.current;
+        const snapshot = withStepOrderMeta(answersRef.current);
         // Локальная копия пишется ДО сети: иначе правки, сделанные в офлайне,
         // не переживут закрытие вкладки.
         persistLocalDraft(snapshot, step, true);
@@ -906,7 +964,11 @@
     }, [answers, step, hydrated, hasEdited, status, enqueueSave, persistLocalDraft]);
 
     const setSectionValue = (section, key, value) => {
-      setHasEdited(true);
+      const onConsentStep = stepRef.current === 0 && STEPS[0]?.id === 'warning';
+      if (!onConsentStep && !isConsentComplete(answersRef.current)) return;
+      if (!(onConsentStep && section === 'warning')) {
+        setHasEdited(true);
+      }
       setError('');
       setSaveErrorCode('');
       setSubmitFailed(false);
@@ -923,6 +985,7 @@
       ? current.required.filter((key) => !String(answers[current.id]?.[key] || '').trim())
       : [];
     const missingRequired = missingKeys.length > 0;
+    const consentComplete = isConsentComplete(answers);
     const warningConfirmed = Boolean(String(answers.warning?.acknowledged_at || '').trim());
 
     // Уводит на шаг с нужным разделом и закрывает сводку: она отдельный экран,
@@ -974,7 +1037,10 @@
       if (step < STEPS.length - 1) {
         const nextStep = step + 1;
         setSaveState('saving');
-        const snapshot = answersRef.current;
+        const snapshot = withStepOrderMeta(answersRef.current);
+        if (step === 0 && STEPS[0]?.id === 'warning') {
+          setHasEdited(true);
+        }
         // Строка «что пишется»: ответы дублируются локально после каждого шага.
         persistLocalDraft(snapshot, step, true);
         const result = await enqueueSave(snapshot, nextStep, false);
@@ -1017,8 +1083,8 @@
       setSaveState('saving');
       // Строка «ошибка отправки»: она обещает, что ответы и подтверждение
       // сохранены. Локальная копия делает обещание правдой и в офлайне.
-      persistLocalDraft(answersRef.current, step, true);
-      const result = await enqueueSave(answersRef.current, step, true);
+      persistLocalDraft(withStepOrderMeta(answersRef.current), step, true);
+      const result = await enqueueSave(withStepOrderMeta(answersRef.current), step, true);
       const tapElapsed = Date.now() - tapAt;
       if (tapElapsed < 350) await new Promise((resolve) => setTimeout(resolve, 350 - tapElapsed));
       if (result.success) {
@@ -1061,7 +1127,7 @@
       }
       setError('');
       setSaveState('saving');
-      const snapshot = answersRef.current;
+      const snapshot = withStepOrderMeta(answersRef.current);
       const result = await enqueueSave(snapshot, step, false);
       const stillSame = answersRef.current === snapshot;
       if (result.success) {
@@ -1087,7 +1153,7 @@
     const flushLocalDraft = React.useCallback(async () => {
       if (!localOnlyRef.current) return;
       setSaveState('saving');
-      const snapshot = answersRef.current;
+      const snapshot = withStepOrderMeta(answersRef.current);
       const targetStep = stepRef.current;
       const result = await enqueueSave(snapshot, targetStep, false);
       const stillSame = answersRef.current === snapshot;
@@ -1114,13 +1180,17 @@
 
     const performClose = async () => {
       setCloseConfirmOpen(false);
+      if (!isConsentComplete(answersRef.current)) {
+        leaveIntake();
+        return;
+      }
       if (!hasEdited && !['pending', 'saving', 'error'].includes(saveState)) {
         leaveIntake();
         return;
       }
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       setSaveState('saving');
-      const snapshot = answersRef.current;
+      const snapshot = withStepOrderMeta(answersRef.current);
       persistLocalDraft(snapshot, step, true);
       const result = await enqueueSave(snapshot, step, false);
       if (result.success) {
@@ -1420,14 +1490,14 @@
 
     // Роль набора здесь развёрнута, а не константой: на неё смотрит тест
     // intake-v4-blocked-action.
-    const submitOrContinueButton = () => React.createElement('button', {
-      type: 'button', onClick: next, disabled: saveState === 'saving' || missingRequired,
-      'aria-describedby': missingRequired ? 'intake-blocked-reason' : undefined,
+    const submitOrContinueButton = (blocked = missingRequired) => React.createElement('button', {
+      type: 'button', onClick: next, disabled: saveState === 'saving' || blocked,
+      'aria-describedby': blocked ? 'intake-blocked-reason' : undefined,
       style: { ...primaryPill, minHeight: 48,
-        background: missingRequired ? SURFACE_1 : 'var(--v4-sand-act, #c67139)',
-        color: missingRequired ? INK : ON_ACCENT,
-        cursor: (saveState === 'saving' || missingRequired) ? 'default' : 'pointer',
-        opacity: (saveState === 'saving' || missingRequired) ? 0.45 : 1 },
+        background: blocked ? SURFACE_1 : 'var(--v4-sand-act, #c67139)',
+        color: blocked ? INK : ON_ACCENT,
+        cursor: (saveState === 'saving' || blocked) ? 'default' : 'pointer',
+        opacity: (saveState === 'saving' || blocked) ? 0.45 : 1 },
     }, HEYS.WaitMark?.button?.(React, {
       busy: saveState === 'saving',
       ok: saveState === 'saved',
@@ -1470,7 +1540,7 @@
         // галочку выше», но на этом экране галочки выше нет — берём
         // формулировку кадра «Анкета · сводка», чтобы причина не указывала на
         // несуществующий контрол.
-        missingRequired ? React.createElement('div', {
+        !consentComplete ? React.createElement('div', {
           key: 'blocked-reason-review',
           id: 'intake-blocked-reason',
           style: {
@@ -1478,14 +1548,14 @@
             padding: '11px 14px', fontSize: 11, fontWeight: 600, lineHeight: 1.45,
             color: WARN_TEXT,
           },
-        }, `Вернитесь к шагу ${STEPS.length} и подтвердите предупреждение`) : null,
-        React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: missingRequired ? 0 : 20 } },
-          // Строка «содержимое»: кнопка «Правки» уводит к первому шагу; стрелка
+        }, 'Вернитесь к шагу 1 и подтвердите предупреждение') : null,
+        React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: !consentComplete ? 0 : 20 } },
+          // Строка «содержимое»: кнопка «Правки» уводит к целям; стрелка
           // назад в шапке возвращает на шаг 5, откуда сводку открыли.
           React.createElement('button', {
             type: 'button', onClick: () => goToSection('goals'), style: secondaryPill,
           }, 'Правки'),
-          submitOrContinueButton()
+          submitOrContinueButton(!consentComplete)
         )
       ));
     }
@@ -1658,7 +1728,7 @@
         id: 'intake-blocked-reason',
         style: { marginTop: 22, fontSize: 11, fontWeight: 500, lineHeight: 1.45,
           textAlign: 'center', color: INK_55 },
-      }, step === STEPS.length - 1 ? 'Поставьте галочку выше' : 'Заполните поля со звёздочкой') : null,
+      }, current?.id === 'warning' ? 'Поставьте галочку выше' : 'Заполните поля со звёздочкой') : null,
       React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: missingRequired ? 9 : 20 } },
         step > 0 ? React.createElement('button', {
           type: 'button', onClick: goBackStep,
@@ -1672,5 +1742,6 @@
   HEYS.TrialIntake = {
     api, ClientScreen, shouldOpen, leaveIntake, EMPTY_ANSWERS, CURATOR_ANSWER_FIELDS,
     WARNING_TEXT_VERSION, WARNING_TEXT_TITLE, WARNING_TEXT_PARAGRAPHS, WARNING_CHECKBOX_LABEL,
+    isConsentComplete, normalizeLoadedStep, STEP_ORDER_FLAG,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

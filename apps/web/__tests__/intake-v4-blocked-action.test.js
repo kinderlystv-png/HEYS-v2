@@ -21,7 +21,8 @@ const SRC = fs.readFileSync(path.resolve(__dirname, '../heys_trial_intake_v1.js'
 
 describe('анкета: недоступное действие называет причину', () => {
   it('кнопка не нажимается, пока обязательное поле пусто', () => {
-    expect(SRC).toMatch(/disabled:\s*saveState === 'saving' \|\| missingRequired/);
+    expect(SRC).toMatch(/disabled:\s*saveState === 'saving' \|\| blocked/);
+    expect(SRC).toContain('blocked = missingRequired');
   });
 
   it('причина стоит над кнопкой, а не появляется после нажатия', () => {
@@ -31,24 +32,24 @@ describe('анкета: недоступное действие называет
     expect(SRC).toContain('Поставьте галочку выше');
   });
 
-  it('на последнем шаге причина говорит про галочку, на прочих — про звёздочку', () => {
+  it('на шаге предупреждения причина говорит про галочку, на прочих — про звёздочку', () => {
     const at = SRC.indexOf("'blocked-reason'");
     const tail = SRC.slice(at, at + 700);
     expect(tail).toMatch(
-      /step === STEPS\.length - 1 \? 'Поставьте галочку выше' : 'Заполните поля со звёздочкой'/,
+      /current\?\.id === 'warning' \? 'Поставьте галочку выше' : 'Заполните поля со звёздочкой'/,
     );
   });
 
   it('заблокированная кнопка гаснет и теряет курсор действия', () => {
-    const at = SRC.indexOf('onClick: next');
-    const tail = SRC.slice(at, at + 600);
-    expect(tail).toMatch(/opacity:.*missingRequired.*0\.45/);
-    expect(tail).toMatch(/cursor:.*missingRequired.*'default'/);
+    const at = SRC.indexOf('const submitOrContinueButton');
+    const tail = SRC.slice(at, at + 700);
+    expect(tail).toMatch(/opacity:.*blocked.*0\.45/);
+    expect(tail).toMatch(/cursor:.*blocked.*'default'/);
   });
 
   it('кнопка держит высоту 48 и заливку акцента набора', () => {
-    const at = SRC.indexOf('onClick: next');
-    const tail = SRC.slice(at, at + 600);
+    const at = SRC.indexOf('const submitOrContinueButton');
+    const tail = SRC.slice(at, at + 700);
     expect(tail).toMatch(/minHeight:\s*48/);
     expect(tail).toContain('var(--v4-sand-act, #c67139)');
     // Легаси-фиолетовый #434587 на кнопке анкеты больше не встречается.

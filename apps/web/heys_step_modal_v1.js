@@ -1412,7 +1412,16 @@
                 className: 'mc-daily-header-caption'
                   + (hideProgressDotsResolved ? ' mc-daily-header-caption--layer' : '')
               }, dailyHeaderCaption),
-              showDailyProgressDots && React.createElement('div', { className: 'mc-progress-dots mc-progress-dots--in-header mc-progress-dots--pills' },
+              showDailyProgressDots && React.createElement('div', {
+                className: 'mc-progress-dots mc-progress-dots--in-header mc-progress-dots--pills',
+                // Строка «доступность» checkin-morning.v4: полоса прогресса —
+                // role=progressbar с подписью «Шаг N из 5».
+                role: 'progressbar',
+                'aria-valuemin': 1,
+                'aria-valuemax': progressStepConfigs.length,
+                'aria-valuenow': progressActiveIndex + 1,
+                'aria-label': `Шаг ${progressActiveIndex + 1} из ${progressStepConfigs.length}`,
+              },
                 progressStepConfigs.map((config, i) =>
                   React.createElement('button', {
                     key: config.id || i,
@@ -1427,7 +1436,8 @@
                       }
                     },
                     disabled: !allowProgressForwardNav && i > progressActiveIndex,
-                    'aria-label': `Шаг ${i + 1}`
+                    'aria-hidden': 'true',
+                    tabIndex: -1,
                   })
                 )
               ),

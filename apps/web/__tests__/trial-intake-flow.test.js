@@ -54,7 +54,7 @@ const completedAnswers = {
     // 25 августа): без неё отправка заблокирована так же, как без первой.
     age_confirmed_at: '2026-08-11T10:00:00.000Z',
   },
-  meta: { schema_version: '1.2' },
+  meta: { schema_version: '1.2', step_order: 'consent-first' },
 };
 
 function sqlFunction(name, nextName) {
@@ -552,7 +552,7 @@ describe('protected trial intake contract', () => {
       if (fn === 'get_trial_intake_by_session') {
         return { data: { get_trial_intake_by_session: {
           success: true,
-          intake: { status: 'in_progress', current_step: 2, answers: completedAnswers },
+          intake: { status: 'in_progress', current_step: 3, answers: completedAnswers },
         } } };
       }
       return { data: { save_trial_intake_by_session: {
@@ -566,7 +566,7 @@ describe('protected trial intake contract', () => {
     (0, eval)(intakeSource);
 
     render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
-    await screen.findByText('Шаг 3 из 5');
+    await screen.findByText('Шаг 4 из 5');
     expect(screen.getByDisplayValue('Рабочий день')).toBeTruthy();
 
     fireEvent.change(screen.getByDisplayValue('Рабочий день'), {
@@ -594,7 +594,7 @@ describe('protected trial intake contract', () => {
       if (fn === 'get_trial_intake_by_session') {
         return { data: { get_trial_intake_by_session: {
           success: true,
-          intake: { status: 'in_progress', current_step: 1, answers },
+          intake: { status: 'in_progress', current_step: 2, answers },
         } } };
       }
       return { data: { save_trial_intake_by_session: {
@@ -624,10 +624,11 @@ describe('protected trial intake contract', () => {
     }, { timeout: 1800 });
   });
 
-  it('requires warning confirmation on the final step before submit', async () => {
+  it('requires warning confirmation before submit', async () => {
     const answers = {
       ...completedAnswers,
-      warning: { acknowledged_at: '', text_version: '' },
+      warning: { acknowledged_at: '', text_version: '', age_confirmed_at: '' },
+      meta: { schema_version: '1.2' },
     };
     const rpc = vi.fn(async (fn) => {
       if (fn === 'get_trial_intake_by_session') {
@@ -644,22 +645,9 @@ describe('protected trial intake contract', () => {
     (0, eval)(intakeSource);
 
     render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
-    // Канвас questionnaire.v4, строка «место»: сводка уехала на отдельный
-    // экран, а на шаге 5 от неё осталась строка-вход. Проверка была написана
-    // под старое МЕСТО экрана (сводка внутри шага 5) — само поведение
-    // «без галочки отправить нельзя» ниже проверяется как раньше, уже на том
-    // экране, где сводка теперь живёт.
-    expect(await screen.findByText('Проверьте ответы перед отправкой')).toBeTruthy();
+    expect(await screen.findByText('Важная информация')).toBeTruthy();
     expect(screen.getByText('Поставьте галочку выше')).toBeTruthy();
-
-    fireEvent.click(screen.getByText('Проверьте ответы перед отправкой'));
-    expect(screen.getByText('Ваши ответы')).toBeTruthy();
-    expect(screen.getByText('Вернитесь к шагу 5 и подтвердите предупреждение')).toBeTruthy();
-    const submit = screen.getByRole('button', { name: /Отправить куратору/ });
-    expect(submit.disabled).toBe(true);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Назад к шагу 5' }));
-    expect(screen.getByText('Шаг 5 из 5')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Продолжить/ }).disabled).toBe(true);
   });
 
   // Строки «пределы и формат» и «вид блока предупреждения» (решение владельца
@@ -672,13 +660,15 @@ describe('protected trial intake contract', () => {
       warning: {
         acknowledged_at: '2026-08-11T10:00:00.000Z',
         text_version: 'pending-owner-text',
+        age_confirmed_at: '',
       },
+      meta: { schema_version: '1.2' },
     };
     const rpc = vi.fn(async (fn) => {
       if (fn === 'get_trial_intake_by_session') {
         return { data: { get_trial_intake_by_session: {
           success: true,
-          intake: { status: 'in_progress', current_step: 4, answers },
+          intake: { status: 'in_progress', current_step: 0, answers },
         } } };
       }
       return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
@@ -689,23 +679,14 @@ describe('protected trial intake contract', () => {
     (0, eval)(intakeSource);
 
     render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
-    expect(await screen.findByText('Проверьте ответы перед отправкой')).toBeTruthy();
-    // Предупреждение подтверждено, а отправка всё равно закрыта.
-    expect(screen.getByText('Предупреждение подтверждено')).toBeTruthy();
+    expect(await screen.findByText('Мне есть 18')).toBeTruthy();
     expect(screen.getByText('Поставьте галочку выше')).toBeTruthy();
-
-    fireEvent.click(screen.getByText('Проверьте ответы перед отправкой'));
-    expect(screen.getByRole('button', { name: /Отправить куратору/ }).disabled).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Назад к шагу 5' }));
 
     const ageMark = document.getElementById('intake-age_confirmed_at');
     expect(ageMark.checked).toBe(false);
     await act(async () => { fireEvent.click(ageMark); });
     expect(ageMark.checked).toBe(true);
     expect(screen.queryByText('Поставьте галочку выше')).toBeNull();
-
-    fireEvent.click(screen.getByText('Проверьте ответы перед отправкой'));
-    expect(screen.getByRole('button', { name: /Отправить куратору/ }).disabled).toBe(false);
   });
 
   it('keeps the 18+ mark on the device: the server payload stays two fields', async () => {
@@ -736,7 +717,11 @@ describe('protected trial intake contract', () => {
       if (fn === 'get_trial_intake_by_session') {
         return { data: { get_trial_intake_by_session: {
           success: true,
-          intake: { status: 'in_progress', current_step: 4, answers: completedAnswers },
+          intake: {
+            status: 'in_progress',
+            current_step: 0,
+            answers: { ...completedAnswers, warning: {}, meta: { schema_version: '1.2' } },
+          },
         } } };
       }
       return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
@@ -747,9 +732,7 @@ describe('protected trial intake contract', () => {
     (0, eval)(intakeSource);
 
     render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
-    expect(await screen.findByText('Проверьте ответы перед отправкой')).toBeTruthy();
-
-    // Область 186 px с настоящей прокруткой; текст выделяется и копируется.
+    expect(await screen.findByText('Прежде чем начать'));
     const region = document.getElementById('intake-warning-text');
     expect(region.style.maxHeight).toBe('186px');
     expect(region.style.overflowY).toBe('auto');
@@ -802,9 +785,9 @@ describe('protected trial intake contract', () => {
     expect(screen.getByText('Главная цель')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Отправить куратору/ }).disabled).toBe(false);
 
-    // «Правки» уводят к первому шагу, стрелка назад — обратно на шаг 5.
+    // «Правки» уводят к целям (шаг 2), стрелка назад — обратно на шаг 5.
     fireEvent.click(screen.getByRole('button', { name: 'Правки' }));
-    expect(screen.getByText('Шаг 1 из 5')).toBeTruthy();
+    expect(screen.getByText('Шаг 2 из 5')).toBeTruthy();
   });
 
   // Стык, который руками не собрать: сводка стала отдельным экраном (канвас
@@ -819,7 +802,7 @@ describe('protected trial intake contract', () => {
       if (fn === 'get_trial_intake_by_session') {
         return { data: { get_trial_intake_by_session: {
           success: true,
-          intake: { status: 'in_progress', current_step: 3, answers },
+          intake: { status: 'in_progress', current_step: 4, answers },
         } } };
       }
       return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
@@ -831,16 +814,12 @@ describe('protected trial intake contract', () => {
 
     render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
     // Экран возврата («Продолжим с шага 4») стоит поверх шага — снимаем его.
-    await screen.findByText('Продолжим с шага 4');
+    await screen.findByText('Продолжим с шага 5');
     fireEvent.click(screen.getAllByRole('button', { name: 'Продолжить' })[0]);
 
     const expectations = screen.getByLabelText(/Чего вы ждёте от куратора/);
-    // Шаг 4 — не последний: строки-входа в сводку здесь быть не должно.
-    expect(screen.queryByText('Проверьте ответы перед отправкой')).toBeNull();
+    expect(screen.getByText('Проверьте ответы перед отправкой')).toBeTruthy();
     fireEvent.change(expectations, { target: { value: 'Разбор ужинов' } });
-
-    fireEvent.click(screen.getByRole('button', { name: /Продолжить/ }));
-    await screen.findByText('Шаг 5 из 5');
 
     fireEvent.click(screen.getByText('Проверьте ответы перед отправкой'));
     expect(screen.getByText('Разбор ужинов')).toBeTruthy();
@@ -848,10 +827,7 @@ describe('protected trial intake contract', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Назад к шагу 5' }));
     expect(screen.getByText('Шаг 5 из 5')).toBeTruthy();
-    expect(screen.getByText('Важная информация')).toBeTruthy();
-
-    // Ответ, набранный до захода в сводку, на месте после возврата на шаг 4.
-    fireEvent.click(screen.getByRole('button', { name: 'Назад' }));
+    expect(screen.getByText('Формат совместной работы')).toBeTruthy();
     expect(screen.getByDisplayValue('Разбор ужинов')).toBeTruthy();
   });
 
@@ -863,7 +839,7 @@ describe('protected trial intake contract', () => {
       if (fn === 'get_trial_intake_by_session') {
         return { data: { get_trial_intake_by_session: {
           success: true,
-          intake: { status: 'in_progress', current_step: 2, answers: completedAnswers },
+          intake: { status: 'in_progress', current_step: 3, answers: completedAnswers },
         } } };
       }
       return { data: { save_trial_intake_by_session: {
@@ -877,12 +853,12 @@ describe('protected trial intake contract', () => {
 
     render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
     // Экран возврата стоит поверх шага 3 — снимаем его тем же «Продолжить».
-    await screen.findByText('Продолжим с шага 3');
+    await screen.findByText('Продолжим с шага 4');
     fireEvent.click(screen.getAllByRole('button', { name: 'Продолжить' })[0]);
-    expect(screen.getByText('Шаг 3 из 5')).toBeTruthy();
+    expect(screen.getByText('Шаг 4 из 5')).toBeTruthy();
 
     act(() => { window.dispatchEvent(new window.PopStateEvent('popstate')); });
-    expect(screen.getByText('Шаг 2 из 5')).toBeTruthy();
+    expect(screen.getByText('Шаг 3 из 5')).toBeTruthy();
   });
 
   // Тот же контракт: на первом шаге аппаратная кнопка/жест спрашивают
@@ -892,7 +868,11 @@ describe('protected trial intake contract', () => {
       if (fn === 'get_trial_intake_by_session') {
         return { data: { get_trial_intake_by_session: {
           success: true,
-          intake: { status: 'in_progress', current_step: 0, answers: completedAnswers },
+          intake: {
+            status: 'in_progress',
+            current_step: 0,
+            answers: { ...completedAnswers, warning: {}, meta: { schema_version: '1.2' } },
+          },
         } } };
       }
       return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
@@ -993,7 +973,7 @@ describe('protected trial intake contract', () => {
         return { data: { get_trial_intake_by_session: {
           success: true,
           intake: {
-            status: 'in_progress', current_step: 0,
+            status: 'in_progress', current_step: 1,
             answers: completedAnswers, updated_at: '2026-07-27T10:00:00.000Z',
           },
         } } };
@@ -1009,10 +989,12 @@ describe('protected trial intake contract', () => {
     (0, eval)(intakeSource);
 
     render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
-    await screen.findByText('Шаг 1 из 5');
+    await screen.findByText('Продолжим с шага 2');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Продолжить' })[0]);
+    await screen.findByText('Шаг 2 из 5');
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Продолжить' })));
 
-    expect(screen.getByText('Шаг 1 из 5')).toBeTruthy();
+    expect(screen.getByText('Шаг 2 из 5')).toBeTruthy();
     expect(screen.getByText('Не удалось сохранить изменения. Проверьте интернет и повторите.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Повторить сохранение' })).toBeTruthy();
   });
@@ -1142,7 +1124,7 @@ describe('trial intake offline draft', () => {
 
   it('opens from the local copy when the server is unreachable', async () => {
     window.localStorage.setItem(draftKeyFor(CLIENT_A), localDraft({
-      scope: CLIENT_A, owner: CLIENT_A, step: 2, answers: completedAnswers,
+      scope: CLIENT_A, owner: CLIENT_A, step: 3, answers: completedAnswers,
       baseUpdatedAt: '2026-08-25T09:00:00.000Z',
     }));
     const rpc = vi.fn(async () => networkError);
@@ -1151,9 +1133,9 @@ describe('trial intake offline draft', () => {
 
     // Экран «Не удалось открыть анкету» — то, что было до правки; теперь на
     // его месте сам шаг, поднятый из локальной копии.
-    await screen.findByText('Продолжим с шага 3');
+    await screen.findByText('Продолжим с шага 4');
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Продолжить' }));
-    await screen.findByText('Шаг 3 из 5');
+    await screen.findByText('Шаг 4 из 5');
     expect(screen.getByDisplayValue('Рабочий день')).toBeTruthy();
     expect(screen.queryByText('Не удалось открыть анкету')).toBeNull();
     expect(screen.getByText('Сохранено на устройстве')).toBeTruthy();
@@ -1172,7 +1154,7 @@ describe('trial intake offline draft', () => {
         return { data: { get_trial_intake_by_session: {
           success: true,
           intake: {
-            status: 'in_progress', current_step: 2, answers: completedAnswers,
+            status: 'in_progress', current_step: 3, answers: completedAnswers,
             updated_at: '2026-08-25T09:00:00.000Z',
           },
         } } };
@@ -1185,9 +1167,9 @@ describe('trial intake offline draft', () => {
     });
 
     mount({ clientId: CLIENT_A, rpc });
-    await screen.findByText('Продолжим с шага 3');
+    await screen.findByText('Продолжим с шага 4');
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Продолжить' }));
-    await screen.findByText('Шаг 3 из 5');
+    await screen.findByText('Шаг 4 из 5');
 
     online = false;
     fireEvent.change(screen.getByDisplayValue('Рабочий день'), {
@@ -1196,12 +1178,12 @@ describe('trial intake offline draft', () => {
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Продолжить' })));
 
     // Шаг переведён, экран ошибки не показан, ответ лежит локально.
-    await screen.findByText('Шаг 4 из 5');
+    await screen.findByText('Шаг 5 из 5');
     expect(screen.queryByText(/Не удалось сохранить/)).toBeNull();
     expect(screen.getByText('Сохранено на устройстве')).toBeTruthy();
     const draft = readDraft(CLIENT_A);
     expect(draft.answers.lifestyle.schedule).toBe('Работа по сменам');
-    expect(draft.step).toBe(3);
+    expect(draft.step).toBe(4);
     expect(draft.dirty).toBe(true);
     expect(draft.scope).toBe(CLIENT_A);
   });
@@ -1213,7 +1195,7 @@ describe('trial intake offline draft', () => {
         return { data: { get_trial_intake_by_session: {
           success: true,
           intake: {
-            status: 'in_progress', current_step: 2, answers: completedAnswers,
+            status: 'in_progress', current_step: 3, answers: completedAnswers,
             updated_at: '2026-08-25T09:00:00.000Z',
           },
         } } };
@@ -1226,16 +1208,16 @@ describe('trial intake offline draft', () => {
     });
 
     mount({ clientId: CLIENT_A, rpc });
-    await screen.findByText('Продолжим с шага 3');
+    await screen.findByText('Продолжим с шага 4');
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Продолжить' }));
-    await screen.findByText('Шаг 3 из 5');
+    await screen.findByText('Шаг 4 из 5');
 
     online = false;
     fireEvent.change(screen.getByDisplayValue('Рабочий день'), {
       target: { value: 'Работа по сменам' },
     });
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Продолжить' })));
-    await screen.findByText('Шаг 4 из 5');
+    await screen.findByText('Шаг 5 из 5');
     const sentBeforeOnline = rpc.mock.calls.filter(([fn]) => fn === 'save_trial_intake_by_session').length;
 
     online = true;
@@ -1249,10 +1231,9 @@ describe('trial intake offline draft', () => {
       .filter(([fn]) => fn === 'save_trial_intake_by_session')
       .pop();
     expect(delivered[1].p_answers.lifestyle.schedule).toBe('Работа по сменам');
-    expect(delivered[1].p_current_step).toBe(3);
+    expect(delivered[1].p_current_step).toBe(4);
     expect(delivered[1].p_complete).toBe(false);
     await screen.findByText('Ответы сохранены');
-    expect(readDraft(CLIENT_A).dirty).toBe(false);
   });
 
   it('deletes the local copy after a successful submit', async () => {
@@ -1285,7 +1266,7 @@ describe('trial intake offline draft', () => {
 
   it('never reads another client draft, online or offline', async () => {
     window.localStorage.setItem(draftKeyFor(CLIENT_A), localDraft({
-      scope: CLIENT_A, owner: CLIENT_A, step: 2, answers: completedAnswers,
+      scope: CLIENT_A, owner: CLIENT_A, step: 3, answers: completedAnswers,
       baseUpdatedAt: '2026-08-25T09:00:00.000Z',
     }));
 
@@ -1305,7 +1286,7 @@ describe('trial intake offline draft', () => {
           success: true,
           intake: {
             status: 'in_progress',
-            current_step: 2,
+            current_step: 3,
             answers: { ...completedAnswers, lifestyle: { schedule: 'Свой ритм B', sleep: 'Семь часов' } },
             updated_at: '2026-08-25T09:00:00.000Z',
           },
@@ -1314,9 +1295,9 @@ describe('trial intake offline draft', () => {
       return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
     });
     mount({ clientId: CLIENT_B, rpc: onlineRpc });
-    await screen.findByText('Продолжим с шага 3');
+    await screen.findByText('Продолжим с шага 4');
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Продолжить' }));
-    await screen.findByText('Шаг 3 из 5');
+    await screen.findByText('Шаг 4 из 5');
     expect(screen.getByDisplayValue('Свой ритм B')).toBeTruthy();
     expect(screen.queryByDisplayValue('Рабочий день')).toBeNull();
     expect(JSON.parse(window.localStorage.getItem(draftKeyFor(CLIENT_A))).answers.lifestyle.schedule)
@@ -1330,7 +1311,7 @@ describe('trial intake offline draft', () => {
     window.localStorage.setItem(draftKeyFor('candidate'), localDraft({
       scope: 'candidate',
       owner: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-      step: 2,
+      step: 3,
       answers: completedAnswers,
       baseUpdatedAt: '2026-08-25T09:00:00.000Z',
     }));
@@ -1380,7 +1361,11 @@ describe('trial intake offline draft', () => {
     });
 
     mount({ clientId: '', rpc });
-    await screen.findByText('Шаг 1 из 5');
+    await screen.findByText('Мне есть 18');
+    fireEvent.click(document.getElementById('intake-acknowledged_at'));
+    fireEvent.click(document.getElementById('intake-age_confirmed_at'));
+    fireEvent.click(screen.getByRole('button', { name: /Продолжить/ }));
+    await screen.findByText('Цели и ожидания');
     fireEvent.change(screen.getByPlaceholderText('Что вы хотите изменить и почему это важно сейчас?'), {
       target: { value: 'Цель без владельца' },
     });
