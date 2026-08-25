@@ -48,6 +48,44 @@
     return `${h}:${String(m).padStart(2, '0')}`;
   }
 
+  function ruPlural(value, one, few, many) {
+    const abs = Math.abs(Math.round(Number(value) || 0));
+    const mod100 = abs % 100;
+    const mod10 = abs % 10;
+    if (mod100 > 10 && mod100 < 20) return many;
+    if (mod10 === 1) return one;
+    if (mod10 >= 2 && mod10 <= 4) return few;
+    return many;
+  }
+
+  /**
+   * «3 часа» · «5 часов 50 минут» — длительность словами.
+   * Строка «волна · озвучивание состояний»: тому, кто не видит экрана, разница
+   * состояний достаётся только словами, а «5:50» экранный диктор прочитает как
+   * время суток.
+   */
+  function spokenDuration(totalMin) {
+    const total = Math.max(0, Math.round(Number(totalMin) || 0));
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    const parts = [];
+    if (h > 0) parts.push(`${h} ${ruPlural(h, 'час', 'часа', 'часов')}`);
+    if (m > 0 || !parts.length) parts.push(`${m} ${ruPlural(m, 'минута', 'минуты', 'минут')}`);
+    return parts.join(' ');
+  }
+
+  /** Часы покоя от подъёма — одна формула для расчёта и для пустого дня. */
+  function restHoursFromWake(nowMinutes) {
+    const nowMin = Number.isFinite(Number(nowMinutes))
+      ? Number(nowMinutes)
+      : (new Date().getHours() * 60 + new Date().getMinutes());
+    return Math.max(0, Math.round((nowMin - DAY_START) / 60));
+  }
+
+  function restFromWakeLabel(nowMinutes) {
+    return `покой ${restHoursFromWake(nowMinutes)} ч от подъёма`;
+  }
+
   function mealCountLabel(n) {
     const count = Math.max(0, Math.round(Number(n) || 0));
     // Пустой день говорит словами, а не нулём (строка «волна · день без приёмов»).
@@ -242,9 +280,13 @@
       const isCurrent = group.waves.some((wave) => wave.isActive);
 
       const figureAmps = amps.slice(index, index + count);
+      const d = figurePath(x0, slot, group.links, figureAmps);
       figures.push({
         id: group.waves[0]?.id || `fig_${groupIndex}`,
-        d: figurePath(x0, slot, group.links, figureAmps),
+        d,
+        // Тот же силуэт без замыкания: обводка не идёт по низу. Нужен ночной
+        // оценке — там фигуры обведены чернилами, а базовой линии нет.
+        openD: d.replace(/\s*Z$/, ''),
         // Незакрытая волна заливается плотнее закрытых.
         opacity: isCurrent ? 0.8 : 0.45,
         isCurrent
@@ -375,7 +417,15 @@
     return history.slice(-2);
   }
 
-  function buildV4FromWave(wave, nowMinutes) {
+  // Ночная оценка (строка «волна · ночная оценка»): сегодня приёмов нет, и
+  // плитка продолжает вчерашний расчёт. Слово одно на весь продукт — его же
+  // печатает вкладка «Питание» (heys_day_nutrition_v1.js, строка окна приёмов),
+  // второй формулировки у продукта быть не должно.
+  const OVERNIGHT_NOTE = 'оценка по вчерашнему дню';
+  const OVERNIGHT_SOURCE = 'от вчерашнего';
+
+  function buildV4FromWave(wave, nowMinutes, options) {
+    const isOvernight = options?.overnight === true;
     const history = Array.isArray(wave?.waveHistory) ? wave.waveHistory : [];
     const overlaps = Array.isArray(wave?.overlaps) ? wave.overlaps : [];
     const nowMin = Number.isFinite(Number(nowMinutes))
@@ -438,12 +488,41 @@
     const underWaveLabel = currentWave
       ? `под волной ${formatHmShort(currentWave.endMin)}`
       : (hasMeals ? `покой ${formatDurationHm(calmWindowMinutes)}` : null);
-    const emptyStateLabel = hasMeals
+    const emptyStateLabel = hasMeals ? null : restFromWakeLabel(nowMin);
+
+    // Ночная оценка считается по вчерашним приёмам со сдвигом на сутки, поэтому
+    // «покой» тут — не самый длинный промежуток вчерашнего дня, а то, сколько
+    // человек уже вне волны к этой минуте. Источник назван прямо в строке.
+    const lastEndMin = hasMeals
+      ? Math.max(...history.map((w) => Number(w.endMin) || 0))
+      : null;
+    const overnightRestMinutes = lastEndMin === null
+      ? 0
+      : Math.max(0, Math.round(nowMin - lastEndMin));
+    const overnightStateLabel = !isOvernight || !hasMeals
       ? null
-      : `покой ${Math.max(0, Math.round((nowMin - DAY_START) / 60))} ч от подъёма`;
+      : (currentWave
+        // Вчерашняя волна ещё идёт — называем её конец, а не покой.
+        ? `под волной ${formatHmShort(currentWave.endMin)} · ${OVERNIGHT_SOURCE}`
+        : `покой ${formatDurationHm(overnightRestMinutes)} · ${OVERNIGHT_SOURCE}`);
+    // Фраза собирается из тех же кусков, что видны в кадре: «5:50» диктор
+    // прочитал бы как время суток, поэтому длительность разворачивается словами.
+    const overnightSpoken = !overnightStateLabel
+      ? null
+      : `Инсулиновая волна, ${OVERNIGHT_NOTE}, ` + (currentWave
+        ? `под волной до ${formatHmShort(currentWave.endMin)} от вчерашнего приёма`
+        : `покой ${spokenDuration(overnightRestMinutes)} от вчерашнего приёма`);
 
     return {
       hasMeals,
+      // Счётчика приёмов в ночной оценке нет вовсе — он про сегодня; тон роли
+      // тоже снят (строки «волна · ночная оценка», «волна · тон в ночной
+      // оценке»). Оба правила исполняет UI, здесь только признак и слова.
+      isOvernight,
+      overnightNote: isOvernight ? OVERNIGHT_NOTE : null,
+      overnightStateLabel,
+      overnightSpoken,
+      overnightRestMinutes,
       scheme,
       // Кадр «Волна · стык и нахлёст»: справа стоит счётчик стыков, когда они
       // есть; иначе там строка состояния.
@@ -479,6 +558,8 @@
   }
 
   HEYS.Widgets.InsulinWaveV4 = {
+    OVERNIGHT_NOTE,
+    OVERNIGHT_SOURCE,
     DAY_START,
     DAY_END,
     SVG_W,
@@ -494,6 +575,9 @@
     minToX,
     formatDurationClock,
     formatDurationHm,
+    spokenDuration,
+    restHoursFromWake,
+    restFromWakeLabel,
     mealCountLabel,
     jointCountLabel,
     overlapCountLabel

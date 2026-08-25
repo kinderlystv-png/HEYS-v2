@@ -1859,8 +1859,12 @@
         const meals = dayData.meals || [];
         const mealsWithTime = meals.filter(m => m.time);
 
-        // Если сегодня нет приёмов пищи — продолжаем вчерашнюю каноническую оценку.
-        if (!isPastDay && mealsWithTime.length === 0) {
+        // Если сегодня нет приёмов пищи — продолжаем вчерашнюю каноническую
+        // оценку. Только на сегодняшней дате: на прошлом дне плитка показывает
+        // приёмы самого этого дня, цепочка на два дня назад не строится
+        // (строка «волна · ночная оценка на прошлом дне»). Будущая дата — тоже
+        // не сегодня, поэтому сравниваем на равенство, а не «не прошлое».
+        if (selectedDate === todayStr && mealsWithTime.length === 0) {
           return this._getOvernightLipolysisData(todayStr);
         }
         if (mealsWithTime.length === 0) return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
@@ -1950,13 +1954,16 @@
         });
         return canonicalResult ? (() => {
           const nowMin = 1440 + currentDateTime.getHours() * 60 + currentDateTime.getMinutes();
-          const v4 = HEYS.Widgets.InsulinWaveV4?.buildV4FromWave?.(canonicalResult, nowMin) || null;
+          const v4 = HEYS.Widgets.InsulinWaveV4?.buildV4FromWave?.(canonicalResult, nowMin, { overnight: true }) || null;
           return {
             ...canonicalResult,
             ...(v4 || {}),
             v4,
             hasData: true,
             isOvernightEstimate: true,
+            // Дата источника — как во втором расчёте волны на «Питании»
+            // (heys_day_insulin_wave_data_v1.js): признак и его день ходят парой.
+            sourceDate: yesterdayStr,
             isLipolysis: canonicalResult.status === 'complete',
             color: canonicalResult.status === 'complete' ? '#16a34a' : '#c67139'
           };

@@ -1,6 +1,19 @@
-// home-widgets.v4.dc.html, строка контракта «зоны углов»:
-// «48×48 в обоих нижних углах сетки свободны от чисел и полос:
-//  слева кнопка настройки, справа «+»».
+// home-widgets.v4.dc.html, строка контракта «зоны углов» (двенадцатая сборка):
+// «нижние углы сетки держатся свободными 52×52 px — по фактическому следу
+//  кнопок: настройка слева, «+» справа. В зоне запрещена любая графика, не
+//  только числа и полосы: спарклайн, кольцо, полоса и дельта одинаково уходят
+//  под палец».
+//
+// Что изменилось против прежней редакции и почему это переписанный тест:
+//   • зона выросла с 48 до 52 — «назвать 48 было ошибкой замера: кнопка «+»
+//     занимает 50, и два пикселя вылезали»;
+//   • запрет расширен с «чисел и полос» на любую графику — «перечисление
+//     всегда неполно: спарклайн в правом углу дефолтной раскладки формально
+//     не был ни числом, ни полосой и проходил запрет»;
+//   • углов два: правый раньше не защищался вовсе.
+// Отступление названо вслух: соседняя строка «что под ней» всё ещё говорит
+// «48×48 … свободна от чисел и полос» и знает только левый угол. Верна
+// «зоны углов» — она переписана позже и сама объясняет ошибку замера.
 //
 // Строку нельзя закрыть чтением разметки: она про то, что оказывается ПОД
 // плавающими кнопками, а это стык трёх вещей — геометрии сетки на 375 px,
@@ -20,10 +33,10 @@
 //      на этой ширине не действуют и остаются проигнорированными — как в
 //      браузере.
 //
-// Итог замера — в таблице DEVIATIONS: поимённый список того, что сегодня стоит
-// в зоне угла. Список закрытый: новая плитка в углу, новая полоса или спарклайн
-// в нём — красный тест. Починка тоже красный: строку из списка нужно снять
-// осознанно, а не молча.
+// Главное, что держит этот тест после починки: мера не должна быть списком
+// узлов. Прежняя мера двигала три класса значений и на раскладке по умолчанию
+// не срабатывала ни разу. Теперь угол резервирует поле самой плитки — и тест
+// проверяет именно поле, то есть меру, которая не зависит от того, что внутри.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -43,6 +56,8 @@ const WIDGETS_CSS = fs.readFileSync(
 
 // Рамка канваса: 375 px — узкий край диапазона (строка «рамка канваса»).
 const VIEWPORT = 375;
+// Зона угла из строки контракта.
+const ZONE = 52;
 
 const SIZES = {
   '1x1': { cols: 1, rows: 1 },
@@ -96,20 +111,24 @@ beforeAll(() => {
 
   // Фикстура — минимальный скелет Главной: `body:has(.widgets-tab)` включает
   // v4-слой, из-за которого поля сетки и плитки отличаются от базовых.
+  // Классы углов стоят так, как их вешает WidgetsTab на раскладке по
+  // умолчанию: слева «Вес» 2×1, справа «Динамика веса» 2×1.
   document.body.innerHTML = `
     <div class="widgets-tab">
       <div class="widgets-grid-container">
         <div class="widgets-grid">
           <div class="widget widget--2x1 widget--weight widget--corner-bl">
             <div class="widget-weight widget-weight--2x1 widget-weight--number-week">
-              <span class="widget-v4-kicker">Вес</span>
-              <div class="widget-weight__number-week-row">
+              <div class="widget-weight__number-week-head">
+                <span class="widget-v4-kicker">Вес</span>
                 <span class="widget-weight__number-week-delta">−0,9 за неделю</span>
+              </div>
+              <div class="widget-weight__number-week-row">
                 <span class="widget-weight__number-week-val">91,1</span>
               </div>
             </div>
           </div>
-          <div class="widget widget--2x1 widget--crashRisk">
+          <div class="widget widget--2x1 widget--crashRisk widget--corner-br">
             <div class="widget-wd widget-v4-stack">
               <div class="widget-wd__head">
                 <span class="widget-v4-kicker">За месяц</span>
@@ -175,60 +194,50 @@ function placed() {
   }));
 }
 
-// ─── поимённый список того, что стоит в зоне угла сегодня ────────────────────
-//
-// Ключ — «тип виджета / вид». `carrier` — что именно попало в 48×48.
-// `overlapPx` — сколько пикселей носителя лежит внутри зоны по горизонтали.
-const DEVIATIONS = {
+// Кто стоит в углах раскладки по умолчанию и что именно там рисуется. Список
+// закрытый: новая плитка в углу — красный тест. Он больше не список
+// отступлений, а список того, что мера обязана накрыть.
+const CORNERS = {
   'bottom-left': {
     type: 'weight',
     variant: 'number_week',
-    carrier: 'число «−0,9 за неделю» 11 px — левая половина строки значения',
-    node: '.widget-weight__number-week-delta',
-    // Дельта начинается у левого края содержимого плитки, то есть на
-    // расстоянии поля плитки от левого края сетки. Всё, что дальше и до 48, —
-    // внутри зоны.
-    overlapPx: 37,
+    tile: '.widget--corner-bl',
+    graphics: ['.widget-weight__number-week-delta', '.widget-weight__number-week-val'],
   },
   'bottom-right': {
     type: 'crashRisk',
     variant: 'curve',
-    carrier: 'кривая «За месяц» — спарклайн 58×24, прижат к правому краю',
-    node: '.widget-wd__spark',
-    overlapPx: 37,
+    tile: '.widget--corner-br',
+    graphics: ['.widget-wd__delta', '.widget-wd__spark'],
   },
 };
 
 describe('home-widgets v4 · «зоны углов» — что замерено на 375 px', () => {
-  it('контракт всё ещё требует 48×48 в обоих нижних углах', () => {
+  it('контракт: 52×52 в обоих нижних углах и запрет любой графики', () => {
     const line = contractLine('зоны углов');
-    expect(line).toContain('48×48');
-    expect(line).toContain('в обоих нижних углах сетки');
-    expect(line).toContain('свободны от чисел и полос');
+    expect(line).toContain('52×52');
+    expect(line).toContain('нижние углы сетки');
+    expect(line).toContain('любая графика');
+    expect(line).toContain('спарклайн, кольцо, полоса и дельта');
   });
 
   it('каскад на 375 px: 4 колонки, зазор 8, ряд 64, поля сетки 16, плитка 11', () => {
     // Числа арифметики ниже держатся на этих значениях — если каскад их
     // перебьёт (медиа-блок, новый v4-слой), таблица форматов станет ложью.
-    // Число колонок читается по подставленному значению в grid-template-columns:
-    // саму переменную happy-dom на унаследовавшем её узле не отдаёт, а
-    // подстановку var() делает — она и есть то, что увидит браузер.
     expect(read('.widgets-grid', 'grid-template-columns')).toBe('repeat(4, minmax(0, 1fr))');
     expect(read('.widgets-grid', 'gap')).toBe('8px');
     expect(read('.widgets-grid', 'grid-auto-rows')).toBe('64px');
     expect(read('.widgets-grid', 'padding')).toBe('16px');
     expect(read('.widgets-grid', 'max-width')).toBe('480px');
-    expect(read('.widget--weight', 'padding')).toBe('11px');
     expect(read('.widget--1x1', 'padding')).toBe('11px');
   });
 
-  it('колонка 79,75 и таблица форматов — доля зоны 48×48 в каждом', () => {
+  it('колонка 79,75 и таблица форматов — доля зоны 52×52 в каждом', () => {
     const gridWidth = Math.min(VIEWPORT, px(read('.widgets-grid', 'max-width')));
     const pad = px(read('.widgets-grid', 'padding'));
     const gap = px(read('.widgets-grid', 'gap'));
     const row = px(read('.widgets-grid', 'grid-auto-rows'));
     const cols = Number(/repeat\((\d+),/.exec(read('.widgets-grid', 'grid-template-columns'))[1]);
-    const zone = 48;
 
     const column = (gridWidth - 2 * pad - (cols - 1) * gap) / cols;
     expect(column).toBeCloseTo(79.75, 5);
@@ -243,11 +252,11 @@ describe('home-widgets v4 · «зоны углов» — что замерено
     expect(tile('2x2')).toEqual({ w: 167.5, h: 136 });
     expect(tile('3x2')).toEqual({ w: 255.25, h: 136 });
 
-    // Сколько от плитки забирает угловая зона и сколько остаётся содержимому.
+    // Сколько от плитки забирает угловая зона.
     const share = (size) => {
       const t = tile(size);
-      const w = Math.min(zone, t.w);
-      const h = Math.min(zone, t.h);
+      const w = Math.min(ZONE, t.w);
+      const h = Math.min(ZONE, t.h);
       return {
         widthPct: Number(((w / t.w) * 100).toFixed(1)),
         heightPct: Number(((h / t.h) * 100).toFixed(1)),
@@ -255,22 +264,17 @@ describe('home-widgets v4 · «зоны углов» — что замерено
       };
     };
 
-    expect(share('1x1')).toEqual({ widthPct: 60.2, heightPct: 75, areaPct: 45.1 });
-    expect(share('2x1')).toEqual({ widthPct: 28.7, heightPct: 75, areaPct: 21.5 });
-    expect(share('2x2')).toEqual({ widthPct: 28.7, heightPct: 35.3, areaPct: 10.1 });
+    expect(share('1x1')).toEqual({ widthPct: 65.2, heightPct: 81.3, areaPct: 53 });
+    expect(share('2x1')).toEqual({ widthPct: 31, heightPct: 81.3, areaPct: 25.2 });
+    expect(share('2x2')).toEqual({ widthPct: 31, heightPct: 38.2, areaPct: 11.9 });
 
-    // По содержимому 1×1 (поля плитки 11) зона съедает больше половины —
-    // то самое, из-за чего в коде отступ на 48 сделан только для чисел.
-    const tilePad = px(read('.widget--1x1', 'padding'));
-    const content = { w: tile('1x1').w - 2 * tilePad, h: tile('1x1').h - 2 * tilePad };
-    const inZone = { w: zone - tilePad, h: Math.min(content.h, zone - tilePad) };
-    expect(inZone.w).toBe(37);
-    expect(
-      Number((((inZone.w * inZone.h) / (content.w * content.h)) * 100).toFixed(1)),
-    ).toBeGreaterThan(50);
+    // Цена меры названа: в 1×1 зона съедает больше половины плитки. Это
+    // открытый вопрос дизайна, а не повод не резервировать угол — в
+    // раскладке по умолчанию в углах стоят 2×1.
+    expect(share('1x1').areaPct).toBeGreaterThan(50);
   });
 
-  it('след кнопок на сетке: слева 40 (44 с целью касания), справа 52', () => {
+  it('след кнопок на сетке укладывается в 52: слева 40, справа 50', () => {
     const gridPad = px(read('.widgets-grid', 'padding'));
     const gridLeft = gridPad;
     const gridRight = VIEWPORT - gridPad;
@@ -297,10 +301,11 @@ describe('home-widgets v4 · «зоны углов» — что замерено
     expect(leftTouchFootprint).toBe(40);
     expect(rightFootprint).toBe(50);
 
-    // Правая кнопка шире зарезервированных 48 — «+» выходит за зону, которую
-    // контракт просит держать пустой; левая укладывается.
+    // Ровно то, из-за чего контракт переписал 48 на 52: правая кнопка шире 48,
+    // но в 52 укладывается — как и левая с целью касания.
     expect(rightFootprint).toBeGreaterThan(48);
-    expect(leftTouchFootprint).toBeLessThan(48);
+    expect(rightFootprint).toBeLessThanOrEqual(ZONE);
+    expect(leftTouchFootprint).toBeLessThanOrEqual(ZONE);
   });
 });
 
@@ -316,78 +321,75 @@ describe('home-widgets v4 · кто стоит в углах раскладки 
     const right = layout.find((w) => w.col + w.cols === 4 && w.row + w.rows - 1 === bottomRow);
 
     expect({ type: left.type, variant: left.variant, size: left.size }).toEqual({
-      type: DEVIATIONS['bottom-left'].type,
-      variant: DEVIATIONS['bottom-left'].variant,
+      type: CORNERS['bottom-left'].type,
+      variant: CORNERS['bottom-left'].variant,
       size: '2x1',
     });
     expect({ type: right.type, variant: right.variant, size: right.size }).toEqual({
-      type: DEVIATIONS['bottom-right'].type,
-      variant: DEVIATIONS['bottom-right'].variant,
+      type: CORNERS['bottom-right'].type,
+      variant: CORNERS['bottom-right'].variant,
       size: '2x1',
     });
   });
 
-  it('слева в зоне лежит число: дельта прижата к левому краю содержимого', () => {
-    // Строка вида «Число и неделя»: число уходит вправо (margin-left: auto),
-    // но дельта остаётся слева — а она тоже число.
-    expect(
-      read('.widget-weight--number-week .widget-weight__number-week-row', 'justify-content'),
-    ).toBe('space-between');
-    expect(read('.widget-weight__number-week-val', 'margin-left')).toBe('auto');
-    expect(read('.widget-weight__number-week-delta', 'font-size')).toBe('11px');
-    expect(read('.widget-weight__number-week-delta', 'margin-left')).not.toBe('auto');
-
-    const tilePad = px(read('.widget--weight', 'padding'));
-    expect(48 - tilePad).toBe(DEVIATIONS['bottom-left'].overlapPx);
-  });
-
-  it('справа в зоне лежит спарклайн: кривая 58 px прижата к правому краю', () => {
-    expect(read('.widget-wd__curve-row', 'justify-content')).toBe('space-between');
-    expect(read('.widget-wd__spark', 'flex')).toBe('0 0 auto');
-    const spark = document.querySelector('.widget-wd__spark');
-    expect(Number(spark.getAttribute('width'))).toBe(58);
-
-    const tilePad = px(read('.widget--crashRisk', 'padding'));
-    const overlap = 48 - tilePad;
-    expect(overlap).toBe(DEVIATIONS['bottom-right'].overlapPx);
-    // Кривая шире перекрытия — часть её действительно уходит под «+».
-    expect(Number(spark.getAttribute('width'))).toBeGreaterThan(overlap);
+  it('в углах есть что накрывать: слева число, справа кривая', () => {
+    // Список закрытый — новая графика в углу поднимет этот тест.
+    expect(Object.keys(CORNERS)).toEqual(['bottom-left', 'bottom-right']);
+    for (const corner of Object.values(CORNERS)) {
+      for (const node of corner.graphics) {
+        expect(document.querySelector(node), `нет узла ${node}`).not.toBeNull();
+      }
+    }
+    // Спарклайн шире зоны — без меры он ушёл бы под палец целиком.
+    expect(Number(document.querySelector('.widget-wd__spark').getAttribute('width'))).toBe(58);
   });
 });
 
-describe('home-widgets v4 · что продукт делает с углами сегодня', () => {
-  it('левый угол: класс есть и вешается на плитку столбца 0 нижнего ряда', () => {
+describe('home-widgets v4 · мера углов', () => {
+  it('оба угла размечены кодом и вешаются на плитки нижнего ряда', () => {
     expect(UI_SRC).toContain('widget--corner-bl');
-    expect(UI_SRC).toContain('cornerBottomLeftId');
-    expect(WIDGETS_CSS).toMatch(/\.widget--corner-bl [^{]*\{[^}]*align-self: flex-end/);
+    expect(UI_SRC).toContain('widget--corner-br');
+    expect(UI_SRC).toContain('cornerWidgetIds');
+    expect(UI_SRC).toContain('isCornerBottomRight');
+    // Правый угол — плитка, чей правый край упирается в последнюю колонку.
+    expect(UI_SRC).toContain("=== WIDGETS_GRID_COLS && touchesBottom(w)");
   });
 
-  it('правого угла у продукта нет вовсе — «+» шире зоны и ничем не обойдён', () => {
-    // Если появится corner-br, эта строка покраснеет: значит правый угол
-    // начали разводить, и таблицу отступлений надо пересобрать.
-    expect(WIDGETS_CSS).not.toMatch(/corner-br/);
-    expect(UI_SRC).not.toMatch(/corner-br|cornerBottomRight/);
+  it('мера — поле плитки, а не список узлов: 52 px с нужной стороны', () => {
+    // Ключевое отличие от прежней меры: она двигала три класса значений и на
+    // раскладке по умолчанию не срабатывала ни разу. Поле работает независимо
+    // от того, что внутри плитки, — и накрывает спарклайн так же, как число.
+    expect(read('.widget--corner-bl', 'padding-left')).toBe(`${ZONE}px`);
+    expect(read('.widget--corner-br', 'padding-right')).toBe(`${ZONE}px`);
+    // Со свободной стороны поле плитки остаётся своим — зона только в углу.
+    expect(read('.widget--corner-bl', 'padding-right')).toBe('11px');
+    expect(read('.widget--corner-br', 'padding-left')).toBe('11px');
+    // Поле подменяет 11 px, а не добавляется к ним: зона считается от края
+    // сетки, и 52 — это расстояние до содержимого, а не сверх поля плитки.
+    expect(px(read('.widget--corner-bl', 'padding-left'))).toBe(ZONE);
   });
 
-  it('отступ левого угла не достаёт до плитки, которая туда попадает', () => {
-    // Правило двигает только .widget-v4-mini__value / -row__value / -hero-num.
-    // «Вес» в виде «Число и неделя» рисуется своими узлами и под правило не
-    // попадает — то есть мера есть, а на дефолтной раскладке не работает.
-    const rule = /\.widget--corner-bl ([^{]+)\{/.exec(WIDGETS_CSS);
-    expect(rule).not.toBeNull();
-    const covered = WIDGETS_CSS.slice(
-      WIDGETS_CSS.indexOf('.widget--corner-bl'),
-      WIDGETS_CSS.indexOf('{', WIDGETS_CSS.indexOf('.widget--corner-bl')),
-    );
-    expect(covered).toContain('.widget-v4-mini__value');
-    expect(covered).not.toContain('number-week');
+  it('вся графика угловой плитки начинается за зоной', () => {
+    const tilePad = { left: 11, right: 11 };
+    const zoneLeft = px(read('.widget--corner-bl', 'padding-left'));
+    const zoneRight = px(read('.widget--corner-br', 'padding-right'));
+
+    // Содержимое стартует ровно на границе зоны — ни одна графика левее
+    // (правее) начаться не может, потому что это край content-box плитки.
+    expect(zoneLeft).toBeGreaterThanOrEqual(ZONE);
+    expect(zoneRight).toBeGreaterThanOrEqual(ZONE);
+    // Прежняя мера давала 11 px поля и 37 px графики внутри зоны — вот та
+    // разница, которую закрыла починка.
+    expect(zoneLeft - tilePad.left).toBe(41);
+    expect(zoneRight - tilePad.right).toBe(41);
   });
 
-  it('таблица отступлений закрыта: в углах ровно два известных носителя', () => {
-    expect(Object.keys(DEVIATIONS)).toEqual(['bottom-left', 'bottom-right']);
-    for (const dev of Object.values(DEVIATIONS)) {
-      expect(document.querySelector(dev.node)).not.toBeNull();
-      expect(dev.overlapPx).toBe(37);
-    }
+  it('содержимому 2×1 после резерва остаётся 104,5 px — плитка живёт', () => {
+    const gridWidth = Math.min(VIEWPORT, px(read('.widgets-grid', 'max-width')));
+    const pad = px(read('.widgets-grid', 'padding'));
+    const gap = px(read('.widgets-grid', 'gap'));
+    const column = (gridWidth - 2 * pad - 3 * gap) / 4;
+    const tile2x1 = 2 * column + gap;
+    expect(tile2x1 - ZONE - 11).toBe(104.5);
   });
 });

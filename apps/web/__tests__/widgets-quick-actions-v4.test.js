@@ -348,3 +348,59 @@ describe('общая шкала темпа: вода на Главной', () =>
     expect(pace(3600, 2700, ctx('15:00'))).toBe('bad');
   });
 });
+
+/**
+ * Строка «стопка на прошлом дне» (решение владельца 24 августа): быстрые
+ * действия пишут в тот день, который открыт капсулой; кнопка на прошлом дне
+ * не прячется и предупреждения не показывает.
+ *
+ * Почему смоуком по исходнику. Проверка требует открытой капсулой вчерашней
+ * даты и записи в неё — на локалке это ручной проход по календарю, а результат
+ * (в какой ключ дня легла вода) глазами вообще не виден. Здесь же видно
+ * главное: дата берётся из selectedDate, а не из «сегодня», и никакого гейта
+ * по дате у кнопки нет.
+ *
+ * Третья часть строки — «XP за прошлый день не начисляется» — этим файлом не
+ * закрывается: начисление живёт в heys_gamification_v1.js по getToday(), и
+ * события heysWaterAdded / heysMealAdded даты не несут. См. протокол экрана.
+ */
+describe('стопка на прошлом дне', () => {
+  it('вода пишется в день, открытый капсулой, а не в сегодня', () => {
+    const idx = uiSrc.indexOf('const handleAddWater = useCallback(');
+    expect(idx).toBeGreaterThan(-1);
+    const block = uiSrc.slice(idx, uiSrc.indexOf('const handleRemoveWater', idx));
+    expect(block).toContain('const dateKey = selectedDate || new Date()');
+    expect(block).toContain('`heys_dayv2_${dateKey}`');
+    expect(block).toMatch(/\}, \[selectedDate\]\);\s*$/);
+  });
+
+  it('убавление воды идёт в тот же день', () => {
+    const idx = uiSrc.indexOf('const handleRemoveWater = useCallback(');
+    expect(idx).toBeGreaterThan(-1);
+    const block = uiSrc.slice(idx, idx + 4000);
+    expect(block).toContain('const dateKey = selectedDate || new Date()');
+  });
+
+  it('«Еда» и «Активность» уводят на открытый день, своей даты не подставляют', () => {
+    const idx = uiSrc.indexOf('const goToDayAndRun = useCallback(');
+    const block = uiSrc.slice(idx, uiSrc.indexOf('}, [setTab]);', idx));
+    expect(block).not.toContain('setSelectedDate');
+    expect(block).not.toMatch(/new Date\(\)/);
+    expect(uiSrc).toContain("onAddMeal: () => goToDayAndRun('diary', 'addMeal', [])");
+    expect(uiSrc).toContain("onOpenActivity: () => goToDayAndRun('activity', 'addActivity', [])");
+  });
+
+  it('кнопка на прошлом дне не прячется и предупреждения не показывает', () => {
+    const idx = uiSrc.indexOf('const renderMobileFabs = () => {');
+    expect(idx).toBeGreaterThan(-1);
+    const block = uiSrc.slice(idx, uiSrc.indexOf('\n    };', idx));
+    // Единственное условие — мобильный экран и не режим расстановки.
+    expect(block).toMatch(/if \(!isMobile \|\| isEditMode\) return null;/);
+    expect(block).not.toContain('selectedDate');
+    expect(block).not.toContain('isPastDay');
+    expect(block).not.toContain('isToday');
+    // Ни подтверждения, ни предупреждения о прошлом дне в карточке нет.
+    expect(uiSrc).not.toMatch(/прошл\w+ день/i);
+    expect(uiSrc).not.toMatch(/confirm\(/);
+  });
+});

@@ -222,12 +222,17 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(customSrc).toContain('PRESETS_ML = [330, 500, 750, 1000]');
     expect(customSrc).toContain('heys:water-custom-volume-open');
     expect(dayShellSrc).toContain('water-fab-vol');
-    expect(dayShellSrc).toContain('pickVolume(200)');
-    expect(dayShellSrc).toContain('pickVolume(500)');
-    expect(dayShellSrc).toContain('pickRemove(200)');
+    // Строка «объёмы человека и чипы стопки»: в стопке два самых частых объёма
+    // за месяц; −200 / +200 / +500 остаются значениями по умолчанию, пока
+    // журнал воды своих объёмов не набрал.
+    expect(dayShellSrc).toContain('WATER_FAB_DEFAULT_VOLUMES = [200, 500]');
+    expect(dayShellSrc).toContain('HEYS.dayWater?.getFrequentVolumes?.()');
+    expect(dayShellSrc).toContain('pickVolume(volumes[0])');
+    expect(dayShellSrc).toContain('pickVolume(volumes[1])');
+    expect(dayShellSrc).toContain('pickRemove(volumes[0])');
     expect(dayShellSrc).toContain('water-fab-vol--minus');
     expect(dayShellSrc).toContain('disabled: waterMl <= 0');
-    expect(dayShellSrc).toContain('−200');
+    expect(dayShellSrc).toContain("'−' + volumes[0]");
     expect(dayShellSrc).toContain('markVolumeChipsClosing');
     expect(handlersSrc).toContain('setVolumeChipsOpen');
     expect(handlersSrc).toContain('markVolumeChipsClosing');

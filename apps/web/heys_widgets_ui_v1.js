@@ -1802,6 +1802,12 @@
 
   function v4TileSpokenLabel(root, fallbackName) {
     if (!root) return fallbackName || null;
+    // Состояние, у которого нет узла значения, собрать по узлам нельзя: у
+    // ночной оценки волны числа на плитке нет вовсе, а у пустого дня прочерк
+    // прочитался бы как «минус». Такие кадры называют свою фразу сами
+    // (строка «волна · озвучивание состояний»).
+    const explicit = root.querySelector('[data-v4-spoken]')?.getAttribute('data-v4-spoken');
+    if (explicit) return explicit;
     const clean = (node) => (node?.textContent || '')
       .replace(/\s+/g, ' ')
       .trim();
@@ -2685,11 +2691,71 @@
     );
   }
 
+  /**
+   * Пустой день: волн нет, но график есть — ровная базовая линия на том же
+   * основании, где стоят волны (строка «волна · пустой день»). Она отличает
+   * пустой день от ночной оценки без чтения подписи, поэтому пустого места
+   * вместо рисунка тут быть не должно.
+   */
+  function InsulinWaveEmptySvg() {
+    // Рисунок — полоса вокруг основания, а не вся высота волн: над линией
+    // рисовать нечего, а плитке 2×2 продукта не хватает высоты на прочерк с
+    // подписью и полный 52-пиксельный холст сразу (у кадра под содержимое 114
+    // px, у продуктовой плитки — 106). Отступление названо: линия при этом
+    // стоит там же, где основание волн, — под ней те же 6 px, что у холста
+    // волн, и обе картинки прижаты к низу одинаково.
+    return React.createElement('svg', {
+      className: 'widget-v4-wave widget-v4-insulin-wave',
+      viewBox: '0 34 130 18',
+      width: '100%',
+      height: 18,
+      style: { overflow: 'visible' },
+      'aria-hidden': 'true'
+    },
+      React.createElement('line', {
+        x1: 4, y1: 46, x2: 126, y2: 46,
+        className: 'widget-v4-insulin-wave__flatline',
+        strokeWidth: 1.2,
+        strokeLinecap: 'round'
+      })
+    );
+  }
+
   function InsulinWaveDaySvg({ v4, height = 52 }) {
     // Схема, а не таймлайн: волны вплотную и равной ширины, оси времени и метки
     // «сейчас» здесь нет (контракт, строка «волна · схема, а не таймлайн»).
     const scheme = v4.scheme || { figures: [], dividers: [], joints: [], overlaps: [] };
     const baseY = 46;
+    // Ночная оценка: геометрия та же, но силуэт приглушён и обведён чернилами,
+    // а не акцентом. Тёплой метки нахлёста здесь нет вовсе — в этом состоянии
+    // плитка не красится по роли (строка «волна · тон в ночной оценке»).
+    const overnight = v4.isOvernight === true;
+
+    if (overnight) {
+      return React.createElement('svg', {
+        className: 'widget-v4-wave widget-v4-insulin-wave widget-v4-insulin-wave--overnight',
+        viewBox: `0 0 130 ${height}`,
+        width: '100%',
+        height,
+        style: { overflow: 'visible' },
+        'aria-hidden': 'true'
+      },
+        scheme.figures.map((figure) => React.createElement('path', {
+          key: `on-fill-${figure.id}`,
+          className: 'widget-v4-insulin-wave__fill',
+          d: figure.d
+        })),
+        scheme.figures.map((figure) => React.createElement('path', {
+          key: `on-line-${figure.id}`,
+          className: 'widget-v4-insulin-wave__overnight-stroke',
+          d: figure.openD || figure.d,
+          fill: 'none',
+          strokeWidth: 1.2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        }))
+      );
+    }
 
     return React.createElement('svg', {
       className: 'widget-v4-wave widget-v4-insulin-wave',
@@ -2754,12 +2820,13 @@
     );
   }
 
-  function InsulinWaveCurrentSvg({ v4, height = 48 }) {
+  function InsulinWaveCurrentSvg({ v4, height = 48, overnight = false }) {
     const baseY = height - 6;
     const nowX = v4.activeNowX ?? v4.nowX;
     const markerY = 26;
     return React.createElement('svg', {
-      className: 'widget-v4-wave widget-v4-insulin-wave widget-v4-insulin-wave--current',
+      className: 'widget-v4-wave widget-v4-insulin-wave widget-v4-insulin-wave--current'
+        + (overnight ? ' widget-v4-insulin-wave--overnight' : ''),
       viewBox: `0 0 130 ${height}`,
       width: '100%',
       height,
@@ -2794,7 +2861,7 @@
     );
   }
 
-  function InsulinWaveOverlapSvg({ v4, height = 50 }) {
+  function InsulinWaveOverlapSvg({ v4, height = 50, overnight = false }) {
     const pair = Array.isArray(v4.overlapPair) ? v4.overlapPair : [];
     // Заливается ровно та часть, где вторая волна налегла на первую, —
     // пересечение фигур, а не прямоугольник (строка «волна · пересечение»).
@@ -2802,7 +2869,8 @@
     const braceY = height - 3;
 
     return React.createElement('svg', {
-      className: 'widget-v4-wave widget-v4-insulin-wave widget-v4-insulin-wave--overlap',
+      className: 'widget-v4-wave widget-v4-insulin-wave widget-v4-insulin-wave--overlap'
+        + (overnight ? ' widget-v4-insulin-wave--overnight' : ''),
       viewBox: `0 0 130 ${height}`,
       width: '100%',
       height,
@@ -2885,37 +2953,65 @@
     const isLipolysis = data?.isLipolysis ?? (status === 'complete');
 
     if (!hasData) {
-      // День без приёмов рисуется своим кадром, а не общим прочерком: силуэта
-      // нет, счётчик говорит словами, снизу — покой от подъёма. Данные
-      // прошлого дня сюда не подставляются (строка «волна · день без приёмов»).
-      if (variantId === 'day_as_is') {
-        const wokeLabel = v4.emptyStateLabel
-          || (HEYS.Widgets.InsulinWaveV4 ? 'покой 0 ч от подъёма' : '');
-        return React.createElement('div', { className: 'widget-v4-stack' },
-          React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
-            v4Kicker('Инсулиновая волна'),
-            React.createElement('span', { className: 'widget-v4-row__meta' }, 'приёмов не было')
-          ),
+      // Пустой день рисуется своим кадром, а не общим прочерком: вместо силуэта
+      // ровная базовая линия, вместо числа прочерк с подписью «приёмов не
+      // было», снизу покой от подъёма. Счётчика в углу нет, и данные прошлого
+      // дня сюда не подставляются (строка «волна · пустой день»).
+      //
+      // Загрузка и ошибка расчёта пустым днём не притворяются: «приёмов не
+      // было» — утверждение о дне, а не о том, что данные ещё не пришли.
+      if (variantId === 'day_as_is' && status === 'noData') {
+        const V4mod = HEYS.Widgets.InsulinWaveV4;
+        const wokeLabel = v4.emptyStateLabel || V4mod?.restFromWakeLabel?.() || '';
+        const restHours = V4mod?.restHoursFromWake?.() ?? 0;
+        const spoken = `Инсулиновая волна, приёмов не было, покой ${V4mod?.spokenDuration
+          ? V4mod.spokenDuration(restHours * 60)
+          : `${restHours} ч`} от подъёма`;
+        return React.createElement('div', {
+          className: 'widget-v4-stack',
+          'data-v4-spoken': spoken
+        },
+          v4Kicker('Инсулиновая волна'),
           React.createElement('div', { className: 'widget-v4-hero-num' },
             React.createElement('span', {
               className: 'widget-v4-hero-num__val widget-v4-val--neutral'
-            }, '—')
+            }, '—'),
+            React.createElement('span', { className: 'widget-v4-unit' }, 'приёмов не было')
           ),
+          InsulinWaveEmptySvg({}),
           React.createElement('span', {
-            className: 'widget-v4-muted', style: { marginTop: 'auto' }
+            className: 'widget-v4-insulin-wave__note'
           }, wokeLabel)
         );
       }
       return v4EmptyTile('Инсулиновая волна');
     }
 
+    // Ночная оценка: сегодня приёмов нет, плитка продолжает вчерашний расчёт.
+    // Счётчика приёмов нет вовсе — он про сегодня, и рядом с нулём съеденного в
+    // калориях врал бы (строка «волна · ночная оценка»). Тона роли тоже нет.
+    const isOvernight = v4.isOvernight === true;
+    // Тон роли в ночной оценке снят целиком: шалфей за длинное окно покоя
+    // похвалил бы человека за то, что он спал (строка «волна · тон в ночной
+    // оценке»).
+    const toneClass = isOvernight
+      ? v4ValueStateClass('neutral')
+      : v4ValueStateClass(v4InsulinWaveState(v4));
+    // Кадр ночной оценки нарисован для 2×2; в остальных видах на подпись
+    // остаётся один слот, поэтому источник назван коротко теми же словами,
+    // что во второй строке 2×2.
+    const overnightMark = isOvernight
+      ? (HEYS.Widgets.InsulinWaveV4?.OVERNIGHT_SOURCE || 'от вчерашнего')
+      : null;
+
     if (variantId === 'calm_window') {
       return React.createElement('div', { className: 'widget-v4-mini' },
         v4Kicker('Покой'),
         React.createElement('span', {
-          className: 'widget-v4-mini__value ' + v4ValueStateClass(v4InsulinWaveState(v4))
+          className: 'widget-v4-mini__value ' + toneClass
         }, v4.calmWindowLabel || '—'),
-        React.createElement('span', { className: 'widget-v4-muted', style: { marginTop: 'auto' } }, 'без волн')
+        React.createElement('span', { className: 'widget-v4-muted', style: { marginTop: 'auto' } },
+          overnightMark || 'без волн')
       );
     }
 
@@ -2923,7 +3019,8 @@
       return React.createElement('div', { className: 'widget-v4-stack' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
           v4Kicker('Инсулин · под волной'),
-          React.createElement('span', { className: 'widget-v4-row__meta' }, v4.elevatedMeta || '—')
+          React.createElement('span', { className: 'widget-v4-row__meta' },
+            overnightMark || v4.elevatedMeta || '—')
         ),
         InsulinWaveDayBar({ v4 })
       );
@@ -2934,15 +3031,16 @@
       return React.createElement('div', { className: 'widget-v4-stack' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
           v4Kicker('Идёт волна'),
-          React.createElement('span', { className: 'widget-v4-row__meta' }, v4.currentMealMeta || '')
+          React.createElement('span', { className: 'widget-v4-row__meta' },
+            overnightMark || v4.currentMealMeta || '')
         ),
         React.createElement('div', { className: 'widget-v4-hero-num' },
           React.createElement('span', {
-            className: 'widget-v4-hero-num__val ' + v4ValueStateClass(v4InsulinWaveState(v4))
+            className: 'widget-v4-hero-num__val ' + toneClass
           }, mins || '—'),
           React.createElement('span', { className: 'widget-v4-unit' }, mins ? 'мин до спада' : '')
         ),
-        InsulinWaveCurrentSvg({ v4 })
+        InsulinWaveCurrentSvg({ v4, overnight: isOvernight })
       );
     }
 
@@ -2950,16 +3048,34 @@
       return React.createElement('div', { className: 'widget-v4-stack' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
           v4Kicker('Пересечение волн'),
-          React.createElement('span', { className: 'widget-v4-row__meta' }, v4.overlapTimeLabel || '')
+          React.createElement('span', { className: 'widget-v4-row__meta' },
+            overnightMark || v4.overlapTimeLabel || '')
         ),
         React.createElement('div', { className: 'widget-v4-hero-num' },
           React.createElement('span', {
-            className: 'widget-v4-hero-num__val ' + v4ValueStateClass(v4InsulinWaveState(v4))
+            className: 'widget-v4-hero-num__val ' + toneClass
           }, v4.overlapHoursLabel || '—'),
           React.createElement('span', { className: 'widget-v4-unit' }, 'без перерыва')
         ),
-        InsulinWaveOverlapSvg({ v4 }),
+        InsulinWaveOverlapSvg({ v4, overnight: isOvernight }),
         React.createElement('span', { className: 'widget-v4-muted' }, 'второй приём попал в волну')
+      );
+    }
+
+    // day_as_is · ночная оценка — третье состояние плитки. Счётчика в углу нет,
+    // силуэт приглушён, снизу две подписи: чей это день и сколько покоя.
+    if (isOvernight) {
+      return React.createElement('div', {
+        className: 'widget-v4-stack',
+        'data-v4-spoken': v4.overnightSpoken || undefined
+      },
+        v4Kicker('Инсулиновая волна'),
+        InsulinWaveDaySvg({ v4 }),
+        React.createElement('span', { className: 'widget-v4-insulin-wave__note' },
+          v4.overnightNote || ''),
+        React.createElement('span', {
+          className: 'widget-v4-insulin-wave__note widget-v4-insulin-wave__note--next'
+        }, v4.overnightStateLabel || '')
       );
     }
 
@@ -2979,9 +3095,9 @@
       InsulinWaveDaySvg({ v4 }),
       React.createElement('div', { className: 'widget-v4-stack__footer widget-v4-insulin-wave__footer' },
         overlapLabel
-          ? React.createElement('span', { className: v4ValueStateClass(v4InsulinWaveState(v4)) }, overlapLabel)
+          ? React.createElement('span', { className: toneClass }, overlapLabel)
           : React.createElement('span', {
-            className: v4ValueStateClass(v4InsulinWaveState(v4))
+            className: toneClass
           }, isLipolysis ? 'без критичных' : 'идёт волна'),
         React.createElement('span', { className: 'widget-v4-muted' },
           // Стыки в дне есть — справа стоит их счётчик, иначе строка состояния.
