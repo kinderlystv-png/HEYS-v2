@@ -186,7 +186,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-steps__track {
   height: 5px;
   border-radius: 999px;
-  background: var(--v4-line, rgba(15, 23, 42, 0.08));
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
   overflow: hidden;
 }
 

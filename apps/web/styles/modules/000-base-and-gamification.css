@@ -11103,7 +11103,7 @@ body:has(:is(
   height: 4px;
   margin: 0 auto 14px;
   border-radius: 999px;
-  background: var(--v4-ink-12, rgba(0, 0, 0, 0.12));
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
 }
 
 .notify-detail__head {
@@ -11193,7 +11193,7 @@ body:has(:is(
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  background: var(--v4-ink-12, rgba(0, 0, 0, 0.12));
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
 }
 
 .notify-detail__switch.is-on {

@@ -11913,7 +11913,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   gap: 12px;
   padding: 14px 18px 20px;
   background: var(--v4-bg, #fffaf1);
-  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .widget-v4-edit-footer__hint {
