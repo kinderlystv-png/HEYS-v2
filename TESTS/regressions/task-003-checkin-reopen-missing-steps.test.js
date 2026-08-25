@@ -207,8 +207,9 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
     });
     const profile = {}; // stepsGoal не задан
 
-    // daypart задан явно: слот шагов подставляет stepsGoal утром и stepsFact
-    // вечером, и без этого проверка начала бы зависеть от часов прогона.
+    // daypart задан явно, хотя слот шагов от него уже не зависит (решение
+    // 24 августа: вечером тот же вопрос теми же словами) — так проверка не
+    // зависит от часов прогона, если время суток снова начнёт что-то решать.
     const steps = window.HEYS.MorningCheckinUtils.getCheckinSteps(profile, {
       filterCompleted: true,
       requiredOnly: true,
@@ -222,7 +223,7 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
     setDay({});
     const profile = { stepsGoal: 6000 }; // вчерашняя цель без stepsGoalConfirmedDate
 
-    // daypart явно: слот шагов утром — stepsGoal, вечером — stepsFact.
+    // daypart явно — по той же причине, что и выше.
     const steps = window.HEYS.MorningCheckinUtils.getCheckinSteps(profile, {
       filterCompleted: true,
       dateKey: TODAY,

@@ -1353,7 +1353,18 @@
                 React.createElement('div', { className: 'heys-consent-sign-sheet__done-title' },
                   'Документы подписаны'
                 ),
-                React.createElement('div', { className: 'heys-consent-sign-sheet__done-meta' },
+                // Строка «вид пункта согласия» (переписана 25 августа):
+                // реквизиты подписи — способ, дата, время, устройство —
+                // выделяются и копируются. Это единственное место, где человек
+                // их видит, и переписать их с экрана вручную нельзя. Названное
+                // исключение из строки «язык, выделение, часовой пояс», которая
+                // прежней редакцией запрещает выделять подписи и даты; правило
+                // из неё стоит классом в 733-ui-v4-login-theme.css, поэтому
+                // снимается здесь, в своём файле, а не правкой чужого модуля.
+                React.createElement('div', {
+                  className: 'heys-consent-sign-sheet__done-meta',
+                  style: { userSelect: 'text', WebkitUserSelect: 'text' },
+                },
                   formatAccessCodeSignMeta(signedAt)
                 )
               ),

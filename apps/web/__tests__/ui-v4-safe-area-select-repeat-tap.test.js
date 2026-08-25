@@ -155,12 +155,18 @@ describe('запрет выделения — только служебные/о
     expect(getComputedStyle(els['consent-fulltext__scroll']).userSelect).not.toBe('none');
   });
 
-  it('questionnaire: медицинское предупреждение служебное и не выделяется', () => {
+  // Строка «вид блока предупреждения» (переписана 25 августа) развернула это
+  // правило: текст предупреждения выделяется и копируется — человек имеет право
+  // сохранить или показать то, что подтверждает. Строка «язык, выделение,
+  // часовой пояс» той же зоны всё ещё зовёт его служебным, но она прежней
+  // редакции, а изменённая строка называет исключение прямо.
+  it('questionnaire: предупреждение выделяется как исключение', () => {
     const intakeSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_trial_intake_v1.js'), 'utf8');
     const warnBlockStart = intakeSrc.indexOf("id: 'intake-warning-text'");
     expect(warnBlockStart).toBeGreaterThan(-1);
-    const warnBlock = intakeSrc.slice(warnBlockStart, warnBlockStart + 1100);
-    expect(warnBlock).toMatch(/userSelect:\s*'none'/);
+    const warnBlock = intakeSrc.slice(warnBlockStart, warnBlockStart + 1400);
+    expect(warnBlock).toMatch(/userSelect:\s*'text'/);
+    expect(warnBlock).not.toMatch(/userSelect:\s*'none'/);
   });
 });
 
@@ -374,7 +380,12 @@ describe('повторный тап — минимум 350 мс поверх б�
       experience: { previous_experience: 'self' },
       lifestyle: { schedule: 'Рабочий день', sleep: 'Около восьми часов' },
       collaboration: { daily_tracking: 'yes', feedback_style: 'concise' },
-      warning: { acknowledged_at: '2026-08-11T10:00:00.000Z', text_version: 'pending-owner-text' },
+      warning: {
+        acknowledged_at: '2026-08-11T10:00:00.000Z',
+        text_version: 'pending-owner-text',
+        // Вторая отметка шага 5: без неё «Отправить» заблокирована.
+        age_confirmed_at: '2026-08-11T10:00:00.000Z',
+      },
       meta: { schema_version: '1.2' },
     };
 

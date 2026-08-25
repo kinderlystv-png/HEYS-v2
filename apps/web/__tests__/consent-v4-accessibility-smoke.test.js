@@ -376,6 +376,13 @@ describe('согласия · шторка подписи', () => {
     const meta = document.querySelector('.heys-consent-sign-sheet__done-meta');
     expect(meta.textContent).toMatch(/\d{2}:\d{2}/);
     expect(meta.textContent).toContain('iPhone · Safari');
+    // Строка «вид пункта согласия» (переписана 25 августа): реквизиты подписи —
+    // способ, дата, время, устройство — выделяются и копируются. Класс модуля
+    // 733 гасит выделение, поэтому правило снято своим инлайном.
+    expect(meta.style.userSelect).toBe('text');
+    // Версии документов остаются невыделяемыми: их строка контракта не менялась.
+    const version = document.querySelector('.heys-consent-sign-sheet__doc-version');
+    expect(version.style.userSelect).toBe('');
     const versions = Array.from(document.querySelectorAll('.heys-consent-sign-sheet__doc-version'))
       .map((el) => el.textContent);
     expect(versions.length).toBe(2);

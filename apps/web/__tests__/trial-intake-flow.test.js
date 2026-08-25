@@ -50,6 +50,9 @@ const completedAnswers = {
   warning: {
     acknowledged_at: '2026-08-11T10:00:00.000Z',
     text_version: 'pending-owner-text',
+    // Вторая отметка шага 5 (строка «пределы и формат», решение владельца
+    // 25 августа): без неё отправка заблокирована так же, как без первой.
+    age_confirmed_at: '2026-08-11T10:00:00.000Z',
   },
   meta: { schema_version: '1.2' },
 };
@@ -657,6 +660,118 @@ describe('protected trial intake contract', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Назад к шагу 5' }));
     expect(screen.getByText('Шаг 5 из 5')).toBeTruthy();
+  });
+
+  // Строки «пределы и формат» и «вид блока предупреждения» (решение владельца
+  // 25 августа): барьер 18+ — отдельная отметка рядом с подтверждением
+  // предупреждения, и она так же блокирует отправку. Руками этот стык не
+  // собрать: нужен черновик, где первая галочка стоит, а вторая нет.
+  it('the separate 18+ mark blocks the submit on its own', async () => {
+    const answers = {
+      ...completedAnswers,
+      warning: {
+        acknowledged_at: '2026-08-11T10:00:00.000Z',
+        text_version: 'pending-owner-text',
+      },
+    };
+    const rpc = vi.fn(async (fn) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: { status: 'in_progress', current_step: 4, answers },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
+    });
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    expect(await screen.findByText('Проверьте ответы перед отправкой')).toBeTruthy();
+    // Предупреждение подтверждено, а отправка всё равно закрыта.
+    expect(screen.getByText('Предупреждение подтверждено')).toBeTruthy();
+    expect(screen.getByText('Поставьте галочку выше')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Проверьте ответы перед отправкой'));
+    expect(screen.getByRole('button', { name: /Отправить куратору/ }).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Назад к шагу 5' }));
+
+    const ageMark = document.getElementById('intake-age_confirmed_at');
+    expect(ageMark.checked).toBe(false);
+    await act(async () => { fireEvent.click(ageMark); });
+    expect(ageMark.checked).toBe(true);
+    expect(screen.queryByText('Поставьте галочку выше')).toBeNull();
+
+    fireEvent.click(screen.getByText('Проверьте ответы перед отправкой'));
+    expect(screen.getByRole('button', { name: /Отправить куратору/ }).disabled).toBe(false);
+  });
+
+  it('keeps the 18+ mark on the device: the server payload stays two fields', async () => {
+    const rpc = vi.fn(async () => ({
+      data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } },
+    }));
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    await window.HEYS.TrialIntake.api.save(completedAnswers, 4, true, null);
+
+    const [, params] = rpc.mock.calls[0];
+    expect(params.p_answers.warning).toEqual({
+      acknowledged_at: '2026-08-11T10:00:00.000Z',
+      text_version: 'pending-owner-text',
+    });
+    // Иначе КАЖДОЕ сохранение вернуло бы unknown_answer_field: серверная схема
+    // знает в разделе ровно два поля.
+    expect(healthMinimizationSql).toContain("ARRAY['acknowledged_at', 'text_version']");
+    // Исходный объект не портится — на экране галочка остаётся отмеченной.
+    expect(completedAnswers.warning.age_confirmed_at).toBe('2026-08-11T10:00:00.000Z');
+  });
+
+  it('draws two marks under the scrollable warning and lets its text be copied', async () => {
+    const rpc = vi.fn(async (fn) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: { status: 'in_progress', current_step: 4, answers: completedAnswers },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
+    });
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    expect(await screen.findByText('Проверьте ответы перед отправкой')).toBeTruthy();
+
+    // Область 186 px с настоящей прокруткой; текст выделяется и копируется.
+    const region = document.getElementById('intake-warning-text');
+    expect(region.style.maxHeight).toBe('186px');
+    expect(region.style.overflowY).toBe('auto');
+    expect(region.style.userSelect).toBe('text');
+
+    const marks = ['intake-acknowledged_at', 'intake-age_confirmed_at']
+      .map((id) => document.getElementById(id));
+    marks.forEach((input) => {
+      const box = input.parentElement;
+      expect(box.style.width).toBe('22px');
+      expect(box.style.height).toBe('22px');
+      expect(box.style.borderRadius).toBe('6px');
+      const row = box.parentElement;
+      expect(row.style.gap).toBe('11px');
+      // Строка «области нажатия»: нажимается вся строка, не квадрат.
+      expect(row.style.minHeight).toBe('44px');
+      expect(row.tagName).toBe('LABEL');
+    });
+    // Шаг между отметками — 10, а не зазор сетки шага.
+    expect(marks[0].parentElement.parentElement.parentElement.style.gap).toBe('10px');
+    // Текст дословно из контракта; кадр рисует «Мне есть 18 лет».
+    expect(marks[1].parentElement.nextSibling.textContent).toBe('Мне есть 18');
   });
 
   it('shows a visible final review with warning confirmation and edit action', async () => {

@@ -1,32 +1,32 @@
-// Сверка двух строк контракта checkin-morning (сборка 24 августа):
+// Сверка двух строк контракта checkin-morning (пятнадцатая сборка пакета):
 //
-//   «чек-ин не пройден до вечера» — вечером предлагается полный чек-ин, как
-//   утренний, но два вопроса переформулированы: вместо «Цель по шагам» стоит
-//   «Сколько прошли за день», вместо «Сколько планируете» — «Сколько
-//   получилось». Остальные вопросы — сон, вес, самочувствие — звучат дословно
-//   так же.
+//   «чек-ин не пройден до вечера» (решение 24 августа) — незакрытый чек-ин
+//   показывается как есть, полным мастером и в прежних формулировках. «Во
+//   сколько легли» и «Насколько выспались» относятся к прошлой ночи и вечером
+//   остаются верными; «Цель по шагам» относится к уже прошедшему дню и тоже не
+//   переписывается. Урезанного вечернего варианта, второго набора текстов и
+//   порога, после которого чек-ин перестают предлагать, нет.
 //
-//   «пропущенные дни подряд» — после двух недель отсутствия чек-ин открывается
-//   только на сегодня; развилка разбора предлагает пачку не больше семи дней,
-//   остальные закрываются без разбора. Числа за незакрытые дни остаются как
-//   есть, «дыр» в истории не появляется.
+//   «пропущенные дни подряд» (решение 24 августа) — развилка разбора предлагает
+//   до семи пропущенных дней подряд; дальше — только сегодняшний чек-ин, старые
+//   дни остаются незакрытыми и в разбор не попадают.
 //
-// Названные отступления (контракт старше кадра, но кадров вечера в пакете нет):
-//   · строка контракта называет вопросы перифразом, а не строками продукта.
-//     «Цель по шагам» — единственное дословное совпадение, в коде это
-//     accessible-имя ползунка шагов; роль «вопроса над крупным числом» играет
-//     надзаголовок экрана «Шаги на сегодня» — его и заменяет «Сколько
-//     получилось».
-//   · нижняя граница ползунка у вечернего экрана — ноль, а не 3 000: «нисколько
-//     не прошёл» — законный факт, тогда как план в ноль шагов смысла не имеет.
-//     Контракт границ не называет.
-//   · порог вечера строкой не назван. Взят уже существующий в продукте рубеж
-//     18:00 (приветствие входа heys_login_screen_v1.js, getTimePeriod советов).
-//   · шапка первого вопроса «Доброе утро» — не вопрос чек-ина, но вечером она
-//     врёт; вечером берётся уже существующее в продукте «Добрый вечер».
-//   · семидневная пачка включена всегда, а не только после двух недель
-//     отсутствия: обоснование строки («за семью днями разбор превращается в
-//     угадывание») от длины перерыва не зависит.
+// Названные отступления (контракт старше кадра, кадров вечера в пакете нет):
+//   · приветствие в шапке первого вопроса вечером говорит «Добрый вечер».
+//     Строка запрещает второй набор формулировок под один экран; приветствие в
+//     него не входит — это не вопрос и не подпись ответа, а та же строка
+//     продукта, что на входе (heys_login_screen_v1.js). Рубеж 18:00 взят оттуда
+//     же и остался в модуле только ради приветствия: ни на состав плана, ни на
+//     тексты вопросов, ни на приёмники ответов он не влияет.
+//   · «старые дни остаются незакрытыми» прочитано как «в разбор не попадают, и
+//     ни одно число дня не трогается»: за пачкой день получает только маркер
+//     out_of_review_window, приёмы и калории остаются как есть. Без маркера те
+//     же дни возвращались бы развилкой каждое утро — а строка требует, чтобы
+//     дальше предлагался только сегодняшний чек-ин.
+//   · «порог 7 совпадает с окном, по которому считается серия» — обоснование
+//     строки, а не проверяемое здесь правило: серия считается сканом на 30 дней
+//     с обрывом на первом неуспешном дне (heys_day_calendar_metrics.js), окна в
+//     семь дней у неё нет. Сверяется само число 7.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -226,7 +226,7 @@ describe('чек-ин не пройден до вечера', () => {
     localStorage.clear();
   });
 
-  it('вечер начинается с 18:00 по часам устройства и часового пояса не заводит', () => {
+  it('час устройства решает только приветствие; часового пояса модуль не заводит', () => {
     const utils = loadMorningPlanner();
     expect(utils.EVENING_CHECKIN_HOUR).toBe(18);
     expect(utils.getCheckinDaypart(new Date(2026, 7, 16, 7, 0))).toBe('morning');
@@ -237,7 +237,7 @@ describe('чек-ин не пройден до вечера', () => {
     expect(MORNING_SRC).not.toMatch(/timeZone|getTimezoneOffset|Intl\.DateTimeFormat/);
   });
 
-  it('вечерний вариант — тот же полный состав шагов, не урезанный', () => {
+  it('вечером мастер тот же: состав шагов совпадает с утренним до идентичности', () => {
     vi.useFakeTimers();
     const utils = loadMorningPlanner();
 
@@ -249,59 +249,56 @@ describe('чек-ин не пройден до вечера', () => {
 
     expect(morningPlan.daypart).toBe('morning');
     expect(eveningPlan.daypart).toBe('evening');
-    // Состав не меняется: та же длина, тот же порядок слотов. Отличается ровно
-    // один — слот шагов: утром там вопрос про план, вечером про факт.
-    expect(eveningPlan.steps).toHaveLength(morningPlan.steps.length);
-    expect(eveningPlan.steps.map((id) => (id === 'stepsFact' ? 'stepsGoal' : id)))
-      .toEqual(morningPlan.steps);
+    // Урезанного вечернего варианта нет: тот же список, тот же порядок.
+    expect(eveningPlan.steps).toEqual(morningPlan.steps);
     expect(morningPlan.steps).toEqual(expect.arrayContaining([
       'weight', 'sleep', 'morning_mood', 'stepsGoal', 'morningRest',
     ]));
-    expect(eveningPlan.steps).toEqual(expect.arrayContaining([
-      'weight', 'sleep', 'morning_mood', 'stepsFact', 'morningRest',
-    ]));
-    expect(eveningPlan.steps).not.toContain('stepsGoal');
     // Чек-ин открывается только на сегодня — своей даты не выбирает.
     expect(eveningPlan.dateKey).toBe(DATE_KEY);
   });
 
-  it('вечером спрашивают факт, а не план: два шага, а не один с ветвлением', () => {
+  it('порога, после которого чек-ин перестают предлагать, нет', () => {
+    vi.useFakeTimers();
+    const utils = loadMorningPlanner();
+
+    // Поздний вечер — мастер всё ещё полный, а не пустой и не обрезанный.
+    vi.setSystemTime(new Date(2026, 7, 16, 23, 45));
+    const latePlan = utils.buildMorningCheckinPlan({ source: 'test', mode: 'daily' });
+    expect(latePlan.steps).toEqual(expect.arrayContaining([
+      'weight', 'sleep', 'morning_mood', 'stepsGoal', 'morningRest',
+    ]));
+    expect(utils.getCheckinSteps({}, { filterCompleted: false, dateKey: DATE_KEY }))
+      .toContain('stepsGoal');
+  });
+
+  it('второго набора текстов нет: слот шагов — один шаг реестра', () => {
     const registry = loadStepRegistry();
     expect(registry.stepsGoal).toBeTruthy();
-    expect(registry.stepsFact).toBeTruthy();
-    expect(registry.stepsFact.component).not.toBe(registry.stepsGoal.component);
+    // Вечернего близнеца не существует ни в реестре, ни в исходнике.
+    expect(registry.stepsFact).toBeUndefined();
+    expect(STEPS_SRC).not.toContain('stepsFact');
+    expect(MORNING_SRC).not.toContain('stepsFact');
 
-    const morning = renderStepsScreen(registry, 'stepsGoal', { stepsGoal: 10500 }, 'morning');
-    expect(morning.container.querySelector('.mc-step-kicker').textContent).toBe('Шаги на сегодня');
-    expect(morning.container.querySelector('.mc-v4-scale').getAttribute('aria-label'))
-      .toBe('Цель по шагам');
-    cleanup();
+    const readScreen = (daypart) => {
+      const view = renderStepsScreen(registry, 'stepsGoal', { stepsGoal: 10500 }, daypart);
+      const text = {
+        kicker: view.container.querySelector('.mc-step-kicker').textContent,
+        label: view.container.querySelector('.mc-v4-scale').getAttribute('aria-label'),
+        min: view.container.querySelector('.mc-v4-scale').getAttribute('aria-valuemin'),
+      };
+      cleanup();
+      return text;
+    };
 
-    // Дословно из строки контракта «чек-ин не пройден до вечера».
-    const evening = renderStepsScreen(registry, 'stepsFact', { steps: 8200 }, 'evening');
-    expect(evening.container.querySelector('.mc-step-kicker').textContent).toBe('Сколько получилось');
-    expect(evening.container.querySelector('.mc-v4-scale').getAttribute('aria-label'))
-      .toBe('Сколько прошли за день');
-  });
-
-  it('вечерний ответ уходит в день, а план дня не трогает', () => {
-    const registry = loadStepRegistry({
-      heys_profile: { stepsGoal: 11000, stepsGoalConfirmedDate: '2026-08-10' },
+    // «Цель по шагам» относится к уже прошедшему дню и не переписывается.
+    expect(readScreen('evening')).toEqual(readScreen('morning'));
+    expect(readScreen('morning')).toEqual({
+      kicker: 'Шаги на сегодня', label: 'Цель по шагам', min: '3000',
     });
-
-    registry.stepsFact.save({ steps: 8200 }, { dateKey: DATE_KEY });
-
-    const day = readStoredDay();
-    expect(day.steps).toBe(8200);
-    expect(day.stepsAnsweredAt).toBeGreaterThan(0);
-    // heys_sync_merge_v1 решает спор по stepsUpdatedAt — без него уменьшение
-    // проиграло бы legacy-правилу «берём максимум».
-    expect(day.stepsUpdatedAt).toBeGreaterThan(0);
-    // План не тронут: факт не выдаёт себя за идеально выполненную цель.
-    expect(readStoredProfile()).toEqual({ stepsGoal: 11000, stepsGoalConfirmedDate: '2026-08-10' });
   });
 
-  it('утренний ответ уходит в план, а факта дня не выдумывает', () => {
+  it('ответ уходит в план дня в любой час, а факта дня не выдумывает', () => {
     const registry = loadStepRegistry();
 
     registry.stepsGoal.save({ stepsGoal: 11500 }, { dateKey: DATE_KEY });
@@ -309,60 +306,22 @@ describe('чек-ин не пройден до вечера', () => {
     const profile = readStoredProfile();
     expect(profile.stepsGoal).toBe(11500);
     expect(profile.stepsGoalConfirmedDate).toBe(DATE_KEY);
+    // Приёмник один: шаг не пишет в день ни числа шагов, ни отметки ответа.
     expect(readStoredDay().steps).toBeUndefined();
     expect(readStoredDay().stepsAnsweredAt).toBeUndefined();
   });
 
-  it('ноль шагов — данный ответ: шаг не переспрашивается', () => {
-    const registry = loadStepRegistry();
-    // Ноль вообще достижим ползунком: у факта нижняя граница — ноль.
-    const view = renderStepsScreen(registry, 'stepsFact', { steps: 0 }, 'evening');
-    expect(view.container.querySelector('.mc-v4-scale').getAttribute('aria-valuemin')).toBe('0');
-    cleanup();
-
-    registry.stepsFact.save({ steps: 0 }, { dateKey: DATE_KEY });
-    const day = readStoredDay();
-    expect(day.steps).toBe(0);
-    expect(day.stepsAnsweredAt).toBeGreaterThan(0);
-
-    // Планировщик читает отметку, а не истинность значения.
+  it('подтверждённый план закрывает слот шагов и вечером тоже', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 7, 16, 21, 0));
-    const utils = loadMorningPlanner({ [dayLsKey(DATE_KEY)]: day });
-    expect(utils.hasStepsFactAnswered(day)).toBe(true);
-    expect(utils.isMorningStepComplete('stepsFact', { dateKey: DATE_KEY, day, profile: {} })).toBe(true);
-    expect(utils.getCheckinSteps({}, { filterCompleted: true, dateKey: DATE_KEY, daypart: 'evening' }))
-      .not.toContain('stepsFact');
+    const utils = loadMorningPlanner();
+    const profile = { stepsGoal: 11500, stepsGoalConfirmedDate: DATE_KEY };
+    expect(utils.hasStepsGoalConfirmedToday(profile, DATE_KEY)).toBe(true);
+    expect(utils.isMorningStepComplete('stepsGoal', { dateKey: DATE_KEY, day: {}, profile }))
+      .toBe(true);
+    expect(utils.getCheckinSteps(profile, { filterCompleted: true, dateKey: DATE_KEY }))
+      .not.toContain('stepsGoal');
   });
-
-  it('повторное открытие вечером показывает уже отвеченное, включая ноль', () => {
-    const answered = { date: DATE_KEY, steps: 0, stepsAnsweredAt: 1700000000000 };
-    const registry = loadStepRegistry({ [dayLsKey(DATE_KEY)]: answered });
-    expect(registry.stepsFact.getInitialData({ dateKey: DATE_KEY }, {}).steps).toBe(0);
-
-    const walked = { date: DATE_KEY, steps: 7400, stepsAnsweredAt: 1700000000000 };
-    const registry2 = loadStepRegistry({ [dayLsKey(DATE_KEY)]: walked });
-    expect(registry2.stepsFact.getInitialData({ dateKey: DATE_KEY }, {}).steps).toBe(7400);
-  });
-
-  it('событие о шагах несёт дату дня, к которому относится ответ', () => {
-    const registry = loadStepRegistry();
-    const seen = [];
-    const listener = (event) => seen.push(event.detail);
-    window.addEventListener('heysStepsUpdated', listener);
-    try {
-      registry.stepsFact.save({ steps: 9100 }, { dateKey: DATE_KEY });
-    } finally {
-      window.removeEventListener('heysStepsUpdated', listener);
-    }
-    expect(seen).toEqual([{ steps: 9100, date: DATE_KEY }]);
-  });
-
-  // Здесь раньше стоял сторож приёмника: пока ответ вечернего экрана уходил в
-  // profile.stepsGoal, переименовывать подписи было нельзя — факт записался бы
-  // как идеально выполненный план. Приёмник разведён (stepsGoal → профиль,
-  // stepsFact → day.steps), и сторож заменён тестами выше: они проверяют и то,
-  // что вечерний вопрос звучит по контракту, и то, что ответ уходит в день.
 
   it('сон, вес и самочувствие вечером звучат дословно так же', () => {
     const registry = loadStepRegistry();

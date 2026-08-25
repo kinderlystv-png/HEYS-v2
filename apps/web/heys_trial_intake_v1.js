@@ -17,6 +17,18 @@
   ]);
   const WARNING_CHECKBOX_LABEL =
     'Я ознакомился с предупреждением. При наличии противопоказаний я согласовал участие с врачом и принимаю решение об участии на себя. Мне 18 лет или больше.';
+  // Строки «пределы и формат» и «вид блока предупреждения» (решение владельца
+  // 25 августа): барьер 18+ стоит отдельной отметкой рядом с подтверждением
+  // предупреждения и так же блокирует отправку. Текст — дословно из контракта;
+  // кадр «Анкета · шаг 5» рисует «Мне есть 18 лет», но контракт старше кадра.
+  const AGE_CONFIRM_CHECKBOX_LABEL = 'Мне есть 18';
+  // Отметка живёт только на устройстве. Серверный валидатор разрешает в разделе
+  // `warning` ровно два поля — acknowledged_at и text_version
+  // (scripts/db/migrations/2026-08-11_health_minimization_intake_v1.sql:77-79),
+  // и третье уронило бы КАЖДОЕ сохранение с `unknown_answer_field`. Само
+  // утверждение «мне 18 лет или больше» при этом на сервере есть: оно входит в
+  // текст подтверждения предупреждения, который хранится с версией.
+  const LOCAL_ONLY_WARNING_FIELDS = Object.freeze(['age_confirmed_at']);
 
   // Candidate invite code is one-time (verify_trial_candidate_pin consumes pin_consumed_at).
   const DRAFT_STORAGE_COPY =
@@ -140,6 +152,14 @@
     return res?.data?.[fn] || res?.data || res || {};
   }
 
+  /** Убирает из посылки поля, которые серверная схема не знает (см. выше). */
+  function stripLocalOnlyAnswers(answers) {
+    const source = answers && typeof answers === 'object' ? answers : {};
+    const warning = { ...(source.warning || {}) };
+    LOCAL_ONLY_WARNING_FIELDS.forEach((field) => { delete warning[field]; });
+    return { ...source, warning };
+  }
+
   const api = {
     isCandidate() {
       return HEYS.YandexAPI?.hasCandidateSessionHint?.() === true;
@@ -157,7 +177,7 @@
         ? 'save_trial_candidate_intake_by_candidate_session'
         : 'save_trial_intake_by_session';
       return unwrapRpc(await HEYS.YandexAPI.rpc(fn, {
-        p_answers: answers,
+        p_answers: stripLocalOnlyAnswers(answers),
         p_current_step: currentStep,
         p_complete: !!complete,
         p_expected_updated_at: expectedUpdatedAt || null,
@@ -382,6 +402,47 @@
     'warning.text_version': { type: 'text' },
   });
 
+  // Строка «вид блока предупреждения»: квадрат 22 px радиусом 6, зазор 11.
+  // Строка «области нажатия»: нажимается вся строка с текстом, а не квадрат
+  // 22 px — по нему промахивается половина попыток, поэтому 44 px держит сама
+  // строка, а не поля вокруг квадрата.
+  function warningMark({ field, label, checked, onToggle }) {
+    return React.createElement('label', {
+      key: `warning-mark-${field}`,
+      style: {
+        display: 'flex', gap: 11, alignItems: 'flex-start', color: INK,
+        fontSize: 12, fontWeight: 600, lineHeight: 1.5,
+        minHeight: 44, cursor: 'pointer',
+      },
+    },
+      React.createElement('span', {
+        style: {
+          position: 'relative', width: 22, height: 22, flex: '0 0 auto', marginTop: 1,
+          borderRadius: 6, display: 'grid', placeItems: 'center',
+          background: checked ? ACCENT_FILL : FIELD_BG,
+          boxShadow: checked ? 'none' : 'inset 0 0 0 2px rgba(0, 0, 0, 0.18)',
+          color: ON_ACCENT, fontSize: 13, fontWeight: 700, lineHeight: 1,
+        },
+      },
+        React.createElement('input', {
+          id: `intake-${field}`,
+          type: 'checkbox',
+          // Строка «доступность»: подтверждение связано с текстом, который
+          // подтверждают.
+          'aria-describedby': 'intake-warning-text',
+          checked,
+          onChange: (event) => onToggle(event.target.checked),
+          style: {
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            margin: 0, opacity: 0, cursor: 'pointer',
+          },
+        }),
+        checked ? '✓' : null
+      ),
+      React.createElement('span', { style: { flex: 1 } }, label)
+    );
+  }
+
   const STEPS = [
     {
       id: 'goals', title: 'Цели и ожидания',
@@ -458,7 +519,8 @@
     {
       id: 'warning', title: 'Важная информация',
       subtitle: 'Прочитайте предупреждение и подтвердите, что готовы продолжить.',
-      required: ['acknowledged_at'],
+      // Строка «вид блока предупреждения»: обе отметки блокируют отправку.
+      required: ['acknowledged_at', 'age_confirmed_at'],
       render: (value, set) => [
         React.createElement('div', {
           key: 'warning-text',
@@ -476,9 +538,13 @@
             padding: '14px 16px', borderRadius: 18, background: SURFACE_1,
             color: INK, fontSize: 12, lineHeight: 1.6,
             display: 'grid', gap: 10,
-            // Строка «язык, выделение, часовой пояс»: текст предупреждения
-            // служебный и не выделяется — в отличие от ответов кандидата.
-            userSelect: 'none',
+            // Строка «вид блока предупреждения» (переписана 25 августа): текст
+            // предупреждения выделяется и копируется — человек имеет право
+            // сохранить или показать то, что подтверждает. Это названное
+            // исключение из строки «язык, выделение, часовой пояс», которая
+            // всё ещё зовёт его служебным: она прежней редакции.
+            userSelect: 'text',
+            WebkitUserSelect: 'text',
           },
         },
           React.createElement('div', { style: { fontWeight: 700, fontSize: 12, lineHeight: 1.35, color: WARN_TEXT } }, WARNING_TEXT_TITLE),
@@ -487,49 +553,28 @@
             style: { margin: 0 },
           }, paragraph)),
         ),
-        // Строка «области нажатия»: нажимается вся строка с текстом, а не
-        // квадрат 22 px — по нему промахивается половина попыток.
-        React.createElement('label', {
-          key: 'warning-confirm',
-          style: {
-            display: 'flex', gap: 11, alignItems: 'flex-start', color: INK,
-            fontSize: 12, fontWeight: 600, lineHeight: 1.5,
-            minHeight: 44, padding: '11px 0', cursor: 'pointer',
-          },
+        // Строка «вид блока предупреждения»: под областью две отметки подряд —
+        // подтверждение предупреждения и «Мне есть 18». Обе блокируют отправку.
+        // Обе живут в одном контейнере: шаг между ними 10, а не зазор сетки 8.
+        React.createElement('div', {
+          key: 'warning-marks',
+          style: { display: 'grid', gap: 10, marginTop: 8 },
         },
-          React.createElement('span', {
-            style: {
-              position: 'relative', width: 22, height: 22, flex: '0 0 auto', marginTop: 1,
-              borderRadius: 6, display: 'grid', placeItems: 'center',
-              background: value.acknowledged_at ? ACCENT_FILL : FIELD_BG,
-              boxShadow: value.acknowledged_at ? 'none' : 'inset 0 0 0 2px rgba(0, 0, 0, 0.18)',
-              color: ON_ACCENT, fontSize: 13, fontWeight: 700, lineHeight: 1,
+          warningMark({
+            field: 'acknowledged_at',
+            label: WARNING_CHECKBOX_LABEL,
+            checked: Boolean(value.acknowledged_at),
+            onToggle: (checked) => {
+              set('acknowledged_at', checked ? new Date().toISOString() : '');
+              set('text_version', checked ? WARNING_TEXT_VERSION : '');
             },
-          },
-            React.createElement('input', {
-              id: 'intake-acknowledged_at',
-              type: 'checkbox',
-              // Строка «доступность»: подтверждение связано с текстом, который
-              // подтверждают.
-              'aria-describedby': 'intake-warning-text',
-              checked: Boolean(value.acknowledged_at),
-              onChange: (event) => {
-                if (event.target.checked) {
-                  set('acknowledged_at', new Date().toISOString());
-                  set('text_version', WARNING_TEXT_VERSION);
-                } else {
-                  set('acknowledged_at', '');
-                  set('text_version', '');
-                }
-              },
-              style: {
-                position: 'absolute', inset: 0, width: '100%', height: '100%',
-                margin: 0, opacity: 0, cursor: 'pointer',
-              },
-            }),
-            value.acknowledged_at ? '✓' : null
-          ),
-          React.createElement('span', { style: { flex: 1 } }, WARNING_CHECKBOX_LABEL)
+          }),
+          warningMark({
+            field: 'age_confirmed_at',
+            label: AGE_CONFIRM_CHECKBOX_LABEL,
+            checked: Boolean(value.age_confirmed_at),
+            onToggle: (checked) => set('age_confirmed_at', checked ? new Date().toISOString() : ''),
+          })
         ),
       ],
     },
@@ -550,6 +595,7 @@
   // именно — ищет глазами среди восьми, часть которых появляется по условию.
   const FIELD_LABELS = {
     acknowledged_at: 'Подтверждение предупреждения',
+    age_confirmed_at: AGE_CONFIRM_CHECKBOX_LABEL,
     activity: 'Какая у вас сейчас физическая активность?',
     constraints: 'Что может мешать вам регулярно присылать фото или короткие сообщения в течение дня?',
     daily_tracking: 'Готовы в течение недели присылать фото, текст или голосовые сообщения о приёмах пищи?',
