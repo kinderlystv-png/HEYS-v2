@@ -1,25 +1,16 @@
-// heys_app_update_notifications_v1.js — update toast & notifications
+// heys_app_update_notifications_v1.js — обычный тост приложения
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
-    const U = HEYS.utils || {};
 
-    const writeGlobalValue = (key, value) => {
-        try {
-            if (HEYS.store?.set) {
-                HEYS.store.set(key, value);
-                return;
-            }
-            if (U.lsSet) {
-                U.lsSet(key, value);
-                return;
-            }
-            const serialized = typeof value === 'string' ? value : JSON.stringify(value);
-            localStorage.setItem(key, serialized);
-        } catch { }
-    };
-
+    // Тост «Доступна новая версия» удалён 25 августа 2026: решение владельца
+    // 19.08, подтверждённое шестнадцатой сборкой — pwa-update.v4.dc.html,
+    // строка «мягкие уведомления» перечисляет toast среди того, что не
+    // рисуется, а лестница слоёв прямо говорит «вестника версии среди ролей
+    // тоста нет». Функция HEYS.showUpdateToast не вызывалась ниоткуда:
+    // обновление ставится само, и спрашивать разрешения не у кого.
+    //
+    // Обычный тост приложения (notification) остаётся — он живой.
     const useUpdateNotifications = ({ React }) => {
-        const [showUpdateToast, setShowUpdateToast] = React.useState(false);
         const [notification, setNotification] = React.useState(null);
 
         React.useEffect(() => {
@@ -29,35 +20,9 @@
             return () => clearTimeout(timer);
         }, [notification]);
 
-        React.useEffect(() => {
-            window.HEYS = window.HEYS || {};
-            window.HEYS.showUpdateToast = () => {
-                setShowUpdateToast(true);
-            };
-            return () => {
-                if (window.HEYS) delete window.HEYS.showUpdateToast;
-            };
-        }, []);
-
-        const handleUpdate = React.useCallback(() => {
-            HEYS.PlatformAPIs?.triggerSkipWaiting?.({
-                fallbackMs: 5000,
-                showModal: false,
-                source: 'UpdateToast.handleUpdate'
-            });
-        }, []);
-
-        const dismissUpdateToast = React.useCallback(() => {
-            setShowUpdateToast(false);
-            writeGlobalValue('heys_update_dismissed', Date.now().toString());
-        }, []);
-
         return {
-            showUpdateToast,
             notification,
             setNotification,
-            handleUpdate,
-            dismissUpdateToast,
         };
     };
 

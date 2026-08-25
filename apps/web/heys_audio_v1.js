@@ -65,10 +65,6 @@
     masterEnabled: true,
     volume: 0.12,
     hapticEnabled: true,
-    // Строка «звук · правило продукта»: у каждого из двух звуков свой
-    // переключатель. Тумблер советов исторически живёт в `heys_advice_settings`
-    // (решение владельца 24.08), тумблер капли — здесь.
-    waterSoundEnabled: true,
     quietHoursEnabled: false, // disabled by default; user can enable in settings
     quietStart: 23,
     quietEnd: 7
@@ -477,15 +473,19 @@
       enabled: settings.masterEnabled !== false,
       volume: settings.volume,
       hapticEnabled: settings.hapticEnabled !== false,
-      waterSoundEnabled: settings.waterSoundEnabled !== false,
       quietHoursEnabled: settings.quietHoursEnabled !== false,
       quietStart: settings.quietStart,
       quietEnd: settings.quietEnd
     };
   }
 
-  // ─── Переключатели двух звуков ────────────────────────────────────────────
-  // Строка «звук · правило продукта»: у каждого звука свой переключатель.
+  // ─── Переключатель звука ──────────────────────────────────────────────────
+  // Строка «звук · правило продукта» шестнадцатой сборки: «свой переключатель
+  // один, у звука совета… Капля звучит под общим выключателем звуков
+  // приложения; своего тумблера у воды нет и не заводится». Тумблер капли
+  // (waterSoundEnabled) заводили 25 августа по пятнадцатой сборке — она этого
+  // ещё не говорила; снят в тот же день, когда сборка ответила.
+  //
   // Тумблер советов живёт в `heys_advice_settings` (решение владельца 24.08 —
   // три локальных гейта в day/_advice.js). Политика читает его тоже, иначе она
   // врала бы: «звук совета включён», пока человек его выключил.
@@ -498,8 +498,9 @@
   }
 
   function soundToggleOn(sound) {
-    const s = loadSettings();
-    if (sound === 'water') return s.waterSoundEnabled !== false;
+    // Капля своего тумблера не имеет: общий выключатель её уже погасил выше,
+    // в play(), поэтому здесь она всегда разрешена.
+    if (sound === 'water') return true;
     if (sound === 'advice') return adviceSoundEnabled();
     return false;
   }

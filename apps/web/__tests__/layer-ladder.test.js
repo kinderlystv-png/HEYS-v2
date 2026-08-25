@@ -112,6 +112,8 @@ const LAYER = {
   sheetScrimWater: ['styles/modules/400-water-and-hydration.css', '.water-custom-sheet__scrim'],
   sheetScrimAps: ['styles/modules/600-steps-and-aps.css', '.aps-v4-exit-backdrop'],
   sheetAps: ['styles/modules/600-steps-and-aps.css', '.aps-v4-exit-dialog'],
+  toast: ['styles/modules/500-pwa-and-offline.css', '.update-toast'],
+  toastContainer: ['styles/modules/002-ui-v4-palette-roles.css', '#heys-toast-container'],
   offlineBanner: ['styles/modules/000-base-and-gamification.css', '.offline-banner'],
   curatorSheet: ['styles/modules/500-pwa-and-offline.css', '.ca-modal-backdrop'],
   syncLock: ['styles/heys-components.css', '.sync-lock-overlay'],
@@ -252,14 +254,52 @@ describe('лестница слоёв — пары продукта', () => {
     }
   });
 
-  it('офлайн-баннер выше шторок; ниже кураторского листа — названное отступление', () => {
+  it('офлайн-баннер — второй сверху: выше кураторского листа и его соседей', () => {
+    // Зоны спорили, кто выше, и до шестнадцатой сборки мы держали вердикт
+    // curator-edits — баннер стоял ниже листа. Сборка спор сняла в пользу
+    // баннера: «офлайн это состояние оболочки, знать о нём надо раньше, чем
+    // читать чужие правки». Отступления здесь больше нет.
     expect(z('offlineBanner')).toBeGreaterThan(z('sheetWidget'));
     expect(z('offlineBanner')).toBeGreaterThan(z('undo'));
-    // Контракт home-widgets ставит баннер на верхний рунг вместе с модалкой
-    // обновления, но curator-edits говорит «лист над всем, кроме слоя
-    // обновления», и это зафиксировано вердиктом зоны. Держим вердикт;
-    // отступление названо вслух здесь и в лестнице.
-    expect(z('offlineBanner')).toBeLessThan(z('curatorSheet'));
+    expect(z('offlineBanner')).toBeGreaterThan(z('curatorSheet'));
+    // Лестница называет баннер вторым сверху, а замок синхронизации, слой
+    // уровня и подложку установки не перечисляет вовсе — значит и они ниже.
+    expect(z('offlineBanner')).toBeGreaterThan(z('syncLock'));
+    expect(z('offlineBanner')).toBeGreaterThan(z('levelUp'));
+    expect(z('offlineBanner')).toBeGreaterThan(z('install'));
+    expect(z('offlineBanner')).toBeLessThan(z('update'));
+  });
+
+  it('обычный тост стоит выше бара отмены и ниже шторок', () => {
+    // Строка «порядок слоёв · правило продукта»: «Обычный тост стоит ниже
+    // шторок, а не поверх них». Прежде тост жил голым числом 10002 — выше
+    // всех листов и вровень с кураторским, то есть порядок между ними
+    // задавала разметка.
+    expect(z('toast')).toBeGreaterThan(z('undo'));
+    expect(z('toast')).toBeLessThan(z('sheetScrimActivity'));
+    expect(z('toastContainer')).toBeGreaterThan(z('undo'));
+    expect(z('toastContainer')).toBeLessThan(z('sheetScrimActivity'));
+    expect(z('toast')).toBeLessThan(z('curatorSheet'));
+  });
+
+  it('тоста «Доступна новая версия» в продукте больше нет', () => {
+    // pwa-update.v4.dc.html, «мягкие уведомления»: бейдж, toast, системный
+    // баннер — не рисуем. Функция HEYS.showUpdateToast не вызывалась ниоткуда.
+    for (const f of [
+      'heys_app_update_notifications_v1.js',
+      'heys_app_overlays_v1.js',
+      'heys_app_overlays_props_v1.js',
+      'heys_app_banner_state_v1.js',
+      'heys_app_root_impl_v1.js',
+    ]) {
+      const src = read(f);
+      expect(src, f).not.toMatch(/showUpdateToast/);
+      expect(src, f).not.toContain('dismissUpdateToast');
+    }
+    // Строкой, а не подстрокой: слова живут в комментарии, который объясняет
+    // удаление, и запрещать их там значило бы стирать причину.
+    expect(read('heys_app_overlays_v1.js')).not.toContain("'Доступна новая версия!'");
+    expect(read('heys_app_overlays_v1.js')).not.toContain("className: 'update-toast-btn'");
   });
 });
 

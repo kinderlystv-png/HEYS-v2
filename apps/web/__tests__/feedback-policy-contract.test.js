@@ -90,7 +90,6 @@ function loadFeedback(settings, adviceSettings) {
           masterEnabled: true,
           volume: 0.12,
           hapticEnabled: true,
-          waterSoundEnabled: true,
           quietHoursEnabled: false,
           quietStart: 23,
           quietEnd: 7,
@@ -237,22 +236,37 @@ describe('политика отклика: два звука', () => {
     }
   });
 
-  it('у каждого звука свой переключатель', () => {
-    // Капля выключена — совет звучит.
-    let HEYS = loadFeedback({ waterSoundEnabled: false });
+  it('переключатель один, у совета; капля идёт под общим выключателем', () => {
+    // Строка «звук · правило продукта» шестнадцатой сборки: «свой переключатель
+    // один, у звука совета… Капля звучит под общим выключателем звуков
+    // приложения; своего тумблера у воды нет и не заводится».
+    // Тумблер капли заводили 25 августа по пятнадцатой сборке и сняли в тот же
+    // день, когда шестнадцатая ответила.
+    let HEYS = loadFeedback(undefined, { adviceSoundEnabled: false });
     log.nodes.length = 0;
-    HEYS.feedback.emit('water.sip');
-    expect(log.nodes.length).toBe(0);
     HEYS.feedback.emit('advice.shown');
+    expect(log.nodes.length).toBe(0);
+    HEYS.feedback.emit('water.sip');
     expect(log.nodes.length).toBeGreaterThan(0);
 
-    // Совет выключен — капля звучит.
-    HEYS = loadFeedback(undefined, { adviceSoundEnabled: false });
+    // Общий выключатель гасит оба.
+    HEYS = loadFeedback({ masterEnabled: false });
     log.nodes.length = 0;
+    HEYS.feedback.emit('water.sip');
     HEYS.feedback.emit('advice.shown');
     expect(log.nodes.length).toBe(0);
-    HEYS.feedback.emit('water.sip');
-    expect(log.nodes.length).toBeGreaterThan(0);
+  });
+
+  it('своего тумблера у капли нет ни в настройках, ни в ярусе «Звуки»', () => {
+    const audio = fs.readFileSync(path.join(WEB_DIR, 'heys_audio_v1.js'), 'utf8');
+    const shell = fs.readFileSync(path.join(WEB_DIR, 'heys_app_shell_v1.js'), 'utf8');
+    expect(audio).not.toMatch(/waterSoundEnabled\s*[:.]/);
+    expect(shell).not.toContain('waterSoundEnabled');
+    expect(shell).not.toContain("label: 'Капля воды'");
+    // Ярус остаётся — контракт «где живёт раздел» называет его прямо, просто
+    // тумблер в нём теперь один.
+    expect(shell).toContain("}, 'Звуки')");
+    expect(shell).toContain("label: 'Звук совета'");
   });
 
   it('исторический ключ soundEnabled тоже гасит совет', () => {
@@ -262,17 +276,8 @@ describe('политика отклика: два звука', () => {
     expect(log.nodes.length).toBe(0);
   });
 
-  it('выключенный звук не отменяет вибрацию записи', () => {
-    const HEYS = loadFeedback({ waterSoundEnabled: false });
-    const buzzes = captureBuzzes();
-    log.nodes.length = 0;
-    HEYS.feedback.emit('water.sip');
-    expect(log.nodes.length).toBe(0);
-    expect(buzzes).toEqual([[10]]);
-  });
-
   it('превью настроек звучит даже при выключенном переключателе этого звука', () => {
-    const HEYS = loadFeedback({ waterSoundEnabled: false }, { adviceSoundEnabled: false });
+    const HEYS = loadFeedback(undefined, { adviceSoundEnabled: false });
     log.nodes.length = 0;
     HEYS.audio.preview('water');
     expect(log.nodes.length).toBeGreaterThan(0);
@@ -363,14 +368,13 @@ describe('политика отклика: уменьшенное движени
   });
 });
 
-describe('политика отклика: оба тумблера звука стоят рядом', () => {
+describe('политика отклика: единственный тумблер звука', () => {
   const shellSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_app_shell_v1.js'), 'utf8');
 
   it('ярус «Звуки» живёт в листе «Оформление»', () => {
     // Контракт «где живёт раздел»: «Палитра» → «Режим» → «Быстрые действия» →
-    // «Звуки». Строка `settings-system` «вибрация, звук, долгое нажатие» велит
-    // держать тумблер воды в настройках воды — отступление названо в
-    // docs/ui/UI_V4_FINDINGS.md.
+    // «Звуки» (один тумблер — звук совета; у капли воды своего тумблера нет,
+    // она идёт под общим выключателем звуков).
     const themePanel = shellSrc.slice(shellSrc.indexOf("label: 'Оформление'"));
     const tierAt = themePanel.indexOf("}, 'Звуки')");
     expect(tierAt).toBeGreaterThan(0);
@@ -378,11 +382,13 @@ describe('политика отклика: оба тумблера звука с
     expect(themePanel.indexOf("'Быстрые действия'")).toBeLessThan(tierAt);
   });
 
-  it('в ярусе два тумблера — капля воды и звук совета', () => {
-    expect(shellSrc).toContain("label: 'Капля воды'");
+  it('в ярусе один тумблер — звук совета', () => {
     expect(shellSrc).toContain("label: 'Звук совета'");
-    expect(shellSrc).toContain('toggleWaterSound');
     expect(shellSrc).toContain('toggleAdviceSound');
+    // Тумблер капли заводили 25 августа по пятнадцатой сборке; шестнадцатая
+    // ответила «своего тумблера у воды нет и не заводится» — снят в тот же день.
+    expect(shellSrc).not.toContain("label: 'Капля воды'");
+    expect(shellSrc).not.toContain('toggleWaterSound');
   });
 
   it('тумблер совета пишет оба имени поля — новое и историческое', () => {

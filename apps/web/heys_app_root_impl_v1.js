@@ -238,12 +238,8 @@
             const { todayISO, selectedDate, setSelectedDate } = dateSelectionState;
 
             const fallbackUseUpdateNotifications = ({ React: HookReact }) => {
-                const [showUpdateToast, setShowUpdateToast] = HookReact.useState(false);
                 const [notification, setNotification] = HookReact.useState(null);
                 HookReact.useEffect(() => { }, []);
-                const handleUpdate = HookReact.useCallback(() => { }, []);
-                const dismissUpdateToast = HookReact.useCallback(() => { }, []);
-                return { showUpdateToast, notification, setNotification, handleUpdate, dismissUpdateToast };
             };
             const useUpdateNotifications = getStableHook(
                 AppUpdateNotifications.useUpdateNotifications,
@@ -274,11 +270,8 @@
                     offlineDuration: 0,
                 };
                 const updates = fallbackUpdates ? fallbackUpdates({ React: HookReact }) : {
-                    showUpdateToast: false,
                     notification: null,
                     setNotification: () => { },
-                    handleUpdate: () => { },
-                    dismissUpdateToast: () => { },
                 };
                 return { ...pwa, ...cloudSync, ...updates };
             };
@@ -308,11 +301,8 @@
                 retryCountdown,
                 handleRetrySync,
                 offlineDuration,
-                showUpdateToast,
                 notification,
                 setNotification,
-                handleUpdate,
-                dismissUpdateToast,
             } = bannerState;
 
             // --- What's New modal state ---
@@ -1032,9 +1022,6 @@
                     handlePwaInstall: params.handlePwaInstall,
                     dismissPwaBanner: params.dismissPwaBanner,
                     dismissIosPwaBanner: params.dismissIosPwaBanner,
-                    showUpdateToast: params.showUpdateToast,
-                    handleUpdate: params.handleUpdate,
-                    dismissUpdateToast: params.dismissUpdateToast,
                     notification: params.notification,
                     dismissNotification: params.dismissNotification,
                     widgetsEditMode: params.widgetsEditMode,
@@ -1092,9 +1079,6 @@
                 handlePwaInstall,
                 dismissPwaBanner,
                 dismissIosPwaBanner,
-                showUpdateToast,
-                handleUpdate,
-                dismissUpdateToast,
                 notification,
                 dismissNotification: () => setNotification(null),
                 widgetsEditMode,
@@ -1106,7 +1090,7 @@
                 // eslint-disable-next-line react-hooks/exhaustive-deps
             }), [gate, desktopGate, consentGate, isConsentBlocking, isMorningCheckinBlocking, showMorningCheckin,
                 showOfflineBanner, showOnlineBanner, showSyncLockOverlay, showSlowInternetHint, offlineDuration, pendingCount,
-                showPwaBanner, showIosPwaBanner, showUpdateToast, notification,
+                showPwaBanner, showIosPwaBanner, notification,
                 widgetsEditMode, tab, appShellProps, showWhatsNew,
                 optionalOutdatedList, handleOptionalReconsent, reconsentOpen, handleReconsentDone]);
             return React.createElement(AppOverlays, overlaysProps);

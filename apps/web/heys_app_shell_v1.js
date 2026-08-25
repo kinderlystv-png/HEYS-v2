@@ -4698,15 +4698,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const [notifyDetailOpen, setNotifyDetailOpen] = React.useState(false);
         const [notifyPrefs, setNotifyPrefs] = React.useState(readNotifyPrefs);
 
-        // Контракт «звук · правило продукта»: звуков два, у каждого свой
-        // переключатель, и оба стоят рядом в ярусе «Оформление» — а не в
-        // настройках своих экранов, где спрятанный тумблер никто не находит.
-        // Капля живёт в heys_audio_settings, совет — в heys_advice_settings
-        // (решение владельца 24.08, три локальных гейта в day/_advice.js).
-        const readWaterSoundOn = React.useCallback(() => {
-            try { return window.HEYS?.audio?.getSettings?.()?.waterSoundEnabled !== false; }
-            catch (_) { return true; }
-        }, []);
+        // Контракт «где живёт раздел»: ярус «Звуки» листа «Оформление» несёт
+        // ОДИН тумблер — звук совета. У капли воды своего тумблера нет и не
+        // заводится: она идёт под общим выключателем звуков. Тумблер капли
+        // здесь был с 25 августа по пятнадцатой сборке и снят в тот же день,
+        // когда шестнадцатая ответила.
+        //
+        // Совет живёт в heys_advice_settings (решение владельца 24.08, три
+        // локальных гейта в day/_advice.js).
         const readAdviceSoundOn = React.useCallback(() => {
             let stored = null;
             try { stored = U && U.lsGet ? U.lsGet('heys_advice_settings', null) : null; } catch (_) { stored = null; }
@@ -4715,16 +4714,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             if (Object.prototype.hasOwnProperty.call(stored, 'soundEnabled')) return stored.soundEnabled !== false;
             return true;
         }, []);
-        const [waterSoundOn, setWaterSoundOn] = React.useState(readWaterSoundOn);
         const [adviceSoundOn, setAdviceSoundOn] = React.useState(readAdviceSoundOn);
-        const toggleWaterSound = () => {
-            const next = !waterSoundOn;
-            setWaterSoundOn(next);
-            try { window.HEYS?.audio?.saveSettings?.({ waterSoundEnabled: next }); } catch (_) { /* останется прежним */ }
-            // Включили — дали послушать: иначе переключатель немой ровно тогда,
-            // когда его и хотят проверить.
-            if (next) { try { window.HEYS?.audio?.preview?.('water'); } catch (_) { /* noop */ } }
-        };
         const toggleAdviceSound = () => {
             const next = !adviceSoundOn;
             setAdviceSoundOn(next);
@@ -4742,9 +4732,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         };
         React.useEffect(() => {
             if (sheetExtra !== 'theme') return;
-            setWaterSoundOn(readWaterSoundOn());
             setAdviceSoundOn(readAdviceSoundOn());
-        }, [sheetExtra, readWaterSoundOn, readAdviceSoundOn]);
+        }, [sheetExtra, readAdviceSoundOn]);
         const notifyQuietStart = notifyPrefs.quiet_start || QUIET_HOURS_DEFAULT.quiet_start;
         const notifyQuietEnd = notifyPrefs.quiet_end || QUIET_HOURS_DEFAULT.quiet_end;
         // В heys_push_prefs кладём только выбранное человеком: дефолт тихих
@@ -5572,7 +5561,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                 onClick: (e) => e.stopPropagation(),
                             },
                                 [
-                                    { key: 'water', label: 'Капля воды', on: waterSoundOn, toggle: toggleWaterSound },
                                     { key: 'advice', label: 'Звук совета', on: adviceSoundOn, toggle: toggleAdviceSound },
                                 ].map((row) => React.createElement('button', {
                                     key: row.key,

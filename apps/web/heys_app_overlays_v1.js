@@ -138,9 +138,6 @@
             handlePwaInstall,
             dismissPwaBanner,
             dismissIosPwaBanner,
-            showUpdateToast,
-            handleUpdate,
-            dismissUpdateToast,
             notification,
             dismissNotification,
             widgetsEditMode,
@@ -437,24 +434,11 @@
                     }, 'Понял')
                 )
             ),
-            // === Update Toast (только после Morning Check-in) ===
-            !isMorningCheckinBlocking && showUpdateToast && React.createElement(
-                'div',
-                { className: 'update-toast' },
-                React.createElement('div', { className: 'update-toast-content' },
-                    React.createElement('span', { className: 'update-toast-icon' }, '🚀'),
-                    React.createElement('span', { className: 'update-toast-text' }, 'Доступна новая версия!'),
-                    React.createElement('button', {
-                        className: 'update-toast-btn',
-                        onClick: handleUpdate
-                    }, 'Обновить'),
-                    React.createElement('button', {
-                        className: 'update-toast-dismiss',
-                        onClick: dismissUpdateToast
-                    }, '✕')
-                )
-            ),
-            // === App Notification Toast ===
+            // === Обычный тост приложения ===
+            // Тост «Доступна новая версия» стоял здесь же и удалён 25 августа:
+            // pwa-update.v4.dc.html, «мягкие уведомления» — не рисуем. Классы
+            // .update-toast остались историческим именем: их носит этот,
+            // обычный тост, и переименование задело бы только вёрстку.
             !isMorningCheckinBlocking && notification && React.createElement(
                 'div',
                 { className: 'update-toast' },

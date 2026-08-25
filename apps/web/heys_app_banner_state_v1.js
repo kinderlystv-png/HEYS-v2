@@ -33,11 +33,8 @@
         };
 
         const updates = useUpdateNotifications ? useUpdateNotifications({ React }) : {
-            showUpdateToast: false,
             notification: null,
             setNotification: () => { },
-            handleUpdate: () => { },
-            dismissUpdateToast: () => { },
         };
 
         return {
