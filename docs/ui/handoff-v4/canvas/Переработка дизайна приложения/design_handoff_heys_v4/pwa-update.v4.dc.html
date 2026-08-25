@@ -14,18 +14,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="./v4-canvas.css" rel="stylesheet">
 <style>
-  .updOverlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(18,14,10,.62);backdrop-filter:blur(2.5px)}
-  .updCard{width:100%;max-width:262px;min-height:238px;background:linear-gradient(165deg,#241d16,#1a140f);border-radius:24px;padding:26px 22px 22px;text-align:center;box-shadow:0 22px 48px rgba(0,0,0,.4);border:1px solid rgba(245,237,225,.08)}
-  .updRing{width:60px;height:60px;border-radius:999px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;flex:none;position:relative}
-  .updTitle{font:700 19px/1.25 Figtree,sans-serif;color:#f5ede1}
-  .updSub{font:500 12px/1.5 Figtree,sans-serif;color:rgba(245,237,225,.6);margin-top:5px;text-wrap:pretty}
+  .updOverlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);backdrop-filter:blur(2.5px)}
+  .updCard{width:100%;max-width:262px;min-height:238px;background:var(--c1);border-radius:24px;padding:26px 22px 22px;text-align:center;box-shadow:0 22px 48px rgba(0,0,0,.4);border:1px solid rgba(var(--ink),.08)}
+  .updRing{width:56px;height:56px;border-radius:999px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;flex:none;position:relative}
+  .updTitle{font:700 19px/1.25 Figtree,sans-serif;color:var(--tx)}
+  .updSub{font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.6);margin-top:5px;text-wrap:pretty}
   .updDots{display:flex;gap:6px;justify-content:center;margin-top:15px}
-  .updDots span{width:6px;height:6px;border-radius:999px;background:rgba(245,237,225,.2)}
-  .updDots span.on{background:#d98a4f;width:16px;border-radius:999px}
-  .updVer{font:600 10px/1.4 ui-monospace,Menlo,monospace;color:rgba(245,237,225,.38);margin-top:15px}
-  .updBtn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:linear-gradient(135deg,#e0975c,#b5652c);font:700 14px/1 Figtree,sans-serif;color:#241207;margin-top:18px}
-  .updGhost{display:flex;align-items:center;justify-content:center;min-height:40px;font:600 12.5px/1 Figtree,sans-serif;color:rgba(245,237,225,.5);margin-top:8px}
-  .offBar{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;justify-content:center;gap:7px;padding:16px 14px 9px;background:#1c1712;color:#f5ede1;font:600 11px/1.3 Figtree,sans-serif;z-index:5;text-align:center}
+  .updDots span{width:6px;height:6px;border-radius:999px;background:rgba(var(--ink),.2)}
+  .updDots span.on{background:var(--acs);width:16px;border-radius:999px}
+  .updVer{font:600 10px/1.4 ui-monospace,Menlo,monospace;color:rgba(var(--ink),.38);margin-top:15px}
+  .updBtn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--acs);font:700 14px/1 Figtree,sans-serif;color:var(--on-acs);margin-top:18px}
+  .updGhost{display:flex;align-items:center;justify-content:center;min-height:40px;font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:8px}
+  .offBar{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;justify-content:center;gap:7px;padding:16px 14px 9px;background:#1c1712;color:var(--tx);font:600 11px/1.3 Figtree,sans-serif;z-index:5;text-align:center}
   .swatch{width:230px;flex:none;background:#0d0b08;border-radius:20px;padding:20px 12px}
   .stg{display:flex;flex-direction:column;align-items:center;gap:5px;color:rgba(0,0,0,.38);flex:none}
   .stg b{font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.02em}
@@ -40,7 +40,7 @@
 </style>
 </helmet>
 
-<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1a140f"/><circle cx="50" cy="42" r="18" fill="none" stroke="#d98a4f" stroke-width="5"/><path d="M50 30v14l9 9" stroke="#d98a4f" stroke-width="5" stroke-linecap="round" fill="none"/><text x="50" y="82" text-anchor="middle" font-family="Figtree,sans-serif" font-size="12" font-weight="700" fill="#f5ede1">update</text></svg></template>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1a140f"/><circle cx="50" cy="42" r="18" fill="none" stroke="var(--acs)" stroke-width="5"/><path d="M50 30v14l9 9" stroke="var(--acs)" stroke-width="5" stroke-linecap="round" fill="none"/><text x="50" y="82" text-anchor="middle" font-family="Figtree,sans-serif" font-size="12" font-weight="700" fill="var(--tx)">update</text></svg></template>
 
 <div style="background:#e9dfcd;padding:0 46px 70px;width:max-content;">
 
@@ -64,6 +64,8 @@
     <div class="spec"><b>источник</b><span data-v="главный для служебного слоя обновления и офлайн-баннера"></span><i>знак ожидания как таковой — в spinners.v4.dc.html</i></div>
     <div class="spec"><b>демо</b><span data-v="data-demo='loop' — кадры с вращающимся кольцом (загрузка, перезагрузка, одиночная) · data-demo='stop' — остальные; вращение непрерывно и в продукте, остальные тайминги ниже"></span></div>
     <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label"></span></div>
+    <div class="spec"><b>области нажатия</b><span data-v="кнопка слоя — не меньше 48 px; у модалки в стадиях загрузки и перезагрузки нажимаемых элементов нет вовсе, крестика тоже; в страховке на iOS вместо кнопки два шага текстом и ничего не нажимается"></span><i>отсутствие крестика — решение: перезагрузка необратима, и отмены у неё нет</i></div>
+    <div class="spec"><b>доступность</b><span data-v="карточка — модальный диалог role='alertdialog' с запертым фокусом; стадия озвучивается при смене («Обновление готово»), точки прогресса декоративны; офлайн-баннер role='status' и читается один раз при появлении"></span><i>три точки скринридеру бесполезны — стадия называется словами</i></div>
 
     <div class="ctrH">Служебный слой</div>
     <div class="spec"><b>палитра</b><span data-v="один тёплый тёмный слой вне четырёх тем продукта, одинаковый во всех палитрах"></span><i>обновление может показаться до загрузки контекста темы — красить переменными палитры нельзя. На кадрах показан поверх светлой темы: держит контраст на самом светлом фоне — на остальных проблем не будет</i></div>
@@ -72,15 +74,35 @@
     <div class="spec"><b>блюр подложки</b><span data-v="2,5 px (инвариант --v4-modal-backdrop-blur); у «Требуется обновление» блюра нет — подложка сплошная"></span><i>было 8 px — нарушение общего значения</i></div>
     <div class="spec"><b>иконки</b><span data-v="линейные, обводка 2,5, один цвет — акцент слоя; эмодзи сняты"></span><i>🔍 🆕 📥 ⚙️ рендерились по-разному на каждой платформе и не складывались в набор</i></div>
     <div class="spec" style="border-bottom:none"><b>высота карточки</b><span data-v="минимум 238 px, постоянная; DOM не пересоздаётся, стадии сменяются на месте"></span><i>иначе смена содержимого читается как новое окно; у одиночного кадра освободившееся место остаётся пустым</i></div>
+    <div class="spec"><b>нажатие и крупный шрифт</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «состояние нажатия · правило продукта» и «крупный системный шрифт · правило продукта»: гашение до 70 % на касание, рост по высоте при крупном шрифте. Местное отличие: карточка при крупном шрифте растёт выше своих 238 px; минимальная высота — нижняя граница, а не фиксированная"></span></div>
+    <div class="spec"><b>вид карточки</b><span data-v="карточка 262 px по ширине с минимальной высотой 238, радиус 24, поля 26/22/22 px, текст по центру; фон --c1, обводка 1 px тоном чернил 8 %, тень 0 22px 48px тона тени палитры. Подложка — --scrim с блюром 2,5 px, поля 20. Слой существует в четырёх палитрах, как остальные поверхности — своего градиента и своих хексов у него нет"></span><i>решение владельца 25 августа: прежде слой был служебным исключением с тёмным градиентом вне тем. Одна поверхность продукта, живущая по своим цветам, — это место, где любая следующая правка палитры молча её обойдёт</i></div>
+    <div class="spec"><b>выход, удаление данных, производительность</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «выход и удаление данных · правило продукта» и «производительность · правило продукта». Местное отличие: слой обновления не зависит от аккаунта — он живёт в оболочке и виден до входа"></span></div>
+    <div class="spec"><b>уведомления и точки входа</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «уведомления · правило продукта» и «точки входа · правило продукта». Местное отличие: слой обновления приходит сам и точки входа не имеет; уведомлением о новой версии продукт не сообщает"></span></div>
+    <div class="spec"><b>вибрация, звук, долгое нажатие</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «вибрация · правило продукта», «звук · правило продукта» и «долгое нажатие · правило продукта». Местное отличие: двойная короткая вибрация в момент перезагрузки — она необратима"></span></div>
+    <div class="spec"><b>порядок слоёв и два устройства</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «порядок слоёв · правило продукта» и «два устройства · правило продукта». Местное отличие: слой обновления стоит выше всего остального, включая листы и бар отмены; на двух устройствах обновления идут независимо — версия у каждого своя до перезагрузки"></span></div>
+    <div class="spec"><b>safe-area и кнопка назад</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «safe-area · правило продукта» и «аппаратная кнопка назад · правило продукта». Местное отличие: карточка центруется между врезками; аппаратная кнопка модалку не закрывает — обновление необратимо и крестика у него нет"></span></div>
+    <div class="spec"><b>вид иконки стадии</b><span data-v="знак ожидания общий для продукта — круг 56 px заливкой --c2, внутри дуга 26 px обводкой 2,75 тоном --acs со скруглёнными концами и хвостом под прозрачностью .16. Дуга крутится на стадиях загрузки и перезагрузки; на «Готово» она заменяется галочкой 26 px обводкой 2,75 тоном --on-acs, вспышка 0,8 с. Своих глифов у стадий нет — форма одна, меняется только то, что внутри круга"></span><i>решение владельца 25 августа: три глифа на трёх стадиях, которые сменяются за секунды, читаются как мигание. Дуга говорит «идёт», галочка — «можно продолжать», облако страховки — «сборка не сменилась»; вид знака тот же, что в spinners.v4.dc.html</i></div>
+    <div class="spec"><b>вид кнопки слоя</b><span data-v="заливка --acs, текст --on-acs 14 px/700, высота не меньше 48, радиус 999, отступ сверху 18 — как у любой основной кнопки продукта"></span><i>градиент на кнопке ушёл вместе с градиентом слоя: служебность слоя больше не выражается цветом</i></div>
 
     <div class="ctrH">Модалка · стадии</div>
     <div class="spec"><b>путь по умолчанию</b><span data-v="загрузка → готово → перезагрузка"></span></div>
+    <div class="spec"><b>обновление во время записи</b><span data-v="решение 24 августа: слой ждёт, пока форма не опустеет — не только закрытия модалок, но и любого заполненного поля на экране. Условие показа: heys:modal-stack-idle + 300 мс И ни одного непустого поля ввода. Пока условие не выполнено, обновление копится молча; вопроса «обновить или продолжить» человеку не задают"></span><i>перезагрузка необратима: потерянный на середине чек-ин человек второй раз проходить не станет, а вопрос посреди ввода — это тот же перерыв, только с виной на человеке</i></div>
     <div class="spec"><b>длительность загрузки</b><span data-v="реальное время установки SW, 0,5–3 с"></span><i>кольцо крутится только там, где ожидание действительно неопределённое</i></div>
     <div class="spec"><b>«Готово!»</b><span data-v="вспышка 0,8 с, кольцо не крутится"></span></div>
     <div class="spec"><b>прогресс</b><span data-v="три точки за стадию; процентов нет"></span><i>20/40/60/80/100 % ничем не были измерены</i></div>
+    <div class="spec"><b>вид точек прогресса</b><span data-v="три точки 6×6 px радиусом 999, зазор 6, по центру, отступ сверху 15; будущие — акцент слоя под прозрачностью 20 %, текущая растягивается до 16 px тем же радиусом и заливается акцентом. Процентов, полосы и подписи «шаг 2 из 3» нет"></span><i>растянутая точка — общий приём продукта: так же отмечен текущий шаг в чек-ине и в регистрации. Раньше эта строка запрещала пилюлю, и запрет спорил и с кадром, и с кодом — снят 24 августа</i></div>
+    <div class="spec"><b>вид версии внизу</b><span data-v="подпись «Текущая версия» и номер в одну строку по центру, 10 px/600 моноширинным, тон — кремовый var(--tx) под прозрачностью 38 %, отступ сверху 15"></span><i>моноширинный намеренно: номер сборки читает поддержка, и цифры должны стоять в колонку при сравнении двух скриншотов</i></div>
+    <div class="spec"><b>язык, выделение, часовой пояс</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «язык · правило продукта», «выделение и копирование · правило продукта» и «часовой пояс · правило продукта». Местное отличие: номер версии выделяется и копируется — его диктуют поддержке; остальной текст слоя нет"></span></div>
     <div class="spec"><b>второй живой путь</b><span data-v="controllerchange: приходит один кадр «Перезагрузка», точек нет вовсе"></span><i>две погашенные точки врали бы про пропущенные шаги</i></div>
     <div class="spec"><b>версия внизу</b><span data-v="подпись «Текущая версия» + номер до перезагрузки (старый)"></span><i>слово «Текущая» снимает путаницу «это версия, на которую обновляемся?»; удалять строку нельзя — это единственный способ поддержке узнать сборку клиента</i></div>
+    <div class="spec"><b>что пишется</b><span data-v="слой пишет одно — счётчик неудачных попыток обновления, по которому после трёх появляется страховка; успешное обновление счётчик обнуляет. Ни версии, ни времени проверки в профиль не пишется"></span><i>история проверок нужна была бы поддержке, но у неё есть логи; в профиле она только копит мусор</i></div>
+    <div class="spec"><b>длинные номера версий</b><span data-v="номер версии не переносится и не обрезается: он моноширинный и стоит в одну строку по центру. Если номер длиннее карточки, уменьшается кегль, а не текст"></span><i>обрезанный номер сборки бесполезен поддержке — именно хвост в нём и различает сборки</i></div>
+    <div class="spec"><b>режим куратора</b><span data-v="слой обновления одинаков у клиента и куратора: приложение одно, и версия у них общая. Отдельного поведения для кураторского входа нет"></span></div>
+    <div class="spec"><b>откуда данные</b><span data-v="номер текущей версии — из сборки, факт наличия новой — от service worker; сам слой ничего не запрашивает и версии не сравнивает"></span><i>клиентское сравнение версий строками — источник ложных обновлений на любой смене схемы нумерации</i></div>
+    <div class="spec"><b>слова на экране</b><span data-v="стадии называются результатом, а не процессом: «Готово», «Перезагрузка», «Требуется обновление». Слов «checking», «found», «installing», процентов и восклицательных знаков нет; на iOS шаги описаны действиями человека («Закройте приложение», «Откройте снова»)"></span><i>человек не участвует в загрузке — ему нужно знать только, когда можно продолжать</i></div>
+    <div class="spec"><b>первое появление</b><span data-v="при самой первой установке приложения слой не показывается вовсе: обновлять ещё нечего"></span></div>
     <div class="spec"><b>перезагрузка</b><span data-v="необратима, крестика нет"></span></div>
+    <div class="spec"><b>повторный тап и поворот</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «повторный тап · правило продукта» и «ориентация · правило продукта»: 350 мс защиты там, где повтор создаёт лишнюю сущность; интерфейс всегда портретный, ширина окна гибкая. Местное отличие: кнопка перезагрузки защищена на всё время перезагрузки, а не на 350 мс — второе нажатие не должно начинать её заново"></span></div>
     <div class="spec"><b>аварийный предел</b><span data-v="10 с, при сверке версии 12 с — модалка скрывается"></span><i>«вечного кольца» быть не должно: человек возвращается в приложение на старой сборке и работает</i></div>
     <div class="spec"><b>после предела</b><span data-v="кадра «не получилось» нет; растёт счётчик попыток"></span></div>
     <div class="spec"><b>не перебивает форму</b><span data-v="ждёт heys:modal-stack-idle + 300 мс"></span></div>
@@ -89,15 +111,19 @@
     <div class="ctrH">Страховка «Требуется обновление»</div>
     <div class="spec"><b>когда</b><span data-v="после трёх неудачных попыток подряд"></span></div>
     <div class="spec"><b>без спиннера</b><span data-v="статичная иконка — облако со стрелкой; ждут человека, ничего не происходит"></span><i>глиф намеренно отличается от круговых стрелок «Перезагрузки»: при уменьшенном движении кольцо не крутится, и одинаковая иконка сделала бы «идёт само» и «ждут вас» неотличимыми</i></div>
+    <div class="spec"><b>вид страховки</b><span data-v="та же карточка --c1 и та же геометрия, что у модалки; отличий два — подложка плотнее (--scrim без прозрачности, 90 %) и блюра нет вовсе, а вместо дуги в круге 56 стоит статичная иконка облака со стрелкой вниз 26 px обводкой 2,75 тоном --acs"></span><i>блюр снят намеренно: страховка показывается, когда сборка не сменилась, и экран под ней может быть нарисован неверно — размывать его значит делать вид, что там всё в порядке. Круг и его размер общие со знаком ожидания, меняется только содержимое</i></div>
     <div class="spec"><b>iOS</b><span data-v="кнопки нет — вместо неё два шага действия (закрыть, открыть)"></span><i>там нужен жест, а не ожидание</i></div>
     <div class="spec"><b>версия</b><span data-v="«Застряли на …» — та сборка, которая не сменилась; целевая версия живёт в тексте и может отсутствовать"></span><i>единственный экран, где версия действительно нужна поддержке</i></div>
     <div class="spec" style="border-bottom:none"><b>уменьшенное движение</b><span data-v="кольцо заменяется таким же кругом без дуги и без анимации"></span><i>осознанный кадр состояния, а не CSS-анимация, выключенная посреди оборота</i></div>
 
     <div class="ctrH">Офлайн-баннер</div>
     <div class="spec" style="border-bottom:none"><b>позиция</b><span data-v="верхний отступ = safe-area-inset-top + 8; тот же визуальный язык, что у обновления"></span></div>
+    <div class="spec"><b>возврат на экран и прокрутка</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «возврат на экран · правило продукта» и «прокрутка · правило продукта». Местное отличие: возврат из фона во время перезагрузки ничего не меняет — она уже идёт; на стадии «Готово» слой остаётся и ждёт паузы"></span></div>
+    <div class="spec"><b>вид офлайн-баннера</b><span data-v="полоса во всю ширину сверху: фон #1c1712, текст var(--tx) 11 px/600 по центру, иконка 15 px обводкой 2,5 тем же тоном, зазор 7, поля 16/14/9 px (верхнее считается от safe-area-inset-top + 8). Радиуса и тени нет — полоса прижата к краю экрана"></span><i>тот же тёплый тёмный слой, что у модалки: офлайн — состояние оболочки, а не продукта, и он не красится темой</i></div>
 
     <div class="ctrH">Не реализовывать</div>
     <div class="spec" style="border-bottom:none"><b>мягкие уведомления</b><span data-v="бейдж, toast, системный баннер, «Всё актуально!», стадии checking / found / installing — не рисуем"></span><i>решение владельца 2026-08-19: код мёртв и уходит отдельной задачей по чистке, а не отрисовкой</i></div>
+
   </div>
 
   <div class="secH" style="margin-top:0;">Живые кадры модалки — путь по умолчанию</div>
@@ -110,10 +136,10 @@
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay">
         <div class="updCard">
-          <div class="updRing" style="background:rgba(217,138,79,.14);">
-            <svg class="spin liveRing" width="52" height="52" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,.16)" stroke-width="2.2"/><circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/></svg>
-            <span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:rgba(217,138,79,.16);"></span>
-            <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#d98a4f;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 18h14"/></svg></span>
+          <div class="updRing" style="background:var(--c2);">
+            <svg class="spin liveRing" width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(var(--ink),.16)" stroke-width="2.75"/><circle cx="12" cy="12" r="9.4" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-dasharray="18 41"/></svg>
+            <span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:var(--c2);"></span>
+            <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--acs);"></span>
           </div>
           <div class="updTitle">Загрузка</div>
           <div class="updSub">Это займёт пару секунд…</div>
@@ -130,8 +156,8 @@
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay">
         <div class="updCard">
-          <div class="updRing" style="background:#d98a4f;">
-            <span style="color:#241207;display:flex;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+          <div class="updRing" style="background:var(--acs);">
+            <span style="color:var(--on-acs);display:flex;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
           </div>
           <div class="updTitle">Готово!</div>
           <div class="updSub">Приложение обновлено</div>
@@ -148,10 +174,10 @@
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay">
         <div class="updCard">
-          <div class="updRing" style="background:rgba(217,138,79,.14);">
-            <svg class="spin liveRing" width="52" height="52" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,.16)" stroke-width="2.2"/><circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/></svg>
-            <span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:rgba(217,138,79,.16);"></span>
-            <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#d98a4f;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0012.5 2.5M18.5 9A7 7 0 006 6.5"/></svg></span>
+          <div class="updRing" style="background:var(--c2);">
+            <svg class="spin liveRing" width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(var(--ink),.16)" stroke-width="2.75"/><circle cx="12" cy="12" r="9.4" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-dasharray="18 41"/></svg>
+            <span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:var(--c2);"></span>
+            <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--acs);"></span>
           </div>
           <div class="updTitle">Перезагрузка</div>
           <div class="updSub">Применяем изменения…</div>
@@ -166,10 +192,10 @@
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay">
         <div class="updCard">
-          <div class="updRing" style="background:rgba(217,138,79,.14);">
-            <svg class="spin liveRing" width="52" height="52" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,.16)" stroke-width="2.2"/><circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/></svg>
-            <span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:rgba(217,138,79,.16);"></span>
-            <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#d98a4f;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0012.5 2.5M18.5 9A7 7 0 006 6.5"/></svg></span>
+          <div class="updRing" style="background:var(--c2);">
+            <svg class="spin liveRing" width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(var(--ink),.16)" stroke-width="2.75"/><circle cx="12" cy="12" r="9.4" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-dasharray="18 41"/></svg>
+            <span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:var(--c2);"></span>
+            <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--acs);"></span>
           </div>
           <div class="updTitle">Перезагрузка</div>
           <div class="updSub">Применяем изменения…</div>
@@ -182,11 +208,11 @@
 
   <div class="secH">Раскадровка: тот же путь компактно</div>
   <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;">
-    <div class="swatch"><div class="updRing" style="width:40px;height:40px;background:rgba(217,138,79,.14);margin:0 auto 10px;"><svg class="spin liveRing" width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,.16)" stroke-width="2.2"/><circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/></svg><span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:rgba(217,138,79,.16);"></span><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#d98a4f;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 18h14"/></svg></span></div><div style="font:700 13px/1 Figtree,sans-serif;color:#f5ede1;text-align:center;">Загрузка</div></div>
+    <div class="swatch"><div class="updRing" style="width:40px;height:40px;background:var(--c2);margin:0 auto 10px;"><svg class="spin liveRing" width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(var(--ink),.16)" stroke-width="2.75"/><circle cx="12" cy="12" r="9.4" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-dasharray="18 41"/></svg><span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:var(--c2);"></span><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--acs);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 18h14"/></svg></span></div><div style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);text-align:center;">Загрузка</div></div>
     <div class="stg" style="width:70px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b>0,5–3 с</b></div>
-    <div class="swatch"><div class="updRing" style="width:40px;height:40px;background:#d98a4f;margin:0 auto 10px;"><span style="color:#241207;display:flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span></div><div style="font:700 13px/1 Figtree,sans-serif;color:#f5ede1;text-align:center;">Готово!</div></div>
+    <div class="swatch"><div class="updRing" style="width:40px;height:40px;background:var(--acs);margin:0 auto 10px;"><span style="color:var(--on-acs);display:flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span></div><div style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);text-align:center;">Готово!</div></div>
     <div class="stg" style="width:70px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b>0,8 с</b></div>
-    <div class="swatch"><div class="updRing" style="width:40px;height:40px;background:rgba(217,138,79,.14);margin:0 auto 10px;"><svg class="spin liveRing" width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,.16)" stroke-width="2.2"/><circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/></svg><span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:rgba(217,138,79,.16);"></span><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#d98a4f;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0012.5 2.5M18.5 9A7 7 0 006 6.5"/></svg></span></div><div style="font:700 13px/1 Figtree,sans-serif;color:#f5ede1;text-align:center;">Перезагрузка</div></div>
+    <div class="swatch"><div class="updRing" style="width:40px;height:40px;background:var(--c2);margin:0 auto 10px;"><svg class="spin liveRing" width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(var(--ink),.16)" stroke-width="2.75"/><circle cx="12" cy="12" r="9.4" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-dasharray="18 41"/></svg><span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:var(--c2);"></span><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--acs);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0012.5 2.5M18.5 9A7 7 0 006 6.5"/></svg></span></div><div style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);text-align:center;">Перезагрузка</div></div>
     <div class="stg" style="width:110px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b>0,5 с → страница перезагружается</b></div>
   </div>
   <p style="margin:12px 0 0;max-width:900px;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);text-wrap:pretty;">Аварийный предел: если модалка провисит на экране дольше 10 с (или 12 с при сверке версии) — её скрывают. У кадра есть потолок жизни, «вечного кольца» быть не должно.</p>
@@ -200,8 +226,8 @@
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay" style="backdrop-filter:none;background:rgba(13,11,8,.9);">
         <div class="updCard">
-          <div class="updRing" style="background:rgba(217,138,79,.14);">
-            <span style="color:#d98a4f;display:flex;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12v7m0 0l-3.2-3.2M12 19l3.2-3.2M17.5 16.2A3.9 3.9 0 0016.6 8.6h-1.2A6 6 0 004 10.2a3.5 3.5 0 00.4 6.2"/></svg></span>
+          <div class="updRing" style="background:var(--c2);">
+            <span style="color:var(--acs);display:flex;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.3A5 5 0 108 16h9a3.5 3.5 0 001-6.9z"/><path d="M12 12v5"/><path d="M9.5 14.5L12 17l2.5-2.5"/></svg></span>
           </div>
           <div class="updTitle">Требуется обновление</div>
           <div class="updSub">Нажмите кнопку для обновления до версии 2026.08.19.1830</div>
@@ -217,8 +243,8 @@
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay" style="backdrop-filter:none;background:rgba(13,11,8,.9);">
         <div class="updCard">
-          <div class="updRing" style="background:rgba(217,138,79,.14);">
-            <span style="color:#d98a4f;display:flex;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12v7m0 0l-3.2-3.2M12 19l3.2-3.2M17.5 16.2A3.9 3.9 0 0016.6 8.6h-1.2A6 6 0 004 10.2a3.5 3.5 0 00.4 6.2"/></svg></span>
+          <div class="updRing" style="background:var(--c2);">
+            <span style="color:var(--acs);display:flex;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.3A5 5 0 108 16h9a3.5 3.5 0 001-6.9z"/><path d="M12 12v5"/><path d="M9.5 14.5L12 17l2.5-2.5"/></svg></span>
           </div>
           <div class="updTitle">Требуется обновление</div>
           <div class="updSub">Нажмите кнопку для обновления</div>
@@ -235,9 +261,9 @@
       <div class="updOverlay" style="backdrop-filter:none;background:rgba(13,11,8,.9);">
         <div class="updCard">
           <div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:16px;">
-            <span class="updRing" style="width:42px;height:42px;background:rgba(217,138,79,.14);margin:0;"><span style="color:#d98a4f;display:flex;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></span>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(245,237,225,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-            <span class="updRing" style="width:42px;height:42px;background:rgba(217,138,79,.14);margin:0;"><span style="color:#d98a4f;display:flex;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a1 1 0 00-1 1v14a1 1 0 001 1h14a1 1 0 001-1v-4M14 4h6v6M20 4l-8 8"/></svg></span></span>
+            <span class="updRing" style="width:42px;height:42px;background:var(--c2);margin:0;"><span style="color:var(--acs);display:flex;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <span class="updRing" style="width:42px;height:42px;background:var(--c2);margin:0;"><span style="color:var(--acs);display:flex;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a1 1 0 00-1 1v14a1 1 0 001 1h14a1 1 0 001-1v-4M14 4h6v6M20 4l-8 8"/></svg></span></span>
           </div>
           <div class="updTitle">Требуется обновление</div>
           <div class="updSub">Закройте приложение и откройте заново для обновления до версии 2026.08.19.1830</div>

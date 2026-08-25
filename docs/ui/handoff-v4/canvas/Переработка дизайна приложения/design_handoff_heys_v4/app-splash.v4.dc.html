@@ -10,15 +10,15 @@
 <helmet>
 <meta name="design_doc_mode" content="canvas">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Caprasimo&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="./v4-canvas.css" rel="stylesheet">
 <style>
   .and{width:330px;height:706px;flex:none;position:relative;overflow:hidden;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);display:flex;flex-direction:column}
   .asb{height:26px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font:500 11px/1 Roboto,system-ui,sans-serif}
   .amid{flex:1;display:flex;align-items:center;justify-content:center}
   .acap{position:absolute;left:0;right:0;bottom:44px;text-align:center;font:400 15px/1.25 Roboto,system-ui,sans-serif}
-  .amk{width:64px;height:64px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:Caprasimo,Georgia,serif;font-size:29px;line-height:1;padding-bottom:3px}
-  .icb{width:168px;height:168px;flex:none;position:relative;display:flex;align-items:center;justify-content:center;font-family:Caprasimo,Georgia,serif;font-size:76px;line-height:1;padding-bottom:6px}
+  .amk{width:64px;height:64px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:Figtree,system-ui,sans-serif;font-weight:800;font-size:29px;line-height:1;padding-bottom:3px}
+  .icb{width:168px;height:168px;flex:none;position:relative;display:flex;align-items:center;justify-content:center;font-family:Figtree,system-ui,sans-serif;font-weight:800;font-size:76px;line-height:1;padding-bottom:6px}
   .icg{position:absolute;inset:0;border-radius:16px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
   .safe{position:absolute;left:10%;top:10%;right:10%;bottom:10%;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(180,68,42,.55)}
   .mn{font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.55)}
@@ -29,7 +29,7 @@
   .no i{flex:none;width:14px;height:14px;margin-top:2px;border-radius:999px;background:rgba(180,68,42,.14);display:flex;align-items:center;justify-content:center;font:800 9px/1 Figtree,sans-serif;color:#b4442a;font-style:normal}
   .cap{width:330px;margin-top:11px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.5);text-wrap:pretty}
   .bm{width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none}
-  .bml{font-family:Caprasimo,Georgia,serif;font-size:25px;line-height:1;color:var(--ac);padding-bottom:2px}
+  .bml{font-family:Figtree,system-ui,sans-serif;font-weight:800;font-size:25px;line-height:1;color:var(--ac);padding-bottom:2px}
   .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
   .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
   .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
@@ -41,7 +41,7 @@
 </style>
 </helmet>
 
-<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#fffaf1"/><circle cx="50" cy="44" r="19" fill="#efe3cf"/><text x="50" y="52" text-anchor="middle" font-family="Georgia,serif" font-size="18" font-weight="700" fill="#a8481c">H</text><rect x="30" y="76" width="40" height="5" rx="2.5" fill="rgba(32,30,29,.3)"/></svg></template>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#fffaf1"/><circle cx="50" cy="44" r="19" fill="#efe3cf"/><text x="50" y="52" text-anchor="middle" font-family="Georgia,serif" font-size="18" font-weight="700" fill="#a1471c">H</text><rect x="30" y="76" width="40" height="5" rx="2.5" fill="rgba(32,30,29,.3)"/></svg></template>
 
 <div style="background:#e9dfcd;padding:0 46px 70px;width:max-content;">
 
@@ -64,24 +64,47 @@
     <div class="spec"><b>границы</b><span data-v="системный кадр рисует платформа из иконки и манифеста — вёрстки там нет; наше — иконка, два цвета манифеста и всё после первого пейнта"></span></div>
     <div class="spec"><b>источник</b><span data-v="главный для иконки, значений манифеста и точки круга на стыке"></span><i>сам знак ожидания и его состояния — spinners.v4.dc.html</i></div>
     <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label; все кадры статичные (data-demo='stop')"></span></div>
+    <div class="spec"><b>палитры</b><span data-v="системный кадр всегда песочный — background_color манифеста #fffaf1, темы там нет; загрузчик уже красится выбранной палитрой. Значит в тёмной теме первый кадр светлый, второй тёмный, и это неизбежно"></span><i>манифест один на приложение и читается до запуска кода: узнать выбранную человеком палитру в этот момент нечем</i></div>
+    <div class="spec"><b>доступность</b><span data-v="системный кадр недоступен для разметки — подпись под иконкой рисует платформа из short_name; в загрузчике диск декоративен, а сам загрузчик озвучивается как «Загрузка» через role='status'"></span></div>
+    <div class="spec"><b>уменьшенное движение</b><span data-v="в загрузчике диск статичен всегда — ни вращения, ни дыхания: движение начинается только со знака ожидания, когда загрузка перешла в порог 300 мс"></span><i>вращение на кадре, который живёт полсекунды, читается как рывок</i></div>
 
     <div class="ctrH">Знак</div>
     <div class="spec"><b>геометрия</b><span data-v="диск 56 — тот же диаметр, что у знака ожидания; в канвасе увеличен до 64 только для наглядности"></span><i>совпадение диаметра и центра делает шов продолжением движения, а не перезагрузкой</i></div>
-    <div class="spec"><b>что в круге</b><span data-v="буква H в Caprasimo, занимает больше половины плитки"></span><i>в круге 56 любая метафора превращается в пятно; дисплейная гарнитура больше нигде в интерфейсе не встречается — знак должен отличаться от текста</i></div>
+    <div class="spec"><b>нажатие и крупный шрифт</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «состояние нажатия · правило продукта» и «крупный системный шрифт · правило продукта»: гашение до 70 % на касание, рост по высоте при крупном шрифте. Местных отличий нет: системный кадр рисует платформа по своим правилам, в загрузчике текста нет вовсе"></span></div>
+    <div class="spec"><b>вид диска в загрузчике</b><span data-v="диск 56 px радиусом 999, заливка --c2, обводки и тени нет — он не менялся. Внутри диска сразу дуга ожидания: круг 50 px, обводка 2,6, поверх полный круг того же радиуса под прозрачностью 0,28 фоном. Буквы в загрузчике нет вовсе, порога 300 мс нет — дуга стоит с первого кадра"></span><i>решение 25 августа: вид знака откатан к состоянию до 24 августа. Буква жила те самые 300 мс до появления дуги, и ради неё в загрузку тянулся preload файла шрифта — обе части ушли вместе. Кадр «Стык · загрузчик» всё это время рисовал дугу сразу, спорила с ним именно проза</i></div>
+    <div class="spec"><b>вид подписи под иконкой</b><span data-v="на системном кадре Android подпись рисует платформа из short_name — кегль, тон и положение задаёт она, наших значений там нет. В загрузчике подписи нет вовсе"></span><i>вид системного кадра не наш: вместо чисел здесь названа граница, чтобы отсутствие значений было решением</i></div>
+    <div class="spec"><b>что в иконке</b><span data-v="буква H рубленая, Figtree весом 800, тоном --ac2 (#a1471c) прямо на фоне #fffaf1 — фон заливает весь квадрат, буква стоит по центру и занимает больше половины плитки. Подложки под буквой нет: ни круга, ни скруглённого квадрата, ни обводки"></span><i>тон взят из набора ролей: --ac2 #a1471c — самый насыщенный терракотовый в палитре, и на 48 px он держится лучше, чем --ac #8a4a20. Прежние #a1471c в кадрах были числом вне набора — описка, которую нельзя было угадывать</i></div>
+    <div class="spec"><b>смена знака у установленного приложения</b><span data-v="решение 25 августа: ничего не делаем и нигде не упоминаем — старая иконка живёт на домашнем экране до переустановки ярлыка. Плашек «обновите ярлык», строк в настройках и инструкций по переустановке нет"></span><i>просьба переустановить ярлык звучит как поломка приложения ради того, чтобы буква стала на два пикселя другой; человек не заметит разницы, а плашку запомнит</i></div>
     <div class="spec"><b>чего нет</b><span data-v="ни кольца по кромке диска, ни сплошной терракотовой заливки"></span><i>кольцо тянет взгляд к кадру, который не читают; сплошная терракота спорит со знаком ожидания, где терракотой набрана дуга, а не подложка</i></div>
     <div class="spec"><b>точка круга</b><span data-v="оптический центр — чуть выше геометрического; одна константа на обе платформы"></span><i>задана Android-кадром: система ставит иконку в оптический центр, ровно по центру знак дёрнулся бы вниз на стыке</i></div>
     <div class="spec" style="border-bottom:none"><b>иконка и цвета</b><span data-v="иконка одна на все палитры; фон иконки = background_color = #fffaf1"></span><i>манифест не знает про тему</i></div>
+    <div class="spec"><b>что пишется</b><span data-v="кадр запуска и загрузчик не пишут ничего; выбранная палитра читается из локального хранилища, куда её положил вход"></span><i>первый кадр рисуется до появления профиля — писать в этот момент некуда и незачем</i></div>
+    <div class="spec"><b>выход, удаление данных, производительность</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «выход и удаление данных · правило продукта» и «производительность · правило продукта». Местное отличие: кадр запуска рисуется без сети и без профиля; палитра берётся из локального хранилища, поэтому выход из аккаунта её не меняет"></span></div>
+    <div class="spec"><b>уведомления и точки входа</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «уведомления · правило продукта» и «точки входа · правило продукта». Местное отличие: кадр запуска — единственная точка входа в приложение с домашнего экрана; уведомление ведёт через него же"></span></div>
+    <div class="spec"><b>вибрация, звук, долгое нажатие</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «вибрация · правило продукта», «звук · правило продукта» и «долгое нажатие · правило продукта». Местных отличий нет: на запуске ни вибрации, ни звука"></span></div>
+    <div class="spec"><b>порядок слоёв и два устройства</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «порядок слоёв · правило продукта» и «два устройства · правило продукта». Местных отличий нет: кадр запуска и загрузчик — единственное, что на экране"></span></div>
+    <div class="spec"><b>язык, выделение, часовой пояс</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «язык · правило продукта», «выделение и копирование · правило продукта» и «часовой пояс · правило продукта». Местных отличий нет: подпись под иконкой рисует платформа, в загрузчике текста нет"></span></div>
+    <div class="spec"><b>возврат на экран и прокрутка</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «возврат на экран · правило продукта» и «прокрутка · правило продукта». Местных отличий нет: кадр запуска и загрузчик живут до первого экрана и в фон не уходят"></span></div>
+    <div class="spec"><b>повторный тап и поворот</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «повторный тап · правило продукта» и «ориентация · правило продукта»: 350 мс защиты там, где повтор создаёт лишнюю сущность; интерфейс всегда портретный, ширина окна гибкая. Местных отличий нет: на кадре запуска и в загрузчике нажимать нечего"></span></div>
+    <div class="spec"><b>офлайн, длинная подпись и куратор</b><span data-v="кадр запуска и загрузчик работают без сети всегда — это их обычный режим. Подпись под иконкой обрезает платформа по своим правилам, наших там нет. У куратора кадр тот же: приложение одно"></span><i>три ответа в одной строке намеренно: все три — «ничего особенного не происходит», и разносить их значило бы обещать различия</i></div>
+    <div class="spec"><b>откуда данные</b><span data-v="иконка, подпись и цвета — из манифеста и сборки; тема загрузчика — из локально сохранённой палитры. Сети на этом этапе нет вовсе"></span><i>кадр запуска обязан рисоваться в самолётном режиме так же, как в сети</i></div>
+    <div class="spec"><b>слова на экране</b><span data-v="на системном кадре — только short_name из манифеста, платформа задаёт его вид; в загрузчике слов нет вообще, ни «Загрузка», ни названия приложения"></span><i>подпись под знаком, живущая полсекунды, читается как мерцание</i></div>
+    <div class="spec"><b>первое появление</b><span data-v="первый запуск после установки на домашний экран отличается только длительностью системного кадра — её задаёт платформа; наша часть та же"></span></div>
 
     <div class="ctrH">Платформы</div>
     <div class="spec"><b>Android</b><span data-v="кадр собирается из иконки ярлыка, убрать её нечем — диск остаётся; подпись берётся из short_name"></span><i>отдельного сплэш-слоя у PWA нет: обнулить кадр можно только сделав иконку пустой плиткой, то есть спрятав приложение на домашнем экране</i></div>
     <div class="spec"><b>iPhone</b><span data-v="apple-touch-startup-image не задаём — по центру не рисуется ничего, только кремовый фон"></span><i>сплэш не место для знакомства с брендом: человек его не рассматривает, он ждёт. На стыке нечему исчезать — фон остаётся фоном</i></div>
+    <div class="spec"><b>вид кадра iPhone</b><span data-v="по центру не рисуется ничего — только грунт #fffaf1 во весь экран, тот же, что background_color манифеста. Знака, подписи и индикатора загрузки нет"></span><i>apple-touch-startup-image не задаём: любая картинка там встаёт в один фиксированный размер и на остальных устройствах растягивается</i></div>
     <div class="spec"><b>подпись</b><span data-v="со второго кадра исчезает: в загрузчике её нет и добавлять не нужно"></span><i>слово в подвале превратилось бы в элемент интерфейса, которого дальше нигде не будет</i></div>
     <div class="spec" style="border-bottom:none"><b>что невозможно</b><span data-v="анимация, вращение и тема на системном кадре недоступны ни на одной платформе; длительность зависит от устройства"></span></div>
 
     <div class="ctrH">Стык и загрузчик</div>
     <div class="spec"><b>тема</b><span data-v="системный кадр всегда песочный: в тёмной палитре первый кадр светлый, второй тёмный"></span><i>этого не избежать; гасить системный слой затемнением нельзя — он недоступен. На Android переход смягчает то, что круг остаётся тем же: меняется грунт, не знак</i></div>
     <div class="spec"><b>загрузчик</b><span data-v="только грунт палитры и знак — ни шапки, ни меню"></span></div>
+    <div class="spec"><b>вид загрузчика</b><span data-v="грунт --bg выбранной палитры во весь экран, диск в оптическом центре — около 45 % высоты; ни шапки, ни навигации, ни подписи. Тот же слой, что ставит тему на входе"></span><i>позиция совпадает с позицией знака ожидания: круг не переезжает при переходе от загрузчика к первому ожиданию</i></div>
+    <div class="spec"><b>safe-area и кнопка назад</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «safe-area · правило продукта» и «аппаратная кнопка назад · правило продукта». Местное отличие: на системном кадре врезки задаёт платформа, наших правил там нет; в загрузчике знак центруется между врезками, аппаратная кнопка выходит из приложения"></span></div>
     <div class="spec" style="border-bottom:none"><b>появление Главной</b><span data-v="один кадр: круг гаснет, экран приезжает целиком"></span><i>скелетонов в продукте нет — причина записана в spinners.v4.dc.html</i></div>
+
   </div>
 
   <div class="secH" style="margin-top:0;">Две последовательности запуска: iPhone и Android</div>
@@ -94,9 +117,9 @@
         <span style="flex:none;color:rgba(0,0,0,.2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         <span style="width:76px;height:76px;flex:none;border-radius:999px;background:#efe3cf;opacity:.45;"></span>
         <span style="flex:none;color:rgba(0,0,0,.2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-        <span style="width:76px;height:76px;flex:none;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg width="68" height="68" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="rgba(198,113,57,.28)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="#c67139" stroke-width="2.6" stroke-linecap="round"/></svg></span>
+        <span style="width:76px;height:76px;flex:none;display:flex;align-items:center;justify-content:center;"><svg width="68" height="68" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="rgba(198,113,57,.28)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="#c67139" stroke-width="2.6" stroke-linecap="round"/></svg></span>
         <span style="flex:none;color:rgba(0,0,0,.2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-        <span style="width:76px;height:76px;flex:none;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="68" height="68" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="rgba(198,113,57,.28)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="#c67139" stroke-width="2.6" stroke-linecap="round"/></svg></span>
+        <span style="width:76px;height:76px;flex:none;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="68" height="68" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="rgba(198,113,57,.28)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="#c67139" stroke-width="2.6" stroke-linecap="round"/></svg></span>
       </div>
       <div style="display:flex;gap:18px;margin-top:12px;font:600 10px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.4);">
         <span style="width:76px;flex:none;">пустой кадр системы</span><span style="width:18px;flex:none;"></span>
@@ -110,13 +133,13 @@
 
       <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.45);">Android · тот же хвост, но кадр системы с иконкой</div>
       <div style="display:flex;align-items:center;gap:18px;margin-top:24px;">
-        <span style="width:76px;height:76px;flex:none;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><span style="font:34px/1 Caprasimo,Georgia,serif;color:#a8481c;padding-bottom:3px;">H</span></span>
+        <span style="width:76px;height:76px;flex:none;display:flex;align-items:center;justify-content:center;"><span style="font:800 34px/1 Figtree,system-ui,sans-serif;color:#a1471c;padding-bottom:3px;">H</span></span>
         <span style="flex:none;color:rgba(0,0,0,.2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-        <span style="width:76px;height:76px;flex:none;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><span style="font:34px/1 Caprasimo,Georgia,serif;color:rgba(168,72,28,.35);padding-bottom:3px;">H</span></span>
+        <span style="width:76px;height:76px;flex:none;display:flex;align-items:center;justify-content:center;"><span style="font:800 34px/1 Figtree,system-ui,sans-serif;color:rgba(168,72,28,.35);padding-bottom:3px;">H</span></span>
         <span style="flex:none;color:rgba(0,0,0,.2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-        <span style="width:76px;height:76px;flex:none;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg width="68" height="68" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="rgba(198,113,57,.28)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="#c67139" stroke-width="2.6" stroke-linecap="round"/></svg></span>
+        <span style="width:76px;height:76px;flex:none;display:flex;align-items:center;justify-content:center;"><svg width="68" height="68" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="rgba(198,113,57,.28)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="#c67139" stroke-width="2.6" stroke-linecap="round"/></svg></span>
         <span style="flex:none;color:rgba(0,0,0,.2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-        <span style="width:76px;height:76px;flex:none;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="68" height="68" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="rgba(198,113,57,.28)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="#c67139" stroke-width="2.6" stroke-linecap="round"/></svg></span>
+        <span style="width:76px;height:76px;flex:none;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="68" height="68" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="rgba(198,113,57,.28)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="#c67139" stroke-width="2.6" stroke-linecap="round"/></svg></span>
       </div>
       <div style="display:flex;gap:18px;margin-top:12px;font:600 10px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.4);">
         <span style="width:76px;flex:none;">иконка системы</span><span style="width:18px;flex:none;"></span>
@@ -133,7 +156,7 @@
         <div class="nt"><b>Стык не читается как смена экрана</b><span>Между системным сплэшем и нашим HTML всегда есть шов — момент, когда одна картинка сменяется другой. Совпадают круг, его диаметр и оптический центр, поэтому шов выглядит как продолжение движения, а не как перезагрузка. Раньше на этом месте синяя H сменялась кремовым спиннером.</span></div>
         <div class="nt"><b>На iPhone по центру нет ничего</b><span>Сплэш — не место для знакомства с брендом: человек его не рассматривает, он ждёт. Самый тихий кадр — это вообще пустой кремовый фон, и на iOS он достаётся бесплатно: пока не заданы <span class="mn">apple-touch-startup-image</span>, система рисует только фон из манифеста. Знак убран, кадр читается как пауза, а первым содержимым становится наш круг ожидания.</span></div>
         <div class="nt"><b>На Android знак убрать нечем</b><span>Кадр там рисует система из иконки ярлыка — отдельного «сплэш-слоя» у PWA нет, и обнулить его можно только сделав саму иконку пустой кремовой плиткой, то есть спрятать приложение на домашнем экране. Поэтому на Android диск остаётся, и весь смысл его геометрии в том, чтобы совпасть с кругом загрузчика: тогда буква гаснет, а круг остаётся на месте.</span></div>
-        <div class="nt"><b>Буква, а не пиктограмма</b><span>В круге 56 любая метафора превращается в пятно. H в Caprasimo — плотная скруглённая форма, которая держится и в иконке 512, и в диске 56. Дисплейная гарнитура в интерфейсе больше нигде не встречается, и это правильно: знак должен отличаться от текста.</span></div>
+        <div class="nt"><b>Буква, а не пиктограмма</b><span>В круге 56 любая метафора превращается в пятно. H рубленая Figtree весом 800 — плотная форма без тонких соединений, которая держится и в иконке 512, и в диске 56. Дисплейная гарнитура в интерфейсе больше нигде не встречается, и это правильно: знак должен отличаться от текста.</span></div>
         <div class="ntl"><b>Что остаётся невозможным</b><span>Анимации на системном кадре нет ни на одной платформе: движение начинается только когда подтянулся наш HTML. Отсюда и разное решение — на Android первый кадр статичен и обязан держаться сам, поэтому в нём буква; на iPhone держать нечего, и пустой фон честнее любой статичной картинки.</span></div>
       </div>
     </div>
@@ -156,7 +179,7 @@
     <div><div class="lab"><b>Знак v4</b><span>диск ожидания, буква терракотой</span></div>
     <div class="and" data-demo="stop" data-screen-label="Сплэш · знак v4" style="background:#fffaf1;">
       <div class="asb" style="background:#fffaf1;color:rgba(32,30,29,.7);"><span>15:29</span><span style="opacity:.6;">LTE ▂▄▆ ▮</span></div>
-      <div class="amid"><span class="amk" style="background:#efe3cf;color:#a8481c;">H</span></div>
+      <div class="amid"><span class="amk" style="background:#fffaf1;color:#a1471c;">H</span></div>
       <div class="acap" style="color:rgba(32,30,29,.8);">HEYS</div>
     </div>
     <div class="cap">Диск того же цвета, что подложка знака ожидания, и на том же месте. Кадр не тянет внимание: человек не рассматривает сплэш, он ждёт — а через долю секунды на месте буквы уже крутится дуга.</div>
@@ -181,18 +204,18 @@
       <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.45);margin-bottom:18px;">Исходник · содержимое внутри 80 %</div>
       <div style="display:flex;gap:24px;align-items:flex-start;">
         <div>
-          <div class="icb" style="background:#efe3cf;color:#a8481c;border-radius:16px;">H<span class="safe"></span><span class="icg"></span></div>
+          <div class="icb" style="background:#fffaf1;color:#a1471c;border-radius:16px;">H<span class="safe"></span><span class="icg"></span></div>
           <div style="width:168px;margin-top:10px;font:500 11px/1.45 Figtree,sans-serif;color:rgba(0,0,0,.5);text-wrap:pretty;">Заливка во весь квадрат, буква — внутри тонкого круга safe zone.</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:16px;">
           <div style="display:flex;gap:14px;">
-            <div style="text-align:center;"><div class="icb" style="width:92px;height:92px;font-size:42px;background:#efe3cf;color:#a8481c;border-radius:999px;">H</div><div style="font:600 10px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">круг</div></div>
-            <div style="text-align:center;"><div class="icb" style="width:92px;height:92px;font-size:42px;background:#efe3cf;color:#a8481c;border-radius:28px;">H</div><div style="font:600 10px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">squircle</div></div>
-            <div style="text-align:center;"><div class="icb" style="width:92px;height:92px;font-size:42px;background:#efe3cf;color:#a8481c;border-radius:16px;">H</div><div style="font:600 10px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">скругл. квадрат</div></div>
+            <div style="text-align:center;"><div class="icb" style="width:92px;height:92px;font-size:42px;background:#fffaf1;color:#a1471c;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);">H</div><div style="font:600 10px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">круг</div></div>
+            <div style="text-align:center;"><div class="icb" style="width:92px;height:92px;font-size:42px;background:#fffaf1;color:#a1471c;border-radius:28px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);">H</div><div style="font:600 10px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">squircle</div></div>
+            <div style="text-align:center;"><div class="icb" style="width:92px;height:92px;font-size:42px;background:#fffaf1;color:#a1471c;border-radius:16px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);">H</div><div style="font:600 10px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">скругл. квадрат</div></div>
           </div>
-          <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);max-width:330px;text-wrap:pretty;">Одна картинка на трёх масках: форму выбирает лончер, поэтому скругление в самой иконке рисовать нельзя — только заливку до края. Буква стоит по центру и переживает любую маску без обрезки.</div>
+          <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);max-width:330px;text-wrap:pretty;">Одна картинка на трёх масках: форму выбирает лончер, поэтому скругление в самой иконке рисовать нельзя — только фон до края и буква по центру. Обводка на трёх примерах показывает границу маски, а не подложку: подложки в файле нет.</div>
           <div style="display:flex;gap:9px;align-items:center;padding:12px 14px;background:#f7efe2;border-radius:16px;max-width:330px;">
-            <span style="width:34px;height:34px;flex:none;border-radius:10px;background:#efe3cf;color:#a8481c;font:15px/1 Caprasimo,Georgia,serif;display:flex;align-items:center;justify-content:center;padding-bottom:2px;">H</span>
+            <span style="width:34px;height:34px;flex:none;color:#a1471c;font:800 15px/1 Figtree,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;padding-bottom:2px;">H</span>
             <span style="width:34px;height:34px;flex:none;border-radius:10px;background:#dcd6cc;"></span>
             <span style="width:34px;height:34px;flex:none;border-radius:10px;background:#d2ccc2;"></span>
             <span style="font:500 11px/1.45 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-left:4px;text-wrap:pretty;">Проверка одна: находится ли знак в ряду чужих иконок за полсекунды.</span>
@@ -208,8 +231,8 @@
         <div class="kv"><b>description</b><span>Nutrition Tracker — переезжает сюда из name</span></div>
         <div class="kv"><b>background_color</b><span>#fffaf1 — совпадает с фоном иконки, иначе ореол</span></div>
         <div class="kv"><b>theme_color</b><span>#fffaf1 — статус-бар кремовый, иконки тёмные; тот же цвет в meta theme-color в index.html</span></div>
-        <div class="kv"><b>icon-192 / 512</b><span>purpose: any maskable · подложка #efe3cf, буква #a8481c, без прозрачности</span></div>
-        <div class="kv" style="border-bottom:none;"><b>шрифт знака</b><span>Caprasimo — только в знаке, в интерфейсе не используется</span></div>
+        <div class="kv"><b>icon-192 / 512</b><span>purpose: any maskable · фон #fffaf1 во весь квадрат, буква #a1471c, подложки и прозрачности нет</span></div>
+        <div class="kv" style="border-bottom:none;"><b>шрифт знака</b><span>Figtree 800 — в иконке; Caprasimo в продукте не используется вовсе</span></div>
 
         <div class="h" style="margin:22px 0 12px;">Не настраивается вовсе</div>
         <div class="no"><i>×</i><span>шрифт, размер и положение подписи — рисует система</span></div>
@@ -248,11 +271,11 @@
     <div style="width:330px;flex:none;background:#fffaf1;border-radius:24px;padding:22px;">
       <div style="display:flex;gap:16px;align-items:flex-start;">
         <div style="text-align:center;">
-          <div class="icb" style="width:96px;height:96px;font-size:44px;background:#efe3cf;color:#a8481c;border-radius:22px;">H</div>
+          <div class="icb" style="width:96px;height:96px;font-size:44px;background:#fffaf1;color:#a1471c;border-radius:22px;">H</div>
           <div style="font:600 10px/1.3 Figtree,sans-serif;color:#5c6a45;margin-top:8px;">залитая подложка</div>
         </div>
         <div style="text-align:center;">
-          <div class="icb" style="width:96px;height:96px;font-size:44px;background:#1c1a18;color:#a8481c;border-radius:22px;">H</div>
+          <div class="icb" style="width:96px;height:96px;font-size:44px;background:#1c1a18;color:#a1471c;border-radius:22px;">H</div>
           <div style="font:600 10px/1.3 Figtree,sans-serif;color:#b4442a;margin-top:8px;">альфа → чёрный</div>
         </div>
       </div>
@@ -283,7 +306,7 @@
     <div><div class="lab"><b>1 · кадр системы · Android</b><span>всегда песочный, тему не знает</span></div>
     <div class="and" data-demo="stop" data-screen-label="Стык · сплэш системы" style="background:#fffaf1;">
       <div class="asb" style="background:#fffaf1;color:rgba(32,30,29,.7);"><span>15:29</span><span style="opacity:.6;">LTE ▂▄▆ ▮</span></div>
-      <div class="amid"><span class="amk" style="background:#efe3cf;color:#a8481c;">H</span></div>
+      <div class="amid"><span class="amk" style="background:#fffaf1;color:#a1471c;">H</span></div>
       <div class="acap" style="color:rgba(32,30,29,.8);">HEYS</div>
     </div></div>
 
@@ -293,7 +316,7 @@
       <div class="amid"></div>
     </div></div>
 
-    <div><div class="lab"><b>2 · наш загрузчик</b><span>дуга на месте буквы, на iPhone — первое содержимое кадра</span></div>
+    <div><div class="lab"><b>2 · наш загрузчик</b><span>дуга с первого кадра, буквы в загрузчике нет; на iPhone — первое содержимое кадра</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Стык · загрузчик" style="align-items:center;justify-content:center;">
       <span class="bm" style="width:64px;height:64px;"><svg class="spin" width="58" height="58" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="rgba(var(--ink),.13)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="var(--acs)" stroke-width="2.6" stroke-linecap="round"/></svg></span>
     </div></div>
