@@ -1247,9 +1247,9 @@
                 ),
             ),
 
-            // Notification (level up / achievement / streak_shield)
+            // Notification (миссии, ежедневный бонус, недельный челлендж, streak_shield)
             notification && React.createElement('div', {
-                className: `game-notification ${notification.type}${notification.type === 'achievement' && notification.data.achievement?.rarity ? ' rarity-' + notification.data.achievement.rarity : ''}`,
+                className: `game-notification ${notification.type}`,
                 onClick: () => setNotification(null),
                 onTouchStart: (e) => { e.currentTarget._touchStartY = e.touches[0].clientY; },
                 onTouchMove: (e) => {
@@ -1259,16 +1259,10 @@
             },
                 // Строка «когда играет»: тоста на новый уровень нет — уровень
                 // отмечает только тихая минута на карточке героя.
-                notification.type === 'achievement'
-                        ? React.createElement(React.Fragment, null,
-                            React.createElement('span', { className: 'notif-icon' }, notification.data.achievement.icon),
-                            React.createElement('div', { className: 'notif-content' },
-                                React.createElement('div', { className: 'notif-title' }, notification.data.achievement.name),
-                                React.createElement('div', { className: 'notif-subtitle' }, `+${notification.data.achievement.xp} XP`),
-                                notification.data.firstInCategory && React.createElement('div', { className: 'notif-first-category' }, '🆕 Новая категория')
-                            )
-                        )
-                        : notification.type === 'daily_bonus'
+                // Строка «уведомления и точки входа»: тоста на достижение тоже
+                // нет — их тридцать шесть, и каждое сообщение обесценивало бы
+                // остальные; достижение отмечается галочкой в списке.
+                notification.type === 'daily_bonus'
                             ? React.createElement(React.Fragment, null,
                                 React.createElement('span', { className: 'notif-icon' }, '🎁'),
                                 React.createElement('div', { className: 'notif-content' },

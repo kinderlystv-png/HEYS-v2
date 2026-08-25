@@ -227,6 +227,105 @@ describe('date-remainders · шторка календаря', () => {
   });
 });
 
+// Строка «откуда данные»: «точки в календаре — из локальной истории, а месяц
+// догружается из облака при открытии шторки: пришедшие дни дорисовываются
+// точками на месте».
+//
+// Почему смоуком. Стык виден только на человеке, у которого часть месяца лежит
+// в облаке, а локально её нет, и который в этот момент открывает шторку. Руками
+// это состояние не собрать: локальная история чистится вместе с сессией.
+describe('date-remainders · откуда данные', () => {
+  function openSheet(host) {
+    act(() => {
+      host.querySelector('.date-picker-trigger-lbl').dispatchEvent(
+        new window.MouseEvent('click', { bubbles: true }),
+      );
+    });
+    return document.querySelector('.date-picker-sheet');
+  }
+
+  function dots(sheet) {
+    return sheet.querySelectorAll('.date-picker-day.has-data').length;
+  }
+
+  let fetched;
+  let resolveFetch;
+  let local;
+
+  beforeEach(() => {
+    vi.setSystemTime(new Date(2026, 7, 21, 12, 0, 0));
+    fetched = [];
+    // Локально известен один день месяца; облако принесёт второй.
+    local = new Map([['2026-08-05', { kcal: 1800, target: 2000, ratio: 0.9 }]]);
+    window.HEYS.cloud = {
+      fetchDays: (dates) => {
+        fetched.push(dates);
+        return new Promise((resolve) => {
+          resolveFetch = () => {
+            local.set('2026-08-12', { kcal: 2100, target: 2000, ratio: 1.05 });
+            resolve();
+          };
+        });
+      },
+    };
+  });
+
+  afterEach(() => {
+    delete window.HEYS.cloud;
+  });
+
+  it('при закрытой капсуле в облако не ходим — сетка не показана', () => {
+    renderPicker({
+      valueISO: '2026-08-21',
+      getActiveDaysForMonth: () => new Map(local),
+    });
+
+    expect(fetched).toHaveLength(0);
+  });
+
+  it('открытие шторки догружает месяц целиком, точки дорисовываются на месте', async () => {
+    const { host } = renderPicker({
+      valueISO: '2026-08-21',
+      getActiveDaysForMonth: () => new Map(local),
+    });
+
+    const sheet = openSheet(host);
+    // Точка сразу одна — из локальной истории, без ожидания облака.
+    expect(dots(sheet)).toBe(1);
+
+    expect(fetched).toHaveLength(1);
+    expect(fetched[0]).toHaveLength(31);
+    expect(fetched[0][0]).toBe('2026-08-01');
+    expect(fetched[0][30]).toBe('2026-08-31');
+
+    await act(async () => {
+      resolveFetch();
+      await Promise.resolve();
+    });
+
+    // Пришедший из облака день дорисован точкой, шторка не перерисована заново.
+    expect(dots(document.querySelector('.date-picker-sheet'))).toBe(2);
+  });
+
+  it('перелистывание месяца в открытой шторке догружает новый месяц', () => {
+    const { host } = renderPicker({
+      valueISO: '2026-08-21',
+      getActiveDaysForMonth: () => new Map(local),
+    });
+    const sheet = openSheet(host);
+    expect(fetched).toHaveLength(1);
+
+    act(() => {
+      sheet.querySelectorAll('.date-picker-sheet-month-nav')[0].dispatchEvent(
+        new window.MouseEvent('click', { bubbles: true }),
+      );
+    });
+
+    expect(fetched).toHaveLength(2);
+    expect(fetched[1][0]).toBe('2026-07-01');
+  });
+});
+
 describe('date-remainders · правила продукта', () => {
   function openSheet(host) {
     act(() => {

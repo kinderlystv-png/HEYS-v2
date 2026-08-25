@@ -245,12 +245,30 @@ describe('новый уровень · движок молчит и вооруж
     expect(game.consumeLevelCeremony()).toBe(null);
   });
 
-  it('достижение сохранило свой звук — он не уехал вместе со звуком уровня', () => {
-    // Категория `triumph` та же, что была у снятого `levelUp`.
-    expect(ENGINE_SRC).toContain('playAchievementSound()');
-    expect(ENGINE_SRC).toContain("HEYS.audio.play('achievementUnlocked')");
-    // А вызова звука уровня в модуле не осталось вовсе.
+  // Пятнадцатая сборка, строка «уведомления и точки входа»: «Уведомлений о
+  // достижениях нет: их тридцать шесть, и каждое сообщение обесценивало бы
+  // остальные», — вместе со строкой «когда играет» («У достижений и серии
+  // празднования нет: достижение отмечается появлением в списке с галочкой»).
+  // До неё достижение звучало фанфарой и показывало тост; проверка ровно
+  // противоположная прежней и заменяет её, а не дополняет.
+  it('достижение молчит: ни тоста, ни звука, ни вибрации', () => {
+    // Публичный путь открытия — тот же, которым пользуется серия.
+    game.checkStreakAchievements(7);
+
+    const unlocked = game.getAchievements().filter((ach) => ach.unlocked);
+    expect(unlocked.length).toBeGreaterThan(0);
+
+    expect(notifications).not.toContain('achievement');
+    expect(sounds).not.toContain('achievementUnlocked');
+    expect(sounds.filter((s) => String(s).startsWith('haptic:'))).toHaveLength(0);
+    // Уровень при этом мог закрыться от XP достижений — его тихая минута
+    // остаётся: молчит достижение, а не весь движок.
+    expect(notifications).not.toContain('level_up');
+  });
+
+  it('звука уровня в движке не осталось вовсе — строка «чего нет»', () => {
     expect(ENGINE_SRC).not.toContain("'levelUp'");
+    expect(ENGINE_SRC).not.toContain("'achievementUnlocked'");
   });
 });
 

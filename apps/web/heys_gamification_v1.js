@@ -3239,12 +3239,8 @@
     }
   }
 
-  // 🎵 Achievement sound (special fanfare)
-  function playAchievementSound() {
-    if (HEYS.audio) {
-      HEYS.audio.play('achievementUnlocked');
-    }
-  }
+  // Звука-фанфары на достижении нет (строка «когда играет»: празднований у
+  // достижений и серии нет) — единственный звук движка остаётся на начислении XP.
 
   // ========== XP HISTORY (7 days) ==========
   function getXPHistory() {
@@ -3979,40 +3975,14 @@
         }
       });
 
-      const hasCategoryUnlocked = data.unlockedAchievements
-        .map((id) => ACHIEVEMENTS[id])
-        .filter(Boolean)
-        .some((item) => item.category === ach.category);
-
-      // Показываем notification (React компонент .game-notification)
-      // NOTE: showAchievementToast убран — был дубль с showNotification
-      showNotification('achievement', {
-        achievement: ach,
-        totalXP: data.totalXP,
-        level: data.level,
-        firstInCategory: !hasCategoryUnlocked
-      });
-
-      // Звук при получении достижения! Категория `triumph` — та же, что была у
-      // снятого звука уровня, поэтому достижение звучит ровно как звучало.
-      playAchievementSound();
-
-      // Confetti для rare+ достижений
-      if (['rare', 'epic', 'legendary', 'mythic'].includes(ach.rarity)) {
-        celebrate({ type: 'achievement', rarity: ach.rarity });
-      }
-
-      // Haptic по редкости
-      if (HEYS.haptic) {
-        const hapticByRarity = {
-          common: 'light',
-          rare: 'medium',
-          epic: 'medium',
-          legendary: 'success',
-          mythic: 'success'
-        };
-        HEYS.haptic(hapticByRarity[ach.rarity] || 'light');
-      }
+      // Строки «уведомления и точки входа» («Уведомлений о достижениях нет:
+      // их тридцать шесть, и каждое сообщение обесценивало бы остальные») и
+      // «когда играет» («У достижений и серии празднования нет: достижение
+      // отмечается появлением в списке с галочкой»): открытие достижения
+      // ничего не показывает, не звучит и не вибрирует. Тост, звук-фанфара,
+      // конфетти и haptic по редкости сняты — достижение видно только на
+      // экране «Достижения». Строка «вибрация, звук, долгое нажатие» отдавала
+      // решение вопросу «празднования»; вопрос закрыт этими двумя строками.
     } finally {
       // 🔓 FIX v2.7: Всегда очищаем mutex, даже при ошибке
       _unlockingAchievements.delete(achievementId);

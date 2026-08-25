@@ -637,37 +637,70 @@
         }
 
         /**
-         * Строка «вид карточки достижения»: карточка --c1, шапка «название +
-         * награда», под шапкой условие. Замок и приглушённый текст закрытого —
-         * строка «закрытое».
+         * Медальон строки достижения. Достигнутое — галочка 16 px обводкой 3,2
+         * на квадрате --gr-bg; недостигнутое — замок 15 px обводкой 2,5 на --c2.
+         * Тон обводки берётся с медальона через currentColor, чтобы цвет жил
+         * ролью в CSS, а не литералом в разметке.
          */
-        function renderAchievementCard(achId, ach, unlockedAch) {
+        function renderAchievementMark(unlockedAch) {
+            const size = unlockedAch ? 16 : 15;
+            return React.createElement('svg', {
+                width: size,
+                height: size,
+                viewBox: '0 0 24 24',
+                fill: 'none',
+                stroke: 'currentColor',
+                strokeWidth: unlockedAch ? 3.2 : 2.5,
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+                'aria-hidden': 'true'
+            }, unlockedAch
+                ? React.createElement('path', { d: 'M5 13l4 4L19 7' })
+                : React.createElement(React.Fragment, null,
+                    React.createElement('rect', { x: 4, y: 10, width: 16, height: 11, rx: 2.5 }),
+                    React.createElement('path', { d: 'M8 10V7a4 4 0 018 0v3' })
+                )
+            );
+        }
+
+        /**
+         * Строка «вид строки достижения»: достижения списком — поля 13/0,
+         * разделитель 1 px, медальон 34 радиусом 12 слева, название и награда
+         * «+N XP» в одной строке, условие под ними.
+         *
+         * Отступление от кадров (контракт старше кадра): в кадрах у
+         * недостигнутого награды нет, а название погашено до 50 %. Строка
+         * контракта требует награду «у правого края» без оговорки про
+         * достигнутость и прямо запрещает гашение («Гашения текста и дат в
+         * строках нет») — иначе два недостигнутых нельзя сравнить по цене.
+         */
+        function renderAchievementRow(achId, ach, unlockedAch) {
             const progress = ach.progress;
             const progressLine = !unlockedAch && progress && progress.target > 1
                 ? ` · ${progress.current} из ${progress.target}`
                 : '';
             return React.createElement('div', {
                 key: achId,
-                className: `game-v4-sheet__card game-v4-sheet__ach-card${unlockedAch ? ' is-unlocked' : ' is-locked'}`
+                className: `game-v4-sheet__ach-row${unlockedAch ? ' is-unlocked' : ' is-locked'}`
             },
-                React.createElement('div', { className: 'game-v4-sheet__card-head' },
-                    React.createElement('span', { className: 'game-v4-sheet__card-title' },
-                        React.createElement('span', {
-                            className: 'game-v4-sheet__ach-mark',
-                            'aria-hidden': 'true'
-                        }, unlockedAch ? '✓' : '🔒'),
-                        ach.name
+                React.createElement('span', {
+                    className: 'game-v4-sheet__ach-medal',
+                    'aria-hidden': 'true'
+                }, renderAchievementMark(unlockedAch)),
+                React.createElement('span', { className: 'game-v4-sheet__ach-body' },
+                    React.createElement('span', { className: 'game-v4-sheet__ach-head' },
+                        React.createElement('span', { className: 'game-v4-sheet__ach-name' }, ach.name),
+                        React.createElement('span', { className: 'game-v4-sheet__ach-xp' }, `+${ach.xp || 0} XP`)
                     ),
-                    React.createElement('span', { className: 'game-v4-sheet__card-xp' }, `+${ach.xp || 0} XP`)
-                ),
-                React.createElement('div', { className: 'game-v4-sheet__card-sub' },
-                    `${ach.desc || ''}${progressLine}`
+                    React.createElement('span', { className: 'game-v4-sheet__ach-cond' },
+                        `${ach.desc || ''}${progressLine}`
+                    )
                 )
             );
         }
 
         /**
-         * Группа достижений: заголовок + карточки. Строка «состав группы» —
+         * Группа достижений: заголовок + список строк. Строка «состав группы» —
          * все открытые и два ближайших закрытых, дальние закрытые по тапу на
          * заголовок группы.
          */
@@ -694,7 +727,7 @@
                         const ach = achievementsById[achId] || HEYS.game?.ACHIEVEMENTS?.[achId];
                         if (!ach) return null;
                         const unlockedAch = ach.unlocked || HEYS.game?.isAchievementUnlocked?.(achId);
-                        return renderAchievementCard(achId, ach, unlockedAch);
+                        return renderAchievementRow(achId, ach, unlockedAch);
                     })
                 )
             );

@@ -18010,33 +18010,96 @@ html.heys-bg-paused *::after {
   padding: 2px 14px;
 }
 
-/* Строка «вид карточки достижения»: карточка --c1 радиусом 20, поля 14/16,
-   зазор между карточками 8; условие под шапкой через 5. */
+/* Строка «вид строки достижения»: достижения списком внутри карточки --c1
+   радиусом 20 с полями 2/16 (кадр «Достижения»); строка — поля 13/0,
+   разделитель 1 px чернил 7 %, медальон 34 радиусом 12 слева, зазор 13. */
 .game-v4-sheet__ach-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.game-v4-sheet__ach-card {
+  background: var(--v4-sand-surface, #f7efe2);
   border-radius: 20px;
+  padding: 2px 16px;
 }
 
-.game-v4-sheet__ach-card .game-v4-sheet__card-sub {
+.game-v4-sheet__ach-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.game-v4-sheet__ach-row:last-child {
+  border-bottom: 0;
+}
+
+.game-v4-sheet__ach-medal {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Достигнутое — галочка тоном --gr на квадрате --gr-bg; недостигнутое —
+   замок чернилами 30 % на --c2. Обводка значка идёт currentColor.
+   Роли берутся парами: --v4-ok-bg с --v4-ok-text и --v4-sand-hero с
+   --v4-sand-ink. Смешивать наборы нельзя — палитро-зависимый фон под
+   песочно-закреплёнными чернилами даёт в сине-тёмной светлое на светлом.
+   Чернила 30 % у замка — прозрачностью значка, а не ролью --v4-ink-30:
+   та следует набору, а квадрат под ней песочный во всех четырёх. */
+.game-v4-sheet__ach-row.is-unlocked .game-v4-sheet__ach-medal {
+  background: var(--v4-ok-bg, #eaefe0);
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.game-v4-sheet__ach-row.is-locked .game-v4-sheet__ach-medal {
+  background: var(--v4-sand-hero, #efe3cf);
+  color: var(--v4-sand-ink, #201e1d);
+}
+
+.game-v4-sheet__ach-row.is-locked .game-v4-sheet__ach-medal svg {
+  opacity: 0.3;
+}
+
+.game-v4-sheet__ach-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.game-v4-sheet__ach-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* Строка прямо запрещает гашение: «Гашения текста и дат в строках нет», —
+   поэтому у недостигнутого те же чернила и та же награда, что у достигнутого.
+   Иначе два недостигнутых нельзя сравнить по цене. */
+.game-v4-sheet__ach-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--v4-sand-ink, #201e1d);
+}
+
+.game-v4-sheet__ach-xp {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--v4-sand-act-text, #8a4a20);
+}
+
+.game-v4-sheet__ach-cond {
+  display: block;
   margin-top: 5px;
-}
-
-.game-v4-sheet__ach-mark {
-  margin-right: 6px;
-}
-
-/* Строка «закрытое»: замок и приглушённый текст, условие видно всегда. */
-.game-v4-sheet__ach-card.is-locked .game-v4-sheet__card-title {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
-}
-
-.game-v4-sheet__ach-card.is-locked .game-v4-sheet__card-xp {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 /* Строка «состав группы»: заголовок группы раскрывает дальние закрытые. */

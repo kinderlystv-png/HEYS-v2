@@ -93,7 +93,12 @@
     
     const y = cur.getFullYear(), m = cur.getMonth();
     
-    // Загружаем данные при смене месяца (сначала локально, затем догружаем месяц из облака).
+    // Контракт date-remainders, строка «откуда данные»: точки берутся из
+    // локальной истории, а месяц догружается из облака ПРИ ОТКРЫТИИ ШТОРКИ —
+    // пришедшие дни дорисовываются точками на месте. Локальный расчёт идёт и
+    // при закрытой шторке (он дешёвый и синхронный), сетевой запрос — нет:
+    // закрытая капсула сетку не показывает, и месяц грузился бы впустую на
+    // каждом старте и на каждом переходе стрелкой через границу месяца.
     React.useEffect(() => {
       if (!getActiveDaysForMonth) return;
       let cancelled = false;
@@ -106,6 +111,7 @@
         }
       };
       applyLocal();
+      if (!isOpen) return () => { cancelled = true; };
       const dim = new Date(y, m + 1, 0).getDate();
       const datesInMonth = [];
       for (let d = 1; d <= dim; d += 1) {
@@ -118,7 +124,7 @@
         });
       }
       return () => { cancelled = true; };
-    }, [y, m, getActiveDaysForMonth, fmtDate]);
+    }, [y, m, isOpen, getActiveDaysForMonth, fmtDate]);
     
     // Преобразуем activeDays в Map (fallback если нет getActiveDaysForMonth)
     const daysDataMap = React.useMemo(() => {
