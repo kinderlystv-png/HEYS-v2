@@ -3222,7 +3222,8 @@
           ratioToValue: stepsGoalSliderRatioToValue,
           stepForValue: stepsGoalSliderStepForValue,
           onValue: (nextValue) => onChange({ ...data, stepsGoal: nextValue }),
-          ariaLabel: stepsTrackAriaLabel,
+          ariaLabel: 'Цель по шагам',
+          'data-a11y-track': stepsTrackAriaLabel,
           style: { marginTop: 0 }
         }),
         React.createElement('div', { className: 'mc-steps-slider-labels' },
