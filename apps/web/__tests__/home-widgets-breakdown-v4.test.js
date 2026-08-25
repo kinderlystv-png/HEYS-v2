@@ -89,7 +89,7 @@ describe('home-widgets breakdown sheets v4', () => {
       data._getProfile = () => ({ stepsGoal: 9000, waterGoalMl: 2700 });
       data._calculateDayTotals = () => ({ kcal: 1500, prot: 80, fat: 60, carbs: 150 });
       V4 = bootVariants();
-      window.HEYS.Widgets.data = data;
+      window.HEYS.Widgets['data'] = data;
       window.HEYS.Widgets.WeightDynamicsV4 = {
         compute: () => ({
           delta: '−1,8',
