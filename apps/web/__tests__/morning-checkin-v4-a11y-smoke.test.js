@@ -38,6 +38,30 @@ describe('чек-ин v4: progressbar по контракту', () => {
   });
 });
 
+describe('чек-ин v4: доступность сна, настроения и шагов', () => {
+  it('капсула времени сна — одна фраза role=group', () => {
+    expect(STEPS_SRC).toContain('buildSleepCapsuleAriaLabel');
+    expect(STEPS_SRC).toContain("'aria-label': buildSleepCapsuleAriaLabel");
+    expect(STEPS_SRC).toContain("role: 'group'");
+    expect(STEPS_SRC).toContain('лёг в');
+  });
+
+  it('ползунки 1–10 — aria-label «название, N из 10»', () => {
+    expect(STEPS_SRC).toContain('buildScaleSliderAriaLabel');
+    expect(STEPS_SRC).toContain("buildScaleSliderAriaLabel('Насколько выспались', sleepQuality)");
+    expect(STEPS_SRC).toContain('buildScaleSliderAriaLabel(row.title, row.value)');
+  });
+
+  it('дорожка шагов и метка «Совет · N» — одна фраза на slider', () => {
+    expect(STEPS_SRC).toContain('buildStepsTrackAriaLabel');
+    expect(STEPS_SRC).toContain('ariaLabel: stepsTrackAriaLabel');
+    const adviceAt = STEPS_SRC.indexOf('mc-steps-advice-mark');
+    const chunk = STEPS_SRC.slice(adviceAt, adviceAt + 260);
+    expect(chunk).toContain("'aria-hidden': 'true'");
+    expect(chunk).toContain('tabIndex: -1');
+  });
+});
+
 describe('чек-ин v4 · step 5 cycle row a11y', () => {
   it('progress stays 5 steps — cycle is inline in morningRest, not extra dot', () => {
     expect(SRC).toContain('progressStepConfigs.length');
@@ -47,5 +71,12 @@ describe('чек-ин v4 · step 5 cycle row a11y', () => {
 
   it('cycle chip exposes contract aria-label', () => {
     expect(STEPS_SRC).toContain("'aria-label': 'Отметить особые дни'");
+  });
+
+  it('expanded cycle row — radiogroup и radio с именами дней', () => {
+    expect(STEPS_SRC).toContain("role: 'radiogroup'");
+    expect(STEPS_SRC).toContain("'aria-label': 'Какой день'");
+    expect(STEPS_SRC).toContain("role: 'radio'");
+    expect(STEPS_SRC).toContain("'aria-label': `День ${day}`");
   });
 });

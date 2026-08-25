@@ -1617,6 +1617,24 @@
   color: inherit;
 }
 
+.mc-rest-row.mc-rest-row--cycle {
+  min-height: 66px;
+}
+
+.mc-rest-cycle-card {
+  margin-top: 8px;
+  padding: 13px 14px;
+  border-radius: 16px;
+  background: var(--v4-sand-surface, #f7efe2);
+}
+
+.mc-rest-cycle-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .mc-rest-cold-time {
   width: 166px;
   margin: 15px auto 0;

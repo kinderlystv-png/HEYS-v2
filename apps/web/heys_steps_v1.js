@@ -2558,6 +2558,40 @@
     return `${h}:${String(m).padStart(2, '0')}`;
   }
 
+  function pluralRu(n, one, few, many) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
+    return many;
+  }
+
+  function formatSleepDurationWords(hours) {
+    const totalMin = Math.max(0, Math.round(Number(hours) * 60));
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    const parts = [];
+    if (h > 0) parts.push(`${h} ${pluralRu(h, 'час', 'часа', 'часов')}`);
+    if (m > 0) parts.push(`${m} ${pluralRu(m, 'минута', 'минуты', 'минут')}`);
+    return parts.join(' ') || '0 минут';
+  }
+
+  function buildSleepCapsuleAriaLabel(startH, startM, endH, endM, sleepHours) {
+    const fell = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+    const woke = `${endH}:${String(endM).padStart(2, '0')}`;
+    return `лёг в ${fell}, встал в ${woke}, ${formatSleepDurationWords(sleepHours)}`;
+  }
+
+  function buildScaleSliderAriaLabel(title, value, max = 10) {
+    const label = String(title || '').trim().toLowerCase();
+    return `${label}, ${value} из ${max}`;
+  }
+
+  function buildStepsTrackAriaLabel(stepsGoal, adviceLabel) {
+    const goal = Math.round(Number(stepsGoal) || 0).toLocaleString('ru-RU');
+    return `Цель по шагам, ${goal} шагов, ${adviceLabel}`;
+  }
+
   function sleepNormLine(hours) {
     const profile = lsGet('heys_profile', {}) || {};
     const norm = Number(profile.sleepHours) || 8;
@@ -2606,7 +2640,7 @@
           max: 10,
           value: sleepQuality,
           onValue: (nextValue) => update({ sleepQuality: nextValue }),
-          ariaLabel: 'Насколько выспались'
+          ariaLabel: buildScaleSliderAriaLabel('Насколько выспались', sleepQuality)
         }),
         React.createElement('button', {
           type: 'button',
@@ -2634,8 +2668,12 @@
           onChange: (e) => update({ sleepNote: e.target.value })
         })
       ),
-      React.createElement('div', { className: 'mc-sleep-times mc-sleep-times--split' },
-        React.createElement('div', { className: 'mc-sleep-block' },
+      React.createElement('div', {
+        className: 'mc-sleep-times mc-sleep-times--split',
+        role: 'group',
+        'aria-label': buildSleepCapsuleAriaLabel(sleepStartH, sleepStartM, sleepEndH, sleepEndM, sleepHours)
+      },
+        React.createElement('div', { className: 'mc-sleep-block', 'aria-hidden': 'true' },
           React.createElement('div', { className: 'mc-sleep-label' }, 'Легли'),
           React.createElement(TimePicker, {
             hours: sleepStartH,
@@ -2651,7 +2689,7 @@
             className: 'mc-sleep-clock'
           })
         ),
-        React.createElement('div', { className: 'mc-sleep-block' },
+        React.createElement('div', { className: 'mc-sleep-block', 'aria-hidden': 'true' },
           React.createElement('div', { className: 'mc-sleep-label' }, 'Встали'),
           React.createElement(TimePicker, {
             hours: sleepEndH,
@@ -3137,6 +3175,7 @@
       Math.max(0, stepsGoalSliderValueToRatio(adviceValue, sliderMin, sliderMax) * 100)
     );
     const adviceLabel = `${hasStepsHistory ? 'Совет' : 'Старт'} · ${adviceValue.toLocaleString('ru-RU')}`;
+    const stepsTrackAriaLabel = buildStepsTrackAriaLabel(stepsGoal, adviceLabel);
     const awayFromAdvice = Math.round(stepsGoal) !== adviceValue;
     const narrative = buildStepsGoalNarrative(stepsStats, awayFromAdvice, adviceValue);
 
@@ -3166,9 +3205,8 @@
             className: 'mc-steps-advice-mark',
             style: { left: `${advicePercent}%` },
             onClick: restoreAdvice,
-            'aria-label': hasStepsHistory
-              ? `Вернуть совет ${adviceValue.toLocaleString('ru-RU')} шагов`
-              : `Вернуть старт ${adviceValue.toLocaleString('ru-RU')} шагов`
+            'aria-hidden': 'true',
+            tabIndex: -1
           }, adviceLabel)
         ),
         React.createElement(DragValueSlider, {
@@ -3184,7 +3222,7 @@
           ratioToValue: stepsGoalSliderRatioToValue,
           stepForValue: stepsGoalSliderStepForValue,
           onValue: (nextValue) => onChange({ ...data, stepsGoal: nextValue }),
-          ariaLabel: 'Цель по шагам',
+          ariaLabel: stepsTrackAriaLabel,
           style: { marginTop: 0 }
         }),
         React.createElement('div', { className: 'mc-steps-slider-labels' },
@@ -4986,7 +5024,7 @@
           max: 10,
           value: row.value,
           onValue: (nextValue) => updateField(row.field, nextValue),
-          ariaLabel: row.title
+          ariaLabel: buildScaleSliderAriaLabel(row.title, row.value)
         })
       )),
       React.createElement('div', { className: 'mc-recorded-hint' }, 'Шкалы 1–10. Подпись справа называет значение словом — число одно не читается.')
@@ -6389,6 +6427,79 @@
     return null;
   }
 
+  function isMorningRestCycleRowVisible(profile) {
+    try {
+      const hf = HEYS.healthFeatures;
+      if (hf && typeof hf.isCycleTrackingEnabled === 'function') {
+        return hf.isCycleTrackingEnabled(profile);
+      }
+    } catch (_) { /* noop */ }
+    return profile?.gender === 'Женский' && profile?.cycleTrackingEnabled === true;
+  }
+
+  function renderMorningRestCycleRow(data, onChange, profile) {
+    if (!isMorningRestCycleRowVisible(profile)) return null;
+
+    const cycleOpen = data.cycleOpen === true;
+    const cycleDay = Number(data.cycleDay);
+    const hasCycleDay = Number.isFinite(cycleDay) && cycleDay >= 1 && cycleDay <= 7;
+    const cycleDays = [1, 2, 3, 4, 5, 6, 7];
+
+    const handleCycleDayKeyDown = (event) => {
+      if (!cycleOpen) return;
+      const current = hasCycleDay ? cycleDay : 1;
+      const idx = cycleDays.indexOf(current);
+      if (idx < 0) return;
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        onChange({ ...data, cycleDay: cycleDays[Math.min(cycleDays.length - 1, idx + 1)], cycleOpen: true });
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        onChange({ ...data, cycleDay: cycleDays[Math.max(0, idx - 1)], cycleOpen: true });
+      }
+    };
+
+    if (!cycleOpen) {
+      return React.createElement('div', { className: 'mc-rest-row mc-rest-row--cycle' },
+        React.createElement('div', null,
+          React.createElement('div', { className: 'mc-rest-card-title' }, 'Особые дни'),
+          hasCycleDay && React.createElement('div', { className: 'mc-rest-card-hint' }, `День ${cycleDay}`)
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-pill mc-pill--mini mc-pill--choice',
+          'aria-label': 'Отметить особые дни',
+          onClick: () => onChange({
+            ...data,
+            cycleOpen: true,
+            cycleDay: hasCycleDay ? cycleDay : 1
+          })
+        }, 'Отметить')
+      );
+    }
+
+    return React.createElement('div', { className: 'mc-rest-cycle-card' },
+      React.createElement('div', { className: 'mc-rest-card-title' }, 'Особые дни'),
+      React.createElement('div', {
+        className: 'mc-rest-cycle-days',
+        role: 'radiogroup',
+        'aria-label': 'Какой день',
+        onKeyDown: handleCycleDayKeyDown
+      },
+        cycleDays.map((day) => React.createElement('button', {
+          key: day,
+          type: 'button',
+          role: 'radio',
+          className: 'mc-pill mc-pill--mini mc-pill--choice' + (cycleDay === day ? ' is-on' : ''),
+          'aria-checked': cycleDay === day,
+          'aria-label': `День ${day}`,
+          tabIndex: cycleDay === day || (!hasCycleDay && day === 1) ? 0 : -1,
+          onClick: () => onChange({ ...data, cycleOpen: true, cycleDay: day })
+        }, String(day)))
+      )
+    );
+  }
+
   function MorningRestStepComponent({ data, onChange, context }) {
     const dateKey = context?.dateKey || getTodayKey();
     const profile = lsGet('heys_profile', {}) || {};
@@ -6810,6 +6921,7 @@
           }, status === 'done' ? 'Сделал' : status === 'planned' ? 'Сделаю' : 'Не сегодня'))
         )
       ),
+      renderMorningRestCycleRow(data, onChange, profile),
       showMeasurements && React.createElement('button', {
         type: 'button',
         className: 'mc-rest-row' + (measurementsOverdue ? ' mc-rest-row--overdue' : ''),
@@ -6919,6 +7031,10 @@
       const cold = dayData.coldExposure || {};
       const maState = normalizeMorningActivationState(dateKey, dayData);
       const routineStatus = isMorningActivationCheckinStatus(maState.status) ? maState.status : null;
+      const cycleDayValue = Number(dayData.cycleDay);
+      const cycleDay = Number.isFinite(cycleDayValue) && cycleDayValue >= 1 && cycleDayValue <= 7
+        ? cycleDayValue
+        : null;
       if (maState.status === 'planned') {
         scheduleMorningActivationPlannedReminder(dateKey);
       }
@@ -6927,6 +7043,8 @@
         coldTime: cold.time || null,
         coldPicked: !!cold.type,
         coldOpen: false,
+        cycleDay,
+        cycleOpen: false,
         supplementsOpen: false,
         supplementsLayer: null,
         supplementsAddDraft: null,
@@ -6970,6 +7088,16 @@
           decidedAt: dayData.morningActivation?.decidedAt || Date.now(),
           checkinAnsweredAt: dayData.morningActivation?.checkinAnsweredAt || Date.now()
         };
+      }
+      const nextCycleDay = Number(data.cycleDay);
+      if (Number.isFinite(nextCycleDay) && nextCycleDay >= 1 && nextCycleDay <= 7) {
+        dayData.cycleDay = nextCycleDay;
+        dayData.cycleStatus = null;
+        dayData.cycleAnsweredAt = Date.now();
+      } else if (data.cycleOpen === true) {
+        dayData.cycleDay = null;
+        dayData.cycleStatus = 'none';
+        dayData.cycleAnsweredAt = Date.now();
       }
       const waist = parseFloat(String(data.waist || '').replace(',', '.'));
       if (Number.isFinite(waist) && waist > 0) {
