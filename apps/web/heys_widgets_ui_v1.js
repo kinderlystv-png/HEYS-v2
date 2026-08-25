@@ -58,6 +58,66 @@
   // Временно: в режиме расстановки только drag (без смены размера). Вернуть true — вернуть handles + «Размер» в ⚙️.
   const WIDGET_EDIT_RESIZE_ENABLED = false;
 
+  // Четыре колонки — та же единица сетки, что GRID_COLS в heys_widgets_core_v1.js.
+  const WIDGETS_GRID_COLS = 4;
+
+  /**
+   * Формат чисел (канвас home-widgets.v4, строка «формат чисел · правило
+   * продукта»): разряды тысяч разделяет узкий неразрывный пробел U+202F
+   * («1 931 ккал»), дробную часть — запятая («2,7 л»), а число с единицей
+   * связывает обычный неразрывный пробел U+00A0, чтобы единица не уезжала
+   * в перенос.
+   *
+   * Оба символа записаны escape-последовательностями намеренно: сырой
+   * невидимый пробел в литерале не виден в диффе и теряется при копировании
+   * кода — ровно та неоднозначность, из-за которой контракт стал называть
+   * символ кодом, а не описанием.
+   *
+   * toLocaleString('ru-RU') отдаёт в разрядах U+00A0, а не U+202F, поэтому
+   * группировку переводим в узкий вручную.
+   */
+  const NUM_GROUP_SEP = '\u202F';
+  const NUM_UNIT_SEP = '\u00A0';
+
+  function formatRuNumber(value, options) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return n.toLocaleString('ru-RU', options).split('\u00A0').join(NUM_GROUP_SEP);
+  }
+
+  /**
+   * Единицы, которые сегодня стоят вплотную к числу, без пробела вовсе.
+   * Контракт про них молчит: он назвал разделитель разрядов и запятую
+   * в дробной части, а «отделяется ли процент» осталось без ответа. Пока
+   * сохраняем то, что человек видит сейчас, — но одним списком, а не
+   * россыпью шаблонов: ответ дизайнера меняет эту строку, а не экран.
+   */
+  const TIGHT_UNITS = new Set(['%']);
+
+  /**
+   * Склейка числа с единицей — одна на файл.
+   *
+   * Значение приходит уже готовым к показу (`formatRuNumber`, `toFixed`,
+   * «7/30», «−0,4»): функция ничего не переформатирует, иначе смена шва
+   * молча меняла бы и сами числа. Её единственное решение — чем сшить.
+   *
+   * По умолчанию шов — обычный неразрывный U+00A0: единица не уезжает
+   * в перенос отдельно от числа (строка контракта home-widgets.v4
+   * «формат чисел · правило продукта»). `tight` — осознанное отступление
+   * для мест, где число и единица стоят вплотную; без него единица берёт
+   * умолчание из `TIGHT_UNITS`.
+   *
+   * @param {string|number} value — уже отформатированное значение
+   * @param {string} unit — единица как её видит человек («ккал», «кг», «%»)
+   * @param {{ tight?: boolean }} [options]
+   */
+  function formatRuUnit(value, unit, options) {
+    const tight = options && 'tight' in options
+      ? options.tight === true
+      : TIGHT_UNITS.has(unit);
+    return String(value) + (tight ? '' : NUM_UNIT_SEP) + String(unit);
+  }
+
   function widgetsOnce(key) {
     if (!key) return true;
     if (_widgetsOnce[key]) return false;
@@ -412,7 +472,7 @@
                 className: `widget-cascade__metric widget-cascade__metric--${badgeTone}`,
                 title: trendMeta.label
               },
-                React.createElement('span', { className: 'widget-cascade__metric-value' }, `${pct}%`),
+                React.createElement('span', { className: 'widget-cascade__metric-value' }, formatRuUnit(pct, '%')),
                 React.createElement('span', {
                   className: `widget-cascade__metric-arrow widget-cascade__metric-arrow--${trendMeta.key}`,
                   'aria-label': trendMeta.label
@@ -432,7 +492,7 @@
               className: `widget-cascade__metric widget-cascade__metric--${badgeTone}`,
               title: trendMeta.label
             },
-              React.createElement('span', { className: 'widget-cascade__metric-value' }, `${pct}%`),
+              React.createElement('span', { className: 'widget-cascade__metric-value' }, formatRuUnit(pct, '%')),
               React.createElement('span', {
                 className: `widget-cascade__metric-arrow widget-cascade__metric-arrow--${trendMeta.key}`,
                 'aria-label': trendMeta.label
@@ -443,7 +503,7 @@
           className: `widget-cascade__badge widget-cascade__badge--${badgeTone}`,
           title: trendMeta.label
         },
-          React.createElement('span', { className: 'widget-cascade__badge-value' }, `${pct}%`),
+          React.createElement('span', { className: 'widget-cascade__badge-value' }, formatRuUnit(pct, '%')),
           React.createElement('span', {
             className: `widget-cascade__badge-arrow widget-cascade__badge-arrow--${trendMeta.key}`,
             'aria-label': trendMeta.label
@@ -538,7 +598,8 @@
     selectedDate,
     dragPreviewPosition = null,
     removePickActive = false,
-    isCornerBottomLeft = false
+    isCornerBottomLeft = false,
+    isCornerBottomRight = false
   }) {
     const registry = HEYS.Widgets.registry;
     const widgetType = registry?.getType(widget.type);
@@ -1304,7 +1365,7 @@
 
     return React.createElement('div', {
       ref: elementRef,
-      className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''} ${isResizing ? 'widget--resizing' : ''} ${isResizing && isResizeSnap ? 'widget--resize-snap' : ''} ${hasScales ? 'widget--has-scales' : ''}${tightClass}${isCornerBottomLeft ? ' widget--corner-bl' : ''}`,
+      className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''} ${isResizing ? 'widget--resizing' : ''} ${isResizing && isResizeSnap ? 'widget--resize-snap' : ''} ${hasScales ? 'widget--has-scales' : ''}${tightClass}${isCornerBottomLeft ? ' widget--corner-bl' : ''}${isCornerBottomRight ? ' widget--corner-br' : ''}`,
       'data-widget-id': widget.id,
       'data-widget-type': widget.type,
       // role=img закрывает внутренние узлы от обхода: иначе фраза распадается
@@ -2968,7 +3029,7 @@
 
     if (!hasData) {
       return v4EmptyTile(
-        `Тренд · ${periodDays} дней`,
+        `Тренд · ${formatRuUnit(periodDays, 'дней')}`,
         daysWithData < 3 ? 'нужно 3 дня' : null
       );
     }
@@ -2983,7 +3044,7 @@
         ? v4ValueStateClass(v4HealthTrendState(compactDelta))
         : '';
       return React.createElement('div', { className: 'widget-v4-stack widget-trend-compact' },
-        v4Kicker(`Тренд · ${periodDays} дней`),
+        v4Kicker(`Тренд · ${formatRuUnit(periodDays, 'дней')}`),
         React.createElement('div', { className: 'widget-trend-compact__row' },
           React.createElement('span', {
             className: 'widget-trend-compact__value ' + compactTone
@@ -3034,7 +3095,7 @@
         React.createElement('span', {
           className: 'widget-v4-hero-num__val ' + v4ValueStateClass(v4HealthTrendState(delta))
         }, hero),
-        React.createElement('span', { className: 'widget-v4-unit' }, `за ${periodDays} дней`)
+        React.createElement('span', { className: 'widget-v4-unit' }, `за ${formatRuUnit(periodDays, 'дней')}`)
       ),
       React.createElement(WidgetV4DrawSparkSvg, {
         className: 'widget-v4-spark widget-v4-spark--ok',
@@ -3608,7 +3669,7 @@
     const remaining = Math.max(0, target - eaten);
     const activityKcal = data.activityKcal || data.burned || 0;
     const dinnerBudget = data.dinnerBudgetKcal || Math.round(target * 0.28);
-    const formatKcal = (value) => Math.round(Number(value) || 0).toLocaleString('ru-RU');
+    const formatKcal = (value) => formatRuNumber(Math.round(Number(value) || 0));
 
     const d = getWidgetDims(widget);
     const size = widget?.size || '2x2';
@@ -3679,7 +3740,7 @@
           React.createElement('div', {
             className: 'widget-calories__dinner-note'
               + (dinnerOk ? ' widget-v4-val--good' : ' widget-v4-val--bad')
-          }, dinnerOk ? 'хватит на ужин' : `не хватит ${formatKcal(dinnerGap)} ккал`)
+          }, dinnerOk ? 'хватит на ужин' : `не хватит ${formatRuUnit(formatKcal(dinnerGap), 'ккал')}`)
         )
       );
     }
@@ -3776,10 +3837,10 @@
         React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } },
           formatKcal(animEaten)
         ),
-        showPct ? React.createElement('div', { className: 'widget-calories__pct' }, `${animPct}%`) : null
+        showPct ? React.createElement('div', { className: 'widget-calories__pct' }, formatRuUnit(animPct, '%')) : null
       ),
       showLabel
-        ? React.createElement('div', { className: 'widget-calories__label' }, `из ${formatKcal(animTarget)} ккал`)
+        ? React.createElement('div', { className: 'widget-calories__label' }, `из ${formatRuUnit(formatKcal(animTarget), 'ккал')}`)
         : null,
       showProgress
         ? React.createElement('div', { className: 'widget-calories__progress' },
@@ -3915,7 +3976,7 @@
     const showPercentage = widget.settings?.showPercentage !== false;
     const showRemaining = widget.settings?.showRemaining !== false;
     const primaryValue = showMilliliters || !showGlasses
-      ? `${drunk}${d.isMicro ? '' : ' мл'}`
+      ? (d.isMicro ? String(drunk) : formatRuUnit(drunk, 'мл'))
       : `${glasses}${d.isMicro ? '🥛' : ' 🥛'}`;
 
     const getWaterColor = () => HEYS.scales.waterProgress(pct).color;
@@ -4001,7 +4062,7 @@
           React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
             v4Kicker('Вода'),
             React.createElement('span', { className: 'widget-v4-row__meta' },
-              `${formatRuDecimal(drunk / 1000, 1)} / ${formatRuDecimal(target / 1000, 1)} л`)
+              `${formatRuDecimal(drunk / 1000, 1)} / ${formatRuUnit(formatRuDecimal(target / 1000, 1), 'л')}`)
           ),
           React.createElement('div', { className: 'widget-v4-row__value' },
             formatRuDecimal(drunk / 1000, 1),
@@ -4065,12 +4126,12 @@
 
     if (variantId === 'rhythm') {
       const hrs = data.hoursSinceWater;
-      const rhythmLabel = Number.isFinite(hrs) && hrs > 0 ? `${hrs} ч без воды` : 'ритм дня';
+      const rhythmLabel = Number.isFinite(hrs) && hrs > 0 ? `${formatRuUnit(hrs, 'ч')} без воды` : 'ритм дня';
       const bins = Array.isArray(data.rhythmBins) ? data.rhythmBins : [];
       const maxBin = Math.max(1, ...bins);
       return React.createElement('div', { className: 'widget-water widget-water--2x1 widget-v4-stack' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
-          v4Kicker(` Вода · ${formatRuDecimal(drunk / 1000, 1)} / ${formatRuDecimal(target / 1000, 1)} л`),
+          v4Kicker(` Вода · ${formatRuDecimal(drunk / 1000, 1)} / ${formatRuUnit(formatRuDecimal(target / 1000, 1), 'л')}`),
           React.createElement('span', { className: 'widget-v4-row__meta widget-v4-val--bad' }, rhythmLabel)
         ),
         React.createElement('div', { className: 'widget-v4-water-rhythm' },
@@ -4103,7 +4164,7 @@
           ),
           showPercentage
             ? React.createElement('div', { className: 'widget-water__pct-badge', style: { background: `${waterColor}20`, color: waterColor } },
-              `${pct}%`
+              formatRuUnit(pct, '%')
             )
             : null
         ),
@@ -4125,7 +4186,7 @@
             : null,
           showRemaining && remaining > 0
             ? React.createElement('div', { className: 'widget-water__meta widget-water__meta--muted' },
-              `ещё ${remaining} мл`
+              `ещё ${formatRuUnit(remaining, 'мл')}`
             )
             : null
         )
@@ -4150,7 +4211,7 @@
           })
         )
         : null,
-      showPctPill ? React.createElement('div', { className: 'widget-water__label' }, `${pct}%`) : null
+      showPctPill ? React.createElement('div', { className: 'widget-water__label' }, formatRuUnit(pct, '%')) : null
     );
   }
 
@@ -4241,7 +4302,7 @@
           v4Kicker('Сон · окно'),
           React.createElement('span', {
             className: 'widget-v4-row__meta ' + v4ValueStateClass(sleepState)
-          }, `${formatRuDecimal(hours, 1)} ч`)
+          }, formatRuUnit(formatRuDecimal(hours, 1), 'ч'))
         ),
         React.createElement('div', { className: 'widget-v4-sleep-window' },
           targetBand
@@ -4278,7 +4339,7 @@
             )
           ),
           React.createElement('div', { className: 'widget-sleep__pct-badge', style: { background: `${sleepColor}20`, color: sleepColor } },
-            `${pct}%`
+            formatRuUnit(pct, '%')
           )
         ),
         // Время: заснул → проснулся
@@ -4293,7 +4354,7 @@
           ),
           showTarget
             ? React.createElement('div', { className: 'widget-sleep__target' },
-              `Цель: ${target}ч`
+              `Цель: ${formatRuUnit(target, 'ч', { tight: true })}`
             )
             : null
         )
@@ -4302,9 +4363,9 @@
 
     // Остальные размеры
     return React.createElement('div', { className: `widget-sleep widget-sleep--${variant}` },
-      React.createElement('div', { className: 'widget-sleep__value' }, `${hours.toFixed(1)}ч ${getEmoji()}`),
+      React.createElement('div', { className: 'widget-sleep__value' }, `${formatRuUnit(hours.toFixed(1), 'ч', { tight: true })} ${getEmoji()}`),
       showTimes ? React.createElement('div', { className: 'widget-sleep__label' }, [sleepStart, sleepEnd].filter(Boolean).join(' → ')) : null,
-      showTarget ? React.createElement('div', { className: 'widget-sleep__label' }, `из ${target}ч`) : null,
+      showTarget ? React.createElement('div', { className: 'widget-sleep__label' }, `из ${formatRuUnit(target, 'ч', { tight: true })}`) : null,
       showQuality ? React.createElement('div', { className: 'widget-sleep__quality' }, `Качество: ${quality}/10`) : null
     );
   }
@@ -4372,7 +4433,7 @@
         React.createElement('div', { className: 'widget-streak__footer' },
           isNewRecord
             ? React.createElement('div', { className: 'widget-streak__record widget-streak__record--new' }, '🏆 Новый рекорд!')
-            : max > 0 && React.createElement('div', { className: 'widget-streak__record' }, `Рекорд: ${max} дн`)
+            : max > 0 && React.createElement('div', { className: 'widget-streak__record' }, `Рекорд: ${formatRuUnit(max, 'дн')}`)
         )
       );
     }
@@ -4501,7 +4562,7 @@
     const formatWeekChange = () => {
       if (!Number.isFinite(weekChange)) return null;
       const sign = weekChange >= 0 ? '+' : '';
-      return `${sign}${weekChange.toFixed(1)} кг/нед`;
+      return `${sign}${formatRuUnit(weekChange.toFixed(1), 'кг/нед')}`;
     };
 
     // ============ БЛОКИ-КОМПОНЕНТЫ ============
@@ -4551,12 +4612,12 @@
       if (inline) {
         return React.createElement('div', { className: 'widget-weight__goal-line' },
           React.createElement('span', { className: 'widget-weight__goal-label' }, 'Цель'),
-          React.createElement('span', { className: 'widget-weight__goal-inline-val' }, `${goal} кг`),
+          React.createElement('span', { className: 'widget-weight__goal-inline-val' }, formatRuUnit(goal, 'кг')),
           weeksToGoal && React.createElement('span', { className: 'widget-weight__goal-eta' }, `~${weeksToGoal} нед`)
         );
       }
       return React.createElement('div', { className: 'widget-weight__goal-block' },
-        React.createElement('div', { className: 'widget-weight__goal-val' }, `${goal} кг`),
+        React.createElement('div', { className: 'widget-weight__goal-val' }, formatRuUnit(goal, 'кг')),
         weeksToGoal && React.createElement('div', { className: 'widget-weight__goal-eta' }, `~${weeksToGoal} нед`)
       );
     };
@@ -4573,7 +4634,7 @@
               style: { height: `${pct}%` }
             })
           ),
-          React.createElement('div', { className: 'widget-weight__progress-goal' }, `${goal} кг`)
+          React.createElement('div', { className: 'widget-weight__progress-goal' }, formatRuUnit(goal, 'кг'))
         );
       }
       return React.createElement('div', { className: 'widget-weight__progress-h' },
@@ -4584,8 +4645,8 @@
           })
         ),
         React.createElement('div', { className: 'widget-weight__progress-info' },
-          React.createElement('span', { className: 'widget-weight__progress-pct' }, `${pct.toFixed(0)}%`),
-          React.createElement('span', { className: 'widget-weight__progress-label' }, `→ ${goal} кг`)
+          React.createElement('span', { className: 'widget-weight__progress-pct' }, formatRuUnit(pct.toFixed(0), '%')),
+          React.createElement('span', { className: 'widget-weight__progress-label' }, `→ ${formatRuUnit(goal, 'кг')}`)
         )
       );
     };
@@ -4612,7 +4673,7 @@
     const AnalyticsBlock = () => {
       const items = [];
       if (showAnalytics && monthChange) {
-        items.push({ icon: '📊', text: `Прогноз: ${monthChange > 0 ? '+' : ''}${monthChange.toFixed(1)} кг/мес` });
+        items.push({ icon: '📊', text: `Прогноз: ${monthChange > 0 ? '+' : ''}${formatRuUnit(monthChange.toFixed(1), 'кг/мес')}` });
       }
       if (showAnalytics && hasCleanTrend) {
         items.push({ icon: '🌸', text: 'Чистый тренд', cls: 'widget-weight__stat--pink' });
@@ -4657,14 +4718,21 @@
         // Строка «вес»: текст остаётся недельным (строка «состав дефолта»),
         // а цвет идёт от окна спарклайна.
         const weekState = v4WeightWindowState(data);
+        // Кадр и строка «состав дефолта» ставят дельту в одну строку с
+        // подписью («подпись слева, „−0,9 за неделю“ справа, число 21 px
+        // прижато к правому краю»), а не рядом с числом. Код держал её слева
+        // от числа — от этого дельта и лежала в левом нижнем углу сетки,
+        // который строка «зоны углов» просит держать пустым.
         return React.createElement('div', { className: 'widget-weight widget-weight--2x1 widget-weight--number-week' },
-          v4Kicker('Вес'),
-          React.createElement('div', { className: 'widget-weight__number-week-row' },
+          React.createElement('div', { className: 'widget-weight__number-week-head' },
+            v4Kicker('Вес'),
             weekText
               ? React.createElement('span', {
                 className: 'widget-weight__number-week-delta ' + v4ValueStateClass(weekState)
               }, weekText)
-              : React.createElement('span', { className: 'widget-weight__number-week-delta is-empty' }, '—'),
+              : React.createElement('span', { className: 'widget-weight__number-week-delta is-empty' }, '—')
+          ),
+          React.createElement('div', { className: 'widget-weight__number-week-row' },
             React.createElement('span', { className: 'widget-weight__number-week-val' },
               hasCurrent ? formatRuDecimal(current, 1) : '—'
             )
@@ -5165,7 +5233,7 @@
   function formatRuThousands(value) {
     const n = Number(value);
     if (!Number.isFinite(n)) return '—';
-    return Math.round(n).toLocaleString('ru-RU');
+    return formatRuNumber(Math.round(n));
   }
 
   // Шаги: красим только шалфеем от 100 % цели и чернилами ниже, красным
@@ -5307,8 +5375,8 @@
     const total = Math.max(0, Math.round(Number(minutes) || 0));
     const h = Math.floor(total / 60);
     const m = total % 60;
-    if (!h) return m + ' м';
-    return h + ' ч' + (m ? ' ' + m + ' м' : '');
+    if (!h) return formatRuUnit(m, 'м');
+    return formatRuUnit(h, 'ч') + (m ? ' ' + formatRuUnit(m, 'м') : '');
   }
 
   function formatLitersRu(ml) {
@@ -5364,7 +5432,7 @@
           hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
         ),
         hasData && data.remaining > 0
-          ? React.createElement('span', { className: 'widget-v4-muted' }, `+${data.remaining} г добрать`)
+          ? React.createElement('span', { className: 'widget-v4-muted' }, `+${formatRuUnit(data.remaining, 'г')} добрать`)
           : null,
         // Пустой словарь — строка не показывается, плитка не ужимается.
         hasData && sources.length
@@ -5452,7 +5520,7 @@
           hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
         ),
         hasData && data.remaining > 0
-          ? React.createElement('span', { className: 'widget-v4-muted' }, `+${data.remaining} г добрать`)
+          ? React.createElement('span', { className: 'widget-v4-muted' }, `+${formatRuUnit(data.remaining, 'г')} добрать`)
           : null
       );
     }
@@ -5710,7 +5778,7 @@
     if (!item?.hasData) {
       return item.key === 'steps' ? 'без цели' : 'нет данных';
     }
-    if (item.key === 'water') return `${formatLitersRu(item.value)} из ${formatLitersRu(item.goal)} л`;
+    if (item.key === 'water') return `${formatLitersRu(item.value)} из ${formatRuUnit(formatLitersRu(item.goal), 'л')}`;
     if (item.key === 'food') return `окно ${formatHoursWords(item.value)}`;
     return `${formatRuThousands(item.value)} из ${formatRuThousands(item.goal)}`;
   }
@@ -5864,10 +5932,10 @@
         ? (effectiveShowGrams ? 'grams' : 'pct')
         : centerMode;
       const centerValue = resolvedCenterMode === 'pct'
-        ? `${Math.min(999, normalizedPct)}%`
+        ? formatRuUnit(Math.min(999, normalizedPct), '%')
         : Math.round(value || 0);
-      const targetText = hideTarget ? null : (resolvedCenterMode === 'grams' ? `/ ${Math.round(target || 0)}г` : null);
-      const percentBadge = hidePercentBadge ? null : (showPercentage && resolvedCenterMode === 'grams' ? `${normalizedPct}%` : null);
+      const targetText = hideTarget ? null : (resolvedCenterMode === 'grams' ? `/ ${formatRuUnit(Math.round(target || 0), 'г', { tight: true })}` : null);
+      const percentBadge = hidePercentBadge ? null : (showPercentage && resolvedCenterMode === 'grams' ? formatRuUnit(normalizedPct, '%') : null);
 
       return React.createElement('div', { key: `${toneClass}-${label}`, className: 'macro-ring-item' },
         React.createElement('div', { className: `macro-ring ${toneClass}${hasOver ? ' macro-ring--over' : ''}${_isWarning ? ' macro-ring-pulse' : ''}` },
@@ -5997,8 +6065,8 @@
         React.createElement('div', { className: 'widget-micro__label' }, 'БЖУ'),
         React.createElement('div', { className: 'widget-macros__micro-value' },
           showPercentage
-            ? `${Math.min(999, avgPct)}%`
-            : `${Math.round(animProtein + animFat + animCarbs)}г`
+            ? formatRuUnit(Math.min(999, avgPct), '%')
+            : formatRuUnit(Math.round(animProtein + animFat + animCarbs), 'г', { tight: true })
         )
       );
     }
@@ -6053,7 +6121,7 @@
             style: { width: `${barPct}%`, backgroundColor: color }
           })
         ),
-        showGrams ? React.createElement('span', { className: 'widget-macros__value' }, `${Math.round(value)}г`) : null
+        showGrams ? React.createElement('span', { className: 'widget-macros__value' }, formatRuUnit(Math.round(value), 'г', { tight: true })) : null
       );
     };
 
@@ -6191,7 +6259,7 @@
         info.emoji, ' ', info.label
       ),
       showLastMeal ? React.createElement('div', { className: 'widget-insulin__phase' }, `🍽 ${lastMealTime}`) : null,
-      showTimer ? React.createElement('div', { className: 'widget-insulin__timer' }, `${remaining} мин`) : null,
+      showTimer ? React.createElement('div', { className: 'widget-insulin__timer' }, formatRuUnit(remaining, 'мин')) : null,
       showPhase ? React.createElement('div', { className: 'widget-insulin__phase' }, phase) : null
     );
   }
@@ -6977,8 +7045,8 @@
     const completeDays = Number(historyQuality?.completeDays) || 0;
     if (!totalDays) return 'история почти пустая';
     if (completeDays >= totalDays * 0.8) return `${completeDays}/${totalDays} полных дней`;
-    if (completeDays >= totalDays * 0.5) return `${completeDays}/${totalDays} дней достаточно полные`;
-    return `${completeDays}/${totalDays} дней слабо заполнены`;
+    if (completeDays >= totalDays * 0.5) return `${formatRuUnit(completeDays + '/' + totalDays, 'дней')} достаточно полные`;
+    return `${formatRuUnit(completeDays + '/' + totalDays, 'дней')} слабо заполнены`;
   }
 
   function getTopRelapseItems(items, count = 2) {
@@ -7415,7 +7483,7 @@
             fontWeight: 700,
             fill: colors[tone] || 'var(--text-primary)'
           }
-        }, `${safeRisk}%`),
+        }, formatRuUnit(safeRisk, '%')),
         React.createElement('text', {
           x: size / 2,
           y: labelY,
@@ -7714,7 +7782,7 @@
       const driverRows = [
         {
           label: 'Срывы',
-          value: relapseScore < 20 && !relapseDriver ? 'нет' : (relapseDriver?.text || relapseDriver?.value || (relapseScore ? `${relapseScore}%` : 'нет')),
+          value: relapseScore < 20 && !relapseDriver ? 'нет' : (relapseDriver?.text || relapseDriver?.value || (relapseScore ? formatRuUnit(relapseScore, '%') : 'нет')),
           warn: relapseScore >= 20
         },
         {
@@ -7750,8 +7818,8 @@
     const showSource = widget.settings?.showSource !== false;
     const srcLabel = getSourceLabel();
     const riskSummaryLabel = [
-      `пик ${topWindowScore}% ${topWindowLabel}`,
-      showConfidence ? `conf ${confidence}%` : null,
+      `пик ${formatRuUnit(topWindowScore, '%')} ${topWindowLabel}`,
+      showConfidence ? `conf ${formatRuUnit(confidence, '%')}` : null,
       // Источник — какой движок дал этот балл. Тумблер объявлен в реестре
       // (heys_widgets_registry_v1.js:603), но раньше ничего не рендерил.
       showSource && srcLabel ? `источник ${srcLabel.toLowerCase()}` : null
@@ -7759,7 +7827,7 @@
 
     return React.createElement('div', { className: `widget-relapse-risk widget-relapse-risk--${variant}` },
       React.createElement('div', { className: 'widget-relapse-risk__top' },
-        React.createElement('div', { className: 'widget-relapse-risk__value', style: { color } }, `${score}%`),
+        React.createElement('div', { className: 'widget-relapse-risk__value', style: { color } }, formatRuUnit(score, '%')),
         React.createElement('div', { className: 'widget-relapse-risk__pct-pill', style: { color, background: `${color}20` } }, getRelapseLevelLabel(level))
       ),
       React.createElement('div', { className: 'widget-relapse-risk__label' }, riskSummaryLabel),
@@ -8116,7 +8184,7 @@
               React.createElement('div', { style: { fontSize: '1.5rem' } }, zoneMeta.emoji),
               React.createElement('div', {
                 style: { fontSize: '2.5rem', fontWeight: 800, color, lineHeight: 1 }
-              }, `${dirArrow} ${absPct.toFixed(1)}%`),
+              }, `${dirArrow} ${formatRuUnit(absPct.toFixed(1), '%')}`),
               React.createElement('div', {
                 className: 'widget-relapse-risk__modal-score-level',
                 style: { color, background: `${color}16`, borderColor: `${color}26` }
@@ -8137,26 +8205,26 @@
             React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
               React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Сейчас'),
-                React.createElement('span', { style: { fontWeight: 600 } }, `${currentWeight.toFixed(1)} кг`)
+                React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit(currentWeight.toFixed(1), 'кг'))
               ),
               firstWeight > 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
-                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, `${dataPoints} дн. назад`),
-                React.createElement('span', { style: { fontWeight: 600 } }, `${firstWeight.toFixed(1)} кг`)
+                React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, `${formatRuUnit(dataPoints, 'дн.')} назад`),
+                React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit(firstWeight.toFixed(1), 'кг'))
               ),
               deltaAbs >= 0.05 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Итого изменение'),
-                React.createElement('span', { style: { fontWeight: 600, color } }, `${deltaSign}${deltaAbs.toFixed(2)} кг`)
+                React.createElement('span', { style: { fontWeight: 600, color } }, `${deltaSign}${formatRuUnit(deltaAbs.toFixed(2), 'кг')}`)
               ),
               React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Темп'),
                 React.createElement('span', { style: { fontWeight: 600 } },
-                  `${slopePerWeek >= 0 ? '+' : ''}${slopePerWeek.toFixed(2)} кг/нед`
+                  `${slopePerWeek >= 0 ? '+' : ''}${formatRuUnit(slopePerWeek.toFixed(2), 'кг/нед')}`
                 )
               ),
               React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Данных'),
                 React.createElement('span', { style: { fontWeight: 600 } },
-                  `${dataPoints}/${periodDays} дн. (${(dataCompleteness * 100).toFixed(0)}%)`
+                  `${formatRuUnit(dataPoints + '/' + periodDays, 'дн.')} (${formatRuUnit((dataCompleteness * 100).toFixed(0), '%')})`
                 )
               ),
               React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
@@ -8172,15 +8240,15 @@
             React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
               React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Целевой вес'),
-                React.createElement('span', { style: { fontWeight: 600 } }, `${goalWeight} кг`)
+                React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit(goalWeight, 'кг'))
               ),
               React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Осталось'),
-                React.createElement('span', { style: { fontWeight: 600 } }, `${(toGoalKg || 0).toFixed(1)} кг`)
+                React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit((toGoalKg || 0).toFixed(1), 'кг'))
               ),
               estimatedDaysToGoal && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Прогноз при текущем темпе'),
-                React.createElement('span', { style: { fontWeight: 600 } }, `~${estimatedDaysToGoal} дней`)
+                React.createElement('span', { style: { fontWeight: 600 } }, `~${formatRuUnit(estimatedDaysToGoal, 'дней')}`)
               )
             )
           ),
@@ -8195,7 +8263,7 @@
                   style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--heys-text-secondary,#94a3b8)' }
                 },
                   React.createElement('span', null, p.date),
-                  React.createElement('span', { style: { fontWeight: 600 } }, `${p.weight.toFixed(1)} кг`)
+                  React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit(p.weight.toFixed(1), 'кг'))
                 )
               )
             )
@@ -8780,7 +8848,7 @@
       || HEYS.DayData?.getCurrentDay?.()?.waterNormMl
       || 2700;
     const normL = Math.max(0.1, Number(norm) || 2700) / 1000;
-    const fmt = (v) => v.toLocaleString('ru-RU', { maximumFractionDigits: 1, minimumFractionDigits: 0 });
+    const fmt = (v) => formatRuNumber(v, { maximumFractionDigits: 1, minimumFractionDigits: 0 });
     return `${fmt(liters)} из ${fmt(normL)}`;
   }
 
@@ -8876,6 +8944,32 @@
       return () => events.forEach((name) => window.removeEventListener(name, sync));
     }, []);
     return visibility;
+  }
+
+  /**
+   * Строка «непрочитанные у мессенджера»: счётчик живёт на строке
+   * «Мессенджер» внутри карточки и больше нигде — на самой плавающей кнопке
+   * значка нет ни при каком числе сообщений.
+   *
+   * Источник тот же, что у остального продукта: HEYS.MessengerAPI держит
+   * счёт в кеше и рассылает 'heys:messenger-fab-unread' при каждом изменении
+   * (heys_messenger_api_v1.js). Своего опроса здесь не заводим — второй
+   * опрос того же эндпоинта был бы лишним сетевым трафиком и вторым
+   * источником правды.
+   */
+  function useQuickUnreadCount(enabled) {
+    const [unread, setUnread] = useState(0);
+    useEffect(() => {
+      if (!enabled) {
+        setUnread(0);
+        return undefined;
+      }
+      setUnread(HEYS.MessengerAPI?.getFabUnreadCount?.() || 0);
+      const onUpdate = (event) => setUnread(Number(event?.detail) || 0);
+      window.addEventListener('heys:messenger-fab-unread', onUpdate);
+      return () => window.removeEventListener('heys:messenger-fab-unread', onUpdate);
+    }, [enabled]);
+    return unread;
   }
 
   /**
@@ -8985,6 +9079,9 @@
 
     const navKeys = QUICK_ACTION_ORDER.filter((key) => visibility[key] !== false);
     const waterOn = visibility.water !== false;
+    // Строка «непрочитанные у мессенджера»: счёт нужен только пока пункт
+    // «Мессенджер» вообще есть в списке.
+    const messengerUnread = useQuickUnreadCount(visibility.message !== false);
     const enabledCount = navKeys.length + (waterOn ? 1 : 0);
     // Строка «включён один пункт»: стопки нет — кнопка становится действием и
     // носит его иконку вместо «+». Навигационный пункт уводит одним тапом,
@@ -9188,6 +9285,15 @@
       },
         React.createElement(QuickActionIcon, { action: key, className: 'widgets-quick-sheet__row-icon' }),
         React.createElement('span', { className: 'widgets-quick-sheet__row-label' }, labels[key]),
+        // Строка «непрочитанные у мессенджера»: кружок 14 px тоном --acs с
+        // цифрой стоит здесь — и только здесь. Гаснет в режиме правки вместе
+        // с шевронами и счётчиком воды: это такой же счётчик на строке.
+        key === 'message' && messengerUnread > 0
+          ? React.createElement('span', {
+            className: 'widgets-quick-sheet__badge widgets-quick-sheet__fade',
+            'aria-label': `${messengerUnread} непрочитанных сообщений`
+          }, messengerUnread > 99 ? '99+' : String(messengerUnread))
+          : null,
         // Строка «режим правки»: шевроны на время правки убираются — гаснут
         // за 120 мс (строка «тайминги правки»), а не исчезают рывком.
         React.createElement('span', {
@@ -10939,12 +11045,21 @@
     const [quickSheetOpen, setQuickSheetOpen] = useState(false);
 
     /**
-     * Строка контракта «что под ней»: зона 48×48 в левом нижнем углу сетки
-     * занята кнопкой настройки экрана — у плитки, которая туда попадает,
-     * число прижато к правому краю. Раньше угол не резервировался вовсе:
-     * у «Веса» 2×1 число стояло справа по своей вёрстке, а не по правилу.
+     * Строка контракта «зоны углов»: оба нижних угла сетки держатся
+     * свободными 52×52 px — по фактическому следу кнопок (настройка слева,
+     * «+» справа). В зоне запрещена любая графика, не только числа и полосы:
+     * спарклайн, кольцо, полоса и дельта одинаково уходят под палец.
+     *
+     * Поэтому угол резервируется полем плитки, а не разводом отдельных узлов:
+     * перечисление узлов всегда неполно — спарклайн «Динамики веса» формально
+     * не был ни числом, ни полосой и прежний запрет проходил.
+     *
+     * Отступление названо вслух: соседняя строка «что под ней» всё ещё
+     * говорит «48×48 … свободна от чисел и полос» и называет только левый
+     * угол. Верна «зоны углов» — она переписана двенадцатой сборкой и сама
+     * объясняет, что 48 было ошибкой замера.
      */
-    const cornerBottomLeftId = useMemo(() => {
+    const cornerWidgetIds = useMemo(() => {
       const list = widgets || [];
       let bottomRow = -1;
       list.forEach((w) => {
@@ -10952,14 +11067,20 @@
         if (!Number.isFinite(row)) return;
         bottomRow = Math.max(bottomRow, row + (Number(w?.rows) || 1) - 1);
       });
-      if (bottomRow < 0) return null;
-      const hit = list.find((w) => {
+      if (bottomRow < 0) return { left: null, right: null };
+      const touchesBottom = (w) => {
         const row = Number(w?.position?.row);
         if (!Number.isFinite(row)) return false;
-        if (Number(w?.position?.col) !== 0) return false;
         return row <= bottomRow && row + (Number(w?.rows) || 1) - 1 >= bottomRow;
+      };
+      const left = list.find((w) => Number(w?.position?.col) === 0 && touchesBottom(w));
+      // Правый угол — плитка, чей правый край упирается в последнюю колонку.
+      const right = list.find((w) => {
+        const col = Number(w?.position?.col);
+        if (!Number.isFinite(col)) return false;
+        return col + (Number(w?.cols) || 1) === WIDGETS_GRID_COLS && touchesBottom(w);
       });
-      return hit?.id || null;
+      return { left: left?.id || null, right: right?.id || null };
     }, [widgets]);
 
     const renderMobileFabs = () => {
@@ -10982,7 +11103,7 @@
           onAddWater: (ml) => {
             handleAddWater(ml);
             HEYS.Undo?.push?.({
-              label: `Записано ${ml} мл`,
+              label: `Записано ${formatRuUnit(ml, 'мл')}`,
               onUndo: () => handleRemoveWater(ml)
             });
           },
@@ -11081,7 +11202,8 @@
               onRemove: handleRemove,
               onSettings: setSettingsWidget,
               removePickActive: catalogRemovePick,
-              isCornerBottomLeft: widget.id === cornerBottomLeftId
+              isCornerBottomLeft: widget.id === cornerWidgetIds.left,
+              isCornerBottomRight: widget.id === cornerWidgetIds.right
             })
           )
         ),
@@ -11213,6 +11335,10 @@
   // продукт»): зоны 8 / 25 % вниз и 110 / 130 % вверх, первый час после
   // подъёма и конец окна руками на живом дне не собрать.
   HEYS.Widgets.v4PaceState = v4PaceState;
+  // Экспорт ради смоука строки «формат чисел · правило продукта»: разделитель
+  // разрядов — невидимый символ, и глазами U+202F от U+00A0 не отличить.
+  HEYS.Widgets.formatRuNumber = formatRuNumber;
+  HEYS.Widgets.formatRuUnit = formatRuUnit;
   HEYS.Widgets.SettingsModal = SettingsModal;
   HEYS.Widgets.RelapseRiskDetailsModal = RelapseRiskDetailsModal;
   /**
