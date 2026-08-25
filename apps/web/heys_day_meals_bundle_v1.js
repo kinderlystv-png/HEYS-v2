@@ -2235,9 +2235,6 @@
           onPhoto: typeof onPhoto === 'function' ? onPhoto : null,
           onDone: () => {
             dispatchFinished();
-            if (isGoalReached && HEYS.Confetti?.fire) {
-              HEYS.Confetti.fire();
-            }
             closeSummary('finish', { scrollToDiary: true });
           }
         },
@@ -2290,7 +2287,7 @@
     }, [day]);
 
     const handleOpenModal = React.useCallback(() => {
-      try { navigator.vibrate?.(10); } catch (e) { }
+      // Открытие листа отклика не даёт — строка «вибрация · правило продукта».
 
       const handleAddPhoto = async ({ mealIndex, mealId: requestedMealId, photo, filename, timestamp }) => {
         const activeDay = getLatestDay();
@@ -2334,7 +2331,7 @@
           return { ...prevDay, meals, updatedAt: Date.now() };
         });
 
-        try { navigator.vibrate?.(10); } catch (e) { }
+        HEYS.feedback?.emit?.('meal.added');
 
         try {
           const mealName = activeMeal?.name || `meal${resolvedMealIndex}`;
@@ -2651,7 +2648,7 @@
           }, 160);
         });
 
-        try { navigator.vibrate?.(10); } catch (e) { }
+        HEYS.feedback?.emit?.('meal.added');
 
         prepared.forEach((entry) => {
           recordGramsForProduct(entry.productId, entry.grams, entry.finalProduct);
@@ -2856,7 +2853,7 @@
           }, 160);
         });
 
-        try { navigator.vibrate?.(10); } catch (e) { }
+        HEYS.feedback?.emit?.('meal.added');
 
 	        dispatchProductAdded({ product: finalProduct || safeProduct, grams, origin: _origin || 'single' });
 
@@ -4207,7 +4204,9 @@
             const y = Number(eventLike?.clientY) || Math.round((window.innerHeight || 844) * 0.55);
             clearProductLongPress();
             productActionSheetIgnoreNextBackdropClickRef.current = true;
-            if (HEYS.dayUtils?.haptic) HEYS.dayUtils.haptic('light');
+            // Долгое нажатие — «короткое вибро в момент срабатывания»
+            // (home-widgets, строка «жест»).
+            HEYS.feedback?.emit?.('longpress');
             setProductActionSheet({
                 product: editableProduct,
                 title: editableProduct.name || 'Продукт',
@@ -4223,7 +4222,7 @@
             productLongPressStartRef.current = { x: point.clientX, y: point.clientY };
             productLongPressTimerRef.current = setTimeout(() => {
                 openProductActionSheet(point, item, product);
-            }, 560);
+            }, HEYS.longPress?.MS ?? 350);
         }, [clearProductLongPress, isProductActionInteractiveTarget, openProductActionSheet]);
 
         const moveProductLongPress = React.useCallback((event) => {
@@ -7642,10 +7641,6 @@
                                                 else localStorage.setItem('heys_meal_hint_shown', '1');
                                             } catch { }
                                         }
-                                        if (quality.score >= 95) {
-                                            setShowConfetti(true);
-                                            setTimeout(() => setShowConfetti(false), 2000);
-                                        }
                                         setMealQualityPopup({
                                             meal: p.meal,
                                             quality,
@@ -7718,10 +7713,6 @@
                                 else if (utils.lsSet) utils.lsSet('heys_meal_hint_shown', '1');
                                 else localStorage.setItem('heys_meal_hint_shown', '1');
                             } catch { }
-                        }
-                        if (quality.score >= 95) {
-                            setShowConfetti(true);
-                            setTimeout(() => setShowConfetti(false), 2000);
                         }
                         setMealQualityPopup({
                             meal,
@@ -8390,7 +8381,7 @@
                         } else {
                             HEYS.Toast?.error('Не удалось сохранить приём. Попробуйте ещё раз.');
                         }
-                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date } }));
 
                         // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                         try {
@@ -8630,7 +8621,8 @@
 
                                         setDay(() => newDayData);
 
-                                        try { navigator.vibrate?.(10); } catch (e) { }
+                                        // nutrition-tab: 10 мс на добавленный приём.
+                                        HEYS.feedback?.emit?.('meal.added');
                                         window.dispatchEvent(new CustomEvent('heysProductAdded', {
                                             detail: {
 	                                                product: finalProduct,
@@ -8976,7 +8968,7 @@
                 if (window.HEYS && window.HEYS.analytics) {
                     window.HEYS.analytics.trackDataOperation('meal-created');
                 }
-                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date } }));
 
                 // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                 try {
@@ -9914,7 +9906,7 @@
                         }
 
                         HEYS.Toast?.success?.(`Создан приём, скопировано: ${cloned.length}`);
-                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date: todayStr } }));
 
                         // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                         try {
@@ -10071,17 +10063,19 @@
                             return { ...existing, meals, updatedAt: Date.now() };
                         }, 'undo_move_item_source');
                     }
-                    HEYS.Toast?.info?.('Возвращено');
+                    // Подтверждающего тоста после возврата нет — строка «тоста подтверждения нет».
                 };
 
-                HEYS.Toast?.show?.({
-                    type: 'success',
-                    message: mode === 'move' ? 'Перемещено в новый приём' : 'Скопировано в новый приём',
-                    duration: 4000,
-                    action: { label: 'Отменить', onClick: undo },
+                // Строка контракта «тоста подтверждения нет»: возврат живёт в баре
+                // отмены, а не в зелёном тосте со своей кнопкой. Два места, где
+                // можно нажать «Отменить», — это два разных таймера и две разные
+                // формы одного действия.
+                HEYS.Undo?.push?.({
+                    label: mode === 'move' ? 'Перемещено в новый приём' : 'Скопировано в новый приём',
+                    onUndo: undo,
                 });
 
-                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date: todayStr } }));
 
                 // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                 try {
@@ -10227,14 +10221,13 @@
                             });
                             return { ...existing, meals, updatedAt: Date.now() };
                         }, 'undo_move_item_source');
-                        HEYS.Toast?.info?.('Возвращено');
+                        // Подтверждающего тоста после возврата нет — строка «тоста подтверждения нет».
                     };
 
-                    HEYS.Toast?.show?.({
-                        type: 'success',
-                        message: `Переместили в ${dstLabel}`,
-                        duration: 4000,
-                        action: { label: 'Отменить', onClick: undo },
+                    // Строка «тоста подтверждения нет»: возврат — через бар отмены.
+                    HEYS.Undo?.push?.({
+                        label: `Переместили в ${dstLabel}`,
+                        onUndo: undo,
                     });
                 },
             });
@@ -10384,14 +10377,13 @@
                     const meals = sortMealsByTime([...(existing.meals || []), srcMealClone]);
                     return { ...existing, meals, updatedAt: Date.now() };
                 }, 'undo_move_meal_source');
-                HEYS.Toast?.info?.('Приём возвращён');
+                // Подтверждающего тоста после возврата нет — строка «тоста подтверждения нет».
             };
 
-            HEYS.Toast?.show?.({
-                type: 'success',
-                message: `Приём перемещён в ${dstLabel}`,
-                duration: 4000,
-                action: { label: 'Отменить', onClick: undo },
+            // Строка «тоста подтверждения нет»: возврат — через бар отмены.
+            HEYS.Undo?.push?.({
+                label: `Приём перемещён в ${dstLabel}`,
+                onUndo: undo,
             });
         }, [date, haptic, buildDaysWithMeals, writeDay, ensureDiaryItemsReadyForDayWrite]);
 

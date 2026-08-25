@@ -173,10 +173,10 @@ describe('опыт за прошлый день', () => {
 });
 
 describe('отправители событий несут дату', () => {
-  it('все четыре heysMealAdded в day/_meals.js передают день приёма', () => {
+  it('все heysMealAdded в day/_meals.js передают день приёма', () => {
     const src = read(path.join('day', '_meals.js'));
     const dispatches = src.match(/new CustomEvent\('heysMealAdded',[^\n]*\)/g) || [];
-    expect(dispatches).toHaveLength(4);
+    expect(dispatches).toHaveLength(5);
     for (const line of dispatches) {
       expect(line).toMatch(/date(:\s*\w+)?\s*[},]/);
     }
