@@ -453,9 +453,7 @@
   // Один визуальный язык на модалку, страховку и офлайн-баннер: линейные иконки
   // вместо эмодзи, которые рендерились по-разному на каждой платформе.
   const UPDATE_ICON_PATHS = {
-    download: 'M12 4v10m0 0l-4-4m4 4l4-4M5 18h14',
     check: 'M5 13l4 4L19 7',
-    refresh: 'M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0012.5 2.5M18.5 9A7 7 0 006 6.5',
     cloudDown: 'M12 12v7m0 0l-3.2-3.2M12 19l3.2-3.2M17.5 16.2A3.9 3.9 0 0016.6 8.6h-1.2A6 6 0 004 10.2a3.5 3.5 0 00.4 6.2',
     close: 'M6 6l12 12M18 6L6 18',
     openApp: 'M9 4H5a1 1 0 00-1 1v14a1 1 0 001 1h14a1 1 0 001-1v-4M14 4h6v6M20 4l-8 8',
@@ -464,7 +462,7 @@
   };
 
   function updateIconSvg(name, size, strokeWidth = 2.5) {
-    const path = UPDATE_ICON_PATHS[name] || UPDATE_ICON_PATHS.refresh;
+    const path = UPDATE_ICON_PATHS[name] || UPDATE_ICON_PATHS.check;
     return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
   }
 
@@ -473,25 +471,33 @@
   // «мягкие уведомления» их прямо запрещает, а своих кадров в макете они
   // не имели. Неизвестная стадия падает на «Загрузка» — первый живой кадр.
   const UPDATE_STAGES = {
-    downloading: { title: 'Загрузка', subtitle: 'Это займёт пару секунд…', icon: 'download', spinner: true, dot: 0 },
-    ready: { title: 'Готово!', subtitle: 'Приложение обновлено', icon: 'check', spinner: false, dot: 1, done: true },
-    reloading: { title: 'Перезагрузка', subtitle: 'Применяем изменения…', icon: 'refresh', spinner: true, dot: 2 },
+    downloading: { title: 'Загрузка', subtitle: 'Это займёт пару секунд…', spinner: true, dot: 0 },
+    ready: { title: 'Готово!', subtitle: 'Приложение обновлено', spinner: false, dot: 1, done: true },
+    reloading: { title: 'Перезагрузка', subtitle: 'Применяем изменения…', spinner: true, dot: 2 },
   };
 
-  // Кольцо крутится только там, где ожидание действительно неопределённое.
+  // Строка «вид иконки стадии» (пятнадцатая сборка): «своих глифов у стадий
+  // нет — форма одна, меняется только то, что внутри круга». Стрелка загрузки
+  // и круговые стрелки перезагрузки сняты вместе со своими путями: на стадиях
+  // загрузки и перезагрузки в круге крутится дуга, на «Готово» — галочка.
+  // Кольцо крутится только там, где ожидание действительно неопределённое;
   // «Готово!» — вспышка на 0.8 с, ничего не грузится, движения нет.
+  const UPDATE_ARC_PX = 26;
+  const UPDATE_ARC_STROKE = '2.75';
+
   function renderStageIcon(stage) {
     const s = UPDATE_STAGES[stage] || UPDATE_STAGES.downloading;
+    // Дуга 26 обводкой 2,75 со скруглёнными концами и хвостом под .16. Тон —
+    // currentColor: круг задаёт его ролью набора, второго цвета в знаке нет
+    // (строка «иконки»: «один цвет — акцент слоя»). Кадр рисует хвост
+    // чернилами под .16 — это второй цвет, и контракт старше кадра.
     const ring = s.spinner
-      ? '<svg class="heys-update-modal__spinner" width="52" height="52" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
-      + '<circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,0.16)" stroke-width="2.2"/>'
-      + '<circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/>'
+      ? `<svg class="heys-update-modal__spinner" width="${UPDATE_ARC_PX}" height="${UPDATE_ARC_PX}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${UPDATE_ARC_STROKE}" stroke-linecap="round" aria-hidden="true">`
+      + '<path d="M21 12a9 9 0 11-9-9" opacity=".16"/>'
+      + '<path d="M12 3a9 9 0 019 9"/>'
       + '</svg><span class="heys-update-modal__still"></span>'
       : '';
-    // Строка «вид иконки стадии»: глиф 24 px обводкой 2,5 — у всех стадий
-    // одинаково, и «Готово!» тут не исключение. Отдельного вида у последней
-    // стадии контракт не знает, а строка «иконки» просит один цвет на все.
-    const glyph = updateIconSvg(s.done ? 'check' : s.icon, 24, 2.5);
+    const glyph = s.done ? updateIconSvg('check', UPDATE_ARC_PX, UPDATE_ARC_STROKE) : '';
     return { ring, glyph, done: !!s.done };
   }
 
@@ -595,7 +601,7 @@
     `
       : `
       <div class="heys-update-modal__icon">
-        <span class="heys-update-modal__glyph">${updateIconSvg('cloudDown', 24)}</span>
+        <span class="heys-update-modal__glyph">${updateIconSvg('cloudDown', UPDATE_ARC_PX, UPDATE_ARC_STROKE)}</span>
       </div>
     `;
 

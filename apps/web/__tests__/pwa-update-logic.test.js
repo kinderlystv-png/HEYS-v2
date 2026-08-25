@@ -656,6 +656,67 @@ describe('PWA update protection', () => {
       };
     };
 
+    // Смоук по РЕАЛЬНЫМ строкам продукта: слайс с UPDATE_ICON_PATHS по конец
+    // renderStageIcon исполняется как есть и рисуется в jsdom. Весь модуль
+    // сюда не поднять — он на загрузке регистрирует Service Worker и вешает
+    // orientation-lock (см. комментарий ниже по файлу), а проверить нужно
+    // именно то, что выходит в DOM, а не текст исходника.
+    const mountStageIcon = (stage) => {
+      const { platform } = readSources();
+      const src = platform.slice(
+        platform.indexOf('const UPDATE_ICON_PATHS = {'),
+        platform.indexOf('function renderStageDotItems(activeIndex)'),
+      );
+      // eslint-disable-next-line no-new-func
+      const parts = new Function(`${src}\nreturn renderStageIcon(${JSON.stringify(stage)});`)();
+      const host = document.createElement('div');
+      host.className = `heys-update-modal__icon${parts.done ? ' heys-update-modal__icon--done' : ''}`;
+      host.innerHTML = `${parts.ring}<span class="heys-update-modal__glyph">${parts.glyph}</span>`;
+      return host;
+    };
+
+    it('в круге стадии живёт только дуга или галочка — своих глифов у стадий нет', () => {
+      // Строка «вид иконки стадии»: «Своих глифов у стадий нет — форма одна,
+      // меняется только то, что внутри круга».
+      for (const stage of ['downloading', 'reloading']) {
+        const icon = mountStageIcon(stage);
+        const arc = icon.querySelector('.heys-update-modal__spinner');
+        expect(arc, stage).not.toBeNull();
+        expect(arc.getAttribute('width'), stage).toBe('26');
+        expect(arc.getAttribute('stroke-width'), stage).toBe('2.75');
+        expect(arc.getAttribute('stroke-linecap'), stage).toBe('round');
+        expect(arc.getAttribute('stroke'), stage).toBe('currentColor');
+        // Хвост — та же дуга под .16, второго цвета в знаке нет.
+        const tail = arc.querySelectorAll('path');
+        expect(tail.length, stage).toBe(2);
+        expect(tail[0].getAttribute('opacity'), stage).toBe('.16');
+        expect(arc.innerHTML, stage).not.toMatch(/rgba|#[0-9a-f]{3,6}/i);
+        // Глиф стадии пуст: ни стрелки загрузки, ни круговых стрелок.
+        expect(icon.querySelector('.heys-update-modal__glyph').innerHTML.trim(), stage).toBe('');
+        expect(icon.classList.contains('heys-update-modal__icon--done'), stage).toBe(false);
+        // Статичный кадр для уменьшенного движения приезжает вместе с дугой.
+        expect(icon.querySelector('.heys-update-modal__still'), stage).not.toBeNull();
+      }
+    });
+
+    it('«Готово» меняет дугу на галочку 26 обводкой 2,75 и заливает круг акцентом', () => {
+      const icon = mountStageIcon('ready');
+      expect(icon.querySelector('.heys-update-modal__spinner')).toBeNull();
+      expect(icon.classList.contains('heys-update-modal__icon--done')).toBe(true);
+      const check = icon.querySelector('.heys-update-modal__glyph svg');
+      expect(check).not.toBeNull();
+      expect(check.getAttribute('width')).toBe('26');
+      expect(check.getAttribute('stroke-width')).toBe('2.75');
+      expect(check.getAttribute('stroke')).toBe('currentColor');
+      expect(check.querySelector('path').getAttribute('d')).toBe('M5 13l4 4L19 7');
+    });
+
+    it('неизвестная стадия падает на «Загрузка», а не рисует пустой круг', () => {
+      const icon = mountStageIcon('installing');
+      expect(icon.querySelector('.heys-update-modal__spinner')).not.toBeNull();
+      expect(icon.classList.contains('heys-update-modal__icon--done')).toBe(false);
+    });
+
     it('рисует линейные иконки, а не эмодзи', () => {
       const { platform } = readSources();
       const modalBlock = platform.slice(
@@ -664,7 +725,10 @@ describe('PWA update protection', () => {
       );
 
       expect(modalBlock).not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
-      expect(platform).toContain("download: 'M12 4v10m0 0l-4-4m4 4l4-4M5 18h14'");
+      // Стрелка загрузки и круговые стрелки перезагрузки сняты пятнадцатой
+      // сборкой: строка «вид иконки стадии» — «своих глифов у стадий нет».
+      expect(platform).toContain("check: 'M5 13l4 4L19 7'");
+      expect(platform).toContain("cloudDown: 'M12 12v7m0 0l-3.2-3.2");
       expect(platform).toContain("wifiOff: 'M2 8.82a15 15 0 0120 0");
       expect(platform).toContain("icon: 'wifiOff',");
       expect(platform).toContain("text: 'Офлайн режим — данные сохраняются локально',");
@@ -693,8 +757,42 @@ describe('PWA update protection', () => {
 
       expect(updateCss).toContain('backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));');
       expect(updateCss).not.toContain('blur(8px)');
-      // Страховка — сплошная подложка без блюра.
-      expect(updateCss).toContain('background: rgba(13, 11, 8, 0.9);');
+      // Строка «вид карточки»: подложка модалки — dim набора, а не свой rgba.
+      expect(updateCss).toContain('background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));');
+      expect(updateCss).toContain('background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));');
+      // Страховка — сплошная подложка без блюра, тон scrim'а под 90 %.
+      expect(updateCss).toContain('background: rgba(42, 26, 12, 0.9);');
+      expect(updateCss).toContain('background: rgba(0, 0, 0, 0.9);');
+      expect(updateCss).not.toContain('background: rgba(13, 11, 8, 0.9);');
+    });
+
+    it('красит слой ролями набора, а не своими хексами', () => {
+      // Строка «вид карточки», решение владельца 25 августа: «Слой существует
+      // в четырёх палитрах, как остальные поверхности — своего градиента и
+      // своих хексов у него нет». Прежде карточка была тёмным градиентом с
+      // кремовым текстом. Строки «палитра» и «цвет текста» той же зоны пока
+      // говорят обратное — расхождение заведено в UI_V4_FINDINGS.md.
+      const { updateCss } = readSources();
+      const card = updateCss.slice(
+        updateCss.indexOf('.heys-update-modal__card,'),
+        updateCss.indexOf('.heys-update-modal__icon {'),
+      );
+
+      expect(card).toContain('background: var(--v4-surface, #f7efe2);');
+      expect(card).toContain('border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));');
+      expect(card).toContain('box-shadow: 0 22px 48px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.4);');
+      expect(card).not.toContain('linear-gradient');
+      // Кнопка слоя — «заливка --acs, текст --on-acs», без градиента.
+      expect(updateCss).toContain('background: var(--v4-act, #c67139);');
+      expect(updateCss).toContain('color: var(--v4-btn-on-act, #2b1608);');
+      expect(updateCss).not.toContain('linear-gradient(135deg, #e0975c, #b5652c)');
+      // Кремовых литералов тёмного слоя не осталось.
+      expect(updateCss).not.toContain('#f5ede1');
+      expect(updateCss).not.toContain('rgba(245, 237, 225');
+      expect(updateCss).not.toContain('#d98a4f');
+      expect(updateCss).not.toContain('rgba(217, 138, 79');
+      // Строка «вид версии внизу»: чернила набора под 38 %.
+      expect(updateCss).toContain('color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));');
     });
 
     it('не даёт карточке прыгать между кадрами', () => {
@@ -763,7 +861,9 @@ describe('PWA update protection', () => {
       const { platform } = readSources();
 
       expect(platform).not.toContain('heys-update-prompt__spinner');
-      expect(platform).toContain("updateIconSvg('cloudDown', 24)");
+      // Строка «вид страховки»: облако со стрелкой вниз 26 px обводкой 2,75
+      // в том же круге 56, что у знака ожидания.
+      expect(platform).toContain("updateIconSvg('cloudDown', UPDATE_ARC_PX, UPDATE_ARC_STROKE)");
       expect(platform).toContain('heys-update-prompt__steps');
       expect(platform).toContain("updateIconSvg('close', 19)");
       expect(platform).toContain("updateIconSvg('openApp', 19)");

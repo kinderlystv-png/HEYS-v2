@@ -254,18 +254,28 @@ describe('мёртвый второй pull-to-refresh снят', () => {
   });
 });
 
-describe('слой обновления PWA живёт по своей зоне и не сводится сюда', () => {
-  // Правило 3: pwa-update.v4.dc.html даёт слою собственный знак — круг 60,
-  // заливка акцента слоя под 14 %, глиф 24 обводкой 2,5 тоном #d98a4f, палитра
-  // «вне четырёх тем продукта». Строка spinners «форма» просит один знак на всё.
-  // Пока владелец не выбрал, слой остаётся как есть — тест это фиксирует, чтобы
-  // никто не «свёл» его молча.
-  it('иконка стадии остаётся по контракту своей зоны', () => {
+describe('слой обновления PWA взял общий знак ожидания', () => {
+  // Пятнадцатая сборка сняла развилку: строка pwa-update «вид иконки стадии»
+  // теперь говорит «знак ожидания общий для продукта — круг 56 px заливкой
+  // --c2 <…> Своих глифов у стадий нет». Прежде слой держал свой знак (круг 60,
+  // заливка акцента под 14 %, глиф 24/2,5 тоном #d98a4f) и спорил со строкой
+  // spinners «форма» — тест фиксировал развилку, теперь фиксирует её исход.
+  it('иконка стадии — круг 56 на --c2 с дугой в акценте, без своих глифов', () => {
     const components = fs.readFileSync(path.join(WEB_DIR, 'styles/heys-components.css'), 'utf8');
     const platform = fs.readFileSync(path.join(WEB_DIR, 'heys_platform_apis_v1.js'), 'utf8');
-    expect(components).toMatch(/\.heys-update-modal__icon \{[\s\S]*?width: 60px;/);
-    expect(components).toContain('background: rgba(217, 138, 79, 0.14);');
+    expect(components).toMatch(/\.heys-update-modal__icon \{[\s\S]*?width: 56px;/);
+    expect(components).toMatch(
+      /\.heys-update-modal__icon \{[\s\S]*?background: var\(--v4-hero, #efe3cf\);[\s\S]*?color: var\(--v4-act, #c67139\);/,
+    );
+    expect(components).not.toContain('background: rgba(217, 138, 79, 0.14);');
     expect(components).toContain('animation: heys-update-spin 1.1s linear infinite;');
-    expect(platform).toContain("updateIconSvg(s.done ? 'check' : s.icon, 24, 2.5)");
+    // Дуга 26 обводкой 2,75, хвост под .16, тон — currentColor круга.
+    expect(platform).toContain("const UPDATE_ARC_PX = 26;");
+    expect(platform).toContain("const UPDATE_ARC_STROKE = '2.75';");
+    expect(platform).toContain('<path d="M21 12a9 9 0 11-9-9" opacity=".16"/>');
+    // Своих глифов у стадий нет: стрелка загрузки и круговые стрелки сняты.
+    expect(platform).not.toContain("download: 'M12 4v10m0 0l-4-4m4 4l4-4M5 18h14'");
+    expect(platform).not.toContain("refresh: 'M4 4v6h6M20 20v-6h-6");
+    expect(platform).toContain("const glyph = s.done ? updateIconSvg('check', UPDATE_ARC_PX, UPDATE_ARC_STROKE) : '';");
   });
 });

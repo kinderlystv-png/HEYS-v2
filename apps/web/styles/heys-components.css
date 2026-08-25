@@ -4647,9 +4647,16 @@ body.tour-active .ios-pwa-banner {
   box-shadow: 0 12px 30px -20px rgba(15, 23, 42, 0.55);
 }
 
-/* Офлайн-баннер говорит на языке системного слоя обновления: тёплый тёмный
-   фон, линейная иконка вместо эмодзи. Верхний отступ считает вырез экрана,
-   а не липнет к кромке (макет v4 2026-08-19). */
+/* Строка «вид офлайн-баннера»: полоса во всю ширину сверху, фон #1c1712
+   литералом — это единственная поверхность зоны, которой контракт всё ещё даёт
+   собственный хекс (карточка обновления переехала в палитры 25 августа).
+   Поля 16/14/9, верхнее считается от safe-area-inset-top + 8 (строка
+   «позиция»): max() держит обе половины — 16 там, где врезки нет, и врезка+8
+   на устройстве с вырезом.
+   Тон текста — отступление, названное вслух: строка просит var(--tx), но на
+   зашитом #1c1712 чернила песочного набора (#201e1d) дают 1,06:1. Держим
+   кремовый, пока дизайнер не развяжет фон и текст; вопрос уходит записью в
+   docs/ui/UI_V4_FINDINGS.md. */
 .heys-system-banner--offline {
   top: 0;
   left: 0;
@@ -4657,7 +4664,7 @@ body.tour-active .ios-pwa-banner {
   border-radius: 0;
   justify-content: center;
   gap: 7px;
-  padding: calc(env(safe-area-inset-top, 0px) + 8px) 14px 9px;
+  padding: max(16px, calc(env(safe-area-inset-top, 0px) + 8px)) 14px 9px;
   background: #1c1712;
   color: #f5ede1;
   font: 600 11px/1.3 Figtree, system-ui, sans-serif;
@@ -4674,11 +4681,10 @@ body.tour-active .ios-pwa-banner {
   line-height: 1.4;
 }
 
-/* Строка «палитра»: системный слой живёт вне четырёх наборов — один тёплый
-   тёмный вид во всех темах. Офлайн-баннер имеет свой фиксированный тон
-   (#1c1712 / #f5ede1), и правило темы по специфичности 0,2,0 перебивало
-   его 0,1,0 — в тёмных темах баннер терял свой вид. Исключение названо
-   явно, а не расширением селектора темы. */
+/* Офлайн-баннер имеет свой фиксированный тон (#1c1712 / #f5ede1 — строка «вид
+   офлайн-баннера»), и правило темы по специфичности 0,2,0 перебивало его
+   0,1,0 — в тёмных темах баннер терял свой вид. Исключение названо явно, а не
+   расширением селектора темы. */
 [data-theme$="dark"] .heys-system-banner:not(.heys-system-banner--offline) {
   background: var(--v4-bg, #111827);
   color: #e5e7eb;
@@ -5821,10 +5827,18 @@ body.tour-active .ios-pwa-banner {
   color: #e2e8f0;
 }
 
-/* === Update modal + страховка (системный тёмный слой, макет v4 2026-08-19) ===
- * Слой намеренно не привязан к палитрам продукта: обновление может показаться
- * до того, как загрузился контекст темы. Поэтому цвета фиксированы внутри слоя
- * и одинаковы во всех палитрах — светлых и тёмных.
+/* === Update modal + страховка (макет v4, пятнадцатая сборка 2026-08-25) ===
+ * Строка «вид карточки», решение владельца 25 августа: слой больше не
+ * служебное исключение с тёмным градиентом вне тем — он живёт в четырёх
+ * палитрах наравне с остальными поверхностями продукта, «своего градиента и
+ * своих хексов у него нет». До этого карточка была linear-gradient(#241d16,
+ * #1a140f) с кремовым текстом, и следующая правка палитры молча обошла бы её.
+ * Расхождение названо вслух: строки «палитра» и «цвет текста» той же зоны всё
+ * ещё говорят «вне четырёх тем продукта» и «цвет текста фиксирован внутри
+ * слоя» — они старой редакции и разошлись с датированным решением; вопрос
+ * дизайнеру уходит записью в docs/ui/UI_V4_FINDINGS.md.
+ * Роли берутся с запасным значением песочного набора: слой может подняться до
+ * того, как тема проставит data-theme-id, и без запаса цвет пропал бы совсем.
  * Макет: docs/ui/handoff-v4/canvas/.../pwa-update.v4.dc.html
  */
 .heys-update-modal,
@@ -5857,14 +5871,33 @@ body.tour-active .ios-pwa-banner {
   animation: heys-update-fade-in 0.3s ease-out;
 }
 
+/* Строка «вид карточки»: подложка — --scrim набора с блюром 2,5 px. Это же
+   продуктовый инвариант scrim'а (CLAUDE.md, «подложка product-модалок»):
+   единый blur и dim из токенов, без своего rgba(18,14,10,.62). */
 .heys-update-modal__backdrop {
-  background: rgba(18, 14, 10, 0.62);
+  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+  -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
 }
 
-/* Страховка: подложка сплошная, без блюра — как в исходной геометрии. */
+[data-theme$="dark"] .heys-update-modal__backdrop {
+  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
+}
+
+/* Строка «вид страховки»: подложка плотнее — тон --scrim без своей
+   прозрачности, 90 %, и блюра нет вовсе (экран под страховкой может быть
+   нарисован неверно, размывать его — делать вид, что там всё в порядке).
+   Отступление названо: токена с ТОНОМ scrim'а отдельно от его альфы в
+   продукте нет, поэтому 90 % набраны литералом — тёплый тон песочных наборов
+   и чёрный у тёмных. Синий светлый набор получает тёплый тон вместо своего
+   rgba(16,24,38): развязать это можно только новой ролью в
+   002-ui-v4-palette-roles.css, а он вне этой задачи. */
 .heys-update-prompt__backdrop {
-  background: rgba(13, 11, 8, 0.9);
+  background: rgba(42, 26, 12, 0.9);
+}
+
+[data-theme$="dark"] .heys-update-prompt__backdrop {
+  background: rgba(0, 0, 0, 0.9);
 }
 
 .heys-update-modal__card,
@@ -5874,41 +5907,56 @@ body.tour-active .ios-pwa-banner {
   /* Стадии сменяются на месте, DOM не пересоздаётся: фиксированная минимальная
      высота не даёт карточке подпрыгивать между кадрами. */
   min-height: 238px;
-  background: linear-gradient(165deg, #241d16, #1a140f);
-  border: 1px solid rgba(245, 237, 225, 0.08);
+  /* «фон --c1, обводка 1 px тоном чернил 8 %, тень 0 22px 48px тона тени
+     палитры». Тон тени — роль набора --dp-shadow-rgb (объявлена на html в
+     000-base-and-gamification.css, канвасный --shadow); кадр рисует чёрный
+     под .4, контракт старше кадра. */
+  background: var(--v4-surface, #f7efe2);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 24px;
   padding: 26px 22px 22px;
   text-align: center;
-  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 22px 48px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.4);
+  color: var(--v4-ink, #201e1d);
   font-family: Figtree, system-ui, -apple-system, sans-serif;
   /* Контракт pwa-update «язык, выделение, часовой пояс»: текст слоя не
      выделяется. Номер версии — исключение, см. .heys-update-modal__version. */
   user-select: none;
 }
 
+/* Строка «вид иконки стадии» (пятнадцатая сборка): знак ожидания общий для
+   продукта — круг 56 заливкой --c2, дуга тоном --acs. Прежние 60 px и заливка
+   акцента под 14 % были собственным знаком слоя и спорили со строкой spinners
+   «форма» («один знак на весь продукт»). */
 .heys-update-modal__icon {
   position: relative;
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   margin: 0 auto 16px;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  background: rgba(217, 138, 79, 0.14);
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act, #c67139);
 }
 
-/* Инверсия «Готово!» снята: контракт даёт один вид иконки стадии — заливка
-   акцента под 14 % и глиф самим акцентом, — а отдельной строки про последнюю
-   стадию в нём нет. */
+/* «на «Готово» она заменяется галочкой тоном --on-acs»: тон текста на акценте
+   существует только на залитом акценте, поэтому круг последней стадии
+   заливается --acs — так же рисует кадр «Обновление · готово». */
+.heys-update-modal__icon--done {
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
+}
+
 .heys-update-modal__glyph {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #d98a4f;
+  color: inherit;
 }
 
 .heys-update-modal__spinner {
@@ -5922,7 +5970,7 @@ body.tour-active .ios-pwa-banner {
   position: absolute;
   inset: 2px;
   border-radius: 999px;
-  background: rgba(217, 138, 79, 0.16);
+  background: var(--v4-hero, #efe3cf);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5939,14 +5987,14 @@ body.tour-active .ios-pwa-banner {
 .heys-update-prompt__title {
   margin: 0;
   font: 700 19px/1.25 Figtree, system-ui, sans-serif;
-  color: #f5ede1;
+  color: var(--v4-ink, #201e1d);
 }
 
 .heys-update-modal__subtitle,
 .heys-update-prompt__text {
   margin: 5px 0 0;
   font: 500 12px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(245, 237, 225, 0.6);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 60%, transparent);
   text-wrap: pretty;
 }
 
@@ -5965,19 +6013,22 @@ body.tour-active .ios-pwa-banner {
   /* Строка «вид точек прогресса»: будущие — акцент слоя под 20 %, а не
      кремовый. Кремовый под прозрачностью читался как выцветший текст, а
      не как «ещё не пройдено». */
-  background: rgba(217, 138, 79, 0.2);
+  background: color-mix(in srgb, var(--v4-act, #c67139) 20%, transparent);
 }
 
 .heys-update-modal__dot--on {
   width: 16px;
-  background: #d98a4f;
+  background: var(--v4-act, #c67139);
 }
 
 .heys-update-modal__version,
 .heys-update-prompt__version {
   margin: 15px 0 0;
   font: 600 10px/1.4 ui-monospace, Menlo, monospace;
-  color: rgba(245, 237, 225, 0.38);
+  /* Строка «вид версии внизу»: чернила набора под 38 % — роль --v4-ink-4.
+     Слово «кремовый» в строке осталось от тёмного слоя; операнд — var(--tx)
+     под 38 %, а чернила набора это он и есть. */
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   /* Местное отличие контракта: номер версии выделяется и копируется — его
      диктуют поддержке при жалобе на баг. Единственное исключение из запрета
      выделения на этом слое. */
@@ -6012,12 +6063,12 @@ body.tour-active .ios-pwa-banner {
   align-items: center;
   justify-content: center;
   flex: none;
-  background: rgba(217, 138, 79, 0.14);
-  color: #d98a4f;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act, #c67139);
 }
 
 .heys-update-prompt__step-arrow {
-  color: rgba(245, 237, 225, 0.35);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 35%, transparent);
   flex: none;
 }
 
@@ -6035,9 +6086,11 @@ body.tour-active .ios-pwa-banner {
   margin-top: 18px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, #e0975c, #b5652c);
+  /* Строка «вид кнопки слоя»: заливка --acs, текст --on-acs — как у любой
+     основной кнопки продукта. Градиент ушёл вместе с градиентом слоя. */
+  background: var(--v4-act, #c67139);
   font: 700 14px/1 Figtree, system-ui, sans-serif;
-  color: #241207;
+  color: var(--v4-btn-on-act, #2b1608);
   cursor: pointer;
   transition: transform 0.15s ease;
 }
@@ -6053,7 +6106,9 @@ body.tour-active .ios-pwa-banner {
   margin-top: 8px;
   background: none;
   font: 600 12.5px/1 Figtree, system-ui, sans-serif;
-  color: rgba(245, 237, 225, 0.5);
+  /* Кадр «Требуется обновление»: .updGhost — чернила набора под 50 %.
+     Кремовый тон уехал вместе с тёмной карточкой: на --c1 он невидим. */
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
 }
 
 .heys-update-prompt__btn:active,
