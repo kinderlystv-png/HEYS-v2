@@ -254,14 +254,23 @@ describe('непрочитанные у мессенджера', () => {
     expect(uiSrc).not.toContain('/messages/unread-count');
   });
 
-  it('CSS: кружок 14 px тоном роли акцента, а не голым hex', () => {
+  it('CSS: цифра 10 px/700 тоном роли, без кружка и заливки', () => {
+    // Пятнадцатая сборка переписала строку: кружок 14 px тоном --acs снят,
+    // остался счёт цифрой тоном --ac. Проверяем и то, что появилось, и то,
+    // что должно было уйти, — иначе заливка вернулась бы незаметно.
     const i = cssSrc.indexOf('\n.widgets-quick-sheet__badge {');
     expect(i).toBeGreaterThan(-1);
     const block = cssSrc.slice(i, cssSrc.indexOf('\n}', i));
-    expect(block).toContain('height: 14px');
-    expect(block).toContain('min-width: 14px');
-    expect(block).toContain('border-radius: 999px');
-    expect(block).toContain('background: var(--v4-act');
+    expect(block).toContain('font-size: 10px');
+    expect(block).toContain('font-weight: 700');
     expect(block).toContain('font-variant-numeric: tabular-nums');
+    // Тон --ac канваса — роль --v4-act-text, а не голый hex.
+    expect(block).toContain('color: var(--v4-act-text');
+    expect(block).not.toMatch(/background/);
+    expect(block).not.toMatch(/border-radius/);
+    expect(block).not.toMatch(/min-width|(^|\s)height:/m);
+    // Подмены цвета цифры для синих палитр держали текст на заливке — вместе
+    // с заливкой они и ушли.
+    expect(cssSrc).not.toMatch(/\[data-theme-id="blue[^"]*"\] \.widgets-quick-sheet__badge/);
   });
 });

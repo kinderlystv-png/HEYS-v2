@@ -9401,9 +9401,10 @@
       },
         React.createElement(QuickActionIcon, { action: key, className: 'widgets-quick-sheet__row-icon' }),
         React.createElement('span', { className: 'widgets-quick-sheet__row-label' }, labels[key]),
-        // Строка «непрочитанные у мессенджера»: кружок 14 px тоном --acs с
-        // цифрой стоит здесь — и только здесь. Гаснет в режиме правки вместе
-        // с шевронами и счётчиком воды: это такой же счётчик на строке.
+        // Строка «непрочитанные у мессенджера»: цифра 10 px/700 тоном --ac
+        // перед шевроном — без кружка и заливки, и стоит она здесь и только
+        // здесь. Гаснет в режиме правки вместе с шевронами и счётчиком воды:
+        // это такой же счётчик на строке.
         key === 'message' && messengerUnread > 0
           ? React.createElement('span', {
             className: 'widgets-quick-sheet__badge widgets-quick-sheet__fade',
@@ -10994,6 +10995,10 @@
             detail: {
               ml,
               total: dayData.waterMl,
+              // Ключ дня, в который записан глоток: гейт «стопка на прошлом
+              // дне» в геймификации смотрит именно сюда, а отправитель без
+              // даты считается сегодняшним — и опыт за вчера начислился бы.
+              date: dateKey,
               targetMl: Number(HEYS.Widgets?.data?.getWaterData?.()?.target) || 0,
               source: 'widgets-fab',
               sourceEl
@@ -11087,6 +11092,8 @@
           detail: {
             ml: -ml,
             total: newWater,
+            // Та же дата, что и у записи: отмена относится к тому же дню.
+            date: dateKey,
             targetMl: Number(HEYS.Widgets?.data?.getWaterData?.()?.target) || 0,
             source: 'widgets-fab-remove',
             playSound: false

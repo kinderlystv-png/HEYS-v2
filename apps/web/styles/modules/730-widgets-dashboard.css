@@ -2844,36 +2844,22 @@ body:has(.page-reports) .hdr::after {
   font-variant-numeric: tabular-nums;
 }
 
-/* Строка «непрочитанные у мессенджера»: кружок 14 px тоном --acs с цифрой на
-   строке «Мессенджер». Тон взят ролью --v4-act — в песочной и тёмной палитрах
-   она совпадает с --acs канваса один в один; в синих палитрах роль даёт
-   #2e7cc0 против #1d5e96 / #3f8fd0 канваса, и это отступление названо вслух
-   в протоколе экрана. Цифра — роль текста на акцентной заливке; в синих
-   палитрах она намеренно не объявлена (см. 002-ui-v4-palette-roles.css),
-   поэтому там держим тон --on-acs канваса. */
+/* Строка «непрочитанные у мессенджера» (пятнадцатая сборка): счётчик стоит на
+   строке «Мессенджер» цифрой 10 px/700 тоном --ac перед шевроном — без кружка
+   и без заливки. Прежняя редакция строки просила кружок 14 px тоном --acs;
+   заливка снята вместе с ней, поэтому ушли и подмены цвета цифры для синих
+   палитр — они держали текст на акцентной заливке, которой больше нет.
+
+   Тон --ac канваса — это роль --v4-act-text: в наборе она совпадает со всеми
+   четырьмя значениями канваса (#8a4a20 / #e2a468 / #1d5e96 / #7fbceb), так что
+   отступления по цвету здесь не осталось. */
 .widgets-quick-sheet__badge {
-  min-width: 14px;
-  height: 14px;
-  padding: 0 3px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1;
+  /* «формат чисел»: счётчик меняется на месте — цифры табличные. */
   font-variant-numeric: tabular-nums;
-  background: var(--v4-act, #c67139);
-  color: var(--v4-btn-on-act, #2b1608);
-}
-
-[data-theme-id="blue"] .widgets-quick-sheet__badge {
-  color: #ffffff;
-}
-
-[data-theme-id="blue-dark"] .widgets-quick-sheet__badge {
-  color: #0b1621;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .widgets-quick-sheet__meta {

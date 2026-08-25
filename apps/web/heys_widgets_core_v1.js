@@ -368,6 +368,27 @@
         // Старые раскладки хранили правду в координатах — переводим их в
         // порядок чтения один раз, дальше порядок ведёт сам массив.
         this._sortWidgetsByReadingOrder();
+
+        // Строка контракта «прежние раскладки с 1×1 в углу»: при первом
+        // открытии такая плитка молча сдвигается в соседнюю клетку того же
+        // ряда, остальные плитки со своих мест не едут. Поэтому правится
+        // координата одной плитки, а не пересобирается вся укладка —
+        // пересборка сдвинула бы соседей и сломала бы обещание строки.
+        // Плашки и подсветки нет: сдвиг стоит дешевле сообщения о нём.
+        if (this._clearBottomCornerSingles()) {
+          try {
+            this.saveLayout(this._widgets.map(w => ({
+              id: w.id,
+              type: w.type,
+              size: w.size,
+              position: w.position,
+              settings: w.settings,
+              createdAt: w.createdAt
+            })), { reason: 'bottom-corner' });
+          } catch (e) {
+            console.error('[widgets] bottom-corner save failed:', e?.message || e);
+          }
+        }
       } else {
         this._widgets = this._createDefaultLayout();
         this._autoPackWidgets();
@@ -541,6 +562,33 @@
         if (ar !== br) return ar - br;
         return (a.position?.col || 0) - (b.position?.col || 0);
       });
+    },
+
+    /**
+     * Сдвинуть плитки 1×1 из нижних углов, не трогая соседей.
+     * Работает по уже сохранённым координатам — это точечная правка, а не
+     * пересборка (строка контракта «прежние раскладки с 1×1 в углу»).
+     * @returns {boolean} true, если хоть одна плитка сдвинулась
+     */
+    _clearBottomCornerSingles() {
+      if (!Array.isArray(this._widgets) || this._widgets.length === 0) return false;
+
+      const current = {};
+      for (const w of this._widgets) {
+        current[w.id] = { col: w.position?.col || 0, row: w.position?.row || 0 };
+      }
+      const fixed = gridEngine.keepBottomCornersClear(current, this._widgets, GRID_COLS);
+
+      let changed = false;
+      this._widgets = this._widgets.map((w) => {
+        const nextPos = fixed[w.id];
+        if (!nextPos) return w;
+        if (nextPos.col === (w.position?.col || 0) && nextPos.row === (w.position?.row || 0)) return w;
+        changed = true;
+        return { ...w, position: { col: nextPos.col, row: nextPos.row } };
+      });
+
+      return changed;
     },
 
     _autoPackWidgets() {
@@ -1536,7 +1584,97 @@
         tailRow += w.rows;
       }
 
-      return positions;
+      return this.keepBottomCornersClear(positions, widgets, gridCols);
+    },
+
+    /**
+     * Освободить нижние углы сетки от плиток 1×1.
+     *
+     * Строки контракта «1×1 в нижнем углу не ставится», «прежние раскладки
+     * с 1×1 в углу» и «2×1 в углу» (решение владельца 25 августа).
+     *
+     * Почему это укладка, а не стили: зона угла 52×52 забирает у плитки 1×1
+     * больше половины площади — на 375 px от неё остаются полосы 28,8×64 и
+     * 80,8×12, куда не влезает ни число героя, ни подпись, ни спарклайн.
+     * Сжимать нечего, поэтому плитка туда просто не ставится, а содержимое
+     * от близости к углу не меняется никак. Формат шире одной колонки в угол
+     * встаёт: 2×1 остаётся 117,5×64 свободного места, и это уже решено полем
+     * плитки в CSS (строка «зоны углов»).
+     *
+     * Правится позиция одной плитки, соседи со своих мест не едут — так
+     * прежняя раскладка при первом открытии сдвигается молча и на один шаг,
+     * без плашки и подсветки. Цель — ближайшая свободная неугловая клетка
+     * того же ряда; если ряд занят целиком, плитка уходит одна в следующий
+     * (его углы ей тоже запрещены, поэтому в колонку 1).
+     *
+     * @param {Object} positions - { [widgetId]: { col, row } }
+     * @param {Object[]} widgets - те же виджеты, что дали позиции
+     * @param {number} cols - число колонок сетки
+     * @returns {Object} позиции с освобождёнными углами
+     */
+    keepBottomCornersClear(positions, widgets, cols = GRID_COLS) {
+      const gridCols = Math.max(1, cols | 0);
+      // В сетке из двух колонок обе крайние — угловые, двигать плитку некуда.
+      if (gridCols < 3) return positions;
+
+      const list = (widgets || []).filter((w) => w && positions?.[w.id]);
+      if (!list.length) return positions;
+
+      const sizeOf = (w) => {
+        const info = HEYS.Widgets.registry?.getSize?.(w.size);
+        return {
+          cols: Math.min(gridCols, Math.max(1, info?.cols || w.cols || 1)),
+          rows: Math.max(1, info?.rows || w.rows || 1)
+        };
+      };
+      const isCornerCol = (c) => c === 0 || c === gridCols - 1;
+
+      const next = { ...positions };
+      // Шаг освобождает один угол и в другой плитку не ставит, а уход в новый
+      // ряд снимает оба сразу — больше трёх шагов не нужно ни в одном случае.
+      for (let pass = 0; pass < 3; pass++) {
+        const taken = new Map();
+        let bottomRow = 0;
+        for (const w of list) {
+          const p = next[w.id];
+          const s = sizeOf(w);
+          for (let c = 0; c < s.cols; c++) {
+            for (let r = 0; r < s.rows; r++) taken.set(`${p.col + c},${p.row + r}`, w.id);
+          }
+          bottomRow = Math.max(bottomRow, p.row + s.rows - 1);
+        }
+
+        // Правый угол разбирается первым: если плитке оттуда пришлось уйти
+        // вниз, нижним рядом становится новый и левый угол снимается сам.
+        let offender = null;
+        for (const cornerCol of [gridCols - 1, 0]) {
+          const id = taken.get(`${cornerCol},${bottomRow}`);
+          if (!id) continue;
+          const w = list.find((x) => x.id === id);
+          if (!w) continue;
+          const s = sizeOf(w);
+          if (s.cols !== 1 || s.rows !== 1) continue;
+          offender = w;
+          break;
+        }
+        if (!offender) break;
+
+        const from = next[offender.id];
+        let target = null;
+        // Сначала вперёд по ряду, потом назад: «следующая свободная клетка
+        // того же ряда» для правого угла лежит левее.
+        for (let c = from.col + 1; c < gridCols && !target; c++) {
+          if (!isCornerCol(c) && !taken.has(`${c},${bottomRow}`)) target = { col: c, row: bottomRow };
+        }
+        for (let c = from.col - 1; c >= 0 && !target; c--) {
+          if (!isCornerCol(c) && !taken.has(`${c},${bottomRow}`)) target = { col: c, row: bottomRow };
+        }
+        if (!target) target = { col: 1, row: bottomRow + 1 };
+
+        next[offender.id] = target;
+      }
+
+      return next;
     },
 
     /**

@@ -146,7 +146,11 @@ describe('flow-раскладка: порядок чтения вместо ко
     expect(grid.computeFlowLayout([], 4)).toEqual({});
     expect(grid.computeFlowLayout(null, 4)).toEqual({});
     const pos = grid.computeFlowLayout([null, { id: 'x', size: 'unknown' }], 4);
-    expect(pos.x).toEqual({ col: 0, row: 0 });
+    // Незнакомый размер трактуется как 1×1, а единственная плитка стоит в
+    // последнем ряду — поэтому её сдвигает строка «1×1 в нижнем углу не
+    // ставится»: колонка 1 вместо нулевой. Укладка при этом не падает, что
+    // тест и проверяет.
+    expect(pos.x).toEqual({ col: 1, row: 0 });
   });
 });
 

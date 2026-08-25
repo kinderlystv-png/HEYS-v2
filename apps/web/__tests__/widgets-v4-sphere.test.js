@@ -180,7 +180,16 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(uiSrc).toContain('function InsulinWaveVariantBody');
         // Волна красится по текущему состоянию: наложение — красный, окно
         // покоя длиннее трёх часов — шалфей, остальное — чернила (строка 95).
-        expect(uiSrc).toMatch(/widget-v4-insulin-wave__footer[\s\S]{0,260}v4InsulinWaveState\(v4\)/);
+        // Раньше здесь стояла проверка на близость двух токенов в тексте
+        // исходника. Она сломалась, когда расчёт тона переехал наверх вместе с
+        // веткой ночной оценки, хотя поведение не менялось — то есть сторожила
+        // расположение строк, а не смысл. Проверяем сам расчёт и его
+        // единственное исключение.
+        expect(uiSrc).toContain('widget-v4-insulin-wave__footer');
+        expect(uiSrc).toMatch(/toneClass\s*=\s*isOvernight[\s\S]{0,200}v4InsulinWaveState\(v4\)/);
+        // В ночной оценке тон нейтральный: иначе плитка хвалила бы человека за
+        // то, что он спал (строка «волна · тон в ночной оценке»).
+        expect(uiSrc).toMatch(/isOvernight[\s\S]{0,120}v4ValueStateClass\('neutral'\)/);
         expect(uiSrc).toContain('V4_INSULIN_CALM_MIN = 180');
 
         expect(cssSrc).toContain('.widget-v4-row__value.widget-v4-val--good');
