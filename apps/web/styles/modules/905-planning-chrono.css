@@ -567,7 +567,8 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-strip__item:active {
-    transform: scale(0.97);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .chrono-strip__emoji {
@@ -767,12 +768,15 @@ html.chrono-bubble-dragging .chrono-screen {
     transition: background 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
 }
 
-.chrono-overview__ledger-row:hover {
+@media (hover: hover) {
+  .chrono-overview__ledger-row:hover {
     background: rgba(15, 23, 42, 0.04);
+}
 }
 
 .chrono-overview__ledger-row:active {
-    background: rgba(37, 99, 235, 0.08);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .chrono-overview__ledger-row.is-reorder-mode {
@@ -806,11 +810,18 @@ html.chrono-bubble-dragging .chrono-screen {
     transition: opacity 0.14s ease, transform 0.14s ease, background 0.14s ease;
 }
 
-.chrono-overview__ledger-row:hover .chrono-overview__ledger-handle,
 .chrono-overview__ledger-row.is-reorder-mode .chrono-overview__ledger-handle {
     background: rgba(15, 23, 42, 0.06);
     opacity: 1;
     transform: scale(1);
+}
+
+@media (hover: hover) {
+  .chrono-overview__ledger-row:hover .chrono-overview__ledger-handle {
+    background: rgba(15, 23, 42, 0.06);
+    opacity: 1;
+    transform: scale(1);
+}
 }
 
 .chrono-overview__ledger-row.is-dragging .chrono-overview__ledger-handle {
@@ -961,13 +972,17 @@ html.chrono-bubble-dragging .chrono-screen {
     outline-offset: 2px;
 }
 
-.chrono-overview__untracked-action:hover {
+@media (hover: hover) {
+  .chrono-overview__untracked-action:hover {
     filter: none;
 }
+}
 
-.chrono-overview__untracked-action:hover::before {
+@media (hover: hover) {
+  .chrono-overview__untracked-action:hover::before {
     filter: brightness(1.04);
     box-shadow: 0 5px 12px rgba(37, 99, 235, 0.2);
+}
 }
 
 .chrono-overview__untracked-action.active {
@@ -1120,11 +1135,18 @@ html.chrono-bubble-dragging .chrono-screen {
     cursor: pointer;
 }
 
-.chrono-untracked-flow__remove:hover,
 .chrono-untracked-flow__remove:focus-visible {
     border-color: rgba(239, 68, 68, 0.28);
     background: rgba(254, 242, 242, 0.9);
     color: #b91c1c;
+}
+
+@media (hover: hover) {
+  .chrono-untracked-flow__remove:hover {
+    border-color: rgba(239, 68, 68, 0.28);
+    background: rgba(254, 242, 242, 0.9);
+    color: #b91c1c;
+}
 }
 
 .chrono-untracked-flow__bar {
@@ -1868,7 +1890,8 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-bubble:active {
-    filter: brightness(0.94);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .chrono-bubble--with-plan {
@@ -2664,8 +2687,9 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 }
 
-.chrono-week-breakdown__col:active .chrono-week-breakdown__col-fill {
-    transform: scale(0.97);
+.chrono-week-breakdown__col:active {
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .chrono-week-breakdown__col.is-active .chrono-week-breakdown__col-fill {
@@ -2903,7 +2927,8 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-history .planning-modal__close:active,
 .chrono-delete .planning-modal__close:active,
 .chrono-picker .planning-modal__close:active {
-    transform: scale(0.92);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .chrono-duration .planning-modal__close {
@@ -2925,7 +2950,8 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-duration .planning-modal__close:active {
-    transform: scale(0.94);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .chrono-duration__emoji {
@@ -2979,7 +3005,8 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .chrono-duration__preset:active {
     transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .chrono-duration__custom-label {
@@ -3217,7 +3244,8 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-duration__target-save:active:not(:disabled) {
-    transform: scale(0.97);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .chrono-duration__target-save:disabled {

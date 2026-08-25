@@ -404,8 +404,10 @@ body:has(.page-reports) .hdr::after {
   box-shadow: 0 4px 12px rgba(154, 52, 18, 0.24);
 }
 
-.empty-meal-alert__action:hover {
+@media (hover: hover) {
+  .empty-meal-alert__action:hover {
   background: var(--v4-wgt-brown, #9a3412);
+}
 }
 
 .empty-meal-alert__action:focus-visible {
@@ -1093,10 +1095,14 @@ body:has(.page-reports) .hdr::after {
   padding: calc(var(--widget-spacing-md) + var(--widget-scale-pad-y)) calc(var(--widget-spacing-md) + var(--widget-scale-pad-x));
 
   /* Smooth transitions */
+  /* opacity/transform — 120 мс: плитка возвращается из нажатия за это время
+     (см. приём нажатия в 001-design-tokens.css). Пружина 0.4s давала на
+     возврате отскок, который контракт называет дрожью. */
   transition:
     box-shadow var(--widget-transition-normal),
-    transform var(--widget-transition-spring),
-    border-color var(--widget-transition-fast);
+    transform 120ms ease,
+    border-color var(--widget-transition-fast),
+    opacity 120ms ease;
 
   cursor: pointer;
   position: relative;
@@ -1158,9 +1164,9 @@ body:has(.page-reports) .hdr::after {
 
 /* Active/pressed state */
 .widget:active {
-  transform: scale(0.97);
-  box-shadow: var(--widget-shadow-subtle);
-  transition-duration: 0.1s;
+  opacity: 0.7;
+  transform: scale(0.965);
+  transition: opacity 120ms ease, transform 120ms ease;
 }
 
 /* Focus state for accessibility */
@@ -1293,7 +1299,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget__quick-action:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* ===== Widget Type Accents — Premium Gradient Borders ===== */
@@ -2187,7 +2194,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget__delete-btn:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* 1x1 edit mode: кнопки остаются ВНУТРИ виджета на уровне выше resize handles.
@@ -2286,7 +2294,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget__resize-btn:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @media (hover: hover) {
@@ -2297,7 +2306,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget__settings-btn:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Size Badge (edit-mode) — компактный индикатор NxM внизу справа внутри виджета */
@@ -2660,7 +2670,8 @@ body:has(.page-reports) .hdr::after {
 
 
 .widgets-settings-fab:active {
-  transform: translateY(1px) scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .widgets-settings-fab {
@@ -2829,6 +2840,40 @@ body:has(.page-reports) .hdr::after {
   font-weight: 600;
   line-height: 1;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  /* «формат чисел»: счётчик воды меняется на месте — цифры табличные. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Строка «непрочитанные у мессенджера»: кружок 14 px тоном --acs с цифрой на
+   строке «Мессенджер». Тон взят ролью --v4-act — в песочной и тёмной палитрах
+   она совпадает с --acs канваса один в один; в синих палитрах роль даёт
+   #2e7cc0 против #1d5e96 / #3f8fd0 канваса, и это отступление названо вслух
+   в протоколе экрана. Цифра — роль текста на акцентной заливке; в синих
+   палитрах она намеренно не объявлена (см. 002-ui-v4-palette-roles.css),
+   поэтому там держим тон --on-acs канваса. */
+.widgets-quick-sheet__badge {
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
+}
+
+[data-theme-id="blue"] .widgets-quick-sheet__badge {
+  color: #ffffff;
+}
+
+[data-theme-id="blue-dark"] .widgets-quick-sheet__badge {
+  color: #0b1621;
 }
 
 [data-theme$="dark"] .widgets-quick-sheet__meta {
@@ -3467,7 +3512,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widgets-edit-fab:active {
-  transform: translateY(1px) scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .widgets-edit-fab {
@@ -3853,6 +3899,8 @@ body:has(.page-reports) .hdr::after {
   font-weight: 500;
   color: var(--text-tertiary, #9ca3af);
   letter-spacing: 0.01em;
+  /* «формат чисел»: число меняется на месте — цифры табличные. */
+  font-variant-numeric: tabular-nums;
 }
 
 .widget-calories__remaining {
@@ -3866,6 +3914,8 @@ body:has(.page-reports) .hdr::after {
   padding: 4px 10px;
   background: var(--widget-surface-soft);
   border-radius: 100px;
+  /* «формат чисел»: число меняется на месте — цифры табличные. */
+  font-variant-numeric: tabular-nums;
 }
 
 .widget-calories__pct {
@@ -3875,6 +3925,8 @@ body:has(.page-reports) .hdr::after {
   border-radius: 100px;
   background: color-mix(in srgb, var(--v4-tint-warm, #ff9500) 12%, transparent);
   color: var(--v4-tint-warm, #FF9500);
+  /* «формат чисел»: число меняется на месте — цифры табличные. */
+  font-variant-numeric: tabular-nums;
 }
 
 .widget-calories__progress {
@@ -4008,6 +4060,8 @@ body:has(.page-reports) .hdr::after {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  /* «формат чисел»: число меняется на месте — цифры табличные. */
+  font-variant-numeric: tabular-nums;
 }
 
 .widget-sleep__label {
@@ -4136,17 +4190,32 @@ body:has(.page-reports) .hdr::after {
   gap: 6px;
 }
 
-.widget-weight--number-week .widget-weight__number-week-row {
+/* Кадр «Главная · дефолтная раскладка» и строка «состав дефолта»: подпись
+   слева, дельта справа — одной строкой; число 21 px отдельной строкой у
+   правого края. Прежняя вёрстка держала дельту слева от числа, и она лежала
+   в левом нижнем углу сетки (строка «зоны углов»). */
+.widget-weight--number-week .widget-weight__number-week-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
 }
 
+.widget-weight--number-week .widget-weight__number-week-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+  margin-top: auto;
+}
+
 .widget-weight__number-week-delta {
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
@@ -4156,6 +4225,8 @@ body:has(.page-reports) .hdr::after {
   font-weight: 800;
   line-height: 1;
   color: #201e1d;
+  /* «формат чисел»: число меняется на месте — цифры табличные. */
+  font-variant-numeric: tabular-nums;
 }
 
 .widget-weight--1x2 {
@@ -4456,6 +4527,8 @@ body:has(.page-reports) .hdr::after {
 
 .widget-weight__progress-pct {
   font-weight: 700;
+  /* «формат чисел»: число меняется на месте — цифры табличные. */
+  font-variant-numeric: tabular-nums;
 }
 
 .widget-weight__progress-label {
@@ -4801,6 +4874,8 @@ body:has(.page-reports) .hdr::after {
   font-weight: 700;
   color: var(--text-primary);
   text-align: center;
+  /* «формат чисел»: число меняется на месте — цифры табличные. */
+  font-variant-numeric: tabular-nums;
 }
 
 .widget-macros--micro .widget-macros__row,
@@ -6710,7 +6785,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widgets-catalog__item:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .widgets-catalog__item-icon {
@@ -7311,7 +7387,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-relapse-risk:active {
-  transform: scale(0.985);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .widget-relapse-risk__modal-overlay {
@@ -7853,6 +7930,8 @@ body:has(.page-reports) .hdr::after {
 
 .widget-relapse-risk__modal-copy-btn:active {
   transform: translateY(0);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @media (max-width: 520px) {
@@ -8303,7 +8382,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-crash-risk:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -8537,7 +8617,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .reports-overview-card:active {
-  transform: translateY(1px) scale(0.995);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .reports-overview-card:focus-visible {
@@ -9429,7 +9510,8 @@ body.reports-fullscreen-open {
 }
 
 .widgets-settings__btn:active {
-  opacity: 0.75;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .widgets-settings__btn--cancel {
@@ -9571,7 +9653,8 @@ body.reports-fullscreen-open {
 }
 
 .widgets-settings__scale-slider::-webkit-slider-thumb:active {
-  transform: scale(1.15);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .widgets-settings__scale-slider::-moz-range-thumb {
@@ -10321,10 +10404,53 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   white-space: nowrap;
 }
 
-/* Строка контракта «что под ней»: зона 48×48 в левом нижнем углу сетки занята
-   кнопкой настройки экрана — у плитки, которая туда попадает, число прижато к
-   правому краю. Полосы этой плитки остаются открытым вопросом дизайна:
-   индент на 48 px съедает половину 1×1, поэтому здесь двигаются только числа. */
+/* Строка контракта «зоны углов»: оба нижних угла сетки держатся свободными
+   52×52 px — по фактическому следу кнопок (настройка слева, «+» справа).
+   В зоне запрещена любая графика, не только числа и полосы: спарклайн,
+   кольцо, полоса и дельта одинаково уходят под палец.
+
+   Поэтому угол резервируется полем самой плитки, а не разводом отдельных
+   узлов: перечисление узлов всегда неполно — спарклайн «Динамики веса»
+   формально не был ни числом, ни полосой и прежний запрет проходил. Поле
+   считается от края сетки, поэтому подменяет собственные 11 px плитки
+   целиком, а не добавляется к ним.
+
+   Отступление названо вслух: соседняя строка «что под ней» всё ещё говорит
+   «48×48 … свободна от чисел и полос» и знает только левый угол. Верна
+   «зоны углов» — она переписана двенадцатой сборкой и сама объясняет, что
+   48 было ошибкой замера. */
+body:has(.widgets-tab) .widget--corner-bl {
+  padding-left: var(--widget-corner-zone, 52px);
+}
+
+body:has(.widgets-tab) .widget--corner-br {
+  padding-right: var(--widget-corner-zone, 52px);
+}
+
+/* Резерв отнимает у плитки 41 px ширины, и содержимое обязано ужаться внутрь,
+   а не вылезти обратно под палец: у flex-строки переполнение выезжает как раз
+   в сторону зоны. min-width: 0 разрешает строкам сжиматься, max-width: 100% —
+   фигурам с собственной шириной (спарклайн 58 px шире оставшегося ряда). */
+.widget--corner-bl > *,
+.widget--corner-br > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.widget--corner-br .widget-wd__curve-row {
+  min-width: 0;
+}
+
+.widget--corner-br .widget-wd__spark {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Содержимое, которое тянулось на всю ширину плитки, после резерва прижимается
+   к свободной стороне — иначе выравнивание «по краю» вернуло бы графику в
+   зону через отрицательные поля собственных правил вида. */
 .widget--corner-bl .widget-v4-mini__value,
 .widget--corner-bl .widget-v4-row__value,
 .widget--corner-bl .widget-v4-hero-num {
@@ -10586,6 +10712,8 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-weight: 700;
   line-height: 1;
   flex-shrink: 0;
+  /* «формат чисел»: строки стоят столбцом — цифры табличные. */
+  font-variant-numeric: tabular-nums;
 }
 
 .widget-v4-unit {
@@ -13065,6 +13193,8 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-weight: 600;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
   margin-top: 4px;
+  /* «формат чисел»: число меняется на месте — цифры табличные. */
+  font-variant-numeric: tabular-nums;
 }
 
 /* Калории 2×1 — канвас «Строка» и «С активностью»: заголовка нет, единица «ккал»
@@ -13110,6 +13240,8 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-weight: 500;
   line-height: 1;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  /* «формат чисел»: число меняется на месте — цифры табличные. */
+  font-variant-numeric: tabular-nums;
 }
 
 .widget-calories__line-foot {
@@ -13181,6 +13313,8 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-weight: 600;
   line-height: 1;
   margin-top: 7px;
+  /* «формат чисел»: число меняется на месте — цифры табличные. */
+  font-variant-numeric: tabular-nums;
 }
 
 /* Тренд здоровья 2×1 «Компакт» — канвас: дельта слева, мини-линия справа. */

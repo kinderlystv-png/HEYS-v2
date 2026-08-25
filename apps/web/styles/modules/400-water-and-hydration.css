@@ -196,7 +196,8 @@ html[data-theme-id="blue-dark"] .water-review {
 }
 
 .water-review__chip:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .water-review__chip--sub {
@@ -689,8 +690,8 @@ body.planning-tab-active .fab-group {
 }
 
 .advice-fab:active {
-  transform: scale(0.95);
-  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @keyframes advice-pulse {
@@ -902,7 +903,8 @@ body.planning-tab-active .fab-group {
 }
 
 .advice-list-header-link:active {
-  opacity: 0.72;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .advice-list-header-link:disabled {
@@ -1002,7 +1004,8 @@ body.planning-tab-active .fab-group {
 }
 
 .advice-list-dismiss-all:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .advice-list-dismiss-all:disabled {
@@ -1499,7 +1502,8 @@ body.planning-tab-active .fab-group {
 }
 
 .fab-group .activity-fab:active {
-  transform: scale(0.94);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 body.widgets-edit-mode .fab-group .activity-fab,
@@ -1624,7 +1628,9 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .water-fab-vol:active:not(:disabled) {
-  transform: translateX(0) scale(0.96);
+  transform: translateX(0);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @keyframes waterFabVolIn {
@@ -1682,10 +1688,8 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .meal-fab:active {
-  transform: scale(0.94);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1),
-              0 3px 8px rgba(15, 23, 42, 0.12),
-              inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .meal-fab {
@@ -1730,10 +1734,8 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .water-fab:active {
-  transform: scale(0.94);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1),
-              0 3px 8px rgba(15, 23, 42, 0.12),
-              inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .water-fab {
@@ -1890,7 +1892,8 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .data-overview-table tbody tr:active {
-  background: var(--v4-hero, #f3f4f6);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Cell states */
@@ -1974,10 +1977,6 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   [data-theme$="dark"] .data-overview-table tbody tr:hover {
   background: #374151;
 }
-}
-
-[data-theme$="dark"] .data-overview-table tbody tr:active {
-  background: #4b5563;
 }
 
 [data-theme$="dark"] .cell-empty {
@@ -3711,7 +3710,8 @@ html[data-theme-id="blue-dark"] .water-column__target {
 .water-custom-sheet__step:active:not(:disabled),
 .water-custom-sheet__preset:active,
 .water-custom-sheet__confirm:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Строка «уменьшенное движение»: выезд шторки и появление всплывающего

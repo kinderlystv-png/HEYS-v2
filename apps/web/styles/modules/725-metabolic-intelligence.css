@@ -278,7 +278,8 @@
 }
 
 .metabolic-status-card__header:active {
-  background: var(--card-header-bg-active, #f1f5f9);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .metabolic-status-card__title {
@@ -514,7 +515,8 @@
 }
 
 .reason-card__science-toggle:active {
-  background: var(--bg-secondary, #f1f5f9);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .reason-card__science-text {
@@ -539,7 +541,8 @@
 }
 
 .action-card:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .action-card__header {
@@ -691,7 +694,8 @@
 }
 
 .tomorrow-forecast__header:active {
-  background: var(--card-header-bg-active, #f1f5f9);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .tomorrow-forecast__title {
@@ -827,11 +831,6 @@
 [data-theme$="dark"] .metabolic-status-card__header,
 .dark .metabolic-status-card__header {
   background: var(--v4-bg, #0f172a);
-}
-
-[data-theme$="dark"] .metabolic-status-card__header:active,
-.dark .metabolic-status-card__header:active {
-  background: var(--v4-hero, #1e293b);
 }
 
 [data-theme$="dark"] .metabolic-status-card__summary,
@@ -5131,6 +5130,8 @@
 
 .phenotype-card--clickable:active {
   transform: translateY(0);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .phenotype-card--compact {
@@ -5732,7 +5733,8 @@
 }
 
 .phenotype-expandable-card__header:active {
-  background: rgba(139, 92, 246, 0.04);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Left: Emoji + Type */

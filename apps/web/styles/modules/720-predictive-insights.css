@@ -85,7 +85,8 @@
 }
 
 .insights-card__tab:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .insights-card__tab--active {
@@ -345,7 +346,8 @@
 }
 
 .insights-total--clickable:active {
-  transform: scale(0.97);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .insights-total__ring {
@@ -574,7 +576,8 @@
 }
 
 .insights-scenario:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .insights-scenario--ideal {
@@ -1939,7 +1942,8 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .insights-tab__tab:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .insights-tab__tab.active {
@@ -2226,7 +2230,9 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .early-warning-card--has-warnings:active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .early-warning-card__header {
@@ -2908,8 +2914,8 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .insights-ring-mini:active {
-  transform: scale(0.96);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* 🚦 Цветовая индикация "СВЕТОФОР" по score (мягкий фон) */
@@ -3073,8 +3079,8 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .insights-ring-card:active {
-  transform: scale(0.98);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .insights-ring-card__ring {
@@ -3534,11 +3540,8 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .insights-collapsible__header:active {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-[data-theme$="dark"] .insights-collapsible__header:active {
-  background-color: rgba(148, 163, 184, 0.08);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .insights-collapsible__title {
@@ -3702,8 +3705,8 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .insights-metabolism-card:active {
-  background-color: var(--bg-hover, #f3f4f6);
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .insights-metabolism-card--expanded {
@@ -3858,10 +3861,6 @@ body:has(.insights-tab) .hdr::after {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-[data-theme$="dark"] .insights-collapsible__header:active {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
 [data-theme$="dark"] .insights-collapsible__badge {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-secondary-dark, #9ca3af);
@@ -3871,7 +3870,6 @@ body:has(.insights-tab) .hdr::after {
   background: rgba(255, 255, 255, 0.05);
 }
 
-[data-theme$="dark"] .insights-metabolism-card:active,
 [data-theme$="dark"] .insights-metabolism-card--expanded {
   background: rgba(255, 255, 255, 0.08);
 }
@@ -3925,7 +3923,8 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .info-button:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Маленькая кнопка для колец */
@@ -4687,7 +4686,8 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .metabolic-quick-status__card:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .dark .metabolic-quick-status__card {

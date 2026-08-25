@@ -263,11 +263,13 @@
   box-shadow: 0 0 0 3px rgba(82, 160, 216, 0.14);
 }
 
-.planning-robot-route__direction:hover:not(:disabled),
+@media (hover: hover) {
+  .planning-robot-route__direction:hover:not(:disabled),
 .planning-robot-route__edit-actions button:hover:not(:disabled),
 .planning-robot-route__primary:hover:not(:disabled),
 .planning-robot-route__secondary:hover:not(:disabled) {
   transform: translateY(-1px);
+}
 }
 
 .planning-robot-route__direction:focus-visible,
@@ -330,8 +332,10 @@
   box-shadow: 0 8px 18px rgba(67, 69, 135, 0.18);
 }
 
-.planning-robot-route__primary:hover:not(:disabled) {
+@media (hover: hover) {
+  .planning-robot-route__primary:hover:not(:disabled) {
   background: var(--robot-primary-strong);
+}
 }
 
 .planning-robot-route--result {

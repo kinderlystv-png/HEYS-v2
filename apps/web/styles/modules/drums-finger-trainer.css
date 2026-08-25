@@ -1286,8 +1286,10 @@
   font-weight: 700;
 }
 
-.drums-ft-pain-btn:hover {
+@media (hover: hover) {
+  .drums-ft-pain-btn:hover {
   background: rgba(220, 38, 38, 0.16) !important;
+}
 }
 
 .drums-ft-modal {
@@ -1359,8 +1361,10 @@
   cursor: pointer;
 }
 
-.drums-ft-modal__steps button:hover {
+@media (hover: hover) {
+  .drums-ft-modal__steps button:hover {
   background: rgba(15, 23, 42, 0.12);
+}
 }
 
 .drums-ft-modal__actions {
@@ -1384,8 +1388,10 @@
   color: var(--v4-bg, #fff);
 }
 
-.drums-ft-modal__primary:hover {
+@media (hover: hover) {
+  .drums-ft-modal__primary:hover {
   background: #115e59;
+}
 }
 
 .drums-ft-modal__secondary {
@@ -1393,8 +1399,10 @@
   color: var(--v4-ink, #0f172a);
 }
 
-.drums-ft-modal__secondary:hover {
+@media (hover: hover) {
+  .drums-ft-modal__secondary:hover {
   background: rgba(15, 23, 42, 0.12);
+}
 }
 
 [data-theme='dark'] .drums-ft-modal__card {
@@ -1455,9 +1463,11 @@
   cursor: pointer;
 }
 
-.drums-ft-technique__variant-btn:hover {
+@media (hover: hover) {
+  .drums-ft-technique__variant-btn:hover {
   background: rgba(15, 23, 42, 0.08);
   color: var(--v4-ink, #0f172a);
+}
 }
 
 .drums-ft-technique__variant-btn.is-active {
@@ -1473,9 +1483,11 @@
   color: var(--v4-ink-2, #94a3b8);
 }
 
-[data-theme='dark'] .drums-ft-technique__variant-btn:hover {
+@media (hover: hover) {
+  [data-theme='dark'] .drums-ft-technique__variant-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   color: var(--v4-ink, #f8fafc);
+}
 }
 
 /* === Animated schematic === */
@@ -1649,8 +1661,10 @@
   font: inherit;
 }
 
-.drums-ft-progress-cta:hover {
+@media (hover: hover) {
+  .drums-ft-progress-cta:hover {
   background: linear-gradient(135deg, rgba(15, 118, 110, 0.2), rgba(15, 118, 110, 0.08));
+}
 }
 
 .drums-ft-progress-cta__icon {
@@ -1733,8 +1747,10 @@
   cursor: pointer;
 }
 
-.drums-ft-back-btn:hover {
+@media (hover: hover) {
+  .drums-ft-back-btn:hover {
   background: rgba(15, 23, 42, 0.12);
+}
 }
 
 [data-theme='dark'] .drums-ft-progress-screen__head strong {
@@ -1770,9 +1786,11 @@
   font: inherit;
 }
 
-.drums-ft-progress-card:hover {
+@media (hover: hover) {
+  .drums-ft-progress-card:hover {
   border-color: rgba(15, 118, 110, 0.4);
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08), 0 10px 28px rgba(15, 118, 110, 0.12);
+}
 }
 
 .drums-ft-progress-card__head {

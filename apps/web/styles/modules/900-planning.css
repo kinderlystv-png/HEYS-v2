@@ -127,7 +127,8 @@
 }
 
 .planning-subnav__item--action:active {
-    color: #37396f;
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-subnav__label {
@@ -139,8 +140,8 @@
 }
 
 .planning-subnav__item:active {
-    transform: scale(0.95);
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.18);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .planning-subnav__item {
@@ -2007,9 +2008,11 @@
     color: #334155;
 }
 
-.planning-checklists-screen__facility-option:not(.is-active):hover {
+@media (hover: hover) {
+  .planning-checklists-screen__facility-option:not(.is-active):hover {
     border-color: rgba(100, 116, 139, 0.7);
     color: #1e293b;
+}
 }
 
 .planning-checklists-screen__facility-option.is-active {
@@ -2266,14 +2269,18 @@
     font-weight: 700;
 }
 
-.planning-checklists-screen__item-edit:hover {
+@media (hover: hover) {
+  .planning-checklists-screen__item-edit:hover {
     background: rgba(37, 99, 235, 0.1);
     color: var(--v4-act, #2563eb);
 }
+}
 
-.planning-checklists-screen__item-delete:hover {
+@media (hover: hover) {
+  .planning-checklists-screen__item-delete:hover {
     background: rgba(239, 68, 68, 0.12);
     color: var(--v4-warn-2, #dc2626);
+}
 }
 
 .planning-checklists-screen__group-head {
@@ -2328,14 +2335,18 @@
     font-size: 16px;
 }
 
-.planning-checklists-screen__group-edit:hover,
+@media (hover: hover) {
+  .planning-checklists-screen__group-edit:hover,
 .planning-checklists-screen__group-add:hover,
 .planning-checklists-screen__group-delete:hover {
     background: color-mix(in srgb, var(--planning-checklist-group-bg) 58%, var(--v4-bg, #fff) 42%);
 }
+}
 
-.planning-checklists-screen__group-delete:hover {
+@media (hover: hover) {
+  .planning-checklists-screen__group-delete:hover {
     background: rgba(254, 226, 226, 0.96);
+}
 }
 
 .planning-checklists-screen__bulk-delete {
@@ -2668,9 +2679,11 @@
     cursor: pointer;
 }
 
-.planning-checklists-screen__params-collapse:hover {
+@media (hover: hover) {
+  .planning-checklists-screen__params-collapse:hover {
     color: var(--planning-text, #0f172a);
     background: rgba(148, 163, 184, 0.12);
+}
 }
 
 /* Свёрнутые параметры — компактная кликабельная сводка вместо блока. */
@@ -2688,9 +2701,11 @@
     cursor: pointer;
 }
 
-.planning-checklists-screen__params-summary:hover {
+@media (hover: hover) {
+  .planning-checklists-screen__params-summary:hover {
     border-color: rgba(37, 99, 235, 0.32);
     background: rgba(37, 99, 235, 0.06);
+}
 }
 
 .planning-checklists-screen__params-summary-icon {
@@ -3021,8 +3036,10 @@
     transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.planning-checklists-modal__preset-option:hover {
+@media (hover: hover) {
+  .planning-checklists-modal__preset-option:hover {
     border-color: rgba(34, 197, 94, 0.42);
+}
 }
 
 .planning-checklists-modal__preset-option.is-active {
@@ -3117,8 +3134,10 @@
     cursor: pointer;
 }
 
-.planning-checklists-modal__secondary:hover {
+@media (hover: hover) {
+  .planning-checklists-modal__secondary:hover {
     background: rgba(148, 163, 184, 0.1);
+}
 }
 
 .planning-checklists-modal__confirm-text {
@@ -3513,11 +3532,15 @@
 }
 
 .planning-filter-toggle.active,
-.planning-filter-toggle.has-active,
-.planning-matrix-toggle:active {
+.planning-filter-toggle.has-active {
     color: var(--planning-accent);
     background: var(--planning-accent-soft);
     border-color: rgba(37, 99, 235, 0.18);
+}
+
+.planning-matrix-toggle:active {
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-filter-toggle__icon {
@@ -3686,7 +3709,8 @@
 }
 
 .planning-quick-target-menu__cancel:active {
-    background: rgba(220, 38, 38, 0.14);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-quick-target-option {
@@ -6268,8 +6292,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-quick-btn-done:active {
-    transform: scale(0.98);
-    filter: brightness(0.96);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-quick-btn-done__icon {
@@ -6378,7 +6402,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-quick-link-cancel:active {
-    color: var(--planning-text);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-quick-link-cancel--danger {
@@ -6388,7 +6413,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-quick-link-cancel--danger:active {
-    color: #991b1b;
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-quick-repeat {
@@ -6438,7 +6464,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-weekday-chip:active {
-    transform: scale(0.97);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-weekday-chip--active {
@@ -6497,7 +6524,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-bg-swatch:active {
-    transform: scale(0.92);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-bg-swatch--active {
@@ -6519,7 +6547,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-quick-repeat__pick-dates:active {
-    transform: scale(0.97);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-quick-repeat__custom-summary {
@@ -6626,7 +6655,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-repeat-calendar__nav:active {
-    transform: scale(0.95);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-repeat-calendar__weekdays {
@@ -6661,7 +6691,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-repeat-calendar__day:active {
-    transform: scale(0.93);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-repeat-calendar__day--empty {
@@ -6717,7 +6748,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-repeat-calendar__clear:active {
-    transform: scale(0.97);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-repeat-calendar__confirm {
@@ -6733,7 +6765,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-repeat-calendar__confirm:active {
-    transform: scale(0.97);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-modal__header {
@@ -7170,7 +7203,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-task-editor__status-btn:active {
-    transform: scale(0.98);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-task-editor__status-btn.active {
@@ -7899,6 +7933,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 
 .planning-calendar-nav__theme-btn:active {
     transform: translateY(-50%);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-calendar-nav__add-task-btn {
@@ -8391,7 +8427,6 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 
 .planning-calendar-task-picker__task-main:active {
     cursor: grabbing;
-    transform: scale(0.995);
 }
 
 .planning-calendar-task-picker__task-main:focus-visible,
@@ -9216,7 +9251,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-calendar-slot__complete:active {
-    transform: scale(0.94);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-calendar-slot--touch-dragging .planning-calendar-slot__complete {
@@ -9262,7 +9298,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-calendar-slot__delete:active {
-    transform: scale(0.92);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-calendar-slot__delete-icon {
@@ -9378,7 +9415,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-calendar-slot__carryover:active {
-    transform: scale(0.92);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .planning-calendar-slot__carryover {
@@ -9537,7 +9575,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-slot-delete-sheet__btn:active {
-    transform: scale(0.99);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-slot-delete-sheet__btn--soft {
@@ -9652,7 +9691,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-calendar-slot__complete--done:active {
-    transform: scale(0.94);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .planning-calendar-slot--muted .planning-calendar-slot__time {
@@ -10411,7 +10451,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-gantt2-today-pill:active {
-    filter: brightness(0.92);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 /* Scroll area + sticky grid */
@@ -10800,7 +10841,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-gantt2-backlog__item:active {
-    background: var(--planning-accent-soft);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 /* Project counters in collapsed group label — small chip "5 / 3" right of name. */
@@ -10882,7 +10924,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 
 .planning-gantt2-undo-toast__btn:active,
 .planning-calendar-undo-toast__btn:active {
-    filter: brightness(0.9);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 /* Reduced-motion preference — kill transitions for users with vestibular sensitivity. */
@@ -11420,7 +11463,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .gantt-quick-edit-btn--primary:active {
-    filter: brightness(0.92);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .gantt-quick-edit-btn--ghost {
@@ -11824,10 +11868,6 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     color: #f87171;
 }
 
-[data-theme$="dark"] .planning-quick-link-cancel--danger:active {
-    color: #fca5a5;
-}
-
 [data-theme$="dark"] .planning-modal .planning-quick-target-field--modal-menu.is-menu-open .planning-quick-target-menu--modal {
     background: var(--planning-surface, #0f172a);
 }
@@ -11985,13 +12025,6 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     box-shadow:
         0 2px 12px rgba(2, 6, 23, 0.55),
         inset 0 1px 0 rgba(255, 255, 255, 0.06),
-        inset 3px 0 0 0 color-mix(in srgb, var(--planning-unscheduled-project-color, #64748b) 72%, transparent);
-}
-
-[data-theme$="dark"] .planning-calendar-unscheduled-pill:active {
-    box-shadow:
-        0 1px 8px rgba(2, 6, 23, 0.45),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
         inset 3px 0 0 0 color-mix(in srgb, var(--planning-unscheduled-project-color, #64748b) 72%, transparent);
 }
 

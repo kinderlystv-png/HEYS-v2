@@ -82,7 +82,8 @@
 }
 
 .sleep-quality-preset:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .sleep-quality-preset-bad.active {
@@ -423,8 +424,8 @@
 }
 
 .day-score-btn:active {
-  transform: scale(0.98);
-  background: #fdf2f8;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .day-score-label {
@@ -457,10 +458,6 @@
   color: #8e8e93;
 }
 
-[data-theme$="dark"] .day-score-display.clickable:active {
-  background: linear-gradient(135deg, #4a2a3a 0%, #5a2a45 100%);
-}
-
 /* Dark theme for sleep quality */
 [data-theme$="dark"] .sleep-quality-display {
   background: linear-gradient(135deg, #2e2a3d 0%, #3a2a4a 100%);
@@ -475,19 +472,11 @@
   color: var(--v4-act-text, #60a5fa);
 }
 
-[data-theme$="dark"] .sleep-quality-display.clickable:active {
-  background: linear-gradient(135deg, #3a2a4a 0%, #4a2a5a 100%);
-}
-
 /* Dark theme for sleep time row */
 [data-theme$="dark"] .sleep-time-display {
   background: linear-gradient(135deg, #2d1824 0%, #3a1e2e 100%);
   border-color: rgba(244, 114, 182, 0.2);
   color: #f9a8d4;
-}
-
-[data-theme$="dark"] .sleep-time-display.clickable:active {
-  background: linear-gradient(135deg, #3a1e2e 0%, #481e38 100%);
 }
 
 [data-theme$="dark"] .sleep-arrow {
@@ -527,8 +516,7 @@
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.08);
 }
 
-[data-theme$="dark"] .sleep-breakdown-cta:focus-visible,
-[data-theme$="dark"] .sleep-breakdown-cta:active {
+[data-theme$="dark"] .sleep-breakdown-cta:focus-visible {
   box-shadow: 0 8px 18px rgba(139, 92, 246, 0.12);
 }
 
@@ -621,8 +609,8 @@
 }
 
 .sleep-quality-btn:active {
-  transform: scale(0.98);
-  background: #fdf2f8;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .sleep-quality-label {
@@ -1565,7 +1553,8 @@
 }
 
 .mood-card:active {
-  transform: scale(0.97);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .mood-card-icon {
@@ -1900,7 +1889,8 @@
 }
 
 .ma-habit-cal-period-nav:active {
-  opacity: 0.65;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .ma-habit-cal-period-nav:focus-visible {
@@ -2110,10 +2100,6 @@
   [data-theme$="dark"] .ma-habit-cal-period-nav:hover {
   color: #e2e8f0;
 }
-}
-
-[data-theme$="dark"] .ma-habit-cal-period-nav:active {
-  opacity: 0.7;
 }
 
 [data-theme$="dark"] .ma-habit-cal-period-label--month {
@@ -2907,7 +2893,8 @@
 
 .metrics-card-clickable:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Умная подсказка */
@@ -3544,7 +3531,8 @@
 }
 
 .quick-chip:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .quick-chip.selected {
@@ -3746,7 +3734,8 @@
 }
 
 .mood-preset:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .mood-preset.active {
@@ -3949,7 +3938,8 @@
 }
 
 .mood-journal-btn:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Journal input field */
@@ -4087,7 +4077,8 @@
 }
 
 .mood-slider::-webkit-slider-thumb:active {
-  transform: scale(1.15);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .mood-slider::-moz-range-thumb {
@@ -4353,6 +4344,7 @@
 
 .grams-hint:active {
   opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Kcal Calculator */
@@ -4452,8 +4444,8 @@
 }
 
 .grams-portion-btn:active {
-  transform: scale(0.96);
-  animation: portion-bounce 0.3s ease;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @keyframes portion-bounce {
@@ -4595,8 +4587,8 @@
 }
 
 .grams-stepper-btn:active {
-  transform: scale(0.95);
-  background: #d1d1d6;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .grams-stepper-btn {
@@ -4608,10 +4600,6 @@
   [data-theme$="dark"] .grams-stepper-btn:hover {
   background: #3a3a3c;
 }
-}
-
-[data-theme$="dark"] .grams-stepper-btn:active {
-  background: #48484a;
 }
 
 .grams-input {
@@ -4737,7 +4725,8 @@
 }
 
 .grams-preset:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .grams-preset.active {
@@ -5094,7 +5083,8 @@
 }
 
 .suggest-item:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* --- Button Micro-interactions --- */
@@ -5109,8 +5099,8 @@
 }
 
 .btn:active {
-  transform: scale(0.96);
-  opacity: 0.9;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @media (hover: hover) {
@@ -5132,7 +5122,8 @@
 }
 
 .favorite-btn:active {
-  animation: starPop 0.25s ease-out;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* --- Card Hover Effects (desktop) --- */
@@ -5509,10 +5500,6 @@ select {
   border-color: var(--heys-border-default);
 }
 
-[data-theme$="dark"] .day-score-btn:active {
-  background: var(--heys-bg-elevated);
-}
-
 [data-theme$="dark"] .day-score-label {
   color: var(--heys-text-muted);
 }
@@ -5524,10 +5511,6 @@ select {
 [data-theme$="dark"] .sleep-quality-btn {
   background: var(--heys-bg-card);
   border-color: var(--heys-border-default);
-}
-
-[data-theme$="dark"] .sleep-quality-btn:active {
-  background: var(--heys-bg-elevated);
 }
 
 [data-theme$="dark"] .sleep-quality-label {

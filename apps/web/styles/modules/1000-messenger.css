@@ -36,7 +36,8 @@
 }
 
 .fab-group .message-fab:active {
-  transform: scale(0.94);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .message-fab-icon {
@@ -351,6 +352,8 @@ button.messenger-day-checklist__chip {
 
 button.messenger-day-checklist__chip:active {
   transform: translateY(0);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Кнопки шапки: 36×36 видимой площади, но касание добирается до 44 через
@@ -387,7 +390,8 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-header-button:active {
-  background: #edebe5;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @media (hover: hover) {
@@ -1997,8 +2001,8 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-keyboard-diagnostic__retry:active {
-  background: #37396f;
-  transform: translateY(1px);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .messenger-keyboard-diagnostic__retry:disabled {
@@ -2031,7 +2035,8 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-send:not(:disabled):active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Отправка: кнопка сохраняет размер, радиус и заливку, гаснет до 60 % и не
@@ -2140,8 +2145,7 @@ button.messenger-day-checklist__chip:active {
   color: #8b949d;
 }
 
-[data-theme$="dark"] .messenger-header-button.is-open,
-[data-theme$="dark"] .messenger-header-button:active {
+[data-theme$="dark"] .messenger-header-button.is-open {
   background: var(--v4-surface, #23272c);
   color: var(--v4-ink, #e7eaed);
 }

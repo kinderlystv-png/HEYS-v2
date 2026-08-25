@@ -187,10 +187,12 @@ body.planning-goal-map-open {
     color: var(--v4-bg, #fff);
 }
 
-.goal-map-button--primary:hover,
+@media (hover: hover) {
+  .goal-map-button--primary:hover,
 .goal-map-screen .goal-map-button--primary:hover {
     border-color: var(--goal-map-accent-strong);
     background: var(--goal-map-accent-strong);
+}
 }
 
 .goal-map-toolbar {
@@ -648,9 +650,15 @@ body.planning-goal-map-open {
     border-radius: 12px !important;
 }
 
-.goal-map-palette__item:hover,
+@media (hover: hover) {
+    .goal-map-palette__item:hover {
+        background: var(--goal-map-accent-soft);
+    }
+}
+
 .goal-map-palette__item:active {
-    background: var(--goal-map-accent-soft);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
 }
 
 .goal-map-palette__item span {

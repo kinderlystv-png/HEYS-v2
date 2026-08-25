@@ -259,7 +259,8 @@
 }
 
 .nutrition-v4-meal-row:active {
-  opacity: 0.9;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .nutrition-v4-meal-row__head {
@@ -355,7 +356,8 @@
 }
 
 .nutrition-v4-meal-row__add:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__items {
@@ -401,7 +403,8 @@
 }
 
 .nutrition-v4-cta:active {
-  transform: scale(0.99);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .nutrition-v4-cta__icon {
@@ -982,7 +985,8 @@
 }
 
 .nutrition-v4-chip:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Кнопки записи в режиме «только чтение» гасятся, но остаются на месте:

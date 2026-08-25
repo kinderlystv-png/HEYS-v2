@@ -297,12 +297,13 @@ body.emoji-system {
 }
 
 .btn:active {
-  transform: scale(0.98);
-  opacity: 0.8;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .tab:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 input:active,
@@ -312,8 +313,8 @@ select:active {
 }
 
 .card.clickable:active {
-  transform: scale(0.99);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .section-title {
@@ -788,7 +789,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .compact-card:active {
-  transform: scale(0.99);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Контракт nutrition-tab, «границы блока воды»: карточка целиком — «фон,
@@ -808,6 +810,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 .compact-train.compact-card:active,
 .compact-household.compact-card:active {
   transform: none;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .compact-card-header {
@@ -1248,7 +1252,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .compact-train-fold-btn:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .compact-train-fold-svg {
@@ -1389,6 +1394,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .compact-household:active {
   transform: none;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .compact-household .compact-train-header {
@@ -2153,7 +2160,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-rest-chip:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .ct-wb-ex-rest-chip {
@@ -2266,7 +2274,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-rest-watch-btn:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .ct-wb-rest-watch-btn--add {
@@ -2588,8 +2597,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-replay-btn:active {
-  transform: scale(0.99);
-  background: rgba(224, 231, 255, 0.9);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .ct-wb-replay-btn {
@@ -2850,7 +2859,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-hist-chip:active {
-  opacity: 0.9;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .ct-wb-ex-hist-detail {
@@ -3025,7 +3035,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-ap-done-btn:active {
-  transform: scale(0.92);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .ct-wb-ex-ap-done-btn.is-on {
@@ -3083,7 +3094,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-ap-remove:active {
-  opacity: 0.85;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .ct-wb-ex-ap-cell--weight {
@@ -3200,7 +3212,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-add-approach-btn:active {
-  opacity: 0.9;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .ct-wb-mini {
@@ -3317,7 +3330,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-enable-btn:active {
-  transform: scale(0.99);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .ct-wb-enable-btn {
@@ -4075,6 +4089,8 @@ html[data-theme-id="classic-dark"] {
 
 .hdr-switch-btn:active {
   transform: translateY(0);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Кнопка темы в шапке */
@@ -4106,7 +4122,8 @@ html[data-theme-id="classic-dark"] {
 
 .hdr-theme-btn:active {
   transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Dark mode */
@@ -4152,7 +4169,8 @@ html[data-theme-id="classic-dark"] {
 }
 
 .theme-fab:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Dark theme FAB */
@@ -4481,8 +4499,10 @@ html[data-theme-id="classic-dark"] {
   border-color: rgba(255, 255, 255, 0.16);
 }
 
-.hdr-header-icon-btn:hover {
+@media (hover: hover) {
+  .hdr-header-icon-btn:hover {
 color: var(--v4-sand-ink, #201e1d);
+}
 }
 
 [data-theme$="dark"] .game-level-number {
@@ -7121,7 +7141,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .hdr-client-avatar:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .hdr-client-info {
@@ -7430,7 +7451,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .ews-badge--medium:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* High severity (red) */
@@ -7452,7 +7474,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .ews-badge--high:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* All OK (green) - показывается когда нет warnings */
@@ -7470,7 +7493,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .ews-badge--ok:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Appearance animation */
@@ -7597,7 +7621,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .offline-banner-retry:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Online banner — сеть восстановлена */
@@ -7742,7 +7767,8 @@ body:has(.offline-banner) .wrap {
 }
 
 .offline-nodata-retry:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @keyframes fadeInScale {
@@ -7802,8 +7828,8 @@ body:has(.offline-banner) .wrap {
 }
 
 .cloud-sync-indicator--clickable:active {
-  transform: scale(0.93);
-  filter: brightness(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Smooth synced → idle transition */
@@ -7978,7 +8004,8 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker--v4 .date-picker-day-nav:active:not(:disabled) {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Контракт nutrition-tab, «капсула даты»: «вперёд с сегодняшнего дня
@@ -8615,7 +8642,8 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
 }
 
 .date-picker:not(.date-picker--v4) .date-picker-day-nav:active:not(:disabled) {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .date-picker:not(.date-picker--v4) .date-picker-day-nav--disabled,
@@ -8876,7 +8904,8 @@ svg.date-picker-icon {
 }
 
 .date-picker-sheet .date-picker-sheet-month-nav:active:not(:disabled) {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .date-picker-sheet .date-picker-sheet-month-nav {
@@ -10173,7 +10202,8 @@ body:has(:is(
 }
 
 .tab:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .tab.active {
@@ -11200,7 +11230,8 @@ body:has(:is(
 }
 
 .tab-settings-item:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .tab-settings-icon {
@@ -11496,7 +11527,8 @@ body:has(:is(
 }
 
 .tab.tab-switch:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Dark theme */
@@ -12320,7 +12352,8 @@ body:has(:is(
 }
 
 .meal-header-inside--collapse-toggle:active {
-  transform: translateY(1px);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .meal-header-inside--collapse-toggle:focus-visible {
@@ -12348,7 +12381,8 @@ body:has(:is(
 }
 
 .meal-time-badge-inside:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Калории приёма — справа */
@@ -12435,7 +12469,8 @@ body:has(:is(
 }
 
 .meal-header-collapse-btn:active {
-  transform: translateY(1px);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .meal-header-collapse-btn:focus-visible {
@@ -12542,6 +12577,8 @@ body:has(:is(
 
 .meal-collapsed-plaque:active {
   transform: translateY(0);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .meal-collapsed-plaque:focus-visible {
@@ -12966,6 +13003,8 @@ body:has(:is(
 
 .login-modal button:active:not(:disabled) {
   transform: translateY(0);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .login-modal {
@@ -13090,7 +13129,8 @@ body:has(:is(
 }
 
 .client-dropdown-sticky-btn:active {
-  transform: scale(0.99);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .client-dropdown-sticky-btn--all {
@@ -13211,7 +13251,8 @@ body:has(:is(
 }
 
 .yesterday-quick-btn:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .yesterday-quick-btn.active {
@@ -13248,7 +13289,8 @@ body:has(:is(
 }
 
 .today-quick-btn:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .today-quick-btn.active {
@@ -13303,7 +13345,8 @@ body:has(:is(
 }
 
 .cal-today-btn:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .cal-title {
@@ -13841,7 +13884,8 @@ body:has(:is(
   }
 
   .mpc-grams-btn:active {
-    background: var(--v4-line, #e5e7eb);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   /* Цветовые подсказки для больших порций */
@@ -13966,8 +14010,8 @@ body:has(:is(
   }
 
   .mpc-delete:active {
-    background: #fee2e2;
-    color: var(--v4-warn-2, #dc2626);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   /* Grid for macros: header + values */
@@ -14164,8 +14208,8 @@ body:has(:is(
   }
 
   .mpc-products-toggle:active {
-    background: var(--v4-hero, #f1f5f9);
-    transform: scale(0.985);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   .mpc-products-toggle.expanded {
@@ -14260,7 +14304,8 @@ body:has(:is(
   }
 
   .mobile-time-btn:active {
-    background: var(--v4-line, #e5e7eb);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   /* Мобильная кнопка редактирования оценок */
@@ -14276,7 +14321,8 @@ body:has(:is(
   }
 
   .mobile-mood-btn:active {
-    background: transparent;
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   /* Компактные цветные badge оценок в приёмах пищи (как в тренировках) */
@@ -14342,8 +14388,8 @@ body:has(:is(
   }
 
   .meal-delete-btn:active {
-    background: #fee2e2;
-    color: var(--v4-warn-2, #dc2626);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   /* === MEAL PHOTOS — фотографии приёма пищи === */
@@ -14390,8 +14436,8 @@ body:has(:is(
   }
 
   .meal-photo-thumb:active {
-    transform: scale(0.95);
-    border-color: var(--color-blue-500);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   .meal-photo-thumb img {
@@ -14423,7 +14469,8 @@ body:has(:is(
   }
 
   .photo-processed-checkbox:active {
-    transform: scale(0.9);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   .photo-processed-checkbox.checked {
@@ -14639,7 +14686,8 @@ body:has(:is(
   }
 
   .photo-confirm-btn.cancel:active {
-    background: var(--v4-hero, #f3f4f6);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   .photo-confirm-btn.confirm {
@@ -14647,7 +14695,8 @@ body:has(:is(
   }
 
   .photo-confirm-btn.confirm:active {
-    background: var(--v4-ok-bg, #ecfdf5);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   [data-theme$="dark"] .photo-confirm-modal {
@@ -14674,14 +14723,6 @@ body:has(:is(
   [data-theme$="dark"] .photo-confirm-btn.cancel {
     color: var(--v4-ink-2, #9ca3af);
     border-color: var(--v4-line, #374151);
-  }
-
-  [data-theme$="dark"] .photo-confirm-btn.cancel:active {
-    background: #374151;
-  }
-
-  [data-theme$="dark"] .photo-confirm-btn.confirm:active {
-    background: rgba(16, 185, 129, 0.2);
   }
 
   /* === CONFIRM MODAL — универсальная модалка подтверждения === */
@@ -14788,7 +14829,8 @@ body:has(:is(
 
   .confirm-modal-btn.cancel:active,
   .delete-confirm-btn.cancel:active {
-    background: var(--v4-hero, #f3f4f6);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   .confirm-modal-btn.confirm,
@@ -14799,7 +14841,8 @@ body:has(:is(
 
   .confirm-modal-btn.confirm:active,
   .delete-confirm-btn.danger:active {
-    background: #fef2f2;
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   .confirm-modal-btn--fill {
@@ -14836,19 +14879,23 @@ body:has(:is(
   }
 
   .confirm-modal-btn--fill.confirm-modal-btn--primary:active {
-    background: var(--v4-act, #2563eb);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   .confirm-modal-btn--fill.confirm-modal-btn--success:active {
-    background: var(--v4-ok-text, #16a34a);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   .confirm-modal-btn--fill.confirm-modal-btn--danger:active {
-    background: var(--v4-warn-2, #dc2626);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   .confirm-modal-btn--fill.confirm-modal-btn--neutral:active {
-    background: #d1d5db;
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   /* 🆕 Flow Selection Buttons */
@@ -14857,13 +14904,15 @@ body:has(:is(
   }
 
   .flow-selection-btn:active {
-    transform: scale(0.98);
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   .flow-selection-btn--quick:active,
   .flow-selection-btn--multi:active,
   .flow-selection-btn--repeat-recent:active {
-    opacity: 0.92;
+    opacity: 0.7;
+    transition: opacity 120ms ease;
   }
 
   /* 🆕 Products List in Confirm Modal */
@@ -14914,19 +14963,9 @@ body:has(:is(
     border-color: var(--v4-line, #374151);
   }
 
-  [data-theme$="dark"] .confirm-modal-btn.cancel:active,
-  [data-theme$="dark"] .delete-confirm-btn.cancel:active {
-    background: #374151;
-  }
-
   [data-theme$="dark"] .confirm-modal-btn.confirm,
   [data-theme$="dark"] .delete-confirm-btn.danger {
     color: #f87171;
-  }
-
-  [data-theme$="dark"] .confirm-modal-btn.confirm:active,
-  [data-theme$="dark"] .delete-confirm-btn.danger:active {
-    background: rgba(239, 68, 68, 0.2);
   }
 
   [data-theme$="dark"] .confirm-modal-btn--fill {
@@ -14960,22 +14999,6 @@ body:has(:is(
   [data-theme$="dark"] .confirm-modal-btn.cancel.confirm-modal-btn--fill.confirm-modal-btn--neutral,
   [data-theme$="dark"] .confirm-modal-btn.confirm.confirm-modal-btn--fill.confirm-modal-btn--neutral {
     color: #e5e7eb;
-  }
-
-  [data-theme$="dark"] .confirm-modal-btn--fill.confirm-modal-btn--primary:active {
-    background: #1d4ed8;
-  }
-
-  [data-theme$="dark"] .confirm-modal-btn--fill.confirm-modal-btn--success:active {
-    background: #15803d;
-  }
-
-  [data-theme$="dark"] .confirm-modal-btn--fill.confirm-modal-btn--danger:active {
-    background: #b91c1c;
-  }
-
-  [data-theme$="dark"] .confirm-modal-btn--fill.confirm-modal-btn--neutral:active {
-    background: #4b5563;
   }
 
   /* === PHOTO SKELETON LOADING — пульсирующий placeholder === */
@@ -15443,8 +15466,8 @@ body:has(:is(
 }
 
 .measurements-card__edit:active {
-  transform: scale(0.97);
-  background: var(--v4-accent-bg, #eef2ff);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .measurements-card__list {
@@ -15655,8 +15678,8 @@ body:has(:is(
 }
 
 .measurements-card__button:active {
-  transform: scale(0.98);
-  background: var(--v4-accent-bg, #eef2ff);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .measurements-card__footer {
@@ -15714,7 +15737,8 @@ body:has(:is(
 }
 
 .profile-section--collapsed:active {
-  transform: scale(0.996);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .profile-section__header {
@@ -17365,7 +17389,8 @@ html.heys-bg-paused *::after {
 }
 
 .mpc-action-sheet__btn:active {
-  background: rgba(67, 69, 135, 0.1);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @media (hover: hover) {
@@ -17396,10 +17421,6 @@ html.heys-bg-paused *::after {
 
 [data-theme$="dark"] .mpc-action-sheet__btn {
   color: var(--v4-ink, #f8fafc);
-}
-
-[data-theme$="dark"] .mpc-action-sheet__btn:active {
-  background: rgba(82, 160, 216, 0.16);
 }
 
 @media (hover: hover) {

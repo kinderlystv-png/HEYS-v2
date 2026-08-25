@@ -751,7 +751,8 @@
 }
 
 .meal-preset-btn:active {
-  transform: scale(0.92);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .meal-preset-btn.active {
@@ -953,7 +954,8 @@
 }
 
 .meal-comment-chip:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .meal-comment-negative .meal-comment-chip {
@@ -1486,7 +1488,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-new-product-btn:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-new-icon {
@@ -1527,7 +1530,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-ready-sets-btn:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-ready-sets-icon {
@@ -2600,7 +2604,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .mpc-save-preset-btn:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$='dark'] .mpc-save-preset-btn {
@@ -2706,7 +2711,9 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-search-barcode-btn:active {
-  transform: translateY(-50%) scale(0.96);
+  transform: translateY(-50%);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-search-barcode-btn:disabled {
@@ -2841,7 +2848,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-shared-toggle:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-shared-toggle input {
@@ -3081,8 +3089,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-product-card:active {
-  transform: scale(0.98);
-  background: var(--color-slate-100);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-product-card--disabled {
@@ -3092,6 +3100,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 
 .aps-product-card--disabled:active {
   transform: none;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @media (hover: hover) {
@@ -3104,10 +3114,6 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
     background: var(--card);
     border-color: var(--border);
   }
-}
-
-[data-theme$='dark'] .aps-product-card:active {
-  background: var(--v4-bg, #0f172a);
 }
 
 .aps-product-card--disabled,
@@ -3198,7 +3204,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-did-you-mean button:active {
-  transform: scale(0.97);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-product-meta {
@@ -3303,7 +3310,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-delete-btn:active {
-  transform: scale(0.9);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-fav-btn {
@@ -3372,7 +3380,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-edit-product-btn:active {
-  transform: scale(0.92);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-product-barcode-icon {
@@ -3745,8 +3754,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-grams-hero-btn:active {
-  transform: scale(0.95);
-  background: var(--color-slate-200);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-grams-hero-field {
@@ -3887,7 +3896,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-grams-btn:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-grams-input {
@@ -4075,7 +4085,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-open-btn:active {
-  transform: scale(0.97);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-open-buttons {
@@ -4543,7 +4554,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-last-grams-btn:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* === 14. Slide-анимация между шагами === */
@@ -4792,7 +4804,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-create-prompt-btn:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-create-prompt-note {
@@ -4903,7 +4916,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 
 .aps-brand-extract-btn:active,
 .pe-brand-tool:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$='dark'] .aps-create-barcode-input,
@@ -5019,7 +5033,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-create-example-btn:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-create-example-note {
@@ -5182,7 +5197,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-create-btn.active:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-create-btn:disabled {
@@ -5245,7 +5261,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .harm-select-step .harm-card:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .harm-select-step .harm-card.selected {
@@ -5334,7 +5351,8 @@ button.meal-quality-badge {
 }
 
 button.meal-quality-badge:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Маленькие бейджи проблем */
@@ -5400,7 +5418,8 @@ button.meal-quality-badge:active {
 }
 
 .meal-bar-container:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Лучший приём дня — золотая рамка + пульсация */
@@ -5877,7 +5896,8 @@ button.meal-quality-badge:active {
 }
 
 .ts-strength-mode-btn:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .ts-strength-mode-btn.active {
@@ -6095,7 +6115,8 @@ button.meal-quality-badge:active {
 }
 
 .ts-type-btn:active {
-  transform: scale(0.97);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .ts-type-btn.active {
@@ -6188,8 +6209,8 @@ button.meal-quality-badge:active {
 }
 
 .ts-time-btn:active {
-  transform: scale(0.95);
-  background: var(--color-slate-200);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .ts-time-value {
@@ -6336,8 +6357,8 @@ button.meal-quality-badge:active {
 }
 
 .ts-zone-btn:active {
-  transform: scale(0.92);
-  background: var(--color-slate-200);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .ts-zone-value {
@@ -6384,7 +6405,8 @@ button.meal-quality-badge:active {
 }
 
 .ts-quick-btn:active {
-  transform: scale(0.97);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .ts-quick-btn.active {
@@ -7644,7 +7666,8 @@ button.meal-quality-badge:active {
 }
 
 .aps-create-mode-btn:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-create-mode-btn.active {
@@ -7773,7 +7796,8 @@ button.meal-quality-badge:active {
 }
 
 .aps-similar-warn__item:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-similar-warn__name {

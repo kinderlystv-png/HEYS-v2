@@ -1902,10 +1902,6 @@
   border-color: #38383a;
 }
 
-[data-theme$="dark"] .mobile-mood-btn:active {
-  background: #2c2c2e;
-}
-
 /* Dark theme for training zones */
 [data-theme$="dark"] .training-zones-label {
   color: #8e8e93;
@@ -1948,10 +1944,6 @@
   background: #2c2c2e;
   border-color: #38383a;
   color: var(--v4-ink, #f2f2f7);
-}
-
-[data-theme$="dark"] .training-preset-btn:active {
-  background: #3a3a3c;
 }
 
 [data-theme$="dark"] .training-zones-time {
@@ -2019,10 +2011,6 @@
   background: var(--heys-bg-elevated);
   border-color: rgba(255, 255, 255, 0.12);
   color: var(--heys-text-primary);
-}
-
-[data-theme$="dark"] .mpc-grams-btn:active {
-  background: var(--v4-ink-4, #475569);
 }
 
 [data-theme$="dark"] .mpc-grams-btn.grams-warn {
@@ -2300,7 +2288,8 @@
 }
 
 .theme-toggle:active {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* === 03. CONFETTI ANIMATION === */
@@ -2504,7 +2493,8 @@
 }
 
 .sparkline-empty-btn:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Weight empty state - фиолетовая тема */
@@ -2774,7 +2764,8 @@
 }
 
 .day-subtab:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .day-subtab.active {
@@ -2973,8 +2964,8 @@
 }
 
 .sleep-time-display.clickable:active {
-  transform: scale(0.96);
-  background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .sleep-arrow {
@@ -2998,8 +2989,8 @@
 }
 
 .sleep-quality-display.clickable:active {
-  transform: scale(0.98);
-  background: linear-gradient(135deg, #ddd6fe 0%, #93c5fd 100%);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .sleep-quality-value-big {
@@ -3098,11 +3089,16 @@ button.sleep-breakdown-item:focus-visible {
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
-.sleep-breakdown-cta:focus-visible,
-.sleep-breakdown-cta:active {
+.sleep-breakdown-cta:focus-visible {
   outline: none;
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(139, 92, 246, 0.18);
+}
+
+.sleep-breakdown-cta:active {
+  outline: none;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @media (hover: hover) {
@@ -3268,8 +3264,8 @@ button.sleep-breakdown-item:focus-visible {
 }
 
 .day-score-manual-hint:active {
-  background: rgba(107, 114, 128, 0.2);
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Пометка «значение вписал куратор» — рядом с полем, тем же весом, что и
@@ -3296,8 +3292,8 @@ button.sleep-breakdown-item:focus-visible {
 }
 
 .day-score-display.clickable:active {
-  transform: scale(0.98);
-  background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Day Score Picker Modal (красивый слайдер) */
@@ -3368,7 +3364,8 @@ button.sleep-breakdown-item:focus-visible {
 }
 
 .day-score-preset:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .day-score-preset-bad.active {
@@ -3546,7 +3543,8 @@ button.sleep-breakdown-item:focus-visible {
 }
 
 .ndte-badge--active:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @keyframes ndtePulse {

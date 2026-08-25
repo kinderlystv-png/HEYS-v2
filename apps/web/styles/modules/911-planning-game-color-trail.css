@@ -137,8 +137,10 @@
     box-shadow: 0 6px 16px rgba(67, 69, 135, 0.18);
 }
 
-.planning-color-trail__primary:hover {
+@media (hover: hover) {
+  .planning-color-trail__primary:hover {
     background: #37396f;
+}
 }
 
 .planning-color-trail__quiet {

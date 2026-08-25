@@ -249,8 +249,8 @@
 }
 
 .cascade-card__copy-btn:active {
-  transform: translateY(1px);
-  opacity: 1;
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* ─────────────────────────────────────────────────────

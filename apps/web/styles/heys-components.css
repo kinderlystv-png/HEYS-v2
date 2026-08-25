@@ -562,7 +562,8 @@
 }
 
 .product-name-edit:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .product-name-text {
@@ -877,7 +878,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .heys-keyboard-dismiss__button:active {
-  transform: translateY(1px) scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .heys-keyboard-dismiss__icon {
@@ -1151,7 +1153,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-step__nav-btn:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .weekly-wrap-step__nav-btn.is-disabled,
@@ -1352,7 +1355,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-step__stat--clickable:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .weekly-wrap-step__stat-value {
@@ -1899,7 +1903,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .meal-plate-guide__continue:active {
-  transform: translateY(1px) scale(0.99);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .meal-plate-guide__continue:disabled,
@@ -2095,8 +2100,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .confirm-modal-btn--custom:active {
-  transform: translateY(1px) scale(0.985);
-  box-shadow: 0 8px 20px -18px rgba(15, 23, 42, 0.45);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .confirm-modal-btn--custom.confirm-modal-btn--fill {
@@ -2112,7 +2117,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .confirm-modal-btn--fill.confirm-modal-btn--warning:active {
-  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .confirm-modal-btn--last-one {
@@ -2592,7 +2598,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-breakdown__close:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .weekly-wrap-breakdown {
@@ -3315,7 +3322,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .widget-relapse-risk__dev-toggle-btn:active {
-  transform: scale(0.985);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .widget-relapse-risk__dev-toggle-btn.is-active {
@@ -4562,7 +4570,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .mc-header-right-btn:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .mc-header-right-btn {
@@ -4741,7 +4750,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .level-up-modal__btn:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @keyframes heys-levelup-pop {
@@ -5018,7 +5028,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .game-audit-btn:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .game-audit-list {
@@ -5692,7 +5703,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .onboarding-fusion__btn:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 @keyframes fusionBtnIn {
@@ -6046,7 +6058,8 @@ body.tour-active .ios-pwa-banner {
 
 .heys-update-prompt__btn:active,
 .heys-update-modal__close-btn:active {
-  transform: scale(0.98);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Контракт pwa-update «повторный тап»: 350 мс защиты от случайного двойного
@@ -6102,7 +6115,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .aps-hide-btn:active {
-  transform: scale(0.92);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .aps-hide-btn--active {
@@ -6134,7 +6148,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .aps-delete-btn:active {
-  transform: scale(0.92);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 [data-theme$="dark"] .aps-hide-btn {
@@ -6434,7 +6449,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 #__vconsole .vc-switch:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* === Monthly Reports — Weekly Cards Grid ===================================== */
@@ -7661,7 +7677,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .client-dropdown__close:active {
-  transform: scale(0.96);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .client-dropdown-account__header {
@@ -7720,7 +7737,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .client-dropdown-account__action:active {
-  transform: scale(0.985);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .client-dropdown-account__action--settings {
@@ -10737,7 +10755,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .meal-rec-card__suggestion-add:active {
-  transform: scale(0.9);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .meal-rec-card__suggestion-add:disabled {
@@ -10926,7 +10945,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .meal-rec-card__product-add-btn:active {
-  transform: scale(0.9);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Bulk add button (v27.5) */
@@ -10963,7 +10983,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 
 .meal-rec-card__add-selected-btn--active:active {
   transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Reasoning — compact tags */
@@ -11037,7 +11058,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .meal-rec-card__open-products-btn:active {
-  transform: scale(0.99);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .meal-rec-card__products-overlay {
@@ -11386,7 +11408,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .meal-rec-card__feedback-btn:active:not(:disabled) {
-  transform: scale(0.95);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .meal-rec-card__feedback-btn:disabled {
@@ -11542,6 +11565,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 
 .heys-undo-bar__btn:active {
   opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Уменьшенное движение: выезда нет, бар проявляется за 120 мс. Кольцо не
@@ -12279,6 +12303,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 
 .score-explainer-cta:active {
   transform: translateY(0);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .score-explainer-cta__icon {
@@ -12497,6 +12523,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 
 .score-explainer-modal__summary-row--clickable:active {
   transform: translateY(0);
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .score-explainer-modal__summary-row:first-of-type {
