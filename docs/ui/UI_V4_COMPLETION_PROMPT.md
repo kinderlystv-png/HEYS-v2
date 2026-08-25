@@ -155,17 +155,6 @@ tests. Флак: `login-error-codes-contract`, teardown в `advice-sound-toggle`
 
 **Не трогать:** `heys_day_nutrition_v1.js`, `heys_trial_intake_v1.js`.
 
-**Файлы:** `heys_tdee_v1.js`, `heys_day_water_state.js`, `heys_iw_calc.js`,
-`heys_day_weight_trends_v1.js`, `advice/_other.js`,
-`heys_day_caloric_balance_v1.js`
-
-**Цель:** подключить `resolveNormCycleDay` / `freezeNormCycleDay` из
-`heys_cycle_v1.js` — множители реально влияют на калории, воду, insulin wave,
-тренд веса. Спека 26.08, acceptance 1–10.
-
-**Не трогать:** check-in UI (`heys_morning_checkin_v1.js`) — отдельный батч
-после wiring.
-
 ### Батч C — Системный шрифт и zoom
 
 **Файлы:** `apps/web/index.html` (viewport),
