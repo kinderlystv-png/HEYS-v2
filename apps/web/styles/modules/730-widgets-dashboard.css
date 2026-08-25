@@ -13684,7 +13684,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   border: none;
   padding: 0;
   margin: -8px -8px -8px 0;
-  background: transparent;
+  background: none;
   cursor: pointer;
   display: flex;
   align-items: center;
