@@ -246,6 +246,10 @@ function probeContext({ probe, handler, calls = [] }) {
       async heys_get_day() {
         return { text: 'День пустой', structured: {} };
       },
+      async heys_log_meal(args) {
+        calls.push(args);
+        return { text: 'Записал приём.', structured: {} };
+      },
     },
     beginTrace: () => ({ sessionId: `s${calls.length}`, seq: 1, connId: 'conn-1', ts: new Date().toISOString() }),
     repeatGuard: createRepeatGuard(),
@@ -327,4 +331,34 @@ test('память инстанса счётчик не дублирует: по
   assert.equal(asked.length, 1);
   assert.match(second.result.content[0].text, /второй поиск подряд/);
   assert.doesNotMatch(second.result.content[0].text, /второй поиск подряд[\s\S]*поиск подряд/);
+});
+
+// ── Разорванная запись ───────────────────────────────────────────────────────
+//
+// Трейс 25.08, обмен 22:34: два heys_log_meal подряд на одну реплику про
+// сырники со сгущёнкой — в чате, который заведомо получил правило «ОДИН ВЫЗОВ
+// НА РЕПЛИКУ» в голове инструкции. Слово не сработало, подсказку в момент
+// ошибки даёт сервер.
+
+test('вторая запись подряд получает подсказку про один вызов', async () => {
+  const ctx = probeContext({ probe: async () => 1 });
+  const res = await callTool(ctx, 'heys_log_meal', { client: 'мне', items: [], transcript: 'x' });
+  const text = res.result.content[0].text;
+  assert.match(text, /запись подряд/);
+  assert.match(text, /items\[\]/);
+  assert.match(text, /meals\[\]/);
+  // Текст поиска сюда попадать не должен: перебор формулировок тут ни при чём.
+  assert.doesNotMatch(text, /поиск подряд/);
+});
+
+test('первая запись подсказку не получает', async () => {
+  const ctx = probeContext({ probe: async () => 0 });
+  const res = await callTool(ctx, 'heys_log_meal', { client: 'мне', items: [], transcript: 'x' });
+  assert.doesNotMatch(res.result.content[0].text, /запись подряд/);
+});
+
+test('серия поиска по-прежнему говорит про формулировки, а не про запись', () => {
+  const { seriesNotice } = require('../lib/repeat-guard');
+  assert.match(seriesNotice('heys_search_products', 2), /поиск подряд/);
+  assert.match(seriesNotice('heys_log_meal', 2), /запись подряд/);
 });

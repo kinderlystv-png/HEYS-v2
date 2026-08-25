@@ -17,7 +17,7 @@ const { TOOL_SCHEMAS } = require('./tools');
 const callContext = require('./call-context');
 const crypto = require('node:crypto');
 const { extractArgKeys } = require('./telemetry');
-const { STREAK_TOOLS, streakNotice } = require('./repeat-guard');
+const { SERIES_TOOLS, seriesNotice } = require('./repeat-guard');
 
 const SERVER_INFO = { name: 'heys-mcp', title: 'HEYS', version: '1.0.0' };
 const SUPPORTED_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26'];
@@ -273,7 +273,7 @@ async function handleMessage(message, ctx) {
         // идёт ПАРАЛЛЕЛЬНО работе инструмента: подсказка про лишний круг не
         // стоит ни одной лишней миллисекунды ожидания куратора, а сбой или
         // таймаут означает просто «подсказки не будет».
-        const wantsProbe = ctx.seriesProbe && STREAK_TOOLS.has(name)
+        const wantsProbe = ctx.seriesProbe && SERIES_TOOLS.has(name)
           && !(guardVerdict && (guardVerdict.repeat || guardVerdict.notice));
         const probe = wantsProbe
           ? Promise.resolve(ctx.seriesProbe(name)).catch(() => 0)
@@ -293,7 +293,7 @@ async function handleMessage(message, ctx) {
         }
         const remoteStreak = Number(priorCalls) > 0 ? Number(priorCalls) + 1 : 0;
         const notice = (guardVerdict && guardVerdict.notice)
-          || (remoteStreak >= 2 ? streakNotice(remoteStreak) : null);
+          || (remoteStreak >= 2 ? seriesNotice(name, remoteStreak) : null);
         hint = guardVerdict && guardVerdict.repeat ? 'repeat' : (notice ? 'streak' : null);
         const result = notice
           ? {

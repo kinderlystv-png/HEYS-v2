@@ -67,6 +67,24 @@ const CACHEABLE_READ_TOOLS = new Set([
 const STREAK_TOOLS = new Set(['heys_search_products']);
 
 /**
+ * Пишущие инструменты, у которых вторая подряд запись за одну реплику почти
+ * всегда означает одну еду, разбитую надвое.
+ *
+ * Трейс 25.08, обмен 22:34 («сырники, сгущёнка, колбаса, шаги»): два
+ * heys_log_meal подряд вместо одного с items[] — и это в чате, заведомо
+ * получившем правило «ОДИН ВЫЗОВ НА РЕПЛИКУ» в голове инструкции. Словесное
+ * правило доехало и не сработало; подсказка приходит в момент самой ошибки,
+ * как это уже сработало для перебора формулировок в поиске.
+ *
+ * Отказывать нельзя: «два часа назад X, час назад Y» — законные два приёма, и
+ * отличить их от разорванной реплики сервер не может. Поэтому только подсказка.
+ */
+const WRITE_SERIES_TOOLS = new Set(['heys_log_meal']);
+
+/** Инструменты, для которых сервер считает серию подряд идущих вызовов. */
+const SERIES_TOOLS = new Set([...STREAK_TOOLS, ...WRITE_SERIES_TOOLS]);
+
+/**
  * Окно, внутри которого повтор считается повтором одной и той же реплики.
  *
  * Минута, а не «сколько не жалко»: по трейсу 18–20.08 повторные чтения идут с
@@ -113,6 +131,16 @@ function streakNotice(streak) {
     return '[второй поиск подряд] Каталог просматривается целиком и по всем написаниям сразу — другая формулировка того же продукта даст тот же список. Нет подходящего: heys_create_product (с from_product_id ближайшего, если состав неизвестен), затем heys_log_meal.';
   }
   return `[${streak}-й поиск подряд] Перебор формулировок каталог не расширяет. Продукта в базе нет — заводи heys_create_product и вноси приём либо спроси куратора одним вопросом.`;
+}
+
+/** Подсказка про разорванную запись — только для пишущих. */
+function writeSeriesNotice(streak) {
+  return `[${streak}-я запись подряд] Позиции из одной реплики идут ОДНИМ heys_log_meal: несколько блюд — items[], несколько приёмов — meals[]. Отдельный вызов на каждое блюдо стоит куратору лишнего круга ожидания. Если приёмы правда разные по времени — так и запиши их одним вызовом через meals[].`;
+}
+
+/** Текст серии зависит от того, читал инструмент или писал. */
+function seriesNotice(tool, streak) {
+  return WRITE_SERIES_TOOLS.has(tool) ? writeSeriesNotice(streak) : streakNotice(streak);
 }
 
 /**
@@ -208,11 +236,15 @@ function createRepeatGuard({ ttlMs = DEFAULT_TTL_MS, now = Date.now } = {}) {
 module.exports = {
   CACHEABLE_READ_TOOLS,
   STREAK_TOOLS,
+  WRITE_SERIES_TOOLS,
+  SERIES_TOOLS,
   DEFAULT_TTL_MS,
   MAX_ENTRIES_PER_SESSION,
   MAX_SESSIONS,
   callKey,
   repeatNotice,
   streakNotice,
+  writeSeriesNotice,
+  seriesNotice,
   createRepeatGuard,
 };
