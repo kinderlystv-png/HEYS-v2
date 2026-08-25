@@ -255,6 +255,16 @@
       if (this._initialized) return;
 
       const meta = this.loadLayoutMeta();
+      // Решения о миграциях принимаются по снимку `meta` на входе, а вот запись
+      // должна идти поверх того, что уже лежит в хранилище: init делает
+      // несколько записей подряд, и каждая следующая обязана видеть предыдущую.
+      // Иначе снятие типов затирает только что записанные поля сетки, и
+      // следующая загрузка зря гоняет миграцию 2→4 колонки.
+      let storedMeta = meta;
+      const writeMeta = (next) => {
+        storedMeta = next;
+        this.saveLayoutMeta(next);
+      };
       let saved = this.loadLayout() || [];
       const hasSavedLayout = Array.isArray(saved) && saved.length > 0;
       const needsPresetMigration = !meta || meta.layoutPresetVersion !== LAYOUT_PRESET_VERSION;
@@ -267,8 +277,8 @@
       // На части устройств/cloud hydration meta может отсутствовать отдельно от layout.
       // В этом случае просто восстанавливаем meta, но сохраняем пользовательский layout как есть.
       if (hasSavedLayout && needsPresetMigration) {
-        this.saveLayoutMeta({
-          ...(meta || {}),
+        writeMeta({
+          ...(storedMeta || {}),
           gridVersion: GRID_VERSION,
           gridCols: GRID_COLS,
           layoutPresetVersion: LAYOUT_PRESET_VERSION,
@@ -291,7 +301,7 @@
 
         saved = presetLayoutData;
 
-        this.saveLayoutMeta({
+        writeMeta({
           gridVersion: GRID_VERSION,
           gridCols: GRID_COLS,
           layoutPresetVersion: LAYOUT_PRESET_VERSION,
@@ -316,7 +326,8 @@
         saved = normalizedLayoutData;
 
         // После миграции — сохраняем meta + текущий layout
-        this.saveLayoutMeta({
+        writeMeta({
+          ...(storedMeta || {}),
           gridVersion: GRID_VERSION,
           gridCols: GRID_COLS,
           layoutPresetVersion: LAYOUT_PRESET_VERSION,
@@ -352,7 +363,7 @@
           .map((t) => String(t.type ?? t.id))
           .sort();
         const retiredKey = retiredIds.join(',');
-        if ((meta?.retiredMigration ?? null) !== retiredKey) {
+        if ((storedMeta?.retiredMigration ?? null) !== retiredKey) {
           const before = this._widgets.length;
           const retiredSet = new Set(retiredIds);
           this._widgets = this._widgets.filter((w) => !retiredSet.has(String(w.type)));
@@ -360,7 +371,7 @@
           if (removed > 0) log(`retired migration: убрано плиток ${removed} (${retiredKey})`);
           try {
             this.saveLayout(this._widgets, { reason: 'retired-migration' });
-            this.saveLayoutMeta({ ...(meta || {}), retiredMigration: retiredKey, migratedAt: Date.now() });
+            writeMeta({ ...(storedMeta || {}), retiredMigration: retiredKey, migratedAt: Date.now() });
           } catch (e) {
             console.error('[widgets] retired migration save failed:', e?.message || e);
           }
@@ -393,7 +404,7 @@
         this._widgets = this._createDefaultLayout();
         this._autoPackWidgets();
         // фиксируем meta для чистого старта
-        this.saveLayoutMeta({
+        writeMeta({
           gridVersion: GRID_VERSION,
           gridCols: GRID_COLS,
           layoutPresetVersion: LAYOUT_PRESET_VERSION,

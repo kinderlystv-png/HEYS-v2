@@ -3,8 +3,30 @@ import path from 'path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
+// Скрипты из scripts/ — исполняемые файлы с шебангом, и тесты импортируют их
+// как модули, чтобы проверить экспортированные помощники. Vite шебанг не
+// снимает, и импорт падает с «Invalid or unexpected token» — из-за этого пять
+// тестов, охраняющих публикацию, молча не загружались вовсе (проверено: файл
+// с одним лишь шебангом не импортируется, без него импортируется).
+//
+// Снимаем шебанг на лету, а не из семидесяти одного файла: он там по делу —
+// помечает точку входа, и правка каждого была бы подметанием ради теста.
+const stripShebang = {
+  name: 'heys-strip-shebang',
+  enforce: 'pre' as const,
+  transform(code: string, id: string) {
+    // Путь нормализуем: на Windows id приходит с обратными слэшами.
+    if (!id.replace(/\\/g, '/').includes('/scripts/')) return null;
+    if (!code.startsWith('#!')) return null;
+    // Строка заменяется пустой, а не удаляется: номера строк в стеке остаются
+    // прежними, иначе отладка чужого падения уедет на единицу.
+    const eol = code.indexOf('\n');
+    return { code: eol < 0 ? '' : code.slice(eol), map: null };
+  },
+};
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), stripShebang],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

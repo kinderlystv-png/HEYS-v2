@@ -23,8 +23,12 @@ function tile(type, col = 0, row = 0) {
   return { type, size: '2x1', position: { col, row } };
 }
 
-/** Хранилище в памяти + загруженные реестр и ядро виджетов. */
-function boot(savedLayout, meta) {
+/**
+ * Хранилище в памяти + загруженные реестр и ядро виджетов.
+ * `beforeInit` даёт заглянуть в state до загрузки — например повесить шпиона
+ * на миграцию сетки, которая срабатывает внутри init().
+ */
+function boot(savedLayout, meta, beforeInit) {
   const memory = new Map();
   if (savedLayout) memory.set(LAYOUT_KEY, savedLayout);
   if (meta) memory.set(META_KEY, meta);
@@ -39,8 +43,17 @@ function boot(savedLayout, meta) {
   };
   eval(REGISTRY_SRC);
   eval(CORE_SRC);
-  window.HEYS.Widgets.state.init();
-  return { state: window.HEYS.Widgets.state, memory };
+  const state = window.HEYS.Widgets.state;
+  if (beforeInit) beforeInit(state);
+  state.init();
+  return { state, memory };
+}
+
+/** Числа версий берём из ядра, чтобы ожидания теста не разошлись с продуктом. */
+function coreNumber(name) {
+  const hit = new RegExp(`const ${name} = (\\d+);`).exec(CORE_SRC);
+  if (!hit) throw new Error(`в ядре нет константы ${name}`);
+  return Number(hit[1]);
 }
 
 /** Типы, которые реестр объявил снятыми — источник правды один. */
@@ -122,5 +135,41 @@ describe('снятые виджеты · одноразовая миграция
       second.getWidgets().map((w) => w.type),
       'постоянный фильтр всё-таки работает при каждой загрузке',
     ).toContain(firstRetired);
+  });
+
+  // Так приходит человек после cloud hydration: раскладка сохранена, meta нет.
+  // init восстанавливает поля сетки, а следом дописывает отметку о снятии —
+  // и если вторая запись идёт поверх прочитанной в начале meta, поля сетки из
+  // хранилища пропадают. Снаружи это выглядит безобидно, но следующая загрузка
+  // видит meta без gridVersion и заново гоняет миграцию 2→4: координаты
+  // умножаются на два, раскладка пересобирается, хотя мигрировать нечего.
+  it('раскладка без meta: после первой загрузки мета полная', () => {
+    const { memory } = boot([tile('calories'), tile('weight', 2, 0)], null);
+
+    const meta = memory.get(META_KEY);
+    expect(meta, 'мета не записана вовсе').toBeTruthy();
+    expect(meta.gridVersion, 'запись снятия затёрла версию сетки').toBe(coreNumber('GRID_VERSION'));
+    expect(meta.gridCols, 'запись снятия затёрла число колонок').toBe(coreNumber('GRID_COLS'));
+    expect(meta.layoutPresetVersion, 'запись снятия затёрла версию пресета')
+      .toBe(coreNumber('LAYOUT_PRESET_VERSION'));
+    expect(meta.retiredMigration, 'снятие не отметилось в мете').toBeTruthy();
+  });
+
+  it('раскладка без meta: вторая загрузка не гоняет миграцию сетки', () => {
+    const { memory } = boot([tile('calories'), tile('weight', 2, 0)], null);
+
+    const stored = memory.get(LAYOUT_KEY);
+    const afterFirst = Array.isArray(stored) ? stored : (stored?.widgets || []);
+    const migrate = vi.fn();
+
+    const { state } = boot(afterFirst, memory.get(META_KEY), (s) => {
+      const original = s._migrateLayout.bind(s);
+      s._migrateLayout = (...args) => { migrate(); return original(...args); };
+    });
+
+    expect(migrate, 'лишний прогон миграции 2→4 при второй загрузке').not.toHaveBeenCalled();
+    expect(state.getWidgets().map((w) => w.type)).toEqual(
+      expect.arrayContaining(['calories', 'weight']),
+    );
   });
 });
