@@ -262,7 +262,11 @@ describe('HEYS.Subscription curator guard', () => {
   it('keeps writes fail-closed without showing a false trial-ended banner for unknown status', () => {
     const consumerSource = `${dayHandlersSource}\n${mealsSource}`;
 
-    expect(consumerSource.match(/if \(!HEYS\.Paywall\?\.canWriteSync\?\.\(\)\)/g)).toHaveLength(11);
+    // 12 paywall-guarded write paths in day handlers + meals (was 11 before
+    // repeatTodayMeal «Повторить сегодня» in day/_meals.js).
+    expect(consumerSource.match(/if \(!HEYS\.Paywall\?\.canWriteSync\?\.\(\)\)/g)).toHaveLength(12);
+    expect(mealsSource).toContain('const repeatTodayMeal = React.useCallback');
+    expect(mealsSource).toMatch(/repeatTodayMeal[\s\S]{0,400}if \(!HEYS\.Paywall\?\.canWriteSync\?\.\(\)\)/);
     expect(consumerSource).not.toContain('if (HEYS.Paywall && !HEYS.Paywall.canWriteSync())');
     expect(dayTabRenderSource).toContain(
       "const isReadOnly = normalizedSubscriptionStatus === 'read_only'",
