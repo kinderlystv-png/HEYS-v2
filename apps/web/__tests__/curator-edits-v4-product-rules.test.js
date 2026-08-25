@@ -221,8 +221,10 @@ describe('лист правок куратора · правила продук�
       const member = document.querySelector('.ca-modal__type-members > li > .ca-modal__item');
       expect(member).toBeTruthy();
       // Отступ вложенности есть, но высота тач-таргета не съедена.
+      // 26 px — из строки контракта: «вложенные строки с левым полем 26 px
+      // вместо 13» (15-я сборка; прежде тест держал 24).
       expect(getComputedStyle(member).minHeight).toBe('44px');
-      expect(getComputedStyle(member).paddingLeft).toBe('24px');
+      expect(getComputedStyle(member).paddingLeft).toBe('26px');
       // Список раскрылся внутри того же листа.
       expect(document.querySelectorAll('.ca-modal-backdrop')).toHaveLength(1);
     });

@@ -5487,10 +5487,37 @@
 }
 
 /* Контракт curator-edits, «очень много правок за день»: свёртка дня по типам
-   («Приёмы · 12»). Своих цветов и размеров у строки нет — она такая же
-   строка листа, как остальные, отличается только раскрытием списка внутри. */
+   («Приёмы · 12»). Строка однострочная — название типа 12,5 px/700 чернилами
+   и сразу за ним через 7 px счётчик 11 px/700 тоном --ac; второй
+   строки-расшифровки у свёрнутой группы нет. */
 .ca-modal__type-group {
   list-style: none;
+}
+
+.ca-modal__type-title {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ca-modal__type-count {
+  margin-left: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1;
+  white-space: nowrap;
+  /* Тот же акцент, что у дельты даты; base = sand light canvas `.ghv`. */
+  color: #8a4a20;
+}
+
+/* Закрывающая строка раскрытой группы: «и ещё 9 правок приёмов» —
+   приглушённый тон, тот же, что у вторых строк. */
+.ca-modal__type-more {
+  list-style: none;
+}
+
+.ca-modal__type-more-title {
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
 }
 
 .ca-modal__type-members {
@@ -5508,20 +5535,22 @@
   padding: 0;
 }
 
-/* Карточка приёма внутри раскрытой группы: тот же фон и отступы, что в
-   основном списке (правило `.ca-modal__items > .ca-modal__meal-card`). */
+/* Карточка приёма внутри раскрытой группы: тот же фон и радиус, что в
+   основном списке (правило `.ca-modal__items > .ca-modal__meal-card`), левое
+   поле — 26 px вложенности вместо 13. */
 .ca-modal__type-members > .ca-modal__meal-card {
   background: var(--v4-card, #f7efe2);
   border-radius: 18px;
-  padding: 11px 13px 12px;
+  padding: 11px 13px 12px 26px;
   list-style: none;
 }
 
-/* Отступ — только у простых строк: у карточки приёма фон и внутренние
+/* Строка контракта: «вложенные строки с левым полем 26 px вместо 13».
+   Отступ — только у простых строк: у карточки приёма фон и внутренние
    отступы живут на обёртке, её трогать нельзя. */
 .ca-modal__type-members > li:not(.ca-modal__meal-card) > .ca-modal__item {
   background: transparent;
-  padding-left: 24px;
+  padding-left: 26px;
 }
 
 .ca-modal__item--repeat {
@@ -5736,15 +5765,19 @@ html[data-theme-id="classic-dark"] .ca-day-entry__title,
 }
 html[data-theme-id="sand-dark"] .ca-modal__header-subtitle,
 html[data-theme-id="sand-dark"] .ca-modal__item-sub,
+html[data-theme-id="sand-dark"] .ca-modal__type-more-title,
 html[data-theme-id="sand-dark"] .ca-modal__meal-product,
 html[data-theme-id="classic-dark"] .ca-modal__header-subtitle,
 html[data-theme-id="classic-dark"] .ca-modal__item-sub,
+html[data-theme-id="classic-dark"] .ca-modal__type-more-title,
 html[data-theme-id="classic-dark"] .ca-modal__meal-product,
 [data-theme="sand-dark"] .ca-modal__header-subtitle,
 [data-theme="sand-dark"] .ca-modal__item-sub,
+[data-theme="sand-dark"] .ca-modal__type-more-title,
 [data-theme="sand-dark"] .ca-modal__meal-product,
 [data-theme="dark"][data-palette="classic"] .ca-modal__header-subtitle,
 [data-theme="dark"][data-palette="classic"] .ca-modal__item-sub,
+[data-theme="dark"][data-palette="classic"] .ca-modal__type-more-title,
 [data-theme="dark"][data-palette="classic"] .ca-modal__meal-product {
   color: rgba(242, 237, 230, 0.5);
 }
@@ -5765,12 +5798,16 @@ html[data-theme-id="classic-dark"] .ca-modal__date-label,
   color: rgba(242, 237, 230, 0.42);
 }
 html[data-theme-id="sand-dark"] .ca-modal__date-kcal,
+html[data-theme-id="sand-dark"] .ca-modal__type-count,
 html[data-theme-id="sand-dark"] .ca-modal__more-products,
 html[data-theme-id="classic-dark"] .ca-modal__date-kcal,
+html[data-theme-id="classic-dark"] .ca-modal__type-count,
 html[data-theme-id="classic-dark"] .ca-modal__more-products,
 [data-theme="sand-dark"] .ca-modal__date-kcal,
+[data-theme="sand-dark"] .ca-modal__type-count,
 [data-theme="sand-dark"] .ca-modal__more-products,
 [data-theme="dark"][data-palette="classic"] .ca-modal__date-kcal,
+[data-theme="dark"][data-palette="classic"] .ca-modal__type-count,
 [data-theme="dark"][data-palette="classic"] .ca-modal__more-products {
   color: #e2a468;
 }
@@ -5833,9 +5870,11 @@ html[data-theme-id="blue"] .ca-day-entry__title,
 }
 html[data-theme-id="blue"] .ca-modal__header-subtitle,
 html[data-theme-id="blue"] .ca-modal__item-sub,
+html[data-theme-id="blue"] .ca-modal__type-more-title,
 html[data-theme-id="blue"] .ca-modal__meal-product,
 [data-theme="blue"][data-palette="blue"] .ca-modal__header-subtitle,
 [data-theme="blue"][data-palette="blue"] .ca-modal__item-sub,
+[data-theme="blue"][data-palette="blue"] .ca-modal__type-more-title,
 [data-theme="blue"][data-palette="blue"] .ca-modal__meal-product {
   color: rgba(16, 24, 38, 0.52);
 }
@@ -5850,8 +5889,10 @@ html[data-theme-id="blue"] .ca-modal__date-label,
   color: rgba(16, 24, 38, 0.42);
 }
 html[data-theme-id="blue"] .ca-modal__date-kcal,
+html[data-theme-id="blue"] .ca-modal__type-count,
 html[data-theme-id="blue"] .ca-modal__more-products,
 [data-theme="blue"][data-palette="blue"] .ca-modal__date-kcal,
+[data-theme="blue"][data-palette="blue"] .ca-modal__type-count,
 [data-theme="blue"][data-palette="blue"] .ca-modal__more-products {
   color: #1d5e96;
 }
@@ -5902,9 +5943,11 @@ html[data-theme-id="blue-dark"] .ca-day-entry__title,
 }
 html[data-theme-id="blue-dark"] .ca-modal__header-subtitle,
 html[data-theme-id="blue-dark"] .ca-modal__item-sub,
+html[data-theme-id="blue-dark"] .ca-modal__type-more-title,
 html[data-theme-id="blue-dark"] .ca-modal__meal-product,
 [data-theme="blue-dark"][data-palette="blue"] .ca-modal__header-subtitle,
 [data-theme="blue-dark"][data-palette="blue"] .ca-modal__item-sub,
+[data-theme="blue-dark"][data-palette="blue"] .ca-modal__type-more-title,
 [data-theme="blue-dark"][data-palette="blue"] .ca-modal__meal-product {
   color: rgba(232, 238, 246, 0.5);
 }
@@ -5919,8 +5962,10 @@ html[data-theme-id="blue-dark"] .ca-modal__date-label,
   color: rgba(232, 238, 246, 0.42);
 }
 html[data-theme-id="blue-dark"] .ca-modal__date-kcal,
+html[data-theme-id="blue-dark"] .ca-modal__type-count,
 html[data-theme-id="blue-dark"] .ca-modal__more-products,
 [data-theme="blue-dark"][data-palette="blue"] .ca-modal__date-kcal,
+[data-theme="blue-dark"][data-palette="blue"] .ca-modal__type-count,
 [data-theme="blue-dark"][data-palette="blue"] .ca-modal__more-products {
   color: #7fbceb;
 }

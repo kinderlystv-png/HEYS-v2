@@ -92,6 +92,14 @@ function advance(ms) {
   vi.advanceTimersByTime(ms);
 }
 
+/** Свернули/развернули приложение: движок сам это состояние не меняет. */
+function setVisibility(value) {
+  Object.defineProperty(document, 'visibilityState', {
+    configurable: true,
+    get: () => value,
+  });
+}
+
 describe('бар отмены · контракт undo-bar.v4.dc.html', () => {
   let Undo;
 
@@ -116,6 +124,7 @@ describe('бар отмены · контракт undo-bar.v4.dc.html', () => {
   afterEach(() => {
     vi.useRealTimers();
     document.body.innerHTML = '';
+    setVisibility('visible');
   });
 
   // ── Форма ──
@@ -473,5 +482,79 @@ describe('бар отмены · контракт undo-bar.v4.dc.html', () => {
     advance(HIDE_MS);
     // Бар пересоздаваться не должен — второй клик ничего не запустил повторно.
     expect(bar()).toBeNull();
+  });
+
+  // ── Строка «закрытие приложения внутри окна» (решение 24 августа) ──
+
+  it('приложение свернули внутри окна — окно истекло, удаление применено, бара при возврате нет', () => {
+    const onUndo = vi.fn();
+    const onExpire = vi.fn();
+    Undo.push({ label: 'Перекус удалён', onUndo, onExpire });
+
+    advance(2000); // середина окна: до истечения ещё три секунды
+    expect(bar()).toBeTruthy();
+    expect(Undo.pending).toBe(true);
+
+    setVisibility('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    // Свёрнутое приложение окно не продлевает и остаток времени не сохраняет:
+    // удаление применяется прямо здесь.
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    expect(onExpire.mock.calls[0][0]).toBe('document-hidden');
+    expect(onUndo).not.toHaveBeenCalled();
+    expect(Undo.pending).toBe(false);
+    advance(HIDE_MS); // бар уезжает вниз своей штатной анимацией
+    expect(bar()).toBeNull();
+
+    // Вернулись на экран внутри бывших пяти секунд — бара нет и не будет.
+    setVisibility('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    advance(UNDO_WINDOW_MS + HIDE_MS);
+    expect(bar()).toBeNull();
+    expect(Undo.pending).toBe(false);
+    expect(onUndo).not.toHaveBeenCalled();
+    // Ничего не отложено на следующий запуск: состояние живёт только в модуле.
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+  });
+
+  it('вкладку закрывают внутри окна — удаление закрепляется до ухода страницы', () => {
+    const onUndo = vi.fn();
+    const onExpire = vi.fn();
+    Undo.push({ label: 'Рис бурый удалён', onUndo, onExpire });
+
+    advance(1000);
+    window.dispatchEvent(new Event('beforeunload'));
+
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    expect(onExpire.mock.calls[0][0]).toBe('beforeunload');
+    expect(onUndo).not.toHaveBeenCalled();
+    expect(Undo.pending).toBe(false);
+  });
+
+  // ── Строка «отмена на другом устройстве» (решение 24 августа) ──
+
+  it('бар живёт только на своём устройстве: состояние не уходит ни в хранилище, ни в облако', () => {
+    const cloudCalls = [];
+    window.HEYS.cloud = new Proxy({}, {
+      get: (_t, prop) => { cloudCalls.push(String(prop)); return () => {}; },
+    });
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+
+    Undo.push({ label: 'Перекус удалён', onUndo: vi.fn(), onExpire: vi.fn() });
+    advance(2000);
+    expect(bar()).toBeTruthy();
+
+    // Второе устройство — это другой документ с собственным модулем: у него
+    // своя переменная состояния, и она пуста. Симулируем повторной загрузкой.
+    const second = loadUndo();
+    expect(second.pending).toBe(false);
+
+    advance(UNDO_WINDOW_MS + HIDE_MS);
+    // Ни записи в хранилище, ни обращения к облаку за всё окно.
+    expect(setItem).not.toHaveBeenCalled();
+    expect(cloudCalls).toHaveLength(0);
+    setItem.mockRestore();
   });
 });

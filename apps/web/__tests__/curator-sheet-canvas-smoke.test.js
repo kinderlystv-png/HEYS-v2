@@ -206,10 +206,13 @@ describe('Canvas frames: curator review sheet', () => {
     expect(bodyText()).toMatch(/Обновлены нормы/);
   });
 
-  // Контракт curator-edits, «очень много правок за день» (12-я сборка):
-  // «Больше десяти правок в одном дне сворачиваются по типам: „Приёмы · 12“,
-  // „Вода · 3“, тап раскрывает список внутри листа».
-  it('Куратор · больше десяти правок за день — свёртка по типам, тап раскрывает список в листе', async () => {
+  // Контракт curator-edits, «очень много правок за день» (15-я сборка):
+  // «Больше пяти правок одного типа за дату — тип сворачивается в одну строку.
+  // Порядок типов фиксирован: Приёмы · Вода · Замеры · Активность · Добавки».
+  // Прежние тесты держали порог по дню целиком (больше десяти строк за дату) и
+  // категории «Тренировки»/«Шаги»/«Вес» — 15-я сборка это отменила, тесты
+  // переписаны под строку.
+  it('Куратор · больше пяти правок одного типа — свёртка по типам, тап раскрывает список в листе', async () => {
     const date = '2026-07-05';
     const meals = Array.from({ length: 12 }, (_, i) => ({
       type: 'meal_added',
@@ -236,78 +239,115 @@ describe('Canvas frames: curator review sheet', () => {
 
     await banner.checkAndShow();
 
-    // Формат подписи — из строки контракта дословно: существительное, «·», число.
-    expect(itemTitles()).toContain('Приёмы · 12');
-    expect(itemTitles()).toContain('Тренировки · 3');
+    // Формат подписи — из строки контракта дословно: существительное, «·»,
+    // число. Счётчик вынесен отдельным элементом тоном --ac, поэтому в
+    // textContent пробела перед «·» нет — он задан полем 7 px.
+    const typeRows = () => Array.from(document.querySelectorAll('[data-ca-expand-type]'))
+      .map((el) => `${el.querySelector('.ca-modal__type-title')?.firstChild?.textContent || ''}`
+        + ` ${el.querySelector('.ca-modal__type-count')?.textContent || ''}`);
+    // Порог берут только «Приёмы» (12 > 5), но в строки типов уходит вся дата —
+    // и порядок фиксирован контрактом, а не числом правок.
+    expect(typeRows()).toEqual(['Приёмы · 12', 'Активность · 3']);
+    // Второй строки-расшифровки у свёрнутой группы нет.
+    expect(document.querySelector('[data-ca-expand-type] .ca-modal__item-sub')).toBeFalsy();
     // Пока не раскрыли — самих правок в листе нет.
     expect(bodyText()).not.toContain('Продукт 1');
     expect(bodyText()).not.toContain('Тренировка: силовая');
     expect(document.querySelectorAll('.ca-modal__type-members')).toHaveLength(0);
 
-    const mealsToggle = Array.from(document.querySelectorAll('[data-ca-expand-type]'))
-      .find((el) => el.textContent.includes('Приёмы · 12'));
-    expect(mealsToggle?.getAttribute('aria-expanded')).toBe('false');
-    mealsToggle.click();
+    const mealsToggle = () => Array.from(document.querySelectorAll('[data-ca-expand-type]'))
+      .find((el) => el.textContent.includes('Приёмы'));
+    expect(mealsToggle()?.getAttribute('aria-expanded')).toBe('false');
+    expect(mealsToggle()?.getAttribute('aria-label')).toBe('Приёмы: 12 изменений, развернуть');
+    mealsToggle().click();
 
     // Раскрылось внутри того же листа: одна модалка, счётчик в шапке тот же.
     expect(document.querySelectorAll('.ca-modal-backdrop')).toHaveLength(1);
     expect(subtitle()).toBe('15 изменений за сегодня');
-    const members = document.querySelectorAll('.ca-modal__type-members > li');
-    expect(members).toHaveLength(12);
+    // Первые три правки и закрывающая строка «и ещё N правок…».
+    expect(document.querySelectorAll('.ca-modal__type-members > li:not(.ca-modal__type-more)')).toHaveLength(3);
+    expect(document.querySelector('.ca-modal__type-more')?.textContent).toContain('и ещё 9 правок приёмов');
     expect(bodyText()).toContain('Продукт 1');
+    expect(bodyText()).not.toContain('Продукт 12');
     // Другой тип остался свёрнутым.
     expect(bodyText()).not.toContain('Тренировка: силовая');
-    expect(itemTitles()).toContain('Тренировки · 3');
+    expect(typeRows()).toContain('Активность · 3');
 
-    // Повторный тап сворачивает обратно.
-    Array.from(document.querySelectorAll('[data-ca-expand-type]'))
-      .find((el) => el.textContent.includes('Приёмы · 12'))
-      .click();
+    // Тап по закрывающей строке дораскрывает группу на месте.
+    document.querySelector('[data-ca-expand-type-all]').click();
+    expect(document.querySelectorAll('.ca-modal-backdrop')).toHaveLength(1);
+    expect(document.querySelectorAll('.ca-modal__type-members > li')).toHaveLength(12);
+    expect(document.querySelector('[data-ca-expand-type-all]')).toBeFalsy();
+    expect(bodyText()).toContain('Продукт 12');
+
+    // Повторный тап по строке типа сворачивает обратно — вместе с «показать все».
+    mealsToggle().click();
     expect(document.querySelectorAll('.ca-modal__type-members')).toHaveLength(0);
-    expect(itemTitles()).toContain('Приёмы · 12');
+    expect(typeRows()).toEqual(['Приёмы · 12', 'Активность · 3']);
+    mealsToggle().click();
+    expect(document.querySelectorAll('.ca-modal__type-members > li:not(.ca-modal__type-more)')).toHaveLength(3);
   });
 
-  it('Куратор · ровно десять правок за день — обычный список, свёртки по типам нет', async () => {
+  it('Куратор · ровно пять правок одного типа — обычный список, свёртки по типам нет', async () => {
     const date = '2026-07-05';
-    const meals = Array.from({ length: 10 }, (_, i) => ({
+    const meal = (i) => ({
       type: 'meal_added',
       date,
       meal_id: `meal_${i}`,
       meal_label: `Приём ${i + 1}`,
       time: `0${(i % 9) + 1}:1${i % 9}`,
       items: [{ name: `Продукт ${i + 1}`, grams: 100 + i }],
-    }));
-    const row = entry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', date, meals);
+    });
+    // Пять приёмов и пять тренировок: десять строк за дату, но ни один тип
+    // порога не берёт. Прежнее правило («больше десяти за день») здесь бы уже
+    // сработало — новое считает по типу.
+    const actions = [
+      ...Array.from({ length: 5 }, (_, i) => meal(i)),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        type: 'training_added', date, training_index: i, kind: `вид ${i + 1}`, duration_min: 20 + i, time: `1${i}:00`,
+      })),
+    ];
+    const row = entry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', date, actions);
     const banner = loadBanner();
     window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([row]));
 
     await banner.checkAndShow();
 
-    expect(banner._test.constants.DAY_TYPE_COLLAPSE_MIN).toBe(10);
+    expect(banner._test.constants.DAY_TYPE_COLLAPSE_MIN).toBe(5);
     expect(document.querySelectorAll('[data-ca-expand-type]')).toHaveLength(0);
     expect(bodyText()).toContain('Продукт 1');
-    expect(bodyText()).toContain('Продукт 10');
+    expect(bodyText()).toContain('Продукт 5');
+    expect(bodyText()).toContain('вид 5');
   });
 
-  it('свёртка по типам не выдумывает категорий и не прячет серверную обрезку', () => {
+  it('свёртка по типам держит фиксированный порядок и не прячет серверную обрезку', () => {
     const banner = loadBanner();
     const pair = (action) => ({ entry: { id: 'e1' }, action });
+    // Правки приходят в обратном порядке — раскладка всё равно идёт по
+    // контракту: Приёмы · Вода · Замеры · Активность.
     const plan = banner._test.planDayTypeGroups('2026-07-05', [
+      pair({ type: 'steps_set', to: 8000 }),
+      pair({ type: 'training_added', kind: 'силовая' }),
+      pair({ type: 'weight_set', from: 82, to: 81.5 }),
+      pair({ type: 'water_set', to: 300 }),
       pair({ type: 'meal_added', meal_label: 'Обед' }),
       pair({ type: 'meal_item_changed', meal_label: 'Обед' }),
-      pair({ type: 'water_set', to: 300 }),
-      pair({ type: 'steps_set', to: 8000 }),
+      // Сон и нормы в пятёрку контракта не входят: остаются обычными строками.
+      pair({ type: 'sleep_set', to: 7 }),
+      pair({ type: 'norms_changed', fields: ['kcal'] }),
       pair({ type: 'truncated', count: 40 }),
     ]);
 
-    expect(plan.groups.map((g) => banner._test.dayTypeGroupLabel(g.label, g.pairs.length))).toEqual([
+    expect(plan.groups.map((g) => `${g.label} · ${g.pairs.length}`)).toEqual([
       'Приёмы · 2',
       'Вода · 1',
-      'Шаги · 1',
+      'Замеры · 1',
+      'Активность · 2',
     ]);
     // «…и ещё N изменений» — обрезка сервера, а не тип правки: остаётся строкой.
-    expect(plan.loose).toHaveLength(1);
-    expect(plan.loose[0].action.type).toBe('truncated');
+    expect(plan.loose.map((p) => p.action.type)).toEqual(['sleep_set', 'norms_changed', 'truncated']);
+    expect(banner._test.dayTypeMoreLabel(9, 'приёмов')).toBe('и ещё 9 правок приёмов');
+    expect(banner._test.dayTypeMoreLabel(2, 'по активности')).toBe('и ещё 2 правки по активности');
   });
 
   it('Куратор · две даты — свежий день раскрыт, прошлый свёрнут', async () => {

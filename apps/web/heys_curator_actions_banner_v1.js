@@ -34,10 +34,17 @@
   const MAX_AUTO_SHOWS_PER_SESSION = 2;
   const MEAL_PRODUCTS_PREVIEW = 3;
   const COLLAPSED_DAY_CAP = 2;
-  // Контракт curator-edits, «очень много правок за день» (12-я сборка):
-  // «Больше десяти правок в одном дне сворачиваются по типам». Порог —
-  // строго больше, то есть ровно десять строк ещё показываются списком.
-  const DAY_TYPE_COLLAPSE_MIN = 10;
+  // Контракт curator-edits, «очень много правок за день» (15-я сборка):
+  // «Больше пяти правок одного типа за дату — тип сворачивается в одну
+  // строку». Порог считается по типу, а не по дню целиком, и строго больше:
+  // ровно пять строк одного типа ещё идут списком. Кадр «Свёрнуто по типам»
+  // показывает, что при срабатывании порога в строки типов уходит вся дата —
+  // рядом с «Приёмы · 12» там стоят «Вода · 3» и «Замеры · 1», которые сами
+  // порога не берут.
+  const DAY_TYPE_COLLAPSE_MIN = 5;
+  // Та же строка: «Тап раскрывает группу на месте: … первые три и закрывающая
+  // строка „и ещё N правок…“».
+  const DAY_TYPE_MEMBERS_PREVIEW = 3;
 
   // ─── State ────────────────────────────────────────────────────────
 
@@ -63,6 +70,7 @@
   let _expandedDates = new Set();
   let _expandedMeals = new Set();
   let _expandedDayTypes = new Set();
+  let _expandedDayTypesFull = new Set();
   let _expandedTail = false;
   // Контракт curator-edits, «правки, пришедшие пока лист открыт»: правки,
   // приехавшие с сервера, пока лист был открыт. В открытый лист они не
@@ -415,10 +423,26 @@
 
   // Строка свёртки по типу внутри дня: «Приёмы · 12». Тап раскрывает список
   // здесь же, лист не закрывается и не перелистывается.
+  //
+  // Строка контракта задаёт вид дословно: свёрнутая строка однострочная —
+  // название типа и сразу за ним счётчик тоном --ac, второй строки-расшифровки
+  // у группы нет («Развернуть/Свернуть» подписью убрано, состояние остаётся в
+  // aria-expanded и в озвучке). Шеврон вниз — и в свёрнутом, и в раскрытом
+  // виде: так нарисован кадр «Свёрнуто по типам».
   function renderDayTypeGroupHtml(typeGroup, renderPair) {
     const expanded = _expandedDayTypes.has(typeGroup.key);
+    const showAll = _expandedDayTypesFull.has(typeGroup.key);
     const count = typeGroup.pairs.length;
-    const membersHtml = expanded ? typeGroup.pairs.map(renderPair).join('') : '';
+    const visible = (expanded && !showAll)
+      ? typeGroup.pairs.slice(0, DAY_TYPE_MEMBERS_PREVIEW)
+      : typeGroup.pairs;
+    const rest = expanded ? Math.max(0, count - visible.length) : 0;
+    // Закрывающая строка раскрытой группы: «и ещё 9 правок приёмов». Число
+    // цифрой, а не словом, — то же решение владельца, что и в подписи листа.
+    const moreHtml = rest > 0
+      ? `<li class="ca-modal__type-more"><button class="ca-modal__item" type="button" data-ca-expand-type-all="${escapeHtml(typeGroup.key)}"><span class="ca-modal__item-copy"><b class="ca-modal__item-title ca-modal__type-more-title">${escapeHtml(dayTypeMoreLabel(rest, typeGroup.more))}</b></span>${chevronSvg(false)}</button></li>`
+      : '';
+    const membersHtml = expanded ? visible.map(renderPair).join('') + moreHtml : '';
     const spoken = `${typeGroup.label}: ${changesLabel(count)}, ${expanded ? 'свернуть' : 'развернуть'}`;
     return `
       <li class="ca-modal__type-group">
@@ -426,10 +450,7 @@
           data-ca-expand-type="${escapeHtml(typeGroup.key)}"
           aria-expanded="${expanded ? 'true' : 'false'}"
           aria-label="${escapeHtml(spoken)}">
-          ${renderRowCopyHtml({
-            title: dayTypeGroupLabel(typeGroup.label, count),
-            subtitle: expanded ? 'Свернуть' : 'Развернуть',
-          })}
+          <span class="ca-modal__item-copy"><b class="ca-modal__item-title ca-modal__type-title">${escapeHtml(typeGroup.label)}<i class="ca-modal__type-count">· ${count}</i></b></span>
           ${chevronSvg(true)}
         </button>
         ${membersHtml ? `<ul class="ca-modal__type-members">${membersHtml}</ul>` : ''}
@@ -469,16 +490,16 @@
       }
       return renderActionRowHtml(action, targetId, entry);
     };
-    // Контракт «очень много правок за день»: больше десяти строк в одном дне
-    // — вместо списка идут строки типов, тап раскрывает список внутри листа.
-    let itemsHtml;
-    if (displayPairs.length > DAY_TYPE_COLLAPSE_MIN) {
-      const plan = planDayTypeGroups(group.date, displayPairs);
-      itemsHtml = plan.groups.map((typeGroup) => renderDayTypeGroupHtml(typeGroup, renderPair)).join('')
-        + plan.loose.map(renderPair).join('');
-    } else {
-      itemsHtml = displayPairs.map(renderPair).join('');
-    }
+    // Контракт «очень много правок за день»: больше пяти правок одного типа
+    // за дату — дата показывается строками типов, тап раскрывает список внутри
+    // листа. Порог берёт один тип, а в строки уходят все: так нарисован кадр,
+    // где рядом с «Приёмы · 12» стоят «Вода · 3» и «Замеры · 1».
+    const plan = planDayTypeGroups(group.date, displayPairs);
+    const collapseByType = plan.groups.some((typeGroup) => typeGroup.pairs.length > DAY_TYPE_COLLAPSE_MIN);
+    const itemsHtml = collapseByType
+      ? plan.groups.map((typeGroup) => renderDayTypeGroupHtml(typeGroup, renderPair)).join('')
+        + plan.loose.map(renderPair).join('')
+      : displayPairs.map(renderPair).join('');
     if (!itemsHtml) return '';
     return `
       <div class="ca-modal__group">
@@ -1174,18 +1195,25 @@
 
   // Контракт curator-edits, «очень много правок за день»: подпись группы —
   // существительное, разделитель «·», число («Приёмы · 12», «Вода · 3»).
-  // Категории — только те типы, что реально приходят в actions; новых не
-  // выдумываем, неизвестный тип остаётся обычной строкой.
+  //
+  // Порядок фиксирован строкой контракта — Приёмы · Вода · Замеры ·
+  // Активность · Добавки — и не зависит ни от числа правок, ни от времени.
+  // «Добавки» в списке нет намеренно: в журнале куратора нет ни одного
+  // действия про добавки, а выдумывать тип, которого сервер не присылает,
+  // нельзя — место в порядке за ним закреплено и займётся, когда действие
+  // появится. Типы вне пятёрки (сон, нормы, профиль, план) в свёртку не
+  // уходят и остаются обычными строками: каждый из них после dedupAndCollapse
+  // даёт не больше одной строки за дату.
   const DAY_TYPE_GROUPS = [
-    { key: 'meals', label: 'Приёмы', match: isMealAction },
-    { key: 'water', label: 'Вода', match: (a) => a.type === 'water_set' },
-    { key: 'training', label: 'Тренировки', match: (a) => a.type === 'training_added' || a.type === 'training_removed' },
-    { key: 'weight', label: 'Вес', match: (a) => a.type === 'weight_set' },
-    { key: 'sleep', label: 'Сон', match: (a) => a.type === 'sleep_set' },
-    { key: 'steps', label: 'Шаги', match: (a) => a.type === 'steps_set' },
-    { key: 'norms', label: 'Нормы', match: (a) => a.type === 'norms_changed' },
-    { key: 'profile', label: 'Профиль', match: (a) => a.type === 'profile_changed' },
-    { key: 'planning', label: 'План', match: (a) => a.type === 'planning_changed' },
+    { key: 'meals', label: 'Приёмы', more: 'приёмов', match: isMealAction },
+    { key: 'water', label: 'Вода', more: 'по воде', match: (a) => a.type === 'water_set' },
+    { key: 'body', label: 'Замеры', more: 'по замерам', match: (a) => a.type === 'weight_set' },
+    {
+      key: 'activity',
+      label: 'Активность',
+      more: 'по активности',
+      match: (a) => a.type === 'training_added' || a.type === 'training_removed' || a.type === 'steps_set',
+    },
   ];
 
   function dayTypeGroupFor(action) {
@@ -1195,8 +1223,10 @@
     return DAY_TYPE_GROUPS.find((g) => g.match(action)) || null;
   }
 
-  function dayTypeGroupLabel(label, count) {
-    return `${label} · ${count}`;
+  // Закрывающая строка раскрытой группы: «и ещё 9 правок приёмов».
+  function dayTypeMoreLabel(rest, more) {
+    const tail = more ? ` ${more}` : '';
+    return `и ещё ${rest} ${pluralRu(rest, 'правка', 'правки', 'правок')}${tail}`;
   }
 
   // Число в подписи — ровно столько строк, сколько раскроет тап: одинаковые
@@ -1212,11 +1242,14 @@
         continue;
       }
       if (!buckets.has(type.key)) {
-        buckets.set(type.key, { key: `${date}|${type.key}`, label: type.label, pairs: [] });
+        buckets.set(type.key, { key: `${date}|${type.key}`, label: type.label, more: type.more, pairs: [] });
       }
       buckets.get(type.key).pairs.push(pair);
     }
-    return { groups: Array.from(buckets.values()), loose };
+    // Порядок групп — из DAY_TYPE_GROUPS, а не из порядка прихода правок:
+    // строка контракта запрещает раскладывать типы по числу правок и по времени.
+    const groups = DAY_TYPE_GROUPS.map((type) => buckets.get(type.key)).filter(Boolean);
+    return { groups, loose };
   }
 
   function sheetSubtitle(groups) {
@@ -1687,6 +1720,7 @@
     _expandedDates = new Set();
     _expandedMeals = new Set();
     _expandedDayTypes = new Set();
+    _expandedDayTypesFull = new Set();
     _expandedTail = false;
     _pendingWhileSheetOpen = [];
     _hiddenActionKeys = null;
@@ -2085,8 +2119,22 @@
         e.preventDefault();
         e.stopPropagation();
         const key = expandType.getAttribute('data-ca-expand-type') || '';
-        if (_expandedDayTypes.has(key)) _expandedDayTypes.delete(key);
-        else _expandedDayTypes.add(key);
+        if (_expandedDayTypes.has(key)) {
+          _expandedDayTypes.delete(key);
+          // Свернули группу — «показать все» тоже сбрасывается: следующий тап
+          // снова открывает первые три и закрывающую строку.
+          _expandedDayTypesFull.delete(key);
+        } else {
+          _expandedDayTypes.add(key);
+        }
+        renderModal();
+        return;
+      }
+      const expandTypeAll = e.target && e.target.closest ? e.target.closest('[data-ca-expand-type-all]') : null;
+      if (expandTypeAll) {
+        e.preventDefault();
+        e.stopPropagation();
+        _expandedDayTypesFull.add(expandTypeAll.getAttribute('data-ca-expand-type-all') || '');
         renderModal();
         return;
       }
@@ -2353,6 +2401,7 @@
     _expandedDates = new Set();
     _expandedMeals = new Set();
     _expandedDayTypes = new Set();
+    _expandedDayTypesFull = new Set();
     // Иначе после тапов по строкам / «Понятно» groupVisibleByDate даёт 0 пар.
     _hiddenActionKeys = new Set();
     try {
@@ -2591,7 +2640,7 @@
       groupVisibleByDate,
       planDateLayout,
       planDayTypeGroups,
-      dayTypeGroupLabel,
+      dayTypeMoreLabel,
       getDayCue,
       getVisibleCue,
       shouldShowNutritionDot,
