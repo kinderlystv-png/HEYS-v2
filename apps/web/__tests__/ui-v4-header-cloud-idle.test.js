@@ -92,6 +92,20 @@ function computedOpacity(el) {
     return raw === '' ? 1 : Number(raw);
 }
 
+// Сила тона роли — из самого набора палитр. Считать по элементу нельзя:
+// jsdom не разворачивает var() внутри rgba(), и computed color возвращает
+// пустую строку — ровно поэтому прежняя редакция теста мерила opacity
+// элемента. Но opacity гасила заодно рамку и фон пилюли, а контракт просит
+// приглушить именно знак, поэтому теперь сила живёт в альфе роли.
+function roleAlpha(role) {
+    // Первый блок палитры — песочный набор по умолчанию; для тёмных наборов
+    // значение проверяется отдельным сопоставлением по тексту.
+    const decl = new RegExp('--' + role + ':\\s*([^;]+);').exec(paletteCss);
+    if (!decl) return null;
+    const rgba = /rgba\([^)]*,\s*([\d.]+)\s*\)/.exec(decl[1]);
+    return rgba ? Number(rgba[1]) : 1;
+}
+
 describe('UI v4 · облако синхронизации в шапке', () => {
     beforeEach(() => {
         const style = document.createElement('style');
@@ -126,18 +140,19 @@ describe('UI v4 · облако синхронизации в шапке', () =>
         expect(baseCss).not.toMatch(/\.cloud-sync-indicator\.idle\s*\{[^}]*display:\s*none/);
     });
 
-    it('покой приглушён: тон ролью и не в полную силу', () => {
+    it('покой приглушён: ровно 30 % чернил, ролью', () => {
         const cloud = buildHeader('idle');
-        const opacity = computedOpacity(cloud);
-        expect(opacity).toBeLessThan(1);
-        expect(opacity).toBeGreaterThanOrEqual(0.6); // видимая примета, а не призрак
+        // Контракт «третий бокс»: в покое приглушённым тоном чернил 30 %.
+        // Приглушает тон, а не opacity: та гасила бы и рамку, и фон пилюли.
+        expect(getComputedStyle(cloud).display).not.toBe("none");
+        expect(computedOpacity(cloud)).toBe(1);
+        expect(roleAlpha("v4-ink-30")).toBeCloseTo(0.3, 2);
 
-        // Тон — ролью набора, а не литералом: покой на ступень бледнее чернил
-        // активных иконок шапки (ink-3 против ink-2).
+        // Тон — ролью набора, а не литералом.
         const toneRule = idleRules().find((body) => /(^|;|\s)color:/.test(body)) || '';
-        expect(toneRule).toMatch(/color:\s*var\(--v4-ink-3/);
+        expect(toneRule).toMatch(/color:\s*var\(--v4-ink-30/);
         expect(baseCss).toMatch(
-            /\[data-theme\$="dark"\] \.cloud-sync-indicator\.idle \{[^}]*color:\s*var\(--v4-ink-3/,
+            /\[data-theme\$="dark"\] \.cloud-sync-indicator\.idle \{[^}]*color:\s*var\(--v4-ink-30/,
         );
 
         const actionRule = baseCss.match(/\.hdr-header-icon-btn \{[^}]*\}/)?.[0] || '';
@@ -145,23 +160,23 @@ describe('UI v4 · облако синхронизации в шапке', () =>
     });
 
     it('синхронизация и проблема заметнее покоя', () => {
-        const tone = {};
-        const weight = {};
-        for (const state of STATES) {
-            const cloud = buildHeader(state);
-            tone[state] = getComputedStyle(cloud).color;
-            weight[state] = computedOpacity(cloud);
-        }
+        // Сила: покой бледнее работы. Сравниваем объявленные альфы ролей —
+        // computed color в jsdom пуст (см. roleAlpha выше).
+        expect(roleAlpha("v4-ink-30")).toBeLessThan(roleAlpha("v4-ink-2"));
 
-        // Сила: покой единственный приглушён.
-        expect(weight.idle).toBeLessThan(weight.syncing);
-        expect(weight.idle).toBeLessThan(weight.problem);
-
-        // Тон: три разных состояния — три разных цвета, покой не путается ни с
-        // работой, ни с ошибкой.
-        expect(tone.idle).not.toBe(tone.syncing);
-        expect(tone.idle).not.toBe(tone.problem);
-        expect(tone.syncing).not.toBe(tone.problem);
+        // Тон: три состояния — три разные роли, покой не путается ни с
+        // работой, ни с ошибкой, а ошибка красная, а не акцентная.
+        const ruleOf = (state) => {
+            const re = new RegExp(
+                "\\.cloud-sync-indicator\\." + state + "\\s*\\{([^}]*--v4-[^}]*)\\}",
+                "g",
+            );
+            return [...baseCss.matchAll(re)].map((m) => m[1]).join(" ");
+        };
+        expect(ruleOf("idle")).toContain("--v4-ink-30");
+        expect(ruleOf("syncing")).toContain("--v4-ink-2");
+        expect(ruleOf("problem")).toContain("--v4-bad-text");
+        expect(ruleOf("problem")).not.toContain("--v4-warn-2");
 
         // Движение есть только у работы: покой стоит молча.
         expect(baseCss).toMatch(
@@ -175,7 +190,10 @@ describe('UI v4 · облако синхронизации в шапке', () =>
         document.documentElement.setAttribute('data-theme-id', 'sand-dark');
         const cloud = buildHeader('idle');
         expect(getComputedStyle(cloud).display).not.toBe('none');
-        expect(computedOpacity(cloud)).toBeLessThan(1);
+        // Приглушает роль, а не opacity элемента: в тёмных наборах
+        // --v4-ink-30 объявлена своими чернилами той же силы.
+        expect(computedOpacity(cloud)).toBe(1);
+        expect(paletteCss).toMatch(/--v4-ink-30:\s*rgba\(242, 237, 230, 0\.3\)/);
     });
 
     it('в шапке ровно ожидаемый состав: два действия и пассивная примета', () => {
@@ -200,14 +218,40 @@ describe('UI v4 · облако синхронизации в шапке', () =>
         expect(boxes[0]).toBe(cloud);
     });
 
-    it('канвас всё ещё просит обратное — отступление названо вслух', () => {
-        // Когда пакет дизайнера пересоберут, строка изменится и тест упадёт:
-        // это сигнал перечитать решение владельца, а не «починить» покой.
-        expect(readContractRow('tips.v4.dc.html', 'третий бокс')).toBe(
-            'индикатор синхронизации, появляется слева от группы только при проблеме: '
-                + 'не сохранилось, нет сети, идёт отправка',
-        );
-        // Отступление зафиксировано там же, где живёт правило.
-        expect(baseCss).toMatch(/Решение владельца 24 августа[\s\S]{0,400}третий бокс/);
+    // Сторож сработал по назначению: строка контракта переписана под решение
+    // владельца от 24 августа, отступление снялось. Раньше здесь сверялся
+    // текст прежней редакции («появляется только при проблеме») — теперь
+    // проверяется согласие кода с новой строкой.
+    it('облако из шапки не исчезает: в покое 30 % чернил, при проблеме --red с точкой', () => {
+        const row = readContractRow('tips.v4.dc.html', 'третий бокс');
+        expect(row).toContain('стоит в шапке всегда');
+        expect(row).toContain('Скрытым в покое не бывает');
+
+        // Тело правила читаем от селектора до ближайшей закрывающей скобки.
+        const bodyOf = (selector) => {
+            const at = baseCss.lastIndexOf(selector + " {");
+            expect(at, selector + " должен существовать").toBeGreaterThan(-1);
+            return baseCss.slice(at, baseCss.indexOf("}", at));
+        };
+
+        // Покой — ровно 30 % чернил своей ролью, а не ink-3 под opacity:
+        // прежняя пара давала около 34 % и приглушала заодно рамку и фон,
+        // потому что opacity действует на весь элемент.
+        const idle = bodyOf(".cloud-sync-indicator.idle");
+        expect(idle).toContain("--v4-ink-30");
+        expect(idle).not.toMatch(/opacity:\s*0\.75/);
+        expect(paletteCss).toMatch(/--v4-ink-30:\s*rgba\([^)]*0\.3\)/);
+
+        // Проблема — тон --red из набора, а не --v4-warn-2: в песочном наборе
+        // тот равен тону обычного акцента, и красный не читался вовсе.
+        const problem = bodyOf(".cloud-sync-indicator.problem");
+        expect(problem).toContain("--v4-bad-text");
+        expect(problem).not.toContain("--v4-warn-2");
+
+        // Точка 6 px рядом — вторая примета проблемы, кроме тона.
+        const dot = bodyOf(".cloud-sync-indicator.problem::after");
+        expect(dot).toMatch(/width:\s*6px/);
+        expect(dot).toMatch(/height:\s*6px/);
+        expect(dot).toContain("--v4-bad-text");
     });
 });
