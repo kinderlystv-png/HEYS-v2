@@ -854,6 +854,156 @@ function assignTraining(day, index, { exercises, time, dayLabel, assignedBy, wee
 }
 
 /**
+ * Адресная правка черновика: добавить, убрать и изменить упражнения и подходы
+ * по id, не пересказывая задание целиком.
+ *
+ * Полная замена списка (assignTraining) остаётся для «назначь другое», но для
+ * «добавь ещё одно упражнение» она опасна: весь список пришлось бы диктовать
+ * заново, и каждый такой пересказ — шанс потерять упражнение или переврать вес.
+ * Поэтому операции адресные, как у позиций приёма еды.
+ *
+ * Итог всегда проходит через общий buildWorkoutLog: правила суперсетов, единиц
+ * измерения и лимитов у правки и у назначения одни, второго набора условий нет.
+ */
+function editTrainingPlan(day, index, ops, { nowMs, clientId }) {
+  const list = Array.isArray(day.trainings) ? day.trainings : [];
+  const i = Number(index);
+  if (!Number.isInteger(i) || i < 0 || i >= list.length) {
+    return { day, error: list.length
+      ? `В дне тренировок ${list.length} — index от 0 до ${list.length - 1}.`
+      : 'В этом дне нет тренировок.' };
+  }
+  const prev = list[i] || {};
+  if (!prev.plan || !prev.plan.status) {
+    return { day, error: `Тренировка ${i} — не назначенный план, а обычная запись клиента. Правь её через heys_update_training (время, оценки, комментарий); состав упражнений клиента куратор не переписывает.` };
+  }
+  if (prev.plan.status !== 'assigned') {
+    return { day, error: `Тренировка ${i} — план со статусом «${prev.plan.status}»: клиент уже открыл его в приложении. Прямая правка заменила бы его работу; отправь её предложением через heys_propose_training_edit.` };
+  }
+
+  const o = ops || {};
+  const asList = (v) => (Array.isArray(v) ? v : []);
+  const hasAny = ['exercises_add', 'exercises_remove', 'exercises_patch', 'exercises_order']
+    .some((k) => asList(o[k]).length);
+  if (!hasAny) {
+    return { day, error: 'Нечего менять: передай exercises_add, exercises_remove, exercises_patch или exercises_order.' };
+  }
+
+  let current = exercisesToInput(prev.workoutLog && prev.workoutLog.exercises);
+  const known = () => current.map((ex) => `${ex.id} («${ex.name}»)`).join(', ');
+
+  // Порядок фиксирован: сначала правки существующего, затем удаление, затем
+  // добавление, затем перестановка. Иначе результат зависел бы от того, в каком
+  // порядке модель перечислила операции в одном вызове.
+  for (const patch of asList(o.exercises_patch)) {
+    const p = patch || {};
+    const target = current.find((ex) => ex.id === p.exercise_id);
+    if (!target) {
+      return { day, error: `Упражнение ${p.exercise_id || '(без exercise_id)'} в этом плане не найдено. Есть: ${known()}.` };
+    }
+    for (const [arg, field] of [['name', 'name'], ['unit', 'unit'], ['note', 'note']]) {
+      if (typeof p[arg] === 'string') target[field] = p[arg];
+    }
+    for (const [arg, field] of [['rpe', 'rpe'], ['rest_sec', 'rest_sec'], ['superset_group', 'superset_group'], ['bodyweight_factor', 'bodyweight_factor']]) {
+      if (p[arg] !== undefined && p[arg] !== null) target[field] = p[arg];
+    }
+
+    for (const ap of asList(p.approaches_patch)) {
+      const a = ap || {};
+      const hit = target.approaches.find((x) => x.id === a.approach_id);
+      if (!hit) {
+        const ids = target.approaches.map((x) => x.id).join(', ');
+        return { day, error: `Подход ${a.approach_id || '(без approach_id)'} у «${target.name}» не найден. Есть: ${ids}.` };
+      }
+      for (const [arg, field] of [['weight_kg', 'weight_kg'], ['reps', 'reps'], ['duration_sec', 'duration_sec'], ['distance_m', 'distance_m'], ['extra_weight_kg', 'extra_weight_kg'], ['done', 'done'], ['discomfort', 'discomfort'], ['discomfort_note', 'discomfort_note'], ['drops', 'drops']]) {
+        if (a[arg] !== undefined) hit[field] = a[arg];
+      }
+      // Разминочный ↔ рабочий: снятие пишется явным 'work', иначе снять метку
+      // было бы нечем — пропуск поля значит «оставь как было».
+      if (a.set_type === 'warmup') hit.set_type = 'warmup';
+      else if (a.set_type === 'work') delete hit.set_type;
+    }
+
+    const removeAps = asList(p.approaches_remove);
+    if (removeAps.length) {
+      const missing = removeAps.filter((id) => !target.approaches.some((x) => x.id === id));
+      if (missing.length) {
+        return { day, error: `У «${target.name}» нет подходов: ${missing.join(', ')}.` };
+      }
+      target.approaches = target.approaches.filter((x) => !removeAps.includes(x.id));
+      if (!target.approaches.length) {
+        return { day, error: `У «${target.name}» не осталось бы подходов. Убери упражнение целиком через exercises_remove.` };
+      }
+    }
+    for (const add of asList(p.approaches_add)) {
+      const copy = { ...(add || {}) };
+      delete copy.id;
+      target.approaches.push(copy);
+    }
+  }
+
+  const removeEx = asList(o.exercises_remove);
+  if (removeEx.length) {
+    const missing = removeEx.filter((id) => !current.some((ex) => ex.id === id));
+    if (missing.length) {
+      return { day, error: `В плане нет упражнений: ${missing.join(', ')}. Есть: ${known()}.` };
+    }
+    current = current.filter((ex) => !removeEx.includes(ex.id));
+  }
+
+  for (const add of asList(o.exercises_add)) {
+    const raw = { ...(add || {}) };
+    const at = raw.at_index;
+    delete raw.at_index;
+    delete raw.id;
+    if (at === undefined || at === null) current.push(raw);
+    else {
+      const k = Number(at);
+      if (!Number.isInteger(k) || k < 0 || k > current.length) {
+        return { day, error: `at_index ${at}: место вставки — целое от 0 до ${current.length}.` };
+      }
+      current.splice(k, 0, raw);
+    }
+  }
+
+  const order = asList(o.exercises_order);
+  if (order.length) {
+    if (order.length !== current.length) {
+      return { day, error: `exercises_order перечисляет ${order.length} упражнений, а в плане их ${current.length} — порядок задаётся полным списком id.` };
+    }
+    const reordered = [];
+    for (const id of order) {
+      const hit = current.find((ex) => ex.id === id);
+      if (!hit || reordered.includes(hit)) {
+        return { day, error: `exercises_order: ${id} не из этого плана или повторяется. Есть: ${known()}.` };
+      }
+      reordered.push(hit);
+    }
+    current = reordered;
+  }
+
+  if (!current.length) {
+    return { day, error: 'В плане не осталось упражнений. Пустое задание не назначают — убери тренировку через heys_delete_training.' };
+  }
+
+  const built = buildWorkoutLog(current, { defaultDone: false, preserveIds: true });
+  if (built.error) return { day, error: built.error };
+
+  const training = {
+    ...prev,
+    workoutLog: built.log,
+    // Снимок задания едет за правкой, как и при повторном назначении: клиент
+    // ещё не начал, сравнивать план с фактом пока не с чем.
+    planSnapshot: { exercises: built.log.exercises },
+    plan: { ...prev.plan, assignedAt: nowMs },
+    updatedAt: nowMs,
+  };
+  const trainings = list.slice();
+  trainings[i] = training;
+  return { day: touch({ ...day, trainings }, nowMs, clientId), index: i, exercises: built.log.exercises.length, error: null };
+}
+
+/**
  * Программа куратора, Слой 5: правка плана, который клиент уже открыл.
  *
  * Прямой записи здесь нет и быть не может — клиент в этот момент может стоять
@@ -1112,7 +1262,56 @@ const REST_PRESETS = [60, 90, 120, 180];
  * `done` по умолчанию true: куратор вносит уже состоявшуюся тренировку, а не
  * план. В приложении наоборот — там подход отмечают по ходу.
  */
-function buildWorkoutLog(exercises, { durationMin, defaultDone } = {}) {
+/**
+ * Модель упражнений → та же форма, которую принимает buildWorkoutLog.
+ *
+ * Одно представление на чтение и запись: куратор видит ровно те имена полей,
+ * которые потом отправляет назад, и правка не требует перевода между двумя
+ * словарями. Отсюда же берётся исходник для адресных операций над планом —
+ * применили изменения к этой форме и прогнали через общий валидатор.
+ */
+function exercisesToInput(exercises) {
+  return (Array.isArray(exercises) ? exercises : []).map((ex) => {
+    const unit = typeof ex.unit === 'string' && ex.unit ? ex.unit : 'weight_reps';
+    const out = {
+      id: ex.id,
+      name: ex.name || '',
+      unit,
+      note: typeof ex.note === 'string' ? ex.note : '',
+      rpe: Number(ex.rpe) || 0,
+      superset_group: Number(ex.ssGroup) || 0,
+      rest_sec: Number(ex.restSec) || 90,
+      approaches: (Array.isArray(ex.approaches) ? ex.approaches : []).map((a) => {
+        const ap = { id: a.id, done: a.done !== false };
+        const w = a.weightKg === '' || a.weightKg === undefined || a.weightKg === null ? null : Number(a.weightKg);
+        if (w !== null && Number.isFinite(w)) ap.weight_kg = w;
+        if (a.reps !== undefined && a.reps !== null) ap.reps = Number(a.reps);
+        if (a.durationSec !== undefined && a.durationSec !== null) ap.duration_sec = Number(a.durationSec);
+        if (a.distanceM !== undefined && a.distanceM !== null) ap.distance_m = Number(a.distanceM);
+        if (a.type === 'warmup') ap.set_type = 'warmup';
+        if (a.extraWeightKg !== undefined && a.extraWeightKg !== null) ap.extra_weight_kg = Number(a.extraWeightKg);
+        if (a.discomfort) {
+          ap.discomfort = true;
+          if (a.discomfortNote) ap.discomfort_note = String(a.discomfortNote);
+        }
+        if (Array.isArray(a.drops) && a.drops.length) {
+          ap.drops = a.drops.map((d) => ({
+            weight_kg: Number(d.weightKg),
+            reps: Number(d.reps),
+            done: d.done !== false,
+          }));
+        }
+        return ap;
+      }),
+    };
+    if (unit === 'bodyweight' && ex.bodyweightFactor !== undefined && ex.bodyweightFactor !== null) {
+      out.bodyweight_factor = Number(ex.bodyweightFactor);
+    }
+    return out;
+  });
+}
+
+function buildWorkoutLog(exercises, { durationMin, defaultDone, preserveIds } = {}) {
   // Назначение плана пишет подходы невыполненными (Слой 2 программы куратора):
   // куратор вносит задание, а не отчёт о том, что клиент уже поднял вес.
   const doneDefault = defaultDone === undefined ? true : !!defaultDone;
@@ -1245,7 +1444,9 @@ function buildWorkoutLog(exercises, { durationMin, defaultDone } = {}) {
         : strictNum(a.extra_weight_kg);
 
       const approach = {
-        id: makeId('ap_'),
+        // Правка существующего подхода не должна выглядеть для приложения
+        // новым: id живёт, пока живёт сам подход.
+        id: preserveIds && typeof a.id === 'string' && a.id ? a.id : makeId('ap_'),
         weightKg: w === null ? '' : String(w),
         done: a.done === undefined ? doneDefault : a.done,
       };
@@ -1285,7 +1486,7 @@ function buildWorkoutLog(exercises, { durationMin, defaultDone } = {}) {
 
     // sets/reps/weightKg — legacy-поля, приложение держит их синхронными с
     // первой строкой подходов (syncLegacyFieldsFromApproaches).
-    let exId = makeId('ex_');
+    let exId = preserveIds && typeof raw.id === 'string' && raw.id ? raw.id : makeId('ex_');
     while (usedIds.has(exId)) exId = makeId('ex_');
     usedIds.add(exId);
     const exOut = {
@@ -2600,6 +2801,8 @@ module.exports = {
   deleteTraining,
   setStrengthWorkout,
   assignTraining,
+  editTrainingPlan,
+  exercisesToInput,
   proposeTrainingEdit,
   moveTrainingOut,
   moveTrainingIn,

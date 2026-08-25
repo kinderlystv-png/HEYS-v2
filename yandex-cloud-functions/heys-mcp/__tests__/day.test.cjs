@@ -1517,6 +1517,147 @@ test('assignTraining правит свой черновик, пока клиен
   assert.equal(t.plan.weekIndex, 2);
 });
 
+/** Черновик из двух упражнений: жим на два подхода и тяга на один. */
+function draftDay() {
+  return day.assignTraining(day.emptyDay('2026-08-11', CLIENT, 1000), undefined, {
+    exercises: [
+      { name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }, { reps: 6, weight_kg: 65 }] },
+      { name: 'Тяга', approaches: [{ reps: 6, weight_kg: 80 }] },
+    ],
+    assignedBy: 'Артём',
+  }, { nowMs: 1000, clientId: CLIENT });
+}
+
+test('editTrainingPlan дописывает упражнение, не трогая остальные', () => {
+  const draft = draftDay();
+  const before = draft.day.trainings[0].workoutLog.exercises.map((e) => e.id);
+
+  const res = day.editTrainingPlan(draft.day, 0, {
+    exercises_add: [{ name: 'Присед', approaches: [{ reps: 5, weight_kg: 100 }] }],
+  }, { nowMs: 2000, clientId: CLIENT });
+
+  assert.equal(res.error, null);
+  const after = res.day.trainings[0].workoutLog.exercises;
+  assert.equal(after.length, 3);
+  assert.deepEqual(after.slice(0, 2).map((e) => e.id), before, 'прежние упражнения те же');
+  assert.equal(after[2].name, 'Присед');
+  assert.equal(after[2].approaches[0].done, false, 'дописанное — тоже задание, а не факт');
+  assert.equal(res.day.trainings[0].planSnapshot.exercises.length, 3, 'снимок задания едет за правкой');
+});
+
+test('editTrainingPlan правит подход по id, и id подхода живёт', () => {
+  const draft = draftDay();
+  const ex = draft.day.trainings[0].workoutLog.exercises[0];
+  const apId = ex.approaches[1].id;
+
+  const res = day.editTrainingPlan(draft.day, 0, {
+    exercises_patch: [{ exercise_id: ex.id, rest_sec: 120, approaches_patch: [{ approach_id: apId, weight_kg: 70, reps: 5 }] }],
+  }, { nowMs: 2000, clientId: CLIENT });
+
+  assert.equal(res.error, null);
+  const got = res.day.trainings[0].workoutLog.exercises[0];
+  assert.equal(got.id, ex.id);
+  assert.equal(got.restSec, 120);
+  assert.equal(got.approaches[1].id, apId, 'для приложения это тот же подход');
+  assert.equal(got.approaches[1].weightKg, '70');
+  assert.equal(got.approaches[1].reps, 5);
+  assert.equal(got.approaches[0].weightKg, '60', 'соседний подход не тронут');
+});
+
+test('editTrainingPlan убирает упражнение и переставляет порядок', () => {
+  const draft = draftDay();
+  const [zhim, tyaga] = draft.day.trainings[0].workoutLog.exercises;
+
+  const added = day.editTrainingPlan(draft.day, 0, {
+    exercises_add: [{ name: 'Присед', approaches: [{ reps: 5, weight_kg: 100 }] }],
+  }, { nowMs: 2000, clientId: CLIENT });
+  const prisedId = added.day.trainings[0].workoutLog.exercises[2].id;
+
+  const removed = day.editTrainingPlan(added.day, 0, {
+    exercises_remove: [zhim.id],
+  }, { nowMs: 3000, clientId: CLIENT });
+  assert.equal(removed.error, null);
+  assert.deepEqual(removed.day.trainings[0].workoutLog.exercises.map((e) => e.id), [tyaga.id, prisedId]);
+
+  const ordered = day.editTrainingPlan(removed.day, 0, {
+    exercises_order: [prisedId, tyaga.id],
+  }, { nowMs: 4000, clientId: CLIENT });
+  assert.equal(ordered.error, null);
+  assert.deepEqual(ordered.day.trainings[0].workoutLog.exercises.map((e) => e.id), [prisedId, tyaga.id]);
+});
+
+test('editTrainingPlan не даёт опустошить план и не молчит о чужих id', () => {
+  const draft = draftDay();
+  const [zhim, tyaga] = draft.day.trainings[0].workoutLog.exercises;
+
+  const empty = day.editTrainingPlan(draft.day, 0, {
+    exercises_remove: [zhim.id, tyaga.id],
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(empty.error, /heys_delete_training/);
+
+  const alien = day.editTrainingPlan(draft.day, 0, {
+    exercises_remove: ['ex_чужой'],
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(alien.error, /ex_чужой/);
+  assert.match(alien.error, new RegExp(zhim.id), 'ошибка называет доступные id');
+
+  const lastAp = day.editTrainingPlan(draft.day, 0, {
+    exercises_patch: [{ exercise_id: tyaga.id, approaches_remove: [tyaga.approaches[0].id] }],
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(lastAp.error, /exercises_remove/);
+});
+
+test('editTrainingPlan не трогает начатое клиентом и чужие записи', () => {
+  const draft = draftDay();
+  const ex = draft.day.trainings[0].workoutLog.exercises[0];
+
+  const opened = JSON.parse(JSON.stringify(draft.day));
+  opened.trainings[0].plan.status = 'started';
+  const started = day.editTrainingPlan(opened, 0, {
+    exercises_remove: [ex.id],
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(started.error, /heys_propose_training_edit/);
+
+  const own = day.addTraining(day.emptyDay('2026-08-11', CLIENT, 1000), [30, 0, 0, 0], { time: '10:00' }, { nowMs: 1000, clientId: CLIENT });
+  const foreign = day.editTrainingPlan(own.day, 0, {
+    exercises_add: [{ name: 'Присед', approaches: [{ reps: 5, weight_kg: 100 }] }],
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(foreign.error, /запись клиента/);
+});
+
+test('exercisesToInput отдаёт упражнение в той же форме, которой его принимают', () => {
+  const assigned = day.assignTraining(day.emptyDay('2026-08-11', CLIENT, 1000), undefined, {
+    exercises: [{
+      name: 'Подтягивания',
+      unit: 'bodyweight',
+      bodyweight_factor: 1,
+      rest_sec: 120,
+      rpe: 8,
+      note: 'до отказа',
+      approaches: [
+        { reps: 8, set_type: 'warmup' },
+        { reps: 6, extra_weight_kg: 10, discomfort: true, discomfort_note: 'локоть' },
+      ],
+    }],
+    assignedBy: 'Артём',
+  }, { nowMs: 1000, clientId: CLIENT });
+
+  const [ex] = day.exercisesToInput(assigned.day.trainings[0].workoutLog.exercises);
+  assert.equal(ex.unit, 'bodyweight');
+  assert.equal(ex.bodyweight_factor, 1);
+  assert.equal(ex.rest_sec, 120);
+  assert.equal(ex.rpe, 8);
+  assert.equal(ex.note, 'до отказа');
+  assert.equal(ex.approaches[0].set_type, 'warmup');
+  assert.equal(ex.approaches[1].extra_weight_kg, 10);
+  assert.equal(ex.approaches[1].discomfort_note, 'локоть');
+  // Круг замыкается: то, что отдали куратору, принимается обратно без перевода.
+  const rebuilt = day.assignTraining(day.emptyDay('2026-08-12', CLIENT, 1000), undefined, {
+    exercises: [ex], assignedBy: 'Артём',
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(rebuilt.error, null);
+});
+
 test('assignTraining не пишет поверх плана, который клиент уже открыл', () => {
   const assigned = day.assignTraining(day.emptyDay('2026-08-11', CLIENT, 1000), undefined, {
     exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }] }],

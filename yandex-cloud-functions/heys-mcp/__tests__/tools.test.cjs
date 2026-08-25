@@ -663,6 +663,94 @@ test('assign_program и assign_training отказывают без тарифа
   assert.equal(apiWrongPlan.saves.length, 0);
 });
 
+/** День с черновиком, который клиент ещё не открывал. */
+const DRAFT_PLAN_DAY = () => ({
+  date: '2026-08-01',
+  meals: [],
+  waterMl: 0,
+  updatedAt: 111,
+  trainings: [{
+    id: 'tr_a',
+    type: 'strength',
+    strengthEntryMode: 'workout_builder',
+    z: [0, 0, 0, 0],
+    time: '18:00',
+    plan: { id: 'pl_1', status: 'assigned', assignedBy: 'Артём', dayLabel: 'День А' },
+    planSnapshot: { exercises: [] },
+    workoutLog: {
+      version: 1,
+      exercises: [{
+        id: 'ex1',
+        name: 'Жим',
+        ssGroup: 0,
+        rpe: 0,
+        restSec: 90,
+        approaches: [
+          { id: 'a1', weightKg: '75', reps: 8, done: false },
+          { id: 'a2', weightKg: '75', reps: 8, done: false },
+        ],
+      }],
+    },
+  }],
+});
+
+test('get_training показывает состав с id упражнений и подходов', async () => {
+  const api = fakeApi({ day: DRAFT_PLAN_DAY(), card: PROPLUS_CARD });
+  const res = await build(api).heys_get_training({});
+
+  assert.match(res.text, /ex1/);
+  assert.match(res.text, /a1/, 'id подхода виден — по нему и правят');
+  assert.match(res.text, /heys_update_training/, 'сразу сказано, чем править');
+  const [t] = res.structured.trainings;
+  assert.equal(t.index, 0);
+  assert.equal(t.plan_status, 'assigned');
+  assert.equal(t.editable, true);
+  assert.equal(t.exercises[0].approaches[0].weight_kg, 75);
+  assert.equal(api.saves.length, 0, 'чтение ничего не пишет');
+});
+
+test('get_training про начатый план говорит, что правка только предложением', async () => {
+  const api = fakeApi({ day: STARTED_PLAN_DAY(), card: PROPLUS_CARD });
+  const res = await build(api).heys_get_training({ index: 0 });
+  assert.equal(res.structured.trainings[0].editable, false);
+  assert.match(res.text, /heys_propose_training_edit/);
+});
+
+test('update_training правит состав черновика адресно', async () => {
+  const api = fakeApi({ day: DRAFT_PLAN_DAY(), card: PROPLUS_CARD });
+  const res = await build(api).heys_update_training({
+    index: 0,
+    exercises_add: [{ name: 'Тяга', approaches: [{ reps: 6, weight_kg: 80 }] }],
+    exercises_patch: [{ exercise_id: 'ex1', approaches_patch: [{ approach_id: 'a2', weight_kg: 80 }] }],
+  });
+
+  const saved = api.saves.find((x) => x.key.startsWith('heys_dayv2_'));
+  const ex = saved.value.trainings[0].workoutLog.exercises;
+  assert.equal(ex.length, 2);
+  assert.equal(ex[0].approaches[1].weightKg, '80');
+  assert.equal(ex[0].approaches[1].id, 'a2', 'подход остался тем же');
+  assert.equal(ex[1].name, 'Тяга');
+  assert.equal(saved.value.trainings[0].plan.status, 'assigned');
+  assert.equal(saved.value.trainings[0].time, '18:00', 'карточка тренировки не тронута');
+  assert.equal(res.structured.exercises.length, 2, 'в ответе состав в той же форме, что на вход');
+});
+
+test('update_training не правит состав начатого плана и требует Pro Спорт', async () => {
+  const started = fakeApi({ day: STARTED_PLAN_DAY(), card: PROPLUS_CARD });
+  await assert.rejects(
+    () => build(started).heys_update_training({ index: 0, exercises_remove: ['ex1'] }),
+    (e) => e.code === 'invalid_plan_edit' && /heys_propose_training_edit/.test(e.message),
+  );
+  assert.equal(started.saves.length, 0);
+
+  const noSub = fakeApi({ day: DRAFT_PLAN_DAY() });
+  await assert.rejects(
+    () => build(noSub).heys_update_training({ index: 0, exercises_remove: ['ex1'] }),
+    (e) => e.code === 'tariff_required',
+  );
+  assert.equal(noSub.saves.length, 0);
+});
+
 // --- heys_propose_training_edit -----------------------------------------
 
 /** День с планом, который клиент открыл и закрыл в нём первый подход. */

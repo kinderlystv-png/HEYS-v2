@@ -2355,9 +2355,86 @@ function createTools({
       };
     },
 
+    async heys_get_training(args) {
+      const date = resolveDate(args.date, nowMs);
+      const current = await readDay(date);
+      const all = (current.trainings || [])
+        .map((t, index) => ({ t, index }))
+        .filter(({ t }) => day.isRealTraining(t));
+      const picked = args.index === undefined || args.index === null
+        ? all
+        : all.filter(({ index }) => index === Number(args.index));
+      if (!picked.length) {
+        throw new ToolError('not_found', all.length
+          ? `В дне ${date} тренировок ${all.length} — index от 0 до ${all.length - 1}.`
+          : `В дне ${date} нет ни одной тренировки.`);
+      }
+
+      const trainings = picked.map(({ t, index }) => ({
+        index,
+        time: t.time || null,
+        type: t.type || null,
+        plan_status: t.plan && t.plan.status ? String(t.plan.status) : null,
+        day_label: t.plan && t.plan.dayLabel ? t.plan.dayLabel : null,
+        assigned_by: t.plan && t.plan.assignedBy ? t.plan.assignedBy : null,
+        program_id: t.plan && t.plan.programId ? t.plan.programId : null,
+        editable: !!(t.plan && t.plan.status === 'assigned'),
+        exercises: day.exercisesToInput(t.workoutLog && t.workoutLog.exercises),
+      }));
+
+      const lines = trainings.map((t) => {
+        const head = `Тренировка ${t.index}${t.time ? ` в ${t.time}` : ''}${t.day_label ? ` («${t.day_label}»)` : ''}${t.plan_status ? ` — план, статус «${t.plan_status}»` : ''}`;
+        const body = t.exercises.map((ex) => {
+          const aps = ex.approaches.map((a) => {
+            const load = a.weight_kg !== undefined ? `${a.weight_kg}кг` : 'свой вес';
+            const work = a.reps !== undefined ? `×${a.reps}` : (a.duration_sec !== undefined ? `${a.duration_sec}с` : `${a.distance_m}м`);
+            return `${a.id} ${load}${work}${a.set_type === 'warmup' ? ' (разминка)' : ''}${a.done ? ' ✓' : ''}`;
+          }).join('; ');
+          return `  ${ex.id} «${ex.name}»${ex.superset_group ? ` [связка ${ex.superset_group}]` : ''}: ${aps}`;
+        }).join('\n');
+        // Правку показываем сразу: иначе куратор узнаёт о запрете уже отказом.
+        const how = t.editable
+          ? 'Правится через heys_update_training по этим id.'
+          : (t.plan_status ? 'Клиент уже открыл план — правка только предложением (heys_propose_training_edit).' : 'Это запись клиента, состав не переписывается.');
+        return [head, body || '  упражнений нет', `  ${how}`].join('\n');
+      });
+
+      return {
+        text: `${date}:\n${lines.join('\n')}`,
+        structured: { date, trainings },
+      };
+    },
+
     async heys_update_training(args) {
       const date = resolveDate(args.date, nowMs);
       const current = await readDay(date);
+      // Состав упражнений живёт отдельной веткой: это правка задания, а не
+      // карточки тренировки, и право на неё проверяется по статусу плана.
+      const planOps = {
+        exercises_add: args.exercises_add,
+        exercises_remove: args.exercises_remove,
+        exercises_patch: args.exercises_patch,
+        exercises_order: args.exercises_order,
+      };
+      const wantsPlanEdit = Object.values(planOps).some((v) => Array.isArray(v) && v.length);
+      if (wantsPlanEdit) {
+        // Тот же гейт, что у назначения: правка задания — часть той же функции.
+        await requireProSportTier('Правка плана тренировки');
+        const res = day.editTrainingPlan(current, args.index, planOps, { nowMs, clientId });
+        if (res.error) throw new ToolError('invalid_plan_edit', res.error);
+        const saved = await writeDay(date, res.day, Number(current.updatedAt) || 0);
+        const after = await dayAfterWrite(saved, res.day);
+        const written = res.day.trainings[res.index];
+        return {
+          text: `Поправил план тренировки ${res.index} за ${date}: ${res.exercises} упр. Клиент увидит обновлённое задание при открытии дня.${dayAfterText(after)}`,
+          structured: {
+            date,
+            index: res.index,
+            exercises: day.exercisesToInput(written.workoutLog && written.workoutLog.exercises),
+            day_after: after,
+          },
+        };
+      }
       const patch = {
         zoneMinutes: args.zones_minutes, time: args.time, type: args.type,
         activityLabel: args.activity_label, comment: args.comment,
@@ -3742,6 +3819,99 @@ const RECIPE_PATCH_SCHEMA = {
   },
 };
 
+const PLAN_EXERCISE_SCHEMA = {
+    type: 'object',
+    properties: {
+      name: { type: 'string', description: 'Название упражнения, свободная строка: «Жим лёжа».' },
+      unit: { type: 'string', enum: ['weight_reps', 'bodyweight', 'time', 'distance'], description: 'Как измеряется подход. По умолчанию weight_reps. bodyweight — нужен bodyweight_factor, time — нужен duration_sec у подходов, distance — distance_m.' },
+      bodyweight_factor: { type: 'number', description: 'Доля веса тела в движении, 0–2 (подтягивания 1.0, брусья 0.95, отжимания 0.64). Только при unit=bodyweight.' },
+      approaches: {
+        type: 'array',
+        description: 'Подходы по порядку. Дропсет — не отдельные подходы, а ступени drops внутри одного подхода.',
+        items: {
+          type: 'object',
+          properties: {
+            weight_kg: { type: 'number', description: 'Вес, кг. Пусто или 0 — свой вес (подтягивания, отжимания).' },
+            reps: { type: 'integer', description: 'Повторы, 1–200. Не нужен при unit=time/distance.' },
+            duration_sec: { type: 'integer', description: 'Время под нагрузкой, секунды, 1–86400. Только при unit=time.' },
+            distance_m: { type: 'number', description: 'Дистанция, метры, 1–200000. Только при unit=distance.' },
+            done: { type: 'boolean', description: 'Выполнен ли. По умолчанию true — вносится уже сделанная тренировка.' },
+            set_type: { type: 'string', enum: ['work', 'warmup'], description: 'Рабочий или разминочный. По умолчанию рабочий; разминка не идёт в тоннаж.' },
+            extra_weight_kg: { type: 'number', description: 'Довес к своему весу: блин на поясе при подтягиваниях. Свойство подхода, 0–500.' },
+            discomfort: { type: 'boolean', description: 'Был дискомфорт/боль на этом подходе.' },
+            discomfort_note: { type: 'string', description: 'Где именно и что почувствовал, до 100 символов.' },
+            drops: {
+              type: 'array',
+              description: 'Ступени сброса внутри этого подхода, по порядку. Вес каждой следующей ниже предыдущей, всего не больше двух ступеней. В связке дропсет запрещён.',
+              items: {
+                type: 'object',
+                properties: {
+                  weight_kg: { type: 'number', description: 'Вес ступени, кг — ниже предыдущей.' },
+                  reps: { type: 'integer', description: 'Повторы на ступени, 1–200.' },
+                  done: { type: 'boolean', description: 'Выполнена ли ступень. По умолчанию как у подхода.' },
+                },
+                required: ['weight_kg', 'reps'],
+              },
+            },
+          },
+          required: [],
+        },
+      },
+      rpe: { type: 'integer', description: 'Субъективная тяжесть упражнения, 0–10.' },
+      superset_group: { type: 'integer', description: 'Номер связки: одинаковый у упражнений одного суперсета, 0 — без связки. В связке нужно минимум два упражнения.' },
+      rest_sec: { type: 'integer', description: 'Отдых между подходами: 60, 90, 120 или 180. По умолчанию 90.' },
+      note: { type: 'string', description: 'Заметка к упражнению.' },
+    },
+    required: ['name', 'approaches'],
+};
+
+const PLAN_EXERCISE_ADD_SCHEMA = {
+  ...PLAN_EXERCISE_SCHEMA,
+  properties: {
+    ...PLAN_EXERCISE_SCHEMA.properties,
+    at_index: { type: 'integer', description: 'Куда вставить, с нуля. Без него — в конец плана.' },
+  },
+};
+
+const PLAN_APPROACH_SCHEMA = PLAN_EXERCISE_SCHEMA.properties.approaches.items;
+
+const PLAN_EXERCISE_PATCH_SCHEMA = {
+  type: 'object',
+  properties: {
+    exercise_id: { type: 'string', description: 'Обязательно: id упражнения (ex_…) из heys_get_training.' },
+    name: { type: 'string', description: 'Новое название упражнения.' },
+    unit: PLAN_EXERCISE_SCHEMA.properties.unit,
+    bodyweight_factor: PLAN_EXERCISE_SCHEMA.properties.bodyweight_factor,
+    note: PLAN_EXERCISE_SCHEMA.properties.note,
+    rpe: PLAN_EXERCISE_SCHEMA.properties.rpe,
+    rest_sec: PLAN_EXERCISE_SCHEMA.properties.rest_sec,
+    superset_group: PLAN_EXERCISE_SCHEMA.properties.superset_group,
+    approaches_add: {
+      type: 'array',
+      description: 'Дописать подходы к этому упражнению, в конец.',
+      items: PLAN_APPROACH_SCHEMA,
+    },
+    approaches_remove: {
+      type: 'array',
+      description: 'Убрать подходы по id (ap_…). Последний подход убрать нельзя — тогда убирай упражнение целиком.',
+      items: { type: 'string' },
+    },
+    approaches_patch: {
+      type: 'array',
+      description: 'Изменить отдельные подходы. Переданное поле заменяет прежнее; set_type: work снимает пометку разминочного.',
+      items: {
+        type: 'object',
+        properties: {
+          approach_id: { type: 'string', description: 'Обязательно: id подхода (ap_…) из heys_get_training.' },
+          ...PLAN_APPROACH_SCHEMA.properties,
+        },
+        required: ['approach_id'],
+      },
+    },
+  },
+  required: ['exercise_id'],
+};
+
 const TOOL_SCHEMAS = [
   {
     name: 'heys_get_day',
@@ -4417,51 +4587,7 @@ const TOOL_SCHEMAS = [
         exercises: {
           type: 'array',
           description: 'Упражнения по порядку. Каждое — со своим списком подходов.',
-          items: {
-            type: 'object',
-            properties: {
-              name: { type: 'string', description: 'Название упражнения, свободная строка: «Жим лёжа».' },
-              unit: { type: 'string', enum: ['weight_reps', 'bodyweight', 'time', 'distance'], description: 'Как измеряется подход. По умолчанию weight_reps. bodyweight — нужен bodyweight_factor, time — нужен duration_sec у подходов, distance — distance_m.' },
-              bodyweight_factor: { type: 'number', description: 'Доля веса тела в движении, 0–2 (подтягивания 1.0, брусья 0.95, отжимания 0.64). Только при unit=bodyweight.' },
-              approaches: {
-                type: 'array',
-                description: 'Подходы по порядку. Дропсет — не отдельные подходы, а ступени drops внутри одного подхода.',
-                items: {
-                  type: 'object',
-                  properties: {
-                    weight_kg: { type: 'number', description: 'Вес, кг. Пусто или 0 — свой вес (подтягивания, отжимания).' },
-                    reps: { type: 'integer', description: 'Повторы, 1–200. Не нужен при unit=time/distance.' },
-                    duration_sec: { type: 'integer', description: 'Время под нагрузкой, секунды, 1–86400. Только при unit=time.' },
-                    distance_m: { type: 'number', description: 'Дистанция, метры, 1–200000. Только при unit=distance.' },
-                    done: { type: 'boolean', description: 'Выполнен ли. По умолчанию true — вносится уже сделанная тренировка.' },
-                    set_type: { type: 'string', enum: ['work', 'warmup'], description: 'Рабочий или разминочный. По умолчанию рабочий; разминка не идёт в тоннаж.' },
-                    extra_weight_kg: { type: 'number', description: 'Довес к своему весу: блин на поясе при подтягиваниях. Свойство подхода, 0–500.' },
-                    discomfort: { type: 'boolean', description: 'Был дискомфорт/боль на этом подходе.' },
-                    discomfort_note: { type: 'string', description: 'Где именно и что почувствовал, до 100 символов.' },
-                    drops: {
-                      type: 'array',
-                      description: 'Ступени сброса внутри этого подхода, по порядку. Вес каждой следующей ниже предыдущей, всего не больше двух ступеней. В связке дропсет запрещён.',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          weight_kg: { type: 'number', description: 'Вес ступени, кг — ниже предыдущей.' },
-                          reps: { type: 'integer', description: 'Повторы на ступени, 1–200.' },
-                          done: { type: 'boolean', description: 'Выполнена ли ступень. По умолчанию как у подхода.' },
-                        },
-                        required: ['weight_kg', 'reps'],
-                      },
-                    },
-                  },
-                  required: [],
-                },
-              },
-              rpe: { type: 'integer', description: 'Субъективная тяжесть упражнения, 0–10.' },
-              superset_group: { type: 'integer', description: 'Номер связки: одинаковый у упражнений одного суперсета, 0 — без связки. В связке нужно минимум два упражнения.' },
-              rest_sec: { type: 'integer', description: 'Отдых между подходами: 60, 90, 120 или 180. По умолчанию 90.' },
-              note: { type: 'string', description: 'Заметка к упражнению.' },
-            },
-            required: ['name', 'approaches'],
-          },
+          items: PLAN_EXERCISE_SCHEMA,
         },
         date: DATE_ARG,
         index: { type: 'integer', description: 'Номер тренировки в дне, если переназначаешь уже стоящий там план. Без него назначается новая.' },
@@ -4635,8 +4761,19 @@ const TOOL_SCHEMAS = [
     },
   },
   {
+    name: 'heys_get_training',
+    description: 'Показать тренировку целиком: упражнения и подходы со всеми параметрами и их id (ex_…, ap_…) — вес, повторы, время, дистанция, разминочные подходы, довес, дискомфорт, ступени сброса, отдых, RPE, связки. Эти id и нужны, чтобы править план адресно через heys_update_training, не диктуя весь список заново. Без index покажет все тренировки дня. Общая сводка дня (heys_get_day) состав не содержит — она про день, а не про задание.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        date: DATE_ARG,
+        index: { type: 'integer', description: 'Номер тренировки в дне, с нуля. Без него — все тренировки дня.' },
+      },
+    },
+  },
+  {
     name: 'heys_update_training',
-    description: 'Поправить уже записанную тренировку: дописать оценки самочувствия, время, тип или комментарий, изменить минуты по зонам. Индекс тренировки — её позиция в списке из heys_get_day (с нуля). Передавай только то, что меняешь.',
+    description: 'Поправить уже записанную тренировку: дописать оценки самочувствия, время, тип или комментарий, изменить минуты по зонам. Индекс тренировки — её позиция в списке из heys_get_day (с нуля). Передавай только то, что меняешь. Этим же инструментом правится состав назначенного плана, пока клиент его не открыл: exercises_add дописывает упражнения, exercises_remove убирает по id, exercises_patch меняет упражнение и отдельные подходы, exercises_order переставляет. Id упражнений и подходов показывает heys_get_training — по ним и адресуй, весь список заново диктовать не нужно. Клиент план уже открыл — правка идёт предложением через heys_propose_training_edit; состав обычной тренировки клиента куратор не переписывает.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -4646,6 +4783,26 @@ const TOOL_SCHEMAS = [
         time: { type: 'string', description: 'Время начала, HH:MM.' },
         type: { type: 'string', description: 'Тип: cardio, strength, hobby и т.п.' },
         activity_label: { type: 'string', description: 'Название активности для отображения.' },
+        exercises_add: {
+          type: 'array',
+          description: 'Дописать упражнения в назначенный план. Форма та же, что у heys_assign_training. По умолчанию в конец; at_index вставляет в нужное место — оно важно для суперсета, участники которого идут подряд.',
+          items: PLAN_EXERCISE_ADD_SCHEMA,
+        },
+        exercises_remove: {
+          type: 'array',
+          description: 'Убрать упражнения из плана по id (ex_…) из heys_get_training.',
+          items: { type: 'string' },
+        },
+        exercises_patch: {
+          type: 'array',
+          description: 'Изменить упражнения плана поимённо. Переданное поле заменяет прежнее, не переданное остаётся как было.',
+          items: PLAN_EXERCISE_PATCH_SCHEMA,
+        },
+        exercises_order: {
+          type: 'array',
+          description: 'Новый порядок упражнений — полный список id (ex_…) после добавлений и удалений.',
+          items: { type: 'string' },
+        },
         mood: { type: 'integer', description: 'Настроение после тренировки, 1–10.' },
         wellbeing: { type: 'integer', description: 'Самочувствие после тренировки, 1–10.' },
         stress: { type: 'integer', description: 'Стресс после тренировки, 1–10.' },

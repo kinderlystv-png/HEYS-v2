@@ -55,6 +55,7 @@ const CACHEABLE_READ_TOOLS = new Set([
   'heys_list_meal_presets',
   'heys_get_program_status',
   'heys_get_training_status',
+  'heys_get_training',
   'heys_get_client_health',
   'tasks_read',
   'tasks_list',
