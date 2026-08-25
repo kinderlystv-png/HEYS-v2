@@ -2176,6 +2176,51 @@
         );
     };
 
+    // Строка «пустое состояние» (решение владельца 25 августа): плашка гаснет
+    // тапом в любое место экрана, не только по себе. Слушатель на документе, а
+    // не прозрачная подложка: подложка съела бы тап по нижнему меню и заперла
+    // бы прокрутку, а промах должен гасить плашку, не отнимая следующий шаг.
+    // Авто-таймера нет — гасит только тап (таймер здесь запрещён тестом
+    // advice-menu-open «keeps empty advice drawer open until user dismisses it»).
+    function EmptyAdviceToast({ React, dismissToast }) {
+        const dismissRef = React.useRef(dismissToast);
+        dismissRef.current = dismissToast;
+        React.useEffect(() => {
+            if (typeof document === 'undefined') return undefined;
+            // Тап, открывший плашку, может ещё догорать в том же событии —
+            // вооружаемся следующей задачей, иначе плашка гаснет мгновенно.
+            let armed = false;
+            let fired = false;
+            const armId = setTimeout(() => { armed = true; }, 0);
+            const onTap = () => {
+                if (!armed || fired) return;
+                fired = true;
+                const fn = dismissRef.current;
+                // 🚀 PERF R32: defer dismissToast — каскад setState бьёт по клику
+                if (typeof fn === 'function') setTimeout(fn, 0);
+            };
+            // Два события, одно гашение: iOS не доводит click до документа при
+            // тапе по неинтерактивному месту, а pointerdown есть не везде.
+            document.addEventListener('pointerdown', onTap, true);
+            document.addEventListener('click', onTap, true);
+            return () => {
+                clearTimeout(armId);
+                document.removeEventListener('pointerdown', onTap, true);
+                document.removeEventListener('click', onTap, true);
+            };
+        }, []);
+        return React.createElement('div', {
+            className: 'advice-v4-empty-toast',
+            role: 'status',
+            'aria-live': 'polite',
+        },
+            renderAdviceV4Icon(React, 'check'),
+            React.createElement('span', { className: 'advice-v4-empty-toast__text' },
+                'Пока всё по плану — советов нет'
+            )
+        );
+    }
+
     dayAdviceListUI.renderEmptyAdviceToast = function renderEmptyAdviceToast({
         React,
         adviceTrigger,
@@ -2189,20 +2234,9 @@
         if (!(adviceTrigger === 'manual_empty' && toastVisible)) return null;
 
         // Строка «пустое состояние»: шторка не открывается — показывается
-        // всплывающая плашка над нижним меню. Гаснет по тапу: таймер здесь
-        // запрещён тестом advice-menu-open «keeps empty advice drawer open
-        // until user dismisses it».
-        return React.createElement('div', {
-            className: 'advice-v4-empty-toast',
-            role: 'status',
-            'aria-live': 'polite',
-            onClick: () => setTimeout(dismissToast, 0),
-        },
-            renderAdviceV4Icon(React, 'check'),
-            React.createElement('span', { className: 'advice-v4-empty-toast__text' },
-                'Пока всё по плану — советов нет'
-            )
-        );
+        // всплывающая плашка над нижним меню. Гашение по тапу в любое место
+        // экрана живёт в EmptyAdviceToast выше.
+        return React.createElement(EmptyAdviceToast, { React, dismissToast });
     };
 
     HEYS.dayAdviceListUI = dayAdviceListUI;

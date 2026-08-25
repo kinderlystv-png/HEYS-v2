@@ -3,7 +3,7 @@
 // «шторка = диалог с запертым фокусом» иначе не воспроизвести руками.
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it, afterEach, beforeAll, beforeEach } from 'vitest';
+import { describe, expect, it, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
@@ -182,6 +182,105 @@ describe('tips v4: карточка, пустое состояние, досту
     expect(plate).toBeTruthy();
     expect(plate.getAttribute('role')).toBe('status');
     expect(plate.textContent).toContain('Пока всё по плану — советов нет');
+  });
+
+  // Строка «пустое состояние» (решение владельца 25 августа): гаснет тапом в
+  // любое место экрана, не только по себе; авто-таймера нет. Руками это не
+  // собрать — промах по плашке и «подождать минуту» проверяются симуляцией.
+  describe('пустое состояние: гашение тапом в любое место', () => {
+    function mountEmptyPlate() {
+      const calls = [];
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      act(() => {
+        root.render(
+          window.HEYS.dayAdviceListUI.renderEmptyAdviceToast({
+            React,
+            adviceTrigger: 'manual_empty',
+            toastVisible: true,
+            dismissToast: () => calls.push('dismiss'),
+            medicalDisclaimerSessionDismissed: true,
+          })
+        );
+      });
+      return { host, root, calls };
+    }
+
+    function tap(el) {
+      act(() => {
+        el.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      });
+      act(() => { vi.advanceTimersByTime(0); });
+    }
+
+    let mounted = null;
+
+    beforeEach(() => { vi.useFakeTimers(); });
+    afterEach(() => {
+      if (mounted) {
+        act(() => { mounted.root.unmount(); });
+        mounted.host.remove();
+        mounted = null;
+      }
+      vi.useRealTimers();
+    });
+
+    it('тап мимо плашки её гасит, а до этого она висит без авто-таймера', () => {
+      mounted = mountEmptyPlate();
+      const { host, calls } = mounted;
+      expect(host.querySelector('.advice-v4-empty-toast')).toBeTruthy();
+
+      // Тап, открывший плашку, ещё не вооружил слушатель — плашка остаётся
+      tap(document.body);
+      expect(calls).toEqual([]);
+
+      // Авто-таймера нет: минута проходит, плашка на месте
+      act(() => { vi.advanceTimersByTime(60000); });
+      expect(calls).toEqual([]);
+
+      // Промах — тап по чужому узлу, не по плашке — гасит
+      const elsewhere = document.createElement('button');
+      document.body.appendChild(elsewhere);
+      tap(elsewhere);
+      expect(calls).toEqual(['dismiss']);
+      elsewhere.remove();
+    });
+
+    it('тап по самой плашке по-прежнему гасит, и ровно один раз', () => {
+      mounted = mountEmptyPlate();
+      const { host, calls } = mounted;
+      act(() => { vi.advanceTimersByTime(0); });
+
+      tap(host.querySelector('.advice-v4-empty-toast__text'));
+      expect(calls).toEqual(['dismiss']);
+    });
+
+    // iOS не доводит click до документа при тапе по неинтерактивному месту —
+    // pointerdown закрывает эту дыру и не должен гасить плашку дважды.
+    it('pointerdown гасит плашку один раз, парный click её уже не трогает', () => {
+      mounted = mountEmptyPlate();
+      const { calls } = mounted;
+      act(() => { vi.advanceTimersByTime(0); });
+
+      act(() => {
+        document.body.dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+        document.body.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      });
+      act(() => { vi.advanceTimersByTime(0); });
+      expect(calls).toEqual(['dismiss']);
+    });
+
+    it('снятая плашка слушатель за собой убирает', () => {
+      mounted = mountEmptyPlate();
+      const { root, calls } = mounted;
+      act(() => { vi.advanceTimersByTime(0); });
+      act(() => { root.unmount(); });
+      mounted.root = { unmount() {} };
+
+      tap(document.body);
+      expect(calls).toEqual([]);
+    });
   });
 
   it('detail keeps three tiers and a close button', () => {
