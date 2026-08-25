@@ -5078,7 +5078,7 @@
                         } else {
                             HEYS.Toast?.error('Не удалось сохранить приём. Попробуйте ещё раз.');
                         }
-                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date } }));
 
                         // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                         try {
@@ -5664,7 +5664,7 @@
                 if (window.HEYS && window.HEYS.analytics) {
                     window.HEYS.analytics.trackDataOperation('meal-created');
                 }
-                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date } }));
 
                 // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                 try {
@@ -6602,7 +6602,7 @@
                         }
 
                         HEYS.Toast?.success?.(`Создан приём, скопировано: ${cloned.length}`);
-                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date: todayStr } }));
 
                         // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                         try {
@@ -6771,7 +6771,7 @@
                     onUndo: undo,
                 });
 
-                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date: todayStr } }));
 
                 // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                 try {

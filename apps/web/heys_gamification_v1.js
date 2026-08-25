@@ -5537,6 +5537,34 @@
       updateDailyMission(reason, missionValue);
     }
 
+    // Строка контракта home-widgets «стопка на прошлом дне»: быстрое действие
+    // пишет в тот день, который открыт капсулой, кнопка не прячется и не
+    // предупреждает — но опыт за прошлый день не начисляется. Гейт один и стоит
+    // здесь, а не в виджетах: на стороне виджетов он закрыл бы только воду с
+    // Главной и завёл второй источник правды.
+    //
+    // Дата действия приезжает в detail события и доходит сюда через extraData.
+    // Сравниваем с getToday() — «эффективным сегодня» по продуктовому правилу
+    // дня (до 03:00 это ещё вчера): приём в час ночи законно пишется во
+    // вчерашний день, и опыт за него положен. Отправитель без даты (старый
+    // вызов) считается сегодняшним, чтобы ничего не сломать.
+    const actionDate = typeof extraData?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(extraData.date)
+      ? extraData.date
+      : null;
+    if (actionDate && actionDate !== today) {
+      // Не console.info: терсер режет log/info/debug из бандла, и причина
+      // отказа пропала бы ровно там, где её ищут — в проде. Отказ редкий
+      // (человек действует на прошлом дне) и штатный, поэтому warn, не error.
+      console.warn(
+        '[🎮 GAME] XP не начислен:', reason,
+        '— действие записано в день', actionDate,
+        ', а опыт идёт только за эффективное сегодня', today,
+        '(быстрое действие на прошлом дне)'
+      );
+      saveData(); // Миссия выше могла обновиться — прогресс не теряем
+      return;
+    }
+
     // Проверяем лимит за день (для начисления XP)
     if (action) {
       const dailyCount = data.dailyXP[today][reason] || 0;
@@ -5710,45 +5738,51 @@
     checkAchievements(reason);
   }
 
-  // Слушаем события от других модулей
+  // Слушаем события от других модулей.
+  //
+  // `detail.date` — ключ дня (YYYY-MM-DD), к которому относится действие. Он
+  // доезжает до _addXPInternal через extraData и там решает, положен ли опыт
+  // (см. гейт «стопка на прошлом дне»). Отправитель, который дату ещё не шлёт,
+  // работает как раньше: undefined значит «сегодня».
   window.addEventListener('heysProductAdded', (e) => {
+    // Продукт живёт в каталоге, а не в дне — даты у него нет по построению.
     game.addXP(0, 'product_added', e.detail?.sourceEl);
   });
 
   window.addEventListener('heysMealAdded', (e) => {
-    game.addXP(0, 'meal_added', e.detail?.sourceEl);
+    game.addXP(0, 'meal_added', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
   window.addEventListener('heysStepsUpdated', (e) => {
-    game.addXP(0, 'steps_updated', e.detail?.sourceEl, { steps: e.detail?.steps || 0 });
+    game.addXP(0, 'steps_updated', e.detail?.sourceEl, { steps: e.detail?.steps || 0, date: e.detail?.date });
   });
 
   window.addEventListener('heys:checkin-complete', (e) => {
-    game.addXP(0, 'checkin_complete', e.detail?.sourceEl);
+    game.addXP(0, 'checkin_complete', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
   window.addEventListener('heysSupplementsTaken', (e) => {
-    game.addXP(0, 'supplements_taken', e.detail?.sourceEl);
+    game.addXP(0, 'supplements_taken', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
   window.addEventListener('heysWaterAdded', (e) => {
-    game.addXP(0, 'water_added', e.detail?.sourceEl);
+    game.addXP(0, 'water_added', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
   window.addEventListener('heysTrainingAdded', (e) => {
-    game.addXP(0, 'training_added', e.detail?.sourceEl);
+    game.addXP(0, 'training_added', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
   window.addEventListener('heysHouseholdActivityAdded', (e) => {
-    game.addXP(0, 'household_added', e.detail?.sourceEl);
+    game.addXP(0, 'household_added', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
   window.addEventListener('heysSleepLogged', (e) => {
-    game.addXP(0, 'sleep_logged', e.detail?.sourceEl);
+    game.addXP(0, 'sleep_logged', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
   window.addEventListener('heysWeightLogged', (e) => {
-    game.addXP(0, 'weight_logged', e.detail?.sourceEl);
+    game.addXP(0, 'weight_logged', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
   // 🔄 КРИТИЧНО: Слушаем sync из облака — сбрасываем кеш чтобы не затереть свежие данные
