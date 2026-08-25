@@ -10038,15 +10038,15 @@ body:has(:is(
   .fingers-fs-rpe-overlay,
   .drums-ft-modal
 ) {
-  z-index: 2147483400;
+  z-index: var(--v4-z-sheet-scrim, 1200);
 }
 
 .date-picker-dropdown {
-  z-index: 2147483401;
+  z-index: var(--v4-z-sheet, 1205);
 }
 
 .date-picker-tooltip {
-  z-index: 2147483402;
+  z-index: var(--v4-z-sheet-2, 1210);
 }
 
 .crs-bar-orange {
@@ -13197,7 +13197,7 @@ body:has(:is(
 }
 
 .modal-backdrop {
-  z-index: 10020;
+  z-index: var(--v4-z-sheet-scrim, 1200);
 }
 
 /* === 35. Login Modal === */
@@ -14950,8 +14950,7 @@ body:has(:is(
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Above fullscreen training overlays (fingers/mobility use 2147483000). */
-    z-index: 2147483400;
+    z-index: var(--v4-z-sheet-scrim, 1200);
     animation: fadeIn 0.15s ease-out;
     padding: 20px;
   }
@@ -17586,7 +17585,7 @@ html.heys-bg-paused *::after {
 .mpc-action-sheet-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 2147482000;
+  z-index: var(--v4-z-sheet-scrim, 1200);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -17596,7 +17595,7 @@ html.heys-bg-paused *::after {
 }
 
 .mpc-action-sheet {
-  z-index: 2147482001;
+  z-index: var(--v4-z-sheet, 1205);
   width: min(300px, calc(100vw - 36px));
   padding: 8px;
   border: 1px solid rgba(148, 163, 184, 0.24);

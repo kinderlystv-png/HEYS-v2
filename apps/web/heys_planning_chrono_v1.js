@@ -1823,7 +1823,7 @@
     // UI-prefs: свёрнут ли блок «Сводка». Локальный per-device ключ, не client-data.
     const OVERVIEW_COLLAPSED_KEY = 'heys_planning_chrono_overview_collapsed_v1';
     const UNTRACKED_TAIL_DISMISS_KEY = 'heys_planning_chrono_untracked_tail_dismissed_v1';
-    const LEDGER_LONG_PRESS_MS = 450;
+    const LEDGER_LONG_PRESS_MS = HEYS.longPress?.MS ?? 350;
     const LEDGER_DRAG_CANCEL_PX = 8;
 
     // === Timer (Pomodoro-style встроенный таймер) ===
@@ -3028,7 +3028,7 @@
         return Math.abs(h);
     }
 
-    const LONG_PRESS_MS = 500;
+    const LONG_PRESS_MS = HEYS.longPress?.MS ?? 350;
     const LONG_PRESS_TOLERANCE_PX = 8;
 
     const DRAG_ACTIVATE_PX = 10;  // палец должен пройти ≥ этого расстояния прежде чем включится drag mode

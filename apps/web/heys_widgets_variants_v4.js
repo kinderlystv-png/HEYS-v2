@@ -13,7 +13,7 @@
   const ReactDOM = global.ReactDOM;
   const { useState, useEffect, useCallback, useRef } = React || {};
 
-  const LONG_PRESS_MS = 350;
+  const LONG_PRESS_MS = HEYS.longPress?.MS ?? 350;
   const SHEET_CLOSE_MS = 400;
   const EXIT_MS = 160;
   const ENTER_MS = 220;

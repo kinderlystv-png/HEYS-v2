@@ -29,6 +29,7 @@ export const LEGACY_BUNDLES = {
         'heys_bootstrap_v1.js',
         'heys_platform_apis_v1.js',
         'heys_motion_policy_v1.js',
+        'heys_long_press_v1.js',
         'heys_audio_v1.js',
         'heys_pwa_module_v1.js',
         'heys_simple_analytics.js',

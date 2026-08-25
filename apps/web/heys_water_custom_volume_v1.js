@@ -8,7 +8,7 @@
   const React = global.React;
   const ReactDOM = global.ReactDOM;
 
-  const LONG_PRESS_MS = 350;
+  const LONG_PRESS_MS = HEYS.longPress?.MS ?? 350;
   const STEP_ML = 50;
   const PRESETS_ML = [330, 500, 750, 1000];
   const DEFAULT_ML = 500;

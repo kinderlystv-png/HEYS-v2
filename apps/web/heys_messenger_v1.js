@@ -936,7 +936,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const handleTouchStart = () => {
       if (!canDelete && !canEdit) return;
       cancelLongPress();
-      longPressTimerRef.current = setTimeout(() => setTouchActionsOpen(true), 450);
+      longPressTimerRef.current = setTimeout(() => setTouchActionsOpen(true), HEYS.longPress?.MS ?? 350);
     };
 
     useEffect(() => cancelLongPress, []);

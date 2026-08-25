@@ -142,6 +142,7 @@ describe('лестница слоёв — ступени объявлены в �
       'v4-z-level-up',
       'v4-z-install',
       'v4-z-update',
+      'v4-z-landscape-gate',
     ]) {
       expect(ladder.get(step), `ступень --${step} пропала из лестницы`).toBeTypeOf('number');
     }
@@ -170,6 +171,24 @@ describe('лестница слоёв — ступени объявлены в �
         `${order[i]} должна стоять выше ${order[i - 1]}`,
       ).toBeGreaterThan(ladder.get(order[i - 1]));
     }
+  });
+
+  it('ландшафтная заглушка — между офлайн-баннером и слоем обновления', () => {
+    const gate = ladder.get('v4-z-landscape-gate');
+    expect(gate).toBeGreaterThan(ladder.get('v4-z-offline-banner'));
+    expect(gate).toBeLessThan(ladder.get('v4-z-update'));
+  });
+
+  it('легаси modal-backdrop на рунге затемнения шторки', () => {
+    expect(zOf('styles/modules/000-base-and-gamification.css', '.modal-backdrop')).toBe(
+      ladder.get('v4-z-sheet-scrim'),
+    );
+    expect(zOf('styles/modules/000-base-and-gamification.css', '.mpc-action-sheet-backdrop')).toBe(
+      ladder.get('v4-z-sheet-scrim'),
+    );
+    expect(zOf('styles/modules/000-base-and-gamification.css', '.mpc-action-sheet')).toBe(
+      ladder.get('v4-z-sheet'),
+    );
   });
 
   it('блокировщик касаний ниже затемнения — он живёт только в кадре закрытия', () => {

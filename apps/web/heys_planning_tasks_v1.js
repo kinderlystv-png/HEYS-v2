@@ -26,7 +26,7 @@
     const TASKS_UI_SCALE_MAX = 1.4;
     const TASKS_UI_SCALE_STEP = 0.05;
     const TASKS_UI_SCALE_DEFAULT = 0.8;
-    const TASKS_LONG_PRESS_MS = 520;
+    const TASKS_LONG_PRESS_MS = HEYS.longPress?.MS ?? 350;
     const TASKS_LONG_PRESS_MOVE_TOLERANCE = 10;
 
     function clampTasksUiScale(value) {

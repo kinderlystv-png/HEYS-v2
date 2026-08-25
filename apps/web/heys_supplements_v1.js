@@ -2653,7 +2653,7 @@
                 // Вибрация для тактильной обратной связи
                 HEYS.feedback?.emit?.('longpress');
                 openSciencePopup(id);
-              }, 500); // 500ms для долгого нажатия
+              }, HEYS.longPress?.MS ?? 350);
             };
 
             const handleTouchEnd = (e) => {

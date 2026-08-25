@@ -3091,7 +3091,7 @@
       padding: 'max(28px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left))',
       position: 'fixed',
       textAlign: 'center',
-      zIndex: '2147483647',
+      zIndex: 'var(--v4-z-landscape-gate, 900000)',
     });
     document.body.appendChild(gate);
 
