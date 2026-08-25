@@ -100,12 +100,20 @@ describe('nutrition-tab · правки зоны', () => {
   });
 
   it('клетчатка: дорожка идёт по шкале зон, а не вечно is-ok', () => {
-    const { container } = renderTab(renderFn);
+    // Закрытый день → progressK = 1: 2 из 27 г — глубокое отставание, красная зона
+    // (контракт «шкала зон» / кадр «вечер, 19:30»). Без isPastDay тест зависит от
+    // времени суток: до подъёма ожидаемое ≈ 0 и 2 г выглядят «в графике».
+    const { container } = renderTab(renderFn, {
+      ctx: {
+        date: '2026-08-19',
+        day: { date: '2026-08-19', meals: MEALS, sleepEnd: '07:00', sleepStart: '23:00' },
+        dayTot: { kcal: 418, prot: 20, fat: 10, carbs: 60, fiber: 2, harm: 3.4, gi: 48 }
+      }
+    });
     const block = container.querySelector('[data-block="fiber"]');
     expect(block).toBeTruthy();
     const bar = block.querySelector('.nutrition-v4-bar i');
     expect(bar).toBeTruthy();
-    // 2 из 27 г к концу дня — глубокое отставание, красная зона.
     expect(bar.className).toBe('is-red');
   });
 
@@ -285,6 +293,116 @@ describe('nutrition-tab · правки зоны', () => {
     // Перерисовка читает профиль заново — состояние показа живёт не в React.
     const second = renderTab(loaded.render, { ctx });
     expect(second.container.querySelector('[data-block="supplements"]')).toBeNull();
+  });
+});
+
+describe('nutrition-tab · доступность и три чипа профиля', () => {
+  let api;
+  let renderFn;
+
+  beforeEach(() => {
+    seedHEYS({ supplementsTrackingEnabled: true });
+    const loaded = loadModule();
+    api = loaded.api;
+    renderFn = loaded.render;
+  });
+
+  it('герой, строка приёма, чипы и прочерк — по контракту доступности', () => {
+    const wave = {
+      waveHistory: [{ id: 'w1', startMin: 8 * 60, endMin: 11 * 60 }],
+      overlaps: []
+    };
+    const { container } = renderTab(renderFn, { ctx: { insulinWaveData: wave } });
+    const hero = container.querySelector('.nutrition-v4-hero');
+    expect(hero.getAttribute('aria-label')).toMatch(/осталось .+ ккал, в коридоре/);
+
+    const row = container.querySelector('.nutrition-v4-meal-row');
+    expect(row.getAttribute('aria-label')).toBe('08:20, Завтрак, 418 ккал, 1 продукт');
+    expect(row.querySelector('.nutrition-v4-sr-only')).toBeNull();
+
+    const track = container.querySelector('.nutrition-v4-timeline__track');
+    expect(track?.getAttribute('aria-hidden')).toBe('true');
+
+    const chip = container.querySelector('.nutrition-v4-chip');
+    expect(chip.getAttribute('role')).toBe('switch');
+    expect(chip.getAttribute('aria-label')).toMatch(/, включено$/);
+  });
+
+  it('пустой приём и пустой день читают «нет данных», а не тире', () => {
+    const emptyMeal = renderTab(renderFn, {
+      ctx: { day: { date: '2026-08-20', meals: [{ id: 'e1', time: '19:30', name: 'Ужин', items: [] }] } }
+    });
+    const emptyRow = emptyMeal.container.querySelector('.nutrition-v4-meal-row');
+    expect(emptyRow.getAttribute('aria-label')).toBe('19:30, Ужин, нет данных, 0 продуктов');
+    expect(emptyRow.querySelector('.nutrition-v4-sr-only')?.textContent).toBe('нет данных');
+
+    const emptyDay = renderTab(renderFn, {
+      ctx: { day: { date: '2026-08-20', meals: [] }, eatenKcal: 0, dayTot: {}, normAbs: { kcal: 1931 } }
+    });
+    expect(emptyDay.container.querySelector('.nutrition-v4-total-row .nutrition-v4-sr-only')?.textContent)
+      .toBe('нет данных');
+  });
+
+  it('три чипа профиля: writeChipState пишет поля и убирает блоки', async () => {
+    const store = seedHEYS({ supplementsTrackingEnabled: true });
+    const loaded = loadModule();
+    const wave = {
+      waveHistory: [{ id: 'w1', startMin: 8 * 60, endMin: 11 * 60 }],
+      overlaps: []
+    };
+    const fields = [
+      ['hunger', 'showDiaryHungerPanel'],
+      ['refeed', 'showDiaryRefeedPanel'],
+      ['mealsTimeline', 'showDiaryMealsTimelinePanel']
+    ];
+    for (const [key, field] of fields) {
+      const chip = loaded.api.CHIPS.find((c) => c.key === key);
+      expect(await loaded.api.writeChipState(chip, false)).toBe(true);
+      expect(store.heys_profile[field]).toBe(false);
+      expect(loaded.api.readChipState(store.heys_profile)[key]).toBe(false);
+    }
+    const hidden = renderTab(loaded.render, {
+      ctx: {
+        prof: store.heys_profile,
+        day: { date: '2026-08-20', meals: MEALS, isRefeedDay: true },
+        insulinWaveData: wave,
+        displayOptimum: 2200,
+        optimum: 1931,
+        budgetKcal: 2200
+      }
+    });
+    expect(hidden.container.querySelector('[data-block="hunger"]')).toBeNull();
+    expect(hidden.container.querySelector('[data-block="refeed"]')).toBeNull();
+    expect(hidden.container.querySelector('[data-block="mealsTimeline"]')).toBeNull();
+  });
+
+  it('три чипа: тап в UI переключает профиль и скрывает блок', async () => {
+    const store = seedHEYS({ supplementsTrackingEnabled: true });
+    const loaded = loadModule();
+    const wave = {
+      waveHistory: [{ id: 'w1', startMin: 8 * 60, endMin: 11 * 60 }],
+      overlaps: []
+    };
+    const { container } = renderTab(loaded.render, {
+      ctx: { insulinWaveData: wave }
+    });
+    const hungerChip = [...container.querySelectorAll('.nutrition-v4-chip')]
+      .find((node) => node.textContent.includes('Голод'));
+    expect(container.querySelector('[data-block="hunger"]')).toBeTruthy();
+    fireEvent.click(hungerChip);
+    await Promise.resolve();
+    expect(store.heys_profile.showDiaryHungerPanel).toBe(false);
+    const after = renderTab(loaded.render, {
+      ctx: { prof: store.heys_profile, insulinWaveData: wave }
+    });
+    expect(after.container.querySelector('[data-block="hunger"]')).toBeNull();
+    const offChip = [...after.container.querySelectorAll('.nutrition-v4-chip')]
+      .find((node) => node.textContent.includes('Голод'));
+    expect(offChip.getAttribute('aria-label')).toBe('Голод, выключено');
+  });
+
+  it('reduce-motion снимает блюр под листом правки приёма', () => {
+    expect(NUTRITION_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*\.nutrition-v4-sheet-backdrop[\s\S]*backdrop-filter:\s*none/);
   });
 });
 

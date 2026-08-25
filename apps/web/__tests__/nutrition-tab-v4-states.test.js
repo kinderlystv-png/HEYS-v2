@@ -321,7 +321,10 @@ describe('вкладка «Питание» v4 — состояния', () => {
     });
     expect(view.getByText('без продуктов · итог дня посчитан без него')).toBeTruthy();
     expect(view.getByText('+ продукт')).toBeTruthy();
-    expect(view.container.querySelector('.nutrition-v4-meal-row__kcal').textContent).toBe(DASH);
+    // На экране — прочерк; «нет данных» только в sr-only (контракт «слова на экране»).
+    const kcalCell = view.container.querySelector('.nutrition-v4-meal-row__kcal');
+    expect(kcalCell.querySelector('[aria-hidden="true"]').textContent).toBe(DASH);
+    expect(kcalCell.querySelector('.nutrition-v4-sr-only').textContent).toBe('нет данных');
   });
 
   it('серия приёмов — факт, а не похвала', () => {

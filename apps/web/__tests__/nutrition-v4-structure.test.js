@@ -79,12 +79,17 @@ describe('Nutrition tab v4 structure', () => {
 
   it('лист правки приёма собран из существующих обработчиков дневника', () => {
     expect(nutritionSource).toContain('function MealEditSheet');
-    ['openTimeEditor', 'openMoodEditor', 'openEditGramsModal', 'openCopyMealModal',
-      'openMoveMealModal', 'saveAsPreset', 'repeatYesterdayMeal', 'removeMeal',
-      'removeItem', 'copyItem', 'moveItem'].forEach((handler) => {
+    ['openTimeEditor', 'openEditGramsModal', 'openCopyMealModal',
+      'openMoveMealModal', 'saveAsPreset', 'repeatTodayMeal', 'repeatYesterdayMeal',
+      'removeMeal', 'removeItem', 'copyItem', 'moveItem'].forEach((handler) => {
       expect(nutritionSource, handler).toContain(handler);
     });
-    expect(nutritionSource).toContain('Оценки приёма');
+    // Контракт nutrition-tab «действия приёма»: четыре строки подряд после
+    // опциональных «Советы · N»; «Оценки приёма» сняты из листа.
+    expect(nutritionSource).toContain('Повторить сегодня');
+    expect(nutritionSource).not.toContain('Оценки приёма');
+    expect(nutritionSource).not.toContain('openMoodEditor');
+    expect(nutritionSource).toMatch(/actionRow\('repeat', 'Повторить сегодня'[\s\S]*actionRow\('copy', 'Копировать приём'[\s\S]*actionRow\('move', 'Переместить на другой день'[\s\S]*actionRow\('preset', 'Сохранить набором'/);
     expect(nutritionSource).toContain('Копировать приём');
     expect(nutritionSource).toContain('Переместить на другой день');
     expect(nutritionSource).toContain('Сохранить набором');

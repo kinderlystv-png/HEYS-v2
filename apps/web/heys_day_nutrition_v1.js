@@ -11,6 +11,7 @@
 
   const NBSP = ' ';
   const DASH = '—';
+  const NO_DATA_LABEL = 'нет данных';
   const HARM_THRESHOLD = 5;
   const MACRO_WARN_PCT = 110;
   const MACRO_RED_PCT = 130;
@@ -60,6 +61,50 @@
   function isNum(value) {
     if (value === null || value === undefined || value === '') return false;
     return Number.isFinite(Number(value));
+  }
+
+  function dashNode(React, className) {
+    return React.createElement('span', className ? { className } : null,
+      React.createElement('span', { 'aria-hidden': 'true' }, DASH),
+      React.createElement('span', { className: 'nutrition-v4-sr-only' }, NO_DATA_LABEL)
+    );
+  }
+
+  function formatProductCountLabel(count) {
+    const n = Math.max(0, Number(count) || 0);
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    const word = mod10 === 1 && mod100 !== 11
+      ? 'продукт'
+      : (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20) ? 'продукта' : 'продуктов');
+    return n + ' ' + word;
+  }
+
+  function buildHeroAriaLabel(hero) {
+    if (!hero) return '';
+    const valueText = hero.value === DASH ? NO_DATA_LABEL : hero.value + ' ккал';
+    if (hero.label === 'Съедено за день') return 'съедено ' + valueText;
+    if (hero.label === 'Перебор') return 'перебор ' + valueText;
+    const zoneWord = hero.zone === 'red'
+      ? 'перебор'
+      : hero.zone === 'warn'
+        ? 'выше нормы'
+        : hero.value === DASH
+          ? NO_DATA_LABEL
+          : 'в коридоре';
+    if (hero.label === 'Осталось на сегодня' && hero.value !== DASH) {
+      return 'осталось ' + hero.value + ' ккал, ' + zoneWord;
+    }
+    return hero.label.toLowerCase() + ' ' + valueText;
+  }
+
+  function buildMealRowAriaLabel(time, title, isEmpty, kcalText, productCount) {
+    const kcalPart = isEmpty ? NO_DATA_LABEL : kcalText + ' ккал';
+    return time + ', ' + title + ', ' + kcalPart + ', ' + formatProductCountLabel(productCount);
+  }
+
+  function chipAriaLabel(label, enabled) {
+    return label + ', ' + (enabled ? 'включено' : 'выключено');
   }
 
   // Разделитель тысяч — неразрывный пробел, один на весь экран (контракт
@@ -601,13 +646,15 @@
     const segments = [overlapRange(wave, waves[idx - 1]), overlapRange(wave, waves[idx + 1])].filter(Boolean);
     return React.createElement('div', { key: keyPrefix + idx, className: 'nutrition-v4-timeline__row' },
       React.createElement('b', null, formatMinutesClock(wave.startMin)),
-      React.createElement('span', { className: 'nutrition-v4-timeline__track' },
+      React.createElement('span', { className: 'nutrition-v4-timeline__track', 'aria-hidden': 'true' },
         React.createElement('i', {
+          'aria-hidden': 'true',
           style: { left: pos(wave.startMin) + '%', width: (pos(wave.endMin) - pos(wave.startMin)) + '%' }
         }),
         segments.map((segment, segIdx) => React.createElement('i', {
           key: 'ov-' + segIdx,
           className: 'is-overlap',
+          'aria-hidden': 'true',
           style: { left: pos(segment.from) + '%', width: (pos(segment.to) - pos(segment.from)) + '%' }
         }))
       ),
@@ -763,7 +810,7 @@
     },
       React.createElement('b', null, label),
       React.createElement('s', null,
-        value == null ? DASH : value,
+        value == null ? dashNode(React) : value,
         React.createElement('i', null, 'из 10')
       ),
       scale(value, tone)
@@ -1335,9 +1382,9 @@
         ),
 
         React.createElement('div', { className: 'nutrition-v4-sheet__caption' }, 'Действия с приёмом'),
-        actionRow('mood', 'Оценки приёма', 'M12 16v-4M12 8h.01',
-          () => { onClose?.(); actions.openMoodEditor?.(mealIndex); }),
-        // Действия приёма — тремя строками; у пустого приёма все три погашены.
+        // Контракт nutrition-tab «действия приёма»: четыре строки; у пустого приёма все погашены.
+        actionRow('repeat', 'Повторить сегодня', 'M3 12a9 9 0 0 1 9-9c3.6 0 6.7 2.1 8.1 5.2M21 4v5h-5M21 12a9 9 0 0 1-9 9c-3.6 0-6.7-2.1-8.1-5.2M3 20v-5h5',
+          () => { onClose?.(); actions.repeatTodayMeal?.(mealIndex); }, isEmpty),
         actionRow('copy', 'Копировать приём', 'M9 9h11v11H9zM5 15V5.5A1.5 1.5 0 0 1 6.5 4H15',
           () => { onClose?.(); actions.openCopyMealModal?.(mealIndex); }, isEmpty),
         actionRow('move', 'Переместить на другой день', 'M4 7h11l-3-3M20 17H9l3 3',
@@ -1539,7 +1586,11 @@
         React.createElement('span', { className: 'ca-modal__chevron', 'aria-hidden': 'true' }, chevron(React, 15))
       ),
 
-      React.createElement('div', { className: 'nutrition-v4-hero', 'data-zone': hero.zone },
+      React.createElement('div', {
+        className: 'nutrition-v4-hero',
+        'data-zone': hero.zone,
+        'aria-label': buildHeroAriaLabel(hero)
+      },
         React.createElement('div', { className: 'nutrition-v4-hero__label' }, hero.label),
         React.createElement('div', { className: 'nutrition-v4-hero__value-row' },
           React.createElement('span', { className: 'nutrition-v4-hero__value' }, hero.value),
@@ -1573,8 +1624,9 @@
           ? React.createElement('div', { className: 'nutrition-v4-diary__empty' }, 'Пока нет приёмов — добавьте первый')
           : meals.map((meal, idx) => {
             const totals = mealTotals(meal, pIndex);
-            const isEmpty = !Array.isArray(meal?.items) || meal.items.length === 0;
-            const kcal = isEmpty ? DASH : formatNumber(Number(totals.kcal) || 0);
+            const items = Array.isArray(meal?.items) ? meal.items : [];
+            const isEmpty = !items.length;
+            const kcalText = isEmpty ? DASH : formatNumber(Number(totals.kcal) || 0);
             const time = meal?.time || '--:--';
             const title = mealTypeLabel(meal);
             const mealIndex = findMealIndexInDay(day, meal);
@@ -1585,7 +1637,7 @@
               role: 'button',
               tabIndex: 0,
               'data-meal-id': meal?.id || undefined,
-              'aria-label': 'Правка приёма ' + title + ' в ' + time,
+              'aria-label': buildMealRowAriaLabel(time, title, isEmpty, kcalText, items.length),
               onClick: () => {
                 openMealSheet?.({ mealIndex, mealId: meal?.id || null, source: 'nutrition-v4-meal-row' });
                 haptic?.('light');
@@ -1601,7 +1653,9 @@
                   React.createElement('span', { className: 'nutrition-v4-meal-row__num', 'aria-hidden': 'true' }, idx + 1),
                   time + ' · ' + title
                 ),
-                React.createElement('span', { className: 'nutrition-v4-meal-row__kcal' }, kcal)
+                React.createElement('span', { className: 'nutrition-v4-meal-row__kcal' },
+                  isEmpty ? dashNode(React) : kcalText
+                )
               ),
               React.createElement('div', { className: 'nutrition-v4-meal-row__body' },
                 React.createElement('div', { className: 'nutrition-v4-meal-row__items' }, summary),
@@ -1649,8 +1703,10 @@
           React.createElement('div', { className: 'nutrition-v4-total-row__head' },
             React.createElement('b', null, row.label),
             React.createElement('span', { 'data-zone': row.zone },
-              React.createElement('em', null, row.fact),
-              ' из ' + row.norm + ' ' + row.unit
+              React.createElement('em', null, row.fact === DASH ? dashNode(React) : row.fact),
+              ' из ',
+              row.norm === DASH ? dashNode(React) : row.norm,
+              ' ' + row.unit
             )
           ),
           row.hasBar ? React.createElement('div', { className: 'nutrition-v4-bar' },
@@ -1695,7 +1751,9 @@
           },
             React.createElement('div', { className: 'nutrition-v4-quality__label' }, 'Вредность'),
             React.createElement('div', { className: 'nutrition-v4-quality__value' },
-              React.createElement('b', null, harmValue == null ? DASH : formatDecimal(harmValue, 1)),
+              React.createElement('b', null,
+                harmValue == null ? dashNode(React) : formatDecimal(harmValue, 1)
+              ),
               harmValue == null ? null : React.createElement('i', null, 'из 10')
             ),
             harmValue == null ? null : React.createElement('div', { className: 'nutrition-v4-quality__hint' + (!harmGood ? ' is-bad' : '') },
@@ -1709,7 +1767,9 @@
           React.createElement('div', { className: 'nutrition-v4-quality__card' },
             React.createElement('div', { className: 'nutrition-v4-quality__label' }, 'Гликемический'),
             React.createElement('div', { className: 'nutrition-v4-quality__value' },
-              React.createElement('b', null, giValue == null || giValue <= 0 ? DASH : Math.round(giValue)),
+              React.createElement('b', null,
+                giValue == null || giValue <= 0 ? dashNode(React) : Math.round(giValue)
+              ),
               (giValue == null || giValue <= 0) ? null : React.createElement('i', null, giStepLabel(giValue))
             ),
             (giValue == null || giValue <= 0) ? null : React.createElement('div', { className: 'nutrition-v4-quality__hint' }, 'взвешен по углеводам')
@@ -1740,6 +1800,7 @@
               className: 'nutrition-v4-chip' + (on ? '' : ' is-off'),
               role: 'switch',
               'aria-checked': on ? 'true' : 'false',
+              'aria-label': chipAriaLabel(chip.label, on),
               onClick: () => toggleChip(chip)
             },
               on ? React.createElement('span', { className: 'nutrition-v4-chip__check', 'aria-hidden': 'true' },
@@ -1784,7 +1845,11 @@
     waterAlarmProgressK,
     totalRowDeviationZone,
     readChipState,
-    writeChipState
+    writeChipState,
+    buildHeroAriaLabel,
+    buildMealRowAriaLabel,
+    chipAriaLabel,
+    formatProductCountLabel
   };
 
 })(window);
