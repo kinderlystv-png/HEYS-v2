@@ -85,6 +85,8 @@
 </style>
 </helmet>
 <div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
+<div style="display:flex;align-items:flex-start;gap:11px;background:#f0d8c4;border-radius:18px;padding:13px 16px;margin:0 0 22px;max-width:960px;"><span style="font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;background:#a8382b;color:#fff5ef;border-radius:999px;flex:none;">МАКЕТ НЕ СОГЛАСОВАН</span><span style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.62);text-wrap:pretty;">Контракта у этого канваса нет, и до вердикта владельца не будет: числа в разметке не спецификация, метки кадров не гарантированы. По этому файлу не реализовывать ничего. Канвасы, готовые к работе, названы в INDEX.md.</span></div>
+
 <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;"><span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#5c6a45;color:#f2f5ec;border-radius:999px;">HEYS v4 · ВКЛАДКА</span><span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Вкладка «Отчёты»: итог периода, динамика, дни и разбор Score</span></div>
 <p style="margin:0 0 34px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Отчёты и раскрытый разбор Score — они читаются вместе, поэтому лежат в одном канвасе: второй экран открывается из HEYS Score первого. Экран нарисован в четырёх палитрах: песочная с тёмной парой и синяя с сине-тёмной. Разметка, подписи и данные в палитрах совпадают — отличается только таблица значений. Виджеты Главной, расстановка и правила плитки живут в «Виджеты Главной v4»; общие решения по палитрам и логотипу продублированы в колонках справа, чтобы канвас читался в одиночку.</p>
 <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:0 0 14px;">Песочная палитра</div>
@@ -137,6 +139,7 @@
           <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вес · 61 день</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">91,1 кг <span style="color:#5c6a45;">−0,9</span></span></div>
           <svg viewBox="0 0 292 72" width="100%" height="72" style="margin-top:8px;"><polyline points="8,30 54,46 100,46 146,10 192,30 238,35 284,37" fill="none" stroke="#c67139" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="284" cy="37" r="4.5" fill="#c67139"/></svg>
           <div style="font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">такими темпами −1,8 кг в месяц</div>
+          <div style="font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">дни особого периода в тренд не входят</div>
           </div>
 
           <div class="grp" style="margin-top:10px;">
@@ -216,6 +219,7 @@
           <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вес · 61 день</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:#f2ede6;">91,1 кг <span style="color:#9fb981;">−0,9</span></span></div>
           <svg viewBox="0 0 292 72" width="100%" height="72" style="margin-top:8px;"><polyline points="8,30 54,46 100,46 146,10 192,30 238,35 284,37" fill="none" stroke="#cf8144" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="284" cy="37" r="4.5" fill="#cf8144"/></svg>
           <div style="font:500 11px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);">такими темпами −1,8 кг в месяц</div>
+          <div style="font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:6px;">дни особого периода в тренд не входят</div>
           </div>
 
           <div class="grp" style="margin-top:10px;">
@@ -309,6 +313,7 @@
         <div class="nt"><b>Уровень числом только в Отчётах</b><span>В Инсайтах его нет: состояние словом, положение на полосе и дельта. На соседних экранах не появляется двух чисел об одном.</span></div>
         <div class="nt"><b>Разбор — по факторам каскада</b><span>Питание и режим, сон, движение, срывы. Это то, из чего каскад уже состоит: новой формулы не нужно, двойного счёта не возникает.</span></div>
         <div class="nt"><b>Шкала</b><span>Рисуем по сырому CRS: показываемое число месяцами стоит на месте. Пока оно живёт в виджете, лидерборде и оценке дня — расхождение закрывается в коде, а не в макете.</span></div>
+        <div class="nt"><b>Дни особого периода — подпись, а не штриховка, и только при включённой функции</b><span>Особый период выключен по умолчанию, и на 61 дне четыре недели зон задержки были бы шумом. Поэтому здесь нет ни зон, ни пустых точек — одна подпись «дни особого периода в тренд не входят». Она условная: появляется только когда тумблер в профиле включён и в окне графика есть дни 1–7; у аккаунта без функции карточка веса выглядит как раньше, без этой строки. Главный файл по периоду — cycle.v4.dc.html, строка контракта «окно графика веса»: зоны и пустые точки живут там, на окнах до 30 дней.</span></div>
         <div class="ntl"><b>Trend Score</b><span>Место под сводную оценку уже занято кольцом, которое мы сняли в архив. Держать обе метрики нельзя — нужно решение, сносим ли его насовсем.</span></div>
       </div>
 
@@ -368,6 +373,7 @@
           <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вес · 61 день</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:#101826;">91,1 кг <span style="color:#1f6e4d;">−0,9</span></span></div>
           <svg viewBox="0 0 292 72" width="100%" height="72" style="margin-top:8px;"><polyline points="8,30 54,46 100,46 146,10 192,30 238,35 284,37" fill="none" stroke="#2e7cc0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="284" cy="37" r="4.5" fill="#2e7cc0"/></svg>
           <div style="font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">такими темпами −1,8 кг в месяц</div>
+          <div style="font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">дни особого периода в тренд не входят</div>
           </div>
 
           <div class="grp" style="margin-top:10px;">
@@ -447,6 +453,7 @@
           <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вес · 61 день</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:#eef3f8;">91,1 кг <span style="color:#7fd1a0;">−0,9</span></span></div>
           <svg viewBox="0 0 292 72" width="100%" height="72" style="margin-top:8px;"><polyline points="8,30 54,46 100,46 146,10 192,30 238,35 284,37" fill="none" stroke="#2e7cc0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="284" cy="37" r="4.5" fill="#2e7cc0"/></svg>
           <div style="font:500 11px/1 Figtree,sans-serif;color:rgba(238,243,248,.5);">такими темпами −1,8 кг в месяц</div>
+          <div style="font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(238,243,248,.5);margin-top:6px;">дни особого периода в тренд не входят</div>
           </div>
 
           <div class="grp" style="margin-top:10px;">

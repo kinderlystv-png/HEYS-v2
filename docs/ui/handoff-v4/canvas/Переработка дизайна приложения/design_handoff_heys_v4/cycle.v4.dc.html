@@ -11,160 +11,899 @@
 <meta name="design_doc_mode" content="canvas">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="./v4-canvas.css" rel="stylesheet">
 <style>
   body{margin:0;background:#e9dfcd;font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   *{box-sizing:border-box}
-  a{color:#8a4a20;text-decoration:none}
-  .ph{width:330px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12)}
-  .sc{min-height:600px;padding:6px 18px 16px}
-  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.42)}
-  .n{font-variant-numeric:tabular-nums}
-  .tier{font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#a1471c;margin:20px 0 10px}
-  .cd{background:#f7efe2;border-radius:20px;padding:2px 16px}
-  .grp{background:#f7efe2;border-radius:20px;padding:16px}
-  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif}
-  .row > :last-child{flex:none}
-  .h{font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:26px 0 12px}
-  .nt{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.07)}
-  .nt > b,.ntl > b{font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;display:block}
-  .nt > span,.ntl > span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);display:block;margin-top:4px}
-  .olab{display:flex;align-items:baseline;gap:8px;font:500 11.5px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-bottom:9px}
-  .oid{font:700 10px/1 ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#201e1d;border-radius:999px}
-  .g{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:64px;gap:8px}
-  .w{background:#f7efe2;border-radius:16px;padding:11px;overflow:hidden;display:flex;flex-direction:column}
-  .v{font:600 21px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em}
-  .u{font-size:10px;font-weight:500;color:rgba(0,0,0,.35)}
-  #g1 .k{font:600 9px/1.1 Figtree,sans-serif;letter-spacing:.03em;color:rgba(0,0,0,.45)}
-  #g1 .sc{padding:14px 16px 16px}
-  .dk .ph{background:#141210;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45)}
-  .dk .cd,.dk .grp,.dk .w{background:#23201b}
-  .dk .row{border-bottom-color:rgba(242,237,230,.1)}
-  .dk .tier{color:#e2a468}
-  .dk .k{color:rgba(242,237,230,.5)}
-  .dk .v{color:#f2ede6}
-  .dk .u{color:rgba(242,237,230,.4)}
-  .dk #g1d .k{color:rgba(242,237,230,.5)}
-  .bl .ph{background:#fff;box-shadow:0 1px 2px rgba(16,24,38,.08),0 14px 40px rgba(16,24,38,.12)}
-  .bl .cd,.bl .grp,.bl .w{background:#eef3f9}
-  .bl .row{border-bottom-color:rgba(16,24,38,.08)}
-  .bl .tier{color:#1d5e96}
-  .logo path,.logo rect{fill:#201e1d}
-  .logo > g > g > path,.logo > g > g > rect{stroke:#201e1d;stroke-width:2.6;stroke-linejoin:round;paint-order:stroke}
-  .logo .lab path{fill:rgba(0,0,0,.42);stroke:none}
-  .logo .lp path{fill:#7a8a5e;stroke:none}
-  .dk .logo path,.dk .logo rect{fill:#f2ede6}
-  .dk .logo > g > g > path{stroke:none}
-  .dk .logo > g > g > rect{stroke:#f2ede6;stroke-width:1.8}
-  .dk .logo .lab path{fill:rgba(242,237,230,.5);stroke:none}
-  .dk .logo .lp path{fill:#8faa6d;stroke:none}
-  .bl .logo path,.bl .logo rect{fill:#101826}
-  .bl .logo > g > g > path,.bl .logo > g > g > rect{stroke:#101826}
-  .bl .logo .lab path{fill:rgba(16,24,38,.45);stroke:none}
-  .bl .logo .lp path{fill:#52A0D8;stroke:none}
-  .cn .logo path,.cn .logo rect{fill:#1e293b}
-  .cn .logo > g > g > path,.cn .logo > g > g > rect{stroke:#1e293b}
-  .cn .logo .lab path{fill:#94a3b8;stroke:none}
-  .cn .logo .lp path{fill:#52A0D8;stroke:none}
-
-  .svc{color:rgba(0,0,0,.11)}
-  .dk .svc{color:rgba(242,237,230,.12)}
-  .bl .svc{color:rgba(16,24,38,.12)}
-  .bd .ph{background:#0d1a26;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45)}
-  .bd .cd,.bd .grp,.bd .w{background:#182a3a}
-  .bd .row{border-bottom-color:rgba(238,243,248,.1)}
-  .bd .tier{color:#8fc1e8}
-  .bd .k{color:rgba(238,243,248,.5)}
-  .bd .v{color:#eef3f8}
-  .bd .u{color:rgba(238,243,248,.4)}
-  .bd .logo path,.bd .logo rect{fill:#eef3f8}
-  .bd .logo > g > g > path{stroke:none}
-  .bd .logo > g > g > rect{stroke:#eef3f8;stroke-width:1.8}
-  .bd .logo .lab path{fill:rgba(238,243,248,.5);stroke:none}
-  .bd .logo .lp path{fill:#52A0D8;stroke:none}
-  .bd .svc{color:rgba(238,243,248,.12)}
+  a{color:var(--ac);text-decoration:none}
+  a:hover{color:var(--acs)}
+  .ph{width:330px;flex:none;background:var(--bg);border-radius:26px;padding:16px 17px 18px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)}
+  .cap{display:flex;flex-direction:column;gap:3px;margin-bottom:11px;width:330px}
+  .cap>b{font:700 12.5px/1.25 Figtree,sans-serif;color:var(--tx)}
+  .cap>span{font:500 11px/1.35 Figtree,sans-serif;color:rgba(var(--ink),.45)}
+  .h{font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(var(--ink),.42);margin:36px 0 14px}
+  .tier{font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:0 0 9px}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1.3 Figtree,sans-serif;color:var(--tx)}
+  .row:last-child{border-bottom:none}
+  .cd{background:var(--c1);border-radius:18px;padding:2px 15px}
+  .hint{font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.45);text-wrap:pretty}
+  .seg{display:flex;gap:6px;background:var(--c2);border-radius:999px;padding:4px}
+  .seg>span{flex:1;display:flex;align-items:center;justify-content:center;min-height:40px;border-radius:999px;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5)}
+  .seg>span.on{background:var(--acs);color:var(--on-acs)}
+  .day{display:flex;gap:5px}
+  .day>span{flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:14px;background:var(--c1);font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);font-variant-numeric:tabular-nums}
+  .day>span.on{background:var(--acs);color:var(--on-acs)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chips>span{display:flex;align-items:center;min-height:34px;padding:0 12px;border-radius:999px;background:var(--c1);font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55)}
+  .chips>span.on{background:var(--c2);color:var(--ac)}
+  .bdg{display:flex;flex-wrap:wrap;gap:6px}
+  .bdg>span{display:flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;background:var(--c2);font:700 11px/1 Figtree,sans-serif;color:var(--ac);font-variant-numeric:tabular-nums}
+  .btns{display:flex;gap:8px;margin-top:18px}
+  .btns>span{flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;font:700 12.5px/1 Figtree,sans-serif}
+  .btns>span.sec{background:var(--c1);color:rgba(var(--ink),.55)}
+  .btns>span.pri{background:var(--acs);color:var(--on-acs)}
+  .btns>span.dng{background:var(--tint);color:var(--ac2)}
+  .tgl{width:44px;height:26px;border-radius:999px;background:rgba(var(--ink),.14);position:relative;flex:none}
+  .tgl>i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:999px;background:var(--bg);box-shadow:0 1px 2px rgba(var(--shadow),.25)}
+  .tgl.on{background:var(--acs)}
+  .tgl.on>i{left:21px}
+  .nt,.ntl{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(var(--ink),.07)}
+  .ntl{padding-bottom:0;margin-bottom:0;border-bottom:none}
+  .nt>b,.ntl>b{font:700 12.5px/1.35 Figtree,sans-serif;color:var(--tx);display:block}
+  .nt>span,.ntl>span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.55);display:block;margin-top:4px;text-wrap:pretty}
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(var(--ink),.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:var(--ac)}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:var(--tx);text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);font-style:normal;text-wrap:pretty}
+  .ctr{background:var(--c2);border-radius:20px;padding:20px;max-width:1020px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:var(--acs);color:var(--on-acs);margin-bottom:12px}
+  .mono{font:600 11px/1.7 ui-monospace,Menlo,monospace;color:var(--ac)}
+  .fb{width:194px;flex:none;background:var(--bg);border-radius:18px;padding:14px 15px;box-shadow:0 1px 2px rgba(var(--shadow),.07)}
+  .fb>b{font:700 11.5px/1.3 Figtree,sans-serif;color:var(--tx);display:block}
+  .fb>span{font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);display:block;margin-top:6px;text-wrap:pretty}
+  .arw{display:flex;align-items:center;font:700 15px/1 Figtree,sans-serif;color:rgba(var(--ink),.3)}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .cell{height:38px;border-radius:11px;background:var(--c1);position:relative;display:flex;align-items:center;justify-content:center;font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);font-variant-numeric:tabular-nums}
+  .cell.cyc::before{content:"";position:absolute;left:4px;top:9px;bottom:9px;width:3px;border-radius:999px;background:rgba(var(--ink),.46)}
+  .cell.eat::after{content:"";position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:999px;background:rgba(var(--ink),.34)}
+  .cell.rf{box-shadow:inset 0 -3px 0 rgba(var(--ink),.28)}
+  .cell.tod{background:var(--acs);color:var(--on-acs)}
+  .cell.pick{box-shadow:inset 0 0 0 2px var(--ac);color:var(--tx)}
+  .cell.off{opacity:.3}
+  .rib{position:absolute;top:0;height:4px;background:var(--acs);left:-5px;right:-5px}
+  .rib.s{left:0;border-top-left-radius:999px;border-bottom-left-radius:999px}
+  .rib.e{right:0;border-top-right-radius:999px;border-bottom-right-radius:999px}
+  .rib.cut{right:0}
+  .rib.g{background:var(--tint)}
+  .cell.rng{background:var(--tint)}
+  .cell.rng.s{border-radius:11px 0 0 11px}
+  .cell.rng.e{border-radius:0 11px 11px 0;box-shadow:-5px 0 0 var(--tint)}
+  .cell.rng.mid{border-radius:0;box-shadow:-5px 0 0 var(--tint)}
+  .prot{width:330px;flex:none;background:var(--c1);border-radius:20px;padding:16px 17px;border:1px dashed rgba(var(--ink),.22)}
+  .prot>b{font:700 12px/1.35 Figtree,sans-serif;color:var(--ac);display:block}
+  .prot>span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.5);display:block;margin-top:6px;text-wrap:pretty}
 </style>
 </helmet>
-<div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
-<div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;"><span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">ЦИКЛ</span><span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Включение функции с отдельным согласием и отдельной подписью</span></div>
-<p style="margin:0 0 34px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Данные о цикле — особая категория, общего соглашения для них недостаточно. Отсюда главное решение: <b>согласие отдельное, подписывается отдельно, и отзывается одним действием вместе с удалением данных.</b> Семь экранов: зачем включать, согласие, подпись кодом, включённое состояние, отметка начала, отзыв и состояние, когда функция неприменима.</p>
-<div style="display:flex;gap:30px;align-items:flex-start;">
-<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Зачем включать</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">польза до согласия</span></div><div class="ph" id="cy1" data-screen-label="Цикл · включение" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);display:flex;flex-direction:column;"><div style="padding:16px 18px 0;display:flex;align-items:center;gap:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span style="font:700 15px/1 Figtree,sans-serif;color:#201e1d;">Отслеживание цикла</span></div><div class="sc" style="min-height:0;height:566px;overflow:hidden;padding:6px 18px 16px;"><div style="background:#efe3cf;border-radius:26px;padding:22px 20px;margin-top:14px;"><div style="font:700 16px/1.4 Figtree,sans-serif;color:#201e1d;text-wrap:pretty;">Цель по калориям будет меняться по фазам</div><div style="font:500 12px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-top:10px;text-wrap:pretty;">В лютеиновой фазе организм тратит больше — по разным оценкам, на 5–10 %. Приложение учтёт это само, и вы не будете думать, почему «не сходится».</div></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8a4a20;margin:20px 0 10px;">Что понадобится</div><div style="background:#f7efe2;border-radius:20px;padding:2px 16px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Дата начала цикла</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">раз в месяц</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Длина цикла</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">можно менее точно</span></div></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8a4a20;margin:20px 0 10px;">Кто это видит</div><div style="background:#f7efe2;border-radius:20px;padding:2px 16px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Вы</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">всегда</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Ваш куратор</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">только цель дня</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Кто-то ещё</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">никогда</span></div></div></div><div style="position:absolute;left:0;right:0;bottom:0;padding:12px 18px 20px;background:#fffaf1;"><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#c67139;font:700 13px/1 Figtree,sans-serif;color:#2b1608;">Продолжить</div><div style="font:500 10.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:9px;text-align:center;text-wrap:pretty;">Куратор видит цель дня, но не фазу и не даты</div></div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="ph" id="cy1d" data-screen-label="Цикл · включение · тёмная" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#141210;border-radius:28px;box-shadow:0 1px 2px rgba(0,0,0,.45),0 14px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;"><div style="padding:16px 18px 0;display:flex;align-items:center;gap:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.63)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span style="font:700 15px/1 Figtree,sans-serif;color:#f2ede6;">Отслеживание цикла</span></div><div class="sc" style="min-height:0;height:566px;overflow:hidden;padding:6px 18px 16px;"><div style="background:#2f2820;border-radius:26px;padding:22px 20px;margin-top:14px;"><div style="font:700 16px/1.4 Figtree,sans-serif;color:#f2ede6;text-wrap:pretty;">Цель по калориям будет меняться по фазам</div><div style="font:500 12px/1.55 Figtree,sans-serif;color:rgba(242,237,230,.63);margin-top:10px;text-wrap:pretty;">В лютеиновой фазе организм тратит больше — по разным оценкам, на 5–10 %. Приложение учтёт это само, и вы не будете думать, почему «не сходится».</div></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#e2a468;margin:20px 0 10px;">Что понадобится</div><div style="background:#23201b;border-radius:20px;padding:2px 16px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(242,237,230,.11000000000000001);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Дата начала цикла</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);">раз в месяц</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(242,237,230,.11000000000000001);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Длина цикла</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);">можно менее точно</span></div></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#e2a468;margin:20px 0 10px;">Кто это видит</div><div style="background:#23201b;border-radius:20px;padding:2px 16px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(242,237,230,.11000000000000001);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Вы</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);">всегда</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(242,237,230,.11000000000000001);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Ваш куратор</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);">только цель дня</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Кто-то ещё</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);">никогда</span></div></div></div><div style="position:absolute;left:0;right:0;bottom:0;padding:12px 18px 20px;background:#141210;"><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#cf8144;font:700 13px/1 Figtree,sans-serif;color:#1a0f04;">Продолжить</div><div style="font:500 10.5px/1.5 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:9px;text-align:center;text-wrap:pretty;">Куратор видит цель дня, но не фазу и не даты</div></div></div></div></div>
-<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Отдельное согласие</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">галочка не отмечена</span></div><div class="ph" id="cy2" data-screen-label="Цикл · согласие" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);display:flex;flex-direction:column;"><div style="padding:16px 18px 0;display:flex;align-items:center;gap:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span style="font:700 15px/1 Figtree,sans-serif;color:#201e1d;">Отслеживание цикла</span></div><div class="sc" style="min-height:0;height:566px;overflow:hidden;padding:6px 18px 16px;"><div style="background:#f0dcc6;border-radius:20px;padding:16px 17px;margin-top:14px;"><div style="font:700 12.5px/1.4 Figtree,sans-serif;color:#a1471c;">Это особая категория данных</div><div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-top:8px;text-wrap:pretty;">Сведения о репродуктивном здоровье закон защищает строже остальных. Общего соглашения для них недостаточно — нужно отдельное, только на эту функцию.</div></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8a4a20;margin:20px 0 10px;">Согласие</div><div style="background:#f7efe2;border-radius:20px;padding:16px 17px;"><div style="font:500 12px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.55);text-wrap:pretty;">Даты цикла хранятся отдельно от остальных данных и не попадают в отчёты куратору и в выгрузки для него. В вашей собственной выгрузке они есть — это ваши данные. При выключении функции они удаляются сразу, а не через тридцать дней.</div><div style="display:flex;align-items:center;gap:7px;margin-top:14px;font:700 11.5px/1 Figtree,sans-serif;color:#8a4a20;">Читать согласие целиком<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div></div><div style="display:flex;align-items:flex-start;gap:11px;margin-top:16px;"><span style="width:22px;height:22px;flex:none;border-radius:7px;box-shadow:inset 0 0 0 2px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;"></span><span style="flex:1;font:600 12px/1.45 Figtree,sans-serif;color:#201e1d;text-wrap:pretty;">Я даю согласие на обработку данных о цикле</span></div><div style="font:500 11px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:14px;text-wrap:pretty;">Отозвать согласие можно в любой момент — там же, где включали.</div></div><div style="position:absolute;left:0;right:0;bottom:0;padding:12px 18px 20px;background:#fffaf1;"><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#efe3cf;font:700 13px/1 Figtree,sans-serif;color:rgba(0,0,0,.3);">Подписать</div><div style="font:500 10.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:9px;text-align:center;text-wrap:pretty;">Согласие подписывается кодом доступа</div></div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="ph" id="cy2d" data-screen-label="Цикл · согласие · тёмная" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#141210;border-radius:28px;box-shadow:0 1px 2px rgba(0,0,0,.45),0 14px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;"><div style="padding:16px 18px 0;display:flex;align-items:center;gap:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.63)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span style="font:700 15px/1 Figtree,sans-serif;color:#f2ede6;">Отслеживание цикла</span></div><div class="sc" style="min-height:0;height:566px;overflow:hidden;padding:6px 18px 16px;"><div style="background:#3a2620;border-radius:20px;padding:16px 17px;margin-top:14px;"><div style="font:700 12.5px/1.4 Figtree,sans-serif;color:#e2a468;">Это особая категория данных</div><div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(242,237,230,.63);margin-top:8px;text-wrap:pretty;">Сведения о репродуктивном здоровье закон защищает строже остальных. Общего соглашения для них недостаточно — нужно отдельное, только на эту функцию.</div></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#e2a468;margin:20px 0 10px;">Согласие</div><div style="background:#23201b;border-radius:20px;padding:16px 17px;"><div style="font:500 12px/1.6 Figtree,sans-serif;color:rgba(242,237,230,.63);text-wrap:pretty;">Даты цикла хранятся отдельно от остальных данных и не попадают в отчёты куратору и в выгрузки для него. В вашей собственной выгрузке они есть — это ваши данные. При выключении функции они удаляются сразу, а не через тридцать дней.</div><div style="display:flex;align-items:center;gap:7px;margin-top:14px;font:700 11.5px/1 Figtree,sans-serif;color:#e2a468;">Читать согласие целиком<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div></div><div style="display:flex;align-items:flex-start;gap:11px;margin-top:16px;"><span style="width:22px;height:22px;flex:none;border-radius:7px;box-shadow:inset 0 0 0 2px rgba(242,237,230,.38);display:flex;align-items:center;justify-content:center;"></span><span style="flex:1;font:600 12px/1.45 Figtree,sans-serif;color:#f2ede6;text-wrap:pretty;">Я даю согласие на обработку данных о цикле</span></div><div style="font:500 11px/1.55 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:14px;text-wrap:pretty;">Отозвать согласие можно в любой момент — там же, где включали.</div></div><div style="position:absolute;left:0;right:0;bottom:0;padding:12px 18px 20px;background:#141210;"><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#2f2820;font:700 13px/1 Figtree,sans-serif;color:rgba(242,237,230,.38);">Подписать</div><div style="font:500 10.5px/1.5 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:9px;text-align:center;text-wrap:pretty;">Согласие подписывается кодом доступа</div></div></div></div></div>
-<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Подпись кодом</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">шторка поверх</span></div><div class="ph" id="cy3" data-screen-label="Цикл · подпись" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);"><div style="position:absolute;inset:0;background:rgba(32,30,29,.34);"></div><div style="position:absolute;left:0;right:0;bottom:0;background:#fffaf1;border-radius:26px 26px 28px 28px;padding:18px 18px 22px;"><div style="width:38px;height:4px;border-radius:999px;background:rgba(0,0,0,.14);margin:0 auto 18px;"></div><div style="font:700 15px/1.35 Figtree,sans-serif;color:#201e1d;">Подписать согласие</div><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f7efe2;border-radius:16px;padding:14px 15px;margin-top:14px;"><span style="font:600 12px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.55);">Согласие на обработку данных о цикле<br><span style="font-weight:500;color:rgba(0,0,0,.42);">редакция от 11 августа 2026</span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.42)" stroke-width="2.75" stroke-linecap="round" style="flex:none;"><path d="M9 6l6 6-6 6"/></svg></div><div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8a4a20;margin:20px 0 9px;">Код доступа</div><div style="display:flex;gap:8px;justify-content:space-between;"><div style="width:56px;height:64px;border-radius:16px;background:#fffaf1;box-shadow:inset 0 0 0 2px #c67139;"></div><div style="width:56px;height:64px;border-radius:16px;background:#f7efe2;"></div><div style="width:56px;height:64px;border-radius:16px;background:#f7efe2;"></div><div style="width:56px;height:64px;border-radius:16px;background:#f7efe2;"></div></div><div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:14px;text-wrap:pretty;">Код вводится каждый раз при подписании — даже на запомненном устройстве.</div><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#c67139;margin-top:18px;font:700 13px/1 Figtree,sans-serif;color:#2b1608;">Подписать</div></div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="ph" id="cy3d" data-screen-label="Цикл · подпись · тёмная" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#141210;border-radius:28px;box-shadow:0 1px 2px rgba(0,0,0,.45),0 14px 40px rgba(0,0,0,.45);"><div style="position:absolute;inset:0;background:rgba(32,30,29,.34);"></div><div style="position:absolute;left:0;right:0;bottom:0;background:#141210;border-radius:26px 26px 28px 28px;padding:18px 18px 22px;"><div style="width:38px;height:4px;border-radius:999px;background:rgba(242,237,230,.18000000000000002);margin:0 auto 18px;"></div><div style="font:700 15px/1.35 Figtree,sans-serif;color:#f2ede6;">Подписать согласие</div><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#23201b;border-radius:16px;padding:14px 15px;margin-top:14px;"><span style="font:600 12px/1.35 Figtree,sans-serif;color:rgba(242,237,230,.63);">Согласие на обработку данных о цикле<br><span style="font-weight:500;color:rgba(242,237,230,.5);">редакция от 11 августа 2026</span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.5)" stroke-width="2.75" stroke-linecap="round" style="flex:none;"><path d="M9 6l6 6-6 6"/></svg></div><div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#e2a468;margin:20px 0 9px;">Код доступа</div><div style="display:flex;gap:8px;justify-content:space-between;"><div style="width:56px;height:64px;border-radius:16px;background:#141210;box-shadow:inset 0 0 0 2px #cf8144;"></div><div style="width:56px;height:64px;border-radius:16px;background:#23201b;"></div><div style="width:56px;height:64px;border-radius:16px;background:#23201b;"></div><div style="width:56px;height:64px;border-radius:16px;background:#23201b;"></div></div><div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:14px;text-wrap:pretty;">Код вводится каждый раз при подписании — даже на запомненном устройстве.</div><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#cf8144;margin-top:18px;font:700 13px/1 Figtree,sans-serif;color:#1a0f04;">Подписать</div></div></div></div></div>
-<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Включено</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">настройка живёт здесь</span></div><div class="ph" id="cy4" data-screen-label="Цикл · включено" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);"><div style="padding:16px 18px 0;display:flex;align-items:center;gap:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span style="font:700 15px/1 Figtree,sans-serif;color:#201e1d;">Отслеживание цикла</span></div><div class="sc" style="min-height:0;height:633px;overflow:hidden;padding:6px 18px 16px;"><div style="display:flex;align-items:center;gap:12px;background:#eaefe0;border-radius:18px;padding:15px 16px;margin-top:14px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5c6a45" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M5 13l4 4L19 7"/></svg><span style="flex:1;font:600 12.5px/1.4 Figtree,sans-serif;color:#5c6a45;">Включено, согласие подписано 11 августа</span></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8a4a20;margin:20px 0 10px;">Цикл</div><div style="background:#efe3cf;border-radius:22px;padding:20px;"><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.42);">Фаза сейчас</div><div style="display:flex;align-items:baseline;gap:9px;margin-top:11px;"><span style="font:600 30px/1 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.02em;">Лютеиновая</span></div><div style="font:600 12px/1.5 Figtree,sans-serif;color:#5c6a45;margin-top:9px;">Цель дня выше обычной</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,0,0,.07);font:600 12px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Начало цикла</span><span style="color:#201e1d;font-variant-numeric:tabular-nums;">28 июля</span></div></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8a4a20;margin:20px 0 10px;">Настройки</div><div style="background:#f7efe2;border-radius:20px;padding:2px 16px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Длина цикла</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">29 дней</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Отметить начало</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);"></span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Согласие</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">подписано</span></div></div><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#f0dcc6;margin-top:18px;font:700 12.5px/1 Figtree,sans-serif;color:#a1471c;">Отключить и удалить данные</div><div style="font:500 11px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:12px;text-wrap:pretty;">Отключение отзывает согласие. Даты цикла удаляются сразу, цель дня возвращается к обычному расчёту.</div></div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="ph" id="cy4d" data-screen-label="Цикл · включено · тёмная" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#141210;border-radius:28px;box-shadow:0 1px 2px rgba(0,0,0,.45),0 14px 40px rgba(0,0,0,.45);"><div style="padding:16px 18px 0;display:flex;align-items:center;gap:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.63)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span style="font:700 15px/1 Figtree,sans-serif;color:#f2ede6;">Отслеживание цикла</span></div><div class="sc" style="min-height:0;height:633px;overflow:hidden;padding:6px 18px 16px;"><div style="display:flex;align-items:center;gap:12px;background:#242c20;border-radius:18px;padding:15px 16px;margin-top:14px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9fb981" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M5 13l4 4L19 7"/></svg><span style="flex:1;font:600 12.5px/1.4 Figtree,sans-serif;color:#9fb981;">Включено, согласие подписано 11 августа</span></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#e2a468;margin:20px 0 10px;">Цикл</div><div style="background:#2f2820;border-radius:22px;padding:20px;"><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(242,237,230,.5);">Фаза сейчас</div><div style="display:flex;align-items:baseline;gap:9px;margin-top:11px;"><span style="font:600 30px/1 Figtree,sans-serif;color:#e2a468;letter-spacing:-.02em;">Лютеиновая</span></div><div style="font:600 12px/1.5 Figtree,sans-serif;color:#9fb981;margin-top:9px;">Цель дня выше обычной</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid rgba(242,237,230,.11000000000000001);font:600 12px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Начало цикла</span><span style="color:#f2ede6;font-variant-numeric:tabular-nums;">28 июля</span></div></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#e2a468;margin:20px 0 10px;">Настройки</div><div style="background:#23201b;border-radius:20px;padding:2px 16px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(242,237,230,.11000000000000001);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Длина цикла</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);">29 дней</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(242,237,230,.11000000000000001);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Отметить начало</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);"></span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Согласие</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);">подписано</span></div></div><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#3a2620;margin-top:18px;font:700 12.5px/1 Figtree,sans-serif;color:#e2a468;">Отключить и удалить данные</div><div style="font:500 11px/1.55 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:12px;text-wrap:pretty;">Отключение отзывает согласие. Даты цикла удаляются сразу, цель дня возвращается к обычному расчёту.</div></div></div></div></div><div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Отметить начало</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">по кнопке из настроек</span></div><div class="ph" id="cy7" data-screen-label="Цикл · отметить начало" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);"><div style="position:absolute;inset:0;background:rgba(32,30,29,.34);"></div><div style="position:absolute;left:0;right:0;bottom:0;background:#fffaf1;border-radius:26px 26px 28px 28px;padding:18px 18px 22px;"><div style="width:38px;height:4px;border-radius:999px;background:rgba(0,0,0,.14);margin:0 auto 18px;"></div><div style="font:700 15px/1.35 Figtree,sans-serif;color:#201e1d;">Начало цикла</div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-top:8px;text-wrap:pretty;">Отметьте первый день. Прогноз следующего пересчитается сам.</div><div style="display:flex;gap:8px;margin-top:16px;"><span style="flex:1;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#c67139;font:700 12px/1 Figtree,sans-serif;color:#2b1608;">Сегодня</span><span style="flex:1;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#f7efe2;font:700 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Вчера</span><span style="flex:1;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#f7efe2;font:700 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Другая дата</span></div><div style="background:#f7efe2;border-radius:18px;padding:16px;margin-top:14px;"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Прошлый цикл</span><span style="flex:none;color:#201e1d;font-variant-numeric:tabular-nums;">28 июля · 29 дней</span></div><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:11px;padding-top:11px;border-top:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Ожидался</span><span style="flex:none;color:#5c6a45;font-variant-numeric:tabular-nums;">26 августа</span></div></div><div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:14px;text-wrap:pretty;">Три кнопки закрывают почти все случаи — точную дату вспоминают редко и обычно это вчера или сегодня.</div><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#c67139;margin-top:16px;font:700 13px/1 Figtree,sans-serif;color:#2b1608;">Отметить</div></div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="ph" id="cy7d" data-screen-label="Цикл · отметить начало · тёмная" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#141210;border-radius:28px;box-shadow:0 1px 2px rgba(0,0,0,.45),0 14px 40px rgba(0,0,0,.45);"><div style="position:absolute;inset:0;background:rgba(32,30,29,.34);"></div><div style="position:absolute;left:0;right:0;bottom:0;background:#141210;border-radius:26px 26px 28px 28px;padding:18px 18px 22px;"><div style="width:38px;height:4px;border-radius:999px;background:rgba(242,237,230,.18000000000000002);margin:0 auto 18px;"></div><div style="font:700 15px/1.35 Figtree,sans-serif;color:#f2ede6;">Начало цикла</div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(242,237,230,.63);margin-top:8px;text-wrap:pretty;">Отметьте первый день. Прогноз следующего пересчитается сам.</div><div style="display:flex;gap:8px;margin-top:16px;"><span style="flex:1;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#cf8144;font:700 12px/1 Figtree,sans-serif;color:#1a0f04;">Сегодня</span><span style="flex:1;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#23201b;font:700 12px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Вчера</span><span style="flex:1;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#23201b;font:700 12px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Другая дата</span></div><div style="background:#23201b;border-radius:18px;padding:16px;margin-top:14px;"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Прошлый цикл</span><span style="flex:none;color:#f2ede6;font-variant-numeric:tabular-nums;">28 июля · 29 дней</span></div><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:11px;padding-top:11px;border-top:1px solid rgba(242,237,230,.11000000000000001);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Ожидался</span><span style="flex:none;color:#9fb981;font-variant-numeric:tabular-nums;">26 августа</span></div></div><div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:14px;text-wrap:pretty;">Три кнопки закрывают почти все случаи — точную дату вспоминают редко и обычно это вчера или сегодня.</div><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#cf8144;margin-top:16px;font:700 13px/1 Figtree,sans-serif;color:#1a0f04;">Отметить</div></div></div></div></div>
-<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Функция недоступна</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">гейт по профилю</span></div><div class="ph" id="cy6" data-screen-label="Цикл · недоступно" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);"><div style="padding:16px 18px 0;display:flex;align-items:center;gap:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span style="font:700 15px/1 Figtree,sans-serif;color:#201e1d;">Настройки</span></div><div class="sc" style="min-height:0;height:633px;overflow:hidden;padding:6px 18px 16px;"><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8a4a20;margin:20px 0 10px;">Расчёт цели</div><div style="background:#f7efe2;border-radius:20px;padding:2px 16px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Дефицит</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">10 %</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Компенсация долга</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">включена</span></div></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8a4a20;margin:20px 0 10px;">Отслеживание цикла</div><div style="background:#f7efe2;border-radius:20px;padding:18px;"><div style="font:700 12.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.55);">Недоступно при вашем профиле</div><div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:8px;text-wrap:pretty;">Функция учитывает фазы менструального цикла. В профиле указан мужской пол — если это ошибка, поправьте профиль, и настройка появится здесь.</div><div style="display:flex;align-items:center;gap:7px;margin-top:13px;font:700 11.5px/1 Figtree,sans-serif;color:#8a4a20;">Открыть профиль<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div></div><div style="font:500 11px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:14px;text-wrap:pretty;">Раздел показан выключенным, а не спрятан: иначе человек, у которого пол указан неверно, никогда не узнает, почему настройки нет.</div></div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="ph" id="cy6d" data-screen-label="Цикл · недоступно · тёмная" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#141210;border-radius:28px;box-shadow:0 1px 2px rgba(0,0,0,.45),0 14px 40px rgba(0,0,0,.45);"><div style="padding:16px 18px 0;display:flex;align-items:center;gap:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.63)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span style="font:700 15px/1 Figtree,sans-serif;color:#f2ede6;">Настройки</span></div><div class="sc" style="min-height:0;height:633px;overflow:hidden;padding:6px 18px 16px;"><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#e2a468;margin:20px 0 10px;">Расчёт цели</div><div style="background:#23201b;border-radius:20px;padding:2px 16px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(242,237,230,.11000000000000001);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Дефицит</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);">10 %</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(242,237,230,.63);">Компенсация долга</span><span style="flex:none;font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);">включена</span></div></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#e2a468;margin:20px 0 10px;">Отслеживание цикла</div><div style="background:#23201b;border-radius:20px;padding:18px;"><div style="font:700 12.5px/1.4 Figtree,sans-serif;color:rgba(242,237,230,.63);">Недоступно при вашем профиле</div><div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:8px;text-wrap:pretty;">Функция учитывает фазы менструального цикла. В профиле указан мужской пол — если это ошибка, поправьте профиль, и настройка появится здесь.</div><div style="display:flex;align-items:center;gap:7px;margin-top:13px;font:700 11.5px/1 Figtree,sans-serif;color:#e2a468;">Открыть профиль<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div></div><div style="font:500 11px/1.55 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:14px;text-wrap:pretty;">Раздел показан выключенным, а не спрятан: иначе человек, у которого пол указан неверно, никогда не узнает, почему настройки нет.</div></div></div></div></div>
 
-<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Отзыв согласия</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">с удалением данных</span></div><div class="ph" id="cy5" data-screen-label="Цикл · отключение" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);"><div style="position:absolute;inset:0;background:rgba(32,30,29,.34);"></div><div style="position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);background:#fffaf1;border-radius:26px;padding:24px 20px 20px;box-shadow:0 4px 12px rgba(80,50,20,.16),0 24px 56px rgba(80,50,20,.22);"><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:#a1471c;">Отозвать согласие</div><div style="font:700 16px/1.35 Figtree,sans-serif;color:#201e1d;margin-top:11px;text-wrap:pretty;">Отключить отслеживание цикла</div><div style="font:500 12px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-top:10px;text-wrap:pretty;">Даты цикла удалятся сразу и восстановить их будет нельзя. Записи о еде, весе и активности останутся как есть.</div><div style="background:#f7efe2;border-radius:16px;padding:13px 15px;margin-top:14px;font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.55);text-wrap:pretty;">Запись об отзыве согласия сохранится в журнале — это требование закона, и она не содержит самих дат.</div><div style="display:flex;gap:8px;margin-top:20px;"><span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#f7efe2;font:700 12.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Оставить</span><span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#f0dcc6;font:700 12.5px/1 Figtree,sans-serif;color:#a1471c;">Отключить</span></div></div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="ph" id="cy5d" data-screen-label="Цикл · отключение · тёмная" style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:#141210;border-radius:28px;box-shadow:0 1px 2px rgba(0,0,0,.45),0 14px 40px rgba(0,0,0,.45);"><div style="position:absolute;inset:0;background:rgba(32,30,29,.34);"></div><div style="position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);background:#141210;border-radius:26px;padding:24px 20px 20px;box-shadow:0 4px 12px rgba(0,0,0,.45),0 24px 56px rgba(0,0,0,.45);"><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:#e2a468;">Отозвать согласие</div><div style="font:700 16px/1.35 Figtree,sans-serif;color:#f2ede6;margin-top:11px;text-wrap:pretty;">Отключить отслеживание цикла</div><div style="font:500 12px/1.55 Figtree,sans-serif;color:rgba(242,237,230,.63);margin-top:10px;text-wrap:pretty;">Даты цикла удалятся сразу и восстановить их будет нельзя. Записи о еде, весе и активности останутся как есть.</div><div style="background:#23201b;border-radius:16px;padding:13px 15px;margin-top:14px;font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(242,237,230,.63);text-wrap:pretty;">Запись об отзыве согласия сохранится в журнале — это требование закона, и она не содержит самих дат.</div><div style="display:flex;gap:8px;margin-top:20px;"><span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#23201b;font:700 12.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Оставить</span><span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#3a2620;font:700 12.5px/1 Figtree,sans-serif;color:#e2a468;">Отключить</span></div></div></div></div></div>
-<div style="width:400px;flex:none;"><div class="h" style="margin-top:0;">Решения</div><div style="background:#fffaf1;border-radius:24px;padding:20px;"><div class="nt"><b>Недоступное показано выключенным, а не спрятано</b><span>Трекинг гейтится по полу в профиле. Если раздел просто исчезает, человек с неверно указанным полом никогда не узнает, почему настройки нет. Поэтому он на месте, с причиной и входом в профиль.</span></div><div class="nt"><b>Отметка начала — три кнопки, не календарь</b><span>«Сегодня», «Вчера», «Другая дата». Точную дату вспоминают редко: в подавляющем большинстве случаев отмечают в тот же день или на следующий. Календарь остаётся третьей кнопкой, а не первым экраном.</span></div><div class="nt"><b>Процент не назван точной цифрой</b><span>В коде диапазон 5–10 %, конкретного множителя для показа нет. На экране, который человек читает перед подписанием согласия, точное «8 %» было бы придуманным числом.</span></div><div class="nt"><b>Польза объясняется до согласия, а не после</b><span>Первый экран не просит ничего — он отвечает, зачем это человеку: цель по калориям начнёт учитывать фазу. Ставить согласие первым значит требовать разрешение на то, смысла чего человек ещё не понял.</span></div><div class="nt"><b>Согласие отдельное, и сказано почему</b><span>«Сведения о репродуктивном здоровье закон защищает строже» — прямо на экране. Без этой строки отдельная галочка выглядит бюрократией; с ней она читается как защита, а не как препятствие.</span></div><div class="nt"><b>«Кто это видит» — три строки, включая «никогда»</b><span>Куратор видит цель дня, но не фазу и не даты. Строка «Кто-то ещё — никогда» стоит явно: её отсутствие человек достраивает сам, и обычно не в нашу пользу.</span></div><div class="nt"><b>Подпись — та же шторка, что у общих документов</b><span>Механизм один: код вводится каждый раз, даже на запомненном устройстве. Отдельный механизм подписи для цикла завёл бы вторую систему доказательств — а нужна одна, просто применённая к другому документу.</span></div><div class="ntl"><b>Отключение и удаление — одно действие</b><span>Кнопка называет оба следствия сразу: «Отключить и удалить данные». Разводить их на два шага нельзя — человек, отозвавший согласие, вправе считать данные удалёнными, а не «отключёнными».</span></div></div><div class="h">Сроки названы честно</div><div style="background:#efe3cf;border-radius:24px;padding:20px;"><div class="nt"><b>Даты удаляются сразу, а не через 30 дней</b><span>Общее правило — тридцать дней, но для особой категории мы обещаем немедленное удаление, и это написано в двух местах: в согласии и в диалоге отзыва. Обещание сильнее общего — так можно.</span></div><div class="ntl"><b>Запись об отзыве остаётся, и это сказано</b><span>Журнал хранится три года по закону. Если не написать, что запись не содержит самих дат, человек прочитает «удалили, но запись осталась» как обман.</span></div></div><div class="h">Для разработки</div><div style="background:#f0d8c4;border-radius:24px;padding:20px;"><div class="nt"><b>Три разных срока в одном продукте</b><span>Данные цикла — сразу, остальные данные — 30 дней, журнал подписания — 3 года. Все три должны быть написаны и в политике, и в соглашении одинаковыми словами, иначе это станет расхождением при следующей проверке.</span></div><div class="ntl"><b>Хранение отдельно от остальных данных</b><span>Обещано на экране: даты не попадают в отчёты куратору и в выгрузки для него. В клиентской выгрузке они обязаны быть — это его право на свои данные. Если технически они лежат в общей таблице дня, обещание придётся либо выполнить, либо снять с экрана — второе хуже.</span></div></div></div>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="22" y="40" width="56" height="5" rx="2.5" fill="#c67139"/><rect x="22" y="53" width="34" height="5" rx="2.5" fill="#c67139" opacity="0.34"/><circle cx="30" cy="30" r="4" fill="#8a4a20"/><circle cx="44" cy="30" r="4" fill="#8a4a20" opacity="0.55"/><circle cx="58" cy="30" r="4" fill="#8a4a20" opacity="0.3"/><circle cx="72" cy="30" r="4" fill="#8a4a20" opacity="0.16"/></svg></template>
+
+<div style="background:#e9dfcd;padding:44px 46px 74px;width:max-content;">
+
+<div style="display:flex;align-items:flex-start;gap:11px;background:#f0d8c4;border-radius:18px;padding:13px 16px;margin:0 0 22px;max-width:1020px;"><span style="font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;background:var(--acs);color:var(--on-acs);border-radius:999px;flex:none;">ЭСКИЗ</span><span style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.62);text-wrap:pretty;">Функция включается для одного аккаунта, а не выпускается клиентам. Раскладка и слова — черновик под спецификацию 25.08, обсуждаемы. Числа в контракте — не черновик, но и не паритет с кодом: они поставлены по физиологии 26 августа и <b>намеренно расходятся</b> с heys_cycle_v1.js, который держит прежние проценты. Меняется код, а не эти строки — подробности в строке контракта «расхождение с кодом». Юридический слой прежней версии снят целиком и лежит в протоколе внизу.</span></div>
+
+<div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;"><span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:var(--acs);color:var(--on-acs);border-radius:999px;">ОСОБЫЙ ПЕРИОД</span><span style="font:700 14px/1.2 Figtree,sans-serif;color:var(--tx);">Один тумблер, один вопрос в день, четыре потребителя</span></div>
+<p style="margin:0 0 10px;max-width:1020px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(var(--ink),.6);text-wrap:pretty;">Раньше здесь была семиэкранная воронка согласия. Клиента-субъекта нет — значит нет и отдельного документа, подписи кодом, строк «кто это видит» и отзыва с записью в журнал. Остаётся то, ради чего функция существует: <b>назвала день — нормы дня подстроились сами.</b> Модель — 28 дней с фазами, но человек никогда не вводит фазу: он отвечает на один вопрос в утреннем чек-ине, и день по умолчанию уже предложен.</p>
+<p class="mono" style="margin:0 0 4px;" data-probar></p>
+<p class="mono" style="margin:0 0 4px;font-weight:700;" data-audit></p>
+<p class="mono" style="margin:0 0 32px;">файл в пакете: cycle.v4.dc.html · кадры искать по data-screen-label · тёмная, синяя и сине-тёмная лежат под каждым рядом, показывает их твик «Все палитры»</p>
+
+<div class="h" style="margin-top:0;">Что куда и зачем</div>
+<div style="display:flex;align-items:stretch;gap:10px;width:max-content;">
+  <div class="fb"><b>Профиль · тумблер</b><span>Единственное место включения. Строка видна при поле «Женский». Подтверждения при включении нет — данных ещё нет.</span></div>
+  <div class="arw">→</div>
+  <div class="fb"><b>Чек-ин · шаг 5 «Остальное»</b><span>Строка в стопке условного, своего шага нет. «Отметить» раскрывает ряд дней, «Не идут» стоит там же. Со второго дня номер уже предложен.</span></div>
+  <div class="arw">→</div>
+  <div class="fb"><b>Дни в записях</b><span>Один ответ проставляет семь дней подряд: назван день N — первый ставится на N−1 назад. Дальше счёт идёт вперёд по 28 дням, пока не переставили руками.</span></div>
+  <div class="arw">→</div>
+  <div class="fb"><b>«Питание» · прошлый день</b><span>Второй вход: блок «Особый период» на вкладке «Питание», тот же ряд 1–7 на дате из капсулы, глубина 28 дней. Так помечается период, кончившийся без отметки.</span></div>
+  <div class="arw">→</div>
+  <div class="fb"><b>Четыре потребителя</b><span>Норма калорий, норма воды, волна, тренд веса. Метка в календаре ничего не считает — она только адрес дня.</span></div>
 </div>
-<p style="margin:30px 0 0;font:500 12.5px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.5);">Дальше: «синяя палитра» · «отметка начала цикла» · «как цикл виден в Активе»</p>
-</div></x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;showContracts&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
+<p style="margin:14px 0 0;max-width:1020px;font:500 12px/1.6 Figtree,sans-serif;color:rgba(var(--ink),.5);text-wrap:pretty;">Зачем так: ввод стоит там, где человек уже отвечает на вопросы о себе. Отдельного экрана «отметить начало» нет — он существовал бы ради одного тапа в месяц. Сбой цикла лечится тем же вопросом: пришло раньше — переставила день, и счёт пересобрался от новой даты. А период, который кончился без отметки, помечается задним числом: вкладка «Питание», блок «Особый период», капсулой даты на нужный день и тот же ряд 1–7. В «Отчётах» этого нет — там период вместо дня и капсулы даты не существует.</p>
+
+<div class="h" data-mirh="m1">Ввод · шаг 5 «Остальное», отдельного шага нет</div>
+<p style="margin:-4px 0 18px;max-width:1020px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(var(--ink),.6);text-wrap:pretty;" data-lead>Особый период живёт строкой в стопке пятого шага — рядом с «Добавками на сегодня», «Утренней рутиной» и «Замерами». Свёрнуто это строка с действием «Отметить»; ряд дней раскрывается вторым слоем той же строки, а на неделе периода строка поднимается наверх и становится верхней карточкой шага. Пятый шаг для этого и сделан: он собирает всё редкое и условное на одном экране, у него нет обязательных полей, и пропускать его отдельно не нужно — он последний перед «Готово». Своего шага у периода нет, точки в индикаторе не добавляется, счётчик остаётся «1 из 5».</p>
+<div class="pal" data-mir="m1" style="display:flex;gap:26px;align-items:flex-start;">
+
+  <div>
+    <div class="cap"><b>Стопка пятого шага</b><span>строка среди прочих условных</span></div>
+    <div class="ph" data-screen-label="Цикл · шаг 5, строка в стопке">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;"><span style="width:17px;height:17px;"></span><span style="display:flex;gap:5px;align-items:center;"><span style="width:5px;height:5px;border-radius:999px;background:rgba(var(--ink),.16);"></span><span style="width:5px;height:5px;border-radius:999px;background:rgba(var(--ink),.16);"></span><span style="width:5px;height:5px;border-radius:999px;background:rgba(var(--ink),.16);"></span><span style="width:5px;height:5px;border-radius:999px;background:rgba(var(--ink),.16);"></span><span style="width:5px;height:5px;border-radius:999px;background:var(--acs);"></span></span><span style="width:17px;height:17px;"></span></div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="border-radius:16px;background:var(--c1);padding:13px 14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Добавки на сегодня</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">2 пункта</span></div>
+        </div>
+        <div style="border-radius:16px;background:var(--c1);padding:11px 12px 11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <span><span style="display:block;font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Особые дни</span><span style="display:block;font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:3px;">Нормы дня подстроятся под них</span></span>
+          <span style="flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;background:var(--c2);font:700 12px/1 Figtree,sans-serif;color:var(--ac);">Отметить</span>
+        </div>
+        <div style="border-radius:16px;background:var(--c1);padding:13px 14px;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <span><span style="display:block;font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Замеры</span><span style="display:block;font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:3px;">Прошло 9 дней с прошлых</span></span>
+          <span style="font:700 15px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);">›</span>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:12px;">Строка, а не карточка с кнопками: карточка в стопку не влезала — проверка ниже.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>Тап по строке → какой день</b><span>второй слой, как у «Замеров»</span></div>
+    <div class="ph" data-screen-label="Цикл · шаг 5, выбор дня">
+      <div style="border-radius:16px;background:var(--c1);padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Особые дни</span><span style="font:700 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">Не идут</span></div>
+        <div class="tier" style="margin:16px 0 8px;">Какой день</div>
+        <div class="day"><span>1</span><span>2</span><span class="on">3</span><span>4</span><span>5</span><span>6</span><span>7</span></div>
+        <div class="hint" style="margin-top:10px;">Дни 1–7 проставятся сами, дальше счёт идёт вперёд.</div>
+      </div>
+      <div class="hint" style="margin-top:12px;">Раскрытие — второй слой той же строки, как у «Замеров» и «Холода». Экран не меняется, «Не идут» стоит справа в шапке.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>Следующее утро</b><span>день предложен — один тап</span></div>
+    <div class="ph" data-screen-label="Цикл · шаг 5, день предложен" data-vid="вид · верхняя карточка на днях 1–7">
+      <div style="border-radius:20px;background:var(--c2);padding:16px 17px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+          <span style="font:700 16px/1.25 Figtree,sans-serif;color:var(--tx);">Особые дни</span>
+          <span style="font:600 12px/1 Figtree,sans-serif;color:var(--ac);white-space:nowrap;">День 4 · середина</span>
+        </div>
+        <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:5px;text-wrap:pretty;">Вчера был третий. Если сегодня иначе — переставьте номер.</div>
+        <div class="day" style="margin-top:12px;"><span>1</span><span>2</span><span>3</span><span class="on">4</span><span>5</span><span>6</span><span>7</span></div>
+        <div style="display:flex;gap:8px;margin-top:11px;">
+          <span style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Закончились</span>
+          <span style="flex:1;min-height:44px;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);">Верно</span>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:12px;">Это верхняя карточка шага, а не строка стопки: на днях 1–7 период занимает её место, «Прохладный душ» уходит вниз строкой. Полный кадр — в проверке высоты.</div>
+    </div>
+  </div>
+
+  <div style="width:400px;flex:none;" data-nomirror>
+    <div class="h" style="margin-top:0;">Решения</div>
+    <div style="background:var(--bg);border-radius:24px;padding:20px;">
+      <div class="nt"><b>Ввод один, и он в пятом шаге</b><span>Вся функция держится на одном вопросе в день, и вопрос стоит там, где уже собрано всё редкое: пятый шаг «Остальное». Отдельный шаг добавил бы точку в индикатор и требовал бы кнопки «Пропустить» — то есть заставлял бы каждое утро отказываться от вопроса, который в двадцати днях месяца не нужен. Экрана «отметить начало цикла» тоже нет: он показывался бы раз в месяц ради того же ответа.</span></div>
+      <div class="nt"><b>Свёрнуто — строка с чипом, а не карточка</b><span>Карточка с двумя кнопками не влезала: стопка пятого шага уходила под «Готово» на 38 px (проверка ниже, три целых кадра, отклонённый — в протоколе). Строка с чипом «Отметить» оставляет 8 px запаса. Чип, а не голое слово: действие в строке должно читаться нажимаемым и держать 44 px. Тумблера здесь нет — тумблер один и живёт в профиле, иначе включение функции и ответ за сегодня выглядели бы одинаково.</span></div>
+      <div class="nt"><b>На неделе периода карточка встаёт первой и главной</b><span>Пока период идёт, «Особые дни» занимают место верхней карточки, а «Прохладный душ» уходит в стопку: ежедневный ответ даётся первым же экраном, одним тапом «Верно». Стопку при этом не режем — «Добавить в курс» и обе кнопки рутины на месте, поэтому шаг прокручивается. Прокрутка одну неделю из четырёх дешевле, чем урезанные соседние функции.</span></div>
+      <div class="nt"><b>Замеры на этой неделе не просят, а объясняют</b><span>Обхваты на днях 1–7 меряют задержку воды, а не тело — просить их значит собирать заведомо испорченные числа и пугать человека сантиметрами. Поэтому строка остаётся на месте, но становится приглушённой: «Замеры отложены — задержка воды искажает обхваты». Спрятать её молча нельзя: пропавший пункт человек достраивает сам, и обычно не в нашу пользу.</span></div>
+      <div class="nt"><b>Прошлый период отмечается задним числом</b><span>Самый частый повод — дни уже кончились, а отметки не было: сегодняшним числом ряда это не назвать никак. Глубина — 28 дней: дальше отметку не с чем связать. Съеденное и вес при этом не двигаются, пересчитываются только нормы затронутых дней. В «Отчётах» этого нет и не будет — там период вместо дня, и капсулы даты не существует.</span></div>
+      <div class="nt"><b>Дата — второй шаг, и по умолчанию она уже верна</b><span>Сначала день, потом дата: «седьмой» без даты не значит ничего, а дата без номера не говорит, где в периоде человек. По умолчанию берётся открытый день экрана, и строка подтверждения сразу называет получившуюся неделю — «26 августа · период 20–26». Календарь прячется за чипом «Другой день», а не открывается сам: обычная отметка делается каждое утро на неделе периода, и платить за неё лишним шагом ради случая раз в месяц нельзя. Второй путь остаётся бесплатным — уйти капсулой на нужный день и отметить там, потому что дата тогда уже выбрана экраном.</span></div>
+      <div class="nt"><b>Со второго дня номер предложен</b><span>Вчера второй — сегодня по умолчанию третий, и «Верно» закрывает шаг одним тапом. Это же лечит сбой цикла: пришло раньше — переставила номер, и семь дней с нормами пересобрались от новой даты, без календаря и без «начала цикла».</span></div>
+      <div class="nt"><b>Числа поставлены по физиологии, а не по коду</b><span>Прежние проценты (плюс пять на 1–5, плюс пять на овуляции, плюс восемь на всю лютеиновую) в сумме давали 5,25 % надбавки по циклу — пятую часть цели −1,8 кг в месяц, которая уходила молча. Расход растёт после овуляции, а не в неё; в менструальные дни он на минимуме. Новая расстановка: 1–14 база, 15–19 плюс три, 20–28 плюс пять — в среднем 2,14 %, около 38 ккал в день. Волна переехала с 1–5 на 20–28: чувствительность к инсулину падает в лютеиновой фазе, а не в фолликулярной, и прежняя расстановка усиливала волну ровно там, где она лучшая. Вода осталась на 1–5, но названа мерой от отёчности, а не расчётом.</span></div>
+      <div class="nt"><b>Фазы после дня 7 считаются, но не вводятся</b><span>Модель 28-дневная. Но UI не спрашивает про фазу никогда: спросить «у вас овуляция?» значит требовать знания, которого у человека нет, ради поправки в пять процентов.</span></div>
+      <div class="nt"><b>Слова не медицинские</b><span>«Особый период», «особые дни», «начало · середина · конец». Названия после дня 7 того же строя — «спокойные дни», «середина цикла», «вторая половина»: они говорят, где человек находится, а не как это зовётся в анатомии. Слово «фаза» в интерфейс не выводится вообще — в контракте оно есть, на экране нет.</span></div>
+      <div class="nt"><b>Цветочка нет</b><span>В коде метка — 🌸. В наборе эмодзи не используются: метка дня — вертикальная полоска тоном чернил, бейджи — обычные пилюли. Иначе одна функция вносит в интерфейс собственный алфавит.</span></div>
+      <div class="nt"><b>Подтверждения при включении нет</b><span>Тумблер и тумблер. Подтверждать нечего: данных ещё нет, документа нет. Выключение спрашивает — но не потому, что удаляет прошлое: оно его как раз не трогает. Спрашивает потому, что гасит вопрос в чек-ине и меняет сегодняшнюю цель.</span></div>
+      <div class="nt"><b>Прошлое не переписывается ни выключением, ни отменой</b><span>Две прежние строки контракта спорили: одна обещала удалить отметки при выключении, другая — не пересчитывать историю. Вместе они давали график с приподнятой ступенькой и без единой метки, объясняющей её. Решено в пользу истории: человек в те дни правда ел по той норме, и стирать её задним числом — врать о прожитом. А разрушительные ответы в чек-ине («Не идут», «Закончились») получили общий бар отмены на пять секунд: один тап не должен уносить неделю отметок молча.</span></div>
+      <div class="ntl"><b>После дня 28 карточка спрашивает</b><span>Счёт не идёт по кругу молча: на 29-й день карточка становится вопросом «период начался?». Молчаливый второй круг означал бы, что нормы двигаются по данным месячной давности.</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="h" data-mirh="m2">Влезает ли · целый шаг 5, копия для сравнения</div>
+<div style="display:flex;align-items:flex-start;gap:11px;background:#f0d8c4;border-radius:18px;padding:13px 16px;margin:-4px 0 18px;max-width:1020px;"><span style="font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;background:var(--ac);color:#fff5ef;border-radius:999px;flex:none;">КОПИЯ</span><span style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.62);text-wrap:pretty;">Канон шага 5 живёт в <b>Утренний чек-ин v4.dc.html</b> (в пакете checkin-morning.v4.dc.html), кадр «Чек-ин · остальное». Здесь его копия — только чтобы проверить высоту с новой карточкой. При расхождении верен тот файл; правки в саму стопку вносятся там, а не здесь.</span></div>
+<div class="pal" data-mir="m2" style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;">
+
+  <div>
+    <div class="cap"><b>Канон · как сейчас</b><span>копия из чек-ина, без периода</span></div>
+    <div data-fit style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12);display:flex;flex-direction:column;" data-screen-label="Цикл · копия шага 5, канон">
+      <div style="padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between;"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="display:flex;gap:5px;"><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:18px;height:7px;border-radius:999px;background:var(--acs);"></span></span><span style="width:44px;"></span></div>
+      <div data-flow style="flex:1;overflow:hidden;padding:14px 18px 0;">
+        <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:700 16px/1.25 Figtree,sans-serif;color:var(--tx);">Прохладный душ</span><span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">4 дня подряд</span></div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:5px;text-wrap:pretty;">Хотя бы тридцать секунд в конце обычного душа — этого достаточно.</div>
+          <div style="display:flex;gap:8px;margin-top:12px;"><span style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Было</span><span style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:11px;">
+          <div style="border-radius:16px;background:var(--c1);padding:12px 14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Добавки на сегодня</span><span style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid rgba(var(--ink),.35);"></span></div>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-top:11px;"><span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);">Витамин D · 5000 МЕ</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">утром</span></span><span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);">Магний · 400 мг</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">вечером</span></span></div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:12px;min-height:44px;"><span style="width:26px;height:26px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span><span style="font:600 12px/1 Figtree,sans-serif;color:var(--ac);">Добавить в курс</span></div>
+          </div>
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Утренняя рутина</span><span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">2 дня подряд</span></div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">Резинки и разогрев · 6 минут</div>
+            <div style="display:flex;gap:6px;margin-top:11px;"><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделал</span><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделаю</span><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</span></div>
+          </div>
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span><span style="display:block;font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Замеры</span><span style="display:block;font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:3px;">Прошло 9 дней с прошлых</span></span><span style="font:700 15px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);">›</span></div>
+        </div>
+      </div>
+      <div style="padding:12px 18px 20px;background:var(--bg);"><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--acs);font:700 13px/1 Figtree,sans-serif;color:var(--on-acs);">Готово</div></div>
+    </div>
+    <div class="hint" style="width:330px;margin-top:10px;" data-fitnote="0" data-owner="высота шага">Запас по высоте считается на канвасе.</div>
+  </div>
+
+  <div data-demo="protocol">
+    <div class="cap"><b>Отклонено · карточка с кнопками</b><span>перебор по высоте, оставлено как протокол</span></div>
+    <div data-fit style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12);display:flex;flex-direction:column;" data-screen-label="Цикл · копия шага 5, с карточкой">
+      <div style="padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between;"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="display:flex;gap:5px;"><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:18px;height:7px;border-radius:999px;background:var(--acs);"></span></span><span style="width:44px;"></span></div>
+      <div data-flow style="flex:1;overflow:hidden;padding:14px 18px 0;">
+        <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:700 16px/1.25 Figtree,sans-serif;color:var(--tx);">Прохладный душ</span><span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">4 дня подряд</span></div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:5px;text-wrap:pretty;">Хотя бы тридцать секунд в конце обычного душа — этого достаточно.</div>
+          <div style="display:flex;gap:8px;margin-top:12px;"><span style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Было</span><span style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:11px;">
+          <div style="border-radius:16px;background:var(--c1);padding:12px 14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Добавки на сегодня</span><span style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid rgba(var(--ink),.35);"></span></div>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-top:11px;"><span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);">Витамин D · 5000 МЕ</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">утром</span></span><span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);">Магний · 400 мг</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">вечером</span></span></div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:12px;min-height:44px;"><span style="width:26px;height:26px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span><span style="font:600 12px/1 Figtree,sans-serif;color:var(--ac);">Добавить в курс</span></div>
+          </div>
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Утренняя рутина</span><span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">2 дня подряд</span></div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">Резинки и разогрев · 6 минут</div>
+            <div style="display:flex;gap:6px;margin-top:11px;"><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделал</span><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделаю</span><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</span></div>
+          </div>
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;">
+            <div style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Особые дни</div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">Нормы дня подстроятся под них</div>
+            <div style="display:flex;gap:6px;margin-top:11px;"><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Идут</span><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Нет</span></div>
+          </div>
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span><span style="display:block;font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Замеры</span><span style="display:block;font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:3px;">Прошло 9 дней с прошлых</span></span><span style="font:700 15px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);">›</span></div>
+        </div>
+      </div>
+      <div style="padding:12px 18px 20px;background:var(--bg);"><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--acs);font:700 13px/1 Figtree,sans-serif;color:var(--on-acs);">Готово</div></div>
+    </div>
+    <div class="hint" style="width:330px;margin-top:10px;" data-fitnote="1" data-owner="высота шага">Запас по высоте считается на канвасе.</div>
+  </div>
+
+  <div>
+    <div class="cap"><b>Дни 1–7 · карточка первой</b><span>стопка целиком, замеры отложены, шаг прокручивается</span></div>
+    <div data-fit style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12);display:flex;flex-direction:column;" data-screen-label="Цикл · копия шага 5, период идёт">
+      <div style="padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between;"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="display:flex;gap:5px;"><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:18px;height:7px;border-radius:999px;background:var(--acs);"></span></span><span style="width:44px;"></span></div>
+      <div data-flow style="flex:1;overflow:hidden;padding:14px 18px 0;">
+        <div style="border-radius:20px;background:var(--c2);padding:16px 17px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:700 16px/1.25 Figtree,sans-serif;color:var(--tx);">Особые дни</span><span style="font:600 12px/1 Figtree,sans-serif;color:var(--ac);white-space:nowrap;">День 4 · середина</span></div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:5px;text-wrap:pretty;">Вчера был третий. Если сегодня иначе — переставьте номер.</div>
+          <div class="day" style="margin-top:12px;"><span>1</span><span>2</span><span>3</span><span class="on">4</span><span>5</span><span>6</span><span>7</span></div>
+          <div style="display:flex;gap:8px;margin-top:11px;"><span style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Закончились</span><span style="flex:1;min-height:44px;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);">Верно</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:11px;">
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Прохладный душ</span><span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">4 дня подряд</span></div>
+            <div style="display:flex;gap:6px;margin-top:11px;"><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Было</span><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</span></div>
+          </div>
+          <div style="border-radius:16px;background:var(--c1);padding:12px 14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Добавки на сегодня</span><span style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid rgba(var(--ink),.35);"></span></div>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-top:11px;"><span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);">Витамин D · 5000 МЕ</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">утром</span></span><span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);">Магний · 400 мг</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">вечером</span></span></div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:12px;min-height:44px;"><span style="width:26px;height:26px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span><span style="font:600 12px/1 Figtree,sans-serif;color:var(--ac);">Добавить в курс</span></div>
+          </div>
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Утренняя рутина</span><span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">2 дня подряд</span></div>
+            <div style="display:flex;gap:6px;margin-top:11px;"><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделал</span><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделаю</span><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</span></div>
+          </div>
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;min-height:44px;display:flex;align-items:center;gap:10px;"><span><span style="display:block;font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Замеры отложены</span><span style="display:block;font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:3px;">Задержка воды искажает обхваты — вернутся после периода</span></span></div>
+        </div>
+      </div>
+      <div style="padding:12px 18px 20px;background:var(--bg);"><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--acs);font:700 13px/1 Figtree,sans-serif;color:var(--on-acs);">Готово</div></div>
+    </div>
+    <div class="hint" style="width:330px;margin-top:10px;" data-fitnote="2" data-owner="прокрутка на неделе периода">Запас по высоте считается на канвасе.</div>
+  </div>
+
+  <div>
+    <div class="cap"><b>Выход · строка вместо карточки</b><span>то же, но свёрнуто до строки с значением</span></div>
+    <div data-fit style="width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12);display:flex;flex-direction:column;" data-screen-label="Цикл · копия шага 5, строка">
+      <div style="padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between;"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="display:flex;gap:5px;"><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:7px;height:7px;border-radius:999px;background:rgba(var(--ink),.14);"></span><span style="width:18px;height:7px;border-radius:999px;background:var(--acs);"></span></span><span style="width:44px;"></span></div>
+      <div data-flow style="flex:1;overflow:hidden;padding:14px 18px 0;">
+        <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:700 16px/1.25 Figtree,sans-serif;color:var(--tx);">Прохладный душ</span><span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">4 дня подряд</span></div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:5px;text-wrap:pretty;">Хотя бы тридцать секунд в конце обычного душа — этого достаточно.</div>
+          <div style="display:flex;gap:8px;margin-top:12px;"><span style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Было</span><span style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:11px;">
+          <div style="border-radius:16px;background:var(--c1);padding:12px 14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Добавки на сегодня</span><span style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid rgba(var(--ink),.35);"></span></div>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-top:11px;"><span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);">Витамин D · 5000 МЕ</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">утром</span></span><span style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);">Магний · 400 мг</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">вечером</span></span></div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:12px;min-height:44px;"><span style="width:26px;height:26px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span><span style="font:600 12px/1 Figtree,sans-serif;color:var(--ac);">Добавить в курс</span></div>
+          </div>
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Утренняя рутина</span><span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">2 дня подряд</span></div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">Резинки и разогрев · 6 минут</div>
+            <div style="display:flex;gap:6px;margin-top:11px;"><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделал</span><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделаю</span><span style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</span></div>
+          </div>
+          <div style="border-radius:16px;background:var(--c1);padding:11px 12px 11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span><span style="display:block;font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Особые дни</span><span style="display:block;font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:3px;">Нормы дня подстроятся под них</span></span><span style="flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;background:var(--c2);font:700 12px/1 Figtree,sans-serif;color:var(--ac);">Отметить</span></div>
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span><span style="display:block;font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Замеры</span><span style="display:block;font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:3px;">Прошло 9 дней с прошлых</span></span><span style="font:700 15px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);">›</span></div>
+        </div>
+      </div>
+      <div style="padding:12px 18px 20px;background:var(--bg);"><div style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--acs);font:700 13px/1 Figtree,sans-serif;color:var(--on-acs);">Готово</div></div>
+    </div>
+    <div class="hint" style="width:330px;margin-top:10px;" data-fitnote="3" data-owner="высота шага">Запас по высоте считается на канвасе.</div>
+  </div>
+</div>
+<p style="margin:16px 0 0;max-width:1020px;font:500 12px/1.6 Figtree,sans-serif;color:rgba(var(--ink),.5);text-wrap:pretty;">Проверка честная: стопка у всех кадров одна и та же, меняется только вид периода. Числа считает канвас при отрисовке — они в подписях под кадрами, а не в прозе. Отклонённый вариант (карточка с двумя кнопками, перебор 38 px) помечен протоколом и по умолчанию скрыт — его число сохранено строкой «высота шага» в контракте.</p>
+
+<div class="h" data-mirh="m3">Включение · профиль</div>
+<div class="pal" data-mir="m3" style="display:flex;gap:26px;align-items:flex-start;">
+  <div>
+    <div class="cap"><b>Строка в профиле · группа «Нормы»</b><span>видна при поле «Женский»</span></div>
+    <div class="ph" data-screen-label="Цикл · профиль, тумблер">
+      <div class="tier">Нормы</div>
+      <div class="cd">
+        <div class="row"><span>Сон</span><span style="color:var(--tx);">7 часов</span></div>
+        <div class="row"><span>Особый период</span><span class="tgl"><i></i></span></div>
+        <div class="row"><span>Инсулиновая волна</span><span style="color:var(--tx);">3 часа</span></div>
+      </div>
+      <div class="hint" style="margin-top:10px;">Стоит среди норм, а не в «Медицинском»: функция меняет нормы дня, а отдельного согласия у неё больше нет. Вид группы — «Регистрация v4», кадр «Профиль · низ».</div>
+    </div>
+  </div>
+  <div>
+    <div class="cap"><b>Выключение</b><span>гасит с сегодня, прошлое не трогает</span></div>
+    <div class="ph" data-screen-label="Цикл · профиль, выключение">
+      <div style="font:700 15px/1.35 Figtree,sans-serif;color:var(--tx);">Выключить особый период?</div>
+      <div style="font:500 12px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:10px;text-wrap:pretty;">Вопрос в чек-ине исчезнет, а сегодняшняя цель вернётся к базовой. Прожитые дни останутся как записаны — вместе с их нормами и отметками.</div>
+      <div class="btns"><span class="sec">Оставить</span><span class="dng">Выключить</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="cap"><b>После дня 28</b><span>карточка дня становится вопросом</span></div>
+    <div class="ph" data-screen-label="Цикл · день 29, вопрос">
+      <div style="background:var(--c1);border-radius:18px;padding:16px;">
+        <div style="font:700 12.5px/1.4 Figtree,sans-serif;color:var(--tx);">Период начался?</div>
+        <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:7px;text-wrap:pretty;">С последней отметки прошло 28 дней. Пока не ответите, нормы считаются базовыми.</div>
+        <div class="btns" style="margin-top:14px;"><span class="sec">Ещё нет</span><span class="pri">Да, первый день</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="h" data-mirh="m4">Где это видно · четыре потребителя и метка</div>
+<div class="pal" data-mir="m4" style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;max-width:1096px;">
+
+  <div>
+    <div class="cap"><b>Карточка дня · пусто</b><span>блок «Питания», день не назван</span></div>
+    <div class="ph" data-screen-label="Цикл · карточка дня, пусто">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--c1);border-radius:18px;padding:16px;">
+        <span style="font:600 12.5px/1.35 Figtree,sans-serif;color:rgba(var(--ink),.55);">Особый период</span>
+        <span style="font:700 12px/1 Figtree,sans-serif;color:var(--ac);flex:none;">Указать день</span>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>Карточка дня · заполнено</b><span>день 3: калории на базе, сдвинута только вода</span></div>
+    <div class="ph" data-screen-label="Цикл · карточка дня, заполнено">
+      <div style="background:var(--c2);border-radius:18px;padding:16px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+          <span style="font:600 15px/1.2 Figtree,sans-serif;color:var(--ac);">Начало периода</span>
+          <span style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);flex:none;">День 3</span>
+        </div>
+        <div class="bdg" style="margin-top:12px;"><span>+10 % вода</span></div>
+        <div style="display:flex;gap:8px;margin-top:14px;"><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">Изменить</span><span style="font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">Сбросить неделю</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>Норма дня · день 22</b><span>вторая половина, единственные дни с надбавкой</span></div>
+    <div class="ph" data-screen-label="Цикл · норма дня">
+      <div class="cd" style="padding:2px 15px;">
+        <div class="row"><span>Съедено</span><span style="font-variant-numeric:tabular-nums;color:rgba(var(--ink),.5);">1 704 ккал</span></div>
+        <div class="row"><span>Нужно съесть</span><span style="display:flex;align-items:center;gap:7px;"><span style="font:700 11px/1 Figtree,sans-serif;color:var(--ac);">+5 %</span><span style="font-variant-numeric:tabular-nums;color:var(--tx);">1 869 ккал</span></span></div>
+      </div>
+      <div class="hint" style="margin-top:10px;">Пометка стоит только в дни 15–28. В сами особые дни калории на базе — там растёт вода, а не расход.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>График калорий</b><span>ступенька без зоны: подъём читается линией</span></div>
+    <div class="ph" data-screen-label="Цикл · график калорий">
+      <div style="background:var(--c1);border-radius:18px;padding:15px 16px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(var(--ink),.45);">Съедено и норма</span><span style="font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">14 дней</span></div>
+        <svg width="266" height="86" viewBox="0 0 266 86" style="display:block;margin-top:10px;">
+          <polyline points="6,30 25,30 44,30 63,30 82,30 101,30 120,30 139,30 158,30 177,44 196,44 215,44 234,44 253,44" fill="none" stroke="var(--acs)" stroke-width="2.4" stroke-linejoin="round"></polyline>
+          <polyline points="6,44 25,36 44,50 63,40 82,34 101,52 120,42 139,56 158,40 177,60 196,50 215,66 234,54 253,62" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2" stroke-linejoin="round" stroke-dasharray="0"></polyline>
+        </svg>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:8px;">
+          <span style="display:flex;align-items:center;gap:6px;font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);"><span style="width:14px;height:2.4px;border-radius:999px;background:var(--acs);"></span>норма</span>
+          <span style="display:flex;align-items:center;gap:6px;font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);"><span style="width:14px;height:2px;border-radius:999px;background:rgba(var(--ink),.45);"></span>съедено</span>
+        </div>
+        <div style="font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);margin-top:7px;">ступенька — надбавка второй половины, зоны здесь нет</div>
+      </div>
+      <div class="hint" style="margin-top:10px;">Норма приподнята во второй половине цикла и возвращается к базе с началом периода — ступенька идёт вниз, а не вверх. Каждый день хранит свою норму и назад не пересчитывается.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>График веса</b><span>восемь дней задержки, окно начинается до дня 1</span></div>
+    <div class="ph" data-screen-label="Цикл · график веса">
+      <div style="background:var(--c1);border-radius:18px;padding:15px 16px;">
+        <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(var(--ink),.45);">Вес и тренд</div>
+        <svg width="266" height="86" viewBox="0 0 266 86" style="display:block;margin-top:10px;">
+          <rect x="0" y="0" width="152" height="86" rx="8" fill="var(--tint)"></rect>
+          <polyline points="6,40 25,34 44,28 63,26 82,30 101,36 120,44 139,50 158,54 177,56 196,58 215,60 234,62 253,64" fill="none" stroke="rgba(var(--ink),.3)" stroke-width="2" stroke-linejoin="round"></polyline>
+          <polyline points="158,55 177,57 196,59 215,61 234,63 253,65" fill="none" stroke="var(--gr2)" stroke-width="2.4" stroke-linejoin="round"></polyline>
+          <circle cx="6" cy="40" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="25" cy="34" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="44" cy="28" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="63" cy="26" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="82" cy="30" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="101" cy="36" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="120" cy="44" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="139" cy="50" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+        </svg>
+        <div class="hint" style="margin-top:8px;">Пустые точки — дни 26–28 и 1–5: вода набирается до периода и уходит с ним. Горб виден, в тренд не входит.</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>Календарь · метка в потоке</b><span>вид ленты — в разделе ниже</span></div>
+    <div class="ph" data-screen-label="Цикл · календарь">
+      <div style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);margin-bottom:11px;">Август</div>
+      <div class="cal">
+        <div class="cell eat">11</div><div class="cell eat">12</div><div class="cell eat rf">13</div><div class="cell eat">14</div><div class="cell">15</div><div class="cell eat">16</div><div class="cell eat">17</div>
+        <div class="cell eat cyc">18</div><div class="cell eat cyc">19</div><div class="cell eat cyc">20</div><div class="cell eat cyc">21</div><div class="cell eat cyc">22</div><div class="cell cyc eat">23</div><div class="cell cyc eat">24</div>
+        <div class="cell eat">25</div><div class="cell eat tod">26</div><div class="cell">27</div><div class="cell">28</div><div class="cell">29</div><div class="cell">30</div><div class="cell">31</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;">
+        <span style="display:flex;align-items:center;gap:6px;font:600 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);"><span style="width:3px;height:12px;border-radius:999px;background:rgba(var(--ink),.46);"></span>период</span>
+        <span style="display:flex;align-items:center;gap:6px;font:600 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);"><span style="width:4px;height:4px;border-radius:999px;background:rgba(var(--ink),.34);"></span>есть еда</span>
+        <span style="display:flex;align-items:center;gap:6px;font:600 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);"><span style="width:12px;height:3px;border-radius:999px;background:rgba(var(--ink),.28);"></span>загрузочный</span>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>Инсайт в балансе</b><span>объясняет ступеньку словами</span></div>
+    <div class="ph" data-screen-label="Цикл · инсайт баланса">
+      <div style="background:var(--gr-bg);border-radius:18px;padding:15px 16px;">
+        <div style="font:700 12px/1.4 Figtree,sans-serif;color:var(--gr);">Норма выше на 5 %</div>
+        <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:7px;text-wrap:pretty;">Начало периода. Легкий перебор в эти дни — норма, а не срыв: организм тратит больше и держит воду.</div>
+      </div>
+      <div class="hint" style="margin-top:10px;">Инсайт показывается в дни с ненулевым множителем и не повторяется больше одного раза в день.</div>
+    </div>
+  </div>
+</div>
+
+<div class="h" data-mirh="m6">Календарь · период как отрезок и прогноз</div>
+<p style="margin:-4px 0 18px;max-width:1020px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(var(--ink),.6);text-wrap:pretty;">Период всегда идёт подряд — это отрезок, а не набор дней. Полоска в каждой клетке этим не пользуется: глаз читает пять меток вместо одной формы. И календарь — единственная поверхность, которая может смотреть вперёд: счёт до 28 дней уже есть, значит следующий период можно показать до того, как он начался. Ни то, ни другое день-карточка сделать не может.</p>
+<div class="pal" data-mir="m6" style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;max-width:1096px;">
+
+  <div>
+    <div class="cap"><b>Лента · выбранный вид</b><span>непрерывная по ходу дней, прогноз — призраком</span></div>
+    <div class="ph" data-screen-label="Цикл · календарь, лента периода">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Август</span><span style="font:600 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">следующий — 29-го</span></div>
+      <div class="cal">
+        <div class="cell eat">1<i class="rib s"></i></div><div class="cell eat">2<i class="rib"></i></div><div class="cell eat">3<i class="rib"></i></div><div class="cell eat">4<i class="rib"></i></div><div class="cell eat">5<i class="rib e"></i></div><div class="cell">6</div><div class="cell eat">7</div>
+        <div class="cell eat">8</div><div class="cell eat">9</div><div class="cell eat rf">10</div><div class="cell eat">11</div><div class="cell">12</div><div class="cell eat">13</div><div class="cell eat">14</div>
+        <div class="cell eat">15</div><div class="cell eat">16</div><div class="cell eat">17</div><div class="cell eat">18</div><div class="cell eat">19</div><div class="cell eat">20</div><div class="cell eat">21</div>
+        <div class="cell eat">22</div><div class="cell eat">23</div><div class="cell eat">24</div><div class="cell eat">25</div><div class="cell eat tod">26</div><div class="cell">27</div><div class="cell">28</div>
+        <div class="cell">29<i class="rib g s"></i></div><div class="cell">30<i class="rib g"></i></div><div class="cell">31<i class="rib g cut"></i></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;">
+        <span style="display:flex;align-items:center;gap:6px;font:600 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);"><span style="width:16px;height:4px;border-radius:999px;background:var(--acs);"></span>период</span>
+        <span style="display:flex;align-items:center;gap:6px;font:600 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);"><span style="width:16px;height:4px;border-radius:999px;background:var(--tint);"></span>ожидается</span>
+        <span style="display:flex;align-items:center;gap:6px;font:600 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);"><span style="width:4px;height:4px;border-radius:999px;background:rgba(var(--ink),.34);"></span>есть еда</span>
+      </div>
+      <div class="hint" style="margin-top:10px;">Лента идёт через зазоры между клетками и обрывается плоским краем на конце недели или месяца — значит продолжается дальше. Прогноз той же формы, но тоном заливки: обещание, а не запись.</div>
+    </div>
+  </div>
+
+  <div data-demo="protocol">
+    <div class="cap"><b>Заливка интервала · отклонено</b><span>читается как выделение диапазона</span></div>
+    <div class="ph" data-screen-label="Цикл · календарь, заливка интервала">
+      <div style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);margin-bottom:11px;">Август</div>
+      <div class="cal">
+        <div class="cell eat rng s">1</div><div class="cell eat rng mid">2</div><div class="cell eat rng mid">3</div><div class="cell eat rng mid">4</div><div class="cell eat rng e">5</div><div class="cell">6</div><div class="cell eat">7</div>
+        <div class="cell eat">8</div><div class="cell eat">9</div><div class="cell eat rf">10</div><div class="cell eat">11</div><div class="cell">12</div><div class="cell eat">13</div><div class="cell eat">14</div>
+        <div class="cell eat">15</div><div class="cell eat">16</div><div class="cell eat">17</div><div class="cell eat">18</div><div class="cell eat">19</div><div class="cell eat">20</div><div class="cell eat">21</div>
+        <div class="cell eat">22</div><div class="cell eat">23</div><div class="cell eat">24</div><div class="cell eat">25</div><div class="cell eat tod">26</div><div class="cell">27</div><div class="cell">28</div>
+        <div class="cell">29</div><div class="cell">30</div><div class="cell">31</div>
+      </div>
+      <div class="hint" style="margin-top:10px;">Отрезок виден лучше, но заливка клетки в календаре уже занята: ею говорят «сегодня» и качество дня. Ещё одна заливка — и клетка перестаёт отвечать на вопрос «какой это день», а начинает отвечать «в каком я диапазоне».</div>
+    </div>
+  </div>
+
+  <div style="width:400px;flex:none;" data-nomirror>
+    <div style="background:var(--bg);border-radius:24px;padding:20px;">
+      <div class="nt"><b>Отрезок рисуется отрезком</b><span>Пять полосок в пяти клетках — это пять сообщений об одном событии. Лента поверху идёт через зазоры сетки и обрывается плоским краем там, где кончается неделя: край сам говорит «продолжение ниже», без второй метки и без подписи.</span></div>
+      <div class="nt"><b>Прогноз — то, что умеет только календарь</b><span>Счёт до 28 дней уже есть, но нигде не показан вперёд. В календаре он стоит почти бесплатно: та же лента, только тоном заливки, плюс строка «следующий — 29-го» в шапке месяца. Это отвечает на вопрос, который человек задаёт календарю чаще всего, и снимает половину поводов лезть в счёт руками.</span></div>
+      <div class="ntl"><b>Заливку клетки не занимаем</b><span>Заливка уже значит «сегодня», и ею же красят качество дня. Третий смысл в той же поверхности — и клетка начинает спорить сама с собой. Лента живёт на свободном верхнем крае, точка еды и полоса загрузочного остаются внизу: три метки, три разных места.</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="h" data-mirh="m5">Края · конец периода, сбой, задержка</div>
+<div class="pal" data-mir="m5" style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;max-width:1096px;">
+
+  <div>
+    <div class="cap"><b>Закончились раньше</b><span>кровотечение кончилось, влияние — нет</span></div>
+    <div class="ph" data-screen-label="Цикл · закончились раньше">
+      <div style="border-radius:16px;background:var(--c1);padding:13px 14px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Особые дни</span><span style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);white-space:nowrap;">закончились на 5-й</span></div>
+        <div style="font:500 11px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:5px;text-wrap:pretty;">Нормы дальше идут по счёту фаз — влияние на организм не кончается вместе с днями.</div>
+      </div>
+      <div class="hint" style="margin-top:12px;">Карточка уходит из верха шага обратно в стопку строкой, а множители продолжают меняться по календарю: 6–14 — базовые, 15–19 плюс три, 20–28 плюс пять.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>Сбой · пришло раньше срока</b><span>19-й день по счёту, а период начался</span></div>
+    <div class="ph" data-screen-label="Цикл · сбой, раньше срока">
+      <div style="border-radius:16px;background:var(--tint);padding:14px;">
+        <div style="font:700 12.5px/1.35 Figtree,sans-serif;color:var(--ac2);">Сейчас 19-й день по счёту</div>
+        <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:7px;text-wrap:pretty;">Отметить сегодня первым днём? Счёт начнётся заново, прошлые дни останутся как записаны.</div>
+        <div class="btns" style="margin-top:13px;"><span class="sec">Не надо</span><span class="pri">Первый день</span></div>
+      </div>
+      <div class="hint" style="margin-top:12px;">Вопрос появляется только когда отметку ставят раньше 21-го дня — на 21-м и позже новый период ожидаем, и лишний вопрос не нужен.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>Прошлый день · отметка задним числом</b><span>период уже кончился, а отметки не было</span></div>
+    <div class="ph" data-screen-label="Цикл · прошлый день, отметка задним числом">
+      <div style="display:flex;align-items:center;gap:8px;background:var(--tint);border-radius:999px;padding:7px 12px;margin-bottom:4px;width:max-content;"><span style="font:700 11px/1 Figtree,sans-serif;color:var(--ac2);">16 августа</span><span style="font:600 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">10 дней назад</span></div>
+      <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(var(--ink),.35);margin:8px 0 10px;">Питание · блок «Особый период»</div>
+      <div style="border-radius:18px;background:var(--c1);padding:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Особый период</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--ac);">Указать день</span></div>
+        <div class="day" style="margin-top:14px;"><span class="on">1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span></div>
+        <div style="font:500 11px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:10px;text-wrap:pretty;">Первый день — 16 августа. Дни 16–22 получат свои нормы, съеденное и вес останутся как есть.</div>
+      </div>
+      <div class="hint" style="margin-top:12px;">Тот же ряд, что в чек-ине, но на дате из капсулы. Отмечая «1» здесь, человек называет начало периода, а не сегодняшний день, — счёт пересобирается от 16-го.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>День выбран · дата по умолчанию сегодня</b><span>одна строка подтверждения, календарь — по желанию</span></div>
+    <div class="ph" data-screen-label="Цикл · день выбран, подтверждение даты">
+      <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(var(--ink),.35);margin-bottom:10px;">Питание · блок «Особый период»</div>
+      <div style="border-radius:18px;background:var(--c1);padding:16px;">
+        <div style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Особый период</div>
+        <div class="day" style="margin-top:14px;"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span class="on">7</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:13px;border-top:1px solid rgba(var(--ink),.08);">
+          <span><span style="display:block;font:600 12px/1 Figtree,sans-serif;color:var(--tx);">Это было сегодня</span><span style="display:block;font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:3px;">26 августа · период 20–26</span></span>
+          <span style="flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:999px;background:var(--c2);font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">Другой день</span>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:12px;">Дата уже выбрана — сегодня. Календарь открывается только если день был не сегодня: обычная отметка остаётся в один тап.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>«Другой день» · календарь</b><span>стандартная шторка, вид — «Дата и остатки»</span></div>
+    <div class="ph" data-screen-label="Цикл · другой день, календарь">
+      <div style="border-radius:26px 26px 18px 18px;background:var(--bg);box-shadow:0 -1px 0 rgba(var(--ink),.06);padding:14px 16px 16px;">
+        <div style="width:38px;height:4px;border-radius:999px;background:rgba(var(--ink),.14);margin:0 auto 14px;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;">
+          <span style="width:34px;height:34px;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.5)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+          <span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Когда это было</span>
+          <span style="width:34px;height:34px;"></span>
+        </div>
+        <div style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);margin-bottom:11px;">Август</div>
+        <div class="cal">
+          <div class="cell">1</div><div class="cell">2</div><div class="cell">3</div><div class="cell">4</div><div class="cell">5</div><div class="cell">6</div><div class="cell">7</div>
+          <div class="cell">8</div><div class="cell">9</div><div class="cell">10</div><div class="cell">11</div><div class="cell">12</div><div class="cell">13</div><div class="cell">14</div>
+          <div class="cell">15</div><div class="cell">16</div><div class="cell">17</div><div class="cell">18</div><div class="cell">19</div><div class="cell">20</div><div class="cell">21</div>
+          <div class="cell">22</div><div class="cell">23</div><div class="cell pick">24</div><div class="cell">25</div><div class="cell tod">26</div><div class="cell off">27</div><div class="cell off">28</div>
+          <div class="cell off">29</div><div class="cell off">30</div><div class="cell off">31</div>
+        </div>
+        <div style="margin-top:14px;padding-top:13px;border-top:1px solid rgba(var(--ink),.08);">
+          <div style="font:600 12.5px/1.35 Figtree,sans-serif;color:var(--tx);">Седьмой день — 24 августа</div>
+          <div style="font:500 11px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:4px;text-wrap:pretty;">Период встанет на 18–24 августа. Их нормы пересчитаются, съеденное и вес останутся как есть.</div>
+          <div class="btns" style="margin-top:13px;"><span class="sec">Отмена</span><span class="pri">Подтвердить</span></div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:12px;">Сегодня 26-е и оно остаётся залитым — заливка по-прежнему значит «сегодня». Выбранная дата берётся обводкой, а не заливкой: два смысла в одной форме спорили бы. Будущие дни приглушены и не нажимаются. Окно в 28 дней от 26 августа уходит в июль, поэтому в августовской сетке недоступных прошлых дней нет вовсе — 30 и 31 июля достаются листанием месяца назад. Подпись внизу пересчитывается при каждом выборе.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cap"><b>Задержка воды · подсказка</b><span>тап по пустой точке графика</span></div>
+    <div class="ph" data-screen-label="Цикл · тултип задержки">
+      <div style="background:var(--c1);border-radius:18px;padding:15px 16px;position:relative;">
+        <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(var(--ink),.45);">Вес и тренд</div>
+        <svg width="266" height="86" viewBox="0 0 266 86" style="display:block;margin-top:10px;">
+          <rect x="0" y="0" width="152" height="86" rx="8" fill="var(--tint)"></rect>
+          <polyline points="6,40 25,34 44,28 63,26 82,30 101,36 120,44 139,50 158,54 177,56 196,58 215,60 234,62 253,64" fill="none" stroke="rgba(var(--ink),.3)" stroke-width="2" stroke-linejoin="round"></polyline>
+          <polyline points="158,55 177,57 196,59 215,61 234,63 253,65" fill="none" stroke="var(--gr2)" stroke-width="2.4" stroke-linejoin="round"></polyline>
+          <circle cx="6" cy="40" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="25" cy="34" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="44" cy="28" r="4.5" fill="var(--bg)" stroke="var(--ac)" stroke-width="2"></circle>
+          <circle cx="63" cy="26" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="82" cy="30" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="101" cy="36" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="120" cy="44" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+          <circle cx="139" cy="50" r="3" fill="none" stroke="rgba(var(--ink),.35)" stroke-width="1.6"></circle>
+        </svg>
+        <div style="position:absolute;left:16px;top:52px;background:var(--tx);border-radius:12px;padding:9px 11px;max-width:196px;box-shadow:0 6px 18px rgba(var(--shadow),.28);">
+          <div style="font:700 11px/1.3 Figtree,sans-serif;color:var(--bg);">День 28 · 62,4 кг</div>
+          <div style="font:500 10.5px/1.4 Figtree,sans-serif;color:var(--bg);opacity:.72;margin-top:3px;text-wrap:pretty;">Возможна задержка воды: от одного до трёх килограммов. В тренд этот день не входит.</div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top:12px;">Показан день до периода — самый пик набранной воды и самая частая паника на весах. Открывается тапом по точке, закрывается тапом вне неё.</div>
+    </div>
+  </div>
+</div>
+
+<div class="h">Контракт</div>
+<div class="ctr" data-contract>
+  <span class="ctrTag">CYCLE · ОСОБЫЙ ПЕРИОД</span>
+  <div class="spec"><b>фича</b><span data-v="особый период: тумблер в профиле, один вопрос в утреннем чек-ине, отметка дня 1–7 с автозаполнением недели, счёт фаз до 28 дней, сдвиг норм калорий, воды, волны и исключение дней задержки из тренда веса"></span></div>
+  <div class="spec"><b>гейт</b><span data-v="строка «Особый период» — в профиле, группа «Нормы», перед «Инсулиновой волной», вид строки и тумблера — registration.v4.dc.html; видна при поле «Женский»; включение — тумблер без подтверждения; выключение — подтверждение, гасящее функцию с сегодняшнего дня; флаг релиза остаётся, функция включается для одного аккаунта"></span></div>
+  <div class="spec"><b>модель данных</b><span data-v="в записи дня: cycleDay 1…7 или null, cycleStatus none | skipped | null, cycleAnsweredAt — timestamp ответа"></span></div>
+  <div class="spec"><b>автозаполнение</b><span data-v="один названный день проставляет семь подряд: назван день N на дате D — первый день ставится на D−(N−1), дальше семь дней вперёд, D+(7−N) последний. «Сбросить неделю» чистит все семь"></span><i>исправлено 26 августа: прежняя запись «−2…+4 от указанной даты» верна только для названного третьего дня — при отметке первого дня задним числом она ставила период на два дня раньше него</i></div>
+  <div class="spec"><b>дата отметки · два шага</b><span data-v="сначала день (ряд 1–7), потом дата. По умолчанию дата — открытый день экрана: на сегодняшнем это сегодня, на прошлом — та дата из капсулы. Строка подтверждения под рядом называет её словами и показывает получившуюся неделю; рядом чип «Другой день» открывает календарь. Календарь сам собой не открывается никогда"></span><i>обычная отметка обязана оставаться в один тап: она делается каждое утро на неделе периода, а другая дата нужна раз в месяц. Ставить календарь в общий путь значило бы платить лишним шагом за редкий случай</i></div>
+  <div class="spec"><b>календарь выбора даты</b><span data-v="стандартная шторка календаря в режиме выбора одной даты: заголовок «Когда это было», под ним название месяца, сетка и клетка того же вида, что в шторке даты. Открывается на месяце выбранной по умолчанию даты, месяцы листаются как обычно. Доступны последние 28 дней включая сегодня — окно может заходить в прошлый месяц, и тогда его дни достаются листанием; дни глубже окна и все будущие — прозрачность 30 %, не нажимаются. Подпись внизу пересчитывается при каждом выборе: «Седьмой день — 24 августа» и «Период встанет на 18–24 августа»; кнопки «Отмена» и «Подтвердить»"></span><i>вид шторки, клетки и сетки — date-remainders.v4.dc.html, строки «вид шторки календаря» и «вид клетки»: свой календарь я не рисую. Моё — режим одной даты, правило приглушения, подпись-пересчёт и вид выбранной клетки</i></div>
+  <div class="spec"><b>вид · строка подтверждения даты</b><span data-v="под рядом дней, отделена линией 1 px тоном чернил 8 % с отступом 13 px: слева «Это было сегодня» 600 12px var(--tx) и под ней дата с неделей 500 11px тоном 45 %; справа чип «Другой день» — высота 44, паддинг 0 14, радиус 999, фон var(--c2), текст 700 11,5px var(--ac)"></span></div>
+  <div class="spec"><b>доступность · выбор даты</b><span data-v="клетки календаря в этом режиме — кнопки с доступным именем полной даты («понедельник, 24 августа»), выбранная несёт aria-selected, недоступные aria-disabled и из обхода фокусом выпадают; подпись-пересчёт живёт в aria-live=polite, чтобы новая неделя объявлялась при каждом выборе; Escape закрывает шторку без записи"></span><i>без live-области человек с экранным диктором выбирает дату и не узнаёт, какая получилась неделя, — то есть единственную обратную связь этого экрана</i></div>
+  <div class="spec"><b>вид · выбранная дата в календаре</b><span data-v="выбранная клетка берётся обводкой inset 2 px тоном --ac, число остаётся чернилами; заливки у неё нет. Сегодняшняя клетка в этом режиме залита как обычно (--acs на --on-acs) и значит только «сегодня» — если выбрана она же, обводка и заливка стоят вместе"></span><i>заливка клетки в календаре уже занята — ею говорят «сегодня» и качество дня (строка «заливка клетки не занимается»). Выбор даты — третий смысл, поэтому он берёт другую форму, а не тот же тон</i></div>
+  <div class="spec"><b>чек-ин календаря не открывает</b><span data-v="в стопке пятого шага дата всегда сегодняшняя: строки подтверждения и чипа «Другой день» там нет. Прошлые периоды помечаются только на «Питании»"></span><i>чек-ин — утренний ритуал сегодняшнего дня; выбор чужой даты внутри него сделал бы шаг решением, а не ответом</i></div>
+  <div class="spec"><b>отметка задним числом</b><span data-v="ряд 1–7 доступен на карточке дня любого прошлого дня, открытого капсулой даты, в пределах 28 дней назад; глубже отметка не ставится. Отмечая «1» на прошлой дате, человек называет начало периода — счёт пересобирается от неё, если этот период новее последней отметки"></span><i>главный сценарий: период кончился, а отметки не было — «сегодня» тут не назвать никаким числом ряда, и без прошлого дня функция теряет уже прожитую неделю</i></div>
+  <div class="spec"><b>где живёт карточка дня</b><span data-v="вкладка «Питание», чип-зависимый блок «Особый период» сразу после «Голода и энергии»; блок и его чип есть только при включённом тумблере в профиле. На Главной карточки нет — плитка периода была бы виджетом, а решения по виджету нет"></span><i>место блока и ряд чипов — nutrition-tab.v4.dc.html, строка «блок «Особый период»»; вид карточки и ряда дней — здесь</i></div>
+  <div class="spec"><b>почему не «Инсайты»</b><span data-v="«Инсайты» карточку периода не получают: у вкладки нет капсулы даты (она работает периодом, а не днём), а отметка задним числом — это выбор даты. Своего контракта у зоны тоже нет, и единственный вход в согласованную функцию оказался бы в файле с пометкой «не реализовывать»"></span><i>рассмотрено 26 августа. Вкладка объясняет, а не собирает: место периоду там есть, но другое — сводка вида «во второй половине цикла норма выше на 5 %, съедено в среднем на 6 % больше». Это чтение по периоду, оно не заменяет ввод и заводится вместе с контрактом «Инсайтов», не раньше</i></div>
+  <div class="spec"><b>где отмечается прошлый день</b><span data-v="два пути, оба на «Питании»: с сегодняшнего экрана — ряд 1–7, затем чип «Другой день» и календарь; либо капсулой даты уйти на нужный день, и тогда дата уже выбрана экраном. В «Отчётах» и «Инсайтах» отметки нет и карточки цикла нет: там период вместо дня и капсулы даты не существует"></span><i>граница взята из date-remainders.v4, строка «область действия»: капсула живёт на трёх дневных вкладках, но карточка периода — только на «Питании». Заводить вход в Отчётах значило бы держать день там, где вся вкладка считает периодом</i></div>
+  <div class="spec"><b>что меняет отметка задним числом</b><span data-v="у затронутых дней пересобираются cycleDay и норма — вместе с пометкой «+%», лентой в календаре и исключением из тренда веса; съеденное, вес, вода и активность этих дней не двигаются. Дни, вышедшие из недели, возвращаются к базовым множителям"></span></div>
+  <div class="spec"><b>пустая карточка на прошлом дне</b><span data-v="на прошлых днях карточка дня активна и выглядит как на сегодняшнем: «Особый период» и действие «Указать день». Прошлый день отличается только капсулой даты сверху — своей плашки у карточки нет"></span></div>
+  <div class="spec"><b>место в чек-ине</b><span data-v="строка в стопке шага 5 «Остальное» (на днях 1–7 — верхняя карточка того же шага); своего шага нет, точка в индикаторе не добавляется, счётчик остаётся 1…5; отдельной кнопки «Пропустить» нет — шаг завершается общей «Готово»"></span><i>вид стопки и порядок карточек — checkin-morning.v4.dc.html, кадр «Чек-ин · остальное»</i></div>
+  <div class="spec"><b>порядок в стопке</b><span data-v="дни 1–7 — «Особые дни» занимают место верхней карточки шага, «Прохладный душ» уходит в стопку строкой; в остальные дни — строка между «Утренняя рутина» и «Замеры»"></span></div>
+  <div class="spec"><b>свёрнутое состояние</b><span data-v="строка высотой 66 px: «Особые дни», подпись «Нормы дня подстроятся под них», справа один чип-кнопка «Отметить» 44 px; двух кнопок «Идут | Нет» в свёрнутом виде нет — карточка с ними не влезает в шаг"></span></div>
+  <div class="spec"><b>высота шага</b><span data-v="проверено на копии шага 5 с полной стопкой, допуск ±1 px: канон — запас 82 px, обычный день со строкой и чипом «Отметить» — запас 8 px, неделя периода с верхней карточкой и отложенными замерами — перебор 68 px, то есть шаг прокручивается; карточка с двумя кнопками в обычный день — перебор 38 px и потому отклонена"></span><i>кадры «Цикл · копия шага 5 …»; числа считает канвас при отрисовке, канон стопки — checkin-morning.v4.dc.html</i></div>
+  <div class="spec"><b>прокрутка на неделе периода</b><span data-v="на днях 1–7 шаг прокручивается: перебор 68 px при полной стопке. Ни одна карточка не сжимается и не прячется — прокрутка дешевле урезанных соседних функций; в остальные 21 день шаг влезает целиком с запасом 8 px"></span></div>
+  <div class="spec"><b>замеры на днях 1–7</b><span data-v="строка «Замеры» действия не просит: заголовок «Замеры отложены» тоном чернил 62 %, подпись «Задержка воды искажает обхваты — вернутся после периода» тоном 50 %, шеврона нет, тап ничего не открывает; сама просрочка замеров считается как обычно и всплывает после дня 7"></span><i>приглушение делается тоном, а не прозрачностью: opacity на всей строке уводит текст ниже 4,5:1 и роняет контраст в тёмных наборах. Причина самого правила: обхваты на этих днях меряют задержку воды, а не тело</i></div>
+  <div class="spec"><b>доступность · строка периода</b><span data-v="свёрнутая строка — не кнопка целиком: нажимаемый только чип, его доступное имя «Отметить особые дни», а не «Отметить». Заголовок и подпись читаются как текст строки"></span></div>
+  <div class="spec"><b>доступность · ряд дней</b><span data-v="ряд 1–7 — группа выбора одного значения: role='radiogroup' с именем «Какой день», каждая клетка role='radio' с именем «День N» и aria-checked; ряд обходится стрелками, выбор — пробелом или Enter. Цифра сама именем не является"></span></div>
+  <div class="spec"><b>доступность · отложенные замеры</b><span data-v="строка получает aria-disabled='true' и не попадает в обход фокусом; вслух читается целиком, вместе с причиной — «Замеры отложены. Задержка воды искажает обхваты, вернутся после периода»"></span><i>пункт, который просто исчез бы из обхода без объяснения, читается как поломка</i></div>
+  <div class="spec"><b>доступность · лента в календаре</b><span data-v="лента и прогноз — не декорация: клетка получает в доступное имя «особые дни» или «ожидается период» после даты. Форма и цвет остаются единственным зрительным признаком, но не единственным признаком вообще"></span></div>
+  <div class="spec"><b>доступность · пустые точки графика</b><span data-v="точка дня из окна исключения объявляется как «День N, вес, в тренд не входит»; тултип открывается с клавиатуры и закрывается Escape"></span></div>
+  <div class="spec"><b>отмена разрушительных ответов</b><span data-v="«Не идут» на отмеченной неделе и «Закончились» зовут общий бар отмены на 5 с: текст «Особые дни сняты · N дней» и «Особые дни закрыты», возврат ставит прежние cycleDay и прежние нормы этих дней. «Идут» и смена номера бара не зовут"></span><i>вид бара, длительность и поведение — undo-bar.v4.dc.html, строка «особый период»: своих значений здесь нет</i></div>
+  <div class="spec"><b>выключение не переписывает прошлое</b><span data-v="выключение тумблера гасит функцию с сегодняшнего дня: отметки и нормы прошлых дней остаются как записаны, график сохраняет ступеньку, лента в календаре остаётся на прожитых днях. Удаляются только состояние счёта и прогноз; сегодняшняя цель пересчитывается к базе, если день ещё открыт"></span><i>исправлено 26 августа: прежние строки говорили «отметки удаляются» и «история не пересчитывается» одновременно — вместе это давало приподнятые нормы прошлых дней без объяснения на экране. Прошлое не переписывают: человек в те дни правда ел по той норме</i></div>
+  <div class="spec"><b>ответ «не идут»</b><span data-v="в раскрытом слое справа в шапке действие «Не идут» — пишет cycleStatus none и чистит семь дней; отдельной кнопки в свёрнутой строке нет"></span></div>
+  <div class="spec"><b>день по умолчанию</b><span data-v="со второго дня карточка предлагает вчерашний день + 1; «Верно» подтверждает, ряд 1–7 переставляет, «Закончились» закрывает период; переставленный день пересобирает неделю от новой даты"></span></div>
+  <div class="spec"><b>фазы и подписи</b><span data-v="1–5 менструальная («начало периода»), 6–14 фолликулярная с овуляцией («спокойные дни»), 15–19 ранняя лютеиновая («середина цикла»), 20–28 поздняя лютеиновая («вторая половина»); внутри дней 1–7 подписи «начало» 1–3, «середина» 4–5, «конец» 6–7"></span><i>границы фаз совпадают с границами множителей: одна подпись — один шаг, чтобы человек не видел смену числа без смены слова</i></div>
+  <div class="spec"><b>множитель калорий</b><span data-v="дни 1–14 0 %, 15–19 +3 %, 20–28 +5 %"></span><i>расход растёт после овуляции, а не в неё, и пик приходится на поздние лютеиновые дни; в менструальные и фолликулярные дни он на своём минимуме — надбавки там нет. Верхняя ступень 5 % — середина литературного разброса 2–11 %, а не его край</i></div>
+  <div class="spec"><b>средняя надбавка</b><span data-v="2,14 % в среднем по циклу: при норме 1780 ккал это ≈38 ккал в день, ≈1070 ккал за цикл, ≈0,14 кг жирового эквивалента в месяц. Прежние проценты давали 5,25 % и ≈0,34 кг — пятую часть цели −1,8 кг в месяц"></span><i>строка существует, чтобы цена поправки была числом, а не ощущением: она вычитается из дефицита. Прежние проценты давали 5,25 % и ≈0,34 кг — пятую часть цели −1,8 кг в месяц, уходившую молча</i></div>
+  <div class="spec"><b>множитель воды</b><span data-v="дни 1–5 +10 %, дни 20–28 +5 %, остальные 0 %"></span><i>это не метаболическое требование, а мера от отёчности и спазмов: потеря жидкости с кровью пренебрежимо мала. Названо прямо, чтобы никто не искал за этими процентами расчёт</i></div>
+  <div class="spec"><b>волна</b><span data-v="+12 % на днях 20–28, остальные 0 %"></span><i>исправлено 26 августа: было +12 % на днях 1–5. Чувствительность к инсулину выше в фолликулярной фазе и ниже в лютеиновой — прежняя расстановка усиливала волну ровно там, где она слабее всего</i></div>
+  <div class="spec"><b>тренд веса</b><span data-v="из линии тренда исключаются дни 26–28 и 1–5 — восемь подряд; точки этих дней рисуются пустыми, обводка 1,6 px тоном чернил 35 %; тултип «День N — возможна задержка воды»"></span><i>задержка воды нарастает предменструально и уходит с началом периода, поэтому окно начинается до дня 1: исключение только 1–7 пропускало ровно тот скачок весов, из-за которого человек и пугается</i></div>
+  <div class="spec"><b>«Закончились»</b><span data-v="закрывает только видимые дни: дни после ответа теряют метку особых дней, а множители продолжаются по счёту фаз (6–14 — 0 %, 15–19 +3 %, 20–28 +5 %). Карточка возвращается из верха шага в стопку строкой. Ответ «закончились» не останавливает счёт цикла"></span><i>влияние на организм не кончается вместе с кровотечением — решение 25.08</i></div>
+  <div class="spec"><b>отметка раньше 21-го дня</b><span data-v="если «первый день» ставят на дне 8…20 по счёту — предупреждение «Сейчас N-й день по счёту. Отметить сегодня первым днём? Счёт начнётся заново, прошлые дни останутся как записаны» с кнопками «Не надо» и «Первый день»; с 21-го дня новый период ожидаем и вопрос не показывается"></span></div>
+
+  <div class="spec"><b>молчание</b><span data-v="нет ответа день, три дня, неделю — счёт идёт сам по календарю, множители не обнуляются и напоминаний не добавляется; молчание не равно «не идут», обнулить период можно только ответом «Не идут» или «Закончились»"></span><i>иначе человек, пропустивший чек-ин, терял бы поправку без объяснения</i></div>
+  <div class="spec"><b>включение в середине цикла</b><span data-v="ряд ввода — только дни 1–7, отдельного экрана «когда был прошлый» нет: включённая на 17-й день функция ждёт первой отметки. Но ждать до следующего периода не обязательно — прошедший помечается задним числом через капсулу даты, в пределах 28 дней"></span><i>исправлено 26 августа: прежняя запись обещала молчание до первого нового периода и не называла прошлый день путём входа</i></div>
+  <div class="spec"><b>окно графика веса</b><span data-v="зоны задержки и пустые точки рисуются на коротком окне — до 30 дней; окно исключения показывается целиком, восемью подряд идущими пустыми точками; на длинных окнах (61 день в «Отчётах») штриховки нет, вместо неё подпись под спарклайном «дни особого периода в тренд не входят» 500 10,5px тоном 42 % светлых и 50 % тёмных палитр"></span><i>на 61 дне четыре недели штриховки — шум, а не объяснение; сам факт исключения из тренда всё равно должен быть назван</i></div>
+  <div class="spec"><b>вид · график калорий</b><span data-v="две линии на подложке var(--c1) радиусом 18, поля 15/16: норма — 2,4 px var(--acs), ступенчатая (значение держится ровно, меняется на границе фазы); съеденное — 2 px тоном чернил 45 %, без точек. Подпись «Съедено и норма» 600 10,5px тоном 45 %, справа окно 600 10px тоном 35 %; легенда снизу — отрезок 14×2,4 и подпись 600 10px тоном 45 %"></span><i>тело графика рисует tab-reports.v4; моё — что зоны заливкой здесь нет и что норма ступенчатая, а не сглаженная: между фазами она меняется скачком</i></div>
+  <div class="spec"><b>вид · график веса</b><span data-v="у обычных дней маркеров нет — линия факта 2 px тоном чернил 30 % идёт без точек; точки рисуются только у дней окна исключения: окружность радиусом 3, обводка 1,6 px тоном 35 %, без заливки. Линия тренда 2,4 px var(--gr2) начинается там, где кончается окно"></span><i>точка ставится там, где день выпал из тренда: она и есть пометка исключения, а не обозначение замера — иначе пустая точка перестала бы отличаться от обычной</i><i>тело графика — tab-reports.v4; моё — форма точек окна, начало линии тренда и зона задержки</i></div>
+  <div class="spec"><b>вид · зона задержки на графике веса</b><span data-v="прямоугольник заливкой var(--tint), радиус 8, во всю высоту области построения, границы — по крайнему левому и крайнему правому дню окна исключения; подпись под графиком называет дни словами"></span></div>
+  <div class="spec"><b>зоны на графике калорий нет</b><span data-v="дни надбавки заливкой не помечаются: подъём нормы читается самой линией, а вторая зона того же тона рядом с зоной задержки на графике веса означала бы разное одной формой. Ступенька объясняется подписью и инсайтом"></span><i>снято 26 августа: зона на графике ккал была нарисована и отклонена по «один смысл — одна форма»</i></div>
+  <div class="spec"><b>вид · тултип задержки</b><span data-v="фон var(--tx), радиус 12, паддинг 9/11, ширина до 196 px; заголовок 700 11px var(--bg) «День N · вес», текст 500 10,5px тон 70 %; точка дня при открытии — радиус 4,5, заливка var(--bg), обводка 2 px var(--ac); открывается тапом по точке, закрывается тапом вне"></span></div>
+  <div class="spec"><b>после дня 28</b><span data-v="счёт останавливается, множители возвращаются к базе; карточка дня становится вопросом «Период начался?» с кнопками «Ещё нет» и «Да, первый день»; второго круга без ответа нет"></span></div>
+  <div class="spec"><b>история не пересчитывается</b><span data-v="норма хранится в дне вместе с cycleDay того дня: смена отметки задним числом меняет только затронутые дни, ступенька в графике остаётся"></span></div>
+  <div class="spec"><b>вид · строка в стопке</b><span data-v="строка стопки высотой 66 px: фон var(--c1), радиус 16, паддинг 11 сверху и снизу, 14 слева, 12 справа; заголовок 600 13px var(--tx), подпись 500 11px тон 45 % с отступом 3 px; справа чип-кнопка «Отметить» — высота 44, паддинг 0 16, радиус 999, фон var(--c2), текст 700 12px var(--ac), flex:none"></span><i>чип, а не текст: действие в строке должно читаться нажимаемым и держать 44 px — тумблера здесь нет, тумблер живёт только в профиле</i></div>
+  <div class="spec"><b>вид · раскрытый слой</b><span data-v="второй слой той же строки: фон var(--c1), радиус 16, паддинг 14; шапка — заголовок 600 13px var(--tx) и справа «Не идут» 700 11px тон 40 %; заголовок ряда 700 10px letter-spacing .16em uppercase var(--ac)"></span></div>
+  <div class="spec"><b>вид · верхняя карточка на днях 1–7</b><span data-v="геометрия верхней карточки шага, не строки стопки: фон var(--c2), радиус 20, паддинг 16/17; заголовок «Особые дни» 700 16px var(--tx), справа «День N · подпись» 600 12px var(--ac); подпись-пояснение 500 11,5px тон 50 %; ряд 1–7 над кнопками; кнопки высотой 44 — «Верно» фон var(--acs) текст var(--on-acs) 700 12,5px, «Закончились» фон var(--bg) обводка inset 1,5 px тон 16 % текст тон 62 %"></span><i>во весь шаг рисуется один раз: фрагмент в разделе «Ввод» и полная копия шага 5 показывают одну и ту же поверхность</i></div>
+  <div class="spec"><b>вид · выбор дня</b><span data-v="ряд 1–7 — высота 44, радиус 14, фон var(--c1), выбранный var(--acs) текст var(--on-acs) 700 13px, цифры tabular-nums, зазор 5 px; раскрытие — второй слой той же карточки, экран не меняется"></span></div>
+  <div class="spec"><b>вид · карточка дня</b><span data-v="пустая — фон var(--c1) радиус 18 паддинг 16, действие «Указать день» 700 12px var(--ac); заполненная — фон var(--c2), название фазы 600 15px var(--ac), «День N» 600 12px тон 45 %, бейджи высота 28 паддинг 0 10 фон var(--c2) текст var(--ac) 700 11px"></span></div>
+  <div class="spec"><b>метка в календаре</b><span data-v="период рисуется одной лентой на все подряд идущие дни с cycleDay 1…7, включая проставленные автозаполнением; дни 8–28 не помечаются, ответ «Не идут» ленту укорачивает, «Закончились» обрезает по последнему дню"></span><i>лента заменяет прежнюю полосу в каждой клетке: отрезок, идущий подряд, показывается одной формой, а не пятью одинаковыми метками</i></div>
+  <div class="spec"><b>вид · лента периода</b><span data-v="высота 4 px, прижата к верхнему краю клетки, заливка --acs; идёт через зазор сетки (по 5 px в каждую сторону от клетки), у первого дня скруглена слева радиусом 999, у последнего справа; на конце недели и месяца обрывается плоским краем без скругления — плоский край и означает продолжение"></span></div>
+  <div class="spec"><b>контраст ленты</b><span data-v="лента красится акцентом --acs, а не тоном чернил: заливка сплошная и в каждом из четырёх наборов держит не меньше 3:1 к фону клетки, поэтому пер-палитровой подгонки тона у неё нет. Прогноз тоном --tint — вспомогательная форма, единственным носителем смысла не является: те же дни названы в доступном имени клетки и строкой «следующий — N-го»"></span><i>у неакцентной метки загрузочного дня тона подобраны пофайлово (date-remainders.v4, строка «тон метки загрузки») — у ленты этого не требуется</i></div>
+  <div class="spec"><b>прогноз следующего периода</b><span data-v="та же лента заливкой --tint на днях ожидаемого начала: дата считается как последняя отметка плюс 28 дней, длина прогноза 5 дней. В шапке месяца строка «следующий — N-го». Прогноз не ставит cycleDay, в нормы не входит и не влияет ни на один множитель"></span><i>календарь — единственная поверхность, которая смотрит вперёд; счёт для этого уже есть, показать его стоит одну ленту</i></div>
+  <div class="spec"><b>прогноз молчит, когда не знает</b><span data-v="лента ожидания не рисуется, если отметок ещё не было, если последняя старше 28 дней (там уже вопрос «период начался?») или если человек ответил «Не идут» на ожидаемый день"></span></div>
+  <div class="spec"><b>заливка клетки не занимается</b><span data-v="заливкой клетки календарь говорит «сегодня» и качество дня; период и прогноз живут только на верхнем крае, точка еды и полоса загрузочного — внизу, выбранная дата в режиме выбора — обводкой. Вариант с заливкой интервала отклонён"></span><i>вид клетки, сетки и заливок — «Дата и остатки v4»; ленту рисую я внутри их клетки, при расхождении по клетке верен тот файл, по ленте — этот</i></div>
+  <div class="spec"><b>вид · кнопки решений</b><span data-v="ряд кнопок под текстом: зазор 8, высота 48, радиус 999, кегль 700 12,5px; вторичная — фон var(--c1) текст тоном чернил 55 %, основная — фон var(--acs) текст var(--on-acs), опасная — фон var(--tint) текст var(--ac2)"></span><i>один ряд на все четыре диалога функции: выключение, вопрос дня 29, календарь выбора даты, предупреждение о сбое. Своей геометрии кнопок ни у одного из них нет</i></div>
+  <div class="spec"><b>вид · вопрос дня 29</b><span data-v="карточка дня становится вопросом: фон var(--c1), радиус 18, паддинг 16; заголовок «Период начался?» 700 12,5px var(--tx), подпись 500 11,5px тоном чернил 50 % с отступом 7; кнопки «Ещё нет» вторичная и «Да, первый день» основная"></span></div>
+  <div class="spec"><b>вид · подтверждение выключения</b><span data-v="заголовок «Выключить особый период?» 700 15px/1,35 var(--tx); текст 500 12px/1,55 тоном чернил 55 % с отступом 10; кнопки «Оставить» вторичная и «Выключить» опасная"></span></div>
+  <div class="spec"><b>вид · предупреждение о сбое</b><span data-v="фон var(--tint), радиус 16, паддинг 14; заголовок «Сейчас N-й день по счёту» 700 12,5px/1,35 var(--ac2), текст 500 11,5px/1,5 тоном чернил 55 % с отступом 7; кнопки «Не надо» вторичная и «Первый день» основная из общего ряда — 48 px на var(--c1), отступ 13"></span><i>единственная поверхность функции на предупреждающем тоне: она отменяет счёт, а не продолжает его</i></div>
+  <div class="spec"><b>вид · строка после «Закончились»</b><span data-v="строка стопки: фон var(--c1), радиус 16, паддинг 13/14; заголовок «Особые дни» 600 13px var(--tx), справа состояние «закончились на N-й» 600 12px тоном чернил 45 %, ниже пояснение 500 11px/1,45 тоном 50 %; действий и кнопок нет"></span></div>
+  <div class="spec"><b>вид · строка прогноза в шапке месяца</b><span data-v="справа от названия месяца, по базовой линии с ним: «следующий — N-го» 600 10,5px тоном чернил 40 %; при молчащем прогнозе строки нет вовсе, место не занимается"></span></div>
+  <div class="spec"><b>вид · пометка нормы</b><span data-v="в строке «Нужно съесть» перед числом пилюля-текст «+5 %» 700 11px var(--ac) без фона, зазор 7 px; пометка стоит только при ненулевом множителе"></span></div>
+  <div class="spec"><b>вид · инсайт</b><span data-v="фон var(--gr-bg) радиус 18 паддинг 15/16, заголовок 700 12px var(--gr), текст 500 11,5px тон 55 %; не чаще одного раза в день"></span></div>
+  <div class="spec"><b>слова на экране</b><span data-v="«особый период», «особые дни», «начало · середина · конец»; медицинские названия фаз в интерфейс не выводятся; эмодзи не используется — 🌸 из канона кода не переносится"></span></div>
+  <div class="spec"><b>границы</b><span data-v="мои — строка «Особые дни» внутри стопки пятого шага и её верхняя карточка на днях 1–7 (сама стопка, индикатор и кнопка «Готово» — чек-ина), содержимое блока «Особый период» на «Питании» (сама вкладка, порядок блоков и ряд чипов — nutrition-tab), карточка дня, пометка в строке «Нужно съесть», инсайт; клетка и сетка календаря — «Дата и остатки v4», метку рисую я внутри их клетки; тела графиков — «Вкладка - Отчёты v4», от меня зона периода, стиль пустых точек и исключение из тренда; строка в профиле — «Настройки и системное v4»"></span></div>
+  <div class="spec"><b>расхождение с кодом · намеренное</b><span data-v="heys_cycle_v1.js держит прежние числа: +5 % на 1–5, +5 % на 13–14, +8 % на 15–28 и волну на 1–5. Контракт задаёт цель — меняется код, а не эти строки. До правки кода баннер канваса остаётся «ЭСКИЗ»"></span><i>решение владельца 26 августа: считать по физиологии, а не по тому, что уже написано</i></div>
+  <div class="spec"><b>один источник</b><span data-v="главный по особому периоду — этот файл: множители, модель дней, слова, поведение краёв, лента и прогноз. Чужое: место строки в стопке пятого шага — checkin-morning.v4; место блока «Особый период» и его чип — nutrition-tab.v4; клетка, сетка и метка загрузочного дня — date-remainders.v4; строка тумблера в профиле — registration.v4, группа «Нормы»; бар отмены — undo-bar.v4. В каждом из них стоит обратная ссылка на этот файл"></span></div>
+  <div class="spec"><b>подпись в «Отчётах»</b><span data-v="подпись «дни особого периода в тренд не входят» под спарклайном веса нарисована в tab-reports.v4, но описана здесь — строкой «окно графика веса»: у того канваса контракта нет вовсе, и своего вида у подписи там нет"></span><i>зона «Отчёты» безконтрактная, поэтому владение подписью взято сюда, а не оставлено в файле без строк: иначе единственным её описанием была бы проза в заметках</i></div>
+  <div class="spec"><b>куратор</b><span data-v="неприменимо, пока аккаунт один: куратора у этой функции нет, режим чтения и правки куратора её не касаются. Если функция когда-нибудь выйдет на клиентов — в выгрузку идёт только цель дня, а день периода, фаза и множитель не выводятся, и тогда же решается, как объяснить куратору изменившуюся цель"></span><i>строка стоит здесь, чтобы вопрос был снят решением, а не забыт: изменившаяся без причины цель на чужом экране — реальный повод для звонка в поддержку, но не сегодня</i></div>
+  <div class="spec"><b>сверка канваса</b><span data-v="в шапке стоит строка сверки: она обходит кадры и ищет три вещи — нарисованную поверхность без строки «вид», кнопку-пилюлю выше 46 px, нарисованную мимо общего ряда .btns, число в прозе, которого нет ни в одном data-v, и живой замер, разошедшийся со своей строкой контракта. Замер сверяется не с любым числом канваса, а только с числами той строки, которую кадр называет атрибутом data-owner, — допуск ±1 px на подпиксельную раскладку. Сравнение с общим пулом чисел проверку обнуляет: мелкие значения совпадают с чем угодно. Кадр может назвать свою строку вида явно атрибутом data-vid, если по словам метки её не найти. Пустая строка сверки — условие сборки пакета"></span><i>заведена 26 августа: три раза подряд пакет объявлялся готовым, а потом находились ровно эти три класса расхождений. Проверка по памяти их не ловит — обход ловит</i></div>
+  <div class="spec"><b>демо</b><span data-v="анимаций на канвасе нет: все кадры — стоп-кадры, сверять можно любой"></span></div>
+  <div class="spec"><b>палитры</b><span data-v="все четыре темы собираются зеркалом из песочного ряда: значения берутся из v4-canvas.css, своих хексов в кадрах нет. Колонка «Решения» в зеркало не едет"></span></div>
+  <div class="spec"><b>открыто до передачи</b><span data-v="ничего: все решения по особому периоду приняты текстом. Баннер «ЭСКИЗ» снимается на «В ПРОД» после подтверждения множителей владельцем — множители в контракте уже совпадают с каноном кода"></span></div>
+</div>
+
+<div class="h">Протокол · снятое</div>
+<div style="display:flex;gap:14px;flex-wrap:wrap;max-width:1096px;">
+  <div class="prot" data-demo="protocol"><b>Отдельный документ согласия и подпись кодом</b><span>Снято 25.08: функция включается для одного аккаунта, субъекта-клиента нет. Шесть кадров прежней воронки лежат в archive/Цикл v4 - согласие и подпись (снято 25.08).dc.html.</span></div>
+  <div class="prot" data-demo="protocol"><b>«Кто это видит» тремя строками и отзыв с записью в журнал</b><span>Снято вместе с документом. Ограничение по куратору осталось строкой контракта, а не экраном.</span></div>
+  <div class="prot" data-demo="protocol"><b>Экран «Отметить начало цикла»</b><span>Снят: тот же ответ даётся в чек-ине, а сбой цикла лечится переотметкой дня, а не датой начала.</span></div>
+  <div class="prot" data-demo="protocol"><b>Профиль «дата начала + длина цикла»</b><span>Снято: модель осталась «день 1–7 + счёт вперёд», как в коде. Длина цикла в профиль не выносится.</span></div>
+  <div class="prot" data-demo="protocol"><b>Гейт по полу как защита данных</b><span>Снято: пол в профиле остаётся условием показа строки, но не выполняет юридической роли.</span></div>
+  <div class="prot" data-demo="protocol"><b>Особый период отдельным шагом чек-ина</b><span>Снято 25.08: свой шаг требовал точки в индикаторе и кнопки «Пропустить» каждое утро. Карточка переехала в стопку пятого шага «Остальное».</span></div>
+  <div class="prot" data-demo="protocol"><b>Виджет «Цикл» 2×2 на Главной</b><span>Отложено: может быть когда-нибудь. Из списка открытого убрано, в контракте не описано — рисовать не по этому файлу.</span></div>
+</div>
+
+<div data-mirdst="m1"></div>
+<div data-mirdst="m2"></div>
+<div data-mirdst="m3"></div>
+<div data-mirdst="m4"></div>
+<div data-mirdst="m6"></div>
+<div data-mirdst="m5"></div>
+
+<p style="margin:30px 0 0;font:500 12.5px/1.6 Figtree,sans-serif;color:rgba(var(--ink),.5);">Дальше: «зеркало четырёх палитр» · «пропуск карточки три дня подряд»</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showContracts&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;showProtocol&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
 class Component extends DCLogic {
-  componentDidMount() { this.applyTweaks(); }
-  componentDidUpdate() { this.applyTweaks(); }
+  pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Синяя тёмная']];
+  componentDidMount() { this.sync(); }
+  componentDidUpdate() { this.sync(); }
   renderVals() { return {}; }
 
-  tw() {
-    const standalone = window.parent === window;
-    return { all: this.props.allPalettes ?? standalone, rules: this.props.rules ?? true };
+  sync() {
+    const showPal = this.props.allPalettes ?? (window.parent === window);
+    document.querySelectorAll('[data-mirdst]').forEach(dst => {
+      const key = dst.getAttribute('data-mirdst');
+      const src = document.querySelector('[data-mir="' + key + '"]');
+      dst.innerHTML = '';
+      if (!src || !showPal) return;
+      const head = document.querySelector('[data-mirh="' + key + '"]');
+      if (head) {
+        const h = document.createElement('div');
+        h.className = 'h';
+        h.textContent = head.textContent + ' · зеркало';
+        dst.append(h);
+      }
+      this.pal.forEach(([cls, name]) => {
+        const cap = document.createElement('div');
+        cap.className = 'palcap';
+        cap.textContent = name;
+        const row = src.cloneNode(true);
+        row.removeAttribute('data-mir');
+        row.className = 'pal ' + cls;
+        row.querySelectorAll('[data-nomirror]').forEach(n => n.remove());
+        row.querySelectorAll('*').forEach(n => {
+          n.removeAttribute('data-cc-id'); n.removeAttribute('data-dm-ref');
+          n.removeAttribute('data-comment-anchor'); n.removeAttribute('data-screen-label');
+          n.removeAttribute('data-fit'); n.removeAttribute('data-fitnote'); n.removeAttribute('data-probar');
+        });
+        dst.append(cap, row);
+      });
+    });
+    this.applyTweaks();
+  }
+
+  plural(n, one, few, many) {
+    const m = n % 10, h = n % 100;
+    if (m === 1 && h !== 11) return one;
+    if (m >= 2 && m <= 4 && (h < 12 || h > 14)) return few;
+    return many;
   }
   contracts() {
     const on = this.props.showContracts ?? false;
     const list = [...document.querySelectorAll('[data-contract]')];
-    if (!list.length) return;
     list.forEach(el => { el.style.display = on ? '' : 'none'; });
-    let bar = document.querySelector('[data-ctrbar]');
-    if (!bar) {
-      bar = document.createElement('div');
-      bar.setAttribute('data-ctrbar', '');
-      bar.style.cssText = 'font:600 11px/1.6 ui-monospace,Menlo,monospace;color:#8a4a20;margin:0 0 22px;white-space:nowrap;';
-      const anchor = document.querySelector('p');
-      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
-      else list[0].parentNode.insertBefore(bar, list[0]);
+    const head = list[0] && list[0].previousElementSibling;
+    if (head && head.classList.contains('h')) head.style.display = on ? '' : 'none';
+    const n = list.length, rows = document.querySelectorAll('[data-contract] .spec').length;
+    if (!n) return '';
+    const word = this.plural(n, 'контракт', 'контракта', 'контрактов');
+    const rw = this.plural(rows, 'строка', 'строки', 'строк');
+    const state = on ? (n === 1 ? 'показан' : 'показаны') + ' ниже' : (n === 1 ? 'скрыт' : 'скрыты') + ' твиком «Контракты»';
+    return n + ' ' + word + ' на канвасе, ' + rows + ' ' + rw + ' · ' + state;
+  }
+  protocols() {
+    const on = this.props.showProtocol ?? false;
+    const list = [...document.querySelectorAll('[data-demo="protocol"]')];
+    list.forEach(el => { el.style.display = on ? '' : 'none'; });
+    const wrap = list[0] && list[0].parentElement;
+    if (wrap) {
+      const live = [...wrap.children].some(c => c.getAttribute('data-demo') !== 'protocol');
+      wrap.style.display = on || live ? '' : 'none';
+      const head = wrap.previousElementSibling;
+      if (head && head.classList.contains('h')) head.style.display = on || live ? '' : 'none';
     }
-    const n = list.length, m = n % 10, h = n % 100, one = m === 1 && h !== 11;
-    const word = one ? 'контракт' : (m >= 2 && m <= 4 && (h < 12 || h > 14) ? 'контракта' : 'контрактов');
-    const rows = document.querySelectorAll('[data-contract] .spec').length;
-    const rm = rows % 10, rh = rows % 100;
-    const rw = rm === 1 && rh !== 11 ? 'строка' : (rm >= 2 && rm <= 4 && (rh < 12 || rh > 14) ? 'строки' : 'строк');
-    bar.textContent = n + ' ' + word + ' на канвасе' + (rows ? ', ' + rows + ' ' + rw : '') + ' · ' + (on ? (one ? 'показан' : 'показаны') + ' ниже' : (one ? 'скрыт' : 'скрыты') + ' твиком «Контракты»');
+    const n = list.length;
+    if (!n) return '';
+    const fr = this.plural(n, 'кадр', 'кадра', 'кадров');
+    const hid = this.plural(n, 'скрыт', 'скрыты', 'скрыты');
+    return on ? n + ' ' + fr + ' протокола показаны ниже' : n + ' отвергнутых ' + fr + ' ' + hid + ' твиком «Протокол»';
+  }
+  fits() {
+    document.querySelectorAll('[data-fitnote]').forEach(note => {
+      const frame = document.querySelectorAll('[data-fit]')[+note.getAttribute('data-fitnote')];
+      const flow = frame && frame.querySelector('[data-flow]');
+      if (!flow || !flow.clientHeight) return;
+      const last = flow.lastElementChild;
+      if (!last) return;
+      const over = Math.round(last.getBoundingClientRect().bottom - flow.getBoundingClientRect().top - flow.clientHeight);
+      note.textContent = over > 0
+        ? 'Не влезает: содержимое выше окна на ' + over + ' px — стопка уходит под кнопку, нужна прокрутка.'
+        : 'Влезает целиком, запас ' + (-over) + ' px до кнопки.';
+      note.style.color = over > 0 ? '#a8382b' : '#5c6a45';
+      note.style.fontWeight = '600';
+    });
+  }
+  audit() {
+    const specs = [...document.querySelectorAll('[data-contract] .spec')];
+    const vals = specs.map(r => {
+      const b = r.querySelector('b'), v = r.querySelector('span[data-v]');
+      return { key: b ? b.textContent : '', val: v ? v.getAttribute('data-v') : '' };
+    });
+    const contract = vals.map(v => v.key + ' ' + v.val).join(' ');
+    const out = [];
+
+    // 1. нарисованная поверхность без строки «вид»
+    const vid = vals.filter(v => v.key.startsWith('вид')).map(v => v.key + ' ' + v.val).join(' ');
+    const named = vals.map(v => v.val).join(' ');
+    const frames = [...document.querySelectorAll('[data-screen-label]')]
+      .filter(f => f.getAttribute('data-demo') !== 'protocol' && !f.closest('[data-demo="protocol"]'));
+    const noVid = frames.filter(f => {
+      const label = f.getAttribute('data-screen-label');
+      if (/копия шага 5/.test(label)) return false; // чужая поверхность, помечена копией
+      const ref = f.getAttribute('data-vid'); // явная ссылка кадра на свою строку вида
+      if (ref) return !vals.some(v => v.key === ref);
+      const words = label.replace(/^Цикл · /, '').split(/[\s,·]+/).filter(s => s.length > 4);
+      return !words.some(w => {
+        const stem = w.slice(0, w.length - 2);
+        return vid.includes(stem) || named.includes(stem);
+      });
+    }).map(f => f.getAttribute('data-screen-label'));
+    if (noVid.length) out.push('без «вида»: ' + noVid.join(' · '));
+
+    // 2. кнопки-ряды, нарисованные мимо общего класса
+    const rogue = [...document.querySelectorAll('[data-screen-label] div:not(.btns) > span, [data-screen-label] div:not(.btns) > div')]
+      .filter(el => {
+        const s = getComputedStyle(el);
+        if (parseFloat(s.borderTopLeftRadius) < 100) return false;
+        if (el.getBoundingClientRect().height < 46) return false; // 44 — кнопки карточек, у них свои строки вида
+        if (!/^(Отмена|Подтвердить|Оставить|Выключить|Не надо|Первый день|Ещё нет|Да, первый день|Верно|Закончились)$/.test(el.textContent.trim())) return false;
+        return !el.parentElement.classList.contains('btns');
+      })
+      .map(el => el.textContent.trim() + ' в «' + (el.closest('[data-screen-label]') || {}).getAttribute('data-screen-label') + '»');
+    if (rogue.length) out.push('кнопка мимо общего ряда: ' + [...new Set(rogue)].join(' · '));
+
+    // 3. число в прозе, которого нет в контракте
+    const proseNodes = [...document.querySelectorAll('.nt, .ntl, .hint, .fb, .cap, [data-lead]')];
+    const stray = new Set();
+    proseNodes.forEach(n => {
+      if (n.closest('[data-contract]') || n.hasAttribute('data-fitnote')) return; // запас считает fits(), это замер, а не проза
+      (n.textContent.match(/\d+[,.]?\d*\s?(%|px|мл|ккал|дн|с\b)/g) || []).forEach(m => {
+        const num = m.match(/\d+[,.]?\d*/)[0];
+        if (num.length < 2) return;
+        const tokens = new Set((contract.match(/\d+[,.]?\d*/g) || []));
+        if (!tokens.has(num)) stray.add(m.trim());
+      });
+    });
+    if (stray.size) out.push('число в прозе вне контракта: ' + [...stray].join(' · '));
+
+    // 4. живой замер, которого нет в контракте
+    const off = [];
+    document.querySelectorAll('[data-fitnote]').forEach(n => {
+      const m = n.textContent.match(/(\d+)\s?px/);
+      if (!m) return;
+      const owner = n.getAttribute('data-owner');
+      const row = vals.find(v => v.key === owner);
+      if (!row) { off.push('замер без владельца: ' + (owner || '—')); return; }
+      const pool = (row.val.match(/\d+/g) || []).map(Number); // только числа своей строки
+      const v = +m[1];
+      if (!pool.some(x => Math.abs(x - v) <= 1)) off.push(m[1] + ' px против «' + owner + '»');
+    });
+    if (off.length) out.push('замер не назван в контракте: ' + off.join(' · '));
+
+    return out;
   }
   applyTweaks() {
-    this.contracts();
-    const t = this.tw(), hide = t.all ? '' : 'none', off = t.rules ? '' : 'none';
-    const lab = /^(т[её]мная|синяя|сине-т[её]мная|синяя\s+т[её]мная)(\s+палитра)?$/i;
-
-    document.querySelectorAll('.pl').forEach(pl => {
-      const row = pl.nextElementSibling;
-      if (!row) return;
-      const h = /песочн/i.test(pl.textContent) ? '' : hide;
-      const host = pl.parentElement;
-      if (host && host.firstElementChild === pl && host.lastElementChild === row && host.children.length === 2) host.style.display = h;
-      else { pl.style.display = h; row.style.display = h; }
-    });
-
-    document.querySelectorAll('div, span').forEach(el => {
-      if (el.children.length || !lab.test((el.textContent || '').trim())) return;
-      el.style.display = hide;
-      const row = el.nextElementSibling;
-      if (row && row.querySelector && (row.classList.contains('ph') || row.querySelector('.ph, .w, .g'))) row.style.display = hide;
-    });
-
-    document.querySelectorAll('[data-mirdst]').forEach(d => { d.style.display = hide; });
-
-    document.querySelectorAll('div[style*="width:300px"]').forEach(col => {
-      if (col.querySelector('.nt, .ntl') && !col.querySelector('.ph, .w')) col.style.display = off;
-    });
-    const boxes = new Set();
-    document.querySelectorAll('.nt, .ntl').forEach(n => { n.style.display = off; boxes.add(n.parentElement); });
-    boxes.forEach(box => {
-      if (!box) return;
-      const other = [...box.children].some(c => !c.classList.contains('nt') && !c.classList.contains('ntl'));
-      box.style.display = other ? '' : off;
-      const head = box.previousElementSibling;
-      if (head && head.classList.contains('h') && !other) head.style.display = off;
-    });
+    this.fits();
+    const audit = document.querySelector('[data-audit]');
+    if (audit) {
+      const found = this.audit();
+      audit.textContent = found.length
+        ? '⚠ сверка: ' + found.join(' | ')
+        : '✓ сверка чиста: у каждого кадра есть «вид», кнопок мимо общего ряда нет, числа в прозе есть в контракте, живые замеры сходятся со своей строкой';
+      audit.style.color = found.length ? '#a8382b' : '#5c6a45';
+    }
+    const bar = document.querySelector('[data-probar]');
+    if (bar) bar.textContent = [this.contracts(), this.protocols()].filter(Boolean).join(' · ');
+    const off = (this.props.rules ?? true) ? '' : 'none';
+    document.querySelectorAll('[data-nomirror]').forEach(col => { col.style.display = off; });
   }
 }
 </script>

@@ -2,6 +2,7 @@
   --val-bad:#a8382b; --val-good:#7a8a5e; --ovl:#d99a63;
   --fab:#c67139; --on-fab:#2b1608; --wat:#5e808f; --on-wat:#ffffff;
   --bg:#fffaf1; --c1:#f7efe2; --c2:#efe3cf; --tint:#f6e6dd; --tx:#201e1d; --ink:0,0,0;
+  --v4-line:rgba(var(--ink),.08); --v4-track:rgba(var(--ink),.12); --v4-edge:rgba(var(--ink),.18);
   --ac:#8a4a20; --ac2:#a1471c; --acs:#c67139; --on-acs:#2b1608;
   --gr:#5c6a45; --gr2:#7a8a5e; --gr-bg:#eaefe0; --red:#b4442a; --warn:#c9922e; --on-gr:#171d0d;
   --kb:#e5ded2; --kbk:#fffaf1; --md:#fffaf1; --edge:#d6cec1;
@@ -102,4 +103,4 @@ a:hover{color:#c67139}
 .pr{display:flex;justify-content:space-between;gap:12px;font:500 11.5px/1.6 Figtree,sans-serif;color:rgba(var(--ink),.55)}
 .cv{color:rgba(var(--ink),.28);display:flex;flex:none}
 .btn2{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c2);font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.58);padding:0 22px}
-.dv{height:1px;background:rgba(var(--ink),.07);margin:9px 0}
+.dv{height:1px;background:var(--v4-line);margin:9px 0}
