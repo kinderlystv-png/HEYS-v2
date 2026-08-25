@@ -3705,7 +3705,7 @@
 
             current.activated = true;
             maybeActivateCalendarDragZoomFromPoint(current.lastX, current.payload);
-            try { navigator.vibrate?.(10); } catch (_e) { /* unsupported */ }
+            HEYS.feedback?.emit?.('longpress');
             setTouchDragSourceKey(current.sourceKey || '');
 
             let sourceHeight = 60;
@@ -4781,7 +4781,7 @@
 
                 active.activated = true;
                 active.longPressActivated = true;
-                try { navigator.vibrate?.(10); } catch (_e) { /* unsupported */ }
+                HEYS.feedback?.emit?.('longpress');
 
                 if (typeof active.handleTouchMovePassive === 'function') {
                     document.removeEventListener('touchmove', active.handleTouchMovePassive, true);
@@ -5200,7 +5200,7 @@
                 if (!active || active !== session) return;
                 active.activated = true;
                 active.longPressActivated = true;
-                try { navigator.vibrate?.(10); } catch (_e) { /* unsupported */ }
+                HEYS.feedback?.emit?.('longpress');
                 if (active.col) active.col.style.touchAction = 'none';
                 if (bodyScrollRef.current) bodyScrollRef.current.style.overflow = 'hidden';
                 if (gridScrollRef.current) gridScrollRef.current.style.overflow = 'hidden';

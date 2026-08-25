@@ -361,14 +361,6 @@
       phonePulseTimer.current = setTimeout(() => setPhoneConfirmPulse(false), 220);
     }
 
-    function hapticInvalidPin() {
-      try {
-        if (global.navigator && typeof global.navigator.vibrate === 'function') {
-          global.navigator.vibrate(35);
-        }
-      } catch (_) { }
-    }
-
     function showInvalidPinFeedback(message = defaultPinError) {
       try {
         const timers = pinErrorTimers.current || {};
@@ -379,7 +371,9 @@
       setPinErrorVisible(true);
       setPinErrorActive(false);
       setActiveEntry('pin');
-      hapticInvalidPin();
+      // Вибрации на ошибке кода нет: login «вибрации на клавишах кода нет —
+      // четыре нажатия подряд превратили бы её в дребезг», а ошибка — не
+      // запись в данные и не необратимое действие.
       setTimeout(() => setPinErrorActive(true), 0);
       pinErrorTimers.current.reset = setTimeout(() => {
         resetPinToFirstSlot();

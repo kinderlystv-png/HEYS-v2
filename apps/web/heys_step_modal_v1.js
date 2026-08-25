@@ -339,23 +339,15 @@
     minutesValues = DEFAULT_MINUTES,
     display = 'HH:MM',
     linkedScroll = true, // При переходе минут через границу менять час
-    haptic = true // Включить haptic feedback
   }) {
-    // Haptic feedback helper
-    const triggerHaptic = React.useCallback((intensity = 5) => {
-      if (!haptic) return;
-      if (navigator.vibrate) navigator.vibrate(intensity);
-    }, [haptic]);
-
     // Ref для отслеживания предыдущих минут — НЕ синхронизируем при каждом рендере!
     // Обновляется ТОЛЬКО в handleMinutesChange после использования
     const prevMinutesRef = useRef(minutes);
 
-    // Обработчик изменения часов с haptic
+    // Обработчик изменения часов
     const handleHoursChange = React.useCallback((newHours) => {
-      triggerHaptic(5);
       onHoursChange(newHours);
-    }, [onHoursChange, triggerHaptic]);
+    }, [onHoursChange]);
 
     // Обработчик изменения минут с учётом overflow на час
     const handleMinutesChange = React.useCallback((newMinutes) => {
@@ -374,7 +366,6 @@
 
           // Обновляем ref ПЕРЕД вызовом callback
           prevMinutesRef.current = newMinutes;
-          triggerHaptic(10); // Усиленный haptic при переходе часа
 
           // Если есть onTimeChange — вызываем его (один вызов = нет batching проблемы)
           if (onTimeChange) {
@@ -394,7 +385,6 @@
 
           // Обновляем ref ПЕРЕД вызовом callback
           prevMinutesRef.current = newMinutes;
-          triggerHaptic(10); // Усиленный haptic при переходе часа
 
           // Если есть onTimeChange — вызываем его (один вызов = нет batching проблемы)
           if (onTimeChange) {
@@ -410,9 +400,8 @@
 
       // Обычное изменение минут (без overflow)
       prevMinutesRef.current = newMinutes;
-      triggerHaptic(5);
       onMinutesChange(newMinutes);
-    }, [onMinutesChange, onHoursChange, onTimeChange, hoursValues, minutesValues, linkedScroll, wrap, hours, triggerHaptic]);
+    }, [onMinutesChange, onHoursChange, onTimeChange, hoursValues, minutesValues, linkedScroll, wrap, hours]);
 
     return React.createElement('div', { className: `mc-time-picker ${className}`.trim() },
       // Дисплей времени сверху
@@ -431,7 +420,7 @@
         React.createElement(WheelPicker, {
           values: hoursValues,
           value: hours,
-          onChange: handleHoursChange, // С haptic
+          onChange: handleHoursChange,
           label: '',
           formatValue: pad2,
           wrap,
@@ -441,7 +430,7 @@
         React.createElement(WheelPicker, {
           values: minutesValues,
           value: minutes,
-          onChange: handleMinutesChange, // С haptic + linkedScroll
+          onChange: handleMinutesChange, // linkedScroll
           label: '',
           formatValue: pad2,
           wrap,
@@ -983,8 +972,8 @@
         setValidationMessage(errorMsg);
         // Показываем shake-анимацию при ошибке
         setValidationError(true);
-        // Haptic feedback при ошибке
-        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        // Вибрации на ошибке валидации нет: контракт знает два случая —
+        // успешная запись и необратимое действие.
         setTimeout(() => {
           setValidationError(false);
           setValidationMessage(null);

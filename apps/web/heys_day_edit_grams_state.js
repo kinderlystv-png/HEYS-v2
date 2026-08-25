@@ -39,8 +39,9 @@
                 const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
                 const percent = x / rect.width;
                 const grams = Math.round((minGrams + percent * (maxGrams - minGrams)) / 10) * 10;
+                // Ползунок отклика не даёт — checkin-morning «на кручение
+                // колёс и ползунков её нет».
                 setEditGramsValue(Math.max(minGrams, Math.min(maxGrams, grams)));
-                try { navigator.vibrate?.(3); } catch (e) { }
             };
 
             updateFromPosition(e.touches ? e.touches[0].clientX : e.clientX);

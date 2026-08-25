@@ -3305,9 +3305,10 @@
 
     const info = getDeficitInfo(deficit);
 
+    // Колесо дефицита отклика не даёт — checkin-morning «на кручение колёс и
+    // ползунков её нет».
     const setDeficit = (v) => {
       onChange({ ...data, deficit: v });
-      if (navigator.vibrate) navigator.vibrate(5);
     };
 
     // Форматирование значения для отображения в колесе
@@ -3360,7 +3361,6 @@
             className: 'deficit-preset' + (deficit === p.value ? ' active' : ''),
             onClick: () => {
               onChange({ ...data, deficit: p.value });
-              if (navigator.vibrate) navigator.vibrate(15);
             },
             style: deficit === p.value ? {
               backgroundColor: info.color,
@@ -3503,14 +3503,8 @@
     const sliderMax = 180;
     const sliderPercent = Math.min(100, (minutes / sliderMax) * 100);
 
-    // Haptic
-    const triggerHaptic = (intensity = 10) => {
-      if (navigator.vibrate) navigator.vibrate(intensity);
-    };
-
     // Quick preset buttons
     const handlePreset = (value) => {
-      triggerHaptic(15);
       onChange({ ...data, minutes: value });
     };
 
@@ -3579,7 +3573,6 @@
           step: 5,
           value: minutes,
         }, getRangeGestureProps((nextValue) => {
-            triggerHaptic(5);
             onChange({ ...data, minutes: nextValue });
           }), {
           style: {
@@ -3637,7 +3630,6 @@
           type: 'button',
           className: 'household-time-clear',
           onClick: () => {
-            triggerHaptic(5);
             onChange({ ...data, householdTime: '' });
           }
         }, '✕ Сбросить')
@@ -4869,13 +4861,6 @@
     return HEYS.scales.stressRating(v).color;
   }
 
-  // Haptic feedback
-  const hapticLight = () => {
-    try { navigator.vibrate?.(5); } catch {
-      // Haptic feedback is optional
-    }
-  };
-
   // Пресеты быстрого выбора (5 вариантов)
   const MOOD_PRESETS = [
     { value: 2, emoji: '😫' },
@@ -4973,7 +4958,6 @@
     const stress = data.stress ?? 5;
 
     const updateField = (field, value) => {
-      hapticLight();
       onChange({ ...data, [field]: value });
     };
 

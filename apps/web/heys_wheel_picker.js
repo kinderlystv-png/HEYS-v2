@@ -5,47 +5,10 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
   
-  // === Haptic Feedback ===
-  const haptic = {
-    light: () => {
-      if (navigator.vibrate) navigator.vibrate(5);
-    },
-    medium: () => {
-      if (navigator.vibrate) navigator.vibrate(10);
-    },
-    tick: () => {
-      if (navigator.vibrate) navigator.vibrate(3);
-    }
-  };
-  
-  // === Click Sound (lazy-loaded) ===
-  let tickSound = null;
-  const playTick = () => {
-    try {
-      if (!tickSound) {
-        // Создаём короткий звук через Web Audio API
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        tickSound = { ctx: audioCtx };
-      }
-      const ctx = tickSound.ctx;
-      if (ctx.state === 'suspended') ctx.resume();
-      
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.frequency.value = 1200; // Высокий тон
-      gain.gain.setValueAtTime(0.03, ctx.currentTime); // Тихо
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
-      
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.05);
-    } catch (e) {
-      // Audio API не доступен
-    }
-  };
-
+  // Колесо не откликается ни вибрацией, ни звуком: checkin-morning — «на
+  // кручение колёс и ползунков её нет», и собственный тик-синтезатор шёл мимо
+  // HEYS.audio и мимо переключателей звука (строка «звук · правило продукта»:
+  // звуков два).
   /**
    * WheelColumn — iOS-style wheel picker с инерционным скроллом
    * @param {Object} props
@@ -134,7 +97,6 @@
           } else {
             setOffset(targetOffset);
             if (clampedIndex !== selected) {
-              haptic.medium(); // Haptic при финальном snap
               onChange(clampedIndex);
             }
           }
@@ -144,7 +106,6 @@
       } else {
         setOffset(targetOffset);
         if (clampedIndex !== selected) {
-          haptic.medium();
           onChange(clampedIndex);
         }
       }
@@ -211,8 +172,6 @@
         const currentIndex = getIndexFromOffset(clampedOffset);
         if (currentIndex !== touchState.current.lastTickIndex) {
           touchState.current.lastTickIndex = currentIndex;
-          haptic.tick();
-          playTick();
         }
         
         touchState.current.lastY = touch.clientY;
@@ -260,8 +219,6 @@
           const currentIndex = getIndexFromOffset(currentOffset);
           if (currentIndex !== touchState.current.lastTickIndex) {
             touchState.current.lastTickIndex = currentIndex;
-            haptic.tick();
-            playTick();
           }
           
           if (Math.abs(currentVelocity) > 0.5) {

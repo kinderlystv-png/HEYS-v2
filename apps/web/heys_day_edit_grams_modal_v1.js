@@ -159,7 +159,6 @@
                 className: 'grams-preset' + (editGramsValue === preset ? ' active' : ''),
                 onClick: () => {
                   setEditGramsValue(preset);
-                  try { navigator.vibrate?.(5); } catch(e) {}
                 }
               }, preset + 'г')
             )

@@ -36,12 +36,7 @@
     // Haptic feedback
     haptic: (type = 'light') => {
       try {
-        if (HEYS.dayUtils?.haptic) {
-          HEYS.dayUtils.haptic(type);
-        } else if (navigator.vibrate) {
-          const patterns = { light: 10, medium: 20, success: [10, 50, 10], warning: [20, 30, 20] };
-          navigator.vibrate(patterns[type] || 10);
-        }
+        HEYS.dayUtils?.haptic?.(type);
       } catch (e) {}
     }
   };

@@ -41,9 +41,9 @@
     function rateLimitedHaptic(lastRef) {
         return function (intensity) {
             const now = Date.now();
-            if (!navigator || typeof navigator.vibrate !== 'function') return;
+            // Перетаскивание отклика не даёт: контракт знает два случая —
+            // успешная запись и необратимое действие.
             if (now - (lastRef.current || 0) < HAPTIC_THROTTLE_MS) return;
-            try { navigator.vibrate(Math.max(1, intensity || 10)); } catch (_e) { /* unsupported */ }
             lastRef.current = now;
         };
     }

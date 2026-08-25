@@ -70,8 +70,9 @@
                 const nextTab = SWIPEABLE_TABS[nextIndex];
 
                 // Фаза 1: выход старого контента (CSS transition)
+                // Строка «вибрация · правило продукта»: «на переключение
+                // вкладок вибрации нет».
                 setSlideDirection('out-left');
-                if (navigator.vibrate) navigator.vibrate(10);
                 clearTimeout(slideTimerRef.current);
                 slideTimerRef.current = setTimeout(() => {
                     // Фаза 2: смена вкладки + вход нового контента
@@ -85,7 +86,6 @@
                 const prevTab = SWIPEABLE_TABS[prevIndex];
 
                 setSlideDirection('out-right');
-                if (navigator.vibrate) navigator.vibrate(10);
                 clearTimeout(slideTimerRef.current);
                 slideTimerRef.current = setTimeout(() => {
                     setTab(prevTab);

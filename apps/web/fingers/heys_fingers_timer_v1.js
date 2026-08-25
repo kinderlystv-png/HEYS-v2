@@ -73,13 +73,13 @@
     } catch (_e) { /* swallow — voice optional */ }
   }
 
-  function _beep(category) {
-    try {
-      if (HEYS.audio && typeof HEYS.audio.play === 'function') {
-        HEYS.audio.play(category);
-      }
-    } catch (_e) { /* swallow */ }
-  }
+  // Три служебных сигнала фаз (notify / caution / triumph) сняты вместе с
+  // остальными восемью синтезаторами 25.08: строка контракта «звук · правило
+  // продукта» знает два звука — каплю воды и звук совета. Фазы и без них
+  // объявляются голосом (`_say`), а вис и его конец держат свои сигналы
+  // `fingerStart` / `fingerRelease` и вибрацию — это то, что нужно человеку,
+  // который на экран не смотрит.
+  function _beep() { }
 
   function _fingerSound(type) {
     try {

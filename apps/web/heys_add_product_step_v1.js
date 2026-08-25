@@ -503,11 +503,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return readStoredValue(key, def);
   };
 
-  // Haptic feedback
+  // Отклик — через единственную политику (HEYS.feedback, heys_audio_v1.js).
+  // 'light' / 'medium' — обычные нажатия, они по контракту молчат; 'success'
+  // (сохранение продукта) даёт 10 мс.
   const haptic = (style = 'light') => {
-    if (navigator.vibrate) {
-      navigator.vibrate(style === 'light' ? 10 : style === 'medium' ? 20 : 30);
-    }
+    const level = HEYS.feedback?.levelFor?.(style);
+    if (level) HEYS.audio?.haptic?.(level);
   };
 
   const useEscapeToClose = (closeFn, enabled = true) => {
@@ -10098,17 +10099,12 @@ NOVA: 1
           }, 'error');
         }
 
-        // 🔊 Harm-based feedback sound
-        if (HEYS.audio) {
-          const harm = typeof productForSubmit?.harm === 'number' ? productForSubmit.harm : 0;
-          if (harm >= 7) {
-            HEYS.audio.play('foodAddedHarmful');
-          } else if (harm >= 3) {
-            HEYS.audio.play('foodAddedModerate');
-          } else {
-            HEYS.audio.play('foodAdded');
-          }
-        }
+        // Звука у записи еды нет — строка «звук · правило продукта»: «Больше
+        // звуков нет: ни у записи еды, ни у достижений, ни у ошибок». Три
+        // звука по вредности продукта (reward / caution / alert) сняты; от
+        // записи остаётся отклик 10 мс, строка nutrition-tab «на добавленный
+        // приём».
+        HEYS.feedback?.emit?.('meal.added');
 
         // Product-add events are emitted by the day mutation after a successful write.
       }

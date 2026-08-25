@@ -10,7 +10,6 @@
             weekHeatmapData,
             showConfetti,
             setShowConfetti,
-            haptic,
             insulinWaveData,
             mealsChartData,
             setShowFirstPerfectAchievement,
@@ -30,13 +29,12 @@
             if (weekHeatmapData?.streak >= 7 && !streakConfettiShownRef.current && !showConfetti) {
                 streakConfettiShownRef.current = true;
                 setShowConfetti(true);
-                haptic('success');
                 setTimeout(() => setShowConfetti(false), 3000);
             }
             if ((weekHeatmapData?.streak || 0) < 7) {
                 streakConfettiShownRef.current = false;
             }
-        }, [weekHeatmapData?.streak, showConfetti, setShowConfetti, haptic]);
+        }, [weekHeatmapData?.streak, showConfetti, setShowConfetti]);
 
         // Делаем данные волны доступными глобально для карточек приёмов
         React.useEffect(() => {
@@ -49,7 +47,6 @@
         // Haptic при начале липолиза
         React.useEffect(() => {
             if (insulinWaveData?.status === 'lipolysis' && prevInsulinStatusRef.current !== 'lipolysis') {
-                try { HEYS.dayUtils?.haptic?.('success'); } catch (e) { }
             }
             prevInsulinStatusRef.current = insulinWaveData?.status || null;
         }, [insulinWaveData?.status]);
@@ -63,8 +60,7 @@
                     const wasUpdated = HEYS.InsulinWave.updateLipolysisRecord(insulinWaveData.lipolysisMinutes);
                     if (wasUpdated) {
                         setShowConfetti(true);
-                        try { HEYS.dayUtils?.haptic?.('success'); } catch (e) { }
-                        setTimeout(() => setShowConfetti(false), 3000);
+                                setTimeout(() => setShowConfetti(false), 3000);
                     }
                 }
             }
@@ -79,7 +75,6 @@
             const currentStreak = mealsChartData?.qualityStreak || 0;
             const prev = prevQualityStreakRef.current;
             if (currentStreak >= 3 && prev < 3) {
-                try { HEYS.dayUtils?.haptic?.('success'); } catch (e) { }
             }
             prevQualityStreakRef.current = currentStreak;
         }, [mealsChartData?.qualityStreak]);
@@ -88,7 +83,6 @@
             const meals = mealsChartData?.meals || [];
             const hasLow = meals.some(m => m.quality && m.quality.score < 50);
             if (hasLow && !lowScoreHapticRef.current) {
-                try { HEYS.dayUtils?.haptic?.('warning'); } catch (e) { }
                 lowScoreHapticRef.current = true;
             }
             if (!hasLow) {
@@ -114,8 +108,7 @@
                         else localStorage.setItem('heys_first_perfect_meal', '1');
                         setShowFirstPerfectAchievement(true);
                         setShowConfetti(true);
-                        try { HEYS.dayUtils?.haptic?.('success'); } catch (e) { }
-                        setTimeout(() => {
+                                setTimeout(() => {
                             setShowFirstPerfectAchievement(false);
                             setShowConfetti(false);
                         }, 5000);

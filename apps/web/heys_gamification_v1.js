@@ -344,12 +344,10 @@
     }
   }
 
-  // 🎵 Mission completion sound
-  function playMissionSound(isAllComplete = false) {
-    if (HEYS.audio) {
-      HEYS.audio.play(isAllComplete ? 'allMissionsComplete' : 'missionComplete');
-    }
-  }
+  // Звука у выполненной миссии нет — строка «звук · правило продукта»:
+  // «Больше звуков нет: ни у записи еды, ни у достижений, ни у ошибок».
+  // Отметка появляется в списке, этого достаточно (строка «когда играет»).
+  function playMissionSound() { }
 
   // Единственная граница суток геймификации — продуктовое правило дня из
   // heys_day_utils.js: NIGHT_HOUR_THRESHOLD = 3, приём в 00:00–02:59 пишется во
@@ -3231,16 +3229,11 @@
     setStoredValue('heys_sound_settings', SOUND_SETTINGS);
   }
 
-  // Строка «чего нет» канваса gamification.v4: у нового уровня звука и вибрации
-  // нет — остаётся только обычный звук начисления XP.
-  function playXPSound() {
-    if (HEYS.audio) {
-      HEYS.audio.play('xpGained');
-    }
-  }
-
-  // Звука-фанфары на достижении нет (строка «когда играет»: празднований у
-  // достижений и серии нет) — единственный звук движка остаётся на начислении XP.
+  // Звука у начисления XP нет: строка «звук · правило продукта» знает два
+  // звука — каплю воды и звук совета. Строка «чего нет» канваса gamification.v4
+  // отдельно запрещает звук и вибрацию новому уровню, строка «когда играет» —
+  // празднование достижения.
+  function playXPSound() { }
 
   // ========== XP HISTORY (7 days) ==========
   function getXPHistory() {
@@ -5622,9 +5615,6 @@
       }
     });
 
-    // Haptic
-    if (HEYS.haptic) HEYS.haptic('light');
-
     // Flying animation
     if (!useReactXPFX) {
       flyToBar(sourceEl, xpToAdd);
@@ -5639,7 +5629,6 @@
       const crossed = thresholds.filter((t) => oldProgress.percent < t && newProgress.percent >= t);
       if (crossed.length > 0) {
         const milestone = crossed[crossed.length - 1];
-        if (HEYS.haptic) HEYS.haptic('light');
         window.dispatchEvent(new CustomEvent('heysProgressMilestone', {
           detail: { milestone, percent: newProgress.percent }
         }));

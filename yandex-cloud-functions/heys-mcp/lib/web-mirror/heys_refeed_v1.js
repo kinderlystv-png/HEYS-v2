@@ -359,14 +359,12 @@
         setRefeedReason(null);
       }
       onChange({ isRefeedDay: value, refeedReason: value ? refeedReason : null });
-      try { navigator.vibrate?.(10); } catch (e) { }
     }, [onChange, refeedReason]);
 
     // Обработчик выбора причины
     const handleReasonSelect = useCallback((reasonId) => {
       setRefeedReason(reasonId);
       onChange({ isRefeedDay: true, refeedReason: reasonId });
-      try { navigator.vibrate?.(15); } catch (e) { }
     }, [onChange]);
 
     return React.createElement('div', { className: 'refeed-step' },

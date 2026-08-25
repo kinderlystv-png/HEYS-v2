@@ -1736,16 +1736,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             window.HEYS?.audio?.saveSettings?.({ volume });
         };
 
-        const previewReward = () => {
-            window.HEYS?.audio?.preview?.('reward');
+        const previewWater = () => {
+            window.HEYS?.audio?.preview?.('water');
         };
 
-        const previewSuccess = () => {
-            window.HEYS?.audio?.preview?.('success');
-        };
-
-        const previewTriumph = () => {
-            window.HEYS?.audio?.preview?.('triumph');
+        const previewAdvice = () => {
+            window.HEYS?.audio?.preview?.('advice');
         };
 
         return React.createElement('div', { className: 'profile-field-group' },
@@ -1815,16 +1811,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         React.createElement('div', { className: 'sound-settings-card__preview-actions' },
                             React.createElement('button', {
                                 className: 'btn-secondary sound-settings-card__preview-button',
-                                onClick: previewReward
-                            }, 'Награда'),
+                                onClick: previewWater
+                            }, 'Капля воды'),
                             React.createElement('button', {
                                 className: 'btn-secondary sound-settings-card__preview-button',
-                                onClick: previewSuccess
-                            }, 'Цель'),
-                            React.createElement('button', {
-                                className: 'btn-secondary sound-settings-card__preview-button',
-                                onClick: previewTriumph
-                            }, 'Уровень')
+                                onClick: previewAdvice
+                            }, 'Совет')
                         )
                     )
                 )

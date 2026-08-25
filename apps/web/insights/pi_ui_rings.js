@@ -59,8 +59,6 @@
     const effectiveColor = hasEmotionalRisk ? '#f87171' : color;
 
     const handleClick = () => {
-      // Haptic feedback
-      if (navigator.vibrate) navigator.vibrate(10);
       setShowTooltip(!showTooltip);
       if (onClick) onClick(category);
     };
@@ -139,8 +137,6 @@
     const offset = circumference - (progress / 100) * circumference;
 
     const handleClick = () => {
-      // Haptic feedback
-      if (navigator.vibrate) navigator.vibrate(10);
       if (onClick) onClick();
     };
 

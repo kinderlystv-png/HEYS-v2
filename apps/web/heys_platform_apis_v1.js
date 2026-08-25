@@ -1461,8 +1461,8 @@
 
       if (granted) {
         console.log('[Storage] ✅ Persistent storage granted!');
-        // Вибрация-подтверждение
-        if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        // Вибрации нет: разрешение на постоянное хранилище выдаёт браузер, а не
+        // человек записывает данные — строка «вибрация · правило продукта».
         return true;
       } else {
         console.log('[Storage] ⚠️ Persistent storage denied by browser');
@@ -3180,51 +3180,44 @@
     }
   };
 
-  // === Vibration Pattern API ===
-  // Расширенные паттерны вибрации
-
-  const VIBRATION_PATTERNS = {
-    success: [50, 30, 50],           // Короткий двойной
-    error: [100, 50, 100, 50, 100],  // Тройной
-    warning: [200, 100, 200],        // Двойной длинный
-    notification: [50, 100, 50, 100, 50], // Быстрая серия
-    heartbeat: [100, 200, 100, 400], // Как сердцебиение
-    sos: [100, 50, 100, 50, 100, 200, 300, 50, 300, 50, 300, 200, 100, 50, 100, 50, 100], // SOS
-    countdown: [100, 800, 100, 800, 100, 800, 500], // Обратный отсчёт
-    levelUp: [50, 50, 50, 50, 50, 50, 200] // Нарастающий
-  };
+  // === Vibration API ===
+  //
+  // Восьми именованных образцов (success / error / warning / notification /
+  // heartbeat / sos / countdown / levelUp) больше нет: строка контракта
+  // «вибрация · правило продукта» знает два уровня — 10 мс на успешную запись
+  // в данные и двойной короткий на необратимое действие. Политика живёт в
+  // `HEYS.feedback` (heys_audio_v1.js); здесь остался тонкий транспорт.
+  //
+  // Массив миллисекунд проходит насквозь — так политика и отдаёт свой отклик
+  // (`HEYS.audio.haptic` → `HEYS.vibration.play([10])`), и рекурсии тут нет.
+  // Строка-имя из старого словаря переводится политикой и чаще всего молчит.
 
   function vibratePattern(pattern) {
     if (!navigator.vibrate) {
       return false;
     }
 
-    const p = typeof pattern === 'string' ? VIBRATION_PATTERNS[pattern] : pattern;
-
-    if (!p) {
-      console.warn('[Vibration] Unknown pattern:', pattern);
-      return false;
+    if (Array.isArray(pattern) || typeof pattern === 'number') {
+      navigator.vibrate(pattern);
+      return true;
     }
 
-    navigator.vibrate(p);
-    return true;
-  }
-
-  // iOS impact light / Android EFFECT_TICK — один короткий тик в момент тапа.
-  function impactLight() {
-    if (!navigator.vibrate) return false;
-    navigator.vibrate(8);
+    const level = HEYS.feedback?.levelFor?.(pattern);
+    if (!level) return false;
+    const p = HEYS.feedback?.LEVELS?.[level];
+    if (!p) return false;
+    navigator.vibrate(p.slice());
     return true;
   }
 
   HEYS.vibration = {
     isSupported: () => 'vibrate' in navigator,
-    patterns: VIBRATION_PATTERNS,
     play: vibratePattern,
     stop: () => navigator.vibrate?.(0),
-    impactLight,
-    tick: impactLight,
-    // Удобные методы
+    // Тик на тапе снят вместе с остальными откликами на обычные нажатия.
+    // Функции остаются, чтобы старый вызов не падал, но молчат.
+    impactLight: () => false,
+    tick: () => false,
     success: () => vibratePattern('success'),
     error: () => vibratePattern('error'),
     warning: () => vibratePattern('warning'),

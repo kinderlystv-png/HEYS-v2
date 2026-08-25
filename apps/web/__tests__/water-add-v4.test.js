@@ -194,18 +194,16 @@ describe('добавление воды — канвас water-add v4, ветк�
 
   it('анти-спам звука — более 4 тапов за 2 с', () => {
     const audioSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_audio_v1.js'), 'utf8');
-    const platformSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_platform_apis_v1.js'), 'utf8');
-    const dayUtilsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_day_utils.js'), 'utf8');
     expect(audioSrc).toContain('function isWaterSoundFlooded');
     expect(audioSrc).toContain('>4 taps / 2s');
-    expect(platformSrc).toContain('function impactLight');
-    expect(platformSrc).toContain('impactLight,');
-    expect(dayUtilsSrc).toContain('HEYS.vibration?.impactLight');
+    // Тик `impactLight` (8 мс на тапе) снят вместе с остальными откликами на
+    // обычные нажатия — строка «вибрация · правило продукта». Отклик глотка
+    // (10 мс) выдаёт политика: см. feedback-policy-contract.test.js.
   });
 
   it('звук капли: синтез WebAudio с вариацией +30¢', () => {
     const audioSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_audio_v1.js'), 'utf8');
-    expect(handlersSrc).toContain("HEYS.audio.play('waterAdded'");
+    expect(handlersSrc).toContain("HEYS.feedback?.emit?.('water.sip')");
     expect(handlersSrc).toMatch(/waterTileIsVisible\(\)\) \{[\s\S]*?setTimeout\(playSound, 240\)/);
     expect(handlersSrc).toContain('HEYS.dayWater?.applyOptimistic?.');
     expect(audioSrc).toContain('function nextWaterToneCents');

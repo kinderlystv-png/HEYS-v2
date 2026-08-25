@@ -4697,6 +4697,54 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         }, []); // eslint-disable-line react-hooks/exhaustive-deps
         const [notifyDetailOpen, setNotifyDetailOpen] = React.useState(false);
         const [notifyPrefs, setNotifyPrefs] = React.useState(readNotifyPrefs);
+
+        // Контракт «звук · правило продукта»: звуков два, у каждого свой
+        // переключатель, и оба стоят рядом в ярусе «Оформление» — а не в
+        // настройках своих экранов, где спрятанный тумблер никто не находит.
+        // Капля живёт в heys_audio_settings, совет — в heys_advice_settings
+        // (решение владельца 24.08, три локальных гейта в day/_advice.js).
+        const readWaterSoundOn = React.useCallback(() => {
+            try { return window.HEYS?.audio?.getSettings?.()?.waterSoundEnabled !== false; }
+            catch (_) { return true; }
+        }, []);
+        const readAdviceSoundOn = React.useCallback(() => {
+            let stored = null;
+            try { stored = U && U.lsGet ? U.lsGet('heys_advice_settings', null) : null; } catch (_) { stored = null; }
+            if (!stored || typeof stored !== 'object') return true;
+            if (Object.prototype.hasOwnProperty.call(stored, 'adviceSoundEnabled')) return stored.adviceSoundEnabled !== false;
+            if (Object.prototype.hasOwnProperty.call(stored, 'soundEnabled')) return stored.soundEnabled !== false;
+            return true;
+        }, []);
+        const [waterSoundOn, setWaterSoundOn] = React.useState(readWaterSoundOn);
+        const [adviceSoundOn, setAdviceSoundOn] = React.useState(readAdviceSoundOn);
+        const toggleWaterSound = () => {
+            const next = !waterSoundOn;
+            setWaterSoundOn(next);
+            try { window.HEYS?.audio?.saveSettings?.({ waterSoundEnabled: next }); } catch (_) { /* останется прежним */ }
+            // Включили — дали послушать: иначе переключатель немой ровно тогда,
+            // когда его и хотят проверить.
+            if (next) { try { window.HEYS?.audio?.preview?.('water'); } catch (_) { /* noop */ } }
+        };
+        const toggleAdviceSound = () => {
+            const next = !adviceSoundOn;
+            setAdviceSoundOn(next);
+            try {
+                let stored = U && U.lsGet ? U.lsGet('heys_advice_settings', null) : null;
+                const nextStored = { ...(stored && typeof stored === 'object' ? stored : {}) };
+                // Два имени поля намеренно: новое читает тумблер советов,
+                // старое лежит у людей, которые трогали только галочку «Звук».
+                nextStored.adviceSoundEnabled = next;
+                nextStored.soundEnabled = next;
+                nextStored.updatedAt = Date.now();
+                if (U && U.lsSet) U.lsSet('heys_advice_settings', nextStored);
+            } catch (_) { /* останется прежним */ }
+            if (next) { try { window.HEYS?.audio?.preview?.('advice'); } catch (_) { /* noop */ } }
+        };
+        React.useEffect(() => {
+            if (sheetExtra !== 'theme') return;
+            setWaterSoundOn(readWaterSoundOn());
+            setAdviceSoundOn(readAdviceSoundOn());
+        }, [sheetExtra, readWaterSoundOn, readAdviceSoundOn]);
         const notifyQuietStart = notifyPrefs.quiet_start || QUIET_HOURS_DEFAULT.quiet_start;
         const notifyQuietEnd = notifyPrefs.quiet_end || QUIET_HOURS_DEFAULT.quiet_end;
         // В heys_push_prefs кладём только выбранное человеком: дефолт тихих
@@ -5513,6 +5561,34 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                 React.createElement('span', { className: 'hdr-settings-sheet__fab-notice-text' },
                                     'Кнопки перестроятся, когда закроете настройки'
                                 )
+                            ),
+                            // Контракт «где живёт раздел»: порядок ярусов
+                            // «Палитра» → «Режим» → «Быстрые действия» → «Звуки».
+                            React.createElement('div', {
+                                className: 'hdr-settings-sheet__tier',
+                            }, 'Звуки'),
+                            React.createElement('div', {
+                                className: 'notify-detail__card',
+                                onClick: (e) => e.stopPropagation(),
+                            },
+                                [
+                                    { key: 'water', label: 'Капля воды', on: waterSoundOn, toggle: toggleWaterSound },
+                                    { key: 'advice', label: 'Звук совета', on: adviceSoundOn, toggle: toggleAdviceSound },
+                                ].map((row) => React.createElement('button', {
+                                    key: row.key,
+                                    type: 'button',
+                                    className: 'notify-detail__row',
+                                    role: 'switch',
+                                    'aria-checked': row.on ? 'true' : 'false',
+                                    'aria-label': `${row.label}, ${row.on ? 'включено' : 'выключено'}`,
+                                    onClick: row.toggle,
+                                },
+                                    React.createElement('span', { className: 'notify-detail__row-label' }, row.label),
+                                    React.createElement('span', {
+                                        className: 'notify-detail__switch' + (row.on ? ' is-on' : ''),
+                                        'aria-hidden': 'true',
+                                    }, React.createElement('span', { className: 'notify-detail__knob' }))
+                                ))
                             )
                         ),
                         renderSettingsRow({
@@ -5767,7 +5843,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             sheetPushAccessOpen && React.createElement('div', {
                 className: 'sheet-push-access-sign',
                 style: {
-                    position: 'fixed', inset: 0, zIndex: 12000,
+                    // Ступень шторки из лестницы слоёв (--v4-z-sheet-scrim):
+                    // затемнение и лист здесь один элемент. Шторка настроек в
+                    // это время не отрисована (settingsMenuOpen &&
+                    // !sheetPushAccessOpen), так что второго уровня не нужно.
+                    position: 'fixed', inset: 0, zIndex: 'var(--v4-z-sheet-scrim, 1200)',
                     background: 'rgba(0,0,0,0.45)', display: 'flex',
                     alignItems: 'flex-end', justifyContent: 'center',
                 },

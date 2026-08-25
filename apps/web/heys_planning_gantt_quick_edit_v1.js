@@ -73,8 +73,9 @@
         // ── Bottom-sheet swipe-down handlers ────────────────────────────
         // useBottomSheetHandlers is a plain hook (uses useRef internally). Called unconditionally
         // to keep hook order stable; HEYS.dayBottomSheet is guaranteed available via boot-day bundle.
-        const sheetHaptic = useCallback((kind) => {
-            try { navigator.vibrate?.(kind === 'light' ? 8 : 16); } catch (_e) { /* noop */ }
+        // Открытие и закрытие листа отклика не дают — строка «вибрация ·
+        // правило продукта».
+        const sheetHaptic = useCallback(() => {
         }, []);
         const useBSHandlers = (HEYS.dayBottomSheet && HEYS.dayBottomSheet.useBottomSheetHandlers) || stubBottomSheetHandlers;
         const { bottomSheetRef, handleSheetTouchStart, handleSheetTouchMove, handleSheetTouchEnd } =
@@ -152,7 +153,6 @@
                     setDeleteArmed(false);
                     deleteResetRef.current = 0;
                 }, DELETE_RESET_MS);
-                try { navigator.vibrate?.(20); } catch (_e) { /* noop */ }
                 return;
             }
             // Confirmed

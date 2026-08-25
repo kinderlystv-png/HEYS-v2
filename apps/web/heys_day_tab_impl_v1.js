@@ -2028,7 +2028,6 @@
             weekHeatmapData,
             showConfetti,
             setShowConfetti,
-            haptic,
             insulinWaveData,
             mealsChartData,
             setShowFirstPerfectAchievement,

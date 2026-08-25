@@ -7,13 +7,6 @@
   const SWIPE_INTENT_DISTANCE = 24;
   const HORIZONTAL_DOMINANCE_RATIO = 1.8;
 
-  function safeVibrate(pattern) {
-    if (!navigator.vibrate) return;
-    const activation = navigator.userActivation;
-    if (activation && !activation.isActive && !activation.hasBeenActive) return;
-    try { navigator.vibrate(pattern); } catch (_) { /* ignore haptic errors */ }
-  }
-
   function isInteractiveSwipeTarget(target) {
     const element = target && target.nodeType === 1
       ? target
@@ -128,7 +121,7 @@
         if (!hasActions && finalX < -DELETE_FULL_THRESHOLD) {
           setIsDeleting(true);
           setTranslateX(-window.innerWidth);
-          safeVibrate(20);
+          HEYS.feedback?.emit?.('record.deleted');
           setTimeout(() => {
             onDeleteRef.current && onDeleteRef.current();
           }, 200);
@@ -153,14 +146,13 @@
     const handleDeleteClick = () => {
       setIsDeleting(true);
       setTranslateX(-window.innerWidth);
-      safeVibrate(20);
+      HEYS.feedback?.emit?.('record.deleted');
       setTimeout(() => {
         onDeleteRef.current && onDeleteRef.current();
       }, 200);
     };
 
     const handleActionClick = (action) => {
-      safeVibrate(10);
       setTranslateX(0);
       setTimeout(() => {
         try { action.onAction && action.onAction(); } catch (e) { /* swallow */ }

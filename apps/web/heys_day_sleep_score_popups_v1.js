@@ -88,15 +88,15 @@
               React.createElement('div', { className: 'sleep-quality-presets' },
                 React.createElement('button', {
                   className: 'sleep-quality-preset sleep-quality-preset-bad' + (pendingSleepQuality >= 1 && pendingSleepQuality <= 3 ? ' active' : ''),
-                  onClick: () => { if (navigator.vibrate) navigator.vibrate(10); setPendingSleepQuality(2); }
+                  onClick: () => { setPendingSleepQuality(2); }
                 }, '😫 Плохо'),
                 React.createElement('button', {
                   className: 'sleep-quality-preset sleep-quality-preset-ok' + (pendingSleepQuality >= 4 && pendingSleepQuality <= 7 ? ' active' : ''),
-                  onClick: () => { if (navigator.vibrate) navigator.vibrate(10); setPendingSleepQuality(5); }
+                  onClick: () => { setPendingSleepQuality(5); }
                 }, '😐 Средне'),
                 React.createElement('button', {
                   className: 'sleep-quality-preset sleep-quality-preset-good' + (pendingSleepQuality >= 8 && pendingSleepQuality <= 10 ? ' active' : ''),
-                  onClick: () => { if (navigator.vibrate) navigator.vibrate(10); setPendingSleepQuality(9); }
+                  onClick: () => { setPendingSleepQuality(9); }
                 }, '😊 Отлично')
               ),
               // Слайдер (0-10, где 0=не указано, 1-10 = оценка)
@@ -108,7 +108,6 @@
                   value: pendingSleepQuality,
                   className: 'mood-slider mood-slider-positive sleep-quality-slider',
                   onChange: (e) => {
-                    if (navigator.vibrate) navigator.vibrate(10);
                     setPendingSleepQuality(parseInt(e.target.value));
                   }
                 }),
@@ -130,7 +129,6 @@
                     : [];
 
                 const addSleepChip = (chip) => {
-                  if (navigator.vibrate) navigator.vibrate(5);
                   const current = pendingSleepNote || '';
                   setPendingSleepNote(current ? current + ', ' + chip : chip);
                 };
@@ -237,15 +235,15 @@
               React.createElement('div', { className: 'day-score-presets' },
                 React.createElement('button', {
                   className: 'day-score-preset day-score-preset-bad' + (pendingDayScore >= 1 && pendingDayScore <= 3 ? ' active' : ''),
-                  onClick: () => { if (navigator.vibrate) navigator.vibrate(10); setPendingDayScore(2); }
+                  onClick: () => { setPendingDayScore(2); }
                 }, '😢 Плохо'),
                 React.createElement('button', {
                   className: 'day-score-preset day-score-preset-ok' + (pendingDayScore >= 4 && pendingDayScore <= 6 ? ' active' : ''),
-                  onClick: () => { if (navigator.vibrate) navigator.vibrate(10); setPendingDayScore(5); }
+                  onClick: () => { setPendingDayScore(5); }
                 }, '😐 Норм'),
                 React.createElement('button', {
                   className: 'day-score-preset day-score-preset-good' + (pendingDayScore >= 7 && pendingDayScore <= 10 ? ' active' : ''),
-                  onClick: () => { if (navigator.vibrate) navigator.vibrate(10); setPendingDayScore(8); }
+                  onClick: () => { setPendingDayScore(8); }
                 }, '😊 Отлично')
               ),
               // Слайдер
@@ -257,7 +255,6 @@
                   value: pendingDayScore,
                   className: 'mood-slider mood-slider-positive day-score-slider',
                   onChange: (e) => {
-                    if (navigator.vibrate) navigator.vibrate(10);
                     setPendingDayScore(parseInt(e.target.value));
                   }
                 }),

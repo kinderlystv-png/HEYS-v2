@@ -215,18 +215,22 @@ describe('новый уровень · движок молчит и вооруж
     expect(typeof ceremonies[0].toTitle).toBe('string');
     expect(typeof ceremonies[0].fromPercent).toBe('number');
 
-    // Строка «чего нет»: звука и вибрации у уровня нет. `levelUp` в
-    // heys_audio_v1.js — категория triumph, а она несёт и вибрацию.
-    expect(sounds).not.toContain('levelUp');
+    // Строка «чего нет»: звука и вибрации у уровня нет. Синтезаторов
+    // triumph / reward в heys_audio_v1.js больше не существует вовсе.
+    expect(sounds).toEqual([]);
     // Строка «когда играет»: тоста «🎉 Уровень N!» нет.
     expect(notifications).not.toContain('level_up');
   });
 
-  it('обычное начисление XP звучит как звучало — тишина только у уровня', () => {
+  // Раньше здесь стояло «обычное начисление XP звучит как звучало». Звук у XP
+  // снят строкой «звук · правило продукта» (home-widgets.v4.dc.html): звуков в
+  // продукте два — капля воды и звук совета, «больше звуков нет: ни у записи
+  // еды, ни у достижений, ни у ошибок».
+  it('обычное начисление XP не звучит и церемонию не заводит', () => {
     grantXP(game, 10, 'water_added');
 
     expect(game.getStats().level).toBe(1);
-    expect(sounds).toContain('xpGained');
+    expect(sounds).toEqual([]);
     expect(ceremonies).toHaveLength(0);
   });
 

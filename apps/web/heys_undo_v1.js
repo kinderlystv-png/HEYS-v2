@@ -21,7 +21,10 @@
     defaultDuration: 5000,
     // Строка «положение»: врезка по бокам и зазор снизу — одна величина.
     gap: 12,
-    zIndex: 1010,
+    // Строка «порядок слоёв»: бар выше навигации и плавающей кнопки, ниже
+    // шторок и листов. Ступень живёт в лестнице слоёв (--v4-z-undo,
+    // styles/modules/002-ui-v4-palette-roles.css) и применяется классом
+    // .heys-undo-bar — инлайновое число прятало бар от чтения стилей.
     // Строка «появление» / «истёк без нажатия».
     enterMs: 220,
     leaveMs: 160,
@@ -93,7 +96,6 @@
     } else {
       barEl.style.removeProperty('bottom');
     }
-    barEl.style.zIndex = String(CONFIG.zIndex);
   }
 
   // ── DOM ──
@@ -295,7 +297,7 @@
     for (const entry of [...state.entries].reverse()) {
       try {
         handleAsyncCallback(entry.onUndo?.(entry.context, entry), {
-          onSuccess: () => safeVibrate(15),
+          onSuccess: () => HEYS.feedback?.emit?.('undo'),
           onError: (err) => {
             console.error('[HEYS.Undo] onUndo error:', err);
             // Тост здесь оставлен намеренно. Контракт снимает у heys_toast_v1
@@ -310,17 +312,6 @@
         console.error('[HEYS.Undo] onUndo error:', err);
         HEYS.Toast?.error('Не удалось отменить');
       }
-    }
-  }
-
-  function safeVibrate(pattern) {
-    if (!navigator.vibrate) return;
-    const activation = navigator.userActivation;
-    if (activation && !activation.isActive && !activation.hasBeenActive) return;
-    try {
-      navigator.vibrate(pattern);
-    } catch (_) {
-      /* ignore haptic errors */
     }
   }
 

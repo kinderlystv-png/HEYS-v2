@@ -1,7 +1,7 @@
 /**
  * Звук не зависит от системной настройки движения.
  *
- * Почему тест нужен. Завязка жила в `canPlay()` и `play()` с первой версии
+ * Почему тест нужен. Завязка жила в `play()` с первой версии
  * модуля (79fc18a5) и молча выключала весь звук приложения тому, кто убрал
  * анимации: «уменьшить движение» — про движение, а настройки «меньше звука» в
  * ОС нет. Связь нигде не была объявлена — ни комментарием, ни коммитом, ни в
@@ -163,14 +163,14 @@ describe('звук и системная настройка движения', (
   it('при уменьшенном движении звук играет', () => {
     setReducedMotion(true);
     const audio = loadAudio();
-    audio.play('waterAdded');
+    audio.play('water');
     expect(log.nodes.length).toBeGreaterThan(0);
   });
 
-  it('при уменьшенном движении играют и остальные категории, и превью настроек', () => {
+  it('при уменьшенном движении играют оба звука и превью настроек', () => {
     setReducedMotion(true);
     const audio = loadAudio();
-    audio.play('buttonTap');
+    audio.play('advice');
     expect(log.nodes.length).toBeGreaterThan(0);
 
     const afterPlay = log.nodes.length;
@@ -178,41 +178,34 @@ describe('звук и системная настройка движения', (
     expect(log.nodes.length).toBeGreaterThan(afterPlay);
   });
 
-  it('canPlay() не отвечает «нельзя» из-за уменьшенного движения', () => {
-    setReducedMotion(true);
-    const audio = loadAudio();
-    expect(audio.canPlay('waterAdded')).toBe(true);
-  });
 
   it('уменьшенное движение ничего не меняет: с ним и без него звук одинаков', () => {
     setReducedMotion(false);
-    loadAudio().play('waterAdded');
+    loadAudio().play('water');
     const withMotion = log.nodes.length;
     expect(withMotion).toBeGreaterThan(0);
 
     log.nodes.length = 0;
     setReducedMotion(true);
-    loadAudio().play('waterAdded');
+    loadAudio().play('water');
     expect(log.nodes.length).toBe(withMotion);
   });
 
   it('общий выключатель по-прежнему глушит', () => {
     const audio = loadAudio({ masterEnabled: false });
-    audio.play('waterAdded');
+    audio.play('water');
     expect(log.nodes.length).toBe(0);
-    expect(audio.canPlay('waterAdded')).toBe(false);
   });
 
   it('тихие часы по-прежнему глушат — и пропускают ignoreQuietHours', () => {
     const quiet = quietWindowAroundNow();
     const audio = loadAudio(quiet);
-    audio.play('waterAdded');
+    audio.play('water');
     expect(log.nodes.length).toBe(0);
-    expect(audio.canPlay('waterAdded')).toBe(false);
 
     // Второй вызов — на свежем экземпляре: иначе его съест не тихий час, а
-    // пауза между повторами той же категории (её проверяет отдельный тест).
-    loadAudio(quiet).play('waterAdded', { ignoreQuietHours: true });
+    // пауза между повторами того же звука (её проверяет отдельный тест).
+    loadAudio(quiet).play('water', { ignoreQuietHours: true });
     expect(log.nodes.length).toBeGreaterThan(0);
   });
 
@@ -222,9 +215,8 @@ describe('звук и системная настройка движения', (
       value: 'hidden',
       configurable: true,
     });
-    audio.play('waterAdded');
+    audio.play('water');
     expect(log.nodes.length).toBe(0);
-    expect(audio.canPlay('waterAdded')).toBe(false);
   });
 
   it('вода звучит первые четыре тапа и молчит с пятого — строка «частые тапы»', () => {
@@ -233,27 +225,27 @@ describe('звук и системная настройка движения', (
     // читался через `||` как «не задано» и подставлял 800 мс, поэтому молчал
     // уже второй быстрый тап, а предел «более 4 за 2 с» не достигался ни разу.
     // Теперь пауза у воды действительно нулевая, и работает именно предел.
-    audio.play('waterAdded');
+    audio.play('water');
     const afterFirst = log.nodes.length;
     expect(afterFirst).toBeGreaterThan(0);
 
     // Тапы со второго по четвёртый звучат — каждый добавляет узлы.
-    for (let i = 0; i < 3; i += 1) audio.play('waterAdded');
+    for (let i = 0; i < 3; i += 1) audio.play('water');
     const afterFourth = log.nodes.length;
     expect(afterFourth).toBeGreaterThan(afterFirst);
 
     // Пятый и дальше в том же окне двух секунд молчат.
-    audio.play('waterAdded');
-    audio.play('waterAdded');
+    audio.play('water');
+    audio.play('water');
     expect(log.nodes.length).toBe(afterFourth);
   });
 
-  it('пауза между звуками одной категории по-прежнему работает', () => {
+  it('пауза между повторами звука совета по-прежнему работает', () => {
     const audio = loadAudio();
-    audio.play('adviceAppear');
+    audio.play('advice');
     const afterFirst = log.nodes.length;
     expect(afterFirst).toBeGreaterThan(0);
-    audio.play('adviceAppear');
+    audio.play('advice');
     expect(log.nodes.length).toBe(afterFirst);
   });
 
@@ -265,11 +257,11 @@ describe('звук и системная настройка движения', (
       buzzes.push(pattern);
       return true;
     };
-    audio.haptic([20]);
+    audio.haptic('tap');
     expect(buzzes).toEqual([]);
 
     setReducedMotion(false);
-    audio.haptic([20]);
+    audio.haptic('tap');
     expect(buzzes.length).toBe(1);
   });
 });

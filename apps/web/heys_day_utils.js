@@ -376,24 +376,22 @@
         window.addEventListener('keydown', markInteracted, { once: true, passive: true });
     }
 
+    // Старый словарь из семи уровней (light / medium / heavy / success /
+    // warning / error / tick) сведён к контрактным двум — политика живёт в
+    // `HEYS.feedback` (heys_audio_v1.js), здесь только мост. Всё, что было
+    // откликом на обычное нажатие, теперь молчит: строка контракта «вибрация ·
+    // правило продукта» — «на обычные нажатия, переключение вкладок и открытие
+    // листов вибрации нет».
+    //
+    // Долгое нажатие и подтверждённая запись вызывают политику по имени
+    // события (`HEYS.feedback.emit('longpress' | 'meal.added' | …)`), а не
+    // через этот мост.
     function hapticFn(type = 'light') {
         if (!userHasInteracted) return;
         try {
-            if ((type === 'light' || type === 'tick') && HEYS.vibration?.impactLight) {
-                HEYS.vibration.impactLight();
-                return;
-            }
-            if (!navigator.vibrate) return;
-            switch (type) {
-                case 'light': navigator.vibrate(10); break;
-                case 'medium': navigator.vibrate(20); break;
-                case 'heavy': navigator.vibrate(30); break;
-                case 'success': navigator.vibrate([10, 50, 20]); break;
-                case 'warning': navigator.vibrate([30, 30, 30]); break;
-                case 'error': navigator.vibrate([50, 30, 50, 30, 50]); break;
-                case 'tick': navigator.vibrate(5); break;
-                default: navigator.vibrate(10);
-            }
+            const level = HEYS.feedback?.levelFor?.(type);
+            if (!level) return;
+            HEYS.audio?.haptic?.(level);
         } catch (e) { /* ignore vibrate errors */ }
     }
 

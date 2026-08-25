@@ -2279,16 +2279,11 @@
   let sciencePopupRoot = null;
   let sciencePopupRootInstance = null;
   const supplementsCollapseTimers = Object.create(null);
-  let supplementsVictoryAudioContext = null;
-
-  function triggerSupplementsVictoryHaptic() {
-    // Delegated to HEYS.audio — haptic fires as part of supplementsComplete event
-  }
-
-  function playSupplementsVictorySound() {
-    if (HEYS.audio) {
-      HEYS.audio.play('supplementsComplete');
-    }
+  // Отклик на закрытый список добавок — 10 мс, строка nutrition-tab «на
+  // отметку добавки». Звука нет: строка «звук · правило продукта» — «Больше
+  // звуков нет: ни у записи еды, ни у достижений, ни у ошибок».
+  function emitSupplementsDone() {
+    HEYS.feedback?.emit?.('supplement.taken');
   }
 
   function openSupplementsSciencePopup(suppId) {
@@ -2508,8 +2503,7 @@
       clearCelebrateTimer();
 
       console.info('[HEYS.supplements] Victory celebration started');
-      triggerSupplementsVictoryHaptic();
-      playSupplementsVictorySound();
+      emitSupplementsDone();
 
       const nextCelebrationPrefs = readSessionValue('heys_supplements_card_fx', {}) || {};
       nextCelebrationPrefs[dateKey] = {
@@ -2657,7 +2651,7 @@
               longPressTimer = setTimeout(() => {
                 isLongPress = true;
                 // Вибрация для тактильной обратной связи
-                if (HEYS.audio) { HEYS.audio.haptic([50]); } else if (navigator.vibrate) { navigator.vibrate(50); }
+                HEYS.feedback?.emit?.('longpress');
                 openSciencePopup(id);
               }, 500); // 500ms для долгого нажатия
             };

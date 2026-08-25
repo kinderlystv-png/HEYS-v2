@@ -90,7 +90,7 @@
         triggeredRef.current = true;
         cancel();
         onLongPress?.(event);
-        HEYS.dayUtils?.haptic?.('light');
+        HEYS.feedback?.emit?.('longpress');
       }, LONG_PRESS_MS);
     }, [cancel, disabled, onLongPress]);
 

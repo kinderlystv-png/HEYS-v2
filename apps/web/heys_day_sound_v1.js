@@ -4,23 +4,14 @@
 
     const HEYS = global.HEYS = global.HEYS || {};
 
-    const playSuccessSound = (() => {
-        let lastPlayTime = 0;
-        return () => {
-            // Dedup: не чаще раза в 2 сек (сохранено из оригинала)
-            const now = Date.now();
-            if (now - lastPlayTime < 2000) return;
-            lastPlayTime = now;
-
-            if (HEYS.audio) {
-                HEYS.audio.play('calorieGoalReached');
-            }
-        };
-    })();
+    // Звука у достигнутой нормы калорий нет — строка «звук · правило
+    // продукта»: звуков два, капля воды и звук совета. Функция остаётся, чтобы
+    // цепочка вызовов из heys_day_animations.js не разъезжалась.
+    const playSuccessSound = () => { };
 
     HEYS.daySound = {
         playSuccessSound
     };
 
-    console.info('[HEYS.daySound] ✅ Bridge to HEYS.audio loaded');
+    console.info('[HEYS.daySound] ✅ loaded (звука у нормы калорий нет)');
 })(window);

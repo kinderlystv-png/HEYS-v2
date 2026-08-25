@@ -179,9 +179,9 @@
             // Ждём пока DayTab смонтируется и вызываем addMeal
             const tryAddMeal = () => {
                 if (window.HEYS?.Day?.addMeal) {
+                    // Открытие листа отклика не даёт — строка «вибрация ·
+                    // правило продукта».
                     window.HEYS.Day.addMeal({ skipPlateGuide: true });
-                    // Вибрация при успешном открытии
-                    if (navigator.vibrate) navigator.vibrate(15);
                     // Сбрасываем флаг после небольшой задержки
                     setTimeout(() => { if (skipTabSwitchRef) skipTabSwitchRef.current = false; }, 500);
                 } else {
@@ -200,7 +200,7 @@
             const tryAddWater = () => {
                 if (window.HEYS?.Day?.addWater) {
                     window.HEYS.Day.addWater(250); // Добавляем 250мл по умолчанию
-                    if (navigator.vibrate) navigator.vibrate(15);
+                    window.HEYS.feedback?.emit?.('water.sip');
                     setTimeout(() => { if (skipTabSwitchRef) skipTabSwitchRef.current = false; }, 500);
                 } else {
                     setTimeout(tryAddWater, 100);
@@ -220,8 +220,6 @@
                     const images = await getAllFromStore(store);
 
                     if (images.length > 0) {
-                        // Вибрация при получении
-                        if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
 
                         // Показываем уведомление пользователю
                         if (typeof setNotification === 'function') {

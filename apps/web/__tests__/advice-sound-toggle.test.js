@@ -22,14 +22,20 @@ const advice = {
   icon: '💡',
 };
 
-// Заглушка HEYS.audio по контракту настоящего модуля: play() молчит, пока
-// masterEnabled === false. Что настоящий модуль ведёт себя именно так,
+// Заглушка политики отклика по контракту настоящего модуля: emit() молчит,
+// пока masterEnabled === false. Что настоящий модуль ведёт себя именно так,
 // проверяется отдельным assert'ом по исходнику ниже — jsdom не даёт Web Audio.
 function makeAudio(state) {
-  return {
-    play: (event) => {
+  window.HEYS.feedback = {
+    emit: (event) => {
       if (!state.masterEnabled) return;
       state.played.push(event);
+    },
+  };
+  return {
+    play: (sound) => {
+      if (!state.masterEnabled) return;
+      state.played.push(sound);
     },
     isEnabled: () => state.masterEnabled,
   };
@@ -103,10 +109,10 @@ describe('тумблер «Звук советов»: локальный гей�
     expect(api.current.adviceSoundEnabled).toBe(true);
 
     act(() => { api.current.markAdviceDetailRead(advice); });
-    expect(audio.played).toEqual(['adviceAppear']);
+    expect(audio.played).toEqual(['advice.shown']);
   });
 
-  it('при выключенном тумблере не звучит ни отметка, ни «скрыть»', () => {
+  it('выключенный тумблер гасит звук совета, но не отклик скрытия', () => {
     const audio = withAudio(true);
     const api = mountAdviceState();
 
@@ -114,16 +120,23 @@ describe('тумблер «Звук советов»: локальный гей�
     expect(api.current.adviceSoundEnabled).toBe(false);
 
     act(() => { api.current.markAdviceDetailRead(advice); });
-    act(() => { api.current.hideAdviceDetailUntilTomorrow({ id: 'a2', category: 'training' }); });
     expect(audio.played).toEqual([]);
+
+    // Тумблер звука вибрацию не выключает: контракт разводит их по разным
+    // строкам, и у вибрации своего переключателя продукт не заводит.
+    act(() => { api.current.hideAdviceDetailUntilTomorrow({ id: 'a2', category: 'training' }); });
+    expect(audio.played).toEqual(['advice.hidden']);
   });
 
-  it('«скрыть до завтра» звучит своим звуком, пока тумблер включён', () => {
+  // Звука у скрытия совета больше нет: строка «звук · правило продукта» знает
+  // один звук совета, а не пару «появился / убрали». Остаётся отклик 10 мс —
+  // строка tips «вибрация 10 мс на скрытие совета свайпом».
+  it('«скрыть до завтра» даёт отклик записи, а не второй звук', () => {
     const audio = withAudio(true);
     const api = mountAdviceState();
 
     act(() => { api.current.hideAdviceDetailUntilTomorrow(advice); });
-    expect(audio.played).toEqual(['adviceDismiss']);
+    expect(audio.played).toEqual(['advice.hidden']);
   });
 
   it('общий выключатель глушит советы даже при включённом частном тумблере', () => {

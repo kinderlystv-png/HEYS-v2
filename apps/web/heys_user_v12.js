@@ -1732,16 +1732,12 @@
       window.HEYS?.audio?.saveSettings?.({ volume });
     };
 
-    const previewReward = () => {
-      window.HEYS?.audio?.preview?.('reward');
+    const previewWater = () => {
+      window.HEYS?.audio?.preview?.('water');
     };
 
-    const previewSuccess = () => {
-      window.HEYS?.audio?.preview?.('success');
-    };
-
-    const previewTriumph = () => {
-      window.HEYS?.audio?.preview?.('triumph');
+    const previewAdvice = () => {
+      window.HEYS?.audio?.preview?.('advice');
     };
 
     return React.createElement('div', { className: 'profile-field-group' },
@@ -1819,16 +1815,12 @@
             React.createElement('div', { className: 'sound-settings-card__preview-actions' },
               React.createElement('button', {
                 className: 'btn-secondary sound-settings-card__preview-button',
-                onClick: previewReward
-              }, '✨ XP'),
+                onClick: previewWater
+              }, 'Капля воды'),
               React.createElement('button', {
                 className: 'btn-secondary sound-settings-card__preview-button',
-                onClick: previewSuccess
-              }, '✅ Цель'),
-              React.createElement('button', {
-                className: 'btn-secondary sound-settings-card__preview-button',
-                onClick: previewTriumph
-              }, '🏆 Уровень')
+                onClick: previewAdvice
+              }, 'Совет')
             )
           )
         ),
@@ -1836,18 +1828,18 @@
         // Status hint
         React.createElement('div', { className: 'muted sound-settings-card__status' },
           settings.masterEnabled !== false
-            ? '✓ Звуки активны — XP, еда, достижения, советы'
+            ? 'Звуки активны — капля воды и совет'
             : 'Звуки и вибрация отключены'
         )
       )
     );
   }
 
-  // Шим для старых вызовов window.playXPSound (обратная совместимость)
+  // Шим для старых вызовов window.playXPSound (обратная совместимость).
+  // Молчит: звука ни у XP, ни у нового уровня нет — строки «звук · правило
+  // продукта» и «чего нет» канваса gamification.v4.
   if (typeof window !== 'undefined') {
-    window.playXPSound = (isLevelUp) => {
-      window.HEYS?.audio?.play?.(isLevelUp ? 'levelUp' : 'xpGained');
-    };
+    window.playXPSound = () => { };
   }
 
   // === 🚫 Скрытые (удалённые) продукты ===

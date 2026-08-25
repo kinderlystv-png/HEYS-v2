@@ -666,10 +666,12 @@
     // Решение владельца 24.08.2026: частный тумблер «Звук советов» остаётся.
     // Человеку, которому мешают советы, не нужно ради этого глушить воду и всё
     // остальное. Общий переключатель звука в профиле работает поверх: он гасит
-    // HEYS.audio.masterEnabled, а этот — только советы (гейты в playAdviceSound /
-    // playAdviceHideSound / показе тоста). Место временное: в новом пакете макета
-    // оба тумблера звука собираются в ярус «Звуки» внутри «Оформления», но пакет
-    // ещё не пересобран, поэтому ряд стоит там же, где стоял.
+    // HEYS.audio.masterEnabled, а этот — только советы (гейты в playAdviceSound
+    // и в показе тоста; политика отклика читает тот же ключ).
+    // Основное место тумблера теперь — ярус «Звуки» внутри «Оформления»
+    // (heys_app_shell_v1.js), рядом с каплей воды: строка «звук · правило
+    // продукта». Ряд здесь остаётся вторым входом в ту же настройку — оба
+    // пишут `heys_advice_settings.adviceSoundEnabled` и `soundEnabled`.
     function renderAdviceSettingsScreen(React, {
         onClose,
         toastsEnabled,
@@ -2771,21 +2773,15 @@
         // проверки тумблер был бы декоративным: HEYS.audio про советы не знает.
         const playAdviceSound = useCallback(() => {
             if (!adviceSoundEnabled) return;
-            if (HEYS.audio) {
-                HEYS.audio.play('adviceAppear');
-            } else if (HEYSRef?.sounds) {
-                HEYSRef.sounds.ding();
-            }
-        }, [adviceSoundEnabled, HEYSRef]);
+            HEYS.feedback?.emit?.('advice.shown');
+        }, [adviceSoundEnabled]);
 
-        const playAdviceHideSound = useCallback(() => {
-            if (!adviceSoundEnabled) return;
-            if (HEYS.audio) {
-                HEYS.audio.play('adviceDismiss');
-            } else if (HEYSRef?.sounds) {
-                HEYSRef.sounds.whoosh();
-            }
-        }, [adviceSoundEnabled, HEYSRef]);
+        // Звука у скрытия совета нет: строка «звук · правило продукта» знает
+        // один звук совета, а не пару «появился / убрали». Остаётся отклик
+        // 10 мс — строка tips «вибрация 10 мс на скрытие совета свайпом».
+        const emitAdviceHidden = useCallback(() => {
+            HEYS.feedback?.emit?.('advice.hidden');
+        }, []);
 
         const toggleToastsEnabled = useCallback(() => {
             setToastsEnabled(prev => {
@@ -3426,23 +3422,14 @@
             setToastDetailsOpen(false);
             setToastRatedState(null);
 
-            if (adviceSoundEnabled && HEYSRef?.sounds) {
-                if (advicePrimary.type === 'achievement' || advicePrimary.showConfetti) {
-                    HEYSRef.sounds.success();
-                } else if (advicePrimary.type === 'warning') {
-                    HEYSRef.sounds.warning();
-                } else {
-                    HEYSRef.sounds.pop();
-                }
-            }
+            // Звук совета один на все виды: три разных (успех / предупреждение /
+            // появление) были тремя из десяти снятых. Вибрации на появлении нет
+            // — совет не запись в данные.
+            if (adviceSoundEnabled) HEYS.feedback?.emit?.('advice.shown');
 
-            if ((advicePrimary.type === 'achievement' || advicePrimary.type === 'warning') && typeof haptic === 'function') {
-                haptic('light');
-            }
             if (advicePrimary.onShow) advicePrimary.onShow();
             if (advicePrimary.showConfetti) {
                 setShowConfetti(true);
-                if (typeof haptic === 'function') haptic('success');
                 setTimeout(() => setShowConfetti(false), 2000);
             }
 
@@ -3574,7 +3561,8 @@
                 rateAdvice(displayedAdvice, isPositive);
                 setToastRatedState(isPositive ? 'positive' : 'negative');
                 setToastScheduledConfirm(false);
-                if (navigator.vibrate) navigator.vibrate(30);
+                // Оценка совета — не запись в данные дня и не необратимое
+                // действие: отклика нет.
                 setTimeout(() => {
                     dismissToast();
                 }, 900);
@@ -3587,7 +3575,6 @@
                 scheduleAdvice(displayedAdvice, 120);
                 setToastRatedState(null);
                 setToastScheduledConfirm(true);
-                if (navigator.vibrate) navigator.vibrate(50);
                 setTimeout(() => {
                     dismissToast();
                 }, 1500);
@@ -3812,8 +3799,7 @@
             const advice = safeAdviceRelevant.find(item => item?.id === adviceId) || safeBadgeAdvices.find(item => item?.id === adviceId);
             if (advice && markHidden) markHidden(advice);
 
-            playAdviceHideSound();
-            haptic('medium');
+            emitAdviceHidden();
 
             setUndoFading(false);
             const hideTimeout = setTimeout(() => {
@@ -3821,7 +3807,7 @@
                 setUndoFading(false);
             }, 3000);
             setLastDismissedAdvice({ id: adviceId, action: 'hidden', hideTimeout });
-        }, [haptic, lastDismissedAdvice, playAdviceHideSound, safeAdviceRelevant, safeBadgeAdvices, markHidden, setStoredValue]);
+        }, [lastDismissedAdvice, emitAdviceHidden, safeAdviceRelevant, safeBadgeAdvices, markHidden, setStoredValue]);
 
         // Деталь совета закрывается после действия: карточка уходит из списка, а
         // отмена живёт панелью в самой шторке (строка «отмена с таймером») — под

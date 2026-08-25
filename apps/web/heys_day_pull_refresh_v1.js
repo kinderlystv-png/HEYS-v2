@@ -15,7 +15,6 @@
     const [refreshStatus, setRefreshStatus] = useState('idle'); // idle | pulling | ready | syncing | success | error | timeout
     const pullStartY = useRef(0);
     const isPulling = useRef(false);
-    const lastHapticRef = useRef(0);
     // 🔧 FIX: Use refs to avoid stale closures in event handlers
     const isRefreshingRef = useRef(false);
     const refreshInFlightRef = useRef(false);
@@ -65,7 +64,6 @@
     const finishRefreshFlow = async (status, holdMs) => {
       setRefreshStatus(status);
       if (status === 'success') {
-        triggerHaptic(20);
       }
 
       await delay(holdMs);
@@ -111,15 +109,6 @@
         return !!document.querySelector('.sync-lock-overlay:not(.sync-lock-overlay--ephemeral)');
       } catch (e) {
         return false;
-      }
-    };
-
-    // Haptic feedback helper
-    const triggerHaptic = (intensity = 10) => {
-      const now = Date.now();
-      if (now - lastHapticRef.current > 50 && navigator.vibrate) {
-        navigator.vibrate(intensity);
-        lastHapticRef.current = now;
       }
     };
 
@@ -219,7 +208,6 @@
       if (now - blockedNoticeAtRef.current < 1500) return;
 
       blockedNoticeAtRef.current = now;
-      triggerHaptic(20);
       console.info('[HEYS.pullRefresh] 🚫 Pull-to-refresh blocked while sync is pending', {
         pendingCount,
       });
@@ -315,7 +303,6 @@
       setIsRefreshing(true);
       setPullProgress(Math.max(pullProgressRef.current, READY_LOCK_HEIGHT));
       setRefreshStatus('ready');
-      triggerHaptic(15);
 
       const cloud = heys && heys.cloud;
       const syncTask = performRefreshSync(cloud);
@@ -449,7 +436,6 @@
           // Haptic при достижении threshold
           if (progress >= PULL_THRESHOLD && refreshStatusRef.current !== 'ready') {
             setRefreshStatus('ready');
-            triggerHaptic(12);
           } else if (progress < PULL_THRESHOLD && refreshStatusRef.current === 'ready') {
             setRefreshStatus('pulling');
           }

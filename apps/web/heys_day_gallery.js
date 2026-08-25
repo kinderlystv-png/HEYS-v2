@@ -110,8 +110,7 @@
         });
         return { ...prevDay, meals, updatedAt: Date.now() };
       });
-      // Haptic feedback
-      try { navigator.vibrate?.(10); } catch(e) {}
+      // Пометка фото — обычное нажатие с видимым результатом: отклика нет.
     }, [photo.id, mealIndex, setDay]);
     
     let finalClass = thumbClass;

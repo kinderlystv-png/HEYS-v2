@@ -298,9 +298,8 @@
                     setIsWakeLockActive(false);
                 });
 
-                // Haptic feedback
-                if (navigator.vibrate) navigator.vibrate(10);
-
+                // Wake lock — не запись в данные и не необратимое действие:
+                // отклика нет (строка «вибрация · правило продукта»).
                 return true;
             } catch (err) {
                 console.warn('[WakeLock] Failed to acquire:', err.message);
@@ -1714,11 +1713,6 @@
                     return;
                 }
 
-                // 🆕 Haptic feedback при восстановлении связи
-                if ('vibrate' in navigator) {
-                    navigator.vibrate([50, 30, 50]); // Два коротких вибро — "всё ок"
-                }
-
                 setTimeout(() => setShowOnlineBanner(false), 2000);
 
                 const runtimePending = getRuntimePendingCount();
@@ -1764,11 +1758,6 @@
 
                 setShowOfflineBanner(true);
                 setCloudStatus('offline');
-
-                // 🆕 Haptic feedback при потере связи
-                if ('vibrate' in navigator) {
-                    navigator.vibrate(100); // Одна длинная вибрация — внимание
-                }
 
                 // Не скрываем баннер автоматически — он исчезнет когда связь вернётся
                 resetLongSyncFallback();

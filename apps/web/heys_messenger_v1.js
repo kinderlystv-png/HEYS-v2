@@ -2895,19 +2895,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           );
           if (newForeign && lastForeignIdRef.current !== newForeign.id) {
             lastForeignIdRef.current = newForeign.id;
-            try {
-              const audio = window.HEYS?.audio;
-              if (audio?.preview) {
-                audio.preview('notify');
-                setTimeout(() => audio.preview('notify'), 220);
-              } else if (audio?.play) {
-                audio.play('notify');
-                setTimeout(() => audio.play('notify'), 220);
-              }
-            } catch { /* ignore */ }
-            try {
-              if (navigator.vibrate) navigator.vibrate([100, 60, 100, 60, 200]);
-            } catch { /* ignore */ }
+            // Отклик через единственную политику. Двойной звонок и
+            // пятиимпульсная вибрация сведены к одному отклику: строка
+            // «звук · правило продукта» знает два звука, и сообщение одолжило
+            // звук совета вместе с его переключателем.
+            try { window.HEYS?.feedback?.emit?.('message.incoming'); } catch { /* ignore */ }
           }
         }
         return prepend
@@ -4763,14 +4755,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   function playInAppMessageCue() {
-    try {
-      const audio = window.HEYS?.audio;
-      if (audio?.play) audio.play('notify');
-      else if (audio?.preview) audio.preview('notify');
-    } catch { /* ignore */ }
-    try {
-      if (navigator.vibrate) navigator.vibrate([80, 50, 120]);
-    } catch { /* ignore */ }
+    try { window.HEYS?.feedback?.emit?.('message.incoming'); } catch { /* ignore */ }
   }
 
   function hideInAppMessageToast() {

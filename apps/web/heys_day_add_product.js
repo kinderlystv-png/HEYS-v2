@@ -546,7 +546,7 @@
     }, [day]);
 
     const handleOpenModal = React.useCallback(() => {
-      try { navigator.vibrate?.(10); } catch (e) { }
+      // Открытие листа отклика не даёт — строка «вибрация · правило продукта».
 
       const handleAddPhoto = async ({ mealIndex, mealId: requestedMealId, photo, filename, timestamp }) => {
         const activeDay = getLatestDay();
@@ -590,7 +590,7 @@
           return { ...prevDay, meals, updatedAt: Date.now() };
         });
 
-        try { navigator.vibrate?.(10); } catch (e) { }
+        HEYS.feedback?.emit?.('meal.added');
 
         try {
           const mealName = activeMeal?.name || `meal${resolvedMealIndex}`;
@@ -907,7 +907,7 @@
           }, 160);
         });
 
-        try { navigator.vibrate?.(10); } catch (e) { }
+        HEYS.feedback?.emit?.('meal.added');
 
         prepared.forEach((entry) => {
           recordGramsForProduct(entry.productId, entry.grams, entry.finalProduct);
@@ -1112,7 +1112,7 @@
           }, 160);
         });
 
-        try { navigator.vibrate?.(10); } catch (e) { }
+        HEYS.feedback?.emit?.('meal.added');
 
 	        dispatchProductAdded({ product: finalProduct || safeProduct, grams, origin: _origin || 'single' });
 

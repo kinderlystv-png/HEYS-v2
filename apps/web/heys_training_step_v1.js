@@ -56,8 +56,11 @@
     });
   };
 
+  // Отклик — через единственную политику (HEYS.feedback). 'light' и 'error'
+  // молчат: обычное нажатие и ошибка отклика не получают.
   const haptic = (style = 'light') => {
-    try { navigator.vibrate?.(style === 'error' ? [50, 30, 50] : style === 'success' ? 20 : 10); } catch { }
+    const level = HEYS.feedback?.levelFor?.(style);
+    if (level) HEYS.audio?.haptic?.(level);
   };
 
   const pad2 = n => String(n).padStart(2, '0');

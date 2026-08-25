@@ -895,7 +895,9 @@
             const y = Number(eventLike?.clientY) || Math.round((window.innerHeight || 844) * 0.55);
             clearProductLongPress();
             productActionSheetIgnoreNextBackdropClickRef.current = true;
-            if (HEYS.dayUtils?.haptic) HEYS.dayUtils.haptic('light');
+            // Долгое нажатие — «короткое вибро в момент срабатывания»
+            // (home-widgets, строка «жест»).
+            HEYS.feedback?.emit?.('longpress');
             setProductActionSheet({
                 product: editableProduct,
                 title: editableProduct.name || 'Продукт',
@@ -5318,7 +5320,8 @@
 
                                         setDay(() => newDayData);
 
-                                        try { navigator.vibrate?.(10); } catch (e) { }
+                                        // nutrition-tab: 10 мс на добавленный приём.
+                                        HEYS.feedback?.emit?.('meal.added');
                                         window.dispatchEvent(new CustomEvent('heysProductAdded', {
                                             detail: {
 	                                                product: finalProduct,

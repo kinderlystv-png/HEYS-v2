@@ -1055,13 +1055,11 @@
       if (!restTimer || restTimer.notified) return;
       const elapsedSec = (restNow - restTimer.startTs) / 1000;
       if (elapsedSec >= restTimer.thresholdSec) {
-        try {
-          if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            navigator.vibrate([80, 60, 80, 60, 120]);
-          }
-        } catch (_e) { /* noop */ }
+        // Конец отдыха — таймерный сигнал тренировки: человек не смотрит на
+        // экран. Своего кадра в пакете дизайна у тренировок нет; отклик остаётся,
+        // но пятиимпульсный образец сведён к контрактному отклику записи.
         try { playRestDoneBeep(); } catch (_e) { /* noop */ }
-        if (typeof haptic === 'function') haptic('success');
+        HEYS.feedback?.emit?.('step.done');
         setRestTimer(function (prev) {
           if (!prev) return prev;
           return { ...prev, notified: true };
@@ -1801,10 +1799,8 @@
                         return applyWorkoutLogToTraining(t0, wl0);
                       });
                       if (!wasDone) {
-                        if (typeof haptic === 'function') haptic('success');
-                        try {
-                          if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(15);
-                        } catch (_e) { /* noop */ }
+                        // Упражнение отмечено сделанным — запись в данные.
+                        HEYS.feedback?.emit?.('step.done');
                         setRestTimer({
                           startTs: Date.now(),
                           thresholdSec: restPresetSec,

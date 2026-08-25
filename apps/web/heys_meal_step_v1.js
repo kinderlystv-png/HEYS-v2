@@ -30,10 +30,10 @@
     localStorage.setItem(key, JSON.stringify(val));
   };
 
-  // Haptic feedback
-  const haptic = (intensity = 10) => {
-    if (navigator.vibrate) navigator.vibrate(intensity);
-  };
+  // Шаги мастера приёма — чипы и ползунки: строка «вибрация · правило
+  // продукта» отклика им не даёт (checkin-morning: «на кручение колёс и
+  // ползунков её нет»). Отклик на записанный приём выдаёт day/_meals.js.
+  const haptic = () => { };
 
   // Unique ID generator
   const uid = (prefix = '') => prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);

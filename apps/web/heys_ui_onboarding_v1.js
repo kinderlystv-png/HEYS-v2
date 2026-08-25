@@ -27,8 +27,6 @@
   const INSIGHTS_TOUR_ENABLED = false;
   const TOUR_ID = 'onboarding_tour_v1';
   const STORAGE_KEY = 'heys_tour_completed';
-  const HAPTIC_ENABLED = true; // navigator.vibrate на переходах
-  const HAPTIC_PATTERN = [15]; // Короткая вибрация 15ms
 
   const getStoredFlag = (key, fallback = false) => {
     const scoped = HEYS.store?.get?.(key, null);
@@ -154,13 +152,9 @@
     wasHidden: false // Флаг для visibilitychange
   };
 
-  // === HAPTIC FEEDBACK ===
-
-  function triggerHaptic() {
-    if (HAPTIC_ENABLED && navigator.vibrate) {
-      navigator.vibrate(HAPTIC_PATTERN);
-    }
-  }
+  // Переходы между шагами тура отклика не получают — строка «вибрация ·
+  // правило продукта»; registration: «на переходах между шагами её нет».
+  function triggerHaptic() { }
 
   // === VISIBILITY CHANGE HANDLER ===
 

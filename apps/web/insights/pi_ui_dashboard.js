@@ -3390,7 +3390,6 @@
       const handleButtonClick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (navigator.vibrate) navigator.vibrate(10);
         setIsOpen(true);
       };
 

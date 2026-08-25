@@ -204,31 +204,12 @@
               // 🎉 Триггер confetti при идеальных оценках (используем состояние из родительского компонента)
               const triggerConfetti = () => {
                 if (!showConfetti) {
+                  // Ни звука, ни вибрации: три собственных синтезатора этого
+                  // экрана (аккорд-празднование, тик ползунка, звук хорошей
+                  // оценки) шли мимо HEYS.audio и мимо переключателей звука.
+                  // Строка «звук · правило продукта»: звуков два, оба здесь ни
+                  // при чём.
                   setShowConfetti(true);
-                  // Haptic celebration
-                  if (navigator.vibrate) navigator.vibrate([50, 50, 50, 50, 100]);
-                  // Звук celebration
-                  try {
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const playNote = (freq, time, dur) => {
-                      const osc = ctx.createOscillator();
-                      const gain = ctx.createGain();
-                      osc.connect(gain);
-                      gain.connect(ctx.destination);
-                      osc.type = 'sine';
-                      osc.frequency.value = freq;
-                      gain.gain.setValueAtTime(0.06, ctx.currentTime + time);
-                      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + time + dur);
-                      osc.start(ctx.currentTime + time);
-                      osc.stop(ctx.currentTime + time + dur);
-                    };
-                    // Мажорный аккорд C-E-G-C
-                    playNote(523.25, 0, 0.15);
-                    playNote(659.25, 0.1, 0.15);
-                    playNote(783.99, 0.2, 0.15);
-                    playNote(1046.50, 0.3, 0.2);
-                  } catch(e) {}
-                  // Автоскрытие через 2 секунды
                   setTimeout(() => setShowConfetti(false), 2000);
                 }
               };
@@ -236,51 +217,6 @@
               // Цвет значения по позиции (positive: red→blue→green)
               const getPositiveColor = (v) => HEYS.scales.wellbeing(v).color;
               const getNegativeColor = (v) => HEYS.scales.stress(v).color;
-              
-              // Haptic feedback с интенсивностью
-              const triggerHaptic = (intensity = 10) => {
-                if (navigator.vibrate) navigator.vibrate(intensity);
-              };
-              
-              // Звуковой tick (очень тихий) + success звук
-              const playTick = (() => {
-                let lastValue = null;
-                return (value) => {
-                  if (lastValue !== null && lastValue !== value) {
-                    try {
-                      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                      const osc = ctx.createOscillator();
-                      const gain = ctx.createGain();
-                      osc.connect(gain);
-                      gain.connect(ctx.destination);
-                      osc.frequency.value = 800 + value * 50;
-                      gain.gain.value = 0.03;
-                      osc.start();
-                      osc.stop(ctx.currentTime + 0.02);
-                    } catch (e) {}
-                  }
-                  lastValue = value;
-                };
-              })();
-              
-              // Приятный звук при хорошей оценке (4-5)
-              const playSuccessSound = () => {
-                try {
-                  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                  const osc = ctx.createOscillator();
-                  const gain = ctx.createGain();
-                  osc.connect(gain);
-                  gain.connect(ctx.destination);
-                  osc.type = 'sine';
-                  osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
-                  osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08); // E5
-                  osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.16); // G5
-                  gain.gain.setValueAtTime(0.05, ctx.currentTime);
-                  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-                  osc.start();
-                  osc.stop(ctx.currentTime + 0.25);
-                } catch (e) {}
-              };
               
               // Корреляция с прошлыми данными
               const getCorrelationHint = () => {
@@ -565,8 +501,6 @@
               
               // Slider handler с haptic, звуком и анимацией emoji
               const handleSliderChange = (field, value, prevValue) => {
-                triggerHaptic(value >= 8 || value <= 2 ? 15 : 10);
-                playTick(value);
                 
                 // Emoji анимация
                 if (value !== prevValue) {
@@ -576,9 +510,6 @@
                   setEmojiAnimating(prev => ({...prev, [field]: animType}));
                   setTimeout(() => setEmojiAnimating(prev => ({...prev, [field]: ''})), 400);
                 }
-                
-                // Success sound при хорошей оценке
-                if (value >= 8 && prevValue < 8) playSuccessSound();
                 
                 // Обновляем состояние
                 const newMood = {...pendingMealMood, [field]: value};
@@ -594,7 +525,6 @@
               
               // Добавить chip в комментарий
               const addChipToComment = (chip) => {
-                triggerHaptic(5);
                 const current = pendingMealMood.journalEntry || '';
                 const newEntry = current ? current + ', ' + chip : chip;
                 setPendingMealMood(prev => ({...prev, journalEntry: newEntry}));
