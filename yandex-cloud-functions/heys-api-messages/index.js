@@ -1049,6 +1049,30 @@ async function sendPushToClient(clientId, payload) {
       });
       return { sent: 0, total: 0, skipped: 'push_consent_missing' };
     }
+    // Тумблер «Сообщения от куратора» из листа «Настроить подробно»
+    // (контракт settings-system, строка «состав листа»). Без этой проверки
+    // тумблер был настройкой, которая ничего не выключает: отправка
+    // сообщений не читала heys_push_prefs вовсе, тогда как остальные пять
+    // видов уведомлений её читают в heys-cron-reminders.
+    //
+    // Согласие проверяется выше и остаётся отдельной сущностью: согласие —
+    // юридический факт, тумблер — предпочтение. Выключенный тумблер не
+    // отзывает согласие, поэтому и причины отказа разные.
+    //
+    // Отсутствие записи читается как «включено»: тумблер по умолчанию стоит,
+    // и человек, который его не трогал, обязан получать сообщения куратора.
+    const prefsRow = await client.query(
+      `SELECT v FROM client_kv_store WHERE client_id = $1 AND k = 'heys_push_prefs' LIMIT 1`,
+      [clientId]
+    );
+    if (prefsRow.rows[0]?.v?.curator_messages_enabled === false) {
+      console.warn('[messages] push skipped', {
+        reason: 'curator_messages_disabled',
+        identity_kind: 'client',
+        identity_id: clientId,
+      });
+      return { sent: 0, total: 0, skipped: 'curator_messages_disabled' };
+    }
     const r = await client.query(
       `SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE client_id = $1`,
       [clientId]

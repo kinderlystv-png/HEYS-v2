@@ -270,8 +270,12 @@ async function handleUnsubscribe(identity, body) {
 // Дефолтные prefs клиента (для merge при сохранении частичных настроек).
 const DEFAULT_CLIENT_PREFS = {
   enabled: true,
-  quiet_start: '23:00',
-  quiet_end: '09:00',
+  // Тихие часы по контракту settings-system, строка «тихие часы»: 22:00–08:00.
+  // Значение видно человеку в листе «Настроить подробно», и до тех пор пока он
+  // капсулы не тронул, отправка обязана считать по тому же дефолту — иначе
+  // интерфейс показывает одно, а рассылка молчит на час дольше с каждого края.
+  quiet_start: '22:00',
+  quiet_end: '08:00',
   meal_reminder_enabled: true,
   meal_reminder_gap_hours: 4,
   evening_summary_enabled: true,

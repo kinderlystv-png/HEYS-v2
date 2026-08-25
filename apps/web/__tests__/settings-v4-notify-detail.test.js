@@ -132,12 +132,19 @@ describe('состав листа — шесть видов в порядке к
         ]);
     });
 
-    // Шестой — сообщения куратора. Их шлёт heys-api-messages, и он prefs не
-    // читает вовсе: ключ заведён, гейт на стороне отправки ещё нужен.
-    // Тест держит факт видимым, а не делает вид, что тумблер уже работает.
-    it('ключ сообщений куратора заведён первым и ждёт гейта отправки', () => {
+    // Шестой вид — сообщения куратора. Их шлёт не рассылка напоминаний, а
+    // heys-api-messages, поэтому и гейт живёт там. Раньше здесь стояла
+    // проверка «ключ есть, гейта ещё нет» — она держала дыру видимой; теперь
+    // гейт стоит, и проверка сторожит его наличие.
+    it('тумблер сообщений куратора действительно гейтит отправку', () => {
         expect(NOTIFY_KIND_ROWS[0].key).toBe('curator_messages_enabled');
+        // Рассылка напоминаний про этот ключ по-прежнему не знает — и не должна.
         expect(CRON_SRC).not.toContain('curator_messages_enabled');
+        const messagesSrc = read(
+            path.resolve(WEB_DIR, '../../yandex-cloud-functions/heys-api-messages/index.js'),
+        );
+        expect(messagesSrc).toContain('curator_messages_enabled === false');
+        expect(messagesSrc).toContain('curator_messages_disabled');
     });
 
     it('общий тумблер остаётся в шторке настроек, в лист не переезжает', () => {
