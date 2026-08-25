@@ -17,6 +17,9 @@
 //     accessible-имя ползунка шагов; роль «вопроса над крупным числом» играет
 //     надзаголовок экрана «Шаги на сегодня» — его и заменяет «Сколько
 //     получилось».
+//   · нижняя граница ползунка у вечернего экрана — ноль, а не 3 000: «нисколько
+//     не прошёл» — законный факт, тогда как план в ноль шагов смысла не имеет.
+//     Контракт границ не называет.
 //   · порог вечера строкой не назван. Взят уже существующий в продукте рубеж
 //     18:00 (приветствие входа heys_login_screen_v1.js, getTimePeriod советов).
 //   · шапка первого вопроса «Доброе утро» — не вопрос чек-ина, но вечером она
@@ -65,11 +68,19 @@ function dayLsKey(date) {
 
 // ── Шаги мастера ─────────────────────────────────────────────────────────────
 
-function loadStepRegistry() {
+/** Хранилище последнего загруженного реестра шагов: приёмники пишут в него. */
+let stepsStore = new Map();
+
+function loadStepRegistry(seed = {}) {
   window.React = React;
   window.ReactDOM = { render: vi.fn(), unmountComponentAtNode: vi.fn() };
+  stepsStore = new Map(Object.entries(seed).map(([key, value]) => [key, structuredClone(value)]));
+  const read = (key, fallback) => (stepsStore.has(key) ? structuredClone(stepsStore.get(key)) : fallback);
+  const write = (key, value) => { stepsStore.set(key, structuredClone(value)); };
   window.HEYS = {
-    utils: { lsGet: () => ({}), lsSet: vi.fn() },
+    currentClientId: CLIENT_ID,
+    store: { get: read, set: write },
+    utils: { lsGet: read, lsSet: write, getCurrentClientId: () => CLIENT_ID },
     dayUtils: { todayISO: () => DATE_KEY },
     scales: {
       moodRating: () => ({ color: '#84cc16', step: 'GOOD_SOFT' }),
@@ -83,10 +94,18 @@ function loadStepRegistry() {
   return window.HEYS.StepModal.registry;
 }
 
-function renderStepsGoal(registry, daypart) {
-  const Component = registry.stepsGoal.component;
+function readStoredDay(date = DATE_KEY) {
+  return stepsStore.get(dayLsKey(date)) || {};
+}
+
+function readStoredProfile() {
+  return stepsStore.get('heys_profile') || {};
+}
+
+function renderStepsScreen(registry, stepId, data, daypart) {
+  const Component = registry[stepId].component;
   return render(React.createElement(Component, {
-    data: { stepsGoal: 10500 },
+    data,
     onChange: vi.fn(),
     stepData: {},
     context: { dateKey: DATE_KEY, dailyCheckin: true, daypart },
@@ -156,8 +175,8 @@ function emptyDay(date) {
 
 // ── Планировщик чек-ина ──────────────────────────────────────────────────────
 
-function loadMorningPlanner() {
-  const values = new Map();
+function loadMorningPlanner(seed = {}) {
+  const values = new Map(Object.entries(seed).map(([key, value]) => [key, structuredClone(value)]));
   localStorage.setItem(`heys_${CLIENT_ID}_profile`, JSON.stringify({
     _sourceClientId: CLIENT_ID,
     profileCompleted: true,
@@ -230,44 +249,120 @@ describe('чек-ин не пройден до вечера', () => {
 
     expect(morningPlan.daypart).toBe('morning');
     expect(eveningPlan.daypart).toBe('evening');
-    expect(eveningPlan.steps).toEqual(morningPlan.steps);
-    expect(eveningPlan.steps).toEqual(expect.arrayContaining([
+    // Состав не меняется: та же длина, тот же порядок слотов. Отличается ровно
+    // один — слот шагов: утром там вопрос про план, вечером про факт.
+    expect(eveningPlan.steps).toHaveLength(morningPlan.steps.length);
+    expect(eveningPlan.steps.map((id) => (id === 'stepsFact' ? 'stepsGoal' : id)))
+      .toEqual(morningPlan.steps);
+    expect(morningPlan.steps).toEqual(expect.arrayContaining([
       'weight', 'sleep', 'morning_mood', 'stepsGoal', 'morningRest',
     ]));
+    expect(eveningPlan.steps).toEqual(expect.arrayContaining([
+      'weight', 'sleep', 'morning_mood', 'stepsFact', 'morningRest',
+    ]));
+    expect(eveningPlan.steps).not.toContain('stepsGoal');
     // Чек-ин открывается только на сегодня — своей даты не выбирает.
     expect(eveningPlan.dateKey).toBe(DATE_KEY);
   });
 
-  // Две вечерние переформулировки экрана шагов сознательно НЕ сделаны: ответ
-  // отсюда уходит в profile.stepsGoal, то есть в план, а вечерний вопрос
-  // «сколько прошли за день» собирает факт. Переименовать подпись, не сменив
-  // приёмник, значит записать факт как идеально выполненный план — день
-  // выглядел бы безупречно закрытой целью. Тест сторожит именно это: пока
-  // приёмник прежний, вечерний экран обязан звучать как план.
-  it('экран шагов вечером не переименован, пока ответ уходит в план', () => {
+  it('вечером спрашивают факт, а не план: два шага, а не один с ветвлением', () => {
     const registry = loadStepRegistry();
+    expect(registry.stepsGoal).toBeTruthy();
+    expect(registry.stepsFact).toBeTruthy();
+    expect(registry.stepsFact.component).not.toBe(registry.stepsGoal.component);
 
-    const morning = renderStepsGoal(registry, 'morning');
-    const morningKicker = morning.container.querySelector('.mc-step-kicker').textContent;
-    const morningAria = morning.container.querySelector('.mc-v4-scale').getAttribute('aria-label');
-    const morningText = morning.container.textContent;
+    const morning = renderStepsScreen(registry, 'stepsGoal', { stepsGoal: 10500 }, 'morning');
+    expect(morning.container.querySelector('.mc-step-kicker').textContent).toBe('Шаги на сегодня');
+    expect(morning.container.querySelector('.mc-v4-scale').getAttribute('aria-label'))
+      .toBe('Цель по шагам');
     cleanup();
 
-    const evening = renderStepsGoal(registry, 'evening');
-    const eveningKicker = evening.container.querySelector('.mc-step-kicker').textContent;
-    const eveningAria = evening.container.querySelector('.mc-v4-scale').getAttribute('aria-label');
-    const eveningText = evening.container.textContent;
-
-    expect(eveningKicker).toBe(morningKicker);
-    expect(eveningAria).toBe(morningAria);
-    expect(eveningText).toBe(morningText);
-
-    // Сторож приёмника: как только ответ перестанет уходить в profile.stepsGoal,
-    // этот тест обязан упасть — значит вопрос владельцу решён и подписи пора
-    // менять по строке контракта.
-    const stepsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_steps_v1.js'), 'utf8');
-    expect(stepsSrc).toContain('profile.stepsGoal = data.stepsGoal;');
+    // Дословно из строки контракта «чек-ин не пройден до вечера».
+    const evening = renderStepsScreen(registry, 'stepsFact', { steps: 8200 }, 'evening');
+    expect(evening.container.querySelector('.mc-step-kicker').textContent).toBe('Сколько получилось');
+    expect(evening.container.querySelector('.mc-v4-scale').getAttribute('aria-label'))
+      .toBe('Сколько прошли за день');
   });
+
+  it('вечерний ответ уходит в день, а план дня не трогает', () => {
+    const registry = loadStepRegistry({
+      heys_profile: { stepsGoal: 11000, stepsGoalConfirmedDate: '2026-08-10' },
+    });
+
+    registry.stepsFact.save({ steps: 8200 }, { dateKey: DATE_KEY });
+
+    const day = readStoredDay();
+    expect(day.steps).toBe(8200);
+    expect(day.stepsAnsweredAt).toBeGreaterThan(0);
+    // heys_sync_merge_v1 решает спор по stepsUpdatedAt — без него уменьшение
+    // проиграло бы legacy-правилу «берём максимум».
+    expect(day.stepsUpdatedAt).toBeGreaterThan(0);
+    // План не тронут: факт не выдаёт себя за идеально выполненную цель.
+    expect(readStoredProfile()).toEqual({ stepsGoal: 11000, stepsGoalConfirmedDate: '2026-08-10' });
+  });
+
+  it('утренний ответ уходит в план, а факта дня не выдумывает', () => {
+    const registry = loadStepRegistry();
+
+    registry.stepsGoal.save({ stepsGoal: 11500 }, { dateKey: DATE_KEY });
+
+    const profile = readStoredProfile();
+    expect(profile.stepsGoal).toBe(11500);
+    expect(profile.stepsGoalConfirmedDate).toBe(DATE_KEY);
+    expect(readStoredDay().steps).toBeUndefined();
+    expect(readStoredDay().stepsAnsweredAt).toBeUndefined();
+  });
+
+  it('ноль шагов — данный ответ: шаг не переспрашивается', () => {
+    const registry = loadStepRegistry();
+    // Ноль вообще достижим ползунком: у факта нижняя граница — ноль.
+    const view = renderStepsScreen(registry, 'stepsFact', { steps: 0 }, 'evening');
+    expect(view.container.querySelector('.mc-v4-scale').getAttribute('aria-valuemin')).toBe('0');
+    cleanup();
+
+    registry.stepsFact.save({ steps: 0 }, { dateKey: DATE_KEY });
+    const day = readStoredDay();
+    expect(day.steps).toBe(0);
+    expect(day.stepsAnsweredAt).toBeGreaterThan(0);
+
+    // Планировщик читает отметку, а не истинность значения.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 16, 21, 0));
+    const utils = loadMorningPlanner({ [dayLsKey(DATE_KEY)]: day });
+    expect(utils.hasStepsFactAnswered(day)).toBe(true);
+    expect(utils.isMorningStepComplete('stepsFact', { dateKey: DATE_KEY, day, profile: {} })).toBe(true);
+    expect(utils.getCheckinSteps({}, { filterCompleted: true, dateKey: DATE_KEY, daypart: 'evening' }))
+      .not.toContain('stepsFact');
+  });
+
+  it('повторное открытие вечером показывает уже отвеченное, включая ноль', () => {
+    const answered = { date: DATE_KEY, steps: 0, stepsAnsweredAt: 1700000000000 };
+    const registry = loadStepRegistry({ [dayLsKey(DATE_KEY)]: answered });
+    expect(registry.stepsFact.getInitialData({ dateKey: DATE_KEY }, {}).steps).toBe(0);
+
+    const walked = { date: DATE_KEY, steps: 7400, stepsAnsweredAt: 1700000000000 };
+    const registry2 = loadStepRegistry({ [dayLsKey(DATE_KEY)]: walked });
+    expect(registry2.stepsFact.getInitialData({ dateKey: DATE_KEY }, {}).steps).toBe(7400);
+  });
+
+  it('событие о шагах несёт дату дня, к которому относится ответ', () => {
+    const registry = loadStepRegistry();
+    const seen = [];
+    const listener = (event) => seen.push(event.detail);
+    window.addEventListener('heysStepsUpdated', listener);
+    try {
+      registry.stepsFact.save({ steps: 9100 }, { dateKey: DATE_KEY });
+    } finally {
+      window.removeEventListener('heysStepsUpdated', listener);
+    }
+    expect(seen).toEqual([{ steps: 9100, date: DATE_KEY }]);
+  });
+
+  // Здесь раньше стоял сторож приёмника: пока ответ вечернего экрана уходил в
+  // profile.stepsGoal, переименовывать подписи было нельзя — факт записался бы
+  // как идеально выполненный план. Приёмник разведён (stepsGoal → профиль,
+  // stepsFact → day.steps), и сторож заменён тестами выше: они проверяют и то,
+  // что вечерний вопрос звучит по контракту, и то, что ответ уходит в день.
 
   it('сон, вес и самочувствие вечером звучат дословно так же', () => {
     const registry = loadStepRegistry();

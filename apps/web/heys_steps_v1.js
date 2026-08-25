@@ -3096,14 +3096,32 @@
     };
   }
 
-  function StepsGoalStepComponent({ data, onChange, stepData, context }) {
-    // Контракт checkin-morning, «чек-ин не пройден до вечера»: две вечерние
-    // переформулировки этого экрана НЕ сделаны намеренно. Ответ отсюда уходит
-    // в profile.stepsGoal (см. save ниже) — это план, а вечерний вопрос
-    // «сколько прошли за день» собирает факт. Переименовать подпись, не сменив
-    // приёмник, значит записать факт как идеально выполненный план. Куда класть
-    // факт (day.steps) и чем тогда отмечать пройденность шага — контракт
-    // молчит, это решение владельца. Вопрос в UI_V4_FINDINGS.
+  // Контракт checkin-morning, «чек-ин не пройден до вечера»: утром спрашивается
+  // план дня, вечером — факт. Это два разных вопроса с разными приёмниками, и
+  // потому два разных шага реестра, а не один с ветвлением по времени:
+  //   · stepsGoal → profile.stepsGoal + profile.stepsGoalConfirmedDate (план);
+  //   · stepsFact → day.steps + day.stepsAnsweredAt (факт того же дня).
+  // Экран у них общий, различаются только две подписи (дословно из контракта)
+  // и поле, куда кладётся значение. Нижняя граница ползунка у факта — ноль:
+  // «нисколько не прошёл» — законный ответ, а у плана ноль смысла не имеет.
+  const STEPS_SCREEN_GOAL = {
+    id: 'stepsGoal',
+    kicker: 'Шаги на сегодня',
+    sliderAriaLabel: 'Цель по шагам',
+    valueKey: 'stepsGoal',
+    sliderMin: STEPS_GOAL_SLIDER_MIN,
+    sliderMinLabel: '3 000'
+  };
+  const STEPS_SCREEN_FACT = {
+    id: 'stepsFact',
+    kicker: 'Сколько получилось',
+    sliderAriaLabel: 'Сколько прошли за день',
+    valueKey: 'steps',
+    sliderMin: 0,
+    sliderMinLabel: '0'
+  };
+
+  function StepsSliderStepComponent({ data, onChange, stepData, context, screen }) {
     const profile = useMemo(() => lsGet('heys_profile', {}), []);
     const weight = stepData?.weight?.weightKg ? (stepData.weight.weightKg + (stepData.weight.weightG || 0) / 10) : profile.weight || 70;
     const stepsStats = useMemo(
@@ -3113,9 +3131,9 @@
 
     const defaultStepsGoal = useMemo(() => stepsStats.recommended, [stepsStats.recommended]);
 
-    const sliderMin = STEPS_GOAL_SLIDER_MIN;
+    const sliderMin = screen.sliderMin;
     const sliderMax = STEPS_GOAL_SLIDER_MAX;
-    const stepsGoal = Math.max(sliderMin, Math.min(sliderMax, data.stepsGoal ?? defaultStepsGoal));
+    const stepsGoal = Math.max(sliderMin, Math.min(sliderMax, data[screen.valueKey] ?? defaultStepsGoal));
     const hasStepsHistory = stepsStats.daysWithData >= STEPS_HISTORY_MIN_DAYS && !stepsStats.fallback;
 
     // Расчёт бонуса ккал
@@ -3143,11 +3161,11 @@
         if (typeof event.preventDefault === 'function') event.preventDefault();
         if (typeof event.stopPropagation === 'function') event.stopPropagation();
       }
-      onChange({ ...data, stepsGoal: adviceValue });
+      onChange({ ...data, [screen.valueKey]: adviceValue });
     };
 
     return React.createElement('div', { className: 'mc-steps-step' },
-      React.createElement('div', { className: 'mc-step-kicker' }, 'Шаги на сегодня'),
+      React.createElement('div', { className: 'mc-step-kicker' }, screen.kicker),
       React.createElement('div', {
         className: 'mc-steps-hero' + (awayFromAdvice ? ' mc-steps-hero--custom' : '')
       },
@@ -3181,12 +3199,12 @@
           valueToRatio: stepsGoalSliderValueToRatio,
           ratioToValue: stepsGoalSliderRatioToValue,
           stepForValue: stepsGoalSliderStepForValue,
-          onValue: (nextValue) => onChange({ ...data, stepsGoal: nextValue }),
-          ariaLabel: 'Цель по шагам',
+          onValue: (nextValue) => onChange({ ...data, [screen.valueKey]: nextValue }),
+          ariaLabel: screen.sliderAriaLabel,
           style: { marginTop: 0 }
         }),
         React.createElement('div', { className: 'mc-steps-slider-labels' },
-          React.createElement('span', null, '3 000'),
+          React.createElement('span', null, screen.sliderMinLabel),
           React.createElement('span', null, '30 000')
         ),
         narrative.sliderHint && React.createElement('div', {
@@ -3220,6 +3238,37 @@
     );
   }
 
+  function StepsGoalStepComponent(props) {
+    return React.createElement(StepsSliderStepComponent, { ...props, screen: STEPS_SCREEN_GOAL });
+  }
+
+  function StepsFactStepComponent(props) {
+    return React.createElement(StepsSliderStepComponent, { ...props, screen: STEPS_SCREEN_FACT });
+  }
+
+  /** Общий для обоих шагов хвост: загрузочный день живёт в дне, а не в профиле. */
+  function saveStepsRefeedDecision(data, dayData) {
+    if (!(data.showRefeed === true && typeof data.isRefeedDay === 'boolean')) return false;
+    dayData.isRefeedDay = data.isRefeedDay;
+    if (data.isRefeedDay === true) {
+      dayData.refeedReason = dayData.refeedReason || 'deficit';
+    } else if (data.refeedManual === true) {
+      dayData.refeedReason = null;
+    }
+    return true;
+  }
+
+  function getStepsRefeedInitialData(profile, dateKey, dayData) {
+    const showRefeed = typeof HEYS.MorningCheckinUtils?.shouldIncludeRefeedStep === 'function'
+      ? HEYS.MorningCheckinUtils.shouldIncludeRefeedStep(profile, dateKey)
+      : false;
+    return {
+      showRefeed,
+      isRefeedDay: typeof dayData.isRefeedDay === 'boolean' ? dayData.isRefeedDay : false,
+      refeedHint: getRefeedStepsHint()
+    };
+  }
+
   registerStep('stepsGoal', {
     title: 'Шаги',
     hint: 'Какой день тебя ждёт?',
@@ -3230,14 +3279,9 @@
       const dateKey = context?.dateKey || getTodayKey();
       const dayData = readDayData(dateKey, {});
       const stats = computeAdaptiveStepsGoal({ profile, context, allStepData });
-      const showRefeed = typeof HEYS.MorningCheckinUtils?.shouldIncludeRefeedStep === 'function'
-        ? HEYS.MorningCheckinUtils.shouldIncludeRefeedStep(profile, dateKey)
-        : false;
       return {
         stepsGoal: stats.recommended,
-        showRefeed,
-        isRefeedDay: typeof dayData.isRefeedDay === 'boolean' ? dayData.isRefeedDay : false,
-        refeedHint: getRefeedStepsHint()
+        ...getStepsRefeedInitialData(profile, dateKey, dayData)
       };
     },
     save: (data, context) => {
@@ -3252,12 +3296,7 @@
       if (data.showRefeed === true && typeof data.isRefeedDay === 'boolean') {
         const dayData = getFreshDayData(dateKey);
         dayData.date = dateKey;
-        dayData.isRefeedDay = data.isRefeedDay;
-        if (data.isRefeedDay === true) {
-          dayData.refeedReason = dayData.refeedReason || 'deficit';
-        } else if (data.refeedManual === true) {
-          dayData.refeedReason = null;
-        }
+        saveStepsRefeedDecision(data, dayData);
         dayData.updatedAt = Date.now();
         saveDayData(dateKey, dayData);
       }
@@ -3266,6 +3305,64 @@
       }));
       window.dispatchEvent(new CustomEvent('heys:day-updated', {
         detail: { date: dateKey, field: 'isRefeedDay', source: 'steps-goal-step', forceReload: true }
+      }));
+    }
+  });
+
+  // Вечерний близнец шага выше. Приёмник другой — day.steps, поле реального
+  // расхода: то, что вечером называют «сколько прошли за день», это факт, а не
+  // план. profile.stepsGoal отсюда не трогается ни при каких условиях, иначе
+  // день выглядел бы идеально закрытой целью.
+  //
+  // Пройденность шага НЕ выводится из значения: ноль шагов — законный ответ, и
+  // `day.steps > 0` объявил бы его незаданным вопросом навсегда. Отметку ставит
+  // отдельный штамп `day.stepsAnsweredAt` (тот же приём, что у cycleAnsweredAt).
+  // Ровно на этом уже спотыкались: `COOLDOWN[cat] || 800` съедал намеренный ноль
+  // у воды, и правило контракта молча не работало.
+  registerStep('stepsFact', {
+    title: 'Шаги',
+    // hint утреннего шага («Какой день тебя ждёт?») вечером врёт, а своей замены
+    // контракт не даёт. В daily-раскладке чек-ина hint не рендерится вовсе
+    // (heys_step_modal_v1.js: только при !isDailyLayout), поэтому пусто.
+    hint: '',
+    icon: '👟',
+    component: StepsFactStepComponent,
+    getInitialData: (context, _allStepData) => {
+      const profile = lsGet('heys_profile', {});
+      const dateKey = context?.dateKey || getTodayKey();
+      const dayData = readDayData(dateKey, {});
+      return {
+        // Стартовое значение — то, что уже записано за день (ползунок дневника
+        // или прошлый ответ, в том числе ноль). Подставлять сюда план нельзя:
+        // человек подтвердит его не глядя, и факт станет копией цели.
+        steps: Math.max(0, Math.round(Number(dayData.steps) || 0)),
+        ...getStepsRefeedInitialData(profile, dateKey, dayData)
+      };
+    },
+    save: (data, context) => {
+      const dateKey = context?.dateKey
+        || HEYS.dayUtils?.todayISO?.()
+        || new Date().toISOString().slice(0, 10);
+      const steps = Math.max(0, Math.round(Number(data.steps) || 0));
+      const dayData = getFreshDayData(dateKey);
+      dayData.date = dateKey;
+      dayData.steps = steps;
+      // stepsUpdatedAt — штамп ручной правки шагов, по нему heys_sync_merge_v1
+      // решает, чей `steps` новее; без него уменьшение до нуля проиграло бы
+      // legacy-правилу «берём максимум».
+      const answeredAt = Math.max(Date.now(), (Number(dayData.stepsUpdatedAt) || 0) + 1);
+      dayData.stepsUpdatedAt = answeredAt;
+      dayData.stepsAnsweredAt = answeredAt;
+      saveStepsRefeedDecision(data, dayData);
+      dayData.updatedAt = answeredAt;
+      saveDayData(dateKey, dayData);
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: { date: dateKey, field: 'steps', source: 'steps-fact-step', forceReload: true }
+      }));
+      // date — ключ дня, к которому относится действие: опыт за прошлый день
+      // не начисляется, и гейт геймификации читает именно detail.date.
+      window.dispatchEvent(new CustomEvent('heysStepsUpdated', {
+        detail: { steps, date: dateKey }
       }));
     }
   });
@@ -7112,6 +7209,7 @@
     SleepTime: SleepTimeStepComponent,
     SleepQuality: SleepQualityStepComponent,
     StepsGoal: StepsGoalStepComponent,
+    StepsFact: StepsFactStepComponent,
     Deficit: DeficitStepComponent,
     HouseholdMinutes: HouseholdMinutesComponent,
     HouseholdStats: HouseholdStatsComponent,

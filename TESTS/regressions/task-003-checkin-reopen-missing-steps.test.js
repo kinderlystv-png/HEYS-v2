@@ -172,9 +172,12 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
     });
     const profile = {}; // stepsGoal не задан
 
+    // daypart задан явно: слот шагов подставляет stepsGoal утром и stepsFact
+    // вечером, и без этого проверка начала бы зависеть от часов прогона.
     const steps = window.HEYS.MorningCheckinUtils.getCheckinSteps(profile, {
       filterCompleted: true,
       requiredOnly: true,
+      daypart: 'morning',
     });
 
     expect(steps).toEqual(['stepsGoal']);

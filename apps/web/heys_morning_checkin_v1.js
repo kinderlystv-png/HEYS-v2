@@ -933,6 +933,32 @@
     return !hasStepsGoalConfirmedToday(profile, dateKey);
   }
 
+  // Слот шагов в плане чек-ина один, но вопросов в нём два: утром спрашивается
+  // план дня (profile.stepsGoal), вечером — факт (day.steps). Это разные шаги
+  // реестра, а не один с ветвлением внутри: один вопрос → один приёмник → одна
+  // копия текста. Состав плана при этом не меняется — в том же слоте стоит
+  // другой шаг.
+  const STEPS_SLOT_STEP_IDS = new Set(['stepsGoal', 'stepsFact']);
+
+  function getStepsSlotStepId(daypart) {
+    return daypart === 'evening' ? 'stepsFact' : 'stepsGoal';
+  }
+
+  // Отметка «на вопрос ответили» — отдельный штамп, а не истинность значения:
+  // ноль шагов законный ответ, и `day.steps > 0` держал бы шаг вечным должником.
+  function hasStepsFactAnswered(day) {
+    return hasPositiveCheckinNumber(day?.stepsAnsweredAt);
+  }
+
+  function needsStepsFactCheckin(day) {
+    return !hasStepsFactAnswered(day);
+  }
+
+  /** Слот шагов закрыт — планом (утро) или фактом (вечер), неважно каким. */
+  function hasStepsSlotAnswered(profile, day, dateKey = getTodayKey()) {
+    return hasStepsGoalConfirmedToday(profile, dateKey) || hasStepsFactAnswered(day);
+  }
+
   function isYesterdayVerifyDecisionReady() {
     return HEYS.YesterdayVerifyReady === true
       && HEYS.YesterdayVerify
@@ -1171,7 +1197,7 @@
     if (!ledger) return ledger;
     const day = getFreshMorningDay(dateKey);
     const profile = getFreshMorningProfile(clientId);
-    const coreSteps = ['weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal'];
+    const coreSteps = ['weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal', 'stepsFact'];
     let changed = false;
     const resolvedAt = Date.now();
     ledger.steps = ledger.steps || {};
@@ -1195,7 +1221,7 @@
     const unsynced = Object.entries(ledger.steps || {})
       .filter(([id, row]) => id !== '__flow__' && isUnresolvedProgressStatus(row && row.status));
     if (changed && blocking.length === 0 && unsynced.length === 0
-      && !coreCheckinDataMissing(day) && hasStepsGoalConfirmedToday(profile, dateKey)) {
+      && !coreCheckinDataMissing(day) && hasStepsSlotAnswered(profile, day, dateKey)) {
       const flow = ledger.steps.__flow__ || {};
       if (flow.status !== 'synced' && flow.status !== 'closed') {
         ledger.steps.__flow__ = {
@@ -1293,13 +1319,14 @@
       // Session-флаг — только подсказка. Он закрывает gate, когда основные данные
       // на месте, в журнале нет незавершённых шагов и не появилась проверка прошлых дней.
       if (!coreCheckinDataMissing(mergedDay)
-        && hasStepsGoalConfirmedToday(profile, todayKey)
+        && hasStepsSlotAnswered(profile, mergedDay, todayKey)
         && remainingProgressSteps.length === 0
         && !yesterdayVerifyRequired) {
         console.info('[MorningCheckin] 🚫 Skip — sessionStorage флаг активен, данные чекина на месте:', sessionKey);
         return false;
       }
-      _reopenRequiredOnly = coreCheckinDataMissing(mergedDay) || needsStepsGoalCheckin(profile, todayKey);
+      _reopenRequiredOnly = coreCheckinDataMissing(mergedDay)
+        || !hasStepsSlotAnswered(profile, mergedDay, todayKey);
       console.warn('[MorningCheckin] ⚠️ session-флаг стоит, но чек-ин требует продолжения', {
         sessionKey,
         hasWeight: hasCheckinWeight(mergedDay),
@@ -1307,6 +1334,7 @@
         hasSleepQuality: hasSleepQuality(mergedDay),
         hasMood: hasMorningMood(mergedDay),
         hasStepsGoal: hasStepsGoalConfirmedToday(profile, todayKey),
+        hasStepsFact: hasStepsFactAnswered(mergedDay),
         remainingSteps: remainingProgressSteps.map((row) => row.id),
         yesterdayVerifyRequired,
       });
@@ -1338,7 +1366,7 @@
     // записывает и завершённым по данным не становится никогда, только явным
     // проходом. Когда обязательное собрано и всё синхронизировано, держать
     // модалку ради него — значит открывать её каждое утро ни за чем.
-    const coreDone = !coreCheckinDataMissing(mergedDay) && hasStepsGoalConfirmedToday(profile, todayKey);
+    const coreDone = !coreCheckinDataMissing(mergedDay) && hasStepsSlotAnswered(profile, mergedDay, todayKey);
     const blockingProgressSteps = (existingProgress
       ? getBlockingMorningSteps({ ledger: existingProgress, dateKey: todayKey, clientId: currentClientId })
       : [])
@@ -1435,7 +1463,10 @@
     if (!hasSleepTime(mergedDay)) pending.push('sleepTime');
     if (!hasSleepQuality(mergedDay)) pending.push('sleepQuality');
     if (!hasMorningMood(mergedDay)) pending.push('morning_mood');
-    if (needsStepsGoalCheckin(profile, todayKey)) pending.push('stepsGoal');
+    // Слот один: план, подтверждённый утром, закрывает и вечерний вопрос —
+    // иначе после 18:00 мастер открывался бы заново у всех, кто чек-ин прошёл.
+    const stepsSlotId = getStepsSlotStepId(getCheckinDaypart());
+    if (!hasStepsSlotAnswered(profile, mergedDay, todayKey)) pending.push(stepsSlotId);
 
     if (yesterdayVerifyRequired) {
       pending.push('yesterdayVerify');
@@ -1463,8 +1494,10 @@
       filterCompleted = false,
       requiredOnly = false,
       yesterdayVerifyRequired = null,
-      dateKey = null
+      dateKey = null,
+      daypart = null
     } = opts || {};
+    const stepsSlotId = getStepsSlotStepId(daypart || getCheckinDaypart());
     const steps = [];
     const canUseDailyFlow = canUseMorningDailyFlow();
 
@@ -1495,7 +1528,7 @@
     steps.push('weight');
     steps.push('sleep');
     steps.push('morning_mood');
-    steps.push('stepsGoal');
+    steps.push(stepsSlotId);
     steps.push('morningRest');
     if (!requiredOnly) steps.push('checkinRecorded');
 
@@ -1520,7 +1553,9 @@
         case 'sleepTime': return !hasSleepTime(day);
         case 'sleepQuality': return !hasSleepQuality(day);
         case 'morning_mood': return !hasMorningMood(day);
-        case 'stepsGoal': return needsStepsGoalCheckin(profile, targetDateKey);
+        case 'stepsGoal':
+        case 'stepsFact':
+          return !hasStepsSlotAnswered(profile, day, targetDateKey);
         case 'morningRest':
         case 'checkinRecorded':
           return !isMorningStepComplete(id, { dateKey: targetDateKey, day, profile });
@@ -1534,7 +1569,7 @@
     // 🆕 TASK-003 follow-up: режим «переоткрытие для восстановления» — только
     // недостающие обязательные шаги, без опционального хвоста.
     if (requiredOnly) {
-      const REQUIRED = new Set(['weight', 'sleep', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal', 'yesterdayVerify']);
+      const REQUIRED = new Set(['weight', 'sleep', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal', 'stepsFact', 'yesterdayVerify']);
       return filtered.filter(id => REQUIRED.has(id));
     }
 
@@ -1586,13 +1621,13 @@
       || opts.source === 'showCheckin.morning';
   }
 
-  function expandV4DailyCanonicalSteps(steps) {
+  function expandV4DailyCanonicalSteps(steps, daypart) {
     const list = Array.isArray(steps) ? steps : [];
     const hasYesterday = list.includes('yesterdayVerify');
     const hasRecorded = list.includes('checkinRecorded');
     return [
       ...(hasYesterday ? ['yesterdayVerify'] : []),
-      ...V4_DAILY_CANONICAL_CORE,
+      ...getV4DailyCanonicalCore(daypart),
       ...(hasRecorded ? ['checkinRecorded'] : [])
     ];
   }
@@ -1600,11 +1635,27 @@
   const MORNING_CORE_STEPS = ['weight', 'sleep', 'morning_mood', 'stepsGoal'];
   /** v4 canvas: пять точек прогресса и «назад» со 2-го экрана — ядро всегда в плане. */
   const V4_DAILY_CANONICAL_CORE = ['weight', 'sleep', 'morning_mood', 'stepsGoal', 'morningRest'];
+
+  /** То же ядро, но слот шагов подставлен по времени суток (план vs факт). */
+  function withStepsSlotForDaypart(coreSteps, daypart) {
+    const slotId = getStepsSlotStepId(daypart || getCheckinDaypart());
+    return coreSteps.map((id) => (STEPS_SLOT_STEP_IDS.has(id) ? slotId : id));
+  }
+
+  function getV4DailyCanonicalCore(daypart) {
+    return withStepsSlotForDaypart(V4_DAILY_CANONICAL_CORE, daypart);
+  }
+
+  function getMorningCoreSteps(daypart) {
+    return withStepsSlotForDaypart(MORNING_CORE_STEPS, daypart);
+  }
+
   const LEGACY_SLEEP_STEP_IDS = new Set(['sleepTime', 'sleepQuality']);
   const LEGACY_REST_STEP_IDS = new Set(['refeedDay', 'cycle', 'measurements', 'cold_exposure', 'supplements', 'morningRoutine']);
   const MORNING_OPTIONAL_TAIL_STEPS = new Set(['checkinRecorded', ...LEGACY_REST_STEP_IDS]);
   const MORNING_DATA_COMPLETABLE_STEPS = new Set([
     ...MORNING_CORE_STEPS,
+    'stepsFact',
     'sleepTime',
     'sleepQuality',
     'morningRest',
@@ -1617,6 +1668,7 @@
   ]);
   const MORNING_REPLANNABLE_REQUIRED_STEPS = new Set([
     ...MORNING_CORE_STEPS,
+    'stepsFact',
     'yesterdayVerify',
     'profile-personal',
     'profile-body',
@@ -1630,6 +1682,7 @@
     sleepQuality: 'качество сна',
     morning_mood: 'самочувствие',
     stepsGoal: 'цель шагов',
+    stepsFact: 'шаги за день',
     yesterdayVerify: 'проверка вчера',
     morningRest: 'остальное',
     checkinRecorded: 'записано',
@@ -1853,12 +1906,23 @@
     }).filter((row) => !isMorningStatusTerminal(row));
   }
 
-  function collapseLegacyCheckinStepIds(stepIds) {
+  function collapseLegacyCheckinStepIds(stepIds, daypart) {
     if (!Array.isArray(stepIds) || stepIds.length === 0) return stepIds || [];
+    const stepsSlotId = getStepsSlotStepId(daypart || getCheckinDaypart());
     const out = [];
     let sawSleep = false;
     let sawRest = false;
+    let sawSteps = false;
     stepIds.forEach((id) => {
+      // Слот шагов один: брошенный утренний stepsGoal вечером становится
+      // stepsFact, иначе в плане оказались бы оба вопроса про одно и то же.
+      if (STEPS_SLOT_STEP_IDS.has(id)) {
+        if (!sawSteps) {
+          out.push(stepsSlotId);
+          sawSteps = true;
+        }
+        return;
+      }
       if (id === 'sleep' || LEGACY_SLEEP_STEP_IDS.has(id)) {
         if (!sawSleep) {
           out.push('sleep');
@@ -1880,12 +1944,14 @@
 
   function mergeFreshStepsWithProgress(freshSteps, existingLedger, state = {}) {
     const dateKey = state.dateKey || getTodayKey();
+    const daypart = state.daypart || getCheckinDaypart();
     const clientId = state.clientId || getCurrentClientId();
     const day = state.day || getFreshMorningDay(dateKey);
     const profile = state.profile || getFreshMorningProfile(clientId);
     const merged = existingLedger
       ? collapseLegacyCheckinStepIds(
-        getRemainingMorningSteps({ ledger: existingLedger, dateKey, clientId }).map((row) => row.id)
+        getRemainingMorningSteps({ ledger: existingLedger, dateKey, clientId }).map((row) => row.id),
+        daypart
       ).filter((id) => !isMorningStepSatisfiedByData(id, {
         dateKey, clientId, day, profile, ledger: existingLedger
       }))
@@ -1972,7 +2038,7 @@
       sleepTime: hasSleepTime(day),
       sleepQuality: hasSleepQuality(day),
       morningMood: hasMorningMood(day),
-      stepsGoal: hasStepsGoalConfirmedToday(profile, dateKey)
+      stepsGoal: hasStepsSlotAnswered(profile, day, dateKey)
     };
   }
 
@@ -2043,7 +2109,7 @@
     const plannedStepIds = Array.isArray(ledger?.plannedStepIds) ? ledger.plannedStepIds.slice() : [];
     const stepIds = plannedStepIds.length
       ? plannedStepIds
-      : MORNING_CORE_STEPS.filter((id) => !isMorningStepComplete(id, { dateKey, clientId, day, profile }));
+      : getMorningCoreSteps().filter((id) => !isMorningStepComplete(id, { dateKey, clientId, day, profile }));
     const steps = stepIds.map((id) => {
       const row = ledger?.steps?.[id] || {};
       const completeByData = isMorningStepComplete(id, { dateKey, clientId, day, profile });
@@ -2104,6 +2170,7 @@
       case 'sleepQuality': return hasSleepQuality(day);
       case 'morning_mood': return hasMorningMood(day);
       case 'stepsGoal': return hasStepsGoalConfirmedToday(profile, dateKey);
+      case 'stepsFact': return hasStepsFactAnswered(day);
       case 'yesterdayVerify':
         return isYesterdayVerifyDecisionReady() && !shouldShowYesterdayVerifyRequired();
       case 'refeedDay': return typeof day?.isRefeedDay === 'boolean' || !shouldIncludeRefeedStep(profile, dateKey);
@@ -2124,7 +2191,7 @@
           return coldReady && routineReady;
         }
       case 'checkinRecorded':
-        return !coreCheckinDataMissing(day) && hasStepsGoalConfirmedToday(profile, dateKey);
+        return !coreCheckinDataMissing(day) && hasStepsSlotAnswered(profile, day, dateKey);
       case 'morningRoutine':
         return false;
       case 'profile-resume':
@@ -2212,6 +2279,12 @@
   }
 
   function buildMorningCheckinPlan(opts = {}) {
+    // Время суток решается один раз на весь план: слот шагов, ledger и
+    // приветствие должны говорить об одном и том же вопросе, даже если
+    // мастер пережил 18:00 открытым.
+    const daypart = opts.daypart === 'evening' || opts.daypart === 'morning'
+      ? opts.daypart
+      : getCheckinDaypart();
     const dateKey = opts.dateKey || getTodayKey();
     const clientId = opts.clientId || getCurrentClientId();
     const profile = opts.profile || getFreshMorningProfile(clientId);
@@ -2227,7 +2300,7 @@
       : null;
     if (opts.source === 'MorningCheckin') _nextPlanYesterdayVerifyRequired = null;
     const derivedFreshSteps = forceCheckinReplay
-      ? [...V4_DAILY_CANONICAL_CORE, 'checkinRecorded']
+      ? [...getV4DailyCanonicalCore(daypart), 'checkinRecorded']
       : wantRegistration
         ? getRegistrationSteps(profile, { forceReplay })
         : getCheckinSteps(profile, {
@@ -2238,7 +2311,8 @@
           yesterdayVerifyRequired: typeof opts.yesterdayVerifyRequired === 'boolean'
             ? opts.yesterdayVerifyRequired
             : cachedYesterdayVerifyRequired,
-          dateKey
+          dateKey,
+          daypart
         });
     // Explicit reset flows cannot wait for the React day-state write to reach
     // localStorage before the plan is built. Force their known reset steps so
@@ -2268,7 +2342,7 @@
             }),
           profile
         )
-        : mergeFreshStepsWithProgress(freshSteps, existingLedger, { dateKey, clientId, profile });
+        : mergeFreshStepsWithProgress(freshSteps, existingLedger, { dateKey, clientId, profile, daypart });
     // Keep explicit reset steps after data-derived filtering too: localStorage
     // may still contain the pre-reset day for a few frames.
     const steps = (() => {
@@ -2276,18 +2350,20 @@
         Array.from(new Set([...forcedStepIds, ...mergedSteps])),
         profile
       );
-      if (forceCheckinReplay) return expandV4DailyCanonicalSteps(normalized);
+      if (forceCheckinReplay) return expandV4DailyCanonicalSteps(normalized, daypart);
       return shouldUseV4DailyCanonicalPlan(opts, wantRegistration, dateKey)
-        ? expandV4DailyCanonicalSteps(normalized)
+        ? expandV4DailyCanonicalSteps(normalized, daypart)
         : normalized;
     })();
     const replannedStepIds = wantRegistration || forceCheckinReplay
       ? []
       : getReplannedMorningStepIds(freshSteps, existingLedger);
-    const fullPlannedStepIds = Array.from(new Set([
+    // Ledger переживает смену времени суток: планировавшийся утром stepsGoal
+    // не должен остаться вечным «не завершён», когда вечером спрашивается факт.
+    const fullPlannedStepIds = Array.from(new Set(withStepsSlotForDaypart([
       ...(existingLedger?.plannedStepIds || []),
       ...freshSteps
-    ]));
+    ], daypart)));
     const flowId = createMorningFlowId(dateKey);
     const isRegistrationCheckin = steps.some((stepId) => isRegistrationPlanStep(stepId));
     const isProfileOnlyRegistration = isRegistrationCheckin
@@ -2311,9 +2387,7 @@
       isProfileOnlyRegistration,
       forceReplay,
       forceCheckinReplay,
-      daypart: opts.daypart === 'evening' || opts.daypart === 'morning'
-        ? opts.daypart
-        : getCheckinDaypart(),
+      daypart,
       mode: wantRegistration ? 'registration' : 'daily'
     };
   }
@@ -2718,6 +2792,9 @@
   HEYS.MorningCheckinUtils.hasPartialCoreCheckinPrefill = hasPartialCoreCheckinPrefill;
   HEYS.MorningCheckinUtils.hasStepsGoalConfirmedToday = hasStepsGoalConfirmedToday;
   HEYS.MorningCheckinUtils.needsStepsGoalCheckin = needsStepsGoalCheckin;
+  HEYS.MorningCheckinUtils.hasStepsFactAnswered = hasStepsFactAnswered;
+  HEYS.MorningCheckinUtils.needsStepsFactCheckin = needsStepsFactCheckin;
+  HEYS.MorningCheckinUtils.getStepsSlotStepId = getStepsSlotStepId;
   HEYS.MorningCheckinUtils.isMorningStepComplete = isMorningStepComplete;
   HEYS.MorningCheckinUtils.buildMorningCheckinPlan = buildMorningCheckinPlan;
   HEYS.MorningCheckinUtils.collapseLegacyCheckinStepIds = collapseLegacyCheckinStepIds;

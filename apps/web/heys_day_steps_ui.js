@@ -171,7 +171,10 @@
                             );
                         } catch (_) { /* noop */ }
                         window.dispatchEvent(new CustomEvent('heysStepsUpdated', {
-                            detail: { steps: finalSteps }
+                            // date — день, к которому относится правка: гейт
+                            // начисления опыта отказывает за прошлый день, а без
+                            // даты считает событие сегодняшним.
+                            detail: { steps: finalSteps, date: safeDay.date }
                         }));
                     }
                 }, 0);

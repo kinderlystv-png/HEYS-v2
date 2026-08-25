@@ -30,7 +30,11 @@
   // advanced by background reconcile/autosave writes, so it cannot decide
   // whether a clear/decrease/toggle is newer than the value on another device.
   const DAY_USER_MUTATION_GROUPS = [
-    { timestamp: 'stepsUpdatedAt', fields: ['steps'] },
+    // stepsAnsweredAt едет в группе вместе с steps: это отметка «человек
+    // ответил», и ноль шагов — законный ответ. Без неё отметка бралась бы со
+    // стороны remote, и ответ «прошёл ноль» на одном устройстве выглядел бы
+    // неотвеченным на другом. У цикла та же пара сделана так же.
+    { timestamp: 'stepsUpdatedAt', fields: ['steps', 'stepsAnsweredAt'] },
     // waterEntries едет в группе вместе с waterMl, чтобы производное число и
     // журнал не разъезжались на откате guardExplicitMutationGroups. В самом
     // mergeDayData журнал сливается по id уже ПОСЛЕ этой группы и её результат
