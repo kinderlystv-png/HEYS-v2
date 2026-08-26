@@ -101,6 +101,20 @@ describe('формат чисел · правило продукта', () => {
     expect(formatRuNumber(999)).toBe('999');
   });
 
+  it('formatRuDecimal — та же точка формата, что formatRuNumber', () => {
+    const { formatRuDecimal, formatRuNumber } = loadWidgets();
+    expect(formatRuDecimal(1931.5, 1)).toBe(`1${NNBSP}931,5`);
+    expect(formatRuDecimal(2.7, 1)).toBe('2,7');
+    expect(formatRuDecimal(999, 1)).toBe('999,0');
+    expect(formatRuNumber(1931.5, { minimumFractionDigits: 1, maximumFractionDigits: 1 }))
+      .toBe(formatRuDecimal(1931.5, 1));
+  });
+
+  it('своих toFixed+replace для пользовательских чисел не осталось', () => {
+    expect(uiSrc).not.toMatch(/\.replace\('\.', ','\)/);
+    expect(uiSrc).not.toMatch(/formatRuUnit\([^)]*\.toFixed\(/);
+  });
+
   it('оба символа записаны escape-ами: сырой невидимый пробел в код не уезжает', () => {
     expect(uiSrc).toContain("const NUM_GROUP_SEP = '\\u202F';");
     expect(uiSrc).toContain("const NUM_UNIT_SEP = '\\u00A0';");
