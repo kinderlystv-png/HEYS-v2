@@ -1,0 +1,35 @@
+{
+  "zone": "cycle",
+  "rows": [
+    {
+      "key": "высота шага",
+      "v": "=",
+      "f": "cycleWeekTop поднимает cycleRow наверх + mc-rest-step--cycle-week padding-bottom 70px ≈ перебор 68px heys_steps_v1.js:6975-7053; 500-pwa-and-offline.css:1627-1629"
+    },
+    {
+      "key": "прокрутка на неделе периода",
+      "v": "=",
+      "f": "дни 1–7: measurementsDeferred, карточки не сжимаются, padding-bottom 70px на .mc-rest-step--cycle-week heys_steps_v1.js:7019-7053; morning-checkin-v4-a11y-smoke.test.js"
+    },
+    {
+      "key": "вид · график калорий",
+      "v": "=",
+      "f": "reports v4: steppedPath targetY 2.4px var(--v4-act), eaten 2px ink 45% без точек, подпись «Съедено и норма» + легенда heys_day_sparklines_v1.js; heys_day_stats_v1.js; 733-ui-v4-reports.css"
+    },
+    {
+      "key": "контраст ленты",
+      "v": "=",
+      "f": "cycle-ribbon--period::before background var(--v4-act) palette-aware 000-base-and-gamification.css:8473"
+    },
+    {
+      "key": "вид · пометка нормы",
+      "v": "=",
+      "f": "renderCycleNormRows: «Нужно съесть» + пилюля +N% gap 7px при cycleKcalMultiplier>1 heys_cycle_ui_v1.js; 500-pwa-and-offline.css cycle-card-v4__norm-pill"
+    },
+    {
+      "key": "слова на экране",
+      "v": "=",
+      "f": "v4 CycleUI без 🌸; legacy registerStep('cycle') icon '' heys_steps_v1.js; DAY_LABELS начало/середина/конец heys_cycle_ui_v1.js:8-15"
+    }
+  ]
+}
