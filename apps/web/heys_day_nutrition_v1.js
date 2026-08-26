@@ -536,8 +536,16 @@
   }
 
   function listConfigChips(profile) {
-    const chips = CHIPS.slice();
-    if (isCycleNutritionAvailable(profile)) chips.splice(1, 0, CYCLE_CHIP);
+    const source = profile && typeof profile === 'object' ? profile : readProfile();
+    const chips = CHIPS.filter((chip) => {
+      if (!chip.needsConsent) return true;
+      const hf = HEYS.healthFeatures;
+      const trackingOn = typeof hf?.isSupplementsTrackingEnabled === 'function'
+        ? hf.isSupplementsTrackingEnabled(source)
+        : source.supplementsTrackingEnabled === true;
+      return trackingOn;
+    });
+    if (isCycleNutritionAvailable(source)) chips.splice(1, 0, CYCLE_CHIP);
     return chips;
   }
 
@@ -580,37 +588,14 @@
   async function writeChipState(chip, nextEnabled) {
     const U = HEYS.utils;
     const profile = U?.lsGet?.('heys_profile', {}) || {};
-    const updated = { ...profile };
-    let consentAsked = false;
-
-    if (chip.needsConsent && nextEnabled) {
-      const hf = HEYS.healthFeatures;
-      const trackingOn = typeof hf?.isSupplementsTrackingEnabled === 'function'
-        ? hf.isSupplementsTrackingEnabled(profile)
-        : profile.supplementsTrackingEnabled === true;
-      if (!trackingOn) {
-        if (typeof hf?.requestHealthFeatureToggle === 'function') {
-          const allowed = await hf.requestHealthFeatureToggle('supplementsTrackingEnabled', true);
-          if (!allowed) return false;
-        }
-        updated.supplementsTrackingEnabled = true;
-        consentAsked = true;
-      }
-      updated[chip.field] = true;
-    } else {
-      updated[chip.field] = nextEnabled !== false;
-    }
+    const updated = { ...profile, [chip.field]: nextEnabled !== false };
 
     U?.lsSet?.('heys_profile', updated);
     global.dispatchEvent(new CustomEvent('heys:diary-optional-panels-visibility-changed', {
       detail: { field: chip.field, enabled: nextEnabled !== false }
     }));
     global.dispatchEvent(new CustomEvent('heys:profile-updated', {
-      detail: {
-        field: chip.field,
-        fields: consentAsked ? [chip.field, 'supplementsTrackingEnabled'] : [chip.field],
-        source: 'nutrition-tab-chips'
-      }
+      detail: { field: chip.field, fields: [chip.field], source: 'nutrition-tab-chips' }
     }));
     return true;
   }
@@ -867,6 +852,21 @@
   function renderCycleBlock(React, params) {
     const { day, date, prof, isReadOnly, haptic } = params || {};
     if (!isCycleNutritionAvailable(prof)) return null;
+
+    if (HEYS.CycleUI?.renderNutritionCycleBlock) {
+      const U = HEYS.utils;
+      return HEYS.CycleUI.renderNutritionCycleBlock(React, {
+        day,
+        date,
+        prof,
+        isReadOnly,
+        haptic,
+        showCycleCard: true,
+        cyclePhase: HEYS.Cycle?.getCyclePhase?.(day?.cycleDay),
+        lsGet: U?.lsGet?.bind(U),
+        lsSet: U?.lsSet?.bind(U),
+      });
+    }
 
     const CycleUI = HEYS.CycleUI || {};
     const dateKey = date || day?.date;

@@ -251,26 +251,30 @@ describe('nutrition-tab · правки зоны', () => {
     expect(loaded.api.readChipState(store.heys_profile).supplements).toBe(true);
   });
 
-  it('чип «Добавки»: первое включение по-прежнему идёт через согласие', async () => {
+  it('чип «Добавки»: без согласия не показывается в ряду', () => {
     const store = seedHEYS({});
     const loaded = loadModule();
-    const requestToggle = vi.fn(async () => false);
     window.HEYS.healthFeatures = {
-      isSupplementsTrackingEnabled: (p) => p?.supplementsTrackingEnabled === true,
-      requestHealthFeatureToggle: requestToggle,
-      FEATURE_TOGGLES: { supplementsTrackingEnabled: { purgeProfile: (p) => p } }
+      isSupplementsTrackingEnabled: (p) => p?.supplementsTrackingEnabled === true
     };
-    const chip = loaded.api.CHIPS.find((c) => c.key === 'supplements');
-    const refused = await loaded.api.writeChipState(chip, true);
-    expect(refused).toBe(false);
-    expect(requestToggle).toHaveBeenCalledWith('supplementsTrackingEnabled', true);
-    expect(store.heys_profile.supplementsTrackingEnabled).toBeUndefined();
+    const chips = loaded.api.listConfigChips(store.heys_profile);
+    expect(chips.some((c) => c.key === 'supplements')).toBe(false);
+    expect(chips.some((c) => c.key === 'hunger')).toBe(true);
+  });
 
-    requestToggle.mockImplementation(async () => true);
-    const granted = await loaded.api.writeChipState(chip, true);
-    expect(granted).toBe(true);
-    expect(store.heys_profile.supplementsTrackingEnabled).toBe(true);
+  it('чип «Добавки»: при согласии в ряду, включение только прячет блок', async () => {
+    const store = seedHEYS({ supplementsTrackingEnabled: true, showDiarySupplementsPanel: false });
+    const loaded = loadModule();
+    window.HEYS.healthFeatures = {
+      isSupplementsTrackingEnabled: (p) => p?.supplementsTrackingEnabled === true
+    };
+    const chips = loaded.api.listConfigChips(store.heys_profile);
+    expect(chips.some((c) => c.key === 'supplements')).toBe(true);
+    const chip = chips.find((c) => c.key === 'supplements');
+    const ok = await loaded.api.writeChipState(chip, true);
+    expect(ok).toBe(true);
     expect(store.heys_profile.showDiarySupplementsPanel).toBe(true);
+    expect(store.heys_profile.supplementsTrackingEnabled).toBe(true);
   });
 
   it('чип «Добавки»: спрятанный блок остаётся спрятанным после перерисовки', () => {
