@@ -472,7 +472,7 @@
   // не имели. Неизвестная стадия падает на «Загрузка» — первый живой кадр.
   const UPDATE_STAGES = {
     downloading: { title: 'Загрузка', subtitle: 'Это займёт пару секунд…', spinner: true, dot: 0 },
-    ready: { title: 'Готово!', subtitle: 'Приложение обновлено', spinner: false, dot: 1, done: true },
+    ready: { title: 'Готово', subtitle: 'Приложение обновлено', spinner: false, dot: 1, done: true },
     reloading: { title: 'Перезагрузка', subtitle: 'Применяем изменения…', spinner: true, dot: 2 },
   };
 

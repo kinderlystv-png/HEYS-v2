@@ -1110,6 +1110,11 @@
                 + ` var(--v4-act, #2563eb) 100%)`;
         };
 
+        // Контракт tips/settings-system: куратор не видит советы и настройки клиента.
+        const isCuratorAdviceSession = (() => {
+            try { return !!HEYS?.auth?.isCuratorSession?.(); } catch (_) { return false; }
+        })();
+
         // Строка «уменьшенное движение»: празднований и вспышек в продукте нет
         // и без настройки — вспышка уровня, конфетти и летящие XP сняты.
         return React.createElement('div', {
@@ -1193,7 +1198,7 @@
                             className: 'hdr-header-actions__debug',
                             onClick: (e) => e.stopPropagation(),
                         }, leadingHeaderActions),
-                        React.createElement('button', {
+                        !isCuratorAdviceSession && React.createElement('button', {
                             className: 'hdr-header-icon-btn hdr-header-icon-btn--advice' + (ewsCritical ? ' hdr-header-icon-btn--advice-critical' : ''),
                             onClick: (e) => {
                                 e.stopPropagation();
@@ -1223,7 +1228,7 @@
                             })
                         ),
 
-                        React.createElement('button', {
+                        !isCuratorAdviceSession && React.createElement('button', {
                             className: 'hdr-header-icon-btn hdr-header-icon-btn--settings',
                             onClick: (e) => {
                                 e.stopPropagation();

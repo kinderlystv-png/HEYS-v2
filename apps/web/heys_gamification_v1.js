@@ -139,11 +139,11 @@
    */
   const ACHIEVEMENTS = {
     // 🔥 Streak (5)
-    streak_1: { id: 'streak_1', name: 'Первый день', desc: 'Streak ≥ 1 день', story: 'Первый день — начало устойчивого ритма.', xp: 100, icon: '🔥', category: 'streak', rarity: 'common' },
-    streak_2: { id: 'streak_2', name: 'Два дня подряд', desc: 'Streak ≥ 2 дня', story: 'Два дня подряд — уже не случайность.', xp: 200, icon: '🔥', category: 'streak', rarity: 'rare' },
-    streak_3: { id: 'streak_3', name: 'Три дня подряд', desc: 'Streak ≥ 3 дня', story: 'Три дня подряд — импульс закрепился.', xp: 350, icon: '🏆', category: 'streak', rarity: 'epic' },
-    streak_5: { id: 'streak_5', name: 'Пять дней подряд', desc: 'Streak ≥ 5 дней', story: 'Пять дней — стабильность уже видна.', xp: 700, icon: '👑', category: 'streak', rarity: 'legendary' },
-    streak_7: { id: 'streak_7', name: 'Семь дней подряд', desc: 'Streak ≥ 7 дней', story: 'Семь дней — это суперредко и очень сильно.', xp: 1200, icon: '💎', category: 'streak', rarity: 'mythic' },
+    streak_1: { id: 'streak_1', name: 'Первый день', desc: 'Серия не меньше одного дня', story: 'Первый день — начало устойчивого ритма.', xp: 100, icon: '🔥', category: 'streak', rarity: 'common' },
+    streak_2: { id: 'streak_2', name: 'Два дня подряд', desc: 'Серия не меньше двух дней', story: 'Два дня подряд — уже не случайность.', xp: 200, icon: '🔥', category: 'streak', rarity: 'rare' },
+    streak_3: { id: 'streak_3', name: 'Три дня подряд', desc: 'Серия не меньше трёх дней', story: 'Три дня подряд — импульс закрепился.', xp: 350, icon: '🏆', category: 'streak', rarity: 'epic' },
+    streak_5: { id: 'streak_5', name: 'Пять дней подряд', desc: 'Серия не меньше пяти дней', story: 'Пять дней — стабильность уже видна.', xp: 700, icon: '👑', category: 'streak', rarity: 'legendary' },
+    streak_7: { id: 'streak_7', name: 'Семь дней подряд', desc: 'Серия не меньше семи дней', story: 'Семь дней — это суперредко и очень сильно.', xp: 1200, icon: '💎', category: 'streak', rarity: 'mythic' },
 
     // 🎯 Первые шаги (10)
     first_checkin: { id: 'first_checkin', name: 'Первый чек-ин', desc: 'Завершить утренний чек-ин', story: 'Первый чек-ин — утро под контролем.', xp: 40, icon: '☀️', category: 'onboarding', rarity: 'common' },
@@ -192,7 +192,7 @@
   };
 
   const ACHIEVEMENT_CATEGORIES = [
-    { id: 'streak', name: '🔥 Streak', achievements: ['streak_1', 'streak_2', 'streak_3', 'streak_5', 'streak_7'] },
+    { id: 'streak', name: 'Серия', achievements: ['streak_1', 'streak_2', 'streak_3', 'streak_5', 'streak_7'] },
     { id: 'onboarding', name: '🎯 Первые шаги', achievements: ['first_checkin', 'first_meal', 'first_product', 'first_steps', 'first_advice', 'first_supplements', 'first_water', 'first_training', 'first_household'] },
     { id: 'advice', name: '💡 Советы', achievements: ['advice_reader', 'advice_master'] },
     { id: 'quality', name: '💎 Качество дня', achievements: ['perfect_day', 'perfect_week', 'balanced_macros', 'fiber_champion'] },
@@ -4522,7 +4522,7 @@
         count: achievements.length,
         achievements,
         totalXP,
-        title: '🎉 Мы нашли ваши достижения!',
+        title: 'Мы нашли ваши достижения',
         message: `Из-за технической ошибки вы не получили ${achievements.length} достижений. Исправлено! +${totalXP} XP`
       });
 

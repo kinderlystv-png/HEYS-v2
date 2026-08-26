@@ -4666,7 +4666,7 @@ body.tour-active .ios-pwa-banner {
   gap: 7px;
   padding: max(16px, calc(env(safe-area-inset-top, 0px) + 8px)) 14px 9px;
   background: #1c1712;
-  color: #f5ede1;
+  color: #f2ede6;
   font: 600 11px/1.3 Figtree, system-ui, sans-serif;
   text-align: center;
   box-shadow: none;
@@ -4681,7 +4681,7 @@ body.tour-active .ios-pwa-banner {
   line-height: 1.4;
 }
 
-/* Офлайн-баннер имеет свой фиксированный тон (#1c1712 / #f5ede1 — строка «вид
+/* Офлайн-баннер имеет свой фиксированный тон (#1c1712 / #f2ede6 — строка «вид
    офлайн-баннера»), и правило темы по специфичности 0,2,0 перебивало его
    0,1,0 — в тёмных темах баннер терял свой вид. Исключение названо явно, а не
    расширением селектора темы. */

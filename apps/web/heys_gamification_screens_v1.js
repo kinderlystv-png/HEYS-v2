@@ -297,11 +297,19 @@
          */
         function orderAchievements(cat, achievementsById) {
             const ids = cat.achievements || [];
+            const unlockedOrder = HEYS.game?.getData?.()?.unlockedAchievements || [];
             const isOpen = (id) => {
                 const ach = achievementsById[id];
                 return !!(ach && ach.unlocked) || !!HEYS.game?.isAchievementUnlocked?.(id);
             };
-            const opened = ids.filter(isOpen);
+            const opened = ids.filter(isOpen).sort((a, b) => {
+                const ai = unlockedOrder.indexOf(a);
+                const bi = unlockedOrder.indexOf(b);
+                if (ai < 0 && bi < 0) return 0;
+                if (ai < 0) return 1;
+                if (bi < 0) return -1;
+                return ai - bi;
+            });
             const locked = ids.filter((id) => !isOpen(id))
                 .sort((a, b) => remainingOf(achievementsById[a]) - remainingOf(achievementsById[b]));
             return [...opened, ...locked];
@@ -626,7 +634,7 @@
             return React.createElement('div', { className: 'game-v4-sheet__card game-v4-sheet__near-card' },
                 React.createElement('div', { className: 'game-v4-sheet__card-head' },
                     React.createElement('span', { className: 'game-v4-sheet__card-title' }, ach.name),
-                    React.createElement('span', { className: 'game-v4-sheet__card-xp game-v4-sheet__card-xp--ok' }, `+${ach.xp} XP`)
+                    React.createElement('span', { className: 'game-v4-sheet__card-xp' }, `+${ach.xp} XP`)
                 ),
                 React.createElement('div', { className: 'game-v4-sheet__card-sub' }, ach.desc),
                 target > 0 && React.createElement('div', { className: 'game-v4-sheet__streak-bar-row' }, bars),
