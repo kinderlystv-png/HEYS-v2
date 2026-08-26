@@ -1966,7 +1966,7 @@
         },
         "минимальная область нажатия": {
           "v": "=",
-          "f": "500-pwa-and-offline.css:2681 mc-close-btn 44×44 margin −8",
+          "f": "500-pwa-and-offline.css:2913-2918 .mc-close-btn 44×44 margin -8; geometry test morning-checkin-v4-contract-geometry.test.js:231",
           "h": "154b34d7f0a6"
         },
         "шагов": {
@@ -2256,7 +2256,7 @@
         },
         "повторный тап и поворот": {
           "v": "=",
-          "f": "heys_step_modal_v1.js:1025 nextTapLockRef 350 ms на «Дальше»",
+          "f": "heys_step_modal_v1.js actionInFlightRef блокирует двойное «Дальше»; morning-checkin-v4-smoke.test.js:257",
           "h": "ef6430e60857"
         },
         "офлайн": {
@@ -2281,7 +2281,7 @@
         },
         "слова на экране": {
           "v": "=",
-          "f": "heys_steps_v1.js:2341 SLEEP_QUALITY_LABELS без «Плохо»/«Отлично»",
+          "f": "heys_steps_v1.js:2341-2344 SLEEP_QUALITY_LABELS без «плохо»/«отлично»; «так себе», «нормально»",
           "h": "afd472e3bd6e"
         },
         "XP за чек-ин": {
@@ -2306,7 +2306,7 @@
         },
         "запись не прошла": {
           "v": "=",
-          "f": "heys_step_modal_v1.js dailySaveFail + auto-retry + «Не сохранилось. Попробуем ещё раз»",
+          "f": "heys_step_modal_v1.js:1603-1613 dailySaveFail «Не сохранилось. Попробуем ещё раз» + auto-retry PROFILE_RETRY_DELAYS_SEC",
           "h": "f511fdb07410"
         },
         "доступность": {
@@ -4723,7 +4723,7 @@
         },
         "три границы суток": {
           "v": "=",
-          "f": "heys_gamification_v1.js:362-363 getToday → HEYS.dayUtils.todayISO()",
+          "f": "heys_gamification_v1.js:354 getToday → HEYS.dayUtils.todayISO(); day-boundary-timezones.test.js",
           "h": "fd079bc47a9f"
         },
         "набор миссий невоспроизводим": {
@@ -4878,7 +4878,7 @@
         },
         "слова на экране": {
           "v": "=",
-          "f": "heys_gamification_v1.js streak desc «Серия не меньше…»; категория «Серия»",
+          "f": "heys_gamification_v1.js:142-146 «Серия не меньше N дней»; :4525 без «!» в title missed_achievements",
           "h": "59fb7922806a"
         },
         "празднование в продукте одно": {
@@ -6967,7 +6967,7 @@
         },
         "вид детали совета": {
           "v": "=",
-          "f": "400-water-and-hydration.css:2788 hero --v4-c1 r18 поля 14/16; advice-v4-panels.test.js detail screen",
+          "f": "400-water-and-hydration.css:2788-2792 hero var(--v4-c1) r18 padding 14/16; advice-v4-panels.test.js:143",
           "h": "25e1468d07ae"
         },
         "пустое состояние": {
@@ -7062,7 +7062,7 @@
         },
         "нажатие и крупный шрифт": {
           "v": "=",
-          "f": "400-water: advice-v4-rate-btn:active opacity 0.7; home-widgets shared press rule",
+          "f": "400-water-and-hydration.css:2083 .advice-v4-panel__btn:active opacity 0.7",
           "h": "ba8155872f0e"
         },
         "первое появление": {
@@ -7142,7 +7142,7 @@
         },
         "конфетти сняты и здесь": {
           "v": "=",
-          "f": "day/_advice.js: confetti listener и showConfetti на advice сняты",
+          "f": "day/_advice.js: без setShowConfetti и heysCelebrate в модуле советов",
           "h": "f5ec5ee37313"
         },
         "только чтение и куратор": {
@@ -7152,7 +7152,7 @@
         },
         "слова на экране": {
           "v": "=",
-          "f": "heys_advice_rules_v1.js:168-210 goodAdvice без «!» и игрового тона",
+          "f": "heys_advice_rules_v1.js:165-210 goodAdvice без восклицаний; COMBO/STREAK без «streak»/«!»",
           "h": "0d7ecf4f62a8"
         }
       }

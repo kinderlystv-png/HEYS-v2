@@ -1,0 +1,10 @@
+{
+  "zone": "checkin-morning",
+  "rows": [
+    {
+      "key": "запись не прошла",
+      "v": "=",
+      "f": "heys_step_modal_v1.js:1603-1613 dailySaveFail «Не сохранилось. Попробуем ещё раз» + auto-retry PROFILE_RETRY_DELAYS_SEC"
+    }
+  ]
+}

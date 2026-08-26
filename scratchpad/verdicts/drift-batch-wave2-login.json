@@ -1,0 +1,15 @@
+{
+  "zone": "login",
+  "rows": [
+    {
+      "key": "нажатие и крупный шрифт",
+      "v": "=",
+      "f": "733-ui-v4-login-theme.css:625-627 .heys-auth-key:active opacity 0.7"
+    },
+    {
+      "key": "вибрация, звук, долгое нажатие",
+      "v": "=",
+      "f": "heys_login_screen_v1.js:374-376 без вибрации на ошибке PIN; pulsePhoneComplete без hapticInvalidPin"
+    }
+  ]
+}

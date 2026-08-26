@@ -1,0 +1,30 @@
+{
+  "zone": "gamification",
+  "rows": [
+    {
+      "key": "три границы суток",
+      "v": "=",
+      "f": "heys_gamification_v1.js:354 getToday → dayUtils.todayISO единая граница"
+    },
+    { "key": "нажатие и крупный шрифт", "v": "=", "f": "000-base:17773 game sheet buttons :active 0.7" },
+    { "key": "держатель места", "v": "=", "f": "полоса/серия только с данными; без skeleton — screens:433" },
+    {
+      "key": "выход, удаление данных, производительность",
+      "v": "=",
+      "f": "screens:595 все группы синхронно — без отложенного кадра"
+    },
+    { "key": "формат чисел", "v": "=", "f": "screens:65 nbsp в XP; «из N» — gamification-v4-achievement-row.test.js" },
+    {
+      "key": "вид карточки «Ближе всего»",
+      "v": "=",
+      "f": "000-base:18255 near-card --v4-sand-surface r20 поля 14/16; XP акцент без --ok"
+    },
+    { "key": "порядок в списке группы", "v": "=", "f": "screens:297 orderAchievements unlockedOrder sort" },
+    { "key": "возврат на экран и прокрутка", "v": "=", "f": "bar:1289 sheet unmount сбрасывает scroll" },
+    {
+      "key": "слова на экране",
+      "v": "=",
+      "f": "heys_gamification_v1.js streak desc «Серия не меньше…»; категория «Серия»"
+    }
+  ]
+}

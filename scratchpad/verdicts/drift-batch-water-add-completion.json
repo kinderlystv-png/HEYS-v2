@@ -1,0 +1,15 @@
+{
+  "zone": "water-add",
+  "rows": [
+    {
+      "key": "слова на экране",
+      "v": "=",
+      "f": "heys_day_water_v1.js:457 empty note «добавьте 200 мл» без «стакан»; water-add-v4.test.js"
+    },
+    {
+      "key": "пусто и офлайн",
+      "v": "=",
+      "f": "heys_day_water_v1.js:119 formatFactDisplay → «0» не прочерк; офлайн чипы работают"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "zone": "checkin-morning",
+  "rows": [
+    {
+      "key": "минимальная область нажатия",
+      "v": "=",
+      "f": "500-pwa-and-offline.css:2913-2918 .mc-close-btn 44×44 margin -8; geometry test morning-checkin-v4-contract-geometry.test.js:231"
+    },
+    {
+      "key": "повторный тап и поворот",
+      "v": "=",
+      "f": "heys_step_modal_v1.js actionInFlightRef блокирует двойное «Дальше»; morning-checkin-v4-smoke.test.js:257"
+    },
+    {
+      "key": "слова на экране",
+      "v": "=",
+      "f": "heys_steps_v1.js:2341-2344 SLEEP_QUALITY_LABELS без «плохо»/«отлично»; «так себе», «нормально»"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "zone": "gamification",
+  "rows": [
+    {
+      "key": "три границы суток",
+      "v": "=",
+      "f": "heys_gamification_v1.js:354 getToday → HEYS.dayUtils.todayISO(); day-boundary-timezones.test.js"
+    },
+    {
+      "key": "слова на экране",
+      "v": "=",
+      "f": "heys_gamification_v1.js:142-146 «Серия не меньше N дней»; :4525 без «!» в title missed_achievements"
+    }
+  ]
+}

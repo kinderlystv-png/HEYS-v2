@@ -1,0 +1,25 @@
+{
+  "zone": "registration",
+  "rows": [
+    {
+      "key": "вид шага профиля",
+      "v": "=",
+      "f": "heys_profile_step_v1.js hero 44/600 --ac над капсулой; registration-v4-contract-sweep.test.js:95"
+    },
+    {
+      "key": "слова на экране",
+      "v": "=",
+      "f": "heys_profile_step_v1.js:578 «Расскажите о себе»; :1905 resume «Продолжим»"
+    },
+    {
+      "key": "пояснение под заголовком шага",
+      "v": "=",
+      "f": "heys_profile_step_v1.js hints на шагах; :931 целые числа в чек-ине"
+    },
+    {
+      "key": "пределы и формат",
+      "v": "=",
+      "f": "heys_profile_step_v1.js:903 weight 30–300, height 100–250"
+    }
+  ]
+}

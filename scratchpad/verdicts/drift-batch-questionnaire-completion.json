@@ -1,0 +1,28 @@
+{
+  "zone": "questionnaire",
+  "rows": [
+    {
+      "key": "прокрутка",
+      "v": "=",
+      "f": "trial_intake warning maxHeight 186 overflowY auto; intake-v4-blocked-action.test.js:61"
+    },
+    {
+      "key": "вид блока предупреждения",
+      "v": "=",
+      "f": "trial_intake:536 SURFACE_1 r18 поля 14/16; pep-access-v4-structure.test.js"
+    },
+    {
+      "key": "нажатие и крупный шрифт",
+      "v": "=",
+      "f": "trial_intake blocked opacity 0.45; shared press на кнопках шага"
+    },
+    { "key": "порядок слоёв и два устройства", "v": "=", "f": "trial_intake:784 fullscreen overlay шаги" },
+    {
+      "key": "выход, удаление данных, производительность",
+      "v": "=",
+      "f": "черновик на сервере; первый кадр после consent — trial_intake flow"
+    },
+    { "key": "вибрация, звук, долгое нажатие", "v": "=", "f": "нет вибрации/звука в анкете — совпало" },
+    { "key": "нижняя граница возраста", "v": "=", "f": "trial_intake:24 AGE_CONFIRM «Мне есть 18» барьер шага warning" }
+  ]
+}

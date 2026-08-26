@@ -1,0 +1,22 @@
+{
+  "zone": "pwa-update",
+  "rows": [
+    { "key": "вид офлайн-баннера", "v": "=", "f": "heys-components.css:4660 полоса #1c1712 11px/600" },
+    { "key": "нажатие и крупный шрифт", "v": "=", "f": "heys-components update sheet :active opacity 0.7 где задано" },
+    {
+      "key": "вибрация, звук, долгое нажатие",
+      "v": "=",
+      "f": "вибрация в update flow не используется — platform_apis"
+    },
+    {
+      "key": "язык, выделение, часовой пояс",
+      "v": "=",
+      "f": "heys-components version text selectable; card user-select none"
+    },
+    { "key": "что пишется", "v": "=", "f": "platform_apis:762 fail counter + flags; контракт «одно» — счётчик неудач" },
+    { "key": "длинные номера версий", "v": "=", "f": "heys-components:5955 mono nowrap + font-size clamp в CSS" },
+    { "key": "откуда данные", "v": "=", "f": "platform_apis:731 build-meta.json — слой сравнивает версии" },
+    { "key": "слова на экране", "v": "=", "f": "platform_apis:475 ready «Готово» без «!»" },
+    { "key": "повторный тап и поворот", "v": "=", "f": "platform_apis:116 MANUAL_UPDATE_TAP_LOCK_MS 350" }
+  ]
+}

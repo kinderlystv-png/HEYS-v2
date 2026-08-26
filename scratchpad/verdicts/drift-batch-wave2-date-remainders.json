@@ -1,0 +1,30 @@
+{
+  "zone": "date-remainders",
+  "rows": [
+    {
+      "key": "вид клетки",
+      "v": "=",
+      "f": "000-base:8319-8407 42×44 r14; date-remainders-v4-cell.test.js; тон точки --v4-ok-fill"
+    },
+    {
+      "key": "тон метки загрузки",
+      "v": "=",
+      "f": "000-base --dp-mark-alpha 45/50/42/42% на 4 наборах; date-remainders-v4-smoke.test.js:415"
+    },
+    {
+      "key": "цикл и загрузка",
+      "v": "=",
+      "f": "000-base:8444 has-cycle::before лента 3px по верхнему краю; has-refeed::after по нижнему"
+    },
+    {
+      "key": "нажатие и крупный шрифт",
+      "v": "=",
+      "f": "000-base:8009 nav :active opacity 0.7; :8366 day :active 0.7; min-height 44px клетки"
+    },
+    {
+      "key": "формат чисел",
+      "v": "=",
+      "f": "000-base:8373 day-number font-variant-numeric tabular-nums"
+    }
+  ]
+}

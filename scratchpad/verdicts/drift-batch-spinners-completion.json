@@ -1,0 +1,16 @@
+{
+  "zone": "spinners",
+  "rows": [
+    { "key": "что пишется", "v": "=", "f": "loading_progress:285 cold fail counter; index.html:727 boot mark" },
+    {
+      "key": "слова на экране",
+      "v": "=",
+      "f": "index.html:1563 heys-boot-mark__sr «Загружаем»; slow line отдельная ступень 15s"
+    },
+    {
+      "key": "нажатие и крупный шрифт",
+      "v": "=",
+      "f": "boot mark retry :active opacity 0.7; spinners-v4-offline-start.test.js"
+    }
+  ]
+}

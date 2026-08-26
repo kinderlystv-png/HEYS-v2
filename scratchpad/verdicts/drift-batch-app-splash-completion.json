@@ -1,0 +1,6 @@
+{
+  "zone": "app-splash",
+  "rows": [
+    { "key": "что пишется", "v": "=", "f": "theme_v1:96 миграция theme keys; index.html:956 init; boot mark не пишет" }
+  ]
+}

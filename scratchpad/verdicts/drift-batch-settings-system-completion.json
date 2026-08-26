@@ -1,0 +1,43 @@
+{
+  "zone": "settings-system",
+  "rows": [
+    {
+      "key": "границы блока настроек",
+      "v": "=",
+      "f": "app_shell:5293 tab-settings-wrap popover у таб-бара без scrim жеста"
+    },
+    { "key": "вид листа", "v": "=", "f": "app_shell:5330 hdr-settings-sheet__card popover без ручки" },
+    { "key": "второй адрес правки", "v": "=", "f": "widgets_ui карандаш → HEYS.FabVisibility одно поле" },
+    {
+      "key": "что пишется",
+      "v": "≠",
+      "f": "theme_v1 локально; палитра не в профиле cloud — scope отдельной задачи sync prefs"
+    },
+    {
+      "key": "выход, удаление данных, производительность",
+      "v": "=",
+      "f": "app_shell:5829 logout вне ярусов после build line"
+    },
+    {
+      "key": "вибрация, звук, долгое нажатие",
+      "v": "=",
+      "f": "единый тумблер «Звук» app_shell:5569; без отдельного звука воды"
+    },
+    { "key": "откуда данные", "v": "≠", "f": "палитра из theme_v1 LS app_shell:5227 — не профиль; подпись честная" },
+    {
+      "key": "режим куратора",
+      "v": "=",
+      "f": "app_shell:4644 toggleSettingsMenu guard; :5328 menu hidden; gamification_bar скрывает шапку"
+    },
+    {
+      "key": "тихие часы",
+      "v": "=",
+      "f": "app_shell QUIET_HOURS_DEFAULT 22-08 шаг 30m; settings-v4-notify-detail.test.js"
+    },
+    {
+      "key": "чип добавок и отзыв согласия — разное",
+      "v": "=",
+      "f": "nutrition_v1:529 supplementsTracking chip только UI панели"
+    }
+  ]
+}

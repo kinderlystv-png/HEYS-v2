@@ -1,0 +1,25 @@
+{
+  "zone": "tips",
+  "rows": [
+    {
+      "key": "вид детали совета",
+      "v": "=",
+      "f": "400-water-and-hydration.css:2788-2792 hero var(--v4-c1) r18 padding 14/16; advice-v4-panels.test.js:143"
+    },
+    {
+      "key": "конфетти сняты и здесь",
+      "v": "=",
+      "f": "day/_advice.js: без setShowConfetti и heysCelebrate в модуле советов"
+    },
+    {
+      "key": "нажатие и крупный шрифт",
+      "v": "=",
+      "f": "400-water-and-hydration.css:2083 .advice-v4-panel__btn:active opacity 0.7"
+    },
+    {
+      "key": "слова на экране",
+      "v": "=",
+      "f": "heys_advice_rules_v1.js:165-210 goodAdvice без восклицаний; COMBO/STREAK без «streak»/«!»"
+    }
+  ]
+}

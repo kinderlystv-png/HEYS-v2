@@ -2,14 +2,42 @@
   "zone": "date-remainders",
   "rows": [
     {
-      "key": "вид клетки",
+      "key": "вид шторки календаря",
       "v": "=",
-      "f": "000-base:8319-8407 42×44 r14; date-remainders-v4-cell.test.js; тон точки --v4-ok-fill"
+      "f": "000-base:8277-8306 нижний лист r26 поля 18/16/16 ручка 38×4; backdrop — отступление product scrim blur 2.5px (8875 комментарий)"
     },
+    { "key": "вид клетки", "v": "=", "f": "000-base:8348-8410 42×44 r14; date-remainders-v4-cell.test.js" },
+    {
+      "key": "цикл и загрузка",
+      "v": "=",
+      "f": "000-base:8450 has-cycle::before top height 3px; cycle-ribbon--period top ribbon; has-refeed bottom 3px"
+    },
+    {
+      "key": "звук",
+      "v": "=",
+      "f": "звук советов один в настройках; в date-remainders отдельного тумблера нет — контракт cross-ref tips"
+    },
+    {
+      "key": "выход, удаление данных, производительность",
+      "v": "=",
+      "f": "точки дней подгружаются при смене месяца — day_pickers:108; shared home-widgets rule"
+    },
+    {
+      "key": "язык, выделение, часовой пояс",
+      "v": "=",
+      "f": "000-base:7929 user-select none капсула+шторка; TZ не в продукте — shared rule"
+    },
+    {
+      "key": "возврат на экран и прокрутка",
+      "v": "=",
+      "f": "переход суток 03:00 — app_shell:3271 day_pickers:80 rerender без смены дня"
+    },
+    { "key": "нажатие и крупный шрифт", "v": "=", "f": "000-base:8009 nav :active 0.7; :8366 sheet day :active 0.7" },
+    { "key": "формат чисел", "v": "=", "f": "000-base:8368 day-number tabular-nums" },
     {
       "key": "тон метки загрузки",
       "v": "=",
-      "f": "000-base --dp-mark-alpha 45/50/42/42% на 4 наборах; date-remainders-v4-smoke.test.js:415"
+      "f": "000-base --dp-mark-alpha 45/50/42/42%; date-remainders-v4-smoke.test.js:415"
     }
   ]
 }

@@ -2,9 +2,65 @@
   "zone": "tips",
   "rows": [
     {
+      "key": "вид детали совета",
+      "v": "=",
+      "f": "400-water-and-hydration.css:2788 hero --v4-c1 r18 поля 14/16; advice-v4-panels.test.js detail screen"
+    },
+    {
       "key": "«не сохранено»",
       "v": "=",
-      "f": "400-water-and-advice.css --v4-tint r18, поля 13/15; advice-v4-tips-behaviour.test.js:632"
-    }
+      "f": "day/_advice.js:447 renderAdviceSyncBanner --tint r18; advice-v4-tips-behaviour.test.js:121"
+    },
+    {
+      "key": "служебные модалки",
+      "v": "=",
+      "f": "app_shell:5809 isCuratorSettingsSession → heys:open-advice-service; _advice.js:1296 hasEvidence+isCuratorReadOnlyMode tech details"
+    },
+    {
+      "key": "нажатие и крупный шрифт",
+      "v": "=",
+      "f": "400-water: advice-v4-rate-btn:active opacity 0.7; home-widgets shared press rule"
+    },
+    {
+      "key": "уведомления и точки входа",
+      "v": "=",
+      "f": "нет push о советах; точка входа лампочка hdr (gamification_bar); всплывашка на Питании — day/_advice.js toast по контракту местного отличия"
+    },
+    {
+      "key": "порядок слоёв и два устройства",
+      "v": "=",
+      "f": "400-water:2630 detail-overlay поверх шторки; merge id советов — heys_day_advice_integration_v1.js outcomes key"
+    },
+    {
+      "key": "вибрация, звук, долгое нажатие",
+      "v": "=",
+      "f": "day/_advice.js:3651 read 10ms; hide swipe 20ms; звук один тумблер app_shell+advice_settings"
+    },
+    {
+      "key": "пределы и формат",
+      "v": "=",
+      "f": "шторка без лимита списка; движок ≤5/day; заголовок до 60 знаков — advice/_core.js"
+    },
+    {
+      "key": "офлайн",
+      "v": "=",
+      "f": "шторка открывается офлайн; плашка только для неотправленной оценки (не «нет связи» списка) — renderAdviceSyncBanner"
+    },
+    {
+      "key": "прошлый день и куратор",
+      "v": "=",
+      "f": "day/_advice.js:2893 adviceIsToday gate; handleShowAdvice curator return"
+    },
+    {
+      "key": "конфетти сняты и здесь",
+      "v": "=",
+      "f": "day/_advice.js: confetti listener и showConfetti на advice сняты"
+    },
+    {
+      "key": "только чтение и куратор",
+      "v": "=",
+      "f": "gamification_bar: isCuratorAdviceSession скрывает лампочку; adviceResult пуст для куратора"
+    },
+    { "key": "слова на экране", "v": "=", "f": "heys_advice_rules_v1.js:168-210 goodAdvice без «!» и игрового тона" }
   ]
 }

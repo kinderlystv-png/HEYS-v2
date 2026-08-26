@@ -1,0 +1,15 @@
+{
+  "zone": "pwa-update",
+  "rows": [
+    {
+      "key": "вид офлайн-баннера",
+      "v": "=",
+      "f": "heys-components.css:4660-4669 полоса #1c1712, текст #f2ede6 11px/600"
+    },
+    {
+      "key": "слова на экране",
+      "v": "=",
+      "f": "heys_platform_apis_v1.js:475 ready title «Готово» без «!»"
+    }
+  ]
+}
