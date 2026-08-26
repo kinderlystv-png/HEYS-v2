@@ -1,0 +1,10 @@
+{
+  "zone": "nutrition-tab",
+  "rows": [
+    {
+      "key": "вибрация, звук, долгое нажатие",
+      "v": "=",
+      "f": "Удаление приёма/продукта/фото — day/_meals.js:5756,6280,7194 record.deleted (double). Запись meal.added — :5316. haptic light на чипах/листе молчит (heys_day_utils:392 light→null); impactLight снят (platform_apis:3219). Долгое нажатие — отдельные строки зоны"
+    }
+  ]
+}

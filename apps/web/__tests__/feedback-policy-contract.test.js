@@ -453,4 +453,20 @@ describe('политика отклика: вызовы не идут мимо �
     }
     expect(offenders).toEqual([]);
   });
+
+  it('удаление в дневнике зовёт record.deleted, а не legacy haptic medium', () => {
+    const src = fs.readFileSync(path.join(WEB_DIR, 'day/_meals.js'), 'utf8');
+    const removeMealBlock = src.slice(src.indexOf('const removeMeal ='), src.indexOf('const ensureProductReadyForDayWrite ='));
+    const removeItemBlock = src.slice(src.indexOf('const removeItem ='), src.indexOf('const repeatYesterdayMeal ='));
+    const removePhotoBlock = src.slice(src.indexOf('const removePhoto ='), src.indexOf('const updateMealField ='));
+
+    for (const [name, block] of [
+      ['removeMeal', removeMealBlock],
+      ['removeItem', removeItemBlock],
+      ['removePhoto', removePhotoBlock],
+    ]) {
+      expect(block, name).toContain("HEYS.feedback?.emit?.('record.deleted')");
+      expect(block, name).not.toMatch(/haptic\s*\(\s*['"]medium['"]\s*\)/);
+    }
+  });
 });
