@@ -1,0 +1,25 @@
+{
+  "zone": "checkin-morning",
+  "rows": [
+    {
+      "key": "особый период в стопке",
+      "v": "=",
+      "f": "cycleWeekTop поднимает mc-rest-cycle-week-card; a58bfe19 + heys_steps_v1.js"
+    },
+    {
+      "key": "замеры на неделе периода",
+      "v": "=",
+      "f": "measurementsDeferred → mc-rest-row--measurements-deferred, muted 62%/50%"
+    },
+    {
+      "key": "прокрутка на неделе периода",
+      "v": "=",
+      "f": "mc-rest-step--cycle-week padding-bottom 70px"
+    },
+    {
+      "key": "доступность · период в стопке",
+      "v": "=",
+      "f": "radiogroup «Какой день», чип «Отметить особые дни», ariaLabelTrack на шагах"
+    }
+  ]
+}

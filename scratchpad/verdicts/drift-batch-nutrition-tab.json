@@ -1,0 +1,20 @@
+{
+  "zone": "nutrition-tab",
+  "rows": [
+    {
+      "key": "порядок блоков",
+      "v": "=",
+      "f": "optionalBlocks: hunger → cycle → fiber — heys_day_nutrition_v1.js:1632-1642"
+    },
+    {
+      "key": "блок «Особый период»",
+      "v": "=",
+      "f": "renderCycleBlock + CYCLE_CHIP в listConfigChips; radiogroup дней 1–7"
+    },
+    {
+      "key": "вид чипа · размеры",
+      "v": "=",
+      "f": "732-ui-v4-nutrition.css min-height 30px, ::after inset -7px 0"
+    }
+  ]
+}

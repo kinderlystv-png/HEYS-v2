@@ -3442,8 +3442,8 @@
           "h": "e8b30a419e37"
         },
         "блок «Особый период»": {
-          "v": "≠",
-          "f": "heys_day_nutrition_v1.js optionalBlocks без cycle-блока и чипа; legacy cycle-card через heys_day_cycle_card_v1.js, не v4 после «Голода и энергии»",
+          "v": "=",
+          "f": "renderCycleBlock + CYCLE_CHIP в listConfigChips после hunger; radiogroup дней 1–7, save через HEYS.CycleUI.applyCycleDaySelection — heys_day_nutrition_v1.js:524-914, 732-ui-v4-nutrition.css nutrition-v4-cycle-day",
           "h": "ecbc6de575c5"
         }
       }

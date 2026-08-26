@@ -57,6 +57,26 @@ describe('Nutrition tab v4 structure', () => {
     });
   });
 
+  it('optionalBlocks: «Особый период» сразу после «Голода и энергии»', () => {
+    const optAt = nutritionSource.indexOf('const optionalBlocks = [');
+    expect(optAt).toBeGreaterThan(-1);
+    const chunk = nutritionSource.slice(optAt, optAt + 1200);
+    const hungerAt = chunk.indexOf("chipState.hunger && renderHungerBlock");
+    const cycleAt = chunk.indexOf('chipState.cycle && isCycleNutritionAvailable');
+    const fiberAt = chunk.indexOf("chipState.fiber && renderFiberBlock");
+    expect(hungerAt).toBeGreaterThan(-1);
+    expect(cycleAt).toBeGreaterThan(hungerAt);
+    expect(fiberAt).toBeGreaterThan(cycleAt);
+    expect(nutritionSource).toContain('function renderCycleBlock');
+    expect(nutritionSource).toContain('listConfigChips');
+    expect(nutritionSource).toContain("CYCLE_CHIP = { key: 'cycle'");
+  });
+
+  it('чипы конфигурации: min-height 30 и припуск ::after −7px', () => {
+    expect(cssSource).toMatch(/\.nutrition-v4-chip \{[^}]*min-height: 30px/);
+    expect(cssSource).toMatch(/\.nutrition-v4-chip::after \{[^}]*inset: -7px 0/);
+  });
+
   it('снимает скрытый легаси-дневник и его мёртвую цель прокрутки', () => {
     expect(nutritionSource).not.toContain('nutrition-v4-legacy-meals');
     expect(nutritionSource).not.toContain('legacyMealsUI');

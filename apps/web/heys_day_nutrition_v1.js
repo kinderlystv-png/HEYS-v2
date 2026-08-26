@@ -521,6 +521,26 @@
     { key: 'wave', field: 'showDiaryInsulinWavePanel', label: 'Волна сейчас' }
   ];
 
+  const CYCLE_CHIP = { key: 'cycle', field: 'showDiaryCyclePanel', label: 'Особый период' };
+
+  function isCycleNutritionAvailable(profile) {
+    const source = profile && typeof profile === 'object' ? profile : readProfile();
+    try {
+      const hf = HEYS.healthFeatures;
+      if (hf && typeof hf.isCycleTrackingEnabled === 'function') {
+        return hf.isCycleTrackingEnabled(source);
+      }
+    } catch (_) { /* noop */ }
+    return (source?.gender === 'Женский' || source?.sex === 'female')
+      && source?.cycleTrackingEnabled === true;
+  }
+
+  function listConfigChips(profile) {
+    const chips = CHIPS.slice();
+    if (isCycleNutritionAvailable(profile)) chips.splice(1, 0, CYCLE_CHIP);
+    return chips;
+  }
+
   function readProfile() {
     try {
       return HEYS.utils?.lsGet?.('heys_profile', {}) || {};
@@ -531,18 +551,22 @@
 
   function readChipState(profile) {
     const source = profile && typeof profile === 'object' ? profile : readProfile();
-    return CHIPS.reduce((acc, chip) => {
+    const acc = CHIPS.reduce((state, chip) => {
       if (chip.needsConsent) {
         const hf = HEYS.healthFeatures;
         const trackingOn = typeof hf?.isSupplementsTrackingEnabled === 'function'
           ? hf.isSupplementsTrackingEnabled(source)
           : source.supplementsTrackingEnabled === true;
-        acc[chip.key] = trackingOn && source[chip.field] !== false;
+        state[chip.key] = trackingOn && source[chip.field] !== false;
       } else {
-        acc[chip.key] = source[chip.field] !== false;
+        state[chip.key] = source[chip.field] !== false;
       }
-      return acc;
+      return state;
     }, {});
+    if (isCycleNutritionAvailable(source)) {
+      acc[CYCLE_CHIP.key] = source[CYCLE_CHIP.field] !== false;
+    }
+    return acc;
   }
 
   // Решение владельца 24.08: чип «Добавки» только прячет и показывает блок.
@@ -823,6 +847,68 @@
           card('wellbeing', 'Самочувствие', wellbeing, 'ok')
         ),
         empty ? React.createElement('div', { className: 'nutrition-v4-why' }, 'отмечается в утреннем чек-ине') : null
+      )
+    );
+  }
+
+  function saveNutritionCycleDay(dateKey, cycleDay) {
+    const U = HEYS.utils;
+    const lsGet = U?.lsGet?.bind(U);
+    const lsSet = U?.lsSet?.bind(U);
+    if (HEYS.CycleUI?.applyCycleDaySelection) {
+      HEYS.CycleUI.applyCycleDaySelection(dateKey, cycleDay, lsGet, lsSet);
+      return;
+    }
+    if (HEYS.Cycle?.setCycleDaysAuto) {
+      HEYS.Cycle.setCycleDaysAuto(dateKey, cycleDay, lsGet, lsSet);
+    }
+  }
+
+  function renderCycleBlock(React, params) {
+    const { day, date, prof, isReadOnly, haptic } = params || {};
+    if (!isCycleNutritionAvailable(prof)) return null;
+
+    const CycleUI = HEYS.CycleUI || {};
+    const dateKey = date || day?.date;
+    const storedDay = Number(day?.cycleDay);
+    const hasStoredDay = Number.isFinite(storedDay) && storedDay >= 1 && storedDay <= 7;
+    const suggestedDay = typeof CycleUI.getSuggestedCycleDay === 'function'
+      ? CycleUI.getSuggestedCycleDay(dateKey, HEYS.utils?.lsGet)
+      : null;
+    const activeDay = typeof CycleUI.resolveCycleDayForUi === 'function'
+      ? CycleUI.resolveCycleDayForUi(dateKey, hasStoredDay ? storedDay : null, HEYS.utils?.lsGet)
+      : (hasStoredDay ? storedDay : (suggestedDay || null));
+    const cycleDays = [1, 2, 3, 4, 5, 6, 7];
+    const meta = hasStoredDay && typeof CycleUI.formatCycleWeekBadge === 'function'
+      ? CycleUI.formatCycleWeekBadge(storedDay)
+      : (hasStoredDay ? `День ${storedDay}` : 'Указать день');
+
+    return blockShell(React, 'cycle', 'Особый период', meta, hasStoredDay ? 'ok' : null,
+      React.createElement(React.Fragment, null,
+        !hasStoredDay && React.createElement('div', { className: 'nutrition-v4-why' },
+          'Отметьте день периода — нормы дня подстроятся под него.'
+        ),
+        React.createElement('div', {
+          className: 'nutrition-v4-cycle-days',
+          role: 'radiogroup',
+          'aria-label': 'Какой день'
+        },
+          cycleDays.map((cycleDay) => React.createElement('button', {
+            key: cycleDay,
+            type: 'button',
+            role: 'radio',
+            className: 'nutrition-v4-cycle-day' + ((activeDay === cycleDay || storedDay === cycleDay) ? ' is-on' : ''),
+            'aria-checked': storedDay === cycleDay ? 'true' : 'false',
+            'aria-label': `День ${cycleDay}`,
+            disabled: !!isReadOnly,
+            tabIndex: storedDay === cycleDay || (!hasStoredDay && cycleDay === (activeDay || 1)) ? 0 : -1,
+            onClick: () => {
+              if (isReadOnly) return;
+              saveNutritionCycleDay(dateKey, cycleDay);
+              haptic?.('light');
+            }
+          }, String(cycleDay)))
+        )
       )
     );
   }
@@ -1546,6 +1632,9 @@
     const optionalBlocks = [
       chipState.mealsTimeline && renderMealsTimelineBlock(React, insulinWaveData, day),
       chipState.hunger && renderHungerBlock(React, day, date, openMorningCheckin),
+      chipState.cycle && isCycleNutritionAvailable(prof) && renderCycleBlock(React, {
+        day, date, prof, isReadOnly, haptic
+      }),
       chipState.fiber && renderFiberBlock(React, {
         dayTot, normAbs, day, pIndex, hasData, progressK,
         expanded: fiberExpanded,
@@ -1792,7 +1881,7 @@
       React.createElement('section', { className: 'nutrition-v4-config' },
         React.createElement('div', { className: 'nutrition-v4-config__title' }, 'Что показывать на этой вкладке'),
         React.createElement('div', { className: 'nutrition-v4-config__row' },
-          CHIPS.map((chip) => {
+          listConfigChips(prof).map((chip) => {
             const on = chipState[chip.key] !== false;
             return React.createElement('button', {
               key: chip.key,
@@ -1824,6 +1913,9 @@
 
   HEYS.NutritionV4 = {
     CHIPS,
+    CYCLE_CHIP,
+    isCycleNutritionAvailable,
+    listConfigChips,
     HARM_THRESHOLD,
     formatShortDate,
     formatNumber,

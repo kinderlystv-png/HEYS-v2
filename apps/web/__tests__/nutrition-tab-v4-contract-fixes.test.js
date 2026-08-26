@@ -404,6 +404,35 @@ describe('nutrition-tab · доступность и три чипа профи�
   it('reduce-motion снимает блюр под листом правки приёма', () => {
     expect(NUTRITION_CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*\.nutrition-v4-sheet-backdrop[\s\S]*backdrop-filter:\s*none/);
   });
+
+  it('«Особый период»: блок после голода, radiogroup дней 1–7', () => {
+    window.HEYS.healthFeatures = {
+      isCycleTrackingEnabled: (p) => p?.cycleTrackingEnabled === true
+    };
+    window.HEYS.CycleUI = {
+      resolveCycleDayForUi: () => 3,
+      getSuggestedCycleDay: () => null,
+      formatCycleWeekBadge: (d) => `День ${d}`,
+      applyCycleDaySelection: vi.fn()
+    };
+    const { container } = renderTab(renderFn, {
+      ctx: {
+        prof: { gender: 'Женский', cycleTrackingEnabled: true, showDiaryCyclePanel: true, showDiaryHungerPanel: true },
+        day: { date: '2026-08-20', meals: MEALS, cycleDay: 3 }
+      }
+    });
+    const blocks = [...container.querySelectorAll('[data-block]')].map((el) => el.getAttribute('data-block'));
+    const hungerIdx = blocks.indexOf('hunger');
+    const cycleIdx = blocks.indexOf('cycle');
+    expect(hungerIdx).toBeGreaterThan(-1);
+    expect(cycleIdx).toBeGreaterThan(hungerIdx);
+    const group = container.querySelector('[data-block="cycle"] [role="radiogroup"]');
+    expect(group?.getAttribute('aria-label')).toBe('Какой день');
+    expect(container.querySelectorAll('.nutrition-v4-cycle-day')).toHaveLength(7);
+    const cycleChip = [...container.querySelectorAll('.nutrition-v4-chip')]
+      .find((node) => node.textContent.includes('Особый период'));
+    expect(cycleChip).toBeTruthy();
+  });
 });
 
 describe('nutrition-tab · повторный тап · правило продукта — добавки', () => {

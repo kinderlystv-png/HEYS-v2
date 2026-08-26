@@ -658,6 +658,37 @@
   text-wrap: pretty;
 }
 
+.nutrition-v4-cycle-days {
+  display: flex;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.nutrition-v4-cycle-day {
+  flex: 1;
+  min-height: 44px;
+  border: none;
+  border-radius: 14px;
+  background: var(--v4-hero, #f8fafc);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--nut-dim);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nutrition-v4-cycle-day.is-on {
+  background: var(--v4-act, #2563eb);
+  color: var(--v4-btn-on-act, #2b1608);
+}
+
+.nutrition-v4-cycle-day:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .nutrition-v4-note {
   margin-top: 9px;
   padding: 11px 12px;
@@ -952,7 +983,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 34px;
+  min-height: 30px;
   padding: 0 13px;
   border: none;
   border-radius: 999px;
@@ -968,7 +999,7 @@
 .nutrition-v4-chip::after {
   content: '';
   position: absolute;
-  inset: -5px 0;
+  inset: -7px 0;
 }
 
 .nutrition-v4-chip.is-off {
