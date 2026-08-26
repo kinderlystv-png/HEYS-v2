@@ -350,7 +350,11 @@ docs/ui/handoff-v4/canvas/Переработка дизайна приложен
 - Финальная интеграция (один агент, чистое дерево): `pnpm ui:v4:check` +
   `npx vitest run --root .` из `apps/web`.
 
-### Lanes (6–8 независимых)
+### Lanes (6–8 независимых)[^lanes-waves]
+
+[^lanes-waves]:
+    **14 lanes total** — запуск двумя волнами **8 + 6** (см.
+    [Recommended waves](#recommended-waves)); не все 14 параллельно.
 
 | Lane                               | Владение (edit)                                                                                                                                                                                                       | DO NOT edit                                                                                                |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -439,6 +443,372 @@ Lanes **home-widgets-typography** + **home-widgets-breakdown-content** — то 
 - [ ] Интеграция: `pnpm ui:v4:check` + полный vitest
 - [ ] `--rehash <zone>` для каждой затронутой зоны
 - [ ] **NO push / deploy** до прямой команды пользователя
+
+---
+
+## Recommended waves
+
+Список полос для запуска cloud agents: одна волна = один checkout на устройстве
+или отдельные cloud branches. Таблица [Lanes](#lanes-68-независимых) — владение
+файлами; [Hot files](#раздача-полос--анти-collision) — лимиты на wave.
+
+### Wave 1 (8 agents — без hot-file collision, старт сразу после push)
+
+| #   | Lane                               | Scope (одна строка)                                                                            |
+| --- | ---------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | **cycle-ui-checkin**               | Остаток cycle `≠`: backdate, day-29, release gate, chart geometry, двухшаговая дата, a11y даты |
+| 2   | **home-widgets-breakdown-content** | Breakdown плитки: `heys_widgets_variants_v4.js`, bindings, batch 2 контент                     |
+| 3   | **nutrition-tab**                  | Nutrition tab: чипы, merge добавок, min-height, «Особый период»                                |
+| 4   | **checkin-a11y**                   | Утренний чек-ин: a11y, debounce, крестик 44 px, push, капсула                                  |
+| 5   | **profile-registration**           | Профиль/регистрация: группы, consents, шаги, пределы вес/рост                                  |
+| 6   | **water-add**                      | Вода: reduced-motion, popover, слова «стакан», rem vs px                                       |
+| 7   | **tips-advice**                    | Советы: герой детали, merge id, вибрация, точка входа                                          |
+| 8   | **login-registration-ui**          | Логин: «Код доступа», приветствие, ошибки 38 px                                                |
+
+### Wave 2 (6 agents — после merge Wave 1 ИЛИ на отдельных cloud branches)
+
+| #   | Lane                        | Scope (одна строка)                                                                 |
+| --- | --------------------------- | ----------------------------------------------------------------------------------- |
+| 1   | **cycle-ui-calendar-undo**  | Календарь cycle 28d, backdate flow, undo cycle — **не параллельно date-remainders** |
+| 2   | **home-widgets-typography** | CSS плиток/линий, роли палитры — **не параллельно breakdown в той же wave**         |
+| 3   | **date-remainders**         | Капсула даты, шторка, полоса цикла 3 px, переход суток                              |
+| 4   | **settings-system**         | Настройки: цикл в профиле, звук воды, режим куратора, «Выйти»                       |
+| 5   | **curator-supplements**     | Кураторские добавки: 4 действия журнала, RPC, офлайн                                |
+| 6   | **platform-misc**           | PWA, gamification, spinners, app-splash — platform/gamification зоны                |
+
+### Rules
+
+- **Max 8** в Wave 1, **max 6** в Wave 2 — **не** запускать все 14 сразу.
+- **Один агент = одна lane** = вставить prompt ниже для этой lane.
+- Если один checkout на устройстве — **дождаться merge Wave 1** перед Wave 2.
+- Таблица **Hot files** и **DO NOT edit** из lanes — по-прежнему обязательны.
+
+---
+
+### Wave 1 — copy-paste prompts
+
+#### cycle-ui-checkin
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: cycle (lane: cycle-ui-checkin).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — секции cycle, lanes, hot files.
+
+Задача: закрыть остаток cycle «≠» (backdate, day-29, release gate CYCLE_TRACKING_IN_RELEASE, геометрия weight trends, двухшаговая дата «1–7» + «Это было сегодня»/«Другой день», a11y выбора даты). Не дублировать уже в a58bfe19/37ec9d26: step 5 check-in, ribbon, profile toggle, undo, engine multipliers.
+Источник чисел: data-v в cycle.v4.dc.html на диске.
+DO NOT EDIT: heys_day_pickers.js (calendar lane), styles/modules/730-widgets-dashboard.css, heys_day_nutrition_v1.js и прочие nutrition-only.
+
+Файлы lane: heys_cycle_ui_v1.js, heys_day_cycle_card_v1.js, heys_day_cycle_state.js, heys_user_tab_impl_v1.js (toggle), heys_day_weight_trends_v1.js.
+Тесты: npx vitest run --root . __tests__/cycle-v4-contract.test.js __tests__/cycle-engine-v4.test.js
+Вердикты: scratchpad/verdicts/apply-verdict.mjs; rehash: --rehash cycle
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1, явные пути. Push/deploy — запрещены.
+Prettier CSS — не запускать.
+После legacy-правок: pnpm bundle:legacy:auto --files=heys_cycle_ui_v1.js,heys_day_cycle_card_v1.js,heys_day_cycle_state.js,heys_user_tab_impl_v1.js,heys_day_weight_trends_v1.js
+
+Критерий готово: zone test cluster зелёный; «?» «выключение не переписывает прошлое» — только ? + FINDINGS; pnpm ui:v4:check если менял роли.
+```
+
+#### home-widgets-breakdown-content
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: home-widgets (lane: home-widgets-breakdown-content).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — home-widgets, lanes.
+
+Задача: закрыть «≠» breakdown/content плитки (bindings, rem tiles batch 2, слова на экране, FAB/QuickActions где в scope variants). Строку «роли линий · правило продукта» (? ) — не в = без дизайна.
+Источник чисел: data-v в home-widgets.v4.dc.html.
+DO NOT EDIT: styles/modules/730-widgets-dashboard.css, heys_day_page_shell.js.
+
+Файлы lane: heys_widgets_variants_v4.js, heys_widgets_ui_v1.js, heys_widgets_core_v1.js, __tests__/home-widgets-breakdown-v4.test.js.
+Тесты: npx vitest run --root . __tests__/home-widgets-breakdown-v4.test.js __tests__/widgets-v4-canvas-geometry.test.js __tests__/widgets-v4-bottom-corner-layout.test.js __tests__/widgets-quick-actions-v4.test.js
+Вердикты: apply-verdict.mjs; rehash: --rehash home-widgets (только финальные =/≠)
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены. Prettier CSS — не запускать.
+После правок: pnpm bundle:legacy:auto --files=heys_widgets_variants_v4.js,heys_widgets_ui_v1.js,heys_widgets_core_v1.js
+
+Критерий готово: breakdown test cluster зелёный.
+```
+
+#### nutrition-tab
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: nutrition-tab (lane: nutrition-tab).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — nutrition-tab, lanes.
+
+Задача: закрыть «≠» nutrition-tab (min-height чипа, merge добавок, держатель места; «Особый период» уже частично в af6a60df).
+Источник чисел: data-v в nutrition-tab.v4.dc.html.
+DO NOT EDIT: heys_morning_checkin_v1.js, heys_widgets_*, cycle UI.
+
+Файлы lane: heys_day_nutrition_v1.js, styles/modules/732-ui-v4-nutrition.css, nutrition __tests__/*.
+Тесты: npx vitest run --root . __tests__/nutrition-v4-canvas-geometry.test.js __tests__/nutrition-tab-v4-contract-fixes.test.js __tests__/nutrition-tab-v4-states.test.js
+Вердикты: apply-verdict.mjs; rehash: --rehash nutrition-tab
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены. Prettier CSS — не запускать.
+После правок: pnpm bundle:legacy:auto --files=heys_day_nutrition_v1.js
+
+Критерий готово: nutrition test cluster зелёный; три чипа с ? — FINDINGS если нет полей профиля.
+```
+
+#### checkin-a11y
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: checkin-morning (lane: checkin-a11y).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — checkin-morning, lanes.
+
+Задача: закрыть «≠» утреннего чек-ина (крестик ≥44 px, утренний push, «Не сохранилось», debounce 350 ms «Дальше», fixed px в капсуле). «?» — только с FINDINGS.
+Источник чисел: data-v в checkin-morning.v4.dc.html.
+DO NOT EDIT: heys_day_nutrition_v1.js, heys_cycle_ui_v1.js, widgets.
+
+Файлы lane: heys_morning_checkin_v1.js, heys_steps_v1.js, styles/modules/500-pwa-and-offline.css (checkin scope), checkin __tests__/*.
+Тесты: npx vitest run --root . __tests__/morning-checkin-v4-a11y-smoke.test.js __tests__/morning-checkin-v4-smoke.test.js __tests__/morning-checkin-v4-contract-geometry.test.js
+Вердикты: apply-verdict.mjs; rehash: --rehash checkin-morning (после fix дубля ключа «замеры на неделе»)
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены.
+После правок: pnpm bundle:legacy:auto --files=heys_morning_checkin_v1.js,heys_steps_v1.js
+
+Критерий готово: checkin test cluster зелёный.
+```
+
+#### profile-registration
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: registration (lane: profile-registration).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — registration, lanes.
+
+Задача: закрыть «≠» регистрации/профиля (группы профиля, согласие шаг 1, пределы вес/рост, вибрация, порядок слоёв consent).
+Источник чисел: data-v в registration.v4.dc.html.
+DO NOT EDIT: heys_app_shell_v1.js (settings lane), heys_widgets_*.
+
+Файлы lane: heys_profile_step_v1.js, heys_consents_v1.js, heys_step_modal_v1.js, heys_auth_v1.js, heys_user_tab_impl_v1.js (profile groups only), styles/modules/733-ui-v4-login.css (registration scope).
+Тесты: npx vitest run --root . __tests__/registration-v4-contract-sweep.test.js __tests__/consent-v4-accessibility-smoke.test.js __tests__/profile-v4-groups.test.js
+Вердикты: apply-verdict.mjs; rehash: --rehash registration
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены.
+После правок: pnpm bundle:legacy:auto --files=heys_profile_step_v1.js,heys_consents_v1.js,heys_user_tab_impl_v1.js
+
+Критерий готово: registration test cluster зелёный.
+```
+
+#### water-add
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: water-add (lane: water-add).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — water-add, lanes.
+
+Задача: закрыть «≠» water-add (reduced-motion на капле, держатель места, rem vs fixed px, слова «стакан», порядок слоёв popover).
+Источник чисел: data-v в water-add.v4.dc.html.
+DO NOT EDIT: day/_advice.js, advice/_core.js, widgets.
+
+Файлы lane: heys_day_water_v1.js, heys_day_water_card_v1.js, heys_day_handlers.js (water scope), styles/modules/400-water-and-advice.css (water scope).
+Тесты: npx vitest run --root . __tests__/water-add-v4.test.js __tests__/water-custom-volume-v4.test.js
+Вердикты: apply-verdict.mjs; rehash: --rehash water-add
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены.
+После правок: pnpm bundle:legacy:auto --files=heys_day_water_v1.js,heys_day_water_card_v1.js,heys_day_handlers.js
+
+Критерий готово: water test cluster зелёный.
+```
+
+#### tips-advice
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: tips (lane: tips-advice).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — tips, lanes.
+
+Задача: закрыть «≠» tips (герой детали, merge по id между устройствами, вибрация 20 vs 10 ms, точка входа не на Главной).
+Источник чисел: data-v в tips.v4.dc.html.
+DO NOT EDIT: heys_day_water_v1.js, heys_widgets_*.
+
+Файлы lane: day/_advice.js, advice/_core.js, heys_day_advice_integration_v1.js, heys_advice_rules_v1.js, styles/modules/400-water-and-advice.css (advice scope).
+Тесты: npx vitest run --root . __tests__/advice-v4-panels.test.js __tests__/advice-v4-tips-behaviour.test.js
+Вердикты: apply-verdict.mjs; rehash: --rehash tips
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены.
+После правок: pnpm bundle:legacy:auto --files=day/_advice.js,advice/_core.js,heys_day_advice_integration_v1.js
+
+Критерий готово: advice test cluster зелёный.
+```
+
+#### login-registration-ui
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: login (lane: login-registration-ui).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — login, lanes.
+
+Задача: закрыть «≠» login («Код от куратора» vs «Код доступа», первое появление/приветствие, длинный текст ошибки 38 px).
+Источник чисел: data-v в login.v4.dc.html.
+DO NOT EDIT: heys_profile_step_v1.js, heys_consents_v1.js (profile-registration lane).
+
+Файлы lane: heys_login_screen_v1.js, styles/modules/733-ui-v4-login.css (login scope).
+Тесты: npx vitest run --root . __tests__/login-v4-input-contract.test.js __tests__/login-v4-structure.test.js
+Вердикты: apply-verdict.mjs; rehash: --rehash login
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены.
+После правок: pnpm bundle:legacy:auto --files=heys_login_screen_v1.js
+
+Критерий готово: login test cluster зелёный.
+```
+
+---
+
+### Wave 2 — copy-paste prompts
+
+#### cycle-ui-calendar-undo
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: cycle + undo-bar (lane: cycle-ui-calendar-undo).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — cycle, undo-bar, lanes, merge order.
+
+Задача: календарь cycle 28d и backdate flow в heys_day_pickers.js; undo cycle «Особые дни» в day/_meals.js, heys_app_ui_state_v1.js. Старт только после merge cycle-ui-checkin ИЛИ отдельная cloud branch.
+Источник чисел: cycle.v4.dc.html, undo-bar.v4.dc.html.
+DO NOT EDIT: heys_cycle_ui_v1.js (ядро UI — cycle-ui-checkin), nutrition, widgets.
+
+Файлы lane: heys_day_pickers.js (cycle mode), day/_meals.js, heys_app_ui_state_v1.js.
+Тесты: npx vitest run --root . __tests__/undo-bar-v4-contract.test.js __tests__/cycle-v4-contract.test.js
+Вердикты: apply-verdict.mjs; rehash: --rehash cycle --rehash undo-bar
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены.
+После правок: pnpm bundle:legacy:auto --files=heys_day_pickers.js
+
+Критерий готово: undo + cycle picker tests зелёные; не параллельно date-remainders на heys_day_pickers.js.
+```
+
+#### home-widgets-typography
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: home-widgets (lane: home-widgets-typography).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — home-widgets, lanes.
+
+Задача: закрыть «≠» геометрии/типографики плиток (роли плиток, песочные vs контрактные, CSS сетки в 730-widgets). Не трогать breakdown content в variants.
+Источник чисел: data-v в home-widgets.v4.dc.html.
+DO NOT EDIT: heys_widgets_variants_v4.js, heys_widgets_ui_v1.js, cycle, nutrition.
+
+Файлы lane: styles/modules/730-widgets-dashboard.css, styles/modules/002-ui-v4-palette-roles.css (роли плиток/линий).
+Тесты: npx vitest run --root . __tests__/widgets-v4-canvas-geometry.test.js __tests__/line-roles-v4.test.js
+Вердикты: apply-verdict.mjs; rehash: --rehash home-widgets
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены. Prettier CSS — не запускать.
+Критерий готово: widgets geometry tests зелёные; pnpm ui:v4:check если объявлял новые роли.
+```
+
+#### date-remainders
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: date-remainders (lane: date-remainders).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — date-remainders, lanes.
+
+Задача: закрыть «≠» date-remainders (полоса цикла 3 px, переход суток, нажатие 70 %; «ночь до 03:00» — ? + FINDINGS без кадра).
+Источник чисел: data-v в date-remainders.v4.dc.html.
+DO NOT EDIT: cycle mode в heys_day_pickers.js (cycle-ui-calendar-undo), widgets.
+
+Файлы lane: heys_day_pickers.js (date capsule/sheet, не cycle mode), styles/modules/000-base-and-gamification.css (date-picker ~7900–8700).
+Тесты: npx vitest run --root . __tests__/date-remainders-v4-smoke.test.js __tests__/date-remainders-v4-cell.test.js __tests__/date-picker-v4-capsule.test.js __tests__/date-picker-sheet-v4-structure.test.js
+Вердикты: apply-verdict.mjs; rehash: --rehash date-remainders
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены.
+После правок: pnpm bundle:legacy:auto --files=heys_day_pickers.js
+
+Критерий гotово: date-remainders test cluster зелёный; не параллельно cycle-ui-calendar-undo.
+```
+
+#### settings-system
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: settings-system (lane: settings-system).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — settings-system, lanes.
+
+Задача: закрыть «≠» settings-system (UI настройки цикла в профиле, звук воды, режим куратора, «Выйти» вне ярусов).
+Источник чисел: data-v в settings-system.v4.dc.html.
+DO NOT EDIT: heys_user_tab_impl_v1.js profile groups (profile-registration lane).
+
+Файлы lane: heys_app_shell_v1.js (settings tab), heys_theme_v1.js, heys_health_features_v1.js.
+Тесты: npx vitest run --root . __tests__/settings-v4-notify-detail.test.js
+Вердикты: apply-verdict.mjs; rehash: --rehash settings-system
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены.
+После правок: pnpm bundle:legacy:auto --files=heys_app_shell_v1.js,heys_theme_v1.js
+
+Критерий готово: settings tests зелёные.
+```
+
+#### curator-supplements
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: curator-edits (lane: curator-supplements).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — curator-edits, lanes.
+
+Задача: закрыть «≠» curator-edits (4 действия журнала добавок на клиенте/сервере, офлайн live fetch, z-index над листом).
+Источник чисел: data-v в curator-edits.v4.dc.html.
+DO NOT EDIT: heys_widgets_*, heys_day_handlers.js.
+
+Файлы lane: heys_curator_actions_banner_v1.js, серверные RPC добавок (если в scope).
+Тесты: npx vitest run --root . __tests__/curator-edits-v4-product-rules.test.js
+Вердикты: apply-verdict.mjs; rehash: --rehash curator-edits
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены.
+Критерий гotово: curator tests зелёные; server scope — только явные RPC в handoff.
+```
+
+#### platform-misc
+
+**Copy-paste prompt:**
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зоны: pwa-update, gamification, spinners, app-splash (lane: platform-misc).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — соответствующие секции Remaining work, lanes.
+
+Задача: закрыть «≠» platform/gamification зон (PWA баннеры, gamification порядок/границы суток, spinners boot, app-splash theme migration).
+Источник чисел: data-v в pwa-update.v4.dc.html, gamification.v4.dc.html, spinners.v4.dc.html, app-splash.v4.dc.html.
+DO NOT EDIT: product UI lanes (nutrition, widgets, cycle, checkin, water, tips, login, registration, settings, curator).
+
+Файлы lane: heys_platform_apis_v1.js, heys_pwa_module_v1.js, heys_gamification_v1.js, heys_gamification_screens_v1.js, index.html, heys_loading_progress_v1.js, styles/modules/000-base-and-gamification.css (gamification scope), styles/modules/heys-components.css.
+Тесты: npx vitest run --root . __tests__/pwa-install-banner-v4-structure.test.js __tests__/sync-pending-banner-v4.test.js __tests__/gamification-v4-achievement-row.test.js __tests__/gamification-v4-order.test.js __tests__/spinners-v4-offline-start.test.js
+Вердикты: apply-verdict.mjs; rehash по каждой затронутой зоне (--rehash pwa-update, gamification, spinners, app-splash)
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1. Push/deploy — запрещены.
+После правок: pnpm bundle:legacy:auto --files=heys_platform_apis_v1.js,heys_pwa_module_v1.js,heys_gamification_v1.js
+
+Критерий гotово: platform test cluster зелёный; undefined roles gate не ухудшать.
+```
 
 ---
 
