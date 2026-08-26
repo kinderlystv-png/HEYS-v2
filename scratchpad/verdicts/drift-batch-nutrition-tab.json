@@ -15,6 +15,11 @@
       "key": "вид чипа · размеры",
       "v": "=",
       "f": "732-ui-v4-nutrition.css min-height 30px, ::after inset -7px 0"
+    },
+    {
+      "key": "согласие",
+      "v": "=",
+      "f": "listConfigChips:538-548 — чип «Добавки» только при supplementsTrackingEnabled; writeChipState:580-593 — только showDiarySupplementsPanel, отзыв в настройках (consents:1490)"
     }
   ]
 }
