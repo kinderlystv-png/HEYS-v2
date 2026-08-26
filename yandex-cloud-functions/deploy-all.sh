@@ -374,11 +374,21 @@ validate_function_env() {
     if [[ "$func_name" =~ (push|reminders|messages) ]]; then
         local v missing=()
         for v in VAPID_PUBLIC_KEY VAPID_SUBJECT; do
-            if [ -z "${!v}" ] && command -v yc >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+              if [ -z "${!v}" ] && command -v yc >/dev/null 2>&1; then
                 local existing_value
-                existing_value="$(yc serverless function version list \
-                    --function-name "$func_name" --format json 2>/dev/null \
-                    | jq -r --arg key "$v" '.[0].environment[$key] // empty')"
+                  # jq на машине может не стоять — тогда читаем тем же node,
+                  # который и так нужен для сборки. Без запасного пути подхват
+                  # молча не срабатывал, и деплой падал на «пустом» ключе,
+                  # хотя в задеплоенной версии он есть.
+                  if command -v jq >/dev/null 2>&1; then
+                      existing_value="$(yc serverless function version list \
+                          --function-name "$func_name" --format json 2>/dev/null \
+                          | jq -r --arg key "$v" '.[0].environment[$key] // empty')"
+                  else
+                      existing_value="$(yc serverless function version list \
+                          --function-name "$func_name" --format json 2>/dev/null \
+                          | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const a=JSON.parse(s);process.stdout.write(((a[0]||{}).environment||{})[process.argv[1]]||'');}catch(e){}});" "$v")"
+                  fi
                 if [ -n "$existing_value" ]; then
                     printf -v "$v" '%s' "$existing_value"
                     export "$v"
