@@ -15264,11 +15264,14 @@ body:has(:is(
     color: #e5e7eb;
   }
 
-  /* === PHOTO SKELETON LOADING — пульсирующий placeholder === */
+  /* Держатель места фотографии приёма. Строка «держатель места · правило
+     продукта»: «ни пульсации, ни скелетон-полос, ни спиннера внутри» —
+     ровная заливка поверхности. Прежде здесь бежал градиент 1,5 с, и это
+     было единственное живое мерцание в зонах с контрактом: остальные
+     сорок пять скелетонов — мёртвый CSS, их никто не рисует. */
   .meal-photo-thumb.skeleton {
-    background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
+    background: var(--v4-c1, #f7efe2);
+    animation: none;
   }
 
   .meal-photo-thumb.skeleton img {
@@ -15286,8 +15289,7 @@ body:has(:is(
   }
 
   [data-theme$="dark"] .meal-photo-thumb.skeleton {
-    background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
-    background-size: 200% 100%;
+    background: var(--v4-c1, #2f2820);
   }
 
   /* Disabled photo button */

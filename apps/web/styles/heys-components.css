@@ -10041,16 +10041,16 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   to { opacity: 1; }
 }
 
-/* Shimmer sweep animation */
+/* Держатель места, а не скелетон: строка «держатель места · правило
+   продукта» запрещает пульсацию, полосы и спиннер внутри — только
+   ровная заливка поверхности --c1. Прежде здесь бежал градиент 1,5 с
+   и пульсировала иконка 2 с. Имена классов оставлены историческими:
+   их ставит heys_app_shell_v1.js, переименование задело бы вёрстку. */
 .deferred-card-skeleton__shimmer {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.5) 50%,
-      transparent 100%);
-  background-size: 200% 100%;
-  animation: deferred-skeleton-shimmer 1.5s ease-in-out infinite;
+  background: var(--v4-c1, #f7efe2);
+  animation: none;
 }
 
 /* Rich skeleton content — icon + descriptive label */
@@ -10070,7 +10070,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   font-size: 28px;
   margin-bottom: 8px;
   opacity: 0.5;
-  animation: deferred-skeleton-pulse 2s ease-in-out infinite;
+  animation: none;
 }
 
 .deferred-card-skeleton__label {
@@ -10132,7 +10132,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
       rgba(255, 255, 255, 0.06) 50%,
       transparent 100%);
   background-size: 200% 100%;
-  animation: deferred-skeleton-shimmer 1.5s ease-in-out infinite;
+  animation: none;
 }
 
 [data-theme$="dark"] .deferred-card-skeleton__label {
