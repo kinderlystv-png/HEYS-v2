@@ -10051,7 +10051,6 @@ body:has(:is(
 :is(
   .modal-backdrop,
   .time-picker-backdrop,
-  .confirm-modal-backdrop,
   .date-picker-backdrop,
   .wn-backdrop,
   .paywall-overlay,
@@ -14988,7 +14987,7 @@ body:has(:is(
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: var(--v4-z-sheet-scrim, 1200);
+    z-index: 2147483600; /* --v4-z-confirm-global: above .fingers-fs 2147483000 */
     animation: fadeIn 0.15s ease-out;
     padding: 20px;
   }

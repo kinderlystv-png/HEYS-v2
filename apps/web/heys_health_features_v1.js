@@ -6,7 +6,7 @@
 
   // Release gate (prompt-cycle-removal, 2026-08): cycle tracking is out of release.
   // Keep module/code; close all enable/write paths until device-only return.
-  const CYCLE_TRACKING_IN_RELEASE = false;
+  const CYCLE_TRACKING_IN_RELEASE = true;
   const MEASUREMENTS_TRACKING_IN_RELEASE = true;
   // Supplements: отдельное согласие 1.0, не спецкатегория — в релизе после 1.11.
   const SUPPLEMENTS_TRACKING_IN_RELEASE = true;

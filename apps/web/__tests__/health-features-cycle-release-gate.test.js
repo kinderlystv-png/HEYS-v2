@@ -34,34 +34,34 @@ function loadHealthFeatures({ profile } = {}) {
 }
 
 describe('optional health features release gate', () => {
-  test('cycle stays out of release; supplements and measurements are in release', () => {
+  test('cycle is in release; supplements and measurements are in release', () => {
     const hf = loadHealthFeatures();
-    expect(hf.CYCLE_TRACKING_IN_RELEASE).toBe(false);
+    expect(hf.CYCLE_TRACKING_IN_RELEASE).toBe(true);
     expect(hf.SUPPLEMENTS_TRACKING_IN_RELEASE).toBe(true);
     expect(hf.MEASUREMENTS_TRACKING_IN_RELEASE).toBe(true);
-    expect(hf.isCycleFeatureAvailable()).toBe(false);
+    expect(hf.isCycleFeatureAvailable()).toBe(true);
     expect(hf.isSupplementsFeatureAvailable()).toBe(true);
     expect(hf.isMeasurementsFeatureAvailable()).toBe(true);
   });
 
-  test('regular profile can enable supplements and measurements but not cycle', () => {
+  test('regular profile can enable cycle, supplements and measurements', () => {
     const hf = loadHealthFeatures();
     expect(hf.isCycleTrackingEnabled({
       gender: 'Женский',
       cycleTrackingEnabled: true,
-    })).toBe(false);
+    })).toBe(true);
     expect(hf.isMeasurementsTrackingEnabled({ measurementsTrackingEnabled: true })).toBe(true);
     expect(hf.isSupplementsTrackingEnabled({ supplementsTrackingEnabled: true })).toBe(true);
   });
 
   test('optional feature toggles visibility matches per-feature gates', () => {
     const hf = loadHealthFeatures();
-    expect(hf.FEATURE_TOGGLES.cycleTrackingEnabled.visible({ gender: 'Женский' })).toBe(false);
+    expect(hf.FEATURE_TOGGLES.cycleTrackingEnabled.visible({ gender: 'Женский' })).toBe(true);
     expect(hf.FEATURE_TOGGLES.measurementsTrackingEnabled.visible({})).toBe(true);
     expect(hf.FEATURE_TOGGLES.supplementsTrackingEnabled.visible({})).toBe(true);
   });
 
-  test('stripDisabledHealthFields nulls cycle fields even when flag was true', () => {
+  test('stripDisabledHealthFields keeps cycle fields when release gate on and tracking enabled', () => {
     const hf = loadHealthFeatures();
     const day = {
       cycleDay: 3,
@@ -73,6 +73,24 @@ describe('optional health features release gate', () => {
     const next = hf.stripDisabledHealthFields(day, {
       gender: 'Женский',
       cycleTrackingEnabled: true,
+    });
+    expect(next.cycleDay).toBe(3);
+    expect(next.cycleStatus).toBe('none');
+    expect(next.waterMl).toBe(500);
+  });
+
+  test('stripDisabledHealthFields nulls cycle when tracking disabled', () => {
+    const hf = loadHealthFeatures();
+    const day = {
+      cycleDay: 3,
+      cycleStatus: 'none',
+      cycleAnsweredAt: 1,
+      cycleUpdatedAt: 2,
+      waterMl: 500,
+    };
+    const next = hf.stripDisabledHealthFields(day, {
+      gender: 'Женский',
+      cycleTrackingEnabled: false,
     });
     expect(next.cycleDay).toBeNull();
     expect(next.cycleStatus).toBeNull();

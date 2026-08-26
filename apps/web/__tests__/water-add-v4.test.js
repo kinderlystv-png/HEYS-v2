@@ -216,7 +216,7 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(dayShellSrc).toContain('function WaterFabButton');
     expect(dayShellSrc).toContain('WaterFabVolButton');
     expect(dayShellSrc).toContain('HEYS.WaterCustomVolume?.open');
-    expect(customSrc).toContain('const LONG_PRESS_MS = 350');
+    expect(customSrc).toMatch(/const LONG_PRESS_MS = (?:HEYS\.longPress\?\.MS \?\? )?350/);
     expect(customSrc).toContain('PRESETS_ML = [330, 500, 750, 1000]');
     expect(customSrc).toContain('heys:water-custom-volume-open');
     expect(dayShellSrc).toContain('water-fab-vol');

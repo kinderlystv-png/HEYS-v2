@@ -104,6 +104,8 @@
   /* Служебный слой обновления — над всем (pwa-update.v4.dc.html, строка
      «порядок слоёв и два устройства»). */
   --v4-z-update: 999999;
+  /* Глобальный ConfirmModal — выше training fullscreen (.fingers-fs 2147483000) */
+  --v4-z-confirm-global: 2147483600;
 }
 
 [data-theme-id="sand"],
