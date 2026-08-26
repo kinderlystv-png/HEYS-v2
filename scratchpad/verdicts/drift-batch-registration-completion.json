@@ -1,0 +1,10 @@
+{
+  "zone": "registration",
+  "rows": [
+    {
+      "key": "вид шага профиля",
+      "v": "=",
+      "f": "heys_profile_step_v1.js hero 44/600 --ac над капсулой; registration-v4-contract-sweep.test.js:95"
+    }
+  ]
+}

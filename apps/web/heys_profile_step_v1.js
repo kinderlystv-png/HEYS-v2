@@ -575,7 +575,7 @@
     return React.createElement('div', { className: 'flex flex-col gap-4' },
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
-      }, 'Персональные данные'),
+      }, 'Расскажите о себе'),
       React.createElement('div', {
         className: 'text-xs',
         style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 8 }
@@ -928,6 +928,10 @@
         className: 'text-xs',
         style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5 }
       }, 'Вес будете уточнять каждое утро, здесь только точка отсчёта'),
+      React.createElement('div', {
+        className: 'text-xs',
+        style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 8 }
+      }, 'Целых чисел достаточно — десятые вводятся в чек-ине.'),
       React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 8 } },
         wheelCard('Рост, см', heightValues, height, 'height'),
         wheelCard('Вес сейчас, кг', weightValues, weight, 'weight')
@@ -1898,7 +1902,7 @@
     },
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 8, lineHeight: 1.3 }
-      }, firstName ? `${firstName}, профиль наполовину` : 'Незавершённый профиль'),
+      }, firstName ? `Продолжим, ${firstName}` : 'Продолжим'),
       React.createElement('p', {
         style: { fontSize: 13, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55, maxWidth: 320 }
       }, bodyStale && capturedLabel
