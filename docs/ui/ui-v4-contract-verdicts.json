@@ -1624,12 +1624,12 @@
         },
         "частые тапы · звук": {
           "v": "=",
-          "f": "isWaterSoundFlooded молчит при >4 тапах за 2с, тик идёт отдельно из haptic('light') — heys_audio_v1.js:252,678 и day_handlers:483",
+          "f": "isWaterSoundFlooded гасит только звук при >4 тапах за 2с; 10 мс остаётся через emit('water.sip') — heys_audio_v1.js:527-531,624-631",
           "h": "715ea24b92ef"
         },
         "тактильный": {
           "v": "=",
-          "f": "haptic('light') зовёт HEYS.vibration.impactLight — iOS impact light / Android EFFECT_TICK — heys_platform_apis_v1.js:3215",
+          "f": "Глоток: emit('water.sip') → tap [10] (heys_day_day_handlers.js:380, heys_audio_v1.js:415-430). Legacy impactLight 8 мс снят (platform_apis:3219); haptic('light') молчит",
           "h": "8554102ccf80"
         },
         "момент": {
