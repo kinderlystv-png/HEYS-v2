@@ -4641,6 +4641,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         }, []);
 
         const toggleSettingsMenu = () => {
+            if (isCuratorSettingsSession) return;
             setSettingsMenuOpen((open) => {
                 if (!open) syncSettingsSheetAnchorNow();
                 return !open;
@@ -5324,7 +5325,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     ),
                     React.createElement('span', { className: 'tab-text' }, 'Ещё'),
                 ),
-                settingsMenuOpen && !sheetPushAccessOpen && React.createElement(
+                settingsMenuOpen && !sheetPushAccessOpen && !isCuratorSettingsSession && React.createElement(
                     'div',
                     {
                         className: 'tab-settings-menu tab-settings-menu--v4-sheet'

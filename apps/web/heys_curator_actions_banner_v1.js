@@ -2483,6 +2483,7 @@
     if (_checkInFlight) return;
     _checkInFlight = true;
     try {
+      if (HEYS?.auth?.isCuratorSession?.()) return;
       if (!HEYS.YandexAPI?.getMyCuratorChangelogSince) return;
       const contextKey = getPinSessionContextKey();
       if (!contextKey) {
