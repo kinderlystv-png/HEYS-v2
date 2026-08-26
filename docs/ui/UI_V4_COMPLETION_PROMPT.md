@@ -6,8 +6,9 @@
 Пакет: **17 зон**, **1487 строк** контракта с вердиктами (1488 в канвасе; одна
 строка без вердикта — см. гигиену ниже).
 
-**База для cloud deploy:** `1560cc8b`
-(`docs(ui): handoff — session 26.08 workers DONE, +39 ahead`).
+**Перед cloud wave на устройстве:** `git status --short --branch` — все session
+commits должны быть на `origin/main` до старта волны (число ahead не
+хардкодить).
 
 ---
 
@@ -32,17 +33,18 @@
 
 ### Гейт `pnpm ui:v4:check`
 
-| Подгейт                           | Состояние   | Примечание                                                                                                                                                                 |
-| --------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ui-v4-check-undefined-roles.mjs` | **красный** | WIP в `000-base-and-gamification.css`, `500-pwa-and-offline.css`: голые `--v4-sand-act-fill`, `--v4-sand-bg` — объявить в `002-ui-v4-palette-roles.css` или заменить ролью |
-| `ui-v4-check-contract-drift.mjs`  | **зелёный** | «Контракты не двигались: 17 зоны, 1487 строк» (проверено 26.08 ~03:10)                                                                                                     |
+| Подгейт                           | Состояние   | Примечание                                                                       |
+| --------------------------------- | ----------- | -------------------------------------------------------------------------------- |
+| `ui-v4-check-undefined-roles.mjs` | **зелёный** | 25 известных ролей; голых `var(--v4-*)` без маркера нет (проверено 26.08 ~03:38) |
+| `ui-v4-check-contract-drift.mjs`  | **зелёный** | «Контракты не двигались: 17 зоны, 1487 строк» (проверено 26.08 ~03:38)           |
 
 Перед push оба подгейта обязаны быть зелёными на **чистом дереве** после merge
-всех локальных batch (session 26.08 — workers DONE, push ещё нет).
+всех локальных batch. Cloud agent **перед wave** перепроверяет на устройстве —
+см. **Pre-push blockers**.
 
 ### Вердикты — итого и по зонам
 
-**Итого:** `=` 1185 · `≠` 193 · `?` 6 · `—` 95
+**Итого:** `=` 1185 · `≠` 193 · `?` 6 · `—` 103
 
 | Зона            | Строк | =   | ≠   | ?   | —   | Снято      |
 | --------------- | ----- | --- | --- | --- | --- | ---------- |
@@ -71,7 +73,7 @@
 `ACCEPTANCE-checkin-morning.md` — при `--rehash checkin-morning` убедиться, что
 вердикт адресует живую строку из `.dc.html`.
 
-### Что DONE (коммиты на main, локально **+39** от origin)
+### Что DONE (коммиты на main; sync с origin — сверить на устройстве)
 
 | Область                         | SHA                     | Что                                                                                                                  |
 | ------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -421,8 +423,9 @@ Lanes **home-widgets-typography** + **home-widgets-breakdown-content** — то 
 
 ### На устройстве (до старта cloud wave)
 
-- [ ] Все локальные коммиты session batch **запушены** или явно согласованы как
-      ahead-only (`1560cc8b` base — fetch `origin/main`, сверить ahead count)
+- [ ] Сверить на устройстве: `git status --short --branch` — все session commits
+      должны быть на `origin/main` перед cloud wave (fetch `origin/main`, не
+      хардкодить ahead count)
 - [ ] `pnpm ui:v4:check` — зелёный (см. **Pre-push blockers** ниже)
 - [ ] `npx vitest run --root .` из `apps/web` — зелёный на **остановленных**
       workers (без параллельных lane в том же дереве)
@@ -431,7 +434,7 @@ Lanes **home-widgets-typography** + **home-widgets-breakdown-content** — то 
 ### На каждый cloud agent (в prompt)
 
 - [ ] Блок **lane** из таблицы lanes (владение + DO NOT edit)
-- [ ] Ссылка: `docs/ui/UI_V4_COMPLETION_PROMPT.md` (этот файл, base `1560cc8b`)
+- [ ] Ссылка: `docs/ui/UI_V4_COMPLETION_PROMPT.md` (этот файл)
 - [ ] Путь канваса:
       `docs/ui/handoff-v4/canvas/…/design_handoff_heys_v4/<zone>.v4.dc.html`
 - [ ] Напоминание: cloud FS ≠ device; commit/push только после merge на
@@ -817,8 +820,9 @@ DO NOT EDIT: product UI lanes (nutrition, widgets, cycle, checkin, water, tips, 
 ### Репозиторий
 
 - **Repo:** `HEYS-v2`
-- **Branch:** `main` (локально **+39** коммитов от `origin/main` на 26.08 —
-  fetch перед стартом)
+- **Branch:** `main` — перед стартом на устройстве:
+  `git status --short --branch` (все session commits на `origin/main`, ahead
+  count не хардкодить)
 - **Dev:** `pnpm dev:local` (API :4001 + web :3001)
 
 ### Обязательное чтение
@@ -858,22 +862,40 @@ pnpm ui:v4:check по затронутым ролям (если менял па�
 
 ## Pre-push blockers (26.08 reviewer audit)
 
-Честный снимок **перед push/deploy** (base `1560cc8b`, проверено на устройстве
-26.08). Все пункты ниже обязаны быть **зелёными**; иначе push запрещён.
+**Снимок 26.08 ~03:38 (устройство): ALL GREEN** — 454 files, 5711 tests;
+`pnpm ui:v4:check` (roles + drift) зелёный. Push блокируют только незавершённый
+scope и отсутствие прямой команды пользователя, не красные гейты.
 
-| #   | Блокер                        | Команда / тест                                                             | Состояние 26.08                                                                                                 |
-| --- | ----------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 1   | Undefined roles gate          | `pnpm ui:v4:check` → `ui-v4-check-undefined-roles.mjs`                     | **красный** — `--v4-sand-act-fill`, `--v4-sand-bg` в `000-base-and-gamification.css`, `500-pwa-and-offline.css` |
-| 2   | Widgets sphere geometry       | `npx vitest run --root . __tests__/widgets-v4-sphere.test.js`              | **красный**                                                                                                     |
-| 3   | Check-in evening / pack limit | `npx vitest run --root . __tests__/checkin-evening-and-pack-limit.test.js` | **красный**                                                                                                     |
-| 4   | Nutrition canvas geometry     | `npx vitest run --root . __tests__/nutrition-v4-canvas-geometry.test.js`   | **красный**                                                                                                     |
+| Проверка      | Команда                                 | Состояние 26.08 |
+| ------------- | --------------------------------------- | --------------- |
+| UI v4 gates   | `pnpm ui:v4:check` (roles + drift)      | **зелёный**     |
+| Полный vitest | `npx vitest run --root .` из `apps/web` | **зелёный**     |
 
-**Правило:** параллельные cloud workers **остановлены** → на устройстве один
-прогон `npx vitest run --root .` из `apps/web` + `pnpm ui:v4:check`. Частичный
-vitest по lane во время wave **не** заменяет финальный полный прогон.
+Fixes, закрывшие прежние блокеры: `5bfc5e10`, `94325590`, `c186ebe6`,
+`fccbdbee`.
 
-Drift-гейт (`ui-v4-check-contract-drift.mjs`) на 26.08 **зелёный** — это не
-отменяет четыре блокера выше.
+### RESOLVED 26.08 — не чинить повторно
+
+| #   | Было красным                                           | Fix SHA    |
+| --- | ------------------------------------------------------ | ---------- |
+| 1   | Undefined roles (`--v4-sand-act-fill`, `--v4-sand-bg`) | `5bfc5e10` |
+| 2   | `widgets-v4-sphere.test.js`                            | `c186ebe6` |
+| 3   | `checkin-evening-and-pack-limit.test.js`               | `fccbdbee` |
+| 4   | `nutrition-v4-canvas-geometry.test.js`                 | `94325590` |
+
+### Правило для cloud agents
+
+**Перед стартом wave** — на **устройстве** (не в cloud FS) перепроверить:
+
+```bash
+pnpm ui:v4:check
+npx vitest run --root .   # из apps/web
+```
+
+Если любая команда падает — **остановить wave**, чинить на устройстве первым.
+
+**После wave:** частичный vitest по lane **не** заменяет финальный полный прогон
+на устройстве.
 
 ---
 
@@ -882,20 +904,19 @@ Drift-гейт (`ui-v4-check-contract-drift.mjs`) на 26.08 **зелёный** 
 - [x] Local workers session 26.08 — **DONE** (`37ec9d26`, `a58bfe19`,
       `ba60afbb`, `af6a60df`, regressions `ffe24fe2`…`79c7bcb0`)
 - [ ] `git status` чистый в `apps/web` и `docs/ui/` (кроме осознанного scope)
-- [ ] `pnpm ui:v4:check` — оба подгейта зелёные (**сейчас красный** undefined
-      roles: `--v4-sand-act-fill` в `000-base-and-gamification.css`;
-      `--v4-sand-act-fill`, `--v4-sand-bg` в `500-pwa-and-offline.css` —
-      объявить в `002-ui-v4-palette-roles.css` или заменить ролью)
+- [ ] `pnpm ui:v4:check` — оба подгейта зелёные (26.08 ~03:38: зелёный;
+      перепроверить на устройстве перед push)
 - [ ] Zone test clusters зелёные; финально `npx vitest run --root .` из
-      `apps/web`
+      `apps/web` (26.08 ~03:38: 454 files, 5711 tests — зелёный)
 - [ ] `docs/ui/ui-v4-contract-verdicts.json` — rehash для затронутых зон (cycle
       pending)
 - [ ] Preview bundles собраны integration-проходом или CI (`build:ci`)
-- [ ] Список коммитов ahead of origin (26.08: **39** на main) — согласован scope
+- [ ] Сверить на устройстве: `git status --short --branch` — session commits на
+      `origin/main`, scope согласован (ahead count не хардкодить)
 - [ ] Прямая команда пользователя на push/deploy
 
-**Ready for push (26.08):** **нет** — undefined roles gate + cycle rehash +
-полный vitest/integration bundles.
+**Ready for push (26.08 ~03:38):** гейты и vitest зелёные; остаётся cycle
+rehash, integration bundles и прямая команда на push/deploy.
 
 ---
 
