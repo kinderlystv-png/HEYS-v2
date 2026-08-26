@@ -167,7 +167,7 @@ describe('tips: защита от повторного тапа на оценк�
     // box.api переустанавливается на каждый рендер — берём его свежим на
     // каждом шаге, а не единожды деструктурированной ссылкой (та осталась
     // бы указывать на снапшот до setDisplayedAdvice).
-    const box = mountAdviceState();
+    const box = mountAdviceState({ date: new Date().toISOString().slice(0, 10) });
     act(() => { box.api.setDisplayedAdvice(advice); });
 
     const fakeEvent = () => ({ stopPropagation() {} });
