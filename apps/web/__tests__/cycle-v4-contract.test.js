@@ -12,6 +12,8 @@ const CSS_SRC = fs.readFileSync(path.resolve(__dirname, '../styles/modules/500-p
 const SPARK_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_sparklines_v1.js'), 'utf8');
 const STATS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_stats_v1.js'), 'utf8');
 
+const BASE_CSS_SRC = fs.readFileSync(path.resolve(__dirname, '../styles/modules/000-base-and-gamification.css'), 'utf8');
+
 describe('cycle v4 · check-in step 5 inline', () => {
   it('cycle lives in morningRest, not separate registerStep flow in stack', () => {
     expect(STEPS_SRC).toContain('renderMorningRestCycleRow');
@@ -100,5 +102,76 @@ describe('cycle v4 · CSS tokens', () => {
     expect(CSS_SRC).toContain('.mc-rest-cycle-mark-chip');
     expect(CSS_SRC).toContain('min-height: 44px');
     expect(CSS_SRC).toContain('.mc-rest-cycle-week-card');
+  });
+});
+
+describe('cycle v4 · step height and week scroll', () => {
+  it('week period moves cycle row to top and defers measurements', () => {
+    expect(STEPS_SRC).toContain('const cycleWeekTop = !!(cycleOnWeek || cycleSuggested)');
+    expect(STEPS_SRC).toContain("cycleWeekTop ? ' mc-rest-step--cycle-week' : ''");
+    expect(STEPS_SRC).toContain('cycleWeekTop ? cycleRow : coldCard');
+    expect(STEPS_SRC).toContain('const measurementsDeferred = cycleWeekTop');
+    expect(STEPS_SRC).toContain('mc-rest-cycle-week-card');
+    expect(STEPS_SRC).toContain('Замеры отложены');
+  });
+
+  it('week step reserves ~68px scroll slack via padding-bottom', () => {
+    expect(CSS_SRC).toContain('.mc-rest-step--cycle-week');
+    expect(CSS_SRC).toMatch(/\.mc-rest-step--cycle-week[\s\S]*padding-bottom:\s*70px/);
+  });
+});
+
+describe('cycle v4 · ribbon contrast', () => {
+  it('period ribbon uses palette-aware accent var(--v4-act)', () => {
+    const periodRule = BASE_CSS_SRC.match(
+      /\.date-picker-sheet \.date-picker-day\.cycle-ribbon--period::before,\n[\s\S]*?background: [^;]+;/
+    );
+    expect(periodRule?.[0]).toContain('background: var(--v4-act');
+  });
+});
+
+describe('cycle v4 · norm pill on nutrition', () => {
+  it('renders Нужно съесть row with +N% pill when multiplier > 1', () => {
+    expect(CYCLE_UI_SRC).toContain('renderCycleNormRows');
+    expect(CYCLE_UI_SRC).toContain('cycle-card-v4__norm-pill');
+    expect(CYCLE_UI_SRC).toContain('Нужно съесть');
+    expect(CYCLE_UI_SRC).toContain('cycleKcalMultiplier');
+    expect(CSS_SRC).toContain('.cycle-card-v4__norm-pill');
+    expect(CSS_SRC).toMatch(/\.cycle-card-v4__norm-value[\s\S]*gap:\s*7px/);
+  });
+
+  it('nutrition tab passes eaten and budget into cycle block', () => {
+    const nutritionSrc = fs.readFileSync(path.resolve(__dirname, '../heys_day_nutrition_v1.js'), 'utf8');
+    expect(nutritionSrc).toContain('budgetKcal: displayOptimum');
+    expect(nutritionSrc).toContain('cycleKcalMultiplier');
+  });
+});
+
+describe('cycle v4 · calorie chart reports styling', () => {
+  it('uses stepped goal line and reports-v4 classes in sparkline', () => {
+    expect(SPARK_SRC).toContain('steppedPath');
+    expect(SPARK_SRC).toContain('reportsV4 ? steppedPath(points, \'targetY\')');
+    expect(SPARK_SRC).toContain('sparkline-goal--reports-v4');
+    expect(SPARK_SRC).toContain('sparkline-line--reports-v4');
+  });
+
+  it('reports tab labels chart Съедено и норма with legend', () => {
+    expect(STATS_SRC).toContain('Съедено и норма');
+    expect(STATS_SRC).toContain('reports-v4-dynamics-card__legend');
+    expect(STATS_SRC).toContain('reportsV4: useReportsV4');
+  });
+});
+
+describe('cycle v4 · on-screen words', () => {
+  it('v4 cycle UI and legacy registerStep avoid 🌸', () => {
+    expect(CYCLE_UI_SRC).not.toContain('🌸');
+    expect(STEPS_SRC).toContain("title: 'Особый период'");
+    expect(STEPS_SRC).toContain("icon: ''");
+    expect(STEPS_SRC).not.toMatch(/registerStep\('cycle'[\s\S]*icon:\s*'🌸'/);
+    expect(CYCLE_UI_SRC).toContain('Особый период');
+    expect(CYCLE_UI_SRC).toMatch(/особые дни/i);
+    expect(CYCLE_UI_SRC).toContain("'начало'");
+    expect(CYCLE_UI_SRC).toContain("'середина'");
+    expect(CYCLE_UI_SRC).toContain("'конец'");
   });
 });

@@ -2027,6 +2027,38 @@
   color: rgba(0, 0, 0, 0.55);
 }
 
+.cycle-card-v4__norm-rows {
+  margin-top: 12px;
+  padding: 2px 15px;
+}
+
+.cycle-card-v4__norm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  font: 500 12.5px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+}
+
+.cycle-card-v4__norm-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink, #0f172a);
+}
+
+.cycle-card-v4__norm-value.is-muted {
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+}
+
+.cycle-card-v4__norm-pill {
+  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act-text, var(--v4-sand-act-text, #8a4a20));
+}
+
 .cycle-v4-btns {
   display: flex;
   gap: 8px;

@@ -121,9 +121,10 @@
             brushStartRef
         } = sparklineState || {};
 
-        const renderSparkline = (data, goal) => HEYS.daySparklines?.renderSparkline?.({
+        const renderSparkline = (data, goal, options) => HEYS.daySparklines?.renderSparkline?.({
             data,
             goal,
+            ...(options || {}),
             React,
             haptic,
             openExclusivePopup,

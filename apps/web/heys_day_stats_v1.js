@@ -1011,10 +1011,8 @@
             )
           ),
           useReportsV4 && React.createElement('div', { className: 'reports-v4-dynamics-card__head' },
-            React.createElement('span', { className: 'reports-v4-dynamics-card__label' }, 'Съедено против плана'),
-            sparklinePeriodMeta?.avgRatioPct != null && React.createElement('span', { className: 'reports-v4-dynamics-card__badge' },
-              (sparklinePeriodMeta.avgRatioPct - 100 >= 0 ? '+' : '') + (sparklinePeriodMeta.avgRatioPct - 100) + ' %'
-            )
+            React.createElement('span', { className: 'reports-v4-dynamics-card__label' }, 'Съедено и норма'),
+            React.createElement('span', { className: 'reports-v4-dynamics-card__period' }, chartPeriod + ' дней')
           ),
           !useReportsV4 && React.createElement('div', { className: 'kcal-sparkline-legend' },
             React.createElement('span', { className: 'kcal-sparkline-legend-item' },
@@ -1031,10 +1029,20 @@
             style: vmComputed.sparklineContainerStyle
           },
             // 🔧 FIX: Используем displayOptimum (с учётом долга) для линии цели
-            renderSparkline(renderData, displayOptimum)
+            renderSparkline(renderData, displayOptimum, { reportsV4: useReportsV4, chartPeriod })
+          ),
+          useReportsV4 && React.createElement('div', { className: 'reports-v4-dynamics-card__legend' },
+            React.createElement('span', { className: 'reports-v4-dynamics-card__legend-item' },
+              React.createElement('span', { className: 'reports-v4-dynamics-card__legend-swatch is-goal', 'aria-hidden': 'true' }),
+              'норма'
+            ),
+            React.createElement('span', { className: 'reports-v4-dynamics-card__legend-item' },
+              React.createElement('span', { className: 'reports-v4-dynamics-card__legend-swatch is-eaten', 'aria-hidden': 'true' }),
+              'съедено'
+            )
           ),
           useReportsV4 && React.createElement('div', { className: 'reports-v4-dynamics-card__hint' },
-            'Столбик вверх — недобор, вниз — перебор. Пунктир — план.'
+            'Ступенька — надбавка второй половины, зоны здесь нет'
           ),
           shouldOfferRealDataConfirmation && React.createElement('div', {
             className: 'kcal-realdata-card'

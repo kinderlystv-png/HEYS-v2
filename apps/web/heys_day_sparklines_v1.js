@@ -25,7 +25,9 @@
       setBrushing,
       brushRange,
       setBrushRange,
-      brushStartRef
+      brushStartRef,
+      reportsV4 = false,
+      chartPeriod,
     } = ctx || {};
 
     const safeHaptic = typeof haptic === 'function' ? haptic : () => { };
@@ -461,6 +463,16 @@
       return d;
     };
 
+    const steppedPath = (pts, yKey = 'y') => {
+      if (!pts.length) return '';
+      if (pts.length === 1) return `M${pts[0].x},${pts[0][yKey]}`;
+      let d = `M${pts[0].x},${pts[0][yKey]}`;
+      for (let i = 1; i < pts.length; i++) {
+        d += ` L${pts[i].x},${pts[i - 1][yKey]} L${pts[i].x},${pts[i][yKey]}`;
+      }
+      return d;
+    };
+
     // Расчёт длины cubic bezier сегмента (приближение через разбиение на отрезки)
     const bezierLength = (p1, cp1, cp2, p2, steps = 10) => {
       let length = 0;
@@ -572,8 +584,8 @@
     const cumulativeLengths = calcCumulativeLengths(points, 'y');
     const totalPathLength = cumulativeLengths[cumulativeLengths.length - 1] || 1;
 
-    // Линия цели — плавная пунктирная
-    const goalPathD = smoothPath(points, 'targetY');
+    // Линия цели — ступенчатая в reports v4, иначе плавная пунктирная
+    const goalPathD = reportsV4 ? steppedPath(points, 'targetY') : smoothPath(points, 'targetY');
 
     // Прогнозная линия (если есть данные)
     let forecastPathD = '';
@@ -988,7 +1000,9 @@
       (goalAchievementPct >= 70 ? '' : goalAchievementPct >= 40 ? ' goal-low' : ' goal-critical');
 
     return React.createElement('div', {
-      className: 'sparkline-container' + (sparklineZoom > 1 ? ' sparkline-zoomed' : ''),
+      className: 'sparkline-container' +
+        (sparklineZoom > 1 ? ' sparkline-zoomed' : '') +
+        (reportsV4 ? ' sparkline-container--reports-v4' : ''),
       style: { position: 'relative', overflow: 'hidden' },
       ref: (el) => {
         // Вызываем Twemoji после рендера для foreignObject
@@ -1017,7 +1031,7 @@
         onClick: handleDoubleClick
       }, Math.round(sparklineZoom * 100) + '%'),
       React.createElement('svg', {
-        className: 'sparkline-svg animate-always',
+        className: 'sparkline-svg animate-always' + (reportsV4 ? ' sparkline-svg--reports-v4' : ''),
         viewBox: '0 0 ' + width + ' ' + height,
         preserveAspectRatio: 'none',
         onPointerMove: handlePointerMove,
@@ -1072,23 +1086,23 @@
           )
         ),
         // Заливка области с градиентом (анимированная)
-        React.createElement('path', {
+        !reportsV4 && React.createElement('path', {
           d: fullAreaPath,
           fill: 'url(#kcalAreaGradient)',
           className: 'sparkline-area-animated'
         }),
-        // Линия цели (плавная пунктирная)
+        // Линия цели
         React.createElement('path', {
           d: goalPathD,
-          className: 'sparkline-goal',
+          className: 'sparkline-goal' + (reportsV4 ? ' sparkline-goal--reports-v4' : ''),
           fill: 'none'
         }),
         // Линия графика с градиентом по ratio zones
         React.createElement('path', {
           d: pathD,
-          className: 'sparkline-line',
+          className: 'sparkline-line' + (reportsV4 ? ' sparkline-line--reports-v4' : ''),
           fill: 'none',
-          style: {
+          style: reportsV4 ? undefined : {
             stroke: 'url(#kcalLineGradient)',
             strokeDasharray: totalPathLength,
             strokeDashoffset: totalPathLength

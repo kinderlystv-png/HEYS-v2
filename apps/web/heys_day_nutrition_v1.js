@@ -863,11 +863,19 @@
   }
 
   function renderCycleBlock(React, params) {
-    const { day, date, prof, isReadOnly, haptic } = params || {};
+    const { day, date, prof, isReadOnly, haptic, eatenKcal, displayOptimum } = params || {};
     if (!isCycleNutritionAvailable(prof)) return null;
 
+    const U = HEYS.utils;
+    const lsGet = U?.lsGet?.bind(U);
+    const countDay = HEYS.Cycle?.resolveCycleCountDay?.({
+      date: date || day?.date,
+      cycleDay: day?.cycleDay,
+      lsGet,
+    }) ?? null;
+    const cycleKcalMultiplier = HEYS.Cycle?.getKcalMultiplier?.(countDay) || 1;
+
     if (HEYS.CycleUI?.renderNutritionCycleBlock) {
-      const U = HEYS.utils;
       return HEYS.CycleUI.renderNutritionCycleBlock(React, {
         day,
         date,
@@ -876,8 +884,11 @@
         haptic,
         showCycleCard: true,
         cyclePhase: HEYS.Cycle?.getCyclePhase?.(day?.cycleDay),
-        lsGet: U?.lsGet?.bind(U),
+        lsGet,
         lsSet: U?.lsSet?.bind(U),
+        eatenKcal,
+        budgetKcal: displayOptimum,
+        cycleKcalMultiplier,
       });
     }
 
@@ -1646,7 +1657,7 @@
       chipState.mealsTimeline && renderMealsTimelineBlock(React, insulinWaveData, day),
       chipState.hunger && renderHungerBlock(React, day, date, openMorningCheckin),
       chipState.cycle && isCycleNutritionAvailable(prof) && renderCycleBlock(React, {
-        day, date, prof, isReadOnly, haptic
+        day, date, prof, isReadOnly, haptic, eatenKcal, displayOptimum
       }),
       chipState.fiber && renderFiberBlock(React, {
         dayTot, normAbs, day, pIndex, hasData, progressK,
