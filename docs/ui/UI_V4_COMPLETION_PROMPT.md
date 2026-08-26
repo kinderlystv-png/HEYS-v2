@@ -15,10 +15,10 @@
 | Подгейт                           | Состояние   | Примечание                                                                                                                                                                 |
 | --------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ui-v4-check-undefined-roles.mjs` | **красный** | WIP в `000-base-and-gamification.css`, `500-pwa-and-offline.css`: голые `--v4-sand-act-fill`, `--v4-sand-bg` — объявить в `002-ui-v4-palette-roles.css` или заменить ролью |
-| `ui-v4-check-contract-drift.mjs`  | **зелёный** | «Контракты не двигались: 17 зоны, 1487 строк» (проверено 26.08)                                                                                                            |
+| `ui-v4-check-contract-drift.mjs`  | **зелёный** | «Контракты не двигались: 17 зоны, 1487 строк» (проверено 26.08 ~03:10)                                                                                                     |
 
 Перед push оба подгейта обязаны быть зелёными на **чистом дереве** после merge
-всех воркеров.
+всех локальных batch (session 26.08 — workers DONE, push ещё нет).
 
 ### Вердикты — итого и по зонам
 
@@ -51,39 +51,43 @@
 `ACCEPTANCE-checkin-morning.md` — при `--rehash checkin-morning` убедиться, что
 вердикт адресует живую строку из `.dc.html`.
 
-### Что DONE (коммиты на main, локально +37 от origin)
+### Что DONE (коммиты на main, локально **+39** от origin)
 
-| Область                         | SHA                   | Что                                                                                              |
-| ------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------ |
-| Пакет дизайна 17                | `9ec6daad`            | handoff v4 package 17 — full canvas sync                                                         |
-| Снимок cycle                    | `75c766bc`            | cycle zone verdicts snapshot                                                                     |
-| Widget breakdown batch 1        | `67388fd8`            | 12 листов разбора плитки                                                                         |
-| Check-in a11y                   | `cc70d34e`            | progressbar, aria по контракту                                                                   |
-| Системный шрифт / zoom          | `b98f93a2`            | allow system font scale and pinch zoom                                                           |
-| Profile groups                  | `20581852`            | три группы профиля по контракту                                                                  |
-| Nutrition chips a11y            | `d5246425`            | nutrition tab v4 chips a11y + tests                                                              |
-| Long-press + layer ladder       | `85cc5bc3`            | unified long-press 350 ms, v4 layers                                                             |
-| Line roles (3)                  | `8308d1d8`            | три роли линии вместо процентов                                                                  |
-| Drift pass 6 zones              | `e208d36d`            | verdict pass для шести зон                                                                       |
-| Subscription / nutrition guards | `ac2b00cd`            | paywall paths + nutrition-v4-structure                                                           |
-| **5 regression fixes**          | `ffe24fe2`…`79c7bcb0` | FAB water cross-day · confetti flags · stepsGoal aria · view-change sheet bg · breakdown harness |
-| Cycle engine                    | `37ec9d26`            | multipliers, 28-day count, norm wiring                                                           |
+| Область                         | SHA                     | Что                                                                                                                  |
+| ------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Пакет дизайна 17                | `9ec6daad`              | handoff v4 package 17 — full canvas sync                                                                             |
+| Снимок cycle                    | `75c766bc`              | cycle zone verdicts snapshot                                                                                         |
+| Widget breakdown batch 1        | `67388fd8`              | 12 листов разбора плитки                                                                                             |
+| Check-in a11y                   | `cc70d34e`              | progressbar, aria по контракту                                                                                       |
+| Системный шрифт / zoom          | `b98f93a2`              | allow system font scale and pinch zoom                                                                               |
+| Profile groups                  | `20581852`              | три группы профиля по контракту                                                                                      |
+| Nutrition chips a11y            | `d5246425`              | nutrition tab v4 chips a11y + tests                                                                                  |
+| Long-press + layer ladder       | `85cc5bc3`              | unified long-press 350 ms, v4 layers                                                                                 |
+| Line roles (3)                  | `8308d1d8`              | три роли линии вместо процентов                                                                                      |
+| Drift pass 6 zones              | `e208d36d`              | verdict pass для шести зон                                                                                           |
+| Subscription / nutrition guards | `ac2b00cd`              | paywall paths + nutrition-v4-structure                                                                               |
+| **5 regression fixes**          | `ffe24fe2`…`79c7bcb0`   | FAB water cross-day · confetti flags · stepsGoal aria · view-change sheet bg · breakdown harness                     |
+| Handoff cloud-agent             | `60cb9cbe`              | канонический `UI_V4_COMPLETION_PROMPT.md`                                                                            |
+| **Cycle engine**                | `37ec9d26` (`f0cfa1fc`) | kcal/water/insulin multipliers, 28-day count, norm wiring — **старые engine-blockers в отчёте cycle UI сняты**       |
+| **Cycle UI**                    | `a58bfe19` (`c7511dca`) | check-in step 5, ribbon/forecast, profile toggle, 5s undo, sparkline labels; shared files с nutrition/checkin        |
+| **Home widgets**                | `ba60afbb` (`687f795a`) | rem tiles, breakdown data bindings; **2 строки `≠`→`=`** + rehash home-widgets                                       |
+| **Nutrition / checkin**         | `af6a60df` (`5f9e5811`) | «Особый период» на nutrition-tab; **7 строк контракта** (nutrition + checkin smoke/structure); часть UI в `a58bfe19` |
 
-### Что IN FLIGHT (pending merge, 26.08 ~03:00)
+### Completed local session 2026-08-26
 
-Три параллельных воркера держат **незакоммиченный** dirty scope в `apps/web`.
-Могут закончить до старта cloud agent — перечитай `git status apps/web` перед
-взятием lane.
+Три параллельных воркера **закрыты и закоммичены** (source-only, без push).
+Перед стартом cloud agent перечитай `git status apps/web` — только новый dirty
+scope, не этот batch.
 
-| Воркер                  | Файлы (dirty / ??)                                                                                                                                              | Зона                           |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| **cycle UI**            | `heys_cycle_ui_v1.js` (??), `heys_day_cycle_card_v1.js`, `heys_day_cycle_state.js`, `__tests__/cycle-v4-contract.test.js` (??)                                  | cycle                          |
-| **home-widgets**        | `heys_widgets_variants_v4.js`, `styles/modules/730-widgets-dashboard.css`, `__tests__/home-widgets-breakdown-v4.test.js`, `widgets-v4-canvas-geometry.test.js`  | home-widgets                   |
-| **nutrition / checkin** | `heys_day_nutrition_v1.js`, `heys_morning_checkin_v1.js`, `heys_steps_v1.js`, `styles/modules/732-ui-v4-nutrition.css`, `morning-checkin-v4-a11y-smoke.test.js` | nutrition-tab, checkin-morning |
+| Воркер                  | SHA        | Зона                           | Статус |
+| ----------------------- | ---------- | ------------------------------ | ------ |
+| **cycle UI**            | `a58bfe19` | cycle (+ shared nutrition)     | DONE   |
+| **home-widgets**        | `ba60afbb` | home-widgets                   | DONE   |
+| **nutrition / checkin** | `af6a60df` | nutrition-tab, checkin-morning | DONE   |
 
-Дополнительно dirty без явного владельца: `docs/ui/ui-v4-contract-verdicts.json`
-(локальные обновления вердиктов checkin/nutrition/cycle — **не rehash** чужой
-зоны без координации).
+Verdict snapshot после batch: drift-гейт зелёный; итоговые счётчики — таблица
+выше (cycle: код в `a58bfe19`/`37ec9d26`, **33 `≠` остаются** — rehash cycle
+отдельно).
 
 **Пять зон «МАКЕТ НЕ СОГЛАСОВАН»** — контракта нет, не реализовывать:
 `tab-insights`, `tab-activity`, `tab-reports`, `food-add`, `food-add-short`.
@@ -116,16 +120,17 @@ docs/ui/handoff-v4/canvas/Переработка дизайна приложен
 
 Для каждой зоны ниже: канвас, продуктовые файлы, тесты, процедура вердикта.
 
-### cycle — 33 `≠`, 1 `?`
+### cycle — 33 `≠`, 1 `?` (код частично в `37ec9d26` + `a58bfe19`)
 
-|                 |                                                                                                                                                                                                                                                                        |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Канвас**      | `cycle.v4.dc.html`                                                                                                                                                                                                                                                     |
-| **Продукт**     | `heys_cycle_ui_v1.js`, `heys_day_cycle_card_v1.js`, `heys_day_cycle_state.js`, `heys_cycle_v1.js`, `heys_user_tab_impl_v1.js` (toggle), `heys_day_pickers.js` (календарь 28 дней), `heys_day_weight_trends_v1.js`, `styles/modules/730-widgets-dashboard.css` (ribbon) |
-| **Тесты**       | `npx vitest run __tests__/cycle-v4-contract.test.js __tests__/cycle-engine-v4.test.js`                                                                                                                                                                                 |
-| **Темы `≠`**    | inline check-in + ribbon + undo; release gate `CYCLE_TRACKING_IN_RELEASE`; двухшаговая дата «1–7» + «Это было сегодня» / «Другой день»; календарь 28 дней; отметка задним числом; a11y выбора даты                                                                     |
-| **`?` blocker** | «выключение не переписывает прошлое» — продуктовое решение до `=`                                                                                                                                                                                                      |
-| **rehash**      | После закрытия batch: `node scripts/ui-v4-check-contract-drift.mjs --rehash cycle`                                                                                                                                                                                     |
+|                        |                                                                                                                                                                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Канвас**             | `cycle.v4.dc.html`                                                                                                                                                                                                                                                     |
+| **Продукт**            | `heys_cycle_ui_v1.js`, `heys_day_cycle_card_v1.js`, `heys_day_cycle_state.js`, `heys_cycle_v1.js`, `heys_user_tab_impl_v1.js` (toggle), `heys_day_pickers.js` (календарь 28 дней), `heys_day_weight_trends_v1.js`, `styles/modules/730-widgets-dashboard.css` (ribbon) |
+| **Тесты**              | `npx vitest run __tests__/cycle-v4-contract.test.js __tests__/cycle-engine-v4.test.js`                                                                                                                                                                                 |
+| **Уже в коде**         | engine multipliers + 28-day count (`37ec9d26`); check-in step 5, ribbon/forecast, profile toggle, 5s undo (`a58bfe19`). **Engine-blockers из старого cycle UI отчёта сняты** — не блокируют lane                                                                       |
+| **Темы `≠` (остаток)** | отметка **задним числом**; **день 29** / граница цикла; **release gate** `CYCLE_TRACKING_IN_RELEASE`; **геометрия графика** (weight trends); двухшаговая дата «1–7» + «Это было сегодня» / «Другой день» (частично); a11y выбора даты                                  |
+| **`?` blocker**        | «выключение не переписывает прошлое» — продуктовое решение до `=`                                                                                                                                                                                                      |
+| **rehash**             | После закрытия batch: `node scripts/ui-v4-check-contract-drift.mjs --rehash cycle`                                                                                                                                                                                     |
 
 ### home-widgets — 34 `≠`, 1 `?`
 
@@ -134,7 +139,7 @@ docs/ui/handoff-v4/canvas/Переработка дизайна приложен
 | **Канвас**      | `home-widgets.v4.dc.html`                                                                                                                                                                                                             |
 | **Продукт**     | `heys_widgets_variants_v4.js`, `heys_widgets_ui_v1.js`, `heys_widgets_core_v1.js`, `heys_day_page_shell.js` (QuickActionsFab), `styles/modules/730-widgets-dashboard.css`, `styles/modules/002-ui-v4-palette-roles.css` (роли плиток) |
 | **Тесты**       | `widgets-v4-canvas-geometry.test.js`, `home-widgets-breakdown-v4.test.js`, `widgets-v4-bottom-corner-layout.test.js`, `line-roles-v4.test.js`, `widgets-quick-actions-v4.test.js`                                                     |
-| **Темы `≠`**    | роли плитки (песочные vs контрактные); FAB/QuickActions дубль; слова на экране (ккал, эмодзи); режим куратора; hardware back; breakdown batch 2 (6 плиток без истории — лист «за сегодня»)                                            |
+| **Темы `≠`**    | роли плитки (песочные vs контрактные); FAB/QuickActions дубль; слова на экране (ккал, эмодзи); режим куратора; hardware back; breakdown batch 2 — **rem tiles + bindings в `ba60afbb` (2 `≠`→`=` + rehash)**                          |
 | **`?` blocker** | «роли линий · правило продукта» — 9 % вне трёх ролей; см. `UI_V4_FINDINGS.md` и `line-roles-v4.test.js`. **Не `--rehash`** пока дизайн не назовет роли для 6/7/9/10/14/22/45 %                                                        |
 | **rehash**      | Только для строк, где вердикт `=`/`≠` финален и дизайн не спорит                                                                                                                                                                      |
 
@@ -202,14 +207,14 @@ docs/ui/handoff-v4/canvas/Переработка дизайна приложен
 
 ### nutrition-tab — 9 `≠`
 
-|              |                                                                                                                              |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Канвас**   | `nutrition-tab.v4.dc.html`                                                                                                   |
-| **Продукт**  | `heys_day_nutrition_v1.js`, `styles/modules/732-ui-v4-nutrition.css`                                                         |
-| **Тесты**    | `nutrition-v4-canvas-geometry.test.js`, `nutrition-tab-v4-contract-fixes.test.js`, `nutrition-tab-v4-states.test.js`         |
-| **Темы `≠`** | три чипа без переключателей (голод/рефид/приёмы — **наша** работа); min-height чипа 34 vs 30; merge добавок; держатель места |
-| **FINDINGS** | три чипа ждут полей профиля — см. `UI_V4_FINDINGS.md`                                                                        |
-| **rehash**   | `--rehash nutrition-tab`                                                                                                     |
+|              |                                                                                                                            |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| **Канвас**   | `nutrition-tab.v4.dc.html`                                                                                                 |
+| **Продукт**  | `heys_day_nutrition_v1.js`, `styles/modules/732-ui-v4-nutrition.css`                                                       |
+| **Тесты**    | `nutrition-v4-canvas-geometry.test.js`, `nutrition-tab-v4-contract-fixes.test.js`, `nutrition-tab-v4-states.test.js`       |
+| **Темы `≠`** | min-height чипа 34 vs 30; merge добавок; держатель места — **«Особый период» / три чипа закрыты** (`af6a60df`, `a58bfe19`) |
+| **FINDINGS** | три чипа ждут полей профиля — см. `UI_V4_FINDINGS.md`                                                                      |
+| **rehash**   | `--rehash nutrition-tab`                                                                                                   |
 
 ### gamification — 9 `≠`
 
@@ -327,22 +332,22 @@ docs/ui/handoff-v4/canvas/Переработка дизайна приложен
 
 ### Lanes (6–8 независимых)
 
-| Lane                               | Владение (edit)                                                                                                                   | DO NOT edit                                                                               |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **cycle-ui-checkin**               | `heys_cycle_ui_v1.js`, `heys_day_cycle_card_v1.js`, `heys_day_cycle_state.js`, `__tests__/cycle-v4-contract.test.js`              | `heys_day_pickers.js`, `730-widgets-dashboard.css`, `heys_widgets_*`                      |
-| **cycle-ui-calendar-undo**         | `heys_day_pickers.js` (режим cycle 28d), undo cycle в `day/_meals.js`, `heys_app_ui_state_v1.js`                                  | `heys_cycle_ui_v1.js`, nutrition, widgets                                                 |
-| **home-widgets-typography**        | `styles/modules/730-widgets-dashboard.css`, `styles/modules/002-ui-v4-palette-roles.css` (роли плиток/линий)                      | `heys_widgets_variants_v4.js` (breakdown), cycle, nutrition                               |
-| **home-widgets-breakdown-content** | `heys_widgets_variants_v4.js`, `heys_widgets_ui_v1.js`, `__tests__/home-widgets-breakdown-v4.test.js`                             | `730-widgets-dashboard.css` (геометрия сетки — lane typography), `heys_day_page_shell.js` |
-| **nutrition-tab**                  | `heys_day_nutrition_v1.js`, `styles/modules/732-ui-v4-nutrition.css`, nutrition `__tests__/*`                                     | `heys_morning_checkin_v1.js`, widgets                                                     |
-| **checkin-a11y**                   | `heys_morning_checkin_v1.js`, `heys_steps_v1.js`, `styles/modules/500-pwa-and-offline.css` (checkin scope), checkin `__tests__/*` | nutrition-tab, cycle UI                                                                   |
-| **profile-registration**           | `heys_profile_step_v1.js`, `heys_consents_v1.js`, `heys_user_tab_impl_v1.js` (profile groups only), registration tests            | `heys_app_shell_v1.js` (settings), widgets                                                |
-| **date-remainders**                | `heys_day_pickers.js` (date capsule/sheet, не cycle mode), `000-base-and-gamification.css` (date-picker block ~7900–8700)         | cycle calendar lane, widgets                                                              |
-| **water-add**                      | `heys_day_water_v1.js`, `heys_day_water_card_v1.js`, `400-water-and-advice.css`, water tests                                      | advice/tips                                                                               |
-| **tips-advice**                    | `day/_advice.js`, `advice/_core.js`, advice tests                                                                                 | water-add, widgets                                                                        |
-| **login-registration-ui**          | `heys_login_screen_v1.js`, `733-ui-v4-login.css`, login tests                                                                     | profile_step (other lane)                                                                 |
-| **settings-system**                | `heys_app_shell_v1.js` (settings tab), `heys_theme_v1.js`, settings tests                                                         | user_tab profile groups                                                                   |
-| **curator-supplements**            | `heys_curator_actions_banner_v1.js`, API/RPC добавок (если в scope), curator tests                                                | widgets, day handlers                                                                     |
-| **platform-misc**                  | `heys_platform_apis_v1.js`, `heys_gamification_v1.js`, `index.html` (spinners), pwa/gamification tests                            | product UI lanes above                                                                    |
+| Lane                               | Владение (edit)                                                                                                                                                                                                       | DO NOT edit                                                                                                |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **cycle-ui-checkin**               | **Остаток cycle `≠`:** backdate, day-29, release gate, chart geometry, двухшаговая дата, a11y даты. **Не дублировать** уже в `a58bfe19`/`37ec9d26`: step 5 check-in, ribbon, profile toggle, undo, engine multipliers | `heys_day_pickers.js` (calendar lane), `730-widgets-dashboard.css` (typography lane), nutrition-only files |
+| **cycle-ui-calendar-undo**         | `heys_day_pickers.js` (режим cycle 28d, backdate flow), undo cycle в `day/_meals.js`, `heys_app_ui_state_v1.js`                                                                                                       | `heys_cycle_ui_v1.js` (ядро UI — готово в `a58bfe19`), nutrition, widgets                                  |
+| **home-widgets-typography**        | `styles/modules/730-widgets-dashboard.css`, `styles/modules/002-ui-v4-palette-roles.css` (роли плиток/линий)                                                                                                          | `heys_widgets_variants_v4.js` (breakdown), cycle, nutrition                                                |
+| **home-widgets-breakdown-content** | `heys_widgets_variants_v4.js`, `heys_widgets_ui_v1.js`, `__tests__/home-widgets-breakdown-v4.test.js`                                                                                                                 | `730-widgets-dashboard.css` (геометрия сетки — lane typography), `heys_day_page_shell.js`                  |
+| **nutrition-tab**                  | `heys_day_nutrition_v1.js`, `styles/modules/732-ui-v4-nutrition.css`, nutrition `__tests__/*`                                                                                                                         | `heys_morning_checkin_v1.js`, widgets                                                                      |
+| **checkin-a11y**                   | `heys_morning_checkin_v1.js`, `heys_steps_v1.js`, `styles/modules/500-pwa-and-offline.css` (checkin scope), checkin `__tests__/*`                                                                                     | nutrition-tab, cycle UI                                                                                    |
+| **profile-registration**           | `heys_profile_step_v1.js`, `heys_consents_v1.js`, `heys_user_tab_impl_v1.js` (profile groups only), registration tests                                                                                                | `heys_app_shell_v1.js` (settings), widgets                                                                 |
+| **date-remainders**                | `heys_day_pickers.js` (date capsule/sheet, не cycle mode), `000-base-and-gamification.css` (date-picker block ~7900–8700)                                                                                             | cycle calendar lane, widgets                                                                               |
+| **water-add**                      | `heys_day_water_v1.js`, `heys_day_water_card_v1.js`, `400-water-and-advice.css`, water tests                                                                                                                          | advice/tips                                                                                                |
+| **tips-advice**                    | `day/_advice.js`, `advice/_core.js`, advice tests                                                                                                                                                                     | water-add, widgets                                                                                         |
+| **login-registration-ui**          | `heys_login_screen_v1.js`, `733-ui-v4-login.css`, login tests                                                                                                                                                         | profile_step (other lane)                                                                                  |
+| **settings-system**                | `heys_app_shell_v1.js` (settings tab), `heys_theme_v1.js`, settings tests                                                                                                                                             | user_tab profile groups                                                                                    |
+| **curator-supplements**            | `heys_curator_actions_banner_v1.js`, API/RPC добавок (если в scope), curator tests                                                                                                                                    | widgets, day handlers                                                                                      |
+| **platform-misc**                  | `heys_platform_apis_v1.js`, `heys_gamification_v1.js`, `index.html` (spinners), pwa/gamification tests                                                                                                                | product UI lanes above                                                                                     |
 
 Lanes **cycle-ui-checkin** + **cycle-ui-calendar-undo** координируют через
 `heys_day_pickers.js` — не работать одновременно; calendar lane стартует после
@@ -358,8 +363,8 @@ Lanes **home-widgets-typography** + **home-widgets-breakdown-content** — то 
 ### Репозиторий
 
 - **Repo:** `HEYS-v2`
-- **Branch:** `main` (локально +37 коммитов от `origin/main` на 26.08 — fetch
-  перед стартом)
+- **Branch:** `main` (локально **+39** коммитов от `origin/main` на 26.08 —
+  fetch перед стартом)
 - **Dev:** `pnpm dev:local` (API :4001 + web :3001)
 
 ### Обязательное чтение
@@ -399,15 +404,23 @@ pnpm ui:v4:check по затронутым ролям (если менял па�
 
 ## Pre-push checklist (для человека)
 
-- [ ] Все local workers завершились или WIP закоммичен / явно отложен
+- [x] Local workers session 26.08 — **DONE** (`37ec9d26`, `a58bfe19`,
+      `ba60afbb`, `af6a60df`, regressions `ffe24fe2`…`79c7bcb0`)
 - [ ] `git status` чистый в `apps/web` и `docs/ui/` (кроме осознанного scope)
-- [ ] `pnpm ui:v4:check` — оба подгейта зелёные
+- [ ] `pnpm ui:v4:check` — оба подгейта зелёные (**сейчас красный** undefined
+      roles: `--v4-sand-act-fill` в `000-base-and-gamification.css`;
+      `--v4-sand-act-fill`, `--v4-sand-bg` в `500-pwa-and-offline.css` —
+      объявить в `002-ui-v4-palette-roles.css` или заменить ролью)
 - [ ] Zone test clusters зелёные; финально `npx vitest run --root .` из
       `apps/web`
-- [ ] `docs/ui/ui-v4-contract-verdicts.json` — rehash для затронутых зон
+- [ ] `docs/ui/ui-v4-contract-verdicts.json` — rehash для затронутых зон (cycle
+      pending)
 - [ ] Preview bundles собраны integration-проходом или CI (`build:ci`)
-- [ ] Список коммитов ahead of origin (26.08: **37** на main) — согласован scope
+- [ ] Список коммитов ahead of origin (26.08: **39** на main) — согласован scope
 - [ ] Прямая команда пользователя на push/deploy
+
+**Ready for push (26.08):** **нет** — undefined roles gate + cycle rehash +
+полный vitest/integration bundles.
 
 ---
 
