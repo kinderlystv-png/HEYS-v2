@@ -1,0 +1,30 @@
+{
+  "zone": "water-add",
+  "rows": [
+    {
+      "key": "что пишется",
+      "v": "=",
+      "f": "Журнал waterEntries {id, ml, ts} — источник правды: day_handlers:416-437 applyWaterJournalDelta → sync.appendWaterEntry; waterMl производное (day_handlers:421-422, sync_merge:907-917 mergeWaterJournal). Fallback без модуля — прежняя арифметика, хуже не становится"
+    },
+    {
+      "key": "откуда данные",
+      "v": "=",
+      "f": "Чипы стопки — два самых частых объёма за 14 дней из журнала waterEntries (water_v1:166-228 getFrequentVolumes/computeFrequentVolumes), кеш по ISO-неделе; дефолт 200/500 пока данных мало. Норма — computeWaterGoal из профиля+активности (widgets/widget_data, water_state)"
+    },
+    {
+      "key": "прошлый день и куратор",
+      "v": "=",
+      "f": "Чипы на прошлом дне пишут в открытую дату (day_handlers:533 date в heysWaterAdded); XP за прошлый день не начисляется — gamification:5514-5528 actionDate !== getToday(); read-only гасит чипы (day_tab_render:15). gamification-xp-past-day-gate.test.js"
+    },
+    {
+      "key": "вибрация, звук, долгое нажатие",
+      "v": "=",
+      "f": "Сквозные правила home-widgets «вибрация/звук/долгое нажатие · правило продукта» =. Местное: капля со своим переключателем (audio SYNTH.water), глоток emit('water.sip') 10 мс (day_handlers:380, feedback-policy). Long-press 350 мс только у FAB → лист «свой объём» (water_custom_volume:11), у чипов объёмов нет — строка «свой объём» ="
+    },
+    {
+      "key": "порядок слоёв и два устройства",
+      "v": "=",
+      "f": "Столбик — не модальный слой, а ответ у кнопки (day_handlers:285-299 body+rect якоря; контракт «местное отличие»). Глотки с двух устройств складываются по id журнала — sync_merge:907-917 mergeWaterJournal; группа waterUpdatedAt держит journal+waterMl вместе (:38)"
+    }
+  ]
+}
