@@ -522,6 +522,9 @@
     const [savingStep, setSavingStep] = useState(false);
     const [profileSaveFail, setProfileSaveFail] = useState(false);
     const [profileSaveOk, setProfileSaveOk] = useState(false);
+    const [dailySaveFail, setDailySaveFail] = useState(false);
+    const [dailyRetryAttempt, setDailyRetryAttempt] = useState(0);
+    const [dailyRetryCountdown, setDailyRetryCountdown] = useState(0);
     // «сохранение»: копия обещает автоматический повтор с растущим интервалом и
     // видимый номер попытки — значит это должно быть механикой, а не словами.
     const [profileRetryAttempt, setProfileRetryAttempt] = useState(0);
@@ -612,6 +615,29 @@
       }, 1000);
       return () => clearInterval(timer);
     }, [profileSaveFail, profileRetryAttempt]);
+
+    useEffect(() => {
+      if (!dailySaveFail) {
+        setDailyRetryCountdown(0);
+        return undefined;
+      }
+      const delays = PROFILE_RETRY_DELAYS_SEC;
+      const index = Math.min(Math.max(dailyRetryAttempt - 1, 0), delays.length - 1);
+      let left = delays[index];
+      setDailyRetryCountdown(left);
+      const timer = setInterval(() => {
+        left -= 1;
+        if (left > 0) {
+          setDailyRetryCountdown(left);
+          return;
+        }
+        clearInterval(timer);
+        setDailyRetryCountdown(0);
+        const retry = handleNextRef.current;
+        if (typeof retry === 'function') Promise.resolve(retry()).catch(() => null);
+      }, 1000);
+      return () => clearInterval(timer);
+    }, [dailySaveFail, dailyRetryAttempt]);
 
     const contextKey = useMemo(() => JSON.stringify(context), [context]);
     const forceVisibleStepIdsKey = Array.isArray(forceVisibleStepIds)
@@ -885,6 +911,10 @@
           }
         }
         savedStepSigsRef.current[config.id] = sig;
+        if (isDailyLayout && requireStepAck) {
+          setDailySaveFail(false);
+          setDailyRetryAttempt(0);
+        }
         return true;
       } catch (e) {
         console.error('[StepModal] step save failed:', config.id, e);
@@ -894,10 +924,15 @@
           setProfileSaveFail(true);
           return false;
         }
+        if (isDailyLayout && requireStepAck) {
+          setDailyRetryAttempt((attempt) => attempt + 1);
+          setDailySaveFail(true);
+          return false;
+        }
         showSaveError(requireStepAck ? (e?.message || 'Не удалось сохранить шаг в облако. Попробуйте ещё раз.') : 'Не удалось сохранить шаг. Попробуйте ещё раз.');
         return false;
       }
-    }, [context, getStepSaveSignature, onStepSaved, requireStepAck, showSaveError]);
+    }, [context, getStepSaveSignature, onStepSaved, requireStepAck, showSaveError, isDailyLayout]);
 
     useEffect(() => {
       setCurrentStepIndex((i) => {
@@ -1007,6 +1042,9 @@
         setProfileSaveFail(false);
         setProfileSaveOk(false);
       }
+      if (isDailyLayout && requireStepAck) {
+        setDailySaveFail(false);
+      }
       setSavingStep(true);
       try {
         // Let the explicit "Сохраняю..." state reach one frame even
@@ -1020,6 +1058,9 @@
         };
         if (currentStepIndex < totalSteps - 1) {
           if (!(await saveStepConfig(currentConfig, allStepData))) return;
+          if (isDailyLayout && HEYS.feedback?.emit) {
+            try { HEYS.feedback.emit('checkin.step'); } catch (_) { /* noop */ }
+          }
           await holdProfileSaveOk();
           setProfileSaveOk(false);
           goToStep(currentStepIndex + 1, 'left');
@@ -1234,6 +1275,34 @@
     const forceClose = useCallback(() => {
       onClose && onClose();
     }, [onClose]);
+
+    useEffect(() => {
+      if (!isDailyLayout) return undefined;
+      const openedDateKey = context?.dateKey || (
+        typeof HEYS.dayUtils?.todayISO === 'function' ? HEYS.dayUtils.todayISO() : null
+      );
+      if (!openedDateKey) return undefined;
+      const onVisibility = () => {
+        if (document.visibilityState !== 'visible') return;
+        const todayKey = typeof HEYS.dayUtils?.todayISO === 'function'
+          ? HEYS.dayUtils.todayISO()
+          : openedDateKey;
+        if (todayKey !== openedDateKey) forceClose();
+      };
+      document.addEventListener('visibilitychange', onVisibility);
+      return () => document.removeEventListener('visibilitychange', onVisibility);
+    }, [isDailyLayout, context?.dateKey, forceClose]);
+
+    useEffect(() => {
+      if (!isDailyLayout || !containerRef.current) return undefined;
+      const syncLargeText = () => {
+        const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+        containerRef.current?.classList.toggle('mc-modal--large-text', rootPx > 17);
+      };
+      syncLargeText();
+      window.addEventListener('resize', syncLargeText);
+      return () => window.removeEventListener('resize', syncLargeText);
+    }, [isDailyLayout, currentStepIndex]);
 
     // Закрытие — опционально через onRequestClose (APS exit guard и др.)
     const handleClose = useCallback(() => {
@@ -1530,7 +1599,18 @@
               ? 'Сохраняю...'
               : currentStepIndex === totalSteps - 1
                 ? (resolvedNextLabel || finishLabel)
-                : (resolvedNextLabel || 'Дальше'))
+                : (resolvedNextLabel || 'Дальше')),
+            dailySaveFail && React.createElement('div', {
+              className: 'mc-daily-save-fail',
+              style: {
+                marginTop: 8,
+                textAlign: 'center',
+                font: '500 11.5px/1.45 Figtree, system-ui, sans-serif',
+                color: 'var(--v4-bad-text, #a1471c)',
+              },
+            }, dailyRetryCountdown > 0
+              ? `Не сохранилось. Попробуем ещё раз · попытка ${dailyRetryAttempt}, через ${dailyRetryCountdown} ${pluralSeconds(dailyRetryCountdown)}`
+              : `Не сохранилось. Попробуем ещё раз · попытка ${dailyRetryAttempt}`)
           ),
 
           // Daily tip

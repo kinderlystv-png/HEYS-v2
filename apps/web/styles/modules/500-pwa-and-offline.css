@@ -1930,6 +1930,238 @@
   color: var(--v4-sand-act-text, #8a4a20);
 }
 
+.cycle-card-v4__date-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 13px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.cycle-card-v4__date-confirm-main {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cycle-card-v4__date-confirm-title {
+  display: block;
+  font: 600 12px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cycle-card-v4__date-confirm-sub {
+  display: block;
+  margin-top: 4px;
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.cycle-card-v4__date-confirm-chip {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-sand-surface-soft, #fffaf1);
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-sand-act-text, #8a4a20);
+  cursor: pointer;
+}
+
+.cycle-card-v4__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cycle-card-v4__cancel,
+.cycle-card-v4__clear {
+  border: none;
+  background: transparent;
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.cycle-card-v4__day29-title,
+.cycle-card-v4__warn-title {
+  font: 700 12.5px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cycle-card-v4__day29-sub,
+.cycle-card-v4__warn-text {
+  margin-top: 7px;
+  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.cycle-card-v4__warn {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--v4-tint, #f6e6dd);
+}
+
+.cycle-card-v4__insight {
+  margin-top: 12px;
+  padding: 15px 16px;
+  border-radius: 18px;
+  background: var(--v4-ok-bg, #eaefe0);
+}
+
+.cycle-card-v4__insight-title {
+  font: 700 12px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.cycle-card-v4__insight-text {
+  margin-top: 6px;
+  font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.cycle-v4-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.cycle-v4-btn {
+  flex: 1;
+  min-height: 48px;
+  border: none;
+  border-radius: 999px;
+  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.cycle-v4-btn--secondary {
+  background: var(--v4-sand-surface, #f7efe2);
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.cycle-v4-btn--primary {
+  background: var(--v4-sand-act, #c67139);
+  color: var(--v4-act-ink, #2b1608);
+}
+
+.cycle-v4-btn--danger {
+  background: var(--v4-tint, #f6e6dd);
+  color: var(--v4-sand-act-text, #8a4a20);
+}
+
+.cycle-v4-dialog-backdrop,
+.cycle-date-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+}
+
+.cycle-v4-dialog,
+.cycle-date-picker-sheet {
+  width: min(100%, 360px);
+  border-radius: 18px;
+  background: var(--v4-sand-surface-soft, #fffaf1);
+  padding: 16px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+.cycle-v4-dialog__title {
+  font: 700 15px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cycle-v4-dialog__text {
+  margin-top: 10px;
+  font: 500 12px/1.55 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.cycle-date-picker-sheet__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cycle-date-picker-sheet__head b {
+  font: 700 14px/1.3 Figtree, system-ui, sans-serif;
+}
+
+.cycle-date-picker-sheet__weekdays,
+.cycle-date-picker-sheet__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.cycle-date-picker-sheet__weekdays span {
+  text-align: center;
+  font: 600 10px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.cycle-date-picker-cell {
+  min-height: 44px;
+  border: none;
+  border-radius: 14px;
+  background: var(--v4-sand-surface, #f7efe2);
+  font: 600 13px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+  cursor: pointer;
+}
+
+.cycle-date-picker-cell.is-today {
+  background: var(--v4-sand-act, #c67139);
+  color: var(--v4-act-ink, #2b1608);
+}
+
+.cycle-date-picker-cell.is-selected {
+  box-shadow: inset 0 0 0 2px var(--v4-sand-act-text, #8a4a20);
+}
+
+.cycle-date-picker-cell.is-disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.cycle-date-picker-sheet__live {
+  margin-top: 12px;
+  font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.cycle-date-picker-sheet__actions {
+  margin-top: 14px;
+}
+
+.date-picker-forecast-line {
+  display: block;
+  margin-top: 2px;
+  font: 600 10.5px/1.2 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.date-picker-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .reports-v4-weight-cycle-footnote {
   margin-top: 8px;
   font: 500 10.5px/1.4 Figtree, system-ui, sans-serif;
@@ -2678,10 +2910,11 @@
   text-overflow: ellipsis;
 }
 
-/* Close button */
+/* Close button — контракт checkin-morning «минимальная область нажатия»: 44×44, margin −8 */
 .mc-close-btn {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
+  margin: -8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6509,6 +6742,25 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 .mc-modal--daily .mc-weight-kilo-card .mc-wheel-value {
   min-width: 0;
   height: auto;
+}
+
+.mc-modal--daily .mc-weight-kilo-card .mc-wheel-value--prev,
+.mc-modal--daily .mc-weight-kilo-card .mc-wheel-value--next {
+  font: 600 13px/1.45 Figtree, system-ui, sans-serif;
+}
+
+/* checkin-morning «нажатие и крупный шрифт»: при крупном системном шрифте
+   капсула колёс показывает одно значение вместо трёх */
+.mc-modal--daily.mc-modal--large-text .mc-weight-kilo-card .mc-wheel-value--prev,
+.mc-modal--daily.mc-modal--large-text .mc-weight-kilo-card .mc-wheel-value--next,
+.mc-modal--daily.mc-modal--large-text .mc-weight-dec-card .mc-wheel-value--prev,
+.mc-modal--daily.mc-modal--large-text .mc-weight-dec-card .mc-wheel-value--next {
+  display: none;
+}
+
+.mc-modal--daily.mc-modal--large-text .mc-weight-kilo-card .mc-wheel-picker--compact .mc-wheel-values,
+.mc-modal--daily.mc-modal--large-text .mc-weight-dec-card .mc-wheel-picker--compact .mc-wheel-values {
+  min-height: 2.75rem;
 }
 
 .mc-modal--daily .mc-btn.mc-daily-footer-secondary,

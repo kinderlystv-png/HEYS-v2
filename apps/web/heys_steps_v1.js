@@ -4014,7 +4014,6 @@
     if (shouldSkip) {
       return React.createElement('div', { className: 'mc-cycle-step mc-cycle-skip' },
         React.createElement('div', { className: 'mc-cycle-header' },
-          React.createElement('span', { className: 'mc-cycle-icon' }, '🌸'),
           React.createElement('span', { className: 'mc-cycle-title' }, 'Пропускаем...')
         )
       );
