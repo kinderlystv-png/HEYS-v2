@@ -2125,7 +2125,9 @@
           const maStatus = day?.morningActivation?.status;
           const routineReady = maStatus === 'done' || maStatus === 'planned' || maStatus === 'skipped'
             || Number(day?.morningActivation?.checkinAnsweredAt) > 0;
-          return coldReady && routineReady;
+          const cycleReady = !HEYS.healthFeatures?.isCycleTrackingEnabled?.(profile)
+            || hasCycleDecision(day, profile);
+          return coldReady && routineReady && cycleReady;
         }
       case 'checkinRecorded':
         return !coreCheckinDataMissing(day) && hasStepsGoalConfirmedToday(profile, dateKey);

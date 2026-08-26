@@ -3190,6 +3190,9 @@
           ) // закрываем badges div
         ), // закрываем условие weightSparklineData.length >= 2
         renderWeightSparkline(weightSparklineData),
+        useReportsV4 && chartPeriod >= 61 && weightSparklineData.some((d) => d.hasWaterRetention) && React.createElement('div', {
+          className: 'reports-v4-weight-cycle-footnote'
+        }, 'дни особого периода в тренд не входят'),
         useReportsV4 && monthForecast?.text && React.createElement('div', { className: 'reports-v4-dynamics-card__hint' },
           monthForecast.text
         ),

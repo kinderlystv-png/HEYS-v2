@@ -54,7 +54,7 @@ describe('чек-ин v4: доступность сна, настроения и
 
   it('дорожка шагов и метка «Совет · N» — одна фраза на slider', () => {
     expect(STEPS_SRC).toContain('buildStepsTrackAriaLabel');
-    expect(STEPS_SRC).toContain('ariaLabel: stepsTrackAriaLabel');
+    expect(STEPS_SRC).toContain('ariaLabelTrack: stepsTrackAriaLabel');
     const adviceAt = STEPS_SRC.indexOf('mc-steps-advice-mark');
     const chunk = STEPS_SRC.slice(adviceAt, adviceAt + 260);
     expect(chunk).toContain("'aria-hidden': 'true'");
@@ -78,5 +78,27 @@ describe('чек-ин v4 · step 5 cycle row a11y', () => {
     expect(STEPS_SRC).toContain("'aria-label': 'Какой день'");
     expect(STEPS_SRC).toContain("role: 'radio'");
     expect(STEPS_SRC).toContain("'aria-label': `День ${day}`");
+  });
+});
+
+describe('чек-ин v4 · неделя периода в стопке', () => {
+  const CSS = fs.readFileSync(
+    path.resolve(__dirname, '../styles/modules/500-pwa-and-offline.css'),
+    'utf8',
+  );
+
+  it('на днях 1–7 карточка периода сверху, прокрутка и отложенные замеры', () => {
+    expect(STEPS_SRC).toContain('cycleWeekTop');
+    expect(STEPS_SRC).toContain("cycleWeekTop ? ' mc-rest-step--cycle-week' : ''");
+    expect(STEPS_SRC).toContain('cycleWeekTop ? cycleRow : coldCard');
+    expect(STEPS_SRC).toContain('measurementsDeferred = cycleWeekTop');
+    expect(STEPS_SRC).toContain('mc-rest-row--measurements-deferred');
+    expect(STEPS_SRC).toContain('Замеры отложены. Задержка воды искажает обхваты, вернутся после периода');
+    expect(STEPS_SRC).toContain('mc-rest-cycle-week-card');
+    expect(CSS).toContain('.mc-rest-step--cycle-week');
+    expect(CSS).toMatch(/\.mc-rest-step--cycle-week[\s\S]*padding-bottom:\s*70px/);
+    expect(CSS).toContain('.mc-rest-card-title--muted');
+    expect(CSS).toContain('rgba(0, 0, 0, 0.62)');
+    expect(CSS).toContain('rgba(0, 0, 0, 0.5)');
   });
 });

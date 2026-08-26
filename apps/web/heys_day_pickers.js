@@ -408,7 +408,16 @@
           )
         ),
         React.createElement('div', { className: 'date-picker-days' },
-          cells.map((dt, i) => {
+          (() => {
+            const realCells = cells.filter(Boolean);
+            const forecastDates = (() => {
+              const CycleUI = HEYS.CycleUI;
+              if (!CycleUI?.findLastCycleMarkDate || !CycleUI.computeCycleForecastDates) return [];
+              const lsGetFn = HEYS.lsGet || HEYS.utils?.lsGet;
+              const lastMark = CycleUI.findLastCycleMarkDate(calendarToday, lsGetFn);
+              return CycleUI.computeCycleForecastDates(lastMark, calendarToday);
+            })();
+            return cells.map((dt, i) => {
             if (dt == null) {
               return React.createElement('div', { key: 'e' + i, className: 'date-picker-day empty', 'aria-hidden': 'true' });
             }
@@ -416,30 +425,23 @@
             const dayData = daysDataMap.get(dateStr);
             const isSel = same(dt, sel);
             const isToday = same(dt, today);
-            // Граница «будущего» — КАЛЕНДАРНОЕ сегодня, как у правой стрелки.
-            // По эффективному (todayISO, до 03:00 = вчера) ночью гасла клетка
-            // уже наступившего дня: стрелка вперёд на него вела, а календарь
-            // его же не отдавал (контракт «ночь до 03:00»: «правая стрелка
-            // живая и ведёт на 21 августа»).
             const isFuture = dateStr > calendarToday;
-            const hasCycle = dayData?.cycleDay != null;
+            const hasCycle = dayData?.cycleDay != null && dayData.cycleDay >= 1 && dayData.cycleDay <= 7;
             const hasRefeed = dayData?.isRefeedDay === true;
-            const hasRealData = dayData && dayData.kcal > 0; // Есть реальные данные (еда)
-            // Вариант А (канвас 2026-08-11): точка = «есть записи»; заливка ratio
-            // и emoji статуса/цикл/refeed из сетки убраны. Цикл/загрузка —
-            // полосы по краю клетки (CSS ::before/::after на has-cycle/has-refeed).
+            const hasRealData = dayData && dayData.kcal > 0;
+            const periodMeta = HEYS.CycleUI?.buildCycleRibbonMeta?.(daysDataMap, dateStr, realCells) || {};
+            const forecastMeta = HEYS.CycleUI?.buildCycleForecastMeta?.(dateStr, forecastDates) || {};
+            const ribbonClass = periodMeta.ribbon || forecastMeta.ribbon || '';
 
-            // Контракт date-remainders, строка «доступность»: клетка озвучивает дату и
-            // наличие записи словом. Прежде это был немой div — диктор читал только
-            // число, а факт записи нёс лишь цвет точки (она декоративна, aria-hidden).
             const pickDay = () => {
               const now = Date.now();
               if (now - lastDayPickRef.current < 350) return;
               lastDayPickRef.current = now;
               onSelect(dateStr); setIsOpen(false); setTooltip(null);
             };
-            const daySpeech = dt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
-              + (hasRealData ? ', есть записи' : '');
+            const daySpeech = dt.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })
+              + (hasRealData ? ', есть записи' : '')
+              + (periodMeta.ariaSuffix || forecastMeta.ariaSuffix || '');
 
             return React.createElement('div', {
               key: dt.toISOString(),
@@ -450,7 +452,8 @@
                 isFuture ? 'future disabled' : '',
                 hasRealData ? 'has-data' : '',
                 hasCycle ? 'has-cycle' : '',
-                hasRefeed ? 'has-refeed' : ''
+                hasRefeed ? 'has-refeed' : '',
+                ribbonClass
               ].join(' ').trim(),
               role: 'button',
               tabIndex: isFuture ? -1 : 0,
@@ -467,7 +470,8 @@
               React.createElement('span', { className: 'day-number' }, dt.getDate()),
               hasRealData && React.createElement('span', { className: 'day-data-dot', 'aria-hidden': 'true' })
             );
-          })
+          });
+          })()
         ),
         // Streak индикатор
         streakInfo.count > 1 && React.createElement('div', {

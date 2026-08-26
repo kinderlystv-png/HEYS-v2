@@ -1330,6 +1330,42 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                 React.createElement(ProfileV4Subtier, { id: 'norms', title: 'Нормы' },
                     React.createElement(ProfileV4Card, null,
+                        (() => {
+                            const hf = HEYS.healthFeatures;
+                            const cycleAvailable = hf && typeof hf.isCycleFeatureAvailable === 'function'
+                              ? hf.isCycleFeatureAvailable(profile)
+                              : false;
+                            if (!cycleAvailable || profile.gender !== 'Женский') return null;
+                            const cycleOn = profile.cycleTrackingEnabled === true;
+                            const requestDisableCycle = () => {
+                                if (!cycleOn) {
+                                    updateProfileField('cycleTrackingEnabled', true);
+                                    return;
+                                }
+                                const ok = window.confirm(
+                                    'Выключить особый период? С сегодняшнего дня вопрос в чек-ине исчезнет, прошлые отметки останутся.'
+                                );
+                                if (ok) updateProfileField('cycleTrackingEnabled', false);
+                            };
+                            return React.createElement('div', { className: 'profile-v4-cycle-toggle' },
+                                React.createElement('div', { className: 'profile-v4-cycle-toggle__copy' },
+                                    React.createElement('span', { className: 'profile-v4-cycle-toggle__title' }, 'Особый период'),
+                                    React.createElement('span', { className: 'profile-v4-cycle-toggle__hint' },
+                                        'Нормы дня подстроятся под особые дни'
+                                    )
+                                ),
+                                React.createElement('button', {
+                                    type: 'button',
+                                    className: 'profile-v4-toggle' + (cycleOn ? ' is-on' : ''),
+                                    role: 'switch',
+                                    'aria-checked': cycleOn,
+                                    'aria-label': 'Особый период',
+                                    onClick: requestDisableCycle
+                                },
+                                    React.createElement('span', { className: 'profile-v4-toggle__thumb', 'aria-hidden': 'true' })
+                                )
+                            );
+                        })(),
                         // Инсулиновая волна
                         (() => {
                             const INSULIN_PRESETS = [

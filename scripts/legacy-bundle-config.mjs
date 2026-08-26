@@ -259,6 +259,7 @@ export const LEGACY_BUNDLES = {
         'heys_insulin_wave_v1.js',
         'heys_iw_version_info.js',
         'heys_cycle_v1.js',
+        'heys_cycle_ui_v1.js',
         'heys_refeed_v1.js',
         'heys_day_realdata_actions_v1.js',
         'heys_yesterday_verify_v1.js',

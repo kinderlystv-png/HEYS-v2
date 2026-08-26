@@ -6,7 +6,13 @@
     function useCycleState(params) {
         const { React, day, date, setDay, lsGet, lsSet, prof } = params || {};
 
-        const showCycleCard = prof?.cycleTrackingEnabled && prof?.sex === 'female';
+        const showCycleCard = (() => {
+            const hf = HEYS.healthFeatures;
+            if (hf && typeof hf.isCycleTrackingEnabled === 'function') {
+                return hf.isCycleTrackingEnabled(prof);
+            }
+            return prof?.cycleTrackingEnabled === true && prof?.gender === 'Женский';
+        })();
         const cyclePhase = HEYS.Cycle?.getCyclePhase?.(day?.cycleDay);
 
         const [cycleEditMode, setCycleEditMode] = React.useState(false);

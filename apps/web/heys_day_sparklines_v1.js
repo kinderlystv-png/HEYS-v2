@@ -2279,9 +2279,10 @@
         };
 
         // Розовая обводка для дней с задержкой воды
-        if (p.hasWaterRetention) {
-          dotStyle.stroke = '#ec4899';
-          dotStyle.strokeWidth = isBlueFilledDot ? 2.5 : 2;
+        if (p.hasWaterRetention && !p.isFuture) {
+          dotStyle.stroke = 'rgba(0, 0, 0, 0.35)';
+          dotStyle.strokeWidth = 1.6;
+          dotStyle.fill = 'transparent';
         }
 
         // Пунктирная обводка для прогнозных дней
@@ -2301,16 +2302,19 @@
           tooltipText += ' (' + (localTrend > 0 ? '+' : '') + localTrend.toFixed(1) + ')';
         }
         if (p.hasWaterRetention) {
-          tooltipText += ' 🌸 День ' + p.cycleDay + ' — возможна задержка воды';
+          tooltipText = `День ${p.cycleDay}, ${p.weight} кг, в тренд не входит`;
         }
 
         return React.createElement('circle', {
           key: 'wdot-' + i,
           cx: p.x,
           cy: p.y,
-          r: p.isFuture ? 3.5 : (p.isToday ? 5 : 4),
+          r: p.isFuture ? 3.5 : (p.isToday ? 5 : (p.hasWaterRetention ? 3 : 4)),
           className: dotClass,
           style: dotStyle,
+          tabIndex: p.hasWaterRetention ? 0 : undefined,
+          role: p.hasWaterRetention ? 'button' : undefined,
+          'aria-label': p.hasWaterRetention ? tooltipText : undefined,
           onClick: (e) => {
             e.stopPropagation();
             safeHaptic('light');

@@ -8454,6 +8454,36 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   pointer-events: none;
 }
 
+.date-picker-sheet .date-picker-day.cycle-ribbon--period::before,
+.date-picker-sheet .date-picker-day.cycle-ribbon--forecast::before {
+  top: 0;
+  left: -5px;
+  right: -5px;
+  bottom: auto;
+  width: auto;
+  height: 4px;
+  border-radius: 0;
+  background: var(--v4-sand-act-fill, #c67139);
+}
+
+.date-picker-sheet .date-picker-day.cycle-ribbon--forecast::before {
+  background: var(--v4-sand-surface-soft, #fffaf1);
+  opacity: 1;
+  background: color-mix(in srgb, var(--v4-sand-act-fill, #c67139) 28%, var(--v4-sand-surface, #f7efe2));
+}
+
+.date-picker-sheet .date-picker-day.cycle-ribbon--period.cycle-ribbon--start::before {
+  left: 0;
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
+
+.date-picker-sheet .date-picker-day.cycle-ribbon--period.cycle-ribbon--end::before {
+  right: 0;
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+}
+
 .date-picker-sheet .date-picker-day.has-refeed::after {
   content: '';
   position: absolute;

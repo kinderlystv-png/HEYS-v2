@@ -1619,20 +1619,321 @@
 
 .mc-rest-row.mc-rest-row--cycle {
   min-height: 66px;
-}
-
-.mc-rest-cycle-card {
-  margin-top: 8px;
-  padding: 13px 14px;
+  padding: 11px 12px 11px 14px;
   border-radius: 16px;
   background: var(--v4-sand-surface, #f7efe2);
 }
 
+.mc-rest-step--cycle-week {
+  padding-bottom: 70px;
+}
+
+.mc-rest-cycle-mark-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-sand-surface-soft, #fffaf1);
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-sand-act-text, #8a4a20);
+  cursor: pointer;
+}
+
+.mc-rest-cycle-card,
+.mc-rest-cycle-card--expanded {
+  margin-top: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--v4-sand-surface, #f7efe2);
+}
+
+.mc-rest-cycle-week-card {
+  margin-top: 0;
+  padding: 16px 17px;
+  border-radius: 20px;
+  background: var(--v4-sand-surface-soft, #fffaf1);
+}
+
+.mc-rest-cycle-week-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mc-rest-cycle-week-title {
+  font: 700 16px/1.25 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.mc-rest-cycle-week-badge {
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-sand-act-text, #8a4a20);
+  white-space: nowrap;
+}
+
+.mc-rest-cycle-week-hint {
+  margin-top: 5px;
+  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.mc-rest-cycle-expanded-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mc-rest-cycle-none-btn {
+  border: none;
+  background: transparent;
+  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+.mc-rest-cycle-tier {
+  margin: 16px 0 8px;
+  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--v4-sand-act-text, #8a4a20);
+}
+
 .mc-rest-cycle-days {
   display: flex;
-  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.mc-rest-cycle-day-btn {
+  flex: 1;
+  min-height: 44px;
+  border: none;
+  border-radius: 14px;
+  background: var(--v4-sand-surface, #f7efe2);
+  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+.mc-rest-cycle-day-btn.is-on {
+  background: var(--v4-sand-act-fill, #c67139);
+  color: var(--v4-act-ink, #2b1608);
+}
+
+.mc-rest-cycle-week-actions {
+  display: flex;
   gap: 8px;
+  margin-top: 11px;
+}
+
+.mc-rest-cycle-btn {
+  flex: 1;
+  min-height: 44px;
+  border: none;
+  border-radius: 999px;
+  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.mc-rest-cycle-btn--primary {
+  background: var(--v4-sand-act-fill, #c67139);
+  color: var(--v4-act-ink, #2b1608);
+}
+
+.mc-rest-cycle-btn--secondary {
+  background: var(--v4-sand-bg, #fffaf1);
+  box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.16);
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.mc-rest-cycle-auto-hint {
   margin-top: 10px;
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.mc-rest-row--cold {
+  min-height: 66px;
+}
+
+.mc-rest-row-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.mc-rest-row--measurements-deferred {
+  cursor: default;
+}
+
+.mc-rest-card-title--muted {
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.mc-rest-card-hint--muted {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.mc-rest-cycle-ended-note {
+  margin-top: 5px;
+  font: 500 11px/1.45 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.profile-v4-cycle-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.profile-v4-cycle-toggle__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.profile-v4-cycle-toggle__title {
+  font: 600 13px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.profile-v4-cycle-toggle__hint {
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.profile-v4-toggle {
+  width: 44px;
+  height: 26px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.14);
+  position: relative;
+  flex: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.profile-v4-toggle.is-on {
+  background: var(--v4-sand-act-fill, #c67139);
+}
+
+.profile-v4-toggle__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--v4-sand-bg, #fffaf1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: left 160ms ease;
+}
+
+.profile-v4-toggle.is-on .profile-v4-toggle__thumb {
+  left: 21px;
+}
+
+.cycle-card-v4 {
+  border-radius: 18px;
+  padding: 16px;
+  background: var(--v4-sand-surface, #f7efe2);
+}
+
+.cycle-card-v4--filled {
+  background: var(--v4-sand-surface-soft, #fffaf1);
+}
+
+.cycle-card-v4__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+
+.cycle-card-v4__title,
+.cycle-card-v4__phase {
+  font: 600 12.5px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cycle-card-v4__phase {
+  font-size: 15px;
+  color: var(--v4-sand-act-text, #8a4a20);
+}
+
+.cycle-card-v4__action {
+  border: none;
+  background: transparent;
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-sand-act-text, #8a4a20);
+  cursor: pointer;
+}
+
+.cycle-card-v4__day {
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.cycle-card-v4__days {
+  display: flex;
+  gap: 5px;
+  margin-top: 14px;
+}
+
+.cycle-card-v4__day-btn {
+  flex: 1;
+  min-height: 44px;
+  border: none;
+  border-radius: 14px;
+  background: var(--v4-sand-bg, #fffaf1);
+  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+.cycle-card-v4__day-btn--active {
+  background: var(--v4-sand-act-fill, #c67139);
+  color: var(--v4-act-ink, #2b1608);
+}
+
+.cycle-card-v4__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.cycle-card-v4__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--v4-sand-surface, #f7efe2);
+  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-sand-act-text, #8a4a20);
+}
+
+.reports-v4-weight-cycle-footnote {
+  margin-top: 8px;
+  font: 500 10.5px/1.4 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.42);
 }
 
 .mc-rest-cold-time {

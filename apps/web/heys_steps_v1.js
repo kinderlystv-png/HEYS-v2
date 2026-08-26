@@ -97,6 +97,7 @@
     className = 'mc-quality-slider',
     background,
     ariaLabel,
+    ariaLabelTrack,
     style,
     variant,
     fill,
@@ -238,7 +239,7 @@
       className: `${className} mc-drag-slider${isV4 ? ' mc-v4-scale' : ''}${fill === 'act' ? ' mc-v4-scale--act' : ''}`,
       role: 'slider',
       tabIndex: 0,
-      'aria-label': ariaLabel,
+      'aria-label': ariaLabelTrack || ariaLabel,
       'aria-valuemin': safeMin,
       'aria-valuemax': safeMax,
       'aria-valuenow': numericValue,
@@ -3223,7 +3224,7 @@
           stepForValue: stepsGoalSliderStepForValue,
           onValue: (nextValue) => onChange({ ...data, stepsGoal: nextValue }),
           ariaLabel: 'Цель по шагам',
-          'data-a11y-track': stepsTrackAriaLabel,
+          ariaLabelTrack: stepsTrackAriaLabel,
           style: { marginTop: 0 }
         }),
         React.createElement('div', { className: 'mc-steps-slider-labels' },
@@ -6438,17 +6439,61 @@
     return profile?.gender === 'Женский' && profile?.cycleTrackingEnabled === true;
   }
 
-  function renderMorningRestCycleRow(data, onChange, profile) {
+  function renderMorningRestCycleRow(data, onChange, profile, context) {
     if (!isMorningRestCycleRowVisible(profile)) return null;
 
+    const CycleUI = HEYS.CycleUI || {};
+    const dateKey = data._dateKey || context?.dateKey || getTodayKey();
     const cycleOpen = data.cycleOpen === true;
-    const cycleDay = Number(data.cycleDay);
-    const hasCycleDay = Number.isFinite(cycleDay) && cycleDay >= 1 && cycleDay <= 7;
     const cycleDays = [1, 2, 3, 4, 5, 6, 7];
+    const storedDay = Number(data.cycleDay);
+    const hasStoredDay = Number.isFinite(storedDay) && storedDay >= 1 && storedDay <= 7;
+    const suggestedDay = typeof CycleUI.getSuggestedCycleDay === 'function'
+      ? CycleUI.getSuggestedCycleDay(dateKey, lsGet)
+      : null;
+    const weekCardMode = typeof CycleUI.isCycleWeekCardMode === 'function'
+      ? CycleUI.isCycleWeekCardMode(dateKey, hasStoredDay ? storedDay : null, lsGet)
+      : (hasStoredDay || suggestedDay != null);
+    const activeDay = typeof CycleUI.resolveCycleDayForUi === 'function'
+      ? CycleUI.resolveCycleDayForUi(dateKey, hasStoredDay ? storedDay : null, lsGet)
+      : (hasStoredDay ? storedDay : (suggestedDay || 1));
+    const endedOnDay = Number(data.cycleEndedOnDay);
+    const endedLabel = Number.isFinite(endedOnDay) && endedOnDay >= 1 && endedOnDay <= 7
+      ? `закончились на ${endedOnDay}-й`
+      : null;
+
+    const commitCycleSelection = (nextDay, patch) => {
+      onChange({
+        ...data,
+        cycleDay: nextDay,
+        cycleStatus: null,
+        cycleEndedOnDay: null,
+        cycleOpen: false,
+        ...patch,
+      });
+    };
+
+    const runDestructiveCycleAction = (label, mutate, snapshot) => {
+      mutate();
+      if (HEYS.CycleUI?.pushCycleUndo) {
+        HEYS.CycleUI.pushCycleUndo(label, () => {
+          if (HEYS.CycleUI.restoreCycleWeekSnapshot) {
+            HEYS.CycleUI.restoreCycleWeekSnapshot(snapshot, lsGet, lsSet);
+          }
+          onChange({
+            ...data,
+            cycleDay: snapshot?.find((row) => row.date === dateKey)?.cycleDay ?? data.cycleDay,
+            cycleStatus: null,
+            cycleEndedOnDay: null,
+            cycleOpen: false,
+          });
+        });
+        return;
+      }
+    };
 
     const handleCycleDayKeyDown = (event) => {
-      if (!cycleOpen) return;
-      const current = hasCycleDay ? cycleDay : 1;
+      const current = activeDay;
       const idx = cycleDays.indexOf(current);
       if (idx < 0) return;
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
@@ -6457,47 +6502,128 @@
       } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
         event.preventDefault();
         onChange({ ...data, cycleDay: cycleDays[Math.max(0, idx - 1)], cycleOpen: true });
+      } else if (event.key === ' ' || event.key === 'Enter') {
+        event.preventDefault();
+        onChange({ ...data, cycleDay: current, cycleOpen: true });
       }
     };
+
+    const renderDayRow = (selectedDay) => React.createElement('div', {
+      className: 'mc-rest-cycle-days',
+      role: 'radiogroup',
+      'aria-label': 'Какой день',
+      onKeyDown: handleCycleDayKeyDown
+    },
+      cycleDays.map((day) => React.createElement('button', {
+        key: day,
+        type: 'button',
+        role: 'radio',
+        className: 'mc-rest-cycle-day-btn' + (selectedDay === day ? ' is-on' : ''),
+        'aria-checked': selectedDay === day,
+        'aria-label': `День ${day}`,
+        tabIndex: selectedDay === day ? 0 : -1,
+        onClick: () => onChange({ ...data, cycleOpen: true, cycleDay: day, cycleEndedOnDay: null })
+      }, String(day)))
+    );
+
+    if (endedLabel && !cycleOpen && !weekCardMode) {
+      return React.createElement('div', { className: 'mc-rest-row mc-rest-row--cycle mc-rest-row--cycle-ended' },
+        React.createElement('div', null,
+          React.createElement('div', { className: 'mc-rest-card-title' }, 'Особые дни'),
+          React.createElement('div', { className: 'mc-rest-card-hint mc-rest-card-hint--muted' }, endedLabel),
+          React.createElement('div', { className: 'mc-rest-cycle-ended-note' },
+            'Нормы дальше идут по счёту фаз — влияние на организм не кончается вместе с днями.'
+          )
+        )
+      );
+    }
+
+    if (weekCardMode && !cycleOpen) {
+      const badge = typeof CycleUI.formatCycleWeekBadge === 'function'
+        ? CycleUI.formatCycleWeekBadge(activeDay)
+        : `День ${activeDay}`;
+      const hint = typeof CycleUI.formatCycleWeekHint === 'function'
+        ? CycleUI.formatCycleWeekHint(dateKey, activeDay, lsGet)
+        : '';
+      return React.createElement('div', { className: 'mc-rest-cycle-week-card' },
+        React.createElement('div', { className: 'mc-rest-cycle-week-head' },
+          React.createElement('div', { className: 'mc-rest-cycle-week-title' }, 'Особые дни'),
+          React.createElement('div', { className: 'mc-rest-cycle-week-badge' }, badge)
+        ),
+        hint && React.createElement('div', { className: 'mc-rest-cycle-week-hint' }, hint),
+        renderDayRow(activeDay),
+        React.createElement('div', { className: 'mc-rest-cycle-week-actions' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-rest-cycle-btn mc-rest-cycle-btn--secondary',
+            onClick: () => {
+              const snapshot = HEYS.CycleUI?.snapshotCycleWeek?.(dateKey, lsGet) || [];
+              runDestructiveCycleAction('Особые дни закрыты', () => {
+                if (HEYS.CycleUI?.clearCycleWeek) HEYS.CycleUI.clearCycleWeek(dateKey, lsGet, lsSet);
+                onChange({
+                  ...data,
+                  cycleDay: null,
+                  cycleStatus: 'none',
+                  cycleEndedOnDay: activeDay,
+                  cycleOpen: false,
+                });
+              }, snapshot);
+            }
+          }, 'Закончились'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-rest-cycle-btn mc-rest-cycle-btn--primary',
+            onClick: () => commitCycleSelection(activeDay)
+          }, 'Верно')
+        )
+      );
+    }
 
     if (!cycleOpen) {
       return React.createElement('div', { className: 'mc-rest-row mc-rest-row--cycle' },
         React.createElement('div', null,
           React.createElement('div', { className: 'mc-rest-card-title' }, 'Особые дни'),
-          hasCycleDay && React.createElement('div', { className: 'mc-rest-card-hint' }, `День ${cycleDay}`)
+          React.createElement('div', { className: 'mc-rest-card-hint' }, 'Нормы дня подстроятся под них')
         ),
         React.createElement('button', {
           type: 'button',
-          className: 'mc-pill mc-pill--mini mc-pill--choice',
+          className: 'mc-rest-cycle-mark-chip',
           'aria-label': 'Отметить особые дни',
           onClick: () => onChange({
             ...data,
             cycleOpen: true,
-            cycleDay: hasCycleDay ? cycleDay : 1
+            cycleDay: hasStoredDay ? storedDay : (suggestedDay || 1),
+            cycleEndedOnDay: null,
           })
         }, 'Отметить')
       );
     }
 
-    return React.createElement('div', { className: 'mc-rest-cycle-card' },
-      React.createElement('div', { className: 'mc-rest-card-title' }, 'Особые дни'),
-      React.createElement('div', {
-        className: 'mc-rest-cycle-days',
-        role: 'radiogroup',
-        'aria-label': 'Какой день',
-        onKeyDown: handleCycleDayKeyDown
-      },
-        cycleDays.map((day) => React.createElement('button', {
-          key: day,
+    return React.createElement('div', { className: 'mc-rest-cycle-card mc-rest-cycle-card--expanded' },
+      React.createElement('div', { className: 'mc-rest-cycle-expanded-head' },
+        React.createElement('div', { className: 'mc-rest-card-title' }, 'Особые дни'),
+        React.createElement('button', {
           type: 'button',
-          role: 'radio',
-          className: 'mc-pill mc-pill--mini mc-pill--choice' + (cycleDay === day ? ' is-on' : ''),
-          'aria-checked': cycleDay === day,
-          'aria-label': `День ${day}`,
-          tabIndex: cycleDay === day || (!hasCycleDay && day === 1) ? 0 : -1,
-          onClick: () => onChange({ ...data, cycleOpen: true, cycleDay: day })
-        }, String(day)))
-      )
+          className: 'mc-rest-cycle-none-btn',
+          onClick: () => {
+            const snapshot = HEYS.CycleUI?.snapshotCycleWeek?.(dateKey, lsGet) || [];
+            const clearedCount = snapshot.length || 7;
+            runDestructiveCycleAction(`Особые дни сняты · ${clearedCount} ${pluralDays(clearedCount)}`, () => {
+              if (HEYS.CycleUI?.clearCycleWeek) HEYS.CycleUI.clearCycleWeek(dateKey, lsGet, lsSet);
+              onChange({
+                ...data,
+                cycleDay: null,
+                cycleStatus: 'none',
+                cycleEndedOnDay: null,
+                cycleOpen: false,
+              });
+            }, snapshot);
+          }
+        }, 'Не идут')
+      ),
+      React.createElement('div', { className: 'mc-rest-cycle-tier' }, 'Какой день'),
+      renderDayRow(activeDay),
+      React.createElement('div', { className: 'mc-rest-cycle-auto-hint' }, 'Дни 1–7 проставятся сами, дальше счёт идёт вперёд.')
     );
   }
 
@@ -6844,28 +6970,90 @@
       );
     }
 
-    return React.createElement('div', { className: 'mc-rest-step' },
-      React.createElement('div', { className: 'mc-rest-cold' },
-        React.createElement('div', { className: 'mc-rest-cold-head' },
-          React.createElement('div', { className: 'mc-rest-cold-title' }, 'Прохладный душ'),
-          coldStreakLabel && React.createElement('div', { className: 'mc-rest-cold-streak' }, coldStreakLabel)
-        ),
-        React.createElement('div', { className: 'mc-rest-cold-hint' },
-          'Хотя бы тридцать секунд в конце обычного душа — этого достаточно.'
-        ),
-        React.createElement('div', { className: 'mc-rest-cold-actions' },
-          React.createElement('button', {
-            type: 'button',
-            className: 'mc-pill mc-pill--choice',
-            onClick: openColdLayer
-          }, 'Было'),
-          React.createElement('button', {
-            type: 'button',
-            className: 'mc-pill mc-pill--choice' + (coldNoneSelected ? ' is-on' : ''),
-            onClick: setColdNone
-          }, 'Не сегодня')
-        )
+    const cycleDayValue = Number(data.cycleDay);
+    const cycleOnWeek = Number.isFinite(cycleDayValue) && cycleDayValue >= 1 && cycleDayValue <= 7;
+    const cycleSuggested = HEYS.CycleUI?.getSuggestedCycleDay?.(dateKey, lsGet);
+    const cycleWeekTop = !!(cycleOnWeek || cycleSuggested);
+    const cycleRow = renderMorningRestCycleRow(data, onChange, profile, context);
+
+    const coldRow = React.createElement('div', { className: 'mc-rest-row mc-rest-row--cold' },
+      React.createElement('div', null,
+        React.createElement('div', { className: 'mc-rest-card-title' }, 'Прохладный душ'),
+        coldStreakLabel && React.createElement('div', { className: 'mc-rest-card-hint' }, coldStreakLabel)
       ),
+      React.createElement('div', { className: 'mc-rest-row-actions' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-pill mc-pill--choice',
+          onClick: openColdLayer
+        }, 'Было'),
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-pill mc-pill--choice' + (coldNoneSelected ? ' is-on' : ''),
+          onClick: setColdNone
+        }, 'Не сегодня')
+      )
+    );
+
+    const coldCard = React.createElement('div', { className: 'mc-rest-cold' },
+      React.createElement('div', { className: 'mc-rest-cold-head' },
+        React.createElement('div', { className: 'mc-rest-cold-title' }, 'Прохладный душ'),
+        coldStreakLabel && React.createElement('div', { className: 'mc-rest-cold-streak' }, coldStreakLabel)
+      ),
+      React.createElement('div', { className: 'mc-rest-cold-hint' },
+        'Хотя бы тридцать секунд в конце обычного душа — этого достаточно.'
+      ),
+      React.createElement('div', { className: 'mc-rest-cold-actions' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-pill mc-pill--choice',
+          onClick: openColdLayer
+        }, 'Было'),
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-pill mc-pill--choice' + (coldNoneSelected ? ' is-on' : ''),
+          onClick: setColdNone
+        }, 'Не сегодня')
+      )
+    );
+
+    const measurementsDeferred = cycleWeekTop;
+    const measurementsNode = showMeasurements && (measurementsDeferred
+      ? React.createElement('div', {
+        className: 'mc-rest-row mc-rest-row--measurements-deferred',
+        role: 'group',
+        'aria-disabled': 'true',
+        'aria-label': 'Замеры отложены. Задержка воды искажает обхваты, вернутся после периода'
+      },
+        React.createElement('div', null,
+          React.createElement('div', { className: 'mc-rest-card-title mc-rest-card-title--muted' }, 'Замеры отложены'),
+          React.createElement('div', { className: 'mc-rest-card-hint mc-rest-card-hint--muted' },
+            'Задержка воды искажает обхваты — вернутся после периода'
+          )
+        )
+      )
+      : React.createElement('button', {
+        type: 'button',
+        className: 'mc-rest-row' + (measurementsOverdue ? ' mc-rest-row--overdue' : ''),
+        onClick: openMeasurementsLayer
+      },
+        React.createElement('div', null,
+          React.createElement('div', { className: 'mc-rest-card-title' }, 'Замеры'),
+          React.createElement('div', { className: 'mc-rest-card-hint' }, measurementRowHint)
+        ),
+        measurementsOverdueBadge && React.createElement('span', {
+          className: 'mc-rest-overdue-badge'
+        }, measurementsOverdueBadge),
+        React.createElement('span', {
+          className: 'mc-rest-chevron' + (measurementsOverdue ? ' mc-rest-chevron--accent' : ''),
+          'aria-hidden': 'true'
+        }, '›')
+      ));
+
+    return React.createElement('div', {
+      className: 'mc-rest-step' + (cycleWeekTop ? ' mc-rest-step--cycle-week' : '')
+    },
+      cycleWeekTop ? cycleRow : coldCard,
       showSupplementsCard && React.createElement('div', { className: 'mc-rest-card mc-rest-card--supplements' },
         React.createElement('button', {
           type: 'button',
@@ -6922,24 +7110,9 @@
           }, status === 'done' ? 'Сделал' : status === 'planned' ? 'Сделаю' : 'Не сегодня'))
         )
       ),
-      renderMorningRestCycleRow(data, onChange, profile),
-      showMeasurements && React.createElement('button', {
-        type: 'button',
-        className: 'mc-rest-row' + (measurementsOverdue ? ' mc-rest-row--overdue' : ''),
-        onClick: openMeasurementsLayer
-      },
-        React.createElement('div', null,
-          React.createElement('div', { className: 'mc-rest-card-title' }, 'Замеры'),
-          React.createElement('div', { className: 'mc-rest-card-hint' }, measurementRowHint)
-        ),
-        measurementsOverdueBadge && React.createElement('span', {
-          className: 'mc-rest-overdue-badge'
-        }, measurementsOverdueBadge),
-        React.createElement('span', {
-          className: 'mc-rest-chevron' + (measurementsOverdue ? ' mc-rest-chevron--accent' : ''),
-          'aria-hidden': 'true'
-        }, '›')
-      ),
+      !cycleWeekTop && cycleRow,
+      cycleWeekTop ? coldRow : null,
+      measurementsNode,
       sparseNote && React.createElement('div', { className: 'mc-rest-empty-note' }, sparseNote),
       showConsentBanner && React.createElement('div', { className: 'mc-rest-consent-card' },
         React.createElement('div', { className: 'mc-rest-consent-card-title' }, consentBannerCopy.title),
@@ -7046,6 +7219,7 @@
         coldOpen: false,
         cycleDay,
         cycleOpen: false,
+        cycleEndedOnDay: Number.isFinite(Number(dayData.cycleEndedOnDay)) ? Number(dayData.cycleEndedOnDay) : null,
         supplementsOpen: false,
         supplementsLayer: null,
         supplementsAddDraft: null,
@@ -7095,10 +7269,20 @@
         dayData.cycleDay = nextCycleDay;
         dayData.cycleStatus = null;
         dayData.cycleAnsweredAt = Date.now();
-      } else if (data.cycleOpen === true) {
+        dayData.cycleUpdatedAt = Math.max(Date.now(), (Number(dayData.cycleUpdatedAt) || 0) + 1);
+        if (HEYS.Cycle?.setCycleDaysAuto) {
+          HEYS.Cycle.setCycleDaysAuto(dateKey, nextCycleDay, lsGet, lsSet);
+        }
+      } else if (data.cycleStatus === 'none' || data.cycleOpen === true) {
         dayData.cycleDay = null;
-        dayData.cycleStatus = 'none';
+        dayData.cycleStatus = data.cycleStatus === 'none' ? 'none' : (dayData.cycleStatus || null);
         dayData.cycleAnsweredAt = Date.now();
+        dayData.cycleUpdatedAt = Math.max(Date.now(), (Number(dayData.cycleUpdatedAt) || 0) + 1);
+      }
+      if (Number.isFinite(Number(data.cycleEndedOnDay))) {
+        dayData.cycleEndedOnDay = Number(data.cycleEndedOnDay);
+      } else if (Number.isFinite(nextCycleDay) && nextCycleDay >= 1) {
+        delete dayData.cycleEndedOnDay;
       }
       const waist = parseFloat(String(data.waist || '').replace(',', '.'));
       if (Number.isFinite(waist) && waist > 0) {
