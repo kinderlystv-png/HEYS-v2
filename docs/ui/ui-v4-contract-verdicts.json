@@ -1883,8 +1883,8 @@
           "h": "2ded17b8baeb"
         },
         "XP за воду": {
-          "v": "≠",
-          "f": "gamification:124 water_added xp:2 maxPerDay:5",
+          "v": "=",
+          "f": "heys_gamification_v1.js:124 maxPerDay:1; isWaterNormMetForXP — XP только при total>=targetMl, не при ml<0; gamification-water-xp-norm-gate.test.js",
           "h": "329ea3fbca45"
         },
         "прошлый день и куратор": {

@@ -121,7 +121,7 @@
     steps_updated: { xp: 3, maxPerDay: 1, label: 'Шаги обновлены' },
     supplements_taken: { xp: 5, maxPerDay: 1, label: 'Витамины приняты' },
     household_added: { xp: 5, maxPerDay: 2, label: 'Бытовая активность' },
-    water_added: { xp: 2, maxPerDay: 5, label: 'Вода добавлена' },
+    water_added: { xp: 2, maxPerDay: 1, label: 'Норма воды' },
     training_added: { xp: 15, maxPerDay: 2, label: 'Тренировка' },
     sleep_logged: { xp: 5, maxPerDay: 1, label: 'Сон заполнен' },
     weight_logged: { xp: 5, maxPerDay: 1, label: 'Вес записан' },
@@ -2484,7 +2484,7 @@
           break;
         case 'water_entries':
           if (type === 'water_added') {
-            // Инкрементируем счетчик (dailyXP имеет лимит maxPerDay=5, реальных добавлений может быть больше)
+            // Инкрементируем счетчик глотков (XP за воду — отдельный гейт по норме)
             newProgress = (mission.progress || 0) + 1;
             matches = true;
           }
@@ -2863,6 +2863,31 @@
     const day = now.getDay();
     const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Понедельник
     return new Date(now.setDate(diff)).toISOString().slice(0, 10);
+  }
+
+  // Контракт water-add «XP за воду»: один раз за день, когда норма набрана;
+  // не за каждый глоток и не за убавление.
+  function isWaterNormMetForXP(extraData) {
+    const ml = Number(extraData?.ml);
+    if (Number.isFinite(ml) && ml < 0) return false;
+
+    const target = Number(extraData?.targetMl);
+    const total = Number(extraData?.total);
+    if (Number.isFinite(target) && target > 0 && Number.isFinite(total)) {
+      return total >= target;
+    }
+
+    const pct = HEYS.Day?.getWaterPercent?.();
+    if (typeof pct === 'number' && pct >= 100) return true;
+
+    const goal = getWaterGoalForDay();
+    if (goal > 0) {
+      const day = HEYS.DayData?.getCurrentDay?.() || {};
+      const drunk = Number(day.waterMl ?? day.water);
+      if (Number.isFinite(drunk)) return drunk >= goal;
+    }
+
+    return false;
   }
 
   // Получить динамическую норму воды из профиля
@@ -5528,6 +5553,11 @@
       return;
     }
 
+    if (reason === 'water_added' && !isWaterNormMetForXP(extraData)) {
+      saveData();
+      return;
+    }
+
     // Проверяем лимит за день (для начисления XP)
     if (action) {
       const dailyCount = data.dailyXP[today][reason] || 0;
@@ -5725,7 +5755,12 @@
   });
 
   window.addEventListener('heysWaterAdded', (e) => {
-    game.addXP(0, 'water_added', e.detail?.sourceEl, { date: e.detail?.date });
+    game.addXP(0, 'water_added', e.detail?.sourceEl, {
+      date: e.detail?.date,
+      ml: e.detail?.ml,
+      total: e.detail?.total,
+      targetMl: e.detail?.targetMl,
+    });
   });
 
   window.addEventListener('heysTrainingAdded', (e) => {
