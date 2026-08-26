@@ -13905,7 +13905,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__wave-seg {
   height: 100%;
   border-radius: 0;
-  background: transparent;
+  background: none;
 }
 
 .widget-bd-sheet__wave-seg.is-active {
