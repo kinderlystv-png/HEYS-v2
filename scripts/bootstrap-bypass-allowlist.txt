@@ -210,8 +210,8 @@ apps/web/heys_ui_onboarding_v1.js:1666
 apps/web/heys_ui_onboarding_v1.js:1681
 apps/web/heys_ui_onboarding_v1.js:171
 apps/web/heys_ui_onboarding_v1.js:778
-apps/web/heys_user_tab_impl_v1.js:475
-apps/web/heys_user_tab_impl_v1.js:760
+apps/web/heys_user_tab_impl_v1.js:476
+apps/web/heys_user_tab_impl_v1.js:761
 apps/web/heys_user_v12.js:149
 apps/web/heys_user_v12.js:160
 apps/web/heys_weekly_reports_v2.js:36

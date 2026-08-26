@@ -1,0 +1,45 @@
+{
+  "zone": "checkin-morning",
+  "rows": [
+    {
+      "key": "минимальная область нажатия",
+      "v": "=",
+      "f": "500-pwa-and-offline.css:2681 mc-close-btn 44×44 margin −8"
+    },
+    {
+      "key": "слова на экране",
+      "v": "=",
+      "f": "heys_steps_v1.js:2341 SLEEP_QUALITY_LABELS без «Плохо»/«Отлично»"
+    },
+    {
+      "key": "повторный тап и поворот",
+      "v": "=",
+      "f": "heys_step_modal_v1.js:1025 nextTapLockRef 350 ms на «Дальше»"
+    },
+    {
+      "key": "запись не прошла",
+      "v": "=",
+      "f": "heys_step_modal_v1.js dailySaveFail + auto-retry + «Не сохранилось. Попробуем ещё раз»"
+    },
+    {
+      "key": "вибрация, звук, долгое нажатие",
+      "v": "=",
+      "f": "heys_step_modal_v1.js:1038 HEYS.feedback.emit('checkin.step') после save"
+    },
+    {
+      "key": "возврат на экран и прокрутка",
+      "v": "=",
+      "f": "heys_step_modal_v1.js visibilitychange закрывает daily при смене dateKey"
+    },
+    {
+      "key": "нажатие и крупный шрифт",
+      "v": "=",
+      "f": "500-pwa mc-modal--large-text скрывает prev/next у колёс веса"
+    },
+    {
+      "key": "уведомления и точки входа",
+      "v": "≠",
+      "f": "sw.js: утреннего push нет — отдельный scope PWA"
+    }
+  ]
+}

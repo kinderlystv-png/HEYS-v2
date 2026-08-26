@@ -1,0 +1,45 @@
+{
+  "zone": "login",
+  "rows": [
+    {
+      "key": "первое появление",
+      "v": "=",
+      "f": "heys_login_screen_v1.js renderStart без greeting"
+    },
+    {
+      "key": "слова на экране",
+      "v": "=",
+      "f": "heys_login_screen_v1.js:495 без «аккаунт», «Код не подошёл»"
+    },
+    {
+      "key": "длинный текст ошибки",
+      "v": "=",
+      "f": "733-ui-v4-login-theme.css:511 2-line clamp max-height 55px"
+    },
+    {
+      "key": "вибрация, звук, долгое нажатие",
+      "v": "≠",
+      "f": "index.html:2281 убрана 35ms на ошибку; успех 10ms — ещё нет"
+    },
+    {
+      "key": "подпись поля",
+      "v": "=",
+      "f": "login-v4-input-contract.test.js getClientLoginCopy pinLabel контекстный"
+    },
+    {
+      "key": "вид шторки подписи",
+      "v": "=",
+      "f": "733-ui-v4-login-theme.css consent sheet geometry"
+    },
+    {
+      "key": "нажатие и крупный шрифт",
+      "v": "≠",
+      "f": "733-ui-v4:608 keypad scale vs opacity 70%"
+    },
+    {
+      "key": "выход, удаление данных, производительность",
+      "v": "≠",
+      "f": "auth_v1:843 session keys only"
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "zone": "water-add",
+  "rows": [
+    {
+      "key": "слова на экране",
+      "v": "=",
+      "f": "heys_day_water_v1.js:457 без «стакан»"
+    },
+    {
+      "key": "пусто и офлайн",
+      "v": "=",
+      "f": "heys_day_water_v1.js:119 formatFactDisplay «0» вместо прочерка"
+    },
+    {
+      "key": "reduced-motion",
+      "v": "≠",
+      "f": "400-water-and-hydration.css animate-always без reduce-ветки"
+    },
+    {
+      "key": "момент",
+      "v": "≠",
+      "f": "240ms есть, reduced-motion/sound веток нет"
+    },
+    {
+      "key": "держатель места",
+      "v": "≠",
+      "f": "placeholder для кольца/чипов не реализован"
+    },
+    {
+      "key": "уведомления и точки входа",
+      "v": "≠",
+      "f": "sw.js: водного push нет"
+    },
+    {
+      "key": "вибрация, звук, долгое нажатие",
+      "v": "≠",
+      "f": "long-press есть; вибрация water.sip — отдельная строка gamification"
+    },
+    {
+      "key": "порядок слоёв и два устройства",
+      "v": "≠",
+      "f": "heys_day_day_handlers.js:299 appendChild body"
+    },
+    {
+      "key": "нажатие и крупный шрифт",
+      "v": "≠",
+      "f": "400-water fixed px у подписи и чипов"
+    },
+    {
+      "key": "откуда данные",
+      "v": "≠",
+      "f": "чипы ml константами, не из breakdown"
+    },
+    {
+      "key": "что пишется",
+      "v": "≠",
+      "f": "waterMl scalar, не waterEntries[]"
+    },
+    {
+      "key": "XP за воду",
+      "v": "≠",
+      "f": "gamification:124 water_added xp:2 maxPerDay:5"
+    },
+    {
+      "key": "прошлый день и куратор",
+      "v": "≠",
+      "f": "dailyXP[getToday()] без ветки read-only прошлого дня"
+    },
+    {
+      "key": "как пишется убавление",
+      "v": "=",
+      "f": "heys_sync_merge_v1.js:145 appendWater additive"
+    },
+    {
+      "key": "режим куратора и только чтение",
+      "v": "=",
+      "f": "heys_day_tab_render_v1.js:15 isReadOnly disabled chips"
+    }
+  ]
+}
