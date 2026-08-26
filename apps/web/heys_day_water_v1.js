@@ -116,8 +116,7 @@
     return ((Math.max(0, Number(ml) || 0)) / 1000).toFixed(1).replace('.', ',');
   }
 
-  function formatFactDisplay(ml, emptyDay) {
-    if (emptyDay) return '—';
+  function formatFactDisplay(ml, _emptyDay) {
     const value = Math.max(0, Number(ml) || 0);
     return value > 0 ? formatLiters(value) : '0';
   }
@@ -455,7 +454,7 @@
             ),
             emptyDay
               ? React.createElement('span', { className: 'water-review__empty-note' },
-                'внесите выпитое или налейте стакан')
+                'внесите выпитое или добавьте 200 мл')
               : (lastDrinkLine
                 ? React.createElement('span', { className: 'water-review__last' }, lastDrinkLine)
                 : null)

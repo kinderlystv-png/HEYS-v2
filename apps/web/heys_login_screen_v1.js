@@ -492,14 +492,14 @@
             // контракт login «слово»: в пользовательских текстах только «код», без «PIN»
             setErr(serverMessage || 'Вход по коду временно отключён. Куратор откроет доступ после обновления входа.');
           } else if (code === 'access_code_login_required') {
-            setErr(serverMessage || 'Используйте код доступа или вход с зарегистрированного устройства.');
+            setErr(serverMessage || 'Используйте свой код или вход с зарегистрированного устройства.');
           } else if (code === 'access_code_required') {
             setClientEntryMode('new_device');
-            setErr(serverMessage || 'Введите свой код доступа от этого аккаунта.');
+            setErr(serverMessage || 'Введите свой код от куратора.');
             resetPinToFirstSlot();
           } else if (code === 'invalid_access_code') {
             setErr(
-              serverMessage || 'Код доступа не подошёл. Проверьте цифры или попросите куратора выдать новый одноразовый код.'
+              serverMessage || 'Код не подошёл. Проверьте цифры или попросите куратора выдать новый.'
             );
           } else if (code === 'invalid_device_id') {
             setErr('Не удалось определить устройство. Обновите страницу и попробуйте снова.');
@@ -614,14 +614,6 @@
 	        try { global.document && global.document.removeEventListener('keydown', onKeyDown); } catch (_) { }
 	      };
 	    }, [supportOpen]);
-
-    const greeting = (() => {
-      const h = new Date().getHours();
-      if (h >= 5 && h < 12) return 'Доброе утро';
-      if (h >= 12 && h < 18) return 'Добрый день';
-      if (h >= 18 && h < 23) return 'Добрый вечер';
-      return 'Доброй ночи';
-    })();
 
     const Card = (...children) =>
       React.createElement(
@@ -774,11 +766,6 @@
             },
             'Вход куратора',
           ),
-        ),
-        React.createElement(
-          'div',
-          { className: 'heys-auth-meta mt-5 text-center text-sm' },
-          greeting,
         ),
       );
     }
