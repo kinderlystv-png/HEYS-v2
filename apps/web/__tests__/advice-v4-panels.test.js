@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const adviceUiSource = fs.readFileSync(
-  path.join(process.cwd(), 'apps/web/day/_advice.js'),
+  path.join(process.cwd(), 'day/_advice.js'),
   'utf8'
 );
 
@@ -134,7 +134,7 @@ describe('advice v4 panels from canvas', () => {
 
   it('detail screen tokens match ad2a canvas', () => {
     const cssSource = fs.readFileSync(
-      path.join(process.cwd(), 'apps/web/styles/modules/400-water-and-hydration.css'),
+      path.join(process.cwd(), 'styles/modules/400-water-and-hydration.css'),
       'utf8'
     );
     expect(adviceUiSource).toContain("renderAdviceV4Icon(React, 'close')");
@@ -163,7 +163,7 @@ describe('advice v4 panels from canvas', () => {
   // категории, заголовок, крестик.
   it('detail is a full screen with eyebrow, title and close', () => {
     const cssSource = fs.readFileSync(
-      path.join(process.cwd(), 'apps/web/styles/modules/400-water-and-hydration.css'),
+      path.join(process.cwd(), 'styles/modules/400-water-and-hydration.css'),
       'utf8',
     );
     const overlay = cssSource.match(/\.advice-v4-detail-overlay \{([^}]*)\}/)[1];

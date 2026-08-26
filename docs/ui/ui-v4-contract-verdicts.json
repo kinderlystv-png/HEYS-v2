@@ -3580,7 +3580,7 @@
         },
         "вид клетки": {
           "v": "=",
-          "f": "000-base:8348-8410 42×44 r14; date-remainders-v4-cell.test.js",
+          "f": "000-base:8319-8407 42×44 r14; date-remainders-v4-cell.test.js; тон точки --v4-ok-fill",
           "h": "a1f220f64fec"
         },
         "точка под числом": {
@@ -3595,7 +3595,7 @@
         },
         "цикл и загрузка": {
           "v": "=",
-          "f": "000-base:8450 has-cycle::before top height 3px; cycle-ribbon--period top ribbon; has-refeed bottom 3px",
+          "f": "000-base:8444 has-cycle::before лента 3px по верхнему краю; has-refeed::after по нижнему",
           "h": "ad36c3ada770"
         },
         "пропущенный день": {
@@ -3720,7 +3720,7 @@
         },
         "нажатие и крупный шрифт": {
           "v": "=",
-          "f": "000-base:8009 nav :active 0.7; :8366 sheet day :active 0.7",
+          "f": "000-base:8009 nav :active opacity 0.7; :8366 day :active 0.7; min-height 44px клетки",
           "h": "ca5d9f3c1b4f"
         },
         "что пишется": {
@@ -3755,7 +3755,7 @@
         },
         "формат чисел": {
           "v": "=",
-          "f": "000-base:8368 day-number tabular-nums",
+          "f": "000-base:8373 day-number font-variant-numeric tabular-nums",
           "h": "d6188ebeaeec"
         },
         "записи в ночь до 03:00": {
@@ -3770,7 +3770,7 @@
         },
         "тон метки загрузки": {
           "v": "=",
-          "f": "000-base --dp-mark-alpha 45/50/42/42%; date-remainders-v4-smoke.test.js:415",
+          "f": "000-base --dp-mark-alpha 45/50/42/42% на 4 наборах; date-remainders-v4-smoke.test.js:415",
           "h": "53ae5c887a83"
         }
       }
@@ -4723,7 +4723,7 @@
         },
         "три границы суток": {
           "v": "=",
-          "f": "heys_gamification_v1.js:354 getToday → dayUtils.todayISO единая граница",
+          "f": "heys_gamification_v1.js:362-363 getToday → HEYS.dayUtils.todayISO()",
           "h": "fd079bc47a9f"
         },
         "набор миссий невоспроизводим": {
@@ -5200,7 +5200,7 @@
         },
         "вибрация, звук, долгое нажатие": {
           "v": "=",
-          "f": "index.html:2273 pulsePhoneComplete vibrate(10); hapticInvalidPin без 35ms",
+          "f": "heys_login_screen_v1.js:374-376 без вибрации на ошибке PIN; pulsePhoneComplete без hapticInvalidPin",
           "h": "9173ff17385f"
         },
         "язык, выделение, часовой пояс": {
@@ -5437,7 +5437,7 @@
         },
         "вид офлайн-баннера": {
           "v": "=",
-          "f": "heys-components.css:4660 полоса #1c1712 11px/600",
+          "f": "heys-components.css:4660-4669 полоса #1c1712, текст #f2ede6 11px/600",
           "h": "03f1e3087104"
         },
         "мягкие уведомления": {
@@ -5502,7 +5502,7 @@
         },
         "слова на экране": {
           "v": "=",
-          "f": "platform_apis:475 ready «Готово» без «!»",
+          "f": "heys_platform_apis_v1.js:475 ready title «Готово» без «!»",
           "h": "0ebd8ccd8740"
         },
         "первое появление": {

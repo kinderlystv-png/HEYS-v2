@@ -588,6 +588,19 @@
   async function writeChipState(chip, nextEnabled) {
     const U = HEYS.utils;
     const profile = U?.lsGet?.('heys_profile', {}) || {};
+    const hf = HEYS.healthFeatures;
+
+    if (chip.needsConsent && nextEnabled) {
+      const trackingOn = typeof hf?.isSupplementsTrackingEnabled === 'function'
+        ? hf.isSupplementsTrackingEnabled(profile)
+        : profile.supplementsTrackingEnabled === true;
+      if (!trackingOn && typeof hf?.requestHealthFeatureToggle === 'function') {
+        const allowed = await hf.requestHealthFeatureToggle('supplementsTrackingEnabled', true);
+        if (!allowed) return false;
+        profile.supplementsTrackingEnabled = true;
+      }
+    }
+
     const updated = { ...profile, [chip.field]: nextEnabled !== false };
 
     U?.lsSet?.('heys_profile', updated);
