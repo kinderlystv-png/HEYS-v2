@@ -113,6 +113,8 @@
   --v4-bg: #fffaf1;
   --v4-hero: #efe3cf;
   --v4-surface: #f7efe2;
+  /* Роль канваса --c1: первая поверхность карточек (советы, чипы, поля). */
+  --v4-c1: #f7efe2;
   --v4-ok-bg: #eaefe0;
   --v4-act: #c67139;
   --v4-act-text: #8a4a20;
@@ -254,6 +256,7 @@
   --v4-bg: #141210;
   --v4-hero: #2f2820;
   --v4-surface: #23201b;
+  --v4-c1: #23201b;
   --v4-ok-bg: #242c20;
   --v4-act: #cf8144;
   --v4-act-text: #e2a468;
@@ -378,6 +381,7 @@
   --v4-bg: #ffffff;
   --v4-hero: #e2ecf6;
   --v4-surface: #eef3f9;
+  --v4-c1: #eef3f9;
   --v4-ok-bg: #e4efe7;
   --v4-act: #2e7cc0;
   --v4-act-text: #1d5e96;
@@ -499,6 +503,7 @@
   --v4-bg: #0d1a26;
   --v4-hero: #1e3448;
   --v4-surface: #182a3a;
+  --v4-c1: #182a3a;
   --v4-ok-bg: #17302a;
   --v4-act: #2e7cc0;
   --v4-act-text: #7fbceb;
