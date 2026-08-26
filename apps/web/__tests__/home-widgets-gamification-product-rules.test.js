@@ -22,8 +22,12 @@ import * as RealReact from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const WEB_DIR = path.resolve(__dirname, '..');
-const widgetsCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8');
-const gameCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
+const widgetsCss = fs
+  .readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8')
+  .replace(/\r\n/g, '\n');
+const gameCss = fs
+  .readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8')
+  .replace(/\r\n/g, '\n');
 const gameBarSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_gamification_bar_v1.js'), 'utf8');
 const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 

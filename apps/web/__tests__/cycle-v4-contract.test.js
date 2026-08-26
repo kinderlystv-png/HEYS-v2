@@ -12,7 +12,9 @@ const CSS_SRC = fs.readFileSync(path.resolve(__dirname, '../styles/modules/500-p
 const SPARK_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_sparklines_v1.js'), 'utf8');
 const STATS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_stats_v1.js'), 'utf8');
 
-const BASE_CSS_SRC = fs.readFileSync(path.resolve(__dirname, '../styles/modules/000-base-and-gamification.css'), 'utf8');
+const BASE_CSS_SRC = fs
+  .readFileSync(path.resolve(__dirname, '../styles/modules/000-base-and-gamification.css'), 'utf8')
+  .replace(/\r\n/g, '\n');
 
 describe('cycle v4 · check-in step 5 inline', () => {
   it('cycle lives in morningRest, not separate registerStep flow in stack', () => {

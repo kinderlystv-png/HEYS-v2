@@ -7,7 +7,9 @@ const WEB_DIR = path.resolve(__dirname, '..');
 const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 const handlersSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_day_day_handlers.js'), 'utf8');
 const widgetsCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8');
-const waterCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/400-water-and-hydration.css'), 'utf8');
+const waterCss = fs
+  .readFileSync(path.join(WEB_DIR, 'styles/modules/400-water-and-hydration.css'), 'utf8')
+  .replace(/\r\n/g, '\n');
 const waterReviewSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_day_water_v1.js'), 'utf8');
 
 describe('добавление воды — канвас water-add v4, ветка В₃', () => {
