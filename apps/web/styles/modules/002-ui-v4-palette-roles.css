@@ -818,3 +818,28 @@ html {
   -webkit-text-size-adjust: auto;
   text-size-adjust: auto;
 }
+
+/* ── v4 держатель места (home-widgets «держатель места · правило продукта») ──
+ * Ровная заливка --c1 без пульсации, скелетон-полос и спиннера внутри.
+ * Появление данных — .v4-place-reveal (200 ms на месте, без сдвига). */
+.v4-place-holder {
+  background: var(--v4-c1, #f7efe2);
+  animation: none;
+  box-shadow: none;
+}
+
+.v4-place-reveal {
+  animation: v4-place-reveal-in 200ms ease-out both;
+}
+
+@keyframes v4-place-reveal-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v4-place-reveal {
+    animation: none;
+    opacity: 1;
+  }
+}

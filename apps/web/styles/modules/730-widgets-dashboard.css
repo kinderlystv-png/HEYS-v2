@@ -1683,13 +1683,19 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-cascade__dot--placeholder {
-  background: rgba(148, 163, 184, 0.26);
-  box-shadow: none;
-  animation: none;
+  display: none;
+}
+
+.widget-cascade__holder {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 11px;
+  border-radius: 6px;
 }
 
 .widget-cascade__dot--latest {
-  animation: widget-cascade-pulse 2s ease-in-out infinite;
+  animation: widget-cascade-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--dot-i, 0) * 60ms);
 }
 
 .widget-cascade__badge {
@@ -3745,20 +3751,15 @@ body:has(.page-reports) .hdr::after {
 
 /* ===== Loading & Error States ===== */
 .widget__loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60px;
+  display: block;
   flex: 1;
+  min-height: 60px;
+  border-radius: inherit;
 }
 
-/* Знак ожидания один на весь продукт (контракт «Спиннеры» → «форма»): своё
-   кольцо 24 обводкой 3 в чужом синем --primary и свой кадровый оборот сняты,
-   загрузку виджета несёт HEYS.WaitMark в форме «вид знака в кнопке»
-   (дуга 18 обводкой 2,5). Тон наследуется через currentColor от содержимого
-   плитки — тот же приём, что у знака стадии в оверлее смены клиента, где
-   чужой синий тоже сняли. Дыхание при уменьшенном движении задаёт
-   styles/heys-boot-mark.css по флагу animate-always внутри самого знака. */
+.widget__loading.v4-place-holder {
+  width: 100%;
+}
 
 .widget__error {
   display: flex;
@@ -13890,6 +13891,12 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   background: var(--v4-bad-text, #a8382b);
   z-index: 1;
   pointer-events: none;
+}
+
+.widget-bd-sheet__wave-placeholder {
+  height: 32px;
+  margin-bottom: 16px;
+  border-radius: 6px;
 }
 
 .widget-bd-sheet__wave-day {

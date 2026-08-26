@@ -79,18 +79,12 @@ describe('motion policy — глобальные правила', () => {
     expect(widgetsCss).not.toMatch(/\.widgets-grid:not\(\.animate-always\)/);
   });
 
-  it('знак ожидания в плитке держит свой флаг', () => {
-    // Единственное функциональное, что жило под флагом сетки: остановленный
-    // знак ожидания читается как «зависло». Своё кольцо widget__spinner снято
-    // (контракт «Спиннеры» → «форма»), знак берётся у HEYS.WaitMark — и флаг
-    // приезжает вместе с ним: heys_loading_progress_v1.js ставит
-    // animate-always на .heys-wait-mark__spin. Свойство то же, механизм общий.
+  it('плитка Главной держит v4-place-holder без знака ожидания', () => {
+    // Контракт «держатель места»: ровная заливка --c1, без спиннера внутри плитки.
+    // Знак ожидания остаётся на уровне экрана (#heys-widgets-live), не в каждой плитке.
     expect(uiSrc).not.toContain('widget__spinner');
-    expect(uiSrc).toMatch(
-      /className: 'widget__loading' \},[\s\S]{0,1400}?WaitMark\?\.render\?\.\(React, \{[\s\S]{0,200}?mode: 'button'/,
-    );
-    const waitSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_loading_progress_v1.js'), 'utf8');
-    expect(waitSrc).toContain("className: 'heys-wait-mark__spin animate-always'");
+    expect(uiSrc).toMatch(/className:\s*'widget__loading v4-place-holder'/);
+    expect(uiSrc).not.toMatch(/className:\s*'widget__loading'[\s\S]{0,400}?WaitMark/);
   });
 
   it('вода — handlers не читают prefers-reduced-motion для звука/плитки', () => {

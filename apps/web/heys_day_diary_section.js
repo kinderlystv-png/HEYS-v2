@@ -1048,7 +1048,7 @@
         const deferredSkeletonState = window.__heysDeferredSkeletonState = window.__heysDeferredSkeletonState || Object.create(null);
         const deferredPendingSlot = (slotKey, minHeightPx) => React.createElement('div', {
             key: slotKey,
-            className: 'deferred-card-slot deferred-card-slot--pending',
+            className: 'deferred-card-slot deferred-card-slot--pending' + (minHeightPx ? ' v4-place-holder' : ''),
             'aria-hidden': 'true',
             style: minHeightPx
                 ? { minHeight: Math.max(0, Number(minHeightPx) || 0) + 'px' }

@@ -393,7 +393,6 @@
   function renderCascadeStrip(data, options = {}) {
     const size = options.size || '4x1';
     const maxDots = Number.isFinite(options.maxDots) ? options.maxDots : (size === '3x1' ? 8 : 10);
-    const placeholderCount = Number.isFinite(options.placeholderCount) ? options.placeholderCount : (size === '3x1' ? 6 : 8);
     const extraClassName = options.className || '';
     const liveEvents = options.useLiveCurrentCascade === true && Array.isArray(window.HEYS?._lastCrs?.events)
       ? window.HEYS._lastCrs.events
@@ -406,8 +405,6 @@
     const trendMeta = getCascadeTrendMeta(data?.trend);
     const badgeTone = getCascadeBadgeTone(pct);
     const hasData = (data?.hasData === true && events.length > 0) || pct > 0;
-    const placeholders = Array.from({ length: placeholderCount });
-    const dotsToRender = hasData ? events : placeholders;
     const showDayBalanceBadge = options.showDayBalanceBadge === true && hasData;
     const metricInlineWithLabel = options.metricInlineWithLabel === true && showDayBalanceBadge;
     const footerLabel = options.footerLabel || 'Позитивный каскад';
@@ -424,36 +421,33 @@
     const dayBalanceOpacity = 0.45 + dayBalanceMeta.confidence * 0.55;
 
     return React.createElement('div', {
-      className: ['widget-cascade', `widget-cascade--${size}`, extraClassName, metricInlineWithLabel ? 'widget-cascade--metric-inline' : '', !hasData ? 'widget-cascade--empty' : '']
+      className: ['widget-cascade', `widget-cascade--${size}`, extraClassName, metricInlineWithLabel ? 'widget-cascade--metric-inline' : '', !hasData ? 'widget-cascade--empty' : '', hasData ? 'v4-place-reveal' : '']
         .filter(Boolean)
         .join(' ')
     },
-      React.createElement('div', {
-        className: 'widget-cascade__dots',
-        style: { '--dot-total': dotsToRender.length }
-      },
-        dotsToRender.map((event, index) => {
-          if (!event) {
-            return React.createElement('span', {
-              key: `cascade-placeholder-${index}`,
-              className: 'widget-cascade__dot widget-cascade__dot--placeholder',
-              'aria-hidden': 'true'
-            });
-          }
-
-          const tone = getCascadeEventTone(Number(event?.weight) || 0);
-          const weight = Number(event?.weight) || 0;
-          const weightLabel = `${weight > 0 ? '+' : ''}${weight.toFixed(1)}`;
-          const isLatestPositive = index === dotsToRender.length - 1 && event?.positive;
-
-          return React.createElement('span', {
-            key: `cascade-dot-${index}-${event?.type || 'event'}`,
-            className: `widget-cascade__dot widget-cascade__dot--${tone} ${isLatestPositive ? 'widget-cascade__dot--latest' : ''}`,
-            style: { '--dot-i': index },
-            title: `${event?.label || 'Событие'} (${weightLabel})`
-          });
+      !hasData
+        ? React.createElement('div', {
+          className: 'widget-cascade__holder v4-place-holder',
+          'aria-hidden': 'true'
         })
-      ),
+        : React.createElement('div', {
+          className: 'widget-cascade__dots',
+          style: { '--dot-total': events.length }
+        },
+          events.map((event, index) => {
+            const tone = getCascadeEventTone(Number(event?.weight) || 0);
+            const weight = Number(event?.weight) || 0;
+            const weightLabel = `${weight > 0 ? '+' : ''}${weight.toFixed(1)}`;
+            const isLatestPositive = index === events.length - 1 && event?.positive;
+
+            return React.createElement('span', {
+              key: `cascade-dot-${index}-${event?.type || 'event'}`,
+              className: `widget-cascade__dot widget-cascade__dot--${tone} ${isLatestPositive ? 'widget-cascade__dot--latest' : ''}`,
+              style: { '--dot-i': index },
+              title: `${event?.label || 'Событие'} (${weightLabel})`
+            });
+          })
+        ),
       showDayBalanceBadge
         ? metricInlineWithLabel
           ? [
@@ -1687,31 +1681,12 @@
       };
     }, [widget.id, widget.type, loadDataSync]);
 
-    // Loading state
+    // Loading state — v4 держатель места (без знака ожидания внутри плитки).
     if (loading) {
-      return React.createElement('div', { className: 'widget__loading' },
-        // Знак ожидания один на весь продукт (контракт «Спиннеры» → «форма»).
-        // Своё кольцо 24/3 снято, знак берётся у HEYS.WaitMark в форме «вид
-        // знака в кнопке»: дуга 18 обводкой 2,5, тон наследуется через
-        // currentColor от содержимого плитки. Отступление названо вслух: это
-        // не круг 56, а строчная форма — знак стоит внутри плитки, где круг 56
-        // не помещается.
-        //
-        // silent — у экрана Главной уже есть своя живая область
-        // (#heys-widgets-live, quickAnnounce): вторая спорила бы с первой, а на
-        // сетке плиток их сразу стало бы столько, сколько виджетов грузится.
-        // Прежний div ролей и aria не нёс, так что озвучка не теряется.
-        //
-        // animate-always знак несёт сам: HEYS.WaitMark ставит флаг на
-        // .heys-wait-mark__spin. Знак функциональный — остановленный читается
-        // как «зависло», — поэтому при уменьшенном движении он не замирает, а
-        // дышит прозрачностью (styles/heys-boot-mark.css).
-        (window.HEYS?.WaitMark?.render?.(React, {
-          mode: 'button',
-          state: 'wait',
-          silent: true,
-        }) || null)
-      );
+      return React.createElement('div', {
+        className: 'widget__loading v4-place-holder',
+        'aria-hidden': 'true'
+      });
     }
 
     // Error state

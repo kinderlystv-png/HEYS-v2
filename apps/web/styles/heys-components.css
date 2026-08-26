@@ -9937,6 +9937,13 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   pointer-events: none;
 }
 
+.deferred-card-slot--pending.v4-place-holder {
+  height: auto;
+  max-height: none;
+  opacity: 1;
+  border-radius: 16px;
+}
+
 /* Loading state: module not ready → skeleton visible */
 .deferred-card-slot--loading {
   /* Visibility is now controlled by JS delayed mount to avoid first-paint flash */

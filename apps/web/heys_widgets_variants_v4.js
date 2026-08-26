@@ -1465,7 +1465,7 @@
       const bar = v4?.dayBar;
       const segments = Array.isArray(bar) ? bar : (bar?.segments || []);
       if (!segments.length) {
-        return React.createElement('div', { className: 'widget-bd-sheet__wave-placeholder' }, 'Волны дня');
+        return React.createElement('div', { className: 'widget-bd-sheet__wave-placeholder v4-place-holder', 'aria-hidden': 'true' });
       }
       const totalFlex = segments.reduce((s, seg) => s + (seg.flex || 1), 0) || 1;
       return React.createElement('div', { className: 'widget-bd-sheet__wave-day' },
