@@ -32,6 +32,7 @@ const {
   mergeHungerStatusEvents,
   mergeInsightsFeedback,
   mergeItemsById,
+  mergeSupplementsTakenMarks,
   mergeScalarKv,
   mergeMorningCheckinProgress,
   hasMorningCheckinProgressConflict,
@@ -165,6 +166,66 @@ describe('mergeDayData — lost-update prevention', () => {
     const remote = makeDay(1500, [], { waterMl: 1200 });
     const merged = mergeDayData(local, remote);
     expect(merged.waterMl).toBe(1200);
+  });
+
+  test('supplementsTaken — two devices mark different ids (union by id, not LWW)', () => {
+    const local = makeDay(5000, [], {
+      supplementsTaken: ['d3'],
+      supplementsTakenAt: { d3: '08:10' },
+      supplementsTakenMeta: { d3: { dose: 1, unit: 'caps' } },
+      supplementsTakenUpdatedAt: 3000,
+    });
+    const remote = makeDay(9000, [], {
+      supplementsTaken: ['mg'],
+      supplementsTakenAt: { mg: '21:05' },
+      supplementsTakenMeta: { mg: { dose: 2, unit: 'tabs' } },
+      supplementsTakenUpdatedAt: 4000,
+    });
+    const merged = mergeDayData(local, remote, { forceKeepAll: true });
+    expect(merged.supplementsTaken).toEqual(['d3', 'mg']);
+    expect(merged.supplementsTakenAt).toEqual({ d3: '08:10', mg: '21:05' });
+    expect(merged.supplementsTakenMeta).toEqual({
+      d3: { dose: 1, unit: 'caps' },
+      mg: { dose: 2, unit: 'tabs' },
+    });
+    expect(merged.supplementsTakenUpdatedAt).toBe(4000);
+  });
+
+  test('mergeSupplementsTakenMarks — partial overlap keeps both sides when stamps differ', () => {
+    const local = {
+      supplementsTaken: ['d3', 'omega'],
+      supplementsTakenAt: { d3: '08:00', omega: '08:05' },
+      supplementsTakenUpdatedAt: 2000,
+    };
+    const remote = {
+      supplementsTaken: ['mg'],
+      supplementsTakenAt: { mg: '21:00' },
+      supplementsTakenUpdatedAt: 3500,
+    };
+    const merged = mergeSupplementsTakenMarks(local, remote);
+    expect(merged.supplementsTaken).toEqual(['d3', 'omega', 'mg']);
+    expect(merged.supplementsTakenAt).toEqual({ d3: '08:00', omega: '08:05', mg: '21:00' });
+    expect(merged.supplementsTakenUpdatedAt).toBe(3500);
+  });
+
+  test('mergeSupplementsTakenMarks — explicit clear-all on newer stamp wins', () => {
+    const local = {
+      supplementsTaken: [],
+      supplementsTakenAt: {},
+      supplementsTakenMeta: {},
+      supplementsTakenUpdatedAt: 5000,
+    };
+    const remote = {
+      supplementsTaken: ['d3'],
+      supplementsTakenAt: { d3: '09:00' },
+      supplementsTakenMeta: { d3: { dose: 1 } },
+      supplementsTakenUpdatedAt: 2000,
+    };
+    const merged = mergeSupplementsTakenMarks(local, remote);
+    expect(merged.supplementsTaken).toEqual([]);
+    expect(merged.supplementsTakenAt).toEqual({});
+    expect(merged.supplementsTakenMeta).toEqual({});
+    expect(merged.supplementsTakenUpdatedAt).toBe(5000);
   });
 
   test.each([
