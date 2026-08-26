@@ -127,9 +127,14 @@ pricing). Это evidence прошедших работ, не очередь з�
   Закрытые записи с решениями —
   [`ui/UI_V4_FINDINGS_HISTORY.md`](ui/UI_V4_FINDINGS_HISTORY.md); архив не
   переписывают задним числом.
-- [`ui/ui-v4-canvas-brief.md`](ui/ui-v4-canvas-brief.md) — живой трекер
-  контрактов канвасов (§0–§3, часы, 🔒); §11 — аудит соответствия контракта коду
-  по экранам (срез на дату сверки, не живой статус); html-таблицы:
+- [`ui/UI_V4_REMAINING_PROMPT.md`](ui/UI_V4_REMAINING_PROMPT.md) — **следующая
+  волна** после merge wave 1+2: 69 `≠`, 7 `?`, порядок блоков A–D, облако vs
+  локально, шаблон полосы. Живые счётчики —
+  `ui-v4-check-contract-drift.mjs --list`.
+- [`ui/UI_V4_COMPLETION_PROMPT.md`](ui/UI_V4_COMPLETION_PROMPT.md) — wave 1+2
+  (merged в main 2026-08-26); lanes, hot files, архив задач. контрактов канвасов
+  (§0–§3, часы, 🔒); §11 — аудит соответствия контракта коду по экранам (срез на
+  дату сверки, не живой статус); html-таблицы:
   [`ui-v4-canvas-brief.html`](ui/ui-v4-canvas-brief.html) через
   `pnpm docs:ui-v4-brief`.
 - [`UI_V4_IMPLEMENTATION_PLAN_2026-08-10`](implementation/UI_V4_IMPLEMENTATION_PLAN_2026-08-10.md)
