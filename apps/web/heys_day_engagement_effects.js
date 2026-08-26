@@ -105,7 +105,6 @@
                     if (!alreadyAchieved) {
                         if (store?.set) store.set('heys_first_perfect_meal', '1');
                         else if (U.lsSet) U.lsSet('heys_first_perfect_meal', '1');
-                        else localStorage.setItem('heys_first_perfect_meal', '1');
                         setShowFirstPerfectAchievement(true);
                         setShowConfetti(true);
                                 setTimeout(() => {
