@@ -120,6 +120,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:verify": "node scripts/e2e/verify.mjs",
     "test:mobile:critical": "vitest run apps/mobile/src/features/webview/__tests__/navigation-session.test.ts apps/mobile/src/features/session/__tests__/storage.test.ts apps/mobile/src/features/deeplink/__tests__/routes.test.ts",
+    "test:node": "node --test scripts/**/*.test.mjs",
     "test:packages": "pnpm -r --filter='./packages/*' run test",
     "test:regressions": "vitest run TESTS/regressions --exclude='**/*-db.test.ts' --exclude='**/468a*.test.ts' --no-coverage",
     "test:rpc": "vitest run TESTS/rpc --no-coverage",

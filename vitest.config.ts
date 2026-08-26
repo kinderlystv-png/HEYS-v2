@@ -2,6 +2,27 @@ import path from 'node:path';
 
 import { defineConfig } from 'vitest/config';
 
+// Скрипты из scripts/ — исполняемые файлы с шебангом, и тесты импортируют их
+// как модули. Vite шебанг не снимает, импорт падает на «Invalid or unexpected
+// token», и файл не загружается вовсе — в отчёте это выглядит как «FAIL … no
+// tests», то есть охранная проверка молча не работает.
+//
+// Тот же плагин уже стоит в apps/web/vitest.config.ts; корневой конфиг его не
+// получил, поэтому CI на каждом PR показывал красное на чистом main.
+const stripShebang = {
+  name: 'heys-strip-shebang',
+  enforce: 'pre' as const,
+  transform(code: string, id: string) {
+    // Путь нормализуем: на Windows id приходит с обратными слэшами.
+    if (!id.replaceAll(String.fromCharCode(92), '/').includes('/scripts/')) return null;
+    if (!code.startsWith('#!')) return null;
+    // Строка заменяется пустой, а не удаляется: номера строк в стеке остаются
+    // прежними, иначе отладка чужого падения уедет на единицу.
+    const eol = code.indexOf(String.fromCharCode(10));
+    return { code: eol < 0 ? '' : code.slice(eol), map: null };
+  },
+};
+
 const enableVerboseReporter =
   process.env.VITEST_VERBOSE === '1' || process.env.VITEST_VERBOSE === 'true';
 
@@ -9,6 +30,7 @@ const enableTestReports =
   process.env.VITEST_REPORT === '1' || process.env.VITEST_REPORT === 'true';
 
 export default defineConfig({
+  plugins: [stripShebang],
   resolve: {
     alias: {
       '@heys/logger': path.resolve(__dirname, './packages/logger/src'),
@@ -26,6 +48,14 @@ export default defineConfig({
       '**/dist/**',
       '**/coverage/**',
       'TESTS/e2e/**',
+      // Файлы node:test, а не vitest: свои assert-проверки они проходят сами,
+      // но vitest не находит в них suite и валит прогон «No test suite found».
+      // Запускаются через node --test (pnpm test:node), в CI — своим шагом.
+      'scripts/**/*.test.mjs',
+      'yandex-cloud-functions/**/*.test.js',
+      'yandex-cloud-functions/**/*.test.cjs',
+      'yandex-cloud-functions/**/*.test.mjs',
+      'TESTS/rpc/**',
       // TESTS/db, TESTS/regressions/468a*-tz-fix.test.ts — против real
       // Postgres, нужны dedicated `pnpm test:db` (60s timeout для psql RTT).
       // Default vitest 10s timeout будет таймаут'ить. Каждый файл имеет
