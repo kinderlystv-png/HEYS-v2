@@ -10156,6 +10156,28 @@
   }
 
   function WidgetsTab({ selectedDate, clientId, cloudUser, setTab, setSelectedDate }) {
+    // Строка «обучение · правило продукта»: онбординга и тултипов в продукте
+    // нет, исключение одно — подсказка про долгий тап по плитке. Один раз на
+    // человека, после третьего открытия Главной, флаг живёт в профиле.
+    // Закрывается любым касанием и больше не возвращается, даже если жестом
+    // так и не воспользовались.
+    const [showLongPressHint, setShowLongPressHint] = React.useState(false);
+    React.useEffect(() => {
+      let prof = null;
+      const U = HEYS.utils || {};
+      try { prof = U.lsGet?.('heys_profile', {}) || {}; } catch (_) { return; }
+      if (prof.longPressHintShown) return;
+      const opens = Number(prof.homeOpensCount || 0) + 1;
+      const next = { ...prof, homeOpensCount: opens };
+      // Показ на третьем открытии: строка называет «после третьего», то есть
+      // счётчик уже дошёл до трёх, а не «после трёх пропущенных».
+      if (opens >= 3) {
+        next.longPressHintShown = true;
+        setShowLongPressHint(true);
+      }
+      try { U.lsSet?.('heys_profile', next); } catch (_) { /* останется прежним */ }
+    }, []);
+
     const canUsePostReleaseLabs = !cloudUser && (
       HEYS.AppTabState?.isPostReleaseLabsClient?.(clientId)
       || HEYS.Board?.isBoardClient?.(clientId)
@@ -11423,6 +11445,31 @@
 
       React.createElement('div', { className: 'widgets-edit-controls' }),
 
+      showLongPressHint && React.createElement('div', {
+        className: 'widgets-longpress-hint',
+        role: 'status',
+        // Плашка не блокирует экран: затемнения нет, плитки под ней работают.
+        // Поэтому закрытие висит на самой плашке и на первом касании сетки.
+        onPointerDown: () => setShowLongPressHint(false)
+      },
+        React.createElement('svg', {
+          className: 'widgets-longpress-hint__icon',
+          width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+          stroke: 'currentColor', strokeWidth: 2.4,
+          strokeLinecap: 'round', strokeLinejoin: 'round',
+          'aria-hidden': 'true'
+        },
+          React.createElement('path', { d: 'M9 11V6a1.5 1.5 0 013 0v5' }),
+          React.createElement('path', { d: 'M12 11V4.5a1.5 1.5 0 013 0V11' }),
+          React.createElement('path', { d: 'M15 11V7.5a1.5 1.5 0 013 0V14a6 6 0 01-6 6h-1a5 5 0 01-4.4-2.6L4 13.5a1.5 1.5 0 012.4-1.8L8 14' })
+        ),
+        React.createElement('span', { className: 'widgets-longpress-hint__text' },
+          React.createElement('span', { className: 'widgets-longpress-hint__title' },
+            'Задержите палец на плитке'),
+          React.createElement('span', { className: 'widgets-longpress-hint__sub' },
+            'Так меняется её вид — например, «Вес» с числа на график.')
+        )
+      ),
       renderMobileFabs()
     );
   }

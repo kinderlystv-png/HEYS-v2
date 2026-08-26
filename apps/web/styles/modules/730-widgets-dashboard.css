@@ -14056,3 +14056,51 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   background: rgba(242, 237, 230, 0.14);
 }
 
+
+/* Подсказка про долгий тап по плитке. Строка «обучение · правило продукта»
+   (home-widgets.v4.dc.html): единственное исключение из «онбординга и тултипов
+   в продукте нет». Показывается один раз на человека, после третьего открытия
+   Главной; закрывается любым касанием и больше не возвращается.
+
+   Плашка не блокирует экран: затемнения под ней нет, плитки под ней работают,
+   поэтому pointer-events остаются у неё самой, а не у слоя во всю ширину. */
+.widgets-longpress-hint {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: 78px;
+  z-index: var(--v4-z-toast, 1100);
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px 15px;
+  border-radius: 18px;
+  background: #201e1d;
+  box-shadow: 0 10px 26px -10px rgba(32, 30, 29, 0.55);
+}
+
+.widgets-longpress-hint__icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  /* Тон из тёмного набора числом, а не ролью: контракт задаёт плашке зашитый
+     фон #201e1d, то есть слой намеренно вне четырёх палитр — как офлайн-баннер,
+     у которого строка «вид офлайн-баннера» тоже называет фон и тон явно. */
+  color: #cf8144;
+}
+
+.widgets-longpress-hint__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.widgets-longpress-hint__title {
+  font: 700 12px/1.35 Figtree, system-ui, sans-serif;
+  color: #f2ede6;
+}
+
+.widgets-longpress-hint__sub {
+  font: 500 11px/1.35 Figtree, system-ui, sans-serif;
+  color: rgba(242, 237, 230, 0.62);
+}
