@@ -2042,7 +2042,10 @@
   function formatRuDecimal(value, digits = 1) {
     const n = Number(value);
     if (!Number.isFinite(n)) return '—';
-    return n.toFixed(digits).replace('.', ',');
+    return formatRuNumber(n, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
   }
 
   const V4_VAL_DEAD_ZONE_KG = 0.2;
@@ -2171,7 +2174,7 @@
           : null
       ),
       React.createElement('span', { className: 'widget-v4-macro-bar-row__nums ' + valClass },
-        `${Math.round(v)} / ${Math.round(t)}`
+        `${formatRuNumber(Math.round(v))} / ${formatRuNumber(Math.round(t))}`
       )
     );
   }
@@ -3154,8 +3157,8 @@
     if (isShort || variantId === 'compact') {
       const compactDelta = Number(data?.delta);
       const compactHero = Number.isFinite(compactDelta)
-        ? `${compactDelta > 0 ? '+' : (compactDelta < 0 ? '−' : '')}${Math.abs(Math.round(compactDelta))}`
-        : String(Math.round(score));
+        ? `${compactDelta > 0 ? '+' : (compactDelta < 0 ? '−' : '')}${formatRuNumber(Math.abs(Math.round(compactDelta)))}`
+        : formatRuNumber(Math.round(score));
       const compactTone = Number.isFinite(compactDelta)
         ? v4ValueStateClass(v4HealthTrendState(compactDelta))
         : '';
@@ -3197,8 +3200,8 @@
     const lastPt = trendPts.split(' ').pop().split(',');
     const delta = Number(data?.delta);
     const hero = Number.isFinite(delta)
-      ? `${delta > 0 ? '+' : (delta < 0 ? '−' : '')}${Math.abs(Math.round(delta))}`
-      : String(Math.round(score));
+      ? `${delta > 0 ? '+' : (delta < 0 ? '−' : '')}${formatRuNumber(Math.abs(Math.round(delta)))}`
+      : formatRuNumber(Math.round(score));
     if (!healthTrendRevealed) {
       return React.createElement('div', {
         className: 'widget-v4-stack widget-v4-stack--spark-hold',
@@ -3257,7 +3260,7 @@
         React.createElement('div', {
           className: 'widget-day-score__score',
           style: { color: getColor(), fontSize: '1.5rem', fontWeight: 700 }
-        }, Math.round(score))
+        }, formatRuNumber(Math.round(score)))
       );
     }
 
@@ -3265,7 +3268,7 @@
       React.createElement('div', {
         className: 'widget-day-score__score-big',
         style: { color: getColor(), fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }
-      }, Math.round(score)),
+      }, formatRuNumber(Math.round(score))),
       React.createElement('div', {
         className: 'widget-day-score__label',
         style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary, #94a3b8)', marginTop: '2px' }
@@ -4450,7 +4453,7 @@
           React.createElement('div', { className: 'widget-sleep__icon' }, getEmoji()),
           React.createElement('div', { className: 'widget-sleep__main' },
             React.createElement('div', { className: 'widget-sleep__value widget-sleep__value--lg' },
-              hours.toFixed(1),
+              formatRuDecimal(hours, 1),
               React.createElement('span', { className: 'widget-sleep__unit' }, 'ч')
             )
           ),
@@ -4479,7 +4482,7 @@
 
     // Остальные размеры
     return React.createElement('div', { className: `widget-sleep widget-sleep--${variant}` },
-      React.createElement('div', { className: 'widget-sleep__value' }, `${formatRuUnit(hours.toFixed(1), 'ч', { tight: true })} ${getEmoji()}`),
+      React.createElement('div', { className: 'widget-sleep__value' }, `${formatRuUnit(formatRuDecimal(hours, 1), 'ч', { tight: true })} ${getEmoji()}`),
       showTimes ? React.createElement('div', { className: 'widget-sleep__label' }, [sleepStart, sleepEnd].filter(Boolean).join(' → ')) : null,
       showTarget ? React.createElement('div', { className: 'widget-sleep__label' }, `из ${formatRuUnit(target, 'ч', { tight: true })}`) : null,
       showQuality ? React.createElement('div', { className: 'widget-sleep__quality' }, `Качество: ${quality}/10`) : null
@@ -4678,7 +4681,7 @@
     const formatWeekChange = () => {
       if (!Number.isFinite(weekChange)) return null;
       const sign = weekChange >= 0 ? '+' : '';
-      return `${sign}${formatRuUnit(weekChange.toFixed(1), 'кг/нед')}`;
+      return `${sign}${formatRuUnit(formatRuDecimal(weekChange, 1), 'кг/нед')}`;
     };
 
     // ============ БЛОКИ-КОМПОНЕНТЫ ============
@@ -4688,7 +4691,7 @@
       const sizes = { sm: 'widget-weight__val--sm', md: 'widget-weight__val--md', lg: 'widget-weight__val--lg', xl: 'widget-weight__val--xl' };
       if (!hasCurrent) return React.createElement('div', { className: 'widget-weight__empty' }, '—');
       return React.createElement('div', { className: `widget-weight__val ${sizes[scale] || ''}` },
-        current.toFixed(1),
+        formatRuDecimal(current, 1),
         React.createElement('span', { className: 'widget-weight__val-unit' }, 'кг')
       );
     };
@@ -4761,7 +4764,7 @@
           })
         ),
         React.createElement('div', { className: 'widget-weight__progress-info' },
-          React.createElement('span', { className: 'widget-weight__progress-pct' }, formatRuUnit(pct.toFixed(0), '%')),
+          React.createElement('span', { className: 'widget-weight__progress-pct' }, formatRuUnit(formatRuNumber(Math.round(pct)), '%')),
           React.createElement('span', { className: 'widget-weight__progress-label' }, `→ ${formatRuUnit(goal, 'кг')}`)
         )
       );
@@ -4774,10 +4777,10 @@
         return React.createElement('div', {
           className: 'widget-weight__bmi-badge',
           style: { background: bmiCategory?.color ? `${bmiCategory.color}20` : undefined, color: bmiCategory?.color }
-        }, `BMI ${bmi.toFixed(1)}`);
+        }, `BMI ${formatRuDecimal(bmi, 1)}`);
       }
       return React.createElement('div', { className: 'widget-weight__bmi-block' },
-        React.createElement('div', { className: 'widget-weight__bmi-num' }, bmi.toFixed(1)),
+        React.createElement('div', { className: 'widget-weight__bmi-num' }, formatRuDecimal(bmi, 1)),
         React.createElement('div', {
           className: 'widget-weight__bmi-cat',
           style: { color: bmiCategory?.color }
@@ -4789,7 +4792,7 @@
     const AnalyticsBlock = () => {
       const items = [];
       if (showAnalytics && monthChange) {
-        items.push({ icon: '📊', text: `Прогноз: ${monthChange > 0 ? '+' : ''}${formatRuUnit(monthChange.toFixed(1), 'кг/мес')}` });
+        items.push({ icon: '📊', text: `Прогноз: ${monthChange > 0 ? '+' : ''}${formatRuUnit(formatRuDecimal(monthChange, 1), 'кг/мес')}` });
       }
       if (showAnalytics && hasCleanTrend) {
         items.push({ icon: '🌸', text: 'Чистый тренд', cls: 'widget-weight__stat--pink' });
@@ -5497,13 +5500,16 @@
 
   function formatLitersRu(ml) {
     const liters = (Math.max(0, Number(ml) || 0)) / 1000;
-    return liters.toFixed(1).replace('.', ',');
+    return formatRuDecimal(liters, 1);
   }
 
   function formatScoreRu(value) {
     const num = Number(value);
     if (!Number.isFinite(num)) return '—';
-    return (Math.round(num * 10) / 10).toString().replace('.', ',');
+    return formatRuNumber(Math.round(num * 10) / 10, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    });
   }
 
   // Клетчатка и белок: чернила, от 100 % нормы — шалфей, красного нет никогда.
@@ -6049,8 +6055,8 @@
         : centerMode;
       const centerValue = resolvedCenterMode === 'pct'
         ? formatRuUnit(Math.min(999, normalizedPct), '%')
-        : Math.round(value || 0);
-      const targetText = hideTarget ? null : (resolvedCenterMode === 'grams' ? `/ ${formatRuUnit(Math.round(target || 0), 'г', { tight: true })}` : null);
+        : formatRuNumber(Math.round(value || 0));
+      const targetText = hideTarget ? null : (resolvedCenterMode === 'grams' ? `/ ${formatRuUnit(formatRuNumber(Math.round(target || 0)), 'г', { tight: true })}` : null);
       const percentBadge = hidePercentBadge ? null : (showPercentage && resolvedCenterMode === 'grams' ? formatRuUnit(normalizedPct, '%') : null);
 
       return React.createElement('div', { key: `${toneClass}-${label}`, className: 'macro-ring-item' },
@@ -6140,7 +6146,7 @@
       const fmtDelta = (d) => {
         if (Math.abs(d) < 0.5) return '0';
         const sign = d > 0 ? '+' : '−';
-        return `${sign}${Math.round(Math.abs(d))}`;
+        return `${sign}${formatRuNumber(Math.round(Math.abs(d)))}`;
       };
       const worstClass = worst.delta < 0 ? 'widget-v4-val--warn' : 'widget-v4-val--act';
       return React.createElement('div', { className: 'widget-macros widget-macros--deficits widget-v4-stack' },
@@ -6169,7 +6175,7 @@
       return React.createElement('div', { className: 'widget-macros widget-macros--1x1 widget-v4-mini' },
         v4Kicker('Белок'),
         React.createElement('div', { className: 'widget-v4-mini__value' },
-          Math.round(animProtein),
+          formatRuNumber(Math.round(animProtein)),
           React.createElement('span', { className: 'widget-v4-unit' }, ' г')
         )
       );
@@ -6182,7 +6188,7 @@
         React.createElement('div', { className: 'widget-macros__micro-value' },
           showPercentage
             ? formatRuUnit(Math.min(999, avgPct), '%')
-            : formatRuUnit(Math.round(animProtein + animFat + animCarbs), 'г', { tight: true })
+            : formatRuUnit(formatRuNumber(Math.round(animProtein + animFat + animCarbs)), 'г', { tight: true })
         )
       );
     }
@@ -6237,7 +6243,7 @@
             style: { width: `${barPct}%`, backgroundColor: color }
           })
         ),
-        showGrams ? React.createElement('span', { className: 'widget-macros__value' }, formatRuUnit(Math.round(value), 'г', { tight: true })) : null
+        showGrams ? React.createElement('span', { className: 'widget-macros__value' }, formatRuUnit(formatRuNumber(Math.round(value)), 'г', { tight: true })) : null
       );
     };
 
@@ -6699,7 +6705,7 @@
     if (!Number.isFinite(deltaKg)) return { sign: '', text: '—' };
     if (Math.abs(deltaKg) <= 0.2) return { sign: '', text: '0,0' };
     const sign = deltaKg < 0 ? '−' : '+';
-    return { sign, text: Math.abs(deltaKg).toFixed(1).replace('.', ',') };
+    return { sign, text: formatRuDecimal(Math.abs(deltaKg), 1) };
   }
 
   function weightDynamicsEntranceTotalMs() {
@@ -8300,7 +8306,7 @@
               React.createElement('div', { style: { fontSize: '1.5rem' } }, zoneMeta.emoji),
               React.createElement('div', {
                 style: { fontSize: '2.5rem', fontWeight: 800, color, lineHeight: 1 }
-              }, `${dirArrow} ${formatRuUnit(absPct.toFixed(1), '%')}`),
+              }, `${dirArrow} ${formatRuUnit(formatRuDecimal(absPct, 1), '%')}`),
               React.createElement('div', {
                 className: 'widget-relapse-risk__modal-score-level',
                 style: { color, background: `${color}16`, borderColor: `${color}26` }
@@ -8321,26 +8327,26 @@
             React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
               React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Сейчас'),
-                React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit(currentWeight.toFixed(1), 'кг'))
+                React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit(formatRuDecimal(currentWeight, 1), 'кг'))
               ),
               firstWeight > 0 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, `${formatRuUnit(dataPoints, 'дн.')} назад`),
-                React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit(firstWeight.toFixed(1), 'кг'))
+                React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit(formatRuDecimal(firstWeight, 1), 'кг'))
               ),
               deltaAbs >= 0.05 && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Итого изменение'),
-                React.createElement('span', { style: { fontWeight: 600, color } }, `${deltaSign}${formatRuUnit(deltaAbs.toFixed(2), 'кг')}`)
+                React.createElement('span', { style: { fontWeight: 600, color } }, `${deltaSign}${formatRuUnit(formatRuDecimal(deltaAbs, 2), 'кг')}`)
               ),
               React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Темп'),
                 React.createElement('span', { style: { fontWeight: 600 } },
-                  `${slopePerWeek >= 0 ? '+' : ''}${formatRuUnit(slopePerWeek.toFixed(2), 'кг/нед')}`
+                  `${slopePerWeek >= 0 ? '+' : ''}${formatRuUnit(formatRuDecimal(slopePerWeek, 2), 'кг/нед')}`
                 )
               ),
               React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Данных'),
                 React.createElement('span', { style: { fontWeight: 600 } },
-                  `${formatRuUnit(dataPoints + '/' + periodDays, 'дн.')} (${formatRuUnit((dataCompleteness * 100).toFixed(0), '%')})`
+                  `${formatRuUnit(dataPoints + '/' + periodDays, 'дн.')} (${formatRuUnit(formatRuNumber(Math.round(dataCompleteness * 100)), '%')})`
                 )
               ),
               React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
@@ -8360,7 +8366,7 @@
               ),
               React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Осталось'),
-                React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit((toGoalKg || 0).toFixed(1), 'кг'))
+                React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit(formatRuDecimal(toGoalKg || 0, 1), 'кг'))
               ),
               estimatedDaysToGoal && React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' } },
                 React.createElement('span', { style: { color: 'var(--heys-text-secondary,#94a3b8)' } }, 'Прогноз при текущем темпе'),
@@ -8379,7 +8385,7 @@
                   style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--heys-text-secondary,#94a3b8)' }
                 },
                   React.createElement('span', null, p.date),
-                  React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit(p.weight.toFixed(1), 'кг'))
+                  React.createElement('span', { style: { fontWeight: 600 } }, formatRuUnit(formatRuDecimal(p.weight, 1), 'кг'))
                 )
               )
             )
@@ -11469,6 +11475,7 @@
   // разрядов — невидимый символ, и глазами U+202F от U+00A0 не отличить.
   HEYS.Widgets.formatRuNumber = formatRuNumber;
   HEYS.Widgets.formatRuUnit = formatRuUnit;
+  HEYS.Widgets.formatRuDecimal = formatRuDecimal;
   HEYS.Widgets.SettingsModal = SettingsModal;
   HEYS.Widgets.RelapseRiskDetailsModal = RelapseRiskDetailsModal;
   /**
