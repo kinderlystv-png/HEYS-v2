@@ -38,6 +38,7 @@ const WEB_DIR = path.resolve(__dirname, '..');
 // затем heys-components.css с глобальным killer'ом.
 const CSS_FILES = [
   'styles/heys-boot-mark.css',
+  'styles/modules/002-ui-v4-palette-roles.css',
   'styles/modules/300-modals-and-day.css',
   'styles/modules/400-water-and-hydration.css',
   'styles/modules/730-widgets-dashboard.css',
@@ -176,11 +177,7 @@ describe('каскад при «уменьшить движение» — сет
         <div class="widget widget--streak"><span class="widget__flame"></span></div>
         <div class="widget widget--water"><span class="widget__wave"></span></div>
         <div class="widget">
-          <div class="widget__loading">
-            <span class="heys-wait-mark heys-wait-mark--button is-wait">
-              <span class="heys-wait-mark__spin animate-always"><svg></svg></span>
-            </span>
-          </div>
+          <div class="widget__loading v4-place-holder"></div>
         </div>
         <div class="widget"><span class="sparkline-svg animate-always"><span class="sparkline-path"></span></span></div>
       </div>
@@ -199,17 +196,10 @@ describe('каскад при «уменьшить движение» — сет
     expect(motion('.widget--water .widget__wave').shorthand).toMatch(/^none\b/);
   });
 
-  it('знак ожидания не замирает — это обратная связь, не украшение', () => {
-    // Своё кольцо widget-spin снято, в плитке стоит общий знак (контракт
-    // «Спиннеры» → «форма»). Свойство то же: остановленный знак читается как
-    // «зависло», поэтому при настройке он не гаснет, а дышит прозрачностью —
-    // правило heys-boot-mark.css по флагу animate-always на самой дуге.
-    const spin = motion('.heys-wait-mark__spin');
-    // jsdom не раскладывает шорткат `animation` на longhand'ы, поэтому
-    // бесконечность читаем из самого шортката, а не из animation-iteration.
-    expect(spin.shorthand).toContain('heys-boot-breathe');
-    expect(spin.shorthand).toContain('infinite');
-    expect(reachedByGlobalKiller('.heys-wait-mark__spin')).toBe(false);
+  it('держатель места в плитке статичен — без бесконечной анимации', () => {
+    const holder = document.querySelector('.widget__loading.v4-place-holder');
+    expect(holder).not.toBeNull();
+    expect(motion('.widget__loading.v4-place-holder').shorthand).toMatch(/^none\b/);
   });
 
   it('плитка больше не рисует своё кольцо', () => {

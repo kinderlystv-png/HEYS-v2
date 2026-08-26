@@ -59,9 +59,9 @@
         'aria-hidden': 'true'
       },
         React.createElement('div', { className: 'date-picker-row date-picker-row--placeholder' },
-          React.createElement('span', { className: 'date-picker-day-nav date-picker-day-nav--placeholder' }),
-          React.createElement('span', { className: 'date-picker-trigger date-picker-trigger--placeholder' }),
-          React.createElement('span', { className: 'date-picker-day-nav date-picker-day-nav--placeholder' })
+          React.createElement('span', { className: 'date-picker-day-nav date-picker-day-nav--placeholder v4-place-holder' }),
+          React.createElement('span', { className: 'date-picker-trigger date-picker-trigger--placeholder v4-place-holder' }),
+          React.createElement('span', { className: 'date-picker-day-nav date-picker-day-nav--placeholder v4-place-holder' })
         )
       );
     }

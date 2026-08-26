@@ -172,46 +172,19 @@ describe('кнопка отправки в чате несёт тот же зн�
   });
 });
 
-describe('загрузка виджета на Главной несёт тот же знак', () => {
+describe('загрузка виджета на Главной — v4 держатель места', () => {
   const ui = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
   const css = fs.readFileSync(
     path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8',
   );
 
-  it('своё кольцо 24/3 снято, знак берётся у HEYS.WaitMark', () => {
+  it('без своего кольца и без WaitMark внутри плитки', () => {
     expect(ui).not.toContain('widget__spinner');
     expect(css).not.toMatch(/\.widget__spinner\s*\{/);
     expect(css).not.toMatch(/@keyframes widget-spin/);
     expect(css).not.toContain('animation: widget-spin');
-    expect(ui).toMatch(
-      /className: 'widget__loading' \},[\s\S]{0,1400}?WaitMark\?\.render\?\.\(React, \{[\s\S]{0,200}?mode: 'button'/,
-    );
-  });
-
-  it('знак — дуга 18 обводкой 2,5 и без второй живой области', () => {
-    // На Главной уже есть своя живая область (#heys-widgets-live,
-    // quickAnnounce). Вторая спорила бы с первой, и на сетке их стало бы
-    // столько, сколько плиток грузится, — поэтому silent.
-    expect(ui).toContain('#heys-widgets-live');
-    expect(ui).toMatch(
-      /className: 'widget__loading' \},[\s\S]{0,1600}?silent: true/,
-    );
-
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-    act(() => {
-      root.render(window.HEYS.WaitMark.render(React, { mode: 'button', state: 'wait', silent: true }));
-    });
-    const svg = host.querySelector('svg');
-    expect(svg.getAttribute('width')).toBe('18');
-    expect(svg.getAttribute('stroke-width')).toBe('2.5');
-    expect([...svg.querySelectorAll('path')].map((p) => p.getAttribute('d'))).toEqual([ARC_TAIL, ARC_HEAD]);
-    expect(host.querySelectorAll('[role="status"]').length).toBe(0);
-    // Знак функциональный: флаг приезжает вместе с ним, и при «уменьшить
-    // движение» дуга дышит, а не замирает (смоук каскада —
-    // reduced-motion-cascade.test.js).
-    expect(host.querySelector('.heys-wait-mark__spin').classList.contains('animate-always')).toBe(true);
+    expect(ui).toMatch(/className:\s*'widget__loading v4-place-holder'/);
+    expect(ui).not.toMatch(/className:\s*'widget__loading'[\s\S]{0,400}?WaitMark/);
   });
 });
 
