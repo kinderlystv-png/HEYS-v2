@@ -1,0 +1,10 @@
+{
+  "zone": "undo-bar",
+  "rows": [
+    {
+      "key": "вибрация, звук, долгое нажатие",
+      "v": "=",
+      "f": "Удаление — day/_meals.js:5756,6280,7194 HEYS.feedback.emit('record.deleted') → double [10,60,10] (heys_audio_v1.js:444-416); отмена — undo_v1:300 emit('undo') → tap [10]. Звука и долгого нажатия нет"
+    }
+  ]
+}

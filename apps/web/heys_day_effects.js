@@ -1325,6 +1325,7 @@
             currentStreak,
             addMeal,
             addWater,
+            focusWater,
             addProductToMeal,
             addProductsToMeal,
             day,
@@ -1384,6 +1385,17 @@
                 }
             };
         }, [addWater]);
+
+        // Экспорт focusWater для push/shortcut: вкладка «Питание», карточка без записи глотка
+        React.useEffect(() => {
+            HEYS.Day = HEYS.Day || {};
+            HEYS.Day.focusWater = focusWater;
+            return () => {
+                if (HEYS.Day && HEYS.Day.focusWater === focusWater) {
+                    delete HEYS.Day.focusWater;
+                }
+            };
+        }, [focusWater]);
 
         // Экспорт addProductToMeal как публичный API
         // Позволяет добавлять продукт в приём извне: HEYS.Day.addProductToMeal(mealIndex, product, grams?)

@@ -41,9 +41,24 @@
         const action = params.get('action');
         const tabParam = params.get('tab');
         const viewParam = params.get('view');
+        const focusParam = params.get('focus');
         const shareReceived = params.get('share-received');
         const switchClientParam = params.get('switch_client');
         const openMessagesParam = params.get('open_messages');
+
+        const navigateToToday = () => {
+            const d = new Date();
+            if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+            const today = d.getFullYear()
+                + '-' + String(d.getMonth() + 1).padStart(2, '0')
+                + '-' + String(d.getDate()).padStart(2, '0');
+            if (typeof HEYS.ui?.setSelectedDate === 'function') {
+                HEYS.ui.setSelectedDate(today);
+            } else if (typeof window.__heysSetSelectedDate === 'function') {
+                window.__heysSetSelectedDate(today);
+            }
+            return today;
+        };
 
         // Очищаем URL в любом случае
         const url = new URL(window.location.href);
@@ -207,6 +222,21 @@
                 }
             };
             setTimeout(tryAddWater, 150);
+        } else if (action === 'morning-checkin') {
+            // Push deep-link: утреннее уведомление → чек-ин шаг 1 сегодня, не Главная
+            needsUrlCleanup = true;
+            if (skipTabSwitchRef) skipTabSwitchRef.current = true;
+
+            const tryOpenMorningCheckin = () => {
+                const today = navigateToToday();
+                if (typeof HEYS.showCheckin?.morning === 'function') {
+                    HEYS.showCheckin.morning(today);
+                    setTimeout(() => { if (skipTabSwitchRef) skipTabSwitchRef.current = false; }, 500);
+                } else {
+                    setTimeout(tryOpenMorningCheckin, 100);
+                }
+            };
+            setTimeout(tryOpenMorningCheckin, 150);
         } else if (shareReceived === 'true') {
             // 🆕 Share Target API — обработка поделённых изображений
             needsUrlCleanup = true;
@@ -263,7 +293,21 @@
             if (validTabs.includes(mappedTab)) {
                 if (skipTabSwitchRef) skipTabSwitchRef.current = true;
                 setTab(mappedTab);
-                setTimeout(() => { if (skipTabSwitchRef) skipTabSwitchRef.current = false; }, 500);
+
+                if (focusParam === 'water' && mappedTab === 'ration') {
+                    navigateToToday();
+                    const tryFocusWater = () => {
+                        if (typeof window.HEYS?.Day?.focusWater === 'function') {
+                            window.HEYS.Day.focusWater();
+                            setTimeout(() => { if (skipTabSwitchRef) skipTabSwitchRef.current = false; }, 500);
+                        } else {
+                            setTimeout(tryFocusWater, 100);
+                        }
+                    };
+                    setTimeout(tryFocusWater, 600);
+                } else {
+                    setTimeout(() => { if (skipTabSwitchRef) skipTabSwitchRef.current = false; }, 500);
+                }
             }
         }
 
@@ -272,6 +316,7 @@
             url.searchParams.delete('action');
             url.searchParams.delete('tab');
             url.searchParams.delete('view');
+            url.searchParams.delete('focus');
             url.searchParams.delete('share-received');
             url.searchParams.delete('switch_client');
             url.searchParams.delete('open_messages');

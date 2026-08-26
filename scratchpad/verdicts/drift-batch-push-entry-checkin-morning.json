@@ -1,0 +1,10 @@
+{
+  "zone": "checkin-morning",
+  "rows": [
+    {
+      "key": "уведомления и точки входа",
+      "v": "=",
+      "f": "cron morning-checkin → /?action=morning-checkin; shortcuts → HEYS.showCheckin.morning(today) шаг 1, не add-water и не Главная"
+    }
+  ]
+}

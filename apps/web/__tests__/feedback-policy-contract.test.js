@@ -453,4 +453,29 @@ describe('политика отклика: вызовы не идут мимо �
     }
     expect(offenders).toEqual([]);
   });
+
+  it('удаление в дневнике зовёт record.deleted, а не legacy haptic medium', () => {
+    const src = fs.readFileSync(path.join(WEB_DIR, 'day/_meals.js'), 'utf8');
+    const removeMealBlock = src.slice(src.indexOf('const removeMeal ='), src.indexOf('const ensureProductReadyForDayWrite ='));
+    const removeItemBlock = src.slice(src.indexOf('const removeItem ='), src.indexOf('const repeatYesterdayMeal ='));
+    const removePhotoBlock = src.slice(src.indexOf('const removePhoto ='), src.indexOf('const updateMealField ='));
+
+    for (const [name, block] of [
+      ['removeMeal', removeMealBlock],
+      ['removeItem', removeItemBlock],
+      ['removePhoto', removePhotoBlock],
+    ]) {
+      expect(block, name).toContain("HEYS.feedback?.emit?.('record.deleted')");
+      expect(block, name).not.toMatch(/haptic\s*\(\s*['"]medium['"]\s*\)/);
+    }
+  });
+
+  it('platform_apis не даёт legacy 8 мс — impactLight снят, транспорт через политику', () => {
+    const src = fs.readFileSync(path.join(WEB_DIR, 'heys_platform_apis_v1.js'), 'utf8');
+    expect(src).not.toMatch(/navigator\s*\.\s*vibrate\s*\(\s*8\s*\)/);
+    expect(src).not.toMatch(/vibrate\s*\(\s*8\s*\)/);
+    expect(src).toContain('impactLight: () => false');
+    expect(src).toContain('HEYS.feedback?.levelFor?.(pattern)');
+    expect(src).toContain('HEYS.feedback?.LEVELS?.[level]');
+  });
 });

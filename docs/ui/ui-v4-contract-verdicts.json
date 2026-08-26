@@ -1624,12 +1624,12 @@
         },
         "частые тапы · звук": {
           "v": "=",
-          "f": "isWaterSoundFlooded молчит при >4 тапах за 2с, тик идёт отдельно из haptic('light') — heys_audio_v1.js:252,678 и day_handlers:483",
+          "f": "isWaterSoundFlooded гасит только звук при >4 тапах за 2с; 10 мс остаётся через emit('water.sip') — heys_audio_v1.js:527-531,624-631",
           "h": "715ea24b92ef"
         },
         "тактильный": {
           "v": "=",
-          "f": "haptic('light') зовёт HEYS.vibration.impactLight — iOS impact light / Android EFFECT_TICK — heys_platform_apis_v1.js:3215",
+          "f": "Глоток: emit('water.sip') → tap [10] (heys_day_day_handlers.js:380, heys_audio_v1.js:415-430). Legacy impactLight 8 мс снят (platform_apis:3219); haptic('light') молчит",
           "h": "8554102ccf80"
         },
         "момент": {
@@ -1818,8 +1818,8 @@
           "h": "b15f8965475e"
         },
         "уведомления и точки входа": {
-          "v": "≠",
-          "f": "sw.js: водного push нет",
+          "v": "=",
+          "f": "cron water-hint → /?tab=ration&focus=water; shortcuts+HEYS.Day.focusWater прокручивает #water-card без записи глотка; sw.js push+notificationclick",
           "h": "cecbf35980e9"
         },
         "вибрация, звук, долгое нажатие": {
@@ -2225,8 +2225,8 @@
           "h": "99f7f886fcd1"
         },
         "уведомления и точки входа": {
-          "v": "≠",
-          "f": "sw.js: утреннего push нет — отдельный scope PWA",
+          "v": "=",
+          "f": "cron morning-checkin → /?action=morning-checkin; shortcuts → HEYS.showCheckin.morning(today) шаг 1, не add-water и не Главная",
           "h": "05313e83ce06"
         },
         "вибрация, звук, долгое нажатие": {
@@ -3372,13 +3372,13 @@
           "h": "a84710620025"
         },
         "уведомления и точки входа": {
-          "v": "≠",
-          "f": "Уведомления о воде как входа не существует — водного пуша в sw.js нет; нижняя навигация и «Еда» из карточки быстрых действий есть",
+          "v": "=",
+          "f": "cron /?tab=ration&focus=water + shortcuts setTab(ration)+focusWater; нижняя навигация и «Еда» из карточки быстрых действий без изменений",
           "h": "3782105a0a9a"
         },
         "вибрация, звук, долгое нажатие": {
-          "v": "≠",
-          "f": "Вибрация 8 мс, не 10 (platform_apis:3127); двойной на удаление приёма нет — всюду один light (nutrition:882,892,903,1437)",
+          "v": "=",
+          "f": "Удаление приёма/продукта/фото — day/_meals.js:5756,6280,7194 record.deleted (double). Запись meal.added — :5316. haptic light на чипах/листе молчит (heys_day_utils:392 light→null); impactLight снят (platform_apis:3219). Долгое нажатие — отдельные строки зоны",
           "h": "d7b48179c256"
         },
         "порядок слоёв и два устройства": {
@@ -3946,8 +3946,8 @@
           "h": "84a7b88acc7b"
         },
         "вибрация, звук, долгое нажатие": {
-          "v": "≠",
-          "f": "Удаление — day/_meals.js:5761 средняя вибрация 20 мс, а не двойная короткая; отмена — undo_v1:298 пятнадцать мс, а не десять. Звука и долгого нажатия нет — эта часть совпадает",
+          "v": "=",
+          "f": "Удаление — day/_meals.js:5756,6280,7194 HEYS.feedback.emit('record.deleted') → double [10,60,10] (heys_audio_v1.js:444-416); отмена — undo_v1:300 emit('undo') → tap [10]. Звука и долгого нажатия нет",
           "h": "162ba985ad0a"
         },
         "язык, выделение, часовой пояс": {

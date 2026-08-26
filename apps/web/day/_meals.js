@@ -5753,7 +5753,7 @@
             const mealName = mealToRemove?.name || 'Приём пищи';
             const mealId = mealToRemove.id;
 
-            haptic('medium');
+            HEYS.feedback?.emit?.('record.deleted');
 
             runUndoableDayMutation({
                 label: mealName + ' удалён',
@@ -6277,7 +6277,7 @@
             const removedItem = originalItems[itemIndex];
             const removedName = removedItem?.name || 'Продукт';
 
-            haptic('medium');
+            HEYS.feedback?.emit?.('record.deleted');
 
             runUndoableDayMutation({
                 label: removedName + ' удалён',
@@ -7191,7 +7191,7 @@
 
             if (confirmed === false) return false;
 
-            haptic('medium');
+            HEYS.feedback?.emit?.('record.deleted');
 
             return !!runUndoableDayMutation({
                 label: 'Фото удалено',

@@ -439,6 +439,17 @@
         }
 
         /**
+         * Push/shortcut entry: scroll to the water card without recording a sip.
+         * Контракт water-add «уведомления и точки входа»: из уведомления глоток не пишется.
+         */
+        function focusWater() {
+            const waterCardEl = document.getElementById('water-card');
+            if (waterCardEl) {
+                waterCardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        /**
          * Add water with animation
          * @param {number} ml - Milliliters to add
          * @param {boolean} skipScroll - Skip scroll to water card
@@ -754,6 +765,7 @@
 
             // Water
             addWater,
+            focusWater,
             removeWater,
             runWaterAnimation,
 
