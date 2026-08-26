@@ -1,152 +1,422 @@
-# Промпт: довести продукт до контракта v4
+# Handoff: довести UI v4 до контракта канваса (cloud agents)
 
-Состояние на 26 августа 2026. Пакет дизайна — **семнадцатая сборка**, 1488 строк
-контракта в 17 зонах.
+Канонический документ для облачных агентов, закрывающих сведение продукта с
+семнадцатой сборкой пакета дизайна. Состояние снимка — **26 августа 2026**.
+
+Пакет: **17 зон**, **1487 строк** контракта с вердиктами (1488 в канвасе; одна
+строка без вердикта — см. гигиену ниже).
 
 ---
 
-## 1. Где источник правды
+## Status snapshot (date 2026-08-26)
 
-**Строки контракта, и только они.** Пакет лежит в
-`docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/`;
-строка — это `<div class="spec"><b>ИМЯ</b><span data-v="ЗНАЧЕНИЕ">`.
+### Гейт `pnpm ui:v4:check`
 
-Не сверяйся по производным. Ни `README.md` пакета, ни `INDEX.md`, ни приёмочные
-листы, ни `UI_V4_FINDINGS.md` источником не являются — все они отстают на шаг, и
-каждый уже соврал. Проза «Решений» — пересказ: при расхождении верен контракт,
-при споре двух канвасов — тот, что назван строкой `источник`.
+| Подгейт                           | Состояние   | Примечание                                                                                                                                                                 |
+| --------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ui-v4-check-undefined-roles.mjs` | **красный** | WIP в `000-base-and-gamification.css`, `500-pwa-and-offline.css`: голые `--v4-sand-act-fill`, `--v4-sand-bg` — объявить в `002-ui-v4-palette-roles.css` или заменить ролью |
+| `ui-v4-check-contract-drift.mjs`  | **зелёный** | «Контракты не двигались: 17 зоны, 1487 строк» (проверено 26.08)                                                                                                            |
 
-**Перечитывай файл с диска, а не по памяти.** Пакет приезжает своими коммитами,
-в том числе посреди работы над экраном: за сутки сменились три сборки, и зона,
-которую вчера было запрещено трогать, сегодня получила контракт. Начинай с
-`node scripts/ui-v4-check-contract-drift.mjs --list`.
+Перед push оба подгейта обязаны быть зелёными на **чистом дереве** после merge
+всех воркеров.
 
-Кадры — вторая величина. **Контракт старше кадра**; отступление называется вслух
-в протоколе и поимённо в тесте сверки.
+### Вердикты — итого и по зонам
 
-## 2. Что уже сделано
+**Итого:** `=` 1185 · `≠` 193 · `?` 6 · `—` 95
 
-Сведены: лестница слоёв, единый знак ожидания, политика звука и вибрации, три
-роли линии, единый порог удержания (`HEYS.longPress`, 350 мс), раскладка
-Главной, празднование, вставка кода на тач, «Повторить сегодня», метки цикла из
-профиля.
+| Зона            | Строк | =   | ≠   | ?   | —   | Снято      |
+| --------------- | ----- | --- | --- | --- | --- | ---------- |
+| home-widgets    | 286   | 243 | 34  | 1   | 8   | 2026-08-24 |
+| water-add       | 96    | 70  | 15  | 0   | 11  | 2026-08-24 |
+| checkin-morning | 82    | 67  | 8   | 3   | 4   | 2026-08-24 |
+| nutrition-tab   | 220   | 197 | 9   | 0   | 14  | 2026-08-24 |
+| date-remainders | 64    | 46  | 10  | 0   | 8   | 2026-08-24 |
+| undo-bar        | 48    | 41  | 3   | 1   | 3   | 2026-08-24 |
+| app-splash      | 38    | 33  | 1   | 0   | 4   | 2026-08-24 |
+| curator-edits   | 54    | 44  | 6   | 0   | 4   | 2026-08-24 |
+| gamification    | 77    | 63  | 9   | 0   | 5   | 2026-08-24 |
+| login           | 71    | 58  | 8   | 0   | 5   | 2026-08-24 |
+| pwa-update      | 55    | 42  | 9   | 0   | 4   | 2026-08-24 |
+| questionnaire   | 57    | 45  | 7   | 0   | 5   | 2026-08-24 |
+| registration    | 63    | 44  | 15  | 0   | 4   | 2026-08-24 |
+| settings-system | 71    | 54  | 10  | 0   | 7   | 2026-08-24 |
+| spinners        | 58    | 51  | 3   | 0   | 4   | 2026-08-24 |
+| tips            | 69    | 49  | 13  | 0   | 7   | 2026-08-24 |
+| cycle           | 78    | 38  | 33  | 1   | 6   | 2026-08-26 |
 
-**Пять зон помечены «МАКЕТ НЕ СОГЛАСОВАН»** — `tab-insights`, `tab-activity`,
-`tab-reports`, `food-add`, `food-add-short`; контракта у них ноль строк, по ним
-не реализовывать ничего. **Зона `cycle` из этого списка вышла** — в семнадцатой
-сборке у неё 78 строк контракта.
+Сводка: `node scripts/ui-v4-check-contract-drift.mjs --list`
 
-## 3. Что осталось
+**Гигиена канваса (не блокирует drift сейчас, но чинить до rehash):** в
+`checkin-morning.v4.dc.html` ключ «замеры на неделе периода» продублирован в
+`ACCEPTANCE-checkin-morning.md` — при `--rehash checkin-morning` убедиться, что
+вердикт адресует живую строку из `.dc.html`.
 
-| Что                       | Строк |
-| ------------------------- | ----- |
-| расхождение с кодом (`≠`) | 242   |
-| спорное (`?`)             | 6     |
-| **без вердикта вообще**   | **0** |
+### Что DONE (коммиты на main, локально +37 от origin)
 
-Зона `cycle` заведена в снимке 26.08.2026: 78 строк, 63 `≠`, 8 `=`, 1 `?`, 6
-`—`.
+| Область                         | SHA                   | Что                                                                                              |
+| ------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------ |
+| Пакет дизайна 17                | `9ec6daad`            | handoff v4 package 17 — full canvas sync                                                         |
+| Снимок cycle                    | `75c766bc`            | cycle zone verdicts snapshot                                                                     |
+| Widget breakdown batch 1        | `67388fd8`            | 12 листов разбора плитки                                                                         |
+| Check-in a11y                   | `cc70d34e`            | progressbar, aria по контракту                                                                   |
+| Системный шрифт / zoom          | `b98f93a2`            | allow system font scale and pinch zoom                                                           |
+| Profile groups                  | `20581852`            | три группы профиля по контракту                                                                  |
+| Nutrition chips a11y            | `d5246425`            | nutrition tab v4 chips a11y + tests                                                              |
+| Long-press + layer ladder       | `85cc5bc3`            | unified long-press 350 ms, v4 layers                                                             |
+| Line roles (3)                  | `8308d1d8`            | три роли линии вместо процентов                                                                  |
+| Drift pass 6 zones              | `e208d36d`            | verdict pass для шести зон                                                                       |
+| Subscription / nutrition guards | `ac2b00cd`            | paywall paths + nutrition-v4-structure                                                           |
+| **5 regression fixes**          | `ffe24fe2`…`79c7bcb0` | FAB water cross-day · confetti flags · stepsGoal aria · view-change sheet bg · breakdown harness |
+| Cycle engine                    | `37ec9d26`            | multipliers, 28-day count, norm wiring                                                           |
 
-### Очередь
+### Что IN FLIGHT (pending merge, 26.08 ~03:00)
 
-**Нулевое — снимок cycle закрыт (26.08).** Гейт пока красный из‑за дубля «замеры
-на неделе периода» в checkin-morning.v4.dc.html.
+Три параллельных воркера держат **незакоммиченный** dirty scope в `apps/web`.
+Могут закончить до старта cloud agent — перечитай `git status apps/web` перед
+взятием lane.
 
-**Первое — доступность.** Контракт назвал её впервые: три `aria-label` на весь
-файл питания, у чек-ина нет `role="progressbar"` со «Шаг N из 5», не озвучены
-капсула сна и дорожка шагов, блюр под листами не гаснет при «уменьшить
-движение».
+| Воркер                  | Файлы (dirty / ??)                                                                                                                                              | Зона                           |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| **cycle UI**            | `heys_cycle_ui_v1.js` (??), `heys_day_cycle_card_v1.js`, `heys_day_cycle_state.js`, `__tests__/cycle-v4-contract.test.js` (??)                                  | cycle                          |
+| **home-widgets**        | `heys_widgets_variants_v4.js`, `styles/modules/730-widgets-dashboard.css`, `__tests__/home-widgets-breakdown-v4.test.js`, `widgets-v4-canvas-geometry.test.js`  | home-widgets                   |
+| **nutrition / checkin** | `heys_day_nutrition_v1.js`, `heys_morning_checkin_v1.js`, `heys_steps_v1.js`, `styles/modules/732-ui-v4-nutrition.css`, `morning-checkin-v4-a11y-smoke.test.js` | nutrition-tab, checkin-morning |
 
-**Второе — решения владельца, которых ещё нет в коде.**
+Дополнительно dirty без явного владельца: `docs/ui/ui-v4-contract-verdicts.json`
+(локальные обновления вердиктов checkin/nutrition/cycle — **не rehash** чужой
+зоны без координации).
 
-- профиль — три группы вместо восьми аккордеонов, у каждого вынесенного блока
-  назван адрес;
-- согласие в анкете уходит на шаг 1, данные не собираются до галочки;
-- куратор правит добавки: четырёх действий журнала нет ни на клиенте, ни на
-  сервере;
-- UI настройки цикла в профиле — сейчас есть только вычисление и якорь.
+**Пять зон «МАКЕТ НЕ СОГЛАСОВАН»** — контракта нет, не реализовывать:
+`tab-insights`, `tab-activity`, `tab-reports`, `food-add`, `food-add-short`.
 
-**Третье — крупный системный шрифт.** До интерфейса не доходит вовсе: 97,8 %
-размеров заданы жёстко, автоувеличение отключено, зум запрещён явно. На Android
-у человека не остаётся ни одного способа увеличить текст.
+---
 
-**Четвёртое — разборы плитки.** Восемнадцать листов, выпуск двумя частями:
-двенадцать сейчас (данные есть), шесть позже (нужна история). Вторая часть
-первую не блокирует — до её выхода тап по этим шести открывает лист без
-исторической картинки, одной строкой «за сегодня».
+## Источник правды
 
-**Пятое — три чипа «Питания».** У «Голода и энергии», «Карточки рефида» и
-«Приёмов за день» чип рисуется, а переключателей под ними нет вовсе.
+**Строки контракта, и только они.** Каталог канвасов:
 
-**Шестое — сторожа subscription и nutrition-v4-structure** — зелёные (26.08: 12
-paywall-путей включая «Повторить сегодня»; openMoodEditor снят из листа приёма).
+```
+docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/
+```
 
-## 4. Правила работы
+Строка: `<div class="spec"><b>ИМЯ</b><span data-v="ЗНАЧЕНИЕ">`.
 
-**Вердикт ставит тот, кто сводил экран, и в той же задаче.** Строка без вердикта
-значит «никто не смотрел». Инструмент переноса —
-`scratchpad/verdicts/apply-verdict.mjs`, хеши руками не считать: скрипт берёт
-отпечаток с живого канваса, а ручная правка легко запишет отпечаток от другого
-значения — и гейт замолчит на разошедшейся строке.
+Не сверяйся по `README.md`, `INDEX.md`, приёмочным листам, `UI_V4_FINDINGS.md` —
+они отстают. Проза «Решений» — пересказ; при расхождении верен `data-v`.
 
-**Вердикт — утверждение о коде против строки контракта.** Ставя `=`, назови файл
-и строку, по которым это видно. Если код ведут по решению владельца, которого в
-пакете ещё нет, — вердикт `?`, а не `=`: иначе снимок скажет «сведено» там, где
-код и контракт противоположны, и гейт этого не поймает.
+Начинай с `node scripts/ui-v4-check-contract-drift.mjs --list`. Перечитывай
+канвас с диска перед каждым крупным блоком.
 
-**Закрытая запись расхождений сразу уезжает в `UI_V4_FINDINGS_HISTORY.md`**
-вместе с решением.
+---
 
-**Отрицательный вывод требует двух независимых способов.** «Этого нет нигде» —
-утверждение о всём множестве; один поиск даёт гипотезу. Три «не нашёл» за вечер
-оказались промахами поиска, а не пропусками в коде.
+## Remaining work — prioritized queue
 
-**«Было до моих правок» — это утверждение, а не отговорка.** Проверяется сверкой
-с базой на чистом дереве. Без сверки честнее писать «не проверял»: три раза
-подряд «падало и раньше» оказалось неправдой.
+Очерёдность: **cycle** (новая зона, 33 `≠`) → **home-widgets** (34 `≠`) →
+**registration** (15) → **water-add** (15) → **tips** (13) → остальные по
+убыванию `≠`. Строки с `?` — не закрывать в `=` без решения владельца/дизайна.
 
-**Кириллицу искать только через ripgrep** — shell-ный `grep -i` здесь регистр
-кириллицы не сворачивает.
+Для каждой зоны ниже: канвас, продуктовые файлы, тесты, процедура вердикта.
 
-**Prettier на CSS не запускать** — переформатирует файл целиком и задевает чужие
-зоны.
+### cycle — 33 `≠`, 1 `?`
 
-**Владение делить по файлам, а не по темам.** Два агента в одном файле — это
-коммит, который нельзя сделать ни с одним из них.
+|                 |                                                                                                                                                                                                                                                                        |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Канвас**      | `cycle.v4.dc.html`                                                                                                                                                                                                                                                     |
+| **Продукт**     | `heys_cycle_ui_v1.js`, `heys_day_cycle_card_v1.js`, `heys_day_cycle_state.js`, `heys_cycle_v1.js`, `heys_user_tab_impl_v1.js` (toggle), `heys_day_pickers.js` (календарь 28 дней), `heys_day_weight_trends_v1.js`, `styles/modules/730-widgets-dashboard.css` (ribbon) |
+| **Тесты**       | `npx vitest run __tests__/cycle-v4-contract.test.js __tests__/cycle-engine-v4.test.js`                                                                                                                                                                                 |
+| **Темы `≠`**    | inline check-in + ribbon + undo; release gate `CYCLE_TRACKING_IN_RELEASE`; двухшаговая дата «1–7» + «Это было сегодня» / «Другой день»; календарь 28 дней; отметка задним числом; a11y выбора даты                                                                     |
+| **`?` blocker** | «выключение не переписывает прошлое» — продуктовое решение до `=`                                                                                                                                                                                                      |
+| **rehash**      | После закрытия batch: `node scripts/ui-v4-check-contract-drift.mjs --rehash cycle`                                                                                                                                                                                     |
 
-## 5. Проверки
+### home-widgets — 34 `≠`, 1 `?`
 
-- `pnpm ui:v4:check` — неопределённые роли и дрейф контракта, оба зелёными до
-  конца задачи. Помнить: зона вне снимка гейтом не сторожится вовсе.
-- `npx vitest run --root .` из `apps/web` — **только при остановленных
-  воркерах**. Тесты читают исходники с диска; при живых агентах прогон меряет
-  движущуюся мишень, и красное с зелёным одинаково ничего не значат. За ночь так
-  трижды «падали» тесты, зелёные в одиночку.
-- Стыки, таймеры, роли и редкие даты — смоук-симуляцией, а не просьбой к
-  человеку собрать условия.
-- После правки легаси-файла, видимой в браузере:
-  `pnpm bundle:legacy:auto --files=<свои файлы>`, затем `pnpm dev:local`.
+|                 |                                                                                                                                                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Канвас**      | `home-widgets.v4.dc.html`                                                                                                                                                                                                             |
+| **Продукт**     | `heys_widgets_variants_v4.js`, `heys_widgets_ui_v1.js`, `heys_widgets_core_v1.js`, `heys_day_page_shell.js` (QuickActionsFab), `styles/modules/730-widgets-dashboard.css`, `styles/modules/002-ui-v4-palette-roles.css` (роли плиток) |
+| **Тесты**       | `widgets-v4-canvas-geometry.test.js`, `home-widgets-breakdown-v4.test.js`, `widgets-v4-bottom-corner-layout.test.js`, `line-roles-v4.test.js`, `widgets-quick-actions-v4.test.js`                                                     |
+| **Темы `≠`**    | роли плитки (песочные vs контрактные); FAB/QuickActions дубль; слова на экране (ккал, эмодзи); режим куратора; hardware back; breakdown batch 2 (6 плиток без истории — лист «за сегодня»)                                            |
+| **`?` blocker** | «роли линий · правило продукта» — 9 % вне трёх ролей; см. `UI_V4_FINDINGS.md` и `line-roles-v4.test.js`. **Не `--rehash`** пока дизайн не назовет роли для 6/7/9/10/14/22/45 %                                                        |
+| **rehash**      | Только для строк, где вердикт `=`/`≠` финален и дизайн не спорит                                                                                                                                                                      |
 
-## 6. Ждёт ответа — в код не тащить
+### registration — 15 `≠`
 
-**Три роли линии не покрывают пакет.** Строка объявляет 8 / 12 / 18 % и говорит
-«больше ролей не заводится», а девять других значений живут в восьми зонах — в
-том числе две строки самого `home-widgets`. Все поимённо в
-`line-roles-v4.test.js`.
+|              |                                                                                                                                    |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Канвас**   | `registration.v4.dc.html`                                                                                                          |
+| **Продукт**  | `heys_profile_step_v1.js`, `heys_consents_v1.js`, `heys_step_modal_v1.js`, `heys_auth_v1.js`, `styles/modules/733-ui-v4-login.css` |
+| **Тесты**    | `registration-v4-contract-sweep.test.js`, `consent-v4-accessibility-smoke.test.js`                                                 |
+| **Темы `≠`** | профиль в настройках (8 групп vs 3); согласие на шаге 1; пределы вес/рост; вибрация; порядок слоёв consent                         |
+| **rehash**   | `--rehash registration`                                                                                                            |
 
-**Бар отмены спорит сам с собой, и в семнадцатой сборке спор жив.** «Слова на
-экране» дают одно действие «Вернуть» и говорят «слов „отменить“ нет»; «слово
-действия» той же зоны требует «всегда „Отменить“ — не „Вернуть“».
+### water-add — 15 `≠`
 
-**Прокрутка.** Общее правило велит ставить её в начало при смене вкладки, зонная
-строка «Питания» — сохранять при возврате. Код делает второе.
+|              |                                                                                                                        |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| **Канвас**   | `water-add.v4.dc.html`                                                                                                 |
+| **Продукт**  | `heys_day_water_v1.js`, `heys_day_water_card_v1.js`, `heys_day_handlers.js`, `styles/modules/400-water-and-advice.css` |
+| **Тесты**    | `water-add-v4.test.js`, `water-custom-volume-v4.test.js`                                                               |
+| **Темы `≠`** | reduced-motion на капле; держатель места; fixed px vs rem; слова «стакан»; порядок слоёв popover                       |
+| **rehash**   | `--rehash water-add`                                                                                                   |
 
-## 7. Границы
+### tips — 13 `≠`
 
-Коммит — на усмотрение агента, source-only:
-`HEYS_COMMIT_SOURCE_ONLY=1 git commit -F <файл-сообщения> -- <явные пути>`.
-Коммитить по ходу, логическими блоками: работа четырёх воркеров лежала без
-единой контрольной точки шесть часов.
+|              |                                                                                                                                                |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Канвас**   | `tips.v4.dc.html`                                                                                                                              |
+| **Продукт**  | `day/_advice.js`, `advice/_core.js`, `heys_day_advice_integration_v1.js`, `heys_advice_rules_v1.js`, `styles/modules/400-water-and-advice.css` |
+| **Тесты**    | `advice-v4-panels.test.js`, `advice-v4-tips-behaviour.test.js`                                                                                 |
+| **Темы `≠`** | герой детали (#efe3cf vs контракт); merge по id между устройствами; вибрация 20 vs 10 ms; точка входа не на Главной                            |
+| **rehash**   | `--rehash tips`                                                                                                                                |
 
-**Push, deploy, PR и любая внешняя публикация — только по отдельной прямой
-команде.**
+### date-remainders — 10 `≠`
+
+|              |                                                                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Канвас**   | `date-remainders.v4.dc.html`                                                                                                                      |
+| **Продукт**  | `heys_day_pickers.js`, `styles/modules/000-base-and-gamification.css` (капсула, шторка, клетки)                                                   |
+| **Тесты**    | `date-remainders-v4-smoke.test.js`, `date-remainders-v4-cell.test.js`, `date-picker-v4-capsule.test.js`, `date-picker-sheet-v4-structure.test.js` |
+| **Темы `≠`** | полоса цикла 3 px; «ночь до 03:00» (кадра нет — долг дизайнера); переход суток; нажатие 70 %                                                      |
+| **FINDINGS** | «ночь до 03:00» — ждёт кадр в `date-remainders.v4.dc.html`                                                                                        |
+| **rehash**   | `--rehash date-remainders`                                                                                                                        |
+
+### settings-system — 10 `≠`
+
+|              |                                                                                                      |
+| ------------ | ---------------------------------------------------------------------------------------------------- |
+| **Канвас**   | `settings-system.v4.dc.html`                                                                         |
+| **Продукт**  | `heys_app_shell_v1.js`, `heys_user_tab_impl_v1.js`, `heys_theme_v1.js`, `heys_health_features_v1.js` |
+| **Тесты**    | `settings-v4-notify-detail.test.js`, `profile-v4-groups.test.js`                                     |
+| **Темы `≠`** | UI настройки цикла в профиле; звук воды; режим куратора; «Выйти» вне ярусов                          |
+| **rehash**   | `--rehash settings-system`                                                                           |
+
+### checkin-morning — 8 `≠`, 3 `?`
+
+|              |                                                                                                                             |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| **Канвас**   | `checkin-morning.v4.dc.html`                                                                                                |
+| **Продукт**  | `heys_morning_checkin_v1.js`, `heys_steps_v1.js`, `heys_step_modal_v1.js`, `styles/modules/500-pwa-and-offline.css`         |
+| **Тесты**    | `morning-checkin-v4-a11y-smoke.test.js`, `morning-checkin-v4-smoke.test.js`, `morning-checkin-v4-contract-geometry.test.js` |
+| **Темы `≠`** | крестик < 44 px; утренний push; «Не сохранилось»; debounce 350 ms на «Дальше»; fixed px в капсуле                           |
+| **`?`**      | выход/производительность; длинные названия; режим куратора                                                                  |
+| **rehash**   | `--rehash checkin-morning` после fix дубля ключа                                                                            |
+
+### nutrition-tab — 9 `≠`
+
+|              |                                                                                                                              |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Канвас**   | `nutrition-tab.v4.dc.html`                                                                                                   |
+| **Продукт**  | `heys_day_nutrition_v1.js`, `styles/modules/732-ui-v4-nutrition.css`                                                         |
+| **Тесты**    | `nutrition-v4-canvas-geometry.test.js`, `nutrition-tab-v4-contract-fixes.test.js`, `nutrition-tab-v4-states.test.js`         |
+| **Темы `≠`** | три чипа без переключателей (голод/рефид/приёмы — **наша** работа); min-height чипа 34 vs 30; merge добавок; держатель места |
+| **FINDINGS** | три чипа ждут полей профиля — см. `UI_V4_FINDINGS.md`                                                                        |
+| **rehash**   | `--rehash nutrition-tab`                                                                                                     |
+
+### gamification — 9 `≠`
+
+|              |                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------ |
+| **Канвас**   | `gamification.v4.dc.html`                                                                                    |
+| **Продукт**  | `heys_gamification_v1.js`, `heys_gamification_screens_v1.js`, `styles/modules/000-base-and-gamification.css` |
+| **Тесты**    | `gamification-v4-achievement-row.test.js`, `gamification-v4-order.test.js`                                   |
+| **Темы `≠`** | три границы суток → одна; держатель места; порядок достигнутых; карточка «Ближе всего»                       |
+| **rehash**   | `--rehash gamification`                                                                                      |
+
+### pwa-update — 9 `≠`
+
+|              |                                                                                           |
+| ------------ | ----------------------------------------------------------------------------------------- |
+| **Канвас**   | `pwa-update.v4.dc.html`                                                                   |
+| **Продукт**  | `heys_platform_apis_v1.js`, `heys_pwa_module_v1.js`, `styles/modules/heys-components.css` |
+| **Тесты**    | `pwa-install-banner-v4-structure.test.js`, `sync-pending-banner-v4.test.js`               |
+| **Темы `≠`** | нажатие scale vs opacity 70 %; «Готово!» vs контракт; длинные версии; вибрация            |
+| **rehash**   | `--rehash pwa-update`                                                                     |
+
+### login — 8 `≠`
+
+|              |                                                                                                |
+| ------------ | ---------------------------------------------------------------------------------------------- |
+| **Канвас**   | `login.v4.dc.html`                                                                             |
+| **Продукт**  | `heys_login_screen_v1.js`, `styles/modules/733-ui-v4-login.css`                                |
+| **Тесты**    | `login-v4-input-contract.test.js`, `login-v4-structure.test.js`                                |
+| **Темы `≠`** | «Код от куратора» vs «Код доступа»; первое появление / приветствие; длинный текст ошибки 38 px |
+| **rehash**   | `--rehash login`                                                                               |
+
+### questionnaire — 7 `≠`
+
+|              |                                                                                    |
+| ------------ | ---------------------------------------------------------------------------------- |
+| **Канвас**   | `questionnaire.v4.dc.html`                                                         |
+| **Продукт**  | `heys_trial_intake_v1.js`                                                          |
+| **Тесты**    | `intake-v4-blocked-action.test.js`, `pep-access-v4-structure.test.js`              |
+| **Темы `≠`** | прокрутка при смене вкладки vs сохранение; нажатие кнопок; нижняя граница возраста |
+| **rehash**   | `--rehash questionnaire`                                                           |
+
+### curator-edits — 6 `≠`
+
+|              |                                                                                                                        |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| **Канвас**   | `curator-edits.v4.dc.html`                                                                                             |
+| **Продукт**  | `heys_curator_actions_banner_v1.js`, серверные RPC добавок                                                             |
+| **Тесты**    | `curator-edits-v4-product-rules.test.js`                                                                               |
+| **Темы `≠`** | **куратор правит добавки** — 4 действия журнала нет на клиенте и сервере; офлайн только live fetch; z-index над листом |
+| **rehash**   | `--rehash curator-edits`                                                                                               |
+
+### undo-bar — 3 `≠`, 1 `?`
+
+|              |                                                                 |
+| ------------ | --------------------------------------------------------------- |
+| **Канвас**   | `undo-bar.v4.dc.html`                                           |
+| **Продукт**  | `heys_app_ui_state_v1.js`, `day/_meals.js`, cycle undo handlers |
+| **Тесты**    | `undo-bar-v4-contract.test.js`                                  |
+| **Темы `≠`** | вибрация удаления; undo cycle «Особые дни»                      |
+| **`?`**      | «слова на экране» — «Вернуть» vs «Отменить» (спор в пакете)     |
+| **rehash**   | `--rehash undo-bar`                                             |
+
+### spinners — 3 `≠`
+
+|             |                                                                    |
+| ----------- | ------------------------------------------------------------------ |
+| **Канвас**  | `spinners.v4.dc.html` + `app-splash.v4.dc.html` (пересечение boot) |
+| **Продукт** | `index.html`, `heys_loading_progress_v1.js`                        |
+| **Тесты**   | `spinners-v4-offline-start.test.js`                                |
+| **rehash**  | `--rehash spinners`                                                |
+
+### app-splash — 1 `≠`
+
+|             |                                        |
+| ----------- | -------------------------------------- |
+| **Канвас**  | `app-splash.v4.dc.html`                |
+| **Продукт** | `heys_theme_v1.js` (миграция theme_v1) |
+| **Тесты**   | `spinners-v4-offline-start.test.js`    |
+| **rehash**  | `--rehash app-splash`                  |
+
+### Процедура закрытия вердикта (все зоны)
+
+1. Сверить строку в `.dc.html` на диске (`data-v`).
+2. Править код → прогнать zone test cluster.
+3. Записать вердикт:
+   ```bash
+   node scratchpad/verdicts/apply-verdict.mjs --zone <zone> --key "<имя строки>" --verdict = --fact "file:line"
+   ```
+   Batch: `--batch scratchpad/verdicts/<zone>-batch.json`
+4. Когда batch зоны готов:
+   `node scripts/ui-v4-check-contract-drift.mjs --rehash <zone>`
+5. Спорное без решения — `?` + запись в `docs/ui/UI_V4_FINDINGS.md`; закрытое —
+   в `UI_V4_FINDINGS_HISTORY.md`.
+
+**Хеши руками не править** — только `apply-verdict.mjs` / `--rehash`.
+
+---
+
+## Parallelization plan for cloud agents
+
+### Правила
+
+- **Владение по файлам**, не по темам. Два агента в одном файле = блокировка.
+- Коммиты **source-only**:
+  ```bash
+  HEYS_COMMIT_SOURCE_ONLY=1 git commit -F <msg> -- <явные пути>
+  ```
+- **NO push / deploy / PR** без прямой команды пользователя.
+- **NO full vitest** при параллельной работе — только cluster своей зоны.
+- Prettier на CSS **не запускать** (переформатирует чужие зоны).
+- После правки legacy UI: `pnpm bundle:legacy:auto --files=<свои>` + reload
+  `pnpm dev:local` (если сервер уже поднят).
+- Финальная интеграция (один агент, чистое дерево): `pnpm ui:v4:check` +
+  `npx vitest run --root .` из `apps/web`.
+
+### Lanes (6–8 независимых)
+
+| Lane                               | Владение (edit)                                                                                                                   | DO NOT edit                                                                               |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **cycle-ui-checkin**               | `heys_cycle_ui_v1.js`, `heys_day_cycle_card_v1.js`, `heys_day_cycle_state.js`, `__tests__/cycle-v4-contract.test.js`              | `heys_day_pickers.js`, `730-widgets-dashboard.css`, `heys_widgets_*`                      |
+| **cycle-ui-calendar-undo**         | `heys_day_pickers.js` (режим cycle 28d), undo cycle в `day/_meals.js`, `heys_app_ui_state_v1.js`                                  | `heys_cycle_ui_v1.js`, nutrition, widgets                                                 |
+| **home-widgets-typography**        | `styles/modules/730-widgets-dashboard.css`, `styles/modules/002-ui-v4-palette-roles.css` (роли плиток/линий)                      | `heys_widgets_variants_v4.js` (breakdown), cycle, nutrition                               |
+| **home-widgets-breakdown-content** | `heys_widgets_variants_v4.js`, `heys_widgets_ui_v1.js`, `__tests__/home-widgets-breakdown-v4.test.js`                             | `730-widgets-dashboard.css` (геометрия сетки — lane typography), `heys_day_page_shell.js` |
+| **nutrition-tab**                  | `heys_day_nutrition_v1.js`, `styles/modules/732-ui-v4-nutrition.css`, nutrition `__tests__/*`                                     | `heys_morning_checkin_v1.js`, widgets                                                     |
+| **checkin-a11y**                   | `heys_morning_checkin_v1.js`, `heys_steps_v1.js`, `styles/modules/500-pwa-and-offline.css` (checkin scope), checkin `__tests__/*` | nutrition-tab, cycle UI                                                                   |
+| **profile-registration**           | `heys_profile_step_v1.js`, `heys_consents_v1.js`, `heys_user_tab_impl_v1.js` (profile groups only), registration tests            | `heys_app_shell_v1.js` (settings), widgets                                                |
+| **date-remainders**                | `heys_day_pickers.js` (date capsule/sheet, не cycle mode), `000-base-and-gamification.css` (date-picker block ~7900–8700)         | cycle calendar lane, widgets                                                              |
+| **water-add**                      | `heys_day_water_v1.js`, `heys_day_water_card_v1.js`, `400-water-and-advice.css`, water tests                                      | advice/tips                                                                               |
+| **tips-advice**                    | `day/_advice.js`, `advice/_core.js`, advice tests                                                                                 | water-add, widgets                                                                        |
+| **login-registration-ui**          | `heys_login_screen_v1.js`, `733-ui-v4-login.css`, login tests                                                                     | profile_step (other lane)                                                                 |
+| **settings-system**                | `heys_app_shell_v1.js` (settings tab), `heys_theme_v1.js`, settings tests                                                         | user_tab profile groups                                                                   |
+| **curator-supplements**            | `heys_curator_actions_banner_v1.js`, API/RPC добавок (если в scope), curator tests                                                | widgets, day handlers                                                                     |
+| **platform-misc**                  | `heys_platform_apis_v1.js`, `heys_gamification_v1.js`, `index.html` (spinners), pwa/gamification tests                            | product UI lanes above                                                                    |
+
+Lanes **cycle-ui-checkin** + **cycle-ui-calendar-undo** координируют через
+`heys_day_pickers.js` — не работать одновременно; calendar lane стартует после
+check-in ribbon или по разным веткам файла (cycle mode vs date sheet).
+
+Lanes **home-widgets-typography** + **home-widgets-breakdown-content** — то же
+для `730-widgets` vs `heys_widgets_variants_v4.js`.
+
+---
+
+## Cloud agent launch template
+
+### Репозиторий
+
+- **Repo:** `HEYS-v2`
+- **Branch:** `main` (локально +37 коммитов от `origin/main` на 26.08 — fetch
+  перед стартом)
+- **Dev:** `pnpm dev:local` (API :4001 + web :3001)
+
+### Обязательное чтение
+
+1. Этот файл — `docs/ui/UI_V4_COMPLETION_PROMPT.md`
+2. `.cursor/rules/canvas-to-code.mdc` — контракт → кадры → гейт
+3. `docs/ui/ui-v4-contract-verdicts.json` — свои строки зоны
+4. Канвас зоны:
+   `docs/ui/handoff-v4/canvas/…/design_handoff_heys_v4/<zone>.v4.dc.html`
+5. User-facing текст: `apps/landing/COPY_VOICE.md`
+6. Открытые споры: `docs/ui/UI_V4_FINDINGS.md`
+
+### Prompt (copy-paste)
+
+```
+Репозиторий: HEYS-v2, ветка main.
+Зона: <ZONE> (lane: <LANE>).
+Handoff: docs/ui/UI_V4_COMPLETION_PROMPT.md — прочитай целиком.
+
+Задача: закрыть строки контракта с вердиктом «≠» в зоне <ZONE>.
+Источник чисел: data-v в <zone>.v4.dc.html на диске.
+Не трогай файлы из колонки DO NOT EDIT для lane <LANE>.
+
+Файлы lane: <список из таблицы lanes>.
+Тесты: npx vitest run --root . <test files>.
+Вердикты: scratchpad/verdicts/apply-verdict.mjs; rehash: --rehash <ZONE>.
+
+Коммит: HEYS_COMMIT_SOURCE_ONLY=1, явные пути. Push/deploy — запрещены.
+Prettier CSS — не запускать.
+После legacy-правок: pnpm bundle:legacy:auto --files=<…>.
+
+Критерий готово: zone test cluster зелёный; закрытые строки = или ? с FINDINGS;
+pnpm ui:v4:check по затронутым ролям (если менял палитру).
+```
+
+---
+
+## Pre-push checklist (для человека)
+
+- [ ] Все local workers завершились или WIP закоммичен / явно отложен
+- [ ] `git status` чистый в `apps/web` и `docs/ui/` (кроме осознанного scope)
+- [ ] `pnpm ui:v4:check` — оба подгейта зелёные
+- [ ] Zone test clusters зелёные; финально `npx vitest run --root .` из
+      `apps/web`
+- [ ] `docs/ui/ui-v4-contract-verdicts.json` — rehash для затронутых зон
+- [ ] Preview bundles собраны integration-проходом или CI (`build:ci`)
+- [ ] Список коммитов ahead of origin (26.08: **37** на main) — согласован scope
+- [ ] Прямая команда пользователя на push/deploy
+
+---
+
+## Общие правила (кратко)
+
+- **Вердикт ставит сводящий экран** в той же задаче. `=` — с файлом и строкой
+  кода.
+- **Контракт старше кадра** — отступления в протокол и тест сверки.
+- **Отрицательный вывод** — два независимых способа; кириллица — только ripgrep.
+- **Progressive disclosure** — перед UI-правкой одна строка UI-гейт (см.
+  CLAUDE.md).
+- Закрытые FINDINGS → `UI_V4_FINDINGS_HISTORY.md`.
