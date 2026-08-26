@@ -451,7 +451,7 @@
     health: { name: 'Здоровье', icon: '💊', desc: 'Витамины, напоминания', isReminder: true },
     sleep: { name: 'Сон', icon: '😴', desc: 'Качество и количество сна' },
     emotional: { name: 'Эмоции', icon: '💙', desc: 'Настроение и стресс' },
-    achievement: { name: 'Достижения', icon: '🏆', desc: 'Streak, рекорды' },
+    achievement: { name: 'Достижения', icon: '🏆', desc: 'Серия, рекорды' },
     timing: { name: 'Тайминг', icon: '⏰', desc: 'Время приёмов пищи' },
     correlation: { name: 'Корреляции', icon: '🔗', desc: 'Связи между показателями' }
   };
