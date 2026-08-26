@@ -1,0 +1,50 @@
+{
+  "zone": "home-widgets",
+  "rows": [
+    {
+      "key": "крупный системный шрифт · правило продукта",
+      "v": "=",
+      "f": "index.html viewport без user-scalable=no; 002-ui-v4-palette-roles.css text-size-adjust:auto; body 81.25% (000-base, critical.css); кегли плиток v4 в rem — kicker 0.5625, value 1.3125, unit 0.625, hero 1.625, calories hero 2.125 (730-widgets:10365+); сетка 4×64 не трогается"
+    },
+    {
+      "key": "1×1",
+      "v": "=",
+      "f": "widget-v4-mini value 1.3125rem (≈21px), kicker 0.5625rem; вода — заливка; rem масштабируется с системой без смены сетки"
+    },
+    {
+      "key": "2×2",
+      "v": "=",
+      "f": "widget-v4-hero-num__val 1.625rem/600 (730-widgets:10880); calories hero 2.125rem; один носитель состояния"
+    },
+    {
+      "key": "вид плитки",
+      "v": "=",
+      "f": "730-widgets:10338 радиус 16, поля 11/14; kicker 0.5625rem/600 .03em; value 1.3125rem; unit 0.625rem — rem-эквивалент контрактных px"
+    },
+    {
+      "key": "разбор · Шаги",
+      "v": "=",
+      "f": "variants_v4:bdStepsWeekdayTable — семь строк по дням недели, weakest tone bad strongest good; chart bars7 + итог «Цель закрыта» (:buildStepsBreakdown)"
+    },
+    {
+      "key": "разбор · Калории",
+      "v": "≠",
+      "f": "bdTypicalCaloriesAtHour из истории приёмов 30 дней (:733+) вместо hourShare×медиана; медиана/разброс/ужин есть; ужин ещё target×0.28, не «обычно на ужин» из приёмов"
+    },
+    {
+      "key": "разбор · Сон",
+      "v": "≠",
+      "f": "sleepStrip 14 дней + avgBed insight (:buildSleepBreakdown); нет оси 21:00→09:00 подписи и риски среднего отбоя как на канвасе"
+    },
+    {
+      "key": "разбор · БЖУ",
+      "v": "≠",
+      "f": "heroTracks три дорожки в листе (:buildMacrosBreakdown); grid3x7 и проценты в stats; герой всё ещё одной строкой белка, не тройной дорожкой как на канвасе"
+    },
+    {
+      "key": "вывод одной строкой",
+      "v": "≠",
+      "f": "калории — insight из bdTypicalCaloriesAtHour; вода/сон/шаги/волна — реальные get*Data; вода без «к 19:40», риск без почасового профиля"
+    }
+  ]
+}

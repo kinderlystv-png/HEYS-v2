@@ -1,0 +1,120 @@
+[
+  {
+    "key": "цель тапа по плитке",
+    "verdict": "=",
+    "fact": "heys_widgets_ui_v1.js:10879 openBreakdownSheet на widget:click; heys_widgets_variants_v4.js:656 opensBreakdown — все 18 типов + status→dayScore"
+  },
+  {
+    "key": "очерёдность разборов · решение владельца",
+    "verdict": "=",
+    "fact": "variants_v4:641 BREAKDOWN_BATCH1 (12) + BREAKDOWN_STUB_TYPES (6); stubOnly + строка «за сегодня» в WidgetBreakdownSheet :1279"
+  },
+  {
+    "key": "каркас разбора · общий",
+    "verdict": "=",
+    "fact": "730-widgets:13608 .widget-bd-sheet left/right/bottom 12px, radius 26, padding 12/18/20; :13605 scrim backdrop-filter none; порядок шапка→герой→вывод→картинка→stats→norm→action в WidgetBreakdownSheet"
+  },
+  {
+    "key": "шапка листа",
+    "verdict": "=",
+    "fact": "730-widgets:13672 title 15/700; :13679 close 44×44; variants_v4:1269-1277 title + svg close без даты"
+  },
+  {
+    "key": "герой листа",
+    "verdict": "=",
+    "fact": "730-widgets:13722 kicker 10/700 uppercase .14em; :13730 hero-val 44/600 letter-spacing -.03em; :13737 unit 12/600"
+  },
+  {
+    "key": "вывод одной строкой",
+    "verdict": "≠",
+    "fact": "batch1 insight из get*Data; калории — bdTypicalCaloriesAtHour (:733); вода checkHourLabel; сон avgBed; без полного набора строк канваса у риска/тренда"
+  },
+  {
+    "key": "подпись метрики",
+    "verdict": "≠",
+    "fact": "bars7/grid/spline/sleepStrip/waveDay из v4.dayBar; вода rhythmBins; нет месячного почасового профиля воды/риска со сплайном"
+  },
+  {
+    "key": "разбор числами",
+    "verdict": "≠",
+    "fact": "stats расширены (вес ±0.6, шаги 7 строк, оценка месяц); нет доли дней у слагаемых оценки и плато 10+ у динамики"
+  },
+  {
+    "key": "строка нормы",
+    "verdict": "=",
+    "fact": "model.norm + .widget-bd-sheet__norm у каждого batch1 builder и stub"
+  },
+  {
+    "key": "действие",
+    "verdict": "=",
+    "fact": "730-widgets:13908 action height 48 radius 999 full width; variants_v4:1325 одна кнопка или чипы воды без второй ссылки"
+  },
+  {
+    "key": "чего в листе нет",
+    "verdict": "=",
+    "fact": "WidgetBreakdownSheet без вкладок, свайпа, overflow scroll, «Подробнее»; смена вида остаётся на long-press"
+  },
+  {
+    "key": "линии в разборах",
+    "verdict": "=",
+    "fact": "variants_v4:699 bdSplinePath cubic bezier; :1235 strokeWidth 1.6 strokeLinecap round на weightCurve/spline30"
+  },
+  {
+    "key": "разбор · Калории",
+    "verdict": "≠",
+    "fact": "bdTypicalCaloriesAtHour 30d; медиана/разброс; ужин — target×0.28, не история приёма"
+  },
+  {
+    "key": "разбор · Вода",
+    "verdict": "≠",
+    "fact": "лист + чипы; rhythmBins + checkHourLabel; нет месячного почасового профиля и сплайна"
+  },
+  {
+    "key": "разбор · Вес",
+    "verdict": "≠",
+    "fact": "spline 30d + bdFormatGoalDate + разброс ±0.6; прогноз «середина декабря» эвристика по weeksToGoal"
+  },
+  { "key": "разбор · Сон", "verdict": "≠", "fact": "sleepStrip 14d + avgBed insight; нет подписанной оси 21→09" },
+  {
+    "key": "разбор · Шаги",
+    "verdict": "=",
+    "fact": "bdStepsWeekdayTable — 7 строк, bad/good tones, bars7, итог «Цель закрыта»"
+  },
+  {
+    "key": "разбор · Инсулиновая волна",
+    "verdict": "≠",
+    "fact": "v4.dayBar в chart waveDay; stats calm/overlap/meals; нет ленты 7 дней"
+  },
+  {
+    "key": "разбор · БЖУ",
+    "verdict": "≠",
+    "fact": "heroTracks + grid3x7; герой одной строкой белка, не три дорожки как на канвасе"
+  },
+  {
+    "key": "разбор · Оценка дня",
+    "verdict": "≠",
+    "fact": "bdDayScoreMonthStats avg/best/below6; factorBars без доли дней месяца у слагаемых"
+  },
+  { "key": "разбор · Риск-радар", "verdict": "≠", "fact": "riskScale + drivers; нет почасового профиля за месяц" },
+  {
+    "key": "разбор · Тренд здоровья",
+    "verdict": "≠",
+    "fact": "spline30 + contributions + daysInPlus; нет «лучшей недели»"
+  },
+  {
+    "key": "разбор · Карта активности",
+    "verdict": "≠",
+    "fact": "grid7x5 + is-gap обводка 2+ пропусков; insight серия без «5 недель подряд»"
+  },
+  {
+    "key": "разбор · Динамика веса",
+    "verdict": "≠",
+    "fact": "WeightDynamicsV4 + weeklyBars 4 строки current tone; нет подсветки плато 10+ дней"
+  },
+  { "key": "разбор · Клетчатка", "verdict": "=", "fact": "BREAKDOWN_STUB_TYPES + stubOnly «за сегодня»" },
+  { "key": "разбор · Белок", "verdict": "=", "fact": "stub batch2 — hero из getDataForWidget" },
+  { "key": "разбор · Окно до сна", "verdict": "=", "fact": "stub batch2 — одна строка «за сегодня»" },
+  { "key": "разбор · Качество еды", "verdict": "=", "fact": "stub batch2 — score/10 hero" },
+  { "key": "разбор · Ритм приёмов", "verdict": "=", "fact": "stub batch2 — mealCount hero" },
+  { "key": "разбор · Готовность ко сну", "verdict": "=", "fact": "stub batch2 — score/10" }
+]

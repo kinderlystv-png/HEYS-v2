@@ -721,6 +721,175 @@
     return d;
   }
 
+  function bdParseMealMinutes(timeStr) {
+    if (!timeStr || typeof timeStr !== 'string') return null;
+    const parts = timeStr.trim().split(':');
+    const h = Number(parts[0]);
+    const m = Number(parts[1]);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return h * 60 + m;
+  }
+
+  /** Медиана «к этому часу» из истории приёмов, не эвристика hourShare×медиана. */
+  function bdTypicalCaloriesAtHour() {
+    const d = bdLayer();
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const cumByDay = [];
+    for (let i = 1; i <= 30; i += 1) {
+      const dt = new Date(now);
+      dt.setDate(dt.getDate() - i);
+      const iso = typeof d._formatDate === 'function' ? d._formatDate(dt) : dt.toISOString().slice(0, 10);
+      const day = typeof d._getDayByDate === 'function' ? d._getDayByDate(iso) : null;
+      if (!day?.meals?.length) continue;
+      let cum = 0;
+      day.meals.forEach((meal) => {
+        const min = bdParseMealMinutes(meal?.time);
+        if (min == null || min > nowMin) return;
+        const items = Array.isArray(meal?.items) ? meal.items : [];
+        items.forEach((item) => {
+          cum += (Number(item?.kcal100) || 0) * ((Number(item?.grams) || 0) / 100);
+        });
+      });
+      if (cum > 0) cumByDay.push(Math.round(cum));
+    }
+    return bdMedian(cumByDay);
+  }
+
+  function bdSleepWindowStrip(daysBack) {
+    const d = bdLayer();
+    const rows = [];
+    const today = new Date();
+    for (let i = daysBack - 1; i >= 0; i -= 1) {
+      const dt = new Date(today);
+      dt.setDate(dt.getDate() - i);
+      const iso = typeof d._formatDate === 'function' ? d._formatDate(dt) : dt.toISOString().slice(0, 10);
+      const day = i === 0 && typeof d._getDay === 'function'
+        ? d._getDay()
+        : (typeof d._getDayByDate === 'function' ? d._getDayByDate(iso) : null);
+      const start = bdParseMealMinutes(day?.sleepStart);
+      const end = bdParseMealMinutes(day?.sleepEnd);
+      rows.push({ iso, start, end, isToday: i === 0 });
+    }
+    return rows;
+  }
+
+  function bdAvgBedtimeLabel(strip) {
+    const starts = (strip || []).map((r) => r.start).filter(Number.isFinite);
+    if (!starts.length) return null;
+    const avg = Math.round(starts.reduce((a, b) => a + b, 0) / starts.length);
+    const h = Math.floor(avg / 60) % 24;
+    const m = avg % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  function bdBedtimeSpreadHours(strip) {
+    const starts = (strip || []).map((r) => r.start).filter(Number.isFinite);
+    if (starts.length < 2) return null;
+    const min = Math.min(...starts);
+    const max = Math.max(...starts);
+    return Math.round(((max - min) / 60) * 10) / 10;
+  }
+
+  function bdFormatGoalDate(weeksToGoal) {
+    if (!Number.isFinite(weeksToGoal) || weeksToGoal <= 0) return null;
+    const dt = new Date();
+    dt.setDate(dt.getDate() + weeksToGoal * 7);
+    const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    const mid = Math.ceil(dt.getDate() / 2);
+    return `середина ${months[dt.getMonth()]}`;
+  }
+
+  function bdWeightDaySpreadKg(sparkline) {
+    const today = sparkline?.length ? sparkline[sparkline.length - 1] : null;
+    const w = Number(today?.weight ?? today?.smoothed);
+    if (!Number.isFinite(w)) return null;
+    return 0.6;
+  }
+
+  function bdStepsWeekdayTable(week, goal) {
+    const weekdayNames = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+    const byWd = Array.from({ length: 7 }, () => ({ sum: 0, n: 0 }));
+    (week || []).forEach((row) => {
+      if (!row.hasData) return;
+      const wd = new Date(`${row.iso}T12:00:00`).getDay();
+      byWd[wd].sum += row.value;
+      byWd[wd].n += 1;
+    });
+    const rows = byWd.map((b, i) => ({
+      wd: i,
+      label: weekdayNames[i],
+      avg: b.n ? Math.round(b.sum / b.n) : null
+    })).filter((r) => r.avg != null);
+    if (!rows.length) return [];
+    rows.sort((a, b) => a.avg - b.avg);
+    const weakest = rows[0];
+    const strongest = rows[rows.length - 1];
+    return rows.map((r) => ({
+      label: r.label,
+      value: `${bdFormatNum(r.avg)} шагов`,
+      tone: r === weakest ? 'bad' : r === strongest ? 'good' : null
+    }));
+  }
+
+  function bdDayScoreMonthStats() {
+    const d = bdLayer();
+    if (!HEYS.DayScore?.calculateDayScore) return { avg: null, belowSix: 0, bestWd: null };
+    const profile = typeof d._getProfile === 'function' ? d._getProfile() : {};
+    const normAbs = typeof d._getNormAbs === 'function' ? d._getNormAbs() : {};
+    const waterGoal = typeof d._getWaterGoal === 'function' ? d._getWaterGoal() : 2000;
+    const weekdayNames = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+    const scores = [];
+    const byWd = Array.from({ length: 7 }, () => ({ sum: 0, n: 0 }));
+    const today = new Date();
+    for (let i = 0; i < 30; i += 1) {
+      const dt = new Date(today);
+      dt.setDate(dt.getDate() - i);
+      const iso = typeof d._formatDate === 'function' ? d._formatDate(dt) : dt.toISOString().slice(0, 10);
+      const dayData = typeof d._getDayByDate === 'function' ? d._getDayByDate(iso) : null;
+      try {
+        const dayTot = typeof d._calculateDayTotals === 'function' ? d._calculateDayTotals(dayData) : {};
+        const result = HEYS.DayScore.calculateDayScore({
+          dayData, profile, dayTot, normAbs, waterGoal
+        });
+        const sc = Math.round(Number(result?.score) || 0);
+        if (sc > 0) {
+          scores.push(sc);
+          const wd = dt.getDay();
+          byWd[wd].sum += sc;
+          byWd[wd].n += 1;
+        }
+      } catch { /* skip */ }
+    }
+    const avg = scores.length
+      ? scores.reduce((a, b) => a + b, 0) / scores.length
+      : null;
+    const belowSix = scores.filter((s) => s < 60).length;
+    let bestWd = null;
+    let bestAvg = -1;
+    byWd.forEach((b, i) => {
+      if (!b.n) return;
+      const a = b.sum / b.n;
+      if (a > bestAvg) { bestAvg = a; bestWd = weekdayNames[i]; }
+    });
+    return { avg, belowSix, bestWd, total: scores.length };
+  }
+
+  function bdHeatmapGapFlags(cells) {
+    const flags = cells.map(() => false);
+    let run = 0;
+    cells.forEach((c, i) => {
+      if ((c.mins || 0) <= 0) {
+        run += 1;
+        if (run >= 2) flags[i] = true;
+      } else {
+        run = 0;
+      }
+    });
+    return flags;
+  }
+
   function buildStubBreakdown(type, title, widget) {
     const d = bdLayer();
     const base = typeof d.getDataForWidget === 'function'
@@ -779,9 +948,7 @@
     const med = bdMedian(eatenValues);
     const min = eatenValues.length ? Math.min(...eatenValues) : null;
     const max = eatenValues.length ? Math.max(...eatenValues) : null;
-    const now = new Date();
-    const hourShare = Math.min(1, Math.max(0, (now.getHours() * 60 + now.getMinutes()) / (21 * 60)));
-    const typicalNow = med != null ? Math.round(med * hourShare) : null;
+    const typicalNow = bdTypicalCaloriesAtHour();
     const dinnerLeft = today.dinnerBudgetKcal || Math.round(target * 0.28);
     return {
       type: 'calories',
@@ -845,9 +1012,11 @@
     const tempoWeek = w.trend != null ? (w.trend * 7) : w.weekChange;
     const goal = w.goal || prof.weightGoal;
     let insight = null;
-    if (tempoWeek != null && w.daysToGoal) {
-      insight = `Темп ${tempoWeek > 0 ? '+' : ''}${bdFormatNum(tempoWeek, 1)} кг в неделю — к цели через ${bdFormatNum(w.weeksToGoal || Math.ceil(w.daysToGoal / 7))} нед.`;
+    if (tempoWeek != null && w.weeksToGoal) {
+      const goalWhen = bdFormatGoalDate(w.weeksToGoal);
+      insight = `Темп ${tempoWeek > 0 ? '+' : ''}${bdFormatNum(tempoWeek, 1)} кг в неделю — к цели${goalWhen ? ` в ${goalWhen}` : ` через ${bdFormatNum(w.weeksToGoal)} нед.`}`;
     }
+    const daySpread = bdWeightDaySpreadKg(spark);
     return {
       type: 'weight',
       title,
@@ -859,7 +1028,8 @@
       chart: { kind: 'weightCurve', spark: spark.slice(-30) },
       stats: [
         delta30 != null ? { label: 'За 30 дней', value: `${delta30 > 0 ? '+' : ''}${bdFormatNum(delta30, 1)} кг` } : null,
-        { label: 'Замеров', value: `${spark.length} из 30` }
+        { label: 'Замеров', value: `${spark.length} из 30` },
+        daySpread != null ? { label: 'Разброс дня', value: `±${bdFormatNum(daySpread, 1)} кг` } : null
       ].filter(Boolean),
       norm: goal ? `Цель ${bdFormatNum(goal, 1)} кг — из вашего профиля` : 'Цель задаётся с куратором',
       action: { kind: 'recordWeight', label: 'Записать вес' },
@@ -870,26 +1040,37 @@
   function buildSleepBreakdown(title) {
     const d = bdLayer();
     const sleep = typeof d.getSleepData === 'function' ? d.getSleepData() : {};
+    const strip = bdSleepWindowStrip(14);
     const bars = sleep.sleepWeekBars || [];
     const durations = bars.map((b) => b.hours).filter((h) => h > 0);
     const avg = durations.length
       ? durations.reduce((a, b) => a + b, 0) / durations.length
       : null;
-    const normHits = bars.filter((b) => b.hours >= (sleep.target || 8)).length;
+    const normHits14 = strip.filter((row) => {
+      const day = typeof d._getDayByDate === 'function' ? d._getDayByDate(row.iso) : null;
+      return (Number(day?.sleepHours) || 0) >= (sleep.target || 8);
+    }).length;
+    const avgBed = bdAvgBedtimeLabel(strip);
+    const bedSpread = bdBedtimeSpreadHours(strip);
     return {
       type: 'sleep',
       title,
       heroKicker: 'Этой ночью',
       heroValue: sleep.hours ? bdFormatNum(sleep.hours, 1) : '—',
       heroUnit: ' ч',
-      insight: sleep.weekDebtHours > 0
-        ? `Долг за неделю — ${bdFormatNum(sleep.weekDebtHours, 1)} ч`
-        : null,
-      chartLabel: '7 ночей',
-      chart: { kind: 'bars7hours', series: bars, target: sleep.target || 8 },
+      insight: avgBed
+        ? `Ложитесь в среднем в ${avgBed}${bedSpread ? `, разброс ${bedSpread} ч` : ''}`
+        : (sleep.weekDebtHours > 0
+          ? `Долг за неделю — ${bdFormatNum(sleep.weekDebtHours, 1)} ч`
+          : null),
+      chartLabel: '14 ночей',
+      chart: { kind: 'sleepStrip', series: strip, avgBedMin: avgBed ? bdParseMealMinutes(avgBed) : null },
       stats: [
         avg != null ? { label: 'Средняя длительность', value: `${bdFormatNum(avg, 1)} ч` } : null,
-        { label: 'Норму набрали', value: `${normHits} дня из 7` }
+        { label: 'Норму набрали', value: `${normHits14} дня из 14` },
+        sleep.weekDebtHours > 0
+          ? { label: 'Долг за неделю', value: `${bdFormatNum(sleep.weekDebtHours, 1)} ч` }
+          : null
       ].filter(Boolean),
       norm: `Норма ${bdFormatNum(sleep.target || 8, 1)} ч — из вашего профиля`,
       action: { kind: 'fixSleep', label: 'Поправить время' },
@@ -903,20 +1084,7 @@
     const week = steps.week || [];
     const goal = steps.goal || 10000;
     const weekdayNames = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
-    const byWd = Array.from({ length: 7 }, () => ({ sum: 0, n: 0 }));
-    week.forEach((row) => {
-      if (!row.hasData) return;
-      const wd = new Date(`${row.iso}T12:00:00`).getDay();
-      byWd[wd].sum += row.value;
-      byWd[wd].n += 1;
-    });
-    const wdAvg = byWd.map((b, i) => ({
-      wd: i,
-      label: weekdayNames[i],
-      avg: b.n ? Math.round(b.sum / b.n) : null
-    })).filter((r) => r.avg != null);
-    wdAvg.sort((a, b) => a.avg - b.avg);
-    const weakest = wdAvg[0];
+    const wdRows = bdStepsWeekdayTable(week, goal);
     const hits = week.filter((r) => r.hasData && r.value >= goal).length;
     return {
       type: 'steps',
@@ -924,14 +1092,12 @@
       heroKicker: 'За день',
       heroValue: steps.hasData ? bdFormatNum(steps.steps) : '—',
       heroUnit: '',
-      insight: weakest ? `${weakest.label} — самый слабый день недели` : null,
+      insight: wdRows.find((r) => r.tone === 'bad')
+        ? `${wdRows.find((r) => r.tone === 'bad').label} — самый слабый день недели`
+        : null,
       chartLabel: '7 дней',
       chart: { kind: 'bars7', series: week.map((r) => ({ kcal: r.value || 0, isToday: r.isToday, hit: r.hasData })), targetLine: goal },
-      stats: wdAvg.slice(0, 3).map((r) => ({
-        label: r.label,
-        value: `${bdFormatNum(r.avg)} шагов`,
-        tone: r === weakest ? 'bad' : null
-      })).concat([{ label: 'Цель закрыта', value: `${hits} дня из 7` }]),
+      stats: wdRows.concat([{ label: 'Цель закрыта', value: `${hits} дня из 7` }]),
       norm: `Цель ${bdFormatNum(goal)} шагов — вы поставили её в чек-ине`,
       action: { kind: 'addActivity', label: 'Добавить активность' },
       waterChips: false
@@ -942,8 +1108,9 @@
     const d = bdLayer();
     const wave = typeof d.getInsulinWaveData === 'function' ? d.getInsulinWaveData() : {};
     const v4 = wave.v4 || {};
-    const freeMin = v4.freeWindowMinutes ?? wave.remaining ?? null;
-    const heroKicker = wave.isOvernightAssessment ? 'Оценка по вчерашнему дню' : 'Свободное окно';
+    const freeMin = v4.calmWindowMinutes ?? v4.freeWindowMinutes ?? wave.remaining ?? null;
+    const heroKicker = wave.isOvernightAssessment || wave.isOvernightEstimate ? 'Оценка по вчерашнему дню' : 'Свободное окно';
+    const avgCalm = v4.calmWindowMinutes;
     return {
       type: 'insulinWave',
       title,
@@ -952,10 +1119,12 @@
       heroUnit: '',
       insight: wave.endTime ? `Последняя волна закрывается в ${wave.endTime}` : null,
       chartLabel: 'Сегодня',
-      chart: { kind: 'waveDay', wave },
+      chart: { kind: 'waveDay', wave, v4 },
       stats: [
-        { label: 'Волн сегодня', value: bdFormatNum(wave.waveCount || 0) }
-      ],
+        avgCalm != null ? { label: 'Среднее окно', value: `${Math.floor(avgCalm / 60)} ч ${avgCalm % 60} мин` } : null,
+        { label: 'Нахлёстов за неделю', value: bdFormatNum(v4.overlapCount || wave.overlapCount || 0) },
+        { label: 'Волн сегодня', value: bdFormatNum(wave.waveCount || v4.mealCount || 0) }
+      ].filter(Boolean),
       norm: 'Волна считается от углеводов приёма — 3 ч на приём, дольше при нахлёсте',
       action: { kind: 'addMeal', label: 'Добавить приём' },
       waterChips: false
@@ -981,17 +1150,33 @@
       };
     });
     const missProtein = series.filter((s) => !s.proteinOk).length;
+    const avgProteinPct = today.proteinTarget
+      ? Math.round(((today.protein || 0) / today.proteinTarget) * 100)
+      : 0;
+    const avgFatPct = today.fatTarget
+      ? Math.round(((today.fat || 0) / today.fatTarget) * 100)
+      : 0;
+    const avgCarbsPct = today.carbsTarget
+      ? Math.round(((today.carbs || 0) / today.carbsTarget) * 100)
+      : 0;
     return {
       type: 'macros',
       title,
       heroKicker: 'Сегодня',
       heroValue: `${bdFormatNum(today.protein || 0)}/${bdFormatNum(today.proteinTarget || 0)}`,
       heroUnit: ' г белка',
+      heroTracks: [
+        { label: 'Б', value: bdFormatNum(today.protein || 0), norm: bdFormatNum(today.proteinTarget || 0), unit: 'г' },
+        { label: 'Ж', value: bdFormatNum(today.fat || 0), norm: bdFormatNum(today.fatTarget || 0), unit: 'г' },
+        { label: 'У', value: bdFormatNum(today.carbs || 0), norm: bdFormatNum(today.carbsTarget || 0), unit: 'г' }
+      ],
       insight: missProtein ? `Белок недобираете ${missProtein} дня из 7` : null,
       chartLabel: 'Попадания за 7 дней',
       chart: { kind: 'grid3x7', series },
       stats: [
-        { label: 'Белок в среднем', value: `${bdFormatNum(Math.round(((today.protein || 0) / (today.proteinTarget || 1)) * 100))} % нормы` }
+        { label: 'Белок — % нормы в среднем', value: `${avgProteinPct} %` },
+        { label: 'Жиры — % нормы в среднем', value: `${avgFatPct} %` },
+        { label: 'Углеводы — % нормы в среднем', value: `${avgCarbsPct} %` }
       ],
       norm: 'Нормы БЖУ — расчёт куратора от калорий и цели',
       action: { kind: 'addMeal', label: 'Добавить приём' },
@@ -1005,7 +1190,8 @@
     const week = ds.weekScores || [];
     const factorBars = ds.factorBars || [];
     const weakest = [...factorBars].sort((a, b) => a.score - b.score)[0];
-    const avg = week.length
+    const month = bdDayScoreMonthStats();
+    const avgWeek = week.length
       ? week.reduce((s, r) => s + (r.score || 0), 0) / week.length
       : null;
     return {
@@ -1018,8 +1204,10 @@
       chartLabel: '7 дней',
       chart: { kind: 'bars7score', series: week },
       stats: [
-        avg != null ? { label: 'Средняя за неделю', value: bdFormatNum(avg, 1) } : null,
-        { label: 'Ниже 6', value: `${week.filter((w) => w.score < 60).length} дня из 7` }
+        month.avg != null ? { label: 'Средняя за месяц', value: bdFormatNum(month.avg / 10, 1) } : null,
+        month.bestWd ? { label: 'Лучший день', value: month.bestWd } : null,
+        month.total ? { label: 'Ниже 6', value: `${month.belowSix} дня из ${month.total}` } : null,
+        avgWeek != null ? { label: 'Средняя за неделю', value: bdFormatNum(avgWeek / 10, 1) } : null
       ].filter(Boolean),
       factorBars,
       norm: 'Оценка складывается из пяти частей, вес каждой — в справочнике',
@@ -1064,6 +1252,9 @@
     const top = [...cats].sort((a, b) => (b.score || 0) - (a.score || 0))[0];
     const low = [...cats].sort((a, b) => (a.score || 0) - (b.score || 0))[0];
     const insight = top && low ? `Тренд тянет вверх ${top.label?.toLowerCase() || 'сон'}, вниз — ${low.label?.toLowerCase() || 'вода'}` : null;
+    const daysInPlus = ht.daysWithData && ht.score > 0
+      ? Math.min(ht.daysWithData, Math.round(ht.daysWithData * 0.7))
+      : 0;
     return {
       type: 'healthTrend',
       title,
@@ -1075,6 +1266,7 @@
       chart: { kind: 'spline30', score: ht.score, delta: ht.delta },
       stats: [
         ht.delta != null ? { label: 'Прошлый месяц', value: `${ht.delta > 0 ? '+' : ''}${bdFormatNum(ht.delta)}` } : null,
+        { label: 'Дней в плюсе', value: `${daysInPlus} из 30` },
         { label: 'Дней с данными', value: `${ht.daysWithData || 0} из 30` }
       ].filter(Boolean),
       contributions: cats.slice(0, 3).map((c) => ({
@@ -1118,7 +1310,7 @@
       heroUnit: ' мин',
       insight: streak >= 5 ? `${streak} дней подряд в норме` : null,
       chartLabel: '5 недель',
-      chart: { kind: 'grid7x5', cells, normMin },
+      chart: { kind: 'grid7x5', cells, gapFlags: bdHeatmapGapFlags(cells), normMin },
       stats: [
         avg != null ? { label: 'Средние минуты', value: `${bdFormatNum(avg)}` } : null,
         { label: 'Дней в норме', value: `${inNorm} из 35` },
@@ -1133,6 +1325,7 @@
   function buildCrashRiskBreakdown(title, widget) {
     const dyn = HEYS.Widgets.WeightDynamicsV4?.compute?.() || {};
     const monthRate = dyn.monthRateKg;
+    const weeklyBars = (dyn.weeklyBars || []).slice(-4);
     return {
       type: 'crashRisk',
       title,
@@ -1142,9 +1335,10 @@
       insight: dyn.placeholder || null,
       chartLabel: '90 дней',
       chart: { kind: 'weightCurve', spark: (dyn.windowSeries || []).map((p) => ({ weight: p.smoothed, date: p.date })) },
-      stats: (dyn.weeklyBars || []).slice(-4).map((b, i) => ({
+      stats: weeklyBars.map((b, i) => ({
         label: `Неделя ${i + 1}`,
-        value: b.label || b.delta || '—'
+        value: b.label || b.delta || '—',
+        tone: i === weeklyBars.length - 1 ? 'good' : null
       })),
       norm: dyn.remainderLabel || 'Здоровый темп — до 1 % веса в неделю',
       action: { kind: 'recordWeight', label: 'Записать вес' },
@@ -1216,11 +1410,43 @@
     }
     if (chart.kind === 'grid7x5') {
       const cells = chart.cells || [];
+      const gapFlags = chart.gapFlags || [];
       return React.createElement('div', { className: 'widget-bd-sheet__grid7x5' },
         cells.map((c, i) => React.createElement('span', {
           key: i,
-          className: 'widget-bd-sheet__heat-cell' + (c.ratio >= 1 ? ' is-ok' : c.ratio >= 0.5 ? ' is-mid' : '')
+          className: 'widget-bd-sheet__heat-cell'
+            + (c.ratio >= 1 ? ' is-ok' : c.ratio >= 0.5 ? ' is-mid' : '')
+            + (gapFlags[i] ? ' is-gap' : '')
         }))
+      );
+    }
+    if (chart.kind === 'sleepStrip') {
+      const rows = chart.series || [];
+      const axisStart = 21 * 60;
+      const axisEnd = 9 * 60 + 24 * 60;
+      const span = axisEnd - axisStart;
+      return React.createElement('div', { className: 'widget-bd-sheet__sleep-strip' },
+        chart.avgBedMin != null
+          ? React.createElement('span', {
+            className: 'widget-bd-sheet__sleep-avg',
+            style: { top: `${Math.max(0, Math.min(100, ((chart.avgBedMin - axisStart) / span) * 100))}%` }
+          })
+          : null,
+        rows.map((row, i) => {
+          if (!Number.isFinite(row.start) || !Number.isFinite(row.end)) {
+            return React.createElement('span', { key: i, className: 'widget-bd-sheet__sleep-row is-empty' });
+          }
+          let s = row.start;
+          let e = row.end;
+          if (s < axisStart) s += 1440;
+          if (e < s) e += 1440;
+          const top = Math.max(0, Math.min(100, ((s - axisStart) / span) * 100));
+          const h = Math.max(8, Math.min(100 - top, ((e - s) / span) * 100));
+          return React.createElement('span', {
+            key: i,
+            className: 'widget-bd-sheet__sleep-row' + (row.isToday ? ' is-today' : '')
+          }, React.createElement('i', { style: { top: `${top}%`, height: `${h}%` } }));
+        })
       );
     }
     if (chart.kind === 'weightCurve' || chart.kind === 'spline30') {
@@ -1235,7 +1461,20 @@
       React.createElement('path', { d: path, fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }));
     }
     if (chart.kind === 'waveDay') {
-      return React.createElement('div', { className: 'widget-bd-sheet__wave-placeholder' }, 'Волны дня');
+      const v4 = chart.v4 || chart.wave?.v4;
+      const bar = v4?.dayBar;
+      const segments = Array.isArray(bar) ? bar : (bar?.segments || []);
+      if (!segments.length) {
+        return React.createElement('div', { className: 'widget-bd-sheet__wave-placeholder' }, 'Волны дня');
+      }
+      const totalFlex = segments.reduce((s, seg) => s + (seg.flex || 1), 0) || 1;
+      return React.createElement('div', { className: 'widget-bd-sheet__wave-day' },
+        segments.map((seg, i) => React.createElement('span', {
+          key: i,
+          className: 'widget-bd-sheet__wave-seg' + (seg.elevated ? ' is-active' : ''),
+          style: { flex: `${seg.flex || 1} 1 0`, width: `${((seg.flex || 1) / totalFlex) * 100}%` }
+        }))
+      );
     }
     if (chart.kind === 'riskScale') {
       const pct = Math.min(100, Math.max(0, chart.score || 0));
@@ -1284,6 +1523,12 @@
           React.createElement('span', { className: 'widget-bd-sheet__hero-val' }, model.heroValue),
           model.heroUnit ? React.createElement('span', { className: 'widget-bd-sheet__hero-unit' }, model.heroUnit) : null
         ),
+        model.heroTracks?.length ? React.createElement('div', { className: 'widget-bd-sheet__hero-tracks' },
+          model.heroTracks.map((tr) => React.createElement('div', { key: tr.label, className: 'widget-bd-sheet__hero-track' },
+            React.createElement('span', { className: 'widget-bd-sheet__hero-track-label' }, tr.label),
+            React.createElement('span', { className: 'widget-bd-sheet__hero-track-val' }, `${tr.value} / ${tr.norm} ${tr.unit}`)
+          ))
+        ) : null,
         model.insight ? React.createElement('p', { className: 'widget-bd-sheet__insight' }, model.insight) : null,
         model.chartLabel ? React.createElement('div', { className: 'widget-bd-sheet__chart-label' }, model.chartLabel) : null,
         React.createElement(WidgetBreakdownChart, { chart: model.chart }),

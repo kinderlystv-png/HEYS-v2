@@ -67,7 +67,7 @@
         },
         "вид плитки": {
           "v": "=",
-          "f": "730-widgets-dashboard.css:9835 радиус 16 и поля 11, :9844 герой 14, :9862 kicker 9/600 .03em",
+          "f": "730-widgets:10338 радиус 16, поля 11/14; kicker 0.5625rem/600 .03em; value 1.3125rem; unit 0.625rem — rem-эквивалент контрактных px",
           "h": "558910da23dd"
         },
         "значение прижато к низу": {
@@ -77,7 +77,7 @@
         },
         "1×1": {
           "v": "=",
-          "f": "widget-v4-mini: kicker, значение 21px (css:10161), полоса одна; вода — заливка плитки",
+          "f": "widget-v4-mini value 1.3125rem (≈21px), kicker 0.5625rem; вода — заливка; rem масштабируется с системой без смены сетки",
           "h": "697a87adc386"
         },
         "2×1": {
@@ -87,7 +87,7 @@
         },
         "2×2": {
           "v": "=",
-          "f": "widget-v4-hero-num__val 26px/600 (css:10287), один носитель состояния на вид",
+          "f": "widget-v4-hero-num__val 1.625rem/600 (730-widgets:10880); calories hero 2.125rem; один носитель состояния",
           "h": "0405a45bc82a"
         },
         "3×2": {
@@ -1136,8 +1136,8 @@
           "h": "49416f3aaa8f"
         },
         "крупный системный шрифт · правило продукта": {
-          "v": "≠",
-          "f": "Механики нет: системный кегль до интерфейса не доходит вовсе. critical:30 базовый кегль жёстким px, tailwind отключает автоувеличение, index.html:967 запрещает зум. Тексты не растут — значит и «растут только тексты» не выполняется",
+          "v": "=",
+          "f": "index.html viewport без user-scalable=no; 002-ui-v4-palette-roles.css text-size-adjust:auto; body 81.25% (000-base, critical.css); кегли плиток v4 в rem — kicker 0.5625, value 1.3125, unit 0.625, hero 1.625, calories hero 2.125 (730-widgets:10365+); сетка 4×64 не трогается",
           "h": "f31dee1d14f5"
         },
         "формат чисел · правило продукта": {
@@ -1232,7 +1232,7 @@
         },
         "вывод одной строкой": {
           "v": "≠",
-          "f": "insight есть у batch1 (variants_v4 build*Breakdown), но «к этому часу» у калорий — эвристика hourShare×медиана (:782-794), не история по часу суток",
+          "f": "калории — insight из bdTypicalCaloriesAtHour; вода/сон/шаги/волна — реальные get*Data; вода без «к 19:40», риск без почасового профиля",
           "h": "6607cdc94d2e"
         },
         "подпись метрики": {
@@ -1262,7 +1262,7 @@
         },
         "разбор · Калории": {
           "v": "≠",
-          "f": "лист есть (:769+): медиана, разброс, ужин; вывод по часу — эвристика, не «обычно к этому часу» из истории",
+          "f": "bdTypicalCaloriesAtHour из истории приёмов 30 дней (:733+) вместо hourShare×медиана; медиана/разброс/ужин есть; ужин ещё target×0.28, не «обычно на ужин» из приёмов",
           "h": "98e2995cb4ae"
         },
         "разбор · Вода": {
@@ -1277,12 +1277,12 @@
         },
         "разбор · Сон": {
           "v": "≠",
-          "f": "7 столбиков sleepWeekBars (:870-897); нет ленты окон 14 дней и риски среднего отбоя",
+          "f": "sleepStrip 14 дней + avgBed insight (:buildSleepBreakdown); нет оси 21:00→09:00 подписи и риски среднего отбоя как на канвасе",
           "h": "6c8139839aef"
         },
         "разбор · Шаги": {
-          "v": "≠",
-          "f": "bars7 + средние по дням недели (:900-938); таблица 7 строк с тонами --val-bad/--gr не полная",
+          "v": "=",
+          "f": "variants_v4:bdStepsWeekdayTable — семь строк по дням недели, weakest tone bad strongest good; chart bars7 + итог «Цель закрыта» (:buildStepsBreakdown)",
           "h": "13e1b046f792"
         },
         "разбор · Инсулиновая волна": {
@@ -1292,7 +1292,7 @@
         },
         "разбор · БЖУ": {
           "v": "≠",
-          "f": "grid3x7 (:1204+) и проценты в stats; герой тройной дорожки в листе нет",
+          "f": "heroTracks три дорожки в листе (:buildMacrosBreakdown); grid3x7 и проценты в stats; герой всё ещё одной строкой белка, не тройной дорожкой как на канвасе",
           "h": "e8db0893764a"
         },
         "разбор · Оценка дня": {
@@ -2320,23 +2320,23 @@
           "h": "001f1f673cb7"
         },
         "особый период в стопке": {
-          "v": "≠",
-          "f": "Строка «Особые дни» в стопке чек-ина не реализована; cycle product scope вне этой задачи — cycle.v4.dc.html",
+          "v": "=",
+          "f": "heys_steps_v1.js MorningRestStep: cycleWeekTop поднимает mc-rest-cycle-week-card наверх стопки (:6973-7056), cycleRow внизу когда не неделя (:7113-7114); mc-rest-step--cycle-week padding-bottom 70px — 500-pwa-and-offline.css:1627-1629",
           "h": "d3b84d4904d8"
         },
         "замеры на неделе периода": {
-          "v": "≠",
-          "f": "Отложенные замеры на неделе периода (тон 62 %/50 %, без шеврона) не реализованы; scope cycle.v4.dc.html",
+          "v": "=",
+          "f": "measurementsDeferred = cycleWeekTop (:7020-7033): mc-rest-row--measurements-deferred без шеврона, заголовок/подсказка с тоном 62 %/50 % — 500-pwa-and-offline.css:1773-1783",
           "h": "09caef515388"
         },
         "прокрутка на неделе периода": {
-          "v": "≠",
-          "f": "Дополнительная прокрутка шага на днях 1–7 периода не реализована; scope cycle.v4.dc.html",
+          "v": "=",
+          "f": "mc-rest-step--cycle-week { padding-bottom: 70px } даёт дополнительную прокрутку шага на днях 1–7 — heys_steps_v1.js:7054, 500-pwa-and-offline.css:1627-1629",
           "h": "789083381a5b"
         },
         "доступность · период в стопке": {
-          "v": "≠",
-          "f": "radiogroup дней 1–7 и чип «Отметить особые дни» не реализованы; полные строки — cycle.v4.dc.html",
+          "v": "=",
+          "f": "renderMorningRestCycleRow: чип «Отметить особые дни» aria-label, radiogroup «Какой день», radio «День N» — heys_steps_v1.js:6442+, morning-checkin-v4-a11y-smoke.test.js",
           "h": "53bf101137ab"
         }
       }
@@ -2372,8 +2372,8 @@
           "h": "de7d034d35d8"
         },
         "порядок блоков": {
-          "v": "≠",
-          "f": "Порядок до «Голода и энергии» совпадает (heys_day_nutrition_v1.js:1568-1705). После hunger в контракте идёт «Особый период*» — в optionalBlocks (:1546-1560) блока cycle нет",
+          "v": "=",
+          "f": "optionalBlocks: hunger → cycle (isCycleNutritionAvailable) → fiber — heys_day_nutrition_v1.js:1632-1642; nutrition-v4-structure.test.js",
           "h": "2adbbfa83371"
         },
         "один экран для всех ширин": {
@@ -2787,8 +2787,8 @@
           "h": "39ddecefe66a"
         },
         "вид чипа · размеры": {
-          "v": "≠",
-          "f": "732-ui-v4:930 min-height 34 против контрактных 30. Остальное совпало: поля 0/13, радиус 999, 11/700, зазор 6, галочка 11 обводкой 3,5. Правка парная: припуск ::after inset -5px рассчитан на 34 и при 30 даст 40 — ниже минимума",
+          "v": "=",
+          "f": "732-ui-v4-nutrition.css:950-972 min-height 30px, padding 0 13px, gap 6, radius 999, font 11/700, ::after inset -7px 0 (припуск 44px); галочка 11×11 stroke 3.5 в heys_day_nutrition_v1.js",
           "h": "0dbe305d5588"
         },
         "семь чипов": {
@@ -7164,12 +7164,12 @@
       "rows": {
         "фича": {
           "v": "≠",
-          "f": "Движок и legacy UI есть (heys_cycle_v1.js, heys_day_cycle_card_v1.js, registerStep cycle), но CYCLE_TRACKING_IN_RELEASE=false heys_health_features_v1.js:9 — тумблер профиля, v4-карточка, чек-ин-стопка и 28-дневный счёт не доведены",
+          "f": "UI v4 inline check-in + ribbon + undo готовы; release gate и engine-множители ещё ≠",
           "h": "96947ed4fc21"
         },
         "гейт": {
           "v": "≠",
-          "f": "Строка «Особый период» в профиле снята с релиза: heys_profile_step_v1.js:540 не пишет cycleTrackingEnabled; FEATURE_TOGGLES.cycleTrackingEnabled.visible=false health-features-cycle-release-gate.test.js:59",
+          "f": "profile toggle heys_user_tab_impl_v1.js:1350 есть; CYCLE_TRACKING_IN_RELEASE=false — toggle disabled для prod",
           "h": "5ef5003193b7"
         },
         "модель данных": {
@@ -7219,7 +7219,7 @@
         },
         "где живёт карточка дня": {
           "v": "≠",
-          "f": "Legacy cycle-card на «Питании» heys_day_cycle_card_v1.js через useCycleState; v4-блок «Особый период» после «Голода и энергии» и чип в nutrition-tab отсутствуют",
+          "f": "v4-блок после «Голода и энергии» в nutrition-tab вне scope — legacy cycle-card на Питании",
           "h": "6a2ed677816a"
         },
         "почему не «Инсайты»": {
@@ -7239,22 +7239,22 @@
         },
         "пустая карточка на прошлом дне": {
           "v": "≠",
-          "f": "heys_day_cycle_card_v1.js:51-58 — legacy «Указать день →», не v4 «Указать день» 700 12px var(--ac) на var(--c1)",
+          "f": "heys_day_cycle_card_v1.js v4 на текущем date; backdate через капсулу/«Другой день» не реализован",
           "h": "b4cb1a9e59e1"
         },
         "место в чек-ине": {
-          "v": "≠",
-          "f": "registerStep('cycle') heys_steps_v1.js:4116 — отдельный шаг, не строка/карточка внутри morningRest; счётчик шагов не 1…5 inline",
+          "v": "=",
+          "f": "heys_steps_v1.js:6977 — renderMorningRestCycleRow внутри MorningRestStepComponent, не отдельный шаг v4-плана",
           "h": "045cbec7a3a7"
         },
         "порядок в стопке": {
-          "v": "≠",
-          "f": "MorningRestStepComponent heys_steps_v1.js:6399+ не содержит cycle-row; порядок «Особые дни» vs «Прохладный душ» не реализован",
+          "v": "=",
+          "f": "heys_steps_v1.js:6977-6995 — на неделе 1–7 cycle-week-card первая, cold shower строкой; иначе cold card + cycle row",
           "h": "fcd630117410"
         },
         "свёрнутое состояние": {
-          "v": "≠",
-          "f": "mc-cycle-step — полноэкранный toggle «Да/Нет» и picker, не строка 66px с одним чипом «Отметить»",
+          "v": "=",
+          "f": "heys_steps_v1.js:6588-6596 — mc-rest-cycle-mark-chip «Отметить», aria-label «Отметить особые дни»",
           "h": "912b2e9679d4"
         },
         "высота шага": {
@@ -7268,38 +7268,38 @@
           "h": "82dc926c005f"
         },
         "замеры на днях 1–7": {
-          "v": "≠",
-          "f": "Строка «Замеры отложены» с aria-disabled в morningRest отсутствует — measurements row работает как обычно",
+          "v": "=",
+          "f": "heys_steps_v1.js:7020-7030 — строка «Замеры отложены», aria-disabled, без шеврона",
           "h": "1009fb8724e5"
         },
         "доступность · строка периода": {
-          "v": "≠",
-          "f": "Чип «Отметить особые дни» с aria-label ожидает morning-checkin-v4-a11y-smoke.test.js:49, но heys_steps_v1.js CycleStepComponent такой метки не содержит",
+          "v": "=",
+          "f": "heys_steps_v1.js:6591 — aria-label «Отметить особые дни»; morning-checkin-v4-a11y-smoke.test.js",
           "h": "153ccc095722"
         },
         "доступность · ряд дней": {
-          "v": "≠",
-          "f": "mc-cycle-exact-btn heys_steps_v1.js:4088-4094 — обычные button без role=radiogroup/radio и aria-checked",
+          "v": "=",
+          "f": "heys_steps_v1.js:6508-6527 — role radiogroup «Какой день», radio + aria-checked на mc-rest-cycle-day-btn",
           "h": "a9e776bbb655"
         },
         "доступность · отложенные замеры": {
-          "v": "≠",
-          "f": "aria-disabled строка замеров на днях 1–7 не реализована",
+          "v": "=",
+          "f": "heys_steps_v1.js:7026 — aria-label «Замеры отложены. Задержка воды…», aria-disabled на строке",
           "h": "324000e1c3cc"
         },
         "доступность · лента в календаре": {
-          "v": "≠",
-          "f": "day-cycle-dot CSS есть, но accessible name «особые дни»/«ожидается период» на клетке не заводился; v4-лента отсутствует",
+          "v": "=",
+          "f": "heys_day_pickers.js:441-443 — ariaSuffix «, особые дни» / «, ожидается период» через CycleUI.buildCycleRibbonMeta",
           "h": "b785cc730bbe"
         },
         "доступность · пустые точки графика": {
-          "v": "≠",
-          "f": "shouldExcludeFromWeightTrend heys_cycle_v1.js:529-531 исключает дни 1–7 из тренда, но пустых точек, тултипа «в тренд не входит» и клавиатуры нет",
+          "v": "=",
+          "f": "heys_day_sparklines_v1.js — tooltip «в тренд не входит», aria-label на точке retention",
           "h": "a0f23d0dc2b2"
         },
         "отмена разрушительных ответов": {
-          "v": "≠",
-          "f": "«Не идут»/«Закончились» не вызывают undo-bar — cycleStatus пишется напрямую heys_steps_v1.js:3992-4005",
+          "v": "=",
+          "f": "heys_cycle_ui_v1.js:170-179 pushCycleUndo 5000ms; heys_steps_v1.js:6478 «Не идут»/«Закончились»",
           "h": "3a5efece3002"
         },
         "выключение не переписывает прошлое": {
@@ -7308,13 +7308,13 @@
           "h": "f299133d5ddd"
         },
         "ответ «не идут»": {
-          "v": "≠",
-          "f": "Есть cycleStatus 'none' при toggle off heys_steps_v1.js:3992, но действия «Не идут» в раскрытой шапке v4-карточки нет",
+          "v": "=",
+          "f": "heys_steps_v1.js:6607-6618 — mc-rest-cycle-none-btn «Не идут», undo «Особые дни сняты»",
           "h": "74338336b171"
         },
         "день по умолчанию": {
-          "v": "≠",
-          "f": "Нет предложения «вчера+1» с кнопками «Верно»/«Закончились» — только ручной picker",
+          "v": "=",
+          "f": "heys_cycle_ui_v1.js:58-71 getSuggestedCycleDay; heys_steps_v1.js:6548-6583 week-card «Верно»/«Закончились»",
           "h": "d6ceaa303c8e"
         },
         "фазы и подписи": {
@@ -7348,8 +7348,8 @@
           "h": "d52885e46651"
         },
         "«Закончились»": {
-          "v": "≠",
-          "f": "Действие «Закончились» с сохранением фазовых множителей 6–28 и возвратом строки в стопку не реализовано",
+          "v": "=",
+          "f": "heys_steps_v1.js:6575-6582 — cycleEndedOnDay в save morningRest; ended-note «закончились на N-й»",
           "h": "486de668a83e"
         },
         "отметка раньше 21-го дня": {
@@ -7368,8 +7368,8 @@
           "h": "b0caebb8f648"
         },
         "окно графика веса": {
-          "v": "≠",
-          "f": "Подпись «дни особого периода в тренд не входят» под спарклайном и 30-дневное окно пустых точек не реализованы",
+          "v": "=",
+          "f": "heys_day_stats_v1.js — reports-v4-weight-cycle-footnote при chartPeriod>=61",
           "h": "1eb1aef4ff52"
         },
         "вид · график калорий": {
@@ -7408,38 +7408,38 @@
           "h": "d13ed4ff4f11"
         },
         "вид · строка в стопке": {
-          "v": "≠",
-          "f": "mc-rest-* строка 66px с чипом «Отметить» не реализована — legacy mc-cycle-step",
+          "v": "=",
+          "f": "500-pwa-and-offline.css .mc-rest-cycle-mark-chip — строка 66px, чип «Отметить» min-height 44px",
           "h": "5afc2385c5b6"
         },
         "вид · раскрытый слой": {
-          "v": "≠",
-          "f": "v4 раскрытый слой с «Не идут» 700 11px 40% и заголовком ряда uppercase .16em отсутствует",
+          "v": "=",
+          "f": "heys_steps_v1.js:6602-6626 — mc-rest-cycle-card--expanded, «Не идут», tier «Какой день» uppercase",
           "h": "1b9f2017a492"
         },
         "вид · верхняя карточка на днях 1–7": {
-          "v": "≠",
-          "f": "Верхняя карточка шага 5 var(--c2) r20 с «Верно»/«Закончились» 44px не реализована",
+          "v": "=",
+          "f": "heys_steps_v1.js:6548-6583 — mc-rest-cycle-week-card var(--c2), кнопки Верно/Закончились 44px",
           "h": "13b6b870cbef"
         },
         "вид · выбор дня": {
-          "v": "≠",
-          "f": "Ряд 1–7 h44 r14 gap5 var(--c1)/var(--acs) — mc-cycle-exact-btn legacy, не v4",
+          "v": "=",
+          "f": "heys_steps_v1.js:6512-6527 — mc-rest-cycle-day-btn h44 r14, is-on var(--acs)",
           "h": "0045b5344f4d"
         },
         "вид · карточка дня": {
-          "v": "≠",
-          "f": "heys_day_cycle_card_v1.js — emoji 🌸/✏️, badge «🔥 +N%», не v4 фаза 600 15px var(--ac) и бейджи h28",
+          "v": "=",
+          "f": "heys_day_cycle_card_v1.js — cycle-card-v4, «Указать день» без 🌸, badges h28",
           "h": "b307e933ff32"
         },
         "метка в календаре": {
-          "v": "≠",
-          "f": "Непрерывная лента cycleDay 1…7 в date-picker отсутствует; date-picker-sheet-v4-structure.test.js:40 — day-cycle-dot снят",
+          "v": "=",
+          "f": "heys_day_pickers.js:431-455 — cycle-ribbon--period/forecast на клетках has-cycle 1–7",
           "h": "3ddab921cdb1"
         },
         "вид · лента периода": {
-          "v": "≠",
-          "f": "Лента 4px --acs через зазор сетки с скруглением 999 на краях не реализована",
+          "v": "=",
+          "f": "000-base-and-gamification.css:8457+ — cycle-ribbon--period 4px --acs, start/end radius 999",
           "h": "f6cf1319ffd6"
         },
         "контраст ленты": {
@@ -7458,8 +7458,8 @@
           "h": "5e3e872254ff"
         },
         "заливка клетки не занимается": {
-          "v": "≠",
-          "f": "Контракт: период только верхняя лента; в коде day-cycle-dot убран из date-picker, v4-лента не добавлена",
+          "v": "=",
+          "f": "000-base-and-gamification.css — лента ::before сверху, заливка ratio не трогается",
           "h": "9ed10fb2c7f5"
         },
         "вид · кнопки решений": {
@@ -7483,8 +7483,8 @@
           "h": "697535dccbcd"
         },
         "вид · строка после «Закончились»": {
-          "v": "≠",
-          "f": "Строка «закончились на N-й» без действий не реализована",
+          "v": "=",
+          "f": "heys_steps_v1.js:6534-6537 — mc-rest-cycle-ended-note «закончились на N-й»",
           "h": "bb8b9df9f0bf"
         },
         "вид · строка прогноза в шапке месяца": {
@@ -7523,8 +7523,8 @@
           "h": "5fee0c4e98e1"
         },
         "подпись в «Отчётах»": {
-          "v": "≠",
-          "f": "Строка «дни особого периода в тренд не входят» под спарклайном веса в tab-reports UI отсутствует",
+          "v": "=",
+          "f": "heys_day_stats_v1.js — «дни особого периода в тренд не входят» под спарклайном веса",
           "h": "f9686d333709"
         },
         "куратор": {

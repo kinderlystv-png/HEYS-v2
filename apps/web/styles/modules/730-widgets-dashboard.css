@@ -10361,9 +10361,9 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   -webkit-text-fill-color: currentColor;
 }
 
-/* v4 kicker label (canvas .k) */
+/* v4 kicker label (canvas .k) — rem для системного кегля */
 .widget-v4-kicker {
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: 0.03em;
@@ -10471,7 +10471,7 @@ body:has(.widgets-tab) .widget--corner-br {
 }
 
 .widget-calories__hero-value .widget-calories__value--lg {
-  font-size: 34px;
+  font-size: 2.125rem;
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.035em;
@@ -10480,13 +10480,13 @@ body:has(.widgets-tab) .widget--corner-br {
 }
 
 .widget-calories__hero-unit {
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 500;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
 }
 
 .widget-calories__hero-remaining-label {
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 500;
   line-height: 1;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
@@ -10617,7 +10617,7 @@ body:has(.widgets-tab) .widget--corner-br {
 }
 
 .widget-v4-row__value {
-  font-size: 21px;
+  font-size: 1.3125rem;
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -10639,7 +10639,7 @@ body:has(.widgets-tab) .widget--corner-br {
 .widget-v4-row__value.widget-v4-val--warn,
 .widget-v4-row__value.widget-v4-val--act,
 .widget-v4-row__value.widget-v4-val--neutral {
-  font-size: 21px;
+  font-size: 1.3125rem;
   font-weight: 600;
   line-height: 1;
 }
@@ -10703,7 +10703,7 @@ body:has(.widgets-tab) .widget--corner-br {
 }
 
 .widget-v4-unit {
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 500;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
 }
@@ -10750,7 +10750,7 @@ body:has(.widgets-tab) .widget--corner-br {
 .widget-v4-mini__value.widget-v4-val--neutral,
 .widget-v4-mini__value.widget-v4-val--warn,
 .widget-v4-mini__value.widget-v4-val--act {
-  font-size: 21px;
+  font-size: 1.3125rem;
   font-weight: 600;
 }
 
@@ -10759,7 +10759,7 @@ body:has(.widgets-tab) .widget--corner-br {
 .widget-v4-hero-num__val.widget-v4-val--neutral,
 .widget-v4-hero-num__val.widget-v4-val--warn,
 .widget-v4-hero-num__val.widget-v4-val--act {
-  font-size: 26px;
+  font-size: 1.625rem;
   font-weight: 600;
   line-height: 1;
 }
@@ -10878,7 +10878,7 @@ body:has(.widgets-tab) .widget--corner-br {
 }
 
 .widget-v4-hero-num__val {
-  font-size: 26px;
+  font-size: 1.625rem;
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -10986,7 +10986,7 @@ body:has(.widgets-tab) .widget--corner-br {
 
 .widget-v4-mini__value {
   margin-top: auto;
-  font-size: 21px;
+  font-size: 1.3125rem;
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -13847,6 +13847,91 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 .widget-bd-sheet__heat-cell.is-ok {
   background: color-mix(in srgb, var(--v4-good, #7a8a5e) 40%, transparent);
+}
+
+.widget-bd-sheet__heat-cell.is-gap {
+  box-shadow: inset 0 0 0 1px var(--v4-bad-text, #a8382b);
+}
+
+.widget-bd-sheet__sleep-strip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  height: 120px;
+  margin-bottom: 16px;
+}
+
+.widget-bd-sheet__sleep-row {
+  position: relative;
+  flex: 1;
+  min-height: 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.widget-bd-sheet__sleep-row > i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--v4-tint-cool, #0a84ff) 35%, transparent);
+}
+
+.widget-bd-sheet__sleep-row.is-today > i {
+  background: color-mix(in srgb, var(--v4-tint, #c67139) 45%, transparent);
+}
+
+.widget-bd-sheet__sleep-avg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--v4-bad-text, #a8382b);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.widget-bd-sheet__wave-day {
+  display: flex;
+  position: relative;
+  height: 32px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.widget-bd-sheet__wave-seg {
+  height: 100%;
+  border-radius: 0;
+  background: transparent;
+}
+
+.widget-bd-sheet__wave-seg.is-active {
+  background: color-mix(in srgb, var(--v4-tint, #c67139) 65%, transparent);
+}
+
+.widget-bd-sheet__hero-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.widget-bd-sheet__hero-track {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.widget-bd-sheet__hero-track-label {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .widget-bd-sheet__stats {

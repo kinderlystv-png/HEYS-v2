@@ -52,6 +52,10 @@ describe('home-widgets breakdown sheets v4', () => {
     expect(VARIANTS_SRC).toContain('buildBreakdownModel');
     expect(VARIANTS_SRC).toContain('WidgetBreakdownSheet');
     expect(VARIANTS_SRC).toContain('function bdSplinePath');
+    expect(VARIANTS_SRC).toContain('bdTypicalCaloriesAtHour');
+    expect(VARIANTS_SRC).toContain('sleepStrip');
+    expect(VARIANTS_SRC).toContain('heroTracks');
+    expect(VARIANTS_SRC).toContain('is-gap');
     expect(VARIANTS_SRC).toContain('function opensBreakdown');
 
     for (const t of [...BATCH1, ...BATCH2_STUB]) {
@@ -75,6 +79,15 @@ describe('home-widgets breakdown sheets v4', () => {
     expect(CSS_SRC).toMatch(/\.widget-bd-sheet__action[\s\S]*?height:\s*48px/);
     expect(CSS_SRC).toMatch(/\.widget-bd-sheet__scrim[\s\S]*?backdrop-filter:\s*none/);
     expect(CSS_SRC).toMatch(/\.widget-bd-sheet__hero-val[\s\S]*?font-size:\s*44px/);
+    expect(CSS_SRC).toContain('.widget-bd-sheet__sleep-strip');
+    expect(CSS_SRC).toContain('.widget-bd-sheet__hero-tracks');
+  });
+
+  it('кегль плиток v4 — rem для системного масштаба', () => {
+    expect(CSS_SRC).toMatch(/\.widget-v4-kicker[\s\S]*?font-size:\s*0\.5625rem/);
+    expect(CSS_SRC).toMatch(/\.widget-v4-mini__value[\s\S]*?font-size:\s*1\.3125rem/);
+    expect(CSS_SRC).toMatch(/\.widget-v4-unit[\s\S]*?font-size:\s*0\.625rem/);
+    expect(CSS_SRC).toMatch(/\.widget-v4-hero-num__val[\s\S]*?font-size:\s*1\.625rem/);
   });
 
   describe('buildBreakdownModel', () => {
@@ -126,11 +139,30 @@ describe('home-widgets breakdown sheets v4', () => {
       expect(V4.opensBreakdown('status')).toBe(true);
     });
 
-    it('калории — медиана и norm, не stub', () => {
+    it('калории — медиана и norm, insight из истории', () => {
       const model = V4.buildBreakdownModel({ id: 'c', type: 'calories', size: '2x2' });
       expect(model.stats.some((r) => r.label.includes('Типичный') || r.label.includes('Разброс'))).toBe(true);
       expect(model.norm).toMatch(/Норма/);
       expect(model.action.kind).toBe('addMeal');
+      expect(model.insight == null || model.insight.includes('Обычно к этому часу')).toBe(true);
+    });
+
+    it('шаги — таблица дней недели с тонами', () => {
+      const d = window.HEYS.Widgets.data;
+      d._getDay = () => ({ date: '2025-12-12', steps: 8500 });
+      d._getDayByDate = (iso) => {
+        if (iso === '2025-12-11') return { date: iso, steps: 12000 };
+        if (iso === '2025-12-10') return { date: iso, steps: 5000 };
+        return null;
+      };
+      const model = V4.buildBreakdownModel({ id: 's', type: 'steps', size: '2x1' });
+      expect(model.stats.some((r) => r.label === 'Цель закрыта')).toBe(true);
+      expect(model.stats.some((r) => r.tone === 'bad' || r.tone === 'good')).toBe(true);
+    });
+
+    it('БЖУ — heroTracks три дорожки', () => {
+      const model = V4.buildBreakdownModel({ id: 'm', type: 'macros', size: '3x2' });
+      expect(model.heroTracks?.length).toBe(3);
     });
 
     it('вода — чипы, лист не закрывается по action kind', () => {
