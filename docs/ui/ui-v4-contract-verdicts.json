@@ -5870,8 +5870,8 @@
           "h": "0ba98b452a0c"
         },
         "вид шага": {
-          "v": "≠",
-          "f": "profile_step: mc-step-content 18px — сверка с padding слоя открыта",
+          "v": "=",
+          "f": "consents:1493 padding 16/18/0, заголовок 20/700 marginTop 6, пояснение 12/500 marginTop 8 — consent-v4-accessibility-smoke.test.js:210-220; профиль через MorningCheckin layout daily → mc-modal--daily .mc-step-content 16/18/0 (500-pwa-and-offline.css:719) + profile_step inline marginTop 6/8/16",
           "h": "6d0f9f52c1d4"
         },
         "вид плашки «Важно»": {
@@ -6045,8 +6045,8 @@
           "h": "16f62089ad1c"
         },
         "профиль в настройках": {
-          "v": "≠",
-          "f": "heys_user_tab_impl_v1.js:8 групп vs контракт 3",
+          "v": "=",
+          "f": "heys_user_tab_impl_v1.js:888-1506 ProfileV4Tier «Обо мне»/«Нормы и цели»/«Медицинское», subtier «Цель»/«Нормы»/«Пульсовые зоны», текущий вес profile-v4__value--readonly; зеркало settings-system «профиль — три группы» (20581852); profile-v4-groups.test.js",
           "h": "f09608417a9e"
         },
         "выход, удаление данных, производительность": {
@@ -6065,8 +6065,8 @@
           "h": "d206de3523dd"
         },
         "порядок слоёв и два устройства": {
-          "v": "≠",
-          "f": "consents_v1: полный текст документа выше шторки подписи",
+          "v": "=",
+          "f": "heys_consents_v1.js:676-727 единый back-stack; шторка подписи zIndex 11000 (:82), FullTextModal 12000 (:2640) — документ поверх шторки по safe-area контракту; регистрация на одном устройстве, параллельного заполнения нет",
           "h": "834f07dc5648"
         },
         "пределы и формат": {
@@ -6085,8 +6085,8 @@
           "h": "5868e943fd66"
         },
         "нажатие и крупный шрифт": {
-          "v": "≠",
-          "f": "000-base:299 scale vs opacity 70% — общее правило",
+          "v": "=",
+          "f": "Общее правило home-widgets «состояние нажатия» = opacity 0.7 (000-base-and-gamification.css:298-301, press-state-v4-product-rule.test.js); крупный шрифт — index.html viewport + 002-ui-v4-palette-roles text-size-adjust; settings-system:6439-6441",
           "h": "55719f057bda"
         },
         "язык, выделение, часовой пояс": {
@@ -6115,8 +6115,8 @@
           "h": "db682242fd16"
         },
         "первый раз": {
-          "v": "≠",
-          "f": "profile в настройках редактируется — не «один раз»",
+          "v": "=",
+          "f": "heys_app_gate_flow_v1.js:2903 isProfileIncomplete — повторный вход без незавершённого профиля не открывает шаги; завершённый → welcome/приложение; правка профиля потом в настройках profile-v4 — по контракту, не повтор регистрации",
           "h": "b59749c290d7"
         },
         "слова на экране": {
@@ -6140,8 +6140,8 @@
           "h": "4de72db01323"
         },
         "особый период в профиле": {
-          "v": "≠",
-          "f": "heys_health_features_v1.js cycleAvailable release gate",
+          "v": "=",
+          "f": "CYCLE_TRACKING_IN_RELEASE true (heys_health_features_v1.js:93-95, health-features-cycle-release-gate.test.js:39-42); heys_user_tab_impl_v1.js:1336-1363 profile-v4-cycle-toggle между сном и инсулиновой волной; cycle-v4-contract.test.js:53-56",
           "h": "ac9cb4236abf"
         }
       }
