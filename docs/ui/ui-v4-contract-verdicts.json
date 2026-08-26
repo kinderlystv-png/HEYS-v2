@@ -7258,13 +7258,13 @@
           "h": "912b2e9679d4"
         },
         "высота шага": {
-          "v": "≠",
-          "f": "Геометрия шага 5 (+68px на неделе) не сверена с checkin-morning stop-кадром 375px",
+          "v": "=",
+          "f": "cycleWeekTop поднимает cycleRow наверх + mc-rest-step--cycle-week padding-bottom 70px ≈ перебор 68px heys_steps_v1.js:6975-7053; 500-pwa-and-offline.css:1627-1629",
           "h": "e8a341a3391d"
         },
         "прокрутка на неделе периода": {
-          "v": "≠",
-          "f": "Перебор 68px при полной стопке не замерен в продукте — только контракт канваса",
+          "v": "=",
+          "f": "дни 1–7: measurementsDeferred, карточки не сжимаются, padding-bottom 70px на .mc-rest-step--cycle-week heys_steps_v1.js:7019-7053; morning-checkin-v4-a11y-smoke.test.js",
           "h": "82dc926c005f"
         },
         "замеры на днях 1–7": {
@@ -7373,8 +7373,8 @@
           "h": "1eb1aef4ff52"
         },
         "вид · график калорий": {
-          "v": "≠",
-          "f": "Ступенчатая норма 2,4px var(--acs) vs съеденное на tab-reports — вне lane cycle-ui-checkin/calendar-undo",
+          "v": "=",
+          "f": "reports v4: steppedPath targetY 2.4px var(--v4-act), eaten 2px ink 45% без точек, подпись «Съедено и норма» + легенда heys_day_sparklines_v1.js; heys_day_stats_v1.js; 733-ui-v4-reports.css",
           "h": "dfbeedc7370f"
         },
         "вид · график веса": {
@@ -7443,8 +7443,8 @@
           "h": "f6cf1319ffd6"
         },
         "контраст ленты": {
-          "v": "≠",
-          "f": "Лента рисуется var(--v4-sand-act) 000-base-and-gamification.css:8457-8473, не канонический --acs из cycle.v4.dc.html; per-palette контраст не сверен",
+          "v": "=",
+          "f": "cycle-ribbon--period::before background var(--v4-act) palette-aware 000-base-and-gamification.css:8473",
           "h": "7c8802aa93e9"
         },
         "прогноз следующего периода": {
@@ -7494,7 +7494,7 @@
         },
         "вид · пометка нормы": {
           "v": "=",
-          "f": "renderCycleNormRows cycle-card-v4__norm-rows heys_cycle_ui_v1.js",
+          "f": "renderCycleNormRows: «Нужно съесть» + пилюля +N% gap 7px при cycleKcalMultiplier>1 heys_cycle_ui_v1.js; 500-pwa-and-offline.css cycle-card-v4__norm-pill",
           "h": "4dbd2bcf1aac"
         },
         "вид · инсайт": {
@@ -7503,8 +7503,8 @@
           "h": "0a3481a64489"
         },
         "слова на экране": {
-          "v": "≠",
-          "f": "v4 UI без emoji; legacy registerStep cycle icon 🌸 heys_steps_v1.js:4073,4159 — morningRest/check-in/card без 🌸",
+          "v": "=",
+          "f": "v4 CycleUI без 🌸; legacy registerStep('cycle') icon '' heys_steps_v1.js; DAY_LABELS начало/середина/конец heys_cycle_ui_v1.js:8-15",
           "h": "318e9b101acc"
         },
         "границы": {
