@@ -145,7 +145,7 @@ describe('advice v4 panels from canvas', () => {
     // Строка «вид детали совета»: три яруса — карточки --c1 радиусом 18,
     // поля 14/16, зазор 8 (tips.v4.dc.html).
     const hero = cssSource.match(/\.advice-v4-detail__hero \{([^}]*)\}/)[1];
-    expect(hero).toMatch(/background:\s*var\(--v4-sand-surface/);
+    expect(hero).toMatch(/background:\s*var\(--v4-c1/);
     expect(hero).toMatch(/border-radius:\s*18px/);
     expect(hero).toMatch(/padding:\s*14px 16px/);
 
