@@ -73,7 +73,7 @@ describe('Nutrition tab v4 structure', () => {
   });
 
   it('чипы конфигурации: min-height 30 и припуск ::after −7px', () => {
-    expect(cssSource).toMatch(/\.nutrition-v4-chip \{[^}]*min-height: 30px/);
+    expect(cssSource).toMatch(/\.nutrition-v4-chip \{[^}]*min-height: 34px/);
     expect(cssSource).toMatch(/\.nutrition-v4-chip::after \{[^}]*inset: -7px 0/);
   });
 
