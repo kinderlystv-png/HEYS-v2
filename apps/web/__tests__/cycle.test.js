@@ -1,10 +1,5 @@
 /**
  * @fileoverview Critical tests for Menstrual Cycle Module
- * 
- * Проверяет:
- * 1. Фазы цикла (Menstrual, Follicular, etc.)
- * 2. Корректировки норм (Kcal, Water, Insulin)
- * 3. Задержка воды (Water Retention)
  */
 
 import fs from 'fs';
@@ -15,21 +10,16 @@ import { afterAll, describe, expect, it } from 'vitest';
 const originalWindow = global.window;
 const originalHEYS = global.HEYS;
 
-// Mock global HEYS object
 global.HEYS = {
-  utils: {
-    lsGet: () => null
-  }
+  utils: { lsGet: () => null },
+  currentClientId: '',
+  healthFeatures: { isCycleFeatureAvailable: () => true }
 };
 
 global.window = global;
 
-// Load the legacy file
 const filePath = path.resolve(__dirname, '../heys_cycle_v1.js');
-const fileContent = fs.readFileSync(filePath, 'utf8');
-
-// Execute the file in the global scope
-eval(fileContent);
+eval(fs.readFileSync(filePath, 'utf8'));
 
 describe('Cycle Module (Critical)', () => {
   const Cycle = global.HEYS.Cycle;
@@ -37,62 +27,66 @@ describe('Cycle Module (Critical)', () => {
   it('should be loaded correctly', () => {
     expect(Cycle).toBeDefined();
     expect(typeof Cycle.getCyclePhase).toBe('function');
+    expect(typeof Cycle.getCycleCountDay).toBe('function');
   });
 
   describe('1. Cycle Phases', () => {
-    it('should identify Menstrual phase (days 1-5)', () => {
+    it('should identify menstrual phase (days 1-5)', () => {
       const phase = Cycle.getCyclePhase(1);
       expect(phase.id).toBe('menstrual');
-      expect(phase.kcalMultiplier).toBeGreaterThan(1.0); // Should increase kcal
+      expect(phase.kcalMultiplier).toBe(1.0);
     });
 
-    it('should identify Follicular phase (days 6-12)', () => {
+    it('should identify follicular phase (days 6-14)', () => {
       const phase = Cycle.getCyclePhase(8);
       expect(phase.id).toBe('follicular');
-      expect(phase.kcalMultiplier).toBe(1.0); // Standard kcal
+      expect(phase.kcalMultiplier).toBe(1.0);
     });
 
-    it('should identify Ovulation (days 13-14)', () => {
-      const phase = Cycle.getCyclePhase(14);
-      expect(phase.id).toBe('ovulation');
+    it('should identify early luteal (days 15-19)', () => {
+      const phase = Cycle.getCyclePhase(17);
+      expect(phase.id).toBe('early_luteal');
+      expect(phase.kcalMultiplier).toBe(1.03);
     });
 
-    it('should identify Luteal phase (days 15-28) — added v4.3', () => {
-      // v4.3: лютеиновая фаза добавлена (Valdes 1991 — Si падает на 20-50%).
-      // Прежде возвращался null → половина цикла шла с ×1.0 множителем.
+    it('should identify late luteal (days 20-28)', () => {
       const phase = Cycle.getCyclePhase(20);
       expect(phase).not.toBeNull();
-      expect(phase.id).toBe('luteal');
-      expect(phase.insulinWaveMultiplier).toBeGreaterThan(1.0);
+      expect(phase.id).toBe('late_luteal');
+      expect(phase.insulinWaveMultiplier).toBe(1.12);
     });
   });
 
   describe('2. Multipliers', () => {
     it('should return correct kcal multiplier', () => {
-      // Menstrual: 1.05
-      expect(Cycle.getKcalMultiplier(1)).toBe(1.05);
-      // Follicular: 1.0
+      expect(Cycle.getKcalMultiplier(1)).toBe(1.0);
       expect(Cycle.getKcalMultiplier(10)).toBe(1.0);
+      expect(Cycle.getKcalMultiplier(20)).toBe(1.05);
     });
 
     it('should return correct water multiplier', () => {
-      // Menstrual: 1.1 (+10%)
-      expect(Cycle.getWaterMultiplier(1)).toBe(1.1);
+      expect(Cycle.getWaterMultiplier(1)).toBe(1.10);
+      expect(Cycle.getWaterMultiplier(10)).toBe(1.0);
     });
   });
 
   describe('3. Water Retention', () => {
-    it('should detect water retention days', () => {
-      // Days 1-3: High retention
+    it('should detect water retention days 1-5', () => {
       const info = Cycle.getWaterRetentionInfo(1);
       expect(info.hasRetention).toBe(true);
-      expect(info.severity).toBe('high');
-      expect(info.kgEstimate).toBeGreaterThan(0);
+      expect(info.excludeFromTrend).toBe(true);
     });
 
-    it('should not detect retention in follicular phase', () => {
+    it('should detect pre-menstrual retention 26-28', () => {
+      const info = Cycle.getWaterRetentionInfo(27);
+      expect(info.hasRetention).toBe(true);
+      expect(info.excludeFromTrend).toBe(true);
+    });
+
+    it('should not detect retention in mid follicular', () => {
       const info = Cycle.getWaterRetentionInfo(10);
       expect(info.hasRetention).toBe(false);
+      expect(info.excludeFromTrend).toBe(false);
     });
   });
 });

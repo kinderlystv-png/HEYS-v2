@@ -371,8 +371,13 @@
       ? +d.deficitPct
       : profileTargetDef;
 
-    // Коррекция на менструальный цикл
-    const cycleKcalMultiplier = HEYS.Cycle?.getKcalMultiplier?.(d.cycleDay) || 1;
+    // Коррекция на менструальный цикл (v4: count day 1…28)
+    const cycleCountDay = HEYS.Cycle?.resolveCycleCountDay?.({
+      date: d.date,
+      cycleDay: d.cycleDay,
+      lsGet
+    }) ?? null;
+    const cycleKcalMultiplier = HEYS.Cycle?.getKcalMultiplier?.(cycleCountDay) || 1;
     // Optimum рассчитывается от baseExpenditure (без TEF)
     const baseOptimum = r0(baseExpenditure * (1 + dayTargetDef / 100));
     const optimum = r0(baseOptimum * cycleKcalMultiplier);

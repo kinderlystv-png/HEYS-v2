@@ -608,11 +608,15 @@
 
         // --- 17. Cycle Awareness (если доступен модуль цикла) ---
         let cycleInsight = null;
-        if (typeof HEYS !== 'undefined' && HEYS.Cycle && day.cycleDay) {
-          const phase = HEYS.Cycle.getCyclePhase?.(day.cycleDay);
+        if (typeof HEYS !== 'undefined' && HEYS.Cycle) {
+          const cycleCountDay = HEYS.Cycle.resolveCycleCountDay?.({
+            date: day.date,
+            cycleDay: day.cycleDay
+          });
+          const phase = HEYS.Cycle.getCyclePhase?.(cycleCountDay);
           if (phase) {
-            const kcalMult = HEYS.Cycle.getKcalMultiplier?.(day.cycleDay) || 1;
-            if (kcalMult > 1.05) {
+            const kcalMult = HEYS.Cycle.getKcalMultiplier?.(cycleCountDay) || 1;
+            if (kcalMult > 1.0) {
               cycleInsight = {
                 phase: phase.name,
                 multiplier: kcalMult,

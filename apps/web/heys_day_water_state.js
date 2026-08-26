@@ -72,7 +72,12 @@
         const seasonBonus = isHotSeason ? 300 : 0;
         const seasonNote = isHotSeason ? '☀️ Лето' : '';
 
-        const cycleMultiplier = HEYS.Cycle?.getWaterMultiplier?.(safeDay.cycleDay) || 1;
+        const cycleCountDay = HEYS.Cycle?.resolveCycleCountDay?.({
+            date: safeDay.date,
+            cycleDay: safeDay.cycleDay,
+            lsGet: HEYS.utils?.lsGet
+        }) ?? null;
+        const cycleMultiplier = HEYS.Cycle?.getWaterMultiplier?.(cycleCountDay) || 1;
         const cycleBonus = cycleMultiplier > 1 ? Math.round(base * (cycleMultiplier - 1)) : 0;
         const cycleNote = cycleBonus > 0 ? '🌸 Особый период' : '';
 

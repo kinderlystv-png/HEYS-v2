@@ -1,5 +1,5 @@
 // heys_cycle_v1.js — Утилиты для менструального цикла (особого периода)
-// Версия: 1.0.0 | Дата: 2025-12-08
+// Версия: 2.0.0 | Дата: 2026-08-26 — v4 contract multipliers + 28-day phase count
 (function (global) {
   'use strict';
 
@@ -49,87 +49,55 @@
   // КОНСТАНТЫ ФАЗ ЦИКЛА
   // ============================================================
 
-  /**
-   * Фазы менструального цикла с научно обоснованными коррекциями
-   * 
-   * Источники:
-   * - Barr et al. 2020 "Menstrual cycle phase and metabolic rate"
-   * - McNulty et al. 2020 "The Effects of Menstrual Cycle Phase"
-   * - Davidsen et al. 2007 "Insulin Sensitivity and Menstrual Cycle"
-   */
+  /** v4 cycle.v4.dc.html — множители только из data-v (ккал / вода / волна). */
+  const CYCLE_COUNT_MAX = 28;
+  const WEIGHT_TREND_EXCLUDE_DAYS = new Set([1, 2, 3, 4, 5, 26, 27, 28]);
+
   const CYCLE_PHASES = {
-    // Дни 1-5: Менструальная фаза
     menstrual: {
-      name: 'Менструальная',
+      name: 'Начало периода',
       shortName: 'Особый период',
       days: [1, 2, 3, 4, 5],
       icon: '🌸',
-      color: '#ec4899', // pink-500
-      // Повышенные энергозатраты (спазмы, терморегуляция)
-      kcalMultiplier: 1.05,     // +5% к норме (компенсация дискомфорта)
-      waterMultiplier: 1.1,     // +10% к норме воды (потеря жидкости)
-      insulinWaveMultiplier: 1.12, // +12% к длине волны (снижение чувствительности)
-      advice: {
-        sweet: true,   // Тяга к сладкому — норма
-        iron: true,    // Напоминание о железе
-        rest: true     // Легче с нагрузками
-      }
+      color: '#ec4899',
+      kcalMultiplier: 1.0,
+      waterMultiplier: 1.10,
+      insulinWaveMultiplier: 1.0,
+      advice: { sweet: true, iron: true, rest: true }
     },
 
-    // Дни 6-12: Фолликулярная фаза
     follicular: {
-      name: 'Фолликулярная',
-      shortName: 'Восстановление',
-      days: [6, 7, 8, 9, 10, 11, 12],
+      name: 'Спокойные дни',
+      shortName: 'Спокойные дни',
+      days: [6, 7, 8, 9, 10, 11, 12, 13, 14],
       icon: '🌱',
-      color: '#22c55e', // green-500
-      // Энергия растёт, хорошее время для тренировок
+      color: '#22c55e',
       kcalMultiplier: 1.0,
       waterMultiplier: 1.0,
-      insulinWaveMultiplier: 0.95, // -5% (улучшенная чувствительность)
-      advice: {
-        training: true, // Хорошее время для интенсивных тренировок
-        energy: true    // Энергия на подъёме
-      }
+      insulinWaveMultiplier: 1.0,
+      advice: { training: true, energy: true }
     },
-
-    // Дни 13-14: Овуляция
-    ovulation: {
-      name: 'Овуляция',
-      shortName: 'Пик энергии',
-      days: [13, 14],
-      icon: '⭐',
-      color: '#eab308', // yellow-500
-      // Пик энергии и силы
-      kcalMultiplier: 1.05,     // +5% (повышенный метаболизм)
-      waterMultiplier: 1.0,
-      insulinWaveMultiplier: 0.92, // -8% (лучшая чувствительность)
-      advice: {
-        peakPerformance: true // Лучшее время для рекордов
-      }
-    },
-
-    // v4.3 (2026-05-13): Лютеиновая фаза (дни 15-28) добавлена.
-    // ПРЕЖДЕ половина цикла шла с insulinWaveMultiplier=1.0 несмотря на реальное
-    // падение Si. Valdes/Elkind-Hirsch 1991: Si падает 6.20 → 3.20 (≈48%) между
-    // фолликулярной и лютеиновой фазами. Bonen 1991, Yeung 2010 (BioCycle)
-    // подтверждают. В отсутствии явного маркера овуляции (юзер не вводит)
-    // считаем лютеиновую как «оценочную» — применяется только если cycleDay
-    // явно ≥15. UI должен предупредить о грубой оценке без LH-теста.
-    luteal: {
-      name: 'Лютеиновая',
-      shortName: 'После овуляции',
-      days: [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28],
+    early_luteal: {
+      name: 'Середина цикла',
+      shortName: 'Середина цикла',
+      days: [15, 16, 17, 18, 19],
       icon: '🌙',
-      color: '#a78bfa', // violet-400
-      // Si падает на 20-30% (Valdes 1991, консервативно — литература до 48%)
-      kcalMultiplier: 1.08,     // +8% (BMR ↑ при прогестероне)
+      color: '#a78bfa',
+      kcalMultiplier: 1.03,
+      waterMultiplier: 1.0,
+      insulinWaveMultiplier: 1.0,
+      advice: { carbAware: true }
+    },
+    late_luteal: {
+      name: 'Вторая половина',
+      shortName: 'Вторая половина',
+      days: [20, 21, 22, 23, 24, 25, 26, 27, 28],
+      icon: '🌙',
+      color: '#a78bfa',
+      kcalMultiplier: 1.05,
       waterMultiplier: 1.05,
-      insulinWaveMultiplier: 1.12, // +12% к волне (Si ↓ — Valdes 1991, консервативно)
-      advice: {
-        carbAware: true, // Меньше быстрых углеводов вечером
-        ironOmega3: true // PMS-симптомы — нужны магний/омега-3
-      }
+      insulinWaveMultiplier: 1.12,
+      advice: { carbAware: true, ironOmega3: true }
     }
   };
 
@@ -138,26 +106,111 @@
   // ============================================================
 
   /**
-   * Определить фазу цикла по дню
-   * @param {number|null} cycleDay - День цикла (1-14 или null)
-   * @returns {Object|null} Фаза с её параметрами или null
+   * Разница в календарных днях между двумя YYYY-MM-DD (включительно с конца).
    */
-  function getCyclePhase(cycleDay) {
-    if (!cycleDay || typeof cycleDay !== 'number' || cycleDay < 1) {
+  function daysBetween(startDate, endDate) {
+    const a = new Date(startDate + 'T12:00:00');
+    const b = new Date(endDate + 'T12:00:00');
+    return Math.round((b - a) / 86400000);
+  }
+
+  /**
+   * День счёта фаз 1…28 по дате: от последней отметки дня 1 (или выведенного старта недели).
+   * @param {string} dateStr - YYYY-MM-DD
+   * @param {function|null} lsGet
+   * @returns {number|null}
+   */
+  function findCycleStartForDate(dateStr, lsGet) {
+    if (!dateStr) return null;
+
+    for (let offset = 0; offset <= 27; offset++) {
+      const d = addDays(dateStr, -offset);
+      const data = readDayData(d, lsGet);
+      if (data?.cycleDay === 1) return d;
+    }
+
+    for (let offset = 0; offset <= 27; offset++) {
+      const d = addDays(dateStr, -offset);
+      const data = readDayData(d, lsGet);
+      if (data?.cycleDay >= 1 && data?.cycleDay <= 7) {
+        return addDays(d, -(data.cycleDay - 1));
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * @param {string} dateStr
+   * @param {function|null} lsGet
+   * @returns {number|null} 1…28 или null после 28-го / без старта
+   */
+  function getCycleCountDay(dateStr, lsGet) {
+    const start = findCycleStartForDate(dateStr, lsGet);
+    if (!start) return null;
+    const count = daysBetween(start, dateStr) + 1;
+    if (count < 1 || count > CYCLE_COUNT_MAX) return null;
+    return count;
+  }
+
+  /**
+   * Единая точка для движка и wiring: count day из даты или fallback на маркер 1…7.
+   * @param {{ date?: string, cycleDay?: number|null, lsGet?: function|null }} options
+   * @returns {number|null}
+   */
+  function resolveCycleCountDay(options = {}) {
+    const { date, cycleDay, lsGet } = options;
+    if (date) {
+      const counted = getCycleCountDay(date, lsGet);
+      if (counted != null) return counted;
+    }
+    if (typeof cycleDay === 'number' && cycleDay >= 1 && cycleDay <= CYCLE_COUNT_MAX) {
+      return cycleDay;
+    }
+    return null;
+  }
+
+  /**
+   * Средняя надбавка ккал за полный цикл (контракт ≈2,14 %).
+   */
+  function getAverageKcalMultiplier() {
+    let sum = 0;
+    for (let d = 1; d <= CYCLE_COUNT_MAX; d++) {
+      sum += getKcalMultiplier(d);
+    }
+    return sum / CYCLE_COUNT_MAX;
+  }
+
+  /**
+   * Подпись внутри недели особых дней 1–7 (контракт: начало / середина / конец).
+   */
+  function getPeriodWeekLabel(markDay) {
+    if (markDay >= 1 && markDay <= 3) return 'начало';
+    if (markDay >= 4 && markDay <= 5) return 'середина';
+    if (markDay >= 6 && markDay <= 7) return 'конец';
+    return null;
+  }
+
+  /**
+   * Определить фазу цикла по дню счёта 1–28
+   * @param {number|null} cycleCountDay
+   * @returns {Object|null}
+   */
+  function getCyclePhase(cycleCountDay) {
+    if (!cycleCountDay || typeof cycleCountDay !== 'number' || cycleCountDay < 1) {
       return null;
     }
 
     for (const [key, phase] of Object.entries(CYCLE_PHASES)) {
-      if (phase.days.includes(cycleDay)) {
+      if (phase.days.includes(cycleCountDay)) {
         return {
           id: key,
-          day: cycleDay,
+          day: cycleCountDay,
           ...phase
         };
       }
     }
 
-    // День за пределами трекинга (>14)
     return null;
   }
 
@@ -476,8 +529,8 @@
    * @param {number|null} cycleDay 
    * @returns {Object} { hasRetention, severity, kgEstimate, advice }
    */
-  function getWaterRetentionInfo(cycleDay) {
-    if (!cycleDay || typeof cycleDay !== 'number' || cycleDay < 1) {
+  function getWaterRetentionInfo(cycleCountDay) {
+    if (!cycleCountDay || typeof cycleCountDay !== 'number' || cycleCountDay < 1) {
       return {
         hasRetention: false,
         severity: 'none',
@@ -487,48 +540,46 @@
       };
     }
 
-    // Дни 1-5: Менструальная фаза — максимальная задержка
-    if (cycleDay >= 1 && cycleDay <= 5) {
+    const excludeFromTrend = WEIGHT_TREND_EXCLUDE_DAYS.has(cycleCountDay);
+
+    if (cycleCountDay >= 1 && cycleCountDay <= 5) {
       return {
         hasRetention: true,
-        severity: cycleDay <= 3 ? 'high' : 'medium', // Пик в первые 3 дня
-        kgEstimate: cycleDay <= 3 ? 2.0 : 1.0, // Средняя оценка
-        advice: 'Вес может быть выше на 1-3 кг из-за задержки воды. Это НЕ жир!',
+        severity: cycleCountDay <= 3 ? 'high' : 'medium',
+        kgEstimate: cycleCountDay <= 3 ? 2.0 : 1.0,
+        advice: 'Вес может быть выше из-за задержки воды. Это не жир.',
         excludeFromTrend: true,
-        phaseColor: '#ec4899' // pink
+        phaseColor: '#ec4899'
       };
     }
 
-    // Дни 6-7: Переходная фаза — остаточная задержка
-    if (cycleDay >= 6 && cycleDay <= 7) {
+    if (cycleCountDay >= 26 && cycleCountDay <= 28) {
       return {
         hasRetention: true,
-        severity: 'low',
-        kgEstimate: 0.5,
-        advice: 'Вода уходит, вес постепенно нормализуется',
-        excludeFromTrend: true, // Всё ещё лучше исключить
-        phaseColor: '#f9a8d4' // pink-300 (светлее)
+        severity: 'medium',
+        kgEstimate: 1.5,
+        advice: 'День ' + cycleCountDay + ' — возможна задержка воды',
+        excludeFromTrend: true,
+        phaseColor: '#a78bfa'
       };
     }
 
-    // Дни 8-14: Фолликулярная/Овуляция — нет задержки
     return {
       hasRetention: false,
       severity: 'none',
       kgEstimate: 0,
       advice: null,
-      excludeFromTrend: false
+      excludeFromTrend: excludeFromTrend
     };
   }
 
   /**
-   * Проверить, нужно ли исключать день из тренда веса
-   * @param {number|null} cycleDay 
+   * @param {number|null} cycleCountDay
    * @returns {boolean}
    */
-  function shouldExcludeFromWeightTrend(cycleDay) {
-    const info = getWaterRetentionInfo(cycleDay);
-    return info.excludeFromTrend;
+  function shouldExcludeFromWeightTrend(cycleCountDay) {
+    if (!cycleCountDay || typeof cycleCountDay !== 'number') return false;
+    return WEIGHT_TREND_EXCLUDE_DAYS.has(cycleCountDay);
   }
 
   /**
@@ -855,6 +906,16 @@
   HEYS.Cycle = {
     // Константы
     PHASES: CYCLE_PHASES,
+    CYCLE_COUNT_MAX,
+    WEIGHT_TREND_EXCLUDE_DAYS,
+
+    // Счёт фаз
+    getCycleCountDay,
+    resolveCycleCountDay,
+    findCycleStartForDate,
+    getAverageKcalMultiplier,
+    getPeriodWeekLabel,
+    daysBetween,
 
     // Основные функции
     getCyclePhase,

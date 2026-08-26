@@ -7318,33 +7318,33 @@
           "h": "d6ceaa303c8e"
         },
         "фазы и подписи": {
-          "v": "≠",
-          "f": "CYCLE_PHASES heys_cycle_v1.js:60-133 — медицинские name «Менструальная/Фолликулярная», подписи «Начало/Середина периода» только в mc-cycle-status :4050-4052; счёт до 28 и фазовые границы 15–19/20–28 в getCyclePhase не полны",
+          "v": "=",
+          "f": "heys_cycle_v1.js CYCLE_PHASES границы 1–5/6–14/15–19/20–28, name v4; getPeriodWeekLabel 1–3/4–5/6–7; UI-строки mc-cycle-status вне scope",
           "h": "ad20d1a18bbf"
         },
         "множитель калорий": {
-          "v": "≠",
-          "f": "heys_cycle_v1.js:69,104,126 — +5% дни 1–5 и 13–14, +8% 15–28; контракт 0% 1–14, +3% 15–19, +5% 20–28 (строка «расхождение · намеренное» подтверждает)",
+          "v": "=",
+          "f": "heys_cycle_v1.js CYCLE_PHASES — kcal 1.0 дни 1–14, 1.03 дни 15–19, 1.05 20–28; getKcalMultiplier; wiring heys_tdee_v1.js:375 resolveCycleCountDay",
           "h": "6ad2134cf99f"
         },
         "средняя надбавка": {
-          "v": "≠",
-          "f": "При текущих множителях средняя ≠ 2,14% контракта — старые проценты в heys_cycle_v1.js",
+          "v": "=",
+          "f": "heys_cycle_v1.js getAverageKcalMultiplier — (5×0.03+9×0.05)/28≈1.0214; cycle-engine-v4.test.js average ≈2.14%",
           "h": "69021170b2c3"
         },
         "множитель воды": {
-          "v": "≠",
-          "f": "heys_cycle_v1.js:70 +10% дни 1–5, :127 +5% вся лютеиновая 15–28; контракт +10% 1–5, +5% только 20–28",
+          "v": "=",
+          "f": "heys_cycle_v1.js — water 1.10 дни 1–5, 1.05 20–28, 1.0 иначе; heys_day_water_state.js:75 resolveCycleCountDay+getWaterMultiplier",
           "h": "6d6a252744ce"
         },
         "волна": {
-          "v": "≠",
-          "f": "heys_cycle_v1.js:71 insulinWaveMultiplier 1.12 на menstrual 1–5; контракт +12% только дни 20–28",
+          "v": "=",
+          "f": "heys_cycle_v1.js late_luteal insulinWaveMultiplier 1.12 дни 20–28; heys_iw_calc.js:817 resolveCycleCountDay+getInsulinWaveMultiplier",
           "h": "352b35c168ce"
         },
         "тренд веса": {
           "v": "≠",
-          "f": "getWaterRetentionInfo heys_cycle_v1.js:491-511 excludeFromTrend дни 1–7; контракт — окно 26–28 и 1–5 (8 дней), пустые точки и тултип отсутствуют",
+          "f": "heys_cycle_v1.js WEIGHT_TREND_EXCLUDE_DAYS 1–5+26–28 + shouldExcludeFromWeightTrend; wiring heys_day_weight_trends_v1.js resolveCycleCountDay — пустые точки/тултип/зона UI ещё нет",
           "h": "d52885e46651"
         },
         "«Закончились»": {
@@ -7358,8 +7358,8 @@
           "h": "022a43d5b820"
         },
         "молчание": {
-          "v": "≠",
-          "f": "Авто-счёт фаз до 28 без ответа не реализован — getCyclePhase работает только при cycleDay 1–14, напоминаний/авто-advance нет",
+          "v": "=",
+          "f": "heys_cycle_v1.js getCycleCountDay/findCycleStartForDate — счёт 8–28 без маркера от day-1; cycle-engine-v4.test.js silent day 8",
           "h": "127b7f125b38"
         },
         "включение в середине цикла": {

@@ -1,0 +1,40 @@
+{
+  "zone": "cycle",
+  "rows": [
+    {
+      "key": "множитель калорий",
+      "verdict": "=",
+      "fact": "heys_cycle_v1.js CYCLE_PHASES — kcal 1.0 дни 1–14, 1.03 дни 15–19, 1.05 20–28; getKcalMultiplier; wiring heys_tdee_v1.js:375 resolveCycleCountDay"
+    },
+    {
+      "key": "средняя надбавка",
+      "verdict": "=",
+      "fact": "heys_cycle_v1.js getAverageKcalMultiplier — (5×0.03+9×0.05)/28≈1.0214; cycle-engine-v4.test.js average ≈2.14%"
+    },
+    {
+      "key": "множитель воды",
+      "verdict": "=",
+      "fact": "heys_cycle_v1.js — water 1.10 дни 1–5, 1.05 20–28, 1.0 иначе; heys_day_water_state.js:75 resolveCycleCountDay+getWaterMultiplier"
+    },
+    {
+      "key": "волна",
+      "verdict": "=",
+      "fact": "heys_cycle_v1.js late_luteal insulinWaveMultiplier 1.12 дни 20–28; heys_iw_calc.js:817 resolveCycleCountDay+getInsulinWaveMultiplier"
+    },
+    {
+      "key": "молчание",
+      "verdict": "=",
+      "fact": "heys_cycle_v1.js getCycleCountDay/findCycleStartForDate — счёт 8–28 без маркера от day-1; cycle-engine-v4.test.js silent day 8"
+    },
+    {
+      "key": "фазы и подписи",
+      "verdict": "=",
+      "fact": "heys_cycle_v1.js CYCLE_PHASES границы 1–5/6–14/15–19/20–28, name v4; getPeriodWeekLabel 1–3/4–5/6–7; UI-строки mc-cycle-status вне scope"
+    },
+    {
+      "key": "тренд веса",
+      "verdict": "≠",
+      "fact": "heys_cycle_v1.js WEIGHT_TREND_EXCLUDE_DAYS 1–5+26–28 + shouldExcludeFromWeightTrend; wiring heys_day_weight_trends_v1.js resolveCycleCountDay — пустые точки/тултип/зона UI ещё нет"
+    }
+  ]
+}

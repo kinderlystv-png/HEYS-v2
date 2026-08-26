@@ -51,8 +51,11 @@
           } catch (e) { }
 
           if (dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0 && dayData.weightMorningEstimated !== true && dayData.weightMorningSource !== 'estimated_avg' && dayData.weightMorningSource !== 'estimated_profile') {
-            const cycleDayValue = dayData.cycleDay || null;
-            const cycleExclude = H.Cycle?.shouldExcludeFromWeightTrend?.(cycleDayValue) || false;
+            const cycleCountDay = H.Cycle?.resolveCycleCountDay?.({
+              date: dateStr,
+              cycleDay: dayData.cycleDay ?? null
+            }) ?? null;
+            const cycleExclude = H.Cycle?.shouldExcludeFromWeightTrend?.(cycleCountDay) || false;
             const refeedExclude = H.Refeed?.shouldExcludeFromWeightTrend?.(dayData) || false;
             const shouldExclude = cycleExclude || refeedExclude;
 
@@ -60,7 +63,7 @@
               date: dateStr,
               weight: +dayData.weightMorning,
               dayIndex: 6 - i,
-              cycleDay: cycleDayValue,
+              cycleDay: cycleCountDay,
               hasRetention: shouldExclude
             };
 
@@ -160,8 +163,11 @@
             const Store = window.HEYS?.store;
             const dayData = Store?.decompress ? Store.decompress(raw) : JSON.parse(raw);
             if (dayData?.weightMorning > 0 && dayData.weightMorningEstimated !== true && dayData.weightMorningSource !== 'estimated_avg' && dayData.weightMorningSource !== 'estimated_profile') {
-              const cycleDayValue = dayData.cycleDay || null;
-              const retentionInfo = H.Cycle?.getWaterRetentionInfo?.(cycleDayValue) || { hasRetention: false };
+              const cycleCountDay = H.Cycle?.resolveCycleCountDay?.({
+                date: dateStr,
+                cycleDay: dayData.cycleDay ?? null
+              }) ?? null;
+              const retentionInfo = H.Cycle?.getWaterRetentionInfo?.(cycleCountDay) || { hasRetention: false };
               const trainings = dayData.trainings || [];
               const hasTraining = trainings.some(t => t?.z?.some(z => z > 0));
               const trainingTypes = trainings
@@ -169,7 +175,7 @@
                 .map(t => t.type || 'cardio');
               return {
                 weight: +dayData.weightMorning,
-                cycleDay: cycleDayValue,
+                cycleDay: cycleCountDay,
                 hasWaterRetention: retentionInfo.hasRetention,
                 retentionSeverity: retentionInfo.severity,
                 retentionAdvice: retentionInfo.advice,
