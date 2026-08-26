@@ -8470,7 +8470,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   width: auto;
   height: 4px;
   border-radius: 0;
-  background: var(--v4-sand-act, #c67139);
+  background: var(--v4-act, #c67139);
 }
 
 .date-picker-sheet .date-picker-day.cycle-ribbon--forecast::before {

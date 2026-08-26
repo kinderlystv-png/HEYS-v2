@@ -4070,7 +4070,6 @@
       // Заголовок с toggle
       React.createElement('div', { className: 'mc-cycle-header' },
         React.createElement('div', { className: 'mc-cycle-header-left' },
-          React.createElement('span', { className: 'mc-cycle-icon' }, '🌸'),
           React.createElement('span', { className: 'mc-cycle-title' }, 'Особые дни')
         ),
         // Toggle кнопка
@@ -4156,7 +4155,7 @@
   registerStep('cycle', {
     title: 'Особый период',
     hint: 'Адаптация норм',
-    icon: '🌸',
+    icon: '',
     component: CycleStepComponent,
     canSkip: true,
     // shouldShow — проверяем, включён ли tracking в профиле

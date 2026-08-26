@@ -1559,7 +1559,10 @@
                 lsGet,
                 lsSet,
                 saveCycleDay,
-                clearCycleDay
+                clearCycleDay,
+                eatenKcal,
+                budgetKcal: optimum,
+                cycleKcalMultiplier,
             }) || null)
             : null;
 

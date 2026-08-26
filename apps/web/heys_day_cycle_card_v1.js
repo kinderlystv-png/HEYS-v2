@@ -33,6 +33,9 @@
         lsSet,
         isReadOnly,
         haptic,
+        eatenKcal: ctx.eatenKcal,
+        budgetKcal: ctx.budgetKcal,
+        cycleKcalMultiplier: ctx.cycleKcalMultiplier,
       });
     }
 

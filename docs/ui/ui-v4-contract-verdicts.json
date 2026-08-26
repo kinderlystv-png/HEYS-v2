@@ -7493,8 +7493,8 @@
           "h": "81c043304b4a"
         },
         "вид · пометка нормы": {
-          "v": "≠",
-          "f": "Пилюля «+N%» перед «Нужно съесть» на nutrition hero не реализована — badge только на cycle-card",
+          "v": "=",
+          "f": "renderCycleNormRows cycle-card-v4__norm-rows heys_cycle_ui_v1.js",
           "h": "4dbd2bcf1aac"
         },
         "вид · инсайт": {

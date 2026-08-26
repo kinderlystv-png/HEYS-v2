@@ -317,6 +317,32 @@
       }, btn.label)));
   }
 
+  function formatCycleNormKcal(value) {
+    const n = Math.round(Number(value) || 0);
+    return n.toLocaleString('ru-RU') + ' ккал';
+  }
+
+  function renderCycleNormRows(React, params) {
+    const { eatenKcal, budgetKcal, cycleKcalMultiplier } = params || {};
+    const mult = Number(cycleKcalMultiplier) || 1;
+    if (mult <= 1) return null;
+    const pct = Math.round((mult - 1) * 100);
+    return React.createElement('div', { className: 'cycle-card-v4__norm-rows' },
+      React.createElement('div', { className: 'cycle-card-v4__norm-row' },
+        React.createElement('span', null, 'Съедено'),
+        React.createElement('span', { className: 'cycle-card-v4__norm-value is-muted' },
+          formatCycleNormKcal(eatenKcal))
+      ),
+      React.createElement('div', { className: 'cycle-card-v4__norm-row' },
+        React.createElement('span', null, 'Нужно съесть'),
+        React.createElement('span', { className: 'cycle-card-v4__norm-value' },
+          React.createElement('span', { className: 'cycle-card-v4__norm-pill' }, '+' + pct + ' %'),
+          formatCycleNormKcal(budgetKcal)
+        )
+      )
+    );
+  }
+
   function renderCycleMarkingPanel(ctx) {
     const {
       React,
@@ -330,6 +356,9 @@
       isReadOnly,
       cyclePhase,
       showCycleCard = true,
+      eatenKcal,
+      budgetKcal,
+      cycleKcalMultiplier,
     } = ctx || {};
 
     if (!React || !showCycleCard) return null;
@@ -578,7 +607,8 @@
               formatCycleWeekBadge(storedDay)
             )
           ),
-          filled
+          filled,
+          renderCycleNormRows(React, { eatenKcal, budgetKcal, cycleKcalMultiplier })
         );
       }
 
