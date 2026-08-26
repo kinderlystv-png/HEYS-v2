@@ -2053,21 +2053,15 @@
     return ((h % 24) * 60) + m;
   }
 
-  function moscowNowMinutes() {
-    try {
-      const parts = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Europe/Moscow',
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: false
-      }).formatToParts(new Date());
-      const h = Number(parts.find((p) => p.type === 'hour')?.value);
-      const min = Number(parts.find((p) => p.type === 'minute')?.value);
-      if (Number.isFinite(h) && Number.isFinite(min)) return h * 60 + min;
-    } catch (_e) { /* fallback ниже */ }
-    const d = new Date();
-    return d.getHours() * 60 + d.getMinutes();
-  }
+    // Время берётся с устройства. Строка «часовой пояс · правило продукта»:
+    // «дата и время берутся с устройства: день закрывается по местному времени
+    // человека, а не по серверному». Прежде здесь стоял Intl с жёстким
+    // Europe/Moscow, и человек в другом поясе видел график воды не по своим
+    // часам. Запасная ветка была верной с самого начала — она и осталась одна.
+    function deviceNowMinutes() {
+      const d = new Date();
+      return d.getHours() * 60 + d.getMinutes();
+    }
 
   function minutesSpan(startMin, endMin) {
     if (!Number.isFinite(startMin) || !Number.isFinite(endMin)) return null;
@@ -2223,7 +2217,7 @@
     const wakeMinutes = parseHmToMinutes(ctx.sleepEnd)
       ?? (Number.isFinite(ctx.medianWakeMinutes) ? ctx.medianWakeMinutes : V4_PACE_FALLBACK_WAKE_MIN);
 
-    const nowMinutes = Number.isFinite(ctx.nowMinutes) ? ctx.nowMinutes : moscowNowMinutes();
+    const nowMinutes = Number.isFinite(ctx.nowMinutes) ? ctx.nowMinutes : deviceNowMinutes();
     if (nowMinutes < wakeMinutes) return 'neutral';
     const minsSinceWake = nowMinutes - wakeMinutes;
     // «Первый час после подъёма не красим».
@@ -4176,7 +4170,7 @@
       const awakeSpan = bedMinutes != null && wakeMinutes != null
         ? minutesSpan(wakeMinutes, bedMinutes)
         : Math.round((24 - profileSleepH) * 60);
-      const atMinutes = moscowNowMinutes();
+      const atMinutes = deviceNowMinutes();
       const schedule = v4WaterScheduleAt(target, wakeMinutes, awakeSpan, atMinutes);
       const expectedMl = data.expectedMlNow ?? schedule.expectedMl;
       const expectedPct = data.expectedPctNow ?? schedule.expectedPct;

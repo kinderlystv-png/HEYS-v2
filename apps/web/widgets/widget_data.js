@@ -571,7 +571,7 @@
         ? this._minutesSpan(wakeMinutes, bedMinutes)
         : Math.round((24 - profileSleepHours) * 60);
       const isClosedDay = this._isClosedDay();
-      const nowMinutes = this._moscowNowMinutes();
+      const nowMinutes = this._deviceNowMinutes();
       const waterSchedule = isClosedDay
         ? { expectedMl: target, expectedPct: 100, checkLabel: null }
         : this._waterScheduleAtMinutes(target, wakeMinutes, awakeSpan, nowMinutes);
@@ -1339,22 +1339,15 @@
       return span;
     },
 
-    _moscowNowMinutes() {
-      try {
-        const parts = new Intl.DateTimeFormat('en-GB', {
-          timeZone: 'Europe/Moscow',
-          hour: 'numeric',
-          minute: 'numeric',
-          hour12: false
-        }).formatToParts(new Date());
-        const h = Number(parts.find((p) => p.type === 'hour')?.value);
-        const min = Number(parts.find((p) => p.type === 'minute')?.value);
-        if (Number.isFinite(h) && Number.isFinite(min)) return h * 60 + min;
-      } catch (_e) { /* fallback */ }
-      const d = new Date();
-      return d.getHours() * 60 + d.getMinutes();
-    },
-
+      // Время берётся с устройства. Строка «часовой пояс · правило продукта»:
+      // «дата и время берутся с устройства: день закрывается по местному времени
+      // человека, а не по серверному». Прежде здесь стоял Intl с жёстким
+      // Europe/Moscow, и человек в другом поясе видел график воды не по своим
+      // часам. Запасная ветка была верной с самого начала — она и осталась одна.
+      _deviceNowMinutes() {
+        const d = new Date();
+        return d.getHours() * 60 + d.getMinutes();
+      },
     _waterScheduleAtMinutes(target, wakeMinutes, awakeSpan, atMinutes) {
       if (!target || !wakeMinutes || !awakeSpan) {
         return { expectedMl: 0, expectedPct: 0, checkLabel: null };
