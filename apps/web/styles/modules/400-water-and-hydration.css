@@ -2786,10 +2786,10 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .advice-v4-detail__hero {
-  background: #efe3cf;
-  border-radius: 22px;
-  padding: 18px;
-  margin-top: 20px;
+  background: var(--v4-sand-surface, #f7efe2);
+  border-radius: 18px;
+  padding: 14px 16px;
+  margin-top: 8px;
 }
 
 .advice-v4-detail__hero-label {
@@ -2908,7 +2908,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 [data-theme$='dark'] .advice-v4-detail__hero {
-  background: #2f2820;
+  background: var(--v4-sand-surface, #2f2820);
 }
 
 [data-theme$='dark'] .advice-v4-detail__science-box {

@@ -77,9 +77,10 @@ describe('advice v4 panels from canvas', () => {
     );
     // Служебная створка — это створка диагностики листа настроек.
     expect(shellSource).toContain("className: 'hdr-settings-sheet__diag-panel'");
-    const at = shellSource.indexOf('isCuratorSettingsSession && React.createElement');
+    const at = shellSource.indexOf("'heys:open-advice-service'");
     expect(at, 'вход должен стоять под признаком куратора').toBeGreaterThan(-1);
-    const entry = shellSource.slice(at, at + 1400);
+    const entry = shellSource.slice(at - 400, at + 200);
+    expect(entry).toContain('isCuratorSettingsSession && React.createElement');
     expect(entry).toContain("hdr-settings-sheet__diag-btn");
     expect(entry).toContain("'heys:open-advice-service'");
     expect(entry).toContain('Служебное — советы');
@@ -140,17 +141,15 @@ describe('advice v4 panels from canvas', () => {
     expect(cssSource).toMatch(/\.advice-v4-detail-overlay[\s\S]*?background:\s*var\(--v4-bg,\s*#fffaf1\)/);
     expect(cssSource).toMatch(/\.advice-v4-detail__close[\s\S]*?background:\s*#f7efe2/);
 
-    // Строка «деталь» (двенадцатая сборка): ярусы разной формы намеренно —
-    // герой на второй поверхности --c2 радиусом 22, «Детали» без карточки прямо
-    // на фоне, наука на первой поверхности --c1 радиусом 18. Прежняя редакция
-    // строки требовала трёх одинаковых карточек --c1 и спорила и с кадром, и с
-    // кодом; здесь закреплена новая, и именно различие форм, а не только цвет.
+    // Строка «вид детали совета»: три яруса — карточки --c1 радиусом 18,
+    // поля 14/16, зазор 8 (tips.v4.dc.html).
     const hero = cssSource.match(/\.advice-v4-detail__hero \{([^}]*)\}/)[1];
-    expect(hero).toMatch(/background:\s*#efe3cf/);
-    expect(hero).toMatch(/border-radius:\s*22px/);
+    expect(hero).toMatch(/background:\s*var\(--v4-sand-surface/);
+    expect(hero).toMatch(/border-radius:\s*18px/);
+    expect(hero).toMatch(/padding:\s*14px 16px/);
 
     const science = cssSource.match(/\.advice-v4-detail__science-box \{([^}]*)\}/)[1];
-    expect(science).toMatch(/background:\s*#f7efe2/);
+    expect(science).toMatch(/background:\s*(?:var\(--v4-sand-surface,\s*#f7efe2\)|#f7efe2)/);
     expect(science).toMatch(/border-radius:\s*18px/);
 
     const detailsText = cssSource.match(/\.advice-v4-detail__text \{([^}]*)\}/)[1];

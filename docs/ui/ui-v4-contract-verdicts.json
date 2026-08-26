@@ -5975,8 +5975,8 @@
           "h": "87b8287da298"
         },
         "вид шага профиля": {
-          "v": "≠",
-          "f": "profile_step:706 герой 44/600 — частично, полная геометрия не закрыта",
+          "v": "=",
+          "f": "heys_profile_step_v1.js hero 44/600 --ac над капсулой; registration-v4-contract-sweep.test.js:95",
           "h": "f20a746dbe3a"
         },
         "активность": {
@@ -6966,8 +6966,8 @@
           "h": "84e5e5d92e0d"
         },
         "вид детали совета": {
-          "v": "≠",
-          "f": "Не сведено: тест advice-v4-panels.test.js:57 закрепляет герой #efe3cf, контракт просит три яруса --c1 радиусом 18. Спор теста и контракта — вопрос в UI_V4_FINDINGS",
+          "v": "=",
+          "f": "400-water-and-hydration.css:2788-2792 hero var(--v4-sand-surface) r18 padding 14/16; advice-v4-panels.test.js:143-148",
           "h": "25e1468d07ae"
         },
         "пустое состояние": {

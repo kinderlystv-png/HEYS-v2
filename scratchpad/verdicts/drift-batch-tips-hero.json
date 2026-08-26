@@ -1,0 +1,10 @@
+{
+  "zone": "tips",
+  "rows": [
+    {
+      "key": "вид детали совета",
+      "v": "=",
+      "f": "400-water-and-hydration.css:2788-2792 hero var(--v4-c1) r18 padding 14/16; advice-v4-panels.test.js:143-148"
+    }
+  ]
+}

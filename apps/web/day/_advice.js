@@ -3205,16 +3205,6 @@
         }, [readStoredValue]);
 
         useEffect(() => {
-            const handleCelebrate = () => {
-                setShowConfetti(true);
-                if (typeof haptic === 'function') haptic('success');
-                setTimeout(() => setShowConfetti(false), 2500);
-            };
-            window.addEventListener('heysCelebrate', handleCelebrate);
-            return () => window.removeEventListener('heysCelebrate', handleCelebrate);
-        }, [haptic, setShowConfetti]);
-
-        useEffect(() => {
             // Cold-start guard (v1.0): if heys_advice_settings is absent from localStorage
             // (incognito / first visit), the user's toastsEnabled=false setting hasn't loaded
             // yet at 1500ms. Wait for Phase B sync (which carries CLIENT_SPECIFIC_KEYS incl.
@@ -3428,10 +3418,6 @@
             if (adviceSoundEnabled) HEYS.feedback?.emit?.('advice.shown');
 
             if (advicePrimary.onShow) advicePrimary.onShow();
-            if (advicePrimary.showConfetti) {
-                setShowConfetti(true);
-                setTimeout(() => setShowConfetti(false), 2000);
-            }
 
             if (!isManualTrigger && markShown) markShown(advicePrimary);
         }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, hiddenUntilTomorrow, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, safeAdviceRelevant, date]);
@@ -3555,7 +3541,7 @@
         const handleToastRate = (isPositive, e) => {
             e && e.stopPropagation();
             const now = Date.now();
-            if (now - toastRateLockRef.current < 350) return;
+            if (now - toastRateLockRef.current < ADVICE_RATE_REPEAT_GUARD_MS) return;
             toastRateLockRef.current = now;
             if (displayedAdvice && rateAdvice) {
                 rateAdvice(displayedAdvice, isPositive);
