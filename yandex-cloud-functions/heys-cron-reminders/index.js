@@ -779,7 +779,7 @@ async function jobMorningCheckin(client) {
     const key = `morning_checkin:${today}:${clientId}`;
 
     const res = await deliverIdempotently(client, key, () => (
-      sendToClient(client, clientId, { ...T.morningCheckin(), tag: 'morning-checkin', url: '/' })
+      sendToClient(client, clientId, { ...T.morningCheckin(), tag: 'morning-checkin', url: '/?action=morning-checkin' })
     ));
     total += res.sent;
   }
@@ -863,7 +863,7 @@ async function jobWaterHint(client) {
     const key = `water_hint:${today}:${bucket}:${clientId}`;
 
     const res = await deliverIdempotently(client, key, () => (
-      sendToClient(client, clientId, { ...T.waterHint(Math.round(deficit)), tag: 'water-hint', url: '/' })
+      sendToClient(client, clientId, { ...T.waterHint(Math.round(deficit)), tag: 'water-hint', url: '/?tab=ration&focus=water' })
     ));
     total += res.sent;
   }

@@ -1,0 +1,10 @@
+{
+  "zone": "nutrition-tab",
+  "rows": [
+    {
+      "key": "уведомления и точки входа",
+      "v": "=",
+      "f": "cron /?tab=ration&focus=water + shortcuts setTab(ration)+focusWater; нижняя навигация и «Еда» из карточки быстрых действий без изменений"
+    }
+  ]
+}

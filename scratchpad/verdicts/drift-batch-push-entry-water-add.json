@@ -1,0 +1,10 @@
+{
+  "zone": "water-add",
+  "rows": [
+    {
+      "key": "уведомления и точки входа",
+      "v": "=",
+      "f": "cron water-hint → /?tab=ration&focus=water; shortcuts+HEYS.Day.focusWater прокручивает #water-card без записи глотка; sw.js push+notificationclick"
+    }
+  ]
+}
