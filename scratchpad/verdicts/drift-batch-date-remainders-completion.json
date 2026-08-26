@@ -1,0 +1,15 @@
+{
+  "zone": "date-remainders",
+  "rows": [
+    {
+      "key": "вид клетки",
+      "v": "=",
+      "f": "000-base:8319-8407 42×44 r14; date-remainders-v4-cell.test.js; тон точки --v4-ok-fill"
+    },
+    {
+      "key": "тон метки загрузки",
+      "v": "=",
+      "f": "000-base --dp-mark-alpha 45/50/42/42% на 4 наборах; date-remainders-v4-smoke.test.js:415"
+    }
+  ]
+}

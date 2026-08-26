@@ -422,8 +422,8 @@ describe('date-remainders · CSS, палитро-зависимые строки
     const refeed = baseCss.match(/\.date-picker-sheet \.date-picker-day\.has-refeed::after \{[^}]+\}/)?.[0] || '';
     expect(cycle).toContain('var(--dp-mark-alpha)');
     expect(refeed).toContain('var(--dp-mark-alpha)');
-    // Контракт «толщина метки»: 3 px у обеих, независимо от набора.
-    expect(cycle).toContain('width: 3px');
+    // Контракт «тон метки»: 3 px у цикла — полоса по верхнему краю клетки.
+    expect(cycle).toContain('height: 3px');
     expect(refeed).toContain('height: 3px');
     // Прежний песочный литерал чернил вместо роли — тёмные наборы получали
     // тёмную метку на тёмной клетке.

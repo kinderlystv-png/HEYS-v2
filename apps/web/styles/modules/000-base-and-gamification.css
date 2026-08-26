@@ -8363,10 +8363,16 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   min-height: 44px;
 }
 
+.date-picker-sheet .date-picker-day:active:not(.disabled):not(.future.disabled) {
+  opacity: 0.7;
+  transition: opacity 120ms ease;
+}
+
 /* Контракт «вид клетки»: «число 12,5 px/600 чернилами по центру». Кадры
    «Календарь · легенда» набирают 13 — верен контракт. */
 .date-picker-sheet .day-number {
   font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 .date-picker-sheet .date-picker-day.has-data:not(.selected) {
@@ -8445,10 +8451,11 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   content: '';
   position: absolute;
   left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 3px;
-  border-radius: 999px;
+  right: 0;
+  top: 0;
+  height: 3px;
+  width: auto;
+  border-radius: 0;
   /* v4-intentional */
   background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent);
   pointer-events: none;
@@ -18252,7 +18259,12 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__near-card {
-  background: var(--v4-ok-bg, #eaefe0);
+  background: var(--v4-sand-surface, #f7efe2);
+  border-radius: 20px;
+}
+
+.game-v4-sheet__near-card .game-v4-sheet__streak-bar-row {
+  margin-top: 14px;
 }
 
 .game-v4-sheet__more-groups {
