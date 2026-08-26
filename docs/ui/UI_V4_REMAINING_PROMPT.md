@@ -9,29 +9,36 @@ wave 1+2).
 
 ---
 
-## Status snapshot (2026-08-26, post-merge)
+## Status snapshot (2026-08-26, post-merge wave 3)
 
-**База:** `origin/main` @ `be103a92` (влива `cursor/ui-v4-completion-3ce2`).
+**База:** `origin/main` @ `240d0f57` (push-entry, haptics, registration
+reaudit).
 
-**Вердикты:** `=` 1308 · **`≠` 69** · **`?` 7** · `—` 103.
+**Вердикты (1487 строк):** `=` 1319 · **`≠` 57** (~89%) · **`?` 8** · `—` 103.
 
 | Зона            | Строк | =   | ≠   | ?   | —   |
 | --------------- | ----- | --- | --- | --- | --- |
 | home-widgets    | 286   | 244 | 33  | 1   | 8   |
-| water-add       | 96    | 75  | 10  | 0   | 11  |
-| registration    | 63    | 48  | 11  | 0   | 4   |
-| nutrition-tab   | 220   | 198 | 8   | 0   | 14  |
-| undo-bar        | 48    | 41  | 3   | 1   | 3   |
+| water-add       | 96    | 76  | 8   | 1   | 11  |
+| nutrition-tab   | 220   | 200 | 6   | 0   | 14  |
+| registration    | 63    | 54  | 5   | 0   | 4   |
+| undo-bar        | 48    | 42  | 2   | 1   | 3   |
 | settings-system | 71    | 62  | 2   | 0   | 7   |
 | login           | 71    | 65  | 1   | 0   | 5   |
-| checkin-morning | 82    | 74  | 1   | 3   | 4   |
+| checkin-morning | 82    | 75  | 0   | 3   | 4   |
 | cycle           | 78    | 71  | 0   | 1   | 6   |
 | curator-edits   | 54    | 49  | 0   | 1   | 4   |
-| остальные 7 зон | —     | —   | 0   | 0   | —   |
+| date-remainders | 64    | 56  | 0   | 0   | 8   |
+| app-splash      | 38    | 34  | 0   | 0   | 4   |
+| gamification    | 77    | 72  | 0   | 0   | 5   |
+| pwa-update      | 55    | 51  | 0   | 0   | 4   |
+| questionnaire   | 57    | 52  | 0   | 0   | 5   |
+| spinners        | 58    | 54  | 0   | 0   | 4   |
+| tips            | 69    | 62  | 0   | 0   | 7   |
 
 Сводка: `node scripts/ui-v4-check-contract-drift.mjs --list`
 
-Если **`≠` не 69** — ветка ещё не влита, пришла новая сборка пакета или кто-то
+Если **`≠` не 57** — ветка ещё не влита, пришла новая сборка пакета или кто-то
 уже закрыл строки. **Остановись** и пересчитай, не работай по этому списку.
 
 ---
