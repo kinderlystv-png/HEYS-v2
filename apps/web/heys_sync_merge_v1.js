@@ -43,6 +43,8 @@
     { timestamp: 'dayCommentUpdatedAt', fields: ['dayComment'] },
     { timestamp: 'dayScoreUpdatedAt', fields: ['dayScore', 'dayScoreManual'] },
     { timestamp: 'supplementsPlannedUpdatedAt', fields: ['supplementsPlanned'] },
+    // supplementsTaken* — штамп группы для guard/stale-write; в mergeDayData массив
+    // отметок перекрывается mergeSupplementsTakenMarks (union по id), как журнал воды.
     { timestamp: 'supplementsTakenUpdatedAt', fields: ['supplementsTaken', 'supplementsTakenAt', 'supplementsTakenMeta'] },
     { timestamp: 'deficitUpdatedAt', fields: ['deficitPct'] },
     { timestamp: 'dayStatusUpdatedAt', fields: ['isFastingDay', 'isIncomplete'] },
@@ -181,6 +183,94 @@
     const waterEntries = Array.from(map.values())
       .sort((a, b) => (Number(a.ts) || 0) - (Number(b.ts) || 0));
     return { waterEntries: waterEntries, waterMl: Math.max(0, sumWaterEntries(waterEntries)) };
+  }
+
+  function normalizeSupplementIdList(arr) {
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((id) => id != null && String(id).trim())
+      .map((id) => String(id));
+  }
+
+  function readSupplementsTakenAt(day) {
+    const at = day && day.supplementsTakenAt;
+    return (at && typeof at === 'object' && !Array.isArray(at)) ? at : {};
+  }
+
+  function readSupplementsTakenMeta(day) {
+    const meta = day && day.supplementsTakenMeta;
+    return (meta && typeof meta === 'object' && !Array.isArray(meta)) ? meta : {};
+  }
+
+  function hasSupplementsTakenMergeSignal(day) {
+    if (!day || typeof day !== 'object') return false;
+    if (Number(day.supplementsTakenUpdatedAt) > 0) return true;
+    if (normalizeSupplementIdList(day.supplementsTaken).length > 0) return true;
+    const at = readSupplementsTakenAt(day);
+    const meta = readSupplementsTakenMeta(day);
+    return Object.keys(at).length > 0 || Object.keys(meta).length > 0;
+  }
+
+  // Отметки добавок с двух устройств складываются по id (nutrition-tab contract).
+  // Whole-array LWW по supplementsTakenUpdatedAt затирал частичные отметки:
+  // телефон A отметил d3, телефон B — mg, победитель оставлял только одну позицию.
+  // Исключение — явное «снять всё»: пустой supplementsTaken у стороны с более
+  // свежим штампом группы (тот же контракт, что guardExplicitMutationGroups).
+  function mergeSupplementsTakenMarks(local, remote) {
+    const localTs = Number(local.supplementsTakenUpdatedAt) || 0;
+    const remoteTs = Number(remote.supplementsTakenUpdatedAt) || 0;
+    const localTaken = normalizeSupplementIdList(local.supplementsTaken);
+    const remoteTaken = normalizeSupplementIdList(remote.supplementsTaken);
+    const localAt = readSupplementsTakenAt(local);
+    const remoteAt = readSupplementsTakenAt(remote);
+    const localMeta = readSupplementsTakenMeta(local);
+    const remoteMeta = readSupplementsTakenMeta(remote);
+    const mergedUpdatedAt = Math.max(localTs, remoteTs);
+
+    if (localTs !== remoteTs) {
+      const newerTaken = localTs > remoteTs ? localTaken : remoteTaken;
+      const olderTaken = localTs > remoteTs ? remoteTaken : localTaken;
+      if (newerTaken.length === 0 && olderTaken.length > 0) {
+        return {
+          supplementsTaken: [],
+          supplementsTakenAt: {},
+          supplementsTakenMeta: {},
+          supplementsTakenUpdatedAt: mergedUpdatedAt,
+        };
+      }
+    }
+
+    const idSet = new Set([...localTaken, ...remoteTaken]);
+    const ordered = [];
+    localTaken.forEach((id) => {
+      if (idSet.has(id) && !ordered.includes(id)) ordered.push(id);
+    });
+    remoteTaken.forEach((id) => {
+      if (idSet.has(id) && !ordered.includes(id)) ordered.push(id);
+    });
+
+    const pickSideValue = (localVal, remoteVal) => {
+      if (localVal == null && remoteVal == null) return undefined;
+      if (localVal == null) return remoteVal;
+      if (remoteVal == null) return localVal;
+      return localTs >= remoteTs ? localVal : remoteVal;
+    };
+
+    const supplementsTakenAt = {};
+    const supplementsTakenMeta = {};
+    ordered.forEach((id) => {
+      const at = pickSideValue(localAt[id], remoteAt[id]);
+      if (at != null) supplementsTakenAt[id] = at;
+      const meta = pickSideValue(localMeta[id], remoteMeta[id]);
+      if (meta != null) supplementsTakenMeta[id] = meta;
+    });
+
+    return {
+      supplementsTaken: ordered,
+      supplementsTakenAt,
+      supplementsTakenMeta,
+      supplementsTakenUpdatedAt: mergedUpdatedAt,
+    };
   }
 
   // ─── mergeItemsById ──────────────────────────────────────────────────────
@@ -914,6 +1004,16 @@
       if (water.waterEntries.length > 0) merged.waterEntries = water.waterEntries;
       else delete merged.waterEntries;
       merged.waterMl = water.waterMl;
+    }
+
+    // ─── Добавки: отметки приёма union по id ───────────────────────────────
+    if (hasSupplementsTakenMergeSignal(local) || hasSupplementsTakenMergeSignal(remote)) {
+      const supp = mergeSupplementsTakenMarks(local, remote);
+      merged.supplementsTaken = supp.supplementsTaken;
+      merged.supplementsTakenAt = supp.supplementsTakenAt;
+      merged.supplementsTakenMeta = supp.supplementsTakenMeta;
+      if (supp.supplementsTakenUpdatedAt > 0) merged.supplementsTakenUpdatedAt = supp.supplementsTakenUpdatedAt;
+      else delete merged.supplementsTakenUpdatedAt;
     }
 
     // ─── Meals: merge by id with deletion detection ────────────────────────
@@ -1730,6 +1830,7 @@
     resolveWaterMl,
     appendWaterEntry,
     mergeWaterJournal,
+    mergeSupplementsTakenMarks,
     WATER_SEED_ID,
     mergeScalarKv,
     mergeScalarKvWithOutcome,
