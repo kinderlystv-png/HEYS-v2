@@ -2890,8 +2890,18 @@
             }
         })();
 
+        const adviceDayIso = typeof date === 'string' ? date : '';
+        const adviceTodayIso = (() => {
+            try {
+                return HEYSRef?.dayUtils?.todayISO?.() || new Date().toISOString().slice(0, 10);
+            } catch (_) {
+                return new Date().toISOString().slice(0, 10);
+            }
+        })();
+        const adviceIsToday = !adviceDayIso || adviceDayIso === adviceTodayIso;
+
         const adviceResult = useMemo(() => {
-            if (!adviceEngine || !hasClient) return emptyAdviceResult;
+            if (!adviceEngine || !hasClient || !adviceIsToday || isCuratorReadOnlyMode()) return emptyAdviceResult;
             return adviceEngine({
                 dayTot,
                 normAbs,
@@ -3112,14 +3122,9 @@
 
         useEffect(() => {
             const handleShowAdvice = () => {
-                // Курaторская сессия: НЕ оборачиваем setters в React.startTransition.
-                // Наблюдалось 2026-05-28: startTransition deprioritizes setAdviceTrigger
-                // + setToastVisible и они теряются между другими urgent updates в курaторе
-                // → state остаётся tab_open + toastVisible=false → dropdown не открывается.
-                // Sync setters работают корректно и для курaтора, и для PIN.
-                const _curator = isCuratorReadOnlyMode();
+                if (isCuratorReadOnlyMode()) return;
                 const _runUpdate = () => {
-                    if (totalAdviceCount > 0 || _curator) {
+                    if (totalAdviceCount > 0) {
                         const engineVisibleAdviceCount = Array.isArray(safeBadgeAdvices)
                             ? safeBadgeAdvices.length
                             : 0;
@@ -3134,7 +3139,6 @@
                             engineVisibleAdviceCount,
                             badgeCount: Array.isArray(safeBadgeAdvices) ? safeBadgeAdvices.length : 0,
                             filteredOutCount: Math.max(0, engineVisibleAdviceCount - totalAdviceCount),
-                            ...(_curator ? { mode: 'curator_history' } : {})
                         });
                         haptic('light');
                     } else {
@@ -3420,7 +3424,7 @@
             if (advicePrimary.onShow) advicePrimary.onShow();
 
             if (!isManualTrigger && markShown) markShown(advicePrimary);
-        }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, hiddenUntilTomorrow, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, safeAdviceRelevant, date]);
+        }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, hiddenUntilTomorrow, markShown, toastsEnabled, haptic, HEYSRef, safeAdviceRelevant, date]);
 
         useEffect(() => {
             setAdviceTrigger(null);
