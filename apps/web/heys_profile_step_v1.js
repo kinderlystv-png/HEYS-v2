@@ -575,8 +575,12 @@
     return React.createElement('div', { className: 'flex flex-col gap-4' },
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
-      }, 'Расскажите о себе'),
-      React.createElement('div', { className: 'flex flex-col gap-2' },
+      }, 'Персональные данные'),
+      React.createElement('div', {
+        className: 'text-xs',
+        style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 8 }
+      }, 'Имя увидит только ваш куратор'),
+      React.createElement('div', { className: 'flex flex-col gap-2', style: { marginTop: 16 } },
         React.createElement('label', { className: 'text-sm font-medium', style: { color: 'rgba(0,0,0,.7)' } },
           'Имя ',
           React.createElement('span', { style: { color: '#8a4a20' } }, '*')
@@ -772,8 +776,8 @@
   }
 
   registerStep('profile-personal', {
-    title: 'Расскажите о себе',
-    hint: '',
+    title: 'Персональные данные',
+    hint: 'Имя увидит только ваш куратор',
     nextLabel: 'Дальше',
     icon: '',
     component: ProfilePersonalComponent,
@@ -900,8 +904,8 @@
     const goalTooLow = goalBmi > 0 && goalBmi < 18.5;
     const minKg = minNormalWeightKg(height);
 
-    const weightValues = useMemo(() => Array.from({ length: 171 }, (_, i) => 30 + i), []);
-    const heightValues = useMemo(() => Array.from({ length: 111 }, (_, i) => 120 + i), []);
+    const weightValues = useMemo(() => Array.from({ length: 271 }, (_, i) => 30 + i), []);
+    const heightValues = useMemo(() => Array.from({ length: 151 }, (_, i) => 100 + i), []);
 
     const wheelCard = (label, values, value, keyName) => React.createElement('div', {
       style: { flex: 1, background: '#f7efe2', borderRadius: 18, padding: '13px 0 14px', textAlign: 'center' }
@@ -923,7 +927,7 @@
       React.createElement('div', {
         className: 'text-xs',
         style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5 }
-      }, 'Целых чисел достаточно — десятые вводятся в чек-ине.'),
+      }, 'Вес будете уточнять каждое утро, здесь только точка отсчёта'),
       React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 8 } },
         wheelCard('Рост, см', heightValues, height, 'height'),
         wheelCard('Вес сейчас, кг', weightValues, weight, 'weight')
@@ -961,7 +965,7 @@
 
   registerStep('profile-body', {
     title: 'Рост и вес',
-    hint: '',
+    hint: 'Вес будете уточнять каждое утро, здесь только точка отсчёта',
     nextLabel: 'Дальше',
     icon: '',
     component: ProfileBodyComponent,
@@ -1026,7 +1030,11 @@
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
       }, 'Цель и активность'),
-      React.createElement('div', { className: 'text-xs font-semibold tracking-widest uppercase', style: { color: '#8a4a20' } }, 'Цель'),
+      React.createElement('div', {
+        className: 'text-xs',
+        style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 8 }
+      }, 'Цель можно поменять в любой момент'),
+      React.createElement('div', { className: 'text-xs font-semibold tracking-widest uppercase', style: { color: '#8a4a20', marginTop: 16 } }, 'Цель'),
       React.createElement('div', { className: 'flex flex-col gap-2' },
         GOAL_DIRECTIONS.map((item) => React.createElement('button', {
           key: item.id,
@@ -1077,7 +1085,7 @@
 
   registerStep('profile-goals', {
     title: 'Цель и активность',
-    hint: '',
+    hint: 'Цель можно поменять в любой момент',
     nextLabel: 'Дальше',
     icon: '',
     component: ProfileGoalsComponent,
@@ -1150,7 +1158,11 @@
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
       }, 'Сон и инсулиновая волна'),
-      React.createElement('div', { className: 'flex flex-col gap-2' },
+      React.createElement('div', {
+        className: 'text-xs',
+        style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 8 }
+      }, 'По этим двум числам считается окно приёмов'),
+      React.createElement('div', { className: 'flex flex-col gap-2', style: { marginTop: 16 } },
         React.createElement('div', { className: 'flex items-center gap-2 relative' },
           React.createElement('div', {
             className: 'text-xs font-semibold tracking-widest uppercase',
@@ -1246,7 +1258,7 @@
 
   registerStep('profile-metabolism', {
     title: 'Сон и инсулиновая волна',
-    hint: '',
+    hint: 'По этим двум числам считается окно приёмов',
     nextLabel: 'Готово',
     icon: '',
     component: ProfileMetabolismComponent,
@@ -1886,7 +1898,7 @@
     },
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 8, lineHeight: 1.3 }
-      }, firstName ? `Продолжим, ${firstName}` : 'Продолжим'),
+      }, firstName ? `${firstName}, профиль наполовину` : 'Незавершённый профиль'),
       React.createElement('p', {
         style: { fontSize: 13, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55, maxWidth: 320 }
       }, bodyStale && capturedLabel
@@ -1909,7 +1921,7 @@
   }
 
   registerStep('profile-resume', {
-    title: 'Продолжим',
+    title: 'Незавершённый профиль',
     hint: '',
     icon: '',
     hiddenFromProgress: true,
