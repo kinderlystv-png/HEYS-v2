@@ -6,6 +6,26 @@
 Пакет: **17 зон**, **1487 строк** контракта с вердиктами (1488 в канвасе; одна
 строка без вердикта — см. гигиену ниже).
 
+**База для cloud deploy:** `1560cc8b`
+(`docs(ui): handoff — session 26.08 workers DONE, +39 ahead`).
+
+---
+
+## Облачные сессии vs устройство (обязательно прочитать)
+
+Правила из `CLAUDE.md` § Cowork / облачные сессии — для **всех** cloud agents и
+для человека на устройстве.
+
+| Правило                                          | Следствие                                                                                                                                                                                                                                                     |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cloud FS ≠ device FS**                         | `git status`, `git log`, содержимое файлов и результаты проверок — только из дерева **на устройстве**. Путь из облачной ФС не подставлять в команды на устройстве.                                                                                            |
+| **Правки в облаке ≠ правки в репо**              | Изменение в облачной сессии для репозитория не существует, пока не перенесено на устройство (merge, patch, PR, явный file output).                                                                                                                            |
+| **Commit / hooks / push — только на устройстве** | Cloud agent **не** пушит и **не** обходит hooks. Выход: patch, PR или явный список файлов для merge человеком/агентом на устройстве.                                                                                                                          |
+| **Рекомендуемый поток**                          | Cloud agents работают в **Cursor cloud branch / worktree**; после merge на устройстве — `pnpm ship "…" --no-push` (или `HEYS_COMMIT_SOURCE_ONLY=1 git commit`) и интеграционные гейты **на устройстве**. Push/deploy — только по прямой команде пользователя. |
+
+Облачный агент, который «закоммитил» у себя, **не** считается shipped. Факт
+проверяй на устройстве: `git log -1 --oneline`, `git status --short --branch`.
+
 ---
 
 ## Status snapshot (date 2026-08-26)
@@ -358,6 +378,70 @@ Lanes **home-widgets-typography** + **home-widgets-breakdown-content** — то 
 
 ---
 
+## Раздача полос — анти-collision
+
+**14 lanes** ниже — не темы, а **эксклюзивное владение файлами**. Одна полоса =
+один агент на wave; список «DO NOT edit» обязателен.
+
+### MERGE ORDER (когда один файл — две полосы)
+
+| Ситуация                                                                  | Порядок merge на устройстве | Иначе                                                             |
+| ------------------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------- |
+| Один файл, engine + UI (напр. `heys_cycle_v1.js` + `heys_cycle_ui_v1.js`) | **engine → UI**             | Конфликт логики; UI lane не стартует, пока engine не в main/ветке |
+| Разные файлы, lanes из таблицы                                            | Параллельно                 | —                                                                 |
+| Два lane в одном файле без разведения по ветке                            | **Запрещено** в одной wave  | Развести по времени или по cloud branch                           |
+
+### Запрещённые пересечения (forbidden overlap)
+
+| Файл                        | Макс. агентов / wave | Lanes, которые его трогают                                                 |
+| --------------------------- | -------------------- | -------------------------------------------------------------------------- |
+| `heys_cycle_v1.js`          | **1**                | cycle engine (закрыт в `37ec9d26`); не открывать повторно без явного scope |
+| `heys_cycle_ui_v1.js`       | **1**                | **cycle-ui-checkin**                                                       |
+| `heys_day_nutrition_v1.js`  | **1**                | **nutrition-tab**; пересечение с cycle UI — только после merge `a58bfe19`  |
+| `heys_widgets_ui_v1.js`     | **1**                | **home-widgets-breakdown-content**                                         |
+| `heys_day_pickers.js`       | **1**                | **cycle-ui-calendar-undo** XOR **date-remainders** — не одновременно       |
+| `730-widgets-dashboard.css` | **1**                | **home-widgets-typography** XOR breakdown — не одновременно                |
+
+**Hot files:** `heys_cycle_v1.js`, `heys_cycle_ui_v1.js`,
+`heys_day_nutrition_v1.js`, `heys_widgets_ui_v1.js` — **не более одного агента
+на файл на wave**. Нарушение = остановка wave, ручной merge на устройстве.
+
+Перед стартом lane: `git status apps/web/<file>` на **устройстве** — файл не
+должен быть dirty у другого воркера.
+
+---
+
+## Cloud launch checklist
+
+Чеклист **перед** запуском wave и **после** merge облачных веток на устройстве.
+
+### На устройстве (до старта cloud wave)
+
+- [ ] Все локальные коммиты session batch **запушены** или явно согласованы как
+      ahead-only (`1560cc8b` base — fetch `origin/main`, сверить ahead count)
+- [ ] `pnpm ui:v4:check` — зелёный (см. **Pre-push blockers** ниже)
+- [ ] `npx vitest run --root .` из `apps/web` — зелёный на **остановленных**
+      workers (без параллельных lane в том же дереве)
+- [ ] `git status apps/web docs/ui` — нет чужого dirty в hot files
+
+### На каждый cloud agent (в prompt)
+
+- [ ] Блок **lane** из таблицы lanes (владение + DO NOT edit)
+- [ ] Ссылка: `docs/ui/UI_V4_COMPLETION_PROMPT.md` (этот файл, base `1560cc8b`)
+- [ ] Путь канваса:
+      `docs/ui/handoff-v4/canvas/…/design_handoff_heys_v4/<zone>.v4.dc.html`
+- [ ] Напоминание: cloud FS ≠ device; commit/push только после merge на
+      устройстве
+
+### После cloud wave (на устройстве)
+
+- [ ] Merge cloud branches / PR → одно дерево на устройстве
+- [ ] Интеграция: `pnpm ui:v4:check` + полный vitest
+- [ ] `--rehash <zone>` для каждой затронутой зоны
+- [ ] **NO push / deploy** до прямой команды пользователя
+
+---
+
 ## Cloud agent launch template
 
 ### Репозиторий
@@ -399,6 +483,27 @@ Prettier CSS — не запускать.
 Критерий готово: zone test cluster зелёный; закрытые строки = или ? с FINDINGS;
 pnpm ui:v4:check по затронутым ролям (если менял палитру).
 ```
+
+---
+
+## Pre-push blockers (26.08 reviewer audit)
+
+Честный снимок **перед push/deploy** (base `1560cc8b`, проверено на устройстве
+26.08). Все пункты ниже обязаны быть **зелёными**; иначе push запрещён.
+
+| #   | Блокер                        | Команда / тест                                                             | Состояние 26.08                                                                                                 |
+| --- | ----------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 1   | Undefined roles gate          | `pnpm ui:v4:check` → `ui-v4-check-undefined-roles.mjs`                     | **красный** — `--v4-sand-act-fill`, `--v4-sand-bg` в `000-base-and-gamification.css`, `500-pwa-and-offline.css` |
+| 2   | Widgets sphere geometry       | `npx vitest run --root . __tests__/widgets-v4-sphere.test.js`              | **красный**                                                                                                     |
+| 3   | Check-in evening / pack limit | `npx vitest run --root . __tests__/checkin-evening-and-pack-limit.test.js` | **красный**                                                                                                     |
+| 4   | Nutrition canvas geometry     | `npx vitest run --root . __tests__/nutrition-v4-canvas-geometry.test.js`   | **красный**                                                                                                     |
+
+**Правило:** параллельные cloud workers **остановлены** → на устройстве один
+прогон `npx vitest run --root .` из `apps/web` + `pnpm ui:v4:check`. Частичный
+vitest по lane во время wave **не** заменяет финальный полный прогон.
+
+Drift-гейт (`ui-v4-check-contract-drift.mjs`) на 26.08 **зелёный** — это не
+отменяет четыре блокера выше.
 
 ---
 
