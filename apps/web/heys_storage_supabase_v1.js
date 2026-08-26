@@ -5993,6 +5993,16 @@
     // cannot infer that this page already contained another client's live state.
     // Preserve that fact before clearing the runtime context.
     if (previousClientId) cloud._clientActivatedThisPage = true;
+    // Окно отмены живёт в body вне React, поэтому перемонтирование приложения
+    // его не снимает — бар досиживал бы отсчёт уже на экране входа, а «Отменить»
+    // после clearNamespace писало бы в вычищенное или чужое пространство.
+    // commit закрывает окно и прогоняет onExpire: правка уже применена в момент
+    // действия, отмена лишь откатывает её, — то есть «удаление применяется»
+    // выполняется само собой. Тот же вызов уже стоит на смене даты и дня
+    // (heys_app_shell_v1.js:3229, heys_day_stats_v1.js:794).
+    try {
+      global.HEYS?.Undo?.commit?.('logout');
+    } catch (_) { }
     armLogoutSuppression();
     try {
       global.HEYS = global.HEYS || {};
@@ -6037,6 +6047,16 @@
       localStorage.removeItem('heys_curator_session');
       localStorage.removeItem('heys_pin_auth_client');
       localStorage.removeItem('heys_session_token');
+      // Маркер незаконченной регистрации переживает clearNamespace намеренно:
+      // он в NON_CLIENT_DATA_BLACKLIST, потому что клиента на этом шаге ещё
+      // нет и в облако его синхронизировать некуда. Но контракт registration
+      // требует «незаконченная регистрация при выходе стирается локально,
+      // но записанные шаги остаются в профиле» — снимаем его здесь, а не
+      // списком: шаги живут в облачном профиле, и при следующем входе
+      // ensureRegistrationInProgressMarker (heys_profile_step_v1.js:200)
+      // ставит маркер заново из неполного профиля. Направление fail-closed
+      // сохраняется — пустой профиль читается как незавершённый.
+      localStorage.removeItem('heys_registration_in_progress');
     } catch (e) { }
     // 🔄 Сброс флагов sync — при следующем входе нужна новая синхронизация
     initialSyncCompleted = false;

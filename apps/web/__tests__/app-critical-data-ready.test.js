@@ -41,9 +41,13 @@ describe('stable first-frame readiness contract', () => {
 
     expect(signOutIndex).toBeGreaterThan(-1);
     expect(readinessResetIndex).toBeGreaterThan(signOutIndex);
-    expect(storageSource.slice(signOutIndex, signOutIndex + 3000)).toContain(
-      'criticalSyncInFlight = null;',
-    );
+    // Границу берём по концу функции, а не окном в 3000 символов: комментарии
+    // внутри signOut растут, и фиксированное окно однажды отрежет проверяемое.
+    const signOutBody = storageSource.slice(
+      signOutIndex,
+      storageSource.indexOf('\n  };', signOutIndex),
+    );
+    expect(signOutBody).toContain('criticalSyncInFlight = null;');
   });
 
   it('hydrates critical keys before a persisted-cursor delta tail', () => {
