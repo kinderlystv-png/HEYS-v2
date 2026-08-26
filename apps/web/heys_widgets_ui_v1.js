@@ -9237,22 +9237,18 @@
         if (wrapRef.current && wrapRef.current.contains(event.target)) return;
         closeSheet();
       };
-      // Строка «закрытие»: системная кнопка назад закрывает карточку.
-      const onPopState = () => closeSheet();
-      document.addEventListener('keydown', onKey);
-      document.addEventListener('pointerdown', onPointerDown, true);
-      window.addEventListener('popstate', onPopState);
-      try {
-        window.history.pushState({ heysQuickActions: true }, '');
-      } catch (_e) { /* история недоступна — остальные пути закрытия работают */ }
-      return () => {
-        document.removeEventListener('keydown', onKey);
-        document.removeEventListener('pointerdown', onPointerDown, true);
-        window.removeEventListener('popstate', onPopState);
-        try {
-          if (window.history.state?.heysQuickActions) window.history.back();
-        } catch (_e) { /* ignore */ }
-      };
+        // Строка «закрытие»: системная кнопка назад закрывает карточку.
+        document.addEventListener('keydown', onKey);
+        document.addEventListener('pointerdown', onPointerDown, true);
+        const popHistoryLayer = HEYS.ModalDismiss?.pushHistoryLayer?.(
+          'heysQuickActions',
+          closeSheet,
+        );
+        return () => {
+          document.removeEventListener('keydown', onKey);
+          document.removeEventListener('pointerdown', onPointerDown, true);
+          if (typeof popHistoryLayer === 'function') popHistoryLayer();
+        };
     }, [open, closeSheet]);
 
     /** Строка «озвучивание режима правки»: вход в режим объявляется. */
@@ -10203,6 +10199,19 @@
     const [isDashboardPainted, setIsDashboardPainted] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [dragPreviewPositions, setDragPreviewPositions] = useState(null);
+      // Строка «аппаратная кнопка назад · правило продукта»: сначала лист,
+      // потом режим правки, потом модалка — и только с Главной без открытых
+      // слоёв кнопка выводит из приложения. Режим расстановки в историю не
+      // писался, поэтому «назад» из него сворачивал приложение целиком, а
+      // незавершённая перестановка оставалась висеть.
+      React.useEffect(() => {
+        if (!isEditMode) return undefined;
+        return HEYS.ModalDismiss?.pushHistoryLayer?.(
+          'heysWidgetsEditMode',
+          () => HEYS.Widgets.exitEditMode?.({ revert: true }),
+        );
+      }, [isEditMode]);
+
     const [cellBudget, setCellBudget] = useState(() => HEYS.Widgets.getBudgetInfo?.() || { used: 0, total: 32 });
     const [catalogBlockedType, setCatalogBlockedType] = useState(null);
     const [catalogPendingAddType, setCatalogPendingAddType] = useState(null);

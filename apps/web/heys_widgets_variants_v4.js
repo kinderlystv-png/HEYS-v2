@@ -318,6 +318,18 @@
     onClose,
     renderPreview
   }) {
+
+      // Строка «аппаратная кнопка назад · правило продукта»: кнопка и жест
+      // назад закрывают верхний слой, а не выходят из приложения. Лист смены
+      // вида в историю не писался вовсе — на Android «назад» сворачивал
+      // приложение вместо листа. Приём тот же, что у быстрых действий Главной.
+      useEffect(() => {
+        if (!open) return undefined;
+        return window.HEYS?.ModalDismiss?.pushHistoryLayer?.(
+          'heysWidgetVariantSheet',
+          () => { if (typeof onClose === 'function') onClose(); },
+        );
+      }, [open, onClose]);
     if (!open && !closing) return null;
     const portalRoot = typeof document !== 'undefined' ? document.body : null;
     if (!portalRoot || !ReactDOM?.createPortal) return null;

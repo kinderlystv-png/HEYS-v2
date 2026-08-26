@@ -96,6 +96,39 @@
         }, true);
     }
 
+    /**
+     * Слой в истории браузера. Строка «аппаратная кнопка назад · правило
+     * продукта» (home-widgets.v4.dc.html): «кнопка и жест назад закрывают
+     * верхний слой, а не выходят из приложения: сначала раскрытая карточка или
+     * лист, потом режим правки, потом модалка».
+     *
+     * Пока слой открыт, в историю кладётся запись; «назад» её снимает и зовёт
+     * onBack вместо выхода из приложения. При обычном закрытии запись убирается
+     * сама, чтобы «назад» не проглатывал лишний шаг.
+     *
+     * Приём был выписан вручную в трёх местах — быстрые действия, лист смены
+     * вида, режим расстановки. Здесь он один на всех: контракт называет слоями
+     * ещё и модалки, а четвёртая копия уже точно разъедется с остальными.
+     *
+     * @param {string} key — своё имя записи, чтобы чужую не снять.
+     * @param {Function} onBack — что закрыть по «назад».
+     * @returns {Function} снятие: вызывать при закрытии слоя другим путём.
+     */
+    function pushHistoryLayer(key, onBack) {
+        if (typeof window === 'undefined' || !key) return () => {};
+        const onPopState = () => { if (typeof onBack === 'function') onBack(); };
+        window.addEventListener('popstate', onPopState);
+        try {
+            window.history.pushState({ [key]: true }, '');
+        } catch (_e) { /* история недоступна — прочие пути закрытия работают */ }
+        return () => {
+            window.removeEventListener('popstate', onPopState);
+            try {
+                if (window.history.state && window.history.state[key]) window.history.back();
+            } catch (_e) { /* ignore */ }
+        };
+    }
+
     HEYS.ModalDismiss = {
         GHOST_MS,
         stopEvent,
@@ -103,6 +136,7 @@
         installGhostClickSwallow,
         dismissFromBackdrop,
         reactBackdropDismiss,
+        pushHistoryLayer,
         bindBackdropElement,
         initGlobalBackdropGhostGuard,
     };
