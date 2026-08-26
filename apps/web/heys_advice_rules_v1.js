@@ -408,7 +408,7 @@
     },
     high: { // mood 4-5
       prefix: ['', '', ''],
-      suffix: [' 🎉', ' 💪', ''],
+      suffix: ['', '', ''],
       avoid: []
     }
   };

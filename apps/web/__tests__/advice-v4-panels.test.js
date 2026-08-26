@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const adviceUiSource = fs.readFileSync(
-  path.join(process.cwd(), 'day/_advice.js'),
+  path.join(process.cwd(), 'apps/web/day/_advice.js'),
   'utf8'
 );
 
@@ -78,9 +78,10 @@ describe('advice v4 panels from canvas', () => {
     // Служебная створка — это створка диагностики листа настроек.
     expect(shellSource).toContain("className: 'hdr-settings-sheet__diag-panel'");
     const at = shellSource.indexOf("'heys:open-advice-service'");
-    expect(at, 'вход должен стоять под признаком куратора').toBeGreaterThan(-1);
-    const entry = shellSource.slice(at - 400, at + 200);
-    expect(entry).toContain('isCuratorSettingsSession && React.createElement');
+    expect(at, 'вход служебного экрана советов').toBeGreaterThan(-1);
+    const guardAt = shellSource.lastIndexOf('isCuratorSettingsSession && React.createElement', at);
+    expect(guardAt, 'вход должен стоять под признаком куратора').toBeGreaterThan(-1);
+    const entry = shellSource.slice(guardAt, at + 200);
     expect(entry).toContain("hdr-settings-sheet__diag-btn");
     expect(entry).toContain("'heys:open-advice-service'");
     expect(entry).toContain('Служебное — советы');
