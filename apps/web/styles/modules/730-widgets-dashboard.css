@@ -10344,7 +10344,7 @@ body:has(.widgets-tab) .widget::before {
 }
 
 body:has(.widgets-tab) .widget--calories {
-  background: var(--v4-sand-hero, #efe3cf);
+  background: var(--v4-hero, #efe3cf);
   padding: 14px;
 }
 
@@ -12985,15 +12985,15 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 }
 
 .widget-v4-tile--bg-sand {
-  background: #efe3cf;
+  background: var(--v4-hero, #efe3cf);
 }
 
 .widget-v4-tile--bg-sage {
-  background: #eaefe0;
+  background: var(--v4-ok-bg, #eaefe0);
 }
 
 .widget-v4-tile--bg-paper {
-  background: #f7efe2;
+  background: var(--v4-sand-surface, #f7efe2);
 }
 
 .widget-wd-sheet__preview--1x1 {
