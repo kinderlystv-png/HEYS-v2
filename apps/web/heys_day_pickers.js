@@ -387,7 +387,19 @@
             title: 'Предыдущий месяц'
           }, navChevron('left')),
           React.createElement('span', { className: 'date-picker-title' },
-            cur.toLocaleString('ru-RU', { month: 'long', year: 'numeric' })
+            cur.toLocaleString('ru-RU', { month: 'long', year: 'numeric' }),
+            (() => {
+              const CycleUI = HEYS.CycleUI;
+              if (!CycleUI?.findLastCycleMarkDate || !CycleUI.formatForecastMonthLine) return null;
+              const lsGetFn = HEYS.lsGet || HEYS.utils?.lsGet;
+              const lastMark = CycleUI.findLastCycleMarkDate(calendarToday, lsGetFn);
+              if (CycleUI.shouldHideCycleForecast?.(lastMark, calendarToday, lsGetFn)) return null;
+              const forecastDates = CycleUI.computeCycleForecastDates(lastMark, calendarToday);
+              const label = CycleUI.formatForecastMonthLine(forecastDates);
+              return label
+                ? React.createElement('span', { className: 'date-picker-forecast-line' }, label)
+                : null;
+            })()
           ),
           React.createElement('button', {
             type: 'button',
@@ -648,11 +660,126 @@
   // Экспортируем DatePicker для использования в шапке (legacy)
   HEYS.DatePicker = DatePicker;
   HEYS.Calendar = Calendar;
+
+  function CycleDatePickerSheet({
+    React: ReactArg,
+    isOpen,
+    onClose,
+    onConfirm,
+    valueISO,
+    todayISO,
+    cycleDay,
+  }) {
+    const R = ReactArg || React;
+    if (!isOpen || !R) return null;
+    const utils = getDayUtils();
+    if (!utils.parseISO || !utils.fmtDate) return null;
+    const { parseISO, fmtDate } = utils;
+    const todayStr = todayISO || utils.todayISO?.() || utils.calendarTodayISO?.();
+    const [cur, setCur] = R.useState(parseISO(valueISO || todayStr));
+    const [selected, setSelected] = R.useState(valueISO || todayStr);
+    const liveRef = R.useRef(null);
+    const dayNum = Number(cycleDay) || 1;
+
+    R.useEffect(() => {
+      setCur(parseISO(valueISO || todayStr));
+      setSelected(valueISO || todayStr);
+    }, [valueISO, todayStr]);
+
+    const minDate = HEYS.CycleUI?.addDaysIso?.(todayStr, -27) || todayStr;
+    const y = cur.getFullYear();
+    const m = cur.getMonth();
+    const first = new Date(y, m, 1);
+    const start = (first.getDay() + 6) % 7;
+    const dim = new Date(y, m + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < start; i++) cells.push(null);
+    for (let d = 1; d <= dim; d++) cells.push(new Date(y, m, d));
+
+    const recalcText = (() => {
+      const ordinal = HEYS.CycleUI?.formatCycleWeekBadge?.(dayNum) || `День ${dayNum}`;
+      const human = selected ? HEYS.CycleUI?.formatShortHumanDate?.(selected) : '';
+      const range = HEYS.CycleUI?.formatWeekRangeForMark?.(selected, dayNum) || '';
+      return `${ordinal} — ${human}. ${range}`;
+    })();
+
+    R.useEffect(() => {
+      if (liveRef.current) liveRef.current.textContent = recalcText;
+    }, [recalcText]);
+
+    const sheet = R.createElement('div', { className: 'cycle-date-picker-backdrop' },
+      R.createElement('div', {
+        className: 'cycle-date-picker-sheet',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-label': 'Когда это было',
+        onKeyDown: (e) => { if (e.key === 'Escape') onClose?.(); },
+      },
+        R.createElement('div', { className: 'cycle-date-picker-sheet__head' },
+          R.createElement('b', null, 'Когда это было'),
+          R.createElement('span', null, cur.toLocaleString('ru-RU', { month: 'long', year: 'numeric' }))
+        ),
+        R.createElement('div', { className: 'cycle-date-picker-sheet__weekdays' },
+          ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((d) =>
+            R.createElement('span', { key: d }, d)
+          )
+        ),
+        R.createElement('div', { className: 'cycle-date-picker-sheet__grid' },
+          cells.map((dt, idx) => {
+            if (!dt) return R.createElement('span', { key: 'e' + idx, className: 'cycle-date-picker-cell empty' });
+            const dateStr = fmtDate(dt);
+            const disabled = dateStr < minDate || dateStr > todayStr;
+            const isSelected = dateStr === selected;
+            const isToday = dateStr === todayStr;
+            const speech = dt.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+            return R.createElement('button', {
+              key: dateStr,
+              type: 'button',
+              className: [
+                'cycle-date-picker-cell',
+                disabled ? 'is-disabled' : '',
+                isSelected ? 'is-selected' : '',
+                isToday ? 'is-today' : '',
+              ].join(' ').trim(),
+              'aria-label': speech,
+              'aria-selected': isSelected ? 'true' : 'false',
+              'aria-disabled': disabled ? 'true' : undefined,
+              tabIndex: disabled ? -1 : 0,
+              onClick: disabled ? undefined : () => setSelected(dateStr),
+            }, dt.getDate());
+          })
+        ),
+        R.createElement('div', {
+          className: 'cycle-date-picker-sheet__live',
+          'aria-live': 'polite',
+          ref: liveRef,
+        }, recalcText),
+        R.createElement('div', { className: 'cycle-v4-btns cycle-date-picker-sheet__actions' },
+          R.createElement('button', {
+            type: 'button',
+            className: 'cycle-v4-btn cycle-v4-btn--secondary',
+            onClick: () => onClose?.(),
+          }, 'Отмена'),
+          R.createElement('button', {
+            type: 'button',
+            className: 'cycle-v4-btn cycle-v4-btn--primary',
+            onClick: () => onConfirm?.(selected),
+          }, 'Подтвердить')
+        )
+      )
+    );
+
+    if (ReactDOM && typeof ReactDOM.createPortal === 'function' && typeof document !== 'undefined') {
+      return ReactDOM.createPortal(sheet, document.body);
+    }
+    return sheet;
+  }
   
   // Новый namespace
   HEYS.dayPickers = {
     DatePicker,
-    Calendar
+    Calendar,
+    CycleDatePickerSheet,
   };
 
 })(window);

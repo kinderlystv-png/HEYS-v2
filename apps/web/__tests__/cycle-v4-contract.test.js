@@ -38,6 +38,10 @@ describe('cycle v4 · helpers', () => {
     expect(CYCLE_UI_SRC).toContain('computeCycleForecastDates');
     expect(CYCLE_UI_SRC).toContain('pushCycleUndo');
     expect(CYCLE_UI_SRC).toContain('getSuggestedCycleDay');
+    expect(CYCLE_UI_SRC).toContain('renderCycleMarkingPanel');
+    expect(CYCLE_UI_SRC).toContain('shouldHideCycleForecast');
+    expect(CYCLE_UI_SRC).toContain('Другой день');
+    expect(CYCLE_UI_SRC).toContain('Это было сегодня');
   });
 });
 
@@ -57,12 +61,25 @@ describe('cycle v4 · calendar ribbon + card', () => {
     expect(PICKERS_SRC).toContain('buildCycleRibbonMeta');
     expect(PICKERS_SRC).toContain('buildCycleForecastMeta');
     expect(PICKERS_SRC).toContain('weekday:');
+    expect(PICKERS_SRC).toContain('CycleDatePickerSheet');
+    expect(PICKERS_SRC).toContain('date-picker-forecast-line');
+    expect(PICKERS_SRC).toContain('Когда это было');
   });
 
-  it('nutrition cycle card is v4 without emoji', () => {
-    expect(CARD_SRC).toContain('cycle-card-v4');
-    expect(CARD_SRC).toContain('Указать день');
-    expect(CARD_SRC).not.toContain('🌸');
+  it('nutrition cycle card delegates to CycleUI panel', () => {
+    expect(CARD_SRC).toContain('renderCycleMarkingPanel');
+    expect(CYCLE_UI_SRC).toContain('cycle-card-v4');
+    expect(CYCLE_UI_SRC).toContain('Указать день');
+    expect(CYCLE_UI_SRC).not.toContain('🌸');
+  });
+});
+
+describe('cycle v4 · profile disable dialog', () => {
+  it('toggle uses v4 dialog instead of window.confirm', () => {
+    expect(PROFILE_SRC).toContain('cycle-v4-dialog');
+    expect(PROFILE_SRC).toContain('cycleDisableOpen');
+    expect(PROFILE_SRC).toContain('Выключить особый период?');
+    expect(PROFILE_SRC).not.toMatch(/window\.confirm\([\s\S]*Особый период/);
   });
 });
 

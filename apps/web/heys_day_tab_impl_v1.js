@@ -1554,6 +1554,10 @@
                 cycleEditMode,
                 setCycleEditMode,
                 day,
+                date,
+                setDay,
+                lsGet,
+                lsSet,
                 saveCycleDay,
                 clearCycleDay
             }) || null)

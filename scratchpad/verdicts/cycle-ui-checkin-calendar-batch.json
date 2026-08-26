@@ -1,0 +1,147 @@
+{
+  "zone": "cycle",
+  "canvas": "cycle.v4.dc.html",
+  "recorded": "2026-08-26",
+  "rows": [
+    {
+      "key": "дата отметки · два шага",
+      "v": "=",
+      "f": "renderCycleMarkingPanel: ряд 1–7 → confirmRow «Это было сегодня» + чип «Другой день» heys_cycle_ui_v1.js:389-425"
+    },
+    {
+      "key": "календарь выбора даты",
+      "v": "=",
+      "f": "CycleDatePickerSheet «Когда это было», окно 28 дней, пересчёт недели, Отмена/Подтвердить heys_day_pickers.js:664-776"
+    },
+    {
+      "key": "вид · строка подтверждения даты",
+      "v": "=",
+      "f": "cycle-card-v4__date-confirm + chip 44px 500-pwa-and-offline.css:1933-1975; heys_cycle_ui_v1.js:405-424"
+    },
+    {
+      "key": "доступность · выбор даты",
+      "v": "=",
+      "f": "CycleDatePickerSheet: aria-label полной даты, aria-selected/disabled, aria-live polite heys_day_pickers.js:733-755"
+    },
+    {
+      "key": "вид · выбранная дата в календаре",
+      "v": "=",
+      "f": "cycle-date-picker-cell.is-selected box-shadow inset 2px var(--v4-sand-act-text) 500-pwa-and-offline.css:2133-2135"
+    },
+    {
+      "key": "отметка задним числом",
+      "v": "=",
+      "f": "isWithinBackdateWindow 28d + «Указать день» на date из капсулы heys_cycle_ui_v1.js:266-273,498-505"
+    },
+    {
+      "key": "где отмечается прошлый день",
+      "v": "=",
+      "f": "nutrition/stats cycle-card: date prop + «Другой день» + капсула heys_day_tab_impl_v1.js:1549-1563; heys_day_cycle_card_v1.js"
+    },
+    {
+      "key": "что меняет отметка задним числом",
+      "v": "=",
+      "f": "applyCycleDaySelection → setCycleDaysAuto семь дней + множители; heys:day-updated heys_cycle_ui_v1.js:183-194,357-371"
+    },
+    {
+      "key": "пустая карточка на прошлом дне",
+      "v": "=",
+      "f": "cycle-card-v4--empty «Указать день» на любом date в окне 28d heys_cycle_ui_v1.js:498-534"
+    },
+    {
+      "key": "тренд веса",
+      "v": "=",
+      "f": "WEIGHT_TREND_EXCLUDE_DAYS + shouldExcludeFromWeightTrend heys_cycle_v1.js:54,580; heys_day_weight_trends_v1.js:58-76"
+    },
+    {
+      "key": "отметка раньше 21-го дня",
+      "v": "=",
+      "f": "getEarlyMarkWarningDay 8–20 + warn card «Сейчас N-й день…» heys_cycle_ui_v1.js:287-291,427-446"
+    },
+    {
+      "key": "вид · график веса",
+      "v": "=",
+      "f": "weight-sparkline-dot-retention + hollow points heys_day_sparklines_v1.js:2050-2082,2265,2305"
+    },
+    {
+      "key": "вид · зона задержки на графике веса",
+      "v": "=",
+      "f": "weight-retention-zone fill url(#retentionZoneGrad) heys_day_sparklines_v1.js:2050-2082"
+    },
+    {
+      "key": "вид · тултип задержки",
+      "v": "=",
+      "f": "tooltip «День N, …, в тренд не входит» heys_day_sparklines_v1.js:2305"
+    },
+    {
+      "key": "после дня 28",
+      "v": "=",
+      "f": "shouldShowDay29Question count>28 + day29Card «Период начался?» heys_cycle_ui_v1.js:280-285,448-467"
+    },
+    {
+      "key": "прогноз молчит, когда не знает",
+      "v": "=",
+      "f": "shouldHideCycleForecast + date-picker-forecast-line guard heys_cycle_ui_v1.js:293-301; heys_day_pickers.js:393-401"
+    },
+    {
+      "key": "вид · кнопки решений",
+      "v": "=",
+      "f": "cycle-v4-btns h48 r999 gap8 500-pwa-and-offline.css:2030-2058; renderDecisionButtons heys_cycle_ui_v1.js:303-312"
+    },
+    {
+      "key": "вид · вопрос дня 29",
+      "v": "=",
+      "f": "cycle-card-v4--day29 «Ещё нет»/«Да, первый день» heys_cycle_ui_v1.js:448-467"
+    },
+    {
+      "key": "вид · подтверждение выключения",
+      "v": "=",
+      "f": "cycle-v4-dialog «Оставить»/«Выключить» heys_user_tab_impl_v1.js:1367-1394"
+    },
+    {
+      "key": "вид · предупреждение о сбое",
+      "v": "=",
+      "f": "cycle-card-v4__warn var(--v4-tint) earlyWarn card heys_cycle_ui_v1.js:427-446; 500-pwa CSS:2005-2010"
+    },
+    {
+      "key": "вид · инсайт",
+      "v": "=",
+      "f": "cycle-card-v4__insight r18 var(--v4-ok-bg) heys_cycle_ui_v1.js:557-562; 500-pwa CSS:2012-2027"
+    },
+    {
+      "key": "контраст ленты",
+      "v": "≠",
+      "f": "Лента рисуется var(--v4-sand-act) 000-base-and-gamification.css:8457-8473, не канонический --acs из cycle.v4.dc.html; per-palette контраст не сверен"
+    },
+    {
+      "key": "вид · график калорий",
+      "v": "≠",
+      "f": "Ступенчатая норма 2,4px var(--acs) vs съеденное на tab-reports — вне lane cycle-ui-checkin/calendar-undo"
+    },
+    {
+      "key": "вид · пометка нормы",
+      "v": "≠",
+      "f": "Пилюля «+N%» перед «Нужно съесть» на nutrition hero не реализована — badge только на cycle-card"
+    },
+    {
+      "key": "высота шага",
+      "v": "≠",
+      "f": "Геометрия шага 5 (+68px на неделе) не сверена с checkin-morning stop-кадром 375px"
+    },
+    {
+      "key": "прокрутка на неделе периода",
+      "v": "≠",
+      "f": "Перебор 68px при полной стопке не замерен в продукте — только контракт канваса"
+    },
+    {
+      "key": "слова на экране",
+      "v": "≠",
+      "f": "v4 UI без emoji; legacy registerStep cycle icon 🌸 heys_steps_v1.js:4073,4159 — morningRest/check-in/card без 🌸"
+    },
+    {
+      "key": "выключение не переписывает прошлое",
+      "v": "?",
+      "f": "Диалог обещает сохранение прошлого heys_user_tab_impl_v1.js:1376; stripDisabledHealthFields поведение при выключении — нужна продуктовая приёмка"
+    }
+  ]
+}

@@ -423,6 +423,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             return lsGet('heys_profile', DEFAULT_PROFILE);
         });
         const [profileSaved, setProfileSaved] = React.useState(false);
+        const [cycleDisableOpen, setCycleDisableOpen] = React.useState(false);
 
         // Строка «Уведомления» листа настроек: текст состояния до раскрытия
         // (UI v4, 2026-08-10 — колокольчик убран из шапки, единый вход сюда).
@@ -1342,10 +1343,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     updateProfileField('cycleTrackingEnabled', true);
                                     return;
                                 }
-                                const ok = window.confirm(
-                                    'Выключить особый период? С сегодняшнего дня вопрос в чек-ине исчезнет, прошлые отметки останутся.'
-                                );
-                                if (ok) updateProfileField('cycleTrackingEnabled', false);
+                                setCycleDisableOpen(true);
                             };
                             return React.createElement('div', { className: 'profile-v4-cycle-toggle' },
                                 React.createElement('div', { className: 'profile-v4-cycle-toggle__copy' },
@@ -1363,6 +1361,34 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     onClick: requestDisableCycle
                                 },
                                     React.createElement('span', { className: 'profile-v4-toggle__thumb', 'aria-hidden': 'true' })
+                                ),
+                                cycleDisableOpen && React.createElement('div', { className: 'cycle-v4-dialog-backdrop' },
+                                    React.createElement('div', {
+                                        className: 'cycle-v4-dialog',
+                                        role: 'dialog',
+                                        'aria-modal': 'true',
+                                        'aria-label': 'Выключить особый период?',
+                                    },
+                                        React.createElement('div', { className: 'cycle-v4-dialog__title' }, 'Выключить особый период?'),
+                                        React.createElement('div', { className: 'cycle-v4-dialog__text' },
+                                            'С сегодняшнего дня вопрос в чек-ине исчезнет. Прошлые отметки и нормы сохранятся как записаны.'
+                                        ),
+                                        React.createElement('div', { className: 'cycle-v4-btns' },
+                                            React.createElement('button', {
+                                                type: 'button',
+                                                className: 'cycle-v4-btn cycle-v4-btn--secondary',
+                                                onClick: () => setCycleDisableOpen(false),
+                                            }, 'Оставить'),
+                                            React.createElement('button', {
+                                                type: 'button',
+                                                className: 'cycle-v4-btn cycle-v4-btn--danger',
+                                                onClick: () => {
+                                                    setCycleDisableOpen(false);
+                                                    updateProfileField('cycleTrackingEnabled', false);
+                                                },
+                                            }, 'Выключить')
+                                        )
+                                    )
                                 )
                             );
                         })(),
