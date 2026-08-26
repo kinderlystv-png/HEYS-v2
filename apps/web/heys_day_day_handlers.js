@@ -381,10 +381,20 @@
                             }
                         };
                         // Звук ждёт касания поверхности: при анимации плитки — 240 мс,
-                        // при столбике — сразу. По prefers-reduced-motion здесь не
-                        // ветвимся: подъём уровня — функциональный ярус, он не гасится
-                        // (docs/implementation/MOTION_POLICY.md).
-                        if (waterTileIsVisible()) {
+                        // при столбике и при reduced-motion — сразу (капли нет, ждать
+                        // нечего; water-add «момент»). Подъём уровня — функциональный
+                        // ярус и не гасится (docs/implementation/MOTION_POLICY.md).
+                        const reducedMotion = (() => {
+                            try {
+                                if (HEYS.motionPolicy?.prefersReducedMotion) {
+                                    return HEYS.motionPolicy.prefersReducedMotion();
+                                }
+                                return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+                            } catch (_error) {
+                                return false;
+                            }
+                        })();
+                        if (waterTileIsVisible() && !reducedMotion) {
                             setTimeout(playSound, 240);
                         } else {
                             playSound();

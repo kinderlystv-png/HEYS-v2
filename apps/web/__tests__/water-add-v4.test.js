@@ -206,7 +206,7 @@ describe('добавление воды — канвас water-add v4, ветк�
   it('звук капли: синтез WebAudio с вариацией +30¢', () => {
     const audioSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_audio_v1.js'), 'utf8');
     expect(handlersSrc).toContain("HEYS.feedback?.emit?.('water.sip')");
-    expect(handlersSrc).toMatch(/waterTileIsVisible\(\)\) \{[\s\S]*?setTimeout\(playSound, 240\)/);
+    expect(handlersSrc).toMatch(/waterTileIsVisible\(\) && !reducedMotion\) \{[\s\S]*?setTimeout\(playSound, 240\)/);
     expect(handlersSrc).toContain('HEYS.dayWater?.applyOptimistic?.');
     expect(audioSrc).toContain('function nextWaterToneCents');
     expect(audioSrc).toContain('(_waterToneStep % 4) * 30');

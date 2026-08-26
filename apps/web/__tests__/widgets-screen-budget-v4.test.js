@@ -128,7 +128,8 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
     expect(UI_SRC).not.toContain('widgets-quick-fab__pill-label');
     expect(UI_SRC).not.toContain('＋ Записать');
     expect(UI_SRC).toContain('renderMobileFabs');
-    expect(UI_SRC).toMatch(/!isMobile \|\| isEditMode\) return null/);
+    expect(UI_SRC).toContain('done: isEditMode');
+    expect(UI_SRC).toContain('widgets-settings-fab--done');
     expect(UI_SRC).not.toContain('QuickActionsFabGroup');
   });
 

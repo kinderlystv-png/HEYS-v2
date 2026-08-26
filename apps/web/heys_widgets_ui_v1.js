@@ -3840,9 +3840,15 @@
     }
 
     if (d.isMicro) {
-      return React.createElement('div', { className: 'widget-calories widget-calories--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, 'ккал'),
-        React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } }, formatKcal(animEaten))
+      return React.createElement('div', { className: 'widget-calories widget-calories--micro widget-v4-mini' },
+        v4Kicker('Калории'),
+        React.createElement('div', {
+          className: 'widget-calories__value widget-v4-mini__value',
+          style: { color: getColor() }
+        },
+          formatKcal(animEaten),
+          React.createElement('span', { className: 'widget-v4-unit' }, ' ккал')
+        )
       );
     }
 
@@ -4340,12 +4346,6 @@
 
     const getSleepColor = () => HEYS.scales.sleepHours(hours, target).color;
 
-    const getEmoji = () => {
-      if (hours >= target) return '😊';
-      if (hours >= target - 1) return '😐';
-      return '😴';
-    };
-
     // 1x1 — канвас g1: «Сон» + часы
     if (d.isMicro || variantId === 'mini') {
       const sleepState = v4SleepValueState(hours, target);
@@ -4423,9 +4423,7 @@
     if (size === '2x2') {
       const sleepColor = getSleepColor();
       return React.createElement('div', { className: 'widget-sleep widget-sleep--2x2' },
-        // Верх: emoji + часы + процент
         React.createElement('div', { className: 'widget-sleep__header' },
-          React.createElement('div', { className: 'widget-sleep__icon' }, getEmoji()),
           React.createElement('div', { className: 'widget-sleep__main' },
             React.createElement('div', { className: 'widget-sleep__value widget-sleep__value--lg' },
               formatRuDecimal(hours, 1),
@@ -4436,15 +4434,13 @@
             formatRuUnit(pct, '%')
           )
         ),
-        // Время: заснул → проснулся
         showTimes && React.createElement('div', { className: 'widget-sleep__times' },
-          sleepStart && React.createElement('span', { className: 'widget-sleep__time' }, `🌙 ${sleepStart}`),
-          sleepEnd && React.createElement('span', { className: 'widget-sleep__time' }, `☀️ ${sleepEnd}`)
+          sleepStart && React.createElement('span', { className: 'widget-sleep__time' }, `лёг ${sleepStart}`),
+          sleepEnd && React.createElement('span', { className: 'widget-sleep__time' }, `встал ${sleepEnd}`)
         ),
-        // Низ: качество + цель
         React.createElement('div', { className: 'widget-sleep__footer' },
           showQuality && React.createElement('div', { className: 'widget-sleep__quality-badge' },
-            `⭐ ${quality}/10`
+            `Качество ${quality}/10`
           ),
           showTarget
             ? React.createElement('div', { className: 'widget-sleep__target' },
@@ -4457,7 +4453,7 @@
 
     // Остальные размеры
     return React.createElement('div', { className: `widget-sleep widget-sleep--${variant}` },
-      React.createElement('div', { className: 'widget-sleep__value' }, `${formatRuUnit(formatRuDecimal(hours, 1), 'ч', { tight: true })} ${getEmoji()}`),
+      React.createElement('div', { className: 'widget-sleep__value' }, formatRuUnit(formatRuDecimal(hours, 1), 'ч', { tight: true })),
       showTimes ? React.createElement('div', { className: 'widget-sleep__label' }, [sleepStart, sleepEnd].filter(Boolean).join(' → ')) : null,
       showTarget ? React.createElement('div', { className: 'widget-sleep__label' }, `из ${formatRuUnit(target, 'ч', { tight: true })}`) : null,
       showQuality ? React.createElement('div', { className: 'widget-sleep__quality' }, `Качество: ${quality}/10`) : null
@@ -4494,9 +4490,9 @@
 
     // 1x1 Micro
     if (d.isMicro) {
-      return React.createElement('div', { className: 'widget-streak widget-streak--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, '🔥'),
-        React.createElement('div', { className: 'widget-streak__value' }, current)
+      return React.createElement('div', { className: 'widget-streak widget-streak--micro widget-v4-mini' },
+        v4Kicker('Серия'),
+        React.createElement('div', { className: 'widget-streak__value widget-v4-mini__value' }, current)
       );
     }
 
@@ -4506,9 +4502,9 @@
       const isNewRecord = current > 0 && current >= max;
 
       return React.createElement('div', { className: 'widget-streak widget-streak--2x2' },
-        // Верх: огонь + число + дни
+        // Верх: серия + число + дни
         React.createElement('div', { className: 'widget-streak__header' },
-          React.createElement('div', { className: 'widget-streak__icon' }, '🔥'),
+          React.createElement('div', { className: 'widget-streak__label-top' }, 'Серия'),
           React.createElement('div', { className: 'widget-streak__value widget-streak__value--lg', style: { color: streakColor } },
             current
           ),
@@ -4526,7 +4522,7 @@
         // Низ: рекорд или поздравление
         React.createElement('div', { className: 'widget-streak__footer' },
           isNewRecord
-            ? React.createElement('div', { className: 'widget-streak__record widget-streak__record--new' }, '🏆 Новый рекорд!')
+            ? React.createElement('div', { className: 'widget-streak__record widget-streak__record--new' }, 'Рекорд')
             : max > 0 && React.createElement('div', { className: 'widget-streak__record' }, `Рекорд: ${formatRuUnit(max, 'дн')}`)
         )
       );
@@ -4534,11 +4530,9 @@
 
     // Остальные размеры
     const showMax = widget.settings?.showMax !== false && max > current && !d.isTiny;
-    const showFlame = widget.settings?.showFlame !== false && current > 0;
 
     return React.createElement('div', { className: `widget-streak widget-streak--${variant}` },
       React.createElement('div', { className: 'widget-streak__value' },
-        showFlame ? '🔥 ' : '',
         current,
         React.createElement('span', { className: 'widget-streak__days' }, ' дн.')
       ),
@@ -6281,8 +6275,8 @@
 
     // 1x1 Micro
     if (d.isMicro) {
-      return React.createElement('div', { className: 'widget-insulin widget-insulin--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, '◷'),
+      return React.createElement('div', { className: 'widget-insulin widget-insulin--micro widget-v4-mini' },
+        v4Kicker('Волна'),
         React.createElement('div', { className: 'widget-insulin__micro' },
           React.createElement('span', { className: 'widget-insulin__micro-emoji' }, info.emoji),
           showTimer ? React.createElement('span', { className: 'widget-insulin__micro-time' }, `${remaining}м`) : null
@@ -6397,9 +6391,10 @@
 
     const buildDayTitle = (meta) => {
       const baseDate = meta?.day?.date || 'Нет даты';
-      const flags = [meta?.hasTraining ? '💪' : null, meta?.highStress ? '😰' : null]
-        .filter(Boolean)
-        .join(' ');
+      const flags = [
+        meta?.hasTraining ? 'тренировка' : null,
+        meta?.highStress ? 'стресс' : null
+      ].filter(Boolean).join(', ');
       return flags ? `${baseDate} ${flags}` : baseDate;
     };
 
@@ -6556,8 +6551,8 @@
 
     // 1x1 Micro
     if (d.isMicro) {
-      return React.createElement('div', { className: 'widget-cycle widget-cycle--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, '🌸'),
+      return React.createElement('div', { className: 'widget-cycle widget-cycle--micro widget-v4-mini' },
+        v4Kicker('Цикл'),
         React.createElement('div', { className: 'widget-cycle__day' }, day)
       );
     }
@@ -8797,7 +8792,7 @@
             React.createElement('div', { className: 'widget-relapse-risk__breakdown-list' },
               // Relapse (emotional)
               React.createElement('div', { className: 'widget-relapse-risk__breakdown-row' },
-                React.createElement('span', { className: 'widget-relapse-risk__breakdown-label' }, '😰 Эмоциональный'),
+                React.createElement('span', { className: 'widget-relapse-risk__breakdown-label' }, 'Эмоциональный'),
                 React.createElement('div', { className: 'widget-relapse-risk__breakdown-track' },
                   React.createElement('div', {
                     style: { width: `${Math.min(100, radarRelapseScore)}%`, height: '100%', borderRadius: '4px', background: getRadarColor(radarRelapseScore), transition: 'width 0.4s ease' }
@@ -8807,7 +8802,7 @@
               ),
               // Crash (metabolic)
               React.createElement('div', { className: 'widget-relapse-risk__breakdown-row' },
-                React.createElement('span', { className: 'widget-relapse-risk__breakdown-label' }, '⚡ Метаболический'),
+                React.createElement('span', { className: 'widget-relapse-risk__breakdown-label' }, 'Метаболический'),
                 React.createElement('div', { className: 'widget-relapse-risk__breakdown-track' },
                   React.createElement('div', {
                     style: { width: `${Math.min(100, radarCrashScore)}%`, height: '100%', borderRadius: '4px', background: getRadarColor(radarCrashScore), transition: 'width 0.4s ease' }
@@ -8950,22 +8945,24 @@
   }
 
   /** Плавающая кнопка настройки экрана — 40 px, левый нижний угол (канвас v4). */
-  function WidgetsSettingsFab({ onClick }) {
+  function WidgetsSettingsFab({ onClick, done = false }) {
     return React.createElement('button', {
       type: 'button',
-      className: 'widgets-settings-fab',
+      className: 'widgets-settings-fab' + (done ? ' widgets-settings-fab--done' : ''),
       id: 'tour-widgets-settings-fab',
       onClick,
-      'aria-label': 'Настроить экран'
+      'aria-label': done ? 'Готово' : 'Настроить экран'
     },
-      React.createElement('svg', {
-        width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
-        stroke: 'currentColor', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round',
-        'aria-hidden': 'true'
-      },
-        React.createElement('path', { d: 'M4 20h4l10-10-4-4L4 16z' }),
-        React.createElement('path', { d: 'M14 6l4 4' })
-      )
+      done
+        ? React.createElement('span', { className: 'widgets-settings-fab__label' }, 'Готово')
+        : React.createElement('svg', {
+          width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+          stroke: 'currentColor', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round',
+          'aria-hidden': 'true'
+        },
+          React.createElement('path', { d: 'M4 20h4l10-10-4-4L4 16z' }),
+          React.createElement('path', { d: 'M14 6l4 4' })
+        )
     );
   }
 
@@ -11205,17 +11202,23 @@
     }, [widgets]);
 
     const renderMobileFabs = () => {
-      if (!isMobile || isEditMode) return null;
+      if (!isMobile) return null;
       return React.createElement(React.Fragment, null,
         // Строка «карандаш и кнопка настройки»: пока карточка раскрыта, кнопка
         // настройки экрана внизу слева скрыта — на затемнённом слое остаются
-        // только карточка, «×» и карандаш правки.
+        // только карточка, «×» и карандаш правки. В режиме расстановки та же
+        // кнопка становится «Готово» (home-widgets «вход в расстановку»).
         React.createElement('div', {
-          className: 'widgets-fab-left' + (quickSheetOpen ? ' is-hidden' : '')
+          className: 'widgets-fab-left' + (quickSheetOpen && !isEditMode ? ' is-hidden' : '')
         },
-          React.createElement(WidgetsSettingsFab, { onClick: openEditWithCatalog })
+          React.createElement(WidgetsSettingsFab, {
+            done: isEditMode,
+            onClick: isEditMode
+              ? () => HEYS.Widgets.toggleEditMode?.()
+              : openEditWithCatalog
+          })
         ),
-        React.createElement(WidgetsQuickActionsFab, {
+        !isEditMode && React.createElement(WidgetsQuickActionsFab, {
           onOpenChange: setQuickSheetOpen,
           waterMl: HEYS.Widgets?.data?.getWaterData?.()?.drunk || 0,
           // Строка контракта «ошибочный глоток»: убавления в стопке нет —

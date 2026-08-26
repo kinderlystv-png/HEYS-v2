@@ -87,10 +87,9 @@ describe('motion policy — глобальные правила', () => {
     expect(uiSrc).not.toMatch(/className:\s*'widget__loading'[\s\S]{0,400}?WaitMark/);
   });
 
-  it('вода — handlers не читают prefers-reduced-motion для звука/плитки', () => {
-    // toContain пропускал `matchMedia?.('(prefers-reduced-motion: reduce)')` —
-    // опциональный вызов ломал точное совпадение строки.
-    expect(handlersSrc).not.toMatch(/matchMedia(\?\.)?\(\s*['"]\(prefers-reduced-motion/);
+  it('вода — звук при reduced-motion сразу, плитка без reduce-ветки', () => {
+    expect(handlersSrc).toMatch(/prefers-reduced-motion: reduce/);
+    expect(handlersSrc).toMatch(/waterTileIsVisible\(\) && !reducedMotion/);
     expect(handlersSrc).toContain('MOTION_POLICY.md');
   });
 

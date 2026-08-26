@@ -2680,6 +2680,30 @@ body:has(.page-reports) .hdr::after {
   transition: opacity 120ms ease;
 }
 
+.widgets-settings-fab--done {
+  width: auto;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 14px;
+  background: linear-gradient(135deg, #16a34a 0%, #059669 100%);
+  color: var(--v4-bg, #ffffff);
+  box-shadow:
+    0 10px 24px rgba(5, 150, 105, 0.34),
+    0 0 0 3px rgba(255, 255, 255, 0.8);
+}
+
+.widgets-settings-fab__label {
+  font: 700 0.8125rem/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+[data-theme$="dark"] .widgets-settings-fab--done {
+  color: #fff;
+  box-shadow:
+    0 10px 24px rgba(5, 150, 105, 0.42),
+    0 0 0 3px rgba(20, 18, 16, 0.85);
+}
+
 [data-theme$="dark"] .widgets-settings-fab {
   background: #23201b;
   color: #e2a468;
@@ -5696,6 +5720,15 @@ body:has(.page-reports) .hdr::after {
   font-weight: 600;
   color: var(--text-secondary);
   margin-left: auto;
+}
+
+.widget-streak__label-top {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  margin-right: 8px;
 }
 
 .widget-streak__week {
@@ -11055,7 +11088,7 @@ body:has(.widgets-tab) .widget--corner-br {
   right: 8px;
   top: 7px;
   z-index: 3;
-  font-size: 8.5px;
+  font-size: 0.53125rem;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0;
@@ -11076,7 +11109,7 @@ body:has(.widgets-tab) .widget--corner-br {
   border-radius: 0;
   background: none;
   display: block;
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: 0.03em;

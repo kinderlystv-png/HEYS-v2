@@ -44,9 +44,10 @@ describe('стопка быстрых действий: два адреса не
     const idx = widgetsUi.indexOf('const renderMobileFabs = ()');
     expect(idx, 'renderMobileFabs не найден').toBeGreaterThan(-1);
     const body = widgetsUi.slice(idx, idx + 900);
-    expect(body).toMatch(/if \(!isMobile \|\| isEditMode\) return null;/);
+    expect(body).toMatch(/if \(!isMobile\) return null;/);
+    expect(body).toContain('done: isEditMode');
+    expect(body).toContain('!isEditMode && React.createElement(WidgetsQuickActionsFab');
     expect(body).toContain('widgets-fab-left');
-    expect(body).toContain('WidgetsQuickActionsFab');
   });
 
   it('второго исполнения v4-стопки в дневной оболочке нет', () => {
