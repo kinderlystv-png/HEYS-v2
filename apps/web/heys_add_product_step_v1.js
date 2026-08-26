@@ -6348,7 +6348,11 @@ NOVA: 1
         return value.length ? value.join(', ') : '—';
       }
       if (value === null || value === undefined || value === '') return '—';
-      const suffix = field.unit ? ` ${field.unit}` : '';
+      // Неразрывный пробел U+00A0, а не обычный. Строка «формат чисел ·
+      // правило продукта»: «единица отделена обычным неразрывным пробелом
+      // и в перенос с числом не уходит; граммы и миллиграммы микро-БЖУ
+      // склеивать нельзя, у них тот же неразрывный пробел».
+      const suffix = field.unit ? ` ${field.unit}` : '';
       return `${value}${suffix}`;
     }, []);
 
