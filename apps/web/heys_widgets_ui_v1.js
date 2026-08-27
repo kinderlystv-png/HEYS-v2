@@ -9259,11 +9259,13 @@
         // Строка «порядок обхода»: в раскрытой карточке обход заперт внутри
         // неё — за пределы карточки фокус не уходит.
         if (event.key !== 'Tab') return;
-        const scope = wrapRef.current;
-        if (!scope) return;
-        const items = [...scope.querySelectorAll(
+        const roots = [];
+        if (wrapRef.current) roots.push(wrapRef.current);
+        const portal = document.querySelector('.widgets-quick-portal');
+        if (portal) roots.push(portal);
+        const items = roots.flatMap((scope) => [...scope.querySelectorAll(
           'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        )].filter((el) => el.offsetParent !== null || el === document.activeElement);
+        )]).filter((el) => el.offsetParent !== null || el === document.activeElement);
         if (!items.length) return;
         const first = items[0];
         const last = items[items.length - 1];
@@ -9277,6 +9279,7 @@
       };
       const onPointerDown = (event) => {
         if (wrapRef.current && wrapRef.current.contains(event.target)) return;
+        if (event.target.closest?.('.widgets-quick-portal')) return;
         closeSheet();
       };
       // Строка «закрытие»: системная кнопка назад закрывает карточку.
@@ -9537,6 +9540,40 @@
 
     const fabAction = soleNavKey ? handlers[soleNavKey] : null;
 
+    const quickScrim = open
+      ? React.createElement('button', {
+        type: 'button',
+        className: 'widgets-quick-scrim',
+        'aria-label': 'Закрыть быстрые действия',
+        onClick: closeSheet
+      })
+      : null;
+
+    const quickSheet = open
+      ? React.createElement('div', {
+        className: 'widgets-quick-sheet' + (editing ? ' is-editing' : ''),
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-label': 'Быстрые действия'
+      },
+        navKeys.map(renderNavRow),
+        navKeys.length > 0 && waterOn && React.createElement('div', { className: 'widgets-quick-sheet__divider', key: 'divider' }),
+        waterOn && waterSection
+      )
+      : null;
+
+    // Карточка и scrim в body — как другие v4-модалки: не растут в flex-стопке
+    // и не зависят от transform предков вкладки.
+    const quickPortal = open && global.document?.body && ReactDOM?.createPortal
+      ? ReactDOM.createPortal(
+        React.createElement('div', { className: 'widgets-quick-portal' },
+          quickScrim,
+          quickSheet
+        ),
+        global.document.body
+      )
+      : null;
+
     return React.createElement('div', {
       ref: wrapRef,
       ...(id ? { id } : {}),
@@ -9549,25 +9586,7 @@
       // обходе с клавиатуры и для скринридера её быть не должно.
       'aria-hidden': fabPhase === 'leave' ? 'true' : undefined
     },
-      // Строка «уменьшенное движение»: правило действует безусловно — перебить
-      // его флагом animate-always нельзя. Затемнение остаётся, блюр и выезд
-      // снимаются (правило под prefers-reduced-motion в CSS).
-      open && React.createElement('button', {
-        type: 'button',
-        className: 'widgets-quick-scrim',
-        'aria-label': 'Закрыть быстрые действия',
-        onClick: closeSheet
-      }),
-      open && React.createElement('div', {
-        className: 'widgets-quick-sheet' + (editing ? ' is-editing' : ''),
-        role: 'dialog',
-        'aria-modal': 'true',
-        'aria-label': 'Быстрые действия'
-      },
-        navKeys.map(renderNavRow),
-        navKeys.length > 0 && waterOn && React.createElement('div', { className: 'widgets-quick-sheet__divider', key: 'divider' }),
-        waterOn && waterSection
-      ),
+      quickPortal,
       chipsRow,
       pencil,
       React.createElement('button', {

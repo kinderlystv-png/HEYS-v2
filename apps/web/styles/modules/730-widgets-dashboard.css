@@ -2732,7 +2732,16 @@ body:has(.page-reports) .hdr::after {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  /* Карточка и карандаш — absolute; в потоке только «+», без роста стопки. */
+  /* В потоке только «+» 52×52; карточка/карандаш/чипы — absolute и не раздувают
+     стопку (иначе при stale relative карточка «выезжает» снизу). */
+  width: 52px;
+  height: 52px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.widgets-quick-fab-wrap > * {
+  pointer-events: auto;
 }
 
 .widgets-quick-scrim {
@@ -2745,6 +2754,18 @@ body:has(.page-reports) .hdr::after {
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   z-index: 0;
+  animation: widgets-quick-scrim-in 180ms ease-out;
+  animation-fill-mode: both;
+}
+
+@keyframes widgets-quick-scrim-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 [data-theme$="dark"] .widgets-quick-scrim {
@@ -2772,10 +2793,12 @@ body:has(.page-reports) .hdr::after {
     0 14px 34px rgba(80, 50, 20, 0.26);
   padding: 13px 14px;
   margin-bottom: 0;
-  animation: widgets-quick-sheet-in 180ms ease-out;
+  transform: none;
+  animation: widgets-quick-sheet-fade-in 180ms ease-out;
+  animation-fill-mode: both;
 }
 
-@keyframes widgets-quick-sheet-in {
+@keyframes widgets-quick-sheet-fade-in {
   from {
     opacity: 0;
   }
@@ -3219,6 +3242,26 @@ body:has(.page-reports) .hdr::after {
   color: #7fbceb;
 }
 
+.widgets-quick-portal {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--v4-z-fab, 1001) - 1);
+  pointer-events: none;
+}
+
+.widgets-quick-portal .widgets-quick-scrim {
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.widgets-quick-portal .widgets-quick-sheet {
+  position: fixed;
+  right: 14px;
+  bottom: calc(76px + 14px + 52px + 10px + env(safe-area-inset-bottom, 0px));
+  z-index: 2;
+  pointer-events: auto;
+}
+
 /* Строка «карандаш и кнопка настройки»: пока карточка раскрыта, кнопка
    настройки экрана внизу слева скрыта. */
 .widgets-fab-left.is-hidden {
@@ -3235,6 +3278,7 @@ body:has(.page-reports) .hdr::after {
     -webkit-backdrop-filter: none;
   }
 
+  .widgets-quick-scrim,
   .widgets-quick-sheet {
     animation: none;
   }
