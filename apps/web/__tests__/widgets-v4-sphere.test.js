@@ -142,7 +142,14 @@ describe('виджеты g1 в сфере палитры', () => {
         // Канвас .opt: своя подложка, радиус 18, паддинг 7; выбранная строка —
         // тёплый акцент с обводкой, и он тёплый во всех палитрах.
         expect(cssSrc).toMatch(/\.widget-wd-sheet__opt \{[\s\S]*?border-radius: 18px;[\s\S]*?padding: 7px;[\s\S]*?background: rgba\(0, 0, 0, 0\.04\)/);
-        expect(cssSrc).not.toMatch(/\.widget-wd-sheet__opt \{[\s\S]*?background: transparent/);
+        // Сверять надо тело одного правила, а не «что угодно до ближайшего
+        // background: transparent». Ненасытная группа ничем не ограничена
+        // справа и перешагивает границы правил: 27.08 её увёл
+        // .widget-bd-sheet__wave-week-seg, появившийся на 1200 строк ниже
+        // вместе с листами разбора, и тест покраснел при верном CSS.
+        const optAt = cssSrc.indexOf('.widget-wd-sheet__opt {');
+        const optRule = cssSrc.slice(optAt, cssSrc.indexOf('}', optAt));
+        expect(optRule).not.toContain('background: transparent');
         expect(cssSrc).toContain('[data-theme$="dark"] .widget-wd-sheet__opt {');
         expect(cssSrc).toContain('html[data-theme-id="blue"] .widget-wd-sheet__opt {');
         expect(cssSrc).toContain('html[data-theme-id="blue-dark"] .widget-wd-sheet__opt {');
