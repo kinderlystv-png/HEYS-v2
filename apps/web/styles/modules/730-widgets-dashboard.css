@@ -2732,7 +2732,7 @@ body:has(.page-reports) .hdr::after {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 10px;
+  /* Карточка и карандаш — absolute; в потоке только «+», без роста стопки. */
 }
 
 .widgets-quick-scrim {
@@ -2760,7 +2760,9 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widgets-quick-sheet {
-  position: relative;
+  position: absolute;
+  right: 0;
+  bottom: calc(52px + 10px);
   z-index: 1;
   width: min(232px, calc(100vw - 28px));
   border-radius: 20px;
@@ -2769,7 +2771,7 @@ body:has(.page-reports) .hdr::after {
     0 2px 4px rgba(80, 50, 20, 0.14),
     0 14px 34px rgba(80, 50, 20, 0.26);
   padding: 13px 14px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   animation: widgets-quick-sheet-in 180ms ease-out;
 }
 
