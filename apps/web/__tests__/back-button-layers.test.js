@@ -81,9 +81,9 @@ describe('аппаратная кнопка назад · правило про�
     const ui = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
     const variants = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_variants_v4.js'), 'utf8');
     // Быстрые действия, режим расстановки, лист смены вида.
-    expect(ui).toContain("pushHistoryLayer?.(\n          'heysQuickActions'");
-    expect(ui).toContain("pushHistoryLayer?.(\n          'heysWidgetsEditMode'");
-    expect(variants).toContain("pushHistoryLayer?.(\n          'heysWidgetVariantSheet'");
+    expect(ui).toMatch(/pushHistoryLayer\?\.\(\s*\n\s*'heysQuickActions'/);
+    expect(ui).toMatch(/pushHistoryLayer\?\.\(\s*\n\s*'heysWidgetsEditMode'/);
+    expect(variants).toMatch(/pushHistoryLayer\?\.\(\s*\n\s*'heysWidgetVariantSheet'/);
     // Своих addEventListener('popstate') у слоёв Главной больше нет: приём был
     // выписан вручную трижды и разъехался бы на четвёртом.
     expect(ui).not.toContain("addEventListener('popstate'");
