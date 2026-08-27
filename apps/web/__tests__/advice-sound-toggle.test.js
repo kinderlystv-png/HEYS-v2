@@ -4,7 +4,7 @@
 // либо всё, либо ничего. Поэтому сценарии идут через настоящий хук useAdviceState.
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it, beforeAll, beforeEach } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { act } from 'react';
@@ -59,8 +59,25 @@ beforeAll(() => {
   new Function('window', 'document', 'navigator', code)(window, document, window.navigator);
 });
 
+// Смонтированное надо снимать в том же файле. Источник ставит
+// setTimeout(fireTabOpen, 100) (day/_advice.js:3273); если корень остался жив,
+// таймер срабатывает уже после сноса jsdom, React зовёт setState и падает
+// «window is not defined». Vitest считает это unhandled error и сам
+// предупреждает, что тесты могут врать: 28.08 из-за такой утечки краснели
+// login-error-codes-contract, curator-sheet-canvas-smoke и planning-reading —
+// каждый в одиночку зелёный, падал тот, кому не повезло идти следом.
+const mounted = [];
+
 beforeEach(() => {
   localStorage.clear();
+});
+
+afterEach(() => {
+  while (mounted.length) {
+    const { root, host } = mounted.pop();
+    act(() => { root.unmount(); });
+    host.remove();
+  }
 });
 
 // Монтирует хук и держит свежий возвращаемый объект в holder.current.
@@ -93,6 +110,7 @@ function mountAdviceState() {
   document.body.appendChild(host);
   const root = createRoot(host);
   act(() => { root.render(React.createElement(Probe)); });
+  mounted.push({ root, host });
   return holder;
 }
 
