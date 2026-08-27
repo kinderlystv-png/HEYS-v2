@@ -2235,6 +2235,9 @@
           onPhoto: typeof onPhoto === 'function' ? onPhoto : null,
           onDone: () => {
             dispatchFinished();
+            if (isGoalReached && HEYS.Confetti?.fire) {
+              HEYS.Confetti.fire();
+            }
             closeSummary('finish', { scrollToDiary: true });
           }
         },
@@ -9062,7 +9065,7 @@
             const mealName = mealToRemove?.name || 'Приём пищи';
             const mealId = mealToRemove.id;
 
-            haptic('medium');
+            HEYS.feedback?.emit?.('record.deleted');
 
             runUndoableDayMutation({
                 label: mealName + ' удалён',
@@ -9586,7 +9589,7 @@
             const removedItem = originalItems[itemIndex];
             const removedName = removedItem?.name || 'Продукт';
 
-            haptic('medium');
+            HEYS.feedback?.emit?.('record.deleted');
 
             runUndoableDayMutation({
                 label: removedName + ' удалён',
@@ -9669,6 +9672,97 @@
             setDay(() => updated);
             HEYS.Toast?.success?.(`Повторено: ${cloned.length} продуктов из вчера`);
         }, [setDay, markUndoWindow, persistDayData, ensureDiaryItemsReadyForDayWrite]);
+
+        // Helpers для копирования в произвольную дату (today, обычно)
+        const navigateAndScrollToMeal = React.useCallback((targetDate, mealId) => {
+            const setSel = window.__heysSetSelectedDate;
+            if (typeof setSel === 'function' && targetDate && targetDate !== date) {
+                try { setSel(targetDate); } catch (e) { /* ignore */ }
+            }
+            // Retry scroll до 6 раз с интервалом 250ms — даём React отрендерить переход на новую дату.
+            let tries = 0;
+            const tryScroll = () => {
+                tries += 1;
+                const target = mealId && document.querySelector(`[data-meal-id="${mealId}"]`);
+                if (target && typeof target.scrollIntoView === 'function') {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else if (tries < 6) {
+                    setTimeout(tryScroll, 250);
+                }
+            };
+            setTimeout(tryScroll, 200);
+        }, [date]);
+
+        const repeatTodayMeal = React.useCallback(async (mealIndex) => {
+            const meal = dayRef.current?.meals?.[mealIndex];
+            if (!meal || !(meal.items || []).length) {
+                HEYS.Toast?.info?.('Приём пуст — нечего повторить');
+                return;
+            }
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Добавление приёма недоступно');
+                return;
+            }
+            const itemIds = (meal.items || []).map((it) => it.id).filter(Boolean);
+            const cloned = await ensureDiaryItemsReadyForDayWrite(
+                cloneItemsFromMeal(meal, itemIds, null),
+                'repeat_today_meal',
+            );
+            if (!cloned || cloned.length === 0) return;
+
+            const now = new Date();
+            const pad2 = (n) => String(n).padStart(2, '0');
+            const timeStr = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+            const targetDay = dayRef.current || day;
+
+            const completeWithItems = (newMealRaw) => {
+                const newMeal = { ...newMealRaw, id: newMealRaw?.id || uid('m_'), items: cloned };
+                markUndoWindow(3000);
+                const newMeals = sortMealsByTime([...(targetDay.meals || []), newMeal]);
+                const updated = { ...targetDay, meals: newMeals, updatedAt: Date.now() };
+                persistDayData(updated, 'repeat_today_meal');
+                setDay(() => updated);
+                HEYS.Toast?.success?.(`Повторён приём: ${cloned.length} продуктов`);
+                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date } }));
+                try {
+                    window.HEYS?.eventLog?.write(
+                        'meal-add',
+                        `meal=${newMeal.name || 'unnamed'} для ${date}`,
+                        { dateKey: date, mealName: newMeal.name || '', count: 1 },
+                        'repeat_today_meal',
+                    );
+                } catch (_) { /* noop */ }
+                navigateAndScrollToMeal(date, newMeal.id);
+            };
+
+            if (!HEYS.MealStep?.showAddMeal) {
+                completeWithItems({
+                    id: uid('m_'),
+                    name: meal.name || 'Приём',
+                    time: timeStr,
+                    mealType: meal.mealType || null,
+                    items: cloned,
+                });
+                return;
+            }
+
+            HEYS.MealStep.showAddMeal({
+                dateKey: date,
+                time: timeStr,
+                initialTime: timeStr,
+                meals: targetDay.meals || [],
+                pIndex,
+                getProductFromItem,
+                trainings: targetDay?.trainings || [],
+                deficitPct: Number(targetDay?.deficitPct ?? prof?.deficitPctTarget ?? 0),
+                prof,
+                dayData: targetDay,
+                onComplete: completeWithItems,
+            });
+        }, [
+            date, prof, pIndex, getProductFromItem, setDay, markUndoWindow,
+            persistDayData, ensureDiaryItemsReadyForDayWrite, navigateAndScrollToMeal,
+        ]);
 
         const saveAsPreset = React.useCallback((mealIndex) => {
             const meal = (day.meals || [])[mealIndex];
@@ -9755,26 +9849,6 @@
                 },
             });
         }, [date, day, products, expandOnlyMeal, addProductToMeal, addProductsToMeal]);
-
-        // Helpers для копирования в произвольную дату (today, обычно)
-        const navigateAndScrollToMeal = React.useCallback((targetDate, mealId) => {
-            const setSel = window.__heysSetSelectedDate;
-            if (typeof setSel === 'function' && targetDate && targetDate !== date) {
-                try { setSel(targetDate); } catch (e) { /* ignore */ }
-            }
-            // Retry scroll до 6 раз с интервалом 250ms — даём React отрендерить переход на новую дату.
-            let tries = 0;
-            const tryScroll = () => {
-                tries += 1;
-                const target = mealId && document.querySelector(`[data-meal-id="${mealId}"]`);
-                if (target && typeof target.scrollIntoView === 'function') {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                } else if (tries < 6) {
-                    setTimeout(tryScroll, 250);
-                }
-            };
-            setTimeout(tryScroll, 200);
-        }, [date]);
 
         const copyItemsToMeal = React.useCallback(async (srcMealIndex, itemIds, dstMealIndex, targetDate, gramsMap) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
@@ -10429,7 +10503,7 @@
 
             if (confirmed === false) return false;
 
-            haptic('medium');
+            HEYS.feedback?.emit?.('record.deleted');
 
             return !!runUndoableDayMutation({
                 label: 'Фото удалено',
@@ -10525,6 +10599,7 @@
             saveAsPreset,
             openAddProductForMeal,
             repeatYesterdayMeal,
+            repeatTodayMeal,
             setGrams,
             removeItem,
             moveItem,
@@ -11605,7 +11680,7 @@
         const deferredSkeletonState = window.__heysDeferredSkeletonState = window.__heysDeferredSkeletonState || Object.create(null);
         const deferredPendingSlot = (slotKey, minHeightPx) => React.createElement('div', {
             key: slotKey,
-            className: 'deferred-card-slot deferred-card-slot--pending',
+            className: 'deferred-card-slot deferred-card-slot--pending' + (minHeightPx ? ' v4-place-holder' : ''),
             'aria-hidden': 'true',
             style: minHeightPx
                 ? { minHeight: Math.max(0, Number(minHeightPx) || 0) + 'px' }

@@ -5477,7 +5477,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                 }, mode.label))
                             ),
                             React.createElement('div', { className: 'hdr-settings-sheet__hint' },
-                                'Выбор запоминается на этом устройстве. «Как в системе» следит за настройкой телефона, пока вы не выберете режим руками.',
+                                'Палитра и режим сохраняются в профиле и подтягиваются на других устройствах. «Как в системе» следит за настройкой телефона, пока вы не выберете режим руками.',
                             ),
                             React.createElement('div', {
                                 className: 'hdr-settings-sheet__tier hdr-settings-sheet__tier--fab',
@@ -6115,35 +6115,21 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const isDayTab = tab === 'stats' || tab === 'diary' || tab === 'activity';
         const hideProductHeader = tab === 'tasks' || tab === 'board';
 
-        // Положение прокрутки вкладки «Питание» сохраняется при возврате и
-        // сбрасывается при смене дня (контракт nutrition-tab, «прокрутка»).
-        // Остальные вкладки открываются сверху, как раньше.
-        const scrollMemoryRef = React.useRef(0);
-
+        // Контракт home-widgets «прокрутка · правило продукта»: смена вкладки
+        // всегда открывает сверху; память прокрутки — только при возврате из
+        // глубины внутри той же вкладки (модалки/листы), не при таб-переходе.
         React.useEffect(() => {
             const viewport = tabViewportRef.current;
             if (!viewport) return undefined;
-            if (tab !== 'diary') {
-                viewport.scrollTop = 0;
-                return undefined;
-            }
-            const restore = scrollMemoryRef.current;
-            if (restore > 0) {
-                const raf = window.requestAnimationFrame(() => { viewport.scrollTop = restore; });
-                return () => {
-                    window.cancelAnimationFrame(raf);
-                    scrollMemoryRef.current = viewport.scrollTop;
-                };
-            }
             viewport.scrollTop = 0;
-            return () => { scrollMemoryRef.current = viewport.scrollTop; };
+            return undefined;
         }, [tab]);
 
         React.useEffect(() => {
-            scrollMemoryRef.current = 0;
             const viewport = tabViewportRef.current;
-            if (viewport && tab === 'diary') viewport.scrollTop = 0;
-        }, [selectedDate]);
+            if (!viewport || tab !== 'diary') return;
+            viewport.scrollTop = 0;
+        }, [selectedDate, tab]);
 
         // diary/activity: native sticky полосы даты; IO на сентинел → is-pinned.
         React.useEffect(() => {
