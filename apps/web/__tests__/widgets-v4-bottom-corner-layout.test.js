@@ -1,13 +1,13 @@
-// home-widgets.v4.dc.html, пятнадцатая сборка — три строки контракта про
-// нижние углы сетки (решение владельца 25 августа):
-//   • «1×1 в нижнем углу не ставится» — движок не ставит плитку 1×1 в две
-//     угловые клетки последнего ряда; правило живёт в раскладке, а не в
-//     стилях, и содержимое плитки от близости к углу не меняется;
+// home-widgets.v4.dc.html — нижние углы сетки (решения владельца 25 и 27 августа):
+//   • «1×1 в нижнем углу не ставится» — движок не ставит плитку 1×1 в левый
+//     нижний угол последнего ряда; в правый 1×1 встаёт, содержимое уходит
+//     вбок полем 52 px, как у 2×1;
 //   • «прежние раскладки с 1×1 в углу» — при первом открытии такая плитка
 //     молча сдвигается в соседнюю клетку того же ряда, остальные плитки со
 //     своих мест не едут, плашки и подсветки нет;
 //   • «2×1 в углу» — формат шире одной колонки в угол встаёт, содержимое
-//     уходит вбок в свободные 117,5×64, кегли и поля прежние.
+//     уходит вбок в свободные 115,5×64, кегли и поля прежние;
+//   • «хвост последнего ряда» — неполный последний ряд прижимается вправо.
 //
 // Почему это симуляция, а не «посмотри на локалке». Правило укладки видно
 // только на стыке трёх вещей: порядка плиток, их форматов и того, какой ряд
@@ -115,8 +115,8 @@ describe('home-widgets v4 · контракт про нижние углы', () 
     expect(line).toContain('не ставит плитку 1×1');
     expect(line).toContain('следующую свободную клетку того же ряда');
     expect(line).toContain('Правило живёт в раскладке, а не в стилях');
-    // Запрет узкий: только 1×1 и только два угла последнего ряда.
-    expect(line).toContain('в двух нижних углах последнего ряда');
+    expect(line).toContain('в левом нижнем углу последнего ряда');
+    expect(line).toContain('В правый угол 1×1 встаёт');
     expect(line).toContain('все остальные форматы в углы встают');
   });
 
@@ -137,6 +137,14 @@ describe('home-widgets v4 · контракт про нижние углы', () 
     expect(line).toContain('кегли не меняются');
   });
 
+  it('строка «хвост последнего ряда» прижимает неполный ряд к кнопке «+»', () => {
+    const line = contractLine('хвост последнего ряда');
+    expect(line).toContain('прижимается вправо');
+    expect(line).toContain('сохраняют свой порядок');
+    expect(line).toContain('1×1 встаёт в правый угол');
+    expect(line).toContain('под кнопкой настройки');
+  });
+
   it('угол не трогает кегль: у правил .widget--corner-* нет размера шрифта', () => {
     // Геометрию зоны держит widgets-v4-corner-zones; здесь закрыта вторая
     // половина строки «2×1 в углу» — угловая плитка не должна отличаться от
@@ -155,36 +163,35 @@ describe('home-widgets v4 · движок не ставит 1×1 в нижний
     const spec = ['a:2x2', 'b:2x2', 'c:1x1'];
     const pos = layout(grid, spec);
 
-    // «c» открывала бы последний ряд с нулевой колонки — она сдвинута вправо.
-    expect(pos.c).toEqual({ col: 1, row: 2 });
+    // «c» открывала бы последний ряд с нулевой колонки — сначала соседняя
+    // клетка, затем хвост ряда прижимается вправо, в клетку под «+».
+    expect(pos.c).toEqual({ col: 3, row: 2 });
     // Соседи остались там же, где стояли бы без правила.
     expect(pos.a).toEqual({ col: 0, row: 0 });
     expect(pos.b).toEqual({ col: 2, row: 0 });
-    expect(cornerSizes(spec, pos)).toEqual({ bottomRow: 2, left: null, right: null });
+    expect(cornerSizes(spec, pos)).toEqual({ bottomRow: 2, left: null, right: '1x1' });
   });
 
-  it('правый угол: ряд занят целиком — плитка уходит одна в следующий', () => {
+  it('правый угол: 1×1 встаёт под кнопку «+», ряд не разъезжается', () => {
     const spec = ['a:2x1', 'b:1x1', 'c:1x1'];
     const pos = layout(grid, spec);
 
-    // Свободной неугловой клетки в ряду нет, поэтому «c» уходит вниз — и не
-    // в нулевую колонку, потому что там угол нового последнего ряда.
-    expect(pos.c).toEqual({ col: 1, row: 1 });
     expect(pos.a).toEqual({ col: 0, row: 0 });
     expect(pos.b).toEqual({ col: 2, row: 0 });
-    expect(cornerSizes(spec, pos)).toEqual({ bottomRow: 1, left: null, right: null });
+    expect(pos.c).toEqual({ col: 3, row: 0 });
+    expect(cornerSizes(spec, pos)).toEqual({ bottomRow: 0, left: '2x1', right: '1x1' });
   });
 
-  it('ряд из четырёх 1×1: сдвигается одна плитка, три остаются', () => {
+  it('ряд из четырёх 1×1: левый угол уходит вниз, правый остаётся под «+»', () => {
     const spec = ['a:1x1', 'b:1x1', 'c:1x1', 'd:1x1'];
     const pos = layout(grid, spec);
 
-    expect(pos.a).toEqual({ col: 0, row: 0 });
+    expect(pos.a).toEqual({ col: 3, row: 1 });
     expect(pos.b).toEqual({ col: 1, row: 0 });
     expect(pos.c).toEqual({ col: 2, row: 0 });
-    expect(pos.d).toEqual({ col: 1, row: 1 });
-    // Уход «d» вниз снял и левый угол: нулевая колонка ряда 0 больше не нижняя.
-    expect(cornerSizes(spec, pos)).toEqual({ bottomRow: 1, left: null, right: null });
+    expect(pos.d).toEqual({ col: 3, row: 0 });
+    // «a» ушла из левого угла вниз и прижалась вправо, под «+».
+    expect(cornerSizes(spec, pos)).toEqual({ bottomRow: 1, left: null, right: '1x1' });
   });
 
   it('1×1 в верхнем ряду у края разрешена — запрет только про последний ряд', () => {
@@ -234,7 +241,6 @@ describe('home-widgets v4 · движок не ставит 1×1 в нижний
             const pos = layout(grid, spec);
             const corners = cornerSizes(spec, pos);
             expect(corners.left, `левый угол на ${spec.join(' ')}`).not.toBe('1x1');
-            expect(corners.right, `правый угол на ${spec.join(' ')}`).not.toBe('1x1');
             checked += 1;
           }
         }
@@ -256,6 +262,43 @@ describe('home-widgets v4 · движок не ставит 1×1 в нижний
       return { id, size };
     });
     expect(grid.keepBottomCornersClear(once, widgets, COLS)).toEqual(once);
+  });
+});
+
+describe('home-widgets v4 · хвост последнего ряда прижимается вправо', () => {
+  it('одиночная 2×1 встаёт под кнопку «+», а не прилипает влево', () => {
+    const spec = ['a:2x2', 'b:2x2', 'c:2x1'];
+    const pos = layout(grid, spec);
+
+    expect(pos.c).toEqual({ col: 2, row: 2 });
+    expect(pos.a).toEqual({ col: 0, row: 0 });
+    expect(pos.b).toEqual({ col: 2, row: 0 });
+    expect(cornerSizes(spec, pos)).toEqual({ bottomRow: 2, left: null, right: '2x1' });
+  });
+
+  it('одиночная 1×1 встаёт под кнопку «+»', () => {
+    const spec = ['a:2x2', 'b:2x2', 'c:1x1'];
+    const pos = layout(grid, spec);
+
+    expect(pos.c).toEqual({ col: 3, row: 2 });
+    expect(cornerSizes(spec, pos)).toEqual({ bottomRow: 2, left: null, right: '1x1' });
+  });
+
+  it('полный последний ряд не сдвигается', () => {
+    const spec = ['a:2x1', 'b:2x1'];
+    const pos = layout(grid, spec);
+
+    expect(pos.a).toEqual({ col: 0, row: 0 });
+    expect(pos.b).toEqual({ col: 2, row: 0 });
+  });
+
+  it('порядок хвоста сохраняется: 2×1 затем 1×1 не меняются местами', () => {
+    const spec = ['a:2x2', 'b:2x2', 'c:2x1', 'd:1x1'];
+    const pos = layout(grid, spec);
+
+    expect(pos.c).toEqual({ col: 1, row: 2 });
+    expect(pos.d).toEqual({ col: 3, row: 2 });
+    expect(cornerSizes(spec, pos).right).toBe('1x1');
   });
 });
 
@@ -355,11 +398,11 @@ describe('home-widgets v4 · прежняя раскладка с 1×1 в угл
     const { state } = boot(saved);
 
     const pos = posById(state);
-    expect(pos.sleep).toEqual({ col: 1, row: 2 });
+    expect(pos.sleep).toEqual({ col: 2, row: 2 });
     // Обещание строки: соседи не едут.
     expect(pos.calories).toEqual({ col: 0, row: 0 });
     expect(pos.insulinWave).toEqual({ col: 2, row: 0 });
-    expect(pos.water).toEqual({ col: 2, row: 2 });
+    expect(pos.water).toEqual({ col: 3, row: 2 });
     // Состав не меняется — сдвиг не повод потерять плитку.
     expect(state.getWidgets()).toHaveLength(4);
   });
@@ -374,7 +417,7 @@ describe('home-widgets v4 · прежняя раскладка с 1×1 в угл
     const first = boot(saved);
     const stored = first.memory.get(LAYOUT_KEY);
     const storedWidgets = Array.isArray(stored) ? stored : stored.widgets;
-    expect(storedWidgets.find((w) => w.type === 'sleep').position).toEqual({ col: 1, row: 2 });
+    expect(storedWidgets.find((w) => w.type === 'sleep').position).toEqual({ col: 2, row: 2 });
 
     delete window.HEYS;
     const second = boot(storedWidgets);
@@ -401,7 +444,7 @@ describe('home-widgets v4 · прежняя раскладка с 1×1 в угл
     const stored = memory.get(LAYOUT_KEY);
     const storedWidgets = Array.isArray(stored) ? stored : stored.widgets;
     const moved = storedWidgets.find((w) => w.type === 'sleep');
-    expect(moved.position).toEqual({ col: 1, row: 2 });
+    expect(moved.position).toEqual({ col: 3, row: 2 });
     // В записи не заводится ни флага «переехала», ни метки для подсветки.
     expect(Object.keys(moved).sort()).toEqual(
       ['createdAt', 'id', 'position', 'settings', 'size', 'type'],
@@ -424,5 +467,35 @@ describe('home-widgets v4 · прежняя раскладка с 1×1 в угл
       crashRisk: { col: 2, row: 2 },
     });
     expect(events.filter((e) => e.name === 'layout:saved')).toHaveLength(0);
+  });
+
+  it('хвост 2×1 на последнем ряду при первом открытии уезжает вправо', () => {
+    const saved = [
+      tile('calories', '2x2', 0, 0),
+      tile('insulinWave', '2x2', 2, 0),
+      tile('fiber', '2x1', 0, 2),
+    ];
+    const { state } = boot(saved);
+
+    const pos = posById(state);
+    expect(pos.fiber).toEqual({ col: 2, row: 2 });
+    expect(pos.calories).toEqual({ col: 0, row: 0 });
+    expect(pos.insulinWave).toEqual({ col: 2, row: 0 });
+  });
+
+  it('последнюю плитку можно поставить вправо, даже если порядок не меняется', () => {
+    const saved = [
+      tile('calories', '2x2', 0, 0),
+      tile('insulinWave', '2x2', 2, 0),
+      tile('fiber', '2x1', 0, 2),
+    ];
+    const { state } = boot(saved);
+    // init уже прижимает хвост; вернём как на экране пользователя.
+    const fiber = state.getWidgets().find((w) => w.type === 'fiber');
+    fiber.position = { col: 0, row: 2 };
+
+    const lastIndex = state.getWidgets().length - 1;
+    expect(state.reorderWidget(fiber.id, lastIndex)).toBe(true);
+    expect(state.getWidgets().find((w) => w.type === 'fiber').position).toEqual({ col: 2, row: 2 });
   });
 });

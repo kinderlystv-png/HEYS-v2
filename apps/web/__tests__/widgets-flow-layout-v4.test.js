@@ -76,8 +76,8 @@ describe('flow-раскладка: порядок чтения вместо ко
     expect(after.weight).toEqual({ col: 2, row: 0 });
     // Вода стояла в первой строке под «Весом», после роста уехала ниже.
     expect(before.water).toEqual({ col: 2, row: 1 });
-    expect(after.water).toEqual({ col: 0, row: 2 });
-    expect(after.sleep).toEqual({ col: 2, row: 2 });
+    expect(after.water).toEqual({ col: 1, row: 2 });
+    expect(after.sleep).toEqual({ col: 3, row: 2 });
   });
 
   it('кадр «сжатие»: в освободившуюся колонку поднимается ближайший, кто влезает', () => {
@@ -93,7 +93,8 @@ describe('flow-раскладка: порядок чтения вместо ко
     expect(pos.weight).toEqual({ col: 2, row: 0 });
     expect(pos.sleep).toEqual({ col: 3, row: 0 });
     expect(pos.water).toEqual({ col: 2, row: 1 });
-    expect(pos.steps).toEqual({ col: 0, row: 2 });
+    // Хвост последнего ряда прижимается вправо — к кнопке «+».
+    expect(pos.steps).toEqual({ col: 2, row: 2 });
   });
 
   it('кадр «дырка»: две следующие плитки не влезают — место остаётся пустым', () => {
@@ -109,8 +110,8 @@ describe('flow-раскладка: порядок чтения вместо ко
     // Колонка 3 первой строки остаётся пустой: «Вода» и «БЖУ» двухколоночные,
     // а «Сон» лежит глубже двух — поиск вперёд его не достаёт.
     expect(pos.water).toEqual({ col: 2, row: 1 });
-    expect(pos.macros).toEqual({ col: 0, row: 2 });
-    expect(pos.sleep).toEqual({ col: 2, row: 2 });
+    expect(pos.macros).toEqual({ col: 1, row: 2 });
+    expect(pos.sleep).toEqual({ col: 3, row: 2 });
     const occupiesHole = Object.values(pos).some((p) => p.col === 3 && p.row === 0);
     expect(occupiesHole).toBe(false);
   });
@@ -119,7 +120,8 @@ describe('flow-раскладка: порядок чтения вместо ко
     const withMini = layout(['macros:3x2', 'water:2x1', 'sleep:1x1']);
     expect(withMini.macros).toEqual({ col: 0, row: 0 });
     expect(withMini.sleep).toEqual({ col: 3, row: 0 });
-    expect(withMini.water).toEqual({ col: 0, row: 2 });
+    // «Вода» одна в последнем ряду — прижимается вправо, не влево.
+    expect(withMini.water).toEqual({ col: 2, row: 2 });
 
     const withoutMini = layout(['macros:3x2', 'water:2x1', 'steps:2x1']);
     expect(withoutMini.water).toEqual({ col: 0, row: 2 });
@@ -147,10 +149,8 @@ describe('flow-раскладка: порядок чтения вместо ко
     expect(grid.computeFlowLayout(null, 4)).toEqual({});
     const pos = grid.computeFlowLayout([null, { id: 'x', size: 'unknown' }], 4);
     // Незнакомый размер трактуется как 1×1, а единственная плитка стоит в
-    // последнем ряду — поэтому её сдвигает строка «1×1 в нижнем углу не
-    // ставится»: колонка 1 вместо нулевой. Укладка при этом не падает, что
-    // тест и проверяет.
-    expect(pos.x).toEqual({ col: 1, row: 0 });
+    // последнем ряду и прижимается вправо — под кнопку «+».
+    expect(pos.x).toEqual({ col: 3, row: 0 });
   });
 });
 

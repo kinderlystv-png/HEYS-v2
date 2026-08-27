@@ -15,7 +15,7 @@
 
 | Зона                                        | Строк | Где построчно                   |
 | ------------------------------------------- | ----- | ------------------------------- |
-| `home-widgets` — Главная                    | 286   | `ACCEPTANCE-home-widgets.md`    |
+| `home-widgets` — Главная                    | 287   | `ACCEPTANCE-home-widgets.md`    |
 | `nutrition-tab` — Вкладка «Питание»         | 220   | `ACCEPTANCE-nutrition-tab.md`   |
 | `checkin-morning` — Утренний чек-ин         | 83    | `ACCEPTANCE-checkin-morning.md` |
 | `cycle` — Особый период                     | 78    | `ACCEPTANCE-cycle.md`           |

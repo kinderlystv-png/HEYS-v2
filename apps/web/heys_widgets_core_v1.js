@@ -387,8 +387,21 @@
       }
 
       this._widgets = widgets.map((w) => this._normalizeWidget(w));
+      this._sortWidgetsByReadingOrder();
+      this._clearBottomCornerSingles();
+      this._packLastRowTail();
       this._rememberSavedFingerprint();
-      const layoutData = { widgets: pending.widgets, updatedAt: cloudUpdatedAt };
+      const layoutData = {
+        widgets: this._widgets.map((w) => ({
+          id: w.id,
+          type: w.type,
+          size: w.size,
+          position: w.position,
+          settings: w.settings,
+          createdAt: w.createdAt
+        })),
+        updatedAt: cloudUpdatedAt
+      };
       if (HEYS.store?.set) {
         HEYS.store.set(STORAGE_KEY, layoutData);
       } else if (HEYS.utils?.lsSet) {
@@ -550,7 +563,13 @@
         // координата одной плитки, а не пересобирается вся укладка —
         // пересборка сдвинула бы соседей и сломала бы обещание строки.
         // Плашки и подсветки нет: сдвиг стоит дешевле сообщения о нём.
-        if (this._clearBottomCornerSingles()) {
+        //
+        // Следом — «хвост последнего ряда»: неполный последний ряд
+        // прижимается вправо, к кнопке «+». Соседей в верхних рядах это
+        // тоже не трогает.
+        const cornerMoved = this._clearBottomCornerSingles();
+        const tailMoved = this._packLastRowTail();
+        if (cornerMoved || tailMoved) {
           try {
             this.saveLayout(this._widgets.map(w => ({
               id: w.id,
@@ -559,9 +578,9 @@
               position: w.position,
               settings: w.settings,
               createdAt: w.createdAt
-            })), { reason: 'bottom-corner' });
+            })), { reason: tailMoved && !cornerMoved ? 'last-row-pack' : 'bottom-corner' });
           } catch (e) {
-            console.error('[widgets] bottom-corner save failed:', e?.message || e);
+            console.error('[widgets] last-row save failed:', e?.message || e);
           }
         }
       } else {
@@ -757,6 +776,32 @@
       let changed = false;
       this._widgets = this._widgets.map((w) => {
         const nextPos = fixed[w.id];
+        if (!nextPos) return w;
+        if (nextPos.col === (w.position?.col || 0) && nextPos.row === (w.position?.row || 0)) return w;
+        changed = true;
+        return { ...w, position: { col: nextPos.col, row: nextPos.row } };
+      });
+
+      return changed;
+    },
+
+    /**
+     * Прижать неполный последний ряд вправо, не трогая верхние ряды.
+     * Строка контракта «хвост последнего ряда».
+     * @returns {boolean} true, если хоть одна плитка сдвинулась
+     */
+    _packLastRowTail() {
+      if (!Array.isArray(this._widgets) || this._widgets.length === 0) return false;
+
+      const current = {};
+      for (const w of this._widgets) {
+        current[w.id] = { col: w.position?.col || 0, row: w.position?.row || 0 };
+      }
+      const packed = gridEngine.packLastRowRight(current, this._widgets, GRID_COLS);
+
+      let changed = false;
+      this._widgets = this._widgets.map((w) => {
+        const nextPos = packed[w.id];
         if (!nextPos) return w;
         if (nextPos.col === (w.position?.col || 0) && nextPos.row === (w.position?.row || 0)) return w;
         changed = true;
@@ -1242,7 +1287,22 @@
 
       const maxIndex = this._widgets.length - 1;
       const target = Math.max(0, Math.min(maxIndex, Math.trunc(Number(toIndex))));
-      if (!Number.isFinite(target) || target === fromIndex) return false;
+      if (!Number.isFinite(target)) return false;
+
+      // Порядок не меняется — но хвост последнего ряда всё равно может
+      // уехать вправо (строка «хвост последнего ряда»). Иначе последнюю
+      // плитку нельзя «поставить» в правую дырку: dropIndex тот же, и
+      // превью прижималось вправо, а отпуск возвращал её влево.
+      if (target === fromIndex) {
+        if (!skipHistory) this._pushHistory();
+        if (!this._autoPackWidgets()) {
+          if (!skipHistory) this._history.pop();
+          return false;
+        }
+        this._debouncedSave();
+        HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
+        return true;
+      }
 
       if (!skipHistory) {
         this._pushHistory();
@@ -1619,6 +1679,12 @@
       this._editSnapshot = JSON.stringify(this._widgets || []);
       document.body.classList.add('widgets-edit-mode');
 
+      // Хвост последнего ряда прижимается сразу при входе в расстановку —
+      // иначе правая дырка под «+» выглядит занятой, а перенос туда молчит.
+      if (this._autoPackWidgets()) {
+        HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
+      }
+
       // Отключаем swipe навигацию
       if (HEYS.App?.disableSwipe) {
         HEYS.App.disableSwipe();
@@ -1759,28 +1825,30 @@
         tailRow += w.rows;
       }
 
-      return this.keepBottomCornersClear(positions, widgets, gridCols);
+      return this.packLastRowRight(
+        this.keepBottomCornersClear(positions, widgets, gridCols),
+        widgets,
+        gridCols
+      );
     },
 
     /**
-     * Освободить нижние углы сетки от плиток 1×1.
+     * Освободить левый нижний угол сетки от плиток 1×1.
      *
      * Строки контракта «1×1 в нижнем углу не ставится», «прежние раскладки
-     * с 1×1 в углу» и «2×1 в углу» (решение владельца 25 августа).
+     * с 1×1 в углу» и «2×1 в углу». Решение владельца 27 августа: правый
+     * угол 1×1 занимает — иначе клетка под «+» выглядит забронированной,
+     * а перетаскивание туда молчит. Содержимое уходит вбок полем плитки
+     * (строка «зоны углов»), как у 2×1.
      *
-     * Почему это укладка, а не стили: зона угла 52×52 забирает у плитки 1×1
-     * больше половины площади — на 375 px от неё остаются полосы 28,8×64 и
-     * 80,8×12, куда не влезает ни число героя, ни подпись, ни спарклайн.
-     * Сжимать нечего, поэтому плитка туда просто не ставится, а содержимое
-     * от близости к углу не меняется никак. Формат шире одной колонки в угол
-     * встаёт: 2×1 остаётся 117,5×64 свободного места, и это уже решено полем
-     * плитки в CSS (строка «зоны углов»).
+     * Левый угол по-прежнему пустой: кнопка настройки 40 px сидит поверх
+     * первой колонки, и дырка там читается как её место, а не как бронь.
      *
      * Правится позиция одной плитки, соседи со своих мест не едут — так
      * прежняя раскладка при первом открытии сдвигается молча и на один шаг,
-     * без плашки и подсветки. Цель — ближайшая свободная неугловая клетка
-     * того же ряда; если ряд занят целиком, плитка уходит одна в следующий
-     * (его углы ей тоже запрещены, поэтому в колонку 1).
+     * без плашки и подсветки. Цель — ближайшая свободная клетка того же
+     * ряда, кроме левого угла; если ряд занят целиком, плитка уходит одна
+     * в следующий (левый угол ей тоже запрещён, поэтому в колонку 1).
      *
      * @param {Object} positions - { [widgetId]: { col, row } }
      * @param {Object[]} widgets - те же виджеты, что дали позиции
@@ -1802,11 +1870,10 @@
           rows: Math.max(1, info?.rows || w.rows || 1)
         };
       };
-      const isCornerCol = (c) => c === 0 || c === gridCols - 1;
+      // Левый угол последнего ряда: 1×1 туда не ставится. Правый — ставится.
+      const isBlockedCol = (c) => c === 0;
 
       const next = { ...positions };
-      // Шаг освобождает один угол и в другой плитку не ставит, а уход в новый
-      // ряд снимает оба сразу — больше трёх шагов не нужно ни в одном случае.
       for (let pass = 0; pass < 3; pass++) {
         const taken = new Map();
         let bottomRow = 0;
@@ -1819,36 +1886,118 @@
           bottomRow = Math.max(bottomRow, p.row + s.rows - 1);
         }
 
-        // Правый угол разбирается первым: если плитке оттуда пришлось уйти
-        // вниз, нижним рядом становится новый и левый угол снимается сам.
-        let offender = null;
-        for (const cornerCol of [gridCols - 1, 0]) {
-          const id = taken.get(`${cornerCol},${bottomRow}`);
-          if (!id) continue;
-          const w = list.find((x) => x.id === id);
-          if (!w) continue;
-          const s = sizeOf(w);
-          if (s.cols !== 1 || s.rows !== 1) continue;
-          offender = w;
-          break;
-        }
+        const id = taken.get(`0,${bottomRow}`);
+        if (!id) break;
+        const offender = list.find((x) => x.id === id);
         if (!offender) break;
+        const offenderSize = sizeOf(offender);
+        if (offenderSize.cols !== 1 || offenderSize.rows !== 1) break;
 
         const from = next[offender.id];
         let target = null;
-        // Сначала вперёд по ряду, потом назад: «следующая свободная клетка
-        // того же ряда» для правого угла лежит левее.
         for (let c = from.col + 1; c < gridCols && !target; c++) {
-          if (!isCornerCol(c) && !taken.has(`${c},${bottomRow}`)) target = { col: c, row: bottomRow };
+          if (!isBlockedCol(c) && !taken.has(`${c},${bottomRow}`)) target = { col: c, row: bottomRow };
         }
         for (let c = from.col - 1; c >= 0 && !target; c--) {
-          if (!isCornerCol(c) && !taken.has(`${c},${bottomRow}`)) target = { col: c, row: bottomRow };
+          if (!isBlockedCol(c) && !taken.has(`${c},${bottomRow}`)) target = { col: c, row: bottomRow };
         }
         if (!target) target = { col: 1, row: bottomRow + 1 };
 
         next[offender.id] = target;
       }
 
+      return next;
+    },
+
+    /**
+     * Прижать неполный последний ряд вправо.
+     *
+     * Строка контракта «хвост последнего ряда» (решение владельца 27 августа):
+     * плитки, которые целиком живут только в последнем ряду, сдвигаются к
+     * правому краю и сохраняют свой порядок. 1×1 встаёт в правый угол —
+     * содержимое уходит вбок полем плитки, как у 2×1. Дырка, если остаётся,
+     * стоит слева, под кнопкой настройки.
+     *
+     * Верхние ряды и плитки, которые заходят в последний ряд сверху
+     * (2×2 / 3×2), не едут: иначе сдвиг хвоста разъехал бы уже собранную
+     * сетку. Если хвост уложить вправо без наложений нельзя — оставляем
+     * как пришло из keepBottomCornersClear.
+     *
+     * @param {Object} positions - { [widgetId]: { col, row } }
+     * @param {Object[]} widgets - те же виджеты, что дали позиции
+     * @param {number} cols - число колонок сетки
+     * @returns {Object} позиции с прижатым хвостом
+     */
+    packLastRowRight(positions, widgets, cols = GRID_COLS) {
+      const gridCols = Math.max(1, cols | 0);
+      const list = (widgets || []).filter((w) => w && positions?.[w.id]);
+      if (!list.length || gridCols < 2) return positions;
+
+      const sizeOf = (w) => {
+        const info = HEYS.Widgets.registry?.getSize?.(w.size);
+        return {
+          cols: Math.min(gridCols, Math.max(1, info?.cols || w.cols || 1)),
+          rows: Math.max(1, info?.rows || w.rows || 1)
+        };
+      };
+      const isBlockedCol = (c) => gridCols >= 3 && c === 0;
+
+      let bottomRow = 0;
+      for (const w of list) {
+        const p = positions[w.id];
+        const s = sizeOf(w);
+        bottomRow = Math.max(bottomRow, p.row + s.rows - 1);
+      }
+
+      const immovable = new Set();
+      const movable = [];
+      for (const w of list) {
+        const p = positions[w.id];
+        const s = sizeOf(w);
+        const top = p.row;
+        const bottom = p.row + s.rows - 1;
+        if (bottom !== bottomRow) continue;
+        if (top === bottomRow) {
+          movable.push({ w, s, from: p });
+        } else {
+          for (let c = 0; c < s.cols; c++) immovable.add(p.col + c);
+        }
+      }
+      if (!movable.length) return positions;
+
+      movable.sort((a, b) => {
+        const colDiff = a.from.col - b.from.col;
+        if (colDiff) return colDiff;
+        return list.indexOf(a.w) - list.indexOf(b.w);
+      });
+
+      const taken = new Set(immovable);
+      const fits = (col, s) => {
+        if (col < 0 || col + s.cols > gridCols) return false;
+        if (s.cols === 1 && s.rows === 1 && isBlockedCol(col)) return false;
+        for (let c = 0; c < s.cols; c++) {
+          if (taken.has(col + c)) return false;
+        }
+        return true;
+      };
+
+      const planned = {};
+      for (let i = movable.length - 1; i >= 0; i--) {
+        const item = movable[i];
+        let col = -1;
+        for (let c = gridCols - item.s.cols; c >= 0; c--) {
+          if (fits(c, item.s)) {
+            col = c;
+            break;
+          }
+        }
+        if (col < 0) return positions;
+        planned[item.w.id] = { col, row: bottomRow };
+        for (let c = 0; c < item.s.cols; c++) taken.add(col + c);
+      }
+
+      const next = { ...positions };
+      for (const id of Object.keys(planned)) next[id] = planned[id];
       return next;
     },
 
