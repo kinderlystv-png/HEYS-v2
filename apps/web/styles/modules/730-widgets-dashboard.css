@@ -2832,7 +2832,8 @@ body:has(.page-reports) .hdr::after {
 .widgets-quick-sheet__section {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  /* Строка «состав карточки»: зазор между строкой «Вода» и чипами объёмов. */
+  gap: 12px;
 }
 
 .widgets-quick-sheet__head {
