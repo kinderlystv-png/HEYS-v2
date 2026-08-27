@@ -781,8 +781,8 @@
           "h": "7d758d04f4bf"
         },
         "где рисуются": {
-          "v": "≠",
-          "f": "heys_day_page_shell.js:695 вкладка «День» рисует свою QuickActionsFabGroup",
+          "v": "=",
+          "f": "WidgetsQuickActionsFab: heys_widgets_ui_v1.js renderMobileFabs + HEYS.Widgets.QuickActionsFab на вкладках День (heys_day_page_shell.js DayQuickActionsFab); легаси QuickActionsFabGroup удалён",
           "h": "58c6a99557de"
         },
         "стопка на прошлом дне": {

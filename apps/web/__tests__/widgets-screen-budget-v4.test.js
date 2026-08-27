@@ -156,7 +156,10 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*width:\s*52px/);
     expect(CSS_SRC).not.toContain('.widgets-quick-fab.is-pill');
     expect(CSS_SRC).not.toContain('.widgets-quick-fab__pill-label');
-    expect(CSS_SRC).toMatch(/\.widgets-quick-sheet__chip[\s\S]*min-height:\s*34px/);
+    const sheetIn = CSS_SRC.match(/@keyframes widgets-quick-sheet-in \{([\s\S]*?)\}/);
+    expect(sheetIn?.[1]).toContain('opacity: 0');
+    expect(sheetIn?.[1]).not.toContain('translateY');
+    expect(sheetIn?.[1]).not.toContain('transform');
     expect(CSS_SRC).toMatch(/\.widgets-quick-sheet__row[\s\S]*min-height:\s*38px/);
     expect(CSS_SRC).toContain('.widgets-quick-fab__glyph.is-open');
     expect(CSS_SRC).toContain('.widgets-tab--legacy-overflow');

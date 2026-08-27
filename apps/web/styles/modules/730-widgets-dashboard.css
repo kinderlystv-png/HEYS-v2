@@ -2770,19 +2770,16 @@ body:has(.page-reports) .hdr::after {
     0 14px 34px rgba(80, 50, 20, 0.26);
   padding: 13px 14px;
   margin-bottom: 8px;
-  transform-origin: bottom right;
   animation: widgets-quick-sheet-in 180ms ease-out;
 }
 
 @keyframes widgets-quick-sheet-in {
   from {
     opacity: 0;
-    transform: translateY(40%);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -3234,6 +3231,10 @@ body:has(.page-reports) .hdr::after {
   .widgets-quick-scrim {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+  }
+
+  .widgets-quick-sheet {
+    animation: none;
   }
 }
 

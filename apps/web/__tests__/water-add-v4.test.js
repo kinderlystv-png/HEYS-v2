@@ -165,9 +165,9 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(waterCss).toMatch(/\.water-column__fill \{[\s\S]*?transition: height 320ms/);
     // Канvас: подписи слева от столбика, столбик вплотную к FAB.
     expect(handlersSrc).toMatch(/water-column__text[\s\S]*?water-column__bar/);
-    expect(handlersSrc).toMatch(/fab-slot--off/);
     expect(handlersSrc).toContain('function resolveWaterColumnAnchor');
-    expect(handlersSrc).toMatch(/resolveWaterColumnAnchor[\s\S]*?querySelectorAll\('\.water-fab'\)/);
+    expect(handlersSrc).toMatch(/resolveWaterColumnAnchor[\s\S]*?querySelectorAll\('\.widgets-quick-fab-wrap'\)/);
+    expect(handlersSrc).toMatch(/resolveWaterColumnAnchor[\s\S]*?querySelector\('\.widgets-quick-fab'\)/);
     expect(handlersSrc).not.toContain('water-card-anim-above');
     expect(handlersSrc).toContain("col.className = 'water-column animate-always'");
   });
@@ -212,40 +212,23 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(audioSrc).toContain('(_waterToneStep % 4) * 30');
   });
 
-  it('быстрые объёмы FAB — столбик после ухода чипов, якорь не трогаем', () => {
+  it('быстрые объёмы — чипы в v4-карточке, столбик у кнопки «+»', () => {
     const dayShellSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_day_page_shell.js'), 'utf8');
     const customSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_water_custom_volume_v1.js'), 'utf8');
-    expect(dayShellSrc).toContain('function WaterFabButton');
-    expect(dayShellSrc).toContain('WaterFabVolButton');
-    expect(dayShellSrc).toContain('HEYS.WaterCustomVolume?.open');
+    const widgetsCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8');
+    expect(dayShellSrc).toContain('HEYS.Widgets?.QuickActionsFab');
+    expect(dayShellSrc).not.toContain('WaterFabButton');
+    expect(uiSrc).toContain('function waterChipVolumes');
+    expect(uiSrc).toContain('widgets-quick-sheet__chip');
     expect(customSrc).toMatch(/const LONG_PRESS_MS = (?:HEYS\.longPress\?\.MS \?\? )?350/);
     expect(customSrc).toContain('PRESETS_ML = [330, 500, 750, 1000]');
     expect(customSrc).toContain('heys:water-custom-volume-open');
-    expect(dayShellSrc).toContain('water-fab-vol');
-    // Строка «объёмы человека и чипы стопки»: в стопке два самых частых объёма
-    // за месяц; −200 / +200 / +500 остаются значениями по умолчанию, пока
-    // журнал воды своих объёмов не набрал.
-    expect(dayShellSrc).toContain('WATER_FAB_DEFAULT_VOLUMES = [200, 500]');
-    expect(dayShellSrc).toContain('HEYS.dayWater?.getFrequentVolumes?.()');
-    expect(dayShellSrc).toContain('pickVolume(volumes[0])');
-    expect(dayShellSrc).toContain('pickVolume(volumes[1])');
-    expect(dayShellSrc).toContain('pickRemove(volumes[0])');
-    expect(dayShellSrc).toContain('water-fab-vol--minus');
-    expect(dayShellSrc).toContain('disabled: waterMl <= 0');
-    expect(dayShellSrc).toContain("'−' + volumes[0]");
-    expect(dayShellSrc).toContain('markVolumeChipsClosing');
     expect(handlersSrc).toContain('setVolumeChipsOpen');
     expect(handlersSrc).toContain('markVolumeChipsClosing');
     expect(handlersSrc).toContain('isVolumeChipsBlockingColumn');
     expect(handlersSrc).toContain('pendingColumnDetail');
     expect(handlersSrc).toMatch(/if \(isVolumeChipsBlockingColumn\(\)\) \{[\s\S]*?pendingColumnDetail = detail/);
-    expect(waterCss).toContain('.water-fab-vol');
-    expect(waterCss).toContain('height: 30px');
-    expect(waterCss).toContain('font: 700 11.5px/1');
-    expect(waterCss).toContain('border: 2px solid var(--water-fab-outline)');
-    expect(waterCss).toContain('waterFabVolInDim');
-    expect(waterCss).toMatch(/@keyframes waterFabVolIn[\s\S]*?translateX\(10px\)/);
-    expect(waterCss).toContain('--water-fab-text: #0d1a26');
+    expect(widgetsCss).toMatch(/\.widgets-quick-sheet__chip[\s\S]*?min-height:\s*34px/);
     expect(waterCss).toContain('[data-theme$="dark"] .water-column__total');
   });
 
@@ -261,12 +244,12 @@ describe('добавление воды — канвас water-add v4, ветк�
     // Контракт «safe-area и кнопка назад» (water-add.v4.dc.html): «столбик
     // объёмов у кнопки вне Главной поднимается от нижней врезки». Столбик не
     // читает env(safe-area-inset-bottom) сам — он наследует врезку через
-    // getBoundingClientRect() кнопки, а .fab-group уже отсчитывает bottom от
-    // env(safe-area-inset-bottom). Если это когда-нибудь разойдётся —
-    // добавлять свой env() в JS не нужно, чинить нужно позицию .fab-group.
+    // getBoundingClientRect() кнопки, а .widgets-quick-fab-wrap отсчитывает bottom
+    // от env(safe-area-inset-bottom). Если это когда-нибудь разойдётся —
+    // добавлять свой env() в JS не нужно, чинить нужно позицию обёртки.
     expect(handlersSrc).not.toContain('safe-area-inset-bottom');
     expect(handlersSrc).toMatch(/showWaterColumn[\s\S]*?anchor\.getBoundingClientRect\(\)/);
-    expect(waterCss).toMatch(/\.fab-group \{[\s\S]*?bottom: calc\(76px \+ env\(safe-area-inset-bottom, 0px\)\)/);
+    expect(widgetsCss).toMatch(/\.widgets-quick-fab-wrap \{[\s\S]*?bottom: calc\(76px \+ 14px \+ env\(safe-area-inset-bottom, 0px\)\)/);
   });
 
   it('выделение и копирование: карточка воды не выделяется — весь текст служебный', () => {

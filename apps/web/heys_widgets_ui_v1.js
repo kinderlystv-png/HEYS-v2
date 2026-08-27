@@ -9173,13 +9173,15 @@
   }
 
   function WidgetsQuickActionsFab({
+    id,
     waterMl,
     onAddWater,
     onAddMeal,
     onOpenCurator,
     onOpenHunger,
     onOpenActivity,
-    onOpenChange
+    onOpenChange,
+    suppressKeys = []
   }) {
     const [open, setOpen] = useState(false);
     // Строка «правка списка»: режим правки живёт только внутри раскрытой
@@ -9206,8 +9208,9 @@
     };
     const labels = { meal: 'Еда', hunger: 'Голод и энергия', activity: 'Активность', message: 'Мессенджер' };
 
-    const navKeys = QUICK_ACTION_ORDER.filter((key) => visibility[key] !== false);
-    const waterOn = visibility.water !== false;
+    const suppressed = new Set(Array.isArray(suppressKeys) ? suppressKeys : []);
+    const navKeys = QUICK_ACTION_ORDER.filter((key) => visibility[key] !== false && !suppressed.has(key));
+    const waterOn = visibility.water !== false && !suppressed.has('water');
     // Строка «непрочитанные у мессенджера»: счёт нужен только пока пункт
     // «Мессенджер» вообще есть в списке.
     const messengerUnread = useQuickUnreadCount(visibility.message !== false);
@@ -9536,6 +9539,7 @@
 
     return React.createElement('div', {
       ref: wrapRef,
+      ...(id ? { id } : {}),
       className: 'widgets-quick-fab-wrap' + (open ? ' is-open' : '')
         // Строка «появление и исчезновение кнопки»: 220 мс с перелётом до
         // 1,06 на первом включённом, 160 мс сжатия на нуле, 220 мс на смену

@@ -256,17 +256,15 @@
                     return false;
                 }
 
-                /** Якорь столбика: плитка на Главной → сама; иначе видимая кнопка воды (FAB). */
+                /** Якорь столбика: плитка на Главной → сама; иначе видимая кнопка «+». */
                 function resolveWaterColumnAnchor() {
                     if (waterTileIsVisible()) return null;
-                    const fabs = document.querySelectorAll('.water-fab');
-                    for (let i = 0; i < fabs.length; i++) {
-                        const fab = fabs[i];
-                        const slot = fab.closest('.fab-slot');
-                        if (slot && (slot.classList.contains('fab-slot--off')
-                            || slot.getAttribute('aria-hidden') === 'true')) {
-                            continue;
-                        }
+                    const wraps = document.querySelectorAll('.widgets-quick-fab-wrap');
+                    for (let i = 0; i < wraps.length; i++) {
+                        const wrap = wraps[i];
+                        if (wrap.getAttribute('aria-hidden') === 'true') continue;
+                        const fab = wrap.querySelector('.widgets-quick-fab');
+                        if (!fab) continue;
                         const rect = fab.getBoundingClientRect();
                         if (rect.width > 0 && rect.height > 0) return fab;
                     }

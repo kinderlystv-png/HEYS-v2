@@ -107,13 +107,12 @@ describe('settings sheet FAB chips markup', () => {
         expect(shellSrc).not.toContain("sheetExtra === 'fabs'");
     });
 
-    it('QuickActionsFabGroup toggles meal slot like other FABs', () => {
+    it('day shell использует v4 QuickActionsFab, не легаси-столбик', () => {
         const dayShellPath = path.resolve(__dirname, '../heys_day_page_shell.js');
         const dayShellSrc = fs.readFileSync(dayShellPath, 'utf8');
-        expect(dayShellSrc).not.toContain("key === 'meal' ? true");
-        expect(dayShellSrc).toContain('fabVisibility[key] !== false');
-        expect(dayShellSrc).toContain('activity-fab');
-        expect(dayShellSrc).toContain("fab-slot--' + key");
+        expect(dayShellSrc).toContain('HEYS.Widgets?.QuickActionsFab');
+        expect(dayShellSrc).not.toContain('QuickActionsFabGroup');
+        expect(dayShellSrc).not.toContain('fabVisibility[key]');
     });
 
     // Тест раньше назывался «defers FAB visibility update until layout-animate
@@ -129,14 +128,12 @@ describe('settings sheet FAB chips markup', () => {
     // выдержки под него, — а отложенный коммит проверяется там, где он остался
     // живым: у одиночной кнопки мессенджера, где класс всё ещё включает
     // единственное разрешённое контрактом движение.
-    it('quick-actions stack commits FAB visibility without the removed layout run', () => {
-        const dayShellPath = path.resolve(__dirname, '../heys_day_page_shell.js');
-        const dayShellSrc = fs.readFileSync(dayShellPath, 'utf8');
-        const markup = dayShellSrc.slice(dayShellSrc.indexOf('function QuickActionsFabGroup'));
-        expect(markup).not.toContain('fab-group--layout-animate');
-        expect(dayShellSrc).not.toContain('FAB_LAYOUT_ANIM_MS');
-        expect(dayShellSrc).not.toContain('FAB_SLOT_STAGGER_MS');
-        expect(dayShellSrc).toContain("window.addEventListener('heys:fab-visibility-changed'");
+    it('quick-actions stack commits FAB visibility in WidgetsQuickActionsFab', () => {
+        const widgetsUiPath = path.resolve(__dirname, '../heys_widgets_ui_v1.js');
+        const widgetsUiSrc = fs.readFileSync(widgetsUiPath, 'utf8');
+        expect(widgetsUiSrc).toContain('function useFabVisibility');
+        expect(widgetsUiSrc).toContain('api?.EVENT');
+        expect(widgetsUiSrc).not.toContain('fab-group--layout-animate');
     });
 
     it('messenger-only FAB keeps the deferred commit and holds the class only for its 220ms', () => {
