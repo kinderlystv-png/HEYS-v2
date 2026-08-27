@@ -508,10 +508,13 @@
             computedCount++;
         }
 
-        // 3. proteinPerMealG — из профиля (не требует истории)
-        const goal = profile.goal || 'maintenance';
+        // 3. proteinPerMealG — из профиля (не требует истории).
+        // Profile может отсутствовать: виджеты/SWR зовут пороги до загрузки
+        // профиля, а analyzeNutritionQuality раньше не передавал его вовсе.
+        const goal = profile?.goal || 'maintenance';
+        const weight = profile?.weight || 70;
         const coefficients = { cut: 1.8, maintenance: 1.4, bulk: 1.6 };
-        const dailyProtein = profile.weight * (coefficients[goal] || 1.4);
+        const dailyProtein = weight * (coefficients[goal] || 1.4);
         const avgMeals = days.reduce((sum, d) => sum + (d.meals?.length || 0), 0) / days.length;
         thresholds.proteinPerMealG = Math.round(clamp(dailyProtein / (avgMeals || 4), 'proteinPerMealG'));
 
@@ -1039,6 +1042,10 @@
      * Внутренняя функция для вычисления и кэширования (используется синхронно и в SWR)
      */
     function _computeAndCache(days, profile, pIndex, U) {
+        // SWR-путь зовёт это напрямую и обходит guard в getAdaptiveThresholds.
+        // Без нормализации computePartialThresholds падает на profile.goal.
+        profile = profile || {};
+
         // 🔬 Вычислить на основе доступных данных (3-tier cascade)
         let result;
 
