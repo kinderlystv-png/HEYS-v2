@@ -745,7 +745,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // === Качество питания ===
       analyzeMealQualityTrend(days, pIndex, optimum),
-      analyzeNutritionQuality(days, pIndex),
+      analyzeNutritionQuality(days, pIndex, profile),
       analyzeProteinSatiety(days, profile, pIndex),     // v2.0: добавлен pIndex
       analyzeFiberRegularity(days, pIndex),              // v2.0: добавлен pIndex
       analyzeMoodFood(days, pIndex, optimum),
