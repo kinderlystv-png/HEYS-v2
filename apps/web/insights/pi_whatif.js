@@ -424,7 +424,7 @@
                 { key: 'wave_overlap', fn: () => patterns.analyzeWaveOverlap?.(recentDays, profile) },
                 { key: 'late_eating', fn: () => patterns.analyzeLateEating?.(recentDays, profile, pIndex) },
                 { key: 'meal_quality', fn: () => patterns.analyzeMealQualityTrend?.(recentDays, pIndex) },
-                { key: 'nutrition_quality', fn: () => patterns.analyzeNutritionQuality?.(recentDays, pIndex) },
+                { key: 'nutrition_quality', fn: () => patterns.analyzeNutritionQuality?.(recentDays, pIndex, profile) },
                 { key: 'protein_satiety', fn: () => patterns.analyzeProteinSatiety?.(recentDays, profile, pIndex) },
                 { key: 'fiber_regularity', fn: () => patterns.analyzeFiberRegularity?.(recentDays, pIndex) },
                 { key: 'sleep_weight', fn: () => patterns.analyzeSleepWeight?.(recentDays, profile, pIndex) },
