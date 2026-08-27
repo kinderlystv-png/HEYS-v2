@@ -195,7 +195,10 @@ const SKIP_MARGIN = new Set(['.hero', '.cfg', '.shR', '.shDel']);
 // Осознанные отступления. Пакет 21.08 закрыл четыре из пяти: дизайн развёл
 // залитую и обводную кнопки (`.plusO`), развернул дефолт состояний на
 // нейтральный и снял инлайн у `.qual`.
-const EXCEPTIONS = new Set([]);
+const EXCEPTIONS = new Set([
+  // home-widgets «цель у чипов в переносимых рядах»: 30 px, не 44 и не 34 кадра.
+  '.nutrition-v4-chip|min-height',
+]);
 
 describe('геометрия вкладки «Питание» против кадров канваса', () => {
   const canvasSource = fs.readFileSync(CANVAS, 'utf8');
@@ -241,6 +244,6 @@ describe('геометрия вкладки «Питание» против ка
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(0);
+    expect(EXCEPTIONS.size).toBe(1);
   });
 });

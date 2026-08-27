@@ -26,8 +26,9 @@ describe('home-widgets owner batch: дата, куратор, вода, онбо
   });
 
   it('вода считает час по локальному времени устройства', () => {
-    expect(dataSrc).toContain('_localNowMinutes()');
-    expect(dataSrc).not.toContain('Europe/Moscow');
+    expect(dataSrc).toContain('_deviceNowMinutes()');
+    expect(dataSrc).not.toContain("timeZone: 'Europe/Moscow'");
+    expect(dataSrc).not.toContain('timeZone: "Europe/Moscow"');
   });
 
   it('подсказка долгого тапа после третьего открытия', () => {

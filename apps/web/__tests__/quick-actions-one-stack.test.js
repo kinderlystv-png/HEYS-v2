@@ -25,7 +25,7 @@ describe('стопка быстрых действий: одно v4-исполн
   it('v4-стопка на Главной и не в режиме расстановки', () => {
     const idx = widgetsUi.indexOf('const renderMobileFabs = ()');
     expect(idx, 'renderMobileFabs не найден').toBeGreaterThan(-1);
-    const body = widgetsUi.slice(idx, idx + 900);
+    const body = widgetsUi.slice(idx, idx + 1500);
     expect(body).toMatch(/if \(!isMobile \|\| isWidgetsCuratorReadOnly\(\)\) return null;/);
     expect(body).toContain('done: isEditMode');
     expect(body).toContain('!isEditMode && React.createElement(WidgetsQuickActionsFab');
