@@ -273,13 +273,14 @@ describe('UI v4 — иконки', () => {
         expect(shellIdx).toBeGreaterThan(iconsIdx);
     });
 
-    it('FAB water/meal используют NavIcon вместо emoji', () => {
+    it('FAB water/meal используют SVG QuickActionIcon вместо emoji', () => {
         const dayShell = fs.readFileSync(path.join(WEB_DIR, 'heys_day_page_shell.js'), 'utf8');
-        const iconsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_app_nav_icons_v1.js'), 'utf8');
-        expect(iconsSrc).toContain("water:");
-        expect(iconsSrc).toContain("meal:");
-        expect(dayShell).toContain("renderFabNavIcon('water'");
-        expect(dayShell).toContain("renderFabNavIcon('meal'");
+        const widgetsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
+        expect(dayShell).toContain('DayQuickActionsFab');
+        expect(dayShell).toContain('HEYS.Widgets?.QuickActionsFab');
+        expect(widgetsSrc).toContain('function QuickActionIcon');
+        expect(widgetsSrc).toContain('QUICK_ACTION_ICONS');
+        expect(widgetsSrc).toContain("labels = { meal: 'Еда'");
         expect(dayShell).not.toMatch(/className: 'water-fab'[\s\S]{0,80}'🥛'/);
     });
 

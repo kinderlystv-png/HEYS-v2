@@ -72,9 +72,9 @@ describe('Nutrition tab v4 structure', () => {
     expect(nutritionSource).toContain("CYCLE_CHIP = { key: 'cycle'");
   });
 
-  it('чипы конфигурации: min-height 30 и припуск ::after −7px', () => {
-    expect(cssSource).toMatch(/\.nutrition-v4-chip \{[^}]*min-height: 34px/);
-    expect(cssSource).toMatch(/\.nutrition-v4-chip::after \{[^}]*inset: -7px 0/);
+  it('чипы конфигурации: min-height 30 px, без ::after-припуска', () => {
+    expect(cssSource).toMatch(/\.nutrition-v4-chip \{[^}]*min-height: 30px/);
+    expect(cssSource).toMatch(/\.nutrition-v4-chip::after \{[^}]*content: none/);
   });
 
   it('снимает скрытый легаси-дневник и его мёртвую цель прокрутки', () => {
@@ -178,9 +178,10 @@ describe('Nutrition tab v4 structure', () => {
     expect(overlay).not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u);
   });
 
-  it('положение прокрутки живёт по вкладке и сбрасывается сменой дня', () => {
-    expect(appShellSource).toContain('scrollMemoryRef');
-    expect(appShellSource).toMatch(/scrollMemoryRef\.current = 0;[\s\S]{0,220}\}, \[selectedDate\]\);/);
+  it('прокрутка вкладки: смена таба сверху, смена дня сбрасывает «Питание»', () => {
+    expect(appShellSource).toContain('tabViewportRef');
+    expect(appShellSource).toMatch(/viewport\.scrollTop = 0;[\s\S]{0,120}\}, \[tab\]\);/);
+    expect(appShellSource).toMatch(/tab !== 'diary'\) return;[\s\S]{0,120}viewport\.scrollTop = 0;[\s\S]{0,120}\}, \[selectedDate, tab\]\);/);
   });
 
   it('палитры: ролевые токены вместо литералов', () => {

@@ -3149,7 +3149,12 @@
     const profile = useMemo(() => lsGet('heys_profile', {}), []);
     const weight = stepData?.weight?.weightKg ? (stepData.weight.weightKg + (stepData.weight.weightG || 0) / 10) : profile.weight || 70;
     const stepsStats = useMemo(
-      () => computeAdaptiveStepsGoal({ profile: { ...profile, weight }, context, allStepData: stepData }),
+      () => computeAdaptiveStepsGoal({
+        profile: { ...profile, weight },
+        context,
+        allStepData: stepData,
+        today: context?.dateKey ? new Date(`${context.dateKey}T12:00:00.000Z`) : undefined,
+      }),
       [weight, profile, context, stepData]
     );
 
@@ -3272,7 +3277,12 @@
       const profile = lsGet('heys_profile', {});
       const dateKey = context?.dateKey || getTodayKey();
       const dayData = readDayData(dateKey, {});
-      const stats = computeAdaptiveStepsGoal({ profile, context, allStepData });
+      const stats = computeAdaptiveStepsGoal({
+        profile,
+        context,
+        allStepData,
+        today: new Date(`${dateKey}T12:00:00.000Z`),
+      });
       const showRefeed = typeof HEYS.MorningCheckinUtils?.shouldIncludeRefeedStep === 'function'
         ? HEYS.MorningCheckinUtils.shouldIncludeRefeedStep(profile, dateKey)
         : false;

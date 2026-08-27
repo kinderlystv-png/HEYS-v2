@@ -114,12 +114,13 @@ describe('water custom volume v4', () => {
 });
 
 describe('water custom volume wiring', () => {
-  it('day shell: long-press 350 мс на FAB и чипах', () => {
+  it('day shell: единый FAB быстрых действий и host листа объёма', () => {
     const dayShellSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_day_page_shell.js'), 'utf8');
-    expect(dayShellSrc).toContain('WaterFabVolButton');
-    expect(dayShellSrc).toContain('useWaterLongPress');
-    expect(dayShellSrc).toContain('HEYS.WaterCustomVolume?.open');
+    const widgetsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
+    expect(dayShellSrc).toContain('DayQuickActionsFab');
     expect(dayShellSrc).toContain('WaterCustomVolumeHost');
+    expect(widgetsSrc).toContain('waterChipVolumes');
+    expect(widgetsSrc).toContain('HEYS.WaterCustomVolume?.PRESETS_ML');
   });
 
   it('water review card: long-press на чипах', () => {
