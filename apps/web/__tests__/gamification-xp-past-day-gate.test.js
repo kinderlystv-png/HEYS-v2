@@ -50,7 +50,8 @@ function setClock(year, month, day, hour, minute) {
 
 /** Быстрое действие «+вода» в конкретном дне; date=null — отправитель без даты. */
 function tapWater(dateKey) {
-  const detail = dateKey === null ? { ml: 250 } : { ml: 250, date: dateKey };
+  const normMet = { ml: 250, total: 2000, targetMl: 2000 };
+  const detail = dateKey === null ? { ...normMet } : { ...normMet, date: dateKey };
   window.dispatchEvent(new CustomEvent('heysWaterAdded', { detail }));
   vi.advanceTimersByTime(DEBOUNCE_AND_FLUSH_MS);
 }

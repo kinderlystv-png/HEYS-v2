@@ -563,6 +563,47 @@
     return _WaterReviewCard;
   }
 
+  function renderWaterReviewPlaceholder(React, options = {}) {
+    const isCompact = options.isCompact === true;
+    const ring = isCompact ? RING_COMPACT : RING_FULL;
+    return React.createElement('div', {
+      className: 'water-review water-review--ring water-review--pending compact-card widget-shadow-diary-glass widget-outline-diary-glass',
+      'aria-hidden': 'true'
+    },
+      React.createElement('div', { className: 'water-review__top' },
+        React.createElement('span', { className: 'water-review__kicker' }, 'Вода')
+      ),
+      React.createElement('div', { className: 'water-review__ring-row' },
+        React.createElement('svg', {
+          className: 'water-review__ring-svg',
+          width: ring.size,
+          height: ring.size,
+          viewBox: '0 0 ' + ring.size + ' ' + ring.size,
+          'aria-hidden': 'true'
+        },
+          React.createElement('circle', {
+            className: 'water-review__ring-track',
+            cx: ring.center,
+            cy: ring.center,
+            r: ring.radius,
+            fill: 'none',
+            strokeWidth: ring.stroke
+          })
+        ),
+        React.createElement('div', { className: 'water-review__ring-text water-review__ring-text--holder' },
+          React.createElement('b', { className: 'water-review__ring-fact' }, '—'),
+          React.createElement('span', { className: 'water-review__ring-meta' }, 'из — л')
+        )
+      ),
+      !isCompact
+        ? React.createElement('div', {
+          className: 'water-review__curve water-review__curve--holder v4-place-holder',
+          'aria-hidden': 'true'
+        })
+        : null
+    );
+  }
+
   function renderWaterCard({ React, ctx, actions }) {
     const {
       day, prof, waterGoal, waterGoalBreakdown, waterLastDrink,
@@ -587,6 +628,7 @@
 
   HEYS.dayWater = {
     render: renderWaterCard,
+    renderPlaceholder: renderWaterReviewPlaceholder,
     applyOptimistic,
     getFrequentVolumes,
     _test: {

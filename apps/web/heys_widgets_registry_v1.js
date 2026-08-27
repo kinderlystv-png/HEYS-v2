@@ -573,7 +573,7 @@
     // === Категория: Мотивация ===
     streak: {
       type: 'streak',
-      name: 'Streak',
+      name: 'Серия',
       // Снят с продукта (контракт «снято с продукта · streak»): серию
       // показывает вид «Тепловая карта · Серия» 1×1.
       retired: true,
@@ -586,8 +586,7 @@
       component: 'WidgetStreak',
       scalableElements: SCALABLE_ELEMENTS.streak,
       settings: {
-        showMax: { type: 'boolean', default: true, label: 'Показывать рекорд' },
-        showFlame: { type: 'boolean', default: true, label: 'Показывать огонь' }
+        showMax: { type: 'boolean', default: true, label: 'Показывать рекорд' }
       },
       settingsBySize: {
         '1x1': {}

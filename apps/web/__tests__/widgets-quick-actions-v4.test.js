@@ -408,8 +408,10 @@ describe('стопка на прошлом дне', () => {
     const idx = uiSrc.indexOf('const renderMobileFabs = () => {');
     expect(idx).toBeGreaterThan(-1);
     const block = uiSrc.slice(idx, uiSrc.indexOf('\n    };', idx));
-    // Единственное условие — мобильный экран и не режим расстановки.
-    expect(block).toMatch(/if \(!isMobile \|\| isEditMode\) return null;/);
+    // На мобиле кнопка настройки остаётся в расстановке (становится «Готово»);
+    // быстрые действия скрыты через !isEditMode.
+    expect(block).toMatch(/if \(!isMobile \|\| isWidgetsCuratorReadOnly\(\)\) return null;/);
+    expect(block).toContain('done: isEditMode');
     expect(block).not.toContain('selectedDate');
     expect(block).not.toContain('isPastDay');
     expect(block).not.toContain('isToday');

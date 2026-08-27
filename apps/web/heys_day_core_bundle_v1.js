@@ -381,24 +381,22 @@
         window.addEventListener('keydown', markInteracted, { once: true, passive: true });
     }
 
+    // Старый словарь из семи уровней (light / medium / heavy / success /
+    // warning / error / tick) сведён к контрактным двум — политика живёт в
+    // `HEYS.feedback` (heys_audio_v1.js), здесь только мост. Всё, что было
+    // откликом на обычное нажатие, теперь молчит: строка контракта «вибрация ·
+    // правило продукта» — «на обычные нажатия, переключение вкладок и открытие
+    // листов вибрации нет».
+    //
+    // Долгое нажатие и подтверждённая запись вызывают политику по имени
+    // события (`HEYS.feedback.emit('longpress' | 'meal.added' | …)`), а не
+    // через этот мост.
     function hapticFn(type = 'light') {
         if (!userHasInteracted) return;
         try {
-            if ((type === 'light' || type === 'tick') && HEYS.vibration?.impactLight) {
-                HEYS.vibration.impactLight();
-                return;
-            }
-            if (!navigator.vibrate) return;
-            switch (type) {
-                case 'light': navigator.vibrate(10); break;
-                case 'medium': navigator.vibrate(20); break;
-                case 'heavy': navigator.vibrate(30); break;
-                case 'success': navigator.vibrate([10, 50, 20]); break;
-                case 'warning': navigator.vibrate([30, 30, 30]); break;
-                case 'error': navigator.vibrate([50, 30, 50, 30, 50]); break;
-                case 'tick': navigator.vibrate(5); break;
-                default: navigator.vibrate(10);
-            }
+            const level = HEYS.feedback?.levelFor?.(type);
+            if (!level) return;
+            HEYS.audio?.haptic?.(level);
         } catch (e) { /* ignore vibrate errors */ }
     }
 
@@ -5067,6 +5065,7 @@
             currentStreak,
             addMeal,
             addWater,
+            focusWater,
             addProductToMeal,
             addProductsToMeal,
             day,
@@ -5126,6 +5125,17 @@
                 }
             };
         }, [addWater]);
+
+        // Экспорт focusWater для push/shortcut: вкладка «Питание», карточка без записи глотка
+        React.useEffect(() => {
+            HEYS.Day = HEYS.Day || {};
+            HEYS.Day.focusWater = focusWater;
+            return () => {
+                if (HEYS.Day && HEYS.Day.focusWater === focusWater) {
+                    delete HEYS.Day.focusWater;
+                }
+            };
+        }, [focusWater]);
 
         // Экспорт addProductToMeal как публичный API
         // Позволяет добавлять продукт в приём извне: HEYS.Day.addProductToMeal(mealIndex, product, grams?)
@@ -5889,18 +5899,30 @@
                     const isRemove = detail.ml < 0;
                     if (!isRemove) {
                         const playSound = () => {
-                            // Прежний звук добавления остаётся как был. Новый «звук капли»
-                            // из канваса не реализуем: спецификация прямо запрещает
-                            // отдавать его без записанного семпла.
-                            if (detail.playSound !== false && HEYS.audio?.play) {
-                                HEYS.audio.play('waterAdded', { haptic: false });
+                            // Отклик глотка целиком — через единственную политику:
+                            // 10 мс (water-add «вибрация 10 мс на каждый глоток») и
+                            // капля со своим переключателем. Прежде вибрации тут не
+                            // было вовсе (`haptic: false`), а образец воды в модуле
+                            // был тройным — 18/80/18.
+                            if (detail.playSound !== false) {
+                                HEYS.feedback?.emit?.('water.sip');
                             }
                         };
                         // Звук ждёт касания поверхности: при анимации плитки — 240 мс,
-                        // при столбике — сразу. По prefers-reduced-motion здесь не
-                        // ветвимся: подъём уровня — функциональный ярус, он не гасится
-                        // (docs/implementation/MOTION_POLICY.md).
-                        if (waterTileIsVisible()) {
+                        // при столбике и при reduced-motion — сразу (капли нет, ждать
+                        // нечего; water-add «момент»). Подъём уровня — функциональный
+                        // ярус и не гасится (docs/implementation/MOTION_POLICY.md).
+                        const reducedMotion = (() => {
+                            try {
+                                if (HEYS.motionPolicy?.prefersReducedMotion) {
+                                    return HEYS.motionPolicy.prefersReducedMotion();
+                                }
+                                return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+                            } catch (_error) {
+                                return false;
+                            }
+                        })();
+                        if (waterTileIsVisible() && !reducedMotion) {
                             setTimeout(playSound, 240);
                         } else {
                             playSound();
@@ -5928,6 +5950,42 @@
         }
 
         ensureSharedWaterFeedback();
+
+        /**
+         * Пишет глоток (или убавление) в журнал воды дня.
+         *
+         * Журнал — источник правды по воде: записи { id, ml, ts } сливаются
+         * между устройствами по id, поэтому два глотка с двух устройств
+         * складываются, а не превращаются в максимум двух чисел. waterMl
+         * остаётся производным полем и всегда равен сумме журнала.
+         *
+         * Общие чистые помощники живут в heys_sync_merge_v1.js (HEYS.sync):
+         * тот же код считает журнал и на слиянии, в том числе на сервере.
+         * Если модуль ещё не поднялся — возвращаем null, и вызывающий считает
+         * воду прежней арифметикой по числу. Хуже прежнего не станет.
+         *
+         * @returns {{waterEntries: Array, waterMl: number}|null}
+         */
+        function applyWaterJournalDelta(liveDay, ml, ts) {
+            const append = HEYS.sync && HEYS.sync.appendWaterEntry;
+            if (typeof append !== 'function') return null;
+            try {
+                return append(liveDay, ml, { ts });
+            } catch (_error) {
+                return null;
+            }
+        }
+
+        /**
+         * Push/shortcut entry: scroll to the water card without recording a sip.
+         * Контракт water-add «уведомления и точки входа»: из уведомления глоток не пишется.
+         */
+        function focusWater() {
+            const waterCardEl = document.getElementById('water-card');
+            if (waterCardEl) {
+                waterCardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
 
         /**
          * Add water with animation
@@ -5965,14 +6023,16 @@
         function runWaterAnimation(ml, options = {}) {
             const liveDay = getLatestDaySnapshot();
             const prevWater = liveDay.waterMl || 0;
-            const newWater = prevWater + ml;
-            const hitGoal = waterGoal && newWater >= waterGoal && prevWater < waterGoal;
             const newUpdatedAt = Math.max(Date.now(), (Number(liveDay.waterUpdatedAt) || 0) + 1);
+            const journal = applyWaterJournalDelta(liveDay, ml, newUpdatedAt);
+            const newWater = journal ? journal.waterMl : prevWater + ml;
+            const hitGoal = waterGoal && newWater >= waterGoal && prevWater < waterGoal;
             const blockUntil = newUpdatedAt + 3000;
             const nextDaySnapshot = {
                 ...liveDay,
                 date,
                 waterMl: newWater,
+                ...(journal ? { waterEntries: journal.waterEntries } : null),
                 lastWaterTime: newUpdatedAt,
                 waterUpdatedAt: newUpdatedAt,
                 updatedAt: newUpdatedAt
@@ -5987,6 +6047,7 @@
             setDay(prev => ({
                 ...prev,
                 waterMl: newWater,
+                ...(journal ? { waterEntries: journal.waterEntries } : null),
                 lastWaterTime: newUpdatedAt,
                 waterUpdatedAt: newUpdatedAt,
                 updatedAt: newUpdatedAt
@@ -6005,6 +6066,9 @@
             const waterDetail = {
                 ml,
                 total: newWater,
+                // Ключ дня, к которому относится действие (YYYY-MM-DD): гейт
+                // геймификации на прошлый день смотрит именно сюда.
+                date,
                 source: options.source || 'day-water',
                 sourceEl: options.sourceEl || null,
                 playSound: options.playSound !== false,
@@ -6043,8 +6107,12 @@
             }
 
             const liveDay = getLatestDaySnapshot();
-            const newWater = Math.max(0, (liveDay.waterMl || 0) - ml);
             const newUpdatedAt = Math.max(Date.now(), (Number(liveDay.waterUpdatedAt) || 0) + 1);
+            // Убавление — такая же запись журнала, только с отрицательным ml.
+            // Записи не удаляются: удалённую запись при слиянии не отличить от
+            // «её нет на этом устройстве», а на старом дне удалять нечего.
+            const journal = applyWaterJournalDelta(liveDay, -ml, newUpdatedAt);
+            const newWater = journal ? journal.waterMl : Math.max(0, (liveDay.waterMl || 0) - ml);
 
             if (typeof HEYS?.Day?.setBlockCloudUpdates === 'function') {
                 HEYS.Day.setBlockCloudUpdates(newUpdatedAt + 3000);
@@ -6054,13 +6122,20 @@
                 ...liveDay,
                 date,
                 waterMl: newWater,
+                ...(journal ? { waterEntries: journal.waterEntries } : null),
                 waterUpdatedAt: newUpdatedAt,
                 updatedAt: newUpdatedAt
             });
 
             HEYS.dayWater?.applyOptimistic?.(document.getElementById('water-card'), newWater, waterGoal);
 
-            setDay(prev => ({ ...prev, waterMl: newWater, waterUpdatedAt: newUpdatedAt, updatedAt: newUpdatedAt }));
+            setDay(prev => ({
+                ...prev,
+                waterMl: newWater,
+                ...(journal ? { waterEntries: journal.waterEntries } : null),
+                waterUpdatedAt: newUpdatedAt,
+                updatedAt: newUpdatedAt
+            }));
 
             scheduleDayFlush();
 
@@ -6069,6 +6144,9 @@
             const waterDetail = {
                 ml: -ml,
                 total: newWater,
+                // Ключ дня, к которому относится действие (YYYY-MM-DD): гейт
+                // геймификации на прошлый день смотрит именно сюда.
+                date,
                 source: 'day-water-remove',
                 playSound: false,
                 targetMl: Number(HEYS.Widgets?.data?.getWaterData?.()?.target) || 0
@@ -6077,7 +6155,13 @@
             window.dispatchEvent(new CustomEvent('heys:day-updated', {
                 detail: {
                     date,
-                    dayData: { ...liveDay, waterMl: newWater, waterUpdatedAt: newUpdatedAt, updatedAt: newUpdatedAt },
+                    dayData: {
+                        ...liveDay,
+                        waterMl: newWater,
+                        ...(journal ? { waterEntries: journal.waterEntries } : null),
+                        waterUpdatedAt: newUpdatedAt,
+                        updatedAt: newUpdatedAt
+                    },
                     source: 'water-remove'
                 }
             }));
@@ -6219,6 +6303,7 @@
 
             // Water
             addWater,
+            focusWater,
             removeWater,
             runWaterAnimation,
 

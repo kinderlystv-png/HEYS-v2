@@ -11917,7 +11917,6 @@
                 score: 1.0,
                 triggers: ['tab_open'],
                 ttl: 7000,
-                showConfetti: true,
                 canSkipCooldown: true,
                 excludes: ['streak_3'],
                 onShow: () => { try { sessionStorage.setItem('heys_streak7', '1'); } catch (e) { } }
@@ -12447,7 +12446,6 @@
                         category: 'measurements',
                         triggers: ['tab_open'],
                         ttl: 6000,
-                        showConfetti: true,
                         onShow: () => { try { sessionStorage.setItem('heys_waist_down', '1'); } catch (e) { } }
                     });
                 }
@@ -12534,7 +12532,6 @@
                     category: 'achievement',
                     triggers: ['tab_open'],
                     ttl: 6000,
-                    showConfetti: true,
                     onShow: () => helpers.markMilestoneShown('first_measurement')
                 });
             }
@@ -12957,7 +12954,6 @@
                 category: 'achievement',
                 triggers: ['tab_open'],
                 ttl: 8000,
-                showConfetti: true,
                 onShow: () => helpers.markMilestoneShown('7_days')
             });
         }
@@ -12974,7 +12970,6 @@
                 category: 'achievement',
                 triggers: ['tab_open'],
                 ttl: 10000,
-                showConfetti: true,
                 onShow: () => helpers.markMilestoneShown('30_days')
             });
         }
@@ -12990,7 +12985,6 @@
                 category: 'achievement',
                 triggers: ['tab_open'],
                 ttl: 12000,
-                showConfetti: true,
                 onShow: () => helpers.markMilestoneShown('100_days')
             });
         }
@@ -13008,7 +13002,6 @@
                     category: 'achievement',
                     triggers: ['tab_open'],
                     ttl: 8000,
-                    showConfetti: true,
                     onShow: () => { try { sessionStorage.setItem('heys_new_record', '1'); } catch (e) { } }
                 });
             }
@@ -13031,7 +13024,6 @@
                     category: 'achievement',
                     triggers: ['tab_open'],
                     ttl: 8000,
-                    showConfetti: true,
                     onShow: () => helpers.markMilestoneShown('first_training')
                 });
             }

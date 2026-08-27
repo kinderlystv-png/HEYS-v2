@@ -113,7 +113,7 @@ html[data-theme-id="blue-dark"] .water-review {
    «Кольце»» минус ушёл из шапки в ряд объёмов, см. .water-review__chip--in-row. */
 
 .water-review__norm {
-  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 0.59375rem/1 Figtree, system-ui, sans-serif;
   color: var(--wr-dim);
 }
 
@@ -173,13 +173,13 @@ html[data-theme-id="blue-dark"] .water-review {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 30px;
-  padding: 0 12px;
+  height: 1.875rem;
+  padding: 0 0.75rem;
   border: none;
   border-radius: 999px;
   background: var(--wr-chip-fill);
   color: var(--wr-chip-text);
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 0.71875rem/1 Figtree, system-ui, sans-serif;
   white-space: nowrap;
   cursor: pointer;
   touch-action: manipulation;
@@ -257,7 +257,7 @@ html[data-theme-id="blue-dark"] .water-review {
 }
 
 .water-review__ring-meta {
-  font: 600 9.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 600 0.59375rem/1.4 Figtree, system-ui, sans-serif;
   color: var(--wr-dim);
 }
 
@@ -313,22 +313,30 @@ html[data-theme-id="blue-dark"] .water-review {
 .water-review__chip--in-row {
   flex: none;
   margin-right: 6px;
-  height: 30px;
-  padding: 0 12px;
+  height: 1.875rem;
+  padding: 0 0.75rem;
   border-radius: 12px;
   box-shadow: inset 0 0 0 2px var(--wr-deep);
-  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  font: 700 0.6875rem/1 Figtree, system-ui, sans-serif;
 }
 
 .water-review__chip--quick {
   flex: 1;
   min-width: 0;
-  height: 30px;
+  height: 1.875rem;
   padding: 0;
   border-radius: 12px;
   background: var(--wr-deep);
   color: var(--wr-on-deep);
-  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  font: 700 0.6875rem/1 Figtree, system-ui, sans-serif;
+}
+
+.water-review__curve--holder {
+  width: 268px;
+  max-width: 100%;
+  height: 34px;
+  margin-top: 13px;
+  border-radius: 8px;
 }
 
 .water-review__curve {
@@ -556,8 +564,11 @@ html[data-theme-id="blue-dark"] .water-review {
 }
 
 body:has(.iw-response-card.expanded) .fab-group,
+body:has(.iw-response-card.expanded) .widgets-quick-fab-wrap,
 body:has(.advice-list-overlay) .fab-group,
-body:has(.macro-toast.visible) .fab-group {
+body:has(.advice-list-overlay) .widgets-quick-fab-wrap,
+body:has(.macro-toast.visible) .fab-group,
+body:has(.macro-toast.visible) .widgets-quick-fab-wrap {
   opacity: 0;
   pointer-events: none;
   transform: translateY(10px) scale(0.96);
@@ -568,7 +579,8 @@ body:has(.macro-toast.visible) .fab-group {
     filter 150ms ease;
 }
 
-body.widgets-edit-mode .fab-group {
+body.widgets-edit-mode .fab-group,
+body.widgets-edit-mode .widgets-quick-fab-wrap {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -594,7 +606,8 @@ body.planning-tab-active .hunger-energy-fab {
 
 /* Контейнер .fab-group остаётся в DOM с layout-боксом размером в его (скрытых) детей —
    его z-index:1001 перехватывал клики по задачам планировщика. Отключаем pointer-events. */
-body.planning-tab-active .fab-group {
+body.planning-tab-active .fab-group,
+body.planning-tab-active .widgets-quick-fab-wrap {
   pointer-events: none !important;
 }
 

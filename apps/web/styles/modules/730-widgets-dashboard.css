@@ -2680,6 +2680,30 @@ body:has(.page-reports) .hdr::after {
   transition: opacity 120ms ease;
 }
 
+.widgets-settings-fab--done {
+  width: auto;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 14px;
+  background: linear-gradient(135deg, #16a34a 0%, #059669 100%);
+  color: var(--v4-bg, #ffffff);
+  box-shadow:
+    0 10px 24px rgba(5, 150, 105, 0.34),
+    0 0 0 3px rgba(255, 255, 255, 0.8);
+}
+
+.widgets-settings-fab__label {
+  font: 700 0.8125rem/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+[data-theme$="dark"] .widgets-settings-fab--done {
+  color: #fff;
+  box-shadow:
+    0 10px 24px rgba(5, 150, 105, 0.42),
+    0 0 0 3px rgba(20, 18, 16, 0.85);
+}
+
 [data-theme$="dark"] .widgets-settings-fab {
   background: #23201b;
   color: #e2a468;
@@ -2708,7 +2732,16 @@ body:has(.page-reports) .hdr::after {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 10px;
+  /* В потоке только «+» 52×52; карточка/карандаш/чипы — absolute и не раздувают
+     стопку (иначе при stale relative карточка «выезжает» снизу). */
+  width: 52px;
+  height: 52px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.widgets-quick-fab-wrap > * {
+  pointer-events: auto;
 }
 
 .widgets-quick-scrim {
@@ -2721,6 +2754,18 @@ body:has(.page-reports) .hdr::after {
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   z-index: 0;
+  animation: widgets-quick-scrim-in 180ms ease-out;
+  animation-fill-mode: both;
+}
+
+@keyframes widgets-quick-scrim-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 [data-theme$="dark"] .widgets-quick-scrim {
@@ -2736,7 +2781,9 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widgets-quick-sheet {
-  position: relative;
+  position: absolute;
+  right: 0;
+  bottom: calc(52px + 10px);
   z-index: 1;
   width: min(232px, calc(100vw - 28px));
   border-radius: 20px;
@@ -2745,12 +2792,13 @@ body:has(.page-reports) .hdr::after {
     0 2px 4px rgba(80, 50, 20, 0.14),
     0 14px 34px rgba(80, 50, 20, 0.26);
   padding: 13px 14px;
-  margin-bottom: 8px;
-  animation: widgets-quick-sheet-in 180ms ease-out;
+  margin-bottom: 0;
+  transform: none;
+  animation: widgets-quick-sheet-fade-in 180ms ease-out;
   animation-fill-mode: both;
 }
 
-@keyframes widgets-quick-sheet-in {
+@keyframes widgets-quick-sheet-fade-in {
   from {
     opacity: 0;
   }
@@ -3194,6 +3242,26 @@ body:has(.page-reports) .hdr::after {
   color: #7fbceb;
 }
 
+.widgets-quick-portal {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--v4-z-fab, 1001) - 1);
+  pointer-events: none;
+}
+
+.widgets-quick-portal .widgets-quick-scrim {
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.widgets-quick-portal .widgets-quick-sheet {
+  position: fixed;
+  right: 14px;
+  bottom: calc(76px + 14px + 52px + 10px + env(safe-area-inset-bottom, 0px));
+  z-index: 2;
+  pointer-events: auto;
+}
+
 /* Строка «карандаш и кнопка настройки»: пока карточка раскрыта, кнопка
    настройки экрана внизу слева скрыта. */
 .widgets-fab-left.is-hidden {
@@ -3208,6 +3276,11 @@ body:has(.page-reports) .hdr::after {
   .widgets-quick-scrim {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+  }
+
+  .widgets-quick-scrim,
+  .widgets-quick-sheet {
+    animation: none;
   }
 }
 
@@ -5694,6 +5767,15 @@ body:has(.page-reports) .hdr::after {
   font-weight: 600;
   color: var(--text-secondary);
   margin-left: auto;
+}
+
+.widget-streak__label-top {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  margin-right: 8px;
 }
 
 .widget-streak__week {
@@ -11053,7 +11135,7 @@ body:has(.widgets-tab) .widget--corner-br {
   right: 8px;
   top: 7px;
   z-index: 3;
-  font-size: 8.5px;
+  font-size: 0.53125rem;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0;
@@ -11074,7 +11156,7 @@ body:has(.widgets-tab) .widget--corner-br {
   border-radius: 0;
   background: none;
   display: block;
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: 0.03em;
@@ -11925,6 +12007,52 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   display: flex;
   justify-content: center;
   padding: 0 18px 4px;
+}
+
+.widgets-tab__hold-onboarding {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  pointer-events: auto;
+}
+
+.widgets-hold-onboarding__card {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px 15px;
+  border-radius: 18px;
+  background: #201e1d;
+  box-shadow: 0 10px 26px -10px rgba(17, 24, 39, 0.55);
+  color: #f8fafc;
+}
+
+.widgets-hold-onboarding__icon {
+  flex: 0 0 auto;
+  color: var(--ac, #c67139);
+}
+
+.widgets-hold-onboarding__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.widgets-hold-onboarding__title {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--tx, #f8fafc);
+}
+
+.widgets-hold-onboarding__desc {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: rgba(248, 250, 252, 0.62);
 }
 
 .widget-v4-hold-hint__pill {

@@ -237,9 +237,29 @@
     }
 
     const ADVICE_UNDO_SECONDS = 3;
-    const ADVICE_MARK_SYNC_KEYS = ['heys_advice_read_today', 'heys_advice_hidden_today'];
 
-    function getAdvicePendingMarkSyncCount(dismissedAdvices, hiddenUntilTomorrow) {
+    // Строка «панель оценки»: свайп влево сужает карточку на 96 px справа — сама
+    // она не сдвигается, и в освободившемся месте встаёт панель «Полезно?».
+    // Порог открытия — половина панели: карточка уже сузилась настолько, что
+    // намерение видно, а до конца жест дотягивать не нужно.
+    const ADVICE_RATING_PANEL_WIDTH = 96;
+    const ADVICE_RATING_OPEN_THRESHOLD = ADVICE_RATING_PANEL_WIDTH / 2;
+    // Строка «повторный тап»: защита стоит на оценке совета; на «прочитано» и
+    // «скрыть» её нет — эти состояния идемпотентны.
+    const ADVICE_RATE_REPEAT_GUARD_MS = 350;
+    // Строка «панель оценки»: после ответа кнопки исчезают, карточка
+    // возвращается на место за 180 мс.
+    const ADVICE_RATING_RETURN_MS = 180;
+
+    // Строка «офлайн»: советы считаются на устройстве, поэтому отдельного
+    // состояния «нет связи» у списка нет. Пропадает только оценка совета — она
+    // уходит на сервер и в офлайне копится. Копится она в heys_advice_outcomes_v1
+    // (advice/_core.js rateAdvice → advice/_outcomes.js), поэтому плашку
+    // «не сохранено» поднимает именно этот ключ в очереди облака, а не отметки
+    // прочтения: они локальные и «не ушедшими» для человека не бывают.
+    const ADVICE_RATING_SYNC_KEY = 'heys_advice_outcomes_v1';
+
+    function hasPendingAdviceRatingSync() {
         try {
             const cloud = (typeof HEYS !== 'undefined' && HEYS?.cloud) || window.HEYS?.cloud;
             const detail = cloud?.getPendingItemsDetail?.();
@@ -247,16 +267,9 @@
                 ...(Array.isArray(detail?.queue) ? detail.queue : []),
                 ...(Array.isArray(detail?.inflight) ? detail.inflight : []),
             ];
-            const hasPendingAdviceMarks = queue.some((item) => {
-                const key = String(item?.k || '');
-                return ADVICE_MARK_SYNC_KEYS.some((markKey) => key.includes(markKey));
-            });
-            if (!hasPendingAdviceMarks) return 0;
-            const dismissedCount = dismissedAdvices instanceof Set ? dismissedAdvices.size : 0;
-            const hiddenCount = hiddenUntilTomorrow instanceof Set ? hiddenUntilTomorrow.size : 0;
-            return Math.max(dismissedCount + hiddenCount, 1);
+            return queue.some((item) => String(item?.k || '').includes(ADVICE_RATING_SYNC_KEY));
         } catch (_) {
-            return 0;
+            return false;
         }
     }
 
@@ -301,8 +314,8 @@
             return React.createElement('svg', {
                 ...common,
                 className: 'advice-v4-icon advice-v4-icon--cloud-off',
-                width: 18,
-                height: 18,
+                width: 19,
+                height: 19,
                 viewBox: '0 0 24 24',
                 strokeWidth: 2.5,
             },
@@ -343,14 +356,6 @@
         return null;
     }
 
-    function formatAdviceSyncCountLabel(pendingCount) {
-        const count = Math.max(1, Number(pendingCount) || 1);
-        if (count === 1) return 'Один совет отмечен';
-        if (count === 2) return 'Два совета отмечены';
-        if (count >= 5) return `${count} советов отмечено`;
-        return `${count} совета отмечены`;
-    }
-
     function renderAdviceHideRing(React, secondsLeft) {
         const radius = 15;
         const circumference = 2 * Math.PI * radius;
@@ -379,6 +384,11 @@
         );
     }
 
+    // Панель оценки всплывающего совета (свайп по плашке на Главной). Оценка
+    // карточки в шторке живёт не здесь: строка «панель оценки» описывает её как
+    // две кнопки под самой карточкой (см. AdviceCard). Эту, тостовую, контракт
+    // не описывает — строка «всплывающий совет и тосты» отдаёт дизайну только
+    // вид плашки, — поэтому она оставлена как была.
     function renderAdviceReadFeedbackPanel(React, {
         onRatePositive,
         onRateNegative,
@@ -433,28 +443,24 @@
         );
     }
 
-    function renderAdviceSyncBanner(React, {
-        pendingCount,
-        onRetry,
-    }) {
-        if (!pendingCount) return null;
-        const countLabel = formatAdviceSyncCountLabel(pendingCount);
+    // Строка «не сохранено»: плашка --tint радиусом 18 с полями 13/15 px, иконка
+    // облака 19 px тоном --red, заголовок «Оценка не ушла — нет связи» и под ним
+    // успокаивающая строка. Кнопки «Повторить» у плашки нет намеренно: повтор
+    // ничего не ускорит — отправка уже в очереди, — а её наличие заставляет
+    // человека решать задачу, которой у него нет.
+    function renderAdviceSyncBanner(React, { pending }) {
+        if (!pending) return null;
 
         return React.createElement('div', { className: 'advice-v4-panel advice-v4-panel--sync', role: 'status' },
-            React.createElement('div', { className: 'advice-v4-sync-head' },
-                renderAdviceV4Icon(React, 'cloud-off'),
-                React.createElement('div', { className: 'advice-v4-sync-copy' },
-                    React.createElement('div', { className: 'advice-v4-panel__title advice-v4-panel__title--accent' }, 'Отметки не сохранились'),
-                    React.createElement('div', { className: 'advice-v4-panel__hint advice-v4-panel__hint--sync' },
-                        `${countLabel} прочитанными только на этом устройстве. Отправим, как появится связь — ничего делать не нужно.`
-                    )
+            renderAdviceV4Icon(React, 'cloud-off'),
+            React.createElement('div', { className: 'advice-v4-sync-copy' },
+                React.createElement('div', { className: 'advice-v4-panel__title' },
+                    'Оценка не ушла — нет связи'
+                ),
+                React.createElement('div', { className: 'advice-v4-panel__hint advice-v4-panel__hint--sync' },
+                    'Она сохранена на телефоне и отправится сама. Ничего делать не нужно.'
                 )
-            ),
-            typeof onRetry === 'function' && React.createElement('button', {
-                type: 'button',
-                className: 'advice-v4-panel__retry',
-                onClick: onRetry,
-            }, 'Попробовать сейчас')
+            )
         );
     }
 
@@ -661,6 +667,15 @@
         );
     }
 
+    // Решение владельца 24.08.2026: частный тумблер «Звук советов» остаётся.
+    // Человеку, которому мешают советы, не нужно ради этого глушить воду и всё
+    // остальное. Общий переключатель звука в профиле работает поверх: он гасит
+    // HEYS.audio.masterEnabled, а этот — только советы (гейты в playAdviceSound
+    // и в показе тоста; политика отклика читает тот же ключ).
+    // Основное место тумблера теперь — ярус «Звуки» внутри «Оформления»
+    // (heys_app_shell_v1.js), рядом с каплей воды: строка «звук · правило
+    // продукта». Ряд здесь остаётся вторым входом в ту же настройку — оба
+    // пишут `heys_advice_settings.adviceSoundEnabled` и `soundEnabled`.
     function renderAdviceSettingsScreen(React, {
         onClose,
         toastsEnabled,
@@ -1216,6 +1231,8 @@
         advice,
         onClose,
         onOpenTechnicalDetails,
+        onMarkRead,
+        onHideUntilTomorrow,
         ADVICE_CATEGORY_NAMES,
     }) {
         if (!advice) return null;
@@ -1234,11 +1251,15 @@
                 onClose && onClose();
             }
         },
-            React.createElement('div', {
+            // Тот же запертый фокус, что у шторки. Без него строка «доступность»
+            // не закрывается: деталь рисуется соседом шторки, фокус остаётся на
+            // карточке внутри шторки, а ловушка шторки не выпускает Tab наружу —
+            // и до новых кнопок «Прочитано» и «Скрыть до завтра» с клавиатуры
+            // просто не дойти. Компонент ещё и возвращает фокус на строку-вход
+            // «Детали», когда деталь закрывают.
+            React.createElement(AdviceModalDialog, {
                 className: 'advice-v4-detail',
-                role: 'dialog',
-                'aria-modal': 'true',
-                'aria-label': 'Детали совета',
+                label: 'Детали совета',
                 onClick: (e) => e.stopPropagation()
             },
                 React.createElement('div', { className: 'advice-v4-detail__header' },
@@ -1268,7 +1289,15 @@
                         React.createElement('div', { className: 'advice-v4-detail__section-title' }, 'Научное описание'),
                         React.createElement('div', { className: 'advice-v4-detail__science-box' }, scienceBlurb)
                     ),
-                    hasEvidence && React.createElement('button', {
+                    // Строка «служебные модалки»: техлог, диагностика и
+                    // технические детали клиенту недоступны — их вход живёт в
+                    // служебной створке настроек, «которая открывается только с
+                    // ролью куратора или разработчика». Строка «деталь» держит
+                    // вход в технические детали в ярусе «Научное описание»,
+                    // поэтому он не удалён, а закрыт ролью: обе строки сходятся
+                    // ровно на этом. Роли разработчика в коде нет — гейт пока
+                    // только кураторский.
+                    hasEvidence && isCuratorReadOnlyMode() && React.createElement('button', {
                         type: 'button',
                         className: 'advice-v4-detail__tech-link',
                         onClick: (e) => {
@@ -1278,6 +1307,41 @@
                     }, 'Технические детали', renderAdviceV4Icon(React, 'chevron-right'))
                 ),
                 React.createElement('div', { className: 'advice-v4-detail__footer' },
+                    // Строка контракта tips «доступность»: «жесты влево и вправо
+                    // дублируются действиями в детали совета — свайп не
+                    // единственный способ». Свайпнуть нельзя с клавиатуры и со
+                    // скринридером, поэтому здесь настоящие <button> в потоке
+                    // фокуса с подписями жестов из строки «жесты» (влево —
+                    // прочитано, вправо — скрыть до завтра), а не div с
+                    // обработчиком. Кадр «Совет · деталь» рисует в подвале одну
+                    // «Понятно» — отступление от кадра в пользу контракта.
+                    (typeof onMarkRead === 'function' || typeof onHideUntilTomorrow === 'function')
+                    && React.createElement('div', {
+                        className: 'advice-v4-detail__actions',
+                        // Геометрия инлайном: строка «вид детали совета» подвал
+                        // не описывает, а править продуктовый CSS эта задача не
+                        // может. Цвет и высота 44 — из общего класса кнопки.
+                        style: { display: 'flex', gap: '8px', marginBottom: '10px' },
+                    },
+                        typeof onMarkRead === 'function' && React.createElement('button', {
+                            key: 'read',
+                            type: 'button',
+                            className: 'advice-v4-panel__btn advice-v4-panel__btn--miss advice-v4-detail__action advice-v4-detail__action--read',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                onMarkRead(advice, e);
+                            },
+                        }, renderAdviceV4Icon(React, 'check'), 'Прочитано'),
+                        typeof onHideUntilTomorrow === 'function' && React.createElement('button', {
+                            key: 'hide',
+                            type: 'button',
+                            className: 'advice-v4-panel__btn advice-v4-panel__btn--miss advice-v4-detail__action advice-v4-detail__action--hide',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                onHideUntilTomorrow(advice, e);
+                            },
+                        }, renderAdviceV4Icon(React, 'thumb-down'), 'Скрыть до завтра')
+                    ),
                     React.createElement('button', {
                         type: 'button',
                         className: 'advice-v4-detail__primary',
@@ -1286,6 +1350,61 @@
                 )
             )
         );
+    }
+
+    // Строка «доступность»: шторка советов — модальный диалог с запертым
+    // фокусом; деталь совета берёт ту же ловушку. Отдельный компонент нужен ради
+    // хука: renderManualAdviceList — обычная функция, хуки в ней недопустимы.
+    const ADVICE_FOCUSABLE_SELECTOR =
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    function AdviceModalDialog({ className, label, onClick, onTouchStart, onTouchMove, onTouchEnd, children }) {
+        const nodeRef = React.useRef(null);
+
+        React.useEffect(() => {
+            const node = nodeRef.current;
+            if (!node) return undefined;
+            const previouslyFocused = document.activeElement;
+            try { node.focus({ preventScroll: true }); } catch (_) { /* noop */ }
+
+            const handleKeyDown = (e) => {
+                if (e.key !== 'Tab') return;
+                const items = Array.from(node.querySelectorAll(ADVICE_FOCUSABLE_SELECTOR))
+                    .filter((el) => el.offsetParent !== null);
+                if (items.length === 0) { e.preventDefault(); return; }
+                const first = items[0];
+                const last = items[items.length - 1];
+                const active = document.activeElement;
+                if (e.shiftKey && (active === first || active === node || !node.contains(active))) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && (active === last || !node.contains(active))) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            };
+
+            node.addEventListener('keydown', handleKeyDown);
+            return () => {
+                node.removeEventListener('keydown', handleKeyDown);
+                if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+                    try { previouslyFocused.focus({ preventScroll: true }); } catch (_) { /* noop */ }
+                }
+            };
+        }, []);
+
+        return React.createElement('div', {
+            ref: nodeRef,
+            className,
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-label': label,
+            tabIndex: -1,
+            onClick,
+            onTouchStart,
+            onTouchMove,
+            onTouchEnd,
+        }, children);
     }
 
     // --- AdviceCard component ---
@@ -1301,7 +1420,6 @@
         onUndo,
         onClearLastDismissed,
         onSchedule,
-        onToggleExpand,
         trackClick,
         onRate,
         onSwipeStart,
@@ -1311,7 +1429,6 @@
         onLongPressEnd,
         registerCardRef,
         onOpenDetails,
-        onOpenTechnicalDetails,
     }) {
         const adviceDescription = getAdviceScienceSummary(advice);
         const hasTechnicalDetails = hasExpertContent(advice);
@@ -1322,43 +1439,82 @@
         const swipeProgress = Math.min(1, Math.abs(swipeX) / 100);
         const showUndo = isLastDismissed && (isDismissed || isHidden);
 
+        // Строка «панель оценки»: свайп влево сужает карточку на 96 px справа —
+        // сама она не сдвигается. Поэтому влево едет только правая граница
+        // (margin-right), а translateX остаётся жестом «скрыть» вправо: если
+        // сдвинуть карточку, первые 96 px уходят под край и человек оценивает
+        // совет, которого не видит. Полоса состояния и текст этим не двигаются
+        // вовсе — они привязаны к левому краю карточки (15 px и 30 px).
+        const ratingOpen = !!swipeState?.rating;
+        const ratingWidth = ratingOpen
+            ? ADVICE_RATING_PANEL_WIDTH
+            : Math.min(ADVICE_RATING_PANEL_WIDTH, Math.max(0, -swipeX));
+        const isDraggingCard = !ratingOpen && !!swipeDirection;
+        const rateLockRef = React.useRef(0);
+
         if ((isDismissed || isHidden) && !showUndo) return null;
         if (showUndo) return null;
 
+        const rate = (isPositive, e) => {
+            e?.stopPropagation?.();
+            // Строка «повторный тап»: 350 мс защиты там, где повтор создаёт
+            // лишнюю сущность. Вторая оценка того же совета — именно такой
+            // случай, поэтому окно закрывается до того, как панель успеет уйти.
+            const now = Date.now();
+            if (now - rateLockRef.current < ADVICE_RATE_REPEAT_GUARD_MS) return;
+            rateLockRef.current = now;
+            if (onRate) onRate(advice, isPositive, e);
+            // Строка «панель оценки»: после ответа кнопки исчезают, карточка
+            // возвращается на место. Совет остаётся в списке — ни «Помогло», ни
+            // «Не показывать такие» его отсюда не убирают.
+            onSwipeEnd(advice.id);
+        };
+
         return React.createElement('div', {
-            className: 'advice-list-item-wrapper',
+            className: 'advice-list-item-wrapper' + (ratingOpen ? ' advice-list-item-wrapper--rating' : ''),
             'data-advice-category': advice.category || advice.ruleCategory || 'general',
             style: {
                 animationDelay: `${globalIndex * 50}ms`,
                 '--stagger-delay': `${globalIndex * 50}ms`,
                 position: 'relative',
-                overflow: 'hidden',
             },
         },
-            React.createElement('div', {
-                className: 'advice-list-item-bg advice-list-item-bg-left',
-                style: { opacity: swipeDirection === 'left' ? swipeProgress : 0 },
-            }, React.createElement('span', { className: 'advice-list-item-bg__label' },
-                renderAdviceV4Icon(React, 'check'),
-                'Прочитано'
-            )),
-            React.createElement('div', {
-                className: 'advice-list-item-bg advice-list-item-bg-right',
-                style: { opacity: swipeDirection === 'right' ? swipeProgress : 0 },
-            }, React.createElement('span', { className: 'advice-list-item-bg__label' },
-                renderAdviceV4Icon(React, 'thumb-down'),
-                'Скрыть'
-            )),
-            React.createElement('div', {
-                ref: (el) => registerCardRef(advice.id, el),
-                className: `advice-list-item advice-list-item-v4 advice-list-item-${advice.type}${isExpanded ? ' expanded' : ''}`,
-                style: {
-                    transform: `translateX(${swipeX}px)`,
-                    touchAction: 'pan-y',
-                },
-                onClick: (e) => {
-                    if (Math.abs(swipeX) > 10) return;
-                    e.stopPropagation();
+            React.createElement('div', { className: 'advice-list-item-frame' },
+                // Строка «панель оценки»: в освободившемся месте открывается
+                // панель шириной 96 с подписью «Полезно?».
+                ratingWidth > 0 && React.createElement('div', {
+                    className: 'advice-v4-rate-panel',
+                    'aria-hidden': !ratingOpen,
+                }, React.createElement('span', { className: 'advice-v4-rate-panel__label' }, 'Полезно?')),
+                React.createElement('div', {
+                    className: 'advice-list-item-bg advice-list-item-bg-right',
+                    style: { opacity: swipeDirection === 'right' ? swipeProgress : 0 },
+                }, React.createElement('span', { className: 'advice-list-item-bg__label' },
+                    renderAdviceV4Icon(React, 'thumb-down'),
+                    'Скрыть'
+                )),
+                React.createElement('div', {
+                    ref: (el) => registerCardRef(advice.id, el),
+                    className: `advice-list-item advice-list-item-v4 advice-list-item-${advice.type}${isExpanded ? ' expanded' : ''}`,
+                    style: {
+                        transform: `translateX(${Math.max(0, swipeX)}px)`,
+                        marginRight: `${ratingWidth}px`,
+                        transition: isDraggingCard
+                            ? 'none'
+                            : `margin-right ${ADVICE_RATING_RETURN_MS}ms ease, transform ${ADVICE_RATING_RETURN_MS}ms ease`,
+                        touchAction: 'pan-y',
+                    },
+                    onClick: (e) => {
+                        // Панель оценки открыта — тап по карточке её закрывает, а
+                        // не проваливается в деталь: иначе единственный способ
+                        // отказаться от ответа это свайп обратно.
+                        if (ratingOpen) {
+                            e.stopPropagation();
+                            onSwipeEnd(advice.id);
+                            return;
+                        }
+                        if (Math.abs(swipeX) > 10) return;
+                        e.stopPropagation();
                     // 🚀 PERF R38: defer heavy details open (167–184ms → ~0ms click)
                     setTimeout(() => {
                         if (trackClick) trackClick(advice);
@@ -1380,40 +1536,22 @@
                 React.createElement('span', { className: 'advice-list-icon' }, advice.icon),
                 React.createElement('div', { className: 'advice-list-content' },
                     React.createElement('span', { className: 'advice-list-text' }, advice.text),
+                    // Строка «вид карточки совета»: «Детали» — строка-вход с
+                    // шевроном 14 px, а не раскрытие пояснения в карточке.
+                    // Пояснение и «Технические детали» живут в детали совета.
                     hasExpandedContent && React.createElement('div', { className: 'advice-list-card-actions' },
                         React.createElement('button', {
                             type: 'button',
                             className: 'advice-card-footnote-link',
                             onClick: (e) => {
                                 e.stopPropagation();
-                                onToggleExpand && onToggleExpand(advice.id, e);
+                                // 🚀 PERF R38: тот же отложенный вход, что и по тапу карточки
+                                setTimeout(() => {
+                                    if (trackClick) trackClick(advice);
+                                    onOpenDetails && onOpenDetails(advice, e);
+                                }, 0);
                             }
-                        }, 'Детали'),
-                        React.createElement('span', {
-                            className: 'advice-expand-arrow',
-                            'aria-hidden': 'true',
-                            style: {
-                                marginLeft: 'auto',
-                                fontSize: '10px',
-                                opacity: 0.5,
-                                transition: 'transform 0.2s',
-                                display: 'inline-block',
-                                transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-                            },
-                        }, '›')
-                    ),
-                    isExpanded && React.createElement('div', { className: 'advice-list-details' },
-                        adviceDescription && React.createElement('div', { className: 'advice-list-details__description' }, adviceDescription),
-                        hasTechnicalDetails && React.createElement('div', { className: 'advice-list-details__actions advice-list-details__actions--subtle' },
-                            React.createElement('button', {
-                                type: 'button',
-                                className: 'advice-technical-trigger',
-                                onClick: (e) => {
-                                    e.stopPropagation();
-                                    onOpenTechnicalDetails && onOpenTechnicalDetails(advice, e);
-                                }
-                            }, 'Тех. детали')
-                        )
+                        }, 'Детали', renderAdviceV4Icon(React, 'chevron-right'))
                     ),
                     // 🎯 Phase B.3 (2026-05-31): in-card action buttons в drawer.
                     // Если rule имеет advice.action.primary — render 2 кнопки
@@ -1466,6 +1604,28 @@
                         }, advice.action.snooze.label || '⏰ Позже')
                     )
                 )
+                )
+            ),
+            // Строка «панель оценки»: под карточкой ряд из двух кнопок высотой 44
+            // и радиусом 999 — «Помогло» заливкой --gr2 (flex 1) и «Не показывать
+            // такие» фоном --c2 (flex 1,5). Третьей кнопки нет: «Нет» было бы
+            // кнопкой в никуда, а главный полезный ответ здесь — «не советуй мне
+            // это». Кнопки живут снаружи рамки карточки, поэтому и вынесены из
+            // .advice-list-item-frame с его overflow.
+            ratingOpen && React.createElement('div', { className: 'advice-v4-rate-actions' },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'advice-v4-rate-btn advice-v4-rate-btn--helped',
+                    onClick: (e) => rate(true, e),
+                }, 'Помогло'),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'advice-v4-rate-btn advice-v4-rate-btn--mute',
+                    onClick: (e) => rate(false, e),
+                }, 'Не показывать такие')
+            ),
+            ratingOpen && React.createElement('div', { className: 'advice-v4-rate-note' },
+                'Оба ответа меняют, что вы увидите дальше. Совет остаётся в списке.'
             )
         );
     });
@@ -1745,7 +1905,6 @@
         adviceSwipeState,
         expandedAdviceId,
         trackClick,
-        handleAdviceToggleExpand,
         rateAdvice,
         handleAdviceSwipeStart,
         handleAdviceSwipeMove,
@@ -1760,14 +1919,10 @@
         dismissAllAnimation,
         toastsEnabled,
         toggleToastsEnabled,
-        adviceSoundEnabled,
-        toggleAdviceSoundEnabled,
         scheduleAdvice,
         undoLastDismiss,
         clearLastDismissed,
         copyAdviceTrace,
-        adviceTraceAvailable,
-        adviceTraceCopyState,
         adviceDiagnostics,
         adviceDiagnosticsOpen,
         openAdviceDiagnostics,
@@ -1776,6 +1931,8 @@
         adviceDetailModalAdvice,
         openAdviceDetailModal,
         closeAdviceDetailModal,
+        markAdviceDetailRead,
+        hideAdviceDetailUntilTomorrow,
         adviceTechnicalDetails,
         adviceTechnicalDetailsOpen,
         openAdviceTechnicalDetails,
@@ -1785,12 +1942,10 @@
         AdviceCard,
         undoCountdownSeconds,
         adviceServiceOpen,
-        openAdviceService,
         closeAdviceService,
         openAdviceRulesPool,
         closeAdviceRulesPool,
         adviceRulesPoolOpen,
-        retryAdviceMarksSync,
         medicalDisclaimerSessionDismissed,
     }) {
         // 2026-05-31: Кураторская сессия видит советы так же как клиент при
@@ -1800,7 +1955,6 @@
         // убрано чтобы курaтор видел текущие live-карточки точно как клиент.
         // Курaтор всё равно не пишет outcomes (гейчено в advice/_core.js
         // recordAdviceOutcomeEvent + track*).
-        const _isCurator = isCuratorReadOnlyMode();
         const drawerAdvices = Array.isArray(badgeAdvices) && badgeAdvices.length > 0
             ? badgeAdvices
             : adviceRelevant;
@@ -1813,7 +1967,45 @@
             medicalDisclaimerSessionDismissed
         );
         if (showDisclaimer) return null;
-        if (!(adviceTrigger === 'manual' && toastVisible && (drawerAdvices?.length > 0 || safeEwsWarnings.length > 0))) return null;
+
+        // Строка «служебные модалки»: вход в служебное живёт в служебной
+        // створке настроек, а не в шапке шторки советов. Значит служебные слои
+        // должны открываться и при закрытой шторке — рисуем их отдельным
+        // куском, общим для обеих веток.
+        const serviceOverlays = React.createElement(React.Fragment, { key: 'advice-service-layers' },
+            adviceServiceOpen && renderAdviceServiceScreen(React, {
+                onClose: closeAdviceService,
+                onOpenTechLog: (e) => {
+                    e?.stopPropagation?.();
+                    closeAdviceService();
+                    copyAdviceTrace();
+                },
+                onOpenDiagnostics: (e) => {
+                    e?.stopPropagation?.();
+                    closeAdviceService();
+                    openAdviceDiagnostics(e);
+                },
+                onOpenRulesPool: (e) => {
+                    e?.stopPropagation?.();
+                    openAdviceRulesPool(e);
+                },
+            }),
+            adviceDiagnosticsOpen && React.createElement(AdviceDiagnosticsModal, {
+                React,
+                diagnostics: adviceDiagnostics,
+                onClose: closeAdviceDiagnostics
+            }),
+            adviceRulesPoolOpen && React.createElement(AdviceRulesPoolModal, {
+                React,
+                diagnostics: adviceDiagnostics,
+                onClose: closeAdviceRulesPool,
+            })
+        );
+        const serviceLayersOpen = !!(adviceServiceOpen || adviceDiagnosticsOpen || adviceRulesPoolOpen);
+
+        if (!(adviceTrigger === 'manual' && toastVisible && (drawerAdvices?.length > 0 || safeEwsWarnings.length > 0))) {
+            return serviceLayersOpen ? serviceOverlays : null;
+        }
 
         const { sorted, groups } = getSortedGroupedAdvices(drawerAdvices);
         const groupKeys = Object.keys(groups);
@@ -1823,15 +2015,16 @@
                 || null)
             : null;
         const showSwipeFeedback = !!lastDismissedAdvice && !!feedbackAdvice;
-        const pendingAdviceMarksCount = getAdvicePendingMarkSyncCount(dismissedAdvices, hiddenUntilTomorrow);
+        const adviceRatingSyncPending = hasPendingAdviceRatingSync();
 
         return React.createElement('div', {
             className: 'advice-list-overlay',
             // 🚀 PERF R32: defer dismissToast — 15 setState calls cascade (115ms → ~0ms click)
             onClick: () => setTimeout(dismissToast, 0),
         },
-            React.createElement('div', {
+            React.createElement(AdviceModalDialog, {
                 className: `advice-list-container advice-list-container--v4${dismissAllAnimation ? ' shake-warning' : ''}${showSwipeFeedback ? ' advice-list-container--feedback-open' : ''}`,
+                label: displayAdviceCount > 0 ? `Советы, ${displayAdviceCount}` : 'Советы',
                 onClick: e => e.stopPropagation(),
                 onTouchStart: handleAdviceListTouchStart,
                 onTouchMove: handleAdviceListTouchMove,
@@ -1840,13 +2033,22 @@
                 React.createElement('div', { className: 'advice-list-handle', 'aria-hidden': true }),
                 React.createElement('div', { className: 'advice-list-header advice-list-header--v4' },
                     React.createElement('div', { className: 'advice-list-header-top' },
-                        React.createElement('span', { className: 'advice-list-title' }, 'Советы'),
+                        React.createElement('span', { className: 'advice-list-title' }, 'Советы',
+                            // Строка «вид шапки шторки»: через пробел счётчик тем же
+                            // кеглем весом 600 тоном чернил 42 % табличными цифрами.
+                            displayAdviceCount > 0 && React.createElement('span', {
+                                className: 'advice-list-title__count n',
+                                'aria-hidden': 'true',
+                            }, ' ' + displayAdviceCount)
+                        ),
                         React.createElement('div', { className: 'advice-list-header-actions' },
-                            _isCurator && (adviceTraceAvailable || adviceDiagnostics) && React.createElement('button', {
-                                className: 'advice-list-header-link advice-list-header-link--service',
-                                onClick: openAdviceService,
-                                title: 'Служебные инструменты советов',
-                            }, 'Служебное'),
+                            // Строка «служебные модалки»: вход в служебное унесён
+                            // в служебную створку настроек — створку диагностики
+                            // (см. hdr-settings-sheet__diag-panel в
+                            // heys_app_shell_v1.js). Здесь, рядом с клиентским
+                            // «Прочитать все», его больше нет; гейт остался
+                            // кураторским, а сам экран открывается событием
+                            // heys:open-advice-service.
                             displayAdviceCount > 1 && React.createElement('button', {
                                 className: 'advice-list-header-link advice-list-header-link--read-all',
                                 onClick: handleDismissAll,
@@ -1856,6 +2058,11 @@
                         )
                     )
                 ),
+                // Строка «не сохранено»: плашка встаёт в шторке НАД списком.
+                // Кадр «Советы · не сохранено» рисует её сразу под ручкой, без
+                // шапки шторки вовсе; верна строка — шапка остаётся, плашка
+                // садится между ней и списком.
+                renderAdviceSyncBanner(React, { pending: adviceRatingSyncPending }),
                 React.createElement('div', { className: 'advice-list-items' },
                     // Группа предупреждений EWS — первой, до всех категорий советов,
                     // визуально плотнее и не сворачивается (UI v4, 2026-08-10).
@@ -1864,7 +2071,7 @@
                         className: 'advice-group advice-group--ews'
                     },
                         React.createElement('div', { className: 'advice-group-header advice-group-header--ews' },
-                            '🚨 Предупреждения'
+                            'Предупреждения'
                         ),
                         safeEwsWarnings.map((warning, idx) =>
                             HEYS.EWSWarningCard
@@ -1896,7 +2103,6 @@
                                         onUndo: undoLastDismiss,
                                         onClearLastDismissed: clearLastDismissed,
                                         onSchedule: scheduleAdvice,
-                                        onToggleExpand: handleAdviceToggleExpand,
                                         trackClick,
                                         onRate: rateAdvice,
                                         onSwipeStart: handleAdviceSwipeStart,
@@ -1906,7 +2112,6 @@
                                         onLongPressEnd: handleAdviceLongPressEnd,
                                         registerCardRef: registerAdviceCardRef,
                                         onOpenDetails: openAdviceDetailModal,
-                                        onOpenTechnicalDetails: openAdviceTechnicalDetails,
                                     })
                                 )
                             );
@@ -1925,7 +2130,6 @@
                             onUndo: undoLastDismiss,
                             onClearLastDismissed: clearLastDismissed,
                             onSchedule: scheduleAdvice,
-                            onToggleExpand: handleAdviceToggleExpand,
                             trackClick,
                             onRate: rateAdvice,
                             onSwipeStart: handleAdviceSwipeStart,
@@ -1935,36 +2139,19 @@
                             onLongPressEnd: handleAdviceLongPressEnd,
                             registerCardRef: registerAdviceCardRef,
                             onOpenDetails: openAdviceDetailModal,
-                            onOpenTechnicalDetails: openAdviceTechnicalDetails,
                         }))
                 ),
+                // Строка «жесты» отдаёт текст этой строки коду («дословно из
+                // кода, без эмодзи»), поэтому она следует за жестом, а не за
+                // прежней подписью: свайп влево теперь открывает панель оценки
+                // (строка «панель оценки»), а не помечает прочитанным.
                 displayAdviceCount > 0 && React.createElement('div', { className: 'advice-list-hints' },
-                    React.createElement('span', { className: 'advice-list-hint-item' }, '← прочитано'),
+                    React.createElement('span', { className: 'advice-list-hint-item' }, '← оценить'),
                     React.createElement('span', { className: 'advice-list-hint-divider' }, '•'),
                     React.createElement('span', { className: 'advice-list-hint-item' }, 'скрыть →'),
                     React.createElement('span', { className: 'advice-list-hint-divider' }, '•'),
                     React.createElement('span', { className: 'advice-list-hint-item' }, 'тап — открыть')
                 ),
-                renderAdviceSyncBanner(React, {
-                    pendingCount: pendingAdviceMarksCount,
-                    onRetry: retryAdviceMarksSync,
-                }),
-                showSwipeFeedback && lastDismissedAdvice.action === 'read' && renderAdviceReadFeedbackPanel(React, {
-                    onRatePositive: (e) => {
-                        e?.stopPropagation?.();
-                        if (navigator.vibrate) navigator.vibrate(30);
-                        setTimeout(() => { rateAdvice && rateAdvice(feedbackAdvice, true); clearLastDismissed(); }, 0);
-                    },
-                    onRateNegative: (e) => {
-                        e?.stopPropagation?.();
-                        if (navigator.vibrate) navigator.vibrate(30);
-                        setTimeout(() => { rateAdvice && rateAdvice(feedbackAdvice, false); clearLastDismissed(); }, 0);
-                    },
-                    onSkip: (e) => {
-                        e?.stopPropagation?.();
-                        clearLastDismissed();
-                    },
-                }),
                 showSwipeFeedback && lastDismissedAdvice.action === 'hidden' && renderAdviceHideUndoPanel(React, {
                     advice: feedbackAdvice,
                     secondsLeft: undoCountdownSeconds,
@@ -1974,40 +2161,19 @@
                     },
                 })
             ),
-            adviceServiceOpen && renderAdviceServiceScreen(React, {
-                onClose: closeAdviceService,
-                onOpenTechLog: (e) => {
-                    e?.stopPropagation?.();
-                    closeAdviceService();
-                    copyAdviceTrace();
-                },
-                onOpenDiagnostics: (e) => {
-                    e?.stopPropagation?.();
-                    closeAdviceService();
-                    openAdviceDiagnostics(e);
-                },
-                onOpenRulesPool: (e) => {
-                    e?.stopPropagation?.();
-                    openAdviceRulesPool(e);
-                },
-            }),
+            serviceOverlays,
             adviceDetailModalOpen && React.createElement(AdviceDetailModal, {
                 React,
                 advice: adviceDetailModalAdvice,
                 onClose: closeAdviceDetailModal,
                 onOpenTechnicalDetails: openAdviceTechnicalDetails,
+                // Строка «доступность»: свайп не единственный способ.
+                onMarkRead: markAdviceDetailRead,
+                onHideUntilTomorrow: hideAdviceDetailUntilTomorrow,
                 ADVICE_CATEGORY_NAMES,
             }),
-            adviceDiagnosticsOpen && React.createElement(AdviceDiagnosticsModal, {
-                React,
-                diagnostics: adviceDiagnostics,
-                onClose: closeAdviceDiagnostics
-            }),
-            adviceRulesPoolOpen && React.createElement(AdviceRulesPoolModal, {
-                React,
-                diagnostics: adviceDiagnostics,
-                onClose: closeAdviceRulesPool,
-            }),
+            // Диагностика и пул правил живут в serviceOverlays выше: они
+            // открываются и из служебного экрана при закрытой шторке.
             adviceTechnicalDetailsOpen && React.createElement(AdviceTechnicalModal, {
                 React,
                 advice: adviceTechnicalDetails,
@@ -2015,6 +2181,51 @@
             })
         );
     };
+
+    // Строка «пустое состояние» (решение владельца 25 августа): плашка гаснет
+    // тапом в любое место экрана, не только по себе. Слушатель на документе, а
+    // не прозрачная подложка: подложка съела бы тап по нижнему меню и заперла
+    // бы прокрутку, а промах должен гасить плашку, не отнимая следующий шаг.
+    // Авто-таймера нет — гасит только тап (таймер здесь запрещён тестом
+    // advice-menu-open «keeps empty advice drawer open until user dismisses it»).
+    function EmptyAdviceToast({ React, dismissToast }) {
+        const dismissRef = React.useRef(dismissToast);
+        dismissRef.current = dismissToast;
+        React.useEffect(() => {
+            if (typeof document === 'undefined') return undefined;
+            // Тап, открывший плашку, может ещё догорать в том же событии —
+            // вооружаемся следующей задачей, иначе плашка гаснет мгновенно.
+            let armed = false;
+            let fired = false;
+            const armId = setTimeout(() => { armed = true; }, 0);
+            const onTap = () => {
+                if (!armed || fired) return;
+                fired = true;
+                const fn = dismissRef.current;
+                // 🚀 PERF R32: defer dismissToast — каскад setState бьёт по клику
+                if (typeof fn === 'function') setTimeout(fn, 0);
+            };
+            // Два события, одно гашение: iOS не доводит click до документа при
+            // тапе по неинтерактивному месту, а pointerdown есть не везде.
+            document.addEventListener('pointerdown', onTap, true);
+            document.addEventListener('click', onTap, true);
+            return () => {
+                clearTimeout(armId);
+                document.removeEventListener('pointerdown', onTap, true);
+                document.removeEventListener('click', onTap, true);
+            };
+        }, []);
+        return React.createElement('div', {
+            className: 'advice-v4-empty-toast',
+            role: 'status',
+            'aria-live': 'polite',
+        },
+            renderAdviceV4Icon(React, 'check'),
+            React.createElement('span', { className: 'advice-v4-empty-toast__text' },
+                'Пока всё по плану — советов нет'
+            )
+        );
+    }
 
     dayAdviceListUI.renderEmptyAdviceToast = function renderEmptyAdviceToast({
         React,
@@ -2028,23 +2239,10 @@
         }
         if (!(adviceTrigger === 'manual_empty' && toastVisible)) return null;
 
-        return React.createElement('div', {
-            className: 'advice-list-overlay',
-            onClick: () => setTimeout(dismissToast, 0),
-        },
-            React.createElement('div', {
-                className: 'advice-list-container advice-list-container--v4 advice-list-container--empty',
-                onClick: (e) => e.stopPropagation(),
-            },
-                React.createElement('div', { className: 'advice-list-handle', 'aria-hidden': true }),
-                React.createElement('div', { className: 'advice-list-header advice-list-header--v4' },
-                    React.createElement('span', { className: 'advice-list-title' }, 'Советы')
-                ),
-                React.createElement('div', { className: 'advice-v4-empty-copy' },
-                    'Пока всё по плану — советов нет'
-                )
-            )
-        );
+        // Строка «пустое состояние»: шторка не открывается — показывается
+        // всплывающая плашка над нижним меню. Гашение по тапу в любое место
+        // экрана живёт в EmptyAdviceToast выше.
+        return React.createElement(EmptyAdviceToast, { React, dismissToast });
     };
 
     HEYS.dayAdviceListUI = dayAdviceListUI;
@@ -2213,6 +2411,12 @@
         const [toastDetailsOpen, setToastDetailsOpen] = useState(false);
         const toastTouchStart = useRef(0);
         const toastInteractionTrackedRef = useRef(false);
+        // Контракт «повторный тап · правило продукта»: второе нажатие оценки
+        // совета в течение 350 мс после первого игнорируется — иначе дребезг
+        // пальца или гонка событий на тач-устройстве засчитывает вторую оценку
+        // за то же прочтение (см. tips.v4.dc.html, «safe-area и кнопка назад»
+        // соседняя строка «повторный тап»).
+        const toastRateLockRef = useRef(0);
         const autoSuppressionTrackedRef = useRef(new Set());
 
         const [adviceTrigger, setAdviceTrigger] = useState(null);
@@ -2301,6 +2505,10 @@
             console.info('[HEYS.advice] readAdviceSettings: no settings found, returning {}');
             return {};
         }, [HEYSRef.store, getCurrentAdviceClientId, readRawAdviceSettings, utils.lsGet]);
+        // Два имени поля намеренно: `adviceSoundEnabled` пишет этот тумблер,
+        // `soundEnabled` — исторический ключ (и галочка «Звук» в профиле →
+        // «Настройки советов»). Терять запасное имя нельзя: у людей со старым
+        // сохранённым значением тумблер иначе сбросится в дефолт.
         const getAdviceSoundEnabled = useCallback((settings) => {
             if (Object.prototype.hasOwnProperty.call(settings, 'adviceSoundEnabled')) {
                 return settings.adviceSoundEnabled !== false;
@@ -2564,23 +2772,20 @@
             setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: diff, direction } }));
         }, []);
 
+        // Гейтов два, и они складываются: этот — частный («Звук» в настройках
+        // советов), общий — HEYS.audio.masterEnabled из профиля. Без локальной
+        // проверки тумблер был бы декоративным: HEYS.audio про советы не знает.
         const playAdviceSound = useCallback(() => {
             if (!adviceSoundEnabled) return;
-            if (HEYS.audio) {
-                HEYS.audio.play('adviceAppear');
-            } else if (HEYSRef?.sounds) {
-                HEYSRef.sounds.ding();
-            }
-        }, [adviceSoundEnabled, HEYSRef]);
+            HEYS.feedback?.emit?.('advice.shown');
+        }, [adviceSoundEnabled]);
 
-        const playAdviceHideSound = useCallback(() => {
-            if (!adviceSoundEnabled) return;
-            if (HEYS.audio) {
-                HEYS.audio.play('adviceDismiss');
-            } else if (HEYSRef?.sounds) {
-                HEYSRef.sounds.whoosh();
-            }
-        }, [adviceSoundEnabled, HEYSRef]);
+        // Звука у скрытия совета нет: строка «звук · правило продукта» знает
+        // один звук совета, а не пару «появился / убрали». Остаётся отклик
+        // 10 мс — строка tips «вибрация 10 мс на скрытие совета свайпом».
+        const emitAdviceHidden = useCallback(() => {
+            HEYS.feedback?.emit?.('advice.hidden');
+        }, []);
 
         const toggleToastsEnabled = useCallback(() => {
             setToastsEnabled(prev => {
@@ -2601,6 +2806,9 @@
             });
         }, [HEYSRef.store, haptic, readAdviceSettings, utils.lsSet]);
 
+        // Пишем оба имени поля: `adviceSoundEnabled` читает этот тумблер,
+        // `soundEnabled` — галочка «Звук» в профиле → «Настройки советов»,
+        // чтобы два экрана не расходились.
         const toggleAdviceSoundEnabled = useCallback(() => {
             setAdviceSoundEnabled(prev => {
                 const newVal = !prev;
@@ -2686,8 +2894,18 @@
             }
         })();
 
+        const adviceDayIso = typeof date === 'string' ? date : '';
+        const adviceTodayIso = (() => {
+            try {
+                return HEYSRef?.dayUtils?.todayISO?.() || new Date().toISOString().slice(0, 10);
+            } catch (_) {
+                return new Date().toISOString().slice(0, 10);
+            }
+        })();
+        const adviceIsToday = !adviceDayIso || adviceDayIso === adviceTodayIso;
+
         const adviceResult = useMemo(() => {
-            if (!adviceEngine || !hasClient) return emptyAdviceResult;
+            if (!adviceEngine || !hasClient || !adviceIsToday || isCuratorReadOnlyMode()) return emptyAdviceResult;
             return adviceEngine({
                 dayTot,
                 normAbs,
@@ -2893,19 +3111,24 @@
             if (badge) {
                 badge.textContent = totalAdviceCount > 0 ? totalAdviceCount : '';
                 badge.style.display = totalAdviceCount > 0 ? 'flex' : 'none';
+                // Строка «доступность»: счётчик не читается отдельным узлом —
+                // лампочка и число озвучиваются одной фразой «Советы, 5».
+                // Число живёт здесь, поэтому имя кнопки ставит тот же владелец.
+                const lampButton = badge.closest('button');
+                if (lampButton) {
+                    lampButton.setAttribute(
+                        'aria-label',
+                        totalAdviceCount > 0 ? `Советы, ${totalAdviceCount}` : 'Советы'
+                    );
+                }
             }
         }, [totalAdviceCount]);
 
         useEffect(() => {
             const handleShowAdvice = () => {
-                // Курaторская сессия: НЕ оборачиваем setters в React.startTransition.
-                // Наблюдалось 2026-05-28: startTransition deprioritizes setAdviceTrigger
-                // + setToastVisible и они теряются между другими urgent updates в курaторе
-                // → state остаётся tab_open + toastVisible=false → dropdown не открывается.
-                // Sync setters работают корректно и для курaтора, и для PIN.
-                const _curator = isCuratorReadOnlyMode();
+                if (isCuratorReadOnlyMode()) return;
                 const _runUpdate = () => {
-                    if (totalAdviceCount > 0 || _curator) {
+                    if (totalAdviceCount > 0) {
                         const engineVisibleAdviceCount = Array.isArray(safeBadgeAdvices)
                             ? safeBadgeAdvices.length
                             : 0;
@@ -2920,7 +3143,6 @@
                             engineVisibleAdviceCount,
                             badgeCount: Array.isArray(safeBadgeAdvices) ? safeBadgeAdvices.length : 0,
                             filteredOutCount: Math.max(0, engineVisibleAdviceCount - totalAdviceCount),
-                            ...(_curator ? { mode: 'curator_history' } : {})
                         });
                         haptic('light');
                     } else {
@@ -2989,16 +3211,6 @@
                 document.removeEventListener('visibilitychange', onVis);
             };
         }, [readStoredValue]);
-
-        useEffect(() => {
-            const handleCelebrate = () => {
-                setShowConfetti(true);
-                if (typeof haptic === 'function') haptic('success');
-                setTimeout(() => setShowConfetti(false), 2500);
-            };
-            window.addEventListener('heysCelebrate', handleCelebrate);
-            return () => window.removeEventListener('heysCelebrate', handleCelebrate);
-        }, [haptic, setShowConfetti]);
 
         useEffect(() => {
             // Cold-start guard (v1.0): if heys_advice_settings is absent from localStorage
@@ -3208,28 +3420,15 @@
             setToastDetailsOpen(false);
             setToastRatedState(null);
 
-            if (adviceSoundEnabled && HEYSRef?.sounds) {
-                if (advicePrimary.type === 'achievement' || advicePrimary.showConfetti) {
-                    HEYSRef.sounds.success();
-                } else if (advicePrimary.type === 'warning') {
-                    HEYSRef.sounds.warning();
-                } else {
-                    HEYSRef.sounds.pop();
-                }
-            }
+            // Звук совета один на все виды: три разных (успех / предупреждение /
+            // появление) были тремя из десяти снятых. Вибрации на появлении нет
+            // — совет не запись в данные.
+            if (adviceSoundEnabled) HEYS.feedback?.emit?.('advice.shown');
 
-            if ((advicePrimary.type === 'achievement' || advicePrimary.type === 'warning') && typeof haptic === 'function') {
-                haptic('light');
-            }
             if (advicePrimary.onShow) advicePrimary.onShow();
-            if (advicePrimary.showConfetti) {
-                setShowConfetti(true);
-                if (typeof haptic === 'function') haptic('success');
-                setTimeout(() => setShowConfetti(false), 2000);
-            }
 
             if (!isManualTrigger && markShown) markShown(advicePrimary);
-        }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, hiddenUntilTomorrow, markShown, toastsEnabled, setShowConfetti, haptic, HEYSRef, safeAdviceRelevant, date]);
+        }, [advicePrimary?.id, adviceTrigger, adviceSoundEnabled, dismissedAdvices, hiddenUntilTomorrow, markShown, toastsEnabled, haptic, HEYSRef, safeAdviceRelevant, date]);
 
         useEffect(() => {
             setAdviceTrigger(null);
@@ -3349,11 +3548,15 @@
 
         const handleToastRate = (isPositive, e) => {
             e && e.stopPropagation();
+            const now = Date.now();
+            if (now - toastRateLockRef.current < ADVICE_RATE_REPEAT_GUARD_MS) return;
+            toastRateLockRef.current = now;
             if (displayedAdvice && rateAdvice) {
                 rateAdvice(displayedAdvice, isPositive);
                 setToastRatedState(isPositive ? 'positive' : 'negative');
                 setToastScheduledConfirm(false);
-                if (navigator.vibrate) navigator.vibrate(30);
+                // Оценка совета — не запись в данные дня и не необратимое
+                // действие: отклика нет.
                 setTimeout(() => {
                     dismissToast();
                 }, 900);
@@ -3366,7 +3569,6 @@
                 scheduleAdvice(displayedAdvice, 120);
                 setToastRatedState(null);
                 setToastScheduledConfirm(true);
-                if (navigator.vibrate) navigator.vibrate(50);
                 setTimeout(() => {
                     dismissToast();
                 }, 1500);
@@ -3456,6 +3658,18 @@
             return () => window.removeEventListener('heys:open-advice-settings', handleOpenAdviceSettings);
         }, []);
 
+        // Строка «служебные модалки»: вход в служебное живёт в служебной створке
+        // настроек. Створка кураторская, но гейт держим и здесь — событие
+        // глобальное, и клиентская сессия не должна открывать служебный экран.
+        useEffect(() => {
+            const handleOpenAdviceService = () => {
+                if (!isCuratorReadOnlyMode()) return;
+                setAdviceServiceOpen(true);
+            };
+            window.addEventListener('heys:open-advice-service', handleOpenAdviceService);
+            return () => window.removeEventListener('heys:open-advice-service', handleOpenAdviceService);
+        }, []);
+
         useEffect(() => {
             const syncCategorySettings = () => {
                 try {
@@ -3509,98 +3723,149 @@
             setAdviceRulesPoolOpen(false);
         }, []);
 
-        const retryAdviceMarksSync = useCallback(async (e) => {
-            e?.stopPropagation?.();
-            try {
-                await HEYSRef?.cloud?.flushPendingQueue?.(5000);
-            } catch (_) { }
-        }, [HEYSRef]);
-
-        const handleAdviceSwipeEnd = useCallback((adviceId) => {
-            const gesture = adviceSwipeStart.current[adviceId];
-            if (gesture?.lock === 'vertical') {
-                setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
-                delete adviceSwipeStart.current[adviceId];
-                return;
-            }
-
-            const state = adviceSwipeState[adviceId];
-            const swipeX = state?.x || 0;
-
+        // Строка контракта tips «доступность»: «жесты влево и вправо дублируются
+        // действиями в детали совета — свайп не единственный способ». Тела обоих
+        // жестов вынесены сюда, чтобы кнопка в детали приводила ровно к тому же
+        // состоянию (LS, markRead/markHidden, звук, отмена с таймером), а не к
+        // своей копии логики, которая со временем разъедется со свайпом.
+        const applyAdviceRead = useCallback((adviceId) => {
+            if (!adviceId) return;
             if (lastDismissedAdvice?.hideTimeout) clearTimeout(lastDismissedAdvice.hideTimeout);
 
-            if (swipeX < -100) {
-                setDismissedAdvices(prev => {
-                    const newSet = new Set([...prev, adviceId]);
+            setDismissedAdvices(prev => {
+                const newSet = new Set([...prev, adviceId]);
+                const saveData = {
+                    date: new Date().toISOString().slice(0, 10),
+                    ids: [...newSet],
+                };
+                try {
+                    setStoredValue('heys_advice_read_today', saveData);
+                } catch (e) { }
+                return newSet;
+            });
+
+            if (HEYSRef?.game?.addXP) {
+                const cardEl = adviceCardRefs.current[adviceId];
+                HEYSRef.game.addXP(0, 'advice_read', cardEl);
+            }
+
+            const advice = safeAdviceRelevant.find(item => item?.id === adviceId) || safeBadgeAdvices.find(item => item?.id === adviceId);
+            if (advice && markRead) markRead(advice);
+
+            playAdviceSound();
+            haptic('light');
+
+            setUndoFading(false);
+            const hideTimeout = setTimeout(() => {
+                setLastDismissedAdvice(null);
+                setUndoFading(false);
+            }, 3000);
+            setLastDismissedAdvice({ id: adviceId, action: 'read', hideTimeout });
+        }, [HEYSRef, haptic, lastDismissedAdvice, playAdviceSound, safeAdviceRelevant, safeBadgeAdvices, markRead, setStoredValue]);
+
+        const applyAdviceHideUntilTomorrow = useCallback((adviceId) => {
+            if (!adviceId) return;
+            if (lastDismissedAdvice?.hideTimeout) clearTimeout(lastDismissedAdvice.hideTimeout);
+
+            setHiddenUntilTomorrow(prev => {
+                const newSet = new Set([...prev, adviceId]);
+                try {
                     const saveData = {
                         date: new Date().toISOString().slice(0, 10),
                         ids: [...newSet],
                     };
-                    try {
-                        setStoredValue('heys_advice_read_today', saveData);
-                    } catch (e) { }
-                    return newSet;
-                });
+                    setStoredValue('heys_advice_hidden_today', saveData);
+                } catch (e) { }
+                return newSet;
+            });
+            setDismissedAdvices(prev => {
+                const newSet = new Set([...prev, adviceId]);
+                try {
+                    const saveData = {
+                        date: new Date().toISOString().slice(0, 10),
+                        ids: [...newSet],
+                    };
+                    setStoredValue('heys_advice_read_today', saveData);
+                } catch (e) { }
+                return newSet;
+            });
 
-                if (HEYSRef?.game?.addXP) {
-                    const cardEl = adviceCardRefs.current[adviceId];
-                    HEYSRef.game.addXP(0, 'advice_read', cardEl);
-                }
+            const advice = safeAdviceRelevant.find(item => item?.id === adviceId) || safeBadgeAdvices.find(item => item?.id === adviceId);
+            if (advice && markHidden) markHidden(advice);
 
-                const advice = safeAdviceRelevant.find(item => item?.id === adviceId) || safeBadgeAdvices.find(item => item?.id === adviceId);
-                if (advice && markRead) markRead(advice);
+            emitAdviceHidden();
 
-                playAdviceSound();
-                haptic('light');
-
+            setUndoFading(false);
+            const hideTimeout = setTimeout(() => {
+                setLastDismissedAdvice(null);
                 setUndoFading(false);
-                const hideTimeout = setTimeout(() => {
-                    setLastDismissedAdvice(null);
-                    setUndoFading(false);
-                }, 3000);
-                setLastDismissedAdvice({ id: adviceId, action: 'read', hideTimeout });
+            }, 3000);
+            setLastDismissedAdvice({ id: adviceId, action: 'hidden', hideTimeout });
+        }, [lastDismissedAdvice, emitAdviceHidden, safeAdviceRelevant, safeBadgeAdvices, markHidden, setStoredValue]);
 
-            } else if (swipeX > 100) {
-                setHiddenUntilTomorrow(prev => {
-                    const newSet = new Set([...prev, adviceId]);
-                    try {
-                        const saveData = {
-                            date: new Date().toISOString().slice(0, 10),
-                            ids: [...newSet],
-                        };
-                        setStoredValue('heys_advice_hidden_today', saveData);
-                    } catch (e) { }
-                    return newSet;
-                });
-                setDismissedAdvices(prev => {
-                    const newSet = new Set([...prev, adviceId]);
-                    try {
-                        const saveData = {
-                            date: new Date().toISOString().slice(0, 10),
-                            ids: [...newSet],
-                        };
-                        setStoredValue('heys_advice_read_today', saveData);
-                    } catch (e) { }
-                    return newSet;
-                });
+        // Деталь совета закрывается после действия: карточка уходит из списка, а
+        // отмена живёт панелью в самой шторке (строка «отмена с таймером») — под
+        // открытой деталью её не видно и не нажать.
+        const markAdviceDetailRead = useCallback((advice, e) => {
+            e?.stopPropagation?.();
+            const adviceId = typeof advice === 'string' ? advice : advice?.id;
+            if (!adviceId) return;
+            applyAdviceRead(adviceId);
+            closeAdviceDetailModal();
+        }, [applyAdviceRead, closeAdviceDetailModal]);
 
-                const advice = safeAdviceRelevant.find(item => item?.id === adviceId) || safeBadgeAdvices.find(item => item?.id === adviceId);
-                if (advice && markHidden) markHidden(advice);
+        const hideAdviceDetailUntilTomorrow = useCallback((advice, e) => {
+            e?.stopPropagation?.();
+            const adviceId = typeof advice === 'string' ? advice : advice?.id;
+            if (!adviceId) return;
+            applyAdviceHideUntilTomorrow(adviceId);
+            closeAdviceDetailModal();
+        }, [applyAdviceHideUntilTomorrow, closeAdviceDetailModal]);
 
-                playAdviceHideSound();
-                haptic('medium');
+        const handleAdviceSwipeEnd = useCallback((adviceId) => {
+            const gesture = adviceSwipeStart.current[adviceId];
+            const state = adviceSwipeState[adviceId];
+            const closeCard = () => {
+                setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
+                delete adviceSwipeStart.current[adviceId];
+            };
 
-                setUndoFading(false);
-                const hideTimeout = setTimeout(() => {
-                    setLastDismissedAdvice(null);
-                    setUndoFading(false);
-                }, 3000);
-                setLastDismissedAdvice({ id: adviceId, action: 'hidden', hideTimeout });
+            if (gesture?.lock === 'vertical') {
+                closeCard();
+                return;
             }
 
-            setAdviceSwipeState(prev => ({ ...prev, [adviceId]: { x: 0, direction: null } }));
-            delete adviceSwipeStart.current[adviceId];
-        }, [adviceSwipeState, haptic, lastDismissedAdvice, playAdviceSound, playAdviceHideSound, safeAdviceRelevant, safeBadgeAdvices, markRead, markHidden, setStoredValue]);
+            // Панель оценки уже открыта: этот вызов — ответ на кнопку или тап по
+            // карточке, и он её закрывает. Карточка возвращается на место
+            // (переход 180 мс живёт на самой карточке), совет остаётся в списке.
+            if (state?.rating) {
+                closeCard();
+                return;
+            }
+
+            const swipeX = state?.x || 0;
+
+            if (lastDismissedAdvice?.hideTimeout) clearTimeout(lastDismissedAdvice.hideTimeout);
+
+            // Строка «панель оценки»: свайп влево открывает панель оценки, а не
+            // помечает совет прочитанным. Само «прочитано» никуда не делось —
+            // оно живёт кнопкой в детали совета и строкой «Прочитать все».
+            if (swipeX < -ADVICE_RATING_OPEN_THRESHOLD) {
+                setAdviceSwipeState(prev => ({
+                    ...prev,
+                    [adviceId]: { x: -ADVICE_RATING_PANEL_WIDTH, direction: 'left', rating: true },
+                }));
+                delete adviceSwipeStart.current[adviceId];
+                haptic('light');
+                return;
+            }
+
+            if (swipeX > 100) {
+                applyAdviceHideUntilTomorrow(adviceId);
+            }
+
+            closeCard();
+        }, [adviceSwipeState, haptic, lastDismissedAdvice, applyAdviceHideUntilTomorrow]);
 
         const adviceLongPressTimer = useRef(null);
         const handleAdviceLongPressStart = useCallback((adviceId) => {
@@ -3762,6 +4027,9 @@
             adviceDetailModalAdvice,
             openAdviceDetailModal,
             closeAdviceDetailModal,
+            // Строка «доступность»: дубли свайпов внутри детали совета.
+            markAdviceDetailRead,
+            hideAdviceDetailUntilTomorrow,
             adviceTechnicalDetails,
             adviceTechnicalDetailsOpen,
             openAdviceTechnicalDetails,
@@ -3808,7 +4076,6 @@
             openAdviceRulesPool,
             closeAdviceRulesPool,
             adviceRulesPoolOpen,
-            retryAdviceMarksSync,
             totalAdviceCount,
             dismissToast,
             ADVICE_CATEGORY_NAMES,
@@ -6122,7 +6389,7 @@
     }, [day]);
 
     const handleOpenModal = React.useCallback(() => {
-      try { navigator.vibrate?.(10); } catch (e) { }
+      // Открытие листа отклика не даёт — строка «вибрация · правило продукта».
 
       const handleAddPhoto = async ({ mealIndex, mealId: requestedMealId, photo, filename, timestamp }) => {
         const activeDay = getLatestDay();
@@ -6166,7 +6433,7 @@
           return { ...prevDay, meals, updatedAt: Date.now() };
         });
 
-        try { navigator.vibrate?.(10); } catch (e) { }
+        HEYS.feedback?.emit?.('meal.added');
 
         try {
           const mealName = activeMeal?.name || `meal${resolvedMealIndex}`;
@@ -6483,7 +6750,7 @@
           }, 160);
         });
 
-        try { navigator.vibrate?.(10); } catch (e) { }
+        HEYS.feedback?.emit?.('meal.added');
 
         prepared.forEach((entry) => {
           recordGramsForProduct(entry.productId, entry.grams, entry.finalProduct);
@@ -6688,7 +6955,7 @@
           }, 160);
         });
 
-        try { navigator.vibrate?.(10); } catch (e) { }
+        HEYS.feedback?.emit?.('meal.added');
 
 	        dispatchProductAdded({ product: finalProduct || safeProduct, grams, origin: _origin || 'single' });
 
@@ -8039,7 +8306,9 @@
             const y = Number(eventLike?.clientY) || Math.round((window.innerHeight || 844) * 0.55);
             clearProductLongPress();
             productActionSheetIgnoreNextBackdropClickRef.current = true;
-            if (HEYS.dayUtils?.haptic) HEYS.dayUtils.haptic('light');
+            // Долгое нажатие — «короткое вибро в момент срабатывания»
+            // (home-widgets, строка «жест»).
+            HEYS.feedback?.emit?.('longpress');
             setProductActionSheet({
                 product: editableProduct,
                 title: editableProduct.name || 'Продукт',
@@ -8055,7 +8324,7 @@
             productLongPressStartRef.current = { x: point.clientX, y: point.clientY };
             productLongPressTimerRef.current = setTimeout(() => {
                 openProductActionSheet(point, item, product);
-            }, 560);
+            }, HEYS.longPress?.MS ?? 350);
         }, [clearProductLongPress, isProductActionInteractiveTarget, openProductActionSheet]);
 
         const moveProductLongPress = React.useCallback((event) => {
@@ -11474,10 +11743,6 @@
                                                 else localStorage.setItem('heys_meal_hint_shown', '1');
                                             } catch { }
                                         }
-                                        if (quality.score >= 95) {
-                                            setShowConfetti(true);
-                                            setTimeout(() => setShowConfetti(false), 2000);
-                                        }
                                         setMealQualityPopup({
                                             meal: p.meal,
                                             quality,
@@ -11550,10 +11815,6 @@
                                 else if (utils.lsSet) utils.lsSet('heys_meal_hint_shown', '1');
                                 else localStorage.setItem('heys_meal_hint_shown', '1');
                             } catch { }
-                        }
-                        if (quality.score >= 95) {
-                            setShowConfetti(true);
-                            setTimeout(() => setShowConfetti(false), 2000);
                         }
                         setMealQualityPopup({
                             meal,
@@ -12222,7 +12483,7 @@
                         } else {
                             HEYS.Toast?.error('Не удалось сохранить приём. Попробуйте ещё раз.');
                         }
-                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date } }));
 
                         // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                         try {
@@ -12462,7 +12723,8 @@
 
                                         setDay(() => newDayData);
 
-                                        try { navigator.vibrate?.(10); } catch (e) { }
+                                        // nutrition-tab: 10 мс на добавленный приём.
+                                        HEYS.feedback?.emit?.('meal.added');
                                         window.dispatchEvent(new CustomEvent('heysProductAdded', {
                                             detail: {
 	                                                product: finalProduct,
@@ -12808,7 +13070,7 @@
                 if (window.HEYS && window.HEYS.analytics) {
                     window.HEYS.analytics.trackDataOperation('meal-created');
                 }
-                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date } }));
 
                 // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                 try {
@@ -12902,7 +13164,7 @@
             const mealName = mealToRemove?.name || 'Приём пищи';
             const mealId = mealToRemove.id;
 
-            haptic('medium');
+            HEYS.feedback?.emit?.('record.deleted');
 
             runUndoableDayMutation({
                 label: mealName + ' удалён',
@@ -13426,7 +13688,7 @@
             const removedItem = originalItems[itemIndex];
             const removedName = removedItem?.name || 'Продукт';
 
-            haptic('medium');
+            HEYS.feedback?.emit?.('record.deleted');
 
             runUndoableDayMutation({
                 label: removedName + ' удалён',
@@ -13509,6 +13771,97 @@
             setDay(() => updated);
             HEYS.Toast?.success?.(`Повторено: ${cloned.length} продуктов из вчера`);
         }, [setDay, markUndoWindow, persistDayData, ensureDiaryItemsReadyForDayWrite]);
+
+        // Helpers для копирования в произвольную дату (today, обычно)
+        const navigateAndScrollToMeal = React.useCallback((targetDate, mealId) => {
+            const setSel = window.__heysSetSelectedDate;
+            if (typeof setSel === 'function' && targetDate && targetDate !== date) {
+                try { setSel(targetDate); } catch (e) { /* ignore */ }
+            }
+            // Retry scroll до 6 раз с интервалом 250ms — даём React отрендерить переход на новую дату.
+            let tries = 0;
+            const tryScroll = () => {
+                tries += 1;
+                const target = mealId && document.querySelector(`[data-meal-id="${mealId}"]`);
+                if (target && typeof target.scrollIntoView === 'function') {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else if (tries < 6) {
+                    setTimeout(tryScroll, 250);
+                }
+            };
+            setTimeout(tryScroll, 200);
+        }, [date]);
+
+        const repeatTodayMeal = React.useCallback(async (mealIndex) => {
+            const meal = dayRef.current?.meals?.[mealIndex];
+            if (!meal || !(meal.items || []).length) {
+                HEYS.Toast?.info?.('Приём пуст — нечего повторить');
+                return;
+            }
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Добавление приёма недоступно');
+                return;
+            }
+            const itemIds = (meal.items || []).map((it) => it.id).filter(Boolean);
+            const cloned = await ensureDiaryItemsReadyForDayWrite(
+                cloneItemsFromMeal(meal, itemIds, null),
+                'repeat_today_meal',
+            );
+            if (!cloned || cloned.length === 0) return;
+
+            const now = new Date();
+            const pad2 = (n) => String(n).padStart(2, '0');
+            const timeStr = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+            const targetDay = dayRef.current || day;
+
+            const completeWithItems = (newMealRaw) => {
+                const newMeal = { ...newMealRaw, id: newMealRaw?.id || uid('m_'), items: cloned };
+                markUndoWindow(3000);
+                const newMeals = sortMealsByTime([...(targetDay.meals || []), newMeal]);
+                const updated = { ...targetDay, meals: newMeals, updatedAt: Date.now() };
+                persistDayData(updated, 'repeat_today_meal');
+                setDay(() => updated);
+                HEYS.Toast?.success?.(`Повторён приём: ${cloned.length} продуктов`);
+                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date } }));
+                try {
+                    window.HEYS?.eventLog?.write(
+                        'meal-add',
+                        `meal=${newMeal.name || 'unnamed'} для ${date}`,
+                        { dateKey: date, mealName: newMeal.name || '', count: 1 },
+                        'repeat_today_meal',
+                    );
+                } catch (_) { /* noop */ }
+                navigateAndScrollToMeal(date, newMeal.id);
+            };
+
+            if (!HEYS.MealStep?.showAddMeal) {
+                completeWithItems({
+                    id: uid('m_'),
+                    name: meal.name || 'Приём',
+                    time: timeStr,
+                    mealType: meal.mealType || null,
+                    items: cloned,
+                });
+                return;
+            }
+
+            HEYS.MealStep.showAddMeal({
+                dateKey: date,
+                time: timeStr,
+                initialTime: timeStr,
+                meals: targetDay.meals || [],
+                pIndex,
+                getProductFromItem,
+                trainings: targetDay?.trainings || [],
+                deficitPct: Number(targetDay?.deficitPct ?? prof?.deficitPctTarget ?? 0),
+                prof,
+                dayData: targetDay,
+                onComplete: completeWithItems,
+            });
+        }, [
+            date, prof, pIndex, getProductFromItem, setDay, markUndoWindow,
+            persistDayData, ensureDiaryItemsReadyForDayWrite, navigateAndScrollToMeal,
+        ]);
 
         const saveAsPreset = React.useCallback((mealIndex) => {
             const meal = (day.meals || [])[mealIndex];
@@ -13595,26 +13948,6 @@
                 },
             });
         }, [date, day, products, expandOnlyMeal, addProductToMeal, addProductsToMeal]);
-
-        // Helpers для копирования в произвольную дату (today, обычно)
-        const navigateAndScrollToMeal = React.useCallback((targetDate, mealId) => {
-            const setSel = window.__heysSetSelectedDate;
-            if (typeof setSel === 'function' && targetDate && targetDate !== date) {
-                try { setSel(targetDate); } catch (e) { /* ignore */ }
-            }
-            // Retry scroll до 6 раз с интервалом 250ms — даём React отрендерить переход на новую дату.
-            let tries = 0;
-            const tryScroll = () => {
-                tries += 1;
-                const target = mealId && document.querySelector(`[data-meal-id="${mealId}"]`);
-                if (target && typeof target.scrollIntoView === 'function') {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                } else if (tries < 6) {
-                    setTimeout(tryScroll, 250);
-                }
-            };
-            setTimeout(tryScroll, 200);
-        }, [date]);
 
         const copyItemsToMeal = React.useCallback(async (srcMealIndex, itemIds, dstMealIndex, targetDate, gramsMap) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
@@ -13746,7 +14079,7 @@
                         }
 
                         HEYS.Toast?.success?.(`Создан приём, скопировано: ${cloned.length}`);
-                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date: todayStr } }));
 
                         // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                         try {
@@ -13903,17 +14236,19 @@
                             return { ...existing, meals, updatedAt: Date.now() };
                         }, 'undo_move_item_source');
                     }
-                    HEYS.Toast?.info?.('Возвращено');
+                    // Подтверждающего тоста после возврата нет — строка «тоста подтверждения нет».
                 };
 
-                HEYS.Toast?.show?.({
-                    type: 'success',
-                    message: mode === 'move' ? 'Перемещено в новый приём' : 'Скопировано в новый приём',
-                    duration: 4000,
-                    action: { label: 'Отменить', onClick: undo },
+                // Строка контракта «тоста подтверждения нет»: возврат живёт в баре
+                // отмены, а не в зелёном тосте со своей кнопкой. Два места, где
+                // можно нажать «Отменить», — это два разных таймера и две разные
+                // формы одного действия.
+                HEYS.Undo?.push?.({
+                    label: mode === 'move' ? 'Перемещено в новый приём' : 'Скопировано в новый приём',
+                    onUndo: undo,
                 });
 
-                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
+                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date: todayStr } }));
 
                 // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                 try {
@@ -14059,14 +14394,13 @@
                             });
                             return { ...existing, meals, updatedAt: Date.now() };
                         }, 'undo_move_item_source');
-                        HEYS.Toast?.info?.('Возвращено');
+                        // Подтверждающего тоста после возврата нет — строка «тоста подтверждения нет».
                     };
 
-                    HEYS.Toast?.show?.({
-                        type: 'success',
-                        message: `Переместили в ${dstLabel}`,
-                        duration: 4000,
-                        action: { label: 'Отменить', onClick: undo },
+                    // Строка «тоста подтверждения нет»: возврат — через бар отмены.
+                    HEYS.Undo?.push?.({
+                        label: `Переместили в ${dstLabel}`,
+                        onUndo: undo,
                     });
                 },
             });
@@ -14216,14 +14550,13 @@
                     const meals = sortMealsByTime([...(existing.meals || []), srcMealClone]);
                     return { ...existing, meals, updatedAt: Date.now() };
                 }, 'undo_move_meal_source');
-                HEYS.Toast?.info?.('Приём возвращён');
+                // Подтверждающего тоста после возврата нет — строка «тоста подтверждения нет».
             };
 
-            HEYS.Toast?.show?.({
-                type: 'success',
-                message: `Приём перемещён в ${dstLabel}`,
-                duration: 4000,
-                action: { label: 'Отменить', onClick: undo },
+            // Строка «тоста подтверждения нет»: возврат — через бар отмены.
+            HEYS.Undo?.push?.({
+                label: `Приём перемещён в ${dstLabel}`,
+                onUndo: undo,
             });
         }, [date, haptic, buildDaysWithMeals, writeDay, ensureDiaryItemsReadyForDayWrite]);
 
@@ -14269,7 +14602,7 @@
 
             if (confirmed === false) return false;
 
-            haptic('medium');
+            HEYS.feedback?.emit?.('record.deleted');
 
             return !!runUndoableDayMutation({
                 label: 'Фото удалено',
@@ -14365,6 +14698,7 @@
             saveAsPreset,
             openAddProductForMeal,
             repeatYesterdayMeal,
+            repeatTodayMeal,
             setGrams,
             removeItem,
             moveItem,
@@ -15445,7 +15779,7 @@
         const deferredSkeletonState = window.__heysDeferredSkeletonState = window.__heysDeferredSkeletonState || Object.create(null);
         const deferredPendingSlot = (slotKey, minHeightPx) => React.createElement('div', {
             key: slotKey,
-            className: 'deferred-card-slot deferred-card-slot--pending',
+            className: 'deferred-card-slot deferred-card-slot--pending' + (minHeightPx ? ' v4-place-holder' : ''),
             'aria-hidden': 'true',
             style: minHeightPx
                 ? { minHeight: Math.max(0, Number(minHeightPx) || 0) + 'px' }

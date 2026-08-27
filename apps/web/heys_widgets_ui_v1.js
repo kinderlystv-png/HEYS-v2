@@ -1822,6 +1822,41 @@
     return HEYS.Widgets.state?.isEditMode?.() || false;
   }
 
+  function isWidgetsCuratorReadOnly() {
+    try { return !!HEYS.auth?.isCuratorSession?.(); } catch (_e) { return false; }
+  }
+
+  function patchWidgetsProfile(patch) {
+    const U = HEYS.utils;
+    if (!U || typeof U.lsGet !== 'function' || typeof U.lsSet !== 'function') return false;
+    const profile = U.lsGet('heys_profile', {}) || {};
+    const next = {
+      ...profile,
+      ...patch,
+      revision: (profile.revision || 0) + 1,
+      updatedAt: Date.now()
+    };
+    U.lsSet('heys_profile', next);
+    try {
+      window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+        detail: { fields: Object.keys(patch), source: 'widgets-tab' }
+      }));
+    } catch (_e) { /* noop */ }
+    return true;
+  }
+
+  function formatWidgetHeatmapDayTitle(dateStr) {
+    if (!dateStr || dateStr === 'Нет даты') return dateStr;
+    const parts = String(dateStr).split('-').map(Number);
+    if (parts.length < 3 || !parts[0] || !parts[1] || !parts[2]) return dateStr;
+    try {
+      const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+      return dt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    } catch (_e) {
+      return dateStr;
+    }
+  }
+
   function WidgetV4VariantShell({ widget, widgetType, renderBody }) {
     const V4 = HEYS.Widgets.VariantsV4;
     const catalog = V4?.getCatalog?.(widgetType) || [];
@@ -1832,7 +1867,7 @@
     const hook = V4.useWidgetVariantTile({
       widget,
       widgetType,
-      disabled: isWidgetV4EditMode(),
+      disabled: isWidgetV4EditMode() || isWidgetsCuratorReadOnly(),
       renderPreview: (variantId, opts) => {
         const meta = V4.getVariantById(widgetType, variantId);
         // Карточка листа рисуется в своём формате, а не в формате плитки,
@@ -3834,9 +3869,15 @@
     }
 
     if (d.isMicro) {
-      return React.createElement('div', { className: 'widget-calories widget-calories--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, 'ккал'),
-        React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } }, formatKcal(animEaten))
+      return React.createElement('div', { className: 'widget-calories widget-calories--micro widget-v4-mini' },
+        v4Kicker('Калории'),
+        React.createElement('div', {
+          className: 'widget-calories__value widget-v4-mini__value',
+          style: { color: getColor() }
+        },
+          formatKcal(animEaten),
+          React.createElement('span', { className: 'widget-v4-unit' }, ' ккал')
+        )
       );
     }
 
@@ -4334,12 +4375,6 @@
 
     const getSleepColor = () => HEYS.scales.sleepHours(hours, target).color;
 
-    const getEmoji = () => {
-      if (hours >= target) return '😊';
-      if (hours >= target - 1) return '😐';
-      return '😴';
-    };
-
     // 1x1 — канвас g1: «Сон» + часы
     if (d.isMicro || variantId === 'mini') {
       const sleepState = v4SleepValueState(hours, target);
@@ -4417,9 +4452,7 @@
     if (size === '2x2') {
       const sleepColor = getSleepColor();
       return React.createElement('div', { className: 'widget-sleep widget-sleep--2x2' },
-        // Верх: emoji + часы + процент
         React.createElement('div', { className: 'widget-sleep__header' },
-          React.createElement('div', { className: 'widget-sleep__icon' }, getEmoji()),
           React.createElement('div', { className: 'widget-sleep__main' },
             React.createElement('div', { className: 'widget-sleep__value widget-sleep__value--lg' },
               formatRuDecimal(hours, 1),
@@ -4430,15 +4463,13 @@
             formatRuUnit(pct, '%')
           )
         ),
-        // Время: заснул → проснулся
         showTimes && React.createElement('div', { className: 'widget-sleep__times' },
-          sleepStart && React.createElement('span', { className: 'widget-sleep__time' }, `🌙 ${sleepStart}`),
-          sleepEnd && React.createElement('span', { className: 'widget-sleep__time' }, `☀️ ${sleepEnd}`)
+          sleepStart && React.createElement('span', { className: 'widget-sleep__time' }, `лёг ${sleepStart}`),
+          sleepEnd && React.createElement('span', { className: 'widget-sleep__time' }, `встал ${sleepEnd}`)
         ),
-        // Низ: качество + цель
         React.createElement('div', { className: 'widget-sleep__footer' },
           showQuality && React.createElement('div', { className: 'widget-sleep__quality-badge' },
-            `⭐ ${quality}/10`
+            `Качество ${quality}/10`
           ),
           showTarget
             ? React.createElement('div', { className: 'widget-sleep__target' },
@@ -4451,7 +4482,7 @@
 
     // Остальные размеры
     return React.createElement('div', { className: `widget-sleep widget-sleep--${variant}` },
-      React.createElement('div', { className: 'widget-sleep__value' }, `${formatRuUnit(formatRuDecimal(hours, 1), 'ч', { tight: true })} ${getEmoji()}`),
+      React.createElement('div', { className: 'widget-sleep__value' }, formatRuUnit(formatRuDecimal(hours, 1), 'ч', { tight: true })),
       showTimes ? React.createElement('div', { className: 'widget-sleep__label' }, [sleepStart, sleepEnd].filter(Boolean).join(' → ')) : null,
       showTarget ? React.createElement('div', { className: 'widget-sleep__label' }, `из ${formatRuUnit(target, 'ч', { tight: true })}`) : null,
       showQuality ? React.createElement('div', { className: 'widget-sleep__quality' }, `Качество: ${quality}/10`) : null
@@ -4488,9 +4519,9 @@
 
     // 1x1 Micro
     if (d.isMicro) {
-      return React.createElement('div', { className: 'widget-streak widget-streak--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, '🔥'),
-        React.createElement('div', { className: 'widget-streak__value' }, current)
+      return React.createElement('div', { className: 'widget-streak widget-streak--micro widget-v4-mini' },
+        v4Kicker('Серия'),
+        React.createElement('div', { className: 'widget-streak__value widget-v4-mini__value' }, current)
       );
     }
 
@@ -4500,9 +4531,9 @@
       const isNewRecord = current > 0 && current >= max;
 
       return React.createElement('div', { className: 'widget-streak widget-streak--2x2' },
-        // Верх: огонь + число + дни
+        // Верх: серия + число + дни
         React.createElement('div', { className: 'widget-streak__header' },
-          React.createElement('div', { className: 'widget-streak__icon' }, '🔥'),
+          React.createElement('div', { className: 'widget-streak__label-top' }, 'Серия'),
           React.createElement('div', { className: 'widget-streak__value widget-streak__value--lg', style: { color: streakColor } },
             current
           ),
@@ -4520,7 +4551,7 @@
         // Низ: рекорд или поздравление
         React.createElement('div', { className: 'widget-streak__footer' },
           isNewRecord
-            ? React.createElement('div', { className: 'widget-streak__record widget-streak__record--new' }, '🏆 Новый рекорд!')
+            ? React.createElement('div', { className: 'widget-streak__record widget-streak__record--new' }, 'Рекорд')
             : max > 0 && React.createElement('div', { className: 'widget-streak__record' }, `Рекорд: ${formatRuUnit(max, 'дн')}`)
         )
       );
@@ -4528,11 +4559,9 @@
 
     // Остальные размеры
     const showMax = widget.settings?.showMax !== false && max > current && !d.isTiny;
-    const showFlame = widget.settings?.showFlame !== false && current > 0;
 
     return React.createElement('div', { className: `widget-streak widget-streak--${variant}` },
       React.createElement('div', { className: 'widget-streak__value' },
-        showFlame ? '🔥 ' : '',
         current,
         React.createElement('span', { className: 'widget-streak__days' }, ' дн.')
       ),
@@ -6152,8 +6181,8 @@
 
     // 1x1 Micro
     if (d.isMicro) {
-      return React.createElement('div', { className: 'widget-macros widget-macros--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, 'БЖУ'),
+      return React.createElement('div', { className: 'widget-macros widget-macros--micro widget-v4-mini' },
+        v4Kicker('БЖУ'),
         React.createElement('div', { className: 'widget-macros__micro-value' },
           showPercentage
             ? formatRuUnit(Math.min(999, avgPct), '%')
@@ -6275,10 +6304,10 @@
 
     // 1x1 Micro
     if (d.isMicro) {
-      return React.createElement('div', { className: 'widget-insulin widget-insulin--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, '◷'),
+      return React.createElement('div', { className: 'widget-insulin widget-insulin--micro widget-v4-mini' },
+        v4Kicker('Волна'),
         React.createElement('div', { className: 'widget-insulin__micro' },
-          React.createElement('span', { className: 'widget-insulin__micro-emoji' }, info.emoji),
+          React.createElement('span', { className: 'widget-insulin__micro-status' }, info.short),
           showTimer ? React.createElement('span', { className: 'widget-insulin__micro-time' }, `${remaining}м`) : null
         )
       );
@@ -6301,10 +6330,10 @@
         // Верх: статус + время последнего приёма
         React.createElement('div', { className: 'widget-insulin__header' },
           React.createElement('div', { className: 'widget-insulin__status-2x2', style: { color: info.color } },
-            info.emoji, ' ', info.short
+            info.short
           ),
           showLastMeal && React.createElement('div', { className: 'widget-insulin__meal-time' },
-            `🍽 ${lastMealTime}`
+            lastMealTime
           )
         ),
         // Центр: кольцо с таймером
@@ -6334,7 +6363,7 @@
           React.createElement('div', { className: 'widget-insulin__timer-center' },
             showTimer
               ? `${remaining}м`
-              : (status === 'lipolysis' ? '🔥' : '—')
+              : (status === 'lipolysis' ? 'ок' : '—')
           )
         ),
         // Низ: фаза волны
@@ -6390,10 +6419,11 @@
     };
 
     const buildDayTitle = (meta) => {
-      const baseDate = meta?.day?.date || 'Нет даты';
-      const flags = [meta?.hasTraining ? '💪' : null, meta?.highStress ? '😰' : null]
-        .filter(Boolean)
-        .join(' ');
+      const baseDate = formatWidgetHeatmapDayTitle(meta?.day?.date || 'Нет даты');
+      const flags = [
+        meta?.hasTraining ? 'тренировка' : null,
+        meta?.highStress ? 'стресс' : null
+      ].filter(Boolean).join(', ');
       return flags ? `${baseDate} ${flags}` : baseDate;
     };
 
@@ -6550,8 +6580,8 @@
 
     // 1x1 Micro
     if (d.isMicro) {
-      return React.createElement('div', { className: 'widget-cycle widget-cycle--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, '🌸'),
+      return React.createElement('div', { className: 'widget-cycle widget-cycle--micro widget-v4-mini' },
+        v4Kicker('Цикл'),
         React.createElement('div', { className: 'widget-cycle__day' }, day)
       );
     }
@@ -8791,7 +8821,7 @@
             React.createElement('div', { className: 'widget-relapse-risk__breakdown-list' },
               // Relapse (emotional)
               React.createElement('div', { className: 'widget-relapse-risk__breakdown-row' },
-                React.createElement('span', { className: 'widget-relapse-risk__breakdown-label' }, '😰 Эмоциональный'),
+                React.createElement('span', { className: 'widget-relapse-risk__breakdown-label' }, 'Эмоциональный'),
                 React.createElement('div', { className: 'widget-relapse-risk__breakdown-track' },
                   React.createElement('div', {
                     style: { width: `${Math.min(100, radarRelapseScore)}%`, height: '100%', borderRadius: '4px', background: getRadarColor(radarRelapseScore), transition: 'width 0.4s ease' }
@@ -8801,7 +8831,7 @@
               ),
               // Crash (metabolic)
               React.createElement('div', { className: 'widget-relapse-risk__breakdown-row' },
-                React.createElement('span', { className: 'widget-relapse-risk__breakdown-label' }, '⚡ Метаболический'),
+                React.createElement('span', { className: 'widget-relapse-risk__breakdown-label' }, 'Метаболический'),
                 React.createElement('div', { className: 'widget-relapse-risk__breakdown-track' },
                   React.createElement('div', {
                     style: { width: `${Math.min(100, radarCrashScore)}%`, height: '100%', borderRadius: '4px', background: getRadarColor(radarCrashScore), transition: 'width 0.4s ease' }
@@ -8944,22 +8974,24 @@
   }
 
   /** Плавающая кнопка настройки экрана — 40 px, левый нижний угол (канвас v4). */
-  function WidgetsSettingsFab({ onClick }) {
+  function WidgetsSettingsFab({ onClick, done = false }) {
     return React.createElement('button', {
       type: 'button',
-      className: 'widgets-settings-fab',
+      className: 'widgets-settings-fab' + (done ? ' widgets-settings-fab--done' : ''),
       id: 'tour-widgets-settings-fab',
       onClick,
-      'aria-label': 'Настроить экран'
+      'aria-label': done ? 'Готово' : 'Настроить экран'
     },
-      React.createElement('svg', {
-        width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
-        stroke: 'currentColor', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round',
-        'aria-hidden': 'true'
-      },
-        React.createElement('path', { d: 'M4 20h4l10-10-4-4L4 16z' }),
-        React.createElement('path', { d: 'M14 6l4 4' })
-      )
+      done
+        ? React.createElement('span', { className: 'widgets-settings-fab__label' }, 'Готово')
+        : React.createElement('svg', {
+          width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+          stroke: 'currentColor', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round',
+          'aria-hidden': 'true'
+        },
+          React.createElement('path', { d: 'M4 20h4l10-10-4-4L4 16z' }),
+          React.createElement('path', { d: 'M14 6l4 4' })
+        )
     );
   }
 
@@ -9135,13 +9167,15 @@
   }
 
   function WidgetsQuickActionsFab({
+    id,
     waterMl,
     onAddWater,
     onAddMeal,
     onOpenCurator,
     onOpenHunger,
     onOpenActivity,
-    onOpenChange
+    onOpenChange,
+    suppressKeys = []
   }) {
     const [open, setOpen] = useState(false);
     // Строка «правка списка»: режим правки живёт только внутри раскрытой
@@ -9168,8 +9202,9 @@
     };
     const labels = { meal: 'Еда', hunger: 'Голод и энергия', activity: 'Активность', message: 'Мессенджер' };
 
-    const navKeys = QUICK_ACTION_ORDER.filter((key) => visibility[key] !== false);
-    const waterOn = visibility.water !== false;
+    const suppressed = new Set(Array.isArray(suppressKeys) ? suppressKeys : []);
+    const navKeys = QUICK_ACTION_ORDER.filter((key) => visibility[key] !== false && !suppressed.has(key));
+    const waterOn = visibility.water !== false && !suppressed.has('water');
     // Строка «непрочитанные у мессенджера»: счёт нужен только пока пункт
     // «Мессенджер» вообще есть в списке.
     const messengerUnread = useQuickUnreadCount(visibility.message !== false);
@@ -9194,8 +9229,9 @@
 
     // Строка «правка списка»: карандаш появляется вместе с карточкой, когда
     // есть что править — включённых больше одного или есть хотя бы один
-    // скрытый пункт. В закрытом состоянии карандаша нет никогда.
-    const canEditList = enabledCount > 1 || hiddenOrdered.length > 0;
+    // скрытый пункт. В закрытом состоянии карандаша нет никогда. В режиме
+    // правки карандаш остаётся, пока человек не выйдет — даже при одной строке.
+    const canEditList = enabledCount > 1 || hiddenOrdered.length > 0 || editing;
 
     const closeSheet = useCallback(() => {
       setOpen(false);
@@ -9217,11 +9253,13 @@
         // Строка «порядок обхода»: в раскрытой карточке обход заперт внутри
         // неё — за пределы карточки фокус не уходит.
         if (event.key !== 'Tab') return;
-        const scope = wrapRef.current;
-        if (!scope) return;
-        const items = [...scope.querySelectorAll(
+        const roots = [];
+        if (wrapRef.current) roots.push(wrapRef.current);
+        const portal = document.querySelector('.widgets-quick-portal');
+        if (portal) roots.push(portal);
+        const items = roots.flatMap((scope) => [...scope.querySelectorAll(
           'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        )].filter((el) => el.offsetParent !== null || el === document.activeElement);
+        )]).filter((el) => el.offsetParent !== null || el === document.activeElement);
         if (!items.length) return;
         const first = items[0];
         const last = items[items.length - 1];
@@ -9235,6 +9273,7 @@
       };
       const onPointerDown = (event) => {
         if (wrapRef.current && wrapRef.current.contains(event.target)) return;
+        if (event.target.closest?.('.widgets-quick-portal')) return;
         closeSheet();
       };
         // Строка «закрытие»: системная кнопка назад закрывает карточку.
@@ -9468,7 +9507,14 @@
         'aria-label': editing ? 'Выйти из правки списка' : 'Править список',
         onClick: (event) => {
           event.stopPropagation();
-          setEditing((v) => !v);
+          if (editing) {
+            setEditing(false);
+            if (enabledCount === 1 && hiddenOrdered.length === 0) {
+              closeSheet();
+            }
+          } else {
+            setEditing(true);
+          }
         }
       },
         React.createElement('svg', {
@@ -9484,8 +9530,43 @@
 
     const fabAction = soleNavKey ? handlers[soleNavKey] : null;
 
+    const quickScrim = open
+      ? React.createElement('button', {
+        type: 'button',
+        className: 'widgets-quick-scrim',
+        'aria-label': 'Закрыть быстрые действия',
+        onClick: closeSheet
+      })
+      : null;
+
+    const quickSheet = open
+      ? React.createElement('div', {
+        className: 'widgets-quick-sheet' + (editing ? ' is-editing' : ''),
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-label': 'Быстрые действия'
+      },
+        navKeys.map(renderNavRow),
+        navKeys.length > 0 && waterOn && React.createElement('div', { className: 'widgets-quick-sheet__divider', key: 'divider' }),
+        waterOn && waterSection
+      )
+      : null;
+
+    // Карточка и scrim в body — как другие v4-модалки: не растут в flex-стопке
+    // и не зависят от transform предков вкладки.
+    const quickPortal = open && global.document?.body && ReactDOM?.createPortal
+      ? ReactDOM.createPortal(
+        React.createElement('div', { className: 'widgets-quick-portal' },
+          quickScrim,
+          quickSheet
+        ),
+        global.document.body
+      )
+      : null;
+
     return React.createElement('div', {
       ref: wrapRef,
+      ...(id ? { id } : {}),
       className: 'widgets-quick-fab-wrap' + (open ? ' is-open' : '')
         // Строка «появление и исчезновение кнопки»: 220 мс с перелётом до
         // 1,06 на первом включённом, 160 мс сжатия на нуле, 220 мс на смену
@@ -9495,25 +9576,7 @@
       // обходе с клавиатуры и для скринридера её быть не должно.
       'aria-hidden': fabPhase === 'leave' ? 'true' : undefined
     },
-      // Строка «уменьшенное движение»: правило действует безусловно — перебить
-      // его флагом animate-always нельзя. Затемнение остаётся, блюр и выезд
-      // снимаются (правило под prefers-reduced-motion в CSS).
-      open && React.createElement('button', {
-        type: 'button',
-        className: 'widgets-quick-scrim',
-        'aria-label': 'Закрыть быстрые действия',
-        onClick: closeSheet
-      }),
-      open && React.createElement('div', {
-        className: 'widgets-quick-sheet' + (editing ? ' is-editing' : ''),
-        role: 'dialog',
-        'aria-modal': 'true',
-        'aria-label': 'Быстрые действия'
-      },
-        navKeys.map(renderNavRow),
-        navKeys.length > 0 && waterOn && React.createElement('div', { className: 'widgets-quick-sheet__divider', key: 'divider' }),
-        waterOn && waterSection
-      ),
+      quickPortal,
       chipsRow,
       pencil,
       React.createElement('button', {
@@ -10223,6 +10286,8 @@
     const breakdownCloseTimerRef = useRef(null);
     const [variantSavedToast, setVariantSavedToast] = useState(false);
     const [variantHoldHint, setVariantHoldHint] = useState(false);
+    const [showHoldOnboarding, setShowHoldOnboarding] = useState(false);
+    const holdVisitCountedRef = useRef(false);
     const variantToastTimerRef = useRef(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
@@ -10359,7 +10424,17 @@
     }, []);
 
     const openEditWithCatalog = useCallback(() => {
+      if (isWidgetsCuratorReadOnly()) return;
       HEYS.Widgets.enterEditMode?.();
+    }, []);
+
+    const dismissHoldOnboarding = useCallback(() => {
+      setShowHoldOnboarding(false);
+      const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
+      patchWidgetsProfile({
+        widgetsHoldHintShown: true,
+        widgetsTabOpenCount: Math.max(Number(profile.widgetsTabOpenCount) || 0, 3)
+      });
     }, []);
 
     const openCuratorMessenger = useCallback(() => {
@@ -10665,6 +10740,16 @@
       });
       return () => { cancelled = true; };
     }, [isLayoutHydrated, widgets.length]);
+
+    useEffect(() => {
+      if (!isLayoutHydrated || holdVisitCountedRef.current || isWidgetsCuratorReadOnly()) return;
+      holdVisitCountedRef.current = true;
+      const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
+      if (profile.widgetsHoldHintShown) return;
+      const nextCount = (Number(profile.widgetsTabOpenCount) || 0) + 1;
+      patchWidgetsProfile({ widgetsTabOpenCount: nextCount });
+      if (nextCount >= 3) setShowHoldOnboarding(true);
+    }, [isLayoutHydrated]);
 
     useEffect(() => () => {
       widgetMotionDisarmIntro();
@@ -11230,17 +11315,23 @@
     }, [widgets]);
 
     const renderMobileFabs = () => {
-      if (!isMobile || isEditMode) return null;
+      if (!isMobile || isWidgetsCuratorReadOnly()) return null;
       return React.createElement(React.Fragment, null,
         // Строка «карандаш и кнопка настройки»: пока карточка раскрыта, кнопка
         // настройки экрана внизу слева скрыта — на затемнённом слое остаются
-        // только карточка, «×» и карандаш правки.
+        // только карточка, «×» и карандаш правки. В режиме расстановки та же
+        // кнопка становится «Готово» (home-widgets «вход в расстановку»).
         React.createElement('div', {
-          className: 'widgets-fab-left' + (quickSheetOpen ? ' is-hidden' : '')
+          className: 'widgets-fab-left' + (quickSheetOpen && !isEditMode ? ' is-hidden' : '')
         },
-          React.createElement(WidgetsSettingsFab, { onClick: openEditWithCatalog })
+          React.createElement(WidgetsSettingsFab, {
+            done: isEditMode,
+            onClick: isEditMode
+              ? () => HEYS.Widgets.toggleEditMode?.()
+              : openEditWithCatalog
+          })
         ),
-        React.createElement(WidgetsQuickActionsFab, {
+        !isEditMode && React.createElement(WidgetsQuickActionsFab, {
           onOpenChange: setQuickSheetOpen,
           waterMl: HEYS.Widgets?.data?.getWaterData?.()?.drunk || 0,
           // Строка контракта «ошибочный глоток»: убавления в стопке нет —
@@ -11282,28 +11373,32 @@
         pullIndicatorEl,
         React.createElement('div', { className: 'widgets-empty widget-v4-empty' },
           React.createElement('div', { className: 'widgets-empty__title' }, 'Виджетов нет'),
-          React.createElement('div', { className: 'widgets-empty__desc' },
-            'Соберите экран из того, что смотрите каждый день'
-          ),
-          React.createElement('button', {
-            type: 'button',
-            className: 'widget-v4-empty__btn',
-            onClick: openEditWithCatalog
-          },
-            React.createElement('svg', {
-              width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
-              stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
-              'aria-hidden': 'true'
-            }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
-            'Добавить виджет'
-          ),
-          // Пустота — законный выбор, но выход из неё не должен требовать
-          // памяти об одиннадцати плитках (контракт, строка «пустой экран»).
-          React.createElement('button', {
-            type: 'button',
-            className: 'widget-v4-empty__reset',
-            onClick: handleResetLayout
-          }, 'Вернуть стандартный экран')
+          isWidgetsCuratorReadOnly()
+            ? React.createElement('div', { className: 'widgets-empty__desc' },
+              'Клиент ещё не собрал экран'
+            )
+            : React.createElement(React.Fragment, null,
+              React.createElement('div', { className: 'widgets-empty__desc' },
+                'Соберите экран из того, что смотрите каждый день'
+              ),
+              React.createElement('button', {
+                type: 'button',
+                className: 'widget-v4-empty__btn',
+                onClick: openEditWithCatalog
+              },
+                React.createElement('svg', {
+                  width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+                  stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+                  'aria-hidden': 'true'
+                }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
+                'Добавить виджет'
+              ),
+              React.createElement('button', {
+                type: 'button',
+                className: 'widget-v4-empty__reset',
+                onClick: handleResetLayout
+              }, 'Вернуть стандартный экран')
+            )
         ),
         renderMobileFabs()
       );
@@ -11366,7 +11461,36 @@
         )
       ),
 
-      !isEditMode && variantHoldHint && React.createElement('div', { className: 'widgets-tab__hold-hint' },
+      !isEditMode && showHoldOnboarding && React.createElement('div', {
+        className: 'widgets-tab__hold-onboarding',
+        onPointerDown: dismissHoldOnboarding
+      },
+        React.createElement('div', { className: 'widgets-hold-onboarding__card' },
+          React.createElement('svg', {
+            className: 'widgets-hold-onboarding__icon',
+            width: 17,
+            height: 17,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: 2.4,
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+            'aria-hidden': 'true'
+          },
+            React.createElement('path', { d: 'M8 13V4.5a1.5 1.5 0 0 1 3 0V12' }),
+            React.createElement('path', { d: 'M11 11.5v-2a1.5 1.5 0 1 1 3 0V12' }),
+            React.createElement('path', { d: 'M14 10.5V5a1.5 1.5 0 0 1 3 0v10' }),
+            React.createElement('path', { d: 'M7 15h10a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2z' })
+          ),
+          React.createElement('div', { className: 'widgets-hold-onboarding__text' },
+            React.createElement('div', { className: 'widgets-hold-onboarding__title' }, 'Задержите палец на плитке'),
+            React.createElement('div', { className: 'widgets-hold-onboarding__desc' }, 'чтобы сменить вид')
+          )
+        )
+      ),
+
+      !isEditMode && !showHoldOnboarding && variantHoldHint && React.createElement('div', { className: 'widgets-tab__hold-hint' },
         React.createElement('span', { className: 'widget-v4-hold-hint__pill' }, 'удерживайте, чтобы сменить вид')
       ),
 

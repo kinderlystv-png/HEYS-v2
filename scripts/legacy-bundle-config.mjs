@@ -177,6 +177,7 @@ export const LEGACY_BUNDLES = {
         'heys_client_access_code_setup_v1.js',
         'heys_ui_onboarding_v1.js',
         'heys_app_hooks_v1.js',
+        'heys_theme_profile_sync_v1.js',
         'heys_app_tabs_v1.js',
         'heys_tab_prefetch_v1.js',
         'heys_early_warning_panel_v1.js',
@@ -202,6 +203,7 @@ export const LEGACY_BUNDLES = {
         'heys_app_runtime_effects_v1.js',
         'heys_app_sync_effects_v1.js',
         'heys_app_tab_state_v1.js',
+        'heys_app_hardware_back_v1.js',
         'heys_app_client_management_v1.js',
         // P0-D-stretch-2: 3x heys_app_backup_{actions,export,import}_v1.js → postboot-3-ui-lazy
         'heys_app_update_checks_v1.js',

@@ -99,289 +99,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return node;
     }
 
-    function renderFabNavIcon(name, emojiFallback, size) {
-        const NavIcon = HEYS.AppNavIcons?.NavIcon;
-        if (NavIcon) {
-            return React.createElement(NavIcon, { name, size: size || 20 });
-        }
-        return emojiFallback;
-    }
-
-    const FAB_SLOT_KEYS = ['activity', 'message', 'hunger', 'water', 'meal'];
-
-    // Строки контракта settings-system «когда применяется» и «снятый прогон»:
-    // «Анимации перестройки на экране нет», прогон стопки снят 24 августа и
-    // помечен data-demo="protocol" — то есть не реализуется. Вместе с ним из
-    // продуктового CSS ушли правила .fab-group--layout-animate для этой группы:
-    // класс перестал что-либо анимировать, а выдержка 688 мс (52×4 + 400 + 80)
-    // держала его впустую и отодвигала смену состояния на два кадра.
-    // Единственное оставшееся движение — появление и исчезновение самой кнопки,
-    // и оно живёт у .fab-group--messenger-only (heys_app_shell_v1.js).
-    function useFabVisibilityState() {
-        const readFabVisibility = () => (
-            HEYS.FabVisibility && typeof HEYS.FabVisibility.read === 'function'
-                ? HEYS.FabVisibility.read()
-                : { water: true, hunger: true, message: true, activity: true, meal: true }
-        );
-        const [fabVisibility, setFabVisibility] = React.useState(readFabVisibility);
-
-        React.useEffect(() => {
-            const onCommitted = (event) => {
-                setFabVisibility(event?.detail?.visibility || readFabVisibility());
-            };
-            window.addEventListener('heys:fab-visibility-changed', onCommitted);
-            return () => window.removeEventListener('heys:fab-visibility-changed', onCommitted);
-        }, []);
-
-        const isFabVisible = (key) => fabVisibility[key] !== false;
-        return { fabVisibility, isFabVisible };
-    }
-
-    const WATER_FAB_VOL_CHIP_MS = 180;
-    // −200 / +200 / +500 из строки контракта «чипы стопки» — пока журнал воды
-    // не набрал своих объёмов этого человека.
-    const WATER_FAB_DEFAULT_VOLUMES = [200, 500];
     const WaterCustomVolumeHost = HEYS.WaterCustomVolume?.WaterCustomVolumeHost;
-    const useWaterLongPress = HEYS.WaterCustomVolume.useLongPress350;
-
-    function WaterFabVolButton({ className, disabled, onShortClick, onLongPress, children, 'aria-disabled': ariaDisabled }) {
-        const press = useWaterLongPress(onLongPress, { onShortClick, disabled });
-        return React.createElement('button', {
-            type: 'button',
-            className,
-            disabled,
-            'aria-disabled': ariaDisabled,
-            onPointerDown: press.onPointerDown,
-            onPointerMove: press.onPointerMove,
-            onPointerUp: press.onPointerUp,
-            onClick: press.onClick
-        }, children);
-    }
-
-    /**
-     * Подпись кнопки воды для диктора — строка «доступность»:
-     * «Вода, 1,7 из 2,7 литра». Норма берётся оттуда же, откуда её берёт
-     * плитка; если её нет, называем только выпитое, а не выдумываем цель.
-     */
-    function waterAriaValue(ml) {
-        const liters = (n) => (Math.round(n / 100) / 10).toFixed(1).replace('.', ',');
-        const drunk = liters(Number(ml) || 0);
-        const target = Number(HEYS.Widgets?.data?.getWaterData?.()?.target) || 0;
-        return target > 0 ? `${drunk} из ${liters(target)} литра` : `${drunk} литра`;
-    }
-
-    function WaterFabButton({ onAddWater, onRemoveWater, waterMl: waterMlProp }) {
-        const [chipsOpen, setChipsOpen] = React.useState(false);
-        const [waterMl, setWaterMl] = React.useState(() => (
-            typeof waterMlProp === 'number'
-                ? waterMlProp
-                : (HEYS.Widgets?.data?.getWaterData?.()?.drunk
-                    || Number(HEYS.DayData?.getCurrentDay?.()?.waterMl)
-                    || 0)
-        ));
-        const wrapRef = React.useRef(null);
-
-        React.useEffect(() => {
-            if (typeof waterMlProp === 'number') setWaterMl(waterMlProp);
-        }, [waterMlProp]);
-
-        React.useEffect(() => {
-            const onWater = (event) => {
-                const total = event?.detail?.total;
-                if (typeof total === 'number') setWaterMl(total);
-            };
-            window.addEventListener('heysWaterAdded', onWater);
-            return () => window.removeEventListener('heysWaterAdded', onWater);
-        }, []);
-
-        React.useEffect(() => {
-            HEYS.waterFeedback?.setVolumeChipsOpen?.(chipsOpen);
-        }, [chipsOpen]);
-
-        React.useEffect(() => {
-            if (!chipsOpen) return undefined;
-            const onPointerDown = (event) => {
-                if (wrapRef.current && wrapRef.current.contains(event.target)) return;
-                setChipsOpen(false);
-            };
-            document.addEventListener('pointerdown', onPointerDown, true);
-            return () => document.removeEventListener('pointerdown', onPointerDown, true);
-        }, [chipsOpen]);
-
-        // Строка контракта water-add «объёмы человека и чипы стопки»: в стопке
-        // быстрых действий стоят два самых частых объёма этого человека за
-        // последний месяц, пересчёт раз в неделю. Пока своих объёмов не
-        // набралось, остаются −200 / +200 / +500 из строки «чипы стопки».
-        // Шаг убавления равен шагу добавления, поэтому минус берёт первый объём.
-        const volumes = React.useMemo(() => {
-            const picked = HEYS.dayWater?.getFrequentVolumes?.();
-            return (Array.isArray(picked) && picked.length === 2)
-                ? picked
-                : WATER_FAB_DEFAULT_VOLUMES;
-        }, []);
-
-        const pickVolume = (ml) => (event) => {
-            event.stopPropagation();
-            HEYS.waterFeedback?.markVolumeChipsClosing?.(WATER_FAB_VOL_CHIP_MS);
-            setChipsOpen(false);
-            onAddWater(ml, event);
-        };
-
-        const pickRemove = (ml) => (event) => {
-            event.stopPropagation();
-            HEYS.waterFeedback?.markVolumeChipsClosing?.(WATER_FAB_VOL_CHIP_MS);
-            setChipsOpen(false);
-            onRemoveWater?.(ml, event);
-        };
-
-        const openCustomVolume = React.useCallback((event) => {
-            event?.stopPropagation?.();
-            HEYS.waterFeedback?.markVolumeChipsClosing?.(WATER_FAB_VOL_CHIP_MS);
-            setChipsOpen(false);
-            HEYS.WaterCustomVolume?.open?.({
-                onAdd: (ml) => onAddWater(ml, event)
-            });
-        }, [onAddWater]);
-
-        const fabLongPress = useWaterLongPress(openCustomVolume, {
-            onShortClick: (event) => {
-                event.stopPropagation();
-                setChipsOpen((open) => !open);
-            }
-        });
-
-        return React.createElement('div', {
-            ref: wrapRef,
-            className: 'water-fab-wrap' + (chipsOpen ? ' is-chips-open' : ''),
-        },
-            chipsOpen && React.createElement('div', {
-                className: 'water-fab-vols animate-always',
-                role: 'group',
-                'aria-label': 'Объём воды',
-            },
-                React.createElement(WaterFabVolButton, {
-                    className: 'water-fab-vol water-fab-vol--minus',
-                    disabled: waterMl <= 0,
-                    'aria-disabled': waterMl <= 0 ? 'true' : 'false',
-                    'aria-label': 'убрать ' + volumes[0] + ' миллилитров',
-                    onShortClick: pickRemove(volumes[0]),
-                    onLongPress: openCustomVolume
-                }, '−' + volumes[0]),
-                React.createElement(WaterFabVolButton, {
-                    className: 'water-fab-vol',
-                    'aria-label': 'добавить ' + volumes[0] + ' миллилитров',
-                    onShortClick: pickVolume(volumes[0]),
-                    onLongPress: openCustomVolume
-                }, '+' + volumes[0]),
-                React.createElement(WaterFabVolButton, {
-                    className: 'water-fab-vol',
-                    'aria-label': 'добавить ' + volumes[1] + ' миллилитров',
-                    onShortClick: pickVolume(volumes[1]),
-                    onLongPress: openCustomVolume
-                }, '+' + volumes[1])
-            ),
-            React.createElement('button', {
-                type: 'button',
-                className: 'water-fab',
-                // Строка «доступность»: кнопка озвучивается со значением —
-                // «Вода, 1,7 из 2,7 литра». Без него диктор называет действие,
-                // но не состояние, ради которого на кнопку и смотрят.
-                'aria-label': chipsOpen
-                    ? 'Скрыть объёмы воды'
-                    : `Вода, ${waterAriaValue(waterMl)}`,
-                'aria-expanded': chipsOpen ? 'true' : 'false',
-                onPointerDown: fabLongPress.onPointerDown,
-                onPointerMove: fabLongPress.onPointerMove,
-                onPointerUp: fabLongPress.onPointerUp,
-                onClick: fabLongPress.onClick
-            }, renderFabNavIcon('water', '🥛', 18))
-        );
-    }
-
-    function renderQuickActionFabButton(key, { onAddWater, onRemoveWater, waterMl, onAddMeal, onAddActivity, hungerContext }) {
-        const HungerFabButton = HEYS.HungerEnergyStatusModal?.FabButton;
-        const MessageFabButton = HEYS.Messenger?.FabButton;
-
-        if (key === 'water') {
-            return React.createElement(WaterFabButton, { onAddWater, onRemoveWater, waterMl });
-        }
-        if (key === 'meal') {
-            return React.createElement('button', {
-                className: 'meal-fab',
-                onClick: onAddMeal,
-                'aria-label': 'Добавить приём пищи',
-            }, renderFabNavIcon('meal', '🍽️', 22));
-        }
-        if (key === 'hunger') {
-            return HungerFabButton
-                ? React.createElement(HungerFabButton, { context: hungerContext })
-                : React.createElement('button', {
-                    className: 'hunger-energy-fab',
-                    onClick: () => HEYS.HungerEnergyStatusModal?.show?.(hungerContext),
-                    'aria-label': 'Открыть оценку голода',
-                }, React.createElement('svg', {
-                    className: 'hes-fab-icon',
-                    viewBox: '0 0 24 24',
-                    width: 19,
-                    height: 19,
-                    focusable: 'false',
-                    'aria-hidden': 'true',
-                },
-                    React.createElement('defs', null,
-                        React.createElement('clipPath', { id: 'hes-fab-fill-two-thirds-fallback' },
-                            React.createElement('rect', { x: 0, y: 9, width: 24, height: 15 })
-                        )
-                    ),
-                    React.createElement('circle', { className: 'hes-fab-icon__ring', cx: 12, cy: 12, r: 8.5 }),
-                    React.createElement('circle', {
-                        className: 'hes-fab-icon__fill',
-                        cx: 12, cy: 12, r: 8.5,
-                        clipPath: 'url(#hes-fab-fill-two-thirds-fallback)',
-                    })
-                ));
-        }
-        if (key === 'activity') {
-            return React.createElement('button', {
-                className: 'activity-fab',
-                onClick: onAddActivity,
-                'aria-label': 'Добавить активность',
-            }, renderFabNavIcon('activity', '📈', 18));
-        }
-        if (key === 'message') {
-            return MessageFabButton
-                ? React.createElement(MessageFabButton, { key: 'msg-fab' })
-                : React.createElement('button', {
-                    className: 'message-fab',
-                    onClick: () => HEYS.Messenger?.openModal?.(),
-                    'aria-label': 'Написать куратору',
-                }, '💬');
-        }
-        return null;
-    }
-
-    function QuickActionsFabGroup({ id, onAddWater, onRemoveWater, waterMl, onAddMeal, onAddActivity, hungerContext = {}, hideMealFab = false }) {
-        const { fabVisibility } = useFabVisibilityState();
-
-        return React.createElement('div', {
-            className: 'fab-group',
-            ...(id ? { id } : {}),
-        },
-            FAB_SLOT_KEYS.map((key) => {
-                if (hideMealFab && key === 'meal') return null;
-                const on = fabVisibility[key] !== false;
-                return React.createElement('div', {
-                    key,
-                    className: 'fab-slot fab-slot--' + key + (on ? ' fab-slot--on' : ' fab-slot--off'),
-                    'data-fab-key': key,
-                    'aria-hidden': on ? undefined : 'true',
-                },
-                    React.createElement('div', { className: 'fab-slot__inner' },
-                        renderQuickActionFabButton(key, { onAddWater, onRemoveWater, waterMl, onAddMeal, onAddActivity, hungerContext })
-                    )
-                );
-            })
-        );
-    }
+    const DayQuickActionsFab = HEYS.Widgets?.QuickActionsFab;
 
     function renderDayPage(params) {
         const {
@@ -698,15 +417,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 isTabActive && reportsFullscreenModal,
 
-                isMobile && isTabActive && (mobileSubTab === 'stats' || mobileSubTab === 'diary' || mobileSubTab === 'activity') && !offlineColdStart && React.createElement(QuickActionsFabGroup, {
+                isMobile && isTabActive && (mobileSubTab === 'stats' || mobileSubTab === 'diary' || mobileSubTab === 'activity') && !offlineColdStart && DayQuickActionsFab && React.createElement(DayQuickActionsFab, {
                     id: 'tour-fab-buttons',
-                    hideMealFab: mobileSubTab === 'diary',
+                    suppressKeys: mobileSubTab === 'diary' ? ['meal'] : [],
                     waterMl: day?.waterMl || 0,
-                    onAddWater: (ml, e) => addWater(ml, {
-                        source: 'day-fab',
-                        sourceEl: e.currentTarget
-                    }),
-                    onRemoveWater: (ml) => removeWater(ml),
+                    onAddWater: (ml) => {
+                        addWater(ml, { source: 'day-fab' });
+                        HEYS.Undo?.push?.({
+                            label: `Записано ${ml} мл`,
+                            onUndo: () => removeWater(ml)
+                        });
+                    },
                     // Скрытого легаси-блока #diary-heading больше нет: раньше FAB
                     // скроллил к display:none-элементу и всё равно ждал 800 мс
                     // перед шторкой. Теперь шторка открывается сразу.
@@ -718,7 +439,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         }
                         addMeal();
                     },
-                    onAddActivity: () => {
+                    onOpenActivity: () => {
                         if (mobileSubTab !== 'activity' && window.HEYS?.App?.setTab) {
                             window.HEYS.App.setTab('activity');
                             setTimeout(() => {
@@ -728,7 +449,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                             openHouseholdPicker('add');
                         }
                     },
-                    hungerContext: {
+                    onOpenHunger: () => HEYS.HungerEnergyStatusModal?.show?.({
                         source: 'day-fab',
                         date,
                         day,
@@ -737,7 +458,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         optimum: displayOptimum || optimum,
                         tdee,
                         caloricDebt
-                    }
+                    }),
+                    onOpenCurator: () => HEYS.Messenger?.openModal?.()
                 }),
 
                 diarySection,
@@ -1003,7 +725,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     HEYS.dayPageShell = {
-        renderDayPage,
-        QuickActionsFabGroup
+        renderDayPage
     };
 })(window);

@@ -176,6 +176,25 @@
         }, [tab]);
 
         React.useEffect(() => {
+            const backNav = window.HEYS?.AppBackNav;
+            if (!backNav || typeof backNav.install !== 'function') return undefined;
+            backNav.install({
+                getTab: () => tabRef.current,
+                setTab: (nextTab) => setTabImmediate(nextTab),
+            });
+            return undefined;
+        }, [setTabImmediate]);
+
+        const prevTabForVisitRef = React.useRef(tab);
+        React.useEffect(() => {
+            const backNav = window.HEYS?.AppBackNav;
+            if (backNav && typeof backNav.recordVisit === 'function') {
+                backNav.recordVisit(prevTabForVisitRef.current, tab);
+            }
+            prevTabForVisitRef.current = tab;
+        }, [tab]);
+
+        React.useEffect(() => {
             if (!window.HEYS) window.HEYS = {};
             if (!window.HEYS.ui) window.HEYS.ui = {};
             window.HEYS.ui.switchTab = (newTab) => {

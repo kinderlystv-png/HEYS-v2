@@ -114,7 +114,8 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
 
   it('UI: FAB настройки 40 px и быстрые действия 52 px, скрыты в расстановке', () => {
     expect(UI_SRC).toContain('function WidgetsSettingsFab');
-    expect(UI_SRC).toContain('function WidgetsQuickActionsFab');
+    expect(UI_SRC).toContain('widgets-quick-portal');
+    expect(UI_SRC).toContain('ReactDOM.createPortal');
     expect(UI_SRC).toContain('function QuickSheetSvgIcon');
     expect(UI_SRC).toContain("className: 'widgets-settings-fab'");
     expect(UI_SRC).toContain("className: 'widgets-quick-fab'");
@@ -128,7 +129,8 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
     expect(UI_SRC).not.toContain('widgets-quick-fab__pill-label');
     expect(UI_SRC).not.toContain('＋ Записать');
     expect(UI_SRC).toContain('renderMobileFabs');
-    expect(UI_SRC).toMatch(/!isMobile \|\| isEditMode\) return null/);
+    expect(UI_SRC).toContain('done: isEditMode');
+    expect(UI_SRC).toContain('widgets-settings-fab--done');
     expect(UI_SRC).not.toContain('QuickActionsFabGroup');
   });
 
@@ -155,7 +157,15 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*width:\s*52px/);
     expect(CSS_SRC).not.toContain('.widgets-quick-fab.is-pill');
     expect(CSS_SRC).not.toContain('.widgets-quick-fab__pill-label');
-    expect(CSS_SRC).toMatch(/\.widgets-quick-sheet__chip[\s\S]*min-height:\s*34px/);
+    const sheetIn = CSS_SRC.match(/@keyframes widgets-quick-sheet-fade-in \{([\s\S]*?)\}/);
+    expect(sheetIn?.[1]).toContain('opacity: 0');
+    expect(sheetIn?.[1]).not.toContain('translateY');
+    expect(sheetIn?.[1]).not.toContain('transform');
+    expect(CSS_SRC).toMatch(/\.widgets-quick-fab-wrap[\s\S]*width:\s*52px/);
+    expect(CSS_SRC).toMatch(/\.widgets-quick-fab-wrap[\s\S]*height:\s*52px/);
+    expect(CSS_SRC).toMatch(/\.widgets-quick-sheet[\s\S]*position:\s*absolute/);
+    expect(CSS_SRC).toContain('@keyframes widgets-quick-scrim-in');
+    expect(CSS_SRC).toContain('.widgets-quick-portal');
     expect(CSS_SRC).toMatch(/\.widgets-quick-sheet__row[\s\S]*min-height:\s*38px/);
     expect(CSS_SRC).toContain('.widgets-quick-fab__glyph.is-open');
     expect(CSS_SRC).toContain('.widgets-tab--legacy-overflow');
