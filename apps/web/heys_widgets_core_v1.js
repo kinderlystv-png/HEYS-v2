@@ -1614,6 +1614,7 @@
     },
 
     enterEditMode() {
+      if (HEYS.auth?.isCuratorSession?.()) return;
       if (this._editMode) return;
       this._editMode = true;
       this._editSnapshot = JSON.stringify(this._widgets || []);

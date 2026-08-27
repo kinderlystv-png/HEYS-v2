@@ -11962,6 +11962,52 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   padding: 0 18px 4px;
 }
 
+.widgets-tab__hold-onboarding {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  pointer-events: auto;
+}
+
+.widgets-hold-onboarding__card {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px 15px;
+  border-radius: 18px;
+  background: #201e1d;
+  box-shadow: 0 10px 26px -10px rgba(17, 24, 39, 0.55);
+  color: #f8fafc;
+}
+
+.widgets-hold-onboarding__icon {
+  flex: 0 0 auto;
+  color: var(--ac, #c67139);
+}
+
+.widgets-hold-onboarding__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.widgets-hold-onboarding__title {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--tx, #f8fafc);
+}
+
+.widgets-hold-onboarding__desc {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: rgba(248, 250, 252, 0.62);
+}
+
 .widget-v4-hold-hint__pill {
   display: inline-flex;
   align-items: center;

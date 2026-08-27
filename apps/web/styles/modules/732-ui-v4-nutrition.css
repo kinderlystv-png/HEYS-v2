@@ -983,7 +983,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 34px;
+  min-height: 30px;
   padding: 0 13px;
   border: none;
   border-radius: 999px;
@@ -997,9 +997,7 @@
 }
 
 .nutrition-v4-chip::after {
-  content: '';
-  position: absolute;
-  inset: -7px 0;
+  content: none;
 }
 
 .nutrition-v4-chip.is-off {

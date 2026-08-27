@@ -571,7 +571,7 @@
         ? this._minutesSpan(wakeMinutes, bedMinutes)
         : Math.round((24 - profileSleepHours) * 60);
       const isClosedDay = this._isClosedDay();
-      const nowMinutes = this._moscowNowMinutes();
+      const nowMinutes = this._localNowMinutes();
       const waterSchedule = isClosedDay
         ? { expectedMl: target, expectedPct: 100, checkLabel: null }
         : this._waterScheduleAtMinutes(target, wakeMinutes, awakeSpan, nowMinutes);
@@ -1339,18 +1339,7 @@
       return span;
     },
 
-    _moscowNowMinutes() {
-      try {
-        const parts = new Intl.DateTimeFormat('en-GB', {
-          timeZone: 'Europe/Moscow',
-          hour: 'numeric',
-          minute: 'numeric',
-          hour12: false
-        }).formatToParts(new Date());
-        const h = Number(parts.find((p) => p.type === 'hour')?.value);
-        const min = Number(parts.find((p) => p.type === 'minute')?.value);
-        if (Number.isFinite(h) && Number.isFinite(min)) return h * 60 + min;
-      } catch (_e) { /* fallback */ }
+    _localNowMinutes() {
       const d = new Date();
       return d.getHours() * 60 + d.getMinutes();
     },

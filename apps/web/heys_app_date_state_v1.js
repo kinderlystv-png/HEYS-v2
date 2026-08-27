@@ -16,8 +16,9 @@
     };
 
     HEYS.AppDateState.useDateSelectionState = function ({ React }) {
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
         const [selectedDate, setSelectedDate] = useState(getTodayISO());
+        const returnSnapRef = useRef({ selected: getTodayISO(), today: getTodayISO() });
 
         // Expose setter globally so deep modules (e.g. CopyMealModal flow) can navigate to a date
         // without prop drilling. Setter from useState is stable, so effect runs once on mount.
@@ -29,6 +30,34 @@
                 }
             };
         }, []);
+
+        // home-widgets «возврат на экран»: если смотрели сегодня, при смене суток
+        // открытый день переезжает на новый «сегодня»; чужую дату не трогаем.
+        useEffect(() => {
+            returnSnapRef.current.selected = selectedDate;
+            returnSnapRef.current.today = getTodayISO();
+        }, [selectedDate]);
+
+        useEffect(() => {
+            const onVisibility = () => {
+                if (document.visibilityState === 'hidden') {
+                    returnSnapRef.current = {
+                        selected: returnSnapRef.current.selected,
+                        today: getTodayISO()
+                    };
+                    return;
+                }
+                if (document.visibilityState !== 'visible') return;
+                const today = getTodayISO();
+                const snap = returnSnapRef.current;
+                if (snap.selected === snap.today && today !== snap.today) {
+                    setSelectedDate(today);
+                }
+                returnSnapRef.current.today = today;
+            };
+            document.addEventListener('visibilitychange', onVisibility);
+            return () => document.removeEventListener('visibilitychange', onVisibility);
+        }, [setSelectedDate]);
 
         return { todayISO: getTodayISO, selectedDate, setSelectedDate };
     };

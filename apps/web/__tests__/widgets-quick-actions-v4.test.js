@@ -410,7 +410,7 @@ describe('стопка на прошлом дне', () => {
     const block = uiSrc.slice(idx, uiSrc.indexOf('\n    };', idx));
     // На мобиле кнопка настройки остаётся в расстановке (становится «Готово»);
     // быстрые действия скрыты через !isEditMode.
-    expect(block).toMatch(/if \(!isMobile\) return null;/);
+    expect(block).toMatch(/if \(!isMobile \|\| isWidgetsCuratorReadOnly\(\)\) return null;/);
     expect(block).toContain('done: isEditMode');
     expect(block).not.toContain('selectedDate');
     expect(block).not.toContain('isPastDay');

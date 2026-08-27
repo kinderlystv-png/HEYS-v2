@@ -1822,6 +1822,41 @@
     return HEYS.Widgets.state?.isEditMode?.() || false;
   }
 
+  function isWidgetsCuratorReadOnly() {
+    try { return !!HEYS.auth?.isCuratorSession?.(); } catch (_e) { return false; }
+  }
+
+  function patchWidgetsProfile(patch) {
+    const U = HEYS.utils;
+    if (!U || typeof U.lsGet !== 'function' || typeof U.lsSet !== 'function') return false;
+    const profile = U.lsGet('heys_profile', {}) || {};
+    const next = {
+      ...profile,
+      ...patch,
+      revision: (profile.revision || 0) + 1,
+      updatedAt: Date.now()
+    };
+    U.lsSet('heys_profile', next);
+    try {
+      window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+        detail: { fields: Object.keys(patch), source: 'widgets-tab' }
+      }));
+    } catch (_e) { /* noop */ }
+    return true;
+  }
+
+  function formatWidgetHeatmapDayTitle(dateStr) {
+    if (!dateStr || dateStr === 'Нет даты') return dateStr;
+    const parts = String(dateStr).split('-').map(Number);
+    if (parts.length < 3 || !parts[0] || !parts[1] || !parts[2]) return dateStr;
+    try {
+      const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+      return dt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    } catch (_e) {
+      return dateStr;
+    }
+  }
+
   function WidgetV4VariantShell({ widget, widgetType, renderBody }) {
     const V4 = HEYS.Widgets.VariantsV4;
     const catalog = V4?.getCatalog?.(widgetType) || [];
@@ -1832,7 +1867,7 @@
     const hook = V4.useWidgetVariantTile({
       widget,
       widgetType,
-      disabled: isWidgetV4EditMode(),
+      disabled: isWidgetV4EditMode() || isWidgetsCuratorReadOnly(),
       renderPreview: (variantId, opts) => {
         const meta = V4.getVariantById(widgetType, variantId);
         // Карточка листа рисуется в своём формате, а не в формате плитки,
@@ -6152,8 +6187,8 @@
 
     // 1x1 Micro
     if (d.isMicro) {
-      return React.createElement('div', { className: 'widget-macros widget-macros--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, 'БЖУ'),
+      return React.createElement('div', { className: 'widget-macros widget-macros--micro widget-v4-mini' },
+        v4Kicker('БЖУ'),
         React.createElement('div', { className: 'widget-macros__micro-value' },
           showPercentage
             ? formatRuUnit(Math.min(999, avgPct), '%')
@@ -6278,7 +6313,7 @@
       return React.createElement('div', { className: 'widget-insulin widget-insulin--micro widget-v4-mini' },
         v4Kicker('Волна'),
         React.createElement('div', { className: 'widget-insulin__micro' },
-          React.createElement('span', { className: 'widget-insulin__micro-emoji' }, info.emoji),
+          React.createElement('span', { className: 'widget-insulin__micro-status' }, info.short),
           showTimer ? React.createElement('span', { className: 'widget-insulin__micro-time' }, `${remaining}м`) : null
         )
       );
@@ -6301,10 +6336,10 @@
         // Верх: статус + время последнего приёма
         React.createElement('div', { className: 'widget-insulin__header' },
           React.createElement('div', { className: 'widget-insulin__status-2x2', style: { color: info.color } },
-            info.emoji, ' ', info.short
+            info.short
           ),
           showLastMeal && React.createElement('div', { className: 'widget-insulin__meal-time' },
-            `🍽 ${lastMealTime}`
+            lastMealTime
           )
         ),
         // Центр: кольцо с таймером
@@ -6334,7 +6369,7 @@
           React.createElement('div', { className: 'widget-insulin__timer-center' },
             showTimer
               ? `${remaining}м`
-              : (status === 'lipolysis' ? '🔥' : '—')
+              : (status === 'lipolysis' ? 'ок' : '—')
           )
         ),
         // Низ: фаза волны
@@ -6390,7 +6425,7 @@
     };
 
     const buildDayTitle = (meta) => {
-      const baseDate = meta?.day?.date || 'Нет даты';
+      const baseDate = formatWidgetHeatmapDayTitle(meta?.day?.date || 'Нет даты');
       const flags = [
         meta?.hasTraining ? 'тренировка' : null,
         meta?.highStress ? 'стресс' : null
@@ -9197,8 +9232,9 @@
 
     // Строка «правка списка»: карандаш появляется вместе с карточкой, когда
     // есть что править — включённых больше одного или есть хотя бы один
-    // скрытый пункт. В закрытом состоянии карандаша нет никогда.
-    const canEditList = enabledCount > 1 || hiddenOrdered.length > 0;
+    // скрытый пункт. В закрытом состоянии карандаша нет никогда. В режиме
+    // правки карандаш остаётся, пока человек не выйдет — даже при одной строке.
+    const canEditList = enabledCount > 1 || hiddenOrdered.length > 0 || editing;
 
     const closeSheet = useCallback(() => {
       setOpen(false);
@@ -9475,7 +9511,14 @@
         'aria-label': editing ? 'Выйти из правки списка' : 'Править список',
         onClick: (event) => {
           event.stopPropagation();
-          setEditing((v) => !v);
+          if (editing) {
+            setEditing(false);
+            if (enabledCount === 1 && hiddenOrdered.length === 0) {
+              closeSheet();
+            }
+          } else {
+            setEditing(true);
+          }
         }
       },
         React.createElement('svg', {
@@ -10195,6 +10238,8 @@
     const breakdownCloseTimerRef = useRef(null);
     const [variantSavedToast, setVariantSavedToast] = useState(false);
     const [variantHoldHint, setVariantHoldHint] = useState(false);
+    const [showHoldOnboarding, setShowHoldOnboarding] = useState(false);
+    const holdVisitCountedRef = useRef(false);
     const variantToastTimerRef = useRef(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
@@ -10331,7 +10376,17 @@
     }, []);
 
     const openEditWithCatalog = useCallback(() => {
+      if (isWidgetsCuratorReadOnly()) return;
       HEYS.Widgets.enterEditMode?.();
+    }, []);
+
+    const dismissHoldOnboarding = useCallback(() => {
+      setShowHoldOnboarding(false);
+      const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
+      patchWidgetsProfile({
+        widgetsHoldHintShown: true,
+        widgetsTabOpenCount: Math.max(Number(profile.widgetsTabOpenCount) || 0, 3)
+      });
     }, []);
 
     const openCuratorMessenger = useCallback(() => {
@@ -10637,6 +10692,16 @@
       });
       return () => { cancelled = true; };
     }, [isLayoutHydrated, widgets.length]);
+
+    useEffect(() => {
+      if (!isLayoutHydrated || holdVisitCountedRef.current || isWidgetsCuratorReadOnly()) return;
+      holdVisitCountedRef.current = true;
+      const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
+      if (profile.widgetsHoldHintShown) return;
+      const nextCount = (Number(profile.widgetsTabOpenCount) || 0) + 1;
+      patchWidgetsProfile({ widgetsTabOpenCount: nextCount });
+      if (nextCount >= 3) setShowHoldOnboarding(true);
+    }, [isLayoutHydrated]);
 
     useEffect(() => () => {
       widgetMotionDisarmIntro();
@@ -11202,7 +11267,7 @@
     }, [widgets]);
 
     const renderMobileFabs = () => {
-      if (!isMobile) return null;
+      if (!isMobile || isWidgetsCuratorReadOnly()) return null;
       return React.createElement(React.Fragment, null,
         // Строка «карандаш и кнопка настройки»: пока карточка раскрыта, кнопка
         // настройки экрана внизу слева скрыта — на затемнённом слое остаются
@@ -11260,28 +11325,32 @@
         pullIndicatorEl,
         React.createElement('div', { className: 'widgets-empty widget-v4-empty' },
           React.createElement('div', { className: 'widgets-empty__title' }, 'Виджетов нет'),
-          React.createElement('div', { className: 'widgets-empty__desc' },
-            'Соберите экран из того, что смотрите каждый день'
-          ),
-          React.createElement('button', {
-            type: 'button',
-            className: 'widget-v4-empty__btn',
-            onClick: openEditWithCatalog
-          },
-            React.createElement('svg', {
-              width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
-              stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
-              'aria-hidden': 'true'
-            }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
-            'Добавить виджет'
-          ),
-          // Пустота — законный выбор, но выход из неё не должен требовать
-          // памяти об одиннадцати плитках (контракт, строка «пустой экран»).
-          React.createElement('button', {
-            type: 'button',
-            className: 'widget-v4-empty__reset',
-            onClick: handleResetLayout
-          }, 'Вернуть стандартный экран')
+          isWidgetsCuratorReadOnly()
+            ? React.createElement('div', { className: 'widgets-empty__desc' },
+              'Клиент ещё не собрал экран'
+            )
+            : React.createElement(React.Fragment, null,
+              React.createElement('div', { className: 'widgets-empty__desc' },
+                'Соберите экран из того, что смотрите каждый день'
+              ),
+              React.createElement('button', {
+                type: 'button',
+                className: 'widget-v4-empty__btn',
+                onClick: openEditWithCatalog
+              },
+                React.createElement('svg', {
+                  width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+                  stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+                  'aria-hidden': 'true'
+                }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
+                'Добавить виджет'
+              ),
+              React.createElement('button', {
+                type: 'button',
+                className: 'widget-v4-empty__reset',
+                onClick: handleResetLayout
+              }, 'Вернуть стандартный экран')
+            )
         ),
         renderMobileFabs()
       );
@@ -11344,7 +11413,36 @@
         )
       ),
 
-      !isEditMode && variantHoldHint && React.createElement('div', { className: 'widgets-tab__hold-hint' },
+      !isEditMode && showHoldOnboarding && React.createElement('div', {
+        className: 'widgets-tab__hold-onboarding',
+        onPointerDown: dismissHoldOnboarding
+      },
+        React.createElement('div', { className: 'widgets-hold-onboarding__card' },
+          React.createElement('svg', {
+            className: 'widgets-hold-onboarding__icon',
+            width: 17,
+            height: 17,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: 2.4,
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+            'aria-hidden': 'true'
+          },
+            React.createElement('path', { d: 'M8 13V4.5a1.5 1.5 0 0 1 3 0V12' }),
+            React.createElement('path', { d: 'M11 11.5v-2a1.5 1.5 0 1 1 3 0V12' }),
+            React.createElement('path', { d: 'M14 10.5V5a1.5 1.5 0 0 1 3 0v10' }),
+            React.createElement('path', { d: 'M7 15h10a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2z' })
+          ),
+          React.createElement('div', { className: 'widgets-hold-onboarding__text' },
+            React.createElement('div', { className: 'widgets-hold-onboarding__title' }, 'Задержите палец на плитке'),
+            React.createElement('div', { className: 'widgets-hold-onboarding__desc' }, 'чтобы сменить вид')
+          )
+        )
+      ),
+
+      !isEditMode && !showHoldOnboarding && variantHoldHint && React.createElement('div', { className: 'widgets-tab__hold-hint' },
         React.createElement('span', { className: 'widget-v4-hold-hint__pill' }, 'удерживайте, чтобы сменить вид')
       ),
 
