@@ -40,6 +40,7 @@ const {
   resolveDayMutationTs,
   ownerClientIdFromDayKey,
   gateCycleDayForOwner,
+  gateHealthFieldsForOwner,
 } = require(mergeModulePath);
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -1856,13 +1857,24 @@ describe('cycleDay feature-gate helpers', () => {
   });
 
   describe('gateCycleDayForOwner', () => {
-    test('tracking OFF (false) → cycleDay nulled, other fields intact', () => {
+    test('tracking OFF preserves past cycleDay history', () => {
       const day = { date: '2026-06-04', cycleDay: 7, weightMorning: 91.5, meals: [{ id: 'm1' }] };
+      const gated = gateCycleDayForOwner(day, false);
+      expect(gated.cycleDay).toBe(7);
+      expect(gated.weightMorning).toBe(91.5);
+      expect(gated.meals).toEqual([{ id: 'm1' }]);
+      expect(gated).toBe(day);
+    });
+    test('tracking OFF nulls current live cycleDay, other fields intact', () => {
+      const now = new Date();
+      const pad = (part) => String(part).padStart(2, '0');
+      const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+      const day = { date: today, cycleDay: 7, weightMorning: 91.5, meals: [{ id: 'm1' }] };
       const gated = gateCycleDayForOwner(day, false);
       expect(gated.cycleDay).toBe(null);
       expect(gated.weightMorning).toBe(91.5);
       expect(gated.meals).toEqual([{ id: 'm1' }]);
-      expect(gated).not.toBe(day); // новый объект, оригинал нетронут
+      expect(gated).not.toBe(day);
       expect(day.cycleDay).toBe(7);
     });
     test('tracking ON (true) → cycleDay preserved, same ref', () => {
@@ -1887,6 +1899,24 @@ describe('cycleDay feature-gate helpers', () => {
     test('non-object input → returned as-is', () => {
       expect(gateCycleDayForOwner(null, false)).toBe(null);
       expect(gateCycleDayForOwner(undefined, false)).toBe(undefined);
+    });
+
+    test('health gate preserves disabled female history but removes non-female pollution', () => {
+      const past = { date: '2026-06-04', cycleDay: 7, cycleStatus: 'none' };
+      expect(gateHealthFieldsForOwner(past, {
+        gender: 'Женский',
+        cycleTrackingEnabled: false,
+        measurementsTrackingEnabled: true,
+        supplementsTrackingEnabled: true,
+      })).toBe(past);
+      const polluted = gateHealthFieldsForOwner(past, {
+        gender: 'Мужской',
+        cycleTrackingEnabled: false,
+        measurementsTrackingEnabled: true,
+        supplementsTrackingEnabled: true,
+      });
+      expect(polluted.cycleDay).toBeNull();
+      expect(polluted.cycleStatus).toBeNull();
     });
   });
 });

@@ -1764,14 +1764,24 @@
     return (m && m[1]) || null;
   }
 
-  // Занулить cycleDay, если трекинг владельца ПОЛОЖИТЕЛЬНО выключен.
-  // trackingEnabled: true (оставить), false (занулить), null/undefined
-  // (неизвестно → оставить, чтобы не снести легит-данные при boot-race).
-  // null (а не delete) — чтобы выиграть merge (`local.cycleDay === null`) и
-  // протолкнуть очистку в облако. Возвращает тот же ref когда менять нечего.
+  function localDateIso(value = new Date()) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const pad = (part) => String(part).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  function isPastDayRecord(day, todayIso = localDateIso()) {
+    const date = day && typeof day.date === 'string' ? day.date : '';
+    return /^\d{4}-\d{2}-\d{2}$/.test(date) && date < todayIso;
+  }
+
+  // При выключении трекинга гасим только live-день. Прошлые отметки —
+  // исторические данные и должны переживать запись/merge без переписывания.
+  // null/undefined по-прежнему означает «профиль неизвестен» и сохраняет всё.
   function gateCycleDayForOwner(day, trackingEnabled) {
     if (!day || typeof day !== 'object' || day.cycleDay == null) return day;
-    if (trackingEnabled === false) {
+    if (trackingEnabled === false && !isPastDayRecord(day)) {
       return Object.assign({}, day, { cycleDay: null });
     }
     return day;
@@ -1787,10 +1797,16 @@
     }
     if (!day || typeof day !== 'object' || !profile || typeof profile !== 'object') return day;
     let next = day;
-    if (!(profile.gender === 'Женский' && profile.cycleTrackingEnabled === true)) {
-      next = gateCycleDayForOwner(next, false);
-      if (next.cycleStatus != null || next.cycleAnsweredAt != null || next.cycleUpdatedAt != null) {
+    if (profile.gender && profile.gender !== 'Женский') {
+      const cyclePatch = {};
+      ['cycleDay', 'cycleStatus', 'cycleAnsweredAt', 'cycleUpdatedAt'].forEach((key) => {
+        if (next[key] != null) cyclePatch[key] = null;
+      });
+      if (Object.keys(cyclePatch).length) next = Object.assign({}, next, cyclePatch);
+    } else if (profile.gender === 'Женский' && profile.cycleTrackingEnabled !== true && !isPastDayRecord(next)) {
+      if (next.cycleDay != null || next.cycleStatus != null || next.cycleAnsweredAt != null || next.cycleUpdatedAt != null) {
         next = Object.assign({}, next, {
+          cycleDay: null,
           cycleStatus: null,
           cycleAnsweredAt: null,
           cycleUpdatedAt: null,

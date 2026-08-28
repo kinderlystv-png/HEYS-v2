@@ -4821,16 +4821,16 @@
   }
 
   // 🌸 cycleDay feature-gate (incident 2026-06-05 #3, cross-gender pollution).
-  // cycleDay валиден ТОЛЬКО когда у владельца дня включён трекинг цикла
-  // (`cycleTrackingEnabled === true`) — это та же калитка, которой UI гейтит
-  // cycle-шаг (shouldShowCycleStep, heys_steps_v1.js). Дыра была в том, что
+  // UI/live-расчёты валидны только при включённом трекинге, но прошлые cycleDay
+  // остаются историей после выключения функции. Дыра была в том, что
   // write-path её игнорил: stale/cross-injected cycleDay переживал запись через
   // carry-forward (yesterday-verify/checkin читают старый день как базу и не
   // трогают cycleDay → Object.assign сохраняет чужое значение) и переотравлял
   // облако на каждой мутации. Облачная чистка устройства не достаёт, а у
   // не-cycle юзера cycle-шаг исключён из checkin → cycleDay некому занулить.
-  // Здесь — единый чокпоинт всех локальных мутаций дня: зануляем невалидный
-  // cycleDay до записи в LS. null (а не delete) — чтобы значение выиграло merge
+  // Здесь — единый чокпоинт всех локальных мутаций дня: зануляем только live-
+  // состояние текущего дня или cross-gender pollution. null (а не delete) —
+  // чтобы значение выиграло merge
   // (heys_cloud_merge_v1.js ветка `local.cycleDay === null`) и протолкнуло
   // очистку в облако и на другие устройства.
   function ownerClientIdFromDayKey(key, clientId) {
@@ -4898,8 +4898,15 @@
     if (sync && typeof sync.gateCycleDayForOwner === 'function') {
       return sync.gateCycleDayForOwner(value, enabled); // протестированная shared-логика
     }
-    // boot-race fallback — идентично HEYS.sync.gateCycleDayForOwner
-    return enabled === false ? Object.assign({}, value, { cycleDay: null }) : value;
+    // boot-race fallback — прошлые отметки не переписываем даже при выключенном
+    // трекинге; неизвестная дата считается live-состоянием и очищается.
+    const now = new Date();
+    const pad = (part) => String(part).padStart(2, '0');
+    const todayIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const keyDate = ((/dayv2_(\d{4}-\d{2}-\d{2})/i.exec(String(key || '')) || [])[1]) || '';
+    const valueDate = String(value.date || keyDate);
+    const isPast = /^\d{4}-\d{2}-\d{2}$/.test(valueDate) && valueDate < todayIso;
+    return enabled === false && !isPast ? Object.assign({}, value, { cycleDay: null }) : value;
   }
 
   function stripDisabledHealthFieldsForDay(key, value, clientId) {
@@ -4936,13 +4943,9 @@
     configurable: true,
   });
 
-  // 🌸 One-shot device scrub (incident 2026-06-05 #3). Чокпоинт-гард
-  // (stampDayv2ValueForLocalMutation) лечит cycleDay при ЗАПИСИ дня, но дормантные
-  // дни в LS остаются «розовыми» до первого касания и могут переотравить облако при
-  // ближайшей мутации. Скраб гасит резидуал сразу: если у текущего клиента трекинг
-  // цикла выключен — зануляет cycleDay во всех его локальных днях (scoped-скан,
-  // инвариант #9). Идемпотентен; флаг ставится только когда профиль реально прочитан
-  // (enabled !== null), поэтому при boot-race повтор на следующем sync безопасен.
+  // 🌸 One-shot device scrub (incident 2026-06-05 #3). Для неженского профиля
+  // по-прежнему удаляет cross-gender pollution из всей истории. Для женщины с
+  // выключенным трекингом очищает только live-день, не переписывая прошлое.
   cloud.scrubInvalidCycleDays = function (clientIdArg) {
     try {
       const FLAG = 'heys_cycleday_scrub_v1';
@@ -4952,8 +4955,10 @@
           ? global.HEYS.utils.getCurrentClientId() : '')
         || (global.HEYS && global.HEYS.currentClientId) || '';
       if (!clientId) return { skipped: 'no-client' };
-      const enabled = readCycleTrackingEnabled(clientId);
-      if (enabled === null) return { skipped: 'no-profile' }; // профиль не готов — повторим на следующем sync
+      const profile = readOwnerProfile(clientId);
+      if (!profile) return { skipped: 'no-profile' }; // профиль не готов — повторим на следующем sync
+      const isFemale = profile.gender === 'Женский';
+      const enabled = isFemale && profile.cycleTrackingEnabled === true;
       if (enabled === true) {
         global.localStorage.setItem(FLAG, '1'); // трекинг включён — чистить нечего
         return { skipped: 'tracking-on' };
@@ -4962,23 +4967,32 @@
       const ls = global.localStorage;
       const toFix = [];
       let scanned = 0;
+      const now = new Date();
+      const pad = (part) => String(part).padStart(2, '0');
+      const todayIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
       for (let i = 0; i < ls.length; i++) {
         const k = ls.key(i);
         if (!k || k.indexOf(prefix) !== 0) continue;
         scanned++;
         const parsed = tryParse(ls.getItem(k));
-        if (parsed && typeof parsed === 'object' && parsed.cycleDay != null) {
+        const keyDate = ((/dayv2_(\d{4}-\d{2}-\d{2})/i.exec(k) || [])[1]) || '';
+        const parsedDate = String(parsed?.date || keyDate);
+        const isPast = /^\d{4}-\d{2}-\d{2}$/.test(parsedDate) && parsedDate < todayIso;
+        if (parsed && typeof parsed === 'object' && parsed.cycleDay != null && (!isFemale || !isPast)) {
           toFix.push({ key: k, day: parsed });
         }
       }
       for (const { key, day } of toFix) {
         day.cycleDay = null;
+        day.cycleStatus = null;
+        day.cycleAnsweredAt = null;
+        day.cycleUpdatedAt = null;
         day.updatedAt = Date.now(); // bump — чтобы null выиграл merge и протолкнулся в облако
         ls.setItem(key, JSON.stringify(day)); // через интерсептор → нормализация + auto-sync
       }
       global.localStorage.setItem(FLAG, '1');
       if (toFix.length > 0) {
-        logCritical(`🌸 [CYCLE SCRUB] Removed cycleDay from ${toFix.length}/${scanned} local days (tracking off) for client ${clientId}`);
+        logCritical(`🌸 [CYCLE SCRUB] Removed live/invalid cycle data from ${toFix.length}/${scanned} local days for client ${clientId}`);
       }
       return { scanned, scrubbed: toFix.length };
     } catch (e) {
