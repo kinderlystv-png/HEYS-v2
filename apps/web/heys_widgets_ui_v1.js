@@ -591,9 +591,7 @@
     index = 0,
     selectedDate,
     dragPreviewPosition = null,
-    removePickActive = false,
-    isCornerBottomLeft = false,
-    isCornerBottomRight = false
+    removePickActive = false
   }) {
     const registry = HEYS.Widgets.registry;
     const widgetType = registry?.getType(widget.type);
@@ -1359,7 +1357,7 @@
 
     return React.createElement('div', {
       ref: elementRef,
-      className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''} ${isResizing ? 'widget--resizing' : ''} ${isResizing && isResizeSnap ? 'widget--resize-snap' : ''} ${hasScales ? 'widget--has-scales' : ''}${tightClass}${isCornerBottomLeft ? ' widget--corner-bl' : ''}${isCornerBottomRight ? ' widget--corner-br' : ''}`,
+      className: `widget ${sizeClass} ${typeClass} ${isEditMode ? 'widget--editing' : ''} ${isResizing ? 'widget--resizing' : ''} ${isResizing && isResizeSnap ? 'widget--resize-snap' : ''} ${hasScales ? 'widget--has-scales' : ''}${tightClass}`,
       'data-widget-id': widget.id,
       'data-widget-type': widget.type,
       // role=img закрывает внутренние узлы от обхода: иначе фраза распадается
@@ -11264,44 +11262,6 @@
     // Карточка быстрых действий раскрыта — см. «карандаш и кнопка настройки».
     const [quickSheetOpen, setQuickSheetOpen] = useState(false);
 
-    /**
-     * Строка контракта «зоны углов»: оба нижних угла сетки держатся
-     * свободными 52×52 px — по фактическому следу кнопок (настройка слева,
-     * «+» справа). В зоне запрещена любая графика, не только числа и полосы:
-     * спарклайн, кольцо, полоса и дельта одинаково уходят под палец.
-     *
-     * Поэтому угол резервируется полем плитки, а не разводом отдельных узлов:
-     * перечисление узлов всегда неполно — спарклайн «Динамики веса» формально
-     * не был ни числом, ни полосой и прежний запрет проходил.
-     *
-     * Отступление названо вслух: соседняя строка «что под ней» всё ещё
-     * говорит «48×48 … свободна от чисел и полос» и называет только левый
-     * угол. Верна «зоны углов» — она переписана двенадцатой сборкой и сама
-     * объясняет, что 48 было ошибкой замера.
-     */
-    const cornerWidgetIds = useMemo(() => {
-      const list = widgets || [];
-      let bottomRow = -1;
-      list.forEach((w) => {
-        const row = Number(w?.position?.row);
-        if (!Number.isFinite(row)) return;
-        bottomRow = Math.max(bottomRow, row + (Number(w?.rows) || 1) - 1);
-      });
-      if (bottomRow < 0) return { left: null, right: null };
-      const touchesBottom = (w) => {
-        const row = Number(w?.position?.row);
-        if (!Number.isFinite(row)) return false;
-        return row <= bottomRow && row + (Number(w?.rows) || 1) - 1 >= bottomRow;
-      };
-      const left = list.find((w) => Number(w?.position?.col) === 0 && touchesBottom(w));
-      // Правый угол — плитка, чей правый край упирается в последнюю колонку.
-      const right = list.find((w) => {
-        const col = Number(w?.position?.col);
-        if (!Number.isFinite(col)) return false;
-        return col + (Number(w?.cols) || 1) === WIDGETS_GRID_COLS && touchesBottom(w);
-      });
-      return { left: left?.id || null, right: right?.id || null };
-    }, [widgets]);
 
     const renderMobileFabs = () => {
       if (!isMobile || isWidgetsCuratorReadOnly()) return null;
@@ -11480,8 +11440,6 @@
               onRemove: handleRemove,
               onSettings: setSettingsWidget,
               removePickActive: catalogRemovePick,
-              isCornerBottomLeft: widget.id === cornerWidgetIds.left,
-              isCornerBottomRight: widget.id === cornerWidgetIds.right
             })
           )
         ),
