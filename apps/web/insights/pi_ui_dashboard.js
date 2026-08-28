@@ -1969,6 +1969,21 @@
       return n + ' ' + word + ' данных';
     }
 
+    // Счётчик всей доступной истории (последние 30 дней), независимый от
+    // выбранного окна анализа. realInsights.daysWithData ограничен daysBack
+    // текущего чипа, поэтому при окне 7д он физически не мог достичь 30 —
+    // чип «30д» был заблокирован навсегда, а шапка занижала «N дней данных».
+    function countHistoryDaysWithData(lsGet) {
+      try {
+        const getter = lsGet || window.HEYS?.utils?.lsGet;
+        const getDays = HEYS.InsightsPI?.calculations?.getDaysData;
+        if (!getter || typeof getDays !== 'function') return 0;
+        return getDays(30, getter).length;
+      } catch (_) {
+        return 0;
+      }
+    }
+
     function InsightsV4Header(props) {
       const { daysWithData, period, onPeriodChange } = props || {};
       return h('div', { className: 'insights-v4-meta' },
@@ -2530,13 +2545,18 @@
       // Дополнительный guard: даже если insights.available=true, при
       // daysWithData < 7 показываем EmptyState (preference UX > completeness).
       const daysWithData = realInsights.daysAnalyzed || realInsights.daysWithData || 0;
+      // Общая история для шапки и разблокировки «30д» — не режется окном чипа.
+      const historyDaysWithData = useMemo(
+        () => countHistoryDaysWithData(lsGet),
+        [lsGet, selectedDate, dataVersion]
+      );
       const MIN_DAYS_FOR_FULL = 7;
       const shouldShowEmptyState = !insights.available || daysWithData < MIN_DAYS_FOR_FULL;
       if (shouldShowEmptyState && insightsTourCompleted) {
         return h(InsightsErrorBoundary, null,
           h('div', { className: 'insights-tab insights-v4' },
             h(InsightsV4Header, {
-              daysWithData: daysWithData,
+              daysWithData: historyDaysWithData,
               period: insightsPeriod,
               onPeriodChange: setInsightsPeriod
             }),
@@ -2623,7 +2643,7 @@
         return h(InsightsErrorBoundary, null,
           h('div', { className: 'insights-tab insights-v4' },
             h(InsightsV4Header, {
-              daysWithData: insightsDaysWithData,
+              daysWithData: historyDaysWithData,
               period: insightsPeriod,
               onPeriodChange: setInsightsPeriod
             }),
@@ -2632,7 +2652,7 @@
               h('div', null,
                 h('div', { className: 'insights-tab__demo-banner-title' }, 'Демо-режим'),
                 h('div', { className: 'insights-tab__demo-banner-desc' },
-                  'Пример данных — реальная статистика появится через 3 дня'
+                  'Пример данных — ваша аналитика появится после 7 дней дневника'
                 )
               )
             ),
@@ -2649,8 +2669,10 @@
                 pIndex
               }),
               h(InsightsV4Attention, {
+                // Опора «на N днях»: EWS сканирует последние 30 дней целиком,
+                // окно чипа на предупреждения не влияет — честна общая история.
                 warnings: ewsWarnings,
-                daysWithData: insightsDaysWithData,
+                daysWithData: historyDaysWithData,
                 onOpenPanel: function () { setEwsPanelOpen(true); }
               }),
               h(InsightsV4Patterns, {
@@ -2747,7 +2769,7 @@
                   'Демо-режим'
                 ),
                 h('div', { className: 'insights-tab__demo-banner-desc' },
-                  'Пример данных — реальная статистика появится через 3 дня'
+                  'Пример данных — ваша аналитика появится после 7 дней дневника'
                 )
               )
             )
@@ -5790,6 +5812,7 @@
         buildInsightsCuratorPhrase,
         formatInsightsDaysLabel,
         buildPatternMaturityLabel,
+        countHistoryDaysWithData,
         INSIGHTS_V4_PERIODS
       }
     };
