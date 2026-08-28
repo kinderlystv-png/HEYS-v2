@@ -16,6 +16,7 @@
 // Использование:
 //   node scripts/ui-v4-check-contract-drift.mjs                # проверить
 //   node scripts/ui-v4-check-contract-drift.mjs --list          # сводка по зонам
+//   node scripts/ui-v4-check-contract-drift.mjs --zone login    # проверить одну зону
 //   node scripts/ui-v4-check-contract-drift.mjs --rehash <зона> # после пересмотра вердиктов
 
 import crypto from 'node:crypto';
@@ -24,6 +25,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ALLOWED_VERDICTS = new Set(['=', '≠', '?', '—']);
 const PACK = path.join(
   ROOT,
   'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4',
@@ -50,10 +52,12 @@ function contractRows(html, contractOnly) {
 
 // Гигиена канваса: дубль ключа ломает саму сверку — вердикты адресуются именем
 // строки, и второй экземпляр молча затирает первый.
-function canvasHygiene() {
+function canvasHygiene(canvasFiles = null) {
   const problems = [];
   const warnings = [];
-  for (const file of fs.readdirSync(PACK).filter((f) => f.endsWith('.dc.html'))) {
+  for (const file of fs.readdirSync(PACK).filter(
+    (f) => f.endsWith('.dc.html') && (!canvasFiles || canvasFiles.has(f)),
+  )) {
     const html = fs.readFileSync(path.join(PACK, file), 'utf8');
     if (!html.includes('data-contract=')) continue;
     const { rows, error } = contractRows(html, false);
@@ -88,6 +92,17 @@ function canvasHygiene() {
 
 function readVerdicts() {
   return JSON.parse(fs.readFileSync(VERDICTS, 'utf8'));
+}
+
+export function findInvalidVerdicts(data, zoneIds = null) {
+  const invalid = [];
+  for (const [zoneId, zone] of Object.entries(data?.zones || {})) {
+    if (zoneIds && !zoneIds.has(zoneId)) continue;
+    for (const [key, row] of Object.entries(zone?.rows || {})) {
+      if (!ALLOWED_VERDICTS.has(row?.v)) invalid.push({ zoneId, key, verdict: row?.v });
+    }
+  }
+  return invalid;
 }
 
 function inspect(zoneId, zone) {
@@ -139,8 +154,28 @@ function runCli() {
     return;
   }
 
+  const requestedZones = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== '--zone') continue;
+    const zoneId = args[index + 1];
+    if (!zoneId || zoneId.startsWith('--')) {
+      console.error('После --zone нужно указать id зоны.');
+      process.exit(1);
+    }
+    if (!data.zones[zoneId]) {
+      console.error(`Неизвестная зона: ${zoneId}. Есть: ${Object.keys(data.zones).join(', ')}`);
+      process.exit(1);
+    }
+    requestedZones.push(zoneId);
+    index += 1;
+  }
+  const selectedZoneIds = requestedZones.length
+    ? new Set(requestedZones)
+    : new Set(Object.keys(data.zones));
+  const selectedZones = Object.entries(data.zones).filter(([zoneId]) => selectedZoneIds.has(zoneId));
+
   if (args.includes('--list')) {
-    for (const [zoneId, zone] of Object.entries(data.zones)) {
+    for (const [zoneId, zone] of selectedZones) {
       const state = inspect(zoneId, zone);
       console.log(
         `${zoneId.padEnd(18)} строк ${String(state.total).padEnd(4)} вердикты ${JSON.stringify(state.tally)} (снято ${zone.recorded})`,
@@ -149,13 +184,20 @@ function runCli() {
     return;
   }
 
-  const hygiene = canvasHygiene();
+  const hygiene = canvasHygiene(new Set(selectedZones.map(([, zone]) => zone.canvas)));
   for (const warning of hygiene.warnings) console.log(`⚠  ${warning}`);
 
-  let failed = hygiene.problems.length > 0;
+  const invalidVerdicts = findInvalidVerdicts(data, selectedZoneIds);
+  let failed = hygiene.problems.length > 0 || invalidVerdicts.length > 0;
   for (const problem of hygiene.problems) console.error(`\n❌ ${problem}`);
+  if (invalidVerdicts.length) {
+    console.error('\n❌ Неизвестный символ вердикта; допустимы только = ≠ ? —:');
+    for (const item of invalidVerdicts) {
+      console.error(`  ${item.zoneId} · «${item.key}» — «${String(item.verdict)}»`);
+    }
+  }
 
-  for (const [zoneId, zone] of Object.entries(data.zones)) {
+  for (const [zoneId, zone] of selectedZones) {
     const state = inspect(zoneId, zone);
     if (state.fatal) {
       failed = true;
@@ -189,8 +231,8 @@ function runCli() {
     process.exit(1);
   }
 
-  const zones = Object.keys(data.zones).length;
-  const rows = Object.values(data.zones).reduce((sum, z) => sum + Object.keys(z.rows).length, 0);
+  const zones = selectedZones.length;
+  const rows = selectedZones.reduce((sum, [, zone]) => sum + Object.keys(zone.rows).length, 0);
   console.log(`Контракты не двигались: ${zones} зоны, ${rows} строк с вердиктами.`);
 }
 

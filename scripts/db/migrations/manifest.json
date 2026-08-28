@@ -238,6 +238,13 @@
       "path": "scripts/db/migrations/2026-08-23_shared_catalog_glue_hygiene.sql",
       "description": "Shared catalog hygiene for MCP resolve: salad name, тефтели рисовые, творог dedupe",
       "destructive": false
+    },
+    {
+      "id": "2026-08-28_registration_server_norms",
+      "order": 32,
+      "path": "scripts/db/migrations/2026-08-28_registration_server_norms.sql",
+      "description": "Calculate and persist first-registration nutrition norms from the confirmed profile on the server",
+      "destructive": false
     }
   ]
 }

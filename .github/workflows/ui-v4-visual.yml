@@ -1,0 +1,83 @@
+name: UI v4 visual baseline
+
+on:
+  workflow_dispatch:
+    inputs:
+      zone:
+        description: Reconciled Canvas zone
+        required: true
+        type: choice
+        options:
+          - curator-edits
+          - login
+          - registration
+      mode:
+        description: Generate a Linux candidate or verify a committed baseline
+        required: true
+        default: candidate
+        type: choice
+        options:
+          - candidate
+          - verify
+
+concurrency:
+  group: ui-v4-visual-${{ inputs.zone }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    name: ${{ inputs.mode }} / ${{ inputs.zone }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Check zone contract
+        run: node scripts/ui-v4-check-contract-drift.mjs --zone "${{ inputs.zone }}"
+
+      - name: Start local stack
+        run: |
+          pnpm dev:local > /tmp/heys-dev-local.log 2>&1 &
+          for attempt in {1..90}; do
+            if curl --fail --silent http://localhost:3001/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/heys-dev-local.log
+          exit 1
+
+      - name: Generate Linux candidate baseline
+        if: inputs.mode == 'candidate'
+        run: node apps/web/scripts/ui-v4-visual-capture.mjs --update-baselines --zone="${{ inputs.zone }}"
+
+      - name: Verify committed Linux baseline
+        if: inputs.mode == 'verify'
+        run: node apps/web/scripts/ui-v4-visual-capture.mjs --verify --zone="${{ inputs.zone }}"
+
+      - name: Upload visual artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-v4-${{ inputs.mode }}-${{ inputs.zone }}
+          if-no-files-found: warn
+          path: |
+            apps/web/__screenshots__/ui-v4/
+            tmp/ui-v4-visual/
+            /tmp/heys-dev-local.log
