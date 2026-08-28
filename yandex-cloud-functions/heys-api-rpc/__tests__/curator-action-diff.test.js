@@ -339,6 +339,62 @@ test('profile: updatedAt field ignored', () => {
   assert.equal(actions.length, 0);
 });
 
+test('supplement course assigned replaces generic profile_changed', () => {
+  const oldV = { name: 'A', plannedSupplements: [] };
+  const newV = { name: 'A', plannedSupplements: ['vitD', 'omega3'], updatedAt: 2 };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_profile');
+  assert.deepStrictEqual(actions, [{
+    type: 'supplement_course_assigned',
+    supplement_ids: ['vitD', 'omega3'],
+  }]);
+});
+
+test('supplement course changed reports membership and settings changes', () => {
+  const oldV = {
+    plannedSupplements: ['vitD', 'omega3'],
+    supplementSettings: { vitD: { dose: 1000 }, omega3: { dose: 500 } },
+  };
+  const newV = {
+    plannedSupplements: ['vitD', 'magnesium'],
+    supplementSettings: { vitD: { dose: 2000 }, magnesium: { dose: 300 } },
+  };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_profile');
+  assert.deepStrictEqual(actions, [{
+    type: 'supplement_course_changed',
+    supplement_ids: ['vitD', 'magnesium'],
+    added_ids: ['magnesium'],
+    removed_ids: ['omega3'],
+    settings_changed: true,
+  }]);
+});
+
+test('supplement course cancelled keeps previous supplement ids', () => {
+  const oldV = { plannedSupplements: ['vitD', 'omega3'] };
+  const newV = { plannedSupplements: [] };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_profile');
+  assert.deepStrictEqual(actions, [{
+    type: 'supplement_course_cancelled',
+    supplement_ids: ['vitD', 'omega3'],
+  }]);
+});
+
+test('supplement mark removed emits one action per removed id', () => {
+  const oldV = { supplementsTaken: ['vitD', 'omega3', 'magnesium'] };
+  const newV = { supplementsTaken: ['omega3'] };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-08-28');
+  assert.deepStrictEqual(actions, [
+    { type: 'supplement_mark_removed', supplement_id: 'vitD' },
+    { type: 'supplement_mark_removed', supplement_id: 'magnesium' },
+  ]);
+});
+
+test('supplement mark added does not masquerade as a removed mark', () => {
+  const oldV = { supplementsTaken: ['vitD'] };
+  const newV = { supplementsTaken: ['vitD', 'omega3'] };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-08-28');
+  assert.deepStrictEqual(actions, []);
+});
+
 test('norms_changed: kcal+prot updated', () => {
   const oldV = { kcal: 2000, prot: 100, fat: 70, carbs: 250 };
   const newV = { kcal: 2200, prot: 110, fat: 70, carbs: 250 };

@@ -407,6 +407,7 @@ function diffDayv2(oldV, newV, actions) {
   const newDay = safeObj(newV) || {};
   diffMeals(oldDay.meals, newDay.meals, actions);
   diffTrainings(oldDay.trainings, newDay.trainings, actions);
+  diffSupplementTakenMarks(oldDay.supplementsTaken, newDay.supplementsTaken, actions);
   diffScalar(oldDay.weightMorning, newDay.weightMorning, 'weight_set', actions, { numericTolerance: 0.05 });
   // Поле блоба дня называется steps (heys-mcp/lib/day.js, apps/web) — по
   // stepsCount диф молчал, и кураторская правка шагов не попадала в фид.
@@ -415,6 +416,72 @@ function diffDayv2(oldV, newV, actions) {
   const nSleepH = computeSleepHours(newDay);
   diffScalar(oSleepH, nSleepH, 'sleep_set', actions, { numericTolerance: 0.1 });
   diffScalar(oldDay.waterMl, newDay.waterMl, 'water_set', actions, { numericTolerance: 50 });
+}
+
+function normalizeSupplementIds(value) {
+  const ids = safeArr(value)
+    .map((id) => String(id || '').trim())
+    .filter(Boolean);
+  return Array.from(new Set(ids));
+}
+
+function supplementIdSetsEqual(left, right) {
+  const a = normalizeSupplementIds(left);
+  const b = normalizeSupplementIds(right);
+  if (a.length !== b.length) return false;
+  const bSet = new Set(b);
+  return a.every((id) => bSet.has(id));
+}
+
+function supplementSettingsChanged(oldSettings, newSettings, supplementIds) {
+  const oldMap = safeObj(oldSettings) || {};
+  const newMap = safeObj(newSettings) || {};
+  return normalizeSupplementIds(supplementIds)
+    .some((id) => !deepEqual(oldMap[id], newMap[id]));
+}
+
+function diffSupplementCourse(oldV, newV, actions) {
+  const oldProfile = safeObj(oldV) || {};
+  const newProfile = safeObj(newV) || {};
+  const oldIds = normalizeSupplementIds(oldProfile.plannedSupplements);
+  const newIds = normalizeSupplementIds(newProfile.plannedSupplements);
+
+  if (oldIds.length === 0 && newIds.length > 0) {
+    actions.push({ type: 'supplement_course_assigned', supplement_ids: newIds });
+    return;
+  }
+  if (oldIds.length > 0 && newIds.length === 0) {
+    actions.push({ type: 'supplement_course_cancelled', supplement_ids: oldIds });
+    return;
+  }
+  if (oldIds.length === 0 || newIds.length === 0) return;
+
+  const addedIds = newIds.filter((id) => !oldIds.includes(id));
+  const removedIds = oldIds.filter((id) => !newIds.includes(id));
+  const settingsChanged = supplementSettingsChanged(
+    oldProfile.supplementSettings,
+    newProfile.supplementSettings,
+    [...oldIds, ...newIds],
+  );
+  if (!supplementIdSetsEqual(oldIds, newIds) || settingsChanged) {
+    actions.push({
+      type: 'supplement_course_changed',
+      supplement_ids: newIds,
+      ...(addedIds.length > 0 ? { added_ids: addedIds } : {}),
+      ...(removedIds.length > 0 ? { removed_ids: removedIds } : {}),
+      ...(settingsChanged ? { settings_changed: true } : {}),
+    });
+  }
+}
+
+function diffSupplementTakenMarks(oldTaken, newTaken, actions) {
+  const oldIds = normalizeSupplementIds(oldTaken);
+  const newSet = new Set(normalizeSupplementIds(newTaken));
+  oldIds.forEach((id) => {
+    if (!newSet.has(id)) {
+      actions.push({ type: 'supplement_mark_removed', supplement_id: id });
+    }
+  });
 }
 
 function computeSleepHours(day) {
@@ -492,7 +559,10 @@ function computeCuratorActionPayload(oldV, newV, key) {
   if (/^heys_dayv2_\d{4}-\d{2}-\d{2}$/.test(key)) {
     diffDayv2(oldV, newV, actions);
   } else if (key === 'heys_profile') {
-    diffObjectFields(oldV, newV, 'profile_changed', actions);
+    diffSupplementCourse(oldV, newV, actions);
+    diffObjectFields(oldV, newV, 'profile_changed', actions, {
+      ignoreFields: ['updatedAt', 'updated_at', 'plannedSupplements', 'supplementSettings'],
+    });
   } else if (key === 'heys_norms') {
     diffObjectFields(oldV, newV, 'norms_changed', actions);
   } else if (key.startsWith('heys_planning_')) {
@@ -561,6 +631,8 @@ module.exports = {
     diffDayv2,
     diffMeals,
     diffTrainings,
+    diffSupplementCourse,
+    diffSupplementTakenMarks,
     computeSleepHours,
     parseHHMM,
     deepEqual,
