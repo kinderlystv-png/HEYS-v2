@@ -220,6 +220,55 @@
       && Number(remoteProfile.updatedAt || 0) === Number(expectedProfile.updatedAt || 0);
   }
 
+  const REGISTRATION_NORM_FIELDS = [
+    'carbsPct', 'proteinPct', 'simpleCarbPct', 'badFatPct',
+    'superbadFatPct', 'fiberPct', 'giPct', 'harmPct'
+  ];
+
+  async function fetchRegistrationNormsFromServer(expectedProfile) {
+    const api = HEYS.YandexAPI;
+    if (!api?.rpc) throw new Error('registration_norms_rpc_unavailable');
+
+    const sessionToken = HEYS.auth?.getSessionToken?.() || localStorage.getItem('heys_session_token');
+    const params = {};
+    if (sessionToken) {
+      const tokenStr = typeof sessionToken === 'string' ? sessionToken : JSON.stringify(sessionToken);
+      params.p_session_token = tokenStr.replace(/"/g, '');
+    }
+
+    const response = await api.rpc('calculate_registration_norms_by_session', params);
+    if (response?.error) {
+      throw new Error(String(response.error?.message || response.error));
+    }
+    const payload = response?.data?.calculate_registration_norms_by_session || response?.data;
+    if (!payload?.success || !payload?.norms || typeof payload.norms !== 'object') {
+      throw new Error(String(payload?.error || 'registration_norms_unconfirmed'));
+    }
+
+    const profileUpdatedAt = Number(payload.norms.profileUpdatedAt || 0);
+    if (!profileUpdatedAt || profileUpdatedAt !== Number(expectedProfile?.updatedAt || 0)) {
+      throw new Error('registration_norms_profile_mismatch');
+    }
+
+    const norms = {};
+    REGISTRATION_NORM_FIELDS.forEach((field) => {
+      const value = Number(payload.norms[field]);
+      if (!Number.isFinite(value)) throw new Error(`registration_norms_invalid:${field}`);
+      norms[field] = value;
+    });
+    norms.source = 'registration-server';
+    norms.schemaVersion = Number(payload.norms.schemaVersion) || 1;
+    norms.profileUpdatedAt = profileUpdatedAt;
+    norms.updatedAt = Number(payload.norms.updatedAt) || profileUpdatedAt;
+
+    lsSet('heys_norms', norms);
+    HEYS.store?.invalidate?.('heys_norms');
+    window.dispatchEvent(new CustomEvent('heys:norms-updated', {
+      detail: { source: 'registration-server' }
+    }));
+    return norms;
+  }
+
   async function confirmProfileCloudSave(expectedProfile) {
     const clientId = getCurrentClientId();
     const api = HEYS.YandexAPI;
@@ -253,10 +302,12 @@
       }
     }
 
+    await fetchRegistrationNormsFromServer(expectedProfile);
     localStorage.removeItem('heys_registration_in_progress');
     window.dispatchEvent(new CustomEvent('heys:profile-sync-confirmed', {
       detail: { clientId, updatedAt: expectedProfile.updatedAt }
     }));
+    HEYS.feedback?.emit?.('registration.done');
     return true;
   }
 
@@ -372,73 +423,6 @@
       hours: recommended,
       range: `${baseMin}-${baseMax}`,
       explanation: explanation + (genderBonus > 0 ? ' +20мин жен.' : '')
-    };
-  }
-
-  // Расчёт норм БЖУ по цели, полу и возрасту
-  function calcNormsFromGoal(deficitPct, gender = 'Мужской', age = 30) {
-    // 🔧 v2.0.2: Принудительное приведение к числу (иногда приходит строка)
-    const deficitPctNum = Number(deficitPct) || 0;
-    const ageNum = Number(age) || 30;
-    const isFemale = gender === 'Женский';
-
-    console.log('[calcNormsFromGoal] Input:', { deficitPct, deficitPctNum, gender, age: ageNum });
-
-    let proteinPct, carbsPct, fatPct;
-
-    if (deficitPctNum <= -15) {
-      if (isFemale) {
-        proteinPct = 30; carbsPct = 35; fatPct = 35;
-      } else {
-        proteinPct = 35; carbsPct = 40; fatPct = 25;
-      }
-    } else if (deficitPctNum <= -5) {
-      if (isFemale) {
-        proteinPct = 28; carbsPct = 40; fatPct = 32;
-      } else {
-        proteinPct = 30; carbsPct = 45; fatPct = 25;
-      }
-    } else if (deficitPctNum <= 5) {
-      if (isFemale) {
-        proteinPct = 25; carbsPct = 45; fatPct = 30;
-      } else {
-        proteinPct = 25; carbsPct = 50; fatPct = 25;
-      }
-    } else {
-      if (isFemale) {
-        proteinPct = 28; carbsPct = 47; fatPct = 25;
-      } else {
-        proteinPct = 30; carbsPct = 50; fatPct = 20;
-      }
-    }
-
-    // Корректировка по возрасту
-    if (ageNum >= 60) {
-      proteinPct += 5;
-      carbsPct -= 5;
-    } else if (ageNum >= 40) {
-      proteinPct += 3;
-      carbsPct -= 3;
-    }
-
-    // Нормализация
-    const total = proteinPct + carbsPct + fatPct;
-    if (total !== 100) {
-      const factor = 100 / total;
-      proteinPct = Math.round(proteinPct * factor);
-      carbsPct = Math.round(carbsPct * factor);
-      fatPct = 100 - proteinPct - carbsPct;
-    }
-
-    return {
-      carbsPct,
-      proteinPct,
-      simpleCarbPct: 30,
-      badFatPct: 30,
-      superbadFatPct: 5,
-      fiberPct: 14,
-      giPct: 55,
-      harmPct: 10
     };
   }
 
@@ -1344,19 +1328,6 @@
         detail: { profile: updatedProfile, source: 'wizard' }
       }));
 
-      // Авторасчёт норм БЖУ
-      const norms = calcNormsFromGoal(
-        updatedProfile.deficitPctTarget,
-        updatedProfile.gender,
-        updatedProfile.age
-      );
-      lsSet('heys_norms', { ...norms, updatedAt: Date.now() });
-      try {
-        window.dispatchEvent(new CustomEvent('heys:norms-updated', {
-          detail: { source: 'wizard-save' }
-        }));
-      } catch (_) {}
-
       // Записываем вес в данные дня (weightMorning), чтобы check-in не спрашивал повторно
       const todayKey = new Date().toISOString().slice(0, 10);
       const dayData = readDayDataScoped(todayKey, {});
@@ -1372,9 +1343,16 @@
       syncCurrentClientName(fullName, 'profile-wizard', { syncCloud: true });
 
       console.log('[ProfileSteps] Profile saved:', updatedProfile);
-      console.log('[ProfileSteps] Norms calculated:', norms);
 
-      return confirmProfileCloudSave(updatedProfile);
+      return confirmProfileCloudSave(updatedProfile).then((confirmed) => {
+        if (confirmed && typeof HEYS.Consents?.completePendingRegistrationPushOptIn === 'function') {
+          // Push — необязательный side effect последнего шага регистрации:
+          // запускаем только после подтверждения профиля и не блокируем финал.
+          Promise.resolve(HEYS.Consents.completePendingRegistrationPushOptIn(getCurrentClientId()))
+            .catch((error) => console.warn('[ProfileSteps] registration push failed:', error?.message));
+        }
+        return confirmed;
+      });
     }
   });
 
@@ -1448,19 +1426,6 @@
       detail: { profile: updatedProfile, source: 'wizard-skip' }
     }));
 
-    // Авторасчёт норм БЖУ
-    const norms = calcNormsFromGoal(
-      updatedProfile.deficitPctTarget,
-      updatedProfile.gender,
-      updatedProfile.age
-    );
-    lsSet('heys_norms', { ...norms, updatedAt: Date.now() });
-    try {
-      window.dispatchEvent(new CustomEvent('heys:norms-updated', {
-        detail: { source: 'wizard-skip' }
-      }));
-    } catch (_) {}
-
     // ⚠️ v1.15 FIX: Инвалидируем кэш HEYS.store.memory
     // т.к. lsSet пишет в localStorage напрямую, но tryStartOnboardingTour читает из HEYS.store (который кэширует)
     if (HEYS.store && typeof HEYS.store.invalidate === 'function') {
@@ -1476,7 +1441,6 @@
     syncCurrentClientName(fullName, 'wizard-skip');
 
     console.log('[saveProfileFromStepData] Profile saved:', updatedProfile);
-    console.log('[saveProfileFromStepData] Norms calculated:', norms);
 
     return confirmProfileCloudSave(updatedProfile);
   }
@@ -1629,23 +1593,17 @@
     const deficitPctTarget = Number.isFinite(Number(step3.deficitPctTarget))
       ? Number(step3.deficitPctTarget)
       : (Number.isFinite(Number(profile.deficitPctTarget)) ? Number(profile.deficitPctTarget) : 0);
-    const gender = step1.gender || profile.gender || 'Мужской';
-
-    let age = 30;
-    if (step1.birthYear && step1.birthMonth && step1.birthDay) {
-      age = calcAgeFromBirthDate(`${step1.birthYear}-${String(step1.birthMonth).padStart(2, '0')}-${String(step1.birthDay).padStart(2, '0')}`) || 30;
-    } else if (profile.birthDate) {
-      age = calcAgeFromBirthDate(profile.birthDate) || Number(profile.age) || 30;
-    } else if (Number(profile.age) > 0) {
-      age = Number(profile.age);
-    }
-
-    const calculatedNorms = calcNormsFromGoal(deficitPctTarget, gender, age);
+    const serverNorms = lsGet('heys_norms', {}) || {};
     const activityLevel = step3.activityLevel || profile.activityLevel || '';
     const weeks = calcTimeToGoal(weight, weightGoal, deficitPctTarget, activityLevel);
-    const protPct = calculatedNorms.proteinPct || 25;
-    const carbsPct = calculatedNorms.carbsPct || 50;
-    const fatPct = 100 - protPct - carbsPct;
+    const protPct = Number(serverNorms.proteinPct);
+    const carbsPct = Number(serverNorms.carbsPct);
+    const hasServerMacros = serverNorms.source === 'registration-server'
+      && Number.isFinite(protPct)
+      && Number.isFinite(carbsPct);
+    const macroSummary = hasServerMacros
+      ? `${protPct} · ${carbsPct} · ${100 - protPct - carbsPct} %`
+      : '—';
 
     // «вид карточки итогов»: строки 12/600, шаг 11, значение справа
     // табличными цифрами.
@@ -1860,7 +1818,7 @@
       }, 'Дальше — утренний чек-ин: полминуты, и день начнёт считаться.'),
       cardShell([
         row('Целевой вес', `${weightGoal} кг`),
-        row('Белки · углеводы · жиры', `${protPct} · ${carbsPct} · ${fatPct} %`),
+        row('Белки · углеводы · жиры', macroSummary),
         row('Прогноз', weeks, { color: '#8a4a20' })
       ]),
       React.createElement('p', {
@@ -2247,7 +2205,6 @@
 
   HEYS.ProfileSteps = {
     isProfileIncomplete,
-    calcNormsFromGoal,
     calcAgeFromBirthDate,
     calcSleepNorm,
     isValidGivenName,

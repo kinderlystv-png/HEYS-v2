@@ -8,6 +8,18 @@ const profileStepSource = fs.readFileSync(path.resolve(__dirname, '../heys_profi
 const originalHEYS = window.HEYS;
 const originalLocalStorage = window.localStorage;
 const originalReact = window.React;
+const SERVER_NORMS = {
+  carbsPct: 40,
+  proteinPct: 28,
+  simpleCarbPct: 30,
+  badFatPct: 30,
+  superbadFatPct: 5,
+  fiberPct: 14,
+  giPct: 55,
+  harmPct: 10,
+  source: 'registration-server',
+  schemaVersion: 1,
+};
 
 function createMockStorage(seed = {}) {
   const store = { ...seed };
@@ -26,7 +38,25 @@ function readJson(storage, key, fallback = null) {
 
 function loadProfileSteps(storage, overrides = {}) {
   const steps = {};
-  const rpc = vi.fn().mockResolvedValue({ success: true });
+  const rpc = vi.fn(async (fnName) => {
+    if (fnName === 'calculate_registration_norms_by_session') {
+      const profile = readJson(storage, 'heys_profile', {});
+      return {
+        data: {
+          calculate_registration_norms_by_session: {
+            success: true,
+            norms: {
+              ...SERVER_NORMS,
+              profileUpdatedAt: profile.updatedAt,
+              updatedAt: Number(profile.updatedAt || 0) + 1,
+            },
+          },
+        },
+        error: null,
+      };
+    }
+    return { data: { success: true }, error: null };
+  });
   const flushPendingQueue = vi.fn().mockResolvedValue(true);
   const waitForSync = vi.fn().mockResolvedValue('synced');
   const getKV = vi.fn().mockImplementation(async () => ({ data: readJson(storage, 'heys_profile') }));
@@ -89,13 +119,18 @@ describe('first login registration flow', () => {
 
   it('persists first and last name, updates curator client card, and flushes profile before completion', async () => {
     const clientId = 'client-1';
+    const completePendingRegistrationPushOptIn = vi.fn().mockResolvedValue({ ok: true });
+    const feedbackEmit = vi.fn();
     const storage = createMockStorage({
       heys_client_current: JSON.stringify(clientId),
       heys_clients: JSON.stringify([{ id: clientId, name: 'Черновик' }]),
       heys_pending_client_name: JSON.stringify('Анна Петрова'),
       heys_profile: JSON.stringify({}),
     });
-    const { steps, rpc, flushPendingQueue, waitForSync, getKV, notifyClientsUpdated } = loadProfileSteps(storage);
+    const { steps, rpc, flushPendingQueue, waitForSync, getKV, notifyClientsUpdated } = loadProfileSteps(storage, {
+      Consents: { completePendingRegistrationPushOptIn },
+      feedback: { emit: feedbackEmit },
+    });
 
     const initial = steps['profile-personal'].getInitialData();
     expect(initial.firstName).toBe('Анна');
@@ -161,6 +196,17 @@ describe('first login registration flow', () => {
     expect(notifyClientsUpdated).toHaveBeenCalledWith([{ id: clientId, name: 'Анна Петрова' }], 'profile-wizard');
     expect(storage._store.heys_registration_in_progress).toBeUndefined();
     expect(storage._store['heys_dayv2_2026-06-19']).toBeUndefined();
+    expect(completePendingRegistrationPushOptIn).toHaveBeenCalledOnce();
+    expect(completePendingRegistrationPushOptIn).toHaveBeenCalledWith(clientId);
+    expect(feedbackEmit).toHaveBeenCalledOnce();
+    expect(feedbackEmit).toHaveBeenCalledWith('registration.done');
+    expect(rpc).toHaveBeenCalledWith('calculate_registration_norms_by_session', {
+      p_session_token: 'session-token',
+    });
+    expect(readJson(storage, 'heys_norms')).toMatchObject({
+      ...SERVER_NORMS,
+      profileUpdatedAt: readJson(storage, 'heys_profile').updatedAt,
+    });
   });
 
   it('finishes when the profile is confirmed even if an unrelated queue item keeps the global flush pending', async () => {
@@ -195,6 +241,8 @@ describe('first login registration flow', () => {
 
   it('keeps registration incomplete and surfaces the exact profile server error', async () => {
     const clientId = 'client-3';
+    const completePendingRegistrationPushOptIn = vi.fn();
+    const feedbackEmit = vi.fn();
     const storage = createMockStorage({
       heys_client_current: JSON.stringify(clientId),
       heys_profile: JSON.stringify({}),
@@ -207,6 +255,8 @@ describe('first login registration flow', () => {
         waitForSync: vi.fn().mockResolvedValue('pending'),
       },
       YandexAPI: { rpc: vi.fn(), getKV, saveKV },
+      Consents: { completePendingRegistrationPushOptIn },
+      feedback: { emit: feedbackEmit },
     });
 
     await expect(steps['profile-metabolism'].save(
@@ -222,6 +272,54 @@ describe('first login registration flow', () => {
 
     expect(storage._store.heys_registration_in_progress).toBe('true');
     expect(window.HEYS.ProfileSteps.isProfileIncomplete(readJson(storage, 'heys_profile'))).toBe(true);
+    expect(completePendingRegistrationPushOptIn).not.toHaveBeenCalled();
+    expect(feedbackEmit).not.toHaveBeenCalled();
+  });
+
+  it('does not complete registration when server norms are not confirmed', async () => {
+    const clientId = 'client-norms-error';
+    const feedbackEmit = vi.fn();
+    const completePendingRegistrationPushOptIn = vi.fn();
+    const storage = createMockStorage({
+      heys_client_current: JSON.stringify(clientId),
+      heys_profile: JSON.stringify({}),
+    });
+    const getKV = vi.fn(async () => ({ data: readJson(storage, 'heys_profile') }));
+    const rpc = vi.fn(async (fnName) => {
+      if (fnName === 'calculate_registration_norms_by_session') {
+        return {
+          data: {
+            calculate_registration_norms_by_session: {
+              success: false,
+              error: 'registration_norms_failed',
+            },
+          },
+          error: null,
+        };
+      }
+      return { data: { success: true }, error: null };
+    });
+    const { steps } = loadProfileSteps(storage, {
+      YandexAPI: { rpc, getKV, saveKV: vi.fn() },
+      feedback: { emit: feedbackEmit },
+      Consents: { completePendingRegistrationPushOptIn },
+    });
+
+    await expect(steps['profile-metabolism'].save(
+      { sleepHours: 8, insulinWaveHours: 3 },
+      {},
+      {
+        'profile-personal': { firstName: 'Анна', gender: 'Женский', birthDate: '1990-01-01' },
+        'profile-body': { weight: 64, height: 172, weightGoal: 60 },
+        'profile-goals': { deficitPctTarget: -10, activityLevel: 'light' },
+        'profile-metabolism': { sleepHours: 8, insulinWaveHours: 3 },
+      },
+    )).rejects.toThrow('registration_norms_failed');
+
+    expect(storage._store.heys_registration_in_progress).toBe('true');
+    expect(storage._store.heys_norms).toBeUndefined();
+    expect(feedbackEmit).not.toHaveBeenCalled();
+    expect(completePendingRegistrationPushOptIn).not.toHaveBeenCalled();
   });
 
   it('ignores a stale registration marker after the completed profile is confirmed by a newer full sync', () => {
