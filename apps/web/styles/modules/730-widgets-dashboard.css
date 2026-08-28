@@ -10907,25 +10907,24 @@ body:has(.widgets-tab) .widget--corner-br {
   display: flex;
   align-items: flex-end;
   gap: 3px;
-  height: 26px;
+  height: 30px;
   margin-top: auto;
 }
 
 .widget-v4-stepbars--month {
   gap: 1.5px;
-  height: 42px;
+  height: 30px;
 }
 
 .widget-v4-stepbars__bar {
   flex: 1;
   min-height: 2px;
   border-radius: 2px;
-  background: var(--v4-sand-ok-fill, #7a8a5e);
-  opacity: 0.45;
+  background: #b7c29b;
 }
 
 .widget-v4-stepbars__bar.is-goal {
-  opacity: 1;
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 /* День без записи — не ноль и не пропуск: тонкая риска на месте столбика. */
@@ -11628,10 +11627,8 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   width: 100%;
 }
 
-/* Строка контракта «тепловая карта»: отдельные клетки не красятся ролями
-   состояния — у них своя шкала плотности в одном тоне; ролью красится только
-   итоговое число над картой. Прежние --ok (#7a8a5e) и --warn (#d99a63) были
-   ровно ролями состояния, то есть вторым, чужим прочтением дня. */
+/* Строка контракта «вид · тепловая карта»: состояние дня несёт сама полоса —
+   норма шалфеем, частичное попадание тоном нахлёста, промах пустой линией. */
 .widget-v4-heat__bar {
   flex: 1;
   height: 9px;
@@ -11640,27 +11637,15 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 .widget-v4-heat__bar--d1 {
-  background: rgba(32, 30, 29, 0.18);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .widget-v4-heat__bar--d2 {
-  background: rgba(32, 30, 29, 0.36);
+  background: var(--v4-wave-overlap, #d99a63);
 }
 
 .widget-v4-heat__bar--d3 {
-  background: rgba(32, 30, 29, 0.58);
-}
-
-[data-theme$="dark"] .widget-v4-heat__bar--d1 {
-  background: rgba(242, 237, 230, 0.2);
-}
-
-[data-theme$="dark"] .widget-v4-heat__bar--d2 {
-  background: rgba(242, 237, 230, 0.4);
-}
-
-[data-theme$="dark"] .widget-v4-heat__bar--d3 {
-  background: rgba(242, 237, 230, 0.62);
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-v4-kv {
@@ -12168,6 +12153,11 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.widget-v4-mini.widget-v4-fiber .widget-v4-goal-value,
+.widget-v4-mini.widget-v4-protein .widget-v4-goal-value {
+  font-size: 21px;
 }
 
 .widget-v4-stack .widget-v4-goal-value {
@@ -13925,6 +13915,76 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   color: var(--v4-act-text, #cf8144);
 }
 
+.widget-bd-sheet__weight-plateau {
+  fill: rgba(0, 0, 0, 0.06);
+}
+
+.widget-bd-sheet__weight-chart {
+  display: block;
+  width: 100%;
+  height: 72px;
+  margin-bottom: 16px;
+}
+
+.widget-bd-sheet__weight-dot {
+  fill: rgba(0, 0, 0, 0.22);
+}
+
+.widget-bd-sheet__weight-trend {
+  color: var(--v4-ok, #7a8a5e);
+}
+
+.widget-bd-sheet__water-profile {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 66px;
+  margin-bottom: 6px;
+}
+
+.widget-bd-sheet__water-profile-gap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 6px;
+  background: rgba(180, 68, 42, 0.08);
+  pointer-events: none;
+}
+
+.widget-bd-sheet__water-profile-bar {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  min-height: 4px;
+}
+
+.widget-bd-sheet__water-profile-bar > i {
+  display: block;
+  width: 100%;
+  border-radius: 3px 3px 1px 1px;
+  background: rgba(94, 128, 143, 0.5);
+}
+
+.widget-bd-sheet__water-profile-spline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: #5e808f;
+  pointer-events: none;
+}
+
+.widget-bd-sheet__water-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.4);
+}
+
 .widget-bd-sheet__grid3x7 {
   display: flex;
   flex-direction: column;
@@ -13985,45 +14045,119 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  height: 120px;
-  margin-bottom: 16px;
+  gap: 4px;
+  margin-bottom: 6px;
 }
 
-.widget-bd-sheet__sleep-row {
+.widget-bd-sheet__sleep-timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.widget-bd-sheet__sleep-timeline-label {
+  flex: none;
+  width: 14px;
+  font-size: 7.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.3);
+}
+
+.widget-bd-sheet__sleep-timeline-track {
   position: relative;
   flex: 1;
-  min-height: 6px;
-  border-radius: 3px;
+  height: 5px;
+  border-radius: 999px;
   background: rgba(0, 0, 0, 0.06);
 }
 
-.widget-bd-sheet__sleep-row > i {
+.widget-bd-sheet__sleep-timeline-bar {
   position: absolute;
-  left: 0;
-  right: 0;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--v4-tint-cool, #0a84ff) 35%, transparent);
+  top: 0;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--v4-act-text, #8a4a20);
 }
 
-.widget-bd-sheet__sleep-row.is-today > i {
-  background: color-mix(in srgb, var(--v4-tint, #c67139) 45%, transparent);
+.widget-bd-sheet__sleep-timeline-row.is-today .widget-bd-sheet__sleep-timeline-bar {
+  background: var(--v4-act-text, #8a4a20);
 }
 
-.widget-bd-sheet__sleep-avg {
+.widget-bd-sheet__sleep-timeline-avg {
   position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--v4-bad-text, #a8382b);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.22);
   z-index: 1;
   pointer-events: none;
+}
+
+.widget-bd-sheet__sleep-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.4);
 }
 
 .widget-bd-sheet__wave-placeholder {
   height: 32px;
   margin-bottom: 16px;
   border-radius: 6px;
+}
+
+.widget-bd-sheet__wave-week {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 16px;
+}
+
+.widget-bd-sheet__wave-week-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.widget-bd-sheet__wave-week-label {
+  width: 12px;
+  flex: none;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.widget-bd-sheet__wave-week-row.is-today .widget-bd-sheet__wave-week-label {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.widget-bd-sheet__wave-week-track {
+  flex: 1;
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.widget-bd-sheet__wave-week-seg {
+  height: 8px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.widget-bd-sheet__wave-week-seg.is-active {
+  background: color-mix(in srgb, var(--v4-tint, #c67139) 65%, transparent);
+}
+
+.widget-bd-sheet__wave-week-empty {
+  flex: 1;
+  height: 8px;
 }
 
 .widget-bd-sheet__wave-day {
@@ -14049,17 +14183,51 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__hero-tracks {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
+  gap: 11px;
+  margin-bottom: 16px;
 }
 
 .widget-bd-sheet__hero-track {
   display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.widget-bd-sheet__hero-track-head {
+  display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
+}
+
+.widget-bd-sheet__hero-track-name {
   font-size: 12px;
   font-weight: 600;
+  color: var(--v4-ink, #201e1d);
+}
+
+.widget-bd-sheet__hero-track-val {
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.widget-bd-sheet__hero-track-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.widget-bd-sheet__hero-track-fill {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--v4-good, #7a8a5e);
+}
+
+.widget-bd-sheet__hero-track-fill.is-bad {
+  background: var(--v4-bad, #c45c4a);
 }
 
 .widget-bd-sheet__hero-track-label {
@@ -14148,14 +14316,32 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 .widget-bd-sheet__factor-row {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 8px;
+  grid-template-columns: 58px 1fr 52px;
+  gap: 9px;
   align-items: center;
-  font-size: 11px;
+  font-size: 10.5px;
+}
+
+.widget-bd-sheet__factor-label {
+  flex: none;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.widget-bd-sheet__factor-share {
+  flex: none;
+  text-align: right;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.widget-bd-sheet__factor-share.is-bad {
+  color: #b4442a;
 }
 
 .widget-bd-sheet__factor-bar {
-  height: 4px;
+  height: 5px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -14168,10 +14354,111 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   background: var(--v4-act-text, #cf8144);
 }
 
+.widget-bd-sheet__factor-bar.is-good > i {
+  background: #7a8a5e;
+}
+
+.widget-bd-sheet__factor-bar.is-warn > i {
+  background: #c9922e;
+}
+
+.widget-bd-sheet__factor-bar.is-bad > i {
+  background: #b4442a;
+}
+
+.widget-bd-sheet__driver-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.widget-bd-sheet__driver-mark {
+  width: 4px;
+  height: 20px;
+  flex: none;
+  border-radius: 999px;
+  background: #c9922e;
+}
+
+.widget-bd-sheet__driver-row.is-bad .widget-bd-sheet__driver-mark {
+  background: #b4442a;
+}
+
+.widget-bd-sheet__driver-row.is-warn .widget-bd-sheet__driver-mark {
+  background: #c9922e;
+}
+
 .widget-bd-sheet__driver {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.widget-bd-sheet__chart-axis .is-accent {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.widget-bd-sheet__contrib {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.widget-bd-sheet__contrib-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.widget-bd-sheet__contrib-label {
+  width: 78px;
+  flex: none;
   font-size: 11px;
-  font-weight: 500;
-  color: rgba(0, 0, 0, 0.55);
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.widget-bd-sheet__contrib-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+
+.widget-bd-sheet__contrib-bar {
+  position: absolute;
+  top: 0;
+  height: 5px;
+  border-radius: 999px;
+}
+
+.widget-bd-sheet__contrib-bar.is-good {
+  background: #7a8a5e;
+}
+
+.widget-bd-sheet__contrib-bar.is-bad {
+  background: #b4442a;
+}
+
+.widget-bd-sheet__contrib-val {
+  width: 24px;
+  flex: none;
+  text-align: right;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.widget-bd-sheet__contrib-val.is-good {
+  color: #7a8a5e;
+}
+
+.widget-bd-sheet__contrib-val.is-bad {
+  color: #b4442a;
 }
 
 [data-theme$="dark"] .widget-bd-sheet {
@@ -14190,12 +14477,14 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
    Главной; закрывается любым касанием и больше не возвращается.
 
    Плашка не блокирует экран: затемнения под ней нет, плитки под ней работают,
-   поэтому pointer-events остаются у неё самой, а не у слоя во всю ширину. */
+   поэтому pointer-events остаются у неё самой, а не у слоя во всю ширину.
+   Рендер в document.body (heys_widgets_ui_v1): иначе под FAB из-за
+   overflow:hidden у .tab-content-swipeable. */
 .widgets-longpress-hint {
   position: fixed;
   left: 14px;
   right: 14px;
-  bottom: 78px;
+  bottom: calc(78px + env(safe-area-inset-bottom, 0px));
   z-index: var(--v4-z-toast, 1100);
   display: flex;
   align-items: flex-start;

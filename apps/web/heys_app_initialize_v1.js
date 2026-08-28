@@ -188,15 +188,11 @@
             warn.setAttribute('viewBox', '0 0 24 24');
             warn.setAttribute('fill', 'none');
             warn.setAttribute('stroke', 'currentColor');
-            warn.setAttribute('stroke-width', '2.75');
+            warn.setAttribute('stroke-width', '3.4');
             warn.setAttribute('stroke-linecap', 'round');
             const warnPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            warnPath.setAttribute('d', 'M12 7v6M12 17h.01');
-            const warnCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            warnCircle.setAttribute('cx', '12');
-            warnCircle.setAttribute('cy', '12');
-            warnCircle.setAttribute('r', '9');
-            warn.append(warnPath, warnCircle);
+            warnPath.setAttribute('d', 'M7 7l10 10M17 7L7 17');
+            warn.append(warnPath);
             disc.appendChild(warn);
             const sign = document.createElement('div');
             sign.className = 'heys-boot-mark__sign';

@@ -288,6 +288,7 @@ describe('повторный тап — минимум 350 мс поверх б�
     }
 
     let signRpc;
+    let feedbackEmit;
 
     beforeEach(() => {
       window.HEYS.auth = Object.assign({}, window.HEYS.auth, {
@@ -295,6 +296,8 @@ describe('повторный тап — минимум 350 мс поверх б�
       });
       global.fetch = vi.fn(async (url) => ({ ok: true, status: 200, text: async () => docMarkdown(url) }));
       signRpc = vi.fn(async () => ({ data: { sign_consents_with_access_code_by_session: { success: true } } }));
+      feedbackEmit = vi.fn();
+      window.HEYS.feedback = { emit: feedbackEmit };
       window.HEYS.YandexAPI = {
         logConsentsBySession: vi.fn(async () => ({
           data: { log_consents_by_session: { success: false, error: 'signing_requires_access_code' } },
@@ -366,10 +369,13 @@ describe('повторный тап — минимум 350 мс поверх б�
       await flush();
       await flushMs(60);
       expect(signRpc).toHaveBeenCalledTimes(1);
+      expect(feedbackEmit).toHaveBeenCalledOnce();
+      expect(feedbackEmit).toHaveBeenCalledWith('document.signed');
 
       // Спустя полное защитное окно новых самопроизвольных вызовов нет.
       await flushMs(350);
       expect(signRpc).toHaveBeenCalledTimes(1);
+      expect(feedbackEmit).toHaveBeenCalledTimes(1);
     });
   });
 

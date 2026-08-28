@@ -187,54 +187,54 @@ PostgreSQL (harm)
 
 **localStorage ключ**: `heys_dayv2_{YYYY-MM-DD}` (с clientId namespace)
 
-| Параметр               | Тип                 | Описание                                                                                                   | Пример                              |
-| ---------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `date`                 | string              | Дата в формате YYYY-MM-DD                                                                                  | `"2025-11-29"`                      |
-| `sleepStart`           | string              | Время начала сна (HH:MM)                                                                                   | `"23:30"`                           |
-| `sleepEnd`             | string              | Время окончания сна (HH:MM)                                                                                | `"07:00"`                           |
-| `daySleepMinutes`      | number              | Дневной сон в минутах                                                                                      | `30`                                |
-| `sleepNote`            | string              | Заметка о сне                                                                                              | `"Хорошо выспался"`                 |
-| `sleepQuality`         | number              | Качество сна (1-10)                                                                                        | `7`                                 |
-| `weightMorning`        | number              | Утренний вес (кг)                                                                                          | `75.5`                              |
-| `deficitPct`           | number              | Процент дефицита/профицита (дефицит = отрицательное число)                                                 | `-15`                               |
-| `steps`                | number              | Количество шагов                                                                                           | `8500`                              |
-| `householdActivities`  | HouseholdActivity[] | Массив бытовых активностей                                                                                 | `[{minutes: 30, time: "14:00"}]`    |
-| `householdMin`         | number              | ⚠️ Legacy: сумма минут всех активностей                                                                    | `30`                                |
-| `householdTime`        | string              | ⚠️ Legacy: время первой активности                                                                         | `"14:00"`                           |
-| `dayScore`             | number / `''`       | Итоговая целая оценка 0-10; может быть рассчитана автоматически или задана вручную                         | `8`                                 |
-| `dayScoreRaw`          | number / `''`       | Автоматическая оценка с точностью 0.1 для аналитики                                                        | `7.3`                               |
-| `moodAvg`              | number              | Среднее настроение за день (1-10)                                                                          | `7.5`                               |
-| `wellbeingAvg`         | number              | Среднее самочувствие за день (1-10)                                                                        | `7.2`                               |
-| `stressAvg`            | number              | Средний стресс за день (1-10)                                                                              | `3.0`                               |
-| `moodMorning`          | number              | Утреннее настроение (1-10, из утреннего чек-ина)                                                           | `6`                                 |
-| `wellbeingMorning`     | number              | Утреннее самочувствие (1-10, из утреннего чек-ина)                                                         | `7`                                 |
-| `stressMorning`        | number              | Утренний стресс (1-10, из утреннего чек-ина)                                                               | `4`                                 |
-| `dayComment`           | string              | Комментарий к дню                                                                                          | `"Продуктивный день"`               |
-| `waterMl`              | number              | Выпито воды (мл)                                                                                           | `1500`                              |
-| `lastWaterTime`        | string              | Время последнего приёма воды (ISO)                                                                         | `"2025-11-29T14:30:00"`             |
-| `sleepHours`           | number              | Вычисляемое: часы сна                                                                                      | `7.5`                               |
-| `updatedAt`            | number              | Timestamp последнего обновления                                                                            | `1732886400000`                     |
-| `meals`                | Meal[]              | Массив приёмов пищи                                                                                        | `[...]`                             |
-| `deletedMealIds`       | object              | Tombstones удалённых приёмов пищи для merge                                                                | `{}`                                |
-| `trainings`            | Training[]          | Массив тренировок (до 3)                                                                                   | `[...]`                             |
-| `measurements`         | Measurements        | Замеры тела (опционально)                                                                                  | `{...}`                             |
-| `cycleDay`             | number/null         | День менструального цикла (1-7, null=не отслеживается)                                                     | `3`                                 |
-| `isRefeedDay`          | boolean/null        | Загрузочный день (из утреннего чек-ина)                                                                    | `true`                              |
-| `refeedReason`         | string              | Причина refeed (deficit/training/holiday/rest)                                                             | `"deficit"`                         |
-| `supplementsPlanned`   | string[]            | IDs запланированных добавок на день                                                                        | `["vit_d", "omega3"]`               |
-| `supplementsTaken`     | string[]            | IDs фактически принятых добавок                                                                            | `["vit_d"]`                         |
-| `supplementsTakenAt`   | string              | Время приёма добавок (ISO)                                                                                 | `"2025-11-29T08:00:00"`             |
-| `supplementsTakenMeta` | object              | Метаданные приёма (форма, доза, тайминг по ID)                                                             | `{vit_d: {dose: 2000, form: "D3"}}` |
-| `coldExposure`         | object/null         | Данные холодовой экспозиции (из чек-ина)                                                                   | `{minutes: 3, type: "shower"}`      |
-| `isFastingDay`         | boolean             | Низкокалорийный день подтверждён как осознанный                                                            | `false`                             |
-| `isIncomplete`         | boolean             | День помечен как неполный для аналитических фильтров                                                       | `false`                             |
-| `savedEatenKcal`       | number              | Сохранённое витринное значение съеденных калорий                                                           | `1850`                              |
-| `savedDisplayOptimum`  | number              | Кэш отрисовки нормы: пишет только браузер и только пока день открыт                                        | `2100`                              |
-| `savedOptimumMeta`     | object              | Из чего получен кэш: `optimum`, `correction`, `ndte` + отпечаток входов. Аудит-след: норму MCP считает сам | `{optimum: 1841, correction: 368}`  |
-| `morningActivation`    | object              | Состояние утренней активации и follow-up                                                                   | `{...}`                             |
-| `schemaVersion`        | number              | Версия схемы данных (autosave по умолчанию пишет 3)                                                        | `3`                                 |
-| `_sourceId`            | string              | ID экземпляра writer для разрешения равных timestamps                                                      | `"abc-123-def"`                     |
-| `dayScoreManual`       | boolean             | Ручная оценка (выигрывает при cloud merge)                                                                 | `true`                              |
+| Параметр               | Тип                 | Описание                                                                                                                             | Пример                              |
+| ---------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| `date`                 | string              | Дата в формате YYYY-MM-DD                                                                                                            | `"2025-11-29"`                      |
+| `sleepStart`           | string              | Время начала сна (HH:MM)                                                                                                             | `"23:30"`                           |
+| `sleepEnd`             | string              | Время окончания сна (HH:MM)                                                                                                          | `"07:00"`                           |
+| `daySleepMinutes`      | number              | Дневной сон в минутах                                                                                                                | `30`                                |
+| `sleepNote`            | string              | Заметка о сне                                                                                                                        | `"Хорошо выспался"`                 |
+| `sleepQuality`         | number              | Качество сна (1-10)                                                                                                                  | `7`                                 |
+| `weightMorning`        | number              | Утренний вес (кг)                                                                                                                    | `75.5`                              |
+| `deficitPct`           | number              | Процент дефицита/профицита (дефицит = отрицательное число)                                                                           | `-15`                               |
+| `steps`                | number              | Количество шагов                                                                                                                     | `8500`                              |
+| `householdActivities`  | HouseholdActivity[] | Массив бытовых активностей                                                                                                           | `[{minutes: 30, time: "14:00"}]`    |
+| `householdMin`         | number              | ⚠️ Legacy: сумма минут всех активностей                                                                                              | `30`                                |
+| `householdTime`        | string              | ⚠️ Legacy: время первой активности                                                                                                   | `"14:00"`                           |
+| `dayScore`             | number / `''`       | Итоговая целая оценка 0-10; может быть рассчитана автоматически или задана вручную                                                   | `8`                                 |
+| `dayScoreRaw`          | number / `''`       | Автоматическая оценка с точностью 0.1 для аналитики                                                                                  | `7.3`                               |
+| `moodAvg`              | number              | Среднее настроение за день (1-10)                                                                                                    | `7.5`                               |
+| `wellbeingAvg`         | number              | Среднее самочувствие за день (1-10)                                                                                                  | `7.2`                               |
+| `stressAvg`            | number              | Средний стресс за день (1-10)                                                                                                        | `3.0`                               |
+| `moodMorning`          | number              | Утреннее настроение (1-10, из утреннего чек-ина)                                                                                     | `6`                                 |
+| `wellbeingMorning`     | number              | Утреннее самочувствие (1-10, из утреннего чек-ина)                                                                                   | `7`                                 |
+| `stressMorning`        | number              | Утренний стресс (1-10, из утреннего чек-ина)                                                                                         | `4`                                 |
+| `dayComment`           | string              | Комментарий к дню                                                                                                                    | `"Продуктивный день"`               |
+| `waterMl`              | number              | Выпито воды (мл)                                                                                                                     | `1500`                              |
+| `lastWaterTime`        | string              | Время последнего приёма воды (ISO)                                                                                                   | `"2025-11-29T14:30:00"`             |
+| `sleepHours`           | number              | Вычисляемое: часы сна                                                                                                                | `7.5`                               |
+| `updatedAt`            | number              | Timestamp последнего обновления                                                                                                      | `1732886400000`                     |
+| `meals`                | Meal[]              | Массив приёмов пищи                                                                                                                  | `[...]`                             |
+| `deletedMealIds`       | object              | Tombstones удалённых приёмов пищи для merge                                                                                          | `{}`                                |
+| `trainings`            | Training[]          | Массив тренировок (до 3)                                                                                                             | `[...]`                             |
+| `measurements`         | Measurements        | Замеры тела (опционально)                                                                                                            | `{...}`                             |
+| `cycleDay`             | number/null         | Историческая отметка дня особого периода (1–7); `null` означает отсутствие отметки в конкретном дне, а не состояние тумблера профиля | `3`                                 |
+| `isRefeedDay`          | boolean/null        | Загрузочный день (из утреннего чек-ина)                                                                                              | `true`                              |
+| `refeedReason`         | string              | Причина refeed (deficit/training/holiday/rest)                                                                                       | `"deficit"`                         |
+| `supplementsPlanned`   | string[]            | IDs запланированных добавок на день                                                                                                  | `["vit_d", "omega3"]`               |
+| `supplementsTaken`     | string[]            | IDs фактически принятых добавок                                                                                                      | `["vit_d"]`                         |
+| `supplementsTakenAt`   | string              | Время приёма добавок (ISO)                                                                                                           | `"2025-11-29T08:00:00"`             |
+| `supplementsTakenMeta` | object              | Метаданные приёма (форма, доза, тайминг по ID)                                                                                       | `{vit_d: {dose: 2000, form: "D3"}}` |
+| `coldExposure`         | object/null         | Данные холодовой экспозиции (из чек-ина)                                                                                             | `{minutes: 3, type: "shower"}`      |
+| `isFastingDay`         | boolean             | Низкокалорийный день подтверждён как осознанный                                                                                      | `false`                             |
+| `isIncomplete`         | boolean             | День помечен как неполный для аналитических фильтров                                                                                 | `false`                             |
+| `savedEatenKcal`       | number              | Сохранённое витринное значение съеденных калорий                                                                                     | `1850`                              |
+| `savedDisplayOptimum`  | number              | Кэш отрисовки нормы: пишет только браузер и только пока день открыт                                                                  | `2100`                              |
+| `savedOptimumMeta`     | object              | Из чего получен кэш: `optimum`, `correction`, `ndte` + отпечаток входов. Аудит-след: норму MCP считает сам                           | `{optimum: 1841, correction: 368}`  |
+| `morningActivation`    | object              | Состояние утренней активации и follow-up                                                                                             | `{...}`                             |
+| `schemaVersion`        | number              | Версия схемы данных (autosave по умолчанию пишет 3)                                                                                  | `3`                                 |
+| `_sourceId`            | string              | ID экземпляра writer для разрешения равных timestamps                                                                                | `"abc-123-def"`                     |
+| `dayScoreManual`       | boolean             | Ручная оценка (выигрывает при cloud merge)                                                                                           | `true`                              |
 
 ---
 
@@ -514,6 +514,12 @@ EXTENDED_NUTRIENT_KEYS маппинг определён в `heys_models_v1.js`.
 
 **Модуль**: `heys_cycle_v1.js` | **Утренний чек-ин**: шаг `cycle`
 
+Отключение `profile.cycleTrackingEnabled` действует с текущего дня: live-вопрос,
+счёт, прогноз и множители текущего дня выключаются, но `cycleDay` и связанные
+нормы прошлых дней сохраняются. Полное удаление исторических полей остаётся
+только защитой от cross-gender contamination; обычное выключение функции не
+переписывает прожитую историю.
+
 ### Поле cycleDay (в DayRecord)
 
 | Значение | Фаза                        | Описание                               |
@@ -605,10 +611,13 @@ HEYS.Cycle.getWeightNormalizationForecast(cycleDay); // {daysUntilNormal, messag
 
 **localStorage ключ**: `heys_norms`
 
-`carbsPct` и `proteinPct` не имеют одного универсального default: мастер профиля
-рассчитывает их через `calcNormsFromGoal()` по цели, полу и возрасту. Числа ниже
-для БЖУ — пример режима поддержки для мужчины младше 40 лет; остальные
-ограничения возвращаются мастером одинаковыми.
+`carbsPct` и `proteinPct` не имеют одного универсального default. После
+подтверждённого сохранения профиля RPC `calculate_registration_norms_by_session`
+читает серверный `heys_profile`, рассчитывает нормы по цели, полу и возрасту и
+сохраняет `heys_norms`. Клиентская формула в wizard отсутствует: локальная копия
+принимает только ответ RPC с совпадающим `profileUpdatedAt`. Числа ниже для БЖУ
+— пример режима поддержки для мужчины младше 40 лет; остальные ограничения
+сервер возвращает одинаковыми.
 
 | Параметр         | Тип    | Описание                 | Пример мастера |
 | ---------------- | ------ | ------------------------ | -------------- |
@@ -620,6 +629,9 @@ HEYS.Cycle.getWeightNormalizationForecast(cycleDay); // {daysUntilNormal, messag
 | `fiberPct`       | number | г клетчатки на 1000 ккал | `14`           |
 | `giPct`          | number | Целевой средний ГИ       | `55`           |
 | `harmPct`        | number | Допустимый % вреда       | `10`           |
+
+Служебные поля первичного расчёта: `source: "registration-server"`,
+`schemaVersion`, `profileUpdatedAt` и серверный `updatedAt`.
 
 ---
 

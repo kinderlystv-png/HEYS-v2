@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="v4-canvas.css" rel="stylesheet">
+<script src="./contract-audit.js"></script>
 <style>
   body{margin:0;background:#e9dfcd;font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   *{box-sizing:border-box}
@@ -87,6 +88,7 @@
     <div class="spec"><b>текст</b><span data-v="что именно исчезло, прошедшим временем: «Перекус удалён», «Рис бурый удалён», «Задача удалена». Без «вы», без восклицаний"></span></div>
     <div class="spec"><b>длинное имя в тексте</b><span data-v="имя записи не обрезается и не сокращается: текст переносится на вторую строку, плашка растёт по высоте, кольцо и «Отменить» остаются на своих местах по вертикальному центру. Многоточия нет"></span><i>«Творожный сыр Пре… удалён» не отличить от «Творожный сыр Пра… удалён»: обрезка экономит высоту ценой того, ради чего бар и существует — понять, что именно исчезло</i></div>
     <div class="spec"><b>пустого текста не бывает</b><span data-v="если удалённое нечем назвать, в текст подставляется «Действие выполнено» — бар показывается и работает как обычно. Молча необратимым удаление не становится никогда"></span><i>прежняя редакция говорила, что бар не показывается вовсе и «страховкой служит сама запись в дневнике» — это делало удаление без имени молча необратимым: отмена пропадала, и человек об этом не узнавал. Заглушка хуже имени, но лучше отсутствия страховки</i></div>
+    <div class="spec"><b>вид полосы</b><span data-v="плавающая полоса над нижней навигацией: отступы 12 px по бокам, 76 px от низа, заливка --c1, радиус 22, поля 11/13, обводка inset 1 px тоном чернил 7 % вместо тени. Полоса тёплая, а не тёмная — общее правило плавающих поверхностей, строка «плавающие поверхности тёплые» в cycle.v4.dc.html"></span><i>кадры «Отмена · одно удаление / пачка / продукт» — одна поверхность, разное содержимое текста</i></div>
     <div class="spec"><b>вид текста и действия</b><span data-v="текст 12 px/600 чернилами занимает всю середину плашки, зазоры 11 px от кольца и до действия; «Отменить» 12 px/700 тоном --ac, не переносится, область нажатия во всю высоту плашки. Второй строки и иконки у текста нет"></span><i>действие подписано словом, а не иконкой стрелки: у отмены нет общепонятного глифа, а цена ошибки здесь — потерянная запись</i></div>
     <div class="spec"><b>выход, удаление данных, производительность</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «выход и удаление данных · правило продукта» и «производительность · правило продукта». Местное отличие: окно отмены при выходе из аккаунта закрывается немедленно, удаление применяется"></span></div>
     <div class="spec"><b>уведомления и точки входа</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «уведомления · правило продукта» и «точки входа · правило продукта». Местных отличий нет: бар не уведомление и своей точки входа не имеет — он приходит от действия"></span></div>
@@ -225,6 +227,63 @@ class Component extends DCLogic {
       }
     };
   }
+  audit() {
+    const specs = [...document.querySelectorAll('[data-contract] .spec, .spec')];
+    const vals = specs.map(r => {
+      const b = r.querySelector('b'), v = r.querySelector('span[data-v]');
+      return { key: b ? b.textContent : '', val: v ? v.getAttribute('data-v') : '' };
+    });
+    if (!vals.length) return ['НЕТ КОНТРАКТА'];
+    const nrm = s => s.replace(/(\d)[\s\u00a0\u202f\u2009](?=\d{3}\b)/g, '$1');
+    const contract = vals.map(v => v.key + ' ' + v.val).join(' ');
+    const low = contract.toLowerCase();
+    const vid = vals.filter(v => v.key.startsWith('вид')).map(v => v.key + ' ' + v.val).join(' ').toLowerCase();
+    const tokens = new Set((nrm(contract).match(/\d+[,.]?\d*/g) || []));
+    const out = [];
+    const frames = [...document.querySelectorAll('[data-screen-label]')]
+      .filter(f => f.getAttribute('data-demo') !== 'protocol' && !f.closest('[data-demo="protocol"]'))
+      .filter(f => !/ · (тёмная|синяя|сине-тёмная)/i.test(f.getAttribute('data-screen-label')));
+    const noVid = frames.filter(f => {
+      const ref = f.getAttribute('data-vid');
+      if (ref) return !vals.some(v => v.key === ref);
+      const l = f.getAttribute('data-screen-label').toLowerCase();
+      const tail = l.split(' · ').pop().trim();
+      if (tail.length > 3 && (vid.includes(tail) || low.includes(tail))) return false;
+      const words = l.split(/[\s,·]+/).filter(s => s.length > 4);
+      return !words.some(w => { const st = w.slice(0, w.length - 2); return vid.includes(st) || low.includes(st); });
+    }).map(f => f.getAttribute('data-screen-label'));
+    if (noVid.length) out.push('без «вида»: ' + [...new Set(noVid)].slice(0, 8).join(' · '));
+    const shown = new Set();
+    document.querySelectorAll('[data-screen-label]').forEach(f => {
+      (nrm(f.textContent).match(/\d+[,.]?\d*/g) || []).forEach(x => shown.add(x));
+    });
+    const stray = new Set();
+    document.querySelectorAll('.nt, .ntl, .hint, .cap, .lab, .fb').forEach(n => {
+      if (n.closest('[data-contract]')) return;
+      (nrm(n.textContent).match(/\d+[,.]?\d*[\s\u00a0]?(?:%|px|мл|ккал|pt)/g) || []).forEach(m => {
+        const num = m.match(/\d+[,.]?\d*/)[0];
+        if (num.length > 1 && !tokens.has(num) && !shown.has(num)) stray.add(m.trim());
+      });
+    });
+    if (stray.size) out.push('число в прозе вне контракта: ' + [...stray].slice(0, 8).join(' · '));
+    return out;
+  }
+  auditBar() {
+    const found = this.audit();
+    let bar = document.querySelector('[data-auditbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-auditbar', '');
+      bar.style.cssText = 'font:700 11px/1.6 ui-monospace,Menlo,monospace;margin:-14px 0 22px;text-wrap:pretty;max-width:1080px;';
+      const anchor = document.querySelector('[data-protobar]') || document.querySelector('[data-ctrbar]') || document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    const none = found[0] === 'НЕТ КОНТРАКТА';
+    bar.textContent = none
+      ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено'
+      : (found.length ? '⚠ сверка: ' + found.join(' | ') : '✓ сверка чиста');
+    bar.style.color = none ? '#8a4a20' : (found.length ? '#a8382b' : '#5c6a45');
+  }
   contracts() {
     const on = this.props.showContracts ?? false;
     const list = [...document.querySelectorAll('[data-contract]')];
@@ -248,6 +307,7 @@ class Component extends DCLogic {
   }
   apply() {
     this.contracts();
+    this.auditBar();
     const all = this.props.allPalettes ?? (window.parent === window);
     document.querySelectorAll('[data-mirdst]').forEach(dst => {
       dst.innerHTML = '';

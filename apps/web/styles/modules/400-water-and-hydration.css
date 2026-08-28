@@ -3022,7 +3022,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  background: var(--v4-surface, #fffaf1);
+  background: var(--v4-bg, #fffaf1);
   color: #201e1d;
 }
 
@@ -3062,11 +3062,17 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .advice-v4-settings__section-label {
-  margin-top: 22px;
+  margin: 22px 0 10px;
   font: 700 10px/1 Figtree, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #8a4a20;
+}
+
+.advice-v4-settings__group {
+  padding: 2px 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
 }
 
 .advice-v4-settings__row {
@@ -3074,8 +3080,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 13px 0;
 }
 
 .advice-v4-settings__row-copy {
@@ -3092,7 +3097,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-settings__row-hint {
   display: block;
   margin-top: 4px;
-  font: 500 10.5px/1.45 Figtree, sans-serif;
+  font: 500 11px/1.45 Figtree, sans-serif;
   color: rgba(32, 30, 29, 0.42);
   text-wrap: pretty;
 }

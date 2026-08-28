@@ -182,8 +182,8 @@
     },
     {
       type: 'healthTrend',
-      size: '2x2',
-      settings: { displayVariant: 'spark' }
+      size: '2x1',
+      settings: { displayVariant: 'compact' }
     },
     {
       type: 'weight',
@@ -203,6 +203,16 @@
       type: 'crashRisk',
       size: '2x1',
       settings: { displayVariant: 'curve' }
+    },
+    {
+      type: 'protein',
+      size: '1x1',
+      settings: { displayVariant: 'now' }
+    },
+    {
+      type: 'fiber',
+      size: '1x1',
+      settings: { displayVariant: 'now' }
     }
   ];
 

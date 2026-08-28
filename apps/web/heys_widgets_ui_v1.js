@@ -10225,13 +10225,23 @@
       let prof = null;
       const U = HEYS.utils || {};
       try { prof = U.lsGet?.('heys_profile', {}) || {}; } catch (_) { return; }
-      if (prof.longPressHintShown) return;
-      const opens = Number(prof.homeOpensCount || 0) + 1;
-      const next = { ...prof, homeOpensCount: opens };
+      // Старый widgetsHoldHintShown / widgetsTabOpenCount — тот же жест; не
+      // показываем вторую legacy-плашку (z-index 40 под FAB).
+      if (prof.longPressHintShown || prof.widgetsHoldHintShown) return;
+      const opens = Math.max(
+        Number(prof.homeOpensCount || 0),
+        Number(prof.widgetsTabOpenCount || 0),
+      ) + 1;
+      const next = {
+        ...prof,
+        homeOpensCount: opens,
+        widgetsTabOpenCount: opens,
+      };
       // Показ на третьем открытии: строка называет «после третьего», то есть
       // счётчик уже дошёл до трёх, а не «после трёх пропущенных».
       if (opens >= 3) {
         next.longPressHintShown = true;
+        next.widgetsHoldHintShown = true;
         setShowLongPressHint(true);
       }
       try { U.lsSet?.('heys_profile', next); } catch (_) { /* останется прежним */ }
@@ -10286,8 +10296,6 @@
     const breakdownCloseTimerRef = useRef(null);
     const [variantSavedToast, setVariantSavedToast] = useState(false);
     const [variantHoldHint, setVariantHoldHint] = useState(false);
-    const [showHoldOnboarding, setShowHoldOnboarding] = useState(false);
-    const holdVisitCountedRef = useRef(false);
     const variantToastTimerRef = useRef(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
@@ -10426,15 +10434,6 @@
     const openEditWithCatalog = useCallback(() => {
       if (isWidgetsCuratorReadOnly()) return;
       HEYS.Widgets.enterEditMode?.();
-    }, []);
-
-    const dismissHoldOnboarding = useCallback(() => {
-      setShowHoldOnboarding(false);
-      const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
-      patchWidgetsProfile({
-        widgetsHoldHintShown: true,
-        widgetsTabOpenCount: Math.max(Number(profile.widgetsTabOpenCount) || 0, 3)
-      });
     }, []);
 
     const openCuratorMessenger = useCallback(() => {
@@ -10740,16 +10739,6 @@
       });
       return () => { cancelled = true; };
     }, [isLayoutHydrated, widgets.length]);
-
-    useEffect(() => {
-      if (!isLayoutHydrated || holdVisitCountedRef.current || isWidgetsCuratorReadOnly()) return;
-      holdVisitCountedRef.current = true;
-      const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
-      if (profile.widgetsHoldHintShown) return;
-      const nextCount = (Number(profile.widgetsTabOpenCount) || 0) + 1;
-      patchWidgetsProfile({ widgetsTabOpenCount: nextCount });
-      if (nextCount >= 3) setShowHoldOnboarding(true);
-    }, [isLayoutHydrated]);
 
     useEffect(() => () => {
       widgetMotionDisarmIntro();
@@ -11355,6 +11344,53 @@
       );
     };
 
+    const renderLongPressHintLayer = () => {
+      if (!showLongPressHint) return null;
+      const node = React.createElement('div', {
+        className: 'widgets-longpress-hint',
+        role: 'status',
+        // Плашка не блокирует экран: затемнения нет, плитки под ней работают.
+        // Поэтому закрытие висит на самой плашке и на первом касании сетки.
+        onPointerDown: () => {
+          setShowLongPressHint(false);
+          try {
+            const U = HEYS.utils || {};
+            const prof = U.lsGet?.('heys_profile', {}) || {};
+            U.lsSet?.('heys_profile', {
+              ...prof,
+              longPressHintShown: true,
+              widgetsHoldHintShown: true,
+              homeOpensCount: Math.max(Number(prof.homeOpensCount) || 0, 3),
+              widgetsTabOpenCount: Math.max(Number(prof.widgetsTabOpenCount) || 0, 3),
+            });
+          } catch (_) { /* профиль останется прежним */ }
+        }
+      },
+        React.createElement('svg', {
+          className: 'widgets-longpress-hint__icon',
+          width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+          stroke: 'currentColor', strokeWidth: 2.4,
+          strokeLinecap: 'round', strokeLinejoin: 'round',
+          'aria-hidden': 'true'
+        },
+          React.createElement('path', { d: 'M9 11V6a1.5 1.5 0 013 0v5' }),
+          React.createElement('path', { d: 'M12 11V4.5a1.5 1.5 0 013 0V11' }),
+          React.createElement('path', { d: 'M15 11V7.5a1.5 1.5 0 013 0V14a6 6 0 01-6 6h-1a5 5 0 01-4.4-2.6L4 13.5a1.5 1.5 0 012.4-1.8L8 14' })
+        ),
+        React.createElement('span', { className: 'widgets-longpress-hint__text' },
+          React.createElement('span', { className: 'widgets-longpress-hint__title' },
+            'Задержите палец на плитке'),
+          React.createElement('span', { className: 'widgets-longpress-hint__sub' },
+            'Так меняется её вид — например, «Вес» с числа на график.')
+        )
+      );
+      // В body — как quick-sheet: swipeable с overflow:hidden ломает stacking
+      // position:fixed, и FAB ниже по DOM перекрывают плашку несмотря на z-index.
+      return global.document?.body && ReactDOM?.createPortal
+        ? ReactDOM.createPortal(node, global.document.body)
+        : node;
+    };
+
     // До гидратации layout — пустая оболочка. Boot-знак держит кадр до paint.
     if (!isLayoutHydrated) {
       return React.createElement('div', {
@@ -11400,7 +11436,8 @@
               }, 'Вернуть стандартный экран')
             )
         ),
-        renderMobileFabs()
+        renderMobileFabs(),
+        renderLongPressHintLayer()
       );
     }
 
@@ -11461,36 +11498,7 @@
         )
       ),
 
-      !isEditMode && showHoldOnboarding && React.createElement('div', {
-        className: 'widgets-tab__hold-onboarding',
-        onPointerDown: dismissHoldOnboarding
-      },
-        React.createElement('div', { className: 'widgets-hold-onboarding__card' },
-          React.createElement('svg', {
-            className: 'widgets-hold-onboarding__icon',
-            width: 17,
-            height: 17,
-            viewBox: '0 0 24 24',
-            fill: 'none',
-            stroke: 'currentColor',
-            strokeWidth: 2.4,
-            strokeLinecap: 'round',
-            strokeLinejoin: 'round',
-            'aria-hidden': 'true'
-          },
-            React.createElement('path', { d: 'M8 13V4.5a1.5 1.5 0 0 1 3 0V12' }),
-            React.createElement('path', { d: 'M11 11.5v-2a1.5 1.5 0 1 1 3 0V12' }),
-            React.createElement('path', { d: 'M14 10.5V5a1.5 1.5 0 0 1 3 0v10' }),
-            React.createElement('path', { d: 'M7 15h10a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2z' })
-          ),
-          React.createElement('div', { className: 'widgets-hold-onboarding__text' },
-            React.createElement('div', { className: 'widgets-hold-onboarding__title' }, 'Задержите палец на плитке'),
-            React.createElement('div', { className: 'widgets-hold-onboarding__desc' }, 'чтобы сменить вид')
-          )
-        )
-      ),
-
-      !isEditMode && !showHoldOnboarding && variantHoldHint && React.createElement('div', { className: 'widgets-tab__hold-hint' },
+      !isEditMode && !showLongPressHint && variantHoldHint && React.createElement('div', { className: 'widgets-tab__hold-hint' },
         React.createElement('span', { className: 'widget-v4-hold-hint__pill' }, 'удерживайте, чтобы сменить вид')
       ),
 
@@ -11578,32 +11586,8 @@
 
       React.createElement('div', { className: 'widgets-edit-controls' }),
 
-      showLongPressHint && React.createElement('div', {
-        className: 'widgets-longpress-hint',
-        role: 'status',
-        // Плашка не блокирует экран: затемнения нет, плитки под ней работают.
-        // Поэтому закрытие висит на самой плашке и на первом касании сетки.
-        onPointerDown: () => setShowLongPressHint(false)
-      },
-        React.createElement('svg', {
-          className: 'widgets-longpress-hint__icon',
-          width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
-          stroke: 'currentColor', strokeWidth: 2.4,
-          strokeLinecap: 'round', strokeLinejoin: 'round',
-          'aria-hidden': 'true'
-        },
-          React.createElement('path', { d: 'M9 11V6a1.5 1.5 0 013 0v5' }),
-          React.createElement('path', { d: 'M12 11V4.5a1.5 1.5 0 013 0V11' }),
-          React.createElement('path', { d: 'M15 11V7.5a1.5 1.5 0 013 0V14a6 6 0 01-6 6h-1a5 5 0 01-4.4-2.6L4 13.5a1.5 1.5 0 012.4-1.8L8 14' })
-        ),
-        React.createElement('span', { className: 'widgets-longpress-hint__text' },
-          React.createElement('span', { className: 'widgets-longpress-hint__title' },
-            'Задержите палец на плитке'),
-          React.createElement('span', { className: 'widgets-longpress-hint__sub' },
-            'Так меняется её вид — например, «Вес» с числа на график.')
-        )
-      ),
-      renderMobileFabs()
+      renderMobileFabs(),
+      renderLongPressHintLayer()
     );
   }
 

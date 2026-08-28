@@ -7,6 +7,25 @@ const runtimeEffectsSource = fs.readFileSync(
   path.resolve(__dirname, '../heys_app_runtime_effects_v1.js'),
   'utf8',
 );
+const consentsSource = fs.readFileSync(
+  path.resolve(__dirname, '../heys_consents_v1.js'),
+  'utf8',
+);
+const serviceWorkerSource = fs.readFileSync(
+  path.resolve(__dirname, '../public/sw.js'),
+  'utf8',
+);
+
+const LEGAL_DOC_URLS = [
+  '/docs/v1.11/user-agreement.md',
+  '/docs/v1.0/personal-data-consent.md',
+  '/docs/v1.5/health-data-consent.md',
+  '/docs/v1.4/marketing-consent.md',
+  '/docs/v1.2/push-notifications-consent.md',
+  '/docs/v1.2/speech-transcription-consent.md',
+  '/docs/v1.0/supplements-consent.md',
+  '/docs/v1.0/body-measurements-consent.md',
+];
 
 const CLIENT_ID = '11111111-1111-1111-1111-111111111111';
 const LEGAL_VERSIONS = {
@@ -18,6 +37,104 @@ const LEGAL_VERSIONS = {
 afterEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+function loadConsentsModule(heys = {}) {
+  const previousHEYS = window.HEYS;
+  const previousReact = window.React;
+  window.HEYS = heys;
+  window.React = {
+    useState: (initial) => [typeof initial === 'function' ? initial() : initial, () => {}],
+    useEffect: () => {},
+    useCallback: (callback) => callback,
+    useRef: (initial) => ({ current: initial }),
+    useMemo: (factory) => factory(),
+    createElement: () => null,
+    Fragment: 'fragment',
+  };
+
+  try {
+    // eslint-disable-next-line no-eval
+    (0, eval)(consentsSource);
+    return window.HEYS.Consents;
+  } finally {
+    window.HEYS = previousHEYS;
+    window.React = previousReact;
+  }
+}
+
+function loadFetchLegalMarkdown() {
+  return loadConsentsModule().fetchLegalMarkdown;
+}
+
+describe('registration push timing', () => {
+  it('keeps opt-in pending until the final registration step and consumes it once', async () => {
+    const setEnabled = vi.fn().mockResolvedValue({ ok: true });
+    const Consents = loadConsentsModule({ push: { setEnabled } });
+
+    expect(Consents.setPendingRegistrationPushOptIn(CLIENT_ID, true)).toBe(true);
+    expect(Consents.hasPendingRegistrationPushOptIn(CLIENT_ID)).toBe(true);
+    expect(setEnabled).not.toHaveBeenCalled();
+
+    await expect(Consents.completePendingRegistrationPushOptIn(CLIENT_ID)).resolves.toEqual({ ok: true });
+    await expect(Consents.completePendingRegistrationPushOptIn(CLIENT_ID)).resolves.toEqual({
+      ok: true,
+      skipped: 'not_requested',
+    });
+    expect(setEnabled).toHaveBeenCalledTimes(1);
+    expect(setEnabled).toHaveBeenCalledWith(true);
+    expect(Consents.hasPendingRegistrationPushOptIn(CLIENT_ID)).toBe(false);
+  });
+
+  it('does not invoke push directly from finishConsentFlow', () => {
+    const start = consentsSource.indexOf('const finishConsentFlow');
+    const end = consentsSource.indexOf('const persistConsentsOrRequestAccessCode', start);
+    const finishBlock = consentsSource.slice(start, end);
+    expect(finishBlock).toContain('setPendingRegistrationPushOptIn(clientId, notificationsOptIn)');
+    expect(finishBlock).not.toContain('HEYS.push.setEnabled(true)');
+  });
+});
+
+describe('offline legal document cache', () => {
+  it('pre-caches every versioned consent document and serves markdown network-first', () => {
+    LEGAL_DOC_URLS.forEach((url) => {
+      expect(serviceWorkerSource).toContain(`'${url}'`);
+      expect(fs.existsSync(path.resolve(__dirname, '../public', url.slice(1)))).toBe(true);
+    });
+    expect(serviceWorkerSource).toContain('return Promise.all([cssPrecache, legalPrecache]);');
+    expect(serviceWorkerSource).toMatch(
+      /if \(url\.pathname\.endsWith\('\.md'\)\) \{\s*event\.respondWith\(networkFirstNoStore\(request\)\)/,
+    );
+    expect(serviceWorkerSource).toContain('!LEGAL_DOC_URLS.includes(new URL(req.url).pathname)');
+  });
+
+  it('reads a legal document from Cache Storage when the network is unavailable', async () => {
+    const previousCaches = window.caches;
+    const markdown = '# Пользовательское соглашение\n\n**Версия:** 1.11';
+    const cacheMatch = vi.fn(async () => ({
+      ok: true,
+      text: async () => markdown,
+    }));
+    Object.defineProperty(window, 'caches', {
+      configurable: true,
+      value: { match: cacheMatch },
+    });
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new TypeError('Failed to fetch');
+    }));
+
+    try {
+      const fetchLegalMarkdown = loadFetchLegalMarkdown();
+      await expect(fetchLegalMarkdown(LEGAL_DOC_URLS[0])).resolves.toBe(markdown);
+      expect(cacheMatch).toHaveBeenCalledWith(LEGAL_DOC_URLS[0]);
+    } finally {
+      Object.defineProperty(window, 'caches', {
+        configurable: true,
+        value: previousCaches,
+      });
+    }
+  });
 });
 
 describe('offline consent validation cache', () => {

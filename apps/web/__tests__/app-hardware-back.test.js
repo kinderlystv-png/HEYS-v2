@@ -46,9 +46,46 @@ describe('heys_app_hardware_back_v1', () => {
         nav.recordVisit('widgets', 'diary');
         nav.recordVisit('diary', 'activity');
 
-        window.dispatchEvent(new PopStateEvent('popstate', { state: { heysAppNav: true } }));
+        Object.defineProperty(window.history, 'state', {
+            value: {},
+            configurable: true,
+        });
+        window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
         await new Promise((resolve) => setTimeout(resolve, 10));
 
         expect(setTab).toHaveBeenCalledWith('diary');
+    });
+
+    it('popstate on trap after layer close does not change tab', async () => {
+        const nav = window.HEYS.AppBackNav;
+        let tab = 'diary';
+        const setTab = vi.fn((next) => { tab = next; });
+        nav.install({ getTab: () => tab, setTab });
+        nav.recordVisit('widgets', 'diary');
+
+        Object.defineProperty(window.history, 'state', {
+            value: { heysAppNav: true },
+            configurable: true,
+        });
+        window.dispatchEvent(new PopStateEvent('popstate', { state: { heysAppNav: true } }));
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        expect(setTab).not.toHaveBeenCalled();
+    });
+
+    it('from non-home tab with empty stack falls back to widgets', async () => {
+        const nav = window.HEYS.AppBackNav;
+        let tab = 'stats';
+        const setTab = vi.fn((next) => { tab = next; });
+        nav.install({ getTab: () => tab, setTab });
+
+        Object.defineProperty(window.history, 'state', {
+            value: {},
+            configurable: true,
+        });
+        window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        expect(setTab).toHaveBeenCalledWith('widgets');
     });
 });

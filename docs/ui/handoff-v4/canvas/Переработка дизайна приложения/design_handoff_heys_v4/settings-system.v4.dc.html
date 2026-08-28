@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="./v4-canvas.css" rel="stylesheet">
+<script src="./contract-audit.js"></script>
 <style>
   @keyframes fabSlot{0%,16%{height:0;margin-bottom:0;opacity:0;transform:scale(.35)}22%{transform:scale(1.06)}28%,58%{height:46px;margin-bottom:10px;opacity:1;transform:scale(1)}66%,100%{height:0;margin-bottom:0;opacity:0;transform:scale(.35)}}
   @keyframes chipOn{0%,16%{background:var(--c1);color:rgba(var(--ink),.55)}28%,58%{background:var(--acs);color:var(--on-acs)}66%,100%{background:var(--c1);color:rgba(var(--ink),.55)}}
@@ -66,7 +67,7 @@
     <div class="spec"><b>пределы и формат</b><span data-v="значение справа не переносится и не обрезается — если оно длиннее свободного места, вместо него стоит счётчик или короткая форма («Бежево-зелёная» тремя кружками, «5 из 7», «328»). Тихие часы пишутся диапазоном «с 22:00 до 08:00», время — двумя цифрами через двоеточие. Число в значении форматируется общим правилом — home-widgets.v4.dc.html, строка «формат чисел · правило продукта»; своих разделителей ярусы не заводят"></span><i>обрезка значения многоточием — худший из вариантов: строка выглядит рабочей, а прочитать её нельзя</i></div>
     <div class="ctrH">Список настроек</div>
     <div class="spec"><b>структура</b><span data-v="ярусы по смыслу, а не плоский перечень из одиннадцати строк"></span><i>плоский список заставляет читать каждую строку, чтобы найти одну</i></div>
-    <div class="spec"><b>что пишется</b><span data-v="все переключатели и чипы пишутся в профиль человека и синхронизируются между его устройствами; локально в браузере не остаётся ничего, кроме выбранной палитры — она нужна до загрузки профиля"></span><i>палитра — исключение по необходимости: тему надо поставить до первого пейнта, когда профиля ещё нет</i></div>
+    <div class="spec"><b>что пишется</b><span data-v="все переключатели и чипы пишутся в профиль человека и синхронизируются между его устройствами. Палитра и режим («светлая / тёмная / как в системе») тоже в профиле — поля themePalette и themeModePref. В локальном хранилище браузера остаётся только зеркало палитры и режима для первого пейнта до загрузки профиля; после прихода профиля источник правды — профиль, зеркало обновляется"></span><i>решение владельца 27 августа (Q1:A). Снято: «локально не остаётся ничего, кроме выбранной палитры» — читалось как «палитра только локально», режим не был назван вовсе. Локальное — не остаток, а зеркало темы до первого пейнта, когда профиля ещё нет. Код: heys_theme_profile_sync_v1.js</i></div>
     <div class="spec"><b>повторное включение уведомлений</b><span data-v="решение 25 августа: согласие действует, пока его не отозвали в явном виде — повторное включение тумблера ничего не спрашивает. Отзыв согласия живёт отдельной строкой в ярусе «Сопровождение», и только после него включение потребует согласия заново"></span><i>выключенный тумблер — это «сейчас не надо», а не «забираю разрешение»; спрашивать при каждом включении значит наказывать за то, что человек однажды выключил</i></div>
     <div class="spec"><b>выход, удаление данных, производительность</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «выход и удаление данных · правило продукта» и «производительность · правило продукта». Местное отличие: кнопка выхода из аккаунта живёт здесь, в ярусе «Вы»; удаления аккаунта в интерфейсе нет — это запрос куратору"></span></div>
     <div class="spec"><b>уведомления и точки входа</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «уведомления · правило продукта» и «точки входа · правило продукта». Местное отличие: тумблер всех трёх уведомлений живёт здесь; входы в шторку — иконка в шапке любой вкладки, других нет"></span></div>
@@ -76,7 +77,7 @@
     <div class="spec"><b>повторный тап и поворот</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «повторный тап · правило продукта» и «ориентация · правило продукта»: 350 мс защиты там, где повтор создаёт лишнюю сущность; интерфейс всегда портретный, ширина окна гибкая. Местное отличие: защиты у тумблеров и чипов нет — второй тап осмысленен и возвращает прежнее состояние"></span></div>
     <div class="spec"><b>офлайн</b><span data-v="настройки открываются и меняются в офлайне: значения пишутся локально и синхронизируются при связи. Лист «на домашний экран» тоже работает без сети — он только объясняет системный жест"></span><i>настройки нужны чаще всего тогда, когда что-то не работает, — и это ровно момент плохой связи</i></div>
     <div class="spec"><b>длинные значения</b><span data-v="значение справа от названия не переносится и не обрезается: если оно длиннее свободного места, переносится название строки, а значение остаётся целым"></span><i>значение — то, за чем в строку и смотрят; обрезать его ради заголовка бессмысленно</i></div>
-    <div class="spec"><b>откуда данные</b><span data-v="значения справа от названий — из профиля; состав ярусов и подписи — из сборки. Диагностика читает служебное состояние приложения и в профиль ничего не отдаёт"></span><i>список настроек, который грузится по сети, не открывается там, где нужнее всего — при проблемах со связью</i></div>
+    <div class="spec"><b>откуда данные</b><span data-v="значения справа от названий — из профиля; состав ярусов и подписи — из сборки. Палитра и режим в листе «Оформление» читаются из профиля (themePalette, themeModePref); до загрузки профиля — из локального зеркала. Диагностика читает служебное состояние приложения и в профиль ничего не отдаёт"></span><i>список настроек, который грузится по сети, не открывается там, где нужнее всего — при проблемах со связью</i></div>
     <div class="spec"><b>слова на экране</b><span data-v="названия строк — существительные без глаголов («Профиль», «Оформление», «Уведомления»); подписи под тумблером объясняют последствие, а не механику («Не пропустите утренний чек-ин», не «включить push»). Слова «настроить», «управление» и «параметры» не используются"></span><i>«Управление уведомлениями» и «Уведомления» ведут в одно место, но первое звучит как раздел администратора</i></div>
     <div class="spec"><b>первое появление</b><span data-v="настройки в первый раз выглядят так же: обучающих подсказок и меток «новое» у пунктов нет"></span></div>
     <div class="spec"><b>режим куратора</b><span data-v="куратор настройки клиента не видит и не меняет: это его личные предпочтения вида и состава экранов, а не данные о здоровье"></span><i>право менять чужой интерфейс — не сопровождение, а вмешательство</i></div>
@@ -413,6 +414,63 @@ class Component extends DCLogic {
     const standalone = window.parent === window;
     return { all: this.props.allPalettes ?? standalone, rules: this.props.rules ?? true };
   }
+  audit() {
+    const specs = [...document.querySelectorAll('[data-contract] .spec, .spec')];
+    const vals = specs.map(r => {
+      const b = r.querySelector('b'), v = r.querySelector('span[data-v]');
+      return { key: b ? b.textContent : '', val: v ? v.getAttribute('data-v') : '' };
+    });
+    if (!vals.length) return ['НЕТ КОНТРАКТА'];
+    const nrm = s => s.replace(/(\d)[\s\u00a0\u202f\u2009](?=\d{3}\b)/g, '$1');
+    const contract = vals.map(v => v.key + ' ' + v.val).join(' ');
+    const low = contract.toLowerCase();
+    const vid = vals.filter(v => v.key.startsWith('вид')).map(v => v.key + ' ' + v.val).join(' ').toLowerCase();
+    const tokens = new Set((nrm(contract).match(/\d+[,.]?\d*/g) || []));
+    const out = [];
+    const frames = [...document.querySelectorAll('[data-screen-label]')]
+      .filter(f => f.getAttribute('data-demo') !== 'protocol' && !f.closest('[data-demo="protocol"]'))
+      .filter(f => !/ · (тёмная|синяя|сине-тёмная)/i.test(f.getAttribute('data-screen-label')));
+    const noVid = frames.filter(f => {
+      const ref = f.getAttribute('data-vid');
+      if (ref) return !vals.some(v => v.key === ref);
+      const l = f.getAttribute('data-screen-label').toLowerCase();
+      const tail = l.split(' · ').pop().trim();
+      if (tail.length > 3 && (vid.includes(tail) || low.includes(tail))) return false;
+      const words = l.split(/[\s,·]+/).filter(s => s.length > 4);
+      return !words.some(w => { const st = w.slice(0, w.length - 2); return vid.includes(st) || low.includes(st); });
+    }).map(f => f.getAttribute('data-screen-label'));
+    if (noVid.length) out.push('без «вида»: ' + [...new Set(noVid)].slice(0, 8).join(' · '));
+    const shown = new Set();
+    document.querySelectorAll('[data-screen-label]').forEach(f => {
+      (nrm(f.textContent).match(/\d+[,.]?\d*/g) || []).forEach(x => shown.add(x));
+    });
+    const stray = new Set();
+    document.querySelectorAll('.nt, .ntl, .hint, .cap, .lab, .fb').forEach(n => {
+      if (n.closest('[data-contract]')) return;
+      (nrm(n.textContent).match(/\d+[,.]?\d*[\s\u00a0]?(?:%|px|мл|ккал|pt)/g) || []).forEach(m => {
+        const num = m.match(/\d+[,.]?\d*/)[0];
+        if (num.length > 1 && !tokens.has(num) && !shown.has(num)) stray.add(m.trim());
+      });
+    });
+    if (stray.size) out.push('число в прозе вне контракта: ' + [...stray].slice(0, 8).join(' · '));
+    return out;
+  }
+  auditBar() {
+    const found = this.audit();
+    let bar = document.querySelector('[data-auditbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-auditbar', '');
+      bar.style.cssText = 'font:700 11px/1.6 ui-monospace,Menlo,monospace;margin:-14px 0 22px;text-wrap:pretty;max-width:1080px;';
+      const anchor = document.querySelector('[data-protobar]') || document.querySelector('[data-ctrbar]') || document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    const none = found[0] === 'НЕТ КОНТРАКТА';
+    bar.textContent = none
+      ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено'
+      : (found.length ? '⚠ сверка: ' + found.join(' | ') : '✓ сверка чиста');
+    bar.style.color = none ? '#8a4a20' : (found.length ? '#a8382b' : '#5c6a45');
+  }
   contracts() {
     const on = this.props.showContracts ?? false;
     const list = [...document.querySelectorAll('[data-contract]')];
@@ -458,6 +516,7 @@ class Component extends DCLogic {
   }
   applyTweaks() {
     this.contracts();
+    this.auditBar();
     this.protocols();
     const t = this.tw(), hide = t.all ? '' : 'none', off = t.rules ? '' : 'none';
     const lab = /^(т[её]мная|синяя|сине-т[её]мная|синяя\s+т[её]мная)(\s+палитра)?$/i;

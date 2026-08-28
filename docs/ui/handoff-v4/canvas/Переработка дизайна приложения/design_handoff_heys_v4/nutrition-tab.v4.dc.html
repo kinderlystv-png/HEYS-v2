@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=Caprasimo&amp;display=swap" rel="stylesheet">
 <link href="v4-canvas.css" rel="stylesheet">
+<script src="./contract-audit.js"></script>
 <style>
   .ph{width:375px}
   :root{--dim:#6b5f4f;--dimIco:#7a6b58;--trk:rgba(0,0,0,.1);--sage:#eaefe0;--sageTx:#3f4a2e}
@@ -54,8 +55,8 @@
   .dcap{margin:11px 18px 0;display:flex;align-items:center;gap:8px}
   .darr{width:34px;height:34px;flex:none;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;color:var(--dim)}
   .dpil{flex:1;min-height:36px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;gap:6px;font:700 12.5px/1 Figtree,sans-serif;color:var(--tx)}
-  .dpil.past{background:#f3e0d2}
-  .pal.dk .dpil.past{background:#3a2a1e}
+  .dpil.past{background:#f6e6dd}
+  .pal.dk .dpil.past{background:#2f2820}
   .pal.bl .dpil.past{background:#e4e0f2}
   .pal.bldk .dpil.past{background:#2b2a44}
   .tod{min-height:26px;padding:0 10px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 10px/1 Figtree,sans-serif;display:inline-flex;align-items:center}
@@ -216,10 +217,10 @@
   .offc b{display:block;font:700 13.5px/1.35 Figtree,sans-serif;color:var(--tx)}
   .offc span{display:block;font:500 11.5px/1.5 Figtree,sans-serif;color:var(--dim);margin-top:6px;text-wrap:pretty}
   /* --- карточка воды: дубль из water-add.v4.dc.html, править там --- */
-  .wCardB{--cardBg:#f7efe2;--w:#7d98a6;--wDeep:#4e6d7a;--wTxt:#fffaf1;--inkTxt:#201e1d;--dimTxt:#6b5f4f;--trk:rgba(0,0,0,.1);--sparkOff:#5d7f8d;--wLow:var(--red);position:relative;background:var(--cardBg);border-radius:18px;padding:12px 14px 13px}
+  .wCardB{--cardBg:#f7efe2;--w:#7d98a6;--wDeep:#4e6d7a;--wTxt:#fffaf1;--inkTxt:#201e1d;--dimTxt:#6b5f4f;--trk:rgba(0,0,0,.1);--sparkOff:#5e808f;--wLow:var(--red);position:relative;background:var(--cardBg);border-radius:18px;padding:12px 14px 13px}
   .pal.dk .wCardB{--cardBg:#23201b;--w:#8fb3c2;--wDeep:#3f6c7e;--wTxt:#f2ede6;--inkTxt:#f2ede6;--dimTxt:rgba(242,237,230,.62);--trk:rgba(242,237,230,.14);--sparkOff:#7ba3b4;--wLow:var(--red)}
   .pal.bl .wCardB{--cardBg:#eef3f9;--w:#3d7f9e;--wDeep:#2c5f76;--wTxt:#ffffff;--inkTxt:#101826;--dimTxt:#5a6474;--trk:rgba(16,24,38,.1);--sparkOff:#4a86a4;--wLow:var(--red)}
-  .pal.bldk .wCardB{--cardBg:#182a3a;--w:#7fb6d0;--wDeep:#35657d;--wTxt:#eef3f8;--inkTxt:#eef3f8;--dimTxt:rgba(238,243,248,.62);--trk:rgba(238,243,248,.14);--sparkOff:#6ba3bf;--wLow:var(--red)}
+  .pal.bldk .wCardB{--cardBg:#182a3a;--w:#7fb6d0;--wDeep:#35657d;--wTxt:#eef3f9;--inkTxt:#eef3f9;--dimTxt:rgba(238,243,248,.62);--trk:rgba(238,243,248,.14);--sparkOff:#6ba3bf;--wLow:var(--red)}
   .wCardB .k{font:600 9.5px/1 Figtree,sans-serif;letter-spacing:.03em;color:var(--dimTxt)}
   .bTop{display:flex;align-items:center;justify-content:space-between}
   .bSub{height:26px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;font:700 10.5px/1 Figtree,sans-serif;color:var(--inkTxt);box-shadow:inset 0 0 0 2px var(--wDeep)}
@@ -285,14 +286,14 @@
   <div class="ctrH">Что это и чьё</div>
   <div class="spec"><b>фича</b><span data-v="вкладка «Питание»: остаток дня, окно приёмов, дневник приёмов, разбор дня, настраиваемые блоки"></span></div>
   <div class="spec"><b>границы</b><span data-v="канвас рисует содержимое вкладки от шапки до ряда чипов; нижняя навигация, плавающие кнопки и шторки добавления — свои канвасы"></span><i>отступ содержимого 18 px от краёв экрана; тот же отступ у капсулы даты — прежнее расхождение 16 против 18 снято</i></div>
-  <div class="spec"><b>источник</b><span data-v="главный для вкладки, дневника приёмов, разбора дня и ряда чипов настройки"></span><i>карточка воды здесь для контекста — при расхождении верен water-add.v4.dc.html; капсула даты — date-remainders.v4.dc.html; лист выбора продукта — food-add.v4.dc.html</i></div>
+  <div class="spec"><b>источник</b><span data-v="главный для вкладки, дневника приёмов, разбора дня и ряда чипов настройки"></span><i>карточка воды здесь для контекста — при расхождении верен water-add.v4.dc.html; капсула даты — date-remainders.v4.dc.html; лист выбора продукта — food-meal.v4.dc.html (канон приёмов; карточка продукта и сканер — product-card.v4.dc.html)</i></div>
   <div class="spec"><b>демо</b><span data-v="data-demo='stop' — статичные кадры, по ним сверять геометрию на 375 px · data-demo='protocol' — отвергнутые или переехавшие кадры (планнер уехал в tab-insights), не реализовывать"></span></div>
   <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label, метки уникальны в файле. Полоса «Вкладка целиком» несёт по одному кадру на блок в каноничном порядке; другие состояния тех же блоков стоят колонкой справа («Вариации · Итоги дня», «Вариации · Вода», «Вариации · Добавки») и в порядок вкладки не входят"></span><i>просьбы вида «приведи всё к макету» без перечисления меток не выполняются: кадров на канвасе несколько десятков</i></div>
 
   <div class="ctrH">Каркас вкладки</div>
   <div class="spec"><b>порядок блоков</b><span data-v="сверху вниз: шапка с капсулой даты · плашка куратора (только при неподтверждённых правках) · герой «Осталось» · окно приёмов · дневник приёмов · «Добавить приём» · итоги дня · вода · качество еды · приёмы за день* · голод и энергия* · особый период* · клетчатка* · добавки* · рефид* · оценка и риск* · волна сейчас* · ряд чипов настройки · нижняя навигация. Звёздочкой — чип-зависимые: выключенный чип убирает блок, порядок остальных не меняется"></span><i>вода стоит сразу за итогами: это второй дневной итог, а не хвост вкладки — в конце его находили только те, кто долистывал до настроек. Ярусов-заголовков «Сейчас / Дневник / Разбор дня» больше нет: блоки разделены воздухом и своими подписями, третий уровень заголовков на телефоне только шумит</i></div>
   <div class="spec"><b>один экран для всех ширин</b><span data-v="то, что было только на десктопе, показывается и на телефоне; отдельной мобильной ветки рендера нет"></span><i>прежний ранний выход renderDiarySection убирал с телефона шесть блоков — человек не мог их найти вовсе</i></div>
-  <div class="spec" style="border-bottom:none"><b>прокрутка</b><span data-v="капсула даты липкая, всё остальное едет; положение прокрутки сохраняется при возврате на вкладку и сбрасывается при смене дня"></span></div>
+  <div class="spec" style="border-bottom:none"><b>прокрутка</b><span data-v="капсула даты липкая, всё остальное едет. При смене вкладки и при повторном входе по нижней навигации прокрутка открывается сверху — общее правило home-widgets.v4.dc.html, строка «прокрутка · правило продукта», без исключения для «Питания». При смене дня в открытой вкладке прокрутка сбрасывается наверх — содержимое другого дня"></span><i>решение владельца 27 августа (Q3:A). Снято: «положение прокрутки сохраняется при возврате на вкладку» — эта строка спорила и с общим правилом, и с продуктом</i></div>
   <div class="spec"><b>держатель места</b><span data-v="общее правило — home-widgets.v4.dc.html, строка «держатель места · правило продукта»: заливка --c1 своей высоты, без пульсации и скелетона, проявление за 200 мс на месте. Местное: держатели у кольца воды (svg 58×58, обводка 6), графика воды за неделю (56 px), полос дневника и волны приёмов (8 на строку) и дорожек итогов дня (5 на строку). Правила .wv и .spb в стилях канваса мёртвые — разметка их не использует, числа из них брать нельзя. Кривой инсулиновой волны и кольца БЖУ на вкладке нет — разбор по приёмам живёт в Инсайтах"></span><i>высоты сняты с кадров канваса, а не по памяти: держатель обязан совпадать с готовым элементом до пикселя, иначе он сам и станет причиной сдвига</i></div>
     <div class="spec"><b>выход, удаление данных, производительность</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «выход и удаление данных · правило продукта» и «производительность · правило продукта». Местное отличие: дневник и итоги рисуются из локальных данных сразу; после первого кадра приходят кольцо воды, её недельный график и волна приёмов — места под них держатся с начала, состав в строке «держатель места»"></span></div>
     <div class="spec"><b>уведомления и точки входа</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «уведомления · правило продукта» и «точки входа · правило продукта». Местное отличие: на вкладку ведут нижняя навигация, уведомление о воде и кнопка «Еда» из карточки быстрых действий; уведомлений о самой вкладке нет"></span></div>
@@ -307,6 +308,13 @@
   <div class="spec"><b>вертикальный ритм</b><span data-v="блоки не разделяются линиями и не вкладываются друг в друга — только воздух и заливка; вертикальные отступы самого блока названы в строке «вид блока» и здесь не повторяются"></span><i>ярусы «Сейчас / Дневник / Разбор дня» сняты, и линии вернули бы третий уровень заголовков через задний ход</i></div>
   <div class="spec"><b>поля вкладки</b><span data-v="горизонтальные поля 18 px задаются обёрткой .sec и принадлежат этому файлу. Вертикальный ритм вокруг вкладки, запас под плавающей кнопкой и нижней навигацией — контейнер вкладки, здесь не рисуются и числами не называются"></span><i>внешние отступы сверху и снизу в канвасе не нарисованы: каждый блок стоит отдельным кадром, полосы «вкладка целиком» одним скроллом здесь нет — называть их числами значило бы придумать</i></div>
   <div class="spec"><b>вид блока</b><span data-v="карточка фоном --c1, радиус 20, внутренние поля 16 px со всех сторон, отступ сверху 10; тени нет — блоки отделяются заливкой, как плитки Главной. Шапка: слева название 10,5 px/600 с разрядкой .04em тоном --dim, справа значение 10,5 px/700, зазор 8, выравнивание по baseline, отступ до содержимого 12"></span><i>название блока набрано вторичным тоном и мелко намеренно: заголовки не должны спорить с числами внутри — на вкладке их девятнадцать</i></div>
+  <div class="spec"><b>вид · блок «Герой»</b><span data-v="единственный блок на --c2, а не --c1: 339 × 162 px, радиус 26, поля 22/20/20. Подпись «Осталось на сегодня» 10,5 px/600 тоном --dim; число 54 px/600 тоном --ac с единицей рядом; внизу два столбца «съедено» и «бюджет» 11 px/600 тоном подписи"></span><i>кадры «Питание · блок · Герой» и «Рефид»: у рефида меняются только число и подпись</i></div>
+  <div class="spec"><b>вид · блок «Итоги дня»</b><span data-v="339 × 225 px на --c1: ярус «Итоги дня» 10,5 px/600 тоном --dim, строки по 23 px — слева название 11,5 px/700 чернилами, справа «1 289 из 1 931 ккал» 11,5 px/600 тоном --dim; шкала зон идёт строкой того же блока"></span><i>кадры «Итоги дня», «Итоги дня · шкала зон / утро / вечер» — состояния одной поверхности</i></div>
+  <div class="spec"><b>вид · блок «Вода»</b><span data-v="339 × 182 px на --c1: шапка одной строкой 10 px — «Вода» слева, «в среднем 2,5 л» справа, оба 9,5 px/600 тоном --dim; ниже блок значения 55 px с «1,7 л» и подписью «из 3,0 л · осталось». Кольцо и его тона рисует water-add.v4.dc.html — главный файл воды"></span><i>кадры «Вода», «Вода · норма набрана / пустой день / отстаёт»</i></div>
+  <div class="spec"><b>вид · блок «Добавки»</b><span data-v="339 × 216 px на --c1: шапка 28 px — «Добавки» 10,5 px/600 тоном --dim, счёт «0 из 6» 10,5 px/700 тем же тоном, справа действия «Курс» и «Всё сразу» 10,5 px/700 тоном --ac"></span><i>кадры «Добавки» и шесть состояний: группа отмечена, всё принято, длинные названия, длинный курс, прошлый день, курса нет</i></div>
+  <div class="spec"><b>вид · блок «Приёмы за день»</b><span data-v="339 × 144 px на --c1: ярус 11 px, справа состояние «нахлёст 1:20» 10,5 px/700 тоном --val-bad; ниже полоса времени 46 px с метками начала и конца приёма 10,5 px"></span><i>кадры «Приёмы за день», «Волна сейчас», «Оценка и риск» — одна геометрия, разное содержимое строки состояния</i></div>
+  <div class="spec"><b>лист правки приёма — не здесь</b><span data-v="полноценный экран правки приёма (время, состав, действия, удаление) рисует food-meal.v4.dc.html, кадр «Приём · правка» и раздел «Правка приёма»: он продолжает список приёмов и ведёт обратно во флоу добавления. На этой вкладке лист дублируется в контексте вкладки; при расхождении верен food-meal"></span><i>перенесено 27 августа вместе со списком приёмов: два экрана одного пути должны согласовываться в одном файле</i></div>
+  <div class="spec"><b>список приёмов дня — не здесь</b><span data-v="перечень приёмов с номером, временем, составом и калорийностью рисует food-meal.v4.dc.html, кадр «Приёмы дня · список» и раздел «Приёмы дня»: там же конец флоу добавления, и экран логичнее держать каноном рядом с ним. На этой вкладке он дублируется; при расхождении верен food-meal"></span><i>решение 27 августа: до него списка не было ни в одном канвасе — только в проде, а здесь жил лишь блок с полосами волн</i></div>
   <div class="spec"><b>состояние в шапке блока</b><span data-v="тон значения справа зависит от состояния: обычно --dim, «всё в порядке» --gr, требует внимания --red. Вставка <em> внутри значения (число из «N из M») набирается чернилами и весом 700, остальная часть остаётся вторичной"></span><i>счётчик «2 из 6» читается числом, а не строкой целиком: подсвечивается только то, что меняется</i></div>
 
   <div class="ctrH">Шапка и капсула даты</div>
@@ -350,7 +358,7 @@
 
   <div class="ctrH">Кнопка «Добавить приём пищи»</div>
   <div class="spec"><b>единственная кнопка каркаса</b><span data-v="во всю ширину содержимого, высота 52 px, радиус 999, заливка --acs, текст --on-acs 13 px/700 и знак справа, поля 0/22, отступ сверху 16; стоит сразу под дневником приёмов, до итогов дня. Второй кнопки добавления на вкладке нет"></span><i>высота 52, а не 48: это единственная кнопка вкладки, и она на четыре пикселя выше кнопок в листах — так она читается как действие экрана, а не как кнопка внутри карточки. Кадры рисовали 52 с 20 августа, проза отставала</i></div>
-  <div class="spec"><b>что открывает</b><span data-v="шторку добавления продукта на новый приём; название приёма подставляется по времени, менять его можно в листе правки. Экран вкладки не прокручивается и не перестраивается"></span><i>лист выбора продукта — food-add.v4.dc.html, там он главный</i></div>
+  <div class="spec"><b>что открывает</b><span data-v="шторку добавления продукта на новый приём; название приёма подставляется по времени, менять его можно в листе правки. Экран вкладки не прокручивается и не перестраивается"></span><i>лист выбора продукта — food-meal.v4.dc.html, там он главный</i></div>
   <div class="spec"><b>прошлый день · кнопка</b><span data-v="перед созданием приёма — вопрос «Приём запишется на 19 августа, а не на сегодня» с выходами «Перейти на сегодня» (по умолчанию) и «Записать на 19 августа»; вопрос стоит до шторки, а не после"></span></div>
   <div class="spec" style="border-bottom:none"><b>гейт и только чтение</b><span data-v="без подписки и в режиме только чтения кнопка остаётся на месте и гаснет до 40 %, нажатие открывает объяснение причины, а не шторку"></span><i>спрятать кнопку — значит сделать вид, что действия нет</i></div>
 
@@ -1547,6 +1555,63 @@ class Component extends DCLogic {
   componentDidMount() { this.apply(); }
   componentDidUpdate() { this.apply(); }
 
+  audit() {
+    const specs = [...document.querySelectorAll('[data-contract] .spec, .spec')];
+    const vals = specs.map(r => {
+      const b = r.querySelector('b'), v = r.querySelector('span[data-v]');
+      return { key: b ? b.textContent : '', val: v ? v.getAttribute('data-v') : '' };
+    });
+    if (!vals.length) return ['НЕТ КОНТРАКТА'];
+    const nrm = s => s.replace(/(\d)[\s\u00a0\u202f\u2009](?=\d{3}\b)/g, '$1');
+    const contract = vals.map(v => v.key + ' ' + v.val).join(' ');
+    const low = contract.toLowerCase();
+    const vid = vals.filter(v => v.key.startsWith('вид')).map(v => v.key + ' ' + v.val).join(' ').toLowerCase();
+    const tokens = new Set((nrm(contract).match(/\d+[,.]?\d*/g) || []));
+    const out = [];
+    const frames = [...document.querySelectorAll('[data-screen-label]')]
+      .filter(f => f.getAttribute('data-demo') !== 'protocol' && !f.closest('[data-demo="protocol"]'))
+      .filter(f => !/ · (тёмная|синяя|сине-тёмная)/i.test(f.getAttribute('data-screen-label')));
+    const noVid = frames.filter(f => {
+      const ref = f.getAttribute('data-vid');
+      if (ref) return !vals.some(v => v.key === ref);
+      const l = f.getAttribute('data-screen-label').toLowerCase();
+      const tail = l.split(' · ').pop().trim();
+      if (tail.length > 3 && (vid.includes(tail) || low.includes(tail))) return false;
+      const words = l.split(/[\s,·]+/).filter(s => s.length > 4);
+      return !words.some(w => { const st = w.slice(0, w.length - 2); return vid.includes(st) || low.includes(st); });
+    }).map(f => f.getAttribute('data-screen-label'));
+    if (noVid.length) out.push('без «вида»: ' + [...new Set(noVid)].slice(0, 8).join(' · '));
+    const shown = new Set();
+    document.querySelectorAll('[data-screen-label]').forEach(f => {
+      (nrm(f.textContent).match(/\d+[,.]?\d*/g) || []).forEach(x => shown.add(x));
+    });
+    const stray = new Set();
+    document.querySelectorAll('.nt, .ntl, .hint, .cap, .lab, .fb').forEach(n => {
+      if (n.closest('[data-contract]')) return;
+      (nrm(n.textContent).match(/\d+[,.]?\d*[\s\u00a0]?(?:%|px|мл|ккал|pt)/g) || []).forEach(m => {
+        const num = m.match(/\d+[,.]?\d*/)[0];
+        if (num.length > 1 && !tokens.has(num) && !shown.has(num)) stray.add(m.trim());
+      });
+    });
+    if (stray.size) out.push('число в прозе вне контракта: ' + [...stray].slice(0, 8).join(' · '));
+    return out;
+  }
+  auditBar() {
+    const found = this.audit();
+    let bar = document.querySelector('[data-auditbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-auditbar', '');
+      bar.style.cssText = 'font:700 11px/1.6 ui-monospace,Menlo,monospace;margin:-14px 0 22px;text-wrap:pretty;max-width:1080px;';
+      const anchor = document.querySelector('[data-protobar]') || document.querySelector('[data-ctrbar]') || document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    const none = found[0] === 'НЕТ КОНТРАКТА';
+    bar.textContent = none
+      ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено'
+      : (found.length ? '⚠ сверка: ' + found.join(' | ') : '✓ сверка чиста');
+    bar.style.color = none ? '#8a4a20' : (found.length ? '#a8382b' : '#5c6a45');
+  }
   contracts() {
     const on = this.props.showContracts ?? false;
     const list = [...document.querySelectorAll('[data-contract]')];
@@ -1592,6 +1657,7 @@ class Component extends DCLogic {
   }
   apply() {
     this.contracts();
+    this.auditBar();
     this.protocols();
     const all = this.props.allPalettes ?? false;
     document.querySelectorAll('[data-mirdst]').forEach((dst) => {

@@ -1,7 +1,12 @@
 # Handoff: закрыть остаток расхождений UI v4
 
-Канонический документ **после влива** волны `cursor/ui-v4-completion-3ce2` в
-`main`. Предыдущая волна —
+> **Архивный снимок от 26.08.** Перечень и числа ниже больше не являются текущей
+> очередью. Актуальный статус берётся только из
+> `docs/ui/ui-v4-contract-verdicts.json` командой
+> `node scripts/ui-v4-check-contract-drift.mjs --list`.
+
+Документ фиксирует состояние **после влива** волны
+`cursor/ui-v4-completion-3ce2` в `main`. Предыдущая волна —
 [`UI_V4_COMPLETION_PROMPT.md`](UI_V4_COMPLETION_PROMPT.md) (архив задач и lanes
 wave 1+2).
 

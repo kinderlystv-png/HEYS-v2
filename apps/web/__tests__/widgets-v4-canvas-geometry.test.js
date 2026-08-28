@@ -59,6 +59,16 @@ function normalize(value) {
   return String(value)
     .trim()
     .replace(/\s+/g, ' ')
+    // Кадр использует имена ролей канваса, а продукт — свои --v4-* роли с
+    // песочным fallback. Для геометрического теста сравниваем вычисленный
+    // песочный цвет; наличие продуктовой роли отдельно охраняет ui:v4:check.
+    .replace(/var\(--c1\)/g, '#f7efe2')
+    .replace(/var\(--bg\)/g, '#fffaf1')
+    .replace(/var\(--tx\)/g, '#201e1d')
+    .replace(/rgba\(var\(--ink\),\s*\.45\)/g, 'rgba(0,0,0,.45)')
+    .replace(/rgba\(var\(--ink\),\s*\.35\)/g, 'rgba(0,0,0,.35)')
+    .replace(/rgba\(var\(--ink\),\s*\.04\)/g, 'rgba(0,0,0,.04)')
+    .replace(/rgba\(var\(--shadow\),\s*\.22\)/g, 'rgba(80,50,20,.22)')
     // Продукт пишет кегль rem для системного масштаба — сверяем с px канваса.
     .replace(/([\d.]+)rem/g, (_, n) => `${parseFloat(n) * 16}px`)
     // Канвас пишет цвет хексом, продукт — ролью с запасным значением.
@@ -171,6 +181,22 @@ describe('геометрия виджетов Главной против кад
     const css = fs.readFileSync(CSS, 'utf8');
     const overrides = [...css.matchAll(/--widget-grid-gap:\s*([^;]+);/g)].map((m) => m[1].trim());
     expect(new Set(overrides)).toEqual(new Set(['8px']));
+  });
+
+  it('однозначные мини-графики совпадают с новой строкой вида', () => {
+    const css = fs.readFileSync(CSS, 'utf8');
+
+    expect(css).toMatch(/\.widget-v4-stepbars \{[\s\S]*?height:\s*30px/);
+    expect(css).toMatch(/\.widget-v4-stepbars--month \{[\s\S]*?height:\s*30px/);
+    expect(css).toMatch(/\.widget-v4-stepbars__bar \{[\s\S]*?background:\s*#b7c29b/);
+    expect(css).toMatch(/\.widget-v4-stepbars__bar\.is-goal \{[\s\S]*?background:\s*var\(--v4-ok-fill, #7a8a5e\)/);
+
+    expect(css).toMatch(/\.widget-v4-heat__bar--d1 \{[\s\S]*?background:\s*var\(--v4-line/);
+    expect(css).toMatch(/\.widget-v4-heat__bar--d2 \{[\s\S]*?background:\s*var\(--v4-wave-overlap/);
+    expect(css).toMatch(/\.widget-v4-heat__bar--d3 \{[\s\S]*?background:\s*var\(--v4-ok-fill/);
+    expect(css).not.toContain('[data-theme$="dark"] .widget-v4-heat__bar--d1');
+
+    expect(css).toMatch(/\.widget-v4-mini\.widget-v4-fiber \.widget-v4-goal-value,[\s\S]*?\.widget-v4-mini\.widget-v4-protein \.widget-v4-goal-value \{[\s\S]*?font-size:\s*21px/);
   });
 
   it('осознанные отступления не разрослись', () => {

@@ -32,10 +32,13 @@ describe('home-widgets owner batch: дата, куратор, вода, онбо
   });
 
   it('подсказка долгого тапа после третьего открытия', () => {
-    expect(uiSrc).toContain('widgetsTabOpenCount');
+    expect(uiSrc).toContain('homeOpensCount');
+    expect(uiSrc).toContain('longPressHintShown');
     expect(uiSrc).toContain('widgetsHoldHintShown');
+    expect(uiSrc).toContain('renderLongPressHintLayer');
     expect(uiSrc).toContain('Задержите палец на плитке');
-    expect(widgetsCss).toContain('.widgets-hold-onboarding__card');
+    expect(uiSrc).not.toContain('widgets-tab__hold-onboarding');
+    expect(widgetsCss).toContain('.widgets-longpress-hint');
   });
 
   it('чипы «Питания» 30 px без припуска', () => {

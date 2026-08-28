@@ -11,29 +11,31 @@
 <meta name="design_doc_mode" content="canvas">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="./v4-canvas.css" rel="stylesheet">
+<script src="./contract-audit.js"></script>
 <style>
-  body{margin:0;background:#e9dfcd;font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{margin:0;background:var(--page);font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   *{box-sizing:border-box}
   .n{font-variant-numeric:tabular-nums}
   .h{font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:26px 0 12px}
   .lab{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
-  .lab b{font:700 12.5px/1.3 Figtree,sans-serif;color:#201e1d}
+  .lab b{font:700 12.5px/1.3 Figtree,sans-serif;color:var(--tx)}
   .lab span{font:500 11px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.5);max-width:230px}
   .nt{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.07)}
-  .nt>b,.ntl>b{font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;display:block}
+  .nt>b,.ntl>b{font:700 12.5px/1.35 Figtree,sans-serif;color:var(--tx);display:block}
   .nt>span,.ntl>span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);display:block;margin-top:4px}
 
-  .ph{width:230px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:26px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);padding:16px 14px 18px}
+  .ph{width:230px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:26px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);padding:16px 14px 18px}
   .k{font:600 9.5px/1 Figtree,sans-serif;letter-spacing:.03em;color:rgba(0,0,0,.5)}
   .u{font-size:9px;font-weight:500;color:rgba(0,0,0,.35)}
-  .v{font:600 18px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em}
+  .v{font:600 18px/1 Figtree,sans-serif;color:var(--tx);letter-spacing:-.02em}
   .grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:44px;gap:6px;margin-bottom:46px}
-  .w{background:#f7efe2;border-radius:13px;padding:8px;overflow:hidden;display:flex;flex-direction:column;position:relative}
-  .hero{background:#efe3cf}
+  .w{background:var(--c1);border-radius:13px;padding:8px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+  .hero{background:var(--c2)}
   .ring{color:rgba(0,0,0,.42)}
 
-  .fab{position:absolute;right:14px;bottom:16px;width:38px;height:38px;border-radius:999px;background:#c67139;display:flex;align-items:center;justify-content:center;color:#2b1608;box-shadow:0 2px 4px rgba(80,50,20,.16),0 8px 18px rgba(80,50,20,.28);z-index:3}
-  .addPill{position:absolute;right:58px;bottom:16px;height:38px;padding:0 13px;border-radius:999px;background:#fffaf1;display:flex;align-items:center;font:700 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.5);box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);white-space:nowrap}
+  .fab{position:absolute;right:14px;bottom:16px;width:38px;height:38px;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;color:var(--on-acs);box-shadow:0 2px 4px rgba(80,50,20,.16),0 8px 18px rgba(80,50,20,.28);z-index:3}
+  .addPill{position:absolute;right:58px;bottom:16px;height:38px;padding:0 13px;border-radius:999px;background:var(--bg);display:flex;align-items:center;font:700 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.5);box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);white-space:nowrap}
 
   /* --- A: рябь от плитки --- */
   .aRing{position:absolute;inset:0;margin:auto;width:14px;height:14px;border-radius:999px;background:#7d98a6;animation:aRing 4s ease-out infinite}
@@ -84,16 +86,16 @@
 
 
   /* --- карточка воды в «Разборе дня» --- */
-  .wCard,.wCardB{--cardBg:#f7efe2;--w:#7d98a6;--wDeep:#4e6d7a;--wTxt:#fffaf1;--inkTxt:#201e1d;--dimTxt:#6b5f4f;--trk:rgba(0,0,0,.1);--sparkOff:#5d7f8d}
-  .pal.dk .wCard,.pal.dk .wCardB{--cardBg:#23201b;--w:#8fb3c2;--wDeep:#3f6c7e;--wTxt:#f2ede6;--inkTxt:#f2ede6;--dimTxt:rgba(242,237,230,.62);--trk:rgba(242,237,230,.14);--sparkOff:#7ba3b4}
-  .pal.bl .wCard,.pal.bl .wCardB{--cardBg:#eef3f9;--w:#3d7f9e;--wDeep:#2c5f76;--wTxt:#ffffff;--inkTxt:#101826;--dimTxt:#5a6474;--trk:rgba(16,24,38,.1);--sparkOff:#4a86a4}
-  .pal.bldk .wCard,.pal.bldk .wCardB{--cardBg:#182a3a;--w:#7fb6d0;--wDeep:#35657d;--wTxt:#eef3f8;--inkTxt:#eef3f8;--dimTxt:rgba(238,243,248,.62);--trk:rgba(238,243,248,.14);--sparkOff:#6ba3bf}
+  .wCard,.wCardB{--cardBg:var(--c1);--w:#7d98a6;--wDeep:#4e6d7a;--wTxt:var(--bg);--inkTxt:var(--tx);--dimTxt:#6b5f4f;--trk:rgba(0,0,0,.1);--sparkOff:var(--wat)}
+  .pal.dk .wCard,.pal.dk .wCardB{--cardBg:var(--c1);--w:var(--wat);--wDeep:#3f6c7e;--wTxt:var(--tx);--inkTxt:var(--tx);--dimTxt:rgba(242,237,230,.62);--trk:rgba(242,237,230,.14);--sparkOff:#7ba3b4}
+  .pal.bl .wCard,.pal.bl .wCardB{--cardBg:var(--c1);--w:var(--wat);--wDeep:#2c5f76;--wTxt:var(--bg);--inkTxt:var(--tx);--dimTxt:#5a6474;--trk:rgba(16,24,38,.1);--sparkOff:#4a86a4}
+  .pal.bldk .wCard,.pal.bldk .wCardB{--cardBg:var(--c1);--w:var(--wat);--wDeep:#35657d;--wTxt:#eef3f9;--inkTxt:#eef3f9;--dimTxt:rgba(238,243,248,.62);--trk:rgba(238,243,248,.14);--sparkOff:#6ba3bf}
   .wCard .k,.wCardB .k{animation:none;color:var(--dimTxt)}
 
-  .wCard{position:relative;background:#f7efe2;border-radius:18px;padding:14px 16px 15px;width:300px}
-  .pal.dk .wCard{background:#23201b}
-  .pal.bl .wCard{background:#eef3f9}
-  .pal.bldk .wCard{background:#182a3a}
+  .wCard{position:relative;background:var(--c1);border-radius:18px;padding:14px 16px 15px;width:300px}
+  .pal.dk .wCard{background:var(--c1)}
+  .pal.bl .wCard{background:var(--c1)}
+  .pal.bldk .wCard{background:var(--c1)}
   .wCard .cTop{display:flex;align-items:baseline;justify-content:space-between}
   .wCard .cNorm{font:600 9.5px/1 Figtree,sans-serif;color:var(--dimTxt)}
   .wCard .cVal{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:9px}
@@ -108,10 +110,10 @@
   .wCard .cFoot{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
   .wCard .cDays{flex:none;white-space:nowrap;font:600 9px/1 Figtree,sans-serif;color:var(--dimTxt)}
 
-  .wCardB{position:relative;background:#f7efe2;border-radius:18px;padding:12px 14px 13px;width:300px}
-  .pal.dk .wCardB{background:#23201b}
-  .pal.bl .wCardB{background:#eef3f9}
-  .pal.bldk .wCardB{background:#182a3a}
+  .wCardB{position:relative;background:var(--c1);border-radius:18px;padding:12px 14px 13px;width:300px}
+  .pal.dk .wCardB{background:var(--c1)}
+  .pal.bl .wCardB{background:var(--c1)}
+  .pal.bldk .wCardB{background:var(--c1)}
   .wCardB .bTop{display:flex;align-items:center;justify-content:space-between}
   .wCardB .bRing{display:flex;align-items:center;gap:13px;margin-top:8px}
   .wCardB .bRingTxt{display:flex;flex-direction:column;gap:3px}
@@ -126,10 +128,10 @@
   .vSw i.on{background:var(--wDeep);color:var(--wTxt)}
   .wCardB .vSw{border-top-color:rgba(0,0,0,.07)}
   .pal.dk .vSw,.pal.bldk .vSw{border-top-color:rgba(255,255,255,.12)}
-  .abBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 0;padding:11px 14px;background:#efe3cf;border-radius:16px;max-width:1000px}
-  .abTag{font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:5px 8px;border-radius:999px;background:rgba(0,0,0,.1);color:#201e1d;flex:none}
-  .abBtn{font:700 11px/1 Figtree,sans-serif;height:32px;padding:0 14px;border:none;border-radius:999px;background:rgba(0,0,0,.07);color:#201e1d;cursor:pointer}
-  .abBtn.on{background:#4e6d7a;color:#fffaf1}
+  .abBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 0;padding:11px 14px;background:var(--c2);border-radius:16px;max-width:1000px}
+  .abTag{font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:5px 8px;border-radius:999px;background:rgba(0,0,0,.1);color:var(--tx);flex:none}
+  .abBtn{font:700 11px/1 Figtree,sans-serif;height:32px;padding:0 14px;border:none;border-radius:999px;background:rgba(0,0,0,.07);color:var(--tx);cursor:pointer}
+  .abBtn.on{background:#4e6d7a;color:var(--bg)}
   .abNote{font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);flex:1;min-width:180px;text-wrap:pretty}
   .wCardB .bFoot{display:flex;align-items:center;justify-content:space-between;margin-top:7px;font:600 9px/1 Figtree,sans-serif;color:var(--dimTxt)}
 
@@ -139,38 +141,38 @@
   .chipRow .gapMinus{margin-right:5px}
   .chip{display:inline-flex;align-items:center;justify-content:center;height:30px;padding:0 12px;border-radius:999px;font:700 11.5px/1 Figtree,sans-serif;white-space:nowrap;position:relative}
   .chip::after{content:'';position:absolute;left:0;right:0;top:-7px;bottom:-7px}
-  .chipAdd{background:#4e6d7a;color:#fffaf1}
-  .chipSub{background:transparent;color:#201e1d;box-shadow:inset 0 0 0 2px #4e6d7a}
+  .chipAdd{background:#4e6d7a;color:var(--bg)}
+  .chipSub{background:transparent;color:var(--tx);box-shadow:inset 0 0 0 2px #4e6d7a}
   .chipOff{opacity:.32}
   .chipPress{transform:scale(.96)}
-  .pal.dk .chipAdd{background:#8fb3c2;color:#201e1d}
-  .pal.dk .chipSub{color:#f2ede6;box-shadow:inset 0 0 0 2px #8fb3c2}
-  .pal.bl .chipAdd{background:#2c5f76;color:#ffffff}
-  .pal.bl .chipSub{color:#101826;box-shadow:inset 0 0 0 2px #2c5f76}
-  .pal.bldk .chipAdd{background:#7fb6d0;color:#0d1a26}
-  .pal.bldk .chipSub{color:#eef3f8;box-shadow:inset 0 0 0 2px #7fb6d0}
-  .chipRow.onWater .chipAdd{background:#fffaf1;color:#201e1d}
-  .chipRow.onWater .chipSub{color:#fffaf1;box-shadow:inset 0 0 0 2px #fffaf1}
-  .pal.dk .chipRow.onWater .chipAdd{background:#f2ede6;color:#201e1d}
-  .pal.dk .chipRow.onWater .chipSub{color:#f2ede6;box-shadow:inset 0 0 0 2px #f2ede6}
-  .pal.bl .chipRow.onWater .chipAdd{background:#ffffff;color:#101826}
-  .pal.bl .chipRow.onWater .chipSub{color:#ffffff;box-shadow:inset 0 0 0 2px #ffffff}
-  .pal.bldk .chipRow.onWater .chipAdd{background:#eef3f8;color:#0d1a26}
-  .pal.bldk .chipRow.onWater .chipSub{color:#eef3f8;box-shadow:inset 0 0 0 2px #eef3f8}
-  .fabW{width:38px;height:38px;flex:none;border-radius:999px;background:#fffaf1;box-shadow:0 1px 3px rgba(80,50,20,.16);display:flex;align-items:center;justify-content:center;color:#7d98a6}
-  .pal.dk .fabW{background:#23201b;color:#8fb3c2}
-  .pal.bl .fabW{background:#ffffff;color:#3d7f9e}
-  .pal.bldk .fabW{background:#182a3a;color:#7fb6d0}
-  .chipPlate{background:#f7efe2;border-radius:20px;padding:14px 16px;display:flex;align-items:center;justify-content:flex-end;gap:9px;width:300px}
-  .pal.dk .chipPlate{background:#23201b}
-  .pal.bl .chipPlate{background:#eef3f9}
-  .pal.bldk .chipPlate{background:#182a3a}
+  .pal.dk .chipAdd{background:var(--wat);color:var(--tx)}
+  .pal.dk .chipSub{color:var(--tx);box-shadow:inset 0 0 0 2px var(--wat)}
+  .pal.bl .chipAdd{background:#2c5f76;color:var(--bg)}
+  .pal.bl .chipSub{color:var(--tx);box-shadow:inset 0 0 0 2px #2c5f76}
+  .pal.bldk .chipAdd{background:var(--wat);color:var(--bg)}
+  .pal.bldk .chipSub{color:#eef3f9;box-shadow:inset 0 0 0 2px var(--wat)}
+  .chipRow.onWater .chipAdd{background:var(--bg);color:var(--tx)}
+  .chipRow.onWater .chipSub{color:var(--bg);box-shadow:inset 0 0 0 2px var(--bg)}
+  .pal.dk .chipRow.onWater .chipAdd{background:var(--tx);color:var(--tx)}
+  .pal.dk .chipRow.onWater .chipSub{color:var(--tx);box-shadow:inset 0 0 0 2px var(--tx)}
+  .pal.bl .chipRow.onWater .chipAdd{background:var(--bg);color:var(--tx)}
+  .pal.bl .chipRow.onWater .chipSub{color:var(--bg);box-shadow:inset 0 0 0 2px var(--bg)}
+  .pal.bldk .chipRow.onWater .chipAdd{background:#eef3f9;color:var(--bg)}
+  .pal.bldk .chipRow.onWater .chipSub{color:#eef3f9;box-shadow:inset 0 0 0 2px #eef3f9}
+  .fabW{width:38px;height:38px;flex:none;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(80,50,20,.16);display:flex;align-items:center;justify-content:center;color:#7d98a6}
+  .pal.dk .fabW{background:var(--c1);color:var(--wat)}
+  .pal.bl .fabW{background:var(--bg);color:var(--wat)}
+  .pal.bldk .fabW{background:var(--c1);color:var(--wat)}
+  .chipPlate{background:var(--c1);border-radius:20px;padding:14px 16px;display:flex;align-items:center;justify-content:flex-end;gap:9px;width:300px}
+  .pal.dk .chipPlate{background:var(--c1)}
+  .pal.bl .chipPlate{background:var(--c1)}
+  .pal.bldk .chipPlate{background:var(--c1)}
 
   /* --- В₃ · высокий уровень: подписи опускаются на дно плитки --- */
-  .vSub{--cardBg:#f7efe2;--w:#7d98a6;--wDeep:#4e6d7a;--wTxt:#fffaf1;--inkTxt:#201e1d;--dimTxt:#6b5f4f}
-  .pal.dk .vSub{--cardBg:#23201b;--w:#8fb3c2;--wDeep:#3f6c7e;--wTxt:#f2ede6;--inkTxt:#f2ede6;--dimTxt:rgba(242,237,230,.62)}
-  .pal.bl .vSub{--cardBg:#eef3f9;--w:#3d7f9e;--wDeep:#2c5f76;--wTxt:#ffffff;--inkTxt:#101826;--dimTxt:#5a6474}
-  .pal.bldk .vSub{--cardBg:#182a3a;--w:#7fb6d0;--wDeep:#35657d;--wTxt:#eef3f8;--inkTxt:#eef3f8;--dimTxt:rgba(238,243,248,.62)}
+  .vSub{--cardBg:var(--c1);--w:#7d98a6;--wDeep:#4e6d7a;--wTxt:var(--bg);--inkTxt:var(--tx);--dimTxt:#6b5f4f}
+  .pal.dk .vSub{--cardBg:var(--c1);--w:var(--wat);--wDeep:#3f6c7e;--wTxt:var(--tx);--inkTxt:var(--tx);--dimTxt:rgba(242,237,230,.62)}
+  .pal.bl .vSub{--cardBg:var(--c1);--w:var(--wat);--wDeep:#2c5f76;--wTxt:var(--bg);--inkTxt:var(--tx);--dimTxt:#5a6474}
+  .pal.bldk .vSub{--cardBg:var(--c1);--w:var(--wat);--wDeep:#35657d;--wTxt:#eef3f9;--inkTxt:#eef3f9;--dimTxt:rgba(238,243,248,.62)}
   .vSub .fillW{animation:vSubFill 4.6s ease-in-out infinite}
   @keyframes vSubFill{0%,20%{height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%)}50%,100%{height:84%;background:var(--wDeep)}}
   .vSub .k{animation:vSubDim 4.6s ease-in-out infinite}
@@ -200,10 +202,10 @@
 
 
   /* --- развитие варианта В --- */
-  .tileV{position:relative;overflow:hidden;background:#f7efe2;border-radius:13px;padding:8px;display:flex;flex-direction:column;flex:none;width:80px;height:64px}
+  .tileV{position:relative;overflow:hidden;background:var(--c1);border-radius:13px;padding:8px;display:flex;flex-direction:column;flex:none;width:80px;height:64px}
   .tileV .k{position:relative;z-index:2;padding-right:34px}
   .numV{position:absolute;right:8px;top:7px;height:15px;z-index:3;text-align:right}
-  .numV b{position:absolute;right:0;top:0;white-space:nowrap;font:600 12px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em}
+  .numV b{position:absolute;right:0;top:0;white-space:nowrap;font:600 12px/1 Figtree,sans-serif;color:var(--tx);letter-spacing:-.02em}
   .numV .out{animation:aOut 4s ease-in-out infinite}
   .numV .in{animation:aIn 4s ease-in-out infinite}
   .zoom{width:200px;height:160px;overflow:hidden;border-radius:32px;flex:none}
@@ -226,7 +228,7 @@
 
   .v4 .fillW{animation:cFillAnim 4s ease-in-out infinite}
   .v4 .goal{position:absolute;left:0;right:0;bottom:55%;border-top:1.5px dashed rgba(0,0,0,.3);z-index:2}
-  .v4 .glint{position:absolute;left:0;right:0;bottom:60%;height:2px;background:#7a8a5e;opacity:0;z-index:3;animation:v4Glint 4s ease-out infinite}
+  .v4 .glint{position:absolute;left:0;right:0;bottom:60%;height:2px;background:var(--gr2);opacity:0;z-index:3;animation:v4Glint 4s ease-out infinite}
   @keyframes v4Glint{0%,46%{opacity:0}53%{opacity:.95}74%,100%{opacity:0}}
 
   .v5{padding-right:20px}
@@ -235,52 +237,52 @@
   @keyframes v5Fill{0%,8%{height:40%}55%,100%{height:60%}}
 
   .palcap{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:18px 0 10px}
-  .pal.dk .ph{background:#141210}
-  .pal.bl .ph{background:#ffffff}
-  .pal.bldk .ph{background:#0d1a26}
-  .pal.dk .w,.pal.dk .tileV{background:#23201b}
-  .pal.bl .w,.pal.bl .tileV{background:#eef3f9}
-  .pal.bldk .w,.pal.bldk .tileV{background:#182a3a}
-  .pal.dk .hero{background:#2f2820}
-  .pal.bl .hero{background:#e2ecf6}
-  .pal.bldk .hero{background:#1e3448}
-  .pal.dk .fillW,.pal.dk .fillW::after,.pal.dk .colFill,.pal.dk .aRing,.pal.dk .bDrop{background:#8fb3c2}
-  .pal.bl .fillW,.pal.bl .fillW::after,.pal.bl .colFill,.pal.bl .aRing,.pal.bl .bDrop{background:#3d7f9e}
-  .pal.bldk .fillW,.pal.bldk .fillW::after,.pal.bldk .colFill,.pal.bldk .aRing,.pal.bldk .bDrop{background:#7fb6d0}
-  .pal.dk .aBar i,.pal.dk .bBar i,.pal.dk .dBar i{background:#8fb3c2}
-  .pal.bl .aBar i,.pal.bl .bBar i,.pal.bl .dBar i{background:#3d7f9e}
-  .pal.bldk .aBar i,.pal.bldk .bBar i,.pal.bldk .dBar i{background:#7fb6d0}
-  .pal.dk .v,.pal.dk .numV b{color:#f2ede6}
-  .pal.bl .v,.pal.bl .numV b{color:#101826}
-  .pal.bldk .v,.pal.bldk .numV b{color:#eef3f8}
-  .pal.dk .hero .v{color:#e2a468}
-  .pal.bl .hero .v{color:#1d5e96}
-  .pal.bldk .hero .v{color:#7fbceb}
+  .pal.dk .ph{background:var(--bg)}
+  .pal.bl .ph{background:var(--bg)}
+  .pal.bldk .ph{background:var(--bg)}
+  .pal.dk .w,.pal.dk .tileV{background:var(--c1)}
+  .pal.bl .w,.pal.bl .tileV{background:var(--c1)}
+  .pal.bldk .w,.pal.bldk .tileV{background:var(--c1)}
+  .pal.dk .hero{background:var(--c2)}
+  .pal.bl .hero{background:var(--c2)}
+  .pal.bldk .hero{background:var(--c2)}
+  .pal.dk .fillW,.pal.dk .fillW::after,.pal.dk .colFill,.pal.dk .aRing,.pal.dk .bDrop{background:var(--wat)}
+  .pal.bl .fillW,.pal.bl .fillW::after,.pal.bl .colFill,.pal.bl .aRing,.pal.bl .bDrop{background:var(--wat)}
+  .pal.bldk .fillW,.pal.bldk .fillW::after,.pal.bldk .colFill,.pal.bldk .aRing,.pal.bldk .bDrop{background:var(--wat)}
+  .pal.dk .aBar i,.pal.dk .bBar i,.pal.dk .dBar i{background:var(--wat)}
+  .pal.bl .aBar i,.pal.bl .bBar i,.pal.bl .dBar i{background:var(--wat)}
+  .pal.bldk .aBar i,.pal.bldk .bBar i,.pal.bldk .dBar i{background:var(--wat)}
+  .pal.dk .v,.pal.dk .numV b{color:var(--tx)}
+  .pal.bl .v,.pal.bl .numV b{color:var(--tx)}
+  .pal.bldk .v,.pal.bldk .numV b{color:#eef3f9}
+  .pal.dk .hero .v{color:var(--ac)}
+  .pal.bl .hero .v{color:var(--ac)}
+  .pal.bldk .hero .v{color:var(--ac)}
   .pal.dk .k{color:rgba(242,237,230,.5)}
   .pal.bl .k{color:rgba(16,24,38,.5)}
   .pal.bldk .k{color:rgba(238,243,248,.5)}
   .pal.dk .u{color:rgba(242,237,230,.4)}
   .pal.bl .u{color:rgba(16,24,38,.4)}
   .pal.bldk .u{color:rgba(238,243,248,.4)}
-  .pal.dk .fab{background:#cf8144;color:#201509}
-  .pal.bl .fab{background:#1d5e96;color:#ffffff}
-  .pal.bldk .fab{background:#3f8fd0;color:#0b1621}
-  .pal.dk .addPill{background:#23201b;color:rgba(242,237,230,.55);box-shadow:inset 0 0 0 1px rgba(242,237,230,.12)}
-  .pal.bl .addPill{background:#ffffff;color:rgba(16,24,38,.55);box-shadow:inset 0 0 0 1px rgba(16,24,38,.1)}
-  .pal.bldk .addPill{background:#182a3a;color:rgba(238,243,248,.55);box-shadow:inset 0 0 0 1px rgba(238,243,248,.12)}
+  .pal.dk .fab{background:var(--acs);color:var(--on-acs)}
+  .pal.bl .fab{background:var(--ac);color:var(--bg)}
+  .pal.bldk .fab{background:var(--acs);color:var(--on-acs)}
+  .pal.dk .addPill{background:var(--c1);color:rgba(242,237,230,.55);box-shadow:inset 0 0 0 1px rgba(242,237,230,.12)}
+  .pal.bl .addPill{background:var(--bg);color:rgba(16,24,38,.55);box-shadow:inset 0 0 0 1px rgba(16,24,38,.1)}
+  .pal.bldk .addPill{background:var(--c1);color:rgba(238,243,248,.55);box-shadow:inset 0 0 0 1px rgba(238,243,248,.12)}
   .pal.dk .colTrack,.pal.dk .aBar,.pal.dk .bBar,.pal.dk .dBar{background:rgba(242,237,230,.12)}
   .pal.bl .colTrack,.pal.bl .aBar,.pal.bl .bBar,.pal.bl .dBar{background:rgba(16,24,38,.1)}
   .pal.bldk .colTrack,.pal.bldk .aBar,.pal.bldk .bBar,.pal.bldk .dBar{background:rgba(238,243,248,.12)}
   .pal.dk .goal{border-top-color:rgba(242,237,230,.35)}
   .pal.bl .goal{border-top-color:rgba(16,24,38,.32)}
   .pal.bldk .goal{border-top-color:rgba(238,243,248,.35)}
-  .pal.dk .glint{background:#8faa6d}
-  .pal.bl .glint{background:#3e9a6b}
-  .pal.bldk .glint{background:#4caf7d}
+  .pal.dk .glint{background:var(--val-good)}
+  .pal.bl .glint{background:var(--val-good)}
+  .pal.bldk .glint{background:var(--val-good)}
   .pal .lab b,.pal .lab span{color:inherit}
   .fz *,.fz *::before,.fz *::after{animation:none!important}
   .kv{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.07);align-items:baseline}
-  .kv b{flex:none;width:150px;font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .kv b{flex:none;width:150px;font:600 11px/1.45 ui-monospace,Menlo,monospace;color:var(--ac)}
   .kv span{font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.62);text-wrap:pretty}
   .frameCap{font:600 10px/1 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);margin-top:8px;text-align:center}
   .colPop{position:absolute;right:62px;bottom:28px;display:flex;align-items:flex-end;gap:7px;opacity:0;z-index:4;animation:colPopAnim 4s ease-in-out infinite}
@@ -291,67 +293,67 @@
   .colPop .cf::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 2px,rgba(255,255,255,.12) 2px 5px);background-size:5px 100%;animation:cWave 2.6s linear infinite}
   .colPop .lbl{display:flex;flex-direction:column;align-items:flex-end;gap:3px;padding-bottom:1px;white-space:nowrap}
   .colPop .plus{font:700 9px/1 Figtree,sans-serif;color:#456b7d}
-  .colPop .tot{font:600 13px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em}
+  .colPop .tot{font:600 13px/1 Figtree,sans-serif;color:var(--tx);letter-spacing:-.02em}
   .colPop .cap{font:500 8px/1 Figtree,sans-serif;color:rgba(0,0,0,.4)}
   .pal.dk .colPop .ct{background:rgba(242,237,230,.14)}
   .pal.bl .colPop .ct{background:rgba(16,24,38,.1)}
   .pal.bldk .colPop .ct{background:rgba(238,243,248,.14)}
-  .pal.dk .colPop .cf{background:#8fb3c2}
-  .pal.bl .colPop .cf{background:#3d7f9e}
-  .pal.bldk .colPop .cf{background:#7fb6d0}
-  .pal.dk .colPop .plus{color:#8fb3c2}
-  .pal.bl .colPop .plus{color:#3d7f9e}
-  .pal.bldk .colPop .plus{color:#7fb6d0}
-  .pal.dk .colPop .tot{color:#f2ede6}
-  .pal.bl .colPop .tot{color:#101826}
-  .pal.bldk .colPop .tot{color:#eef3f8}
+  .pal.dk .colPop .cf{background:var(--wat)}
+  .pal.bl .colPop .cf{background:var(--wat)}
+  .pal.bldk .colPop .cf{background:var(--wat)}
+  .pal.dk .colPop .plus{color:var(--wat)}
+  .pal.bl .colPop .plus{color:var(--wat)}
+  .pal.bldk .colPop .plus{color:var(--wat)}
+  .pal.dk .colPop .tot{color:var(--tx)}
+  .pal.bl .colPop .tot{color:var(--tx)}
+  .pal.bldk .colPop .tot{color:#eef3f9}
   .pal.dk .colPop .cap{color:rgba(242,237,230,.42)}
   .pal.bl .colPop .cap{color:rgba(16,24,38,.42)}
   .pal.bldk .colPop .cap{color:rgba(238,243,248,.42)}
   .tabPh .fab{bottom:40px}
-  .rowLine{height:34px;border-radius:11px;background:#f7efe2}
-  .pal.dk .rowLine{background:#23201b}
-  .pal.bl .rowLine{background:#eef3f9}
-  .pal.bldk .rowLine{background:#182a3a}
+  .rowLine{height:34px;border-radius:11px;background:var(--c1)}
+  .pal.dk .rowLine{background:var(--c1)}
+  .pal.bl .rowLine{background:var(--c1)}
+  .pal.bldk .rowLine{background:var(--c1)}
   .tabs{display:flex;justify-content:space-between;padding:0 6px;margin-top:auto}
   .tabs span{width:26px;height:4px;border-radius:999px;background:rgba(0,0,0,.12)}
-  .tabs span.on{background:#c67139}
+  .tabs span.on{background:var(--acs)}
   .pal.dk .tabs span{background:rgba(242,237,230,.16)}
   .pal.bl .tabs span{background:rgba(16,24,38,.14)}
   .pal.bldk .tabs span{background:rgba(238,243,248,.16)}
-  .pal.dk .tabs span.on{background:#cf8144}
-  .pal.bl .tabs span.on{background:#1d5e96}
-  .pal.bldk .tabs span.on{background:#3f8fd0}
+  .pal.dk .tabs span.on{background:var(--acs)}
+  .pal.bl .tabs span.on{background:var(--ac)}
+  .pal.bldk .tabs span.on{background:var(--acs)}
   .spec{display:grid;grid-template-columns:132px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
-  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
-  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:var(--ac)}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:var(--tx);text-wrap:pretty}
   .spec>span[data-v]::before{content:attr(data-v)}
   .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
-  .ctr{background:#efe3cf;border-radius:20px;padding:18px;max-width:1000px;margin-bottom:18px}
-  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608;margin-bottom:12px}
-  .pal.dk .spec>span[data-v]{color:#f2ede6}
-  .pal.bl .spec>span[data-v]{color:#101826}
-  .pal.bldk .spec>span[data-v]{color:#eef3f8}
+  .ctr{background:var(--c2);border-radius:20px;padding:18px;max-width:1000px;margin-bottom:18px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:var(--acs);color:var(--on-acs);margin-bottom:12px}
+  .pal.dk .spec>span[data-v]{color:var(--tx)}
+  .pal.bl .spec>span[data-v]{color:var(--tx)}
+  .pal.bldk .spec>span[data-v]{color:#eef3f9}
 </style>
 </helmet>
 
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><circle cx="50" cy="46" r="20" fill="none" stroke="#7d98a6" stroke-width="5"/><text x="50" y="80" text-anchor="middle" font-family="Figtree,sans-serif" font-size="12" font-weight="700" fill="#8a4a20">вода</text></svg></template>
 
-<div style="background:#e9dfcd;padding:0 46px 70px;width:max-content;">
+<div style="background:var(--page);padding:0 46px 70px;width:max-content;">
 
   <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
-    <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">ДОБАВЛЕНИЕ ВОДЫ</span>
-    <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Четыре замены полноэкранной заливке</span>
+    <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:var(--acs);color:var(--on-acs);border-radius:999px;">ДОБАВЛЕНИЕ ВОДЫ</span>
+    <span style="font:700 14px/1.2 Figtree,sans-serif;color:var(--tx);">Четыре замены полноэкранной заливке</span>
   </div>
-  <div style="display:flex;align-items:flex-start;gap:11px;background:#efe3cf;border-radius:16px;padding:13px 16px;margin:0 0 18px;max-width:900px;">
-    <span style="font:700 9.5px/1 ui-monospace,Menlo,monospace;padding:5px 8px;background:#c67139;color:#2b1608;border-radius:999px;flex:none;">В ПРОД</span>
+  <div style="display:flex;align-items:flex-start;gap:11px;background:var(--c2);border-radius:16px;padding:13px 16px;margin:0 0 18px;max-width:900px;">
+    <span style="font:700 9.5px/1 ui-monospace,Menlo,monospace;padding:5px 8px;background:var(--acs);color:var(--on-acs);border-radius:999px;flex:none;">В ПРОД</span>
     <span style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.62);text-wrap:pretty;">Реализуется <b>В₃ «Капля и круг»</b> с раскладкой <b>Б</b> (подписи снизу, норма сверху) — раздел «Спецификация к разработке» ниже. Всё остальное на этом канвасе (А, Б, Г и ветки В₁, В₂, В₄, В₅) — протокол сравнения: показывает, что рассматривали и почему отказались. Реализовывать по ним нельзя.</span>
   </div>
 
   <div class="ctr" data-contract="water-add">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
       <span class="ctrTag" style="margin:0;">КОНТРАКТ</span>
-      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:var(--tx);cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
       <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
     <div class="spec"><b>фича</b><span data-v="добавление воды: тап по кнопке раскрывает ряд объёмов −200 / +200 / +500; одиночного «тап = +250» нет"></span></div>
@@ -380,8 +382,10 @@
     <div class="spec"><b>границы</b><span data-v="канвас рисует содержимое плитки; внешний контейнер продукта и его паддинг — не наши"></span><i>заливка и круг позиционируются от границ плитки и обрезаются её скруглением — не от содержимого и не от контейнера продукта</i></div>
     <div class="spec"><b>источник</b><span data-v="этот файл главный для плитки «Вода»"></span><i>кадр в home-widgets вторичен; при расхождении остановиться, а не выбирать</i></div>
     <div class="spec"><b>демо</b><span data-v="data-demo='loop' — петля для показа движения (в продукте анимация событийная) · data-demo='stop' — стоп-кадр, только по ним сверять геометрию · data-demo='protocol' — отвергнутая ветка, не реализовывать"></span><i>кадры с петлями помечены data-demo="loop", отвергнутые ветки — data-demo="protocol"; сверяться и сравнивать пиксельно только по стоп-кадрам с подписями в мс</i></div>
+    <div class="spec"><b>рамка канваса</b><span data-v="плитки нарисованы в натуральном размере на ширине экрана 375 px; рядом стоит та же плитка с увеличением 2,5× — это лупа канваса, в продукте её нет"></span><i>геометрию сверять по натуральной плитке, не по лупе</i></div>
     <div class="spec"><b>адресация</b><span data-v="кадр = data-screen-label"></span></div>
-    <div class="spec" style="border-bottom:none"><b>палитры</b><span data-v="переменные v4-canvas.css; хексы в разметке не вводить"></span></div>
+    <div class="spec"><b>палитры</b><span data-v="канвас подключает v4-canvas.css и красит по ролям — 199 обращений к переменным. Палитровые правила шапки сведены к ролям: где стояли четыре строки .wCard с четырьмя хексами, теперь одна роль --c1, а тёмное значение даёт обёртка .pal.dk"></span><i>переписано 26 августа: строка утверждала, что канвас не подключает файл ролей, при стоящем link — нашла проверка 10</i></div>
+    <div class="spec" style="border-bottom:none"><b>тона воды не роли</b><span data-v="глубина заливки — своя шкала канваса, в таблице ролей её нет и заводить не нужно: #7d98a6 и #4e6d7a в песочной, #3f6c7e и #7ba3b4 в тёмной, #2c5f76 и #4a86a4 в синей, #35657d и #6ba3bf в сине-тёмной. Роль --wat — только базовый тон воды, шкала строится от него вниз"></span><i>названы, чтобы отсутствие роли было решением: правка палитры эти тона не двигает</i></div>
   </div>
   <p style="margin:0 0 30px;max-width:900px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Дёшево выглядит не метафора воды, а её масштаб и громкость: заливка на весь экран плюс крупный текст поперёк интерфейса — приём казуальных игр, а не спокойного продукта. Все четыре замены держат эффект внутри или рядом с плиткой «Вода», ничего не занимает экран целиком. Кольца, крепление и цифры зациклены на 4 секунды — смотрите подряд.</p>
 
@@ -392,7 +396,7 @@
       <div class="grid">
         <div class="w hero" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Калории</div>
-          <div class="v" style="margin-top:6px;color:#8a4a20;">642<span class="u"> ккал</span></div>
+          <div class="v" style="margin-top:6px;color:var(--ac);">642<span class="u"> ккал</span></div>
         </div>
         <div class="w" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Инсулиновая волна</div>
@@ -420,7 +424,7 @@
       <div class="grid">
         <div class="w hero" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Калории</div>
-          <div class="v" style="margin-top:6px;color:#8a4a20;">642<span class="u"> ккал</span></div>
+          <div class="v" style="margin-top:6px;color:var(--ac);">642<span class="u"> ккал</span></div>
         </div>
         <div class="w" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Инсулиновая волна</div>
@@ -448,7 +452,7 @@
       <div class="grid">
         <div class="w hero" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Калории</div>
-          <div class="v" style="margin-top:6px;color:#8a4a20;">642<span class="u"> ккал</span></div>
+          <div class="v" style="margin-top:6px;color:var(--ac);">642<span class="u"> ккал</span></div>
         </div>
         <div class="w" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Инсулиновая волна</div>
@@ -459,7 +463,7 @@
         <div class="w" style="grid-column:span 1;">
           <span class="cFill"></span>
           <div class="cNum">
-            <div class="k" style="color:#201e1d;">Вода</div>
+            <div class="k" style="color:var(--tx);">Вода</div>
             <div style="position:relative;height:16px;margin-top:2px;">
               <b class="v out" style="font-size:13px;">0,4<span class="u">л</span></b>
               <b class="v in" style="font-size:13px;">0,65<span class="u">л</span></b>
@@ -477,7 +481,7 @@
       <div class="grid">
         <div class="w hero" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Калории</div>
-          <div class="v" style="margin-top:6px;color:#8a4a20;">642<span class="u"> ккал</span></div>
+          <div class="v" style="margin-top:6px;color:var(--ac);">642<span class="u"> ккал</span></div>
         </div>
         <div class="w" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Инсулиновая волна</div>
@@ -509,35 +513,35 @@
 
   <div class="pal" data-mir="m2" data-demo="protocol" style="display:flex;flex-direction:column;gap:14px;margin-bottom:8px;">
 
-    <div style="display:flex;align-items:center;gap:22px;background:#fffaf1;border-radius:20px;padding:14px 18px;">
+    <div style="display:flex;align-items:center;gap:22px;background:var(--bg);border-radius:20px;padding:14px 18px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>В₁ · Зафиксированная база</b><span>уровень поднимается, у поверхности бегут блики, число переезжает 0,4 → 0,65</span></div></div>
       <div class="tileV v1" data-demo="protocol" data-screen-label="Вода · В1 база"><span class="fillW" style="height:40%;"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV v1"><span class="fillW" style="height:40%;"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div></div></div>
       <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);max-width:230px;text-wrap:pretty;">Как есть. Слабое место одно: к концу дня вода доходит до числа и читаемость падает — это решают В₄ и В₅.</div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:22px;background:#fffaf1;border-radius:20px;padding:14px 18px;">
+    <div style="display:flex;align-items:center;gap:22px;background:var(--bg);border-radius:20px;padding:14px 18px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>В₂ · Плеск</b><span>поверхность качается и выравнивается, как в реальном стакане</span></div></div>
       <div class="tileV v2" data-demo="protocol" data-screen-label="Вода · В2 плеск"><span class="fillW" style="height:40%;"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV v2"><span class="fillW" style="height:40%;"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div></div></div>
       <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);max-width:230px;text-wrap:pretty;">Физика вместо анимации: наклон гаснет за три качка. Самый «дорогой» на ощущение и самый требовательный к кадрам в коде.</div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:22px;background:#fffaf1;border-radius:20px;padding:14px 18px;">
+    <div style="display:flex;align-items:center;gap:22px;background:var(--bg);border-radius:20px;padding:14px 18px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>В₃ · Капля и круг</b><span>в плитку падает капля, от неё расходится круг, и только потом растёт уровень</span></div></div>
       <div class="tileV v3" data-demo="loop" data-screen-label="Вода · В3 капля и круг"><span class="fillW" style="height:40%;"></span><span class="drop"></span><span class="ripple"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV v3" data-demo="loop"><span class="fillW" style="height:40%;"></span><span class="drop"></span><span class="ripple"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div></div></div>
       <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);max-width:230px;text-wrap:pretty;">Единственная ветка, где видна причина, а не только следствие — без выхода за пределы плитки.</div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:22px;background:#fffaf1;border-radius:20px;padding:14px 18px;">
+    <div style="display:flex;align-items:center;gap:22px;background:var(--bg);border-radius:20px;padding:14px 18px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>В₄ · Метка нормы</b><span>пунктир — норма дня; перешагнули её — поверхность коротко блеснёт шалфеем</span></div></div>
       <div class="tileV v4" data-demo="protocol" data-screen-label="Вода · В4 метка нормы"><span class="fillW" style="height:40%;"></span><span class="goal"></span><span class="glint"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV v4"><span class="fillW" style="height:40%;"></span><span class="goal"></span><span class="glint"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div></div></div>
       <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);max-width:230px;text-wrap:pretty;">Анимация начинает что-то сообщать: видно не только «стало больше», но и «норма взята».</div>
     </div>
 
-    <div style="display:flex;align-items:center;gap:22px;background:#fffaf1;border-radius:20px;padding:14px 18px;">
+    <div style="display:flex;align-items:center;gap:22px;background:var(--bg);border-radius:20px;padding:14px 18px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>В₅ · Мерный столбик</b><span>вода заливает не фон, а узкую колонку справа — текст всегда на чистом песке</span></div></div>
       <div class="tileV v5" data-demo="protocol" data-screen-label="Вода · В5 мерный столбик"><span class="colTrack"><span class="colFill" style="height:40%;"></span></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV v5"><span class="colTrack"><span class="colFill" style="height:40%;"></span></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div></div></div>
@@ -553,13 +557,13 @@
   <p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Выбран В₃. Ниже — раскадровка стоп-кадрами (увеличение 2×, подписи в миллисекундах от тапа), готовая петля в натуральном размере и в увеличении, вариант для уменьшенного движения и параметры числами. Вся анимация живёт внутри плитки «Вода»: ни один слой не выходит за её скругление, полноэкранной заливки больше нет.</p>
 
   <div class="pal" data-mir="m3">
-    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;background:#fffaf1;border-radius:20px;padding:16px 18px;">
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;background:var(--bg);border-radius:20px;padding:16px 18px;">
       <div><div class="zoom" style="width:160px;height:128px;"><div class="zoomInner" style="transform:scale(2);"><div class="tileV v3 fz" data-demo="stop"><span class="fillW" style="height:40%;"></span><div class="k">Вода</div><div class="numV"><b class="out" style="opacity:1;">0,4 л</b><b class="in" style="opacity:0;">0,65 л</b></div></div></div></div><div class="frameCap">0 мс · покой</div></div><div><div class="zoom" style="width:160px;height:128px;"><div class="zoomInner" style="transform:scale(2);"><div class="tileV v3 fz" data-demo="stop"><span class="fillW" style="height:40%;"></span><span class="drop" style="opacity:1;transform:translateY(0px) scaleY(1);"></span><div class="k">Вода</div><div class="numV"><b class="out" style="opacity:1;">0,4 л</b><b class="in" style="opacity:0;">0,65 л</b></div></div></div></div><div class="frameCap">120 мс · капля</div></div><div><div class="zoom" style="width:160px;height:128px;"><div class="zoomInner" style="transform:scale(2);"><div class="tileV v3 fz" data-demo="stop"><span class="fillW" style="height:40%;"></span><span class="drop" style="opacity:1;transform:translateY(21px) scaleY(1.4);"></span><div class="k">Вода</div><div class="numV"><b class="out" style="opacity:1;">0,4 л</b><b class="in" style="opacity:0;">0,65 л</b></div></div></div></div><div class="frameCap">240 мс · касание</div></div><div><div class="zoom" style="width:160px;height:128px;"><div class="zoomInner" style="transform:scale(2);"><div class="tileV v3 fz" data-demo="stop"><span class="fillW" style="height:42%;"></span><span class="ripple" style="opacity:0.9;transform:scale(0.7);"></span><div class="k">Вода</div><div class="numV"><b class="out" style="opacity:1;">0,4 л</b><b class="in" style="opacity:0;">0,65 л</b></div></div></div></div><div class="frameCap">300 мс · круг</div></div><div><div class="zoom" style="width:160px;height:128px;"><div class="zoomInner" style="transform:scale(2);"><div class="tileV v3 fz" data-demo="stop"><span class="fillW" style="height:50%;"></span><span class="ripple" style="opacity:0.25;transform:scale(2.4);"></span><div class="k">Вода</div><div class="numV"><b class="out" style="opacity:1;">0,4 л</b><b class="in" style="opacity:0;">0,65 л</b></div></div></div></div><div class="frameCap">520 мс · уровень пошёл</div></div><div><div class="zoom" style="width:160px;height:128px;"><div class="zoomInner" style="transform:scale(2);"><div class="tileV v3 fz" data-demo="stop"><span class="fillW" style="height:60%;"></span><div class="k">Вода</div><div class="numV"><b class="out" style="opacity:0;">0,4 л</b><b class="in" style="opacity:1;">0,65 л</b></div></div></div></div><div class="frameCap">900 мс · покой</div></div>
     </div>
 
-    <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap;background:#fffaf1;border-radius:20px;padding:16px 18px;margin-top:14px;">
+    <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap;background:var(--bg);border-radius:20px;padding:16px 18px;margin-top:14px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>Живая петля</b><span>натуральный размер плитки 1×1 на 375 px и увеличение 2,5×</span></div></div>
-      <div class="tileV v3" data-demo="loop" data-screen-label="Вода · В3 · финал"><span class="fillW" style="height:40%;"></span><span class="drop"></span><span class="ripple"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
+      <div class="tileV v3" data-demo="loop" data-screen-label="Вода · В3 · финал" data-vid="тон по объёму"><span class="fillW" style="height:40%;"></span><span class="drop"></span><span class="ripple"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV v3" data-demo="loop"><span class="fillW" style="height:40%;"></span><span class="drop"></span><span class="ripple"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div></div></div>
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>Уменьшенное движение</b><span>ни капли, ни круга: уровень и число просто меняются за 160 мс</span></div></div>
       <div class="tileV fz" data-demo="stop" data-screen-label="Вода · В3 · уменьшенное движение"><span class="fillW" style="height:60%;"></span><div class="k">Вода</div><div class="numV"><b class="out" style="opacity:0;">0,4 л</b><b class="in" style="opacity:1;">0,65 л</b></div></div>
@@ -568,7 +572,7 @@
   <div data-mirdst="m3"></div>
 
   <div class="h">Параметры</div>
-  <div style="background:#fffaf1;border-radius:20px;padding:18px;max-width:1000px;">
+  <div style="background:var(--bg);border-radius:20px;padding:18px;max-width:1000px;">
     <div class="spec"><b>капля</b><span data-v="6 × 6 px · старт по центру верхней кромки, отступ 5 px · падение 220 мс ease-in · к концу scaleY 1,4"></span><i>единственная деформация во всей анимации</i></div>
     <div class="spec"><b>круг</b><span data-v="обводка 1,5 px белым 75 %, без заливки · scale 0,3 → 3,2 за 420 мс ease-out · opacity → 0"></span><i>рождается в точке касания на поверхности воды, обрезается скруглением плитки</i></div>
     <div class="spec"><b>уровень</b><span data-v="320 мс ease-in-out, старт по касанию капли · высота = доля от нормы дня (2,7 л = 100 %)"></span><i>не раньше касания: иначе вода поднимается до того, как в неё что-то попало</i></div>
@@ -587,11 +591,19 @@
     <div class="spec"><b>тон по объёму</b><span data-v="заливка темнеет по доле нормы: от базового тона при 0 % до глубокого при 70 % и выше, линейно в oklab; пересчитывается той же анимацией 320 мс, что и высота"></span><i>глубина воды читается как объём — к вечеру стакан темнее, чем утром. Это же снимает скачок тона на пороге: к моменту касания заливка уже пришла в глубокий тон, и на пороге меняется только текст</i></div>
     <div class="spec"><b>выше 70 %</b><span data-v="тон не темнеет дальше глубокого"></span><i>дальше начинается не вода, а чернота, и кремовый текст теряет опору на 5,3:1 сверху вниз — потолок нужен именно для читаемости</i></div>
     <div class="spec"><b>концы ramp</b><span data-v="песочная #7d98a6 → #4e6d7a · тёмная #8fb3c2 → #3f6c7e · синяя #3d7f9e → #2c5f76 · сине-тёмная #7fb6d0 → #35657d"></span><i>в канвасе промежуточные тона взяты как color-mix(in oklab, базовый, глубокий N %) — в продукте можно так же или таблицей на 5–10 шагов, разницы на глаз нет</i></div>
-    <div class="spec" style="border-bottom:none"><b>reduced-motion</b><span data-v="капли и круга нет, блики стоят, уровень и число меняются за 160 мс"></span><i>это отдельный кадр, а не та же анимация на медленной скорости</i></div>
+    <div class="spec"><b>reduced-motion</b><span data-v="капли и круга нет, блики стоят, уровень и число меняются за 160 мс"></span><i>это отдельный кадр, а не та же анимация на медленной скорости</i></div>
+
+    <div class="ctrH">Вид нарисованных поверхностей</div>
+    <div class="spec"><b>вид · плитка воды 1×1</b><span data-v="80 × 64 px в натуральном размере, фон --c1, радиус 13, поля 8; заливка прижата к низу во всю ширину без своего радиуса — её обрезает плитка. Подпись «Вода» 9,5 px/600 чернилами 50 % в левом верхнем углу, число 17 px/600 в правом нижнем: чернилами над водой и тоном --bg внутри заливки. Капля 8 px радиусом 999 тоном заливки, круг — обводка 1,5 px тем же тоном"></span><i>кадры «Вода · В3 · финал», «В3 · уменьшенное движение», «норма · петля»</i></div>
+    <div class="spec"><b>вид · плитка в увеличении</b><span data-v="те же 80 × 64, показанные через scale 2,1 в рамке 168 × 134: кегли, радиус и толщины растут вместе с плиткой, поэтому сверять их по увеличенному кадру нельзя — только по натуральному"></span><i>кадры «Вода · норма · 0,4 / 0,8 / 1,0 / 2,1 / 2,7 л» — это одна и та же плитка при разной доле нормы</i></div>
+    <div class="spec"><b>вид · карточка «Кольцо»</b><span data-v="300 × 269 px, фон --c1, радиус 18, поля 12/14/13. Шапка 44 px: слева «Вода · 7 дней в среднем N л» 9,5 px/600 тоном #6b5f4f, справа чип «−200» высотой 26 и полями 0/10, кегль 10,5 px/700, радиус 999 обводкой. Кольцо в блоке 58 px высоты: число 1,7 л и подписи «из 3,0 · осталось» справа от него"></span><i>кадр «Вода · карточка · Кольцо» — единственный вид карточки, который идёт в прод</i></div>
+    <div class="spec"><b>вид · лист своего объёма</b><span data-v="300 × 208 px, фон --c1, радиус 18, поля 14/16/15. Шапка: «Свой объём» 9,5 px/600 и «шаг 50 мл» тем же кеглем тоном #6b5f4f по краям строки; ниже ряд «−» число «+» с зазором 12"></span><i>кадр «Вода · свой объём · лист»</i></div>
+    <div class="spec"><b>вид · столбик на вкладках</b><span data-v="кадр вкладки 230 × 250 px, фон --bg, радиус 26, поля 16/14/18; строки-заглушки 202 × 34 фоном --c1 радиусом 11 с зазором 6. Сам столбик привязан к кнопке воды: вертикальный центр кнопки, левый край — её левый край"></span><i>кадры «Вода · столбик · Питание / Актив / Главная прокручена» — три места одного решения, вид один</i></div>
+    <div class="spec" style="border-bottom:none"><b>вид · ряд чипов объёма</b><span data-v="плашка 300 × 82 px, фон --c1, радиус 20, поля 14/16. Чипы 53 × 44, радиус 999, кегль 11,5 px/700: «плюс» — заливка глубоким тоном воды #4e6d7a с текстом --bg, «минус» — без заливки, чернилами, обводкой; зазор до «минуса» больше остальных"></span><i>кадры «Чипы объёма · обычный вид / нечего убавлять / нажатие»</i></div>
   </div>
 
   <div class="h">Края и поведение</div>
-  <div style="background:#efe3cf;border-radius:20px;padding:18px;max-width:1000px;">
+  <div style="background:var(--c2);border-radius:20px;padding:18px;max-width:1000px;">
     <div class="nt"><b>Частые тапы не выстраиваются в очередь</b><span>Второй тап во время анимации не ждёт своей очереди и не наслаивает вторую каплю: текущая капля и круг перезапускаются с нуля, уровень едет к новому итоговому значению. Иначе шесть тапов подряд дали бы шесть секунд бульканья и цифру, отстающую от реальности.</span></div>
     <div class="nt"><b>Выше нормы — уровень упирается, число растёт</b><span>При 100 % и больше заливка занимает всю плитку и дальше не растёт, а число продолжает увеличиваться. Специального «перебора» у воды нет: перепить воду — не то же самое, что перебрать калории, красным здесь ничего не красим.</span></div>
     <div class="nt"><b>Первый стакан за день — из пустой плитки</b><span>Уровень стартует с нуля, поэтому первая капля даёт самый заметный подъём за день. Никакой отдельной «пустой» иллюстрации не нужно: пустая плитка и есть честное состояние.</span></div>
@@ -603,12 +615,12 @@
   <div class="h">Звук капли</div>
   <p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Премиальный звук здесь — не «плюх», а короткое касание: капля падает не в бассейн, а в толстостенную керамическую чашку, где уже есть вода. Тело удара плюс быстрый верхний призвук, никакого хвоста и никакого эха. Задача — чтобы его можно было услышать шесть раз в день и ни разу не поморщиться.</p>
 
-  <div style="background:#fffaf1;border-radius:20px;padding:18px;max-width:1000px;">
+  <div style="background:var(--bg);border-radius:20px;padding:18px;max-width:1000px;">
     <div style="font:700 11px/1 Figtree,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,0,0,.38);margin-bottom:12px;">Когда что срабатывает</div>
     <div style="position:relative;height:54px;margin:0 4px 6px;">
       <div style="position:absolute;left:0;right:0;top:26px;height:3px;border-radius:999px;background:rgba(0,0,0,.1);"></div>
-      <div style="position:absolute;left:0;top:0;width:2px;height:34px;background:#c67139;"></div>
-      <div style="position:absolute;left:0;top:36px;font:600 9.5px/1.3 Figtree,sans-serif;color:#8a4a20;white-space:nowrap;">0 мс · тап<br>тактильный тик</div>
+      <div style="position:absolute;left:0;top:0;width:2px;height:34px;background:var(--acs);"></div>
+      <div style="position:absolute;left:0;top:36px;font:600 9.5px/1.3 Figtree,sans-serif;color:var(--ac);white-space:nowrap;">0 мс · тап<br>тактильный тик</div>
       <div style="position:absolute;left:27%;top:8px;width:2px;height:26px;background:#7d98a6;"></div>
       <div style="position:absolute;left:27%;top:36px;font:600 9.5px/1.3 Figtree,sans-serif;color:#456b7d;white-space:nowrap;">240 мс · касание<br>звук капли</div>
       <div style="position:absolute;left:58%;top:14px;width:2px;height:20px;background:rgba(0,0,0,.22);"></div>
@@ -620,7 +632,7 @@
   </div>
 
   <div class="h">Параметры звука</div>
-  <div style="background:#fffaf1;border-radius:20px;padding:18px;max-width:1000px;">
+  <div style="background:var(--bg);border-radius:20px;padding:18px;max-width:1000px;">
     <div class="spec"><b>чем сделан</b><span data-v="синтез в WebAudio, не семпл"></span><i>решено по факту реализации: ассет не тащим, громкость управляется общим регулятором. Требования к характеру, тону и огибающей ниже остаются обязательными — синтез обязан звучать так же, а не «как получится»</i></div>
   <div class="spec"><b>характер</b><span data-v="мягкое контактное «ток» + короткий водяной призвук; без пузырей и реверберации"></span><i>эхо мгновенно выдаёт стоковую библиотеку; физическая аналогия — капля в керамическую чашку</i></div>
     <div class="spec"><b>тон</b><span data-v="основной 400 → 540 Гц восходящим глайдом · обертон ×2 на −12 дБ"></span><i>глайд и делает его каплей, а не системным бипом; не совпадает с тоном уведомлений</i></div>
@@ -638,7 +650,7 @@
   </div>
 
   <div class="h">Когда звука нет</div>
-  <div style="background:#efe3cf;border-radius:20px;padding:18px;max-width:1000px;">
+  <div style="background:var(--c2);border-radius:20px;padding:18px;max-width:1000px;">
     <div class="nt"><b>Переключатель «без звука» — главнее нашего замысла</b><span>Категория звука — ambient: аппаратный тумблер бесшумного режима на iPhone гасит капли полностью, музыка и подкаст у человека при этом не прерываются и не приглушаются. Никакого «важного» звука, который играет вопреки настройке, у воды быть не может.</span></div>
     <div class="nt"><b>Звук — только у живого жеста</b><span>Молчим при исправлении задним числом, при синхронизации с другого устройства и при отмене. Звук подтверждает действие пальцем прямо сейчас, а не появление данных: иначе приложение начнёт булькать при каждом открытии.</span></div>
     <div class="nt"><b>Уменьшенное движение звука не отключает</b><span>Это разные настройки: человек может не любить движение и при этом хотеть слышать отклик. При выключенной анимации капли нет, поэтому звук играет сразу в момент тапа — ждать касания больше нечего.</span></div>
@@ -652,7 +664,7 @@
   <p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">К концу дня уровень доходит до строки с подписью и числом. Раньше это был единственный некрасивый кадр варианта В: вода наползала на чернильный текст, и он становился нечитаемым ровно в тот момент, когда норма почти взята. Порог — момент касания: как только поверхность доходит до низа строки, подпись и число одним движением опускаются на дно плитки и становятся кремовыми, а тон заливки под ними уходит на шаг глубже. Это одно движение, а не подстройка: воде некуда деться, и текст уходит туда, где вода будет глубокой при любом уровне выше порога. Кремовый по обычной воде даёт 2,9:1, по глубокой — 5,3:1; на плитке без воды кремовый вообще невидим (1,05:1), поэтому перекраска и переезд происходят строго одновременно.</p>
 
   <div class="pal" data-mir="m5">
-    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;background:#fffaf1;border-radius:20px;padding:16px 18px;">
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;background:var(--bg);border-radius:20px;padding:16px 18px;">
       <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · 0 мс"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k" style="transform:translateY(0px);color:var(--dimTxt);">Вода</div><div class="numV"><b style="transform:translateY(0px);color:var(--inkTxt);">2,4 л</b></div></div></div></div><div class="frameCap">0 мс · вода ниже строки</div></div>
       <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · подход"><span class="fillW" style="height:66%;background:color-mix(in oklab, var(--w), var(--wDeep) 94%);"></span><div class="k" style="transform:translateY(0px);color:var(--dimTxt);">Вода</div><div class="numV"><b style="transform:translateY(0px);color:var(--inkTxt);">2,4 л</b></div></div></div></div><div class="frameCap">66 % · вода почти у строки, всё на месте</div></div>
       <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · касание"><span class="fillW" style="height:70%;background:var(--wDeep);"></span><div class="k" style="transform:translateY(0px);color:var(--dimTxt);">Вода</div><div class="numV"><b style="transform:translateY(0px);color:var(--inkTxt);">2,4 л</b></div></div></div></div><div class="frameCap">70 % · порог: поверхность коснулась строки</div></div>
@@ -660,7 +672,7 @@
       <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · покой"><span class="fillW" style="height:84%;background:var(--wDeep);"></span><div class="k" style="transform:translateY(38.5px);color:var(--wTxt);">Вода</div><div class="numV"><b style="transform:translateY(37px);color:var(--wTxt);">2,4 л</b></div></div></div></div><div class="frameCap">покой · строка на дне, 5,3:1</div></div>
     </div>
 
-    <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap;background:#fffaf1;border-radius:20px;padding:16px 18px;margin-top:14px;">
+    <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap;background:var(--bg);border-radius:20px;padding:16px 18px;margin-top:14px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>Живая петля</b><span>натуральный размер и увеличение 2,5×</span></div></div>
       <div class="tileV vSub" data-demo="protocol" data-screen-label="Вода · погружение · петля"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV vSub"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b><small>из 3,0</small></div></div></div></div>
@@ -729,7 +741,7 @@
   </div>
   <div data-mirdst="m9"></div>
 
-  <div style="background:#efe3cf;border-radius:20px;padding:18px;max-width:1000px;margin-bottom:26px;">
+  <div style="background:var(--c2);border-radius:20px;padding:18px;max-width:1000px;margin-bottom:26px;">
     <div class="nt"><b>Что решает выбор между ними</b><span>Круг — точный ответ на «сколько уже», но он занимает четверть карточки и дублирует то, что говорит число рядом. Полоса отвечает на тот же вопрос полосой 6 px и оставляет место неделе. Четыре объёма против трёх — это про частоту: −200 нужен как симметрия к добавлению, а четвёртый шаг (+330) появился под конкретную бутылку и в v4 у нас есть долгое нажатие для произвольного объёма. Кривая красивее столбиков, но по ней нельзя прочесть отдельный день, а именно это и спрашивают у недельного графика — «когда я пропустил».</span></div>
     <div class="ntl"><b>Что берём из прежнего</b><span>Строку среднего за неделю и норму в подвале — они дают контекст, которого в плитке нет. Подсказку про бутылки на кухне не берём: совет в карточке данных живёт один день, а потом читается как реклама.</span></div>
   </div>
@@ -760,7 +772,7 @@
   <div class="pal" data-mir="m4" style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;">
     <div><div class="lab"><b>Вкладка «Питание»</b><span>плитки нет — работает столбик</span></div>
       <div class="ph tabPh" style="height:250px;display:flex;flex-direction:column;" data-demo="loop" data-screen-label="Вода · столбик · Питание">
-        <div style="font:700 13px/1 Figtree,sans-serif;color:#201e1d;margin-bottom:9px;">Питание</div>
+        <div style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);margin-bottom:9px;">Питание</div>
         <div style="display:flex;flex-direction:column;gap:6px;"><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div></div>
         <div class="tabs"><span class=""></span><span class="on"></span><span class=""></span><span class=""></span><span class=""></span></div>
         <span class="colPop"><span class="lbl"><span class="plus">+200 мл</span><span class="tot">0,65 л</span><span class="cap">из 2,7</span></span><span class="ct"><span class="cf" style="height:40%;"></span></span></span><span class="fab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
@@ -768,7 +780,7 @@
     </div>
     <div><div class="lab"><b>Вкладка «Актив»</b><span>тот же кадр на любой вкладке</span></div>
       <div class="ph tabPh" style="height:250px;display:flex;flex-direction:column;" data-demo="loop" data-screen-label="Вода · столбик · Актив">
-        <div style="font:700 13px/1 Figtree,sans-serif;color:#201e1d;margin-bottom:9px;">Актив</div>
+        <div style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);margin-bottom:9px;">Актив</div>
         <div style="display:flex;flex-direction:column;gap:6px;"><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div></div>
         <div class="tabs"><span class=""></span><span class=""></span><span class="on"></span><span class=""></span><span class=""></span></div>
         <span class="colPop"><span class="lbl"><span class="plus">+200 мл</span><span class="tot">0,65 л</span><span class="cap">из 2,7</span></span><span class="ct"><span class="cf" style="height:40%;"></span></span></span><span class="fab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
@@ -776,7 +788,7 @@
     </div>
     <div><div class="lab"><b>Главная, прокрученная вниз</b><span>плитка есть, но её не видно — тоже столбик</span></div>
       <div class="ph tabPh" style="height:250px;display:flex;flex-direction:column;" data-demo="loop" data-screen-label="Вода · столбик · Главная прокручена">
-        <div style="font:700 13px/1 Figtree,sans-serif;color:#201e1d;margin-bottom:9px;">Отчёт за день</div>
+        <div style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);margin-bottom:9px;">Отчёт за день</div>
         <div style="display:flex;flex-direction:column;gap:6px;"><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div></div>
         <div class="tabs"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
         <span class="colPop"><span class="lbl"><span class="plus">+200 мл</span><span class="tot">0,65 л</span><span class="cap">из 2,7</span></span><span class="ct"><span class="cf" style="height:40%;"></span></span></span><span class="fab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
@@ -786,7 +798,7 @@
   <div data-mirdst="m4"></div>
 
   <div class="h">Как это работает</div>
-  <div style="background:#fffaf1;border-radius:20px;padding:18px;max-width:1000px;">
+  <div style="background:var(--bg);border-radius:20px;padding:18px;max-width:1000px;">
     <div class="spec"><b>когда</b><span data-v="плитка «Вода» видна менее чем наполовину или её нет на экране"></span><i>проверяется видимость плитки, а не текущая вкладка</i></div>
     <div class="spec"><b>полный вид</b><span data-v="карточка воды в «Разборе дня» на вкладке «Питание» — постоянная, показывается всегда, независимо от того, есть ли виджет на Главной и включён ли чип кнопки"></span><i>экран, который меняет состав от настроек другого экрана, невозможно запомнить; виджет и кнопка — короткие пути к тому же, а не замена</i></div>
     <div class="spec"><b>адрес один</b><span data-v="«Питание», не «Актив»"></span><i>вода это то, что попало в тело, а «Актив» про расход; два адреса для одного показателя заставляют помнить, где искать</i></div>
@@ -800,7 +812,7 @@
     <div class="spec"><b>запись выбора</b><span data-v="по нажатию, сразу; своя настройка на человека и на устройство, подтверждения нет"></span><i>тот же приём, что у смены вида виджета: подтверждать нечего — человек уже видит результат</i></div>
     <div class="spec"><b>служебный переключатель канваса</b><span data-v="кнопки «Оба рядом», «Только Полоса», «Только Кольцо» над рядом сравнения — только канвас, в продукт не идут"></span><i>нужны, чтобы показать человеку один вид без второго рядом; продуктовый переключатель — тот, что внутри карточки</i></div>
     <div class="spec"><b>чем они отличаются</b><span data-v="«Полоса» отвечает на «сколько за неделю» (семь столбиков, сегодня всегда правый), «Кольцо» — на «сколько сейчас» (доля нормы кольцом) и даёт четыре готовых объёма вместо трёх"></span><i>это разные вопросы, а не разное оформление: у А сильнее контекст, у Б — текущее состояние и скорость ввода. Ответ на ревью нужен один: какой вопрос человек задаёт, открывая «Разбор дня»</i></div>
-    <div class="spec"><b>что в карточке</b><span data-v="сверху подпись «Вода» стандартным .k и норма справа · выпито крупно с единицей и остатком · значение 26 px/600, полоса за сегодня 6 px глубоким тоном, дорожка спарклайна 30 px · спарклайн за 7 дней сплошными столбиками: прошлые — средний тон ramp (#5d7f8d песочная, #7ba3b4 тёмная, #4a86a4 синяя, #6ba3bf сине-тёмная, 3,77:1 к подложке), сегодняшний — глубокий тон (4,85:1). Сегодня узнаётся позицией: он всегда правый · внизу «в среднем N» слева (nowrap) и ряд объёмов справа"></span><i>столбики сплошные: полые читаются беднее и превращают график в схему. Порог 3:1 держать к подложке, а не между соседними столбиками — соседние различать не нужно, сегодняшний и так всегда правый. Альфа здесь не работает: даже сплошной базовый тон воды даёт по этой подложке 2,66:1, поэтому прошлые дни берут средний тон ramp, а не прозрачность. Заливки на всю карточку здесь нет: в плитке 80 × 64 она знак, на 300 px — цветной прямоугольник. Среднее стоит отдельной строкой в подвале, а не в подписи через точку: подпись называет виджет одним словом, как во всех плитках. Слово «неделя» в строке не пишем — период читается по семи столбикам над ней, а на 300 px рядом с рядом объёмов остаётся 90 px, и «7 дней · в среднем 2,1 л» рвётся на две строки</i></div>
+    <div class="spec"><b>что в карточке</b><span data-v="сверху подпись «Вода» стандартным .k и норма справа · выпито крупно с единицей и остатком · значение 26 px/600, полоса за сегодня 6 px глубоким тоном, дорожка спарклайна 30 px · спарклайн за 7 дней сплошными столбиками: прошлые — средний тон ramp (var(--wat) песочная, #7ba3b4 тёмная, #4a86a4 синяя, #6ba3bf сине-тёмная, 3,77:1 к подложке), сегодняшний — глубокий тон (4,85:1). Сегодня узнаётся позицией: он всегда правый · внизу «в среднем N» слева (nowrap) и ряд объёмов справа"></span><i>столбики сплошные: полые читаются беднее и превращают график в схему. Порог 3:1 держать к подложке, а не между соседними столбиками — соседние различать не нужно, сегодняшний и так всегда правый. Альфа здесь не работает: даже сплошной базовый тон воды даёт по этой подложке 2,66:1, поэтому прошлые дни берут средний тон ramp, а не прозрачность. Заливки на всю карточку здесь нет: в плитке 80 × 64 она знак, на 300 px — цветной прямоугольник. Среднее стоит отдельной строкой в подвале, а не в подписи через точку: подпись называет виджет одним словом, как во всех плитках. Слово «неделя» в строке не пишем — период читается по семи столбикам над ней, а на 300 px рядом с рядом объёмов остаётся 90 px, и «7 дней · в среднем 2,1 л» рвётся на две строки</i></div>
     <div class="spec" style="border-bottom:none"><b>нет виджета и нет кнопки</b><span data-v="ответ на добавление показывает сама карточка: уровень и число едут в ней; столбик не появляется"></span><i>столбику некуда цепляться — кнопки нет; а карточка в этот момент перед глазами, человек добавляет из неё</i></div>
     <div class="spec"><b>якорь</b><span data-v="кнопка воды, всегда: столбик привязан к её вертикальному центру и левому краю — зазор 10 px"></span><i>не к «плюсу», не к краю экрана и не к нижнему меню: кнопка воды меняет своё место в стопке от того, сколько чипов включено, и всё, что привязано к экрану, разъедется. По центру, а не по низу — при разной высоте это разные точки</i></div>
     <div class="spec"><b>нет кнопки воды</b><span data-v="чип воды выключен — столбика нет вовсе"></span><i>без кнопки воду добавляют из самой плитки, а её в этот момент видно — отвечает плитка. Привязывать столбик к «плюсу» нельзя: «плюс» это добавление еды, и ответ про воду рядом с ним читается как ответ про еду</i></div>
@@ -826,7 +838,7 @@
   </div>
 
   <div class="h">Правило выбора носителя</div>
-  <div style="background:#efe3cf;border-radius:20px;padding:18px;max-width:1000px;">
+  <div style="background:var(--c2);border-radius:20px;padding:18px;max-width:1000px;">
     <div class="nt"><b>Плитка видна — анимируем плитку, столбик не показываем</b><span>На Главной, когда «Вода» в кадре, работает В₃: капля, круг, подъём уровня. Второй индикатор рядом с кнопкой в этот момент был бы дублем — один ответ на одно действие.</span></div>
     <div class="nt"><b>Плитку не видно — работает столбик</b><span>Другая вкладка или прокрученная Главная — случай один и тот же: результат некуда показать на месте. Проверять надо именно видимость плитки в кадре, а не текущую вкладку: анимация в невидимой плитке — это молчание в ответ на действие.</span></div>
     <div class="nt"><b>Переключение носителя не создаёт третьего кадра</b><span>Если человек тапнул на Главной внизу (работает столбик), а потом прокрутил вверх к плитке — плитка уже показывает новое значение, без повторной анимации. Анимация — реакция на жест, а не на появление плитки в кадре.</span></div>
@@ -835,18 +847,18 @@
 
 
   <div class="h">Семпл · послушать</div>
-  <div style="background:#fffaf1;border-radius:20px;padding:18px;max-width:1000px;">
+  <div style="background:var(--bg);border-radius:20px;padding:18px;max-width:1000px;">
     <audio id="dropSfx" preload="auto" src="./assets/water-drop.wav"></audio>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span data-play="0" style="min-height:38px;display:inline-flex;align-items:center;gap:8px;padding:0 16px;border-radius:999px;background:#c67139;color:#2b1608;font:700 12px/1 Figtree,sans-serif;cursor:pointer;">
+      <span data-play="0" style="min-height:38px;display:inline-flex;align-items:center;gap:8px;padding:0 16px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 12px/1 Figtree,sans-serif;cursor:pointer;">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Капля
       </span>
       <span style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);">четыре стакана подряд — те же четыре ступени по 30 центов:</span>
-      <span data-play="0" style="min-height:34px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:#efe3cf;font:700 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.6);cursor:pointer;">1-й</span>
-      <span data-play="1" style="min-height:34px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:#efe3cf;font:700 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.6);cursor:pointer;">2-й</span>
-      <span data-play="2" style="min-height:34px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:#efe3cf;font:700 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.6);cursor:pointer;">3-й</span>
-      <span data-play="3" style="min-height:34px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:#efe3cf;font:700 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.6);cursor:pointer;">4-й</span>
-      <span data-play="seq" style="min-height:34px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:#efe3cf;font:700 11px/1 Figtree,sans-serif;color:#8a4a20;cursor:pointer;">всё подряд ▸</span>
+      <span data-play="0" style="min-height:34px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c2);font:700 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.6);cursor:pointer;">1-й</span>
+      <span data-play="1" style="min-height:34px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c2);font:700 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.6);cursor:pointer;">2-й</span>
+      <span data-play="2" style="min-height:34px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c2);font:700 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.6);cursor:pointer;">3-й</span>
+      <span data-play="3" style="min-height:34px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c2);font:700 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.6);cursor:pointer;">4-й</span>
+      <span data-play="seq" style="min-height:34px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;background:var(--c2);font:700 11px/1 Figtree,sans-serif;color:var(--ac);cursor:pointer;">всё подряд ▸</span>
     </div>
     <div style="font:500 11px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:12px;text-wrap:pretty;">Ступени сделаны скоростью воспроизведения (1 · 1,0175 · 1,0353 · 1,0535 — по 30 центов), а не четырьмя файлами: файл один, вариация живёт в коде. Слушать нужно на телефонном динамике и в тишине — на ноутбучных колонках основной тон уходит, и звук кажется тише, чем он есть.</div>
   </div>
@@ -858,14 +870,14 @@
   <p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Выбран вариант Б. Подпись и факт стоят у нижнего края с самого начала, норма — мелкой строкой в правом верхнем углу; ничего никуда не едет. Правило одно на все три строки: строка становится кремовой, когда поверхность прошла её верх. У нижних это заливка 31 %, у нормы — 89 %, поэтому большую часть дня внизу кремовый текст на воде, а норма ещё в чернилах на чистом фоне — и белеет она только к самому концу, когда вода доходит и до неё. Заливка при этом темнеет по доле нормы, как и раньше.</p>
 
   <div class="pal" data-mir="m8">
-    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;background:#fffaf1;border-radius:20px;padding:16px 18px;">
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;background:var(--bg);border-radius:20px;padding:16px 18px;">
       <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 0,4 л"><span class="fillW" style="height:12%;background:color-mix(in oklab, var(--w), var(--wDeep) 17%);"></span><span class="topNorm" style="color:var(--dimTxt);">из 3,0</span><span class="botK" style="color:var(--dimTxt);animation:none;">Вода</span><span class="botV" style="color:var(--inkTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">12 % · вода ниже подписей</div></div>
       <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 0,8 л"><span class="fillW" style="height:25%;background:color-mix(in oklab, var(--w), var(--wDeep) 36%);"></span><span class="topNorm" style="color:var(--dimTxt);">из 3,0</span><span class="botK" style="color:var(--dimTxt);animation:none;">Вода</span><span class="botV" style="color:var(--inkTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">25 % · чернила частью на воде, 5,4:1</div></div>
       <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 1,0 л"><span class="fillW" style="height:31%;background:color-mix(in oklab, var(--w), var(--wDeep) 44%);"></span><span class="topNorm" style="color:var(--dimTxt);">из 3,0</span><span class="botK" style="color:var(--wTxt);animation:none;">Вода</span><span class="botV" style="color:var(--wTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">31 % · порог нижних строк — стали кремовыми</div></div>
       <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 2,1 л"><span class="fillW" style="height:70%;background:var(--wDeep);"></span><span class="topNorm" style="color:var(--dimTxt);">из 3,0</span><span class="botK" style="color:var(--wTxt);animation:none;">Вода</span><span class="botV" style="color:var(--wTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">70 % · тон дошёл до глубокого, норма ещё в чернилах</div></div>
       <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 2,7 л"><span class="fillW" style="height:89%;background:var(--wDeep);"></span><span class="topNorm" style="color:var(--wTxt);">из 3,0</span><span class="botK" style="color:var(--wTxt);animation:none;">Вода</span><span class="botV" style="color:var(--wTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">89 % · порог нормы — побелела и она</div></div>
     </div>
-    <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap;background:#fffaf1;border-radius:20px;padding:16px 18px;margin-top:14px;">
+    <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap;background:var(--bg);border-radius:20px;padding:16px 18px;margin-top:14px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>Живая петля</b><span>натуральный размер и увеличение 2,5×</span></div></div>
       <div class="tileV vSub nrmB" data-demo="loop" data-screen-label="Вода · норма · петля"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV vSub nrmB"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div></div></div>
@@ -879,14 +891,14 @@
   <div class="pal" data-mir="m7" style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;">
     <div>
       <div class="lab" style="margin:0 0 9px;"><b>А · норма при факте</b><span>«2,4 / 3,0» одним блоком, тонет целиком</span></div>
-      <div style="display:flex;gap:22px;align-items:center;background:#fffaf1;border-radius:20px;padding:16px 18px;">
+      <div style="display:flex;gap:22px;align-items:center;background:var(--bg);border-radius:20px;padding:16px 18px;">
         <div class="tileV vSub nrmA" data-demo="protocol" data-screen-label="Вода · норма А · петля"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b><small>из 3,0</small></div></div>
         <div class="zoom" style="width:180px;height:144px;"><div class="zoomInner" style="transform:scale(2.25);"><div class="tileV vSub nrmA"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b><small>из 3,0</small></div></div></div></div>
       </div>
     </div>
     <div>
       <div class="lab" style="margin:0 0 9px;"><b>Б · норма сверху, подписи снизу</b><span>подписи внизу с самого начала, погружения нет</span></div>
-      <div style="display:flex;gap:22px;align-items:center;background:#fffaf1;border-radius:20px;padding:16px 18px;">
+      <div style="display:flex;gap:22px;align-items:center;background:var(--bg);border-radius:20px;padding:16px 18px;">
         <div class="tileV vSub nrmB" data-demo="protocol" data-screen-label="Вода · норма Б · петля (протокол, канон — Вода · норма · петля)"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div>
         <div class="zoom" style="width:180px;height:144px;"><div class="zoomInner" style="transform:scale(2.25);"><div class="tileV vSub nrmB"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div></div></div>
       </div>
@@ -895,8 +907,8 @@
   <div data-mirdst="m7"></div>
 
   <div class="h">Что стояло за выбором</div>
-  <div style="background:#efe3cf;border-radius:20px;padding:18px;max-width:1000px;">
-    <div class="nt"><b>А сохраняет момент, Б его отменяет</b><span>В варианте А всё, что уже описано контрактом, остаётся: до 70 % подписи стоят наверху в чернилах, на касании уходят на дно и белеют. Норма просто едет вместе с фактом мелкой строкой под ним — новых состояний не появляется. В варианте Б подписи внизу с первого литра, поэтому вода накрывает их уже к 35 % нормы: они белеют в первой трети дня и остаются белыми до конца. Погружение как событие исчезает — тонуть нечему.</span></div>
+  <div style="background:var(--c2);border-radius:20px;padding:18px;max-width:1000px;">
+    <div class="nt"><b>А сохраняет момент, Б его отменяет</b><span>В варианте А всё, что уже описано контрактом, остаётся: до 70 % подписи стоят наверху в чернилах, на касании уходят на дно и белеют. Норма просто едет вместе с фактом мелкой строкой под ним — новых состояний не появляется. В варианте Б подписи внизу с первого литра, поэтому вода накрывает их уже к 31 % нормы: они белеют в первой трети дня и остаются белыми до конца. Погружение как событие исчезает — тонуть нечему.</span></div>
     <div class="nt"><b>Б проще в реализации, но тратит верх плитки</b><span>Одно состояние вместо двух и никакой геометрии порога. Плата: наверху остаётся одна мелкая серая строка «из 3,0», которая ничего не делает весь день, а главное число уезжает в самый низ, где его перекрывает палец при тапе по кнопке воды.</span></div>
     <div class="nt"><b>Норма числом — не обязанность</b><span>У калорий и БЖУ пара «факт / норма» нужна: там по одному числу нельзя понять, много это или мало. У воды высота заливки уже отвечает на этот вопрос, поэтому норма здесь — справка, а не носитель смысла. Если выбирать между «норма числом» и «читаемая плитка», выигрывает второе.</span></div>
     <div class="ntl"><b>Выбран Б</b><span>Норма мелкой строкой под фактом, оба тонут одним блоком. Это добавляет одну строку и ноль новых состояний, а плитка продолжает жить тем самым движением, ради которого весь раздел и делался. Б стоит брать только если норма в плитке нужна крупно и постоянно — тогда честнее сразу отказаться от погружения, а не держать его наполовину.</span></div>
@@ -954,9 +966,9 @@
     <div class="nt"><b>Отмена промаха — чипом −200 и историей дня, но не всплывашкой</b><span>Короткой кнопки «Отменить» с таймером у плитки и у столбика не будет. Промах на один тап убирается тем же рядом объёмов — чипом −200, он доступен всегда и ничем не ограничен по времени; всё остальное правится в истории приёмов, там же, где еда. Всплывающая кнопка завела бы второй адрес для той же операции и заставила бы решать в те 1,4 с, пока она видна. Лишние 250 мл дешевле второго механизма правки.</span></div>
     <div class="nt"><b>Порция — 250 мл, как в коде</b><span>Канвас приведён к продукту: один тап добавляет 250 мл, поэтому в примерах 0,4 → 0,65 л. Кружка, бутылка и произвольный объём — отдельный жест (долгое нажатие по кнопке) и отдельная задача; анимация от размера порции не зависит, меняются только числа.</span></div>
   <div class="h">Решения</div>
-  <div style="background:#efe3cf;border-radius:20px;padding:18px;max-width:1000px;">
+  <div style="background:var(--c2);border-radius:20px;padding:18px;max-width:1000px;">
     <div class="nt"><b>Вариант В зафиксирован как база</b><span>Выбран В: заливка живёт строго внутри плитки «Вода», остальной экран не шевелится. Метафора стакана остаётся — она хорошая, ломал её только масштаб. Пять веток ниже развивают именно её, а не заводят новую идею.</span></div>
-    <div class="nt"><b>Читаемость числа — главный риск заливки</b><span>При 60–80 % заполнения вода доходит до цифры, и чернила по холодному тону читаются хуже. Две ветки решают это по-разному: В₄ оставляет заливку, но добавляет смысл (метка нормы), В₅ вообще уводит воду в узкую колонку, чтобы текст всегда лежал на чистом песке. Если норма часто перекрывается — берём В₅.</span></div>
+    <div class="nt"><b>Читаемость числа — главный риск заливки</b><span>При 70 % и выше заполнения вода доходит до цифры, и чернила по холодному тону читаются хуже. Две ветки решают это по-разному: В₄ оставляет заливку, но добавляет смысл (метка нормы), В₅ вообще уводит воду в узкую колонку, чтобы текст всегда лежал на чистом песке. Если норма часто перекрывается — берём В₅.</span></div>
     <div class="nt"><b>Заливка на весь экран — приём другого жанра</b><span>Полноэкранная смена цвета плюс крупная надпись поверх интерфейса — язык казуальных игр и фитнес-трекеров с геймификацией. У этого продукта уже есть свой словарь сдержанной обратной связи (переход спиннера в галочку, плавные счётчики) — вода должна говорить на нём же, а не заводить отдельный.</span></div>
     <div class="nt"><b>Эффект живёт там же, где результат</b><span>Во всех четырёх заменах анимация происходит на самой плитке «Вода» или рядом с кнопкой, которая её вызвала — не на всём экране. Человек видит причину и следствие одним взглядом, без того, чтобы на секунду терять из виду остальные плитки.</span></div>
     <div class="nt"><b>А — рекомендация</b><span>Кольцо тем же приглушённым цветом, что и полоса самой плитки (никаких новых оттенков), число едет от старого значения к новому, соседи гаснут на 120 мс — этого достаточно, чтобы почувствовать «что-то случилось», не устраивая из этого сцену.</span></div>
@@ -977,7 +989,7 @@ class Component extends DCLogic {
       box = document.createElement('textarea');
       box.setAttribute('data-spec-out', '');
       box.setAttribute('readonly', '');
-      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:#201e1d;background:#fffaf1;border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
+      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:var(--tx);background:var(--bg);border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
       host.appendChild(box);
     }
     box.value = txt;
@@ -1047,7 +1059,7 @@ class Component extends DCLogic {
     if (!bar) {
       bar = document.createElement('div');
       bar.setAttribute('data-ctrbar', '');
-      bar.style.cssText = 'font:600 11px/1.6 ui-monospace,Menlo,monospace;color:#8a4a20;margin:0 0 22px;white-space:nowrap;';
+      bar.style.cssText = 'font:600 11px/1.6 ui-monospace,Menlo,monospace;color:var(--ac);margin:0 0 22px;white-space:nowrap;';
       const anchor = document.querySelector('p');
       if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
       else list[0].parentNode.insertBefore(bar, list[0]);
@@ -1081,9 +1093,70 @@ class Component extends DCLogic {
     const w = one ? 'отвергнутый кадр' : (m >= 2 && m <= 4 && (h < 12 || h > 14) ? 'отвергнутых кадра' : 'отвергнутых кадров');
     bar.textContent = n + ' ' + w + ' · ' + (on ? (one ? 'показан' : 'показаны') : (one ? 'скрыт' : 'скрыты') + ' твиком «Протокол»');
   }
+  audit() {
+    const specs = [...document.querySelectorAll('[data-contract] .spec, .spec')]; // часть канвасов держит строки вне обёртки
+    const vals = specs.map(r => {
+      const b = r.querySelector('b'), v = r.querySelector('span[data-v]');
+      return { key: b ? b.textContent : '', val: v ? v.getAttribute('data-v') : '' };
+    });
+    if (!vals.length) return ['НЕТ КОНТРАКТА'];
+    const nrm = s => s.replace(/(\d)[\s\u00a0\u202f\u2009](?=\d{3}\b)/g, '$1');
+    const contract = vals.map(v => v.key + ' ' + v.val).join(' ');
+    const low = contract.toLowerCase();
+    const vid = vals.filter(v => v.key.startsWith('вид')).map(v => v.key + ' ' + v.val).join(' ').toLowerCase();
+    const tokens = new Set((nrm(contract).match(/\d+[,.]?\d*/g) || []));
+    const out = [];
+
+    const frames = [...document.querySelectorAll('[data-screen-label]')]
+      .filter(f => f.getAttribute('data-demo') !== 'protocol' && !f.closest('[data-demo="protocol"]'))
+      .filter(f => !/ · (тёмная|синяя|сине-тёмная)/.test(f.getAttribute('data-screen-label')));
+    const noVid = frames.filter(f => {
+      const ref = f.getAttribute('data-vid');
+      if (ref) return !vals.some(v => v.key === ref);
+      const l = f.getAttribute('data-screen-label').toLowerCase();
+      const tail = l.split(' · ').pop().trim();
+      if (tail.length > 3 && (vid.includes(tail) || low.includes(tail))) return false;
+      const words = l.split(/[\s,·]+/).filter(s => s.length > 4);
+      return !words.some(w => { const st = w.slice(0, w.length - 2); return vid.includes(st) || low.includes(st); });
+    }).map(f => f.getAttribute('data-screen-label'));
+    if (noVid.length) out.push('без «вида»: ' + [...new Set(noVid)].join(' · '));
+
+    const shown = new Set();
+    document.querySelectorAll('[data-screen-label]').forEach(f => {
+      (nrm(f.textContent).match(/\d+[,.]?\d*/g) || []).forEach(x => shown.add(x));
+    });
+    const stray = new Set();
+    document.querySelectorAll('.nt, .ntl, .hint, .cap, .lab, .fb').forEach(n => {
+      if (n.closest('[data-contract]')) return;
+      (nrm(n.textContent).match(/\d+[,.]?\d*[\s\u00a0]?(?:%|px|мл|ккал|pt|дБ)/g) || []).forEach(m => {
+        const num = m.match(/\d+[,.]?\d*/)[0];
+        if (num.length > 1 && !tokens.has(num) && !shown.has(num)) stray.add(m.trim());
+      });
+    });
+    if (stray.size) out.push('число в прозе вне контракта: ' + [...stray].slice(0, 10).join(' · '));
+
+    return out;
+  }
+  auditBar() {
+    const found = this.audit();
+    let bar = document.querySelector('[data-auditbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-auditbar', '');
+      bar.style.cssText = 'font:700 11px/1.6 ui-monospace,Menlo,monospace;margin:-14px 0 22px;text-wrap:pretty;max-width:1080px;';
+      const anchor = document.querySelector('[data-protobar]') || document.querySelector('[data-ctrbar]');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    const none = found[0] === 'НЕТ КОНТРАКТА';
+    bar.textContent = none
+      ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено'
+      : (found.length ? '⚠ сверка: ' + found.join(' | ') : '✓ сверка чиста');
+    bar.style.color = none ? 'var(--ac)' : (found.length ? 'var(--val-bad)' : 'var(--gr)');
+  }
   apply() {
     this.contracts();
     this.protocols();
+    this.auditBar();
     const all = this.props.allPalettes ?? (window.parent === window);
     document.querySelectorAll('[data-mirdst]').forEach(dst => {
       dst.innerHTML = '';

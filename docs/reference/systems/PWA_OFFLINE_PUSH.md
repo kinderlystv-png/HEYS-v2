@@ -65,16 +65,17 @@ iPhone бесполезный runtime-запрос не выполняется: 
 
 ## Cache routing
 
-| Запрос                                            | Стратегия                                          |
-| ------------------------------------------------- | -------------------------------------------------- |
-| `build-meta.json`, `version.json`, legal Markdown | network/no-store                                   |
-| auth/payments/sms/leads API                       | network no-store                                   |
-| RPC                                               | network-first                                      |
-| GET client KV                                     | stale-while-revalidate со специальной инвалидацией |
-| HTML                                              | network-first/no-store                             |
-| hash bundle                                       | cache-first                                        |
-| прочий JS                                         | stale-while-revalidate                             |
-| CDN/static assets                                 | cache-first или профильная static strategy         |
+| Запрос                            | Стратегия                                          |
+| --------------------------------- | -------------------------------------------------- |
+| `build-meta.json`, `version.json` | network/no-store                                   |
+| versioned legal Markdown          | network-first/no-store + обязательный precache     |
+| auth/payments/sms/leads API       | network no-store                                   |
+| RPC                               | network-first                                      |
+| GET client KV                     | stale-while-revalidate со специальной инвалидацией |
+| HTML                              | network-first/no-store                             |
+| hash bundle                       | cache-first                                        |
+| прочий JS                         | stale-while-revalidate                             |
+| CDN/static assets                 | cache-first или профильная static strategy         |
 
 KV SWR cache требует client isolation. При curator switch страница отправляет
 `CLIENT_SWITCH`/`CLEAR_API_KV`, а SW инвалидирует cache до загрузки нового
@@ -142,7 +143,11 @@ recovery. Бюджет 15 секунд начинается только при 
 1. `HEYS.push.getStatus()` проверяет browser capability, permission,
    subscription и iOS standalone requirement.
 2. `subscribe()` запрашивает permission только из пользовательского flow,
-   получает VAPID public key и создаёт browser PushSubscription.
+   получает VAPID public key и создаёт browser PushSubscription. В первой
+   регистрации выбор сохраняется как client-scoped pending intent:
+   `setEnabled(true)` запускается только после облачного подтверждения
+   четвёртого шага профиля и не блокирует завершение регистрации при ошибке
+   push.
 3. Endpoint + `p256dh/auth` отправляются в `/push/subscribe`.
 4. Backend server-side резолвит identity из curator JWT или client session
    (Bearer/HttpOnly cookie) и upsert-ит отдельную client/curator таблицу.
@@ -171,8 +176,9 @@ Messenger push использует приватный generic preview: «Нов
 
 ## Инварианты
 
-1. Auth/payment responses и legal/version документы не кэшируются как обычные
-   assets.
+1. Auth/payment responses и version metadata не кэшируются как обычные assets.
+   Legal Markdown кэшируется только по неизменяемому versioned URL; экран
+   дополнительно сверяет версию текста перед показом и подписью.
 2. Hash bundles immutable; HTML всегда должен иметь путь к свежей версии.
 3. Client switch инвалидирует KV API cache до первого fetch нового клиента.
 4. Update reload не должен обрывать активную auth sync.
@@ -185,7 +191,10 @@ Messenger push использует приватный generic preview: «Нов
 11. Клиентский push не уходит без живого `consents.push_notifications`.
     Кураторский — без живого `curator_consents.curator_push_notifications`. Нет
     согласия → `skipped: push_consent_missing`, не ошибка.
-12. Payload уходит только через
+12. Push permission/subscribe первой регистрации не запускается на экране
+    обязательных согласий; pending opt-in потребляется один раз на финальном
+    шаге профиля после подтверждённого cloud save.
+13. Payload уходит только через
     `webpush.sendNotification(subscription, payload)`. Содержательный текст в
     push-`topic` и заголовках запрещён: в Web Push они не шифруются. Тест:
     `yandex-cloud-functions/__tests__/push-encryption-invariant.test.cjs`.
@@ -325,4 +334,7 @@ state и update version. Ожидаемый отказ `screen.orientation.lock(
 | W22 | Visual guard держит boot-знак до paint, принимает blocking consent gate, считает `subscription-loading` transient и даёт ручной recovery без reload-цикла                                                      | `pnpm exec vitest run apps/web/__tests__/blank-screen-guard.test.js apps/web/__tests__/consent-gate-flow.test.js apps/web/__tests__/trial-prestart-access-contract.test.js apps/web/__tests__/yandex-api-backpressure.test.js --no-coverage` | 29/29 + isolated cookie-only smoke, проверено 2026-08-15 |
 | W23 | Повторный PIN-вход/foreground сразу перечитывает правки; auto-ack требует tombstone                                                                                                                            | `pnpm vitest run apps/web/__tests__/curator-actions-banner.test.js`                                                                                                                                                                          | проверено 2026-07-26                                     |
 | W24 | Live legal drift canary: обязательные (`user_agreement`, `personal_data`) + landing; push-типы (`push_notifications`, `curator_push_notifications`) — только реестр ↔ LegalVersions в boot-core, без лендинга | `node --test scripts/ci/__tests__/legal-drift-canary.test.mjs`; `node scripts/check-live-legal-drift.mjs`                                                                                                                                    | source 2026-08-16                                        |
+| W27 | Versioned legal Markdown обязателен в install precache и читается через Cache Storage при сетевой ошибке                                                                                                       | `pnpm exec vitest run apps/web/__tests__/consent-offline-cache.test.js`                                                                                                                                                                      | проверено локально 2026-08-27                            |
+| W28 | Push opt-in первой регистрации откладывается до подтверждённого финального шага профиля и потребляется один раз                                                                                                | `pnpm exec vitest run apps/web/__tests__/consent-offline-cache.test.js apps/web/__tests__/first-login-registration-flow.test.js`                                                                                                             | проверено локально 2026-08-28                            |
+| W29 | Четыре семантических события добавок используют общий лист правок куратора и его существующий fetch/ack/retry-контракт                                                                                         | `node --test yandex-cloud-functions/heys-api-rpc/__tests__/curator-action-diff.test.js && pnpm --filter @heys/web exec vitest run __tests__/curator-actions-banner.test.js __tests__/curator-sheet-canvas-smoke.test.js --no-coverage`       | проверено локально 2026-08-28                            |
 | W25 | Write telemetry различает безопасные key/error-коды, а visual guard считает только видимое post-auth время                                                                                                     | `npx vitest run apps/web/__tests__/client-session-observability.test.js apps/web/__tests__/blank-screen-guard.test.js`                                                                                                                       | проверено 2026-07-30                                     |

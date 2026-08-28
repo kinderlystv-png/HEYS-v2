@@ -65,10 +65,10 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
     expect(block).not.toMatch(/type:\s*'weight'[\s\S]*?size:\s*'2x2'/);
   });
 
-  it('дефолт: одиннадцать плиток, сумма клеток = 32, восемь рядов без дыр', () => {
+  it('дефолт: тринадцать плиток, сумма клеток = 32, восемь рядов без дыр', () => {
     const block = defaultLayoutBlock();
     const entries = parseDefaultLayoutEntries(block);
-    expect(entries).toHaveLength(11);
+    expect(entries).toHaveLength(13);
     const totalCells = entries.reduce((sum, e) => sum + cellCount(e.size), 0);
     expect(totalCells).toBe(32);
 

@@ -46,6 +46,8 @@ describe('обучение · правило продукта — подсказ
   it('показывается на третьем открытии Главной, флаг — в профиле', () => {
     expect(UI).toContain('longPressHintShown');
     expect(UI).toContain('homeOpensCount');
+    expect(UI).toContain('widgetsHoldHintShown');
+    expect(UI).not.toContain('widgets-tab__hold-onboarding');
     expect(UI).toMatch(/if \(opens >= 3\)/);
     // Счётчик и флаг пишутся в профиль, а не в свой ключ: строка называет
     // именно профиль, и на другом устройстве подсказка не повторится.
@@ -54,10 +56,11 @@ describe('обучение · правило продукта — подсказ
   });
 
   it('одноразовость: флаг ставится в тот же проход, что и показ', () => {
-    const at = UI.indexOf('if (prof.longPressHintShown) return;');
+    const at = UI.indexOf('if (prof.longPressHintShown || prof.widgetsHoldHintShown) return;');
     expect(at).toBeGreaterThan(-1);
-    const block = UI.slice(at, at + 700);
+    const block = UI.slice(at, at + 800);
     expect(block).toContain('next.longPressHintShown = true;');
+    expect(block).toContain('next.widgetsHoldHintShown = true;');
     expect(block).toContain('setShowLongPressHint(true);');
     // Ранний выход стоит до инкремента — иначе счётчик рос бы вечно.
     expect(block.indexOf('next.longPressHintShown')).toBeGreaterThan(0);
@@ -69,6 +72,18 @@ describe('обучение · правило продукта — подсказ
     expect(UI.slice(at, at + 400)).toContain('setShowLongPressHint(false)');
   });
 
+  it('поверх FAB: плашка в document.body, не под swipeable', () => {
+    const at = UI.indexOf('renderLongPressHintLayer = () =>');
+    expect(at).toBeGreaterThan(-1);
+    const block = UI.slice(at, at + 2600);
+    expect(block).toContain('ReactDOM.createPortal');
+    expect(block).toContain('global.document.body');
+    const fabAt = UI.indexOf('renderMobileFabs()');
+    const hintCallAt = UI.indexOf('renderLongPressHintLayer()');
+    expect(fabAt).toBeGreaterThan(-1);
+    expect(hintCallAt).toBeGreaterThan(fabAt);
+  });
+
   it('не блокирует экран: затемнения под плашкой нет', () => {
     expect(CSS).not.toMatch(/\.widgets-longpress-hint[^{]*backdrop/);
     expect(CSS).not.toMatch(/\.widgets-longpress-hint-scrim/);
@@ -76,11 +91,11 @@ describe('обучение · правило продукта — подсказ
     expect(r).not.toContain('inset: 0');
   });
 
-  it('вид совпадает с контрактом до пикселя', () => {
+  it('фиксирует текущий тёмный вид продукта до решения конфликта контракта', () => {
     const r = rule('.widgets-longpress-hint');
     expect(r).toContain('left: 14px');
     expect(r).toContain('right: 14px');
-    expect(r).toContain('bottom: 78px');
+    expect(r).toContain('bottom: calc(78px + env(safe-area-inset-bottom, 0px))');
     expect(r).toContain('border-radius: 18px');
     expect(r).toContain('background: #201e1d');
     expect(r).toContain('padding: 13px 15px');
@@ -94,11 +109,18 @@ describe('обучение · правило продукта — подсказ
     expect(UI).toContain("strokeWidth: 2.4");
   });
 
-  it('слова взяты из кадра канваса, а не придуманы', () => {
+  it('явно обнаруживает конфликт тёплой строки вида со старым общим правилом', () => {
+    const warm = /<b>вид подсказки жеста<\/b><span data-v="([^"]*)"/.exec(CANVAS)?.[1];
+    const dark = /<b>обучение · правило продукта<\/b><span data-v="([^"]*)"/.exec(CANVAS)?.[1];
+    expect(warm).toContain('заливка --tint');
+    expect(warm).toContain('Значок 22 px');
+    expect(dark).toContain('фон #201e1d');
+    expect(dark).toContain('иконка руки 17 px');
+  });
+
+  it('текст текущей продуктовой подсказки остаётся стабильным', () => {
     const title = 'Задержите палец на плитке';
     const sub = 'Так меняется её вид — например, «Вес» с числа на график.';
-    expect(CANVAS).toContain(title);
-    expect(CANVAS).toContain(sub);
     expect(UI).toContain(title);
     expect(UI).toContain(sub);
   });

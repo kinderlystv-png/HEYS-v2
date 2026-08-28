@@ -14,6 +14,18 @@
   const { useState, useEffect, useCallback, useRef } = React || {};
 
   const LONG_PRESS_MS = HEYS.longPress?.MS ?? 350;
+
+  function localDateISO(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function formatWidgetDate(d, date) {
+    return typeof d._formatDate === 'function' ? d._formatDate(date) : localDateISO(date);
+  }
+
   const SHEET_CLOSE_MS = 400;
   const EXIT_MS = 160;
   const ENTER_MS = 220;
@@ -697,9 +709,7 @@
     for (let i = daysBack - 1; i >= 0; i -= 1) {
       const dt = new Date(today);
       dt.setDate(dt.getDate() - i);
-      const iso = typeof d._formatDate === 'function'
-        ? d._formatDate(dt)
-        : dt.toISOString().slice(0, 10);
+      const iso = formatWidgetDate(d, dt);
       const day = i === 0 && typeof d._getDay === 'function'
         ? d._getDay()
         : (typeof d._getDayByDate === 'function' ? d._getDayByDate(iso) : null);
@@ -733,6 +743,31 @@
     return d;
   }
 
+  function bdSplinePathRange(points, width, height, padY, min, max) {
+    if (!points.length) return '';
+    const span = Math.max(0.1, max - min);
+    const xs = points.map((_, i) => (i / Math.max(1, points.length - 1)) * width);
+    const ys = points.map((v) => height - padY - ((v - min) / span) * (height - padY * 2));
+    if (points.length < 2) return `M ${xs[0]} ${ys[0]}`;
+    let d = `M ${xs[0]} ${ys[0]}`;
+    for (let i = 0; i < xs.length - 1; i += 1) {
+      const x0 = xs[i - 1] ?? xs[i];
+      const y0 = ys[i - 1] ?? ys[i];
+      const x1 = xs[i];
+      const y1 = ys[i];
+      const x2 = xs[i + 1];
+      const y2 = ys[i + 1];
+      const x3 = xs[i + 2] ?? x2;
+      const y3 = ys[i + 2] ?? y2;
+      const cp1x = x1 + (x2 - x0) / 6;
+      const cp1y = y1 + (y2 - y0) / 6;
+      const cp2x = x2 - (x3 - x1) / 6;
+      const cp2y = y2 - (y3 - y1) / 6;
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
+    }
+    return d;
+  }
+
   function bdParseMealMinutes(timeStr) {
     if (!timeStr || typeof timeStr !== 'string') return null;
     const parts = timeStr.trim().split(':');
@@ -740,6 +775,13 @@
     const m = Number(parts[1]);
     if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
     return h * 60 + m;
+  }
+
+  function bdMealKcal(meal) {
+    const items = Array.isArray(meal?.items) ? meal.items : [];
+    return Math.round(items.reduce((sum, item) => {
+      return sum + (Number(item?.kcal100) || 0) * ((Number(item?.grams) || 0) / 100);
+    }, 0));
   }
 
   /** Медиана «к этому часу» из истории приёмов, не эвристика hourShare×медиана. */
@@ -751,21 +793,42 @@
     for (let i = 1; i <= 30; i += 1) {
       const dt = new Date(now);
       dt.setDate(dt.getDate() - i);
-      const iso = typeof d._formatDate === 'function' ? d._formatDate(dt) : dt.toISOString().slice(0, 10);
+      const iso = formatWidgetDate(d, dt);
       const day = typeof d._getDayByDate === 'function' ? d._getDayByDate(iso) : null;
       if (!day?.meals?.length) continue;
       let cum = 0;
       day.meals.forEach((meal) => {
         const min = bdParseMealMinutes(meal?.time);
         if (min == null || min > nowMin) return;
-        const items = Array.isArray(meal?.items) ? meal.items : [];
-        items.forEach((item) => {
-          cum += (Number(item?.kcal100) || 0) * ((Number(item?.grams) || 0) / 100);
-        });
+        cum += bdMealKcal(meal);
       });
       if (cum > 0) cumByDay.push(Math.round(cum));
     }
     return bdMedian(cumByDay);
+  }
+
+  /** Медиана калорий ужина (17:00–22:00) из истории приёмов за 30 дней. */
+  function bdTypicalDinnerKcal() {
+    const d = bdLayer();
+    const now = new Date();
+    const dinnerStart = 17 * 60;
+    const dinnerEnd = 22 * 60;
+    const byDay = [];
+    for (let i = 1; i <= 30; i += 1) {
+      const dt = new Date(now);
+      dt.setDate(dt.getDate() - i);
+      const iso = formatWidgetDate(d, dt);
+      const day = typeof d._getDayByDate === 'function' ? d._getDayByDate(iso) : null;
+      if (!day?.meals?.length) continue;
+      let dinnerKcal = 0;
+      day.meals.forEach((meal) => {
+        const min = bdParseMealMinutes(meal?.time);
+        if (min == null || min < dinnerStart || min >= dinnerEnd) return;
+        dinnerKcal += bdMealKcal(meal);
+      });
+      if (dinnerKcal > 0) byDay.push(dinnerKcal);
+    }
+    return bdMedian(byDay);
   }
 
   function bdSleepWindowStrip(daysBack) {
@@ -775,7 +838,7 @@
     for (let i = daysBack - 1; i >= 0; i -= 1) {
       const dt = new Date(today);
       dt.setDate(dt.getDate() - i);
-      const iso = typeof d._formatDate === 'function' ? d._formatDate(dt) : dt.toISOString().slice(0, 10);
+      const iso = formatWidgetDate(d, dt);
       const day = i === 0 && typeof d._getDay === 'function'
         ? d._getDay()
         : (typeof d._getDayByDate === 'function' ? d._getDayByDate(iso) : null);
@@ -786,21 +849,74 @@
     return rows;
   }
 
-  function bdAvgBedtimeLabel(strip) {
-    const starts = (strip || []).map((r) => r.start).filter(Number.isFinite);
-    if (!starts.length) return null;
-    const avg = Math.round(starts.reduce((a, b) => a + b, 0) / starts.length);
-    const h = Math.floor(avg / 60) % 24;
-    const m = avg % 60;
+  const BD_SLEEP_AXIS_START = 21 * 60;
+  const BD_SLEEP_AXIS_SPAN = 12 * 60;
+
+  function bdNormalizeSleepMinute(min, axisStart = BD_SLEEP_AXIS_START) {
+    if (!Number.isFinite(min)) return null;
+    let normalized = min;
+    if (normalized < axisStart) normalized += 1440;
+    return normalized;
+  }
+
+  function bdSleepBarPosition(startMin, endMin, axisStart = BD_SLEEP_AXIS_START, span = BD_SLEEP_AXIS_SPAN) {
+    let s = bdNormalizeSleepMinute(startMin, axisStart);
+    let e = bdNormalizeSleepMinute(endMin, axisStart);
+    if (!Number.isFinite(s) || !Number.isFinite(e)) return null;
+    if (e < s) e += 1440;
+    const left = ((s - axisStart) / span) * 100;
+    const width = ((e - s) / span) * 100;
+    return {
+      left: Math.max(0, Math.min(100, left)),
+      width: Math.max(2, Math.min(100 - Math.max(0, left), width))
+    };
+  }
+
+  function bdSleepDurationHours(startMin, endMin) {
+    let s = bdNormalizeSleepMinute(startMin);
+    let e = bdNormalizeSleepMinute(endMin);
+    if (!Number.isFinite(s) || !Number.isFinite(e)) return null;
+    if (e < s) e += 1440;
+    return (e - s) / 60;
+  }
+
+  function bdMinutesToClockLabel(totalMinutes) {
+    if (!Number.isFinite(totalMinutes)) return null;
+    const clock = ((totalMinutes % 1440) + 1440) % 1440;
+    const h = Math.floor(clock / 60);
+    const m = clock % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
 
+  function bdAvgBedtimeLabel(strip) {
+    const starts = (strip || [])
+      .map((r) => bdNormalizeSleepMinute(r.start))
+      .filter(Number.isFinite);
+    if (!starts.length) return null;
+    const avg = Math.round(starts.reduce((a, b) => a + b, 0) / starts.length);
+    return bdMinutesToClockLabel(avg);
+  }
+
   function bdBedtimeSpreadHours(strip) {
-    const starts = (strip || []).map((r) => r.start).filter(Number.isFinite);
+    const starts = (strip || [])
+      .map((r) => bdNormalizeSleepMinute(r.start))
+      .filter(Number.isFinite);
     if (starts.length < 2) return null;
     const min = Math.min(...starts);
     const max = Math.max(...starts);
     return Math.round(((max - min) / 60) * 10) / 10;
+  }
+
+  function bdFormatSleepSpreadLabel(hours) {
+    if (!Number.isFinite(hours)) return null;
+    const rounded = Math.round(hours * 10) / 10;
+    if (rounded === 1.5) return 'полтора часа';
+    if (rounded === 1) return 'час';
+    if (rounded === 0.5) return 'полчаса';
+    if (Number.isInteger(rounded) && rounded >= 2 && rounded <= 4) {
+      return `${rounded} часа`;
+    }
+    return `${bdFormatNum(rounded, rounded % 1 ? 1 : 0)} ч`;
   }
 
   function bdFormatGoalDate(weeksToGoal) {
@@ -810,14 +926,213 @@
     const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
       'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
     const mid = Math.ceil(dt.getDate() / 2);
-    return `середина ${months[dt.getMonth()]}`;
+    return `середине ${months[dt.getMonth()]}`;
   }
 
-  function bdWeightDaySpreadKg(sparkline) {
-    const today = sparkline?.length ? sparkline[sparkline.length - 1] : null;
-    const w = Number(today?.weight ?? today?.smoothed);
-    if (!Number.isFinite(w)) return null;
-    return 0.6;
+  function bdFormatGoalMonthDeadline(weeksToGoal) {
+    if (!Number.isFinite(weeksToGoal) || weeksToGoal <= 0) return null;
+    const dt = new Date();
+    dt.setDate(dt.getDate() + weeksToGoal * 7);
+    const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    return months[dt.getMonth()];
+  }
+
+  function bdWeightSmoothedFromSpark(sparkline) {
+    return (sparkline || []).map((row, index, arr) => {
+      const slice = arr.slice(Math.max(0, index - 6), index + 1)
+        .filter((r) => r.weight != null && !r.excluded);
+      const smoothed = slice.length
+        ? slice.reduce((sum, r) => sum + r.weight, 0) / slice.length
+        : null;
+      return {
+        date: row.date,
+        weight: row.weight,
+        hasWeight: row.weight != null && !row.excluded,
+        smoothed
+      };
+    });
+  }
+
+  function bdWeightBreakdown30Series() {
+    const d = bdLayer();
+    const prof = typeof d._getProfile === 'function' ? d._getProfile() : {};
+    const dyn = HEYS.Widgets.WeightDynamicsV4?.compute?.({ profile: prof }) || {};
+    let series = Array.isArray(dyn.windowSeries) ? dyn.windowSeries.slice(-30) : [];
+    if (series.length < 30 && typeof d._calculateWeightTrendExtended === 'function') {
+      const ext = d._calculateWeightTrendExtended(30);
+      series = bdWeightSmoothedFromSpark(ext?.sparkline || []).slice(-30);
+    }
+    if (series.length < 30) {
+      series = bdWeightBreakdownSeries(30);
+    }
+    return { series, dyn, prof };
+  }
+
+  function bdWeightFromDay(dayData) {
+    if (!dayData) return null;
+    if (dayData.weightMorningEstimated === true) return null;
+    if (dayData.weightMorningSource === 'estimated_avg' || dayData.weightMorningSource === 'estimated_profile') {
+      return null;
+    }
+    const w = Number(dayData.weightMorning);
+    return Number.isFinite(w) && w > 0 ? w : null;
+  }
+
+  function bdWeightBreakdownSeries(daysBack = 90) {
+    const rows = bdDaySeries(daysBack).map(({ iso, day }) => {
+      const weight = bdWeightFromDay(day);
+      return { date: iso, weight, hasWeight: weight != null };
+    });
+    return bdWeightSmoothedFromSpark(rows.map((r) => ({
+      date: r.date,
+      weight: r.weight,
+      excluded: !r.hasWeight
+    }))).map((r, i) => ({
+      date: rows[i].date,
+      weight: rows[i].weight,
+      hasWeight: rows[i].hasWeight,
+      smoothed: r.smoothed
+    }));
+  }
+
+  function bdWeightPlateauBands(series, minDays = 10, deadZone = 0.2) {
+    const bands = [];
+    let start = null;
+    const flush = (endIdx) => {
+      if (start == null) return;
+      if (endIdx - start + 1 >= minDays) bands.push({ start, end: endIdx });
+      start = null;
+    };
+    for (let i = 0; i < series.length; i += 1) {
+      const s = series[i]?.smoothed;
+      if (!Number.isFinite(s)) {
+        flush(i - 1);
+        continue;
+      }
+      if (start == null) {
+        start = i;
+        continue;
+      }
+      const slice = series.slice(start, i + 1).map((r) => r.smoothed).filter(Number.isFinite);
+      const span = Math.max(...slice) - Math.min(...slice);
+      if (span > deadZone) {
+        flush(i - 1);
+        start = i;
+      }
+    }
+    if (start != null) flush(series.length - 1);
+    return bands;
+  }
+
+  function bdFormatShortRuDate(iso) {
+    if (!iso) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    if (!m) return null;
+    const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    return `${Number(m[3])} ${months[Number(m[2]) - 1]}`;
+  }
+
+  function bdWeightPlateauInsight(bands, series) {
+    if (!bands.length) return null;
+    const last = bands[bands.length - 1];
+    const days = last.end - last.start + 1;
+    const weeks = Math.max(1, Math.round(days / 7));
+    const startLabel = bdFormatShortRuDate(series[last.start]?.date);
+    const weekPhrase = weeks === 1
+      ? 'Одну неделю'
+      : weeks === 2
+        ? 'Две недели'
+        : weeks === 3
+          ? 'Три недели'
+          : `${weeks} недель`;
+    if (startLabel) return `${weekPhrase} плато — вес стоит с ${startLabel}`;
+    return `${weekPhrase} плато — вес почти не менялся`;
+  }
+
+  function bdWeightWeeklyDeltaStats(series, weekCount = 4) {
+    const tail = (series || []).slice(-weekCount * 7);
+    const rows = [];
+    for (let w = 0; w < weekCount; w += 1) {
+      const chunk = tail.slice(w * 7, (w + 1) * 7).filter((d) => Number.isFinite(d.smoothed));
+      let value = '—';
+      if (chunk.length >= 2) {
+        const delta = chunk[chunk.length - 1].smoothed - chunk[0].smoothed;
+        if (Math.abs(delta) <= 0.05) {
+          value = '0,0 кг';
+        } else if (delta > 0) {
+          value = `+${bdFormatNum(delta, 1)} кг`;
+        } else {
+          value = `−${bdFormatNum(Math.abs(delta), 1)} кг`;
+        }
+      }
+      rows.push({
+        label: `Неделя ${w + 1}`,
+        value,
+        tone: w === weekCount - 1 ? 'good' : null
+      });
+    }
+    return rows;
+  }
+
+  function bdWeightHealthyTempoNorm(profile) {
+    const ref = Number(profile?.weight || profile?.weightGoal);
+    const pctKg = Number.isFinite(ref) ? Math.round(ref * 0.01 * 10) / 10 : null;
+    const pctLabel = pctKg != null ? bdFormatNum(pctKg, 1) : '1';
+    return `Здоровый темп — до 1 % веса в неделю, у вас это ${pctLabel} кг`;
+  }
+
+  function bdWeightDelta30Kg(series) {
+    const smoothed = (series || []).map((r) => r.smoothed).filter(Number.isFinite);
+    if (smoothed.length >= 2) {
+      return smoothed[smoothed.length - 1] - smoothed[0];
+    }
+    const raw = (series || []).filter((r) => r.hasWeight && Number.isFinite(r.weight)).map((r) => r.weight);
+    if (raw.length < 2) return null;
+    return raw[raw.length - 1] - raw[0];
+  }
+
+  function bdWeightDaySpreadKg(series) {
+    const diffs = (series || [])
+      .filter((r) => r.hasWeight && Number.isFinite(r.weight) && Number.isFinite(r.smoothed))
+      .map((r) => Math.abs(r.weight - r.smoothed));
+    if (!diffs.length) return null;
+    diffs.sort((a, b) => a - b);
+    const mid = Math.floor(diffs.length / 2);
+    const med = diffs.length % 2 ? diffs[mid] : (diffs[mid - 1] + diffs[mid]) / 2;
+    return Math.round(med * 10) / 10;
+  }
+
+  function bdWeightWeeksToGoal(current, goal, tempoWeekKg) {
+    if (!Number.isFinite(current) || !Number.isFinite(goal) || !Number.isFinite(tempoWeekKg)) return null;
+    if (Math.abs(tempoWeekKg) < 0.01) return null;
+    const diff = current - goal;
+    if ((diff > 0 && tempoWeekKg >= 0) || (diff < 0 && tempoWeekKg <= 0)) return null;
+    return Math.abs(diff / tempoWeekKg);
+  }
+
+  function bdWeightChartGeometry(series, width = 300, height = 72, padY = 6) {
+    const rows = series || [];
+    if (!rows.length) return { trendPath: '', dots: [] };
+    const trendVals = rows.map((r) => r.smoothed).filter(Number.isFinite);
+    const measureVals = rows
+      .filter((r) => r.hasWeight && Number.isFinite(r.weight))
+      .map((r) => r.weight);
+    const all = [...trendVals, ...measureVals];
+    if (!all.length) return { trendPath: '', dots: [] };
+    const min = Math.min(...all);
+    const max = Math.max(...all);
+    const span = Math.max(0.1, max - min);
+    const xAt = (i) => (i / Math.max(1, rows.length - 1)) * width;
+    const yAt = (v) => height - padY - ((v - min) / span) * (height - padY * 2);
+    const trendPoints = rows.map((r) => (Number.isFinite(r.smoothed) ? r.smoothed : min));
+    const trendPath = bdSplinePathRange(trendPoints, width, height, padY, min, max);
+    const dots = rows.map((r, i) => {
+      if (!r.hasWeight || !Number.isFinite(r.weight)) return null;
+      return { cx: xAt(i), cy: yAt(r.weight) };
+    }).filter(Boolean);
+    return { trendPath, dots };
   }
 
   function bdStepsWeekdayTable(week, goal) {
@@ -845,20 +1160,58 @@
     }));
   }
 
+  const BD_DAY_SCORE_FACTOR_KEYS = ['food', 'water', 'sleep', 'activity', 'relapse'];
+  const BD_HT_CONTRIB_LABELS = {
+    recovery: 'Сон',
+    activity: 'Активность',
+    nutrition: 'Питание',
+    timing: 'Тайминг',
+    metabolism: 'Метаболизм',
+    water: 'Вода'
+  };
+  const BD_HT_INSIGHT_NAMES = {
+    recovery: 'сон',
+    activity: 'активность',
+    nutrition: 'питание',
+    timing: 'tайминг',
+    metabolism: 'метаболизм',
+    water: 'вода'
+  };
+  const BD_HT_WEEK_ORDINALS = ['первая', 'вторая', 'третья', 'четвёртая'];
+  const BD_DAY_SCORE_FACTOR_LABELS = {
+    food: 'Еда',
+    water: 'Вода',
+    sleep: 'Сон',
+    activity: 'Активность',
+    relapse: 'Срыв'
+  };
+
+  function bdMorningCheckinDone() {
+    const status = HEYS.MorningCheckinUtils?.getMorningCheckinStatus?.()
+      || HEYS.MorningCheckinDebug?.getStatus?.();
+    if (!status) return false;
+    if (status.sessionDone === true) return true;
+    return status.state === 'complete' || status.state === 'done';
+  }
+
   function bdDayScoreMonthStats() {
     const d = bdLayer();
-    if (!HEYS.DayScore?.calculateDayScore) return { avg: null, belowSix: 0, bestWd: null };
+    const emptyWeak = Object.fromEntries(BD_DAY_SCORE_FACTOR_KEYS.map((k) => [k, 0]));
+    if (!HEYS.DayScore?.calculateDayScore) {
+      return { avg: null, belowSix: 0, bestWd: null, weakCounts: emptyWeak, scoredDays: 0 };
+    }
     const profile = typeof d._getProfile === 'function' ? d._getProfile() : {};
     const normAbs = typeof d._getNormAbs === 'function' ? d._getNormAbs() : {};
     const waterGoal = typeof d._getWaterGoal === 'function' ? d._getWaterGoal() : 2000;
     const weekdayNames = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
     const scores = [];
     const byWd = Array.from({ length: 7 }, () => ({ sum: 0, n: 0 }));
+    const weakCounts = { ...emptyWeak };
     const today = new Date();
     for (let i = 0; i < 30; i += 1) {
       const dt = new Date(today);
       dt.setDate(dt.getDate() - i);
-      const iso = typeof d._formatDate === 'function' ? d._formatDate(dt) : dt.toISOString().slice(0, 10);
+      const iso = formatWidgetDate(d, dt);
       const dayData = typeof d._getDayByDate === 'function' ? d._getDayByDate(iso) : null;
       try {
         const dayTot = typeof d._calculateDayTotals === 'function' ? d._calculateDayTotals(dayData) : {};
@@ -871,6 +1224,17 @@
           const wd = dt.getDay();
           byWd[wd].sum += sc;
           byWd[wd].n += 1;
+          const cats = result?.statusResult?.categoryScores || {};
+          let weakKey = BD_DAY_SCORE_FACTOR_KEYS[0];
+          let weakVal = Number(cats[weakKey]) || 0;
+          BD_DAY_SCORE_FACTOR_KEYS.forEach((key) => {
+            const val = Number(cats[key]) || 0;
+            if (val < weakVal) {
+              weakVal = val;
+              weakKey = key;
+            }
+          });
+          weakCounts[weakKey] += 1;
         }
       } catch { /* skip */ }
     }
@@ -885,7 +1249,7 @@
       const a = b.sum / b.n;
       if (a > bestAvg) { bestAvg = a; bestWd = weekdayNames[i]; }
     });
-    return { avg, belowSix, bestWd, total: scores.length };
+    return { avg, belowSix, bestWd, total: scores.length, scoredDays: scores.length, weakCounts };
   }
 
   function bdHeatmapGapFlags(cells) {
@@ -900,6 +1264,37 @@
       }
     });
     return flags;
+  }
+
+  function bdHeatmapWeeksWithoutLongGap(cells, weekCount = 5, weekDays = 7) {
+    let streakWeeks = 0;
+    for (let w = 0; w < weekCount; w += 1) {
+      const slice = cells.slice(w * weekDays, (w + 1) * weekDays);
+      if (!slice.length) break;
+      let run = 0;
+      let hasLongGap = false;
+      slice.forEach((c) => {
+        if ((c.mins || 0) <= 0) {
+          run += 1;
+          if (run >= 2) hasLongGap = true;
+        } else {
+          run = 0;
+        }
+      });
+      if (hasLongGap) break;
+      streakWeeks += 1;
+    }
+    return streakWeeks;
+  }
+
+  function bdHeatmapBreakdownInsight(cells) {
+    const weeks = bdHeatmapWeeksWithoutLongGap(cells);
+    if (weeks >= 5) return 'Пять недель подряд без пропусков дольше двух дней';
+    if (weeks >= 2) {
+      const word = weeks === 2 || weeks === 3 || weeks === 4 ? 'недели' : 'недель';
+      return `${weeks} ${word} подряд без пропусков дольше двух дней`;
+    }
+    return null;
   }
 
   function buildStubBreakdown(type, title, widget) {
@@ -961,7 +1356,8 @@
     const min = eatenValues.length ? Math.min(...eatenValues) : null;
     const max = eatenValues.length ? Math.max(...eatenValues) : null;
     const typicalNow = bdTypicalCaloriesAtHour();
-    const dinnerLeft = today.dinnerBudgetKcal || Math.round(target * 0.28);
+    const typicalDinner = bdTypicalDinnerKcal();
+    const dinnerLeft = typicalDinner ?? today.dinnerBudgetKcal ?? Math.round(target * 0.28);
     return {
       type: 'calories',
       title,
@@ -989,61 +1385,93 @@
   function buildWaterBreakdown(title) {
     const d = bdLayer();
     const water = typeof d.getWaterData === 'function' ? d.getWaterData() : {};
+    const profile = typeof d.getWaterBreakdownProfile === 'function' ? d.getWaterBreakdownProfile() : null;
     const target = water.target || 2000;
-    const bins = Array.isArray(water.rhythmBins) ? water.rhythmBins : [];
-    const weekHits = bdDaySeries(7).filter(({ day }) => (day?.waterMl || 0) >= target).length;
-    const insight = water.checkHourLabel
-      ? `Норму вы обычно набираете ${water.checkHourLabel}`
+    const targetLiters = bdFormatNum(Math.round(target / 100) / 10, 1);
+    const drunkLiters = bdFormatNum(Math.round((water.drunk || 0) / 100) / 10, 1);
+    const insight = profile?.typicalNormLabel
+      ? `Норму вы обычно набираете к ${profile.typicalNormLabel}`
       : null;
+    const gapStartIdx = profile?.gapFromHour != null && profile?.chartStartHour != null
+      ? profile.gapFromHour - profile.chartStartHour
+      : null;
+    const gapEndIdx = profile?.gapToHour != null && profile?.chartStartHour != null
+      ? profile.gapToHour - profile.chartStartHour + 1
+      : null;
+    const chipMl = (typeof global.HEYS?.dayWater?.getFrequentVolumes === 'function')
+      ? global.HEYS.dayWater.getFrequentVolumes().filter((ml) => ml > 0).slice(0, 2)
+      : [200, 500];
+    const stats = [];
+    if (profile?.gapLabel) {
+      stats.push({ label: 'Провал', value: profile.gapLabel, tone: 'bad' });
+    }
+    stats.push({
+      label: 'Норма набрана',
+      value: `${profile?.weekNormHits ?? 0} дня из 7`
+    });
+    if (profile?.topVolumeMl) {
+      stats.push({ label: 'Частый объём', value: `${bdFormatNum(profile.topVolumeMl)} мл` });
+    }
     return {
       type: 'water',
       title,
       heroKicker: 'Выпито за день',
-      heroValue: bdFormatNum(Math.round((water.drunk || 0) / 100) / 10, 1),
-      heroUnit: ' л',
+      heroValue: drunkLiters,
+      heroUnit: `из ${targetLiters} л`,
       insight,
-      chartLabel: 'Ритм дня',
-      chart: { kind: 'bins', bins, todayLine: bins },
-      stats: [
-        { label: 'Норма набирается', value: `${weekHits} дня из 7` },
-        { label: 'Сейчас', value: `${bdFormatNum(water.drunk || 0)} мл` }
-      ],
-      norm: `Норма ${bdFormatNum(Math.round(target / 100) / 10, 1)} л — 30 мл на килограмм плюс поправка на активность`,
+      chartLabel: null,
+      chart: profile ? {
+        kind: 'waterHourProfile',
+        monthAvg: profile.monthAvg,
+        todayCurve: profile.todayCumulative,
+        gapStartIdx,
+        gapEndIdx,
+        axisTicks: profile.axisTicks
+      } : null,
+      stats,
+      norm: `Норма ${targetLiters} л — 30 мл на килограмм плюс поправка на активность`,
       action: { kind: 'waterChips', label: 'Добавить воду' },
-      waterChips: true
+      waterChips: true,
+      waterChipMl: chipMl.length ? chipMl : [200, 500]
     };
   }
 
   function buildWeightBreakdown(title) {
     const d = bdLayer();
     const w = typeof d.getWeightData === 'function' ? d.getWeightData() : {};
-    const prof = typeof d._getProfile === 'function' ? d._getProfile() : {};
-    const spark = Array.isArray(w.sparkline) ? w.sparkline : [];
-    const points = spark.slice(-30).map((p) => Number(p.weight)).filter(Number.isFinite);
-    const delta30 = points.length >= 2 ? points[points.length - 1] - points[0] : null;
-    const tempoWeek = w.trend != null ? (w.trend * 7) : w.weekChange;
+    const { series, prof } = bdWeightBreakdown30Series();
     const goal = w.goal || prof.weightGoal;
+    const current = w.current ?? prof.weight ?? null;
+    const delta30 = bdWeightDelta30Kg(series);
+    const tempoWeek = delta30 != null ? (delta30 / 30) * 7 : null;
+    const weeksToGoal = bdWeightWeeksToGoal(current, goal, tempoWeek);
+    const goalWhen = weeksToGoal ? bdFormatGoalDate(weeksToGoal) : null;
+    const goalMonth = weeksToGoal ? bdFormatGoalMonthDeadline(weeksToGoal) : null;
+    const daySpread = bdWeightDaySpreadKg(series);
+    const weighCount = series.filter((row) => row.hasWeight).length;
     let insight = null;
-    if (tempoWeek != null && w.weeksToGoal) {
-      const goalWhen = bdFormatGoalDate(w.weeksToGoal);
-      insight = `Темп ${tempoWeek > 0 ? '+' : ''}${bdFormatNum(tempoWeek, 1)} кг в неделю — к цели${goalWhen ? ` в ${goalWhen}` : ` через ${bdFormatNum(w.weeksToGoal)} нед.`}`;
+    if (tempoWeek != null && goalWhen) {
+      insight = `Темп ${tempoWeek > 0 ? '+' : ''}${bdFormatNum(tempoWeek, 1)} кг в неделю — к цели в ${goalWhen}`;
+    } else if (tempoWeek != null && weeksToGoal) {
+      insight = `Темп ${tempoWeek > 0 ? '+' : ''}${bdFormatNum(tempoWeek, 1)} кг в неделю — к цели через ${bdFormatNum(weeksToGoal)} нед.`;
     }
-    const daySpread = bdWeightDaySpreadKg(spark);
     return {
       type: 'weight',
       title,
       heroKicker: 'Утром',
-      heroValue: w.current != null ? bdFormatNum(w.current, 1) : '—',
+      heroValue: current != null ? bdFormatNum(current, 1) : '—',
       heroUnit: ' кг',
       insight,
-      chartLabel: '30 дней',
-      chart: { kind: 'weightCurve', spark: spark.slice(-30) },
+      chartLabel: null,
+      chart: { kind: 'weightDualCurve', series },
       stats: [
         delta30 != null ? { label: 'За 30 дней', value: `${delta30 > 0 ? '+' : ''}${bdFormatNum(delta30, 1)} кг` } : null,
-        { label: 'Замеров', value: `${spark.length} из 30` },
+        { label: 'Замеров', value: `${weighCount} из 30` },
         daySpread != null ? { label: 'Разброс дня', value: `±${bdFormatNum(daySpread, 1)} кг` } : null
       ].filter(Boolean),
-      norm: goal ? `Цель ${bdFormatNum(goal, 1)} кг — из вашего профиля` : 'Цель задаётся с куратором',
+      norm: goal
+        ? `Цель ${bdFormatNum(goal, 1)} кг — поставлена с куратором${goalMonth ? `, срок до ${goalMonth}` : ''}`
+        : 'Цель задаётся с куратором',
       action: { kind: 'recordWeight', label: 'Записать вес' },
       waterChips: false
     };
@@ -1053,10 +1481,11 @@
     const d = bdLayer();
     const sleep = typeof d.getSleepData === 'function' ? d.getSleepData() : {};
     const strip = bdSleepWindowStrip(14);
-    const bars = sleep.sleepWeekBars || [];
-    const durations = bars.map((b) => b.hours).filter((h) => h > 0);
-    const avg = durations.length
-      ? durations.reduce((a, b) => a + b, 0) / durations.length
+    const durations14 = strip
+      .map((row) => bdSleepDurationHours(row.start, row.end))
+      .filter((h) => Number.isFinite(h) && h > 0);
+    const avgDur14 = durations14.length
+      ? durations14.reduce((a, b) => a + b, 0) / durations14.length
       : null;
     const normHits14 = strip.filter((row) => {
       const day = typeof d._getDayByDate === 'function' ? d._getDayByDate(row.iso) : null;
@@ -1064,6 +1493,8 @@
     }).length;
     const avgBed = bdAvgBedtimeLabel(strip);
     const bedSpread = bdBedtimeSpreadHours(strip);
+    const spreadLabel = bdFormatSleepSpreadLabel(bedSpread);
+    const avgBedMin = avgBed ? bdParseMealMinutes(avgBed) : null;
     return {
       type: 'sleep',
       title,
@@ -1071,17 +1502,22 @@
       heroValue: sleep.hours ? bdFormatNum(sleep.hours, 1) : '—',
       heroUnit: ' ч',
       insight: avgBed
-        ? `Ложитесь в среднем в ${avgBed}${bedSpread ? `, разброс ${bedSpread} ч` : ''}`
-        : (sleep.weekDebtHours > 0
-          ? `Долг за неделю — ${bdFormatNum(sleep.weekDebtHours, 1)} ч`
-          : null),
-      chartLabel: '14 ночей',
-      chart: { kind: 'sleepStrip', series: strip, avgBedMin: avgBed ? bdParseMealMinutes(avgBed) : null },
+        ? `Ложитесь в среднем в ${avgBed}${spreadLabel ? `, разброс ${spreadLabel}` : ''}`
+        : null,
+      chartLabel: null,
+      chart: {
+        kind: 'sleepStrip',
+        series: strip,
+        avgBedMin: avgBedMin != null ? bdNormalizeSleepMinute(avgBedMin) : null,
+        axisStart: BD_SLEEP_AXIS_START,
+        axisSpan: BD_SLEEP_AXIS_SPAN,
+        axisTicks: ['21:00', '00:00', '03:00', '06:00', '09:00']
+      },
       stats: [
-        avg != null ? { label: 'Средняя длительность', value: `${bdFormatNum(avg, 1)} ч` } : null,
+        avgDur14 != null ? { label: 'Средняя длительность', value: `${bdFormatNum(avgDur14, 1)} ч` } : null,
         { label: 'Норму набрали', value: `${normHits14} дня из 14` },
         sleep.weekDebtHours > 0
-          ? { label: 'Долг за неделю', value: `${bdFormatNum(sleep.weekDebtHours, 1)} ч` }
+          ? { label: 'Долг за неделю', value: `${bdFormatNum(sleep.weekDebtHours, 1)} ч`, tone: 'bad' }
           : null
       ].filter(Boolean),
       norm: `Норма ${bdFormatNum(sleep.target || 8, 1)} ч — из вашего профиля`,
@@ -1116,41 +1552,193 @@
     };
   }
 
+  function bdFormatDurationMin(totalMin) {
+    const total = Math.max(0, Math.round(Number(totalMin) || 0));
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    if (h <= 0) return `${m} мин`;
+    return `${h} ч ${m} мин`;
+  }
+
+  function bdInsulinWaveCalculateForDay(day, nowMin) {
+    const meals = (day?.meals || []).filter((m) => m.time);
+    if (!meals.length || !HEYS.InsulinWave?.calculate) {
+      return { v4: null, endTime: null, overlapCount: 0, calmWindowMinutes: null, mealCount: 0 };
+    }
+    const d = bdLayer();
+    const profile = typeof d._getProfile === 'function' ? d._getProfile() : {};
+    const pIndex = HEYS.products?.buildIndex?.() || null;
+    const getProductFromItem = (item) => {
+      if (!pIndex?.byId?.get) return item;
+      return pIndex.byId.get(item.product_id || item.productId) || item;
+    };
+    try {
+      const result = HEYS.InsulinWave.calculate({
+        meals,
+        pIndex,
+        getProductFromItem,
+        trainings: day?.trainings || [],
+        dayData: {
+          sleepHours: day?.sleepHours || null,
+          sleepQuality: day?.sleepQuality || null,
+          stressAvg: day?.stressAvg || 0,
+          waterMl: day?.waterMl || 0,
+          householdMin: day?.householdMin || 0,
+          steps: day?.steps || 0,
+          date: day?.date,
+          profile: {
+            age: profile?.age || 0,
+            weight: profile?.weight || 0,
+            height: profile?.height || 0,
+            gender: profile?.gender || ''
+          }
+        },
+        nowMinutes: nowMin
+      });
+      if (!result) {
+        return { v4: null, endTime: null, overlapCount: 0, calmWindowMinutes: null, mealCount: 0 };
+      }
+      const v4 = HEYS.Widgets.InsulinWaveV4?.buildV4FromWave?.(result, nowMin) || null;
+      return {
+        v4,
+        endTime: result.endTime || null,
+        overlapCount: v4?.overlapCount ?? (result.overlaps?.length || 0),
+        calmWindowMinutes: v4?.calmWindowMinutes ?? null,
+        mealCount: v4?.mealCount || meals.length
+      };
+    } catch (_) {
+      return { v4: null, endTime: null, overlapCount: 0, calmWindowMinutes: null, mealCount: 0 };
+    }
+  }
+
+  function bdInsulinWaveWeekStrip(excludeToday) {
+    const d = bdLayer();
+    const today = new Date();
+    const nowMin = today.getHours() * 60 + today.getMinutes();
+    const weekdayNames = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+    const rows = [];
+    let overlapSum = 0;
+    let calmSum = 0;
+    let calmCount = 0;
+    const maxOffset = excludeToday ? 7 : 6;
+    const minOffset = excludeToday ? 1 : 0;
+    for (let i = maxOffset; i >= minOffset; i -= 1) {
+      const dt = new Date(today);
+      dt.setDate(dt.getDate() - i);
+      const iso = formatWidgetDate(d, dt);
+      const day = i === 0 && typeof d._getDay === 'function'
+        ? d._getDay()
+        : (typeof d._getDayByDate === 'function' ? d._getDayByDate(iso) : null);
+      const sliceNow = i === 0 ? nowMin : 1439;
+      const calc = bdInsulinWaveCalculateForDay(day, sliceNow);
+      if (calc.calmWindowMinutes != null && calc.mealCount > 0) {
+        calmSum += calc.calmWindowMinutes;
+        calmCount += 1;
+      }
+      overlapSum += calc.overlapCount || 0;
+      rows.push({
+        iso,
+        isToday: i === 0,
+        label: weekdayNames[dt.getDay()],
+        segments: calc.v4?.dayBar?.segments || [],
+        empty: !(calc.v4?.dayBar?.segments?.length)
+      });
+    }
+    return {
+      rows,
+      overlapSum,
+      avgCalmMinutes: calmCount ? Math.round(calmSum / calmCount) : null
+    };
+  }
+
   function buildInsulinWaveBreakdown(title, widget) {
     const d = bdLayer();
     const wave = typeof d.getInsulinWaveData === 'function' ? d.getInsulinWaveData() : {};
     const v4 = wave.v4 || {};
-    const freeMin = v4.calmWindowMinutes ?? v4.freeWindowMinutes ?? wave.remaining ?? null;
-    const heroKicker = wave.isOvernightAssessment || wave.isOvernightEstimate ? 'Оценка по вчерашнему дню' : 'Свободное окно';
-    const avgCalm = v4.calmWindowMinutes;
+    const isOvernight = wave.isOvernightEstimate || v4.isOvernight;
+    const week = bdInsulinWaveWeekStrip(isOvernight);
+    const heroMin = isOvernight
+      ? (v4.overnightRestMinutes ?? v4.calmWindowMinutes ?? wave.remaining)
+      : (v4.calmWindowMinutes ?? v4.freeWindowMinutes ?? wave.remaining);
+    const heroKicker = isOvernight ? 'Оценка по вчерашнему дню' : 'Свободное окно';
+    const avgCalm = week.avgCalmMinutes ?? v4.calmWindowMinutes;
+    const stats = [
+      avgCalm != null ? { label: 'Среднее окно', value: bdFormatDurationMin(avgCalm) } : null,
+      { label: 'Нахлёстов за неделю', value: bdFormatNum(week.overlapSum) }
+    ];
+    if (!isOvernight) {
+      stats.push({ label: 'Волн сегодня', value: bdFormatNum(wave.waveCount || v4.mealCount || 0) });
+    }
     return {
       type: 'insulinWave',
       title,
       heroKicker,
-      heroValue: freeMin != null ? `${Math.floor(freeMin / 60)} ч ${freeMin % 60} мин` : '—',
+      heroValue: heroMin != null ? bdFormatDurationMin(heroMin) : '—',
       heroUnit: '',
       insight: wave.endTime ? `Последняя волна закрывается в ${wave.endTime}` : null,
-      chartLabel: 'Сегодня',
-      chart: { kind: 'waveDay', wave, v4 },
-      stats: [
-        avgCalm != null ? { label: 'Среднее окно', value: `${Math.floor(avgCalm / 60)} ч ${avgCalm % 60} мин` } : null,
-        { label: 'Нахлёстов за неделю', value: bdFormatNum(v4.overlapCount || wave.overlapCount || 0) },
-        { label: 'Волн сегодня', value: bdFormatNum(wave.waveCount || v4.mealCount || 0) }
-      ].filter(Boolean),
+      chartLabel: null,
+      chart: { kind: 'waveWeekStrip', rows: week.rows },
+      stats: stats.filter(Boolean),
       norm: 'Волна считается от углеводов приёма — 3 ч на приём, дольше при нахлёсте',
       action: { kind: 'addMeal', label: 'Добавить приём' },
       waterChips: false
     };
   }
 
+  function bdMacroPct(value, target) {
+    const tgt = Number(target) || 0;
+    if (tgt <= 0) return 0;
+    return Math.max(0, Math.min(100, Math.round(((Number(value) || 0) / tgt) * 100)));
+  }
+
+  function bdMacroDeviationBad(value, target, toneClass) {
+    const num = Number(value) || 0;
+    const tgt = Number(target) || 0;
+    if (tgt <= 0) return false;
+    const margin = tgt * 0.05;
+    if (toneClass === 'protein') return num < tgt - margin;
+    return num > tgt + margin;
+  }
+
+  function bdMacroDayTotals(day) {
+    const d = bdLayer();
+    const tot = typeof d._calculateDayTotals === 'function' ? d._calculateDayTotals(day) : {};
+    return {
+      protein: Number(tot?.prot ?? tot?.protein) || 0,
+      fat: Number(tot?.fat) || 0,
+      carbs: Number(tot?.carbs) || 0
+    };
+  }
+
+  function bdMacrosWeekAvgPct(dayRows, targets) {
+    const sums = { protein: 0, fat: 0, carbs: 0, count: 0 };
+    (dayRows || []).forEach(({ day }) => {
+      if (!day) return;
+      const tot = bdMacroDayTotals(day);
+      const hasData = tot.protein > 0 || tot.fat > 0 || tot.carbs > 0;
+      if (!hasData) return;
+      sums.count += 1;
+      if (targets.proteinTarget) sums.protein += (tot.protein / targets.proteinTarget) * 100;
+      if (targets.fatTarget) sums.fat += (tot.fat / targets.fatTarget) * 100;
+      if (targets.carbsTarget) sums.carbs += (tot.carbs / targets.carbsTarget) * 100;
+    });
+    if (!sums.count) return { protein: 0, fat: 0, carbs: 0 };
+    return {
+      protein: Math.round(sums.protein / sums.count),
+      fat: Math.round(sums.fat / sums.count),
+      carbs: Math.round(sums.carbs / sums.count)
+    };
+  }
+
   function buildMacrosBreakdown(title) {
     const d = bdLayer();
     const today = typeof d.getMacrosData === 'function' ? d.getMacrosData() : {};
-    const series = bdDaySeries(7).map(({ day, isToday }) => {
-      const tot = typeof d._calculateDayTotals === 'function' ? d._calculateDayTotals(day) : {};
-      const p = Number(tot?.protein) || 0;
-      const f = Number(tot?.fat) || 0;
-      const c = Number(tot?.carbs) || 0;
+    const dayRows = bdDaySeries(7);
+    const series = dayRows.map(({ day, isToday }) => {
+      const tot = bdMacroDayTotals(day);
+      const p = tot.protein;
+      const f = tot.fat;
+      const c = tot.carbs;
       const pt = today.proteinTarget || 1;
       const ft = today.fatTarget || 1;
       const ct = today.carbsTarget || 1;
@@ -1162,33 +1750,39 @@
       };
     });
     const missProtein = series.filter((s) => !s.proteinOk).length;
-    const avgProteinPct = today.proteinTarget
-      ? Math.round(((today.protein || 0) / today.proteinTarget) * 100)
-      : 0;
-    const avgFatPct = today.fatTarget
-      ? Math.round(((today.fat || 0) / today.fatTarget) * 100)
-      : 0;
-    const avgCarbsPct = today.carbsTarget
-      ? Math.round(((today.carbs || 0) / today.carbsTarget) * 100)
-      : 0;
+    const avgPct = bdMacrosWeekAvgPct(dayRows, today);
+    const mkTrack = (name, value, target, toneClass) => ({
+      name,
+      label: name.slice(0, 1),
+      value: bdFormatNum(value || 0),
+      norm: bdFormatNum(target || 0),
+      unit: 'г',
+      pct: bdMacroPct(value, target),
+      tone: bdMacroDeviationBad(value, target, toneClass) ? 'bad' : 'good'
+    });
     return {
       type: 'macros',
       title,
       heroKicker: 'Сегодня',
-      heroValue: `${bdFormatNum(today.protein || 0)}/${bdFormatNum(today.proteinTarget || 0)}`,
-      heroUnit: ' г белка',
+      heroValue: null,
+      heroUnit: null,
       heroTracks: [
-        { label: 'Б', value: bdFormatNum(today.protein || 0), norm: bdFormatNum(today.proteinTarget || 0), unit: 'г' },
-        { label: 'Ж', value: bdFormatNum(today.fat || 0), norm: bdFormatNum(today.fatTarget || 0), unit: 'г' },
-        { label: 'У', value: bdFormatNum(today.carbs || 0), norm: bdFormatNum(today.carbsTarget || 0), unit: 'г' }
+        mkTrack('Белок', today.protein, today.proteinTarget, 'protein'),
+        mkTrack('Жиры', today.fat, today.fatTarget, 'fat'),
+        mkTrack('Углеводы', today.carbs, today.carbsTarget, 'carbs')
       ],
+      insightBeforeHero: true,
       insight: missProtein ? `Белок недобираете ${missProtein} дня из 7` : null,
-      chartLabel: 'Попадания за 7 дней',
+      chartLabel: null,
       chart: { kind: 'grid3x7', series },
       stats: [
-        { label: 'Белок — % нормы в среднем', value: `${avgProteinPct} %` },
-        { label: 'Жиры — % нормы в среднем', value: `${avgFatPct} %` },
-        { label: 'Углеводы — % нормы в среднем', value: `${avgCarbsPct} %` }
+        {
+          label: 'Белок — % нормы в среднем',
+          value: `${avgPct.protein} %`,
+          tone: avgPct.protein > 0 && avgPct.protein < 90 ? 'bad' : null
+        },
+        { label: 'Жиры', value: `${avgPct.fat} %` },
+        { label: 'Углеводы', value: `${avgPct.carbs} %` }
       ],
       norm: 'Нормы БЖУ — расчёт куратора от калорий и цели',
       action: { kind: 'addMeal', label: 'Добавить приём' },
@@ -1200,31 +1794,205 @@
     const d = bdLayer();
     const ds = typeof d.getDayScoreData === 'function' ? d.getDayScoreData() : {};
     const week = ds.weekScores || [];
-    const factorBars = ds.factorBars || [];
-    const weakest = [...factorBars].sort((a, b) => a.score - b.score)[0];
     const month = bdDayScoreMonthStats();
-    const avgWeek = week.length
-      ? week.reduce((s, r) => s + (r.score || 0), 0) / week.length
-      : null;
+    const weakTotal = 30;
+    const factorBars = (ds.factorBars || []).map((f) => ({
+      ...f,
+      label: BD_DAY_SCORE_FACTOR_LABELS[f.key] || f.label,
+      weakDays: month.weakCounts?.[f.key] ?? 0,
+      weakTotal
+    }));
+    const dominant = factorBars.reduce((best, f) => (
+      !best || (f.weakDays || 0) > (best.weakDays || 0) ? f : best
+    ), null);
+    const dominantInsightLabel = dominant?.key === 'water'
+      ? 'вода'
+      : (dominant?.key === 'food' ? 'еда'
+        : (dominant?.key === 'sleep' ? 'сон'
+          : (dominant?.key === 'activity' ? 'активность'
+            : (dominant?.key === 'relapse' ? 'срыв' : dominant?.label?.toLowerCase()))));
+    const maxWeakDays = dominant?.weakDays || 0;
     return {
       type: 'dayScore',
       title,
-      heroKicker: 'Оценка',
-      heroValue: bdFormatNum(Math.round(ds.score || 0)),
+      heroKicker: 'Сегодня',
+      heroValue: bdFormatNum(Math.round(ds.score || 0) / 10, 1),
       heroUnit: ' / 10',
-      insight: weakest ? `Чаще всего вниз тянет ${weakest.label}` : null,
+      insight: maxWeakDays > 0 && dominantInsightLabel
+        ? `Чаще всего вниз тянет ${dominantInsightLabel}`
+        : null,
       chartLabel: '7 дней',
       chart: { kind: 'bars7score', series: week },
       stats: [
         month.avg != null ? { label: 'Средняя за месяц', value: bdFormatNum(month.avg / 10, 1) } : null,
         month.bestWd ? { label: 'Лучший день', value: month.bestWd } : null,
-        month.total ? { label: 'Ниже 6', value: `${month.belowSix} дня из ${month.total}` } : null,
-        avgWeek != null ? { label: 'Средняя за неделю', value: bdFormatNum(avgWeek / 10, 1) } : null
+        { label: 'Ниже 6', value: `${month.belowSix} дня из ${weakTotal}` }
       ].filter(Boolean),
       factorBars,
+      factorWeakMax: maxWeakDays,
       norm: 'Оценка складывается из пяти частей, вес каждой — в справочнике',
-      action: { kind: 'checkin', label: 'Заполнить чек-ин' },
+      action: {
+        kind: 'checkin',
+        label: bdMorningCheckinDone() ? 'Поправить ответы' : 'Заполнить чек-ин'
+      },
       waterChips: false
+    };
+  }
+
+  function bdRelapseCanvasLevelWord(level) {
+    if (level === 'critical') return 'Критичный';
+    if (level === 'high') return 'Высокий';
+    if (level === 'elevated' || level === 'guarded' || level === 'medium') return 'Средний';
+    return 'Низкий';
+  }
+
+  function bdRelapseFormatHour(hour) {
+    const h = Math.max(0, Math.min(23, Math.round(Number(hour) || 0)));
+    return `${String(h).padStart(2, '0')}:00`;
+  }
+
+  function bdRelapseSimNow(iso, hour) {
+    const h = Math.max(0, Math.min(23, Number(hour) || 0));
+    return `${iso}T${String(h).padStart(2, '0')}:30:00`;
+  }
+
+  function bdRelapseScoreAtHour(ctx) {
+    if (!HEYS.RelapseRisk?.calculate) return 0;
+    try {
+      const result = HEYS.RelapseRisk.calculate(ctx);
+      return Math.round(Number(result?.score) || 0);
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function bdRelapseDriverRows(drivers) {
+    return (drivers || []).slice(0, 3).map((dr) => {
+      const impact = Number(dr?.impact ?? dr?.weightedImpact ?? 0);
+      let tone = 'warn';
+      if (impact >= 15) tone = 'bad';
+      else if (impact < 8) tone = 'good';
+      const label = dr?.label || dr?.text || (typeof dr === 'string' ? dr : '');
+      return { label, tone };
+    }).filter((row) => row.label);
+  }
+
+  function bdRelapseMonthProfile() {
+    const CHART_START = 6;
+    const CHART_HOURS = 14;
+    const PROFILE_DAYS = 30;
+    const ELEVATED = 40;
+    const EVENT = 60;
+    const d = bdLayer();
+    const profile = typeof d._getProfile === 'function' ? d._getProfile() : {};
+    const normAbs = typeof d._getNormAbs === 'function' ? d._getNormAbs() : {};
+    const profileKey = typeof d._getRelapseRiskProfileKey === 'function'
+      ? d._getRelapseRiskProfileKey()
+      : (HEYS.RelapseRisk?.CONFIG?.DEFAULT_PROFILE_KEY || 'v1_2');
+    const monthBucketSums = Array(CHART_HOURS).fill(0);
+    const todayCurve = Array(CHART_HOURS).fill(0);
+    let daysSampled = 0;
+    let relapseCount = 0;
+    const relapseHours = [];
+    let daysWithoutRisk = 0;
+    const anchor = new Date();
+
+    for (let offset = 0; offset < PROFILE_DAYS; offset += 1) {
+      const dt = new Date(anchor);
+      dt.setDate(dt.getDate() - offset);
+      const iso = formatWidgetDate(d, dt);
+      const dayData = offset === 0
+        ? (typeof d._getDay === 'function' ? d._getDay() : null)
+        : (typeof d._getDayByDate === 'function' ? d._getDayByDate(iso) : null);
+      if (!dayData) continue;
+
+      const dayTot = typeof d._getDayTotalsFor === 'function'
+        ? d._getDayTotalsFor(dayData)
+        : (typeof d._calculateDayTotals === 'function' ? d._calculateDayTotals(dayData) : {});
+      const historyDays = [];
+      for (let back = 1; back <= 14; back += 1) {
+        const histDt = new Date(dt);
+        histDt.setDate(histDt.getDate() - back);
+        const histIso = formatWidgetDate(d, histDt);
+        const histDay = typeof d._getDayByDate === 'function' ? d._getDayByDate(histIso) : null;
+        if (histDay) historyDays.push(histDay);
+      }
+
+      let dayMax = 0;
+      let peakHour = null;
+      for (let i = 0; i < CHART_HOURS; i += 1) {
+        const hour = CHART_START + i;
+        const score = bdRelapseScoreAtHour({
+          dayData,
+          dayTot,
+          profile,
+          normAbs,
+          historyDays,
+          weightProfileKey: profileKey,
+          now: bdRelapseSimNow(iso, hour)
+        });
+        monthBucketSums[i] += score;
+        if (score > dayMax) {
+          dayMax = score;
+          peakHour = hour;
+        }
+        if (offset === 0) todayCurve[i] = score;
+      }
+      for (let hour = CHART_START + CHART_HOURS; hour <= 23; hour += 1) {
+        const score = bdRelapseScoreAtHour({
+          dayData,
+          dayTot,
+          profile,
+          normAbs,
+          historyDays,
+          weightProfileKey: profileKey,
+          now: bdRelapseSimNow(iso, hour)
+        });
+        if (score > dayMax) {
+          dayMax = score;
+          peakHour = hour;
+        }
+      }
+      daysSampled += 1;
+      if (dayMax < ELEVATED) daysWithoutRisk += 1;
+      if (dayMax >= EVENT) {
+        relapseCount += 1;
+        relapseHours.push(peakHour != null ? peakHour : 22);
+      }
+    }
+
+    const monthAvg = monthBucketSums.map((sum) => (
+      daysSampled > 0 ? sum / daysSampled : 0
+    ));
+    let dangerIdx = 0;
+    let dangerMax = -1;
+    monthAvg.forEach((avg, i) => {
+      if (avg > dangerMax) {
+        dangerMax = avg;
+        dangerIdx = i;
+      }
+    });
+    const dangerHour = CHART_START + dangerIdx;
+    let insight = null;
+    if (relapseHours.length > 0 && relapseHours.every((h) => h >= 21)) {
+      insight = 'Все срывы за месяц были после 21:00';
+    } else if (relapseHours.length > 0) {
+      const minHour = Math.min(...relapseHours);
+      insight = `Чаще всего срывы после ${bdRelapseFormatHour(minHour)}`;
+    }
+
+    return {
+      chartStartHour: CHART_START,
+      chartHours: CHART_HOURS,
+      monthAvg,
+      todayCurve,
+      axisTicks: [6, 9, 12, 15, 18, 21, 24],
+      dangerStartIdx: Math.max(0, dangerIdx - 1),
+      dangerEndIdx: Math.min(CHART_HOURS, dangerIdx + 2),
+      dangerHour: bdRelapseFormatHour(dangerHour),
+      relapseCount,
+      daysWithoutRisk,
+      insight
     };
   }
 
@@ -1233,25 +2001,136 @@
     const snap = typeof d.getRelapseRiskData === 'function'
       ? d.getRelapseRiskData(widget)
       : {};
-    const score = Math.round(Number(snap.score) || 0);
-    const drivers = Array.isArray(snap.primaryDrivers) ? snap.primaryDrivers.slice(0, 3) : [];
+    const profile = bdRelapseMonthProfile();
+    const level = snap.level || 'low';
+    const drivers = bdRelapseDriverRows(snap.primaryDrivers);
+    const insight = profile.insight
+      || snap.recommendation
+      || (drivers[0]?.label ? `Главный фактор — ${drivers[0].label}` : null);
     return {
       type: 'relapseRisk',
       title,
-      heroKicker: 'Уровень',
-      heroValue: snap.levelLabel || `${score}%`,
+      heroKicker: 'Сейчас',
+      heroValue: bdRelapseCanvasLevelWord(level),
       heroUnit: '',
-      insight: snap.recommendation || (drivers[0]?.label ? `Главный фактор — ${drivers[0].label}` : null),
-      chartLabel: 'Сегодня',
-      chart: { kind: 'riskScale', score, level: snap.level },
+      insight,
+      chartLabel: null,
+      chart: {
+        kind: 'riskHourProfile',
+        monthAvg: profile.monthAvg,
+        todayCurve: profile.todayCurve,
+        dangerStartIdx: profile.dangerStartIdx,
+        dangerEndIdx: profile.dangerEndIdx,
+        axisTicks: profile.axisTicks
+      },
       stats: [
-        { label: 'Риск', value: `${score}%` },
-        { label: 'Дней без риска', value: snap.daysWithoutRisk != null ? String(snap.daysWithoutRisk) : '—' }
-      ],
+        { label: 'Срывов за месяц', value: bdFormatNum(profile.relapseCount) },
+        profile.dangerHour
+          ? { label: 'Опасный час', value: profile.dangerHour, tone: 'bad' }
+          : null,
+        { label: 'Дней без риска', value: `${profile.daysWithoutRisk} из 30` }
+      ].filter(Boolean),
       drivers,
       norm: 'Риск считается по отклонениям дня от ваших норм — шкала в Инсайтах',
       action: { kind: 'insights', label: 'Что делать' },
       waterChips: false
+    };
+  }
+
+  function bdHealthTrendDayScore(dayData) {
+    const d = bdLayer();
+    if (!dayData) return null;
+    if (HEYS.DayScore?.calculateDayScore) {
+      try {
+        const profile = typeof d._getProfile === 'function' ? d._getProfile() : {};
+        const normAbs = typeof d._getNormAbs === 'function' ? d._getNormAbs() : {};
+        const waterGoal = typeof d._getWaterGoal === 'function' ? d._getWaterGoal() : 2000;
+        const dayTot = typeof d._calculateDayTotals === 'function'
+          ? d._calculateDayTotals(dayData)
+          : {};
+        const result = HEYS.DayScore.calculateDayScore({
+          dayData, profile, dayTot, normAbs, waterGoal
+        });
+        const sc = Math.round(Number(result?.score) || 0);
+        return sc > 0 ? sc : null;
+      } catch { /* skip */ }
+    }
+    for (const field of ['dayScoreRaw', 'dayScore']) {
+      const value = Number(dayData[field]);
+      if (Number.isFinite(value) && value >= 1 && value <= 10) {
+        return Math.round(value * 10);
+      }
+    }
+    let proxy = 50;
+    if (Array.isArray(dayData.meals) && dayData.meals.length >= 3) proxy += 15;
+    if (Number(dayData.sleepHours) >= 7) proxy += 15;
+    if (Number(dayData.stressAvg) > 0 && Number(dayData.stressAvg) <= 5) proxy += 10;
+    if (Number(dayData.weight) > 0) proxy += 10;
+    return Math.min(100, proxy);
+  }
+
+  function bdHealthTrendHydrationScore(patterns) {
+    const hyd = (patterns || []).find((p) => p.pattern === 'hydration' && p.available);
+    if (!hyd || hyd.score == null) return null;
+    return Math.round((Number(hyd.score) - 50) / 12);
+  }
+
+  function bdHealthTrendContributions(ht, patterns) {
+    const rows = (ht.categories || []).map((c) => ({
+      key: c.key,
+      label: BD_HT_CONTRIB_LABELS[c.key] || c.label,
+      score: Math.round(Number(c.score) || 0)
+    }));
+    const hydScore = bdHealthTrendHydrationScore(patterns);
+    if (hydScore != null) {
+      rows.push({ key: 'water', label: 'Вода', score: hydScore });
+    }
+    const positives = rows.filter((r) => r.score > 0).sort((a, b) => b.score - a.score);
+    const negatives = rows.filter((r) => r.score < 0).sort((a, b) => a.score - b.score);
+    const picked = [];
+    positives.slice(0, 2).forEach((r) => picked.push(r));
+    if (negatives[0]) picked.push(negatives[0]);
+    if (picked.length < 3) {
+      rows
+        .sort((a, b) => Math.abs(b.score) - Math.abs(a.score))
+        .forEach((r) => {
+          if (picked.length < 3 && !picked.includes(r)) picked.push(r);
+        });
+    }
+    const top3 = picked.slice(0, 3);
+    const maxAbs = Math.max(...top3.map((r) => Math.abs(r.score)), 1);
+    return top3.map((r) => ({
+      key: r.key,
+      label: r.label,
+      score: r.score,
+      barPct: Math.max(6, Math.round((Math.abs(r.score) / maxAbs) * 38)),
+      value: r.score > 0 ? `+${bdFormatNum(r.score)}` : bdFormatNum(r.score)
+    }));
+  }
+
+  function bdHealthTrendMonthAnalysis() {
+    const series = bdDaySeries(30).map(({ day }) => bdHealthTrendDayScore(day));
+    const scored = series.filter((s) => Number.isFinite(s));
+    const daysInPlus = scored.filter((s) => s >= 60).length;
+    const weekAvgs = [];
+    for (let w = 0; w < 4; w += 1) {
+      const start = w * 7;
+      const end = w === 3 ? 30 : start + 7;
+      const slice = series.slice(start, end).filter((s) => Number.isFinite(s));
+      weekAvgs.push(slice.length ? slice.reduce((a, b) => a + b, 0) / slice.length : null);
+    }
+    let bestWeekIdx = 0;
+    let bestWeekAvg = -1;
+    weekAvgs.forEach((avg, i) => {
+      if (avg != null && avg > bestWeekAvg) {
+        bestWeekAvg = avg;
+        bestWeekIdx = i;
+      }
+    });
+    return {
+      series,
+      daysInPlus,
+      bestWeekOrdinal: BD_HT_WEEK_ORDINALS[bestWeekIdx] || '—'
     };
   }
 
@@ -1260,31 +2139,33 @@
     const ht = typeof d.getHealthTrendData === 'function'
       ? d.getHealthTrendData({ ...(widget.settings || {}), periodDays: 30 })
       : {};
-    const cats = ht.categories || [];
-    const top = [...cats].sort((a, b) => (b.score || 0) - (a.score || 0))[0];
-    const low = [...cats].sort((a, b) => (a.score || 0) - (b.score || 0))[0];
-    const insight = top && low ? `Тренд тянет вверх ${top.label?.toLowerCase() || 'сон'}, вниз — ${low.label?.toLowerCase() || 'вода'}` : null;
-    const daysInPlus = ht.daysWithData && ht.score > 0
-      ? Math.min(ht.daysWithData, Math.round(ht.daysWithData * 0.7))
-      : 0;
+    const analysis = HEYS.PredictiveInsights?.analyze?.({ daysBack: 30 }) || null;
+    const month = bdHealthTrendMonthAnalysis();
+    const contributions = bdHealthTrendContributions(ht, analysis?.patterns);
+    const sortedContrib = [...contributions].sort((a, b) => b.score - a.score);
+    const top = sortedContrib[0];
+    const low = sortedContrib[sortedContrib.length - 1];
+    const insight = top && low
+      ? `Тренд тянет вверх ${BD_HT_INSIGHT_NAMES[top.key] || top.label.toLowerCase()}, вниз — ${BD_HT_INSIGHT_NAMES[low.key] || low.label.toLowerCase()}`
+      : null;
+    const heroScore = Math.round(Number(ht.score) || 0);
+    const spark = month.series.map((score) => ({ weight: Number.isFinite(score) ? score : 0 }));
     return {
       type: 'healthTrend',
       title,
-      heroKicker: 'За 30 дней',
-      heroValue: ht.score > 0 ? `+${bdFormatNum(ht.score)}` : bdFormatNum(ht.score || 0),
-      heroUnit: '',
+      heroKicker: 'За месяц',
+      heroValue: heroScore > 0 ? `+${bdFormatNum(heroScore)}` : bdFormatNum(heroScore),
+      heroUnit: ' пунктов',
       insight,
-      chartLabel: '30 дней',
-      chart: { kind: 'spline30', score: ht.score, delta: ht.delta },
+      chartLabel: null,
+      chart: { kind: 'spline30', spark },
+      chartAxis: { left: '30 дней назад', right: 'сегодня' },
       stats: [
         ht.delta != null ? { label: 'Прошлый месяц', value: `${ht.delta > 0 ? '+' : ''}${bdFormatNum(ht.delta)}` } : null,
-        { label: 'Дней в плюсе', value: `${daysInPlus} из 30` },
-        { label: 'Дней с данными', value: `${ht.daysWithData || 0} из 30` }
+        { label: 'Лучшая неделя', value: month.bestWeekOrdinal },
+        { label: 'Дней в плюсе', value: `${month.daysInPlus} из 30` }
       ].filter(Boolean),
-      contributions: cats.slice(0, 3).map((c) => ({
-        label: c.label,
-        value: c.score != null ? (c.score >= 0 ? `+${c.score}` : String(c.score)) : '—'
-      })),
+      contributions,
       norm: 'Тренд — сглаженное среднее по вашим дням, порог в Инсайтах',
       action: { kind: 'insightsTab', label: 'Открыть Инсайты' },
       waterChips: false
@@ -1320,7 +2201,7 @@
       heroKicker: 'Активные минуты',
       heroValue: bdFormatNum(todayMins),
       heroUnit: ' мин',
-      insight: streak >= 5 ? `${streak} дней подряд в норме` : null,
+      insight: bdHeatmapBreakdownInsight(cells),
       chartLabel: '5 недель',
       chart: { kind: 'grid7x5', cells, gapFlags: bdHeatmapGapFlags(cells), normMin },
       stats: [
@@ -1335,24 +2216,32 @@
   }
 
   function buildCrashRiskBreakdown(title, widget) {
-    const dyn = HEYS.Widgets.WeightDynamicsV4?.compute?.() || {};
-    const monthRate = dyn.monthRateKg;
-    const weeklyBars = (dyn.weeklyBars || []).slice(-4);
+    const d = bdLayer();
+    const prof = typeof d._getProfile === 'function' ? d._getProfile() : {};
+    const dyn = HEYS.Widgets.WeightDynamicsV4?.compute?.({ profile: prof }) || {};
+    const series90 = bdWeightBreakdownSeries(90);
+    const plateaus = bdWeightPlateauBands(series90, 10);
+    const monthDelta = bdWeightDelta30Kg(series90.slice(-30));
+    const heroVal = monthDelta != null
+      ? `${monthDelta > 0 ? '+' : ''}${bdFormatNum(monthDelta, 1)}`
+      : (dyn.delta?.sign && dyn.delta?.text ? `${dyn.delta.sign}${dyn.delta.text}` : '—');
     return {
       type: 'crashRisk',
       title,
       heroKicker: 'За месяц',
-      heroValue: dyn.delta || (monthRate != null ? `${monthRate > 0 ? '+' : ''}${bdFormatNum(monthRate, 1)}` : '—'),
+      heroValue: heroVal,
       heroUnit: ' кг',
-      insight: dyn.placeholder || null,
+      insight: bdWeightPlateauInsight(plateaus, series90) || dyn.placeholder || null,
       chartLabel: '90 дней',
-      chart: { kind: 'weightCurve', spark: (dyn.windowSeries || []).map((p) => ({ weight: p.smoothed, date: p.date })) },
-      stats: weeklyBars.map((b, i) => ({
-        label: `Неделя ${i + 1}`,
-        value: b.label || b.delta || '—',
-        tone: i === weeklyBars.length - 1 ? 'good' : null
-      })),
-      norm: dyn.remainderLabel || 'Здоровый темп — до 1 % веса в неделю',
+      chart: {
+        kind: 'weightCurve',
+        spark: series90.map((p) => ({ weight: p.smoothed, date: p.date })),
+        plateaus
+      },
+      stats: bdWeightWeeklyDeltaStats(series90, 4),
+      norm: dyn.remainderLabel && dyn.remainderLabel.includes('темп')
+        ? dyn.remainderLabel
+        : bdWeightHealthyTempoNorm(prof),
       action: { kind: 'recordWeight', label: 'Записать вес' },
       waterChips: false
     };
@@ -1407,6 +2296,53 @@
         }, React.createElement('i', { style: { height: `${Math.max(8, (v / max) * 100)}%` } })))
       );
     }
+    if (chart.kind === 'waterHourProfile' || chart.kind === 'riskHourProfile') {
+      const monthAvg = chart.monthAvg || [];
+      const todayCurve = chart.todayCurve || [];
+      const barCount = Math.max(monthAvg.length, todayCurve.length, 1);
+      const max = Math.max(...monthAvg, ...todayCurve, 1);
+      const gapStart = chart.gapStartIdx ?? chart.dangerStartIdx;
+      const gapEnd = chart.gapEndIdx ?? chart.dangerEndIdx;
+      const gapLeft = Number.isFinite(gapStart) && Number.isFinite(gapEnd) && gapEnd > gapStart
+        ? (gapStart / barCount) * 100
+        : null;
+      const gapWidth = gapLeft != null ? ((gapEnd - gapStart) / barCount) * 100 : null;
+      const path = bdSplinePath(todayCurve.length ? todayCurve : [0], 268, 66, 6);
+      return React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'widget-bd-sheet__water-profile' },
+          gapLeft != null && gapWidth != null
+            ? React.createElement('span', {
+              className: 'widget-bd-sheet__water-profile-gap',
+              style: { left: `${gapLeft}%`, width: `${gapWidth}%` }
+            })
+            : null,
+          monthAvg.map((v, i) => {
+            const h = Math.max(6, Math.round((v / max) * 100));
+            return React.createElement('span', {
+              key: i,
+              className: 'widget-bd-sheet__water-profile-bar'
+            }, React.createElement('i', { style: { height: `${h}%` } }));
+          }),
+          React.createElement('svg', {
+            className: 'widget-bd-sheet__water-profile-spline',
+            viewBox: '0 0 268 66',
+            preserveAspectRatio: 'none',
+            'aria-hidden': 'true'
+          }, React.createElement('path', {
+            d: path,
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: 1.6,
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round'
+          }))
+        ),
+        Array.isArray(chart.axisTicks) && chart.axisTicks.length
+          ? React.createElement('div', { className: 'widget-bd-sheet__water-axis' },
+            chart.axisTicks.map((tick) => React.createElement('span', { key: tick }, String(tick))))
+          : null
+      );
+    }
     if (chart.kind === 'grid3x7') {
       const labels = ['Б', 'Ж', 'У'];
       const keys = ['proteinOk', 'fatOk', 'carbsOk'];
@@ -1434,43 +2370,130 @@
     }
     if (chart.kind === 'sleepStrip') {
       const rows = chart.series || [];
-      const axisStart = 21 * 60;
-      const axisEnd = 9 * 60 + 24 * 60;
-      const span = axisEnd - axisStart;
-      return React.createElement('div', { className: 'widget-bd-sheet__sleep-strip' },
-        chart.avgBedMin != null
-          ? React.createElement('span', {
-            className: 'widget-bd-sheet__sleep-avg',
-            style: { top: `${Math.max(0, Math.min(100, ((chart.avgBedMin - axisStart) / span) * 100))}%` }
+      const axisStart = chart.axisStart ?? BD_SLEEP_AXIS_START;
+      const span = chart.axisSpan ?? BD_SLEEP_AXIS_SPAN;
+      const labelWidthPx = 19;
+      const weekdayNames = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+      const avgPct = chart.avgBedMin != null
+        ? Math.max(0, Math.min(100, ((chart.avgBedMin - axisStart) / span) * 100))
+        : null;
+      return React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'widget-bd-sheet__sleep-strip widget-bd-sheet__sleep-timeline' },
+          avgPct != null
+            ? React.createElement('span', {
+              className: 'widget-bd-sheet__sleep-timeline-avg',
+              style: { left: `calc(${labelWidthPx}px + (100% - ${labelWidthPx}px) * ${avgPct / 100})` }
+            })
+            : null,
+          rows.map((row, i) => {
+            const pos = bdSleepBarPosition(row.start, row.end, axisStart, span);
+            const wd = row.iso ? new Date(`${row.iso}T12:00:00`).getDay() : null;
+            const showLabel = i % 2 === 0 && wd != null;
+            return React.createElement('div', {
+              key: i,
+              className: 'widget-bd-sheet__sleep-timeline-row'
+                + (row.isToday ? ' is-today' : '')
+                + (!pos ? ' is-empty' : '')
+            },
+              React.createElement('span', { className: 'widget-bd-sheet__sleep-timeline-label' },
+                showLabel ? weekdayNames[wd] : ''),
+              React.createElement('span', { className: 'widget-bd-sheet__sleep-timeline-track' },
+                pos
+                  ? React.createElement('span', {
+                    className: 'widget-bd-sheet__sleep-timeline-bar',
+                    style: { left: `${pos.left}%`, width: `${pos.width}%` }
+                  })
+                  : null
+              )
+            );
           })
-          : null,
-        rows.map((row, i) => {
-          if (!Number.isFinite(row.start) || !Number.isFinite(row.end)) {
-            return React.createElement('span', { key: i, className: 'widget-bd-sheet__sleep-row is-empty' });
-          }
-          let s = row.start;
-          let e = row.end;
-          if (s < axisStart) s += 1440;
-          if (e < s) e += 1440;
-          const top = Math.max(0, Math.min(100, ((s - axisStart) / span) * 100));
-          const h = Math.max(8, Math.min(100 - top, ((e - s) / span) * 100));
-          return React.createElement('span', {
-            key: i,
-            className: 'widget-bd-sheet__sleep-row' + (row.isToday ? ' is-today' : '')
-          }, React.createElement('i', { style: { top: `${top}%`, height: `${h}%` } }));
-        })
+        ),
+        Array.isArray(chart.axisTicks) && chart.axisTicks.length
+          ? React.createElement('div', { className: 'widget-bd-sheet__sleep-axis' },
+            chart.axisTicks.map((tick) => React.createElement('span', { key: tick }, tick)))
+          : null
       );
+    }
+    if (chart.kind === 'weightDualCurve') {
+      const geom = bdWeightChartGeometry(chart.series || [], 300, 72, 6);
+      return React.createElement('svg', {
+        className: 'widget-bd-sheet__weight-chart',
+        viewBox: '0 0 300 72',
+        preserveAspectRatio: 'none',
+        'aria-hidden': 'true'
+      },
+      geom.dots.map((dot, i) => React.createElement('circle', {
+        key: i,
+        className: 'widget-bd-sheet__weight-dot',
+        cx: dot.cx,
+        cy: dot.cy,
+        r: 2.2
+      })),
+      geom.trendPath
+        ? React.createElement('path', {
+          className: 'widget-bd-sheet__weight-trend',
+          d: geom.trendPath,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.6,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        })
+        : null);
     }
     if (chart.kind === 'weightCurve' || chart.kind === 'spline30') {
       const spark = chart.spark || [];
       const pts = spark.map((p) => Number(p.weight ?? p.smoothed)).filter(Number.isFinite);
-      const path = bdSplinePath(pts.length ? pts : [0], 300, 72, 6);
+      const width = 300;
+      const height = 72;
+      const padY = 6;
+      const path = bdSplinePath(pts.length ? pts : [0], width, height, padY);
+      const plateaus = chart.plateaus || [];
+      const n = Math.max(spark.length, 1);
       return React.createElement('svg', {
-        className: 'widget-bd-sheet__spline',
-        viewBox: '0 0 300 72',
+        className: 'widget-bd-sheet__spline' + (chart.kind === 'weightCurve' ? ' widget-bd-sheet__weight-curve' : ''),
+        viewBox: `0 0 ${width} ${height}`,
         preserveAspectRatio: 'none'
       },
+      plateaus.map((band, i) => {
+        const denom = Math.max(1, n - 1);
+        const x0 = (band.start / denom) * width;
+        const x1 = ((band.end + 1) / denom) * width;
+        return React.createElement('rect', {
+          key: i,
+          className: 'widget-bd-sheet__weight-plateau',
+          x: x0,
+          y: 0,
+          width: Math.max(0, x1 - x0),
+          height,
+          rx: 0
+        });
+      }),
       React.createElement('path', { d: path, fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }));
+    }
+    if (chart.kind === 'waveWeekStrip') {
+      const rows = chart.rows || [];
+      return React.createElement('div', { className: 'widget-bd-sheet__wave-week' },
+        rows.map((row, i) => {
+          const segments = row.segments || [];
+          const totalFlex = segments.reduce((s, seg) => s + (seg.flex || 1), 0) || 1;
+          return React.createElement('div', {
+            key: row.iso || i,
+            className: 'widget-bd-sheet__wave-week-row' + (row.isToday ? ' is-today' : '')
+          },
+            React.createElement('span', { className: 'widget-bd-sheet__wave-week-label' }, row.label || ''),
+            React.createElement('div', { className: 'widget-bd-sheet__wave-week-track' },
+              segments.length
+                ? segments.map((seg, si) => React.createElement('span', {
+                  key: si,
+                  className: 'widget-bd-sheet__wave-week-seg' + (seg.elevated ? ' is-active' : ''),
+                  style: { flex: `${seg.flex || 1} 1 0`, width: `${((seg.flex || 1) / totalFlex) * 100}%` }
+                }))
+                : React.createElement('span', { className: 'widget-bd-sheet__wave-week-empty' })
+            )
+          );
+        })
+      );
     }
     if (chart.kind === 'waveDay') {
       const v4 = chart.v4 || chart.wave?.v4;
@@ -1531,26 +2554,75 @@
           ? React.createElement('p', { className: 'widget-bd-sheet__stub' }, 'за сегодня')
           : null,
         React.createElement('div', { className: 'widget-bd-sheet__kicker' }, model.heroKicker),
-        React.createElement('div', { className: 'widget-bd-sheet__hero' },
-          React.createElement('span', { className: 'widget-bd-sheet__hero-val' }, model.heroValue),
-          model.heroUnit ? React.createElement('span', { className: 'widget-bd-sheet__hero-unit' }, model.heroUnit) : null
-        ),
+        model.insightBeforeHero && model.insight
+          ? React.createElement('p', { className: 'widget-bd-sheet__insight' }, model.insight)
+          : null,
+        model.heroValue != null && model.heroValue !== '' && !model.heroTracks?.length
+          ? React.createElement('div', { className: 'widget-bd-sheet__hero' },
+            React.createElement('span', { className: 'widget-bd-sheet__hero-val' }, model.heroValue),
+            model.heroUnit ? React.createElement('span', { className: 'widget-bd-sheet__hero-unit' }, model.heroUnit) : null
+          )
+          : null,
         model.heroTracks?.length ? React.createElement('div', { className: 'widget-bd-sheet__hero-tracks' },
-          model.heroTracks.map((tr) => React.createElement('div', { key: tr.label, className: 'widget-bd-sheet__hero-track' },
-            React.createElement('span', { className: 'widget-bd-sheet__hero-track-label' }, tr.label),
-            React.createElement('span', { className: 'widget-bd-sheet__hero-track-val' }, `${tr.value} / ${tr.norm} ${tr.unit}`)
+          model.heroTracks.map((tr) => React.createElement('div', { key: tr.name || tr.label, className: 'widget-bd-sheet__hero-track' },
+            React.createElement('div', { className: 'widget-bd-sheet__hero-track-head' },
+              React.createElement('span', { className: 'widget-bd-sheet__hero-track-name' }, tr.name || tr.label),
+              React.createElement('span', { className: 'widget-bd-sheet__hero-track-val' }, `${tr.value} из ${tr.norm} ${tr.unit}`)
+            ),
+            React.createElement('div', { className: 'widget-bd-sheet__hero-track-bar', 'aria-hidden': 'true' },
+              React.createElement('div', {
+                className: 'widget-bd-sheet__hero-track-fill'
+                  + (tr.tone === 'bad' ? ' is-bad' : ''),
+                style: { width: `${Math.max(0, Math.min(100, Number(tr.pct) || 0))}%` }
+              })
+            )
           ))
         ) : null,
-        model.insight ? React.createElement('p', { className: 'widget-bd-sheet__insight' }, model.insight) : null,
+        !model.insightBeforeHero && model.insight
+          ? React.createElement('p', { className: 'widget-bd-sheet__insight' }, model.insight)
+          : null,
         model.chartLabel ? React.createElement('div', { className: 'widget-bd-sheet__chart-label' }, model.chartLabel) : null,
         React.createElement(WidgetBreakdownChart, { chart: model.chart }),
+        model.chartAxis ? React.createElement('div', { className: 'widget-bd-sheet__sleep-axis widget-bd-sheet__chart-axis' },
+          React.createElement('span', null, model.chartAxis.left),
+          React.createElement('span', { className: 'is-accent' }, model.chartAxis.right)
+        ) : null,
         model.factorBars?.length ? React.createElement('div', { className: 'widget-bd-sheet__factors' },
-          model.factorBars.map((f) => React.createElement('div', { key: f.key, className: 'widget-bd-sheet__factor-row' },
-            React.createElement('span', null, f.label),
-            React.createElement('span', { className: 'widget-bd-sheet__factor-bar' },
+          model.factorBars.map((f) => React.createElement('div', {
+            key: f.key,
+            className: 'widget-bd-sheet__factor-row'
+              + (f.tone === 'bad' ? ' is-bad' : f.tone === 'warn' ? ' is-warn' : '')
+          },
+            React.createElement('span', { className: 'widget-bd-sheet__factor-label' }, f.label),
+            React.createElement('span', {
+              className: 'widget-bd-sheet__factor-bar'
+                + (f.tone === 'good' ? ' is-good' : f.tone === 'warn' ? ' is-warn' : f.tone === 'bad' ? ' is-bad' : '')
+            },
               React.createElement('i', { style: { width: `${f.score}%` } })),
-            React.createElement('span', null, `${f.score}%`)
+            React.createElement('span', {
+              className: 'widget-bd-sheet__factor-share'
+                + ((f.weakDays || 0) === model.factorWeakMax && model.factorWeakMax > 0 ? ' is-bad' : '')
+            }, f.weakDays != null ? `${f.weakDays} из ${f.weakTotal || 30}` : '')
           ))
+        ) : null,
+        model.contributions?.length ? React.createElement('div', { className: 'widget-bd-sheet__contrib' },
+          model.contributions.map((row, i) => {
+            const isPos = (row.score ?? 0) >= 0;
+            return React.createElement('div', { key: i, className: 'widget-bd-sheet__contrib-row' },
+              React.createElement('span', { className: 'widget-bd-sheet__contrib-label' }, row.label),
+              React.createElement('span', { className: 'widget-bd-sheet__contrib-track' },
+                React.createElement('span', {
+                  className: 'widget-bd-sheet__contrib-bar' + (isPos ? ' is-good' : ' is-bad'),
+                  style: isPos
+                    ? { left: '50%', width: `${row.barPct || 0}%` }
+                    : { right: '50%', width: `${row.barPct || 0}%` }
+                })
+              ),
+              React.createElement('span', {
+                className: 'widget-bd-sheet__contrib-val' + (isPos ? ' is-good' : ' is-bad')
+              }, row.value)
+            );
+          })
         ) : null,
         model.stats?.length ? React.createElement('div', { className: 'widget-bd-sheet__stats' },
           model.stats.map((row, i) => React.createElement('div', {
@@ -1561,19 +2633,20 @@
             React.createElement('span', { className: 'widget-bd-sheet__stat-value' }, row.value)
           ))
         ) : null,
-        model.contributions?.length ? React.createElement('div', { className: 'widget-bd-sheet__stats widget-bd-sheet__stats--contrib' },
-          model.contributions.map((row, i) => React.createElement('div', { key: i, className: 'widget-bd-sheet__stat-row' },
-            React.createElement('span', { className: 'widget-bd-sheet__stat-label' }, row.label),
-            React.createElement('span', { className: 'widget-bd-sheet__stat-value' }, row.value)
-          ))
-        ) : null,
         model.drivers?.length ? React.createElement('div', { className: 'widget-bd-sheet__drivers' },
-          model.drivers.map((dr, i) => React.createElement('div', { key: i, className: 'widget-bd-sheet__driver' }, dr.label || dr.text))
+          model.drivers.map((dr, i) => React.createElement('div', {
+            key: i,
+            className: 'widget-bd-sheet__driver-row'
+              + (dr.tone === 'bad' ? ' is-bad' : dr.tone === 'warn' ? ' is-warn' : '')
+          },
+            React.createElement('span', { className: 'widget-bd-sheet__driver-mark', 'aria-hidden': 'true' }),
+            React.createElement('span', { className: 'widget-bd-sheet__driver' }, dr.label || dr.text)
+          ))
         ) : null,
         model.norm ? React.createElement('p', { className: 'widget-bd-sheet__norm' }, model.norm) : null,
         model.waterChips
           ? React.createElement('div', { className: 'widget-bd-sheet__chips', role: 'group', 'aria-label': 'Объём воды' },
-            [200, 300, 500].map((ml) => React.createElement('button', {
+            (Array.isArray(model.waterChipMl) && model.waterChipMl.length ? model.waterChipMl : [200, 500]).map((ml) => React.createElement('button', {
               key: ml,
               type: 'button',
               className: 'widget-bd-sheet__chip',

@@ -191,6 +191,24 @@ describe('advice v4 panels from canvas', () => {
     expect(adviceUiSource).toContain('heys:open-advice-settings');
     expect(adviceUiSource).toMatch(/renderMedicalDisclaimer\(\) \{\s*return null;/);
   });
+
+  it('settings groups match the canvas card geometry', () => {
+    const cssSource = fs.readFileSync(
+      path.join(webDir, 'styles/modules/400-water-and-hydration.css'),
+      'utf8',
+    );
+    expect(adviceUiSource.match(/advice-v4-settings__group/g)).toHaveLength(2);
+
+    const group = cssSource.match(/\.advice-v4-settings__group \{([^}]*)\}/)[1];
+    expect(group).toMatch(/padding:\s*2px 16px/);
+    expect(group).toMatch(/border-radius:\s*20px/);
+    expect(group).toMatch(/background:\s*var\(--v4-surface, #f7efe2\)/);
+
+    const row = cssSource.match(/\.advice-v4-settings__row \{([^}]*)\}/)[1];
+    expect(row).toMatch(/padding:\s*13px 0/);
+    expect(row).not.toMatch(/border-bottom/);
+    expect(cssSource).toMatch(/\.advice-v4-settings__row-hint \{[\s\S]*?font:\s*500 11px\/1\.45/);
+  });
 });
 
 // Поведение, а не текст: вход в служебное переехал в служебную створку

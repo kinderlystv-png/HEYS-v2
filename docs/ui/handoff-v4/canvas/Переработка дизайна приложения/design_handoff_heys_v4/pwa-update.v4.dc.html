@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="./v4-canvas.css" rel="stylesheet">
+<script src="./contract-audit.js"></script>
 <style>
   .updOverlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);backdrop-filter:blur(2.5px)}
   .updCard{width:100%;max-width:262px;min-height:238px;background:var(--c1);border-radius:24px;padding:26px 22px 22px;text-align:center;box-shadow:0 22px 48px rgba(0,0,0,.4);border:1px solid rgba(var(--ink),.08)}
@@ -70,6 +71,7 @@
     <div class="ctrH">Служебный слой</div>
     <div class="spec"><b>палитра</b><span data-v="слой живёт в палитрах продукта и берёт роли, как любая другая поверхность: в каждой из четырёх тем свой фон и свой акцент. Отдельной «системной» пятой темы у слоя нет"></span><i>правка 25 августа: эта строка отстала от решения, которое перевело слой в палитры, и три строки одной зоны говорили разное про его природу. Приёмка не сходилась ни при каком коде: выполнив одну строку, обязательно нарушаешь две другие</i>></span><i>обновление может показаться до загрузки контекста темы — красить переменными палитры нельзя. На кадрах показан поверх светлой темы: держит контраст на самом светлом фоне — на остальных проблем не будет</i></div>
     <div class="spec"><b>цвет текста</b><span data-v="текст и заголовок берут роли той палитры, в которой открыт слой — --tx и тон чернил; фиксированных хексов внутри слоя нет. Контраст к фону слоя проверяется в каждой из четырёх тем отдельно. Исключение одно и оно названо: офлайн-баннер держит зашитые фон и тон текста — строка «вид офлайн-баннера»"></span><i>правка 25 августа вслед за строкой «палитра»: фиксированный тон имел смысл, пока слой был один для всех тем; теперь он давал бы тёмный текст на тёмном фоне в двух палитрах из четырёх. Баннер выведен из правила названным исключением: офлайн — состояние оболочки, и полоса показывается тогда, когда продукта за ней может ещё не быть</i></div>
+    <div class="spec"><b>цвета не из палитры</b><span data-v="три тона мимо таблицы ролей, и это намеренно: #1c1712 — фон офлайн-полосы, тёмная плашка системного слоя поверх любой темы (своя строка «вид офлайн-баннера»); #0d0b08 — подложка служебной плитки образцов на самом канвасе, в продукте её нет; #1a140f — фон иконки предпросмотра файла, тоже разметка канваса. Снятый градиент #1a1a2e → #16213e назван в строке «шрифт» как протокол"></span><i>названы, чтобы отсутствие роли было решением: сверка иначе видит их как цвет мимо таблицы</i></div>
     <div class="spec"><b>шрифт</b><span data-v="Figtree; прежний градиент #1a1a2e → #16213e и зелёно-синие кнопки на system-ui сняты"></span><i>это был чужой язык (Material)</i></div>
     <div class="spec"><b>блюр подложки</b><span data-v="2,5 px (инвариант --v4-modal-backdrop-blur); у «Требуется обновление» блюра нет — подложка сплошная"></span><i>было 8 px — нарушение общего значения</i></div>
     <div class="spec"><b>иконки</b><span data-v="линейные, обводка 2,5, один цвет — акцент слоя; эмодзи сняты"></span><i>🔍 🆕 📥 ⚙️ рендерились по-разному на каждой платформе и не складывались в набор</i></div>
@@ -293,7 +295,7 @@
     <div class="nt"><b>Контраст текста считается в каждой теме отдельно</b><span>Заголовок и подпись раньше были заданы как `var(--v4-bg, #ffffff)` — то есть текст красился ролью грунта, а не ролью текста, и на тёмных палитрах сливался с карточкой. Теперь он берёт --tx той палитры, в которой открыт слой, и контраст проверяется в каждой из четырёх отдельно: зашитый тон переносил ту же ошибку в другую сторону.</span></div>
     <div class="nt"><b>Блюр подложки — 2,5 px, как у всех модалок</b><span>8 px нарушал инвариант `--v4-modal-backdrop-blur`. Приведено к общему значению; у «Требуется обновление» блюра нет вовсе — там подложка сплошная, как в исходной геометрии.</span></div>
     <div class="nt"><b>Эмодзи заменены на линейные иконки</b><span>🔍 🆕 📥 ⚙️ ✨ 🚀 📴 рендерились по-разному на каждой платформе и не складывались в набор. Теперь один язык: обводка 2,5, один цвет — акцент той палитры, в которой открыт слой.</span></div>
-    <div class="nt"><b>Прогресс — три точки за стадию, не проценты</b><span>20/40/60/80/100% не были ничем измерены. Три точки честно показывают, где вы в последовательности из трёх кадров; кольцо крутится только там, где ожидание действительно неопределённое.</span></div>
+    <div class="nt"><b>Прогресс — три точки за стадию, не проценты</b><span>Проценты 20/40/60/80 не были ничем измерены. Три точки честно показывают, где вы в последовательности из трёх кадров; кольцо крутится только там, где ожидание действительно неопределённое.</span></div>
     <div class="nt"><b>Подпись «Текущая версия», а не голое число</b><span>Строка всегда показывает версию до перезагрузки — старую. Слово «Текущая» снимает путаницу «это версия, на которую обновляемся?». Удалять строку с экрана нельзя — это единственный способ для поддержки узнать сборку клиента; если бы её прятали, следующий дом — «Настройки → О приложении».</span></div>
     <div class="nt"><b>Уменьшенное движение — внятный статичный кадр, а не застывший спиннер</b><span>Твик «Статично» меняет вращающееся кольцо на такой же круг без дуги и без анимации — это осознанный кадр состояния, а не то, что получится, если просто выключить CSS-анимацию посреди оборота.</span></div>
     <div class="nt"><b>«Требуется обновление» не притворяется, что грузит</b><span>Спиннер там раньше был декорацией — ничего не происходит, ждут человека. Заменён на статичную иконку; на iOS вместо спиннера — два шага действия (закрыть, открыть), потому что там нужен жест, а не ожидание.</span></div>
@@ -348,6 +350,63 @@ class Component extends DCLogic {
       }
     };
   }
+  audit() {
+    const specs = [...document.querySelectorAll('[data-contract] .spec, .spec')];
+    const vals = specs.map(r => {
+      const b = r.querySelector('b'), v = r.querySelector('span[data-v]');
+      return { key: b ? b.textContent : '', val: v ? v.getAttribute('data-v') : '' };
+    });
+    if (!vals.length) return ['НЕТ КОНТРАКТА'];
+    const nrm = s => s.replace(/(\d)[\s\u00a0\u202f\u2009](?=\d{3}\b)/g, '$1');
+    const contract = vals.map(v => v.key + ' ' + v.val).join(' ');
+    const low = contract.toLowerCase();
+    const vid = vals.filter(v => v.key.startsWith('вид')).map(v => v.key + ' ' + v.val).join(' ').toLowerCase();
+    const tokens = new Set((nrm(contract).match(/\d+[,.]?\d*/g) || []));
+    const out = [];
+    const frames = [...document.querySelectorAll('[data-screen-label]')]
+      .filter(f => f.getAttribute('data-demo') !== 'protocol' && !f.closest('[data-demo="protocol"]'))
+      .filter(f => !/ · (тёмная|синяя|сине-тёмная)/i.test(f.getAttribute('data-screen-label')));
+    const noVid = frames.filter(f => {
+      const ref = f.getAttribute('data-vid');
+      if (ref) return !vals.some(v => v.key === ref);
+      const l = f.getAttribute('data-screen-label').toLowerCase();
+      const tail = l.split(' · ').pop().trim();
+      if (tail.length > 3 && (vid.includes(tail) || low.includes(tail))) return false;
+      const words = l.split(/[\s,·]+/).filter(s => s.length > 4);
+      return !words.some(w => { const st = w.slice(0, w.length - 2); return vid.includes(st) || low.includes(st); });
+    }).map(f => f.getAttribute('data-screen-label'));
+    if (noVid.length) out.push('без «вида»: ' + [...new Set(noVid)].slice(0, 8).join(' · '));
+    const shown = new Set();
+    document.querySelectorAll('[data-screen-label]').forEach(f => {
+      (nrm(f.textContent).match(/\d+[,.]?\d*/g) || []).forEach(x => shown.add(x));
+    });
+    const stray = new Set();
+    document.querySelectorAll('.nt, .ntl, .hint, .cap, .lab, .fb').forEach(n => {
+      if (n.closest('[data-contract]')) return;
+      (nrm(n.textContent).match(/\d+[,.]?\d*[\s\u00a0]?(?:%|px|мл|ккал|pt)/g) || []).forEach(m => {
+        const num = m.match(/\d+[,.]?\d*/)[0];
+        if (num.length > 1 && !tokens.has(num) && !shown.has(num)) stray.add(m.trim());
+      });
+    });
+    if (stray.size) out.push('число в прозе вне контракта: ' + [...stray].slice(0, 8).join(' · '));
+    return out;
+  }
+  auditBar() {
+    const found = this.audit();
+    let bar = document.querySelector('[data-auditbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-auditbar', '');
+      bar.style.cssText = 'font:700 11px/1.6 ui-monospace,Menlo,monospace;margin:-14px 0 22px;text-wrap:pretty;max-width:1080px;';
+      const anchor = document.querySelector('[data-protobar]') || document.querySelector('[data-ctrbar]') || document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    const none = found[0] === 'НЕТ КОНТРАКТА';
+    bar.textContent = none
+      ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено'
+      : (found.length ? '⚠ сверка: ' + found.join(' | ') : '✓ сверка чиста');
+    bar.style.color = none ? '#8a4a20' : (found.length ? '#a8382b' : '#5c6a45');
+  }
   contracts() {
     const on = this.props.showContracts ?? false;
     const list = [...document.querySelectorAll('[data-contract]')];
@@ -371,6 +430,7 @@ class Component extends DCLogic {
   }
   apply() {
     this.contracts();
+    this.auditBar();
     const off = (this.props.rules ?? true) ? '' : 'none';
     document.querySelectorAll('.nt, .ntl').forEach(n => { n.style.display = off; });
     document.querySelectorAll('.cards').forEach(c => {

@@ -172,12 +172,14 @@ describe('дефолтный набор · контракт home-widgets', () =>
     ['steps', '2x1', 'week'],
     ['heatmap', '2x1', 'week_bar'],
     ['relapseRisk', '2x2', 'scale'],
-    ['healthTrend', '2x2', 'spark'],
+    ['healthTrend', '2x1', 'compact'],
     ['weight', '2x1', 'number_week'],
     ['crashRisk', '2x1', 'curve'],
+    ['protein', '1x1', 'now'],
+    ['fiber', '1x1', 'now'],
   ];
 
-  it('чистый старт даёт одиннадцать плиток в порядке контракта', () => {
+  it('чистый старт даёт тринадцать плиток в порядке контракта', () => {
     const { state } = boot(null, null);
     const got = state.getWidgets().map((w) => [w.type, w.size, w.settings?.displayVariant]);
     expect(got).toEqual(EXPECTED);
@@ -206,14 +208,18 @@ describe('дефолтный набор · контракт home-widgets', () =>
     expect(types).not.toContain('cascade');
   });
 
-  it('строка контракта «состав дефолта» всё ещё называет одиннадцать плиток', () => {
+  it('строка контракта «состав дефолта» всё ещё называет тринадцать плиток', () => {
     // Если дизайнер поменяет состав, тест выше начнёт врать молча — привязываем
     // его к самому канвасу, как гейт геометрии.
     const canvas = fs.readFileSync(CANVAS, 'utf8');
     const line = canvas.match(/<b>состав дефолта<\/b><span data-v="([^"]+)"/);
     expect(line).not.toBeNull();
-    expect(line[1]).toMatch(/одиннадцать плиток/);
+    expect(line[1]).toMatch(/тринадцать плиток/);
     expect(line[1]).toMatch(/11\.\s*Динамика веса/);
+    // Пакет 28 августа добавил два хвостовых 1×1 и перевёл тренд в «Компакт».
+    expect(line[1]).toMatch(/12\.\s*Белок — 1×1, вид «Как сейчас»/);
+    expect(line[1]).toMatch(/13\.\s*Клетчатка — 1×1, вид «Как сейчас»/);
+    expect(line[1]).toMatch(/Тренд здоровья — 2×1, вид «Компакт»/);
     // Обе формулировки закрыты владельцем 22 августа. Уедут назад — состав в
     // EXPECTED разойдётся с контрактом молча.
     expect(line[1]).toMatch(/Тепловая карта — 2×1, вид «Как сейчас»/);
@@ -253,7 +259,7 @@ describe('сброс к рекомендуемому экрану', () => {
 
     state.resetLayout();
 
-    expect(layoutOf(memory)).toHaveLength(11);
+    expect(layoutOf(memory)).toHaveLength(13);
     expect(typesOf(memory)[0]).toBe('calories');
   });
 
@@ -268,14 +274,14 @@ describe('сброс к рекомендуемому экрану', () => {
 
     state.resetLayout();
 
-    expect(state.getWidgets()).toHaveLength(11);
+    expect(state.getWidgets()).toHaveLength(13);
     expect(writes.length).toBe(before);
     expect(typesOf(memory)).toEqual(['calories', 'water']);
 
     // «Готово» фиксирует то, что человек собрал.
     state._editMode = false;
     state.saveLayout(null, { reason: 'edit-done' });
-    expect(layoutOf(memory)).toHaveLength(11);
+    expect(layoutOf(memory)).toHaveLength(13);
   });
 
   it('один шаг назад после сброса возвращает прежний состав', () => {
@@ -286,7 +292,7 @@ describe('сброс к рекомендуемому экрану', () => {
     const { state, memory } = boot(saved, { retiredMigration: '' });
 
     state.resetLayout();
-    expect(state.getWidgets()).toHaveLength(11);
+    expect(state.getWidgets()).toHaveLength(13);
 
     state.undo();
     state.saveLayout(null, { reason: 'undo' });

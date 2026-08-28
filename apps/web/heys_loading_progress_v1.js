@@ -47,8 +47,8 @@
                 strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true',
             },
                 h('g', { className: 'heys-wait-mark__spin animate-always' }, ...paths),
-                h('circle', { className: 'heys-wait-mark__close', cx: '12', cy: '12', r: '9' }),
-                h('path', { className: 'heys-wait-mark__check', d: 'M5 13l4 4L19 7' })
+                h('circle', { className: 'heys-wait-mark__close', cx: '12', cy: '12', r: '9', strokeWidth: '3.4' }),
+                h('path', { className: 'heys-wait-mark__check', d: 'M5 13l4 4L19 7', strokeWidth: '3.4' })
             );
         }
         return h('span', { className: 'heys-wait-mark__spin animate-always', 'aria-hidden': 'true' }, spinSvg);
@@ -58,9 +58,9 @@
         return h('svg', {
             className: 'heys-wait-mark__icon',
             width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
-            stroke: 'currentColor', strokeWidth: waitStroke(size), strokeLinecap: 'round',
+            stroke: 'currentColor', strokeWidth: size <= WAIT_GLYPH_BUTTON_PX ? waitStroke(size) : '3.4', strokeLinecap: 'round',
             'aria-hidden': 'true',
-        }, h('path', { d: 'M12 7v6M12 17h.01' }), h('circle', { cx: '12', cy: '12', r: '9' }));
+        }, h('path', { d: 'M7 7l10 10M17 7L7 17' }));
     }
 
     function renderWaitMarkStatic(React, opts) {

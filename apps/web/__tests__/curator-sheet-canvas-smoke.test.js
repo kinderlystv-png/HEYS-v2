@@ -228,11 +228,15 @@ describe('Canvas frames: curator review sheet', () => {
       { type: 'training_added', kind: 'кардио', duration_min: 30, time: '12:30' },
       { type: 'training_added', kind: 'растяжка', duration_min: 15, time: '20:30' },
     ];
+    const supplements = [
+      { type: 'supplement_course_assigned', supplement_ids: ['vitD', 'omega3'] },
+      { type: 'supplement_mark_removed', supplement_id: 'omega3' },
+    ];
     const row = entry(
       '11111111-1111-4111-8111-111111111111',
       '2026-07-05T09:00:00.000Z',
       date,
-      [...meals, ...trainings],
+      [...meals, ...trainings, ...supplements],
     );
     const banner = loadBanner();
     window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([row]));
@@ -247,7 +251,7 @@ describe('Canvas frames: curator review sheet', () => {
         + ` ${el.querySelector('.ca-modal__type-count')?.textContent || ''}`);
     // Порог берут только «Приёмы» (12 > 5), но в строки типов уходит вся дата —
     // и порядок фиксирован контрактом, а не числом правок.
-    expect(typeRows()).toEqual(['Приёмы · 12', 'Активность · 3']);
+    expect(typeRows()).toEqual(['Приёмы · 12', 'Активность · 3', 'Добавки · 2']);
     // Второй строки-расшифровки у свёрнутой группы нет.
     expect(document.querySelector('[data-ca-expand-type] .ca-modal__item-sub')).toBeFalsy();
     // Пока не раскрыли — самих правок в листе нет.
@@ -263,7 +267,7 @@ describe('Canvas frames: curator review sheet', () => {
 
     // Раскрылось внутри того же листа: одна модалка, счётчик в шапке тот же.
     expect(document.querySelectorAll('.ca-modal-backdrop')).toHaveLength(1);
-    expect(subtitle()).toBe('15 изменений за сегодня');
+    expect(subtitle()).toBe('17 изменений за сегодня');
     // Первые три правки и закрывающая строка «и ещё N правок…».
     expect(document.querySelectorAll('.ca-modal__type-members > li:not(.ca-modal__type-more)')).toHaveLength(3);
     expect(document.querySelector('.ca-modal__type-more')?.textContent).toContain('и ещё 9 правок приёмов');
@@ -283,7 +287,7 @@ describe('Canvas frames: curator review sheet', () => {
     // Повторный тап по строке типа сворачивает обратно — вместе с «показать все».
     mealsToggle().click();
     expect(document.querySelectorAll('.ca-modal__type-members')).toHaveLength(0);
-    expect(typeRows()).toEqual(['Приёмы · 12', 'Активность · 3']);
+    expect(typeRows()).toEqual(['Приёмы · 12', 'Активность · 3', 'Добавки · 2']);
     mealsToggle().click();
     expect(document.querySelectorAll('.ca-modal__type-members > li:not(.ca-modal__type-more)')).toHaveLength(3);
   });

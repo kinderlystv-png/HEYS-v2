@@ -26,6 +26,9 @@ const ARC_TAIL = 'M21 12a9 9 0 11-9-9';
 const ARC_HEAD = 'M12 3a9 9 0 019 9';
 const CHECK = 'M5 13l4 4L19 7';
 const WARN = 'M12 7v6M12 17h.01';
+// Пакет 28 августа: у знака ожидания отказ рисуется крестом, а не восклицанием
+// («вид галочки и отказа»: «отказ — подложка #f6e6dd и крест 26 px»).
+const CROSS = 'M7 7l10 10M17 7L7 17';
 
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -83,7 +86,7 @@ describe('оверлей смены клиента несёт общий зна�
     stage('error');
     const fail = host.querySelector('.cso-sign');
     expect(fail.className).toContain('cso-sign--fail');
-    expect([...fail.querySelectorAll('path')].map((p) => p.getAttribute('d'))).toContain(WARN);
+    expect([...fail.querySelectorAll('path')].map((p) => p.getAttribute('d'))).toContain(CROSS);
     expect(fail.textContent).toBe('');
   });
 

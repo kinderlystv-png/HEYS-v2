@@ -669,6 +669,70 @@
     markOptionalFeatureConsentsOffered(extra, 'consent-screen');
   }
 
+  const REGISTRATION_PUSH_OPT_IN_PREFIX = 'heys_registration_push_opt_in_v1:';
+
+  function registrationPushOptInKey(clientId) {
+    const normalizedClientId = String(clientId || '').trim();
+    return normalizedClientId ? `${REGISTRATION_PUSH_OPT_IN_PREFIX}${normalizedClientId}` : '';
+  }
+
+  function setPendingRegistrationPushOptIn(clientId, enabled) {
+    const key = registrationPushOptInKey(clientId);
+    if (!key) return false;
+    try {
+      if (enabled) {
+        localStorage.setItem(key, JSON.stringify({ clientId: String(clientId), requestedAt: Date.now() }));
+      } else {
+        localStorage.removeItem(key);
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function hasPendingRegistrationPushOptIn(clientId) {
+    const key = registrationPushOptInKey(clientId);
+    if (!key) return false;
+    try {
+      return !!localStorage.getItem(key);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function shouldDeferPushUntilRegistrationComplete() {
+    let profile = {};
+    try {
+      profile = HEYS.utils?.lsGet
+        ? HEYS.utils.lsGet('heys_profile', {})
+        : JSON.parse(localStorage.getItem('heys_profile') || '{}');
+    } catch (_) { /* keep empty profile */ }
+    if (typeof HEYS.ProfileSteps?.isProfileIncomplete === 'function') {
+      return HEYS.ProfileSteps.isProfileIncomplete(profile) === true;
+    }
+    return profile?.profileCompleted !== true;
+  }
+
+  async function completePendingRegistrationPushOptIn(clientId) {
+    if (!hasPendingRegistrationPushOptIn(clientId)) {
+      return { ok: true, skipped: 'not_requested' };
+    }
+    if (typeof HEYS.push?.setEnabled !== 'function') {
+      return { ok: false, reason: 'push_unavailable' };
+    }
+
+    // Снимаем одноразовый intent до системного prompt: повторный save/re-render
+    // финального шага не должен запрашивать разрешение второй раз.
+    setPendingRegistrationPushOptIn(clientId, false);
+    try {
+      return await HEYS.push.setEnabled(true);
+    } catch (error) {
+      console.warn('[Consents] deferred registration push failed:', error?.message);
+      return { ok: false, reason: 'push_failed', error: error?.message };
+    }
+  }
+
   // =====================================================
   // React компоненты
   // =====================================================
@@ -796,16 +860,19 @@
 
     const finishConsentFlow = useCallback(async (consentList) => {
       applyOptionalFeatureFlagsFromConsents(consentList);
+      setPendingRegistrationPushOptIn(clientId, notificationsOptIn);
       if (notificationsOptIn) {
         try {
-          if (HEYS.push?.setEnabled) {
-            await HEYS.push.setEnabled(true);
-          } else {
-            await consentsAPI.setPushConsent(true);
-            if (HEYS.push) {
-              HEYS.push.subscribe().catch((err) =>
-                console.warn('[Consents] push.subscribe failed:', err?.message)
-              );
+          if (!shouldDeferPushUntilRegistrationComplete()) {
+            if (HEYS.push?.setEnabled) {
+              await completePendingRegistrationPushOptIn(clientId);
+            } else {
+              await consentsAPI.setPushConsent(true);
+              if (HEYS.push) {
+                HEYS.push.subscribe().catch((err) =>
+                  console.warn('[Consents] push.subscribe failed:', err?.message)
+                );
+              }
             }
           }
         } catch (err) {
@@ -813,7 +880,7 @@
         }
       }
       onComplete?.(consentList);
-    }, [notificationsOptIn, onComplete]);
+    }, [clientId, notificationsOptIn, onComplete]);
 
     const persistConsentsOrRequestAccessCode = useCallback(async (consentList) => {
       const result = await consentsAPI.logConsents(clientId, consentList);
@@ -825,6 +892,7 @@
         throw new Error(result.error || 'Ошибка сохранения согласий');
       }
       consentsAPI.saveLocal(clientId, consentList);
+      HEYS.feedback?.emit?.('document.signed');
       return { deferred: false, consentList };
     }, [clientId]);
 
@@ -1245,6 +1313,7 @@
           throw new Error(errCode || 'Не удалось подписать документы');
         }
         consentsAPI.saveLocal(clientId, signList);
+        HEYS.feedback?.emit?.('document.signed');
         setSignedConsentList(signList);
         setSignSuccess(true);
         setSignedAt(new Date());
@@ -2169,6 +2238,24 @@
     return String(text ?? '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
   }
 
+  async function fetchLegalMarkdown(url) {
+    let networkError = null;
+    try {
+      const response = await fetch(url, { cache: 'default' });
+      if (response.ok) return response.text();
+      networkError = new Error('HTTP ' + response.status);
+    } catch (error) {
+      networkError = error;
+    }
+
+    try {
+      const cached = await global.caches?.match?.(url);
+      if (cached?.ok) return cached.text();
+    } catch (_) { /* Cache Storage unavailable — report original network error. */ }
+
+    throw networkError || new Error('document_offline_unavailable');
+  }
+
   async function fetchConsentDocumentMarkdown(type) {
     if (rawMarkdownCache[type]) return rawMarkdownCache[type];
 
@@ -2177,21 +2264,15 @@
       throw new Error('document_not_found:' + type);
     }
 
-    async function fetchMarkdown(url) {
-      const response = await fetch(url, { cache: 'no-store' });
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-      return response.text();
-    }
-
     const expectedVersion = getDocExpectedVersion(type);
     let markdown;
     try {
-      markdown = await fetchMarkdown(docInfo.versioned);
+      markdown = await fetchLegalMarkdown(docInfo.versioned);
       if (!isExpectedDocVersion(markdown, expectedVersion)) {
         throw new Error('DOC_VERSION_MISMATCH');
       }
     } catch (_) {
-      markdown = await fetchMarkdown(docInfo.latest);
+      markdown = await fetchLegalMarkdown(docInfo.latest);
       if (!isExpectedDocVersion(markdown, expectedVersion)) {
         throw new Error('DOC_VERSION_MISMATCH:' + type);
       }
@@ -2575,16 +2656,6 @@
           return;
         }
 
-        async function fetchMarkdown(url) {
-          const response = await fetch(url, { cache: 'no-store' });
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-
-          return response.text();
-        }
-
         try {
           // 1) Сначала пробуем "неубиваемый" версионированный путь.
           // 2) Если /docs/vX ещё не задеплоены — пробуем /docs/latest, НО только если версия в тексте совпадает.
@@ -2593,12 +2664,12 @@
           const expectedVersion = getDocExpectedVersion(type);
 
           try {
-            markdown = await fetchMarkdown(docInfo.versioned);
+            markdown = await fetchLegalMarkdown(docInfo.versioned);
             if (!isExpectedDocVersion(markdown, expectedVersion)) {
               throw new Error('DOC_VERSION_MISMATCH');
             }
           } catch (e) {
-            markdown = await fetchMarkdown(docInfo.latest);
+            markdown = await fetchLegalMarkdown(docInfo.latest);
             if (!isExpectedDocVersion(markdown, expectedVersion)) {
               const exp = expectedVersion ? `v${expectedVersion}` : 'актуальная версия';
               setError(
@@ -3847,7 +3918,11 @@
     parseMarkdown,
     parseConsentDocument,
     prepareConsentMarkdown,
-    normalizeLegalDocumentText
+    normalizeLegalDocumentText,
+    fetchLegalMarkdown,
+    setPendingRegistrationPushOptIn,
+    hasPendingRegistrationPushOptIn,
+    completePendingRegistrationPushOptIn
   });
 
   // Verbose init log removed

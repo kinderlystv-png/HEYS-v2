@@ -11534,11 +11534,9 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   margin-inline: auto;
   border-radius: 22px;
   background: var(--v4-surface, #ffffff);
-  /* Обводка стоит во всех наборах, тень тоже: на тёмных читается обводка,
-     на светлых — тень (строка «тёмные наборы»). */
-  box-shadow:
-    inset 0 0 0 1px var(--v4-line, #e5e7eb),
-    0 10px 28px rgba(80, 50, 20, 0.22);
+  /* Канвас держит плавающую полосу тёплой и плоской: только тонкая внутренняя
+     обводка, без внешней тени. */
+  box-shadow: inset 0 0 0 1px var(--v4-line, #e5e7eb);
   opacity: 0;
   transform: translateY(24px);
   pointer-events: none;

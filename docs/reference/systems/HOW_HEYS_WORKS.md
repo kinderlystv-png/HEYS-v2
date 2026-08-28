@@ -312,7 +312,8 @@ A, не ждёт весь хвост синхронизации и имеет fa
 | -------------------------------------- | -------------------------------- | ------------------------------------------- |
 | Открытый день                          | React-state `DayTab`             | Scoped `heys_dayv2_<date>` + cloud KV       |
 | Активный клиент                        | App/client state                 | `heys_client_current` и last-client markers |
-| Профиль, нормы, настройки              | `HEYS.store` и профильные модули | Scoped localStorage + cloud KV              |
+| Профиль и настройки                    | `HEYS.store` и профильные модули | Scoped localStorage + cloud KV              |
+| Первичные нормы регистрации            | Server RPC по cloud-профилю      | `heys_norms` в cloud KV + локальная копия   |
 | Pending-записи                         | Sync runtime                     | Персистентная очередь до успешной отправки  |
 | Вычисляемые totals/TDEE/advice context | Память текущего render           | Восстанавливаются из исходных данных        |
 
@@ -484,4 +485,5 @@ Advice engine работает как детерминированный pipelin
 | Background consent revalidation не скрывает валидный экран                   | `rg -n "isConsentRevalidationBlocking\|_consentsValid" apps/web/heys_app_derived_state_v1.js apps/web/heys_app_root_impl_v1.js`                                                                                                     | Подтверждён version-bound non-blocking revalidation                                             |
 | Foreground hot-sync монотонно объединяет progress ledger                     | `rg -n "mergeMorningCheckinInboundValue\|applyForegroundHotSyncValue" apps/web/heys_storage_supabase_v1.js`                                                                                                                         | Подтверждён step-level merge до записи в localStorage                                           |
 | Day передаёт totals/norms/profile в advice engine                            | `sed -n '1700,1765p' apps/web/heys_day_tab_impl_v1.js`                                                                                                                                                                              | Подтверждена интеграция                                                                         |
+| Первичные нормы регистрации рассчитывает и сохраняет сервер                  | `pnpm exec vitest run apps/web/__tests__/registration-server-norms-contract.test.js apps/web/__tests__/first-login-registration-flow.test.js`                                                                                       | Клиентской формулы нет; завершение ждёт server-owned `heys_norms`                               |
 | Advice pipeline генерирует, фильтрует, приоритизирует и возвращает trace     | `sed -n '8199,8735p' apps/web/heys_advice_bundle_v1.js`                                                                                                                                                                             | Подтверждены context, candidate sources, filters, cooldown, outputs и trace                     |

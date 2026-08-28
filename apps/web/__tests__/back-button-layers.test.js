@@ -96,4 +96,13 @@ describe('аппаратная кнопка назад · правило про�
     expect(at).toBeGreaterThan(-1);
     expect(ui.slice(at, at + 200)).toContain('exitEditMode?.({ revert: true })');
   });
+
+  it('без слоёв «назад» уводит на предыдущую вкладку, а не из приложения', () => {
+    const tabState = fs.readFileSync(path.join(WEB_DIR, 'heys_app_tab_state_v1.js'), 'utf8');
+    const backNav = fs.readFileSync(path.join(WEB_DIR, 'heys_app_hardware_back_v1.js'), 'utf8');
+    expect(tabState).toContain('backNav.install');
+    expect(tabState).toContain('backNav.recordVisit');
+    expect(backNav).toContain('visitStack');
+    expect(backNav).toContain('if (state[BACK_TRAP_KEY]) return');
+  });
 });

@@ -45,6 +45,12 @@
   // Та же строка: «Тап раскрывает группу на месте: … первые три и закрывающая
   // строка „и ещё N правок…“».
   const DAY_TYPE_MEMBERS_PREVIEW = 3;
+  const SUPPLEMENT_ACTION_TYPES = new Set([
+    'supplement_course_assigned',
+    'supplement_course_changed',
+    'supplement_course_cancelled',
+    'supplement_mark_removed',
+  ]);
 
   // ─── State ────────────────────────────────────────────────────────
 
@@ -176,7 +182,7 @@
 
     const mealId = a.meal_id || null;
     const mealTime = a.time || null;
-    const itemId = a.item_id || null;
+    const itemId = a.item_id || a.supplement_id || null;
     const firstItem = Array.isArray(a.items) ? a.items.find(Boolean) : null;
     const firstItemId = firstItem?.item_id || null;
     const trainingIndex = Number.isInteger(a.training_index) ? a.training_index : null;
@@ -235,6 +241,15 @@
         target.date = null;
         target.selectors.push('[data-curator-target="nutrition"]', '#diary-heading');
         break;
+      case 'supplement_course_assigned':
+      case 'supplement_course_changed':
+      case 'supplement_course_cancelled':
+        target.date = null;
+        target.selectors.push('.widget--supplements-diary', '.supplements-card', '#diary-heading');
+        break;
+      case 'supplement_mark_removed':
+        target.selectors.push('.widget--supplements-diary', '.supplements-card', '#diary-heading');
+        break;
       case 'meal_removed':
         target.tab = 'diary';
         target.selectors.push('#diary-heading');
@@ -260,7 +275,7 @@
     }
     let mealsAdded = 0, productsAdded = 0, productsRemoved = 0, portionsChanged = 0;
     let mealsRemoved = 0, trainAdded = 0, trainRemoved = 0;
-    let weight = null, normsTouched = false, profileTouched = false, planningTouched = false;
+    let weight = null, normsTouched = false, profileTouched = false, planningTouched = false, supplementsTouched = false;
     let visibleTotal = 0;
     for (const acts of rawByDate.values()) {
       const collapsed = dedupAndCollapse(acts);
@@ -279,6 +294,7 @@
         else if (a.type === 'norms_changed') normsTouched = true;
         else if (a.type === 'profile_changed') profileTouched = true;
         else if (a.type === 'planning_changed') planningTouched = true;
+        else if (isSupplementAction(a)) supplementsTouched = true;
       }
     }
     if (visibleTotal === 0) return null;
@@ -297,6 +313,7 @@
     if (normsTouched) parts.push('нормы');
     if (profileTouched) parts.push('профиль');
     if (planningTouched) parts.push('план');
+    if (supplementsTouched) parts.push('добавки');
     if (parts.length === 0) parts.push(`${visibleTotal} ${pluralRu(visibleTotal, 'правка', 'правки', 'правок')}`);
     if (parts.length > 3) {
       return `${visibleTotal} ${pluralRu(visibleTotal, 'изменение', 'изменения', 'изменений')} от куратора`;
@@ -306,6 +323,46 @@
 
   // Возвращает строку для обычных action'ов; для meal_card — null (его рендерит
   // renderMealCardHtml как мульти-line карточку).
+  function isSupplementAction(action) {
+    return !!(action && SUPPLEMENT_ACTION_TYPES.has(action.type));
+  }
+
+  function supplementName(id) {
+    const key = String(id || '').trim();
+    if (!key) return '';
+    return HEYS.Supplements?.CATALOG?.[key]?.name || key;
+  }
+
+  function supplementNames(ids) {
+    const names = Array.from(new Set((Array.isArray(ids) ? ids : [])
+      .map(supplementName)
+      .filter(Boolean)));
+    return names.join(', ');
+  }
+
+  function supplementActionCopy(action) {
+    const a = action || {};
+    const names = supplementNames(a.supplement_ids);
+    if (a.type === 'supplement_course_assigned') {
+      return { title: 'Назначен курс добавок', subtitle: names };
+    }
+    if (a.type === 'supplement_course_cancelled') {
+      return { title: 'Курс добавок отменён', subtitle: names };
+    }
+    if (a.type === 'supplement_mark_removed') {
+      const name = supplementName(a.supplement_id) || 'добавка';
+      return { title: `Снята отметка о приёме: ${name}`, subtitle: '' };
+    }
+
+    const details = [];
+    const added = supplementNames(a.added_ids);
+    const removed = supplementNames(a.removed_ids);
+    if (added) details.push(`Добавлено: ${added}`);
+    if (removed) details.push(`Убрано: ${removed}`);
+    if (a.settings_changed) details.push(`Обновлены доза или время${names ? `: ${names}` : ''}`);
+    return { title: 'Изменён курс добавок', subtitle: details.join(' · ') || names };
+  }
+
   function actionText(a) {
     if (!a || typeof a !== 'object') return '—';
     switch (a.type) {
@@ -331,6 +388,11 @@
       case 'norms_changed':    return `Обновлены нормы${a.fields && a.fields.length ? ` (${a.fields.join(', ')})` : ''}`;
       case 'profile_changed':  return `Обновлён профиль${a.fields && a.fields.length ? ` (${a.fields.join(', ')})` : ''}`;
       case 'planning_changed': return 'Обновлён план/задачи';
+      case 'supplement_course_assigned':
+      case 'supplement_course_changed':
+      case 'supplement_course_cancelled':
+      case 'supplement_mark_removed':
+        return supplementActionCopy(a).title;
       case 'truncated':        return `…и ещё ${a.count} изменений`;
       default:                 return 'Обновлены данные';
     }
@@ -1008,8 +1070,9 @@
     const a = action || {};
     const entryId = (entry && entry.id) || '';
     const meal = a.meal_id || a.meal_label || a.meal_name || a.name || '';
-    const item = a.item_id || '';
-    const extra = a.training_index != null ? String(a.training_index) : (a.kind || a.time || '');
+    const item = a.item_id || a.supplement_id || '';
+    const supplementIds = Array.isArray(a.supplement_ids) ? a.supplement_ids.join(',') : '';
+    const extra = a.training_index != null ? String(a.training_index) : (a.kind || a.time || supplementIds || '');
     return [entryId, a.type || '', meal, item, extra].join(':');
   }
 
@@ -1198,10 +1261,8 @@
   //
   // Порядок фиксирован строкой контракта — Приёмы · Вода · Замеры ·
   // Активность · Добавки — и не зависит ни от числа правок, ни от времени.
-  // «Добавки» в списке нет намеренно: в журнале куратора нет ни одного
-  // действия про добавки, а выдумывать тип, которого сервер не присылает,
-  // нельзя — место в порядке за ним закреплено и займётся, когда действие
-  // появится. Типы вне пятёрки (сон, нормы, профиль, план) в свёртку не
+  // Серверные supplement_* действия занимают закреплённое за ними пятое место.
+  // Типы вне пятёрки (сон, нормы, профиль, план) в свёртку не
   // уходят и остаются обычными строками: каждый из них после dedupAndCollapse
   // даёт не больше одной строки за дату.
   const DAY_TYPE_GROUPS = [
@@ -1214,6 +1275,7 @@
       more: 'по активности',
       match: (a) => a.type === 'training_added' || a.type === 'training_removed' || a.type === 'steps_set',
     },
+    { key: 'supplements', label: 'Добавки', more: 'по добавкам', match: isSupplementAction },
   ];
 
   function dayTypeGroupFor(action) {
@@ -1257,11 +1319,13 @@
     const actionCount = (groups || []).reduce((sum, g) => sum + dayActionCount(g), 0);
     if (actionCount === 0) return '';
     const mealTouched = (groups || []).some((g) => (g.pairs || []).some((p) => isMealAction(p.action)));
+    const supplementsTouched = (groups || []).some((g) => (g.pairs || []).some((p) => isSupplementAction(p.action)));
     if (dates.length > 1) {
       if (dates.length >= 6) return `Пока вас не было — правки за ${dates.length} ${daysWord(dates.length)}`;
       if (dates.length === 2) return 'Изменения за два дня';
       return `Изменения за ${dates.length} ${daysWord(dates.length)}`;
     }
+    if (!mealTouched && supplementsTouched) return 'Еду не трогали — изменились добавки';
     if (!mealTouched) return 'Еду не трогали — правки по весу и активности';
     if (actionCount > 3) {
       const date = dates[0];
@@ -1393,6 +1457,11 @@
         return { title: 'Обновлён профиль', subtitle: (a.fields || []).join(', ') };
       case 'planning_changed':
         return { title: 'Обновлён план', subtitle: '' };
+      case 'supplement_course_assigned':
+      case 'supplement_course_changed':
+      case 'supplement_course_cancelled':
+      case 'supplement_mark_removed':
+        return supplementActionCopy(a);
       case 'truncated':
         return { title: `…и ещё ${a.count} изменений`, subtitle: '' };
       default:

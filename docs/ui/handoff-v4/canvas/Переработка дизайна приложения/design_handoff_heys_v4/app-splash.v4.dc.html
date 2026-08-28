@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="./v4-canvas.css" rel="stylesheet">
+<script src="./contract-audit.js"></script>
 <style>
   .and{width:330px;height:706px;flex:none;position:relative;overflow:hidden;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);display:flex;flex-direction:column}
   .asb{height:26px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font:500 11px/1 Roboto,system-ui,sans-serif}
@@ -65,6 +66,7 @@
     <div class="spec"><b>источник</b><span data-v="главный для иконки, значений манифеста и точки круга на стыке"></span><i>сам знак ожидания и его состояния — spinners.v4.dc.html</i></div>
     <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label; все кадры статичные (data-demo='stop')"></span></div>
     <div class="spec"><b>палитры</b><span data-v="системный кадр всегда песочный — background_color манифеста #fffaf1, темы там нет; загрузчик уже красится выбранной палитрой. Значит в тёмной теме первый кадр светлый, второй тёмный, и это неизбежно"></span><i>манифест один на приложение и читается до запуска кода: узнать выбранную человеком палитру в этот момент нечем</i></div>
+    <div class="spec"><b>цвета не из палитры</b><span data-v="на канвасе есть тона, которых в v4-canvas.css нет и быть не должно: #2563eb — системный синий Android (статусная строка и прежняя синяя иконка в кадрах протокола), #ffffff — белый системного кадра iPhone, #dcd6cc и #d2ccc2 — чужие иконки в ряду на домашнем экране, #1c1a18 — чёрный, в который превращается иконка с альфой. Это цвета платформы и чужих приложений, а не наши роли; при правке палитры они не меняются"></span><i>названы, чтобы отсутствие роли было решением, а не дырой: сверка иначе видит их как цвет мимо таблицы</i></div>
     <div class="spec"><b>доступность</b><span data-v="системный кадр недоступен для разметки — подпись под иконкой рисует платформа из short_name; в загрузчике диск декоративен, а сам загрузчик озвучивается как «Загрузка» через role='status'"></span></div>
     <div class="spec"><b>уменьшенное движение</b><span data-v="в загрузчике диск статичен всегда — ни вращения, ни дыхания: движение начинается только со знака ожидания, когда загрузка перешла в порог 300 мс"></span><i>вращение на кадре, который живёт полсекунды, читается как рывок</i></div>
 
@@ -252,7 +254,7 @@
   <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
 
     <div><div class="lab"><b>Сейчас на iPhone</b><span>белый кадр, синяя плитка</span></div>
-    <div class="and" data-demo="stop" data-screen-label="iOS · как сейчас" style="background:#ffffff;">
+    <div class="and" data-demo="stop" data-screen-label="iOS · как сейчас" data-vid="вид кадра iPhone" style="background:#ffffff;">
       <div class="asb" style="background:transparent;color:rgba(32,30,29,.75);"><span>15:29</span><span style="opacity:.6;">▂▄▆ ▮</span></div>
       <div class="amid"><span class="amk" style="background:#2563eb;color:#ffffff;border-radius:22px;font-family:Figtree,sans-serif;font-size:30px;font-weight:800;padding:0;">H</span></div>
     </div>
@@ -409,6 +411,63 @@ class Component extends DCLogic {
     const standalone = window.parent === window;
     return { all: this.props.allPalettes ?? standalone, rules: this.props.rules ?? true };
   }
+  audit() {
+    const specs = [...document.querySelectorAll('[data-contract] .spec, .spec')];
+    const vals = specs.map(r => {
+      const b = r.querySelector('b'), v = r.querySelector('span[data-v]');
+      return { key: b ? b.textContent : '', val: v ? v.getAttribute('data-v') : '' };
+    });
+    if (!vals.length) return ['НЕТ КОНТРАКТА'];
+    const nrm = s => s.replace(/(\d)[\s\u00a0\u202f\u2009](?=\d{3}\b)/g, '$1');
+    const contract = vals.map(v => v.key + ' ' + v.val).join(' ');
+    const low = contract.toLowerCase();
+    const vid = vals.filter(v => v.key.startsWith('вид')).map(v => v.key + ' ' + v.val).join(' ').toLowerCase();
+    const tokens = new Set((nrm(contract).match(/\d+[,.]?\d*/g) || []));
+    const out = [];
+    const frames = [...document.querySelectorAll('[data-screen-label]')]
+      .filter(f => f.getAttribute('data-demo') !== 'protocol' && !f.closest('[data-demo="protocol"]'))
+      .filter(f => !/ · (тёмная|синяя|сине-тёмная)/i.test(f.getAttribute('data-screen-label')));
+    const noVid = frames.filter(f => {
+      const ref = f.getAttribute('data-vid');
+      if (ref) return !vals.some(v => v.key === ref);
+      const l = f.getAttribute('data-screen-label').toLowerCase();
+      const tail = l.split(' · ').pop().trim();
+      if (tail.length > 3 && (vid.includes(tail) || low.includes(tail))) return false;
+      const words = l.split(/[\s,·]+/).filter(s => s.length > 4);
+      return !words.some(w => { const st = w.slice(0, w.length - 2); return vid.includes(st) || low.includes(st); });
+    }).map(f => f.getAttribute('data-screen-label'));
+    if (noVid.length) out.push('без «вида»: ' + [...new Set(noVid)].slice(0, 8).join(' · '));
+    const shown = new Set();
+    document.querySelectorAll('[data-screen-label]').forEach(f => {
+      (nrm(f.textContent).match(/\d+[,.]?\d*/g) || []).forEach(x => shown.add(x));
+    });
+    const stray = new Set();
+    document.querySelectorAll('.nt, .ntl, .hint, .cap, .lab, .fb').forEach(n => {
+      if (n.closest('[data-contract]')) return;
+      (nrm(n.textContent).match(/\d+[,.]?\d*[\s\u00a0]?(?:%|px|мл|ккал|pt)/g) || []).forEach(m => {
+        const num = m.match(/\d+[,.]?\d*/)[0];
+        if (num.length > 1 && !tokens.has(num) && !shown.has(num)) stray.add(m.trim());
+      });
+    });
+    if (stray.size) out.push('число в прозе вне контракта: ' + [...stray].slice(0, 8).join(' · '));
+    return out;
+  }
+  auditBar() {
+    const found = this.audit();
+    let bar = document.querySelector('[data-auditbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-auditbar', '');
+      bar.style.cssText = 'font:700 11px/1.6 ui-monospace,Menlo,monospace;margin:-14px 0 22px;text-wrap:pretty;max-width:1080px;';
+      const anchor = document.querySelector('[data-protobar]') || document.querySelector('[data-ctrbar]') || document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    const none = found[0] === 'НЕТ КОНТРАКТА';
+    bar.textContent = none
+      ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено'
+      : (found.length ? '⚠ сверка: ' + found.join(' | ') : '✓ сверка чиста');
+    bar.style.color = none ? '#8a4a20' : (found.length ? '#a8382b' : '#5c6a45');
+  }
   contracts() {
     const on = this.props.showContracts ?? false;
     const list = [...document.querySelectorAll('[data-contract]')];
@@ -432,6 +491,7 @@ class Component extends DCLogic {
   }
   applyTweaks() {
     this.contracts();
+    this.auditBar();
     const t = this.tw(), hide = t.all ? '' : 'none', off = t.rules ? '' : 'none';
     const lab = /^(т[её]мная|синяя|сине-т[её]мная|синяя\s+т[её]мная)(\s+палитра)?$/i;
 

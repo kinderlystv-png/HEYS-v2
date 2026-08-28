@@ -51,7 +51,7 @@ describe('добавление воды — канвас water-add v4, ветк�
     // уровень: смена дня / intro — --widget-motion-ms; добавление — 320 мс + 240 мс задержка
     expect(uiSrc).toContain('function useWaterFillDisplayPct');
     expect(uiSrc).toContain('height: `${displayFillPct}%`');
-    expect(widgetsCss).toMatch(/\.widget-water__fill \{[\s\S]*?transition:[\s\S]*?height var\(--widget-motion-ms/);
+    expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__fill \{[^}]*transition:[^}]*height var\(--widget-motion-ms/);
     expect(widgetsCss).toMatch(/\.widget-water--adding \.widget-water__fill \{[\s\S]*?320ms[^;]*240ms/);
     // число — кроссфейд 160 мс со сдвигом 5 px, старт через 240 мс
     expect(widgetsCss).toContain('animation: widgetWaterNumOut 160ms ease-in-out 240ms');
@@ -170,6 +170,9 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(handlersSrc).toMatch(/resolveWaterColumnAnchor[\s\S]*?querySelector\('\.widgets-quick-fab'\)/);
     expect(handlersSrc).not.toContain('water-card-anim-above');
     expect(handlersSrc).toContain("col.className = 'water-column animate-always'");
+    expect(handlersSrc).toContain("col.style.left = Math.round(rect.left) + 'px'");
+    expect(handlersSrc).toContain("col.style.right = ''");
+    expect(handlersSrc).not.toContain('window.innerWidth - rect.left + 10');
   });
 
   it('перекраска nrmB и ramp тона — контракт 2026-08-20', () => {

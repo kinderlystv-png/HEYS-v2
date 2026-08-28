@@ -117,18 +117,7 @@ beforeAll(() => {
     <div class="widgets-tab">
       <div class="widgets-grid-container">
         <div class="widgets-grid">
-          <div class="widget widget--2x1 widget--weight widget--corner-bl">
-            <div class="widget-weight widget-weight--2x1 widget-weight--number-week">
-              <div class="widget-weight__number-week-head">
-                <span class="widget-v4-kicker">Вес</span>
-                <span class="widget-weight__number-week-delta">−0,9 за неделю</span>
-              </div>
-              <div class="widget-weight__number-week-row">
-                <span class="widget-weight__number-week-val">91,1</span>
-              </div>
-            </div>
-          </div>
-          <div class="widget widget--2x1 widget--crashRisk widget--corner-br">
+          <div class="widget widget--2x1 widget--crashRisk widget--corner-bl">
             <div class="widget-wd widget-v4-stack">
               <div class="widget-wd__head">
                 <span class="widget-v4-kicker">За месяц</span>
@@ -136,6 +125,27 @@ beforeAll(() => {
               <div class="widget-wd__curve-row">
                 <span class="widget-wd__delta">−2,4</span>
                 <svg class="widget-wd__spark" width="58" height="24"></svg>
+              </div>
+            </div>
+          </div>
+          <div class="widget widget--1x1 widget--fiber widget--corner-br">
+            <div class="widget-v4-mini widget-v4-fiber">
+              <span class="widget-v4-kicker">Клетчатка</span>
+              <div class="widget-v4-goal-hero">
+                <span class="widget-v4-goal-value">18</span>
+                <span class="widget-v4-unit">г</span>
+              </div>
+              <div class="widget-v4-goalbar"><i class="widget-v4-goalbar__fill"></i></div>
+            </div>
+          </div>
+          <div class="widget widget--2x1 widget--weight">
+            <div class="widget-weight widget-weight--2x1 widget-weight--number-week">
+              <div class="widget-weight__number-week-head">
+                <span class="widget-v4-kicker">Вес</span>
+                <span class="widget-weight__number-week-delta">−0,9 за неделю</span>
+              </div>
+              <div class="widget-weight__number-week-row">
+                <span class="widget-weight__number-week-val">91,1</span>
               </div>
             </div>
           </div>
@@ -198,17 +208,22 @@ function placed() {
 // закрытый: новая плитка в углу — красный тест. Он больше не список
 // отступлений, а список того, что мера обязана накрыть.
 const CORNERS = {
+  // Пакет 28 августа переставил нижний ряд: «Динамика веса» съехала в левый
+  // угол, а правый занял 1×1 «Клетчатка» (строка «состав дефолта», плитки
+  // 11 и 13). «Вес» поднялся в предпоследний ряд и углом больше не является.
   'bottom-left': {
-    type: 'weight',
-    variant: 'number_week',
-    tile: '.widget--corner-bl',
-    graphics: ['.widget-weight__number-week-delta', '.widget-weight__number-week-val'],
-  },
-  'bottom-right': {
     type: 'crashRisk',
     variant: 'curve',
-    tile: '.widget--corner-br',
+    size: '2x1',
+    tile: '.widget--corner-bl',
     graphics: ['.widget-wd__delta', '.widget-wd__spark'],
+  },
+  'bottom-right': {
+    type: 'fiber',
+    variant: 'now',
+    size: '1x1',
+    tile: '.widget--corner-br',
+    graphics: ['.widget-v4-goal-value', '.widget-v4-goalbar'],
   },
 };
 
@@ -229,7 +244,9 @@ describe('home-widgets v4 · «зоны углов» — что замерено
     expect(read('.widgets-grid', 'grid-auto-rows')).toBe('64px');
     expect(read('.widgets-grid', 'padding')).toBe('16px');
     expect(read('.widgets-grid', 'max-width')).toBe('480px');
-    expect(read('.widget--1x1', 'padding')).toBe('11px');
+    // Явно неугловая 1×1: с 28 августа правый угол занимает 1×1 «Клетчатка»,
+    // и выбор «первой попавшейся» 1×1 читал бы её поле с зоной 52.
+    expect(read('.widget--1x1.widget--sleep', 'padding')).toBe('11px');
   });
 
   it('колонка 79,75 и таблица форматов — доля зоны 52×52 в каждом', () => {
@@ -310,9 +327,9 @@ describe('home-widgets v4 · «зоны углов» — что замерено
 });
 
 describe('home-widgets v4 · кто стоит в углах раскладки по умолчанию', () => {
-  it('нижний ряд дефолта — «Вес» слева и «Динамика веса» справа', () => {
+  it('нижний ряд дефолта — «Динамика веса» слева и «Клетчатка» справа', () => {
     const layout = placed();
-    expect(layout).toHaveLength(11);
+    expect(layout).toHaveLength(13);
 
     const bottomRow = Math.max(...layout.map((w) => w.row + w.rows - 1));
     expect(bottomRow).toBe(7); // восемь рядов, бюджет 32 клетки
@@ -323,12 +340,12 @@ describe('home-widgets v4 · кто стоит в углах раскладки 
     expect({ type: left.type, variant: left.variant, size: left.size }).toEqual({
       type: CORNERS['bottom-left'].type,
       variant: CORNERS['bottom-left'].variant,
-      size: '2x1',
+      size: CORNERS['bottom-left'].size,
     });
     expect({ type: right.type, variant: right.variant, size: right.size }).toEqual({
       type: CORNERS['bottom-right'].type,
       variant: CORNERS['bottom-right'].variant,
-      size: '2x1',
+      size: CORNERS['bottom-right'].size,
     });
   });
 

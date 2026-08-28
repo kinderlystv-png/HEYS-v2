@@ -22,6 +22,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const WEB_DIR = path.resolve(__dirname, '..');
 const SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_audio_v1.js'), 'utf8');
+const CONSENTS_SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_consents_v1.js'), 'utf8');
+const PROFILE_STEP_SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_profile_step_v1.js'), 'utf8');
 const SETTINGS_KEY = 'heys_audio_settings';
 
 function installFakeAudioContext() {
@@ -152,6 +154,11 @@ describe('политика отклика: уровни вибрации', () =>
       HEYS.feedback.emit(event);
       expect(buzzes, event).toEqual([[10]]);
     }
+  });
+
+  it('регистрация эмитит канонические события из точек подтверждённой записи', () => {
+    expect(CONSENTS_SRC.match(/HEYS\.feedback\?\.emit\?\.\('document\.signed'\)/g)).toHaveLength(2);
+    expect(PROFILE_STEP_SRC.match(/HEYS\.feedback\?\.emit\?\.\('registration\.done'\)/g)).toHaveLength(1);
   });
 
   it('необратимое действие даёт двойной короткий', () => {

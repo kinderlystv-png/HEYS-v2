@@ -266,11 +266,15 @@ describe('реестр и каталог видов шести виджетов'
     NEW_TYPES.forEach((type) => expect(available, type).toContain(type));
   });
 
-  it('в дефолтный набор не входит ни один', () => {
+  it('в дефолтный набор входят только «Белок» и «Клетчатка»', () => {
+    // Пакет 28 августа поднял два из шести в состав дефолта (строка «состав
+    // дефолта»: 12. Белок — 1×1 · 13. Клетчатка — 1×1). Остальные четыре
+    // остаются только в каталоге.
     const core = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_core_v1.js'), 'utf8');
     const block = core.slice(core.indexOf('const DEFAULT_LAYOUT = ['), core.indexOf('\n  ];', core.indexOf('const DEFAULT_LAYOUT = [')));
+    const IN_DEFAULT = new Set(['protein', 'fiber']);
     NEW_TYPES.forEach((type) => {
-      expect(block.includes(`type: '${type}'`), type).toBe(false);
+      expect(block.includes(`type: '${type}'`), type).toBe(IN_DEFAULT.has(type));
     });
   });
 

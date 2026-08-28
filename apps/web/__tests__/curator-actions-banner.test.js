@@ -949,6 +949,54 @@ describe('CuratorActionsBanner review modal', () => {
   });
 
   describe('display grouping', () => {
+    it('renders four supplement journal actions and routes them to the supplements card', () => {
+      const banner = loadBanner();
+      window.HEYS.Supplements = {
+        CATALOG: {
+          vitD: { name: 'Витамин D' },
+          omega3: { name: 'Омега-3' },
+          magnesium: { name: 'Магний' },
+        },
+      };
+      const { actionRowCopy, buildActionTarget, planDayTypeGroups } = banner._test;
+      const actions = [
+        { type: 'supplement_course_assigned', supplement_ids: ['vitD', 'omega3'] },
+        {
+          type: 'supplement_course_changed',
+          supplement_ids: ['vitD', 'magnesium'],
+          added_ids: ['magnesium'],
+          removed_ids: ['omega3'],
+          settings_changed: true,
+        },
+        { type: 'supplement_course_cancelled', supplement_ids: ['vitD'] },
+        { type: 'supplement_mark_removed', supplement_id: 'omega3' },
+      ];
+
+      expect(actionRowCopy(actions[0])).toEqual({
+        title: 'Назначен курс добавок',
+        subtitle: 'Витамин D, Омега-3',
+      });
+      expect(actionRowCopy(actions[1]).title).toBe('Изменён курс добавок');
+      expect(actionRowCopy(actions[1]).subtitle).toContain('Добавлено: Магний');
+      expect(actionRowCopy(actions[1]).subtitle).toContain('Убрано: Омега-3');
+      expect(actionRowCopy(actions[2]).title).toBe('Курс добавок отменён');
+      expect(actionRowCopy(actions[3]).title).toBe('Снята отметка о приёме: Омега-3');
+
+      const plan = planDayTypeGroups('2026-08-28', actions.map((action) => ({
+        entry: { id: 'entry-supplements' },
+        action,
+      })));
+      expect(plan.groups.map((group) => group.key)).toEqual(['2026-08-28|supplements']);
+      expect(plan.groups[0].label).toBe('Добавки');
+
+      const courseTarget = buildActionTarget({ keys: ['heys_profile'] }, actions[0]);
+      expect(courseTarget.date).toBeNull();
+      expect(courseTarget.selectors).toContain('.widget--supplements-diary');
+      const markTarget = buildActionTarget({ keys: ['heys_dayv2_2026-08-28'] }, actions[3]);
+      expect(markTarget.date).toBe('2026-08-28');
+      expect(markTarget.selectors).toContain('.widget--supplements-diary');
+    });
+
     it('groups identical meal_item_removed rows', () => {
       const banner = loadBanner();
       const { groupIdenticalRemovalPairs, actionRowCopy } = banner._test;

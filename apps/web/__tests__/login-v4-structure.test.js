@@ -20,7 +20,7 @@ describe('login v4 canvas structure', () => {
   it('keeps PIN cells at 56×64 with 8px gap and 46px keys', () => {
     expect(css).toMatch(/\.heys-auth-pin-box\s*\{[\s\S]*?width:\s*56px/);
     expect(css).toMatch(/\.heys-auth-pin-box\s*\{[\s\S]*?height:\s*64px/);
-    expect(css).toMatch(/\.heys-auth-pin-box\s*\{[\s\S]*?border-radius:\s*16px|\.heys-auth-pin-input\s*\{[\s\S]*?border-radius:\s*16px/);
+    expect(css).toMatch(/\.heys-auth-pin-input\s*\{[^}]*border-radius:\s*16px/);
     expect(css).toMatch(/\.heys-auth-pin-input,\s*\n\.heys-auth-pin-overlay\s*\{[\s\S]*?font-size:\s*26px/);
     expect(css).toMatch(/\.heys-auth-pin-grid\s*\{[\s\S]*?gap:\s*8px/);
     expect(css).toMatch(/\.heys-auth-key,\s*\n\.heys-auth-key-spacer\s*\{[\s\S]*?height:\s*46px/);

@@ -125,10 +125,6 @@ const ALLOWED = new Map(
       '7 % · дорожка окна сна, роли не имеет',
     '730-widgets-dashboard.css | .widget-v4-sleep-window__target | background':
       '13 % · полоса цели поверх дорожки, роли не имеет',
-    '730-widgets-dashboard.css | .widget-v4-heat__bar--d1 | background':
-      '18 % · своя шкала плотности тепловой карты, не линия (контракт «тепловая карта»)',
-    '730-widgets-dashboard.css | [data-theme$="dark"] .widget-v4-heat__bar--d1 | background':
-      '20 % · тёмная ступень той же шкалы плотности',
   }),
 );
 

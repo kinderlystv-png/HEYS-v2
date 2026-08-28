@@ -62,6 +62,12 @@ responseLoad + responseShape + estimatedWindow + confidence + trace
 fallback этих значений зашит прямо в расчёт. Это продуктовый контракт HEYS, а не
 универсальная таблица энергетической ценности.
 
+Первичные проценты `heys_norms` при регистрации принадлежат серверу:
+`calculate_registration_norms_by_session` читает подтверждённый cloud-профиль,
+считает проценты по цели, полу и возрасту и сохраняет результат через общий KV
+write-gate. Wizard только принимает ответ с совпадающим `profileUpdatedAt` и не
+имеет клиентской формулы или silent fallback.
+
 ## Источник нутриентов
 
 Канонический путь суммы приёма — `HEYS.models.getProductFromItem`. Масса позиции
@@ -190,6 +196,12 @@ shape, но явно помечается в driver и не повышает con
 состояние. Отметка приёма не даёт бонус к расчёту инсулиновой волны или
 каскадной оценке дня.
 
+Если куратор меняет пользовательский план добавок, серверный semantic diff пишет
+в общий журнал одно из четырёх событий: курс назначен, изменён, отменён или
+снята отметка о приёме. Лист правок показывает эти события в фиксированной
+группе «Добавки»; сами события служат прозрачностью изменений и не превращают
+план в медицинское назначение.
+
 ## Инварианты
 
 1. Сохранённый meal item должен содержать достаточный snapshot для истории.
@@ -227,23 +239,25 @@ shape, но явно помечается в driver и не повышает con
     показанием к добавке.
 17. Положительный вывод о добавке должен относиться к конкретному показанию и
     иметь источник и дату ревью; иначе интерфейс работает fail-closed.
-18. Неуказанная доза и отсутствие проверенного UL не должны отображаться как
+18. Изменения добавок куратором должны попадать в общий журнал семантическими
+    событиями, без дублирующего общего `profile_changed`.
+19. Неуказанная доза и отсутствие проверенного UL не должны отображаться как
     подтверждённо безопасная схема.
-19. Отметка приёма добавки не меняет инсулиновую волну или каскадную оценку дня
+20. Отметка приёма добавки не меняет инсулиновую волну или каскадную оценку дня
     без отдельного проверенного контракта вещества, дозы и приёма пищи.
-20. Пересечение оценок отклика соседних приёмов описывает их частоту и состав,
+21. Пересечение оценок отклика соседних приёмов описывает их частоту и состав,
     но само по себе не доказывает набор жира, блокировку его снижения или
     обязательную частоту питания.
-21. Outcome follow-up не создаётся для `hungerLevel=0`, не может пережить более
+22. Outcome follow-up не создаётся для `hungerLevel=0`, не может пережить более
     новую фактическую оценку и при чтении cloud-состояния нормализует старые
     открытые планы по тем же правилам.
-22. Уточнение результата показывает исходную оценку и время, а для сценария
+23. Уточнение результата показывает исходную оценку и время, а для сценария
     паузы или еды — соответствующую длительность или время приёма; технические
     идентификаторы в пользовательский текст не выводятся.
-23. Редактирование уровня или времени оценки закрывает её открытый outcome-plan,
+24. Редактирование уровня или времени оценки закрывает её открытый outcome-plan,
     но не удаляет событие, edit history или уже сохранённый пользовательский
     ответ.
-24. Due follow-up остаётся `pending`, пока открыт другой пользовательский flow,
+25. Due follow-up остаётся `pending`, пока открыт другой пользовательский flow,
     и переходит в `shown` только после успешного открытия собственной модалки.
 
 ## Подтверждённые слабые места и пробелы
@@ -272,29 +286,31 @@ shape, но явно помечается в driver и не повышает con
 
 ## Facts Table
 
-| ID  | Утверждение                                                                                                         | Проверка                                                                                                                                               | Статус               |
-| --- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
-| N1  | Сумма дня агрегирует `M.mealTotals`, а GI/harm отдельно взвешивает по граммам                                       | `sed -n '20,60p' apps/web/heys_day_calculations.js`                                                                                                    | проверено 2026-07-17 |
-| N2  | `mealTotals` использует snapshot-aware product resolver и кеш-сигнатуры                                             | `sed -n '805,872p' apps/web/heys_models_v1.js`                                                                                                         | проверено 2026-07-17 |
-| N3  | Нормы используют net Atwater 3/4/9                                                                                  | `sed -n '65,105p' apps/web/heys_day_calculations.js`                                                                                                   | проверено 2026-07-17 |
-| N4  | Масса meal item нормализуется без подмены явного `0`                                                                | `pnpm exec vitest run apps/web/__tests__/item-grams-zero-contract.test.js`                                                                             | проверено 2026-07-21 |
-| N5  | Публичный API и каноническая модель экспортируют version `5.0.1`                                                    | `rg -n "5\.0\.1\|MODEL_VERSION\|VERSION" apps/web/heys_iw_response_model.js apps/web/heys_insulin_wave_v1.js apps/web/config/insulin-wave-config.json` | проверено 2026-07-22 |
-| N6  | GL считается отдельно от Food Insulin Index                                                                         | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                         | проверено 2026-07-21 |
-| N7  | Current — тот же объект, что последняя запись history; overlap не меняет duration                                   | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                         | проверено 2026-07-21 |
-| N8  | DayTab до готовности модели возвращает loading без GI-only расчёта                                                  | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                         | проверено 2026-07-21 |
-| N9  | Каноническая модель загружается до публичного adapter в lazy bundle                                                 | `rg -n "heys_iw_response_model\|heys_insulin_wave_v1" scripts/legacy-bundle-config.mjs`                                                                | проверено 2026-07-21 |
-| N10 | Запрещённые физиологические утверждения отсутствуют в активном UI и связанных Insights                              | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                         | проверено 2026-07-23 |
-| N11 | API canary загружает реальные зависимости и не принимает null за успех                                              | `pnpm exec vitest run apps/web/__tests__/iw_api_canary.test.js`                                                                                        | проверено 2026-07-21 |
-| N12 | Day core generator включает `heys_day_calculations.js`                                                              | `sed -n '345,358p' scripts/legacy-bundle-config.mjs`                                                                                                   | проверено 2026-07-17 |
-| N13 | Автоподбор добавок и универсальные курсы выключены fail-closed                                                      | `pnpm --filter @heys/web exec vitest run __tests__/supplements-evidence-safety.test.js __tests__/supplements-card-visibility.test.js --no-coverage`    | проверено 2026-07-21 |
-| N14 | Доказательность привязана к показанию, источникам и дате ревью                                                      | `pnpm --filter @heys/web exec vitest run __tests__/supplements-evidence-safety.test.js --no-coverage`                                                  | проверено 2026-07-21 |
-| N15 | Все supplement bonuses в source-конфиге равны нулю                                                                  | `node -e "const c=require('./apps/web/config/insulin-wave-config.json'); if(Object.values(c.SUPPLEMENTS_BONUS).some(x=>x.bonus!==0)) process.exit(1)"` | проверено 2026-07-21 |
-| N16 | Отметки добавок не дают бонуса или штрафа каскадной оценке дня                                                      | `pnpm --filter @heys/web exec vitest run __tests__/supplements-evidence-safety.test.js --no-coverage`                                                  | проверено 2026-07-21 |
-| N17 | Таймер, график и пользовательский progress bar используют верхнюю границу, а legacy `progress` остаётся центральным | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                         | проверено 2026-07-22 |
-| N21 | Создание приёма не на HEYS-сегодня требует явного подтверждения и иначе блокируется                                 | `pnpm vitest run apps/web/__tests__/meal-plate-guide.test.js --no-coverage`                                                                            | проверено 2026-07-22 |
-| N18 | Порог жидкой формы использует raw-долю питательной энергии без предварительного округления                          | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                         | проверено 2026-07-22 |
-| N19 | Пороги processed/simple используют raw-доли без предварительного округления                                         | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                         | проверено 2026-07-22 |
-| N20 | Нулевые по БЖУ напитки не меняют processed decision-ratio, shape или duration                                       | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                         | проверено 2026-07-22 |
+| ID  | Утверждение                                                                                                         | Проверка                                                                                                                                                                                                                               | Статус                        |
+| --- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| N1  | Сумма дня агрегирует `M.mealTotals`, а GI/harm отдельно взвешивает по граммам                                       | `sed -n '20,60p' apps/web/heys_day_calculations.js`                                                                                                                                                                                    | проверено 2026-07-17          |
+| N2  | `mealTotals` использует snapshot-aware product resolver и кеш-сигнатуры                                             | `sed -n '805,872p' apps/web/heys_models_v1.js`                                                                                                                                                                                         | проверено 2026-07-17          |
+| N3  | Нормы используют net Atwater 3/4/9                                                                                  | `sed -n '65,105p' apps/web/heys_day_calculations.js`                                                                                                                                                                                   | проверено 2026-07-17          |
+| N4  | Масса meal item нормализуется без подмены явного `0`                                                                | `pnpm exec vitest run apps/web/__tests__/item-grams-zero-contract.test.js`                                                                                                                                                             | проверено 2026-07-21          |
+| N5  | Публичный API и каноническая модель экспортируют version `5.0.1`                                                    | `rg -n "5\.0\.1\|MODEL_VERSION\|VERSION" apps/web/heys_iw_response_model.js apps/web/heys_insulin_wave_v1.js apps/web/config/insulin-wave-config.json`                                                                                 | проверено 2026-07-22          |
+| N6  | GL считается отдельно от Food Insulin Index                                                                         | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                                                                                                         | проверено 2026-07-21          |
+| N7  | Current — тот же объект, что последняя запись history; overlap не меняет duration                                   | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                                                                                                         | проверено 2026-07-21          |
+| N8  | DayTab до готовности модели возвращает loading без GI-only расчёта                                                  | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                                                                                                         | проверено 2026-07-21          |
+| N9  | Каноническая модель загружается до публичного adapter в lazy bundle                                                 | `rg -n "heys_iw_response_model\|heys_insulin_wave_v1" scripts/legacy-bundle-config.mjs`                                                                                                                                                | проверено 2026-07-21          |
+| N10 | Запрещённые физиологические утверждения отсутствуют в активном UI и связанных Insights                              | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                                                                                                         | проверено 2026-07-23          |
+| N11 | API canary загружает реальные зависимости и не принимает null за успех                                              | `pnpm exec vitest run apps/web/__tests__/iw_api_canary.test.js`                                                                                                                                                                        | проверено 2026-07-21          |
+| N12 | Day core generator включает `heys_day_calculations.js`                                                              | `sed -n '345,358p' scripts/legacy-bundle-config.mjs`                                                                                                                                                                                   | проверено 2026-07-17          |
+| N13 | Автоподбор добавок и универсальные курсы выключены fail-closed                                                      | `pnpm --filter @heys/web exec vitest run __tests__/supplements-evidence-safety.test.js __tests__/supplements-card-visibility.test.js --no-coverage`                                                                                    | проверено 2026-07-21          |
+| N14 | Доказательность привязана к показанию, источникам и дате ревью                                                      | `pnpm --filter @heys/web exec vitest run __tests__/supplements-evidence-safety.test.js --no-coverage`                                                                                                                                  | проверено 2026-07-21          |
+| N15 | Все supplement bonuses в source-конфиге равны нулю                                                                  | `node -e "const c=require('./apps/web/config/insulin-wave-config.json'); if(Object.values(c.SUPPLEMENTS_BONUS).some(x=>x.bonus!==0)) process.exit(1)"`                                                                                 | проверено 2026-07-21          |
+| N16 | Отметки добавок не дают бонуса или штрафа каскадной оценке дня                                                      | `pnpm --filter @heys/web exec vitest run __tests__/supplements-evidence-safety.test.js --no-coverage`                                                                                                                                  | проверено 2026-07-21          |
+| N17 | Таймер, график и пользовательский progress bar используют верхнюю границу, а legacy `progress` остаётся центральным | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                                                                                                         | проверено 2026-07-22          |
+| N21 | Создание приёма не на HEYS-сегодня требует явного подтверждения и иначе блокируется                                 | `pnpm vitest run apps/web/__tests__/meal-plate-guide.test.js --no-coverage`                                                                                                                                                            | проверено 2026-07-22          |
+| N18 | Порог жидкой формы использует raw-долю питательной энергии без предварительного округления                          | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                                                                                                         | проверено 2026-07-22          |
+| N19 | Пороги processed/simple используют raw-доли без предварительного округления                                         | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                                                                                                         | проверено 2026-07-22          |
+| N20 | Нулевые по БЖУ напитки не меняют processed decision-ratio, shape или duration                                       | `pnpm exec vitest run apps/web/__tests__/insulin-wave.test.js`                                                                                                                                                                         | проверено 2026-07-22          |
+| N22 | Первичные проценты норм регистрации рассчитываются сервером после подтверждения профиля                             | `pnpm exec vitest run apps/web/__tests__/registration-server-norms-contract.test.js apps/web/__tests__/first-login-registration-flow.test.js`                                                                                          | проверено 2026-08-28          |
+| N23 | Журнал куратора различает назначение, изменение и отмену курса добавок, а также снятие отметки о приёме             | `node --test yandex-cloud-functions/heys-api-rpc/__tests__/curator-action-diff.test.js && pnpm --filter @heys/web exec vitest run __tests__/curator-actions-banner.test.js __tests__/curator-sheet-canvas-smoke.test.js --no-coverage` | проверено локально 2026-08-28 |
 
 ## Связанные источники
 

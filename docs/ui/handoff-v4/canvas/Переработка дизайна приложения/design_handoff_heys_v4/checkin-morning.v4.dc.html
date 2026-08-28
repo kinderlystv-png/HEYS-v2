@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="./v4-canvas.css" rel="stylesheet">
+<script src="./contract-audit.js"></script>
 <style>
   .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
   .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
@@ -120,8 +121,9 @@
     <div class="spec"><b>интенсивность</b><span data-v="не придумывается: без ответа — «Зарядка · была», вклада в нагрузку нет"></span><i>подставленная «средняя из утренних оценок» — выдуманные данные под видом факта; если расчёту она нужна, пишется с меткой оценочной и в статистику нагрузки не идёт</i></div>
     <div class="spec"><b>просроченные замеры</b><span data-v="после 7 дней та же строка на том же месте получает подложку с обводкой и метку числом; эскалации дальше нет"></span><i>переезд строк учит искать их заново каждое утро; удвоенная тревога замеров не приносит</i></div>
     <div class="spec"><b>особый период в стопке</b><span data-v="строка «Особые дни» — условный пункт стопки: видна только при включённом тумблере в профиле, свёрнута до строки с чипом «Отметить» (66 px), стоит между рутиной и замерами. На днях 1–7 занимает место верхней карточки шага, а душ уходит в стопку строкой"></span><i>вид строки, ряда дней, верхней карточки и множителей — cycle.v4.dc.html; при расхождении верен он</i></div>
-    <div class="spec"><b>прокрутка на неделе периода</b><span data-v="на днях 1–7 содержимое шага выше окна на 70 px — шаг прокручивается; ни одна карточка стопки не сжимается и не прячется. В остальные дни шаг влезает целиком, запас 8 px"></span><i>проверено на копии шага в cycle.v4.dc.html, кадры «Цикл · копия шага 5 …»</i></div>
-    <div class="spec"><b>замеры на неделе периода</b><span data-v="строка замеров действия не просит: «Замеры отложены» тоном чернил 62 % и «Задержка воды искажает обхваты» тоном 50 %, шеврона нет, aria-disabled, из обхода фокусом исключена, но вслух читается вместе с причиной; счёт просрочки идёт как обычно и всплывает после дня 7"></span><i>приглушение тоном, а не прозрачностью: opacity на строке роняет контраст текста ниже 4,5:1</i></div>
+    <div class="spec"><b>прокрутка на неделе периода</b><span data-v="на днях 1–7 стопка влезает целиком: в кадре 330×706 при окне шага 582 px запас 181 px до кнопки, ни одна карточка не сжимается и не прячется. Прокрутка шага включена всё равно — на устройствах уже 330 px запас исчезает. В остальные дни запас не измеряется, и числа для него в контракте нет. На полной стопке — когда включены все условные пункты — тот же шаг переполняется на 70 px: этот случай мерит cycle.v4.dc.html, строка «высота шага»"></span><i>замер живой: печатается в кадре «Чек-ин · остальное на неделе периода» и сверяется с этой строкой. Снято 26 августа: «содержимое выше окна на 70 px» и «в остальные дни запас 8 px» — ни того перебора, ни того запаса на канвасе нет, оба числа жили только объявлением</i></div>
+    <div class="spec"><b>главный файл · период</b><span data-v="вид строки «Особые дни», ряда дней 1–7, верхней карточки и отложенных замеров рисует cycle.v4.dc.html — этот файл вторичен; при расхождении кодер останавливается, а не выбирает"></span><i>здесь период показан только на своём месте в стопке пятого шага</i></div>
+    <div class="spec"><b>замеры на неделе периода</b><span data-v="строка замеров действия не просит: «Замеры отложены» тоном чернил 62 % и «Задержка воды искажает обхваты» тоном 50 %, шеврона нет, aria-disabled, из обхода фокусом исключена, но вслух читается вместе с причиной; счёт просрочки идёт как обычно и всплывает после дня 7"></span><i>приглушение тоном, а не прозрачностью: opacity на строке роняет контраст текста ниже 4,5:1. Снято 26 августа: вторая строка с тем же именем и «прозрачностью 55 %» — два значения под одним ключом</i></div>
     <div class="spec"><b>доступность · период в стопке</b><span data-v="нажимаемый в свёрнутой строке только чип, доступное имя «Отметить особые дни»; раскрытый ряд 1–7 — role='radiogroup' с именем «Какой день», клетки role='radio' с именами «День N» и aria-checked, обход стрелками"></span><i>полные строки — cycle.v4.dc.html, раздел «доступность»</i></div>
     <div class="spec" style="border-bottom:none"><b>загрузочный день</b><span data-v="стоит под ползунком шагов, не в «остальном»; по умолчанию «Нет» отмечен; цель по шагам не пересчитывает"></span><i>он меняет норму калорий, а не то, сколько имеет смысл ходить; дефолтное «Нет» пишется без метки ручного выбора, чтобы куратор видел разницу с «не спрашивали»</i></div>
 
@@ -822,7 +824,7 @@
             <div><div style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Замеры отложены</div><div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:3px;">Задержка воды искажает обхваты — вернутся после периода</div></div>
           </div>
         </div>
-        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty;">Стопка не режется: на этой неделе шаг прокручивается. Вид карточки, ряда дней и отложенных замеров — cycle.v4.dc.html.</div>
+        <div data-fitnote data-owner="прокрутка на неделе периода" data-fittail="Вид карточки, ряда дней и отложенных замеров — cycle.v4.dc.html." style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty;">замер идёт…</div>
       </div>
       <div class="foot"><div class="btn">Готово</div></div>
     </div></div>
@@ -1286,8 +1288,103 @@ class Component extends DCLogic {
     const rw = rm === 1 && rh !== 11 ? 'строка' : (rm >= 2 && rm <= 4 && (rh < 12 || rh > 14) ? 'строки' : 'строк');
     bar.textContent = n + ' ' + word + ' на канвасе' + (rows ? ', ' + rows + ' ' + rw : '') + ' · ' + (on ? (one ? 'показан' : 'показаны') + ' ниже' : (one ? 'скрыт' : 'скрыты') + ' твиком «Контракты»');
   }
+  fits() {
+    // живой замер: влезает ли содержимое шага в окно кадра. Сам замер из подсчёта
+    // исключён — в продукте этой поясняющей строки нет.
+    document.querySelectorAll('[data-fitnote]').forEach(note => {
+      const frame = note.closest('.ph');
+      const sc = frame && frame.querySelector('.sc');
+      if (!sc) return;
+      const kids = [...sc.children].filter(n => n !== note);
+      const last = kids[kids.length - 1];
+      if (!last) return;
+      const over = Math.round(last.getBoundingClientRect().bottom - sc.getBoundingClientRect().top - sc.clientHeight);
+      const tail = note.getAttribute('data-fittail') || '';
+      note.textContent = (over > 0
+        ? 'Не влезает: содержимое выше окна на ' + over + ' px — шаг прокручивается.'
+        : 'Влезает целиком, запас ' + (-over) + ' px до кнопки.') + (tail ? ' ' + tail : '');
+      note.style.color = over > 0 ? '#a8382b' : 'rgba(var(--ink),.42)';
+      note.style.fontWeight = over > 0 ? '600' : '500';
+    });
+  }
+  audit() {
+    const specs = [...document.querySelectorAll('[data-contract] .spec, .spec')];
+    const vals = specs.map(r => {
+      const b = r.querySelector('b'), v = r.querySelector('span[data-v]');
+      return { key: b ? b.textContent : '', val: v ? v.getAttribute('data-v') : '' };
+    });
+    if (!vals.length) return ['НЕТ КОНТРАКТА'];
+    const nrm = s => s.replace(/(\d)[\s\u00a0\u202f\u2009](?=\d{3}\b)/g, '$1');
+    const contract = vals.map(v => v.key + ' ' + v.val).join(' ');
+    const low = contract.toLowerCase();
+    const vid = vals.filter(v => v.key.startsWith('вид')).map(v => v.key + ' ' + v.val).join(' ').toLowerCase();
+    const tokens = new Set((nrm(contract).match(/\d+[,.]?\d*/g) || []));
+    const out = [];
+
+    const frames = [...document.querySelectorAll('[data-screen-label]')]
+      .filter(f => f.getAttribute('data-demo') !== 'protocol' && !f.closest('[data-demo="protocol"]'))
+      .filter(f => !/ · (тёмная|синяя|сине-тёмная)/i.test(f.getAttribute('data-screen-label')));
+    const noVid = frames.filter(f => {
+      const ref = f.getAttribute('data-vid');
+      if (ref) return !vals.some(v => v.key === ref);
+      const l = f.getAttribute('data-screen-label').toLowerCase();
+      const tail = l.split(' · ').pop().trim();
+      if (tail.length > 3 && (vid.includes(tail) || low.includes(tail))) return false;
+      const words = l.split(/[\s,·]+/).filter(s => s.length > 4);
+      return !words.some(w => { const st = w.slice(0, w.length - 2); return vid.includes(st) || low.includes(st); });
+    }).map(f => f.getAttribute('data-screen-label'));
+    if (noVid.length) out.push('без «вида»: ' + [...new Set(noVid)].join(' · '));
+
+    const shown = new Set();
+    document.querySelectorAll('[data-screen-label]').forEach(f => {
+      (nrm(f.textContent).match(/\d+[,.]?\d*/g) || []).forEach(x => shown.add(x));
+    });
+    const stray = new Set();
+    document.querySelectorAll('.nt, .ntl, .hint, .cap, .lab, .fb').forEach(n => {
+      if (n.closest('[data-contract]')) return;
+      (nrm(n.textContent).match(/\d+[,.]?\d*[\s\u00a0]?(?:%|px|мл|ккал|pt|ч\b)/g) || []).forEach(m => {
+        const num = m.match(/\d+[,.]?\d*/)[0];
+        if (num.length > 1 && !tokens.has(num) && !shown.has(num)) stray.add(m.trim());
+      });
+    });
+    if (stray.size) out.push('число в прозе вне контракта: ' + [...stray].slice(0, 10).join(' · '));
+
+    // живой замер сверяется только с числами той строки, которую кадр назвал сам
+    const off = [];
+    document.querySelectorAll('[data-fitnote]').forEach(n => {
+      const m = n.textContent.match(/(\d+)\s?px/);
+      if (!m) return;
+      const owner = n.getAttribute('data-owner');
+      const row = vals.find(v => v.key === owner);
+      if (!row) { off.push('замер без владельца: ' + (owner || '—')); return; }
+      const pool = (row.val.match(/\d+/g) || []).map(Number);
+      const v = +m[1];
+      if (!pool.some(x => Math.abs(x - v) <= 1)) off.push(m[1] + ' px против «' + owner + '»');
+    });
+    if (off.length) out.push('замер не сходится со своей строкой: ' + off.join(' · '));
+
+    return out;
+  }
+  auditBar() {
+    const found = this.audit();
+    let bar = document.querySelector('[data-auditbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-auditbar', '');
+      bar.style.cssText = 'font:700 11px/1.6 ui-monospace,Menlo,monospace;margin:-14px 0 22px;text-wrap:pretty;max-width:1080px;';
+      const anchor = document.querySelector('[data-protobar]') || document.querySelector('[data-ctrbar]');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    const none = found[0] === 'НЕТ КОНТРАКТА';
+    bar.textContent = none
+      ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено'
+      : (found.length ? '⚠ сверка: ' + found.join(' | ') : '✓ сверка чиста');
+    bar.style.color = none ? '#8a4a20' : (found.length ? '#a8382b' : '#5c6a45');
+  }
   applyTweaks() {
     this.contracts();
+    this.fits();
+    this.auditBar();
     const t = this.tw(), hide = t.all ? '' : 'none', off = t.rules ? '' : 'none';
     const lab = /^(т[её]мная|синяя|сине-т[её]мная|синяя\s+т[её]мная)(\s+палитра)?$/i;
 

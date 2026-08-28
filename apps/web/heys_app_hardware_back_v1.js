@@ -31,10 +31,13 @@
         if (global.document.querySelector('.heys-consent-sign-sheet')) return true;
         if (global.document.querySelector('.heys-date-sheet-backdrop')) return true;
         if (global.document.querySelector('.heys-meal-edit-sheet')) return true;
+        if (global.document.querySelector('.widgets-quick-fab-wrap.is-open')) return true;
+        if (global.document.querySelector('.widget-wd-sheet')) return true;
         if (HEYS.Widgets?.isEditMode?.()) return true;
         const state = global.history.state || {};
         if (state.heysSettingsSheet || state.heysNotifyDetailSheet || state.heysQuickActions
             || state.heysCuratorEdits || state.heysDateSheet || state.heysMealEditSheet
+            || state.heysWidgetVariantSheet || state.heysWidgetsEditMode
             || state.heysFullscreen || state.heysConsentBackDepth || state.heysIntakeBack) {
             return true;
         }
@@ -84,6 +87,10 @@
                 pushBackTrap();
                 return;
             }
+            const state = global.history.state || {};
+            // Закрыли слой и вернулись на ловушку — вкладку не меняем (одно «назад»
+            // не должно и закрыть лист, и уйти на другую вкладку).
+            if (state[BACK_TRAP_KEY]) return;
             if (!navigateBackTab()) {
                 // На Главной без слоёв — выход из приложения (не возвращаем trap).
                 return;

@@ -37,6 +37,11 @@ function commitFile(name, content, message) {
 beforeEach(() => {
   repo = mkdtempSync(path.join(tmpdir(), 'heys-integrate-'));
   git(['init', '-q', '-b', 'main']);
+  // Не наследуем Windows core.autocrlf из пользовательского Git-конфига:
+  // иначе одна и та же конфликтная фикстура меняет LF/CRLF между merge/reset,
+  // шумит предупреждениями и в полном параллельном suite изредка оставляет
+  // другой результат, хотя изолированный тест стабилен.
+  git(['config', 'core.autocrlf', 'false']);
   git(['config', 'user.email', 'test@heys.local']);
   git(['config', 'user.name', 'Test']);
   commitFile('base.txt', 'base\n', 'chore: base');

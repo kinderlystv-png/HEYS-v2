@@ -1385,6 +1385,185 @@
       return bins;
     },
 
+    /** Журнал воды с ts — без legacy-seed (время неизвестно). */
+    _waterJournalEntries(day) {
+      const norm = HEYS.sync && HEYS.sync.normalizeWaterEntries;
+      const entries = typeof norm === 'function' ? norm(day) : (Array.isArray(day?.waterEntries) ? day.waterEntries : []);
+      return entries.filter((e) => e && e.kind !== 'legacy' && Number(e.ml) > 0 && Number(e.ts) > 0);
+    },
+
+    _hourMlFromJournalEntries(entries) {
+      const byHour = Array(24).fill(0);
+      entries.forEach((entry) => {
+        const d = new Date(Number(entry.ts));
+        if (!Number.isFinite(d.getTime())) return;
+        byHour[d.getHours()] += Math.round(Number(entry.ml) || 0);
+      });
+      return byHour;
+    },
+
+    _cumulativeHourlySlice(byHour, startHour, endHourExclusive) {
+      const out = [];
+      let cum = 0;
+      for (let h = startHour; h < endHourExclusive; h += 1) {
+        cum += byHour[h] || 0;
+        out.push(cum);
+      }
+      return out;
+    },
+
+    /**
+     * Почасовой профиль для листа «разбор · Вода»: среднее за ~30 дней,
+     * накопление сегодня, провал, медиана часа закрытия нормы.
+     */
+    _buildWaterBreakdownProfile() {
+      const CHART_START = 6;
+      const CHART_HOURS = 14;
+      const CHART_END = CHART_START + CHART_HOURS;
+      const PROFILE_DAYS = 30;
+      const target = this._getWaterGoal() || 2000;
+
+      const monthBucketSums = Array(CHART_HOURS).fill(0);
+      let daysWithJournal = 0;
+      const normHitMinutes = [];
+      const volumeCounts = new Map();
+      let todayByHour = Array(24).fill(0);
+
+      const anchor = new Date();
+      for (let offset = 0; offset < PROFILE_DAYS; offset += 1) {
+        const dt = new Date(anchor);
+        dt.setDate(dt.getDate() - offset);
+        const iso = this._formatDate(dt);
+        const day = offset === 0 ? this._getDay() : this._getDayByDate(iso);
+        if (!day) continue;
+
+        const entries = this._waterJournalEntries(day);
+        if (!entries.length) continue;
+
+        daysWithJournal += 1;
+        const byHour = this._hourMlFromJournalEntries(entries);
+        if (offset === 0) todayByHour = byHour.slice();
+
+        for (let i = 0; i < CHART_HOURS; i += 1) {
+          monthBucketSums[i] += byHour[CHART_START + i] || 0;
+        }
+
+        const sorted = entries.slice().sort((a, b) => (Number(a.ts) || 0) - (Number(b.ts) || 0));
+        let cum = 0;
+        for (let ei = 0; ei < sorted.length; ei += 1) {
+          cum += Number(sorted[ei].ml) || 0;
+          if (cum >= target) {
+            const hit = new Date(Number(sorted[ei].ts));
+            if (Number.isFinite(hit.getTime())) {
+              normHitMinutes.push(hit.getHours() * 60 + hit.getMinutes());
+            }
+            break;
+          }
+        }
+
+        entries.forEach((entry) => {
+          const ml = Math.round(Number(entry.ml) || 0);
+          if (ml > 0) volumeCounts.set(ml, (volumeCounts.get(ml) || 0) + 1);
+        });
+      }
+
+      const monthAvg = monthBucketSums.map((sum) => (
+        daysWithJournal > 0 ? sum / daysWithJournal : 0
+      ));
+      const todayCumulative = this._cumulativeHourlySlice(todayByHour, CHART_START, CHART_END);
+      const todayHourly = todayByHour.slice(CHART_START, CHART_END);
+
+      let bestGap = null;
+      let runStart = null;
+      for (let i = 0; i < CHART_HOURS; i += 1) {
+        const todayMl = todayHourly[i] || 0;
+        const avg = monthAvg[i] || 0;
+        const isGap = avg >= 80 && todayMl < avg * 0.45;
+        if (isGap) {
+          if (runStart == null) runStart = i;
+        } else if (runStart != null) {
+          const len = i - runStart;
+          if (!bestGap || len > bestGap.len) bestGap = { start: runStart, len };
+          runStart = null;
+        }
+      }
+      if (runStart != null) {
+        const len = CHART_HOURS - runStart;
+        if (!bestGap || len > bestGap.len) bestGap = { start: runStart, len };
+      }
+
+      let gapFromHour = null;
+      let gapToHour = null;
+      let gapLabel = null;
+      if (bestGap && bestGap.len >= 2) {
+        gapFromHour = CHART_START + bestGap.start;
+        gapToHour = CHART_START + bestGap.start + bestGap.len - 1;
+        gapLabel = `с ${gapFromHour} до ${gapToHour}`;
+      }
+
+      let typicalNormLabel = null;
+      if (normHitMinutes.length) {
+        normHitMinutes.sort((a, b) => a - b);
+        const mid = Math.floor(normHitMinutes.length / 2);
+        const medMin = normHitMinutes.length % 2
+          ? normHitMinutes[mid]
+          : Math.round((normHitMinutes[mid - 1] + normHitMinutes[mid]) / 2);
+        typicalNormLabel = this._minutesToHm(medMin);
+      }
+
+      let weekNormHits = 0;
+      for (let i = 0; i < 7; i += 1) {
+        const dt = new Date(anchor);
+        dt.setDate(dt.getDate() - i);
+        const iso = this._formatDate(dt);
+        const day = i === 0 ? this._getDay() : this._getDayByDate(iso);
+        if ((Number(day?.waterMl) || 0) >= target) weekNormHits += 1;
+      }
+
+      let topVolumeMl = null;
+      if (volumeCounts.size) {
+        topVolumeMl = Array.from(volumeCounts.entries())
+          .sort((a, b) => (b[1] - a[1]) || (a[0] - b[0]))[0][0];
+      }
+
+      return {
+        chartStartHour: CHART_START,
+        chartHours: CHART_HOURS,
+        monthAvg,
+        todayCumulative,
+        todayHourly,
+        gapFromHour,
+        gapToHour,
+        gapLabel,
+        typicalNormLabel,
+        weekNormHits,
+        topVolumeMl,
+        axisTicks: [6, 9, 12, 15, 18, 21, 24]
+      };
+    },
+
+    getWaterBreakdownProfile() {
+      if (this._isDemoMode()) {
+        const monthAvg = [120, 180, 220, 260, 200, 140, 90, 70, 160, 240, 320, 280, 190, 110];
+        const todayCumulative = [100, 280, 520, 780, 920, 980, 1020, 1050, 1180, 1420, 1680, 1720, 1750, 1700];
+        return {
+          chartStartHour: 6,
+          chartHours: 14,
+          monthAvg,
+          todayCumulative,
+          todayHourly: todayCumulative.map((v, i) => (i === 0 ? v : v - todayCumulative[i - 1])),
+          gapFromHour: 13,
+          gapToHour: 16,
+          gapLabel: 'с 13 до 16',
+          typicalNormLabel: '19:40',
+          weekNormHits: 4,
+          topVolumeMl: 500,
+          axisTicks: [6, 9, 12, 15, 18, 21, 24]
+        };
+      }
+      return this._buildWaterBreakdownProfile();
+    },
+
     _getDay() {
       // Используем selectedDate из WidgetsTab, или текущую дату как fallback
       const dateStr = this._selectedDate || this._formatDate(new Date());

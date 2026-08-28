@@ -111,6 +111,13 @@ describe('согласие на уведомления и тумблер — р�
 
   beforeEach(() => {
     journal = createConsentJournal();
+    Object.defineProperty(window.navigator, 'serviceWorker', {
+      configurable: true,
+      value: {
+        addEventListener: () => {},
+        getRegistrations: async () => [],
+      },
+    });
     window.HEYS = undefined;
     window.HEYS = {
       auth: { isCuratorSession: () => false },
