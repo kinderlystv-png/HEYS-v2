@@ -6,7 +6,7 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1787818158838';
+const CACHE_VERSION = 'heys-1787954464129';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -43,6 +43,20 @@ const KV_CACHE_ROLLOUT_PCT = 1.0;
 // per-client rollout decision (cached в meta после первого hit, чтобы decision был стабилен)
 const KV_CACHE_ROLLOUT_DECISION_KEY = '/__kv_cache_rollout_decision__';
 
+// Юридические документы подписываются только по неизменяемым versioned URL.
+// Они обязательны для регистрации, поэтому новый SW не должен установиться,
+// если не смог положить эти файлы в offline cache.
+const LEGAL_DOC_URLS = Object.freeze([
+  '/docs/v1.11/user-agreement.md',
+  '/docs/v1.0/personal-data-consent.md',
+  '/docs/v1.5/health-data-consent.md',
+  '/docs/v1.4/marketing-consent.md',
+  '/docs/v1.2/push-notifications-consent.md',
+  '/docs/v1.2/speech-transcription-consent.md',
+  '/docs/v1.0/supplements-consent.md',
+  '/docs/v1.0/body-measurements-consent.md',
+]);
+
 // Ресурсы для предварительного кэширования (App Shell — минимальный набор)
 // После бандлинга: 73 отдельных JS-файла заменены на 3 бандла.
 // Бандлы (*.bundle.{hash}.js) кэшируются автоматически при первом запросе
@@ -76,6 +90,7 @@ const PRECACHE_URLS = [
   '/icon-512.png',
   '/react-bundle.js',
   '/heys_loading_progress_v1.js',
+  ...LEGAL_DOC_URLS,
 ];
 
 // CDN ресурсы — кэшируем при первом запросе.
@@ -102,22 +117,31 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE)
       .then((cache) => {
         const cssUrls = PRECACHE_URLS.filter(url => url.endsWith('.css'));
-        console.log('[SW] 📦 Phase 1: Blocking CSS precache (' + cssUrls.length + ' files)');
-        return Promise.allSettled(
-          cssUrls.map(url =>
+        console.log('[SW] 📦 Phase 1: Blocking CSS + legal precache (' + cssUrls.length + ' CSS, ' + LEGAL_DOC_URLS.length + ' legal)');
+        const cssPrecache = Promise.allSettled(cssUrls.map(url =>
+          Promise.race([
+            cache.add(url),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Timeout')), 5000)
+            )
+          ]).catch(err => {
+            console.warn('[SW] ⚠️ CSS cache skip:', url, err.message);
+          })
+        ));
+        const legalPrecache = Promise.all(
+          LEGAL_DOC_URLS.map(url =>
             Promise.race([
               cache.add(url),
               new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('Timeout')), 5000)
               )
-            ]).catch(err => {
-              console.warn('[SW] ⚠️ CSS cache skip:', url, err.message);
-            })
+            ])
           )
         );
+        return Promise.all([cssPrecache, legalPrecache]);
       })
       .then(() => {
-        console.log('[SW] ✅ CSS precached — waiting for controlled activation');
+        console.log('[SW] ✅ CSS + legal docs precached — waiting for controlled activation');
 
         // Phase 2: Non-CSS assets + boot bundles in BACKGROUND
         setTimeout(() => {
@@ -126,6 +150,7 @@ self.addEventListener('install', (event) => {
               console.log('[SW] 📦 Phase 2: Background precaching started...');
               const nonCssUrls = PRECACHE_URLS.filter(url =>
                 !url.endsWith('.css') &&
+                !LEGAL_DOC_URLS.includes(url) &&
                 url !== '/version.json' && url !== '/build-meta.json'
               );
 
@@ -176,6 +201,7 @@ self.addEventListener('install', (event) => {
       })
       .catch(err => {
         console.error('[SW] Install error:', err);
+        throw err;
       })
   );
 });
@@ -232,13 +258,16 @@ self.addEventListener('activate', (event) => {
       })
       .then(() => {
         // Очистка юридических документов (.md) в фоне — НЕ блокируем
-        console.log('[SW] Purging cached .md files in background...');
+        console.log('[SW] Purging non-versioned cached .md files in background...');
         caches.keys().then(names => {
           names.forEach(cacheName => {
             caches.open(cacheName).then(cache => {
               cache.keys().then(requests => {
                 requests
-                  .filter(req => req.url.endsWith('.md') || req.url.includes('/docs/'))
+                  .filter(req =>
+                    (req.url.endsWith('.md') || req.url.includes('/docs/')) &&
+                    !LEGAL_DOC_URLS.includes(new URL(req.url).pathname)
+                  )
                   .forEach(req => cache.delete(req).catch(() => { }));
               });
             });
@@ -349,9 +378,9 @@ self.addEventListener('fetch', (event) => {
       return;
     }
 
-    // Markdown документы (юридика) — ВСЕГДА с сервера
+    // Юридические Markdown: свежая сеть первой, точный versioned cache — offline fallback.
     if (url.pathname.endsWith('.md')) {
-      event.respondWith(fetch(request));
+      event.respondWith(networkFirstNoStore(request));
       return;
     }
 

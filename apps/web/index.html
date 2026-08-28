@@ -731,7 +731,7 @@
                 var again = failCount >= 2;
                 document.body.innerHTML = '<div class="heys-boot-mark is-fail' + (again ? ' is-fail-again' : '') + '" role="alert">' +
                     '<span class="heys-boot-mark__disc" aria-hidden="true">' +
-                    '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>' +
+                    '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>' +
                     '</span>' +
                     '<div class="heys-boot-mark__sign">' +
                     '<div class="heys-boot-mark__fail">' +
@@ -996,11 +996,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.f4c7d698b712.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.269c69206165.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.ae2b51b5298c.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.690fcbe7def2.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.70669b2d2b0b.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.2785ee395316.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.55dbe5a10407.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.fd7fb473c2ef.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.cef473773b5f.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.d472dc64aa0a.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
          <script src="react-bundle.js"> (внизу body) бандл уже скачан. Sync execution сохранён
@@ -1554,9 +1554,8 @@
                         <path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
                     </svg>
                 </span>
-                <svg class="heys-boot-mark__warn" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round">
-                    <path d="M12 7v6M12 17h.01"></path>
-                    <circle cx="12" cy="12" r="9"></circle>
+                <svg class="heys-boot-mark__warn" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round">
+                    <path d="M7 7l10 10M17 7L7 17"></path>
                 </svg>
             </span>
             <div class="heys-boot-mark__sign">
@@ -3270,11 +3269,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.f4c7d698b712.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.269c69206165.js"></script>
-    <script defer src="boot-day.bundle.ae2b51b5298c.js"></script>
-    <script defer src="boot-app.bundle.690fcbe7def2.js"></script>
-    <script defer src="boot-init.bundle.70669b2d2b0b.js"
+    <script defer src="boot-core.bundle.2785ee395316.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.55dbe5a10407.js"></script>
+    <script defer src="boot-day.bundle.fd7fb473c2ef.js"></script>
+    <script defer src="boot-app.bundle.cef473773b5f.js"></script>
+    <script defer src="boot-init.bundle.d472dc64aa0a.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- ⚡ PERF 2026-06-13: D1 (solid-шапка на Android вместо frosted glass —
