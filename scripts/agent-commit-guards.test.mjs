@@ -4,7 +4,11 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { assertMultiZoneStaging, getMultiZoneInfo } from './check-agent-staging.mjs';
+import {
+  assertMultiZoneStaging,
+  getMultiZoneInfo,
+  mirrorSourceOf,
+} from './check-agent-staging.mjs';
 import {
   assertStagedHygiene,
   getDeletedWorkspaceManifests,
@@ -119,6 +123,29 @@ test('assertWorkspaceRuntime reports missing packages', () => {
 
 test('getMultiZoneInfo returns null for single-zone staged set', async () => {
   const info = await getMultiZoneInfo(['apps/web/heys_day_norm_v1.js']);
+  assert.equal(info, null);
+});
+
+test('mirrorSourceOf возвращает источник зеркала и null для обычного файла', () => {
+  assert.equal(
+    mirrorSourceOf('yandex-cloud-functions/heys-mcp/lib/web-mirror/heys_tdee_v1.js'),
+    'apps/web/heys_tdee_v1.js',
+  );
+  assert.equal(
+    mirrorSourceOf('yandex-cloud-functions/heys-api-rest/lib/heys_sync_merge_v1.cjs'),
+    'apps/web/heys_sync_merge_v1.js',
+  );
+  assert.equal(mirrorSourceOf('yandex-cloud-functions/heys-api-rpc/index.js'), null);
+});
+
+test('зеркало не заводит вторую зону: источник и его копии — один коммит', async () => {
+  // Хук зеркал требует их одним коммитом с источником, хук зон запрещал —
+  // коммита, проходящего оба, не существовало (29 августа снимали вручную).
+  const info = await getMultiZoneInfo([
+    'apps/web/heys_sync_merge_v1.js',
+    'yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs',
+    'yandex-cloud-functions/heys-api-rest/lib/heys_sync_merge_v1.cjs',
+  ]);
   assert.equal(info, null);
 });
 

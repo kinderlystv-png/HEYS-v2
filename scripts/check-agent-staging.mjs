@@ -147,13 +147,28 @@ function getForbiddenAgentStagedFiles(files = getStagedFiles()) {
 
 // Cross-zone check: staged source files MUST belong to ≤1 zone per agent-zones
 // manifest. Multiple zones in one commit → likely cross-agent contamination.
+// Зеркало принадлежит зоне своего источника, а не той папки, где лежит копия.
+// Иначе два хука противоречат друг другу: зеркала обязаны ехать одним коммитом
+// с источником (расхождение ESM и CJS молчит и разводит клиент с сервером), а
+// проверка зон видит в этом смешение задач и коммит отбивает. Правило, а не
+// список: новый файл в MIRRORED_FILES подхватится сам.
+function mirrorSourceOf(file) {
+  const mcp = file.match(/^yandex-cloud-functions\/heys-mcp\/lib\/web-mirror\/(.+)$/);
+  if (mcp) return `apps/web/${mcp[1]}`;
+  const syncMerge = file.match(
+    /^yandex-cloud-functions\/heys-api-(?:rpc|rest)\/lib\/heys_sync_merge_v1\.cjs$/,
+  );
+  if (syncMerge) return 'apps/web/heys_sync_merge_v1.js';
+  return null;
+}
+
 async function getMultiZoneInfo(files = getStagedFiles()) {
   try {
     const { getZoneForFile } = await import('./agent-zones.mjs');
     const sourceFiles = files.filter((f) => !isGeneratedOrReleaseFile(f));
     const zonesByFile = new Map();
     sourceFiles.forEach((f) => {
-      const zone = getZoneForFile(f);
+      const zone = getZoneForFile(mirrorSourceOf(f) || f);
       if (zone && zone !== '_generated') zonesByFile.set(f, zone);
     });
     const distinctZones = new Set(zonesByFile.values());
@@ -322,6 +337,7 @@ if (import.meta.url === invokedPath) {
 }
 
 export {
+  mirrorSourceOf,
   GENERATED_FILE_PATTERNS,
   RELEASE_FILE_PATTERNS,
   assertAgentStaging,
