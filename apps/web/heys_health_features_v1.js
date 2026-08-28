@@ -51,6 +51,18 @@
     'supplementsTaken', 'supplementsTakenAt', 'supplementsTakenMeta', 'supplementsTakenUpdatedAt',
   ];
 
+  function localDateIso(value = new Date()) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const pad = (part) => String(part).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  }
+
+  function isPastDayRecord(day, todayIso = localDateIso()) {
+    const date = day && typeof day.date === 'string' ? day.date : '';
+    return /^\d{4}-\d{2}-\d{2}$/.test(date) && date < todayIso;
+  }
+
   function resolveClientId(clientId) {
     if (clientId != null && String(clientId).trim()) {
       return String(clientId).trim().toLowerCase();
@@ -152,6 +164,20 @@
     return nullOutFields(day, CYCLE_DAY_FIELDS);
   }
 
+  // Отключение функции действует с текущего дня: прожитые отметки остаются
+  // частью истории, а live-состояние сегодняшнего/будущего дня гасится.
+  function purgeLiveCycleDataFromDay(day, todayIso = localDateIso()) {
+    if (!day || typeof day !== 'object') return day;
+    return isPastDayRecord(day, todayIso) ? day : purgeCycleDataFromDay(day);
+  }
+
+  function shouldApplyCycleEffectsToDate(profile, date, todayIso = localDateIso()) {
+    const resolved = resolveProfile(profile);
+    if (!resolved || resolved.gender !== 'Женский') return false;
+    if (resolved.cycleTrackingEnabled === true) return true;
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(date || '')) && String(date) < todayIso;
+  }
+
   function purgeMeasurementsFromDay(day) {
     if (!day || typeof day !== 'object') return day;
     return nullOutFields(day, MEASUREMENT_FIELDS);
@@ -196,7 +222,10 @@
 
     let next = day;
     if (!isCycleTrackingEnabled(profile)) {
-      const purged = purgeCycleDataFromDay(next);
+      const resolved = resolveProfile(profile);
+      const purged = resolved?.gender === 'Женский'
+        ? purgeLiveCycleDataFromDay(next)
+        : (resolved?.gender ? purgeCycleDataFromDay(next) : next);
       if (purged !== next) next = purged;
     }
     if (!isMeasurementsTrackingEnabled(profile)) {
@@ -218,7 +247,7 @@
     cycleTrackingEnabled: {
       consentType: 'cycle_tracking',
       label: 'Трекинг цикла',
-      purgeDay: purgeCycleDataFromDay,
+      purgeDay: purgeLiveCycleDataFromDay,
       purgeProfile: purgeCycleDataFromProfile,
       visible: (profile) => isOptionalHealthFeatureAvailable(profile),
     },
@@ -345,9 +374,9 @@
       }
       return true;
     }
-    const ok = global.confirm(
-      `Выключение «${cfg.label}» удалит все сохранённые данные этой функции. Продолжить?`
-    );
+    const ok = global.confirm(flagKey === 'cycleTrackingEnabled'
+      ? 'Выключить особый период? Прошлые отметки и нормы сохранятся, а функция отключится с сегодняшнего дня.'
+      : `Выключение «${cfg.label}» удалит все сохранённые данные этой функции. Продолжить?`);
     if (!ok) return false;
     purgeLocalDays(cfg.purgeDay);
     if (!isReadonlyHost && HEYS.YandexAPI && typeof HEYS.YandexAPI.revokeConsentBySession === 'function') {
@@ -371,12 +400,14 @@
     isMeasurementsFeatureAvailable,
     isSupplementsFeatureAvailable,
     isCycleTrackingEnabled,
+    shouldApplyCycleEffectsToDate,
     isMeasurementsTrackingEnabled,
     isSupplementsTrackingEnabled,
     isKnownSupplementId,
     stripDisabledHealthFields,
     gateHealthFieldsForOwner,
     purgeCycleDataFromDay,
+    purgeLiveCycleDataFromDay,
     purgeMeasurementsFromDay,
     purgeSupplementsFromDay,
     purgeCycleDataFromProfile,

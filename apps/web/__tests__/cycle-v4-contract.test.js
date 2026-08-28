@@ -11,6 +11,8 @@ const CARD_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_cycle_card
 const CSS_SRC = fs.readFileSync(path.resolve(__dirname, '../styles/modules/500-pwa-and-offline.css'), 'utf8');
 const SPARK_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_sparklines_v1.js'), 'utf8');
 const STATS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_stats_v1.js'), 'utf8');
+const POPUPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_popups_state_v1.js'), 'utf8');
+const REPORTS_CSS_SRC = fs.readFileSync(path.resolve(__dirname, '../styles/modules/733-ui-v4-reports.css'), 'utf8');
 
 const BASE_CSS_SRC = fs
   .readFileSync(path.resolve(__dirname, '../styles/modules/000-base-and-gamification.css'), 'utf8')
@@ -91,6 +93,17 @@ describe('cycle v4 · reports sparkline label', () => {
   it('retention tooltip names exclusion without emoji', () => {
     expect(SPARK_SRC).toContain('в тренд не входит');
     expect(SPARK_SRC).not.toContain('🌸 День');
+  });
+
+  it('retention point opens a warm v4 tooltip by pointer or keyboard', () => {
+    expect(SPARK_SRC).toContain("is-tooltip-open");
+    expect(SPARK_SRC).toContain("'aria-expanded': p.hasWaterRetention ? isRetentionOpen : undefined");
+    expect(SPARK_SRC).toContain("e.key !== 'Enter' && e.key !== ' '");
+    expect(STATS_SRC).toContain('sparkline-popup--retention');
+    expect(STATS_SRC).toContain('Возможна задержка воды: от одного до трёх килограммов. В тренд этот день не входит.');
+    expect(REPORTS_CSS_SRC).toMatch(/\.sparkline-popup\.sparkline-popup--retention[\s\S]*background:\s*var\(--v4-tint/);
+    expect(REPORTS_CSS_SRC).toMatch(/\.sparkline-popup\.sparkline-popup--retention[\s\S]*border-radius:\s*12px/);
+    expect(POPUPS_SRC).toContain("e.key !== 'Escape'");
   });
 
   it('long reports window gets footnote under weight sparkline', () => {

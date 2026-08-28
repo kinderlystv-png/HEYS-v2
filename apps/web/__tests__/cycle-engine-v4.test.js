@@ -157,18 +157,27 @@ describe('Cycle wiring hooks (source contracts)', () => {
     const src = fs.readFileSync(path.resolve(__dirname, '../heys_tdee_v1.js'), 'utf8');
     expect(src).toContain('resolveCycleCountDay');
     expect(src).toContain('getKcalMultiplier');
+    expect(src).toContain('shouldApplyCycleEffectsToDate');
   });
 
   it('water state uses resolveCycleCountDay', () => {
     const src = fs.readFileSync(path.resolve(__dirname, '../heys_day_water_state.js'), 'utf8');
     expect(src).toContain('resolveCycleCountDay');
     expect(src).toContain('getWaterMultiplier');
+    expect(src).toContain('shouldApplyCycleEffectsToDate');
   });
 
   it('insulin calc uses resolveCycleCountDay', () => {
     const src = fs.readFileSync(path.resolve(__dirname, '../heys_iw_calc.js'), 'utf8');
     expect(src).toContain('resolveCycleCountDay');
     expect(src).toContain('getInsulinWaveMultiplier');
+    expect(src).toContain('shouldApplyCycleEffectsToDate');
+  });
+
+  it('calendar forecast is gated by active cycle tracking', () => {
+    const src = fs.readFileSync(path.resolve(__dirname, '../heys_day_pickers.js'), 'utf8');
+    expect(src).toContain('isCycleForecastEnabled');
+    expect(src).toContain('isCycleTrackingEnabled');
   });
 
   it('weight trends uses count day for exclusion', () => {

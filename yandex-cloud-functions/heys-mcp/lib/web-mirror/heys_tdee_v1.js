@@ -372,11 +372,16 @@
       : profileTargetDef;
 
     // Коррекция на менструальный цикл (v4: count day 1…28)
-    const cycleCountDay = HEYS.Cycle?.resolveCycleCountDay?.({
-      date: d.date,
-      cycleDay: d.cycleDay,
-      lsGet
-    }) ?? null;
+    const cycleEffectsEnabled = HEYS.healthFeatures?.shouldApplyCycleEffectsToDate
+      ? HEYS.healthFeatures.shouldApplyCycleEffectsToDate(prof, d.date)
+      : true;
+    const cycleCountDay = cycleEffectsEnabled
+      ? (HEYS.Cycle?.resolveCycleCountDay?.({
+        date: d.date,
+        cycleDay: d.cycleDay,
+        lsGet
+      }) ?? null)
+      : null;
     const cycleKcalMultiplier = HEYS.Cycle?.getKcalMultiplier?.(cycleCountDay) || 1;
     // Optimum рассчитывается от baseExpenditure (без TEF)
     const baseOptimum = r0(baseExpenditure * (1 + dayTargetDef / 100));

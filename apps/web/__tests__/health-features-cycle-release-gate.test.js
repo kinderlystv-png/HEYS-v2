@@ -79,7 +79,7 @@ describe('optional health features release gate', () => {
     expect(next.waterMl).toBe(500);
   });
 
-  test('stripDisabledHealthFields nulls cycle when tracking disabled', () => {
+  test('stripDisabledHealthFields nulls live cycle state when tracking disabled', () => {
     const hf = loadHealthFeatures();
     const day = {
       cycleDay: 3,
@@ -95,6 +95,51 @@ describe('optional health features release gate', () => {
     expect(next.cycleDay).toBeNull();
     expect(next.cycleStatus).toBeNull();
     expect(next.waterMl).toBe(500);
+  });
+
+  test('stripDisabledHealthFields preserves past cycle history when tracking disabled', () => {
+    const hf = loadHealthFeatures();
+    const day = {
+      date: '2026-08-01',
+      cycleDay: 3,
+      cycleStatus: 'none',
+      cycleAnsweredAt: 1,
+      cycleUpdatedAt: 2,
+      waterMl: 500,
+    };
+    const next = hf.stripDisabledHealthFields(day, {
+      gender: 'Женский',
+      cycleTrackingEnabled: false,
+    });
+    expect(next).toBe(day);
+    expect(next.cycleDay).toBe(3);
+    expect(next.cycleStatus).toBe('none');
+  });
+
+  test('stripDisabledHealthFields still removes cross-gender cycle pollution', () => {
+    const hf = loadHealthFeatures();
+    const next = hf.stripDisabledHealthFields({
+      date: '2026-08-01',
+      cycleDay: 3,
+      cycleStatus: 'none',
+    }, {
+      gender: 'Мужской',
+      cycleTrackingEnabled: false,
+    });
+    expect(next.cycleDay).toBeNull();
+    expect(next.cycleStatus).toBeNull();
+  });
+
+  test('cycle effects remain historical but stop for today after disable', () => {
+    const hf = loadHealthFeatures();
+    const profile = { gender: 'Женский', cycleTrackingEnabled: false };
+    expect(hf.shouldApplyCycleEffectsToDate(profile, '2026-08-01', '2026-08-27')).toBe(true);
+    expect(hf.shouldApplyCycleEffectsToDate(profile, '2026-08-27', '2026-08-27')).toBe(false);
+    expect(hf.shouldApplyCycleEffectsToDate(
+      { gender: 'Женский', cycleTrackingEnabled: true },
+      '2026-08-27',
+      '2026-08-27',
+    )).toBe(true);
   });
 
   test('supplements day fields survive when tracking enabled on regular profile', () => {

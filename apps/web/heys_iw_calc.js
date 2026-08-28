@@ -814,11 +814,16 @@
     const stressBonus = calculateStressBonus(stressLevel);
 
     // 🌸 Менструальный цикл — count day 1…28
-    const cycleCountDay = HEYS.Cycle?.resolveCycleCountDay?.({
-      date: dayData.date,
-      cycleDay: dayData.cycleDay || null,
-      lsGet: dayData.lsGet
-    }) ?? null;
+    const cycleEffectsEnabled = HEYS.healthFeatures?.shouldApplyCycleEffectsToDate
+      ? HEYS.healthFeatures.shouldApplyCycleEffectsToDate(dayData.profile, dayData.date)
+      : true;
+    const cycleCountDay = cycleEffectsEnabled
+      ? (HEYS.Cycle?.resolveCycleCountDay?.({
+        date: dayData.date,
+        cycleDay: dayData.cycleDay || null,
+        lsGet: dayData.lsGet
+      }) ?? null)
+      : null;
     const cycleMultiplier = HEYS.Cycle?.getInsulinWaveMultiplier?.(cycleCountDay) || 1;
     const cycleBonusValue = cycleMultiplier > 1 ? (cycleMultiplier - 1) : 0;
 
