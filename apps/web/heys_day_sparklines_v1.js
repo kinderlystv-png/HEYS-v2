@@ -1828,7 +1828,7 @@
   };
 
   HEYS.daySparklines.renderWeightSparkline = function renderWeightSparkline(ctx) {
-    const { data, React, prof, openExclusivePopup, haptic } = ctx || {};
+    const { data, React, prof, openExclusivePopup, sparklinePopup, haptic } = ctx || {};
 
     const safeHaptic = typeof haptic === 'function' ? haptic : () => { };
     const safeOpenPopup = typeof openExclusivePopup === 'function' ? openExclusivePopup : () => { };
@@ -2278,6 +2278,16 @@
         if (p.isToday) dotClass += ' weight-sparkline-dot-today sparkline-dot-pulse';
         if (p.hasWaterRetention) dotClass += ' weight-sparkline-dot-retention';
         if (p.isFuture) dotClass += ' weight-sparkline-dot-forecast';
+        const isRetentionOpen = !!(
+          p.hasWaterRetention &&
+          sparklinePopup?.type === 'weight' &&
+          sparklinePopup.point?.hasWaterRetention &&
+          (
+            (p.date && sparklinePopup.point.date === p.date) ||
+            (!p.date && sparklinePopup.point.cycleDay === p.cycleDay)
+          )
+        );
+        if (isRetentionOpen) dotClass += ' is-tooltip-open';
 
         // Задержка анимации через CSS переменную
         const animDelay = 3 + i * 0.15;
@@ -2294,9 +2304,9 @@
 
         // Розовая обводка для дней с задержкой воды
         if (p.hasWaterRetention && !p.isFuture) {
-          dotStyle.stroke = 'rgba(0, 0, 0, 0.35)';
-          dotStyle.strokeWidth = 1.6;
-          dotStyle.fill = 'transparent';
+          dotStyle.stroke = isRetentionOpen ? 'var(--v4-act, #c67139)' : 'rgba(0, 0, 0, 0.35)';
+          dotStyle.strokeWidth = isRetentionOpen ? 2 : 1.6;
+          dotStyle.fill = isRetentionOpen ? 'var(--v4-bg, #fffaf1)' : 'transparent';
         }
 
         // Пунктирная обводка для прогнозных дней
@@ -2319,44 +2329,59 @@
           tooltipText = `День ${p.cycleDay}, ${p.weight} кг, в тренд не входит`;
         }
 
+        const retentionTooltipId = p.hasWaterRetention
+          ? 'weight-retention-tooltip-' + String(p.date || p.cycleDay || i).replace(/[^a-zA-Z0-9_-]/g, '-')
+          : undefined;
+        const openPointPopup = (e) => {
+          const targetRect = e.currentTarget?.getBoundingClientRect?.();
+          const eventX = Number(e.clientX) || 0;
+          const eventY = Number(e.clientY) || 0;
+          const anchorX = eventX || (targetRect ? targetRect.left + targetRect.width / 2 : 0);
+          const anchorY = eventY || (targetRect ? targetRect.top + targetRect.height / 2 : 0);
+
+          safeHaptic('light');
+          if (p.isFuture) {
+            const lastRealWeight = realPoints.length > 0 ? realPoints[realPoints.length - 1].weight : p.weight;
+            const forecastChange = p.weight - lastRealWeight;
+            safeOpenPopup('sparkline', {
+              type: 'weight-forecast',
+              point: { ...p, forecastChange, lastWeight: lastRealWeight },
+              x: anchorX,
+              y: anchorY
+            });
+            return;
+          }
+
+          safeOpenPopup('sparkline', {
+            type: 'weight',
+            point: { ...p, localTrend },
+            x: anchorX,
+            y: anchorY
+          });
+        };
+
         return React.createElement('circle', {
           key: 'wdot-' + i,
           cx: p.x,
           cy: p.y,
-          r: p.isFuture ? 3.5 : (p.isToday ? 5 : (p.hasWaterRetention ? 3 : 4)),
+          r: p.isFuture ? 3.5 : (p.isToday ? 5 : (p.hasWaterRetention ? (isRetentionOpen ? 4.5 : 3) : 4)),
           className: dotClass,
           style: dotStyle,
           tabIndex: p.hasWaterRetention ? 0 : undefined,
           role: p.hasWaterRetention ? 'button' : undefined,
           'aria-label': p.hasWaterRetention ? tooltipText : undefined,
+          'aria-expanded': p.hasWaterRetention ? isRetentionOpen : undefined,
+          'aria-controls': isRetentionOpen ? retentionTooltipId : undefined,
           onClick: (e) => {
             e.stopPropagation();
-            safeHaptic('light');
-
-            if (p.isFuture) {
-              // Клик на прогнозную точку
-              const lastRealWeight = realPoints.length > 0 ? realPoints[realPoints.length - 1].weight : p.weight;
-              const forecastChange = p.weight - lastRealWeight;
-              safeOpenPopup('sparkline', {
-                type: 'weight-forecast',
-                point: {
-                  ...p,
-                  forecastChange,
-                  lastWeight: lastRealWeight
-                },
-                x: e.clientX,
-                y: e.clientY
-              });
-            } else {
-              // Клик на реальную точку
-              safeOpenPopup('sparkline', {
-                type: 'weight',
-                point: { ...p, localTrend },
-                x: e.clientX,
-                y: e.clientY
-              });
-            }
-          }
+            openPointPopup(e);
+          },
+          onKeyDown: p.hasWaterRetention ? (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            e.stopPropagation();
+            openPointPopup(e);
+          } : undefined
         },
           React.createElement('title', null, tooltipText)
         );

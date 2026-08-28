@@ -9,6 +9,19 @@
   // Lazy getter for dayUtils (loaded asynchronously)
   const getDayUtils = () => HEYS.dayUtils || {};
 
+  function isCycleForecastEnabled() {
+    let profile = null;
+    try {
+      profile = HEYS.store?.get?.('heys_profile', null)
+        || HEYS.utils?.lsGet?.('heys_profile', null);
+    } catch (_) { /* noop */ }
+    const hf = HEYS.healthFeatures;
+    if (hf && typeof hf.isCycleTrackingEnabled === 'function') {
+      return hf.isCycleTrackingEnabled(profile);
+    }
+    return profile?.gender === 'Женский' && profile?.cycleTrackingEnabled === true;
+  }
+
   function formatStreakDayLabel(count) {
     const n = Math.abs(Number(count)) || 0;
     const mod10 = n % 10;
@@ -390,6 +403,7 @@
             cur.toLocaleString('ru-RU', { month: 'long', year: 'numeric' }),
             (() => {
               const CycleUI = HEYS.CycleUI;
+              if (!isCycleForecastEnabled()) return null;
               if (!CycleUI?.findLastCycleMarkDate || !CycleUI.formatForecastMonthLine) return null;
               const lsGetFn = HEYS.lsGet || HEYS.utils?.lsGet;
               const lastMark = CycleUI.findLastCycleMarkDate(calendarToday, lsGetFn);
@@ -424,6 +438,7 @@
             const realCells = cells.filter(Boolean);
             const forecastDates = (() => {
               const CycleUI = HEYS.CycleUI;
+              if (!isCycleForecastEnabled()) return [];
               if (!CycleUI?.findLastCycleMarkDate || !CycleUI.computeCycleForecastDates) return [];
               const lsGetFn = HEYS.lsGet || HEYS.utils?.lsGet;
               const lastMark = CycleUI.findLastCycleMarkDate(calendarToday, lsGetFn);

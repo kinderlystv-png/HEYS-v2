@@ -72,11 +72,16 @@
         const seasonBonus = isHotSeason ? 300 : 0;
         const seasonNote = isHotSeason ? '☀️ Лето' : '';
 
-        const cycleCountDay = HEYS.Cycle?.resolveCycleCountDay?.({
-            date: safeDay.date,
-            cycleDay: safeDay.cycleDay,
-            lsGet: HEYS.utils?.lsGet
-        }) ?? null;
+        const cycleEffectsEnabled = HEYS.healthFeatures?.shouldApplyCycleEffectsToDate
+            ? HEYS.healthFeatures.shouldApplyCycleEffectsToDate(safeProf, safeDay.date)
+            : true;
+        const cycleCountDay = cycleEffectsEnabled
+            ? (HEYS.Cycle?.resolveCycleCountDay?.({
+                date: safeDay.date,
+                cycleDay: safeDay.cycleDay,
+                lsGet: HEYS.utils?.lsGet
+            }) ?? null)
+            : null;
         const cycleMultiplier = HEYS.Cycle?.getWaterMultiplier?.(cycleCountDay) || 1;
         const cycleBonus = cycleMultiplier > 1 ? Math.round(base * (cycleMultiplier - 1)) : 0;
         const cycleNote = cycleBonus > 0 ? '🌸 Особый период' : '';

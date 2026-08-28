@@ -313,8 +313,9 @@
                     const col = ensureWaterColumn(anchor);
                     // Столбик не кнопка: касание проходит насквозь к тому, что под ним.
                     col.style.top = Math.round(rect.top + rect.height / 2) + 'px';
-                    col.style.right = Math.round(window.innerWidth - rect.left + 10) + 'px';
-                    col.style.left = '';
+                    // Канвас: левый край столбика совпадает с левым краем кнопки воды.
+                    col.style.left = Math.round(rect.left) + 'px';
+                    col.style.right = '';
                     const deltaMl = Number(detail.ml) || 0;
                     col.querySelector('.water-column__delta').textContent = deltaMl < 0
                         ? '−' + Math.abs(deltaMl) + ' мл'

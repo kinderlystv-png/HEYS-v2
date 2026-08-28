@@ -101,6 +101,7 @@
             React,
             haptic,
             openExclusivePopup,
+            sparklinePopup,
             sparklineState,
             prof
         } = params || {};
@@ -148,6 +149,7 @@
             React,
             prof,
             openExclusivePopup,
+            sparklinePopup,
             haptic
         });
 

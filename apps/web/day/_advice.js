@@ -707,49 +707,53 @@
                         'Единственное место, где это настраивается. В шторке советов тумблеров нет — там только чтение.'
                     ),
                     React.createElement('div', { className: 'advice-v4-settings__section-label' }, 'Как приходят'),
-                    React.createElement('div', { className: 'advice-v4-settings__row' },
-                        React.createElement('div', { className: 'advice-v4-settings__row-copy' },
-                            React.createElement('span', { className: 'advice-v4-settings__row-title' }, 'Показывать советы сами'),
-                            React.createElement('span', { className: 'advice-v4-settings__row-hint' },
-                                'Всплывают поверх экрана, когда система что-то замечает. Выключено — ждут в лампочке.'
-                            )
-                        ),
-                        React.createElement('button', {
-                            type: 'button',
-                            className: 'advice-v4-settings__toggle' + (toastsEnabled ? ' is-on' : ''),
-                            onClick: onToggleToasts,
-                            'aria-pressed': toastsEnabled ? 'true' : 'false',
-                        }, React.createElement('span', { className: 'advice-v4-settings__toggle-thumb' }))
-                    ),
-                    React.createElement('div', { className: 'advice-v4-settings__row' },
-                        React.createElement('div', { className: 'advice-v4-settings__row-copy' },
-                            React.createElement('span', { className: 'advice-v4-settings__row-title' }, 'Звук'),
-                            React.createElement('span', { className: 'advice-v4-settings__row-hint' },
-                                'Только у советов. Остальные звуки приложения не затрагивает.'
-                            )
-                        ),
-                        React.createElement('button', {
-                            type: 'button',
-                            className: 'advice-v4-settings__toggle' + (adviceSoundEnabled ? ' is-on' : ''),
-                            onClick: onToggleSound,
-                            'aria-pressed': adviceSoundEnabled ? 'true' : 'false',
-                        }, React.createElement('span', { className: 'advice-v4-settings__toggle-thumb' }))
-                    ),
-                    React.createElement('div', { className: 'advice-v4-settings__section-label' }, 'О чём'),
-                    ADVICE_SETTINGS_GROUPS.map((group) => {
-                        const enabled = group.keys.every((key) => categorySettings?.[key] !== false);
-                        return React.createElement('div', { key: group.id, className: 'advice-v4-settings__row' },
+                    React.createElement('div', { className: 'advice-v4-settings__group' },
+                        React.createElement('div', { className: 'advice-v4-settings__row' },
                             React.createElement('div', { className: 'advice-v4-settings__row-copy' },
-                                React.createElement('span', { className: 'advice-v4-settings__row-title' }, group.label)
+                                React.createElement('span', { className: 'advice-v4-settings__row-title' }, 'Показывать советы сами'),
+                                React.createElement('span', { className: 'advice-v4-settings__row-hint' },
+                                    'Всплывают поверх экрана, когда система что-то замечает. Выключено — ждут в лампочке.'
+                                )
                             ),
                             React.createElement('button', {
                                 type: 'button',
-                                className: 'advice-v4-settings__toggle' + (enabled ? ' is-on' : ''),
-                                onClick: () => onToggleCategoryGroup && onToggleCategoryGroup(group.keys, !enabled),
-                                'aria-pressed': enabled ? 'true' : 'false',
+                                className: 'advice-v4-settings__toggle' + (toastsEnabled ? ' is-on' : ''),
+                                onClick: onToggleToasts,
+                                'aria-pressed': toastsEnabled ? 'true' : 'false',
                             }, React.createElement('span', { className: 'advice-v4-settings__toggle-thumb' }))
-                        );
-                    }),
+                        ),
+                        React.createElement('div', { className: 'advice-v4-settings__row' },
+                            React.createElement('div', { className: 'advice-v4-settings__row-copy' },
+                                React.createElement('span', { className: 'advice-v4-settings__row-title' }, 'Звук'),
+                                React.createElement('span', { className: 'advice-v4-settings__row-hint' },
+                                    'Только у советов. Остальные звуки приложения не затрагивает.'
+                                )
+                            ),
+                            React.createElement('button', {
+                                type: 'button',
+                                className: 'advice-v4-settings__toggle' + (adviceSoundEnabled ? ' is-on' : ''),
+                                onClick: onToggleSound,
+                                'aria-pressed': adviceSoundEnabled ? 'true' : 'false',
+                            }, React.createElement('span', { className: 'advice-v4-settings__toggle-thumb' }))
+                        )
+                    ),
+                    React.createElement('div', { className: 'advice-v4-settings__section-label' }, 'О чём'),
+                    React.createElement('div', { className: 'advice-v4-settings__group' },
+                        ADVICE_SETTINGS_GROUPS.map((group) => {
+                            const enabled = group.keys.every((key) => categorySettings?.[key] !== false);
+                            return React.createElement('div', { key: group.id, className: 'advice-v4-settings__row' },
+                                React.createElement('div', { className: 'advice-v4-settings__row-copy' },
+                                    React.createElement('span', { className: 'advice-v4-settings__row-title' }, group.label)
+                                ),
+                                React.createElement('button', {
+                                    type: 'button',
+                                    className: 'advice-v4-settings__toggle' + (enabled ? ' is-on' : ''),
+                                    onClick: () => onToggleCategoryGroup && onToggleCategoryGroup(group.keys, !enabled),
+                                    'aria-pressed': enabled ? 'true' : 'false',
+                                }, React.createElement('span', { className: 'advice-v4-settings__toggle-thumb' }))
+                            );
+                        })
+                    ),
                     React.createElement('p', { className: 'advice-v4-settings__footnote' },
                         'Предупреждения приходят всегда. Наблюдения по вашим записям — тоже: это не тема, а способ подачи.'
                     )

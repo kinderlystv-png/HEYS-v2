@@ -3257,6 +3257,38 @@
       // Popup с деталями веса при клике на точку — V2 STYLE
       sparklinePopup && sparklinePopup.type === 'weight' && (() => {
         const point = sparklinePopup.point;
+        if (point.hasWaterRetention) {
+          const popupW = 196;
+          const popupH = 82;
+          const pos = getSmartPopupPosition(
+            sparklinePopup.x,
+            sparklinePopup.y,
+            popupW,
+            popupH,
+            { preferAbove: true, offset: 10 }
+          );
+          const tooltipId = 'weight-retention-tooltip-' + String(point.date || point.cycleDay || 'day')
+            .replace(/[^a-zA-Z0-9_-]/g, '-');
+          const weightLabel = String(point.weight).replace('.', ',') + ' кг';
+          const retentionStyle = popupPositionStyle
+            ? popupPositionStyle({ position: 'fixed', zIndex: 9999 }, pos.left, pos.top, popupW)
+            : undefined;
+
+          return React.createElement('div', {
+            id: tooltipId,
+            className: 'sparkline-popup sparkline-popup--retention',
+            role: 'tooltip',
+            style: retentionStyle,
+            onClick: (e) => e.stopPropagation()
+          },
+            React.createElement('div', { className: 'sparkline-popup--retention__title' },
+              'День ' + point.cycleDay + ' · ' + weightLabel
+            ),
+            React.createElement('div', { className: 'sparkline-popup--retention__text' },
+              'Возможна задержка воды: от одного до трёх килограммов. В тренд этот день не входит.'
+            )
+          );
+        }
         const popupW = 240;
         const popupH = 180;
         const pos = getSmartPopupPosition(

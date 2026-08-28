@@ -2067,6 +2067,7 @@
             React,
             haptic,
             openExclusivePopup,
+            sparklinePopup,
             sparklineState,
             prof
         }) || {};

@@ -5784,17 +5784,15 @@
                     return false;
                 }
 
-                /** Якорь столбика: плитка на Главной → сама; иначе видимая кнопка воды (FAB). */
+                /** Якорь столбика: плитка на Главной → сама; иначе видимая кнопка «+». */
                 function resolveWaterColumnAnchor() {
                     if (waterTileIsVisible()) return null;
-                    const fabs = document.querySelectorAll('.water-fab');
-                    for (let i = 0; i < fabs.length; i++) {
-                        const fab = fabs[i];
-                        const slot = fab.closest('.fab-slot');
-                        if (slot && (slot.classList.contains('fab-slot--off')
-                            || slot.getAttribute('aria-hidden') === 'true')) {
-                            continue;
-                        }
+                    const wraps = document.querySelectorAll('.widgets-quick-fab-wrap');
+                    for (let i = 0; i < wraps.length; i++) {
+                        const wrap = wraps[i];
+                        if (wrap.getAttribute('aria-hidden') === 'true') continue;
+                        const fab = wrap.querySelector('.widgets-quick-fab');
+                        if (!fab) continue;
                         const rect = fab.getBoundingClientRect();
                         if (rect.width > 0 && rect.height > 0) return fab;
                     }
@@ -5843,8 +5841,9 @@
                     const col = ensureWaterColumn(anchor);
                     // Столбик не кнопка: касание проходит насквозь к тому, что под ним.
                     col.style.top = Math.round(rect.top + rect.height / 2) + 'px';
-                    col.style.right = Math.round(window.innerWidth - rect.left + 10) + 'px';
-                    col.style.left = '';
+                    // Канвас: левый край столбика совпадает с левым краем кнопки воды.
+                    col.style.left = Math.round(rect.left) + 'px';
+                    col.style.right = '';
                     const deltaMl = Number(detail.ml) || 0;
                     col.querySelector('.water-column__delta').textContent = deltaMl < 0
                         ? '−' + Math.abs(deltaMl) + ' мл'

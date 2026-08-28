@@ -159,12 +159,18 @@
           // debtSciencePopup закрывается через overlay onClick
         });
       };
+      const handleKeyDown = (e) => {
+        if (e.key !== 'Escape' || !sparklinePopup) return;
+        setSparklinePopup(null);
+      };
       const timerId = setTimeout(() => {
         document.addEventListener('click', handleClickOutside);
+        document.addEventListener('keydown', handleKeyDown);
       }, 10);
       return () => {
         clearTimeout(timerId);
         document.removeEventListener('click', handleClickOutside);
+        document.removeEventListener('keydown', handleKeyDown);
       };
     }, [
       sparklinePopup,
