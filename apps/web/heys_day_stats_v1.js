@@ -1589,7 +1589,6 @@
             className: 'kcal-realdata-card'
           },
             React.createElement('div', { className: 'kcal-realdata-card__header' },
-              React.createElement('span', { className: 'kcal-realdata-card__icon' }, '⚠️'),
               React.createElement('div', { className: 'kcal-realdata-card__copy' },
                 React.createElement('div', { className: 'kcal-realdata-card__title' }, 'Мало калорий — ещё не значит, что день пустой'),
                 React.createElement('div', { className: 'kcal-realdata-card__text' },
@@ -1601,19 +1600,30 @@
               React.createElement('span', { className: 'kcal-realdata-card__badge' },
                 Math.round((currentRatio || 0) * 100) + '% от нормы'
               ),
+              // Контракт «порядок кнопок подтверждения»: рекомендованное
+              // действие стоит ПЕРВЫМ, а не просто красится ярче. Раньше
+              // порядок был фиксированным и менялось только оформление —
+              // читающий сверху вниз видел рекомендацию второй.
               React.createElement('div', { className: 'kcal-realdata-card__actions' },
-                React.createElement('button', {
+                (isClearPrimary ? [
+                  { id: 'clear', label: 'Очистить данные', onClick: clearCurrentDayFromStats,
+                    aria: 'Очистить данные дня и исключить из статистики' },
+                  { id: 'real', label: 'Это реальные данные', onClick: confirmCurrentDayAsRealData,
+                    aria: 'Подтвердить день как реальные данные' }
+                ] : [
+                  { id: 'real', label: 'Это реальные данные', onClick: confirmCurrentDayAsRealData,
+                    aria: 'Подтвердить день как реальные данные' },
+                  { id: 'clear', label: 'Очистить данные', onClick: clearCurrentDayFromStats,
+                    aria: 'Очистить данные дня и исключить из статистики' }
+                ]).map((btn, index) => React.createElement('button', {
+                  key: btn.id,
                   type: 'button',
-                  className: 'kcal-realdata-card__button' + (isClearPrimary ? '' : ' kcal-realdata-card__button--secondary'),
-                  onClick: clearCurrentDayFromStats,
-                  'aria-label': 'Очистить данные дня и исключить из статистики'
-                }, 'Очистить данные'),
-                React.createElement('button', {
-                  type: 'button',
-                  className: 'kcal-realdata-card__button' + (isClearPrimary ? ' kcal-realdata-card__button--secondary' : ''),
-                  onClick: confirmCurrentDayAsRealData,
-                  'aria-label': 'Подтвердить день как реальные данные'
-                }, 'Это реальные данные')
+                  // Вторая остаётся доступной и выглядит вторичной — не
+                  // прячется и не гаснет.
+                  className: 'kcal-realdata-card__button' + (index === 0 ? '' : ' kcal-realdata-card__button--secondary'),
+                  onClick: btn.onClick,
+                  'aria-label': btn.aria
+                }, btn.label))
               ),
               React.createElement('div', { className: 'kcal-realdata-card__recommendation' }, recommendationText),
               React.createElement('div', { className: 'kcal-realdata-card__impact' }, impactHintText)

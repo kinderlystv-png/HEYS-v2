@@ -134,48 +134,50 @@
     }
   }
 
+  // Контракт «вид · баннер решения о дне»: карточка на --tint радиусом 20
+  // полями 16. Не жёлтая: предупреждение в системе тёплое, а красный значит
+  // разрушающее действие — вопрос о дне таковым не является.
   const FULL_BANNER_STYLE = {
-    background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-    border: '1px solid #f59e0b',
-    borderRadius: 12,
-    padding: '12px 14px',
-    margin: '8px 0',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+    background: 'var(--v4-tint, #f6e6dd)',
+    borderRadius: 20,
+    padding: 16,
+    margin: '8px 0'
   };
 
+  // Контракт «после ответа — одна строка»: решение видно всегда, а не
+  // исчезает вместе с баннером.
   const COMPACT_BANNER_STYLE = {
-    background: 'rgba(148, 163, 184, 0.12)',
-    border: '1px solid rgba(148, 163, 184, 0.3)',
-    borderRadius: 10,
-    padding: '8px 12px',
+    background: 'var(--v4-tint, #f6e6dd)',
+    borderRadius: 20,
+    padding: '10px 16px',
     margin: '8px 0',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    fontSize: 13,
-    color: '#475569'
+    fontSize: 12
   };
 
   const ACTION_BTN_STYLE = {
     flex: '1 1 calc(50% - 4px)',
     minWidth: 140,
-    padding: '8px 10px',
-    border: '1px solid rgba(15,23,42,0.12)',
-    borderRadius: 8,
-    background: '#fff',
+    minHeight: 40,
+    padding: '8px 12px',
+    border: '1px solid var(--v4-line, rgba(0,0,0,0.08))',
+    borderRadius: 12,
+    background: 'var(--v4-bg, #fffaf1)',
     cursor: 'pointer',
-    fontSize: 13,
-    fontWeight: 500,
-    color: '#1f2937',
+    fontSize: 12.5,
+    fontWeight: 600,
+    color: 'var(--v4-ink, #201e1d)',
     textAlign: 'left',
     transition: 'all 0.15s'
   };
 
   const CHANGE_BTN_STYLE = {
     padding: '4px 10px',
-    border: '1px solid rgba(15,23,42,0.15)',
-    borderRadius: 6,
+    border: '1px solid var(--v4-line, rgba(0,0,0,0.08))',
+    borderRadius: 8,
     background: '#fff',
     cursor: 'pointer',
     fontSize: 12,
@@ -188,10 +190,12 @@
   function renderChoiceBanner(date, descLine) {
     return React.createElement('div', { className: 'low-cal-banner low-cal-banner-full', style: FULL_BANNER_STYLE },
       React.createElement('div', {
-        style: { fontSize: 14, fontWeight: 700, color: '#92400e', marginBottom: 4 }
-      }, '⚠️ Этот день не учитывается в статистике'),
+        // Без эмодзи и без слова «внимание»: вопрос задают словами, а не
+        // значком тревоги.
+        style: { fontSize: 13.5, fontWeight: 700, color: 'var(--v4-warn-3, #a1471c)', marginBottom: 4 }
+      }, 'Этот день не учитывается в статистике'),
       React.createElement('div', {
-        style: { fontSize: 12, color: '#78350f', marginBottom: 10 }
+        style: { fontSize: 12, color: 'var(--v4-ink-2, rgba(0,0,0,0.55))', marginBottom: 10 }
       }, descLine),
       React.createElement('div', {
         style: { display: 'flex', flexWrap: 'wrap', gap: 8 }
@@ -201,26 +205,29 @@
           onClick: () => markFasting(date),
           style: ACTION_BTN_STYLE,
           title: 'Засчитать день как осознанное голодание'
-        }, '🍽 Это было голодание'),
+        }, 'Это было голодание'),
         React.createElement('button', {
           type: 'button',
           onClick: scrollToDiary,
           style: ACTION_BTN_STYLE,
           title: 'Прокрутить к дневнику еды чтобы дописать'
-        }, '✏️ Дописать пропущенное'),
+        }, 'Дописать пропущенное'),
         React.createElement('button', {
           type: 'button',
           onClick: () => markIncomplete(date),
           style: ACTION_BTN_STYLE,
           title: 'Явно исключить день из статистики'
-        }, '🚫 Не учитывать день')
+        }, 'Не учитывать день')
       )
     );
   }
 
-  function renderCompactDecision(date, label) {
+  function renderCompactDecision(date, label, muted) {
     return React.createElement('div', { className: 'low-cal-banner low-cal-banner-compact', style: COMPACT_BANNER_STYLE },
-      React.createElement('span', null, label),
+      // Голодание — решение о дне, пропуск — его отсутствие: второе приглушено.
+      React.createElement('span', {
+        style: { color: muted ? 'var(--v4-ink-3, rgba(0,0,0,0.45))' : 'var(--v4-ink, #201e1d)' }
+      }, label),
       React.createElement('button', {
         type: 'button',
         onClick: () => resetDecision(date),
@@ -236,12 +243,12 @@
 
     // State B — отмечен как голодание (флаг показываем всегда, независимо от ratio)
     if (day.isFastingDay === true) {
-      return renderCompactDecision(date, '🍽 День отмечен как осознанное голодание');
+      return renderCompactDecision(date, 'День отмечен как осознанное голодание', false);
     }
 
     // State C — помечен как пропуск (флаг показываем всегда, независимо от ratio)
     if (day.isIncomplete === true) {
-      return renderCompactDecision(date, '🚫 День помечен как пропуск (не учитывается)');
+      return renderCompactDecision(date, 'День помечен как пропуск — не учитывается', true);
     }
 
     const hasMeals = Array.isArray(day.meals)
@@ -254,7 +261,7 @@
     // все исторические пустые дни.
     if (!hasMeals) {
       if (isPendingEmptyDay(date)) {
-        return renderChoiceBanner(date, 'За этот день нет данных — он не попадёт в статистику. Выбери, что делать:');
+        return renderChoiceBanner(date, 'За этот день нет записей — он не попадёт в статистику. Выбери, что делать:');
       }
       return null;
     }
