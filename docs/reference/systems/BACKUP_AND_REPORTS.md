@@ -91,18 +91,25 @@ transaction.
 
 ## Отчёты
 
-`HEYS.ReportsTab` — тонкий compatibility entrypoint над
-`HEYS.ReportsTabImpl.createReportsTab()`. Weekly/monthly services строят
-пользовательские представления из day/profile/norm данных. Их аудит остаётся
-частичным: расчётные метрики принадлежат соответствующим nutrition/analytics
-модулям, а отчёт не должен заводить вторую формулу.
+Legacy `HEYS.ReportsTab` снят полностью 2026-08-29: вход из UI убрали ещё в
+июне, но модуль оставался в сборке и на каждой загрузке вешал 33 наблюдателя за
+днями, продуктами, профилем и зонами — ради компонента, который никто не
+монтировал. Живой второй рендер того же экрана и есть будущий источник
+расхождений, поэтому он удалён вместе со своим compatibility-прокси. Архив
+сохранён: `archive/legacy-v12/heys_reports_v12_archived.js`.
+
+Weekly/monthly services строят пользовательские представления из
+day/profile/norm данных. Их аудит остаётся частичным: расчётные метрики
+принадлежат соответствующим nutrition/analytics модулям, а отчёт не должен
+заводить вторую формулу.
 
 Ключевые точки:
 
-- `apps/web/heys_reports_v12.js` — compatibility export;
-- `apps/web/heys_reports_tab_impl_v1.js` — UI coordinator;
-- `apps/web/heys_weekly_reports_v2.js` — weekly представление;
-- `apps/web/heys_monthly_reports_service_v1.js` — monthly data service;
+- `apps/web/heys_weekly_reports_v2.js` — weekly представление, оно же
+  вычислительное ядро листа периодов;
+- `apps/web/heys_monthly_reports_service_v1.js` — monthly data service; месяц
+  считается по календарным дням, а не складыванием недель;
+- `apps/web/heys_monthly_reports_v1.js` — лист карточек периодов;
 - `apps/web/heys_export_utils_v1.js` — общие export helpers.
 
 ## Инварианты
@@ -157,7 +164,7 @@ transaction.
 | D5  | Server snapshot schema v2 содержит accountData и checksum               | `rg -n -e 'schemaVersion: 2' -e 'accountData' -e 'snapshot.checksum' yandex-cloud-functions/heys-client-daily-backup/index.js`                                      | проверено 2026-07-18            |
 | D6  | Полный restore пишет account (`clients`) до KV в одной transaction      | `rg -n -e 'executeFullRestore' -e 'restoreAccountRows' -e 'restoreKvRows' yandex-cloud-functions/heys-client-daily-backup/restore-client-backup.js`                 | исправлено 2026-08-15           |
 | D7  | KV restore сохраняет `v_encrypted`, `key_version`, `updated_at`         | `rg -n -e 'v_encrypted = EXCLUDED' -e 'key_version = EXCLUDED' -e 'updated_at = EXCLUDED' yandex-cloud-functions/heys-client-daily-backup/restore-client-backup.js` | проверено 2026-07-18            |
-| D8  | Reports entrypoint делегирует `ReportsTabImpl`                          | `rg -n 'ReportsTabImpl.*createReportsTab' apps/web/heys_reports_v12.js`                                                                                             | проверено 2026-07-17            |
+| D8  | Legacy ReportsTab не грузится: нет ни модуля, ни его записи в сборке    | `rg -n 'heys_reports_tab_impl_v1\|heys_reports_v12' scripts/legacy-bundle-config.mjs apps/web` — пусто                                                              | снят 2026-08-29                 |
 | D9  | Concurrent snapshot и fault-after-KV rollback защищены регрессиями      | `node --test yandex-cloud-functions/heys-client-daily-backup/__tests__/backup-consistency.test.cjs`                                                                 | 4/4 пройдено 2026-08-15         |
 | D10 | Production daily backup trigger активен и пишет объекты                 | `yc serverless trigger list --folder-id b1gnv1a4q8i6de6atl6n`; ручной invoke 2026-08-15                                                                             | 16/16, businessDate 2026-08-14  |
 | D11 | Managed PG backup 14 дней, окно 22:00 UTC, живые AUTOMATED копии        | `yc managed-postgresql cluster get c9qk0squejja8jast509`; `yc managed-postgresql backup list --folder-id b1gnv1a4q8i6de6atl6n`                                      | retain=14; 14.08 CREATING       |

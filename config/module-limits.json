@@ -4552,48 +4552,6 @@
         }
       }
     },
-    "apps/web/heys_reports_tab_impl_v1.js": {
-      "metrics": {
-        "loc": 1116,
-        "functions": 146,
-        "heysRefs": 47
-      },
-      "limits": {
-        "loc": {
-          "warn": 1116,
-          "error": 1228
-        },
-        "functions": {
-          "warn": 146,
-          "error": 161
-        },
-        "heysRefs": {
-          "warn": 47,
-          "error": 52
-        }
-      }
-    },
-    "apps/web/heys_reports_v12.js": {
-      "metrics": {
-        "loc": 11,
-        "functions": 2,
-        "heysRefs": 4
-      },
-      "limits": {
-        "loc": {
-          "warn": 11,
-          "error": 13
-        },
-        "functions": {
-          "warn": 2,
-          "error": 3
-        },
-        "heysRefs": {
-          "warn": 4,
-          "error": 5
-        }
-      }
-    },
     "apps/web/heys_risk_radar_v1.js": {
       "metrics": {
         "loc": 288,

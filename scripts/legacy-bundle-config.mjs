@@ -356,8 +356,6 @@ export const LEGACY_BUNDLES = {
         'heys_morning_checkin_v1.js',
         'heys_monthly_reports_service_v1.js',
         'heys_monthly_reports_v1.js',
-        'heys_reports_tab_impl_v1.js',
-        'heys_reports_v12.js',
         'heys_weekly_reports_v2.js',
         'heys_data_overview_v1.js',
         'heys_day_score_v1.js',

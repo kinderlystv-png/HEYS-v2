@@ -749,7 +749,10 @@
     flushPerformanceProfile: computeDataProfile
   };
 
-  // Alias для совместимости с heys_reports_v12.js
+  // Alias, заведённый для heys_reports_v12.js. Сам файл удалён 2026-08-29
+  // вместе с legacy ReportsTab, и живых потребителей у HEYS.performance больше
+  // нет — остались только архив (не грузится) и упоминания в документации.
+  // Объект оставлен как публичное имя: к нему могли обращаться из консоли.
   HEYS.performance = {
     // Методы из analytics
     ...HEYS.analytics,
