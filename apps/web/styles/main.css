@@ -42,7 +42,11 @@
 @import url('./modules/715-yesterday-verify.css');
 /* 720-predictive-insights, 725-metabolic-intelligence, 900-planning moved to main-deferred.css
  * (chained preload after main.css onload — see index.html). 2026-04-25 split. */
-@import url('./modules/730-widgets-dashboard.css?v=fab-fade-3');
+/* Без query-строки: Vite инлайнит @import только у чистого пути. С «?v=...»
+   он считает импорт внешним адресом, оставляет строку в собранном CSS и файл
+   не выкладывает — с 27 августа прод отдавал 404 на весь дашборд виджетов.
+   Кэш-бастер тут не нужен: собранный файл и так содержит хэш содержимого. */
+@import url('./modules/730-widgets-dashboard.css');
 @import url('./modules/731-ui-v4-activity.css');
 @import url('./modules/732-ui-v4-nutrition.css');
 @import url('./modules/733-ui-v4-reports.css');
