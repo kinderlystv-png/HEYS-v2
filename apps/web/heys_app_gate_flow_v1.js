@@ -2188,6 +2188,30 @@
                                                 )
                                                 : '📋 Очередь'
                                         ),
+                                        // Контракт «вид · ряд вкладок кабинета»: пять вкладок,
+                                        // порядок один на весь канвас, «Панель» третья.
+                                        React.createElement(
+                                            'button',
+                                            {
+                                                onClick: () => {
+                                                    console.info('[HEYS.gate] 🔘 Переключение на таб Панель');
+                                                    setCuratorTab('panel');
+                                                },
+                                                style: {
+                                                    flex: 1,
+                                                    padding: '8px 3px',
+                                                    border: 'none',
+                                                    borderRadius: 8,
+                                                    fontSize: 11,
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    background: curatorTab === 'panel' ? 'rgba(255,255,255,0.95)' : 'transparent',
+                                                    color: curatorTab === 'panel' ? '#0f172a' : 'rgba(255,255,255,0.8)'
+                                                }
+                                            },
+                                            '◆ Панель'
+                                        ),
                                         React.createElement(
                                             'button',
                                             {
@@ -2650,6 +2674,18 @@
                                     }),
 
                                     // === TAB: MODERATION (Заявки на продукты) ===
+                                    // Панель отвечает на «кем заняться сегодня» и живёт своим
+                                    // модулем: файл кабинета и так огромный, а вкладка — своя зона
+                                    // контракта со своими правилами.
+                                    curatorTab === 'panel' && HEYS.CuratorPanel
+                                        && React.createElement(HEYS.CuratorPanel.Component, {
+                                            clients,
+                                            // Вход в дневник у панели тот же, что у списка
+                                            // клиентов: переключаем кабинет на «Клиенты», а сам
+                                            // вход остаётся одной механикой на весь кабинет —
+                                            // второй копии switchClient здесь заводить нельзя.
+                                            onOpenClient: () => setCuratorTab('clients')
+                                        }),
                                     curatorTab === 'moderation' && React.createElement(ModerationTab, { clients }),
 
                                     // === TAB: DIAGNOSTICS (client launches and sync) ===
