@@ -6141,6 +6141,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     MESSAGES: MESSAGES,
     CRS_THRESHOLDS: CRS_THRESHOLDS,
     getCrsRawTrend: getCrsRawTrend,
+    // Отображаемое число Score — нужно ярусу «Неделя к неделе» в Отчётах,
+    // чтобы колонка «sc» считалась той же шкалой, что плитка итога.
+    formatHeysScoreNumber: formatHeysScoreNumber,
     CRS_RAW_TREND_THRESHOLDS: CRS_RAW_TREND_THRESHOLDS,
     getCrsRawTrendBreakdown: getCrsRawTrendBreakdown,
     CRS_SCORE_GROUPS: CRS_SCORE_GROUPS,

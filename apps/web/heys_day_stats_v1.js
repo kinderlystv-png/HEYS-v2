@@ -78,6 +78,114 @@
     return { cur, prev };
   }
 
+  // Контракт reports-insights.v4, ярус «Неделя к неделе» (строки «состав»,
+  // «неполные дни», «не советует и не предсказывает»): четыре последние
+  // ЗАКРЫТЫЕ недели, новая сверху; три колонки — средний ±ккал в день, Δ веса
+  // за неделю, Score недели. Незакрытая текущая не попадает. Оценок и
+  // экстраполяции здесь нет: только измеренное.
+  function buildWeeklyRows(lsGet, clientId, weeksCount) {
+    if (typeof lsGet !== 'function') return [];
+    const weeks = weeksCount || 4;
+    const hasAnyData = HEYS.DisciplineMatrix && HEYS.DisciplineMatrix.hasAnyData;
+    if (typeof hasAnyData !== 'function') return [];
+
+    const readDay = (ds) => {
+      const scopedKey = clientId ? 'heys_' + clientId + '_dayv2_' + ds : 'heys_dayv2_' + ds;
+      return lsGet(scopedKey, null) || lsGet('heys_dayv2_' + ds, null) || null;
+    };
+    const iso = (d) => d.toISOString().slice(0, 10);
+
+    // Понедельник текущей недели: всё, что раньше него, — закрытые недели.
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const dow = (today.getDay() + 6) % 7; // 0 = понедельник
+    const thisMonday = new Date(today);
+    thisMonday.setDate(thisMonday.getDate() - dow);
+
+    // Score по датам — из той же серии, что плитка итога (шкала одна).
+    let scoreByDate = {};
+    let formatScore = null;
+    try {
+      const cc = HEYS.CascadeCard;
+      if (cc && typeof cc.getCrsRawTrend === 'function') {
+        const trend = cc.getCrsRawTrend(clientId || undefined);
+        (trend && trend.series ? trend.series : []).forEach((pt) => {
+          if (pt && pt.date) scoreByDate[pt.date] = pt.raw;
+        });
+        formatScore = typeof cc.formatHeysScoreNumber === 'function' ? cc.formatHeysScoreNumber : null;
+      }
+    } catch (e) { scoreByDate = {}; }
+
+    const productsMap = (() => {
+      try {
+        return HEYS.dayUtils && HEYS.dayUtils.getProductsMap ? HEYS.dayUtils.getProductsMap() : new Map();
+      } catch (e) { return new Map(); }
+    })();
+    const getDayData = HEYS.dayUtils && HEYS.dayUtils.getDayData;
+
+    const rows = [];
+    for (let w = 1; w <= weeks; w++) {
+      const monday = new Date(thisMonday);
+      monday.setDate(monday.getDate() - 7 * w);
+      const sunday = new Date(monday);
+      sunday.setDate(sunday.getDate() + 6);
+
+      let filledDays = 0;
+      let planSum = 0;
+      let planDays = 0;
+      let firstWeight = null;
+      let lastWeight = null;
+
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(d.getDate() + i);
+        const ds = iso(d);
+        const row = readDay(ds);
+        // Единый счётчик зоны: дни, помеченные «не заполнял», не в счёт.
+        if (!row || !hasAnyData(row)) continue;
+        filledDays++;
+
+        if (typeof getDayData === 'function') {
+          const info = getDayData(ds, productsMap, {});
+          const kcal = info ? +info.kcal || 0 : 0;
+          const target = info ? +info.savedDisplayOptimum || 0 : 0;
+          if (kcal > 0 && target > 0) {
+            planSum += kcal - target;
+            planDays++;
+          }
+        }
+
+        const weight = +row.weightMorning || 0;
+        const estimated = row.weightMorningEstimated === true
+          || row.weightMorningSource === 'estimated_avg'
+          || row.weightMorningSource === 'estimated_profile';
+        if (weight > 0 && !estimated) {
+          if (firstWeight === null) firstWeight = weight;
+          lastWeight = weight;
+        }
+      }
+
+      if (!filledDays) continue;
+
+      const rawScore = scoreByDate[iso(sunday)];
+      const score = (typeof rawScore === 'number' && formatScore) ? formatScore(rawScore) : null;
+
+      rows.push({
+        key: iso(monday),
+        label: monday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+          + '—' + sunday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
+        filledDays,
+        isPartial: filledDays < 7,
+        planAvg: planDays ? Math.round(planSum / planDays) : null,
+        weightDelta: (firstWeight !== null && lastWeight !== null && lastWeight !== firstWeight)
+          ? Math.round((lastWeight - firstWeight) * 10) / 10
+          : null,
+        score
+      });
+    }
+    return rows;
+  }
+
   function buildReportsPeriodMeta(sparklineData, chartPeriod, ratioZones, lsGet, clientId) {
     const points = (sparklineData || []).filter((p) => p && !p.isFuture && !p.isIncomplete);
     const withKcal = points.filter((p) => p.kcal > 0);
@@ -202,6 +310,7 @@
       periodWord,
       historyDays,
       discipline,
+      weeklyRows: buildWeeklyRows(lsGet, clientId, 4),
       lastMeasureDaysAgo,
       dateRange,
       inNorm,
@@ -353,11 +462,51 @@
     );
   }
 
+  // Контракт «вид · таблица недель»: ярус «Неделя к неделе» с подписью
+  // «закрытые недели · только измеренное»; строка — дата слева, три числа
+  // справа (ккал / вес / Score), пометка неполной недели пилюлей.
+  function ReportsV4Weeks(props) {
+    const { React, rows } = props || {};
+    if (!React || !rows || !rows.length) return null;
+    const fmtPlan = (v) => (v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v));
+    const fmtWeight = (v) => (v == null ? '—' : (v > 0 ? '+' : '−') + String(Math.abs(v)).replace('.', ','));
+    return React.createElement(React.Fragment, null,
+      React.createElement('div', { className: 'reports-v4-tier reports-v4-tier--weeks' },
+        'Неделя к неделе',
+        React.createElement('span', { className: 'reports-v4-tier__note' }, 'закрытые недели · только измеренное')
+      ),
+      React.createElement('div', { className: 'reports-v4-weeks' },
+        React.createElement('div', { className: 'reports-v4-weeks__head' },
+          React.createElement('span', { className: 'reports-v4-weeks__head-date' }, ''),
+          React.createElement('span', { className: 'reports-v4-weeks__head-kcal' }, 'к плану'),
+          React.createElement('span', { className: 'reports-v4-weeks__head-weight' }, 'вес'),
+          React.createElement('span', { className: 'reports-v4-weeks__head-score' }, 'sc')
+        ),
+        rows.map((row) => React.createElement('div', { key: row.key, className: 'reports-v4-weeks__row' },
+          React.createElement('span', { className: 'reports-v4-weeks__date' },
+            row.label,
+            row.isPartial && React.createElement('span', { className: 'reports-v4-weeks__partial' },
+              row.filledDays + ' из 7')
+          ),
+          React.createElement('span', { className: 'reports-v4-weeks__kcal' }, fmtPlan(row.planAvg)),
+          React.createElement('span', { className: 'reports-v4-weeks__weight' }, fmtWeight(row.weightDelta)),
+          React.createElement('span', { className: 'reports-v4-weeks__score' }, row.score == null ? '—' : row.score)
+        )),
+        React.createElement('div', { className: 'reports-v4-weeks__note' },
+          'Средний ±ккал в день, изменение веса и Score недели. Текущая неделя войдёт, когда закроется.'
+        )
+      )
+    );
+  }
+
   function ReportsTabV4Bottom(props) {
     const { React, periodMeta } = props || {};
     if (!React || !periodMeta) return null;
 
     return React.createElement(React.Fragment, null,
+      // Ярус недель — между «Динамикой» и «Днями»: сверху вниз период
+      // дробится (итог → дисциплина → динамика → недели → дни).
+      ReportsV4Weeks({ React, rows: periodMeta.weeklyRows }),
       periodMeta.showWellbeingBlock && React.createElement('div', { className: 'reports-v4-wellbeing' },
         React.createElement('div', { className: 'reports-v4-wellbeing__title' }, 'Сон и самочувствие'),
         React.createElement('div', { className: 'reports-v4-wellbeing__grid' },

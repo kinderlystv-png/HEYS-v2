@@ -42,7 +42,41 @@ const norm = (v) => (v == null ? null : String(v).replace(/(^|[\s:(])\.(\d)/g, '
 describe('Отчёты и Инсайты v4 — сверка с канвасом', () => {
   it('канвас на месте и держит контракт зоны', () => {
     expect(canvas).toContain('data-contract');
-    expect(canvas.match(/data-v="/g).length).toBeGreaterThanOrEqual(50);
+    // Пакет 2026-08-29 (вторая пересборка): 59 строк — +демо-режим и пять
+    // строк яруса «Неделя к неделе».
+    expect(canvas.match(/data-v="/g).length).toBeGreaterThanOrEqual(59);
+  });
+
+  it('ярус «Неделя к неделе»: место, состав, неполные дни, вид', () => {
+    const stats = fs.readFileSync(
+      path.resolve(__dirname, '../heys_day_stats_v1.js'), 'utf8');
+    // место: между «Динамикой» и «Днями»
+    expect(stats).toContain('function ReportsV4Weeks');
+    const bottom = stats.slice(
+      stats.indexOf('function ReportsTabV4Bottom'),
+      stats.indexOf('function ReportsTabV4('),
+    );
+    expect(bottom.indexOf('ReportsV4Weeks(')).toBeLessThan(bottom.indexOf("'Дни'"));
+    // состав и «не предсказывает»
+    expect(stats).toContain('закрытые недели · только измеренное');
+    expect(stats).toContain('function buildWeeklyRows');
+    expect(stats).toContain('Текущая неделя войдёт, когда закроется.');
+    // неполные дни — общим счётчиком зоны
+    expect(stats).toContain('HEYS.DisciplineMatrix.hasAnyData');
+    expect(stats).toContain("row.filledDays + ' из 7'");
+    // вид: колонки 56 / 40 / 26, пилюля, разделители
+    const kcal = cssBlock(reportsCss, 'reports-v4-weeks__head-kcal,\\s*\\n\\.reports-v4-weeks__kcal');
+    expect(prop(kcal, 'width')).toBe('56px');
+    const weight = cssBlock(reportsCss, 'reports-v4-weeks__head-weight,\\s*\\n\\.reports-v4-weeks__weight');
+    expect(prop(weight, 'width')).toBe('40px');
+    const score = cssBlock(reportsCss, 'reports-v4-weeks__head-score,\\s*\\n\\.reports-v4-weeks__score');
+    expect(prop(score, 'width')).toBe('26px');
+    const wrap = cssBlock(reportsCss, 'reports-v4-weeks');
+    expect(prop(wrap, 'border-radius')).toBe('20px');
+    expect(prop(wrap, 'padding')).toContain('2px 16px');
+    const partial = cssBlock(reportsCss, 'reports-v4-weeks__partial');
+    expect(prop(partial, 'padding')).toBe('3px 6px');
+    expect(prop(partial, 'font')).toContain('9px');
   });
 
   it('ярус .tier: 10px/700, разрядка .16em — в обеих вкладках', () => {
