@@ -491,3 +491,59 @@ describe('поправка на факт · «применено» относи�
     expect(fn).toContain('Number.isNaN');
   });
 });
+
+describe('поправка на факт · чей это тариф', () => {
+  // От ответа зависит, кому принадлежит решение о снижении нормы. Ошибка в
+  // одну сторону даёт кнопки клиенту, у которого есть куратор; в другую —
+  // говорит «поправку смотрит куратор» человеку, у которого куратора нет.
+  const cases = [
+    ['pro при активной подписке', { subscription_plan: 'pro', subscription_status: 'active' }, 'pro'],
+    ['proplus при активной подписке', { subscription_plan: 'proplus', subscription_status: 'active' }, 'pro'],
+    ['base — свой тариф', { subscription_plan: 'base', subscription_status: 'active' }, 'self'],
+    ['триал — куратора ещё нет', { subscription_status: 'trial' }, 'self'],
+    ['пустой профиль', {}, 'self'],
+    ['истёкшая подписка Pro — куратор кончился вместе с ней',
+      { subscription_plan: 'pro', subscription_status: 'canceled' }, 'self'],
+    ['только просмотр', { subscription_plan: 'pro', subscription_status: 'read_only' }, 'self'],
+    ['регистр плана не важен', { subscription_plan: 'PRO', subscription_status: 'active' }, 'pro']
+  ];
+
+  for (const [name, profile, expected] of cases) {
+    it(name + ' → ' + expected, () => {
+      expect(NC.resolveTariff(profile)).toBe(expected);
+    });
+  }
+
+  it('явный аргумент важнее подписки — им пользуется кабинет куратора', () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../heys_norm_correction_v1.js'), 'utf8'
+    );
+    expect(src).toContain('const activeTariff = tariff || resolveTariff(prof);');
+  });
+});
+
+describe('поправка на факт · на Pro у числа один хозяин', () => {
+  const up = () => NC.compute({
+    days: days(21, 2500),
+    formulaPerDay: 2400,
+    trend: { deltaKg: -0.2, measuredDays: 21, windowDays: 21 },
+    currentFactor: 1,
+    historyDays: 60
+  });
+
+  it('рост на Pro не применяется сам — он тоже ждёт куратора', () => {
+    // Правило «рост применяет система» уступает более сильному: завести у
+    // одного числа второго хозяина нельзя.
+    const c = NC.buildWeeklySyncCard({ result: up(), tariff: 'pro', applied: false });
+    expect(c.frame).toBe('pending_curator');
+    expect(c.decidedBy).toBe('curator');
+    expect(c.actions).not.toContain('revert');
+  });
+
+  it('сборщик поднимает норму сам только на Self', () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../heys_norm_correction_v1.js'), 'utf8'
+    );
+    expect(src).toContain("activeTariff === 'self'");
+  });
+});

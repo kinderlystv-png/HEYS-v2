@@ -444,8 +444,10 @@
     }
 
     // Рост система применяет сама и сообщает в тот же день — решение её,
-    // уведомление человеку. Отменить можно одной кнопкой.
-    if (res.direction === 'up') {
+    // уведомление человеку. Отменить можно одной кнопкой. На Pro это правило
+    // уступает более сильному: у одного числа не бывает двух хозяев, поэтому
+    // рост там тоже ждёт куратора и проходит ниже общей веткой.
+    if (res.direction === 'up' && isSelf) {
       // Единственное праздничное состояние — и единственное место, где о
       // дневнике говорят похвалой, а не упрёком.
       return Object.assign(card, {
@@ -552,6 +554,29 @@
     if (Number.isNaN(at.getTime())) return false;
     const base = now instanceof Date ? now : new Date();
     return (base - at) <= 7 * 24 * 60 * 60 * 1000;
+  }
+
+  // Тарифы с куратором: «Ведение дневника куратором» есть только у них
+  // (CONFIG.PLANS в heys_subscriptions_v1.js).
+  const CURATED_PLANS = new Set(['pro', 'proplus']);
+  // Оплаченная подписка кончилась — куратор вместе с ней. Триал куратора не
+  // даёт: план проставляется только при оплате.
+  const LIVE_STATUSES = new Set(['trial', 'active']);
+
+  /**
+   * Чей это тариф — свой или кураторский.
+   *
+   * От ответа зависит, кому принадлежит решение о снижении нормы, поэтому
+   * определяем его по оплаченному плану, а не по догадке. Триал и любой
+   * неизвестный план — Self: куратора там нет, а сказать человеку без куратора
+   * «поправку смотрит куратор» значит соврать. Истёкшая подписка тоже Self —
+   * куратор кончился вместе с ней.
+   */
+  function resolveTariff(profile) {
+    const prof = profile || {};
+    const plan = String(prof.subscription_plan || '').toLowerCase();
+    const status = String(prof.subscription_status || 'trial').toLowerCase();
+    return CURATED_PLANS.has(plan) && LIVE_STATUSES.has(status) ? 'pro' : 'self';
   }
 
   /**
@@ -707,8 +732,12 @@
 
     // Рост норма применяет сама: молча она не двигается — карточка сообщит об
     // этом в тот же день, — но и согласия на «можно есть больше» не просит.
+    // На Pro норма принадлежит куратору: поднять её сами значило бы завести
+    // у одного числа второго хозяина. Там любое изменение ждёт его решения.
+    const activeTariff = tariff || resolveTariff(prof);
     let justRaised = detectAppliedRaise(weeks, base);
-    if (!justRaised && result.status === 'ready' && result.direction === 'up' && lsSet) {
+    if (!justRaised && activeTariff === 'self'
+        && result.status === 'ready' && result.direction === 'up' && lsSet) {
       const previousFactor = result.currentFactor;
       lsSet('heys_profile', Object.assign({}, prof, {
         normCorrectionFactor: result.nextFactor,
@@ -727,7 +756,7 @@
       result,
       justRaised,
       recomposition: detectRecomposition(rawDays, prof),
-      tariff: tariff || prof.normCorrectionTariff || 'self',
+      tariff: activeTariff,
       // «Применено» — про эту неделю, а не про то, что поправку когда-то
       // трогали. Иначе клиент, которому куратор поправил норму месяц назад,
       // читал бы новое предложение как уже принятое решение.
@@ -748,6 +777,7 @@
     gather,
     detectRecomposition,
     detectAppliedRaise,
+    resolveTariff,
     formatKcal,
     HISTORY_KEY,
     HISTORY_MAX,
