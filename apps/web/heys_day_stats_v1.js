@@ -1353,7 +1353,17 @@
                     : 0,
                   displayOptimum: displayHeroOptimum,
                   isRefeedDay: day.isRefeedDay,
-                  refeedBoost: caloricDebt?.refeedBoost || 0
+                  refeedBoost: caloricDebt?.refeedBoost || 0,
+                  // Поправка на факт правит расход раз в неделю и стоит между
+                  // базой и дефицитом: дефицит остаётся договорённостью, долг
+                  // правит итог дня. Пока применённой поправки нет — строка
+                  // показывает холодный старт со счётом дней, а не прячется.
+                  normCorrection: (prof && prof.normCorrection) || null,
+                  correctionHistoryDays: HEYS.DisciplineMatrix?.countHistoryDays
+                    ? HEYS.DisciplineMatrix.countHistoryDays(
+                        HEYS.utils?.lsGet, HEYS.NormCorrection?.COLD_START_DAYS || 14
+                      )
+                    : 0
                 }
               });
               haptic('light');
@@ -3144,6 +3154,43 @@
                 React.createElement('span', { style: goalStyles.rowLabel }, 'из них вчерашняя тренировка'),
                 React.createElement('span', { style: goalStyles.rowValue }, Math.round(d.ndteBoost) + ' ккал')
               ),
+              // Поправка на факт: расход после неё и есть база дефицита.
+              (() => {
+                const nc = d.normCorrection;
+                const coldDays = HEYS.NormCorrection?.COLD_START_DAYS || 14;
+                if (nc && Number.isFinite(nc.factor) && nc.factor !== 1) {
+                  const corrected = Math.round(d.baseExpenditure * nc.factor);
+                  return React.createElement(React.Fragment, null,
+                    React.createElement('div', { style: goalStyles.row },
+                      React.createElement('span', { style: goalStyles.rowLabel },
+                        'Поправка на факт',
+                        nc.appliedAt && React.createElement('span', {
+                          style: { marginLeft: 6, fontSize: 9, fontFamily: 'ui-monospace, monospace', opacity: 0.7 }
+                        }, 'с ' + nc.appliedAt)
+                      ),
+                      React.createElement('span', { style: goalStyles.rowValue },
+                        '×' + nc.factor.toFixed(2).replace('.', ','))
+                    ),
+                    React.createElement('div', { style: goalStyles.row },
+                      React.createElement('span', { style: goalStyles.rowLabel }, 'Расход после поправки'),
+                      React.createElement('span', { style: goalStyles.rowValue }, corrected + ' ккал')
+                    )
+                  );
+                }
+                // Холодный старт — видимое состояние со счётом, а не пустая строка.
+                const done = Math.min(coldDays, d.correctionHistoryDays || 0);
+                return React.createElement('div', { style: goalStyles.row },
+                  React.createElement('span', { style: goalStyles.rowLabel },
+                    'Поправка на факт',
+                    React.createElement('span', {
+                      style: { marginLeft: 6, fontSize: 9, opacity: 0.5 }
+                    }, 'копим данные')
+                  ),
+                  React.createElement('span', { style: { fontSize: 11, opacity: 0.55 } },
+                    done + ' дней из ' + coldDays)
+                );
+              })(),
+
               // 2. Дефицит
               React.createElement('div', { style: goalStyles.row },
                 React.createElement('span', { style: goalStyles.rowLabel },
