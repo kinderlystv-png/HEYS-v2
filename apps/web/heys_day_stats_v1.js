@@ -1019,9 +1019,11 @@
       applyDate();
     };
 
+    // Контракт «вход один»: разбор Score открывается отдельным экраном —
+    // на вкладке каскад занял бы место трёх блоков (screenMode у плитки).
     const reportsV4ScoreTile = HEYS.CascadeCard?.HeysScoreTile
       ? React.createElement('div', { className: 'reports-v4-score-slot' },
-        React.createElement(HEYS.CascadeCard.HeysScoreTile, {}))
+        React.createElement(HEYS.CascadeCard.HeysScoreTile, { screenMode: true }))
       : null;
 
     const reportsV4BalanceClick = (e) => {
@@ -3382,7 +3384,8 @@
         React.createElement('div', { className: useReportsV4 ? 'reports-v4-dynamics-card__head' : 'weight-sparkline-header' },
           React.createElement('span', {
             className: useReportsV4 ? 'reports-v4-dynamics-card__label' : 'weight-sparkline-title'
-          }, useReportsV4 ? ('Вес · ' + chartPeriod + ' дней') : '⚖️ Вес'),
+          // Контракт «динамика»: кривая веса на фиксированных 30 днях.
+          }, useReportsV4 ? 'Вес · 30 дней' : '⚖️ Вес'),
           // Badges показываем только когда есть тренд (2+ точки)
           weightSparklineData.length >= 2 && weightTrend && React.createElement('div', { className: 'weight-sparkline-badges' },
             React.createElement('span', {
@@ -3394,7 +3397,9 @@
                 weightTrend.direction === 'up' ? '↑' : '→',
               ' ', weightTrend.text
             ),
-            monthForecast && React.createElement('span', {
+            // Контракт «два запрета»: «~кг/мес» — экстраполяция, в Отчётах
+            // прогнозов нет; темп живёт только в «Подробно» Инсайтов.
+            !useReportsV4 && monthForecast && React.createElement('span', {
               className: 'weight-forecast-badge' +
                 (monthForecast.direction === 'down' ? ' down' :
                   monthForecast.direction === 'up' ? ' up' : '')
@@ -3407,12 +3412,13 @@
           ) // закрываем badges div
         ), // закрываем условие weightSparklineData.length >= 2
         renderWeightSparkline(weightSparklineData),
-        useReportsV4 && chartPeriod >= 61 && weightSparklineData.some((d) => d.hasWaterRetention) && React.createElement('div', {
+        // Контракт «динамика»: сноска про особый период — всегда, когда такие
+        // дни есть в окне (раньше пряталась за chartPeriod >= 61 и на 7/14/30
+        // не показывалась никогда). Подсказка «~кг/мес» снята — прогнозов в
+        // Отчётах нет («два запрета»).
+        useReportsV4 && weightSparklineData.some((d) => d.hasWaterRetention) && React.createElement('div', {
           className: 'reports-v4-weight-cycle-footnote'
         }, 'дни особого периода в тренд не входят'),
-        useReportsV4 && monthForecast?.text && React.createElement('div', { className: 'reports-v4-dynamics-card__hint' },
-          monthForecast.text
-        ),
         // Сноска о задержке воды если есть такие дни
         !useReportsV4 && weightSparklineData.some(d => d.hasWaterRetention) && React.createElement('div', {
           className: 'weight-retention-note'

@@ -752,3 +752,64 @@
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
+
+.insights-v4-attention__sheet-link {
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-sand-act-deep, #8a4a20);
+  cursor: pointer;
+  text-align: left;
+}
+
+/* Контракт «вид · лист»: шторка снизу на --bg радиусом 28/28/0/0 с полями
+   22/20/18 поверх --scrim. Scrim — по product-инварианту модалок. */
+.insights-v4-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--v4-z-sheet-scrim, 1200);
+  display: flex;
+  align-items: flex-end;
+  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+  -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+}
+
+[data-theme$="dark"] .insights-v4-sheet-scrim {
+  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
+}
+
+.insights-v4-sheet {
+  width: 100%;
+  max-height: 82vh;
+  overflow-y: auto;
+  background: var(--v4-bg, #fffaf1);
+  border-radius: 28px 28px 0 0;
+  padding: 22px 20px 18px;
+}
+
+.insights-v4-sheet__title {
+  font: 700 16px/1.25 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+  margin-bottom: 12px;
+}
+
+.insights-v4-sheet__text {
+  margin: 0 0 10px;
+  font: 500 12px/1.55 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
+}
+
+.insights-v4-sheet__ok {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 14px;
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #fff5ef);
+  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  cursor: pointer;
+}

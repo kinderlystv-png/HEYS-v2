@@ -4252,8 +4252,56 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       ? roundHeysScoreGroupsForDisplay(breakdown.groups, displayNumber)
       : null;
 
+    // Контракт reports-insights.v4 «вход один»: в screenMode тап открывает
+    // разбор отдельным экраном (на вкладке каскад занял бы место трёх
+    // блоков), inline-раскрытие остаётся для прежних мест.
+    var screenMode = !!props.screenMode;
+    var screen = screenMode && expanded && React.createElement('div', {
+      className: 'heys-score-screen',
+      onClick: function (e) { e.stopPropagation(); }
+    },
+      React.createElement('div', { className: 'heys-score-screen__head' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'heys-score-screen__back',
+          onClick: function (e) { e.stopPropagation(); setExpanded(false); }
+        }, '‹'),
+        React.createElement('span', { className: 'heys-score-screen__title' }, 'HEYS Score')
+      ),
+      React.createElement('div', { className: 'heys-score-screen__hero' },
+        React.createElement('div', { className: 'heys-score-screen__tier' }, 'За месяц'),
+        React.createElement('div', { className: 'heys-score-screen__number-row' },
+          React.createElement('span', { className: 'heys-score-screen__number', style: { color: color } }, displayNumber),
+          deltaText && React.createElement('span', { className: 'heys-score-screen__delta' }, deltaText)
+        ),
+        React.createElement('div', { className: 'heys-score-screen__phrase' }, phrase)
+      ),
+      React.createElement('div', { className: 'heys-score-screen__cascade-head' },
+        React.createElement('span', { className: 'heys-score-screen__tier' }, 'Из чего сложился каскад'),
+        React.createElement('span', { className: 'heys-score-screen__note' }, 'доли одного числа, сумма = ' + displayNumber)
+      ),
+      rows
+        ? rows.map(function (row) {
+          var maxShare = rows.reduce(function (m, r) { return Math.max(m, Math.abs(r.displayValue)); }, 1);
+          return React.createElement('div', { key: row.key, className: 'heys-score-screen__row' },
+            React.createElement('span', { className: 'heys-score-screen__row-label' }, row.label),
+            React.createElement('span', { className: 'heys-score-screen__row-bar' },
+              React.createElement('span', {
+                className: 'heys-score-screen__row-fill',
+                style: { width: Math.round((Math.abs(row.displayValue) / maxShare) * 100) + '%' }
+              })
+            ),
+            React.createElement('span', { className: 'heys-score-screen__row-value' },
+              (row.displayValue >= 0 ? '+' : '') + row.displayValue)
+          );
+        })
+        : React.createElement('div', { className: 'heys-score-tile__detail-loading' }, 'Считаем…'),
+      React.createElement('p', { className: 'heys-score-screen__footnote' },
+        'Строки в сумме дают ровно ' + displayNumber + ': это доли одного числа, а не отдельные слагаемые. Вес и самочувствие в каскад не входят, поэтому в разборе их нет.')
+    );
+
     return React.createElement('div', {
-      className: 'heys-score-tile' + (expanded ? ' heys-score-tile--expanded' : ''),
+      className: 'heys-score-tile' + (!screenMode && expanded ? ' heys-score-tile--expanded' : ''),
       role: 'button',
       tabIndex: 0,
       'aria-expanded': expanded,
@@ -4283,7 +4331,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         })
       ),
       deltaText && React.createElement('div', { className: 'heys-score-tile__delta' }, deltaText),
-      expanded && React.createElement('div', { className: 'heys-score-tile__detail' },
+      screen || null,
+      !screenMode && expanded && React.createElement('div', { className: 'heys-score-tile__detail' },
         React.createElement('div', { className: 'heys-score-tile__detail-intro' }, 'Каскад решений'),
         rows
           ? rows.map(function (row) {

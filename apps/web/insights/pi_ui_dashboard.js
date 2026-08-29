@@ -2042,8 +2042,40 @@
       } catch (_) { return null; }
     }
 
+    // Контракт «тексты из движка» + «вид · лист»: лист «Как считается долг» —
+    // перевод heys_day_caloric_debt_core_v1.js дословно (пороги по цели,
+    // потолок 1500, возврат 75 % с растяжкой 1–3 дня, потолок +20 %, refeed
+    // +35 %). Ссылки на исследования в лист не идут.
+    const DEBT_SHEET_PARAGRAPHS = [
+      'Долг — это недобор до вашей нормы за последние 3 дня, сложенный вместе. Больше 1500 ккал не копим: старый недобор организм уже пережил.',
+      'Порог «это уже долг» зависит от цели: на похудении — от 80 ккал, на поддержании — от 100, на наборе — от 150.',
+      'Возвращаем не всё, а 75 % — организм на дефиците тратит меньше. Возврат растягивается: долг до 300 ккал — за день, до 700 — за два, больше — за три. Прибавка к дневной цели не превышает +20 % нормы, поэтому цель «выше обычной» — это расчёт, а не поблажка.',
+      'Если долг перевалил за 1000 ккал или дефицит держится 5 дней подряд — система предложит день восстановления (+35 % к норме). Это рекомендация, сама она цель не меняет.',
+      'Перебор считается мягче: тренировки этой недели гасят половину лишнего.'
+    ];
+
+    function InsightsV4DebtSheet(props) {
+      const { onClose } = props || {};
+      return h('div', { className: 'insights-v4-sheet-scrim', onClick: onClose },
+        h('div', {
+          className: 'insights-v4-sheet',
+          onClick: function (e) { e.stopPropagation(); }
+        },
+          h('div', { className: 'insights-v4-sheet__title' }, 'Как считается долг'),
+          DEBT_SHEET_PARAGRAPHS.map(function (text, idx) {
+            return h('p', { key: idx, className: 'insights-v4-sheet__text' }, text);
+          }),
+          h('button', {
+            type: 'button',
+            className: 'insights-v4-sheet__ok',
+            onClick: onClose
+          }, 'Понятно')
+        )
+      );
+    }
+
     function InsightsV4Attention(props) {
-      const { warnings, daysWithData, onOpenPanel } = props || {};
+      const { warnings, daysWithData, onOpenPanel, onOpenDebtSheet } = props || {};
       const riskCard = buildRelapseRiskAttentionCard();
       const list = warnings || [];
       if (!riskCard && list.length === 0) {
@@ -2073,6 +2105,7 @@
             )
           ),
           shown.map(function (w, idx) {
+            const isDebt = w.type === 'CALORIC_DEBT';
             return h('li', { key: w.id || w.type || idx, className: 'insights-v4-attention__item' },
               h('div', { className: 'insights-v4-attention__copy' },
                 h('div', { className: 'insights-v4-attention__line' }, w.message || w.detail),
@@ -2080,7 +2113,14 @@
                 h('div', { className: 'insights-v4-attention__meta' },
                   h('span', { className: 'insights-v4-maturity' }, 'наблюдение'),
                   basis && h('span', { className: 'insights-v4-attention__basis' }, basis)
-                )
+                ),
+                // Контракт «тексты из движка»: рекомендация без обоснования
+                // читается как приказ — у карточки долга обязательный лист.
+                isDebt && onOpenDebtSheet && h('button', {
+                  type: 'button',
+                  className: 'insights-v4-attention__sheet-link',
+                  onClick: onOpenDebtSheet
+                }, 'Как считается долг ›')
               )
             );
           })
@@ -2405,6 +2445,7 @@
       const [priorityActions, setPriorityActions] = useState([]);
       const [insightsPeriod, setInsightsPeriod] = useState(7);
       const [showInsightsDetail, setShowInsightsDetail] = useState(false);
+      const [debtSheetOpen, setDebtSheetOpen] = useState(false); // лист «Как считается долг»
       const [ewsPanelOpen, setEwsPanelOpen] = useState(false);
       const [dataVersion, setDataVersion] = useState(0);
       const useInsightsV4 = true;
@@ -3021,7 +3062,8 @@
                 // окно чипа на предупреждения не влияет — честна общая история.
                 warnings: ewsWarnings,
                 daysWithData: historyDaysWithData,
-                onOpenPanel: function () { setEwsPanelOpen(true); }
+                onOpenPanel: function () { setEwsPanelOpen(true); },
+                onOpenDebtSheet: function () { setDebtSheetOpen(true); }
               }),
               h(InsightsV4Patterns, {
                 patterns: insights.patterns,
@@ -3036,6 +3078,9 @@
                 onClick: function () { setShowInsightsDetail(true); }
               }, 'Подробно →')
             ),
+            debtSheetOpen && h(InsightsV4DebtSheet, {
+              onClose: function () { setDebtSheetOpen(false); }
+            }),
             ewsPanelOpen && HEYS.EarlyWarningPanel && h(HEYS.EarlyWarningPanel, {
               isOpen: ewsPanelOpen,
               onClose: function () { setEwsPanelOpen(false); },

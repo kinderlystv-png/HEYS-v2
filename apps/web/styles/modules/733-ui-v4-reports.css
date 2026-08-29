@@ -685,3 +685,132 @@
   font: 700 12px/1 Figtree, system-ui, sans-serif;
   cursor: pointer;
 }
+
+/* Контракт «вход один»: разбор Score — отдельный экран поверх вкладки. */
+.heys-score-screen {
+  position: fixed;
+  inset: 0;
+  z-index: var(--v4-z-sheet, 1190);
+  overflow-y: auto;
+  background: var(--v4-bg, #fffaf1);
+  padding: 14px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  cursor: default;
+}
+
+.heys-score-screen__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.heys-score-screen__back {
+  min-width: 40px;
+  min-height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: var(--v4-card, #ffffff);
+  color: var(--v4-ink, #0f172a);
+  font: 700 18px/1 Figtree, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.heys-score-screen__title {
+  font: 700 16px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+}
+
+.heys-score-screen__hero {
+  background: var(--v4-hero, #f7efe2);
+  border-radius: 26px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.heys-score-screen__tier {
+  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--v4-sand-act-mid, #a75c2b);
+}
+
+.heys-score-screen__number-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 10px 0 8px;
+}
+
+.heys-score-screen__number {
+  font: 600 44px/0.9 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.heys-score-screen__delta {
+  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.heys-score-screen__phrase {
+  font: 600 13px/1.45 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+}
+
+.heys-score-screen__cascade-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.heys-score-screen__note {
+  font: 500 9.5px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.heys-score-screen__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+}
+
+.heys-score-screen__row-label {
+  flex: none;
+  width: 88px;
+  font: 600 11.5px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+}
+
+.heys-score-screen__row-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--v4-chip, rgba(0, 0, 0, 0.07));
+  overflow: hidden;
+}
+
+.heys-score-screen__row-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--v4-ok-fill, #6aa06a);
+}
+
+.heys-score-screen__row-value {
+  flex: none;
+  min-width: 34px;
+  text-align: right;
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink, #0f172a);
+}
+
+.heys-score-screen__footnote {
+  margin: 14px 0 0;
+  font: 500 11px/1.55 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
+}

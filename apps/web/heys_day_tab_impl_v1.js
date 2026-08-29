@@ -1922,7 +1922,10 @@
                 isEnabled: showStatsContent,
                 date,
                 day,
-                chartPeriod,
+                // Контракт reports-insights.v4 «динамика»: кривая веса
+                // считается на 30 днях независимо от выбранного периода —
+                // на коротком окне наклон врёт, на длинном тянет старый тренд.
+                chartPeriod: 31,
                 prof,
                 fmtDate,
                 r1,

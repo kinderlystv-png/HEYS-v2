@@ -137,16 +137,37 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
   // docs/implementation/REPORTS_INSIGHTS_V4_IMPLEMENTATION_2026-08-29.md.
   // Снятие любого пункта = правка кода + правка этого списка в одном заходе.
   it('отступления названы и не разрастаются молча', () => {
+    // 2026-08-29, второй заход: сняты «разбор Score» (отдельный экран
+    // heys-score-screen), «кривая веса» (фикс-30 + сноска + без «~кг/мес») и
+    // лист долга (шторка InsightsV4DebtSheet).
     const DEVIATIONS = [
       'планер яруса — существующая карточка MealRecCard, вид не по кадру',
       'ритм приёмов — без своей рекомендации времени (живёт в планере)',
-      'разбор Score — раскрытие плитки, не отдельный экран',
-      'кривая веса Отчётов следует периоду, не фикс-30; цикл-дни не сведены',
       'Δ питания прошлого окна — только дни с savedDisplayOptimum',
       'заглушка Отчётов — лента дней периода, не «с первого дня»',
       'опора счётных паттернов — «N дней наблюдений» без matched/total',
-      'листы раскрывашек поверх карточек не рисовались (следующий заход)'
+      'лист «Как посчитано» — в карточке планера, не отдельной шторкой'
     ];
-    expect(DEVIATIONS.length).toBe(8);
+    expect(DEVIATIONS.length).toBe(6);
+  });
+
+  it('второй заход: экран Score, вес фикс-30, лист долга — в коде', () => {
+    const cascade = fs.readFileSync(
+      path.resolve(__dirname, '../heys_cascade_card_v1.js'), 'utf8');
+    expect(cascade).toContain('heys-score-screen');
+    expect(cascade).toContain('доли одного числа, сумма = ');
+    const stats = fs.readFileSync(
+      path.resolve(__dirname, '../heys_day_stats_v1.js'), 'utf8');
+    expect(stats).toContain("'Вес · 30 дней'");
+    expect(stats).toContain('screenMode: true');
+    expect(stats).toContain('дни особого периода в тренд не входят');
+    expect(stats).toContain('!useReportsV4 && monthForecast');
+    const dayImpl = fs.readFileSync(
+      path.resolve(__dirname, '../heys_day_tab_impl_v1.js'), 'utf8');
+    expect(dayImpl).toContain('chartPeriod: 31');
+    const dashboard = fs.readFileSync(
+      path.resolve(__dirname, '../insights/pi_ui_dashboard.js'), 'utf8');
+    expect(dashboard).toContain('InsightsV4DebtSheet');
+    expect(dashboard).toContain('Как считается долг');
   });
 });
