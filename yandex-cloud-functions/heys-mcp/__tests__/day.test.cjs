@@ -1197,10 +1197,21 @@ test('без доступа к профилю и нормам норма чес�
 
 test('оценка учитывает день цикла — множитель берётся из зеркала apps/web', () => {
   const profile = { weight: 60, height: 165, age: 30, gender: 'Женский' };
-  const plain = day.dailyNorm({ date: '2026-08-01', meals: [] }, { profile, norms: NORMS, hrZones: [] });
-  // День 2 — менструальная фаза, приложение поднимает норму на 5%.
-  const cycle = day.dailyNorm({ date: '2026-08-01', cycleDay: 2, meals: [] }, { profile, norms: NORMS, hrZones: [] });
-  assert.equal(cycle.kcal, Math.round(plain.kcal * 1.05));
+  const ctx = { profile, norms: NORMS, hrZones: [] };
+  const plain = day.dailyNorm({ date: '2026-08-01', meals: [] }, ctx);
+  const atCycleDay = (cycleDay) => day.dailyNorm({ date: '2026-08-01', cycleDay, meals: [] }, ctx).kcal;
+
+  // Числа принадлежат канвасу цикла и живут в apps/web/heys_cycle_v1.js
+  // (их держит apps/web/__tests__/cycle-engine-v4.test.js). Здесь проверяется
+  // только проводка: сервер обязан считать ту же норму, что приложение.
+  //
+  // Значения после пересборки движка 26.08.2026: начало периода норму больше
+  // не поднимает (было +5%), середина цикла +3%, вторая половина +5%. Старое
+  // ожидание +5% на второй день пережило ту правку и три дня держало красным
+  // обязательный гейт деплоя heys-mcp.
+  assert.equal(atCycleDay(2), plain.kcal);
+  assert.equal(atCycleDay(15), Math.round(plain.kcal * 1.03));
+  assert.equal(atCycleDay(20), Math.round(plain.kcal * 1.05));
 });
 
 test('patchSupplementsPlanned — add/remove не трогают остальные id', () => {
