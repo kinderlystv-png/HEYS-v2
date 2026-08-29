@@ -2320,7 +2320,15 @@
             h('span', { className: 'insights-v4-nutrition__head-note' }, 'сегодня')
           ),
           h('div', { className: 'insights-v4-nutrition__rhythm-line' },
-            'Промежутки ' + gaps.map(fmtGap).join(' ч и ') + ' ч.',
+            // Кадр рисует три приёма — два промежутка перечислением. На живых
+            // днях их бывает пять и одиннадцать (проверено на дневниках:
+            // 6 приёмов у одного клиента, 12 у другого), и перечисление
+            // разрасталось до 97 символов. От трёх промежутков переходим на
+            // диапазон: строка остаётся одной длины при любом числе приёмов.
+            gaps.length <= 2
+              ? 'Промежутки ' + gaps.map(fmtGap).join(' ч и ') + ' ч.'
+              : 'Промежутки от ' + fmtGap(Math.min.apply(null, gaps))
+                + ' до ' + fmtGap(Math.max.apply(null, gaps)) + ' ч.',
             // Контракт «ритм приёмов»: следующий приём — рекомендацией
             // времени, не приказом. Время берём из окна, опубликованного
             // планером выше (HEYS.MealRecCard._lastPlan) — второго вызова
@@ -2334,11 +2342,20 @@
               } catch (_) { return null; }
             })()
           ),
+          // Полоса времён: при 12 приёмах (живой день) метки времени не
+          // помещаются в 330 px. Показываем края и число скрытых между ними —
+          // полоса остаётся читаемой при любом числе приёмов.
           h('div', { className: 'insights-v4-nutrition__rhythm-track' },
-            timed.map(function (x, idx) {
+            (timed.length <= 4
+              ? timed
+              : [timed[0], null, timed[timed.length - 1]]
+            ).map(function (x, idx, arr) {
               return h(React.Fragment, { key: idx },
-                h('span', { className: 'insights-v4-nutrition__rhythm-time' }, x.meal.time),
-                idx < timed.length - 1 && h('span', { className: 'insights-v4-nutrition__rhythm-bar' })
+                x
+                  ? h('span', { className: 'insights-v4-nutrition__rhythm-time' }, x.meal.time)
+                  : h('span', { className: 'insights-v4-nutrition__rhythm-more' },
+                    '+' + (timed.length - 2)),
+                idx < arr.length - 1 && h('span', { className: 'insights-v4-nutrition__rhythm-bar' })
               );
             })
           )
@@ -2407,7 +2424,13 @@
           ),
           h('div', { className: 'insights-v4-stub__count' }, have + ' из 7')
         ),
-        h('div', { className: 'insights-v4-tier' }, 'Что заполнить сегодня'),
+        // Заголовок следует состоянию: на живых данных все три поля бывают
+        // заполнены уже в первый день, и блок «Что заполнить» с тремя «есть»
+        // ничего не сообщал. Заполнено всё — говорим это прямо.
+        h('div', { className: 'insights-v4-tier' },
+          fillRows.every(function (r) { return r.done; })
+            ? 'Сегодня заполнено'
+            : 'Что заполнить сегодня'),
         h('ul', { className: 'insights-v4-stub__fill' },
           fillRows.map(function (row, idx) {
             return h('li', { key: idx, className: 'insights-v4-stub__fill-row' },
@@ -2418,6 +2441,8 @@
             );
           })
         ),
+        fillRows.every(function (r) { return r.done; }) && h('p', { className: 'insights-v4-stub__all-done' },
+          'День закрыт полностью — просто продолжайте, данные копятся.'),
         earlyWarnings.length > 0 && h(React.Fragment, null,
           h('div', { className: 'insights-v4-tier' }, 'Стоит внимания — уже с трёх дней'),
           h('ul', { className: 'insights-v4-stub__warnings' },

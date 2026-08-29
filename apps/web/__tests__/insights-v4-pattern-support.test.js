@@ -66,3 +66,27 @@ describe('число опоры паттернов', () => {
     });
   });
 });
+
+// Живые данные показали то, чего синтетика не ловила: у одного клиента в
+// дне 6 приёмов, у другого 12 — перечисление промежутков разрасталось до
+// 97 символов при кадре на ~30. Проверяем обе формы строки ритма.
+describe('строка «Ритм приёмов» переживает живой день', () => {
+  const dashboard = fs.readFileSync(
+    path.resolve(__dirname, '../insights/pi_ui_dashboard.js'), 'utf8');
+
+  it('до двух промежутков — перечисление, дальше диапазон', () => {
+    expect(dashboard).toContain('gaps.length <= 2');
+    expect(dashboard).toContain("'Промежутки от '");
+    expect(dashboard).toContain("' до '");
+  });
+
+  it('полоса времён сворачивается на длинном дне', () => {
+    expect(dashboard).toContain('timed.length <= 4');
+    expect(dashboard).toContain("'+' + (timed.length - 2)");
+  });
+
+  it('заглушка говорит «Сегодня заполнено», когда все поля закрыты', () => {
+    expect(dashboard).toContain("'Сегодня заполнено'");
+    expect(dashboard).toContain('День закрыт полностью');
+  });
+});
