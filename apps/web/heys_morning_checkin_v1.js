@@ -2670,6 +2670,13 @@
           registrationMode: plan.mode === 'registration',
           dailyCheckin: plan.mode !== 'registration',
           onStartDailyCheckin: startDailyCheckin,
+          // «Дописать точно» в развилке разбора: контракт checkin-morning —
+          // дневник на дату, чек-ин закрывается. Здесь мастер живёт оверлеем
+          // без onClose (крестика нет), поэтому выход отдаёт наружу владелец
+          // оверлея — он же гасит показ, пока человек пишет день.
+          onExitToDiary: (dateKey) => {
+            if (typeof onComplete === 'function') onComplete({ exitToDiary: true, dateKey });
+          },
           onRefreshAccess: () => {
             try {
               return HEYS.Subscription?.getStatusDetails?.(true)

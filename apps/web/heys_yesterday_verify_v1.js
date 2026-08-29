@@ -1755,6 +1755,14 @@
         HEYS.ui.switchTab('diary');
       }
     } catch (_) { }
+    // Блокирующий утренний чек-ин рисуется поверх контента без крестика, и его
+    // StepModal не получает onClose — там выход к дневнику даёт только
+    // onExitToDiary из MorningCheckin. В обычной модалке (showCheckin.morning)
+    // остаётся onClose.
+    if (typeof context?.onExitToDiary === 'function') {
+      context.onExitToDiary(dateKey);
+      return;
+    }
     if (typeof context?.onClose === 'function') context.onClose();
   }
 

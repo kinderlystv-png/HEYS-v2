@@ -150,8 +150,24 @@
 
         const [checkinMountKey, setCheckinMountKey] = React.useState('boot');
         const [checkinMode, setCheckinMode] = React.useState(undefined);
+        // «Дописать точно» увело в дневник: пока человек там пишет день, gate
+        // не поднимает чек-ин обратно (он переоценивается на каждом
+        // heysSyncCompleted). Ушёл из дневника — подавление снимается и чек-ин
+        // возвращается тем же шагом.
+        const [checkinExitedToDiary, setCheckinExitedToDiary] = React.useState(false);
         const activeEditableRef = React.useRef(null);
         const [showKeyboardDismiss, setShowKeyboardDismiss] = React.useState(false);
+
+        React.useEffect(() => {
+            if (!checkinExitedToDiary || tab === 'diary') return;
+            try {
+                if (window.HEYS?.ui) window.HEYS.ui.suppressMorningCheckin = false;
+            } catch (_) { /* noop */ }
+            setCheckinExitedToDiary(false);
+            try {
+                if (window.HEYS?.shouldShowMorningCheckin?.() === true) setShowMorningCheckin(true);
+            } catch (_) { /* noop */ }
+        }, [checkinExitedToDiary, tab, setShowMorningCheckin]);
 
         const syncKeyboardDismiss = React.useCallback(() => {
             if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -285,6 +301,18 @@
                 key: checkinMountKey,
                 mode: checkinMode,
                 onComplete: (result) => {
+                    if (result && result.exitToDiary) {
+                        try {
+                            if (!window.HEYS.ui) window.HEYS.ui = {};
+                            window.HEYS.ui.suppressMorningCheckin = true;
+                        } catch (_) { /* noop */ }
+                        setCheckinExitedToDiary(true);
+                        setShowMorningCheckin(false);
+                        setCheckinMode(undefined);
+                        setCheckinMountKey('boot');
+                        // Вкладку и дату уже выставил сам шаг — на главную не уводим.
+                        return;
+                    }
                     if (result && result.startDailyCheckin) {
                         setCheckinMode('daily');
                         setCheckinMountKey('daily-' + Date.now());
