@@ -40,10 +40,23 @@ describe('поправка на факт · карточка сверки в ш�
   it('применение пишет оба скаляра профиля вместе', () => {
     // Профиль сливается перекрытием по родительской метке времени: скаляры
     // едут атомарно, вложенный объект мог бы склеиться половинами.
-    const start = SRC.indexOf('const applyFactor = (factor)');
-    const body = SRC.slice(start, start + 400);
+    const start = SRC.indexOf('const applyFactor = (factor, fromTomorrow)');
+    const body = SRC.slice(start, start + 500);
+    expect(start).toBeGreaterThan(-1);
     expect(body).toContain('normCorrectionFactor: factor');
     expect(body).toContain('normCorrectionAppliedAt');
+  });
+
+  it('снижение вступает в силу со следующего дня, возврат — сразу', () => {
+    // Так написано на кнопке «Применить с завтра», и так норма не
+    // переписывается задним числом. Возврат отменяет, а не назначает.
+    expect(SRC).toContain('applyFactor(correction.result.nextFactor, true)');
+    expect(SRC).toContain('applyFactor(back, false)');
+    const fn = SRC.slice(
+      SRC.indexOf('const applyFactor = (factor, fromTomorrow)'),
+      SRC.indexOf('const applyFactor = (factor, fromTomorrow)') + 400
+    );
+    expect(fn).toContain('at.setDate(at.getDate() + 1)');
   });
 
   it('каждое решение попадает в историю — иначе счётчик отказов не сойдётся', () => {

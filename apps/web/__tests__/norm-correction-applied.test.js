@@ -139,3 +139,79 @@ describe('поправка на факт · история решений', () =
     expect(NC.readHistory(lsGet)).toEqual([]);
   });
 });
+
+describe('поправка на факт · действует с даты применения', () => {
+  let dayNorm;
+  beforeEach(() => { dayNorm = load(); });
+
+  const PROF = Object.assign({}, PROFILE, {
+    normCorrectionFactor: 0.97,
+    normCorrectionAppliedAt: '2026-08-29'
+  });
+
+  it('дни до применения считаются без поправки — не задним числом', () => {
+    // Иначе согласие в понедельник переписало бы нормы прошлых дней вместе с
+    // окном долга калорий, которое пересчитывает три дня назад.
+    expect(dayNorm.resolve({ date: '2026-08-28' }, PROF, {}).kcal).toBe(2112);
+  });
+
+  it('день применения и дальше — с поправкой', () => {
+    expect(dayNorm.resolve({ date: '2026-08-29' }, PROF, {}).kcal).toBe(2049);
+    expect(dayNorm.resolve({ date: '2026-09-05' }, PROF, {}).kcal).toBe(2049);
+  });
+
+  it('профиль без даты применения остаётся на прежнем поведении', () => {
+    const noDate = Object.assign({}, PROFILE, { normCorrectionFactor: 0.97 });
+    expect(dayNorm.resolve({ date: '2026-01-01' }, noDate, {}).kcal).toBe(2049);
+  });
+});
+
+describe('поправка на факт · рост применяется сам', () => {
+  let NC;
+  beforeEach(() => {
+    window.HEYS = {};
+    // eslint-disable-next-line no-eval
+    (0, eval)(correctionSrc);
+    NC = window.HEYS.NormCorrection;
+  });
+
+  const now = new Date('2026-08-29');
+
+  it('свежая запись о поднятом множителе — это применённый рост', () => {
+    const weeks = [
+      { weekLabel: '24–30 авг', factor: 1.03, what: 'applied', at: now.getTime() },
+      { weekLabel: '17–23 авг', factor: 1.0, what: 'declined', at: 0 }
+    ];
+    expect(NC.detectAppliedRaise(weeks, now)).toEqual({ previousFactor: 1 });
+  });
+
+  it('снижение применённым ростом не считается', () => {
+    const weeks = [
+      { weekLabel: '24–30 авг', factor: 0.97, what: 'applied', at: now.getTime() },
+      { weekLabel: '17–23 авг', factor: 1.0, what: 'applied', at: 0 }
+    ];
+    expect(NC.detectAppliedRaise(weeks, now)).toBe(null);
+  });
+
+  it('запись прошлого месяца не держит кадр вечно', () => {
+    const old = new Date('2026-07-01').getTime();
+    const weeks = [{ weekLabel: 'июль', factor: 1.03, what: 'applied', at: old }];
+    expect(NC.detectAppliedRaise(weeks, now)).toBe(null);
+  });
+
+  it('кадр роста называет разницу от значения до роста, а не ноль', () => {
+    // Расчёт к этому моменту уже сошёлся: без «было» из истории карточка
+    // сообщила бы о росте на ноль килокалорий.
+    const card = NC.buildWeeklySyncCard({
+      result: { status: 'ready', direction: 'hold', currentFactor: 1.03, nextFactor: 1.03 },
+      tariff: 'self',
+      justRaised: { previousFactor: 1 },
+      expenditure: 2400, deficitPct: -12, basalMetabolism: 1520
+    });
+    expect(card.frame).toBe('raised');
+    expect(card.norms.deltaKcal).toBe(63);
+    expect(card.copy.heroCaption).toBe('+63 ккал');
+    // Возврат идёт к значению до роста, а не к действующему.
+    expect(card.previousFactor).toBe(1);
+  });
+});

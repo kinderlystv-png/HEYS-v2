@@ -331,19 +331,26 @@
 
   function buildWeeklySyncCard({
     result, tariff, applied, refusalStreak, weeksUnchanged, recomposition,
-    expenditure, deficitPct, basalMetabolism
+    justRaised, expenditure, deficitPct, basalMetabolism
   }) {
     const res = result || {};
     const isSelf = tariff === 'self';
     const streak = Number(refusalStreak) || 0;
     const exp = Number(expenditure) || res.formulaPerDay || 0;
 
+    // Рост уже применён, и расчёт с ним сошёлся — но сказать об этом человеку
+    // нужно всё равно. Тогда «было» берётся из истории решений, иначе разница
+    // вышла бы нулевой и карточка сообщила бы о росте на ноль килокалорий.
+    const raiseApplied = !!(justRaised && Number.isFinite(justRaised.previousFactor));
+    const beforeFactor = raiseApplied ? justRaised.previousFactor : res.currentFactor;
+    const afterFactor = raiseApplied
+      ? res.currentFactor
+      : (res.status === 'ready' ? res.nextFactor : res.currentFactor);
+
     // Оба числа считаем здесь одним способом: рисующему нечего округлять
     // самому, и клиент с куратором видят одно и то же.
-    const before = applyFactor({ expenditure: exp, factor: res.currentFactor, deficitPct, basalMetabolism });
-    const after = res.status === 'ready'
-      ? applyFactor({ expenditure: exp, factor: res.nextFactor, deficitPct, basalMetabolism })
-      : before;
+    const before = applyFactor({ expenditure: exp, factor: beforeFactor, deficitPct, basalMetabolism });
+    const after = applyFactor({ expenditure: exp, factor: afterFactor, deficitPct, basalMetabolism });
     const norms = {
       current: before.norm,
       next: after.norm,
@@ -394,6 +401,29 @@
           body: 'Замера не было, силовых в эти недели тоже. Две недели ожидания истекли — поправку применяем по весу.',
           footnote: 'Поправка — про расчёт, а не про старание. Замер в любой момент вернёт ветку перестройки.',
           actionLabels: { ok: 'Понятно' }
+        }
+      });
+    }
+
+    // Рост система применяет сама и сообщает в тот же день. Кадр держится
+    // неделю после применения: расчёт к этому моменту уже сошёлся, и без этой
+    // ветки сообщение исчезло бы раньше, чем человек его увидел.
+    if (raiseApplied) {
+      return Object.assign(card, {
+        frame: 'raised',
+        decidedBy: 'system',
+        needsConsent: false,
+        actions: ['revert'],
+        celebratory: true,
+        // Возврат идёт к значению до роста, а не к действующему: действующее —
+        // это и есть поднятое число.
+        previousFactor: justRaised.previousFactor,
+        copy: {
+          title: 'Можно есть больше',
+          body: 'Вы ели больше плана, а вес всё равно шёл вниз. Значит, тратите вы больше, чем мы считали, — норму подняли под ваш результат.',
+          heroCaption: '+' + formatKcal(Math.abs(norms.deltaKcal)) + '\u00a0ккал',
+          footnote: 'Такое бывает, когда дневник ведут честно: чем точнее записи, тем точнее норма.',
+          actionLabels: { revert: 'Вернуть прежнюю норму' }
         }
       });
     }
@@ -524,6 +554,20 @@
     return (base - at) <= 7 * 24 * 60 * 60 * 1000;
   }
 
+  /**
+   * Был ли рост применён на этой неделе — по истории решений, а не по флагу в
+   * профиле: флаг знает только «когда», а нужно ещё «с какого значения».
+   */
+  function detectAppliedRaise(weeks, now) {
+    const last = weeks && weeks[0];
+    if (!last || last.what !== 'applied' || !last.at) return null;
+    const base = now instanceof Date ? now : new Date();
+    if ((base - new Date(last.at)) > 7 * 24 * 60 * 60 * 1000) return null;
+    const previousFactor = weeks[1] ? Number(weeks[1].factor) : 1;
+    if (!(Number(last.factor) > previousFactor)) return null;
+    return { previousFactor };
+  }
+
   const MONTHS_RU = [
     'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
     'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
@@ -581,7 +625,7 @@
    * Окно кончается вчерашним днём: сегодняшний ещё пишется, и его неполнота
    * тянула бы средний съеденный вниз каждую неделю одинаково.
    */
-  function gather({ lsGet, lsSet, profile, pIndex, now, tariff }) {
+  function gather({ lsGet, lsSet, profile, pIndex, now, tariff, weekLabel }) {
     if (!lsGet) return null;
 
     const prof = profile || lsGet('heys_profile', {});
@@ -661,8 +705,27 @@
       else break;
     }
 
+    // Рост норма применяет сама: молча она не двигается — карточка сообщит об
+    // этом в тот же день, — но и согласия на «можно есть больше» не просит.
+    let justRaised = detectAppliedRaise(weeks, base);
+    if (!justRaised && result.status === 'ready' && result.direction === 'up' && lsSet) {
+      const previousFactor = result.currentFactor;
+      lsSet('heys_profile', Object.assign({}, prof, {
+        normCorrectionFactor: result.nextFactor,
+        // Рост действует с сегодня: это не задним числом, а с того дня, когда
+        // человеку об этом сказали.
+        normCorrectionAppliedAt: base.toISOString().split('T')[0]
+      }));
+      recordDecision({
+        lsGet, lsSet, weekLabel: weekLabel || base.toISOString().split('T')[0],
+        factor: result.nextFactor, what: 'applied', now: base.getTime()
+      });
+      justRaised = { previousFactor };
+    }
+
     const card = buildWeeklySyncCard({
       result,
+      justRaised,
       recomposition: detectRecomposition(rawDays, prof),
       tariff: tariff || prof.normCorrectionTariff || 'self',
       // «Применено» — про эту неделю, а не про то, что поправку когда-то
@@ -684,6 +747,7 @@
     buildWeeklySyncCard,
     gather,
     detectRecomposition,
+    detectAppliedRaise,
     formatKcal,
     HISTORY_KEY,
     HISTORY_MAX,

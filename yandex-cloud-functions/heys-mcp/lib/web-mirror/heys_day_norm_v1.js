@@ -136,6 +136,18 @@
     return floor > 0 ? Math.max(corrected, floor) : corrected;
   }
 
+  // Поправка действует с даты применения, а не задним числом. Без этой
+  // границы согласие в понедельник переписывало бы нормы прошлых дней — и
+  // вместе с ними окно долга калорий, которое пересчитывает три дня назад.
+  // Профили без даты остаются на прежнем поведении.
+  function factorForDate(profile, date) {
+    const k = Number(profile && profile.normCorrectionFactor);
+    if (!Number.isFinite(k) || k === 1) return 1;
+    const from = profile && profile.normCorrectionAppliedAt;
+    if (!from || !date) return k;
+    return String(date).slice(0, 10) >= String(from).slice(0, 10) ? k : 1;
+  }
+
   function withNdte(tdee, ndte, factor) {
     const rawBase = Math.round((Number(tdee && tdee.baseExpenditure) || 0) + (Number(ndte) || 0));
     const baseExp = correctedExpenditure(rawBase, factor, tdee && tdee.bmr);
@@ -159,7 +171,7 @@
       return { kcal: 0, ndte: 0, tdee, reason: tdee ? 'profile_incomplete' : 'no_tdee' };
     }
     const ndte = ndteBoost(prevBlob, profile, tdee.bmr, day && day.date);
-    const factor = Number(profile && profile.normCorrectionFactor);
+    const factor = factorForDate(profile, day && day.date);
     return { kcal: withNdte(tdee, ndte, factor), ndte, tdee, factor, reason: null };
   }
 
@@ -242,7 +254,7 @@
     }
 
     const tdee = own.tdee;
-    const factor = Number.isFinite(own.factor) ? own.factor : Number(profile && profile.normCorrectionFactor);
+    const factor = Number.isFinite(own.factor) ? own.factor : factorForDate(profile, date);
     const base = withNdte(tdee, ndte, factor);
     // Поддержание — тот же расход без дефицита, поэтому поправка на него
     // распространяется: она правит расход, а не долю.

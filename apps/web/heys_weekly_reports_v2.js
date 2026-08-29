@@ -850,7 +850,8 @@
                 return HEYS.NormCorrection.gather({
                     lsGet: getLsGet(),
                     lsSet: getLsSet(),
-                    pIndex: HEYS.products?.buildIndex?.()
+                    pIndex: HEYS.products?.buildIndex?.(),
+                    weekLabel: report?.rangeLabel || ''
                 });
             } catch (e) {
                 console.warn('[HEYS.weeklyReports] сверка нормы не собралась', e);
@@ -868,23 +869,29 @@
             // Применяем — двумя скалярами, а не объектом: профиль сливается
             // перекрытием по родительской метке времени, и вложенный объект мог
             // бы склеиться половинами разных недель.
-            const applyFactor = (factor) => {
+            // Снижение вступает в силу со следующего дня — так написано на
+            // кнопке, и так норма не переписывается задним числом. Возврат к
+            // прежнему числу действует сразу: он отменяет, а не назначает.
+            const applyFactor = (factor, fromTomorrow) => {
+                const at = new Date(now);
+                if (fromTomorrow) at.setDate(at.getDate() + 1);
                 lsSet('heys_profile', Object.assign({}, profile, {
                     normCorrectionFactor: factor,
-                    normCorrectionAppliedAt: new Date(now).toISOString().split('T')[0]
+                    normCorrectionAppliedAt: at.toISOString().split('T')[0]
                 }));
             };
 
             if (action === 'apply_tomorrow' || action === 'apply') {
-                applyFactor(correction.result.nextFactor);
+                applyFactor(correction.result.nextFactor, true);
                 HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.nextFactor, what: 'applied', now });
             } else if (action === 'keep_current') {
                 HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.currentFactor, what: 'declined', now });
             } else if (action === 'revert') {
-                // Рост отменяется возвратом к прежнему множителю — тому, от
-                // которого расчёт и шагнул вверх.
-                applyFactor(correction.result.currentFactor);
-                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.currentFactor, what: 'declined', now });
+                // Рост уже применён, поэтому текущий множитель — это поднятое
+                // число. Возвращаемся к тому, от которого расчёт шагнул вверх.
+                const back = Number.isFinite(card?.previousFactor) ? card.previousFactor : 1;
+                applyFactor(back, false);
+                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: back, what: 'declined', now });
             } else if (action === 'mute_month') {
                 HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.currentFactor, what: 'postponed', now });
             } else if (action === 'ask_curator' || action === 'measure_waist') {
