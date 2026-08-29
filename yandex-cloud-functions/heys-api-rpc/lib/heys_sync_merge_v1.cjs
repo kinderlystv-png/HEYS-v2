@@ -1234,11 +1234,31 @@
         winner = lPlanPriority > rPlanPriority ? lt : rt;
       } else if (remoteRowEditedUnseen) {
         winner = rt;
-      } else if (localTrainingIsNewer) {
-        winner = lt;
       } else if (ltSum === 0 && rtSum > 0) {
+        // Непустая строка не проигрывает пустой по свежести.
+        //
+        // Раньше эта пара стояла ПОСЛЕ localTrainingIsNewer, и пустая локальная
+        // строка со свежим штампом стирала заполненную облачную. Приложение при
+        // сохранении дня штампует изменённую строку свежим mutationTs, поэтому
+        // устаревший React-снимок открытой вкладки приходит с меткой новее
+        // кураторской записи и выигрывает по свежести. Так 29.08 пропали 70
+        // минут кардио, записанные куратором через MCP, и так же 19.08 трижды
+        // откатывались зоны «Барабаны» [47,73] → [0,120] (heys/9cb568).
+        //
+        // Защита remoteRowEditedUnseen выше этот случай не ловит: ей нужно
+        // remoteTrainingTs > lastSeenUpdatedAt, а клиент, открывавший день
+        // после кураторской записи, поднимает last-seen выше её метки.
+        //
+        // Осознанное удаление сюда не попадает: tombstone из deletedTrainings
+        // применяется раньше (см. matchingTrainingDeletionTs выше) и гасит ОБЕ
+        // стороны по одной подписи, поэтому у удалённой строки rtSum тоже 0.
         winner = rt;
       } else if (rtSum === 0 && ltSum > 0) {
+        // Симметрия пары. Перенос сюда результата не меняет: при свежем local
+        // ту же строку выбирал localTrainingIsNewer, при свежем remote — эта же
+        // ветка ниже. Стоит рядом, чтобы правило читалось целиком.
+        winner = lt;
+      } else if (localTrainingIsNewer) {
         winner = lt;
       } else if (ltSum === 0 && rtSum === 0) {
         const lRich = workoutLogRichness(lt);
