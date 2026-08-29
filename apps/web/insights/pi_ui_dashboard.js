@@ -2055,6 +2055,10 @@
           ? HEYS.RelapseRisk.getCurrentSnapshot()
           : null;
         if (!snap || !snap.hasData) return null;
+        // Контракт «порог карточки риска срыва»: порог 60 не опускаем — риск
+        // обязан быть редким, иначе становится фоном. При 40–59 сигнал не
+        // теряется: идёт обычным предупреждением в общий список со словом
+        // «гипотеза», без карточки и первого места (см. buildRelapseHint).
         if (snap.level !== 'high' && snap.level !== 'critical') return null;
         const driver = snap.primaryDriver || null;
         const driverLabel = driver ? String(driver.label || '').toLowerCase() : '';
@@ -2104,10 +2108,34 @@
       );
     }
 
+    // Контракт «порог карточки риска срыва»: 40–59 (elevated) — обычное
+    // предупреждение в общем списке со словом «гипотеза». Иначе сигнал,
+    // который движок посчитал, пропадал бы совсем: на живых данных уровень
+    // high достигается редко, а elevated встречается.
+    function buildRelapseHintWarning() {
+      try {
+        const snap = HEYS.RelapseRisk && HEYS.RelapseRisk.getCurrentSnapshot
+          ? HEYS.RelapseRisk.getCurrentSnapshot()
+          : null;
+        if (!snap || !snap.hasData || snap.level !== 'elevated') return null;
+        const driver = snap.primaryDriver || null;
+        if (!driver) return null;
+        return {
+          id: 'relapse-elevated',
+          type: 'RELAPSE_ELEVATED',
+          humanMessage: String(driver.label) + ' заметнее обычного'
+            + (snap.topWindowLabel ? ' — ' + snap.topWindowLabel : '')
+            + (driver.explanation ? '. ' + driver.explanation : '.'),
+          maturity: 'гипотеза'
+        };
+      } catch (_) { return null; }
+    }
+
     function InsightsV4Attention(props) {
       const { warnings, daysWithData, onOpenPanel, onOpenDebtSheet } = props || {};
       const riskCard = buildRelapseRiskAttentionCard();
-      const list = warnings || [];
+      const hint = riskCard ? null : buildRelapseHintWarning();
+      const list = hint ? [hint].concat(warnings || []) : (warnings || []);
       if (!riskCard && list.length === 0) {
         return h('div', { className: 'insights-v4-attention insights-v4-attention--ok' },
           h('div', { className: 'insights-v4-tier' }, 'Стоит внимания'),
@@ -2136,12 +2164,22 @@
           ),
           shown.map(function (w, idx) {
             const isDebt = w.type === 'CALORIC_DEBT';
+            // Контракт «стоит внимания»: наблюдение голосом куратора. В
+            // w.message лежит заголовок с эмодзи («🍽️ Слишком большой
+            // дефицит калорий») — в v4 эмодзи нет и заголовок не фраза.
+            // Написанная фраза приходит в humanMessage (pi_early_warning);
+            // на старых снимках предупреждений его нет — тогда чистим эмодзи
+            // у заголовка, чтобы вкладка не показывала чужой тон.
+            const line = w.humanMessage
+              || String(w.message || w.detail || '')
+                .replace(/^[^\p{L}\p{N}]+/u, '')
+                .trim();
             return h('li', { key: w.id || w.type || idx, className: 'insights-v4-attention__item' },
               h('div', { className: 'insights-v4-attention__copy' },
-                h('div', { className: 'insights-v4-attention__line' }, w.message || w.detail),
+                h('div', { className: 'insights-v4-attention__line' }, line),
                 w.detail && w.message && h('div', { className: 'insights-v4-attention__sub' }, w.detail),
                 h('div', { className: 'insights-v4-attention__meta' },
-                  h('span', { className: 'insights-v4-maturity' }, 'наблюдение'),
+                  h('span', { className: 'insights-v4-maturity' }, w.maturity || 'наблюдение'),
                   basis && h('span', { className: 'insights-v4-attention__basis' }, basis)
                 ),
                 // Контракт «тексты из движка»: рекомендация без обоснования
@@ -2448,7 +2486,11 @@
           h('ul', { className: 'insights-v4-stub__warnings' },
             earlyWarnings.map(function (w, idx) {
               return h('li', { key: w.id || idx, className: 'insights-v4-stub__warning' },
-                h('div', { className: 'insights-v4-attention__line' }, w.message || w.detail),
+                // Тот же голос куратора, что в живом блоке: фраза, не
+                // заголовок с эмодзи.
+                h('div', { className: 'insights-v4-attention__line' },
+                  w.humanMessage
+                  || String(w.message || w.detail || '').replace(/^[^\p{L}\p{N}]+/u, '').trim()),
                 h('div', { className: 'insights-v4-attention__meta' },
                   h('span', { className: 'insights-v4-maturity' }, 'гипотеза'),
                   h('span', { className: 'insights-v4-attention__basis' }, have + ' ' + pluralDaysWord(have) + ' наблюдений')

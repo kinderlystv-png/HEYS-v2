@@ -185,17 +185,25 @@
       const rawScore = scoreByDate[iso(sunday)];
       const score = (typeof rawScore === 'number' && formatScore) ? formatScore(rawScore) : null;
 
+      // Контракт «порог строки недели»: неделя показывается всегда, но при
+      // меньше четырёх днях с записями числа «к плану» и «вес» не считаются —
+      // на их месте прочерки, а пометка называет счёт. Строку не убираем:
+      // дыра в хронологии читалась бы как отсутствие недели, а не данных.
+      // Порог тот же, что у счёта «день ведён» — 4 из 7.
+      const MIN_DAYS_FOR_WEEK_NUMBERS = 4;
+      const enoughForNumbers = filledDays >= MIN_DAYS_FOR_WEEK_NUMBERS;
+
       rows.push({
         key: iso(monday),
         label: monday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
           + '—' + sunday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
         filledDays,
         isPartial: filledDays < 7,
-        planAvg: planDays ? Math.round(planSum / planDays) : null,
-        weightDelta: (firstWeight !== null && lastWeight !== null && lastWeight !== firstWeight)
+        planAvg: (enoughForNumbers && planDays) ? Math.round(planSum / planDays) : null,
+        weightDelta: (enoughForNumbers && firstWeight !== null && lastWeight !== null && lastWeight !== firstWeight)
           ? Math.round((lastWeight - firstWeight) * 10) / 10
           : null,
-        score
+        score: enoughForNumbers ? score : null
       });
     }
     return rows;
@@ -458,24 +466,84 @@
               }, fmtDelta(row))
             );
           }
-          return React.createElement('div', { key: row.key, className: 'reports-v4-discipline__row' },
-            React.createElement('span', { className: 'reports-v4-discipline__name' }, row.label),
-            React.createElement('span', { className: 'reports-v4-discipline__bar' },
+          // Контракт «нулевая строка» + «вид · нулевая строка»: когда в норме
+          // не было ни одного дня, полоса штрихуется, а под строкой встаёт
+          // средняя доля нормы — иначе строка молчит и при 200 мл, и при 2500
+          // при норме 2745 (найдено на живых данных).
+          return React.createElement('div', {
+            key: row.key,
+            className: 'reports-v4-discipline__group' + (row.isZeroRow ? ' is-zero' : '')
+          },
+            React.createElement('div', { className: 'reports-v4-discipline__row' },
+              React.createElement('span', { className: 'reports-v4-discipline__name' }, row.label),
               React.createElement('span', {
-                className: 'reports-v4-discipline__bar-fill',
-                style: { width: Math.round((row.share || 0) * 100) + '%' }
-              })
+                className: 'reports-v4-discipline__bar' + (row.isZeroRow ? ' is-zero' : '')
+              },
+                React.createElement('span', {
+                  className: 'reports-v4-discipline__bar-fill',
+                  style: { width: Math.round((row.share || 0) * 100) + '%' }
+                })
+              ),
+              React.createElement('span', {
+                className: 'reports-v4-discipline__score' + (row.isZeroRow ? ' is-zero' : '')
+              }, row.inNorm + ' из ' + row.tracked),
+              React.createElement('span', {
+                className: 'reports-v4-discipline__delta'
+                  + (row.delta > 0 ? ' is-up' : row.delta < 0 ? ' is-down' : '')
+              }, fmtDelta(row))
             ),
-            React.createElement('span', { className: 'reports-v4-discipline__score' }, row.inNorm + ' из ' + row.tracked),
-            React.createElement('span', {
-              className: 'reports-v4-discipline__delta'
-                + (row.delta > 0 ? ' is-up' : row.delta < 0 ? ' is-down' : '')
-            }, fmtDelta(row))
+            row.isZeroRow && row.avgShare != null && React.createElement('div', {
+              className: 'reports-v4-discipline__zero-note'
+            },
+              React.createElement('span', { className: 'reports-v4-discipline__zero-share' },
+                'в среднем ' + Math.round(row.avgShare * 100) + ' % нормы'),
+              React.createElement('span', { className: 'reports-v4-discipline__zero-hint' },
+                'ни одного дня в норме')
+            )
           );
         }),
         React.createElement('div', { className: 'reports-v4-discipline__footnote' },
           'Сводной суммы у матрицы нет — дисциплину одним числом говорит Score выше.'
         )
+      ),
+      // Контракт «месяц нулей — вопрос к норме»: единственное действие ведёт
+      // к куратору — недостижимая весь период норма обсуждается, а не
+      // оценивается. Оценок и слов про старание в строке нет. Без куратора
+      // входа нет: строка остаётся информацией.
+      rows.some((r) => r.isZeroRow) && ReportsV4ZeroActions({ React, rows })
+    );
+  }
+
+  function ReportsV4ZeroActions(props) {
+    const { React, rows } = props || {};
+    const zero = (rows || []).filter((r) => r.isZeroRow);
+    if (!zero.length) return null;
+    const names = zero.map((r) => r.label.toLowerCase()).join(' и ');
+    const hasCurator = (() => {
+      try {
+        return !!(HEYS.currentCuratorId || HEYS.curatorId
+          || (HEYS.utils && HEYS.utils.lsGet && HEYS.utils.lsGet('heys_curator_id', null)));
+      } catch (e) { return false; }
+    })();
+    return React.createElement(React.Fragment, null,
+      React.createElement('div', { className: 'reports-v4-tier' }, 'Что с этим делать'),
+      React.createElement('div', { className: 'reports-v4-zero-actions' },
+        React.createElement('div', { className: 'reports-v4-zero-actions__row' },
+          'Норма по строке «' + names + '» не закрывалась ни разу за период.'),
+        hasCurator
+          ? React.createElement('button', {
+            type: 'button',
+            className: 'reports-v4-zero-actions__row reports-v4-zero-actions__row--link',
+            onClick: () => {
+              const setTab = (HEYS.App && HEYS.App.setTab) || (HEYS.ui && HEYS.ui.switchTab);
+              if (typeof setTab === 'function') setTab('messages');
+            }
+          },
+            React.createElement('span', null, 'Обсудить норму с куратором'),
+            React.createElement('span', { className: 'reports-v4-zero-actions__chevron', 'aria-hidden': 'true' }, '›')
+          )
+          : React.createElement('div', { className: 'reports-v4-zero-actions__row' },
+            'Норму можно поменять в настройках профиля.')
       )
     );
   }

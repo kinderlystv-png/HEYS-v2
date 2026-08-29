@@ -179,3 +179,59 @@ describe('discipline matrix', () => {
     });
   });
 });
+
+// Найдено на живых данных: у клиента с недостижимой нормой воды обе доли
+// нулевые в обоих окнах, и Δ показывала «0» — то есть «не изменилось»,
+// хотя человек мог вырасти с 200 мл до 2500. Сравнивать там нечего.
+describe('Δ при нулевых долях в обоих окнах', () => {
+  const profile = { weight: 90, stepsGoal: 10000, age: 35, gender: 'Мужской' };
+
+  beforeEach(() => {
+    window.HEYS = {
+      calcSleepNorm: () => ({ hours: 8, range: '7-9', explanation: '' }),
+      ratioZones: null
+    };
+    // eslint-disable-next-line no-eval
+    (0, eval)(src);
+  });
+
+  afterEach(() => {
+    delete window.HEYS;
+  });
+
+  // Контракт «нулевая строка» (2026-08-29): порог нормы не двигается, но
+  // полоса и Δ считаются по средней доле нормы — иначе строка молчит и при
+  // 200 мл, и при 2500 при норме 2745 (найдено на живых данных).
+  it('нет дней в норме — Δ и полоса по средней доле нормы', () => {
+    const dry = (ml) => entry({ waterMl: ml });
+    const cur = [dry(1000), dry(2400)];   // норма 2700 — оба вне, в среднем 63 %
+    const prev = [dry(200), dry(300)];    // тоже вне, в среднем 9 %
+    const res = window.HEYS.DisciplineMatrix.compute(cur, prev, profile);
+    const water = res.rows.find((r) => r.key === 'water');
+    expect(water.inNorm).toBe(0);
+    expect(water.isZeroRow).toBe(true);
+    // средняя доля: (1000+2400)/2 / 2700 ≈ 0,63
+    expect(Math.round(water.avgShare * 100)).toBe(63);
+    // Δ по доле нормы: 63 % − 9 % = +54 п.п., а не «0», как было бы по дням
+    expect(water.delta).toBe(54);
+    // полоса показывает долю нормы, а не долю дней
+    expect(Math.round(water.share * 100)).toBe(63);
+  });
+
+  it('живая строка считает Δ по дням, isZeroRow не ставится', () => {
+    const cur = [entry({ waterMl: 2800 }), entry({ waterMl: 1000 })];
+    const prev = [entry({ waterMl: 2800 }), entry({ waterMl: 2800 })];
+    const res = window.HEYS.DisciplineMatrix.compute(cur, prev, profile);
+    const water = res.rows.find((r) => r.key === 'water');
+    expect(water.isZeroRow).toBe(false);
+    expect(water.avgShare).toBe(null);
+    expect(water.delta).toBe(-50); // 1 из 2 против 2 из 2
+  });
+
+  it('появился хотя бы один день в норме — Δ снова считается', () => {
+    const cur = [entry({ waterMl: 2800 }), entry({ waterMl: 1000 })];
+    const prev = [entry({ waterMl: 200 }), entry({ waterMl: 300 })];
+    const res = window.HEYS.DisciplineMatrix.compute(cur, prev, profile);
+    expect(res.rows.find((r) => r.key === 'water').delta).toBe(50);
+  });
+});

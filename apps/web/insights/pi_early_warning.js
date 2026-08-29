@@ -540,7 +540,7 @@
         },
         SLEEP_DEBT: {
             title: 'Накопился недосып',
-            message: 'Несколько дней подряд сон меньше 7 часов — организм не успевает восстановиться.',
+            message: 'Вы спите меньше шести часов вторую ночь. После таких дней у вас обычно срыв вечером.',
             insight: 'Sleep debt снижает метаболизм на 10-15%, усиливает голод и тягу к сладкому, ухудшает работу инсулина. Приоритет: вернуть регулярный сон 7-9 часов.',
             science: 'Сон <7 часов 3+ ночи подряд нарушает гормональный баланс: растёт ghrelin (гормон голода), падает leptin (гормон сытости), снижается чувствительность к инсулину на 20-30%. Риск ожирения увеличивается на 40%, риск диабета 2 типа — на 28% (Sleep Medicine Reviews, 2019). Недосып 1 ночи компенсируется 2-3 ночами полноценного сна; хронический debt требует 7-10 дней восстановления.',
             actions: [
@@ -551,7 +551,10 @@
         },
         CALORIC_DEBT: {
             title: 'Слишком большой дефицит калорий',
-            message: 'Два дня подряд недобор более 1500 ккал — это экстремальный дефицит, замедляющий метаболизм.',
+            // Контракт «структура фразы» и «пять образцов»: наблюдение с
+            // числом опоры → следствие «у вас обычно…» → одно действие.
+            // Без эмодзи, без «слишком/плохо», причина в данных, не в человеке.
+            message: 'Два дня подряд недобор около 2 000 ккал. После таких дней у вас обычно вечерний перебор. Сегодня норма выше обычной — часть недобора вернётся сама.',
             insight: 'Резкий дефицит включает режимэкономии: организм расходует меньше энергии, теряет мышцы вместо жира. Оптимальный дефицит для похудения: 300-500 ккал/день.',
             science: 'Дефицит >30% от нормы (>1500 ккал) запускает adaptive thermogenesis: базовый метаболизм падает на 10-15%, активность NEAT снижается, растёт cortisol (катаболизм мышц). Потеря мышечной массы при агрессивном дефиците достигает 40-50% от общей потери веса (vs 20-30% при умеренном дефиците). Исследования показывают: быстрая потеря веса (>1 кг/неделю) ведёт к rebound эффекту в 80% случаев (Obesity Reviews, 2021).',
             actions: [
@@ -573,7 +576,7 @@
         },
         HYDRATION_DEFICIT: {
             title: 'Недостаток жидкости',
-            message: 'Несколько дней подряд вы пьёте меньше 1.5 л воды — это влияет на энергию и метаболизм.',
+            message: 'Вода ниже нормы пятый день — в среднем 1,4 из 2,0 л. В такие дни вас сильнее тянет на сладкое к вечеру.',
             insight: 'Вода критична для всех процессов: транспорт питательных веществ, терморегуляция, вывод токсинов, работоспособность. Даже лёгкое обезвоживание (1-2%) снижает физическую и умственную продуктивность.',
             science: 'Норма: 30-40 мл/кг веса (для 70 кг — 2.1-2.8 л). Обезвоживание 1-2% массы тела снижает физическую выносливость на 10-20%, когнитивные функции на 10% (European Journal of Clinical Nutrition, 2003). Вода участвует в липолизе (жиросжигании): дефицит замедляет метаболизм на 3-5%. Хроническое обезвоживание повышает кортизол, ухудшает сон, усиливает голод (путается с жаждой).',
             actions: [
@@ -661,7 +664,7 @@
         },
         WEEKEND_PATTERN: {
             title: 'Выходные срывы',
-            message: 'Паттерны питания в Сб/Вс хуже, чем в будни — алкоголь, углеводы, читмилы сбивают прогресс.',
+            message: 'Три выходных из четырёх заканчивались перебором больше 20 %. Дело не в самих выходных, а в пропущенном обеде.',
             insight: 'Выходные срывы +1500 ккал могут перекрыть дефицит 5 будних дней. Стратегия: гибкая диета (80/20), планирование refeed дней, контроль алкоголя.',
             science: 'Исследования показывают: потребление калорий в выходные на 15-20% выше, чем в будни, алкоголь добавляет 300-800 ккал (Obesity, 2008). Weekend warrior pattern — очень строго Пн-Пт, отказ Сб-Вс — ведёт к binge-restrict cycle. Алкоголь блокирует жиросжигание на 12-36 часов, ухудшает сон, снижает синтез белка на 20-30%. Стратегия: включить выходные в недельное планирование (calorie cycling), планировать приёмы пищи заранее (Nutr J, 2017).',
             actions: [
@@ -674,7 +677,7 @@
         // NEW v3.2: Advanced Warnings
         FIBER_DEFICIT: {
             title: 'Хронический дефицит клетчатки',
-            message: 'Потребление клетчатки ниже минимума 5+ дней подряд — риск для кишечника и метаболизма',
+            message: 'Клетчатки меньше 20 г шестой день подряд. Проще всего добрать овощами в обед.',
             insight: 'Клетчатка критична для микробиома, насыщения и регуляции сахара крови. Дефицит (<15г/день) ведёт к дисбиозу, запорам, повышенному аппетиту.',
             science: 'Fiber — prebiotic для микробиома: норма 25-35 г/день (WHO). Дефицит (<15 г) снижает SCFA production (масляная кислота — питание колоноцитов), ухудшает GLP-1 секрецию (гормон насыщения), повышает spike глюкозы после еды. Исследование NHANES: связь <15 г клетчатки с +40% риском obesity, +25% CVD (Nutrients, 2020). Постепенное повышение клетчатки (5 г/нед) предотвращает газообразование.',
             actions: [
@@ -2093,6 +2096,11 @@
                         percentChange,
                         patternName: humanMsg.title,
                         message: `📉 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                         detail: `Было ${Math.round(previousScore)}, стало ${Math.round(currentScore)} (−${percentChange}% за ${THRESHOLDS.HEALTH_SCORE_DECLINE_DAYS} дня)`,
                         insight: humanMsg.insight,
                         science: humanMsg.science,
@@ -2154,6 +2162,11 @@
                     percentChange,
                     patternName: humanMsg.title,
                     message: `📉 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                     detail: `Было ${Math.round(previousScore)}, стало ${Math.round(currentScore)} (−${percentChange}% за 7 дней)`,
                     insight: humanMsg.insight,
                     science: humanMsg.science,
@@ -2263,6 +2276,11 @@
                     currentScore: Math.round(score),
                     threshold: PATTERN_LOW_SCORE_THRESHOLDS.critical,
                     message: `🚨 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                     detail: humanMsg.message,
                     insight: humanMsg.insight,
                     science: humanMsg.science,
@@ -2279,6 +2297,11 @@
                     currentScore: Math.round(score),
                     threshold: 50,
                     message: `⚠️ ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                     detail: humanMsg.message,
                     insight: humanMsg.insight,
                     science: humanMsg.science,
@@ -2295,6 +2318,11 @@
                     currentScore: Math.round(score),
                     threshold: PATTERN_LOW_SCORE_THRESHOLDS.important,
                     message: `⚠️ ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                     detail: humanMsg.message,
                     insight: humanMsg.insight,
                     science: humanMsg.science,
@@ -2431,6 +2459,11 @@
                     avgDailyDrop: Math.round(avgDailyDrop * 10) / 10,
                     patternName: humanMsg.title,
                     message: `📊 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                     detail: `С ${startScore} до ${endScore} (падение ${Math.round(totalDrop)} баллов за ${THRESHOLDS.STATUS_SCORE_DECLINE_DAYS} дня)`,
                     insight: humanMsg.insight,
                     science: humanMsg.science,
@@ -2499,6 +2532,11 @@
                 totalDeficit: Math.round(totalDeficit * 10) / 10,
                 patternName: humanMsg.title,
                 message: `💤 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Средний сон: ${Math.round(avgSleep * 10) / 10}ч (цель: ${targetSleep}ч), дефицит: ${Math.round(totalDeficit * 10) / 10}ч`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -2569,6 +2607,11 @@
                 avgDebt: Math.round(avgDebt),
                 patternName: humanMsg.title,
                 message: `🍽️ ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Средний недобор: ${Math.round(avgDebt)} ккал/день (всего ${Math.round(totalDebt)} ккал)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -2641,6 +2684,11 @@
                 percentChange,
                 patternName: humanMsg.title,
                 message: `⚖️ ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Вес вырос с ${previous.toFixed(1)} до ${current.toFixed(1)} кг (+${delta.toFixed(1)} кг, +${percentChange}%)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -2718,6 +2766,11 @@
                 deficit: Math.round(targetWater - avgWater),
                 patternName: humanMsg.title,
                 message: `💧 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Средний объём: ${Math.round(avgWater)} мл (цель: ${targetWater} мл, дефицит: ${Math.round(targetWater - avgWater)} мл)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -2795,6 +2848,11 @@
                 consecutiveGap,
                 patternName: humanMsg.title,
                 message: `📝 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Нет записей ${consecutiveGap} ${consecutiveGap === 2 ? 'дня' : 'дней'} подряд`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -2889,6 +2947,11 @@
                 deficit: Math.round(minProteinGrams - avgProtein),
                 patternName: humanMsg.title,
                 message: `🥩 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Средний белок: ${Math.round(avgProtein)}г (цель: ${Math.round(minProteinGrams)}г, дефицит: ${Math.round(minProteinGrams - avgProtein)}г)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -2987,6 +3050,11 @@
                 avgSignals: Math.round(avgSignals * 10) / 10,
                 patternName: humanMsg.title,
                 message: `😰 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `${highStressDays} дней с множественными признаками стресса (сон, нагрузка, состояние)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3089,6 +3157,11 @@
                 avgMealCount: Math.round(avgMealCount * 10) / 10,
                 patternName: humanMsg.title,
                 message: `🍽️ ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `${irregularDays} из ${mealData.length} дней с пропусками или длинными перерывами (>8ч)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3206,6 +3279,11 @@
                 avgBingeMeals: Math.round(avgBingeMeals * 10) / 10,
                 patternName: humanMsg.title,
                 message: `🍔 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `${bingeDays} из ${bingeData.length} дней с признаками переедания (крупные порции >40% нормы)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3284,6 +3362,11 @@
                 avgWellbeing: avgWellbeing !== null ? Math.round(avgWellbeing * 10) / 10 : null,
                 patternName: humanMsg.title,
                 message: `😔 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Средний уровень: ${avgMood !== null ? 'mood ' + avgMood.toFixed(1) : ''}${avgMood && avgWellbeing ? ', ' : ''}${avgWellbeing !== null ? 'wellbeing ' + avgWellbeing.toFixed(1) : ''} (норма: ≥5)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3365,6 +3448,11 @@
                 avgWeight: Math.round(avgWeight * 10) / 10,
                 patternName: humanMsg.title,
                 message: `⚖️ ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Вес колеблется в пределах ${variation.toFixed(1)} кг за 14 дней (среднее: ${avgWeight.toFixed(1)} кг)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3474,6 +3562,11 @@
                 weekendAlcoholRate: Math.round(weekendAlcoholRate * 100),
                 patternName: humanMsg.title,
                 message: `🍻 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Выходные: ${Math.round(avgWeekendKcal)} ккал (будни: ${Math.round(avgWeekdayKcal)} ккал, +${Math.round(weekendExcessPercent)}%), алкоголь: ${Math.round(weekendAlcoholRate * 100)}% дней`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3524,6 +3617,11 @@
                 severity: 'medium',
                 patternName: humanMsg.title,
                 message: `📊 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Средняя клетчатка: ${avgFiber.toFixed(1)}г (цель: ${FIBER_THRESHOLD}+г)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3573,6 +3671,11 @@
                 severity: 'medium',
                 patternName: humanMsg.title,
                 message: `🧂 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Средний натрий: ${Math.round(avgSodium)} мг (цель: <${SODIUM_THRESHOLD} мг)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3657,6 +3760,11 @@
                 severity: 'high',
                 patternName: humanMsg.title,
                 message: `🌙 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Поздние приёмы пищи: ${lateMealCount} дней, разброс сна: ${sleepVariance.toFixed(1)}ч`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3716,6 +3824,11 @@
                 severity: 'high',
                 patternName: humanMsg.title,
                 message: `💪 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `${trainingCount} тренировок за ${MIN_DAYS} дней при ${poorRecoveryCount} днях плохого восстановления`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3767,6 +3880,11 @@
                 severity: 'medium',
                 patternName: humanMsg.title,
                 message: `🥑 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Omega Balancer: ${Math.round(avgScore)} баллов (цель: ${SCORE_THRESHOLD}+)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3826,6 +3944,11 @@
                 severity: 'medium',
                 patternName: humanMsg.title,
                 message: `🍬 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Added Sugar Dependency: ${Math.round(avgScore)} баллов (цель: ${SCORE_THRESHOLD}+)`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3890,6 +4013,11 @@
                 severity: 'medium',
                 patternName: humanMsg.title,
                 message: `🔬 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `${lowPatterns.length} микронутриентов с низким score: ${lowPatterns.map(p => p.name).join(', ')}`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3961,6 +4089,11 @@
                 severity: 'low',
                 patternName: humanMsg.title,
                 message: `🚶 ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Шаги упали на ${declinePercent}%: с ${Math.round(allAvg)} до ${Math.round(recentAvg)} шагов/день`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -4020,6 +4153,11 @@
                 severity: 'low',
                 patternName: humanMsg.title,
                 message: `⏰ ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Время первого приёма пищи колеблется на ${maxDiff.toFixed(1)} часа`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -4079,6 +4217,11 @@
                 severity: 'medium',
                 patternName: humanMsg.title,
                 message: `⚡ ${humanMsg.title}`,
+                    // Голос куратора для v4: фраза уже написана в
+                    // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
+                    // показывала заголовок с эмодзи. Контракт «стоит внимания»
+                    // требует наблюдение голосом куратора, эмодзи в v4 нет.
+                    humanMessage: humanMsg.message,
                 detail: `Electrolyte Homeostasis: ${Math.round(avgScore)} баллов при ${trainingCount} тренировках`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,

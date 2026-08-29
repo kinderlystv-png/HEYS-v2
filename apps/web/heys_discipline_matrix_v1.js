@@ -154,14 +154,17 @@
     }
     const rz = HEYS.ratioZones;
 
+    // sumShare/shareDays — для «нулевой строки» (контракт): когда в норме не
+    // было ни одного дня, полоса и Δ считаются по средней доле нормы, иначе
+    // строка одинаково молчит и при 200 мл, и при 2500 при норме 2745.
     const acc = {
-      nutrition: { inNorm: 0, tracked: 0 },
-      water: { inNorm: 0, tracked: 0 },
-      steps: { inNorm: 0, tracked: 0 },
-      sleep: { inNorm: 0, tracked: 0 },
+      nutrition: { inNorm: 0, tracked: 0, sumShare: 0, shareDays: 0 },
+      water: { inNorm: 0, tracked: 0, sumShare: 0, shareDays: 0 },
+      steps: { inNorm: 0, tracked: 0, sumShare: 0, shareDays: 0 },
+      sleep: { inNorm: 0, tracked: 0, sumShare: 0, shareDays: 0 },
       activation: { count: 0 },
       trainings: { count: 0 },
-      tracking: { inNorm: 0, tracked: entries.length }
+      tracking: { inNorm: 0, tracked: entries.length, sumShare: 0, shareDays: 0 }
     };
 
     entries.forEach((entry) => {
@@ -176,6 +179,10 @@
           ? rz.isStreakDayWithRefeed(ratio, day || {})
           : (ratio >= 0.70 && ratio < 1.35);
         if (ok) acc.nutrition.inNorm++;
+        // Для питания «доля нормы» — близость к коридору: за 100 % берём
+        // попадание, за пределами считаем расстояние до ближайшей границы.
+        acc.nutrition.sumShare += ok ? 1 : (ratio < 0.70 ? ratio / 0.70 : 1.35 / ratio);
+        acc.nutrition.shareDays++;
       }
 
       if (!day) return;
@@ -184,19 +191,26 @@
       if (water > 0) {
         acc.water.tracked++;
         if (water >= waterGoal) acc.water.inNorm++;
+        acc.water.sumShare += Math.min(1, water / waterGoal);
+        acc.water.shareDays++;
       }
 
       const steps = +day.steps || 0;
       if (steps > 0) {
         acc.steps.tracked++;
         if (steps >= stepsGoal) acc.steps.inNorm++;
+        acc.steps.sumShare += Math.min(1, steps / stepsGoal);
+        acc.steps.shareDays++;
       }
 
       const sleep = sleepHoursOf(day);
       if (sleep > 0) {
         acc.sleep.tracked++;
         // Норма сна — диапазон: пересып тоже вне нормы.
-        if (sleep >= sleepMin && sleep <= sleepMax) acc.sleep.inNorm++;
+        const inSleepNorm = sleep >= sleepMin && sleep <= sleepMax;
+        if (inSleepNorm) acc.sleep.inNorm++;
+        acc.sleep.sumShare += inSleepNorm ? 1 : (sleep < sleepMin ? sleep / sleepMin : sleepMax / sleep);
+        acc.sleep.shareDays++;
       }
 
       if (((day.trainings || []).some(isMorningActivation))) acc.activation.count++;
@@ -218,18 +232,34 @@
     const cur = computeWindow(entriesCur || [], profile);
     const prev = computeWindow(entriesPrev || [], profile);
 
+    // Контракт «нулевая строка»: если в норме не было ни одного дня, порог
+    // нормы не двигается (остаётся 100 %), но полоса и Δ считаются по средней
+    // доле нормы — «0 из 26 · в среднем 91 % нормы», Δ +6 п.п. по этой доле.
+    const avgShareOf = (a) => (a && a.shareDays ? a.sumShare / a.shareDays : null);
+
     const ratioRow = (key, label) => {
       const c = cur[key];
       const p = prev[key];
       if (!c.tracked) return { key, label, kind: 'ratio', notTracked: true };
+      const isZero = c.inNorm === 0;
+      const avgShare = avgShareOf(c);
+      const prevAvgShare = avgShareOf(p);
       return {
         key,
         label,
         kind: 'ratio',
         inNorm: c.inNorm,
         tracked: c.tracked,
-        share: c.inNorm / c.tracked,
-        delta: shareDelta(c, p)
+        // Полоса нулевой строки показывает среднюю долю нормы, живой —
+        // долю дней в норме.
+        share: isZero && avgShare != null ? avgShare : c.inNorm / c.tracked,
+        isZeroRow: isZero,
+        avgShare: isZero ? avgShare : null,
+        delta: isZero
+          ? (avgShare != null && prevAvgShare != null
+            ? Math.round((avgShare - prevAvgShare) * 100)
+            : null)
+          : shareDelta(c, p)
       };
     };
 

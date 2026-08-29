@@ -90,3 +90,30 @@ describe('строка «Ритм приёмов» переживает живо
     expect(dashboard).toContain('День закрыт полностью');
   });
 });
+
+// Живые данные: в карточку «Стоит внимания» шёл заголовок с эмодзи
+// («🍽️ Слишком большой дефицит калорий»), хотя написанная фраза куратора
+// лежала в WARNING_HUMAN_MESSAGES и в объект предупреждения не попадала.
+describe('голос куратора в предупреждениях', () => {
+  it('движок отдаёт написанную фразу в humanMessage', () => {
+    const ews = read('insights/pi_early_warning.js');
+    const titles = (ews.match(/message: `[^`]*\$\{humanMsg\.title\}[^`]*`/g) || []).length;
+    const human = (ews.match(/humanMessage: humanMsg\.message/g) || []).length;
+    expect(titles).toBeGreaterThan(20);
+    // Каждому заголовку соответствует проброшенная фраза
+    expect(human).toBe(titles);
+  });
+
+  it('v4 предпочитает фразу, а эмодзи у старых снимков срезает', () => {
+    const dashboard = read('insights/pi_ui_dashboard.js');
+    expect(dashboard).toContain('w.humanMessage');
+    // эмодзи-префикс срезается регуляркой по не-буквенным символам в начале
+    expect(dashboard).toMatch(/replace\(\/\^\[\^\\p\{L\}\\p\{N\}\]\+\/u/);
+    // Сырое w.message в v4-блоках больше не показывается
+    const attention = dashboard.slice(
+      dashboard.indexOf('function InsightsV4Attention'),
+      dashboard.indexOf('function buildPatternMaturityWord'),
+    );
+    expect(attention).not.toContain("}, w.message || w.detail)");
+  });
+});
