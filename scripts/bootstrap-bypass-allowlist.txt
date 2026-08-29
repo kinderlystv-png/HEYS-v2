@@ -212,9 +212,9 @@ apps/web/heys_ui_onboarding_v1.js:171
 apps/web/heys_ui_onboarding_v1.js:778
 apps/web/heys_user_tab_impl_v1.js:476
 apps/web/heys_user_tab_impl_v1.js:761
-apps/web/heys_user_v12.js:149
-apps/web/heys_user_v12.js:160
-apps/web/heys_weekly_reports_v2.js:36
+apps/web/heys_user_v12.js:166
+apps/web/heys_user_v12.js:177
+apps/web/heys_weekly_reports_v2.js:38
 apps/web/heys_curator_actions_banner_v1.js:342
 apps/web/heys_curator_actions_banner_v1.js:378
 apps/web/heys_curator_push_onboarding_banner_v1.js:62
@@ -230,10 +230,10 @@ apps/web/heys_yesterday_verify_v1.js:1267
 apps/web/heys_yesterday_verify_v1.js:1265
 apps/web/heys_yesterday_verify_v1.js:36
 apps/web/heys_yesterday_verify_v1.js::heys_debug_yesterday_zero_payload
-apps/web/insights/pi_early_warning.js:1273
-apps/web/insights/pi_early_warning.js:1827
-apps/web/insights/pi_early_warning.js:847
-apps/web/insights/pi_early_warning.js:1352
+apps/web/insights/pi_early_warning.js:1310
+apps/web/insights/pi_early_warning.js:1864
+apps/web/insights/pi_early_warning.js:884
+apps/web/insights/pi_early_warning.js:1389
 apps/web/insights/pi_ui_meal_rec_card.js:1141
 apps/web/insights/pi_ui_meal_rec_card.js:1402
 apps/web/insights/pi_ui_meal_rec_card.js:2472
