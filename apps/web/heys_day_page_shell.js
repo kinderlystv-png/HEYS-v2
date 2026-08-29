@@ -100,9 +100,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
 
     const WaterCustomVolumeHost = HEYS.WaterCustomVolume?.WaterCustomVolumeHost;
-    const DayQuickActionsFab = HEYS.Widgets?.QuickActionsFab;
 
     function renderDayPage(params) {
+        // Читаем в момент отрисовки, а не при загрузке модуля. Этот файл живёт в
+        // boot-day, а QuickActionsFab регистрирует heys_widgets_ui_v1.js из
+        // postboot-3-ui-lazy — ленивый кусок доезжает уже после первого рендера.
+        // Захват на уровне модуля давал undefined навсегда: условие показа FAB
+        // ниже его проверяет, поэтому стопка быстрых действий не появлялась на
+        // «Питании» и «Активе» вообще, а вместо неё оставался глобальный FAB
+        // мессенджера (он прячется только при наличии .widgets-quick-fab-wrap).
+        // На Главной проблемы нет: там компонент используется внутри своего же
+        // модуля, без обращения к чужому. WaterCustomVolumeHost выше трогать не
+        // нужно — он в том же boot-day и на момент захвата уже зарегистрирован.
+        const DayQuickActionsFab = HEYS.Widgets?.QuickActionsFab;
         const {
             isReadOnly,
             pullProgress,

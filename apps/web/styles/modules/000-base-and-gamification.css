@@ -11878,10 +11878,19 @@ body:has(:is(
   color: var(--v4-ink, #fff);
 }
 
-/* Отступ для контента страницы */
+/* Отступ для контента страницы.
+
+   Только вертикаль и только длинными свойствами. Шорткат здесь задавал все
+   четыре стороны разом и молча обнулял боковые поля вкладок: элемент несёт
+   два класса сразу (`page page-day`, `page page-reports`), у `.page-day`
+   боковые 18 px объявлены в 730-widgets-dashboard.css, но `.page` идёт в
+   каскаде последним и стирал их четвёртым значением шортката. Вкладки
+   «Питание», «Актив» и «Отчёты» из-за этого шли встык к краю экрана против
+   строки контракта «поля вкладки» (nutrition-tab.v4.dc.html: «горизонтальные
+   поля 18 px»). Главная и Инсайты класса `page` не несут и не пострадали. */
 .page {
-  padding:
-    max(0px, env(safe-area-inset-top)) 0 calc(80px + max(8px, env(safe-area-inset-bottom))) 0;
+  padding-top: max(0px, env(safe-area-inset-top));
+  padding-bottom: calc(80px + max(8px, env(safe-area-inset-bottom)));
   /* Плавное появление контента */
   animation: pageFadeIn 0.2s ease-out;
 }
@@ -13764,11 +13773,13 @@ body:has(:is(
 }
 
 @media (max-width: 840px) {
-  .page {
-    padding-left: 0;
-    padding-right: 0;
-  }
-
+  /* Боковые поля вкладки на узком экране задаёт сама вкладка, а не `.page`.
+     Здесь стояло обнуление, и оно било по всему, что несёт класс `page`:
+     `page page-day` и `page page-reports` теряли свои 18 px из
+     730-widgets-dashboard.css и шли встык к краю против строки контракта
+     «поля вкладки» (nutrition-tab.v4.dc.html). Главная и Инсайты класса
+     `page` не несут — их отступ даёт своя сетка, поэтому там всё было
+     видно правильно, и разница между вкладками читалась как «растянуло». */
   .day-header {
     flex-direction: column;
     gap: 10px;
