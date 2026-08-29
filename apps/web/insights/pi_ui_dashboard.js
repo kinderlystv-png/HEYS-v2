@@ -1978,12 +1978,42 @@
     // выбранного окна анализа. realInsights.daysWithData ограничен daysBack
     // текущего чипа, поэтому при окне 7д он физически не мог достичь 30 —
     // чип «30д» был заблокирован навсегда, а шапка занижала «N дней данных».
+    //
+    // Предикат «день считается» — общий с Отчётами (HEYS.DisciplineMatrix):
+    // прежний getDaysData засчитывал любую непустую запись, включая дни с
+    // одним техническим полем и дни, помеченные человеком как незаполненные
+    // (isIncomplete). Из-за этого пороги 7/14/30 расходились между вкладками.
     function countHistoryDaysWithData(lsGet) {
       try {
         const getter = lsGet || window.HEYS?.utils?.lsGet;
-        const getDays = HEYS.InsightsPI?.calculations?.getDaysData;
-        if (!getter || typeof getDays !== 'function') return 0;
-        return getDays(30, getter).length;
+        if (!getter) return 0;
+        const dm = HEYS.DisciplineMatrix;
+        if (dm && typeof dm.countHistoryDays === 'function') {
+          return dm.countHistoryDays(getter, 30);
+        }
+        // Фолбэк на случай, если модуль Отчётов ещё не загружен: тот же
+        // критерий, локальной копией — без него счётчик молча вернул бы 0.
+        const clientId = (HEYS.utils && HEYS.utils.getCurrentClientId && HEYS.utils.getCurrentClientId())
+          || HEYS.currentClientId || '';
+        const today = new Date();
+        let count = 0;
+        for (let i = 0; i < 30; i++) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const ds = d.toISOString().slice(0, 10);
+          const scopedKey = clientId ? 'heys_' + clientId + '_dayv2_' + ds : 'heys_dayv2_' + ds;
+          const row = getter(scopedKey, null) || getter('heys_dayv2_' + ds, null);
+          if (!row || row.isIncomplete === true) continue;
+          const hasMeals = (row.meals || []).some(function (m) {
+            const items = (m && (m.items || m.food || m.list || m.products)) || [];
+            return items.length > 0;
+          });
+          const hasSleep = !!(row.sleepStart && row.sleepEnd);
+          if (hasMeals || hasSleep || (+row.weightMorning || 0) > 0
+            || (+row.steps || 0) > 0 || (+row.waterMl || 0) > 0
+            || ((row.trainings || []).length > 0)) count++;
+        }
+        return count;
       } catch (_) {
         return 0;
       }

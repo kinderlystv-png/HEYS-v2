@@ -156,25 +156,13 @@
         : chartPeriod === 30 ? 'месяц'
           : chartPeriod + ' дней';
 
-    // Контракт «мало данных»: порог общий с Инсайтами — дни с любыми данными
-    // за последние 30, не только дни с ккал.
-    const hasAnyData = HEYS.DisciplineMatrix && HEYS.DisciplineMatrix._test
-      ? HEYS.DisciplineMatrix._test.hasAnyData
-      : null;
-    let historyDays = 0;
-    if (typeof lsGet === 'function' && hasAnyData) {
-      const today = new Date();
-      for (let i = 0; i < 30; i++) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        const ds = d.toISOString().slice(0, 10);
-        const scopedKey = clientId ? 'heys_' + clientId + '_dayv2_' + ds : 'heys_dayv2_' + ds;
-        const row = lsGet(scopedKey, null) || lsGet('heys_dayv2_' + ds, null);
-        if (row && hasAnyData(row)) historyDays++;
-      }
-    } else {
-      historyDays = withKcal.length;
-    }
+    // Контракт «мало данных»: порог общий с Инсайтами — один счётчик на обе
+    // вкладки (HEYS.DisciplineMatrix.countHistoryDays): дни с реальными
+    // данными за последние 30, дни с isIncomplete не считаются.
+    const countHistoryDays = HEYS.DisciplineMatrix && HEYS.DisciplineMatrix.countHistoryDays;
+    const historyDays = (typeof lsGet === 'function' && typeof countHistoryDays === 'function')
+      ? countHistoryDays(lsGet, 30, clientId)
+      : withKcal.length;
 
     // Контракт «замеры тела»: единственный призыв вкладки — про данные, не
     // про поведение; стоит последним. Ищем последний день с замерами за 60.

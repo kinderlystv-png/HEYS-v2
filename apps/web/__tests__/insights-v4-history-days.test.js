@@ -44,11 +44,29 @@ describe('insights v4 history days counter', () => {
     // 18 заполненных дней из последних 30 — больше любого окна 7/14
     const store = {};
     for (let i = 0; i < 18; i++) {
-      store[`heys_dayv2_${isoDaysAgo(i)}`] = { meals: [{ time: '12:00' }] };
+      store[`heys_dayv2_${isoDaysAgo(i)}`] = { meals: [{ items: [{ name: 'x' }], time: '12:00' }] };
     }
     const lsGet = (key, fallback) => (key in store ? store[key] : fallback ?? null);
 
     expect(counter(lsGet)).toBe(18);
+  });
+
+  // Порог общий с Отчётами (2026-08-29): пустые технические записи и дни,
+  // помеченные «не заполнял», не двигают пороги 7/14/30 и чип «30».
+  it('технические пустышки и isIncomplete не считаются', () => {
+    const counter = window.HEYS.InsightsPI.uiDashboard._test.countHistoryDaysWithData;
+    const store = {};
+    for (let i = 0; i < 6; i++) {
+      store[`heys_dayv2_${isoDaysAgo(i)}`] = { meals: [{ items: [{ name: 'x' }] }], steps: 9000 };
+    }
+    for (let i = 6; i < 10; i++) {
+      store[`heys_dayv2_${isoDaysAgo(i)}`] = { updatedAt: 1756000000000 };
+    }
+    for (let i = 10; i < 13; i++) {
+      store[`heys_dayv2_${isoDaysAgo(i)}`] = { steps: 9000, isIncomplete: true };
+    }
+    const lsGet = (key, fallback) => (key in store ? store[key] : fallback ?? null);
+    expect(counter(lsGet)).toBe(6);
   });
 
   it('при полных 30 днях счётчик достигает порога разблокировки «30д»', () => {

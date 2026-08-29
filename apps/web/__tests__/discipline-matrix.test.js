@@ -131,4 +131,51 @@ describe('discipline matrix', () => {
     const res = window.HEYS.DisciplineMatrix.compute(cur, prev, profile);
     expect(res.rows.find((r) => r.key === 'trainings').delta).toBe(1);
   });
+
+  // Единый порог обеих вкладок (2026-08-29): до этого Инсайты считали любую
+  // непустую запись, Отчёты — по данным, спарклайн — по !isIncomplete.
+  describe('порог «день считается» — общий счётчик', () => {
+    const iso = (daysAgo) => {
+      const d = new Date();
+      d.setDate(d.getDate() - daysAgo);
+      return d.toISOString().slice(0, 10);
+    };
+    const makeGetter = (store) => (key, fallback) => (key in store ? store[key] : (fallback ?? null));
+
+    it('день с одним техническим полем не считается', () => {
+      const { hasAnyData } = window.HEYS.DisciplineMatrix;
+      expect(hasAnyData({ updatedAt: 1756000000000 })).toBe(false);
+      expect(hasAnyData({ date: '2026-08-29', deficitPct: -10 })).toBe(false);
+      expect(hasAnyData({})).toBe(false);
+      expect(hasAnyData(null)).toBe(false);
+    });
+
+    it('день, помеченный «не заполнял» (isIncomplete), не двигает порог', () => {
+      const { hasAnyData } = window.HEYS.DisciplineMatrix;
+      const filled = day();
+      expect(hasAnyData(filled)).toBe(true);
+      expect(hasAnyData({ ...filled, isIncomplete: true })).toBe(false);
+    });
+
+    it('countHistoryDays считает только реальные дни из последних 30', () => {
+      const { countHistoryDays } = window.HEYS.DisciplineMatrix;
+      const store = {};
+      // 5 настоящих дней
+      for (let i = 0; i < 5; i++) store['heys_dayv2_' + iso(i)] = day();
+      // 3 технических пустышки и 2 «не заполнял» — не в счёт
+      for (let i = 5; i < 8; i++) store['heys_dayv2_' + iso(i)] = { updatedAt: 1 };
+      for (let i = 8; i < 10; i++) store['heys_dayv2_' + iso(i)] = { ...day(), isIncomplete: true };
+      expect(countHistoryDays(makeGetter(store), 30)).toBe(5);
+    });
+
+    it('счётчик читает client-scoped ключи', () => {
+      const { countHistoryDays } = window.HEYS.DisciplineMatrix;
+      const cid = 'abc-123';
+      const store = {};
+      for (let i = 0; i < 4; i++) store['heys_' + cid + '_dayv2_' + iso(i)] = day();
+      expect(countHistoryDays(makeGetter(store), 30, cid)).toBe(4);
+      // без clientId те же ключи не видны — scope не протекает
+      expect(countHistoryDays(makeGetter(store), 30, '')).toBe(0);
+    });
+  });
 });

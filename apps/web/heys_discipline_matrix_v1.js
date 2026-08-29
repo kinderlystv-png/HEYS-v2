@@ -45,8 +45,18 @@
     );
   }
 
+  // Единый предикат «день считается» для порогов обеих вкладок (контракт
+  // «до 7 дней»: порог общий с Инсайтами). До 2026-08-29 критериев было три:
+  // Инсайты считали любую непустую запись (даже с одним updatedAt), Отчёты —
+  // по наличию данных, спарклайн — по !isIncomplete. Пороги 7/14/30 и
+  // разблокировка чипа «30» из-за этого расходились между вкладками.
+  //
+  // isIncomplete ставит сам человек («день не заполнял» — low-cal banner,
+  // realdata actions, yesterday verify): такой день из статистик исключён,
+  // значит и порог двигать не должен.
   function hasAnyData(day) {
     if (!day) return false;
+    if (day.isIncomplete === true) return false;
     const meals = (day.meals || []).some((m) => {
       const items = (m && (m.items || m.food || m.list || m.products)) || [];
       return items.length > 0;
@@ -57,6 +67,29 @@
       || (+day.steps || 0) > 0
       || (+day.waterMl || 0) > 0
       || ((day.trainings || []).length > 0);
+  }
+
+  // Счётчик истории: сколько дней из последних `depth` реально считаются.
+  // Один на обе вкладки — шапка Инсайтов, разблокировка окна «30» и порог
+  // заглушки Отчётов должны говорить одно и то же число.
+  function countHistoryDays(lsGet, depth, clientId) {
+    if (typeof lsGet !== 'function') return 0;
+    const days = depth || 30;
+    const cid = clientId
+      || (HEYS.utils && HEYS.utils.getCurrentClientId && HEYS.utils.getCurrentClientId())
+      || HEYS.currentClientId
+      || '';
+    const today = new Date();
+    let count = 0;
+    for (let i = 0; i < days; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const ds = d.toISOString().slice(0, 10);
+      const scopedKey = cid ? 'heys_' + cid + '_dayv2_' + ds : 'heys_dayv2_' + ds;
+      const row = lsGet(scopedKey, null) || lsGet('heys_dayv2_' + ds, null);
+      if (row && hasAnyData(row)) count++;
+    }
+    return count;
   }
 
   // «День ведён» = заполнено ≥4 полей из 5 (еда · вес · сон · шаги · вода).
@@ -229,6 +262,9 @@
 
   HEYS.DisciplineMatrix = {
     compute,
+    // Публичное API порога — обе вкладки считают дни одинаково.
+    hasAnyData,
+    countHistoryDays,
     _test: {
       computeWindow,
       fieldsFilled,
