@@ -318,6 +318,38 @@
   // Возвращает изменение сглаженного тренда за окно и качество данных, потому
   // что поправке нужно и число, и право его посчитать: гейт требует не меньше
   // шести реальных взвешиваний в окне.
+  /**
+   * Тот же тренд, но по готовому ряду вместо локального хранилища.
+   *
+   * Кураторской панели ряд приходит с сервера — клиентского хранилища у неё
+   * нет. Считать там «первая точка минус последняя» значило бы завести второй
+   * тренд: сглаживание, интерполяция дыр и мёртвая зона остались бы только у
+   * клиента, и числа разошлись бы при одинаковых данных. Поэтому ряд входит
+   * снаружи, а алгоритм остаётся один.
+   *
+   * @param {Array<{date:string, weight:number|null, hasWeight:boolean}>} series
+   * @param {number} days длина окна
+   */
+  function trendForSeries(series, days) {
+    const windowDays = Math.max(7, days || 21);
+    const smoothed = interpolateSeries(buildSmoothedSeries(series || []));
+    const windowSeries = smoothed.slice(-windowDays);
+
+    const measuredDays = windowSeries.filter((d) => d.hasWeight).length;
+    const withTrend = windowSeries.filter((d) => d.smoothed != null);
+    const first = withTrend[0] || null;
+    const last = withTrend[withTrend.length - 1] || null;
+
+    return {
+      windowDays,
+      measuredDays,
+      deltaKg: (first && last) ? last.smoothed - first.smoothed : null,
+      startSmoothed: first ? first.smoothed : null,
+      endSmoothed: last ? last.smoothed : null,
+      series: windowSeries
+    };
+  }
+
   function trendForWindow(options) {
     const windowDays = Math.max(7, (options && options.days) || 21);
     const series = loadDailyWeights(Math.max(windowDays + MA_WINDOW, MAX_HISTORY_DAYS));
@@ -347,6 +379,7 @@
     MA_WINDOW,
     compute: computeWeightDynamicsV4,
     trendForWindow,
+    trendForSeries,
     deltaStateForGoal,
     resolveGoalDirection
   };

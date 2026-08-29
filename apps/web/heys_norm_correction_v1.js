@@ -773,8 +773,182 @@
     return { result, card, weeks, lsSet };
   }
 
+  // Молчание считается по последнему дню с записью, а не по последнему заходу:
+  // человек может открывать приложение и ничего не вносить.
+  const SILENT_DAYS_ALERT = 3;
+
+  /**
+   * Синтетический день для движка расхода из строки серверного окна.
+   *
+   * Окно отдаёт минуты по зонам, сложенные по всем тренировкам дня. Расход
+   * тренировки линеен по минутам внутри зоны, поэтому одна тренировка с этими
+   * суммами даёт ровно тот же расход, что и поштучный проход, — а числа у
+   * куратора и у клиента обязаны совпадать.
+   */
+  function dayFromWindowRow(row) {
+    const zones = Array.isArray(row.zone_min) ? row.zone_min.map((m) => Number(m) || 0) : null;
+    return {
+      date: row.day_date,
+      weightMorning: row.weight_morning == null ? null : Number(row.weight_morning),
+      steps: Number(row.steps) || 0,
+      householdMin: Number(row.household_min) || 0,
+      trainings: zones && zones.some((m) => m > 0) ? [{ z: zones }] : [],
+      isIncomplete: !!row.is_incomplete
+    };
+  }
+
+  /**
+   * Профиль клиента из строки контекста.
+   *
+   * Возраст сервер отдаёт и числом, и датой рождения, потому что в блобах они
+   * расходятся — у живого клиента нашлось `age: 25` при дате рождения 1991
+   * года. Правило выбора живёт в движке расхода, здесь мы только передаём оба.
+   */
+  function profileFromContextRow(row) {
+    return {
+      weight: row.weight == null ? null : Number(row.weight),
+      height: row.height == null ? null : Number(row.height),
+      age: row.age == null ? null : Number(row.age),
+      birthDate: row.birth_date || '',
+      gender: row.gender || '',
+      deficitPctTarget: row.deficit_pct_target == null ? null : Number(row.deficit_pct_target),
+      normCorrectionFactor: row.norm_correction_factor == null ? 1 : Number(row.norm_correction_factor),
+      normCorrectionAppliedAt: row.norm_correction_applied_at || ''
+    };
+  }
+
+  /**
+   * Поправка по каждому клиенту куратора из серверного окна и профилей.
+   *
+   * Считает тот же движок и та же compute(), что у клиента: сервер отдаёт
+   * сырьё, а не готовое число, — иначе у панели завёлся бы второй расчёт,
+   * который разошёлся бы с первым молча.
+   *
+   * @param {object} input
+   * @param {Array} input.windowRows строки get_curator_clients_window
+   * @param {Array} input.contextRows строки get_curator_clients_norm_context
+   * @param {Date} input.now точка отсчёта молчания
+   */
+  function buildPanelRows({ windowRows, contextRows, now }) {
+    const base = now instanceof Date ? now : new Date();
+    const byClient = new Map();
+
+    for (const row of contextRows || []) {
+      if (!row || !row.client_id) continue;
+      byClient.set(row.client_id, {
+        clientId: row.client_id,
+        profile: profileFromContextRow(row),
+        hrZones: Array.isArray(row.hr_zones) ? row.hr_zones : [],
+        lastDecision: row.last_decision || null,
+        lastDecisionWeek: row.last_decision_week || null,
+        days: []
+      });
+    }
+
+    for (const row of windowRows || []) {
+      const entry = byClient.get(row && row.client_id);
+      if (entry) entry.days.push(row);
+    }
+
+    const out = [];
+    for (const entry of byClient.values()) {
+      entry.days.sort((a, b) => String(a.day_date).localeCompare(String(b.day_date)));
+
+      // Молчание: сколько дней подряд с конца окна нет ни одной записи.
+      let silentDays = 0;
+      for (let i = entry.days.length - 1; i >= 0; i--) {
+        if (entry.days[i].has_day) break;
+        silentDays++;
+      }
+
+      // Сторона съеденного и сторона расхода — по тем же правилам, что в
+      // gather(): неполные дни исключаются, расход берётся до поправки.
+      const days = [];
+      let expSum = 0;
+      let expDays = 0;
+      let bmr = 0;
+      let deficitPct = 0;
+      for (const row of entry.days) {
+        if (!row.has_day) continue;
+        days.push({
+          dateStr: row.day_date,
+          kcal: Number(row.kcal) || 0,
+          isLogged: (Number(row.meals_count) || 0) > 0,
+          isIncomplete: !!row.is_incomplete
+        });
+        const tdee = HEYS.TDEE?.calculate
+          ? HEYS.TDEE.calculate(dayFromWindowRow(row), entry.profile, {
+            includeNDTE: false,
+            hrZones: entry.hrZones,
+            lsGet: () => null
+          })
+          : null;
+        if (tdee && tdee.baseExpenditure > 0) {
+          expSum += tdee.baseExpenditure;
+          expDays++;
+          bmr = tdee.bmr || bmr;
+          deficitPct = Number.isFinite(tdee.deficitPct) ? tdee.deficitPct : deficitPct;
+        }
+      }
+
+      // Тренд веса — тот же канонический алгоритм, что у клиента, только ряд
+      // приходит с сервера: у куратора клиентского хранилища нет. Считать тут
+      // «первая точка минус последняя» значило бы завести второй тренд —
+      // сглаживание и интерполяция дыр остались бы только у клиента, и числа
+      // разошлись бы при одинаковых данных.
+      const series = entry.days.map((r) => ({
+        date: r.day_date,
+        weight: (r.weight_measured && r.weight_morning != null) ? Number(r.weight_morning) : null,
+        hasWeight: !!(r.weight_measured && r.weight_morning != null)
+      }));
+      const trend = HEYS.Widgets?.WeightDynamicsV4?.trendForSeries
+        ? HEYS.Widgets.WeightDynamicsV4.trendForSeries(series, entry.days.length)
+        : { windowDays: entry.days.length, measuredDays: 0, deltaKg: null };
+
+      const result = compute({
+        days,
+        formulaPerDay: expDays ? expSum / expDays : 0,
+        trend,
+        currentFactor: entry.profile.normCorrectionFactor,
+        // Дней ведения у куратора столько, сколько видно в окне: более длинной
+        // истории сервер не отдаёт, и занижать её честнее, чем выдумывать.
+        historyDays: days.length
+      });
+
+      out.push({
+        clientId: entry.clientId,
+        silentDays,
+        isSilent: silentDays >= SILENT_DAYS_ALERT,
+        result,
+        // «Ждёт решения» — расчёт готов, а последнего решения по нему нет.
+        awaitsDecision: result.status === 'ready' && result.direction !== 'hold' && !entry.lastDecision,
+        mismatchPct: Number.isFinite(result.mismatchPct) ? Math.abs(result.mismatchPct) : null,
+        card: buildCuratorCard({
+          result,
+          expenditure: expDays ? expSum / expDays : 0,
+          deficitPct,
+          basalMetabolism: bmr,
+          history: []
+        })
+      });
+    }
+
+    // Порядок панели — кем заняться: сперва ждущие решения, потом молчащие,
+    // потом расхождение по убыванию. Алфавит здесь бесполезен.
+    out.sort((a, b) => (
+      (b.awaitsDecision ? 1 : 0) - (a.awaitsDecision ? 1 : 0)
+      || b.silentDays - a.silentDays
+      || (b.mismatchPct || 0) - (a.mismatchPct || 0)
+    ));
+    return out;
+  }
+
   HEYS.NormCorrection = {
     REFUSAL_STREAK_LIMIT,
+    SILENT_DAYS_ALERT,
+    buildPanelRows,
+    dayFromWindowRow,
+    profileFromContextRow,
     buildWeeklySyncCard,
     gather,
     detectRecomposition,
