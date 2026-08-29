@@ -335,6 +335,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Кегли поля телефона взяты с кадров канваса login.v4.dc.html: префикс «+7» —
+   15 px/600, сам номер — 17 px/600. Строка контракта «вид карточки и боксов
+   кода» говорит «текст 13 px/600» и расходится с собственными кадрами; решением
+   владельца 30 августа верны кадры. 25 августа код поверил строке и ушёл с 17 на
+   13 — номер стал мелким на всю ширину поля. Разбор в UI_V4_FINDINGS_HISTORY. */
 .heys-auth-shell .phone-prefix-large,
 .heys-auth-shell .heys-auth-field > .heys-auth-prefix,
 #heys-login-gate .phone-prefix-large,
@@ -342,7 +347,7 @@
   flex: 0 0 auto;
   height: auto !important;
   min-height: 0 !important;
-  font-size: 13px !important;
+  font-size: 15px !important;
   font-weight: 600 !important;
   line-height: 1 !important;
   letter-spacing: 0 !important;
@@ -368,7 +373,7 @@
   background: transparent !important;
   box-shadow: none !important;
   outline: none !important;
-  font-size: 13px !important;
+  font-size: 17px !important;
   font-weight: 600 !important;
   letter-spacing: 0 !important;
   line-height: 1 !important;
