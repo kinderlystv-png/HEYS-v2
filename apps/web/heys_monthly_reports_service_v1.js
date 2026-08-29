@@ -186,7 +186,12 @@
                 // взвесился (среднее трёх последних взвешиваний либо вес
                 // профиля). Все графики веса такие точки выбрасывают, здесь они
                 // шли в среднее наравне с измеренными и двигали стрелку.
-                const weights = visibleDays
+                // Вес не зависит от еды: сторона веса и сторона съеденного
+                // считаются по своим выборкам, и одна другую не отсекает. День,
+                // когда человек взвесился, но не записал питание, в средний вес
+                // попадает — раньше он выпадал вместе с едой.
+                const weights = (report.days || [])
+                    .filter((d) => d.isEligible)
                     .map((d) => dayMap.get(d.dateStr))
                     .filter(isMeasuredWeight)
                     .map((src) => src.weightMorning)
@@ -294,8 +299,10 @@
             const totalBurned = burnedDays.reduce((s, d) => s + d.burned, 0);
             const totalKcal = foodDays.reduce((s, d) => s + (d.totals?.kcal || 0), 0);
 
+            // Вес по годным дням, а не по учтённым: учтённые при
+            // filterEmptyDays — это дни с едой, а взвешивание от еды не зависит.
             const weights = allDays
-                .filter((d) => d.isCounted && d.weightMeasured && (d.weightMorning || 0) > 0)
+                .filter((d) => d.isEligible && d.weightMeasured && (d.weightMorning || 0) > 0)
                 .map((d) => d.weightMorning);
 
             const targets = burnedDays

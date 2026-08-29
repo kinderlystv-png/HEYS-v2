@@ -189,7 +189,7 @@ describe('лист отчётов · средний вес', () => {
       weeklyReports: {
         buildWeekReport: () => ({
           daysWithData: 7,
-          days: dates.map((d) => ({ dateStr: d, hasMeals: true, ratio: 1 }))
+          days: dates.map((d) => ({ dateStr: d, hasMeals: true, isEligible: true, ratio: 1 }))
         })
       }
     };
@@ -237,6 +237,26 @@ describe('лист отчётов · средний вес', () => {
     expect(weekReport().avgWeight).toBe(0);
   });
 
+  it('вес считается и в дни, когда человек не ел', () => {
+    // Сторона веса и сторона съеденного — разные выборки, и одна другую не
+    // отсекает. Раньше день со взвешиванием, но без записанного питания,
+    // выпадал из среднего веса вместе с едой.
+    seedWeights((d, i) => (i < 3
+      ? { weightMorning: 90, weightMorningSource: 'measured' }
+      : { weightMorning: 96, weightMorningSource: 'measured' }));
+    // Дни без еды: заглушка отдаёт их годными, но не пищевыми.
+    window.HEYS.weeklyReports.buildWeekReport = () => ({
+      daysWithData: 3,
+      daysWithRecords: 7,
+      days: dates.map((d, i) => ({
+        dateStr: d, hasMeals: i < 3, isEligible: true, ratio: 1
+      }))
+    });
+    // Среднее по всем семи: (3×90 + 4×96) / 7 = 93,4. По одним пищевым было
+    // бы ровно 90 — то есть четыре взвешивания просто исчезали.
+    expect(weekReport().avgWeight).toBe(93.4);
+  });
+
   it('месяц считается по дням: порог достижим, средние взвешены по дням', () => {
     // Шестнадцать недель подряд с записями. Раньше месяц собирался из недель
     // по их понедельнику при календарном знаменателе, и у месяца, начинающегося
@@ -273,6 +293,7 @@ describe('лист отчётов · средний вес', () => {
           hasMeals: has,
           hasAnyRecord: has,
           isCounted: has,
+          isEligible: has,
           ratio: 1,
           burned: 2500,
           targetDeficitPct: -12,
@@ -337,7 +358,8 @@ describe('лист отчётов · средний вес', () => {
         d.setDate(monday.getDate() + i);
         const key = fmt(d);
         const has = seeded.has(key);
-        return { dateStr: key, hasMeals: has, hasAnyRecord: has, isCounted: has, ratio: 1 };
+        return { dateStr: key, hasMeals: has, hasAnyRecord: has, isCounted: has,
+          isEligible: has, ratio: 1 };
       });
       return { daysWithData: days.filter((d) => d.isCounted).length, days };
     };

@@ -183,16 +183,20 @@
             ? HEYS.weeklyCalc.shouldIncludeDay({ day: d, nowDateStr: todayStr, ...opts })
             : (!d.isFuture && !(d.isToday && d.ratio < 0.5));
 
-        // visibleDays: исключаем неполный сегодня + опционально дни без еды (если filterEmptyDays)
+        // «День годен» — прошёл правила включения и ничего не знает про еду.
+        // shouldIncludeDay судит «неполный» только про сегодняшний день:
+        // isIncompleteToday выходит на false, если дата не сегодняшняя. А
+        // пометку «не заполнял» человек ставит и на прошлые дни, и вся
+        // остальная зона (матрица дисциплины, итог периода) выбрасывает их
+        // на любой дате.
+        days.forEach((d) => {
+            d.isEligible = !d.isIncomplete && shouldIncludeDay(d, { requireMeals: false });
+        });
+
+        // visibleDays: годные дни, опционально только с едой (filterEmptyDays)
         const visibleDays = days.filter((d) => {
-            // shouldIncludeDay судит «неполный» только про сегодняшний день:
-            // isIncompleteToday выходит на false, если дата не сегодняшняя. А
-            // пометку «не заполнял» человек ставит и на прошлые дни, и вся
-            // остальная зона (матрица дисциплины, итог периода) выбрасывает их
-            // на любой дате. Здесь такой день попадал и в средние, и в счёт.
-            if (d.isIncomplete) return false;
-            if (!shouldIncludeDay(d, { requireMeals: false })) return false;
-            if (filterEmptyDays && !d.hasMeals) return false; // опционально: дни без еды
+            if (!d.isEligible) return false;
+            if (filterEmptyDays && !d.hasMeals) return false;
             return true;
         });
         // Метка «день учтён» ставится там же, где живут правила включения, —
@@ -206,14 +210,10 @@
         const daysWithData = visibleDays.filter((d) => d.hasMeals).length;
 
         // daysWithRecords отвечает за «учтено N дней» и пороги надёжности, и
-        // считается по своей выборке: visibleDays при filterEmptyDays уже
-        // отброшены дни без еды, а счёт записей от еды зависеть не должен —
+        // считается по годным дням, а не по visibleDays: там при filterEmptyDays
+        // уже отброшены дни без еды, а счёт записей от еды зависеть не должен —
         // иначе он просто повторял бы daysWithData.
-        const daysWithRecords = days.filter((d) => {
-            if (d.isIncomplete) return false;
-            if (!shouldIncludeDay(d, { requireMeals: false })) return false;
-            return d.hasAnyRecord;
-        }).length;
+        const daysWithRecords = days.filter((d) => d.isEligible && d.hasAnyRecord).length;
         const totalKcal = visibleDays.reduce((s, d) => s + (d.totals?.kcal || 0), 0);
         const totalTarget = visibleDays.reduce((s, d) => s + (d.goalOptimum || 0), 0);
         const avgKcal = daysWithData ? Math.round(totalKcal / daysWithData) : 0;
