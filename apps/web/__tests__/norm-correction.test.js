@@ -474,6 +474,57 @@ describe('поправка на факт · довод перестройки', 
     expect(NC.detectRecomposition([dayWith('2026-08-01', 78)], {})).toEqual({ noWaistEvidence: false });
   });
 
+  it('замера нет, но веса растут — довод косвенный, и он назван косвенным', () => {
+    // Вторая ступень лестницы: слабее замера, поэтому и карточка обычная, а
+    // не праздничная, и норму трогать нельзя только этот цикл.
+    const card = NC.buildWeeklySyncCard({
+      result: { status: 'ready', direction: 'down', currentFactor: 1, nextFactor: 0.97 },
+      tariff: 'self',
+      recomposition: { indirect: true, weeks: 4, deltaPct: 6.2, source: 'по росту рабочих весов за 4 недели' }
+    });
+    expect(card.frame).toBe('recomposition_indirect');
+    expect(card.celebratory).toBeUndefined();
+    expect(card.frozenCycle).toBe(true);
+    expect(card.evidence).toBe('по росту рабочих весов за 4 недели');
+    expect(card.copy.body).toContain('рабочие веса в зале растут 4 недели');
+    // Предлагаем замер, а не решение: он отличит перестройку прямо.
+    expect(card.actions).toEqual(['enable_measurements', 'later']);
+  });
+
+  it('вторая ступень срабатывает, когда модуль весов загружен', () => {
+    const days = Array.from({ length: 28 }, (_, i) => ({
+      date: '2026-08-' + String(i + 1).padStart(2, '0'),
+      measurements: null, meals: [],
+      trainings: [{ type: 'strength', workoutLog: { exercises: [
+        { name: 'жим', approaches: [{ weightKg: String(60 + (i > 13 ? 6 : 0)) }] },
+        { name: 'тяга', approaches: [{ weightKg: String(90 + (i > 13 ? 8 : 0)) }] }
+      ] } }]
+    }));
+    const wsrc = fs.readFileSync(
+      path.resolve(__dirname, '../heys_working_weights_v1.js'), 'utf8'
+    );
+    // eslint-disable-next-line no-eval
+    (0, eval)(wsrc);
+    const r = NC.detectRecomposition(days, {});
+    expect(r.indirect).toBe(true);
+    expect(r.weeks).toBe(4);
+    expect(r.source).toBe('по росту рабочих весов за 4 недели');
+  });
+
+  it('лестница доводов идёт по ступеням, а не перескакивает', () => {
+    const days = Array.from({ length: 28 }, (_, i) => ({
+      date: '2026-08-' + String(i + 1).padStart(2, '0'),
+      measurements: null, meals: [],
+      trainings: [{ type: 'strength', workoutLog: { exercises: [
+        { name: 'жим', approaches: [{ weightKg: String(60 + (i > 13 ? 6 : 0)) }] },
+        { name: 'тяга', approaches: [{ weightKg: String(90 + (i > 13 ? 8 : 0)) }] }
+      ] } }]
+    }));
+    // Замера нет — прямого довода тоже; но веса растут, значит вторая ступень.
+    window.HEYS.WorkingWeights = undefined;
+    expect(NC.detectRecomposition(days, {})).toEqual({ noWaistEvidence: true });
+  });
+
   it('в тексте карточки стоит конкретика замера, а не утешение', () => {
     const card = NC.buildWeeklySyncCard({
       result: { status: 'ready', direction: 'down', currentFactor: 1, nextFactor: 0.97 },

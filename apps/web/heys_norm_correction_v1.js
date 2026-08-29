@@ -316,13 +316,17 @@
    * появляется, только если куратор уже применил. Иначе экран сказал бы «норму
    * снизили», а в приложении норма прежняя. Факты недели показываются всегда.
    */
-  function pluralWeeksRu(n) {
+  function weeksWordRu(n) {
     const abs = Math.abs(n) % 100;
     const last = abs % 10;
-    if (abs > 10 && abs < 20) return n + ' недель';
-    if (last > 1 && last < 5) return n + ' недели';
-    if (last === 1) return n + ' неделю';
-    return n + ' недель';
+    if (abs > 10 && abs < 20) return 'недель';
+    if (last > 1 && last < 5) return 'недели';
+    if (last === 1) return 'неделю';
+    return 'недель';
+  }
+
+  function pluralWeeksRu(n) {
+    return n + ' ' + weeksWordRu(n);
   }
 
   function pluralDaysRu(n) {
@@ -401,6 +405,27 @@
         }
       });
     }
+    // «Перестройка · по косвенным»: заморозка на один цикл, норму не трогаем.
+    // Карточка остаётся обычной, а не праздничной: довод слабее замера, и
+    // выглядеть он должен слабее.
+    if (recomposition && recomposition.indirect) {
+      return Object.assign(card, {
+        frame: 'recomposition_indirect',
+        evidence: recomposition.source,
+        actions: ['enable_measurements', 'later'],
+        decidedBy: 'nobody',
+        frozenCycle: true,
+        copy: {
+          title: 'Похоже на перестройку',
+          body: 'Вес стоит, но рабочие веса в зале растут ' + recomposition.weeks
+            + ' ' + weeksWordRu(recomposition.weeks)
+            + ' — тренировки продуктивны. Норму на этот цикл не трогаем.',
+          footnote: 'Точнее скажет замер талии — он отличит перестройку от застоя прямо, а не по догадке.',
+          actionLabels: { enable_measurements: 'Включить замеры', later: 'Не сейчас' }
+        }
+      });
+    }
+
     // Кадра «перестройку проверить не удалось» здесь нет намеренно: он
     // утверждает, что двухнедельная заморозка истекла, а заморозки в проекте
     // пока нет — метрики роста рабочих весов не существует. Но молчать тоже
@@ -633,9 +658,25 @@
     for (let i = rawDays.length - 1; i >= 0; i--) {
       if (rawDays[i]?.measurements?.waist) { evidence = rawDays[i].date; break; }
     }
-    // Замера в окне нет — довода нет, и это надо сказать вслух, а не молча
-    // применить поправку по весу.
-    if (!evidence) return { noWaistEvidence: true };
+    // Замера в окне нет — прямого довода нет. Но лестница доводов на этом не
+    // кончается: вторая ступень — рост рабочих весов. Он слабее замера и
+    // назван косвенным, потому что в первые месяцы это во многом нервная
+    // адаптация: довод «тренировки продуктивны», а не «мышцы выросли».
+    if (!evidence) {
+      const weights = HEYS.WorkingWeights && HEYS.WorkingWeights.analyze;
+      const growth = weights ? weights({ days: rawDays }) : null;
+      if (growth && growth.available && growth.growing) {
+        return {
+          indirect: true,
+          weeks: growth.weeks,
+          deltaPct: growth.deltaPct,
+          source: 'по росту рабочих весов за ' + growth.weeks + ' ' + weeksWordRu(growth.weeks)
+        };
+      }
+      // Ни замера, ни роста весов — третья ступень: поправка идёт по весу, и
+      // говорит об этом вслух.
+      return { noWaistEvidence: true };
+    }
 
     if (!analyze) return { noWaistEvidence: false };
 
