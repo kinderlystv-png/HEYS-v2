@@ -177,6 +177,94 @@
     };
   }
 
+  const WHAT_HUMAN = {
+    applied: 'применил',
+    postponed: 'отложил',
+    declined: 'отказался',
+    cold_start: 'холодный старт'
+  };
+
+  /**
+   * Модель кураторской карточки: строки и числа, без вёрстки.
+   *
+   * Сетка кабинета куратора и место карточки в списке клиентов — отдельное
+   * решение и отдельный канвас (строка «вид кабинета куратора»), поэтому здесь
+   * только содержимое. Что бы её ни рисовало потом — кабинет или коннектор
+   * куратора, — числа берутся отсюда, и они те же, что увидит клиент: одно
+   * окно, одно округление.
+   */
+  function buildCuratorCard({ result, expenditure, deficitPct, basalMetabolism, history }) {
+    const res = result || {};
+    const exp = Number(expenditure) || res.formulaPerDay || 0;
+
+    const card = {
+      status: res.status,
+      // Норма против факта — двумя строками с подписями источника.
+      formula: { value: Math.round(exp), source: 'BMR + шаги + тренировки' },
+      fact: res.status === 'ready' || res.status === 'out_of_range'
+        ? { value: res.factPerDay, source: 'съедено минус движение веса' }
+        : null,
+      mismatchPct: Number.isFinite(res.mismatchPct) ? Math.abs(res.mismatchPct) : null,
+      // Качество данных — словом «хватает» или «мало», а не голым числом.
+      quality: [
+        {
+          label: 'Взвешиваний реальных',
+          value: res.weighIns,
+          need: GATE_WEIGH_INS,
+          enough: (res.weighIns || 0) >= GATE_WEIGH_INS
+        },
+        {
+          label: 'Дней ведено',
+          value: res.loggedDays,
+          need: GATE_LOGGED_DAYS,
+          enough: (res.loggedDays || 0) >= GATE_LOGGED_DAYS
+        }
+      ],
+      // Только куратору. Клиенту эта строка не показывается никогда: она про
+      // выбор лечения, а не про клиента.
+      whereMismatchSits: res.status === 'ready'
+        ? 'В расходе — формула завышает. Или в точности записей — часть съеденного не попала в дневник. Поправка выравнивает результат в обоих случаях, но лечится это по-разному.'
+        : null,
+      recommendation: null,
+      actions: []
+    };
+
+    if (res.status === 'ready') {
+      const after = applyFactor({ expenditure: exp, factor: res.nextFactor, deficitPct, basalMetabolism });
+      const before = applyFactor({ expenditure: exp, factor: res.currentFactor, deficitPct, basalMetabolism });
+      card.recommendation = {
+        norm: after.norm,
+        deltaKcal: after.norm - before.norm,
+        currentNorm: before.norm,
+        stepFactor: res.nextFactor,
+        targetFactor: res.targetFactor,
+        hitFloor: after.hitFloor
+      };
+      card.actions = ['apply_tomorrow', 'postpone', 'freeze'];
+    } else {
+      card.reason = res.reason;
+      card.missing = res.missing || null;
+    }
+
+    // История: значение поправки и что сделал человек. Точка недели стоит по
+    // шкале между 1,00 и целью, а не «примерно» — долю считаем здесь, чтобы
+    // рисующий не выдумывал её сам.
+    const target = Number.isFinite(res.targetFactor) ? res.targetFactor : FACTOR_MIN;
+    card.history = (history || []).map((row) => {
+      const span = 1 - target;
+      const share = span > 0 ? clamp((1 - row.factor) / span, 0, 1) : 0;
+      return {
+        weekLabel: row.weekLabel,
+        factor: row.factor,
+        what: row.what,
+        whatWord: WHAT_HUMAN[row.what] || row.what,
+        scaleShare: Math.round(share * 100) / 100
+      };
+    });
+
+    return card;
+  }
+
   HEYS.NormCorrection = {
     KCAL_PER_KG,
     FACTOR_MIN,
@@ -188,6 +276,7 @@
     GATE_WEIGH_INS,
     COLD_START_DAYS,
     compute,
-    applyFactor
+    applyFactor,
+    buildCuratorCard
   };
 })(typeof window !== 'undefined' ? window : globalThis);

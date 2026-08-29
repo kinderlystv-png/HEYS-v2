@@ -172,3 +172,83 @@ describe('поправка на факт · границы и шаг', () => {
     expect(b.norm / b.correctedExpenditure).toBeCloseTo(0.88, 3);
   });
 });
+
+describe('поправка на факт · модель кураторской карточки', () => {
+  const ready = () => NC.compute({
+    days: days(21, 2112),
+    formulaPerDay: 2400,
+    trend: { deltaKg: -0.267, measuredDays: 21, windowDays: 21 },
+    currentFactor: 1,
+    historyDays: 60
+  });
+
+  it('норма против факта, расхождение и рекомендация — числами сквозного примера', () => {
+    const card = NC.buildCuratorCard({
+      result: ready(), expenditure: 2400, deficitPct: -12
+    });
+    expect(card.formula.value).toBe(2400);
+    expect(card.formula.source).toBe('BMR + шаги + тренировки');
+    expect(card.fact.value).toBe(2210);
+    expect(card.mismatchPct).toBe(8);
+    expect(card.recommendation.norm).toBe(2049);
+    expect(card.recommendation.currentNorm).toBe(2112);
+    expect(card.recommendation.deltaKcal).toBe(-63);
+    expect(card.actions).toEqual(['apply_tomorrow', 'postpone', 'freeze']);
+  });
+
+  it('качество данных сказано словом «хватает», а не голым числом', () => {
+    const card = NC.buildCuratorCard({ result: ready(), expenditure: 2400, deficitPct: -12 });
+    expect(card.quality.every((q) => q.enough)).toBe(true);
+
+    const weak = NC.buildCuratorCard({
+      result: NC.compute({
+        days: days(21, 2112),
+        formulaPerDay: 2400,
+        trend: { deltaKg: -0.3, measuredDays: 4, windowDays: 21 },
+        historyDays: 60
+      }),
+      expenditure: 2400, deficitPct: -12
+    });
+    expect(weak.status).toBe('not_enough_data');
+    expect(weak.quality.find((q) => q.label === 'Взвешиваний реальных').enough).toBe(false);
+    expect(weak.recommendation).toBeNull();
+    expect(weak.actions).toEqual([]);
+    expect(weak.missing.weighIns).toBe(2);
+  });
+
+  it('«где может сидеть расхождение» — только куратору и только когда есть что объяснять', () => {
+    const card = NC.buildCuratorCard({ result: ready(), expenditure: 2400, deficitPct: -12 });
+    expect(card.whereMismatchSits).toContain('формула завышает');
+    expect(card.whereMismatchSits).toContain('не попала в дневник');
+
+    // Считать нечего — объяснять тоже нечего.
+    const cold = NC.buildCuratorCard({
+      result: NC.compute({ days: days(21, 2112), formulaPerDay: 2400, trend: {}, historyDays: 3 }),
+      expenditure: 2400, deficitPct: -12
+    });
+    expect(cold.whereMismatchSits).toBeNull();
+  });
+
+  it('точка недели в истории стоит по шкале, а не «примерно»', () => {
+    const card = NC.buildCuratorCard({
+      result: ready(), expenditure: 2400, deficitPct: -12,
+      history: [
+        { weekLabel: '26 авг', factor: 0.97, what: 'applied' },
+        { weekLabel: '19 авг', factor: 1.00, what: 'cold_start' }
+      ]
+    });
+    // Цель ×0,92, значит 0,97 — три десятых пути от 1,00.
+    expect(card.history[0].scaleShare).toBeCloseTo(0.38, 1);
+    expect(card.history[0].whatWord).toBe('применил');
+    expect(card.history[1].scaleShare).toBe(0);
+    expect(card.history[1].whatWord).toBe('холодный старт');
+  });
+
+  it('норма ниже базового обмена не уезжает и на карточке', () => {
+    const card = NC.buildCuratorCard({
+      result: ready(), expenditure: 2400, deficitPct: -40, basalMetabolism: 1520
+    });
+    expect(card.recommendation.norm).toBe(1520);
+    expect(card.recommendation.hitFloor).toBe(true);
+  });
+});
