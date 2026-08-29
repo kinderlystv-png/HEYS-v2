@@ -284,3 +284,6 @@ decode.mjs
 
 # Vendored security scanners (install via brew / CI action)
 TOOLS/gitleaks/
+
+# Черновики агентов: логи прогонов, разовые скрипты разбора (остаются локальными)
+scratchpad/
