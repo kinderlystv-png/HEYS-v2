@@ -7558,6 +7558,104 @@
         formatDateLabel: formatMealDateLabel,
     };
 
+    // ── Защита от задвоенного приёма ──────────────────────────────────────
+    // Повтор и копирование пишут приём целиком, поэтому второе нажатие даёт
+    // в дневнике две одинаковые карточки рядом — так 28 августа появились два
+    // приёма 15:30 из одних и тех же рулета 160 г и йогурта 100 г. Окно и
+    // правило сравнения те же, что у коннектора (lib/day.js): десять минут и
+    // совпадение ВСЕГО состава до грамма — «ещё одна такая же порция» остаётся
+    // законной записью, её просто подтверждают.
+    const MEAL_DUPLICATE_WINDOW_MIN = 10;
+
+    function mealTimeMinutes(time) {
+        const match = /^(\d{1,2}):(\d{2})$/.exec(String(time || '').trim());
+        if (!match) return null;
+        return Number(match[1]) * 60 + Number(match[2]);
+    }
+
+    function isSameMealItem(a, b) {
+        const idA = a && a.product_id != null ? String(a.product_id) : '';
+        const idB = b && b.product_id != null ? String(b.product_id) : '';
+        const sameProduct = idA && idB
+            ? idA === idB
+            : String((a && a.name) || '').trim().toLowerCase() === String((b && b.name) || '').trim().toLowerCase();
+        if (!sameProduct) return false;
+        return Math.round(Number(a && a.grams) || 0) === Math.round(Number(b && b.grams) || 0);
+    }
+
+    /** Уже записанный приём рядом по времени с тем же составом — или null. */
+    function findDuplicateMealNearby(meals, meal) {
+        const items = (meal && meal.items) || [];
+        if (!items.length) return null;
+        const minutes = mealTimeMinutes(meal && meal.time);
+        if (minutes === null) return null;
+        return (meals || []).find((prev) => {
+            if (!prev || String(prev.id) === String(meal && meal.id)) return false;
+            const prevMinutes = mealTimeMinutes(prev.time);
+            if (prevMinutes === null) return false;
+            if (Math.abs(prevMinutes - minutes) > MEAL_DUPLICATE_WINDOW_MIN) return false;
+            const prevItems = prev.items || [];
+            if (!prevItems.length) return false;
+            return items.every((item) => prevItems.some((prevItem) => isSameMealItem(prevItem, item)));
+        }) || null;
+    }
+
+    /** true — писать, false — человек передумал. Без модалки пишем как раньше. */
+    async function confirmDuplicateMeal(existing) {
+        if (!HEYS.ConfirmModal?.show) return true;
+        const time = existing?.time ? ` в ${existing.time}` : '';
+        const name = existing?.name ? `«${existing.name}»` : 'приём';
+        // Fail-open: упавшая модалка не должна съесть запись — вопрос про дубль
+        // ценнее лишней карточки, но дешевле потерянной еды.
+        const result = await HEYS.ConfirmModal.show({
+            icon: '',
+            title: 'Похоже, это уже записано',
+            text: `Такой же ${name}${time} уже есть в дне — тот же состав и те же граммы. Записать второй раз?`,
+            actions: [
+                {
+                    key: 'cancel-duplicate',
+                    label: 'Не записывать',
+                    value: 'cancel',
+                    style: 'primary',
+                    variant: 'fill',
+                    row: 0,
+                    isDefault: true,
+                    isCancel: true,
+                },
+                {
+                    key: 'confirm-duplicate',
+                    label: 'Всё равно записать',
+                    value: 'confirm',
+                    style: 'neutral',
+                    variant: 'text',
+                    row: 1,
+                },
+            ],
+            defaultActionValue: 'cancel',
+            cancelActionValue: 'cancel',
+        });
+        return result === 'confirm';
+    }
+
+    /** Гейт перед записью склонированного приёма. */
+    async function allowMealWrite(meals, meal) {
+        try {
+            const twin = findDuplicateMealNearby(meals, meal);
+            if (!twin) return true;
+            return await confirmDuplicateMeal(twin);
+        } catch (error) {
+            trackError(error, { source: 'day/_meals.js', action: 'meal_duplicate_guard' });
+            return true;
+        }
+    }
+
+    HEYS.mealDuplicateGuard = {
+        WINDOW_MIN: MEAL_DUPLICATE_WINDOW_MIN,
+        findDuplicate: findDuplicateMealNearby,
+        isSameItem: isSameMealItem,
+        allowWrite: allowMealWrite,
+    };
+
     function dispatchMealFlowFinished(detail) {
         try {
             window.dispatchEvent(new CustomEvent('heys:meal-flow-finished', {
@@ -13818,8 +13916,11 @@
             const timeStr = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
             const targetDay = dayRef.current || day;
 
-            const completeWithItems = (newMealRaw) => {
+            const completeWithItems = async (newMealRaw) => {
                 const newMeal = { ...newMealRaw, id: newMealRaw?.id || uid('m_'), items: cloned };
+                // Второе нажатие «Повторить» даёт в дневнике две одинаковые
+                // карточки рядом — спрашиваем до записи, а не показываем факт.
+                if (!(await allowMealWrite((dayRef.current || day)?.meals, newMeal))) return;
                 markUndoWindow(3000);
                 const newMeals = sortMealsByTime([...(targetDay.meals || []), newMeal]);
                 const updated = { ...targetDay, meals: newMeals, updatedAt: Date.now() };
@@ -14050,8 +14151,12 @@
                     );
                     if (!cloned || cloned.length === 0) return;
 
-                    const completeWithItems = (newMealRaw) => {
+                    const completeWithItems = async (newMealRaw) => {
                         const newMeal = { ...newMealRaw, id: newMealRaw?.id || uid('m_'), items: cloned };
+                        const guardMeals = (todayStr === date)
+                            ? (dayRef.current || {}).meals
+                            : targetMeals;
+                        if (!(await allowMealWrite(guardMeals, newMeal))) return;
 
                         if (todayStr === date) {
                             // Today открыт: используем стандартный setDay
