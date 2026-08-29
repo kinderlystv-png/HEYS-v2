@@ -509,6 +509,21 @@
     });
   }
 
+  /**
+   * Была ли поправка применена в течение недели до сверки.
+   *
+   * Флаг в профиле хранит дату применения, а не «когда-либо трогали»: разница
+   * важна на Pro, где кадр «норму подстроили» и кадр «на согласовании»
+   * различаются ровно этим.
+   */
+  function appliedThisWeek(appliedAt, now) {
+    if (!appliedAt) return false;
+    const at = new Date(appliedAt);
+    if (Number.isNaN(at.getTime())) return false;
+    const base = now instanceof Date ? now : new Date();
+    return (base - at) <= 7 * 24 * 60 * 60 * 1000;
+  }
+
   const MONTHS_RU = [
     'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
     'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
@@ -650,7 +665,10 @@
       result,
       recomposition: detectRecomposition(rawDays, prof),
       tariff: tariff || prof.normCorrectionTariff || 'self',
-      applied: !!prof.normCorrectionAppliedAt,
+      // «Применено» — про эту неделю, а не про то, что поправку когда-то
+      // трогали. Иначе клиент, которому куратор поправил норму месяц назад,
+      // читал бы новое предложение как уже принятое решение.
+      applied: appliedThisWeek(prof.normCorrectionAppliedAt, base),
       refusalStreak,
       weeksUnchanged,
       expenditure: formulaPerDay,

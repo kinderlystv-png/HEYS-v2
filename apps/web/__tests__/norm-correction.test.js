@@ -479,3 +479,15 @@ describe('поправка на факт · довод перестройки', 
     expect(card.evidence).toBe('по замеру от 12 августа');
   });
 });
+
+describe('поправка на факт · «применено» относится к этой неделе', () => {
+  it('старая дата применения не выдаёт новое предложение за принятое решение', () => {
+    // Клиент, которому куратор поправил норму месяц назад, иначе прочитал бы
+    // свежее предложение как уже применённое.
+    expect(src).toContain('appliedThisWeek(prof.normCorrectionAppliedAt');
+    const fn = src.slice(src.indexOf('function appliedThisWeek'), src.indexOf('const MONTHS_RU'));
+    expect(fn).toContain('7 * 24 * 60 * 60 * 1000');
+    // Битая дата не должна превращаться в «применено».
+    expect(fn).toContain('Number.isNaN');
+  });
+});
