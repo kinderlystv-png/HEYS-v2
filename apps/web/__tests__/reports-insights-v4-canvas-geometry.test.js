@@ -175,10 +175,21 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
     // считается движком через HEYS.dayNorm), «лента дней» снята как
     // ошибочно записанная — спарклайн и так начинает с первого дня с едой
     // и периодом не ограничен (heys_day_sparkline_data_v1.js).
+    // Список обязан совпадать с вердиктами «≠» в
+    // docs/ui/ui-v4-contract-verdicts.json — иначе отступление живёт в одном
+    // месте и молчит в другом.
     const DEVIATIONS = [
-      'опора «N из M» — только у анализаторов, где счёт по дням есть внутри'
+      'вид · сценарий — панель «Что если» не приведена к кадру (категории и раскрытие по одному — контрактны)'
     ];
     expect(DEVIATIONS.length).toBe(1);
+
+    const verdicts = JSON.parse(fs.readFileSync(
+      path.resolve(__dirname, '../../../docs/ui/ui-v4-contract-verdicts.json'), 'utf8'));
+    const notEqual = Object.entries(verdicts.zones['reports-insights'].rows)
+      .filter(([, row]) => row.v === '≠')
+      .map(([key]) => key);
+    expect(notEqual).toEqual(['вид · сценарий']);
+    expect(notEqual.length).toBe(DEVIATIONS.length);
   });
 
   it('четвёртый заход: план прошлых дней и «N из M» у счётных', () => {
