@@ -304,7 +304,105 @@
     return weeks.slice(0, HISTORY_MAX);
   }
 
+  // После третьего «Оставить прежнюю» отказ перестаёт уходить в тишину: без
+  // куратора норма иначе стоит месяцами при расходящемся расчёте.
+  const REFUSAL_STREAK_LIMIT = 3;
+
+  /**
+   * Модель карточки недельной сверки — какой кадр показать и чьё это решение.
+   *
+   * Клиент видит результат, а не предложение: на Pro карточка изменения нормы
+   * появляется, только если куратор уже применил. Иначе экран сказал бы «норму
+   * снизили», а в приложении норма прежняя. Факты недели показываются всегда.
+   */
+  function buildWeeklySyncCard({ result, tariff, applied, refusalStreak, weeksUnchanged, recomposition }) {
+    const res = result || {};
+    const isSelf = tariff === 'self';
+    const streak = Number(refusalStreak) || 0;
+
+    const card = {
+      tariff: isSelf ? 'self' : 'pro',
+      // Предохранители есть в обоих тарифах, разный только слой: там, где
+      // человека нет, ограничители перестают быть внутренними.
+      safeguardsLayer: isSelf ? 'first' : 'second',
+      safeguards: [
+        'Шаг за неделю не больше 3 %',
+        'Ниже базового обмена не опускаем',
+        'Отменить можно в любой момент'
+      ]
+    };
+
+    // Вес стоит, но тело меняется — норму не трогаем. Кадр появляется только
+    // при подтверждённом доводе, иначе он превращается в оправдание застоя.
+    if (recomposition && recomposition.confirmed) {
+      return Object.assign(card, {
+        frame: 'recomposition',
+        heroNorm: res.currentNormKcal ?? null,
+        evidence: recomposition.source,
+        actions: ['ok'],
+        decidedBy: 'nobody'
+      });
+    }
+    if (recomposition && recomposition.checkFailed) {
+      return Object.assign(card, { frame: 'recomposition_unverified', actions: ['ok'], decidedBy: 'nobody' });
+    }
+
+    if (res.status !== 'ready' || res.direction === 'hold') {
+      return Object.assign(card, { frame: 'matched', actions: ['ok'], decidedBy: 'nobody' });
+    }
+
+    // Рост система применяет сама и сообщает в тот же день — решение её,
+    // уведомление человеку. Отменить можно одной кнопкой.
+    if (res.direction === 'up') {
+      return Object.assign(card, {
+        frame: 'raised',
+        decidedBy: 'system',
+        needsConsent: false,
+        actions: ['revert']
+      });
+    }
+
+    // Снижение. На Pro решает куратор: клиент либо видит применённое, либо
+    // читает предложение и ждёт — отменить решение куратора он не может, двух
+    // хозяев у одного числа быть не должно.
+    if (!isSelf) {
+      return applied
+        ? Object.assign(card, { frame: 'lowered', decidedBy: 'curator', actions: ['ok', 'ask_curator'] })
+        : Object.assign(card, {
+            frame: 'pending_curator',
+            decidedBy: 'curator',
+            readOnly: true,
+            // Герой — действующая норма, предложение вторым весом: иначе человек
+            // начнёт есть на число, которое ещё не применено.
+            hero: 'currentNorm',
+            actions: ['ask_curator']
+          });
+    }
+
+    // Self: снижение требует явного согласия клиента.
+    if (streak >= REFUSAL_STREAK_LIMIT) {
+      return Object.assign(card, {
+        frame: 'refused_three_times',
+        decidedBy: 'client',
+        weeksUnchanged: Number(weeksUnchanged) || 0,
+        mismatchPct: Math.abs(res.mismatchPct || 0),
+        // Кнопки необязательные: плохо не то, что человек отказывается, а то,
+        // что он не знает о расхождении.
+        actions: ['apply', 'measure_waist', 'mute_month']
+      });
+    }
+
+    return Object.assign(card, {
+      frame: 'lowered_needs_consent',
+      decidedBy: 'client',
+      needsConsent: true,
+      actions: ['apply_tomorrow', 'keep_current']
+    });
+  }
+
   HEYS.NormCorrection = {
+    REFUSAL_STREAK_LIMIT,
+    buildWeeklySyncCard,
     HISTORY_KEY,
     HISTORY_MAX,
     readHistory,

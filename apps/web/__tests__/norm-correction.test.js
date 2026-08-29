@@ -252,3 +252,95 @@ describe('поправка на факт · модель кураторской 
     expect(card.recommendation.hitFloor).toBe(true);
   });
 });
+
+describe('поправка на факт · кадры недельной сверки', () => {
+  const down = () => NC.compute({
+    days: days(21, 2112),
+    formulaPerDay: 2400,
+    trend: { deltaKg: -0.267, measuredDays: 21, windowDays: 21 },
+    currentFactor: 1,
+    historyDays: 60
+  });
+  const up = () => NC.compute({
+    days: days(21, 2500),
+    formulaPerDay: 2400,
+    trend: { deltaKg: -0.2, measuredDays: 21, windowDays: 21 },
+    currentFactor: 1,
+    historyDays: 60
+  });
+  const hold = () => NC.compute({
+    days: days(21, 2112),
+    formulaPerDay: 2400,
+    trend: { deltaKg: -0.3, measuredDays: 3, windowDays: 21 },
+    historyDays: 60
+  });
+
+  it('рост применяет система и сообщает — отменить можно одной кнопкой', () => {
+    const c = NC.buildWeeklySyncCard({ result: up(), tariff: 'self' });
+    expect(c.frame).toBe('raised');
+    expect(c.decidedBy).toBe('system');
+    expect(c.needsConsent).toBe(false);
+    expect(c.actions).toContain('revert');
+  });
+
+  it('на Pro до решения куратора клиент видит действующую норму, а не предложение', () => {
+    const c = NC.buildWeeklySyncCard({ result: down(), tariff: 'pro', applied: false });
+    expect(c.frame).toBe('pending_curator');
+    expect(c.readOnly).toBe(true);
+    // Герой — действующая норма: иначе человек начнёт есть на непринятое число.
+    expect(c.hero).toBe('currentNorm');
+    // Отменить решение куратора клиент не может — двух хозяев у числа нет.
+    expect(c.actions).not.toContain('keep_current');
+  });
+
+  it('на Pro применённое снижение показывается как результат', () => {
+    const c = NC.buildWeeklySyncCard({ result: down(), tariff: 'pro', applied: true });
+    expect(c.frame).toBe('lowered');
+    expect(c.decidedBy).toBe('curator');
+  });
+
+  it('на Self снижение требует согласия клиента', () => {
+    const c = NC.buildWeeklySyncCard({ result: down(), tariff: 'self' });
+    expect(c.frame).toBe('lowered_needs_consent');
+    expect(c.decidedBy).toBe('client');
+    expect(c.actions).toEqual(['apply_tomorrow', 'keep_current']);
+  });
+
+  it('третий отказ подряд перестаёт уходить в тишину', () => {
+    const c = NC.buildWeeklySyncCard({
+      result: down(), tariff: 'self', refusalStreak: 3, weeksUnchanged: 6
+    });
+    expect(c.frame).toBe('refused_three_times');
+    expect(c.weeksUnchanged).toBe(6);
+    expect(c.mismatchPct).toBe(8);
+    // Кнопки необязательные: плохо не то, что человек отказывается.
+    expect(c.actions).toEqual(['apply', 'measure_waist', 'mute_month']);
+  });
+
+  it('рекомпозиция показывается только при подтверждённом доводе', () => {
+    const ok = NC.buildWeeklySyncCard({
+      result: down(), tariff: 'self',
+      recomposition: { confirmed: true, source: 'по замеру от 12 августа' }
+    });
+    expect(ok.frame).toBe('recomposition');
+    expect(ok.evidence).toContain('замеру');
+
+    const failed = NC.buildWeeklySyncCard({
+      result: down(), tariff: 'self', recomposition: { checkFailed: true }
+    });
+    expect(failed.frame).toBe('recomposition_unverified');
+  });
+
+  it('считать нечего — сошлось, и это самый частый исход', () => {
+    expect(NC.buildWeeklySyncCard({ result: hold(), tariff: 'self' }).frame).toBe('matched');
+  });
+
+  it('предохранители есть в обоих тарифах, слой разный', () => {
+    const self = NC.buildWeeklySyncCard({ result: down(), tariff: 'self' });
+    const pro = NC.buildWeeklySyncCard({ result: down(), tariff: 'pro', applied: true });
+    expect(self.safeguardsLayer).toBe('first');
+    expect(pro.safeguardsLayer).toBe('second');
+    // Содержание одно и то же — иначе это два разных набора правил.
+    expect(self.safeguards).toEqual(pro.safeguards);
+  });
+});

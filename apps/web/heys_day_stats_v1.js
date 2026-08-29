@@ -3160,17 +3160,26 @@
               (() => {
                 const nc = d.normCorrection;
                 const coldDays = HEYS.NormCorrection?.COLD_START_DAYS || 14;
+                // Типографика строки — по контракту «вид · строка поправки»:
+                // имя 12,5 px/600 тоном --tx, пилюля даты 9 px моношириной на
+                // --c2 тоном --ac, значение 12,5 px/700 тоном --ac.
+                const ncName = { fontSize: 12.5, fontWeight: 600, color: 'var(--tx)' };
+                const ncPill = {
+                  marginLeft: 6, fontSize: 9, fontFamily: 'ui-monospace, monospace',
+                  background: 'var(--c2)', color: 'var(--ac)',
+                  padding: '1px 5px', borderRadius: 4
+                };
+                const ncValue = { fontSize: 12.5, fontWeight: 700, color: 'var(--ac)' };
+
                 if (nc && Number.isFinite(nc.factor) && nc.factor !== 1) {
                   const corrected = Math.round(d.baseExpenditure * nc.factor);
                   return React.createElement(React.Fragment, null,
                     React.createElement('div', { style: goalStyles.row },
-                      React.createElement('span', { style: goalStyles.rowLabel },
+                      React.createElement('span', { style: ncName },
                         'Поправка на факт',
-                        nc.appliedAt && React.createElement('span', {
-                          style: { marginLeft: 6, fontSize: 9, fontFamily: 'ui-monospace, monospace', opacity: 0.7 }
-                        }, 'с ' + nc.appliedAt)
+                        nc.appliedAt && React.createElement('span', { style: ncPill }, 'с ' + nc.appliedAt)
                       ),
-                      React.createElement('span', { style: goalStyles.rowValue },
+                      React.createElement('span', { style: ncValue },
                         '×' + nc.factor.toFixed(2).replace('.', ','))
                     ),
                     React.createElement('div', { style: goalStyles.row },
@@ -3179,17 +3188,38 @@
                     )
                   );
                 }
-                // Холодный старт — видимое состояние со счётом, а не пустая строка.
+
+                // Холодный старт — видимое состояние со счётом и полосой, а не
+                // пустая строка: «пока нет» 11 px тоном чернил 38 %, пилюля
+                // «копим данные» 50 %, полоса 6 px радиусом 999 на --acs.
                 const done = Math.min(coldDays, d.correctionHistoryDays || 0);
-                return React.createElement('div', { style: goalStyles.row },
-                  React.createElement('span', { style: goalStyles.rowLabel },
-                    'Поправка на факт',
+                const pct = coldDays > 0 ? Math.round((done / coldDays) * 100) : 0;
+                return React.createElement('div', null,
+                  React.createElement('div', { style: goalStyles.row },
+                    React.createElement('span', { style: ncName },
+                      'Поправка на факт',
+                      React.createElement('span', {
+                        style: Object.assign({}, ncPill, { background: 'transparent', color: 'color-mix(in srgb, var(--tx) 50%, transparent)' })
+                      }, 'копим данные')
+                    ),
                     React.createElement('span', {
-                      style: { marginLeft: 6, fontSize: 9, opacity: 0.5 }
-                    }, 'копим данные')
+                      style: { fontSize: 11, color: 'color-mix(in srgb, var(--tx) 38%, transparent)' }
+                    }, 'пока нет')
                   ),
-                  React.createElement('span', { style: { fontSize: 11, opacity: 0.55 } },
-                    done + ' дней из ' + coldDays)
+                  React.createElement('div', {
+                    style: {
+                      height: 6, borderRadius: 999, marginTop: 4,
+                      background: 'color-mix(in srgb, var(--tx) 10%, transparent)',
+                      overflow: 'hidden'
+                    }
+                  },
+                    React.createElement('div', {
+                      style: { width: pct + '%', height: '100%', borderRadius: 999, background: 'var(--acs)' }
+                    })
+                  ),
+                  React.createElement('div', {
+                    style: { fontSize: 11, fontWeight: 700, color: 'var(--ac)', marginTop: 3 }
+                  }, done + ' дней из ' + coldDays)
                 );
               })(),
 
