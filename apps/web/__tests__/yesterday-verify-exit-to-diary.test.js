@@ -191,4 +191,30 @@ describe('Yesterday verify — «Дописать точно» уводит в �
     expect(OVERLAYS_SRC).toContain('window.HEYS.ui.suppressMorningCheckin = true;');
     expect(OVERLAYS_SRC).toContain('if (!checkinExitedToDiary || tab === \'diary\') return;');
   });
+
+  it('после ответа шаг не превращается в пустой экран без выхода', () => {
+    // Возврат стрелкой на уже отвеченный разбор: пропусков нет, но шаг остаётся
+    // в мастере (freezeVisibleSteps). Экран обязан объяснить и пустить дальше.
+    localStorage.setItem(dayKey(YESTERDAY), JSON.stringify(filledDay(YESTERDAY)));
+    const YesterdayVerify = loadYesterdayVerify();
+    expect(YesterdayVerify.shouldShow()).toBe(false);
+
+    const config = registered.yesterdayVerify;
+    const context = { dateKey: TODAY, onClose: vi.fn(), onNext: vi.fn(), onExitToDiary: vi.fn() };
+    let data = { ...config.getInitialData(context), incompleteAction: 'fill_later' };
+    const onChange = (next) => { data = next; };
+
+    window.React.__rewind();
+    config.component({ data, onChange, context });
+    window.React.__runEffects();
+    window.React.__rewind();
+    const tree = config.component({ data, onChange, context });
+
+    expect(findByText(tree, 'Прошлые дни разобраны')).toBeTruthy();
+    expect(findByText(tree, 'Ответ записан. День вернётся завтра тем же вопросом.')).toBeTruthy();
+    const next = findByText(tree, 'Дальше');
+    expect(next).toBeTruthy();
+    next.props.onClick();
+    expect(context.onNext).toHaveBeenCalledTimes(1);
+  });
 });

@@ -799,6 +799,24 @@
     return formatDateRu(packDayDate);
   }
 
+  /** Чем закрыт разбор — одной строкой, по ответу этого же захода. */
+  function resolvedStepNote(data) {
+    switch (data && data.incompleteAction) {
+      case 'fill_later':
+        return 'Ответ записан. День вернётся завтра тем же вопросом.';
+      case 'confirm_real_data':
+        return 'Ответ записан: цифры дня остаются как есть.';
+      case 'estimated_fill':
+        return 'Ответ записан: день закрыт оценкой по ощущениям.';
+      case 'clear_day':
+        return 'Ответ записан: пустые дни убраны из списка.';
+      case 'pack_days_resolved':
+        return 'Ответ записан по каждому дню пачки.';
+      default:
+        return 'Здесь больше ничего не ждёт — можно закрывать утро.';
+    }
+  }
+
   function resolveYesterdayVerifyHeaderCaption(data) {
     if (!data) return 'Перед чек-ином';
     if (data.feelingsDate) return formatDateRu(data.feelingsDate);
@@ -2283,6 +2301,30 @@
       : null;
     if (packDay) {
       return renderPackDayDetail(packDay);
+    }
+
+    // Разбирать уже нечего: ответ по дню записан, и список пропусков пуст.
+    // Шаг из мастера при этом не исчезает (freezeVisibleSteps), поэтому возврат
+    // стрелкой приводил на экран с одним заголовком — без карточки, без кнопок
+    // и без выхода вперёд. Здесь этот тупик закрыт: человек видит, чем он день
+    // закрыл, и идёт дальше.
+    if (!visibleDays.length) {
+      return React.createElement('div', { className: 'yv-step yv-step--single' },
+        diagnosticBanner,
+        React.createElement('div', { className: 'yv-hero' },
+          React.createElement('div', { className: 'yv-hero-title' }, 'Прошлые дни разобраны'),
+          React.createElement('div', { className: 'yv-hero-sub' }, resolvedStepNote(data))
+        ),
+        React.createElement('div', { className: 'yv-canvas-foot' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'yv-pack-primary',
+            onClick: () => {
+              if (typeof context?.onNext === 'function') context.onNext(data);
+            }
+          }, 'Дальше')
+        )
+      );
     }
 
     const single = !isPack && visibleDays[0] ? visibleDays[0] : null;
