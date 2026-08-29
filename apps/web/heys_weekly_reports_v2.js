@@ -487,7 +487,13 @@
         },
             h('div', { className: 'weekly-wrap-correction__title' }, copy.title),
             card.evidence
-                ? h('span', { className: 'weekly-wrap-correction__evidence' }, card.evidence)
+                ? h('span', {
+                    // Косвенный довод слабее подтверждённого замером, и пилюля
+                    // у него приглушена: слабый довод не должен выглядеть как
+                    // сильный.
+                    className: 'weekly-wrap-correction__evidence'
+                        + (card.frame === 'recomposition_indirect' ? ' is-weak' : '')
+                }, card.evidence)
                 : null,
             h('div', { className: 'weekly-wrap-correction__body' }, copy.body),
             showsNumber
@@ -501,6 +507,14 @@
                                 + (card.norms.deltaKcal > 0 ? ' is-up' : (card.norms.deltaKcal < 0 ? ' is-down' : ''))
                         }, copy.heroCaption)
                         : null
+                )
+                : null,
+            Array.isArray(card.facts) && card.facts.length
+                ? h('div', { className: 'weekly-wrap-correction__facts' },
+                    card.facts.map((f) => h('div', { className: 'weekly-wrap-correction__fact', key: f.label },
+                        h('span', { className: 'weekly-wrap-correction__fact-label' }, f.label),
+                        h('span', { className: 'weekly-wrap-correction__fact-value' }, f.value)
+                    ))
                 )
                 : null,
             // Довода перестройки не было — так и сказано. Молчание здесь

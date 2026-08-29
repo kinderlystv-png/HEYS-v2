@@ -1323,6 +1323,39 @@ body.tour-active .ios-pwa-banner {
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
+/* Косвенный довод слабее подтверждённого замером: пилюля источника уходит на
+   чернила, а не на акцент. Слабый довод не должен выглядеть как сильный. */
+.weekly-wrap-correction__evidence.is-weak {
+  background: none;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
+}
+
+/* Строки фактов: довод назван слабым словом, а не оформлением. */
+.weekly-wrap-correction__facts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.weekly-wrap-correction__fact {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.weekly-wrap-correction__fact-label {
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.weekly-wrap-correction__fact-value {
+  color: var(--v4-ink, #201e1d);
+}
+
 /* Довода перестройки не было — карточка говорит это прямо, а не молчит. */
 .weekly-wrap-correction__evidence-note {
   font-size: 11.5px;

@@ -3258,13 +3258,13 @@
                 // Типографика строки — по контракту «вид · строка поправки»:
                 // имя 12,5 px/600 тоном --tx, пилюля даты 9 px моношириной на
                 // --c2 тоном --ac, значение 12,5 px/700 тоном --ac.
-                const ncName = { fontSize: 12.5, fontWeight: 600, color: 'var(--tx)' };
+                const ncName = { fontSize: 12.5, fontWeight: 600, color: 'var(--v4-ink, #201e1d)' };
                 const ncPill = {
                   marginLeft: 6, fontSize: 9, fontFamily: 'ui-monospace, monospace',
-                  background: 'var(--c2)', color: 'var(--ac)',
+                  background: 'var(--v4-hero, #efe3cf)', color: 'var(--v4-act-text, #8a4a20)',
                   padding: '1px 5px', borderRadius: 4
                 };
-                const ncValue = { fontSize: 12.5, fontWeight: 700, color: 'var(--ac)' };
+                const ncValue = { fontSize: 12.5, fontWeight: 700, color: 'var(--v4-act-text, #8a4a20)' };
 
                 if (nc && Number.isFinite(nc.factor) && nc.factor !== 1) {
                   const corrected = Math.round(d.baseExpenditure * nc.factor);
@@ -3294,26 +3294,26 @@
                     React.createElement('span', { style: ncName },
                       'Поправка на факт',
                       React.createElement('span', {
-                        style: Object.assign({}, ncPill, { background: 'transparent', color: 'color-mix(in srgb, var(--tx) 50%, transparent)' })
+                        style: Object.assign({}, ncPill, { background: 'transparent', color: 'color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent)' })
                       }, 'копим данные')
                     ),
                     React.createElement('span', {
-                      style: { fontSize: 11, color: 'color-mix(in srgb, var(--tx) 38%, transparent)' }
+                      style: { fontSize: 11, color: 'color-mix(in srgb, var(--v4-ink, #201e1d) 38%, transparent)' }
                     }, 'пока нет')
                   ),
                   React.createElement('div', {
                     style: {
                       height: 6, borderRadius: 999, marginTop: 4,
-                      background: 'color-mix(in srgb, var(--tx) 10%, transparent)',
+                      background: 'color-mix(in srgb, var(--v4-ink, #201e1d) 10%, transparent)',
                       overflow: 'hidden'
                     }
                   },
                     React.createElement('div', {
-                      style: { width: pct + '%', height: '100%', borderRadius: 999, background: 'var(--acs)' }
+                      style: { width: pct + '%', height: '100%', borderRadius: 999, background: 'var(--v4-act, #c67139)' }
                     })
                   ),
                   React.createElement('div', {
-                    style: { fontSize: 11, fontWeight: 700, color: 'var(--ac)', marginTop: 3 }
+                    style: { fontSize: 11, fontWeight: 700, color: 'var(--v4-act-text, #8a4a20)', marginTop: 3 }
                   }, done + ' дней из ' + coldDays)
                 );
               })(),

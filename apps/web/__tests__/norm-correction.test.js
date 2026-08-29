@@ -624,3 +624,93 @@ describe('поправка на факт · на Pro у числа один хо
     expect(src).toContain("activeTariff === 'self'");
   });
 });
+
+describe('поправка на факт · предел заморозки', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const growingDays = () => Array.from({ length: 28 }, (_, i) => ({
+    date: '2026-08-' + String(i + 1).padStart(2, '0'),
+    measurements: null, meals: [],
+    trainings: [{ type: 'strength', workoutLog: { exercises: [
+      { name: 'жим', approaches: [{ weightKg: String(60 + (i > 13 ? 6 : 0)) }] },
+      { name: 'тяга', approaches: [{ weightKg: String(90 + (i > 13 ? 8 : 0)) }] }
+    ] } }]
+  }));
+
+  beforeEach(() => {
+    const wsrc = fs.readFileSync(
+      path.resolve(__dirname, '../heys_working_weights_v1.js'), 'utf8'
+    );
+    // eslint-disable-next-line no-eval
+    (0, eval)(wsrc);
+  });
+
+  it('предел — две недели, и отсчёт от первой просьбы, а не от начала застоя', () => {
+    // Застой мог тянуться месяц до того, как мы впервые спросили; наказывать
+    // за это нечестно.
+    expect(NC.FREEZE_LIMIT_DAYS).toBe(14);
+    const now = new Date('2026-08-28T12:00:00');
+    expect(NC.freezeAgeDays(now.getTime() - 3 * DAY, now)).toBe(3);
+    expect(NC.freezeAgeDays(null, now)).toBe(null);
+  });
+
+  it('внутри предела довод косвенный и говорит, сколько ждать', () => {
+    const now = new Date('2026-08-28T12:00:00');
+    const r = NC.detectRecomposition(growingDays(), {}, { askedAt: now.getTime() - 8 * DAY, now });
+    expect(r.indirect).toBe(true);
+    expect(r.daysLeft).toBe(6);
+  });
+
+  it('первая просьба ещё не прозвучала — заморозка только начинается', () => {
+    const r = NC.detectRecomposition(growingDays(), {}, { askedAt: null, now: new Date() });
+    expect(r.indirect).toBe(true);
+    expect(r.daysLeft).toBe(14);
+  });
+
+  it('две недели истекли — поправка идёт по весу, и кадр перестал быть ложью', () => {
+    const now = new Date('2026-08-28T12:00:00');
+    const r = NC.detectRecomposition(growingDays(), {}, { askedAt: now.getTime() - 15 * DAY, now });
+    expect(r.checkExpired).toBe(true);
+    expect(r.waitedDays).toBe(15);
+
+    const card = NC.buildWeeklySyncCard({
+      result: { status: 'ready', direction: 'down', currentFactor: 1, nextFactor: 0.97 },
+      tariff: 'self', recomposition: r
+    });
+    expect(card.frame).toBe('recomposition_unverified');
+    expect(card.copy.body).toContain('Две недели ожидания истекли');
+  });
+
+  it('вторая просьба заморозку не продлевает', () => {
+    const store = new Map();
+    const lsGet = (k, fb = null) => (store.has(k) ? store.get(k) : fb);
+    const lsSet = (k, v) => store.set(k, v);
+    const first = NC.recordMeasurementAsk({ lsGet, lsSet, now: 1000 });
+    const second = NC.recordMeasurementAsk({ lsGet, lsSet, now: 9999 });
+    expect(first).toBe(1000);
+    expect(second).toBe(1000);
+  });
+
+  it('ответ на просьбу не стирает саму просьбу', () => {
+    // Порядок обратный: сначала метка, потом решение. Раньше recordDecision
+    // писал объект целиком и заморозка исчезала от ответа на неё же.
+    const store = new Map();
+    const lsGet = (k, fb = null) => (store.has(k) ? store.get(k) : fb);
+    const lsSet = (k, v) => store.set(k, v);
+    NC.recordMeasurementAsk({ lsGet, lsSet, now: 7 });
+    NC.recordDecision({ lsGet, lsSet, weekLabel: '24 авг', factor: 0.97, what: 'applied', now: 9 });
+    expect(NC.readMeasurementAsk(lsGet)).toBe(7);
+    expect(NC.readHistory(lsGet)).toHaveLength(1);
+  });
+
+  it('метка просьбы живёт в том же блобе, что история решений', () => {
+    const store = new Map();
+    const lsGet = (k, fb = null) => (store.has(k) ? store.get(k) : fb);
+    const lsSet = (k, v) => store.set(k, v);
+    NC.recordDecision({ lsGet, lsSet, weekLabel: '24 авг', factor: 0.97, what: 'applied', now: 5 });
+    NC.recordMeasurementAsk({ lsGet, lsSet, now: 7 });
+    const blob = store.get(NC.HISTORY_KEY);
+    // Решения не потерялись от того, что рядом легла метка.
+    expect(blob.weeks).toHaveLength(1);
+    expect(blob.measurementAskedAt).toBe(7);
+  });
+});

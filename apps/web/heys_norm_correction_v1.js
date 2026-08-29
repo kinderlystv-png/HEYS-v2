@@ -273,6 +273,44 @@
   const HISTORY_KEY = 'heys_norm_correction_history';
   const HISTORY_MAX = 12;
 
+  // Предел заморозки — две недели, и отсчёт идёт от первой просьбы о замере, а
+  // не от начала застоя. Разница принципиальная: застой мог тянуться месяц до
+  // того, как мы впервые спросили, и наказывать за это нечестно. А без предела
+  // косвенный довод превращается в ту же машину оправданий, только с отсрочкой.
+  const FREEZE_LIMIT_DAYS = 14;
+
+  /**
+   * Когда впервые попросили замер. Метка живёт в блобе истории решений: она
+   * про ту же поправку и синхронизируется тем же атомарным перекрытием.
+   */
+  function readMeasurementAsk(lsGet) {
+    try {
+      const raw = lsGet ? lsGet(HISTORY_KEY, null) : null;
+      const at = raw && raw.measurementAskedAt;
+      return Number.isFinite(at) ? at : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** Ставится один раз: вторая просьба не продлевает заморозку. */
+  function recordMeasurementAsk({ lsGet, lsSet, now }) {
+    const existing = readMeasurementAsk(lsGet);
+    if (existing) return existing;
+    const at = Number(now) || 0;
+    if (!at || !lsSet) return existing;
+    const raw = (lsGet && lsGet(HISTORY_KEY, null)) || {};
+    lsSet(HISTORY_KEY, Object.assign({}, raw, { measurementAskedAt: at }));
+    return at;
+  }
+
+  /** Сколько дней прошло с первой просьбы; null — не просили. */
+  function freezeAgeDays(askedAt, now) {
+    if (!askedAt) return null;
+    const base = now instanceof Date ? now.getTime() : Number(now) || Date.now();
+    return Math.floor((base - askedAt) / (24 * 60 * 60 * 1000));
+  }
+
   function readHistory(lsGet) {
     try {
       const raw = lsGet ? lsGet(HISTORY_KEY, null) : null;
@@ -300,7 +338,14 @@
       at: now || null
     });
     if (lsSet) {
-      lsSet(HISTORY_KEY, { weeks: weeks.slice(0, HISTORY_MAX), updatedAt: now || 0 });
+      // Пишем поверх блоба, а не вместо него: рядом с решениями живёт метка
+      // первой просьбы о замере, и заменить объект целиком значит стереть
+      // заморозку ответом на неё же.
+      const raw = (lsGet && lsGet(HISTORY_KEY, null)) || {};
+      lsSet(HISTORY_KEY, Object.assign({}, raw, {
+        weeks: weeks.slice(0, HISTORY_MAX),
+        updatedAt: now || 0
+      }));
     }
     return weeks.slice(0, HISTORY_MAX);
   }
@@ -415,6 +460,12 @@
         actions: ['enable_measurements', 'later'],
         decidedBy: 'nobody',
         frozenCycle: true,
+        // Две строки фактов, как у кураторской карточки: довод назван слабым
+        // прямо, а не подразумевается оформлением.
+        facts: [
+          { label: 'Довод', value: 'косвенный' },
+          { label: 'Заморозка', value: 'один цикл' }
+        ],
         copy: {
           title: 'Похоже на перестройку',
           body: 'Вес стоит, но рабочие веса в зале растут ' + recomposition.weeks
@@ -426,7 +477,24 @@
       });
     }
 
-    // Кадра «перестройку проверить не удалось» здесь нет намеренно: он
+    // Заморозка истекла — кадр «перестройку проверить не удалось» перестал
+    // быть ложью: две недели ожидания действительно были и действительно
+    // кончились. Раньше он утверждал это на пустом месте, поэтому и был удалён.
+    if (recomposition && recomposition.checkExpired) {
+      return Object.assign(card, {
+        frame: 'recomposition_unverified',
+        actions: ['ok', 'ask_curator'],
+        decidedBy: 'nobody',
+        copy: {
+          title: 'Отличить перестройку было нечем',
+          body: 'Замера не было, а рост рабочих весов — довод косвенный. Две недели ожидания истекли — поправку применяем по весу.',
+          footnote: 'Поправка — про расчёт, а не про старание. Замер в любой момент вернёт ветку перестройки.',
+          actionLabels: { ok: 'Понятно', ask_curator: 'Написать куратору' }
+        }
+      });
+    }
+
+    // Кадра «перестройку проверить не удалось» без истёкшей заморозки нет: он
     // утверждает, что двухнедельная заморозка истекла, а заморозки в проекте
     // пока нет — метрики роста рабочих весов не существует. Но молчать тоже
     // нельзя: строка контракта «заморозка до косвенного довода» прямо
@@ -649,7 +717,7 @@
    * заморозки истекли», не заводя саму заморозку, было бы неправдой. Пока
    * такого довода нет, поправка идёт по весу — это и есть третья ступень.
    */
-  function detectRecomposition(rawDays, profile) {
+  function detectRecomposition(rawDays, profile, freeze) {
     const analyze = HEYS.InsightsPI?.patternModules?.analyzeHypertrophy;
     if (!rawDays || !rawDays.length) return null;
 
@@ -666,10 +734,19 @@
       const weights = HEYS.WorkingWeights && HEYS.WorkingWeights.analyze;
       const growth = weights ? weights({ days: rawDays }) : null;
       if (growth && growth.available && growth.growing) {
+        // Заморозка не может длиться вечно: через две недели после первой
+        // просьбы о замере поправка применяется по весу, и тогда кадр
+        // «проверить не удалось» перестаёт быть ложью — заморозка правда была
+        // и правда истекла.
+        const age = freezeAgeDays(freeze && freeze.askedAt, freeze && freeze.now);
+        if (age != null && age >= FREEZE_LIMIT_DAYS) {
+          return { checkExpired: true, weeks: growth.weeks, waitedDays: age };
+        }
         return {
           indirect: true,
           weeks: growth.weeks,
           deltaPct: growth.deltaPct,
+          daysLeft: age == null ? FREEZE_LIMIT_DAYS : Math.max(0, FREEZE_LIMIT_DAYS - age),
           source: 'по росту рабочих весов за ' + growth.weeks + ' ' + weeksWordRu(growth.weeks)
         };
       }
@@ -789,6 +866,17 @@
       else break;
     }
 
+    // Косвенный довод замораживает норму, но заморозка отсчитывается от первой
+    // просьбы о замере — значит эту просьбу надо поставить в тот же момент,
+    // когда она впервые прозвучала, а не когда человек на неё ответит.
+    const recomposition = detectRecomposition(rawDays, prof, {
+      askedAt: readMeasurementAsk(lsGet),
+      now: base
+    });
+    if (recomposition && recomposition.indirect) {
+      recordMeasurementAsk({ lsGet, lsSet, now: base.getTime() });
+    }
+
     // Рост норма применяет сама: молча она не двигается — карточка сообщит об
     // этом в тот же день, — но и согласия на «можно есть больше» не просит.
     // На Pro норма принадлежит куратору: поднять её сами значило бы завести
@@ -814,7 +902,7 @@
     const card = buildWeeklySyncCard({
       result,
       justRaised,
-      recomposition: detectRecomposition(rawDays, prof),
+      recomposition: recomposition,
       tariff: activeTariff,
       // «Применено» — про эту неделю, а не про то, что поправку когда-то
       // трогали. Иначе клиент, которому куратор поправил норму месяц назад,
@@ -1088,6 +1176,10 @@
     gather,
     detectRecomposition,
     detectAppliedRaise,
+    FREEZE_LIMIT_DAYS,
+    readMeasurementAsk,
+    recordMeasurementAsk,
+    freezeAgeDays,
     resolveTariff,
     formatKcal,
     HISTORY_KEY,
