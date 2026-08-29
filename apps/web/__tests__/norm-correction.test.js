@@ -498,19 +498,18 @@ describe('поправка на факт · «применено» относи�
 });
 
 describe('поправка на факт · чей это тариф', () => {
-  // От ответа зависит, кому принадлежит решение о снижении нормы. Ошибка в
-  // одну сторону даёт кнопки клиенту, у которого есть куратор; в другую —
-  // говорит «поправку смотрит куратор» человеку, у которого куратора нет.
+  // Решение владельца 30 августа: признак Pro — наличие куратора, а не
+  // оплаченный план. Клиент без платежа не Self, а Pro с неактивной подпиской.
   const cases = [
-    ['pro при активной подписке', { subscription_plan: 'pro', subscription_status: 'active' }, 'pro'],
-    ['proplus при активной подписке', { subscription_plan: 'proplus', subscription_status: 'active' }, 'pro'],
-    ['base — свой тариф', { subscription_plan: 'base', subscription_status: 'active' }, 'self'],
-    ['триал — куратора ещё нет', { subscription_status: 'trial' }, 'self'],
-    ['пустой профиль', {}, 'self'],
-    ['истёкшая подписка Pro — куратор кончился вместе с ней',
-      { subscription_plan: 'pro', subscription_status: 'canceled' }, 'self'],
-    ['только просмотр', { subscription_plan: 'pro', subscription_status: 'read_only' }, 'self'],
-    ['регистр плана не важен', { subscription_plan: 'PRO', subscription_status: 'active' }, 'pro']
+    ['куратора нет — свой тариф', { hasCurator: false }, 'self'],
+    ['куратор есть', { hasCurator: true }, 'pro'],
+    ['куратор есть, подписка кончилась — право решения не переносится',
+      { hasCurator: true, subscription_status: 'canceled' }, 'pro'],
+    // Прежняя редакция считала по плану и на боевых данных давала Self всем:
+    // subscription_plan проставляется только при оплате, а куратор есть у всех.
+    ['план пуст — не повод отдать решение клиенту', { subscription_plan: null }, 'pro'],
+    ['пустой профиль', {}, 'pro'],
+    ['план base сам по себе ничего не решает', { subscription_plan: 'base' }, 'pro']
   ];
 
   for (const [name, profile, expected] of cases) {
@@ -519,7 +518,14 @@ describe('поправка на факт · чей это тариф', () => {
     });
   }
 
-  it('явный аргумент важнее подписки — им пользуется кабинет куратора', () => {
+  it('неизвестность — это Pro, и это выбор менее опасной ошибки', () => {
+    // Ошибиться в сторону Self — отдать клиенту кнопку на числе, которым
+    // распоряжается куратор. Ошибиться в сторону Pro — задержать решение.
+    expect(NC.resolveTariff(undefined)).toBe('pro');
+    expect(NC.resolveTariff({ hasCurator: undefined })).toBe('pro');
+  });
+
+  it('явный аргумент важнее — им пользуется кабинет куратора', () => {
     const src = fs.readFileSync(
       path.resolve(__dirname, '../heys_norm_correction_v1.js'), 'utf8'
     );
