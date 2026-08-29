@@ -16,6 +16,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { assertWorkspaceRuntime } from './check-workspace-runtime.mjs';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const STAMP_DIR = resolve(ROOT, '.heys');
@@ -64,6 +66,18 @@ function main() {
   }
 
   console.info(`[sync:local] 🔄 Syncing workspace for HEAD ${head.slice(0, 8)}…`);
+
+  // A concurrent `pnpm install` from another agent session in this same
+  // directory can leave a runtime package (esbuild, vitest, …) briefly
+  // missing — predev then fails with ERR_MODULE_NOT_FOUND. Self-heal by
+  // installing, same check ensure-local-toolchain.mjs uses. This never stops
+  // dev:local: this script also runs at dev:local's own startup, and killing
+  // it here would kill another session's server, not just ours.
+  const runtime = assertWorkspaceRuntime({ rootDir: ROOT });
+  if (!runtime.ok) {
+    console.warn('[sync:local] ⚠ Missing runtime package(s), running pnpm install…');
+    run('restore dependencies', 'pnpm', ['install']);
+  }
 
   run('version meta', 'node', ['apps/web/scripts/update-version.cjs']);
   run('generators', 'pnpm', ['--filter', '@heys/web', 'run', 'predev']);
