@@ -613,12 +613,14 @@ describe('registration welcome split smoke', () => {
         MORNING_SRC.indexOf('return React.createElement(HEYS.StepModal.Component'),
         MORNING_SRC.indexOf('requireStepAck: true') + 'requireStepAck: true'.length,
       );
-      expect(stepModalMount).not.toContain('onClose');
+      // Проверяем проп, а не слово: комментарий рядом объясняет, почему
+      // крестика нет, и подстрочный поиск ловил именно его.
+      expect(stepModalMount).not.toMatch(/onClose\s*:/);
       expect(stepModalMount).toContain('showProgress: true');
       const morningMountStart = OVERLAYS_SRC.indexOf('React.createElement(HEYS.MorningCheckin');
       const morningMountEnd = OVERLAYS_SRC.indexOf('// === OFFLINE BANNER', morningMountStart);
       const morningMount = OVERLAYS_SRC.slice(morningMountStart, morningMountEnd);
-      expect(morningMount).not.toContain('onClose');
+      expect(morningMount).not.toMatch(/onClose\s*:/);
       expect(OVERLAYS_SRC).toContain('startDailyCheckin');
       expect(OVERLAYS_SRC).toContain("setCheckinMode('daily')");
       expect(OVERLAYS_SRC).toContain("resolveHomeTab?.('widgets')");

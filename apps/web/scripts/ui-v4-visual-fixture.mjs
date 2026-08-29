@@ -26,6 +26,7 @@ export const UI_V4_CANVAS_ZONES = Object.freeze([
   'tips',
   'cycle',
   'reports-insights',
+  'norm-correction',
 ]);
 
 export const UI_V4_PIXEL_GATE_ZONES = Object.freeze([
