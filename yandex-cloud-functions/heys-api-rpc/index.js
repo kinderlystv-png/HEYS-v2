@@ -1098,6 +1098,8 @@ const CURATOR_ONLY_FUNCTIONS = [
   'reset_client_pin',                 // Сброс PIN клиента
   'get_curator_clients',              // Список клиентов куратора
   'get_curator_clients_day_summary',  // Read-only сводка дня по всем клиентам куратора
+  'get_curator_clients_window',       // Read-only окно дней по всем клиентам куратора (панель)
+  'get_curator_clients_norm_context', // Read-only профиль и поправка по всем клиентам куратора
   'get_client_observability_by_curator', // Structured client boot/session diagnostics
   'get_curator_observability_overview', // Aggregate curator diagnostics dashboard
   'admin_get_all_clients',            // 🆕 Список всех клиентов (JWT-only v4.0)
@@ -1179,6 +1181,10 @@ const CURATOR_AUDIT_SKIP = new Set([
   // client_id у неё нет. Детальный доступ к дневнику логируется при входе
   // в конкретного клиента.
   'get_curator_clients_day_summary',
+  // Панель куратора: те же агрегаты по всем клиентам сразу, единого target
+  // client_id нет. Окно read-only, профильный контекст — только поля расчёта.
+  'get_curator_clients_window',
+  'get_curator_clients_norm_context',
   'admin_get_all_clients',
   'admin_get_trial_queue_list',
   'admin_get_leads',
@@ -4894,6 +4900,14 @@ async function handleRpcRequest(event, context) {
       'get_curator_clients_day_summary': {
         'p_curator_id': '::uuid',
         'p_date': '::date'
+      },
+      'get_curator_clients_window': {
+        'p_curator_id': '::uuid',
+        'p_from': '::date',
+        'p_to': '::date'
+      },
+      'get_curator_clients_norm_context': {
+        'p_curator_id': '::uuid'
       },
       'create_pending_product_by_session': {
         'p_session_token': '::text',
