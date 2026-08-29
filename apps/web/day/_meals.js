@@ -190,6 +190,8 @@
         if (!HEYS.ConfirmModal?.show) return true;
         const time = existing?.time ? ` в ${existing.time}` : '';
         const name = existing?.name ? `«${existing.name}»` : 'приём';
+        // Fail-open: упавшая модалка не должна съесть запись — вопрос про дубль
+        // ценнее лишней карточки, но дешевле потерянной еды.
         const result = await HEYS.ConfirmModal.show({
             icon: '',
             title: 'Похоже, это уже записано',
@@ -222,9 +224,14 @@
 
     /** Гейт перед записью склонированного приёма. */
     async function allowMealWrite(meals, meal) {
-        const twin = findDuplicateMealNearby(meals, meal);
-        if (!twin) return true;
-        return confirmDuplicateMeal(twin);
+        try {
+            const twin = findDuplicateMealNearby(meals, meal);
+            if (!twin) return true;
+            return await confirmDuplicateMeal(twin);
+        } catch (error) {
+            trackError(error, { source: 'day/_meals.js', action: 'meal_duplicate_guard' });
+            return true;
+        }
     }
 
     HEYS.mealDuplicateGuard = {
