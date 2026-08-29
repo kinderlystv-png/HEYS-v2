@@ -79,14 +79,28 @@
     if (!vals.length) return 'nocontract';
     var out = [];
 
-    var allFrames = document.querySelectorAll('[data-screen-label]');
-    if (allFrames.length) {
-      var visible = 0;
-      [].forEach.call(allFrames, function (fr) {
-        var b = fr.getBoundingClientRect();
-        if (b.width > 4 && b.height > 4) visible++;
+    // штатно скрытые зеркала палитр (.pal dk/bl/bldk при выключенном allPalettes) считать за
+    // схлопывание нельзя; и мерить вообще только после раскладки: DC строит зеркала
+    // в componentDidMount, а этот файл считает раньше — иначе проверка плавает
+    // \u043c\u0435\u0440\u0438\u043c \u0442\u043e\u043b\u044c\u043a\u043e \u043a\u043e\u0433\u0434\u0430 \u0433\u0435\u043e\u043c\u0435\u0442\u0440\u0438\u044f \u0432\u043e\u043e\u0431\u0449\u0435 \u0438\u0437\u043c\u0435\u0440\u0438\u043c\u0430: \u0432 \u043d\u0443\u043b\u0435\u0432\u043e\u043c \u0432\u044c\u044e\u043f\u043e\u0440\u0442\u0435 (\u0444\u043e\u043d\u043e\u0432\u0430\u044f
+    // \u0432\u043a\u043b\u0430\u0434\u043a\u0430, offscreen-\u0440\u0435\u043d\u0434\u0435\u0440, \u043f\u0435\u0447\u0430\u0442\u044c) \u0432\u0441\u0451 \u0440\u0430\u0432\u043d\u043e 0\u00d70 \u2014 \u0447\u0435\u0441\u0442\u043d\u044b\u0439 \u043e\u0442\u0432\u0435\u0442 \u00ab\u043d\u0435 \u0438\u0437\u043c\u0435\u0440\u044f\u043b\u0438\u00bb,
+    // \u0430 \u043d\u0435 \u00ab\u0441\u0445\u043b\u043e\u043f\u043d\u0443\u043b\u043e\u0441\u044c\u00bb
+    var vw = window.innerWidth || document.documentElement.clientWidth || 0;
+    if (document.readyState === 'complete' && vw > 0 && document.documentElement.scrollHeight > 0) {
+      var own = [].filter.call(document.querySelectorAll('[data-screen-label]'), function (fr) {
+        for (var p = fr.parentNode; p && p.nodeType === 1; p = p.parentNode) {
+          if (p.classList && p.classList.contains('pal')) return false;
+        }
+        return true;
       });
-      if (!visible) out.push('кадров ' + allFrames.length + ', видимых 0 — разметка схлопнулась: чаще всего незакрытый div в контракте');
+      if (own.length) {
+        var visible = 0;
+        own.forEach(function (fr) {
+          var b = fr.getBoundingClientRect();
+          if (b.width > 4 && b.height > 4) visible++;
+        });
+        if (!visible) out.push('кадров ' + own.length + ', видимых 0 — разметка схлопнулась: чаще всего незакрытый div в контракте');
+      }
     }
 
     var blind = sections()
@@ -375,6 +389,10 @@
     }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['style'] });
     setTimeout(paint, 500);
     setTimeout(paint, 1500);
+    // перемер после раскладки и после load: двенадцатая проверка без этого врёт
+    requestAnimationFrame(function () { requestAnimationFrame(paint); });
+    window.addEventListener('load', function () { paint(); setTimeout(paint, 300); });
+    window.__auditRepaint = paint;
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

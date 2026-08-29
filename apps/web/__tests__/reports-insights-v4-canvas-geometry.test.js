@@ -60,7 +60,8 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
     // состав и «не предсказывает»
     expect(stats).toContain('закрытые недели · только измеренное');
     expect(stats).toContain('function buildWeeklyRows');
-    expect(stats).toContain('Текущая неделя войдёт, когда закроется.');
+    // Подпись под таблицей — из кадра: объясняет прочерк Score и счёт дней.
+    expect(stats).toContain('Score считается по 30-дневной серии');
     // неполные дни — общим счётчиком зоны
     expect(stats).toContain('HEYS.DisciplineMatrix.hasAnyData');
     expect(stats).toContain("row.filledDays + ' из 7'");
@@ -175,21 +176,36 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
     // считается движком через HEYS.dayNorm), «лента дней» снята как
     // ошибочно записанная — спарклайн и так начинает с первого дня с едой
     // и периодом не ограничен (heys_day_sparkline_data_v1.js).
-    // Список обязан совпадать с вердиктами «≠» в
-    // docs/ui/ui-v4-contract-verdicts.json — иначе отступление живёт в одном
-    // месте и молчит в другом.
-    const DEVIATIONS = [
-      'вид · сценарий — панель «Что если» не приведена к кадру (категории и раскрытие по одному — контрактны)'
-    ];
-    expect(DEVIATIONS.length).toBe(1);
+    // Пакет 2026-08-29 (третья пересборка): отступлений не осталось —
+    // вид панели «Что если» принят как есть отдельной строкой контракта,
+    // формы чисел планера и прочерк Score описаны значениями.
+    // Список обязан совпадать с вердиктами «≠» в снимке — иначе отступление
+    // живёт в одном месте и молчит в другом.
+    const DEVIATIONS = [];
 
     const verdicts = JSON.parse(fs.readFileSync(
       path.resolve(__dirname, '../../../docs/ui/ui-v4-contract-verdicts.json'), 'utf8'));
     const notEqual = Object.entries(verdicts.zones['reports-insights'].rows)
       .filter(([, row]) => row.v === '≠')
       .map(([key]) => key);
-    expect(notEqual).toEqual(['вид · сценарий']);
-    expect(notEqual.length).toBe(DEVIATIONS.length);
+    expect(notEqual).toEqual(DEVIATIONS);
+  });
+
+  it('пакет 3: формы чисел планера, прочерк Score, «плановых», счётчик', () => {
+    const card = fs.readFileSync(
+      path.resolve(__dirname, '../insights/pi_ui_meal_rec_card.js'), 'utf8');
+    // белок — вилка ±5 с округлением до 5; углеводы — потолок; ккал — точка
+    expect(card).toContain("'белок ' + lo + '–' + hi + ' г'");
+    expect(card).toContain("'углеводы до '");
+    expect(card).toContain("'≈ ' + round10(v4Kcal) + ' ккал'");
+    expect(card).not.toContain('spread(');
+    const stats = fs.readFileSync(
+      path.resolve(__dirname, '../heys_day_stats_v1.js'), 'utf8');
+    expect(stats).toContain("' плановых'");
+    expect(stats).toContain("reports-v4-weeks__score' + (row.score == null ? ' is-empty'");
+    expect(stats).toContain('те, что вы сами отметили «не заполнял»');
+    const empty = cssBlock(reportsCss, 'reports-v4-weeks__score\\.is-empty');
+    expect(prop(empty, 'color')).toContain('v4-ink-30');
   });
 
   it('четвёртый заход: план прошлых дней и «N из M» у счётных', () => {

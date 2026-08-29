@@ -445,7 +445,10 @@
             );
           }
           if (row.kind === 'count') {
-            const suffix = row.planned > 0 ? (' из плановых ' + row.planned) : ' за период';
+            // Контракт «вид · тренировки при программе»: «9 из 12 плановых» —
+            // слово «плановых» обязательно, иначе знаменатель читается как
+            // календарные дни.
+            const suffix = row.planned > 0 ? (' из ' + row.planned + ' плановых') : ' за период';
             return React.createElement('div', { key: row.key, className: 'reports-v4-discipline__row' },
               React.createElement('span', { className: 'reports-v4-discipline__name' }, row.label),
               React.createElement('span', { className: 'reports-v4-discipline__count' }, row.count + suffix),
@@ -505,10 +508,20 @@
           ),
           React.createElement('span', { className: 'reports-v4-weeks__kcal' }, fmtPlan(row.planAvg)),
           React.createElement('span', { className: 'reports-v4-weeks__weight' }, fmtWeight(row.weightDelta)),
-          React.createElement('span', { className: 'reports-v4-weeks__score' }, row.score == null ? '—' : row.score)
+          // Контракт «прочерк вместо Score»: прочерк тоном чернил 32 %,
+          // а не выдуманное число.
+          React.createElement('span', {
+            className: 'reports-v4-weeks__score' + (row.score == null ? ' is-empty' : '')
+          }, row.score == null ? '—' : row.score)
         )),
+        // Копия из кадра: прочерк у старой недели и построжавший счётчик дней
+        // объясняются здесь, а не прячутся (контракты «прочерк вместо Score»
+        // и «счётчик дней»).
         React.createElement('div', { className: 'reports-v4-weeks__note' },
-          'Средний ±ккал в день, изменение веса и Score недели. Текущая неделя войдёт, когда закроется.'
+          'К плану — в день, вес — за неделю. Score считается по 30-дневной серии, '
+          + 'поэтому у самой старой недели вместо числа стоит прочерк. '
+          + 'Считаем дни с записями: те, что вы сами отметили «не заполнял», '
+          + 'в счёт не идут — отсюда «5 из 7».'
         )
       )
     );

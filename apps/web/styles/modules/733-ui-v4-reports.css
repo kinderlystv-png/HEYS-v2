@@ -751,6 +751,11 @@
   color: var(--v4-ink, #0f172a);
 }
 
+/* Контракт «прочерк вместо Score»: чернила 32 %, а не выдуманное число. */
+.reports-v4-weeks__score.is-empty {
+  color: var(--v4-ink-30, rgba(0, 0, 0, 0.32));
+}
+
 .reports-v4-weeks__note {
   padding-top: 11px;
   border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));

@@ -2801,16 +2801,23 @@
             const v4Kcal = Math.round(macros?.kcal || primaryPlannedMeal?.macros?.kcal || 0);
             const v4Prot = Math.round(macros?.protein || primaryPlannedMeal?.macros?.prot || 0);
             const v4Carbs = Math.round(macros?.carbs || primaryPlannedMeal?.macros?.carbs || 0);
-            // Вилка ±12 % — та же подача, что на кадре: не точка, а диапазон.
-            const spread = (v, pct) => {
-                const d = Math.max(1, Math.round(v * pct));
-                return (v - d) + '–' + (v + d);
-            };
+            // Контракт «вид · числа планера»: три разные формы, потому что три
+            // разные природы. Белок — вилка ±5 г с округлением до 5 (усвоение
+            // за приём измеряется в граммах). Углеводы — потолок «до N г»
+            // (ограничение по гликемической нагрузке — лимит, а не цель).
+            // Калории — точка «≈ N ккал», округление до 10. Проценты вилки не
+            // задаются: ±N % ни у одного из трёх не имеет физического смысла.
+            const round5 = (v) => Math.round(v / 5) * 5;
+            const round10 = (v) => Math.round(v / 10) * 10;
             const hoursToSleep = primaryPlannedMeal?.hoursToSleep;
             const chips = [];
-            if (v4Prot > 0) chips.push({ key: 'prot', text: 'белок ' + spread(v4Prot, 0.12) + ' г' });
-            if (v4Carbs > 0) chips.push({ key: 'carbs', text: 'углеводы ' + spread(v4Carbs, 0.55) + ' г' });
-            if (v4Kcal > 0) chips.push({ key: 'kcal', text: spread(v4Kcal, 0.14) + ' ккал' });
+            if (v4Prot > 0) {
+                const lo = Math.max(0, round5(v4Prot - 5));
+                const hi = round5(v4Prot + 5);
+                chips.push({ key: 'prot', text: 'белок ' + lo + '–' + hi + ' г' });
+            }
+            if (v4Carbs > 0) chips.push({ key: 'carbs', text: 'углеводы до ' + round5(v4Carbs) + ' г' });
+            if (v4Kcal > 0) chips.push({ key: 'kcal', text: '≈ ' + round10(v4Kcal) + ' ккал' });
 
             const v4Element = h('div', { className: 'meal-rec-card meal-rec-card--v4' },
                 h('div', { className: 'meal-rec-v4__head' },
