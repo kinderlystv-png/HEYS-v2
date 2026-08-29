@@ -51,7 +51,10 @@ describe('норма калорий берётся из TDEE, а не из жё�
     it('каждый вызов resolveDailyTargets в инсайтах попадает в живой модуль', () => {
         const src = read('apps/web/insights/pi_analytics_api.js');
         const calls = [...src.matchAll(/HEYS\.TDEE\?\.resolveDailyTargets\?\.\(/g)];
-        expect(calls.length, 'в файле должны остаться вызовы нормы').toBe(3);
+        // Счёт намеренно точный: число меняется — человек смотрит, не завёлся ли
+        // рядом новый baseline 2000. Четвёртый и пятый вызовы — байесовская
+        // проверка прогноза и ранние сигналы: там норма была захардкожена 2000.
+        expect(calls.length, 'в файле должны остаться вызовы нормы').toBe(5);
         expect(typeof global.HEYS.TDEE.resolveDailyTargets).toBe('function');
     });
 

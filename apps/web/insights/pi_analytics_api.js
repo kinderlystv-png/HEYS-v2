@@ -1064,6 +1064,7 @@
     calculateBayesianConfidence: function (options = {}) {
       const lsGet = options.lsGet || U.lsGet;
       const pIndex = options.pIndex || HEYS.products?.buildIndex?.();
+      const profile = options.profile || lsGet('heys_profile', {});
       const daysBack = options.daysBack || 30;
       const days = getDaysData(daysBack, lsGet);
 
@@ -1094,8 +1095,12 @@
 
         // Простая модель: kcalDeficit × 7700 = потеря жира
         // 7700 ккал ≈ 1 кг жира (Wishnofsky 1958, спорно но широко используется)
-        const optimum = 2000; // baseline
-        const dailyDeficit = optimum - avgKcal;
+        // Норма — по тем же дням, что и avgKcal: baseline 2000 сравнивал съеденное
+        // с чужим числом, и MAPE уезжал у всех, чья норма не 2000.
+        const avgOptimum = average(
+          prevDays.map(d => HEYS.TDEE?.resolveDailyTargets?.(profile, d)?.kcal || 2000)
+        );
+        const dailyDeficit = avgOptimum - avgKcal;
         const predictedWeightChange = (dailyDeficit * 3) / 7700; // за 3 дня
         const predictedWeight = avgWeight - predictedWeightChange;
 
@@ -1643,6 +1648,7 @@
     detectEarlyWarningSignals: function (options = {}) {
       const lsGet = options.lsGet || U.lsGet;
       const pIndex = options.pIndex || HEYS.products?.buildIndex?.();
+      const profile = options.profile || lsGet('heys_profile', {});
       const days = getDaysData(21, lsGet);
 
       if (days.length < 14) {
@@ -1654,10 +1660,11 @@
         };
       }
 
-      // Главная метрика: отклонение от нормы калорий
-      const optimum = 2000;
+      // Главная метрика: отклонение от нормы калорий — своей у каждого дня.
+      // Общий baseline 2000 объявлял отклонением саму норму клиента.
       const deviations = days.map(d => {
         const kcal = calculateDayKcal(d, pIndex);
+        const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile, d)?.kcal || 2000;
         return kcal > 0 ? (kcal - optimum) / optimum : null;
       }).filter(d => d !== null);
 
