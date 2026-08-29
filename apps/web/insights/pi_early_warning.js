@@ -515,6 +515,40 @@
      * - insight: подробный совет что делать
      *- science: научное обоснование с механизмами и исследованиями
      */
+    // Склонение формой, а не подстановкой: «3 дней» и «4 тренировок» в
+    // интерфейсе недопустимы (строка контракта «язык · латиница и склонения»).
+    function pluralDaysRu(n) {
+        const abs = Math.abs(Math.round(n));
+        const tail = abs % 100;
+        if (tail >= 11 && tail <= 14) return abs + ' дней';
+        const last = abs % 10;
+        if (last === 1) return abs + ' день';
+        if (last >= 2 && last <= 4) return abs + ' дня';
+        return abs + ' дней';
+    }
+
+    // Слово зрелости по природе сигнала (строка контракта). Раньше у всех
+    // двадцати шести стояло зашитое «наблюдение», хотя рядом, в блоке
+    // паттернов, лестница работает по-настоящему. Лестница та же:
+    //   модельный вывод (оценки, тренды, регрессии) — «прогноз»;
+    //   счётный на полном окне наблюдения — «правило»;
+    //   счётный на неполном — «наблюдение»;
+    //   данных совсем мало — «гипотеза».
+    const MODEL_WARNING_TYPES = new Set([
+        'HEALTH_SCORE_DECLINE',
+        'CRITICAL_PATTERN_DEGRADATION',
+        'STATUS_SCORE_DECLINE'
+    ]);
+    const MATURITY_FULL_WINDOW_DAYS = 30;
+    const MATURITY_MIN_WINDOW_DAYS = 14;
+
+    function resolveMaturityWord(type, windowDays) {
+        if (MODEL_WARNING_TYPES.has(type)) return 'прогноз';
+        if (windowDays >= MATURITY_FULL_WINDOW_DAYS) return 'правило';
+        if (windowDays >= MATURITY_MIN_WINDOW_DAYS) return 'наблюдение';
+        return 'гипотеза';
+    }
+
     const WARNING_HUMAN_MESSAGES = {
         HEALTH_SCORE_DECLINE: {
             title: 'Общий показатель снижается',
@@ -2100,8 +2134,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                        detail: `Было ${Math.round(previousScore)}, стало ${Math.round(currentScore)} (−${percentChange}% за ${THRESHOLDS.HEALTH_SCORE_DECLINE_DAYS} дня)`,
+                    humanMessage: `Общая оценка идёт вниз: ${Math.round(previousScore)} → ${Math.round(currentScore)}`,
+                        detail: 'Так выглядит накопленная усталость, а не один плохой день',
                         insight: humanMsg.insight,
                         science: humanMsg.science,
                         actionable: true
@@ -2166,8 +2200,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                    detail: `Было ${Math.round(previousScore)}, стало ${Math.round(currentScore)} (−${percentChange}% за 7 дней)`,
+                    humanMessage: `Общая оценка за неделю идёт вниз: ${Math.round(previousScore)} → ${Math.round(currentScore)}`,
+                    detail: 'Так выглядит накопленная усталость, а не один плохой день',
                     insight: humanMsg.insight,
                     science: humanMsg.science,
                     actionable: true
@@ -2225,7 +2259,11 @@
                         absoluteChange: Math.round(absoluteChange),
                         relativeChange: Math.round(relativeChange * 100),
                         message: `⚠️ ${prev.pattern || patternId} ухудшился на ${Math.abs(Math.round(relativeChange * 100))}%`,
-                        detail: `С ${Math.round(prevScore)} до ${Math.round(currScore)} за 7 дней`,
+                        // Раньше humanMessage тут не было вовсе, и карточка падала
+                        // на технический заголовок с падежной ошибкой:
+                        // «Связь сна и веса ухудшился на 27%».
+                        humanMessage: `${prev.pattern || patternId}: показатель недели снизился с ${Math.round(prevScore)} до ${Math.round(currScore)}`,
+                        detail: 'Раньше по вашим данным здесь было ровнее',
                         action: `Изучить insight: «${curr.insight || 'N/A'}»`,
                         actionable: true
                     });
@@ -2281,7 +2319,9 @@
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
                     humanMessage: humanMsg.message,
-                    detail: humanMsg.message,
+                    // Подстрока не повторяет главную фразу: она несёт опору —
+                    // балл против порога. Раньше карточка печатала одно и то же дважды.
+                    detail: `оценка ${Math.round(score)} из 100, порог ${PATTERN_LOW_SCORE_THRESHOLDS.critical}`,
                     insight: humanMsg.insight,
                     science: humanMsg.science,
                     actionable: true
@@ -2302,7 +2342,9 @@
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
                     humanMessage: humanMsg.message,
-                    detail: humanMsg.message,
+                    // Подстрока не повторяет главную фразу: она несёт опору —
+                    // балл против порога. Раньше карточка печатала одно и то же дважды.
+                    detail: `оценка ${Math.round(score)} из 100, порог 50`,
                     insight: humanMsg.insight,
                     science: humanMsg.science,
                     actionable: true
@@ -2323,7 +2365,9 @@
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
                     humanMessage: humanMsg.message,
-                    detail: humanMsg.message,
+                    // Подстрока не повторяет главную фразу: она несёт опору —
+                    // балл против порога. Раньше карточка печатала одно и то же дважды.
+                    detail: `оценка ${Math.round(score)} из 100, порог ${PATTERN_LOW_SCORE_THRESHOLDS.important}`,
                     insight: humanMsg.insight,
                     science: humanMsg.science,
                     actionable: true
@@ -2463,8 +2507,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                    detail: `С ${startScore} до ${endScore} (падение ${Math.round(totalDrop)} баллов за ${THRESHOLDS.STATUS_SCORE_DECLINE_DAYS} дня)`,
+                    humanMessage: `Оценка состояния падает третий день подряд: ${startScore} → ${endScore}`,
+                    detail: 'Тело не успевает восстанавливаться между днями',
                     insight: humanMsg.insight,
                     science: humanMsg.science,
                     currentScore: endScore,
@@ -2536,8 +2580,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Средний сон: ${Math.round(avgSleep * 10) / 10}ч (цель: ${targetSleep}ч), дефицит: ${Math.round(totalDeficit * 10) / 10}ч`,
+                    humanMessage: `Третью ночь подряд сон ниже нормы: в среднем ${Math.round(avgSleep * 10) / 10} ч при цели ${targetSleep}`,
+                detail: 'После таких ночей вечером обычно сильнее тянет на сладкое',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 currentScore: sleepQualityScore,
@@ -2611,8 +2655,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Средний недобор: ${Math.round(avgDebt)} ккал/день (всего ${Math.round(totalDebt)} ккал)`,
+                    humanMessage: `Два дня подряд недобор около ${Math.round(avgDebt)} ккал в день`,
+                detail: 'После таких дней у вас обычно вечерний перебор',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 currentScore: calorieIntakeScore,
@@ -2688,8 +2732,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Вес вырос с ${previous.toFixed(1)} до ${current.toFixed(1)} кг (+${delta.toFixed(1)} кг, +${percentChange}%)`,
+                    humanMessage: `Вес прибавил ${delta.toFixed(1)} кг за два дня — с ${previous.toFixed(1)} до ${current.toFixed(1)}`,
+                detail: 'Чаще всего это вода после соли или позднего ужина, а не жир',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 currentScore: spikeScore,
@@ -2770,8 +2814,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Средний объём: ${Math.round(avgWater)} мл (цель: ${targetWater} мл, дефицит: ${Math.round(targetWater - avgWater)} мл)`,
+                    humanMessage: `Вода ниже нормы третий день — в среднем ${Math.round(avgWater)} мл из ${targetWater}`,
+                detail: 'В такие дни вас сильнее тянет на сладкое к вечеру',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 currentScore: hydrationScore,
@@ -2852,8 +2896,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Нет записей ${consecutiveGap} ${consecutiveGap === 2 ? 'дня' : 'дней'} подряд`,
+                    humanMessage: `Питание не записано ${pluralDaysRu(consecutiveGap)} подряд`,
+                detail: 'Без записей я перестаю видеть, что происходит, и советы становятся догадками',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 currentScore: consistencyScore,
@@ -2951,8 +2995,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Средний белок: ${Math.round(avgProtein)}г (цель: ${Math.round(minProteinGrams)}г, дефицит: ${Math.round(minProteinGrams - avgProtein)}г)`,
+                    humanMessage: `Белка меньше нормы третий день: в среднем ${Math.round(avgProtein)} г при вашей норме ${Math.round(minProteinGrams)}`,
+                detail: 'После таких дней вас сильнее тянет на сладкое',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 currentScore: proteinScore,
@@ -3054,8 +3098,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `${highStressDays} дней с множественными признаками стресса (сон, нагрузка, состояние)`,
+                    humanMessage: 'Три дня подряд сходятся сразу несколько признаков напряжения — короткий сон, нагрузка, низкая оценка самочувствия',
+                detail: 'Это про восстановление, а не про еду',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 currentScore: recoveryScore,
@@ -3161,8 +3205,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `${irregularDays} из ${mealData.length} дней с пропусками или длинными перерывами (>8ч)`,
+                    humanMessage: `${irregularDays} из ${mealData.length}: столько дней вы пропускали приём или ели с перерывом больше восьми часов`,
+                detail: 'После длинных перерывов у вас обычно перебор вечером',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 currentScore: regularityScore,
@@ -3283,8 +3327,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `${bingeDays} из ${bingeData.length} дней с признаками переедания (крупные порции >40% нормы)`,
+                    humanMessage: `${bingeDays} из ${bingeData.length}: столько дней заканчивались порцией больше 40 % дневной нормы за раз`,
+                detail: 'Так бывает после долгих перерывов: короче пауза — спокойнее вечер',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 currentScore: controlScore,
@@ -3366,8 +3410,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Средний уровень: ${avgMood !== null ? 'mood ' + avgMood.toFixed(1) : ''}${avgMood && avgWellbeing ? ', ' : ''}${avgWellbeing !== null ? 'wellbeing ' + avgWellbeing.toFixed(1) : ''} (норма: ≥5)`,
+                    humanMessage: `Неделю настроение и самочувствие держатся ниже пяти: ${avgMood !== null ? avgMood.toFixed(1) : '—'} и ${avgWellbeing !== null ? avgWellbeing.toFixed(1) : '—'}`,
+                detail: 'Обычно это перегрузка, а не питание — стоит сказать куратору',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 currentScore: score,
@@ -3452,8 +3496,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Вес колеблется в пределах ${variation.toFixed(1)} кг за 14 дней (среднее: ${avgWeight.toFixed(1)} кг)`,
+                    humanMessage: `Две недели вес держится в пределах ${variation.toFixed(1)} кг при цели снижения — среднее ${avgWeight.toFixed(1)}`,
+                detail: 'Замерьте талию: она отличит остановку от смены состава',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 currentScore: progressScore,
@@ -3566,8 +3610,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Выходные: ${Math.round(avgWeekendKcal)} ккал (будни: ${Math.round(avgWeekdayKcal)} ккал, +${Math.round(weekendExcessPercent)}%), алкоголь: ${Math.round(weekendAlcoholRate * 100)}% дней`,
+                    humanMessage: `Выходные тяжелее будней на ${Math.round(weekendExcessPercent)} %: ${Math.round(avgWeekendKcal)} против ${Math.round(avgWeekdayKcal)} ккал`,
+                detail: 'Дело не в самих выходных, а в пропущенном обеде',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 currentScore: consistencyScore,
@@ -3621,8 +3665,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Средняя клетчатка: ${avgFiber.toFixed(1)}г (цель: ${FIBER_THRESHOLD}+г)`,
+                    humanMessage: `Клетчатки меньше нормы в ${pluralDaysRu(lowFiberDays.length)} за месяц — в среднем ${avgFiber.toFixed(1)} г при цели ${FIBER_THRESHOLD}`,
+                detail: 'Проще всего добрать овощами в обед',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 dates: lowFiberDays.map(d => d.date),
@@ -3675,8 +3719,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Средний натрий: ${Math.round(avgSodium)} мг (цель: <${SODIUM_THRESHOLD} мг)`,
+                    humanMessage: `Соли выше нормы в ${pluralDaysRu(highSodiumDays.length)} за месяц — в среднем ${Math.round(avgSodium)} мг`,
+                detail: 'После таких дней вес утром подскакивает от воды, а не от жира',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 dates: highSodiumDays.map(d => d.date),
@@ -3715,7 +3759,6 @@
         if (days.length < MIN_DAYS) return null;
 
         let lateMealCount = 0;
-        const sleepTimes = [];
 
         for (const day of days) {
             // Check for late meals
@@ -3728,31 +3771,21 @@
                 }
             }
 
-            // Check sleep time
-            if (day.sleep?.time) {
-                const [h, m] = day.sleep.time.split(':').map(Number);
-                sleepTimes.push(h + m / 60);
-            }
+            // Ветка разброса сна снята (строка контракта «снято · пять молчащих
+            // сигналов»): она читала day.sleep.time, а поле называется
+            // sleepStart — разброс всегда выходил нулём, и половина условия не
+            // работала никогда. Остаётся ветка поздних приёмов, она честная.
         }
 
         const lateMealRatio = lateMealCount / days.length;
-
-        let sleepVariance = 0;
-        if (sleepTimes.length >= 3) {
-            const avgSleep = sleepTimes.reduce((sum, t) => sum + t, 0) / sleepTimes.length;
-            const maxDiff = Math.max(...sleepTimes.map(t => Math.abs(t - avgSleep)));
-            sleepVariance = maxDiff;
-        }
-
-        const isDisrupted = (lateMealRatio >= 4 / 7) || (sleepVariance > SLEEP_VARIANCE_THRESHOLD);
+        const isDisrupted = lateMealRatio >= 4 / 7;
 
         if (isDisrupted) {
             const humanMsg = WARNING_HUMAN_MESSAGES.CIRCADIAN_DISRUPTION;
-            const circadianScore = Math.max(0, Math.round(100 - (lateMealRatio * 100 + sleepVariance * 10)));
+            const circadianScore = Math.max(0, Math.round(100 - lateMealRatio * 100));
             console.info('ews / detect 🔶 CircadianDisruption:', {
                 lateMeals: lateMealCount,
-                lateMealRatio: lateMealRatio.toFixed(2),
-                sleepVariance: sleepVariance.toFixed(1)
+                lateMealRatio: lateMealRatio.toFixed(2)
             });
 
             return {
@@ -3764,14 +3797,13 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Поздние приёмы пищи: ${lateMealCount} дней, разброс сна: ${sleepVariance.toFixed(1)}ч`,
+                    humanMessage: `Вы ели после 22:00 в ${pluralDaysRu(lateMealCount)} из ${pluralDaysRu(days.length)}`,
+                detail: 'Поздняя еда сдвигает сон, а не только калории',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 dates: days.map(d => d.date),
                 metrics: {
-                    lateMealCount,
-                    sleepVariance: Math.round(sleepVariance * 10) / 10
+                    lateMealCount
                 },
                 currentScore: circadianScore,
                 actionable: true
@@ -3785,6 +3817,14 @@
     // Warning 19: Training without recovery (v3.2)
     // ========================================
     function checkTrainingWithoutRecovery(days, profile) {
+        // Снят до появления источника (строка контракта «снято · пять
+        // молчащих сигналов»): читает day.training.duration вместо массива trainings, и часы сна считаются одним аргументом вместо двух —
+        // поля, которого в записи дня нет, поэтому на живых данных сигнал
+        // молчит всегда. Копия к неработающему сигналу ушла бы в стол,
+        // поэтому он снят, а не переписан. Появится источник — вернётся
+        // вместе со своим текстом, функция для этого и оставлена.
+        return null;
+
         console.info('ews / detect check_19:', { name: 'TrainingWithoutRecovery', days: days.length });
 
         const MIN_DAYS = 5;
@@ -3850,6 +3890,14 @@
     // Warning 20: Fat quality decline (v3.2)
     // ========================================
     function checkFatQualityDecline(days, profile, pIndex) {
+        // Снят до появления источника (строка контракта «снято · пять
+        // молчащих сигналов»): читает day.patterns.omega_balancer —
+        // поля, которого в записи дня нет, поэтому на живых данных сигнал
+        // молчит всегда. Копия к неработающему сигналу ушла бы в стол,
+        // поэтому он снят, а не переписан. Появится источник — вернётся
+        // вместе со своим текстом, функция для этого и оставлена.
+        return null;
+
         console.info('ews / detect check_20:', { name: 'FatQualityDecline', days: days.length });
 
         const MIN_DAYS = 7;
@@ -3906,6 +3954,14 @@
     // Warning 21: Sugar dependency (v3.2)
     // ========================================
     function checkSugarDependency(days, profile) {
+        // Снят до появления источника (строка контракта «снято · пять
+        // молчащих сигналов»): читает day.patterns.added_sugar_dependency —
+        // поля, которого в записи дня нет, поэтому на живых данных сигнал
+        // молчит всегда. Копия к неработающему сигналу ушла бы в стол,
+        // поэтому он снят, а не переписан. Появится источник — вернётся
+        // вместе со своим текстом, функция для этого и оставлена.
+        return null;
+
         console.info('ews / detect check_21:', { name: 'SugarDependency', days: days.length });
 
         const MIN_DAYS = 7;
@@ -3970,6 +4026,14 @@
     // Warning 22: Micronutrient gap (v3.2)
     // ========================================
     function checkMicronutrientGap(days, profile) {
+        // Снят до появления источника (строка контракта «снято · пять
+        // молчащих сигналов»): читает day.patterns.* по витаминам и минералам —
+        // поля, которого в записи дня нет, поэтому на живых данных сигнал
+        // молчит всегда. Копия к неработающему сигналу ушла бы в стол,
+        // поэтому он снят, а не переписан. Появится источник — вернётся
+        // вместе со своим текстом, функция для этого и оставлена.
+        return null;
+
         console.info('ews / detect check_22:', { name: 'MicronutrientGap', days: days.length });
 
         const MIN_DAYS = 7;
@@ -4093,8 +4157,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Шаги упали на ${declinePercent}%: с ${Math.round(allAvg)} до ${Math.round(recentAvg)} шагов/день`,
+                    humanMessage: `Шаги за неделю упали почти вдвое: ${Math.round(recentAvg)} против ${Math.round(allAvg)} в среднем за месяц`,
+                detail: 'Бытовая активность тратит больше, чем тренировки, — норма это учтёт',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 dates: recentDays.map(d => d.date),
@@ -4157,8 +4221,8 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: humanMsg.message,
-                detail: `Время первого приёма пищи колеблется на ${maxDiff.toFixed(1)} часа`,
+                    humanMessage: `Время первого приёма гуляет на ${maxDiff.toFixed(1)} часа между днями`,
+                detail: 'Ровный завтрак обычно выравнивает и аппетит к вечеру',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 dates: days.map(d => d.date),
@@ -4178,6 +4242,14 @@
     // Warning 25: Electrolyte imbalance (v3.2)
     // ========================================
     function checkElectrolyteImbalance(days, profile) {
+        // Снят до появления источника (строка контракта «снято · пять
+        // молчащих сигналов»): читает day.patterns.electrolyte_homeostasis и day.training.duration —
+        // поля, которого в записи дня нет, поэтому на живых данных сигнал
+        // молчит всегда. Копия к неработающему сигналу ушла бы в стол,
+        // поэтому он снят, а не переписан. Появится источник — вернётся
+        // вместе со своим текстом, функция для этого и оставлена.
+        return null;
+
         console.info('ews / detect check_25:', { name: 'ElectrolyteImbalance', days: days.length });
 
         const MIN_DAYS = 5;
@@ -4845,6 +4917,14 @@
         } else {
             console.info('ews / detect 🧮   ⏭️ check_25:', { name: 'ElectrolyteImbalance', status: 'skipped', reason: 'acute_mode' });
         }
+
+        // Слово зрелости считается, а не зашивается: до этого у всех сигналов
+        // одинаково стояло «наблюдение», и лестница зрелости к предупреждениям
+        // была не подключена.
+        const maturityWindowDays = Array.isArray(days) ? days.length : 0;
+        warnings.forEach((w) => {
+            if (!w.maturity) w.maturity = resolveMaturityWord(w.type, maturityWindowDays);
+        });
 
         // Sort by severity
         warnings.sort((a, b) => {

@@ -95,13 +95,17 @@ describe('строка «Ритм приёмов» переживает живо
 // («🍽️ Слишком большой дефицит калорий»), хотя написанная фраза куратора
 // лежала в WARNING_HUMAN_MESSAGES и в объект предупреждения не попадала.
 describe('голос куратора в предупреждениях', () => {
-  it('движок отдаёт написанную фразу в humanMessage', () => {
+  it('у каждого заголовка есть написанная фраза в humanMessage', () => {
     const ews = read('insights/pi_early_warning.js');
     const titles = (ews.match(/message: `[^`]*\$\{humanMsg\.title\}[^`]*`/g) || []).length;
-    const human = (ews.match(/humanMessage: humanMsg\.message/g) || []).length;
+    // Раньше фраза была статичной и пробрасывалась из словаря один в один.
+    // Контракт «подстрока не повторяет порог» перевернул роли: число ушло в
+    // главную фразу, а следствие — в подстроку. Значит главная фраза стала
+    // шаблоном и словарной быть не может. Считаем оба вида.
+    const fromDict = (ews.match(/humanMessage: humanMsg\.message/g) || []).length;
+    const templated = (ews.match(/humanMessage: `/g) || []).length;
     expect(titles).toBeGreaterThan(20);
-    // Каждому заголовку соответствует проброшенная фраза
-    expect(human).toBe(titles);
+    expect(fromDict + templated).toBeGreaterThanOrEqual(titles);
   });
 
   it('v4 предпочитает фразу, а эмодзи у старых снимков срезает', () => {
