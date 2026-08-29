@@ -81,7 +81,9 @@
             anchor.setDate(anchor.getDate() - 7 - i * 7);
             const anchorDate = anchor.toISOString().split('T')[0];
             const report = buildWeekReport({ dateStr: anchorDate, lsGet: getter, profile: prof, pIndex: index });
-            if (report?.daysWithData >= minDays) {
+            // Порог показа — по дням с записями: неделя, где человек вёл вес и
+            // сон, но не еду, всё равно есть что подвести.
+            if ((report?.daysWithRecords ?? report?.daysWithData) >= minDays) {
                 available.push({ anchorDate, report, isPrevious: i === 0 });
             }
         }
@@ -135,9 +137,18 @@
             const ratio = goalOptimum ? (totals?.kcal || 0) / goalOptimum : 0;
             const isToday = dstr === todayStr;
 
+            // «День с записями» — общий предикат зоны: еда, вес, сон, шаги,
+            // вода или тренировка. Обе вкладки обязаны считать дни одинаково,
+            // поэтому берём его, а не заводим шестую копию правила. Без модуля
+            // остаёмся на прежнем поведении — дни с едой.
+            const hasAnyRecord = HEYS.DisciplineMatrix?.hasAnyData
+                ? HEYS.DisciplineMatrix.hasAnyData(day)
+                : hasMeals;
+
             return {
                 dateStr: dstr,
                 hasMeals,
+                hasAnyRecord,
                 totals,
                 optimum,
                 goalOptimum,
@@ -184,7 +195,20 @@
             if (filterEmptyDays && !d.hasMeals) return false; // опционально: дни без еды
             return true;
         });
+        // Два счётчика на две разные работы — иначе один сломает другую.
+        // daysWithData делит пищевые средние: пусти в знаменатель день с весом
+        // и сном, но без еды — и «съедено в среднем» уронит ноль.
         const daysWithData = visibleDays.filter((d) => d.hasMeals).length;
+
+        // daysWithRecords отвечает за «учтено N дней» и пороги надёжности, и
+        // считается по своей выборке: visibleDays при filterEmptyDays уже
+        // отброшены дни без еды, а счёт записей от еды зависеть не должен —
+        // иначе он просто повторял бы daysWithData.
+        const daysWithRecords = days.filter((d) => {
+            if (d.isIncomplete) return false;
+            if (!shouldIncludeDay(d, { requireMeals: false })) return false;
+            return d.hasAnyRecord;
+        }).length;
         const totalKcal = visibleDays.reduce((s, d) => s + (d.totals?.kcal || 0), 0);
         const totalTarget = visibleDays.reduce((s, d) => s + (d.goalOptimum || 0), 0);
         const avgKcal = daysWithData ? Math.round(totalKcal / daysWithData) : 0;
@@ -306,6 +330,7 @@
             rangeLabel: Sparklines.formatDateRange ? Sparklines.formatDateRange(dates) : '',
             days,
             daysWithData,
+            daysWithRecords,
             totalKcal,
             totalTarget,
             avgKcal,

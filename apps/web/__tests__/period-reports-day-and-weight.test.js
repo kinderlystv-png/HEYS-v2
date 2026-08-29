@@ -20,6 +20,10 @@ const weeklySrc = fs.readFileSync(
   path.resolve(__dirname, '../heys_weekly_reports_v2.js'),
   'utf8'
 );
+const matrixSrc = fs.readFileSync(
+  path.resolve(__dirname, '../heys_discipline_matrix_v1.js'),
+  'utf8'
+);
 const serviceSrc = fs.readFileSync(
   path.resolve(__dirname, '../heys_monthly_reports_service_v1.js'),
   'utf8'
@@ -115,6 +119,25 @@ describe('лист отчётов · день, помеченный «не за�
 
     const mean = perDay.reduce((s, v) => s + v, 0) / perDay.length;
     expect(report.targetDeficitPct).toBe(Math.round(mean));
+  });
+
+  it('два счётчика: записи считаются шире еды, но средние делит еда', () => {
+    // Общий предикат зоны берём настоящий, а не свой: смысл правки в том, что
+    // обе вкладки считают дни одинаково.
+    // eslint-disable-next-line no-eval
+    (0, eval)(matrixSrc);
+    expect(typeof window.HEYS.DisciplineMatrix.hasAnyData).toBe('function');
+
+    // Четыре дня с едой по 2000 и три дня, где человек вёл только вес и сон.
+    seed(PAST_WEEK, (d, i) => (i < 4
+      ? { meals: MEALS, dayTot: { kcal: 2000 } }
+      : { weightMorning: 90, sleepStart: '23:00', sleepEnd: '07:00' }));
+
+    const report = build();
+    expect(report.daysWithData).toBe(4);
+    expect(report.daysWithRecords).toBe(7);
+    // Главное: дни без еды не попали в знаменатель «съедено в среднем».
+    expect(report.avgKcal).toBe(2000);
   });
 
   it('норма БЖУ считается для самого дня, а не для пустого', () => {

@@ -159,7 +159,8 @@
                 filterEmptyDays: true
             });
 
-            if (report.daysWithData >= 2) {
+            // Порог включения недели — по дням с записями, общим счётчиком зоны.
+            if ((report.daysWithRecords ?? report.daysWithData) >= 2) {
                 const dayMap = new Map(days.map((d) => [d.dateStr, d]));
                 const visibleDays = (report.days || []).filter((d) => {
                     const hasMeals = d.hasMeals;
@@ -274,7 +275,8 @@
                     acc.avgWeight += report.avgWeight;
                     acc.weightWeeks += 1;
                 }
-                acc.daysWithData += report.daysWithData || 0;
+                // Полнота месяца — тоже по дням с записями.
+                acc.daysWithData += (report.daysWithRecords ?? report.daysWithData) || 0;
                 return acc;
             }, {
                 avgTarget: 0,
@@ -313,6 +315,7 @@
                         ? Math.round(sum.avgWeight / sum.weightWeeks * 10) / 10
                         : 0,
                     daysWithData: sum.daysWithData,
+                    daysWithRecords: sum.daysWithData,
                     totalDaysPossible,
                     completenessRatio: totalDaysPossible > 0 ? sum.daysWithData / totalDaysPossible : 0,
                     periodType: 'month'

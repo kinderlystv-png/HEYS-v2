@@ -8,7 +8,12 @@
     const PARTIAL_RATIO_THRESHOLD = 4 / 7;
 
     function getCompletenessMeta(report) {
-        const daysWithData = Number.isFinite(report?.daysWithData) ? report.daysWithData : 0;
+        // «Учтено N дней» и пороги надёжности считают дни с записями — общим
+        // счётчиком зоны. Пищевые средние делятся отдельным числом, см.
+        // heys_weekly_reports_v2.js: один счётчик на две работы ломает вторую.
+        const daysWithData = Number.isFinite(report?.daysWithRecords)
+            ? report.daysWithRecords
+            : (Number.isFinite(report?.daysWithData) ? report.daysWithData : 0);
         const totalDaysPossible = Number.isFinite(report?.totalDaysPossible) ? report.totalDaysPossible : 0;
         const isMonthPeriod = report?.periodType === 'month' || totalDaysPossible > 0;
 
@@ -492,7 +497,7 @@
         const isWeeksMode = mode === 'weeks';
         const isMonthsMode = mode === 'months';
         const totalWeeksCount = monthlyWeeks.length;
-        const trustedWeeksCount = monthlyWeeks.filter((week) => (week?.report?.daysWithData || 0) >= 6).length;
+        const trustedWeeksCount = monthlyWeeks.filter((week) => (week?.report?.daysWithRecords ?? week?.report?.daysWithData ?? 0) >= 6).length;
         const totalMonthsCount = monthlyMonths.length;
         const trustedMonthsCount = monthlyMonths.filter((month) => {
             const ratio = month?.report?.completenessRatio || 0;
@@ -502,7 +507,7 @@
             .map((week, index) => ({ week, index }))
             .filter(({ week }) => {
                 if (isWeeksMode && weekFilter === 'trusted') {
-                    return (week?.report?.daysWithData || 0) >= 6;
+                    return (week?.report?.daysWithRecords ?? week?.report?.daysWithData ?? 0) >= 6;
                 }
                 if (isMonthsMode && monthFilter === 'trusted') {
                     return (week?.report?.completenessRatio || 0) >= COMPLETE_RATIO_THRESHOLD;
