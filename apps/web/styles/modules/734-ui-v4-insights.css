@@ -757,6 +757,157 @@
   color: var(--v4-ok-text, #2e7d32);
 }
 
+/* Контракт «вид · оси фенотипа»: имя 11 px/600 шириной 86, полоса 8 px
+   радиусом 999 на подложке чернил 8 %, маркер — круг 14 px тоном --acs со
+   сдвигом −7 px, слово справа 10,5 px чернил 55 % шириной 74. */
+.insights-v4-pheno__axes {
+  background: var(--v4-card, #ffffff);
+  border-radius: 20px;
+  padding: 2px 16px;
+}
+
+.insights-v4-pheno__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+}
+
+.insights-v4-pheno__row:last-child {
+  border-bottom: none;
+}
+
+.insights-v4-pheno__name {
+  flex: none;
+  width: 86px;
+  font: 600 11px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+}
+
+.insights-v4-pheno__track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--v4-chip, rgba(0, 0, 0, 0.08));
+}
+
+.insights-v4-pheno__dot {
+  position: absolute;
+  top: -3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--v4-act, #c67139);
+}
+
+.insights-v4-pheno__word {
+  flex: none;
+  width: 74px;
+  text-align: right;
+  font: 500 10.5px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.insights-v4-pheno__note,
+.insights-v4-pheno__locked {
+  margin: 8px 0 0;
+  font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.42));
+}
+
+.insights-v4-pheno__uses {
+  list-style: none;
+  margin: 0;
+  padding: 2px 16px;
+  background: var(--v4-card, #ffffff);
+  border-radius: 20px;
+}
+
+.insights-v4-pheno__use {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  font: 500 12px/1.45 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
+}
+
+.insights-v4-pheno__use:last-child {
+  border-bottom: none;
+}
+
+/* Контракт «вид · таблица порогов»: шапка 9 px/700 трекингом .1em, строка —
+   имя 11,5 px/600, личное 11,5 px/700 тоном --ac шириной 56, общее 11 px/600
+   чернил 35 % шириной 52, моноцифрами. */
+.insights-v4-thresh__head-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.insights-v4-thresh__table {
+  background: var(--v4-card, #ffffff);
+  border-radius: 20px;
+  padding: 2px 16px;
+}
+
+.insights-v4-thresh__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 11px 0 7px;
+  font: 700 9px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.insights-v4-thresh__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+}
+
+.insights-v4-thresh__name {
+  flex: 1;
+  min-width: 0;
+  font: 600 11.5px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+}
+
+.insights-v4-thresh__head .insights-v4-thresh__name {
+  font: inherit;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+}
+
+.insights-v4-thresh__mine {
+  flex: none;
+  width: 56px;
+  text-align: right;
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-sand-act-deep, #8a4a20);
+}
+
+.insights-v4-thresh__common {
+  flex: none;
+  width: 52px;
+  text-align: right;
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+}
+
+.insights-v4-thresh__where {
+  margin-top: 10px;
+  background: var(--v4-card, #ffffff);
+  border-radius: 20px;
+  padding: 16px;
+  font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
+}
+
 .insights-v4-stub__all-done {
   margin: 0;
   font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;

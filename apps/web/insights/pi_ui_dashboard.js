@@ -2426,6 +2426,167 @@
       );
     }
 
+    // Контракт «состав фенотипа»: пять осей, положение между «плохо
+    // переносит» и «переносит хорошо»; середина — отсутствие перевеса, не
+    // оценка. Движок (pi_phenotype) считает четыре измерения: metabolic →
+    // углеводы, satiety → белок, circadian → хронотип, stress → стресс. Оси
+    // «жиры» в движке нет — показываем честно «пока не определено», а не
+    // выдуманное положение (отступление названо в протоколе).
+    const PHENOTYPE_AXES = [
+      {
+        key: 'carbs', label: 'Углеводы', from: 'metabolic',
+        map: { insulin_resistant: 0.2, metabolic_syndrome_risk: 0.15, neutral: 0.5, insulin_sensitive: 0.85 },
+        word: { insulin_resistant: 'переносит хуже', metabolic_syndrome_risk: 'переносит хуже', neutral: 'без перевеса', insulin_sensitive: 'переносит хорошо' }
+      },
+      { key: 'fat', label: 'Жиры', from: null },
+      {
+        key: 'protein', label: 'Белок', from: 'satiety',
+        map: { low_satiety: 0.25, volume_eater: 0.4, normal: 0.5, high_satiety: 0.85 },
+        word: { low_satiety: 'насыщает слабее', volume_eater: 'важнее объём', normal: 'без перевеса', high_satiety: 'насыщает хорошо' }
+      },
+      {
+        key: 'chrono', label: 'Хронотип', from: 'circadian',
+        map: { evening_type: 0.2, flexible: 0.5, morning_type: 0.85 },
+        word: { evening_type: 'вечерний', flexible: 'гибкий', morning_type: 'утренний' }
+      },
+      {
+        key: 'stress', label: 'Стресс', from: 'stress',
+        map: { stress_eater: 0.2, stress_anorexic: 0.3, neutral: 0.5 },
+        word: { stress_eater: 'заедает', stress_anorexic: 'теряет аппетит', neutral: 'без перевеса' }
+      }
+    ];
+
+    function InsightsV4Phenotype(props) {
+      const { lsGet, profile, historyDays } = props || {};
+      const ready = (historyDays || 0) >= 30;
+      const detected = useMemo(() => {
+        if (!ready) return null;
+        try {
+          const getter = lsGet || window.HEYS?.utils?.lsGet;
+          const getDays = HEYS.InsightsPI?.calculations?.getDaysData;
+          const auto = HEYS.InsightsPI?.phenotype?.autoDetect;
+          if (!getter || typeof getDays !== 'function' || typeof auto !== 'function') return null;
+          return auto(getDays(30, getter), profile || {}, null);
+        } catch (_) { return null; }
+      }, [ready, lsGet, profile]);
+
+      if (!ready) {
+        const left = Math.max(1, 30 - (historyDays || 0));
+        return h('div', { className: 'insights-v4-pheno' },
+          h('div', { className: 'insights-v4-tier' }, 'Метаболический фенотип'),
+          h('p', { className: 'insights-v4-pheno__locked' },
+            'Откроется через ' + left + ' ' + pluralDaysWord(left) + ' — считается строго на 30 днях.')
+        );
+      }
+
+      return h('div', { className: 'insights-v4-pheno' },
+        h('div', { className: 'insights-v4-tier' }, 'Метаболический фенотип'),
+        h('div', { className: 'insights-v4-pheno__axes' },
+          PHENOTYPE_AXES.map(function (axis) {
+            const raw = axis.from && detected ? detected[axis.from] : null;
+            const pos = raw && axis.map ? axis.map[raw] : null;
+            return h('div', { key: axis.key, className: 'insights-v4-pheno__row' },
+              h('span', { className: 'insights-v4-pheno__name' }, axis.label),
+              h('span', { className: 'insights-v4-pheno__track' },
+                pos != null && h('span', {
+                  className: 'insights-v4-pheno__dot',
+                  style: { left: 'calc(' + Math.round(pos * 100) + '% - 7px)' }
+                })
+              ),
+              h('span', { className: 'insights-v4-pheno__word' },
+                pos != null ? (axis.word[raw] || '') : 'пока не определено')
+            );
+          })
+        ),
+        h('p', { className: 'insights-v4-pheno__note' },
+          'Середина шкалы — не оценка, а отсутствие перевеса. Обновляется раз в неделю.'),
+        // Контракт: ярус «Что из этого следует» — куда фенотип уходит числами.
+        detected && h(React.Fragment, null,
+          h('div', { className: 'insights-v4-tier' }, 'Что из этого следует'),
+          h('ul', { className: 'insights-v4-pheno__uses' },
+            [
+              detected.circadian === 'morning_type'
+                ? 'Углеводы в первую половину дня — планер сдвигает их к утру.'
+                : detected.circadian === 'evening_type'
+                  ? 'Пик активности вечером — планер не гонит углеводы в утро.'
+                  : 'Время приёмов гибкое — планер не смещает углеводы.',
+              detected.satiety === 'low_satiety'
+                ? 'Белка 2,0 г/кг вместо 1,6 — норма дня считается с этой поправкой.'
+                : 'Белок по обычной норме — поправка фенотипа не нужна.',
+              detected.stress === 'stress_eater'
+                ? 'Стресс входит в порог предупреждения — риск срыва замечается раньше.'
+                : 'Стресс порог предупреждения не двигает.'
+            ].map(function (text, idx) {
+              return h('li', { key: idx, className: 'insights-v4-pheno__use' }, text);
+            })
+          )
+        )
+      );
+    }
+
+    // Контракт «состав порогов»: восемь строк, у каждой два числа — личное и
+    // общее. Колонка «общий» обязательна: без неё личное читается как
+    // произвольное. До 14 дней колонка «ваш» пуста, слово зрелости —
+    // «наблюдение» вместо «правила». Экран только читает.
+    function InsightsV4Thresholds(props) {
+      const { lsGet, profile, pIndex, historyDays } = props || {};
+      const personal = (historyDays || 0) >= 14;
+      const data = useMemo(() => {
+        try {
+          const getter = lsGet || window.HEYS?.utils?.lsGet;
+          const getDays = HEYS.InsightsPI?.calculations?.getDaysData;
+          const get = HEYS.InsightsPI?.thresholds?.get;
+          if (!getter || typeof getDays !== 'function' || typeof get !== 'function') return null;
+          return get(getDays(30, getter), profile || {}, pIndex || null);
+        } catch (_) { return null; }
+      }, [lsGet, profile, pIndex]);
+
+      const t = (data && data.thresholds) || {};
+      const prof = profile || {};
+      const weight = +prof.weight || 0;
+      const hhmm = (h24) => {
+        const whole = Math.floor(h24);
+        return whole + ':' + String(Math.round((h24 - whole) * 60)).padStart(2, '0');
+      };
+      const rows = [
+        { label: 'Поздний ужин', mine: t.lateEatingHour ? hhmm(t.lateEatingHour) : null, common: '21:00' },
+        { label: 'Минимум белка', mine: t.proteinPerMealG ? Math.round(t.proteinPerMealG * 4) + ' г' : null, common: '100 г' },
+        { label: 'Вода', mine: weight ? (Math.round(weight * 30 / 100) / 10).toFixed(1).replace('.', ',') + ' л' : null, common: '2,0 л' },
+        { label: 'Шаги', mine: prof.stepsGoal ? String(prof.stepsGoal) : null, common: '8 000' },
+        { label: 'Сон', mine: prof.sleepHours ? hhmm(+prof.sleepHours) : null, common: '7:30' },
+        { label: 'Между приёмами', mine: t.idealMealGapMin ? hhmm(t.idealMealGapMin / 60) : null, common: '3:00' },
+        { label: 'Перебор дня', mine: null, common: '+20 %' },
+        { label: 'Недосып', mine: null, common: '6:00' }
+      ];
+
+      return h('div', { className: 'insights-v4-thresh' },
+        h('div', { className: 'insights-v4-thresh__head-row' },
+          h('div', { className: 'insights-v4-tier' }, 'Персональные пороги'),
+          h('span', {
+            className: 'insights-v4-maturity' + (personal ? ' insights-v4-maturity--rule' : '')
+          }, personal ? 'правило' : 'наблюдение')
+        ),
+        h('div', { className: 'insights-v4-thresh__table' },
+          h('div', { className: 'insights-v4-thresh__head' },
+            h('span', { className: 'insights-v4-thresh__name' }, 'порог'),
+            h('span', { className: 'insights-v4-thresh__mine' }, 'ваш'),
+            h('span', { className: 'insights-v4-thresh__common' }, 'общий')
+          ),
+          rows.map(function (row, idx) {
+            return h('div', { key: idx, className: 'insights-v4-thresh__row' },
+              h('span', { className: 'insights-v4-thresh__name' }, row.label),
+              h('span', { className: 'insights-v4-thresh__mine' }, personal && row.mine ? row.mine : '—'),
+              h('span', { className: 'insights-v4-thresh__common' }, row.common)
+            );
+          })
+        ),
+        h('div', { className: 'insights-v4-thresh__where' },
+          personal
+            ? 'Эти числа движок подставляет вместо общих: в предупреждения, в планер и в оценку дня. Считаются сами, меняются раз в неделю.'
+            : 'Пока считаем по общим числам: личные появятся с 14 дней данных. Считаются сами, править их не нужно.')
+      );
+    }
+
     // Контракт «новый пользователь»: до 7 дней — витрина лестницы, а не
     // заглушка. Прогресс «N из 7», что заполнить сегодня, ранние
     // предупреждения (детекторы 3–5 дней) со словом «гипотеза», лестница
@@ -3065,8 +3226,12 @@
                   pIndex: effectiveData.pIndex,
                   selectedDate
                 }),
-                HEYS.Phenotype?.PhenotypeExpandableCard && h(HEYS.Phenotype.PhenotypeExpandableCard, {
-                  profile: effectiveData.profile
+                // Контракт «состав фенотипа» и «оба экрана только читают»:
+                // пять осей и что из них следует; ни кнопок, ни правки.
+                h(InsightsV4Phenotype, {
+                  lsGet,
+                  profile: effectiveData.profile,
+                  historyDays: historyDaysWithData
                 }),
                 h(AdvancedAnalyticsCard, {
                   lsGet,
@@ -3112,21 +3277,15 @@
                   : h('p', { className: 'insights-v4-whatif__locked' },
                     'Откроется через ' + Math.max(1, 14 - historyDaysWithData) + ' ' + pluralDaysWord(Math.max(1, 14 - historyDaysWithData)) + ' — сценарий на коротких данных был бы гаданием.')
               ),
-              // Контракт «второй слой»: повторного счётчика полноты нет —
-              // счётчик один и живёт в шапке; здесь только строки порогов.
-              h('div', { className: 'insights-v4-thresholds' },
-                h('div', { className: 'insights-v4-tier' }, 'Пороги'),
-                h('div', { className: 'insights-v4-thresholds__row' },
-                  h('span', null, 'Персональные пороги'),
-                  h('span', { className: 'insights-v4-thresholds__value' },
-                    historyDaysWithData >= 14 ? 'открыто' : 'через ' + (14 - historyDaysWithData) + ' ' + pluralDaysWord(14 - historyDaysWithData))
-                ),
-                h('div', { className: 'insights-v4-thresholds__row' },
-                  h('span', null, 'Метаболический фенотип'),
-                  h('span', { className: 'insights-v4-thresholds__value' },
-                    historyDaysWithData >= 30 ? 'открыт' : 'через ' + (30 - historyDaysWithData) + ' ' + pluralDaysWord(30 - historyDaysWithData))
-                )
-              )
+              // Контракт «состав порогов» + «оба экрана только читают»:
+              // восемь строк с личным и общим числом; повторного счётчика
+              // полноты нет — счётчик один и живёт в шапке.
+              h(InsightsV4Thresholds, {
+                lsGet,
+                profile: effectiveData.profile,
+                pIndex: effectiveData.pIndex,
+                historyDays: historyDaysWithData
+              })
             )
           ),
           showWhatIfScenarios && HEYS.InsightsPI?.WhatIfScenariosPanel && h(HEYS.InsightsPI.WhatIfScenariosPanel, {

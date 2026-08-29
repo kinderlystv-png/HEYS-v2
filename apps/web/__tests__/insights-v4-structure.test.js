@@ -56,11 +56,13 @@ describe('Insights tab v4 structure', () => {
     expect(v4Block).not.toContain('MetabolicQuickStatus');
   });
 
-  it('detail layer includes weight forecast disclaimer and data completeness', () => {
+  it('detail layer includes weight forecast disclaimer and thresholds table', () => {
     expect(dashboardSource).toContain('insights-v4--detail');
     expect(dashboardSource).toContain('Прогноз веса');
     expect(dashboardSource).toContain('insights-v4-detail__disclaimer');
-    expect(dashboardSource).toContain('Полнота данных');
+    // «Полнота данных» заменена таблицей порогов (контракт «состав порогов»):
+    // второго счётчика полноты в слое нет, счётчик один и живёт в шапке.
+    expect(dashboardSource).toContain('Персональные пороги');
     const detailBlock = dashboardSource.slice(
       dashboardSource.indexOf('if (useInsightsV4 && showInsightsDetail)'),
       dashboardSource.indexOf('if (useInsightsV4) {\n        return h(InsightsErrorBoundary'),
@@ -125,5 +127,46 @@ describe('Insights tab v4 structure', () => {
     expect(shellSource).toContain('isPeriodAnalyticsTab = tab === \'stats\' || tab === \'insights\'');
     expect(shellSource).not.toMatch(/showDateRow = .*tab === 'insights'/);
     expect(dashboardSource).toContain('insights-v4-meta__title');
+  });
+});
+
+// Экраны «Подробно» (пакет 2026-08-29): фенотип пятью осями и таблица
+// порогов с двумя числами. Оба только читают — ни кнопок, ни правки.
+describe('экраны «Подробно»: фенотип и пороги', () => {
+  it('фенотип: пять осей, ярус следствий, честная незаполненная ось', () => {
+    expect(dashboardSource).toContain('PHENOTYPE_AXES');
+    expect(dashboardSource).toContain('function InsightsV4Phenotype');
+    expect(dashboardSource).toContain('Что из этого следует');
+    // Оси «жиры» в движке нет — выдуманное положение не рисуем
+    expect(dashboardSource).toContain("'пока не определено'");
+    expect(dashboardSource).toContain('Середина шкалы — не оценка');
+    // строго 30 дней
+    expect(dashboardSource).toContain('считается строго на 30 днях');
+  });
+
+  it('пороги: два числа в строке, зрелость по 14 дням, экран читающий', () => {
+    expect(dashboardSource).toContain('function InsightsV4Thresholds');
+    expect(dashboardSource).toContain("'общий'");
+    expect(dashboardSource).toContain("'ваш'");
+    // до 14 дней — «наблюдение», после — «правило»
+    expect(dashboardSource).toContain("personal ? 'правило' : 'наблюдение'");
+    expect(dashboardSource).toContain('править их не нужно');
+    // ни одной кнопки внутри экранов
+    const thresh = dashboardSource.slice(
+      dashboardSource.indexOf('function InsightsV4Thresholds'),
+      dashboardSource.indexOf('// Контракт «новый пользователь»'),
+    );
+    expect(thresh).not.toContain("h('button'");
+  });
+
+  it('старые карточки фенотипа и полноты в «Подробно» не монтируются', () => {
+    const detail = dashboardSource.slice(
+      dashboardSource.indexOf('if (useInsightsV4 && showInsightsDetail)'),
+      dashboardSource.indexOf('if (useInsightsV4) {\n        return h(InsightsErrorBoundary'),
+    );
+    expect(detail).not.toContain('PhenotypeExpandableCard');
+    expect(detail).not.toContain('DataCompletenessCard');
+    expect(detail).toContain('InsightsV4Phenotype');
+    expect(detail).toContain('InsightsV4Thresholds');
   });
 });
