@@ -450,6 +450,10 @@
         const [reportsModalOpen, setReportsModalOpen] = useState(false);
         const [reportsModuleTick, setReportsModuleTick] = useState(0);
         const [monthlyReportsMode, setMonthlyReportsMode] = useState('weeks');
+        // Фильтр надёжности живёт здесь же, где режим: внутри модалки он
+        // умирал вместе с ней, и выбор терялся на каждом заходе.
+        const [monthlyWeekFilter, setMonthlyWeekFilter] = useState('all');
+        const [monthlyMonthFilter, setMonthlyMonthFilter] = useState('all');
 
         const ensureReportsModules = useCallback(() => {
             // Глобал живёт в HEYS, а не на window напрямую
@@ -1557,6 +1561,10 @@
                         MonthlyReportsContent
                             ? React.createElement(MonthlyReportsContent, {
                                 mode: monthlyReportsMode,
+                                weekFilter: monthlyWeekFilter,
+                                setWeekFilter: setMonthlyWeekFilter,
+                                monthFilter: monthlyMonthFilter,
+                                setMonthFilter: setMonthlyMonthFilter,
                                 setMode: setMonthlyReportsMode
                             })
                             : React.createElement('div', {

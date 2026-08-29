@@ -480,8 +480,14 @@
             : (HEYS.utils?.lsGet ? HEYS.utils.lsGet('heys_profile', {}) : {});
         const weightGoal = +profile.weightGoal || 0;
         const [localMode, setLocalMode] = useState('weeks');
-        const [weekFilter, setWeekFilter] = useState('all');
-        const [monthFilter, setMonthFilter] = useState('all');
+        // Фильтр приходит сверху, как и режим: локальное состояние умирало
+        // вместе с модалкой, и выбор сбрасывался на каждом открытии.
+        const [localWeekFilter, setLocalWeekFilter] = useState('all');
+        const [localMonthFilter, setLocalMonthFilter] = useState('all');
+        const weekFilter = props.weekFilter || localWeekFilter;
+        const setWeekFilter = props.setWeekFilter || setLocalWeekFilter;
+        const monthFilter = props.monthFilter || localMonthFilter;
+        const setMonthFilter = props.setMonthFilter || setLocalMonthFilter;
         const mode = props.mode || localMode;
         const setMode = props.setMode || setLocalMode;
 
