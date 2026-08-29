@@ -14,10 +14,25 @@
   const MONTH_WINDOW = 30;
   const GAP_DASH_DAYS = 3;
 
-  function getWeightFromDay(dayData) {
+  // Дни цикла и рефида из тренда веса исключаются: там вода и гликоген, а не
+  // изменение состава. Правило и предикаты те же, что у семидневного тренда дня
+  // (heys_day_weight_trends_v1.js) — заводить второй набор нельзя, иначе
+  // «чистый тренд» станет означать разное в разных местах.
+  function isWaterRetentionDay(dayData, dateStr) {
+    if (!dayData) return false;
+    const cycleCountDay = HEYS.Cycle?.resolveCycleCountDay?.({
+      date: dateStr,
+      cycleDay: dayData.cycleDay ?? null
+    }) ?? null;
+    if (HEYS.Cycle?.shouldExcludeFromWeightTrend?.(cycleCountDay)) return true;
+    return !!HEYS.Refeed?.shouldExcludeFromWeightTrend?.(dayData);
+  }
+
+  function getWeightFromDay(dayData, dateStr) {
     if (!dayData) return null;
     if (dayData.weightMorningEstimated === true) return null;
     if (dayData.weightMorningSource === 'estimated_avg' || dayData.weightMorningSource === 'estimated_profile') return null;
+    if (isWaterRetentionDay(dayData, dateStr)) return null;
     const w = dayData.weightMorning;
     return (w && w > 0) ? w : null;
   }
@@ -34,7 +49,7 @@
       date.setDate(date.getDate() - i);
       const dateStr = fmtDate(date);
       const dayData = U.lsGet(`heys_dayv2_${dateStr}`, null);
-      const weight = getWeightFromDay(dayData);
+      const weight = getWeightFromDay(dayData, dateStr);
       result.push({
         date: dateStr,
         weight,
@@ -296,9 +311,42 @@
     };
   }
 
+  // Канонический тренд веса для поправки на факт (строка контракта «тренд веса
+  // один»): поправка ходит сюда, а не заводит седьмую реализацию. Остальные
+  // тренды в проекте не трогаются и в расчёт не входят.
+  //
+  // Возвращает изменение сглаженного тренда за окно и качество данных, потому
+  // что поправке нужно и число, и право его посчитать: гейт требует не меньше
+  // шести реальных взвешиваний в окне.
+  function trendForWindow(options) {
+    const windowDays = Math.max(7, (options && options.days) || 21);
+    const series = loadDailyWeights(Math.max(windowDays + MA_WINDOW, MAX_HISTORY_DAYS));
+    const smoothed = interpolateSeries(buildSmoothedSeries(series));
+    const windowSeries = smoothed.slice(-windowDays);
+
+    const measuredDays = windowSeries.filter((d) => d.hasWeight).length;
+    const withTrend = windowSeries.filter((d) => d.smoothed != null);
+    const first = withTrend[0] || null;
+    const last = withTrend[withTrend.length - 1] || null;
+    const deltaKg = (first && last) ? last.smoothed - first.smoothed : null;
+
+    return {
+      windowDays,
+      measuredDays,
+      // Мёртвая зона тренда — своя у виджета; поправке нужно сырое число,
+      // округление и «без изменений» решаются на её стороне.
+      deltaKg,
+      startSmoothed: first ? first.smoothed : null,
+      endSmoothed: last ? last.smoothed : null,
+      series: windowSeries
+    };
+  }
+
   HEYS.Widgets.WeightDynamicsV4 = {
     DEAD_ZONE_KG,
+    MA_WINDOW,
     compute: computeWeightDynamicsV4,
+    trendForWindow,
     deltaStateForGoal,
     resolveGoalDirection
   };
