@@ -140,7 +140,12 @@
                 normAbs,
                 ratio,
                 isToday,
+                isFuture: dstr > todayStr,
                 isRefeedDay: !!day?.isRefeedDay,
+                // Без этих двух полей общий предикат shouldIncludeDay работал
+                // вхолостую: он их читает, а в объекте дня их не было.
+                isIncomplete: !!day?.isIncomplete,
+                isFastingDay: !!day?.isFastingDay,
                 deficitPct: day.deficitPct,
                 steps: day.steps || 0,
                 sleepHours: day.sleepHours || 0,
@@ -165,6 +170,12 @@
 
         // visibleDays: исключаем неполный сегодня + опционально дни без еды (если filterEmptyDays)
         const visibleDays = days.filter((d) => {
+            // shouldIncludeDay судит «неполный» только про сегодняшний день:
+            // isIncompleteToday выходит на false, если дата не сегодняшняя. А
+            // пометку «не заполнял» человек ставит и на прошлые дни, и вся
+            // остальная зона (матрица дисциплины, итог периода) выбрасывает их
+            // на любой дате. Здесь такой день попадал и в средние, и в счёт.
+            if (d.isIncomplete) return false;
             if (!shouldIncludeDay(d, { requireMeals: false })) return false;
             if (filterEmptyDays && !d.hasMeals) return false; // опционально: дни без еды
             return true;

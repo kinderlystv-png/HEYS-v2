@@ -168,13 +168,26 @@
                     return hasMeals && !(isToday && ratio < 0.5);
                 });
 
+                // Расчётный вес — не замер: он подставляется, когда человек не
+                // взвесился (среднее трёх последних взвешиваний либо вес
+                // профиля). Все графики веса такие точки выбрасывают, здесь они
+                // шли в среднее наравне с измеренными и двигали стрелку.
                 const weights = visibleDays
-                    .map((d) => dayMap.get(d.dateStr)?.weightMorning)
+                    .map((d) => dayMap.get(d.dateStr))
+                    .filter((src) => src
+                        && src.weightMorningEstimated !== true
+                        && src.weightMorningSource !== 'estimated_avg'
+                        && src.weightMorningSource !== 'estimated_profile')
+                    .map((src) => src.weightMorning)
                     .filter((w) => w && w > 0);
 
+                // Ни одного взвешивания — честный ноль: карточка покажет прочерк
+                // и не нарисует стрелку. Прежний фолбэк на вес из профиля
+                // сравнивал соседний период с константой и выдавал это за
+                // динамику.
                 const avgWeight = weights.length > 0
                     ? Math.round(weights.reduce((s, w) => s + w, 0) / weights.length * 10) / 10
-                    : (profile.weight || 0);
+                    : 0;
 
                 const reportDays = (report.days || []).map((d) => {
                     const sourceDay = dayMap.get(d.dateStr);
@@ -255,7 +268,12 @@
                 acc.avgNormFat += report.avgNormFat || 0;
                 acc.avgCarbs += report.avgCarbs || 0;
                 acc.avgNormCarbs += report.avgNormCarbs || 0;
-                acc.avgWeight += report.avgWeight || 0;
+                // Неделя без единого взвешивания даёт avgWeight = 0, и делить на
+                // неё нельзя: месяц с одной такой неделей уехал бы к нулю.
+                if (report.avgWeight > 0) {
+                    acc.avgWeight += report.avgWeight;
+                    acc.weightWeeks += 1;
+                }
                 acc.daysWithData += report.daysWithData || 0;
                 return acc;
             }, {
@@ -270,6 +288,7 @@
                 avgCarbs: 0,
                 avgNormCarbs: 0,
                 avgWeight: 0,
+                weightWeeks: 0,
                 daysWithData: 0
             });
 
@@ -290,7 +309,9 @@
                     avgNormFat: sum.avgNormFat / total,
                     avgCarbs: sum.avgCarbs / total,
                     avgNormCarbs: sum.avgNormCarbs / total,
-                    avgWeight: Math.round(sum.avgWeight / total * 10) / 10,
+                    avgWeight: sum.weightWeeks > 0
+                        ? Math.round(sum.avgWeight / sum.weightWeeks * 10) / 10
+                        : 0,
                     daysWithData: sum.daysWithData,
                     totalDaysPossible,
                     completenessRatio: totalDaysPossible > 0 ? sum.daysWithData / totalDaysPossible : 0,
