@@ -77,8 +77,16 @@
     // HELPERS
     // ============================================================================
 
+    // Расчётный вес — не замер: когда человек не взвесился, день получает
+    // среднее трёх последних взвешиваний либо вес профиля. Такие точки помечены
+    // и во всех остальных графиках веса выброшены (heys_widgets_weight_dynamics_v4.js,
+    // heys_day_weight_trends_v1.js, heys_day_stats_v1.js). Здесь фильтра не было,
+    // и зона темпа — вплоть до «критично» — считалась в том числе по синтетике.
     function getWeightFromDay(dayData) {
         if (!dayData) return null;
+        if (dayData.weightMorningEstimated === true) return null;
+        if (dayData.weightMorningSource === 'estimated_avg'
+            || dayData.weightMorningSource === 'estimated_profile') return null;
         if (dayData.weightMorning && dayData.weightMorning > 0) return dayData.weightMorning;
         return null;
     }
