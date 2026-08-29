@@ -126,169 +126,66 @@
         return new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0, 0);
     }
 
-    function getWeekKey(dateStr) {
-        const d = parseLocalDate(dateStr);
-        if (!d || Number.isNaN(d.getTime())) return '';
-        const dayOfWeek = d.getDay();
-        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-        d.setDate(d.getDate() + mondayOffset);
-        return U.fmtDate ? U.fmtDate(d) : d.toISOString().slice(0, 10);
-    }
-
-    function getReportDateKeysFromStorage() {
-        if (HEYS.dayCache?.getDayDates) {
-            return HEYS.dayCache.getDayDates();
-        }
-
-        const dates = new Set();
-        const clientId = HEYS.utils?.getCurrentClientId?.() || HEYS.currentClientId || '';
-        const scopedPrefix = clientId ? ('heys_' + clientId + '_dayv2_') : '';
-        const legacyPrefix = 'heys_dayv2_';
-
-        try {
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i) || '';
-                let dateStr = '';
-                if (scopedPrefix && key.startsWith(scopedPrefix) && key.length === scopedPrefix.length + 10) {
-                    dateStr = key.slice(scopedPrefix.length);
-                } else if (key.startsWith(legacyPrefix) && key.length === legacyPrefix.length + 10) {
-                    dateStr = key.slice(legacyPrefix.length);
-                }
-                if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) dates.add(dateStr);
-            }
-        } catch (_) { }
-
-        return Array.from(dates).sort();
-    }
-
-    function readReportDay(dateStr) {
-        return HEYS.dayCache?.getDay?.(dateStr)
-            || HEYS.dayStorage?.lsGet?.('heys_dayv2_' + dateStr, null)
-            || HEYS.utils?.lsGet?.('heys_dayv2_' + dateStr, null)
-            || null;
-    }
-
-    function hasReportMealData(dayData) {
-        const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
-        return meals.some((meal) => Array.isArray(meal?.items) ? meal.items.length > 0 : !!meal);
-    }
-
+    // Виджет входа сам ничего не считает. Прежде здесь была запасная ветка,
+    // которая до загрузки модуля сканировала хранилище своими порогами (2 дня
+    // на неделю, 14 на месяц) — и числа во входе расходились с числами в самом
+    // листе. Пока модуль не подъехал, чисел нет вовсе: карточка зовёт открыть
+    // отчёты, а счёт покажет тот же расчёт, что и лист.
     function buildReportsOverviewMeta() {
         const service = HEYS.monthlyReportsService;
-        if (service?.buildMonthlyWeeks) {
-            try {
-                const weeks = service.buildMonthlyWeeks({ weeksCount: 16, useCache: true }) || [];
-                const months = service.buildMonthlyMonths
-                    ? (service.buildMonthlyMonths({ weeksCount: 16, useCache: true }) || [])
-                    : [];
-                const weeksCount = weeks.length;
-                const monthsCount = months.length;
-                const weekUnitText = pluralRu(weeksCount, ['неделя', 'недели', 'недель']);
-                const monthUnitText = pluralRu(monthsCount, ['месяц', 'месяца', 'месяцев']);
-                const weeksText = weeksCount + ' ' + pluralRu(weeksCount, ['неделя', 'недели', 'недель']);
-                const monthsText = monthsCount + ' ' + pluralRu(monthsCount, ['месяц', 'месяца', 'месяцев']);
-
-                if (monthsCount > 0) {
-                    return {
-                        monthsCount,
-                        weeksCount,
-                        monthUnitText,
-                        weekUnitText,
-                        monthsText,
-                        weeksText,
-                        countText: monthsText,
-                        bodyText: 'Доступно ' + monthsText + ' и ' + weeksText + ' статистики для просмотра.',
-                        // Вход отвечает «есть ли что открывать», а не «можно ли
-                        // доверять»: его порог — два дня с едой, а надёжность в
-                        // самом листе начинается с шести. Прежняя копия обещала
-                        // второе, называя первое.
-                        detailText: 'Периоды, где есть записи',
-                        actionText: 'Открыть отчёты'
-                    };
-                }
-
-                if (weeksCount > 0) {
-                    return {
-                        monthsCount,
-                        weeksCount,
-                        monthUnitText,
-                        weekUnitText,
-                        monthsText,
-                        weeksText,
-                        countText: weeksText,
-                        bodyText: 'Доступно ' + weeksText + ' статистики для просмотра.',
-                        // Вход отвечает «есть ли что открывать», а не «можно ли
-                        // доверять»: его порог — два дня с едой, а надёжность в
-                        // самом листе начинается с шести. Прежняя копия обещала
-                        // второе, называя первое.
-                        detailText: 'Периоды, где есть записи',
-                        actionText: 'Открыть отчёты'
-                    };
-                }
-            } catch (_) { }
+        if (!service?.buildMonthlyWeeks) {
+            return { pending: true, actionText: 'Открыть отчёты' };
         }
 
-        const weekMap = new Map();
-        const monthMap = new Map();
+        let weeksCount = 0;
+        let monthsCount = 0;
+        try {
+            weeksCount = (service.buildMonthlyWeeks({ weeksCount: 16, useCache: true }) || []).length;
+            monthsCount = service.buildMonthlyMonths
+                ? (service.buildMonthlyMonths({ weeksCount: 16, useCache: true }) || []).length
+                : 0;
+        } catch (_) {
+            return { pending: true, actionText: 'Открыть отчёты' };
+        }
 
-        getReportDateKeysFromStorage().forEach((dateStr) => {
-            const dayData = readReportDay(dateStr);
-            if (!hasReportMealData(dayData)) return;
-
-            const weekKey = getWeekKey(dateStr);
-            const monthKey = String(dateStr).slice(0, 7);
-            if (weekKey) weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + 1);
-            if (/^\d{4}-\d{2}$/.test(monthKey)) monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + 1);
-        });
-
-        const weeksCount = Array.from(weekMap.values()).filter((days) => days >= 2).length;
-        const monthsCount = Array.from(monthMap.values()).filter((days) => days >= 14).length;
         const weekUnitText = pluralRu(weeksCount, ['неделя', 'недели', 'недель']);
         const monthUnitText = pluralRu(monthsCount, ['месяц', 'месяца', 'месяцев']);
-        const weeksText = weeksCount + ' ' + pluralRu(weeksCount, ['неделя', 'недели', 'недель']);
-        const monthsText = monthsCount + ' ' + pluralRu(monthsCount, ['месяц', 'месяца', 'месяцев']);
+        const weeksText = weeksCount + ' ' + weekUnitText;
+        const monthsText = monthsCount + ' ' + monthUnitText;
 
-        if (monthsCount > 0) {
+        if (weeksCount === 0 && monthsCount === 0) {
             return {
-                monthsCount,
-                weeksCount,
-                monthUnitText,
-                weekUnitText,
-                monthsText,
-                weeksText,
-                countText: monthsText,
-                bodyText: 'Доступно ' + monthsText + ' и ' + weeksText + ' статистики для просмотра.',
-                detailText: 'Периоды, где есть записи',
-                actionText: 'Открыть отчёты'
-            };
-        }
-
-        if (weeksCount > 0) {
-            return {
-                monthsCount,
-                weeksCount,
+                pending: false,
+                monthsCount: 0,
+                weeksCount: 0,
                 monthUnitText,
                 weekUnitText,
                 monthsText,
                 weeksText,
                 countText: weeksText,
-                bodyText: 'Доступно ' + weeksText + ' статистики для просмотра.',
-                detailText: 'Периоды, где есть записи',
-                actionText: 'Открыть отчёты'
+                bodyText: 'Пока мало данных: отчёты появятся после 2 дней с едой за неделю.',
+                detailText: 'Нужно больше дней с записями',
+                actionText: 'Посмотреть раздел'
             };
         }
 
         return {
-            monthsCount: 0,
-            weeksCount: 0,
-            monthUnitText: 'месяцев',
-            weekUnitText: 'недель',
-            monthsText: '0 месяцев',
-            weeksText: '0 недель',
-            countText: '0 недель',
-            bodyText: 'Пока мало данных: отчёты появятся после 2 дней с едой за неделю.',
-            detailText: 'Нужно больше дней с записями',
-            actionText: 'Посмотреть раздел'
+            pending: false,
+            monthsCount,
+            weeksCount,
+            monthUnitText,
+            weekUnitText,
+            monthsText,
+            weeksText,
+            countText: weeksText,
+            bodyText: monthsCount > 0
+                ? 'Доступно ' + monthsText + ' и ' + weeksText + ' статистики для просмотра.'
+                : 'Доступно ' + weeksText + ' статистики для просмотра.',
+            // Вход отвечает «есть ли что открывать», а не «можно ли доверять»:
+            // его порог — два дня с едой, а надёжность в листе начинается с
+            // шести. Прежняя копия обещала второе, называя первое.
+            detailText: 'Периоды, где есть записи',
+            actionText: 'Открыть отчёты'
         };
     }
     // Profile and calculation utilities from dayUtils (required)
@@ -1597,7 +1494,13 @@
                     React.createElement('span', { className: 'reports-overview-card__icon', 'aria-hidden': 'true' }, '📙'),
                     React.createElement('span', { className: 'reports-overview-card__title' }, 'ОТЧЕТЫ ПО МЕСЯЦАМ И НЕДЕЛЯМ')
                 ),
-                React.createElement('div', { className: 'reports-overview-card__body' },
+                meta.pending
+                    // Модуль ещё не подъехал: чисел нет, но открыть можно —
+                    // счёт покажет тот же расчёт, что и лист.
+                    ? React.createElement('div', { className: 'reports-overview-card__body' },
+                        React.createElement('span', { className: 'reports-overview-card__action' }, meta.actionText)
+                    )
+                    : React.createElement('div', { className: 'reports-overview-card__body' },
                     // Недели первыми и крупно: лист открывается в неделях, а
                     // главным числом стояли месяцы — человек видел «1 месяц» и
                     // попадал в список недель.

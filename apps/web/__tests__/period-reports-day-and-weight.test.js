@@ -237,64 +237,121 @@ describe('лист отчётов · средний вес', () => {
     expect(weekReport().avgWeight).toBe(0);
   });
 
-  it('неделя без взвешиваний не тянет средний вес месяца к нулю', () => {
-    // Восемь недель: в чётных вес измерен, в нечётных только расчётный.
+  it('месяц считается по дням: порог достижим, средние взвешены по дням', () => {
+    // Шестнадцать недель подряд с записями. Раньше месяц собирался из недель
+    // по их понедельнику при календарном знаменателе, и у месяца, начинающегося
+    // с воскресенья, доля упиралась примерно в 80 % — порог «≥86 %» был
+    // недостижим при любой дисциплине.
     const now = new Date();
     const dow = now.getDay();
     const monday0 = new Date(now);
     monday0.setDate(now.getDate() + (dow === 0 ? -6 : 1 - dow));
 
-    const allDates = [];
+    const seeded = new Set();
+    for (let w = 0; w < 16; w++) {
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday0);
+        d.setDate(monday0.getDate() - 7 * w + i);
+        const key = fmt(d);
+        if (d > now) continue;
+        seeded.add(key);
+        store.set(`heys_dayv2_${key}`, {
+          date: key, meals: MEALS, weightMorning: 90, weightMorningSource: 'measured'
+        });
+      }
+    }
+
+    window.HEYS.weeklyReports.buildWeekReport = ({ dateStr }) => {
+      const monday = new Date(dateStr);
+      const days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        const key = fmt(d);
+        const has = seeded.has(key);
+        return {
+          dateStr: key,
+          hasMeals: has,
+          hasAnyRecord: has,
+          isCounted: has,
+          ratio: 1,
+          burned: 2500,
+          targetDeficitPct: -12,
+          totals: { kcal: 2000, prot: 120, fat: 70, carbs: 200 },
+          normAbs: { prot: 130, fat: 70, carbs: 210 }
+        };
+      });
+      return { daysWithData: days.filter((d) => d.isCounted).length, days };
+    };
+
+    const months = window.HEYS.monthlyReportsService
+      .buildMonthlyMonths({ weeksCount: 16, useCache: false });
+    expect(months.length).toBeGreaterThan(0);
+
+    // Месяц, все календарные дни которого засеяны, обязан дать полноту 1 —
+    // и заодно доказать, что стык недель делится по дням, а не по понедельнику.
+    const full = months.filter((m) => {
+      const [y, mo] = m.monthKey.split('-').map(Number);
+      const inMonth = new Date(y, mo, 0).getDate();
+      for (let day = 1; day <= inMonth; day++) {
+        if (!seeded.has(`${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`)) return false;
+      }
+      return true;
+    });
+    expect(full.length).toBeGreaterThan(0);
+    full.forEach((m) => {
+      expect(m.report.completenessRatio).toBe(1);
+      // Порог надёжности месяцев — 6/7 ≈ 0,857. Теперь он берётся.
+      expect(m.report.completenessRatio).toBeGreaterThanOrEqual(6 / 7);
+      expect(m.report.daysWithRecords).toBe(m.report.totalDaysPossible);
+    });
+
+    // Средние взвешены по дням: все дни одинаковы, значит и месяц равен дню,
+    // независимо от того, сколько дней месяца попало в какую неделю.
+    months.forEach((m) => {
+      expect(m.report.avgKcal).toBe(2000);
+      expect(m.report.avgWeight).toBe(90);
+      expect(m.report.targetDeficitPct).toBe(-12);
+    });
+  });
+
+  it('дни месяца не задваиваются на стыке недель', () => {
+    const now = new Date();
+    const dow = now.getDay();
+    const monday0 = new Date(now);
+    monday0.setDate(now.getDate() + (dow === 0 ? -6 : 1 - dow));
+    const seeded = new Set();
     for (let w = 0; w < 8; w++) {
       for (let i = 0; i < 7; i++) {
         const d = new Date(monday0);
         d.setDate(monday0.getDate() - 7 * w + i);
-        allDates.push({ key: fmt(d), week: w });
+        if (d > now) continue;
+        const key = fmt(d);
+        seeded.add(key);
+        store.set(`heys_dayv2_${key}`, { date: key, meals: MEALS });
       }
     }
-    allDates.forEach(({ key, week }) => {
-      store.set(`heys_dayv2_${key}`, week % 2 === 0
-        ? { date: key, meals: MEALS, weightMorning: 90, weightMorningSource: 'measured' }
-        : { date: key, meals: MEALS, weightMorning: 60, weightMorningEstimated: true });
-    });
     window.HEYS.weeklyReports.buildWeekReport = ({ dateStr }) => {
       const monday = new Date(dateStr);
-      return {
-        daysWithData: 7,
-        days: Array.from({ length: 7 }, (_, i) => {
-          const d = new Date(monday);
-          d.setDate(monday.getDate() + i);
-          return { dateStr: fmt(d), hasMeals: true, ratio: 1 };
-        })
-      };
+      const days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        const key = fmt(d);
+        const has = seeded.has(key);
+        return { dateStr: key, hasMeals: has, hasAnyRecord: has, isCounted: has, ratio: 1 };
+      });
+      return { daysWithData: days.filter((d) => d.isCounted).length, days };
     };
 
-    const svc = window.HEYS.monthlyReportsService;
-    const weeks = svc.buildMonthlyWeeks({ weeksCount: 8, useCache: false });
-    const months = svc.buildMonthlyMonths({ weeksCount: 8, useCache: false });
-    expect(months.length).toBeGreaterThan(0);
+    const months = window.HEYS.monthlyReportsService
+      .buildMonthlyMonths({ weeksCount: 8, useCache: false });
 
-    // Проверка не должна проходить вхолостую: хотя бы у одного месяца должна
-    // быть и измеренная неделя, и неизмеренная — иначе защита не сработала бы
-    // ни разу и тест ничего не доказывает.
-    const mixed = months.some((month) => {
-      const mine = weeks.filter((w) => w.monday.slice(0, 7) === month.monthKey);
-      const measured = mine.filter((w) => w.report.avgWeight > 0).length;
-      return measured > 0 && measured < mine.length;
-    });
-    expect(mixed).toBe(true);
-
-    // Ожидание считаем из тех же недель: месяц — среднее только по неделям,
-    // где вес вообще измеряли. Нулевые в знаменатель не идут.
-    months.forEach((month) => {
-      const mine = weeks.filter((w) => w.monday.slice(0, 7) === month.monthKey);
-      const measured = mine.map((w) => w.report.avgWeight).filter((v) => v > 0);
-      const expected = measured.length
-        ? Math.round(measured.reduce((s, v) => s + v, 0) / measured.length * 10) / 10
-        : 0;
-      expect(month.report.avgWeight).toBe(expected);
-      // И главное: пока хоть одна неделя измерена, ноль в месяце невозможен.
-      if (measured.length) expect(month.report.avgWeight).toBeGreaterThan(0);
+    months.forEach((m) => {
+      const dates = m.report.days.map((d) => d.dateStr);
+      expect(new Set(dates).size).toBe(dates.length);
+      // И каждый день принадлежит своему календарному месяцу, а не месяцу
+      // понедельника своей недели.
+      dates.forEach((d) => expect(d.slice(0, 7)).toBe(m.monthKey));
+      expect(m.report.daysWithRecords).toBeLessThanOrEqual(m.report.totalDaysPossible);
     });
   });
 });

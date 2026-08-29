@@ -6,6 +6,19 @@
     function pad2(n) { return String(n).padStart(2, '0'); }
     function fmtDate(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
 
+    // Расчётный вес — не замер: подставляется, когда человек не взвесился.
+    // Правило одно на неделю и на месяц, поэтому живёт одной функцией.
+    function isMeasuredWeight(src) {
+        return !!src
+            && src.weightMorningEstimated !== true
+            && src.weightMorningSource !== 'estimated_avg'
+            && src.weightMorningSource !== 'estimated_profile';
+    }
+
+    function averageOf(values) {
+        return values.length ? values.reduce((s, v) => s + v, 0) / values.length : 0;
+    }
+
     // HEYS.store.getCurrentProfile не существует — здесь всегда получался 'guest',
     // и подпись кэша читала несуществующие ключи. Канонический источник id —
     // HEYS.utils.getCurrentClientId (heys_core_v12.js), см. также HEYS.cloud.
@@ -175,10 +188,7 @@
                 // шли в среднее наравне с измеренными и двигали стрелку.
                 const weights = visibleDays
                     .map((d) => dayMap.get(d.dateStr))
-                    .filter((src) => src
-                        && src.weightMorningEstimated !== true
-                        && src.weightMorningSource !== 'estimated_avg'
-                        && src.weightMorningSource !== 'estimated_profile')
+                    .filter(isMeasuredWeight)
                     .map((src) => src.weightMorning)
                     .filter((w) => w && w > 0);
 
@@ -194,7 +204,10 @@
                     const sourceDay = dayMap.get(d.dateStr);
                     return {
                         ...d,
-                        weightMorning: Number.isFinite(sourceDay?.weightMorning) ? sourceDay.weightMorning : 0
+                        weightMorning: Number.isFinite(sourceDay?.weightMorning) ? sourceDay.weightMorning : 0,
+                        // Метку измеренности несём дальше: месяц собирается по
+                        // этим же дням и обязан фильтровать так же, как неделя.
+                        weightMeasured: isMeasuredWeight(sourceDay)
                     };
                 });
 
@@ -221,32 +234,41 @@
         return weeks;
     }
 
+    // Месяц считается по дням, а не по неделям. Прежняя раскладка складывала
+    // недели по их понедельнику при календарном знаменателе, и получалось два
+    // перекоса сразу: дни начала месяца, попавшие в неделю с прошлым
+    // понедельником, в числитель не шли никогда (у месяца, начинающегося с
+    // воскресенья, потолок доли был около 80 % — порог «>=86 %» недостижим), а
+    // средние считались по неделям невзвешенно, и неделя из двух дней весила
+    // столько же, сколько неделя из семи. Оба уходят одним решением: и
+    // числитель, и знаменатель календарные, неделя-стык делится по дням.
     function buildMonthlyMonths({ weeksCount = 16, useCache = true } = {}) {
         const weeks = buildMonthlyWeeks({ weeksCount, useCache });
         if (!weeks.length) return [];
 
         const now = new Date();
         const currentMonthKey = now.getFullYear() + '-' + pad2(now.getMonth() + 1);
-        const monthMap = new Map();
 
+        // Дни всех недель, каждый — ровно один раз: неделя-стык раскладывается
+        // между двумя месяцами по датам самих дней.
+        const byMonth = new Map();
+        const seen = new Set();
         weeks.forEach((week) => {
-            if (!week?.monday) return;
-            const mondayDate = new Date(week.monday);
-            if (Number.isNaN(mondayDate.getTime())) return;
-            const key = mondayDate.getFullYear() + '-' + pad2(mondayDate.getMonth() + 1);
-            if (!monthMap.has(key)) {
-                monthMap.set(key, { key, weeks: [] });
-            }
-            monthMap.get(key).weeks.push(week);
+            (week?.report?.days || []).forEach((day) => {
+                const dateStr = day?.dateStr;
+                if (!dateStr || seen.has(dateStr)) return;
+                seen.add(dateStr);
+                const key = dateStr.slice(0, 7);
+                if (!byMonth.has(key)) byMonth.set(key, []);
+                byMonth.get(key).push(day);
+            });
         });
 
         const months = [];
-        monthMap.forEach((bucket) => {
-            if (!bucket?.weeks?.length) return;
-            const isCurrentMonth = bucket.key === currentMonthKey;
-            if (!isCurrentMonth && bucket.weeks.length < 4) return;
+        byMonth.forEach((allDays, key) => {
+            const isCurrentMonth = key === currentMonthKey;
 
-            const [yearStr, monthStr] = String(bucket.key || '').split('-');
+            const [yearStr, monthStr] = String(key).split('-');
             const year = Number(yearStr);
             const monthIndex = Number(monthStr) - 1;
             const daysInMonth = Number.isFinite(year) && Number.isFinite(monthIndex)
@@ -256,74 +278,63 @@
                 ? Math.min(daysInMonth || 0, now.getDate())
                 : daysInMonth;
 
-            const total = bucket.weeks.length;
-            const sum = bucket.weeks.reduce((acc, week) => {
-                const report = week.report || {};
-                acc.avgTarget += report.avgTarget || 0;
-                acc.avgKcal += report.avgKcal || 0;
-                acc.targetDeficitPct += report.targetDeficitPct || 0;
-                acc.avgDeltaPct += report.avgDeltaPct || 0;
-                acc.avgProt += report.avgProt || 0;
-                acc.avgNormProt += report.avgNormProt || 0;
-                acc.avgFat += report.avgFat || 0;
-                acc.avgNormFat += report.avgNormFat || 0;
-                acc.avgCarbs += report.avgCarbs || 0;
-                acc.avgNormCarbs += report.avgNormCarbs || 0;
-                // Неделя без единого взвешивания даёт avgWeight = 0, и делить на
-                // неё нельзя: месяц с одной такой неделей уехал бы к нулю.
-                if (report.avgWeight > 0) {
-                    acc.avgWeight += report.avgWeight;
-                    acc.weightWeeks += 1;
-                }
-                // Полнота месяца — тоже по дням с записями.
-                acc.daysWithData += (report.daysWithRecords ?? report.daysWithData) || 0;
-                return acc;
-            }, {
-                avgTarget: 0,
-                avgKcal: 0,
-                targetDeficitPct: 0,
-                avgDeltaPct: 0,
-                avgProt: 0,
-                avgNormProt: 0,
-                avgFat: 0,
-                avgNormFat: 0,
-                avgCarbs: 0,
-                avgNormCarbs: 0,
-                avgWeight: 0,
-                weightWeeks: 0,
-                daysWithData: 0
-            });
+            // Учтённые дни отмечены там, где живут правила включения
+            // (heys_weekly_reports_v2.js): пометка «не заполнял», будущее и
+            // неполный сегодня уже отсеяны.
+            const counted = allDays.filter((d) => d.isCounted);
+            const foodDays = counted.filter((d) => d.hasMeals);
+            const recordDays = counted.filter((d) => d.hasAnyRecord);
 
-            const monthStart = new Date(bucket.weeks[bucket.weeks.length - 1].monday);
-            const monthLabel = monthStart.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+            // Месяц без порога недель, но не из воздуха: два дня с едой — тот
+            // же минимум, что у недели.
+            if (!isCurrentMonth && foodDays.length < 2) return;
+            if (foodDays.length === 0) return;
+
+            const burnedDays = counted.filter((d) => (d.burned || 0) > 0);
+            const totalBurned = burnedDays.reduce((s, d) => s + d.burned, 0);
+            const totalKcal = foodDays.reduce((s, d) => s + (d.totals?.kcal || 0), 0);
+
+            const weights = allDays
+                .filter((d) => d.isCounted && d.weightMeasured && (d.weightMorning || 0) > 0)
+                .map((d) => d.weightMorning);
+
+            const targets = burnedDays
+                .map((d) => d.targetDeficitPct)
+                .filter((v) => Number.isFinite(v));
 
             months.push({
-                rangeLabel: monthLabel,
-                monthKey: bucket.key,
+                rangeLabel: new Date(year, monthIndex, 1)
+                    .toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }),
+                monthKey: key,
                 report: {
-                    avgTarget: Math.round(sum.avgTarget / total),
-                    avgKcal: Math.round(sum.avgKcal / total),
-                    targetDeficitPct: Math.round(sum.targetDeficitPct / total),
-                    avgDeltaPct: Math.round(sum.avgDeltaPct / total),
-                    avgProt: sum.avgProt / total,
-                    avgNormProt: sum.avgNormProt / total,
-                    avgFat: sum.avgFat / total,
-                    avgNormFat: sum.avgNormFat / total,
-                    avgCarbs: sum.avgCarbs / total,
-                    avgNormCarbs: sum.avgNormCarbs / total,
-                    avgWeight: sum.weightWeeks > 0
-                        ? Math.round(sum.avgWeight / sum.weightWeeks * 10) / 10
+                    avgTarget: burnedDays.length ? Math.round(totalBurned / burnedDays.length) : 0,
+                    avgKcal: Math.round(averageOf(foodDays.map((d) => d.totals?.kcal || 0))),
+                    targetDeficitPct: targets.length ? Math.round(averageOf(targets)) : 0,
+                    avgDeltaPct: totalBurned
+                        ? Math.round(((totalKcal - totalBurned) / totalBurned) * 100)
                         : 0,
-                    daysWithData: sum.daysWithData,
-                    daysWithRecords: sum.daysWithData,
+                    avgProt: averageOf(foodDays.map((d) => d.totals?.prot || 0)),
+                    avgNormProt: averageOf(foodDays.map((d) => d.normAbs?.prot || 0)),
+                    avgFat: averageOf(foodDays.map((d) => d.totals?.fat || 0)),
+                    avgNormFat: averageOf(foodDays.map((d) => d.normAbs?.fat || 0)),
+                    avgCarbs: averageOf(foodDays.map((d) => d.totals?.carbs || 0)),
+                    avgNormCarbs: averageOf(foodDays.map((d) => d.normAbs?.carbs || 0)),
+                    // Ни одного измеренного взвешивания — прочерк, не вес из профиля.
+                    avgWeight: weights.length ? Math.round(averageOf(weights) * 10) / 10 : 0,
+                    daysWithData: foodDays.length,
+                    daysWithRecords: recordDays.length,
                     totalDaysPossible,
-                    completenessRatio: totalDaysPossible > 0 ? sum.daysWithData / totalDaysPossible : 0,
-                    periodType: 'month'
+                    completenessRatio: totalDaysPossible > 0
+                        ? recordDays.length / totalDaysPossible
+                        : 0,
+                    periodType: 'month',
+                    days: allDays.slice().sort((a, b) => (a.dateStr < b.dateStr ? -1 : 1))
                 },
                 isCurrent: isCurrentMonth
             });
         });
 
+        months.sort((a, b) => (a.monthKey < b.monthKey ? 1 : -1));
         return months;
     }
 
