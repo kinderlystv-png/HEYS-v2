@@ -58,7 +58,8 @@ describe('лист отчётов · день, помеченный «не за�
     store = new Map();
     window.HEYS = {
       SparklinesShared: { getWeekDates: () => PAST_WEEK.slice() },
-      dayNorm: { resolve: () => ({ kcal: 2000 }) }
+      dayNorm: { resolve: () => ({ kcal: 2000 }) },
+      dayUtils: { getDayTdee: () => ({ tdee: 2500 }) }
     };
     // eslint-disable-next-line no-eval
     (0, eval)(weeklySrc);
@@ -98,6 +99,22 @@ describe('лист отчётов · день, помеченный «не за�
     // Раньше было 7 дней и среднее 1743 — помеченный день тянул вниз.
     expect(report.daysWithData).toBe(6);
     expect(report.avgKcal).toBe(2000);
+  });
+
+  it('уставка дня сохраняется, и плитка «план» — её среднее', () => {
+    // Инвариант против третьей формулы: строка дня и плитка обязаны показывать
+    // одно и то же число. Раньше строка считала свой процент из нормы и затрат,
+    // и «−10 %» в плитке спорил с «−14 %» в строке того же дня.
+    seed(PAST_WEEK, () => ({ meals: MEALS, dayTot: { kcal: 2000 } }));
+    const report = build();
+
+    const perDay = report.days
+      .map((d) => d.targetDeficitPct)
+      .filter((v) => Number.isFinite(v));
+    expect(perDay.length).toBe(7);
+
+    const mean = perDay.reduce((s, v) => s + v, 0) / perDay.length;
+    expect(report.targetDeficitPct).toBe(Math.round(mean));
   });
 
   it('голодный день остаётся в расчёте — это осознанный режим, а не пропуск', () => {

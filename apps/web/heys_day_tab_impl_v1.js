@@ -198,7 +198,11 @@
                         weeksText,
                         countText: monthsText,
                         bodyText: 'Доступно ' + monthsText + ' и ' + weeksText + ' статистики для просмотра.',
-                        detailText: 'Периоды с достаточным количеством записей',
+                        // Вход отвечает «есть ли что открывать», а не «можно ли
+                        // доверять»: его порог — два дня с едой, а надёжность в
+                        // самом листе начинается с шести. Прежняя копия обещала
+                        // второе, называя первое.
+                        detailText: 'Периоды, где есть записи',
                         actionText: 'Открыть отчёты'
                     };
                 }
@@ -213,7 +217,11 @@
                         weeksText,
                         countText: weeksText,
                         bodyText: 'Доступно ' + weeksText + ' статистики для просмотра.',
-                        detailText: 'Периоды с достаточным количеством записей',
+                        // Вход отвечает «есть ли что открывать», а не «можно ли
+                        // доверять»: его порог — два дня с едой, а надёжность в
+                        // самом листе начинается с шести. Прежняя копия обещала
+                        // второе, называя первое.
+                        detailText: 'Периоды, где есть записи',
                         actionText: 'Открыть отчёты'
                     };
                 }
@@ -250,7 +258,7 @@
                 weeksText,
                 countText: monthsText,
                 bodyText: 'Доступно ' + monthsText + ' и ' + weeksText + ' статистики для просмотра.',
-                detailText: 'Периоды с достаточным количеством записей',
+                detailText: 'Периоды, где есть записи',
                 actionText: 'Открыть отчёты'
             };
         }
@@ -265,7 +273,7 @@
                 weeksText,
                 countText: weeksText,
                 bodyText: 'Доступно ' + weeksText + ' статистики для просмотра.',
-                detailText: 'Периоды с достаточным количеством записей',
+                detailText: 'Периоды, где есть записи',
                 actionText: 'Открыть отчёты'
             };
         }
@@ -1590,14 +1598,17 @@
                     React.createElement('span', { className: 'reports-overview-card__title' }, 'ОТЧЕТЫ ПО МЕСЯЦАМ И НЕДЕЛЯМ')
                 ),
                 React.createElement('div', { className: 'reports-overview-card__body' },
+                    // Недели первыми и крупно: лист открывается в неделях, а
+                    // главным числом стояли месяцы — человек видел «1 месяц» и
+                    // попадал в список недель.
                     React.createElement('div', { className: 'reports-overview-card__stats' },
                         React.createElement('span', { className: 'reports-overview-card__stat reports-overview-card__stat--primary' },
-                            React.createElement('span', { className: 'reports-overview-card__stat-value' }, meta.monthsCount),
-                            React.createElement('span', { className: 'reports-overview-card__stat-label' }, meta.monthUnitText)
-                        ),
-                        React.createElement('span', { className: 'reports-overview-card__stat' },
                             React.createElement('span', { className: 'reports-overview-card__stat-value' }, meta.weeksCount),
                             React.createElement('span', { className: 'reports-overview-card__stat-label' }, meta.weekUnitText)
+                        ),
+                        React.createElement('span', { className: 'reports-overview-card__stat' },
+                            React.createElement('span', { className: 'reports-overview-card__stat-value' }, meta.monthsCount),
+                            React.createElement('span', { className: 'reports-overview-card__stat-label' }, meta.monthUnitText)
                         )
                     ),
                     React.createElement('span', { className: 'reports-overview-card__text' }, meta.detailText),

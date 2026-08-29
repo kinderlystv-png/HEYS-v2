@@ -236,6 +236,10 @@
                         burned
                     })
                     : (Number.isFinite(targetPctFromGoal) ? targetPctFromGoal : (profile?.deficitPctTarget ?? 0));
+                // Уставку дня сохраняем, чтобы строка дня показывала её же.
+                // Раньше она считала свой третий вариант из нормы и затрат, и
+                // «план −10 %» в плитке спорил с «−14 %» в строке того же дня.
+                d.targetDeficitPct = Number.isFinite(targetPctFromDay) ? targetPctFromDay : null;
                 totalTargetDeficit += Number.isFinite(targetPctFromDay) ? targetPctFromDay : 0;
                 daysWithBurned += 1;
             }

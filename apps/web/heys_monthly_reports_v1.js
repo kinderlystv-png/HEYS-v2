@@ -110,8 +110,10 @@
         const formatMacroDiff = (value, norm) => {
             if (!Number.isFinite(value) || !Number.isFinite(norm) || norm === 0) return '—';
             const diff = Math.round(value - norm);
-            const sign = diff > 0 ? '+' : '';
-            return sign + diff;
+            // Минус типографский, как во всей зоне: ASCII-дефис здесь был
+            // единственным местом, где знак набран иначе.
+            if (diff < 0) return '−' + Math.abs(diff);
+            return (diff > 0 ? '+' : '') + diff;
         };
 
         const getMacroDiffTone = (value, norm, preferHigher) => {
@@ -136,33 +138,43 @@
                 ? 'monthly-metric-value--deficit'
                 : 'monthly-metric-value--neutral';
 
+        // Стрелка снята: она сравнивает средние двух периодов, и период, начатый
+        // высоко и законченный низко, законно давал «↑» при тренде вниз. На
+        // плитке объяснить это негде, поэтому направление больше не рисуется —
+        // оно называется словами: «−0,3 кг к прошлой неделе».
         const getWeightTrend = () => {
             const currentWeight = Number.isFinite(report?.avgWeight) ? report.avgWeight : 0;
             const prevWeight = Number.isFinite(prevWeek?.report?.avgWeight) ? prevWeek.report.avgWeight : 0;
 
             if (!currentWeight || !prevWeight) return null;
 
+            const periodWord = report?.periodType === 'month' ? 'месяцу' : 'неделе';
             const diff = currentWeight - prevWeight;
             if (Math.abs(diff) < 0.05) {
-                return { symbol: '→', tone: 'monthly-weight-trend--neutral', diff: 0 };
+                return {
+                    tone: 'monthly-weight-trend--neutral',
+                    diff: 0,
+                    text: `без изменений к прошлой ${periodWord}`
+                };
             }
 
-            const symbol = diff > 0 ? '↑' : '↓';
+            const sign = diff > 0 ? '+' : '−';
+            const text = `${sign}${Math.abs(diff).toFixed(1)} кг к прошлой ${periodWord}`;
             const goal = Number.isFinite(weightGoal) && weightGoal > 0 ? weightGoal : 0;
             if (!goal) {
-                return { symbol, tone: 'monthly-weight-trend--neutral', diff };
+                return { tone: 'monthly-weight-trend--neutral', diff, text };
             }
 
             const needDown = currentWeight - goal > 0.2;
             const needUp = currentWeight - goal < -0.2;
             if (needDown) {
-                return { symbol, tone: diff < 0 ? 'monthly-weight-trend--good' : 'monthly-weight-trend--bad', diff };
+                return { tone: diff < 0 ? 'monthly-weight-trend--good' : 'monthly-weight-trend--bad', diff, text };
             }
             if (needUp) {
-                return { symbol, tone: diff > 0 ? 'monthly-weight-trend--good' : 'monthly-weight-trend--bad', diff };
+                return { tone: diff > 0 ? 'monthly-weight-trend--good' : 'monthly-weight-trend--bad', diff, text };
             }
 
-            return { symbol, tone: 'monthly-weight-trend--neutral', diff };
+            return { tone: 'monthly-weight-trend--neutral', diff, text };
         };
 
         const weightValue = Number.isFinite(report?.avgWeight) && report.avgWeight > 0
@@ -186,10 +198,17 @@
                     : (Number.isFinite(d.optimum) ? d.optimum : 0);
                 const eaten = d.totals?.kcal || 0;
                 const goal = d.goalOptimum || 0;
-                const targetPct = burned > 0 ? Math.round(((goal - burned) / burned) * 100) : 0;
-                const factPct = burned > 0 ? Math.round(((eaten - burned) / burned) * 100) : 0;
+                // Та же уставка, что усредняется в плитку «план»: цель — это то,
+                // о чём договорились, а не производная от нормы и затрат.
+                const targetDeficitPct = Number.isFinite(d.targetDeficitPct)
+                    ? Math.round(d.targetDeficitPct)
+                    : null;
                 const hasMeals = !!d.hasMeals;
-                const isIncluded = hasMeals && !(d.isToday && (d.ratio || 0) < 0.5);
+                const isIncluded = hasMeals
+                    // День, помеченный «не заполнял», выброшен из средних —
+                    // значит и в ленте он не строка расчёта.
+                    && !d.isIncomplete
+                    && !(d.isToday && (d.ratio || 0) < 0.5);
                 const weightMorning = Number.isFinite(d.weightMorning) && d.weightMorning > 0
                     ? Math.round(d.weightMorning * 10) / 10
                     : '—';
@@ -205,8 +224,7 @@
                     eaten,
                     goal,
                     deficit,
-                    targetPct,
-                    factPct,
+                    targetDeficitPct,
                     prot: d.totals?.prot || 0,
                     fat: d.totals?.fat || 0,
                     carbs: d.totals?.carbs || 0,
@@ -292,9 +310,9 @@
         };
 
         const targetPct = report?.targetDeficitPct ?? 0;
-        const avgGoalPct = breakdownTotals.avgBurned
-            ? ((breakdownTotals.avgGoal - breakdownTotals.avgBurned) / breakdownTotals.avgBurned) * 100
-            : 0;
+        // Итоговый процент — та же средняя уставка, что в плитке «план», а не
+        // ещё один расчёт из средней нормы и средних затрат.
+        const avgGoalPct = targetPct;
 
         const toggleExpanded = () => {
             setIsExpanded((prev) => {
@@ -341,14 +359,14 @@
                     h('div', { className: 'monthly-metric-value ' + targetPctClass },
                         (report.targetDeficitPct > 0 ? '+' : '') + report.targetDeficitPct + '%'
                     ),
-                    h('div', { className: 'monthly-metric-label' }, 'цель')
+                    h('div', { className: 'monthly-metric-label' }, 'план')
                 ),
                 h('div', { className: 'monthly-metric-block' },
                     h('div', { className: 'monthly-metric-icon' }, '📊'),
                     h('div', { className: 'monthly-metric-value ' + deficitPctClass },
                         (report.avgDeltaPct > 0 ? '+' : '') + report.avgDeltaPct + '%'
                     ),
-                    h('div', { className: 'monthly-metric-label' }, 'факт')
+                    h('div', { className: 'monthly-metric-label' }, 'вышло')
                 ),
                 h('div', { className: 'monthly-metric-block monthly-metric-block--macros' },
                     h('div', { className: 'monthly-macro-diffs' },
@@ -375,11 +393,8 @@
                 h('div', { className: 'monthly-metric-block' },
                     h('div', { className: 'monthly-metric-icon' }, '⚖️'),
                     h('div', { className: 'monthly-metric-value' }, weightValue),
-                    weightTrend && weightTrend.diff != null
-                        ? h('div', { className: 'monthly-weight-trend-sub ' + weightTrend.tone },
-                            weightTrend.symbol,
-                            Math.abs(weightTrend.diff).toFixed(1)
-                        )
+                    weightTrend && weightTrend.text
+                        ? h('div', { className: 'monthly-weight-trend-sub ' + weightTrend.tone }, weightTrend.text)
                         : null,
                     h('div', { className: 'monthly-metric-label' }, 'средний вес')
                 )
@@ -399,12 +414,12 @@
                                 h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--day' }, 'День'),
                                 h('span', { className: 'weekly-wrap-breakdown__cell' }, 'Затраты'),
                                 h('span', { className: 'weekly-wrap-breakdown__cell' }, 'Съедено'),
-                                h('span', { className: 'weekly-wrap-breakdown__cell' }, 'Цель'),
+                                h('span', { className: 'weekly-wrap-breakdown__cell' }, 'План'),
                                 h('span', { className: 'weekly-wrap-breakdown__cell' }, 'Дефицит', h('br'), 'от потрач.')
                             ),
                             ...includedDayRows.map((day, i) => {
-                                const goalPct = day.burned ? ((day.goal - day.burned) / day.burned) * 100 : 0;
-                                const goalPctClass = getTargetToneClass(goalPct, targetPct);
+                                const goalPct = day.targetDeficitPct;
+                                const goalPctClass = getTargetToneClass(goalPct ?? 0, targetPct);
                                 const toneClass = getDeltaToneClass(day.deficit, targetPct);
                                 return h('div', { key: day.dateStr || i, className: 'weekly-wrap-breakdown__row' },
                                     h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--day' }, day.dayLabel),
@@ -413,9 +428,11 @@
                                     h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--goal' },
                                         Math.round(day.goal),
                                         ' ',
-                                        h('span', { className: 'weekly-wrap-breakdown__goal-pct ' + goalPctClass },
-                                            '(' + (goalPct > 0 ? '+' : '') + Math.round(goalPct) + '%)'
-                                        )
+                                        goalPct == null
+                                            ? null
+                                            : h('span', { className: 'weekly-wrap-breakdown__goal-pct ' + goalPctClass },
+                                                '(' + (goalPct > 0 ? '+' : '') + Math.round(goalPct) + '%)'
+                                            )
                                     ),
                                     h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--delta ' + toneClass },
                                         formatDeficitWithPct(day.deficit, day.burned)
