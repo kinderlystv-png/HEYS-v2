@@ -363,6 +363,8 @@ export const LEGACY_BUNDLES = {
         'heys_widgets_events_v1.js',
         'heys_widgets_registry_v1.js',
         'heys_widgets_weight_dynamics_v4.js',
+        // Поправка на факт ходит в канонический тренд веса выше — порядок важен.
+        'heys_norm_correction_v1.js',
         'heys_widgets_insulin_wave_v4.js',
         'heys_widgets_data_crash_risk_v1.js',
         'heys_widgets_core_v1.js',

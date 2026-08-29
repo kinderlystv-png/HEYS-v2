@@ -6,6 +6,8 @@
     const U = HEYS.utils || {};
     const Sparklines = HEYS.SparklinesShared || {};
 
+    let warnedNoDisciplineMatrix = false;
+
     const WEEKLY_WRAP_MIN_DAYS = 3;
     const WEEKLY_WRAP_MAX_WEEKS = 26;
 
@@ -141,9 +143,20 @@
             // вода или тренировка. Обе вкладки обязаны считать дни одинаково,
             // поэтому берём его, а не заводим шестую копию правила. Без модуля
             // остаёмся на прежнем поведении — дни с едой.
-            const hasAnyRecord = HEYS.DisciplineMatrix?.hasAnyData
-                ? HEYS.DisciplineMatrix.hasAnyData(day)
-                : hasMeals;
+            let hasAnyRecord;
+            if (HEYS.DisciplineMatrix?.hasAnyData) {
+                hasAnyRecord = HEYS.DisciplineMatrix.hasAnyData(day);
+            } else {
+                // Матрица грузится загрузчиком вкладки статистики, а этот модуль
+                // живёт в общем бандле: понедельничный попап зовёт расчёт с
+                // вкладки дня и может успеть раньше. Откат безопасен, но меняет
+                // счёт дней — поэтому он не молчит.
+                if (!warnedNoDisciplineMatrix) {
+                    warnedNoDisciplineMatrix = true;
+                    console.warn('[HEYS.weeklyReports] DisciplineMatrix ещё не загружена — дни считаются по еде, а не общим счётчиком зоны');
+                }
+                hasAnyRecord = hasMeals;
+            }
 
             return {
                 dateStr: dstr,
