@@ -18,7 +18,10 @@ const SRC = fs.readFileSync(
 
 describe('поправка на факт · строка в разборе нормы', () => {
   it('данные попапа несут применённую поправку и счёт холодного старта', () => {
-    expect(SRC).toContain('normCorrection: (prof && prof.normCorrection) || null');
+    // Два скаляра, а не объект: профиль сливается перекрытием с родительской
+    // меткой времени, и вложенный объект может склеиться половинами.
+    expect(SRC).toContain('prof.normCorrectionFactor');
+    expect(SRC).toContain('prof.normCorrectionAppliedAt');
     expect(SRC).toContain('correctionHistoryDays');
   });
 

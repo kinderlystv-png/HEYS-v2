@@ -121,8 +121,24 @@
     return Math.round(bmr * ((ndte && ndte.tdeeBoost) || 0));
   }
 
-  function withNdte(tdee, ndte) {
-    const baseExp = Math.round((Number(tdee && tdee.baseExpenditure) || 0) + (Number(ndte) || 0));
+  // Поправка на факт правит расход, а не обещание: она множит базовый расход
+  // ДО дефицита. Дефицит остаётся договорённостью с человеком и системой не
+  // переписывается — меняется база, а не доля (канон norm-correction.v4).
+  function correctedExpenditure(baseExp, factor, bmr) {
+    const k = Number.isFinite(factor) && factor > 0 ? factor : 1;
+    if (k === 1) return baseExp;
+    const corrected = Math.round(baseExp * k);
+    // Ниже базового обмена расход не опускается ни при какой поправке. Пол
+    // ставится только когда поправка действует: людям без неё поведение не
+    // меняем — у них этого предохранителя не было и его отсутствие отдельный
+    // вопрос, а не побочный эффект поправки.
+    const floor = Math.round(Number(bmr) || 0);
+    return floor > 0 ? Math.max(corrected, floor) : corrected;
+  }
+
+  function withNdte(tdee, ndte, factor) {
+    const rawBase = Math.round((Number(tdee && tdee.baseExpenditure) || 0) + (Number(ndte) || 0));
+    const baseExp = correctedExpenditure(rawBase, factor, tdee && tdee.bmr);
     const def = Number(tdee && tdee.deficitPct) || 0;
     const cyc = Number(tdee && tdee.cycleMultiplier) || 1;
     return Math.round(Math.round(baseExp * (1 + def / 100)) * cyc);
@@ -143,7 +159,8 @@
       return { kcal: 0, ndte: 0, tdee, reason: tdee ? 'profile_incomplete' : 'no_tdee' };
     }
     const ndte = ndteBoost(prevBlob, profile, tdee.bmr, day && day.date);
-    return { kcal: withNdte(tdee, ndte), ndte, tdee, reason: null };
+    const factor = Number(profile && profile.normCorrectionFactor);
+    return { kcal: withNdte(tdee, ndte, factor), ndte, tdee, factor, reason: null };
   }
 
   function buildDebtWindow(date, profile, opts) {
@@ -225,8 +242,11 @@
     }
 
     const tdee = own.tdee;
-    const base = withNdte(tdee, ndte);
-    const maintenance = withNdte({ ...tdee, deficitPct: 0 }, ndte);
+    const factor = Number.isFinite(own.factor) ? own.factor : Number(profile && profile.normCorrectionFactor);
+    const base = withNdte(tdee, ndte, factor);
+    // Поддержание — тот же расход без дефицита, поэтому поправка на него
+    // распространяется: она правит расход, а не долю.
+    const maintenance = withNdte({ ...tdee, deficitPct: 0 }, ndte, factor);
     const deficitPct = Number(tdee.deficitPct) || 0;
 
     const windowDays = buildDebtWindow(date, profile, options);

@@ -1358,7 +1358,9 @@
                   // базой и дефицитом: дефицит остаётся договорённостью, долг
                   // правит итог дня. Пока применённой поправки нет — строка
                   // показывает холодный старт со счётом дней, а не прячется.
-                  normCorrection: (prof && prof.normCorrection) || null,
+                  normCorrection: (prof && Number(prof.normCorrectionFactor) > 0 && Number(prof.normCorrectionFactor) !== 1)
+                    ? { factor: Number(prof.normCorrectionFactor), appliedAt: prof.normCorrectionAppliedAt || '' }
+                    : null,
                   correctionHistoryDays: HEYS.DisciplineMatrix?.countHistoryDays
                     ? HEYS.DisciplineMatrix.countHistoryDays(
                         HEYS.utils?.lsGet, HEYS.NormCorrection?.COLD_START_DAYS || 14

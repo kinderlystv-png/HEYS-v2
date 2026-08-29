@@ -265,7 +265,50 @@
     return card;
   }
 
+  // История решений живёт своим ключом, а не в профиле: она растёт, а профиль
+  // читается на каждом расчёте нормы. Ключ client-scoped — иначе при
+  // кураторском входе история одного клиента протекла бы другому (девятый
+  // архитектурный инвариант проекта).
+  const HISTORY_KEY = 'heys_norm_correction_history';
+  const HISTORY_MAX = 12;
+
+  function readHistory(lsGet) {
+    try {
+      const raw = lsGet ? lsGet(HISTORY_KEY, null) : null;
+      return Array.isArray(raw && raw.weeks) ? raw.weeks : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /**
+   * Записать решение недели. Решение принимает человек — модуль только
+   * сохраняет то, что человек выбрал, и не решает сам.
+   *
+   * Массивы при синхронизации сливаются атомарно: свежая сторона выигрывает
+   * целиком. Для решения раз в неделю одним актором это приемлемо, а потеря
+   * косметическая — испортится график истории, но не норма: действующее
+   * значение живёт скалярами в профиле и сливается отдельно.
+   */
+  function recordDecision({ lsGet, lsSet, weekLabel, factor, what, now }) {
+    const weeks = readHistory(lsGet).filter((w) => w && w.weekLabel !== weekLabel);
+    weeks.unshift({
+      weekLabel,
+      factor: Number(factor),
+      what,
+      at: now || null
+    });
+    if (lsSet) {
+      lsSet(HISTORY_KEY, { weeks: weeks.slice(0, HISTORY_MAX), updatedAt: now || 0 });
+    }
+    return weeks.slice(0, HISTORY_MAX);
+  }
+
   HEYS.NormCorrection = {
+    HISTORY_KEY,
+    HISTORY_MAX,
+    readHistory,
+    recordDecision,
     KCAL_PER_KG,
     FACTOR_MIN,
     FACTOR_MAX,
