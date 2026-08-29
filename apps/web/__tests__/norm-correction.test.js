@@ -325,10 +325,15 @@ describe('поправка на факт · кадры недельной све
     expect(ok.frame).toBe('recomposition');
     expect(ok.evidence).toContain('замеру');
 
-    const failed = NC.buildWeeklySyncCard({
-      result: down(), tariff: 'self', recomposition: { checkFailed: true }
+    // Кадра «перестройку проверить не удалось» нет намеренно: он утверждает,
+    // что двухнедельная заморозка истекла, а заморозки в проекте нет.
+    const noEvidence = NC.buildWeeklySyncCard({
+      result: down(), tariff: 'self', recomposition: { noWaistEvidence: true },
+      expenditure: 2400, deficitPct: -12, basalMetabolism: 1520
     });
-    expect(failed.frame).toBe('recomposition_unverified');
+    expect(noEvidence.frame).toBe('lowered_needs_consent');
+    // Но молчать нельзя: строка контракта называет молчание дефектом.
+    expect(noEvidence.copy.evidenceNote).toBe('Замера не было — проверить перестройку было нечем');
   });
 
   it('считать нечего — сошлось, и это самый частый исход', () => {
@@ -442,10 +447,10 @@ describe('поправка на факт · довод перестройки', 
     };
   }
 
-  it('без замера талии довода нет — иначе экран оправдывает застой', () => {
+  it('без замера талии довода нет, но и молчания нет', () => {
     stubPattern('recomposition', -0.1);
     const days = Array.from({ length: 21 }, (_, i) => dayWith('2026-08-' + String(i + 1).padStart(2, '0'), null));
-    expect(NC.detectRecomposition(days, {})).toBe(null);
+    expect(NC.detectRecomposition(days, {})).toEqual({ noWaistEvidence: true });
   });
 
   it('замер есть — довод назван источником и числом', () => {
@@ -466,7 +471,7 @@ describe('поправка на факт · довод перестройки', 
 
   it('модуль инсайтов не загружен — сверка не падает', () => {
     delete window.HEYS.InsightsPI;
-    expect(NC.detectRecomposition([dayWith('2026-08-01', 78)], {})).toBe(null);
+    expect(NC.detectRecomposition([dayWith('2026-08-01', 78)], {})).toEqual({ noWaistEvidence: false });
   });
 
   it('в тексте карточки стоит конкретика замера, а не утешение', () => {

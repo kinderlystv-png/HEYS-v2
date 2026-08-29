@@ -81,6 +81,13 @@ describe('поправка на факт · карточка сверки в ш�
     expect(body).toContain('return null');
   });
 
+  it('отсутствие довода перестройки карточка говорит вслух', () => {
+    // Контракт «заморозка до косвенного довода»: молчание здесь и есть дефект.
+    expect(SRC).toContain('copy.evidenceNote');
+    expect(SRC).toContain('weekly-wrap-correction__evidence-note');
+    expect(CSS).toContain('.weekly-wrap-correction__evidence-note');
+  });
+
   it('праздничная заливка есть только у роста и подтверждённой перестройки', () => {
     expect(SRC).toContain('weekly-wrap-correction--good');
     expect(CSS).toMatch(/\.weekly-wrap-correction--good\s*\{[^}]*--v4-ok-bg/);

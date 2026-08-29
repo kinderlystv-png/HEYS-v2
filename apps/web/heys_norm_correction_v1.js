@@ -391,19 +391,15 @@
         }
       });
     }
-    if (recomposition && recomposition.checkFailed) {
-      return Object.assign(card, {
-        frame: 'recomposition_unverified',
-        actions: ['ok'],
-        decidedBy: 'nobody',
-        copy: {
-          title: 'Отличить перестройку было нечем',
-          body: 'Замера не было, силовых в эти недели тоже. Две недели ожидания истекли — поправку применяем по весу.',
-          footnote: 'Поправка — про расчёт, а не про старание. Замер в любой момент вернёт ветку перестройки.',
-          actionLabels: { ok: 'Понятно' }
-        }
-      });
-    }
+    // Кадра «перестройку проверить не удалось» здесь нет намеренно: он
+    // утверждает, что двухнедельная заморозка истекла, а заморозки в проекте
+    // пока нет — метрики роста рабочих весов не существует. Но молчать тоже
+    // нельзя: строка контракта «заморозка до косвенного довода» прямо
+    // называет молчание дефектом. Поэтому поправка применяется по весу и
+    // говорит об этом отдельной строкой на карточке.
+    const evidenceNote = (recomposition && recomposition.noWaistEvidence)
+      ? 'Замера не было — проверить перестройку было нечем'
+      : null;
 
     // Рост система применяет сама и сообщает в тот же день. Кадр держится
     // неделю после применения: расчёт к этому моменту уже сошёлся, и без этой
@@ -480,6 +476,7 @@
               // Причина — система, никогда человек.
               body: 'Вес и обхваты держатся на месте. Значит, наш расчёт расхода для вас завышен — мы поправили его, а не вас.',
               heroCaption: '\u2212' + formatKcal(Math.abs(norms.deltaKcal)) + '\u00a0ккал',
+              evidenceNote,
               footnote: 'Решение куратора остаётся в силе — отменить его здесь нельзя, можно спросить, почему так.',
               actionLabels: { ok: 'Понятно', ask_curator: 'Написать куратору' }
             }
@@ -535,6 +532,7 @@
         title: 'Расчёт разошёлся с фактом',
         body: 'По вашим записям и весам расход выходит ниже, чем считает формула. Снижение нормы — только с вашего согласия.',
         heroCaption: '\u2212' + formatKcal(Math.abs(norms.deltaKcal)) + '\u00a0ккал',
+        evidenceNote,
         footnote: 'Без ответа норма не меняется. Рост нормы — наоборот: применяем сами и сразу сообщаем, отменить можно в один тап.',
         actionLabels: { apply_tomorrow: 'Применить с завтра', keep_current: 'Оставить прежнюю' }
       }
@@ -612,7 +610,18 @@
    */
   function detectRecomposition(rawDays, profile) {
     const analyze = HEYS.InsightsPI?.patternModules?.analyzeHypertrophy;
-    if (!analyze || !rawDays || !rawDays.length) return null;
+    if (!rawDays || !rawDays.length) return null;
+
+    // Дата последнего замера талии в окне — она же источник довода на карточке.
+    let evidence = null;
+    for (let i = rawDays.length - 1; i >= 0; i--) {
+      if (rawDays[i]?.measurements?.waist) { evidence = rawDays[i].date; break; }
+    }
+    // Замера в окне нет — довода нет, и это надо сказать вслух, а не молча
+    // применить поправку по весу.
+    if (!evidence) return { noWaistEvidence: true };
+
+    if (!analyze) return { noWaistEvidence: false };
 
     let pattern;
     try {
@@ -621,13 +630,6 @@
       return null;
     }
     if (!pattern || !pattern.available || pattern.compositionQuality !== 'recomposition') return null;
-
-    // Дата последнего замера талии в окне — она же источник довода на карточке.
-    let evidence = null;
-    for (let i = rawDays.length - 1; i >= 0; i--) {
-      if (rawDays[i]?.measurements?.waist) { evidence = rawDays[i].date; break; }
-    }
-    if (!evidence) return null;
 
     // Конкретика важнее общей фразы: «талия ушла на 2 см» — это довод, а
     // «тело меняется» — утешение.

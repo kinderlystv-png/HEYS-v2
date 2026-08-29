@@ -1323,6 +1323,13 @@ body.tour-active .ios-pwa-banner {
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
+/* Довода перестройки не было — карточка говорит это прямо, а не молчит. */
+.weekly-wrap-correction__evidence-note {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
 .weekly-wrap-correction__safeguards {
   display: flex;
   flex-direction: column;
