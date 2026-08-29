@@ -327,6 +327,74 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
 }
 
+/* Две кривые за период на одной сетке: часы сна и оценка самочувствия. Шкалы
+   независимые — часы и баллы несравнимы, общая ось прижала бы одну в полоску.
+   Средних чисел здесь больше нет: они стоят в итоге периода. */
+.reports-v4-wellbeing__chart {
+  display: block;
+  width: 100%;
+  height: 96px;
+  overflow: visible;
+}
+
+.reports-v4-wellbeing__line {
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.reports-v4-wellbeing__line--sleep,
+.reports-v4-wellbeing__dot--sleep,
+.reports-v4-wellbeing__mark--sleep {
+  stroke: var(--v4-water, #7d98a6);
+  fill: var(--v4-water, #7d98a6);
+}
+
+.reports-v4-wellbeing__line--mood,
+.reports-v4-wellbeing__dot--mood,
+.reports-v4-wellbeing__mark--mood {
+  stroke: var(--v4-sand-act, #c67139);
+  fill: var(--v4-sand-act, #c67139);
+}
+
+.reports-v4-wellbeing__dot { stroke: none; }
+
+.reports-v4-wellbeing__mark {
+  stroke: none;
+  font-size: 9.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.reports-v4-wellbeing__legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.reports-v4-wellbeing__key {
+  position: relative;
+  padding-left: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+}
+
+.reports-v4-wellbeing__key::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 8px;
+  height: 2px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.reports-v4-wellbeing__key--sleep::before { background: var(--v4-water, #7d98a6); }
+.reports-v4-wellbeing__key--mood::before { background: var(--v4-sand-act, #c67139); }
+
 .reports-v4-wellbeing__grid {
   display: flex;
   justify-content: space-between;

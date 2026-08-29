@@ -259,6 +259,24 @@
       ? reportsR1(wellbeingVals.reduce((a, b) => a + b, 0) / wellbeingVals.length)
       : null;
 
+    // Кривой нужен каждый день периода, а не только дни с едой: сон
+    // записывают и в день без единого приёма. Пропуск остаётся null — линия
+    // на нём рвётся, а не соединяет соседние точки прямой через несколько
+    // суток, которых не было.
+    const wellbeingSeries = points.map((p) => {
+      let wellbeing = +p.wellbeingAvg || 0;
+      if (!wellbeing && typeof lsGet === 'function' && p.date) {
+        const scopedKey = clientId ? 'heys_' + clientId + '_dayv2_' + p.date : 'heys_dayv2_' + p.date;
+        const dayRow = lsGet(scopedKey, null) || lsGet('heys_dayv2_' + p.date, null);
+        if (dayRow) wellbeing = +dayRow.wellbeingAvg || +dayRow.wellbeingMorning || 0;
+      }
+      return {
+        date: p.date,
+        sleep: p.sleepHours > 0 ? +p.sleepHours : null,
+        wellbeing: wellbeing > 0 ? wellbeing : null
+      };
+    });
+
     const showWellbeingBlock = sleepVals.length >= 3 || moodVals.length >= 3 || wellbeingVals.length >= 3;
 
     const dayRows = [...withKcal].reverse().map((p) => {
@@ -335,6 +353,7 @@
       discipline,
       weeklyRows: buildWeeklyRows(lsGet, clientId, 4),
       lastMeasureDaysAgo,
+      wellbeingSeries,
       dateRange,
       inNorm,
       withData: withKcal.length,
@@ -506,45 +525,6 @@
           'Сводной суммы у матрицы нет — дисциплину одним числом говорит Score выше.'
         )
       ),
-      // Контракт «месяц нулей — вопрос к норме»: единственное действие ведёт
-      // к куратору — недостижимая весь период норма обсуждается, а не
-      // оценивается. Оценок и слов про старание в строке нет. Без куратора
-      // входа нет: строка остаётся информацией.
-      rows.some((r) => r.isZeroRow) && ReportsV4ZeroActions({ React, rows })
-    );
-  }
-
-  function ReportsV4ZeroActions(props) {
-    const { React, rows } = props || {};
-    const zero = (rows || []).filter((r) => r.isZeroRow);
-    if (!zero.length) return null;
-    const names = zero.map((r) => r.label.toLowerCase()).join(' и ');
-    const hasCurator = (() => {
-      try {
-        return !!(HEYS.currentCuratorId || HEYS.curatorId
-          || (HEYS.utils && HEYS.utils.lsGet && HEYS.utils.lsGet('heys_curator_id', null)));
-      } catch (e) { return false; }
-    })();
-    return React.createElement(React.Fragment, null,
-      React.createElement('div', { className: 'reports-v4-tier' }, 'Что с этим делать'),
-      React.createElement('div', { className: 'reports-v4-zero-actions' },
-        React.createElement('div', { className: 'reports-v4-zero-actions__row' },
-          'Норма по строке «' + names + '» не закрывалась ни разу за период.'),
-        hasCurator
-          ? React.createElement('button', {
-            type: 'button',
-            className: 'reports-v4-zero-actions__row reports-v4-zero-actions__row--link',
-            onClick: () => {
-              const setTab = (HEYS.App && HEYS.App.setTab) || (HEYS.ui && HEYS.ui.switchTab);
-              if (typeof setTab === 'function') setTab('messages');
-            }
-          },
-            React.createElement('span', null, 'Обсудить норму с куратором'),
-            React.createElement('span', { className: 'reports-v4-zero-actions__chevron', 'aria-hidden': 'true' }, '›')
-          )
-          : React.createElement('div', { className: 'reports-v4-zero-actions__row' },
-            'Норму можно поменять в настройках профиля.')
-      )
     );
   }
 
@@ -595,6 +575,114 @@
     );
   }
 
+  /**
+   * Две кривые за период на одной сетке: часы сна и оценка самочувствия 1–10.
+   *
+   * Контракт «ярус „Сон и самочувствие“»: только измеренное — ни выводов о
+   * связи, ни оценок «мало/много». Связь сна с весом и аппетитом живёт в
+   * Инсайтах паттернами, здесь её нет. Средние за период показывать нечем:
+   * они уже стоят в итоге, и повторять их графиком незачем.
+   *
+   * У каждой кривой своя шкала: часы сна и оценка 1–10 несравнимы, общая ось
+   * прижала бы одну из них в полоску. Подпись — у последней точки.
+   */
+  function ReportsV4Wellbeing(props) {
+    const { React, periodMeta } = props || {};
+    const series = (periodMeta && periodMeta.wellbeingSeries) || [];
+    if (!React || series.length < 2) return null;
+
+    const W = 296;
+    const H = 96;
+    const PAD = 8;
+    const stepX = series.length > 1 ? (W - PAD * 2) / (series.length - 1) : 0;
+
+    // Отрезки строим по подряд идущим точкам: день без записи рвёт линию, а
+    // не соединяет соседей прямой через пропуск.
+    const buildPath = (key) => {
+      const vals = series.map((d) => d[key]).filter((v) => v != null);
+      if (vals.length < 2) return null;
+      const min = Math.min(...vals);
+      const max = Math.max(...vals);
+      const span = max - min || 1;
+      const y = (v) => PAD + (H - PAD * 2) * (1 - (v - min) / span);
+      const segments = [];
+      let current = [];
+      series.forEach((d, i) => {
+        if (d[key] == null) {
+          if (current.length > 1) segments.push(current);
+          current = [];
+          return;
+        }
+        current.push((PAD + i * stepX).toFixed(1) + ',' + y(d[key]).toFixed(1));
+      });
+      if (current.length > 1) segments.push(current);
+
+      let lastIdx = -1;
+      for (let i = series.length - 1; i >= 0; i--) {
+        if (series[i][key] != null) { lastIdx = i; break; }
+      }
+      return {
+        segments,
+        last: lastIdx >= 0
+          ? { x: PAD + lastIdx * stepX, y: y(series[lastIdx][key]), value: series[lastIdx][key] }
+          : null
+      };
+    };
+
+    const sleep = buildPath('sleep');
+    const wellbeing = buildPath('wellbeing');
+    if (!sleep && !wellbeing) return null;
+
+    const line = (path, cls) => path && path.segments.map((seg, i) => React.createElement('polyline', {
+      key: cls + i,
+      className: 'reports-v4-wellbeing__line reports-v4-wellbeing__line--' + cls,
+      points: seg.join(' '),
+      fill: 'none'
+    }));
+
+    const dot = (path, cls, unit) => path && path.last && React.createElement(React.Fragment, { key: cls + '-last' },
+      React.createElement('circle', {
+        className: 'reports-v4-wellbeing__dot reports-v4-wellbeing__dot--' + cls,
+        cx: path.last.x, cy: path.last.y, r: 3
+      }),
+      React.createElement('text', {
+        className: 'reports-v4-wellbeing__mark reports-v4-wellbeing__mark--' + cls,
+        x: Math.min(path.last.x + 6, W - 2),
+        y: Math.max(path.last.y - 6, 10),
+        textAnchor: path.last.x > W - 40 ? 'end' : 'start'
+      }, String(Math.round(path.last.value * 10) / 10).replace('.', ',') + unit)
+    );
+
+    return React.createElement('div', { className: 'reports-v4-wellbeing' },
+      React.createElement('div', { className: 'reports-v4-wellbeing__title' }, 'Сон и самочувствие'),
+      React.createElement('svg', {
+        className: 'reports-v4-wellbeing__chart',
+        viewBox: '0 0 ' + W + ' ' + H,
+        preserveAspectRatio: 'none',
+        role: 'img',
+        'aria-label': 'Часы сна и оценка самочувствия за период'
+      },
+        line(sleep, 'sleep'),
+        line(wellbeing, 'mood'),
+        dot(sleep, 'sleep', ' ч'),
+        dot(wellbeing, 'mood', '')
+      ),
+      React.createElement('div', { className: 'reports-v4-wellbeing__legend' },
+        React.createElement('span', { className: 'reports-v4-wellbeing__key reports-v4-wellbeing__key--sleep' }, 'сон, часы'),
+        React.createElement('span', { className: 'reports-v4-wellbeing__key reports-v4-wellbeing__key--mood' }, 'самочувствие, 1–10')
+      )
+    );
+  }
+
+  function pluralDaysReports(n) {
+    const abs = Math.abs(n) % 100;
+    const last = abs % 10;
+    if (abs > 10 && abs < 20) return 'дней';
+    if (last > 1 && last < 5) return 'дня';
+    if (last === 1) return 'день';
+    return 'дней';
+  }
+
   function ReportsTabV4Bottom(props) {
     const { React, periodMeta } = props || {};
     if (!React || !periodMeta) return null;
@@ -603,23 +691,7 @@
       // Ярус недель — между «Динамикой» и «Днями»: сверху вниз период
       // дробится (итог → дисциплина → динамика → недели → дни).
       ReportsV4Weeks({ React, rows: periodMeta.weeklyRows }),
-      periodMeta.showWellbeingBlock && React.createElement('div', { className: 'reports-v4-wellbeing' },
-        React.createElement('div', { className: 'reports-v4-wellbeing__title' }, 'Сон и самочувствие'),
-        React.createElement('div', { className: 'reports-v4-wellbeing__grid' },
-          periodMeta.avgSleep != null && React.createElement('div', { className: 'reports-v4-wellbeing__item' },
-            React.createElement('span', { className: 'reports-v4-wellbeing__value' }, String(periodMeta.avgSleep).replace('.', ',')),
-            React.createElement('span', { className: 'reports-v4-wellbeing__label' }, 'часов' + (periodMeta.sleepCount < periodMeta.withData ? ' · за ' + periodMeta.sleepCount + ' дн.' : ''))
-          ),
-          periodMeta.avgMood != null && React.createElement('div', { className: 'reports-v4-wellbeing__item' },
-            React.createElement('span', { className: 'reports-v4-wellbeing__value' }, String(periodMeta.avgMood).replace('.', ',')),
-            React.createElement('span', { className: 'reports-v4-wellbeing__label' }, 'настроение' + (periodMeta.moodCount < periodMeta.withData ? ' · за ' + periodMeta.moodCount + ' дн.' : ''))
-          ),
-          periodMeta.avgWellbeing != null && React.createElement('div', { className: 'reports-v4-wellbeing__item' },
-            React.createElement('span', { className: 'reports-v4-wellbeing__value' }, String(periodMeta.avgWellbeing).replace('.', ',')),
-            React.createElement('span', { className: 'reports-v4-wellbeing__label' }, 'самочувствие' + (periodMeta.wellbeingCount < periodMeta.withData ? ' · за ' + periodMeta.wellbeingCount + ' дн.' : ''))
-          )
-        )
-      ),
+      periodMeta.showWellbeingBlock && ReportsV4Wellbeing({ React, periodMeta }),
       periodMeta.dayRows.length > 0 && React.createElement('div', { className: 'reports-v4-tier' }, 'Дни'),
       periodMeta.dayRows.length > 0 && React.createElement('div', { className: 'reports-v4-days' },
         periodMeta.dayRows.slice(0, 4).map((row) => {
@@ -643,28 +715,41 @@
           'ещё ' + (periodMeta.dayRows.length - 4) + ' ' + (periodMeta.dayRows.length - 4 === 1 ? 'день' : (periodMeta.dayRows.length - 4 < 5 ? 'дня' : 'дней'))
         )
       ),
-      // Контракт «замеры тела»: единственный призыв вкладки — про данные;
-      // стоит последним: без замеров отчёт верен, просто беднее.
-      React.createElement('div', { className: 'reports-v4-measure' },
-        React.createElement('div', { className: 'reports-v4-measure__copy' },
-          React.createElement('div', { className: 'reports-v4-measure__title' }, 'Замеры тела'),
-          React.createElement('div', { className: 'reports-v4-measure__note' },
-            periodMeta.lastMeasureDaysAgo == null
-              ? 'замеров ещё не было'
-              : periodMeta.lastMeasureDaysAgo === 0
-                ? 'последний замер сегодня'
+      // Контракт «ярус „Что с этим делать“»: единственное место в Отчётах, где
+      // есть призыв, и он про данные, а не про поведение. Советов о еде,
+      // тренировках и норме здесь нет — это территория Инсайтов; прежний блок
+      // предлагал обсудить норму с куратором и был ровно тем, что строка
+      // запрещает. Стоит последним: без замеров отчёт верен, просто беднее.
+      //
+      // Замер сделан сегодня — призывать не к чему, и ярус не рисуется вовсе,
+      // а не говорит «всё в порядке».
+      periodMeta.lastMeasureDaysAgo !== 0 && React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'reports-v4-tier' }, 'Что с этим делать'),
+        React.createElement('div', { className: 'reports-v4-measure' },
+          React.createElement('div', { className: 'reports-v4-measure__copy' },
+            React.createElement('div', { className: 'reports-v4-measure__title' }, 'Замеры тела'),
+            React.createElement('div', { className: 'reports-v4-measure__note' },
+              periodMeta.lastMeasureDaysAgo == null
+                ? 'замеров ещё не было'
                 : 'последний замер ' + periodMeta.lastMeasureDaysAgo + ' ' +
-                  (periodMeta.lastMeasureDaysAgo % 10 === 1 && periodMeta.lastMeasureDaysAgo % 100 !== 11 ? 'день'
-                    : periodMeta.lastMeasureDaysAgo % 10 >= 2 && periodMeta.lastMeasureDaysAgo % 10 <= 4 && (periodMeta.lastMeasureDaysAgo % 100 < 10 || periodMeta.lastMeasureDaysAgo % 100 >= 20) ? 'дня' : 'дней') + ' назад')
-        ),
-        React.createElement('button', {
-          type: 'button',
-          className: 'reports-v4-measure__cta',
-          onClick: () => {
-            const setTab = (HEYS.App && HEYS.App.setTab) || (HEYS.ui && HEYS.ui.switchTab);
-            if (typeof setTab === 'function') setTab('diary');
-          }
-        }, 'Заполнить')
+                  pluralDaysReports(periodMeta.lastMeasureDaysAgo) + ' назад')
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'reports-v4-measure__cta',
+            onClick: () => {
+              // Вход прямо в замеры, а не «куда-то в дневник»: призыв называет
+              // действие, значит и ведёт в него.
+              const show = HEYS.StepModal && HEYS.StepModal.show;
+              if (typeof show === 'function') {
+                show({ steps: ['measurements'], context: { dateKey: periodMeta.todayKey || undefined } });
+                return;
+              }
+              const setTab = (HEYS.App && HEYS.App.setTab) || (HEYS.ui && HEYS.ui.switchTab);
+              if (typeof setTab === 'function') setTab('diary');
+            }
+          }, 'Записать замер')
+        )
       )
     );
   }
