@@ -1,0 +1,312 @@
+/* 734-ui-v4-curator-panel.css — пятая вкладка кабинета куратора.
+ *
+ * Канон — curator-cabinet.v4.dc.html. Панель отвечает на вопрос «кем заняться
+ * сегодня», поэтому тревожное и спокойное занимают в ней разное место: группа
+ * «всё ровно» свёрнута в одну строку, а не идёт списком наравне с остальными.
+ */
+
+.cur-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+.cur-panel__stub,
+.cur-panel__empty {
+  margin: 16px;
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: var(--v4-c1, #f7efe2);
+  text-align: center;
+}
+
+/* «Работать не с кем» — нормальный день, а не пустой экран: заливка «идёт
+   хорошо» говорит это раньше слов. */
+.cur-panel__empty--ok {
+  background: var(--v4-ok-bg, #eaefe0);
+}
+
+.cur-panel__empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+  margin-bottom: 6px;
+}
+
+.cur-panel__empty-note {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+/* Чипы фильтра меняют состав, но не порядок: выбран один — группы не
+   показываются, строки идут сплошняком. */
+.cur-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cur-chip {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cur-chip.is-on {
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #fff5ef);
+}
+
+/* «Копят данные» — рабочее состояние первых трёх недель, а не тревога. */
+.cur-chip.is-muted {
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+}
+
+.cur-chip.is-muted.is-on {
+  color: var(--v4-btn-on-act, #fff5ef);
+}
+
+.cur-group,
+.cur-panel__flat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cur-group__title {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  margin-bottom: 2px;
+}
+
+.cur-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 20px;
+  background: var(--v4-c1, #f7efe2);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cur-row__avatar {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.cur-row__copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cur-row__name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cur-row__state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
+}
+
+/* Акцентом только там, где нужно решение: иначе акцент перестаёт значить
+   «сюда смотреть». */
+.cur-row__state.is-act {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.cur-row__dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
+}
+
+.cur-row__dot--awaits { background: var(--v4-act, #c67139); }
+.cur-row__dot--mismatch { background: var(--v4-warn-1, #d99a63); }
+.cur-row__dot--silent { background: var(--v4-bad-text, #b4442a); }
+.cur-row__dot--decided_today { background: var(--v4-good, #7a8a5e); }
+
+.cur-row__age {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Самая частая группа — одна строка со счётом: тревожное и спокойное не
+   должны занимать одинаковое место. */
+.cur-fine__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 20px;
+  background: var(--v4-ok-bg, #eaefe0);
+  color: var(--v4-ok-text, #5c6a45);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cur-fine__more {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cur-fine__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+/* Лист поверх панели: панель под ним остаётся на месте — куратор смотрит
+   клиентов подряд, и уход на отдельный экран сбивает позицию. */
+.cur-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--v4-z-curator-sheet, 10001);
+  background: var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+  display: flex;
+  align-items: flex-end;
+}
+
+.cur-sheet {
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  border-radius: 24px 24px 0 0;
+  background: var(--v4-bg, #fffaf1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cur-sheet__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cur-sheet__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cur-sheet__meta {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.cur-sheet__facts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--v4-c1, #f7efe2);
+}
+
+.cur-sheet__fact {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cur-sheet__fact-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.cur-sheet__fact-value {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Только куратору: строка про то, где сидит расхождение, клиенту не
+   показывается никогда — она про выбор лечения, а не про него. */
+.cur-sheet__where {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.cur-sheet__cta,
+.cur-sheet__btn {
+  min-height: 48px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cur-sheet__cta {
+  border: none;
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #fff5ef);
+}
+
+.cur-sheet__row {
+  display: flex;
+  gap: 8px;
+}
+
+.cur-sheet__btn {
+  flex: 1;
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  background: var(--v4-bg, #fffaf1);
+  color: var(--v4-ink, #201e1d);
+}
+
+.cur-sheet__btn--wide {
+  width: 100%;
+}
