@@ -503,6 +503,10 @@ describe('поправка на факт · чей это тариф', () => {
   const cases = [
     ['куратора нет — свой тариф', { hasCurator: false }, 'self'],
     ['куратор есть', { hasCurator: true }, 'pro'],
+    // Назначенный куратор приезжает в профиль сам — по нему тариф виден без
+    // отдельного флага.
+    ['назначен куратор по id', { curatorId: 'cur-1' }, 'pro'],
+    ['тот же id в змеином регистре', { curator_id: 'cur-1' }, 'pro'],
     ['куратор есть, подписка кончилась — право решения не переносится',
       { hasCurator: true, subscription_status: 'canceled' }, 'pro'],
     // Прежняя редакция считала по плану и на боевых данных давала Self всем:
@@ -523,6 +527,17 @@ describe('поправка на факт · чей это тариф', () => {
     // распоряжается куратор. Ошибиться в сторону Pro — задержать решение.
     expect(NC.resolveTariff(undefined)).toBe('pro');
     expect(NC.resolveTariff({ hasCurator: undefined })).toBe('pro');
+  });
+
+  it('отсутствие куратора записывается фактом, а не молчанием', () => {
+    // Без этого «куратора нет» и «ещё не спрашивали» выглядят одинаково.
+    const api = fs.readFileSync(
+      path.resolve(__dirname, '../heys_yandex_api_v1.js'), 'utf8'
+    );
+    expect(api).toContain('function clearAssignedCuratorInProfile');
+    expect(api).toContain('hasCurator: false');
+    // Чистим только на настоящей записи клиента, а не на ошибке ответа.
+    expect(api).toContain('looksLikeClient');
   });
 
   it('явный аргумент важнее — им пользуется кабинет куратора', () => {

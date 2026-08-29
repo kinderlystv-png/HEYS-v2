@@ -3342,9 +3342,32 @@
     return { curatorId, curatorName };
   }
 
+  function clearAssignedCuratorInProfile() {
+    const lsGet = HEYS.utils?.lsGet;
+    const lsSet = HEYS.utils?.lsSet;
+    if (typeof lsGet !== 'function' || typeof lsSet !== 'function') return false;
+    const profile = lsGet('heys_profile', {}) || {};
+    if (!profile || typeof profile !== 'object' || Array.isArray(profile)) return false;
+    if (profile.hasCurator === false && !profile.curatorId && !profile.curator_id) return false;
+    const next = { ...profile, hasCurator: false };
+    delete next.curatorId;
+    delete next.curator_id;
+    delete next.curatorName;
+    delete next.curatorDisplayName;
+    lsSet('heys_profile', next);
+    return true;
+  }
+
   function applyAssignedCuratorToProfile(meta) {
     const normalized = normalizeAssignedCuratorMeta(meta);
-    if (!normalized) return false;
+    // Отсутствие куратора — это факт, а не отсутствие ответа, но только когда
+    // сервер прислал настоящую запись клиента. Без этой ветки «куратора нет» и
+    // «ещё не спрашивали» выглядят одинаково, а от их различия зависит, кому
+    // принадлежит решение о норме: поправка на факт читает hasCurator.
+    if (!normalized) {
+      const looksLikeClient = !!(meta && (meta.client_id || meta.id || meta?.data?.id));
+      return looksLikeClient ? clearAssignedCuratorInProfile() : false;
+    }
     const lsGet = HEYS.utils?.lsGet;
     const lsSet = HEYS.utils?.lsSet;
     if (typeof lsGet !== 'function' || typeof lsSet !== 'function') return false;

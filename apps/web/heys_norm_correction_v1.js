@@ -584,7 +584,13 @@
   function resolveTariff(profile) {
     // План в решении не участвует вовсе: он говорит об оплате, а не о том,
     // кто распоряжается нормой.
-    return (profile && profile.hasCurator === false) ? 'self' : 'pro';
+    const prof = profile || {};
+    if (prof.hasCurator === false) return 'self';
+    // Назначенный куратор приезжает в профиль из get_client_data_by_session
+    // (applyAssignedCuratorToProfile): положительный признак сильнее
+    // умолчания.
+    if (prof.curatorId || prof.curator_id || prof.hasCurator === true) return 'pro';
+    return 'pro';
   }
 
   /**
@@ -796,6 +802,20 @@
   // важнее числа — решение владельца, 30 августа.
   const PANEL_STATES = ['awaits', 'decided_today', 'silent', 'mismatch', 'collecting', 'fine'];
 
+  /**
+   * Дни с последнего понедельника — возраст пересчёта поправки.
+   *
+   * Пилюля справа в строке всегда значит длительность состояния и никогда
+   * важность. У «ждут решения» это дни с последнего пересчёта: предложение не
+   * хранится, поэтому «дни с первого расчёта» мерить нечем, и мы не пытаемся —
+   * иначе пришлось бы хранить предложение и спорить с его собственной строкой.
+   */
+  function daysSinceMonday(now) {
+    const base = now instanceof Date ? now : new Date();
+    // getDay(): воскресенье 0, понедельник 1. Понедельник даёт 0 дней.
+    return (base.getDay() + 6) % 7;
+  }
+
   // «Решено сегодня» живёт до конца дня: убрать строку сразу — оставить
   // сомнение, нажалось ли; держать до понедельника — оставить строку, по
   // которой делать нечего.
@@ -970,9 +990,16 @@
         alsoNote = 'и расчёт разошёлся';
       }
 
+      // Длительность состояния — своя у каждой группы, но смысл один.
+      const ageDays = state === 'silent' ? silentDays
+        : state === 'mismatch' ? (result.windowDays || entry.days.length)
+          : state === 'awaits' ? daysSinceMonday(base)
+            : null;
+
       out.push({
         clientId: entry.clientId,
         state,
+        ageDays,
         alsoNote,
         silentDays,
         isSilent,
@@ -1012,6 +1039,7 @@
     REFUSAL_STREAK_LIMIT,
     SILENT_DAYS_ALERT,
     PANEL_STATES,
+    daysSinceMonday,
     buildPanelRows,
     dayFromWindowRow,
     profileFromContextRow,

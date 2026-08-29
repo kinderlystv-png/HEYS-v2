@@ -228,6 +228,33 @@ describe('панель куратора · сборка строк', () => {
     expect(yesterday.state).not.toBe('decided_today');
   });
 
+  it('пилюля меряет длительность состояния, а не важность', () => {
+    // У молчания — дни без записей; у расхождения — длина окна; у «ждут
+    // решения» — дни с последнего пересчёта, то есть с понедельника.
+    const monday = new Date('2026-08-31T10:00:00');
+    const thursday = new Date('2026-09-03T10:00:00');
+    expect(NC.daysSinceMonday(monday)).toBe(0);
+    expect(NC.daysSinceMonday(thursday)).toBe(3);
+    // Воскресенье — шестой день недели, а не нулевой.
+    expect(NC.daysSinceMonday(new Date('2026-09-06T10:00:00'))).toBe(6);
+
+    const silent = NC.buildPanelRows({
+      windowRows: days21((i) => (i >= 17 ? { has_day: false } : {})),
+      contextRows: [contextRow()]
+    })[0];
+    expect(silent.state).toBe('silent');
+    expect(silent.ageDays).toBe(silent.silentDays);
+
+    const awaits = NC.buildPanelRows({
+      now: thursday,
+      windowRows: days21((i) => ({ weight_morning: 90 - i * 0.0127 })),
+      contextRows: [contextRow()]
+    })[0];
+    expect(awaits.state).toBe('awaits');
+    // Не «дни с первого расчёта»: предложение не хранится, мерить нечем.
+    expect(awaits.ageDays).toBe(3);
+  });
+
   it('окно ещё не набралось — это «копят данные», а не ошибка', () => {
     const rows = NC.buildPanelRows({
       windowRows: days21((i) => (i > 5 ? { has_day: false } : {})),
