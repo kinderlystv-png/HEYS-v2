@@ -414,6 +414,11 @@
 
         const confidence = hydrationData.length >= 7 ? 0.8 : 0.5;
 
+        // Контракт reports-insights.v4, «число опоры»: у счётных выводов
+        // форма «N из M дней». Гидратация счётная — считаем дни, где норма
+        // закрыта (achievement ≥ 100 %), из дней с данными по воде.
+        const matchedDays = hydrationData.filter((d) => d.achievement >= 100).length;
+
         return {
             pattern: PATTERNS.HYDRATION,
             available: true,
@@ -422,6 +427,8 @@
             achievement: Math.round(avgAchievement),
             trend,
             dataPoints: hydrationData.length,
+            matchedDays,
+            totalDays: hydrationData.length,
             score,
             confidence,
             insight

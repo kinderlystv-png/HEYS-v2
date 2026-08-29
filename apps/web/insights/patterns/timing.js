@@ -180,11 +180,19 @@
         const latePct = totalMeals > 0 ? (lateMeals.length / totalMeals) * 100 : 0;
         const score = Math.max(0, 100 - latePct * 2);
 
+        // Контракт «число опоры»: счётным выводам — «N из M дней». Считаем
+        // именно дни с поздним приёмом (не сами приёмы): человек читает
+        // строку как «в стольких днях из стольких это было».
+        const lateDates = new Set(lateMeals.map((m) => m.date));
+        const daysWithMeals = days.filter((d) => (d.meals || []).some((m) => m && m.time)).length;
+
         return {
             pattern: PATTERNS.LATE_EATING,
             available: true,
             lateCount: lateMeals.length,
             totalMeals,
+            matchedDays: lateDates.size,
+            totalDays: daysWithMeals,
             latePct: Math.round(latePct),
             score: Math.round(score),
             confidence: days.length >= CONFIG.MIN_DAYS_FOR_FULL_ANALYSIS ? 0.8 : 0.5,

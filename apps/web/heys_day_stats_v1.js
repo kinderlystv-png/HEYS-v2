@@ -61,16 +61,25 @@
       const getDayData = HEYS.dayUtils && HEYS.dayUtils.getDayData;
       if (firstDate && typeof getDayData === 'function') {
         const productsMap = HEYS.dayUtils.getProductsMap ? HEYS.dayUtils.getProductsMap() : new Map();
+        const profile = (typeof lsGet === 'function' && lsGet('heys_profile', {})) || {};
+        const resolvePlan = HEYS.DisciplineMatrix && HEYS.DisciplineMatrix.resolveDayPlan;
         const first = new Date(firstDate + 'T12:00:00');
         for (let i = 1; i <= chartPeriod; i++) {
           const d = new Date(first);
           d.setDate(d.getDate() - i);
           const ds = d.toISOString().slice(0, 10);
           const info = getDayData(ds, productsMap, {}) || null;
+          const dayRow = readDay(ds);
+          // План прошлого дня: сохранённая норма, иначе считаем движком —
+          // иначе день выпадал из знаменателя Δ и периоды сравнивались по
+          // разному числу дней.
+          const target = typeof resolvePlan === 'function'
+            ? resolvePlan(dayRow, info ? info.savedDisplayOptimum : 0, profile)
+            : (info ? +info.savedDisplayOptimum || 0 : 0);
           prev.push({
-            day: readDay(ds),
+            day: dayRow,
             kcal: info ? +info.kcal || 0 : 0,
-            target: info ? +info.savedDisplayOptimum || 0 : 0
+            target
           });
         }
       }
@@ -122,6 +131,8 @@
       } catch (e) { return new Map(); }
     })();
     const getDayData = HEYS.dayUtils && HEYS.dayUtils.getDayData;
+    const resolvePlan = HEYS.DisciplineMatrix && HEYS.DisciplineMatrix.resolveDayPlan;
+    const weeklyProfile = lsGet('heys_profile', {}) || {};
 
     const rows = [];
     for (let w = 1; w <= weeks; w++) {
@@ -148,7 +159,11 @@
         if (typeof getDayData === 'function') {
           const info = getDayData(ds, productsMap, {});
           const kcal = info ? +info.kcal || 0 : 0;
-          const target = info ? +info.savedDisplayOptimum || 0 : 0;
+          // План: сохранённая норма дня, иначе считаем движком — иначе
+          // неделя со старыми днями сравнивалась бы по меньшему числу дней.
+          const target = typeof resolvePlan === 'function'
+            ? resolvePlan(row, info ? info.savedDisplayOptimum : 0, weeklyProfile)
+            : (info ? +info.savedDisplayOptimum || 0 : 0);
           if (kcal > 0 && target > 0) {
             planSum += kcal - target;
             planDays++;

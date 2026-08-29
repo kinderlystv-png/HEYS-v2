@@ -69,6 +69,21 @@
       || ((day.trainings || []).length > 0);
   }
 
+  // План дня для сравнения с фактом. Сохранённая норма (savedDisplayOptimum)
+  // есть не у всех прошлых дней — для остальных считаем ту же норму движком
+  // (HEYS.dayNorm.resolve), иначе день молча выпадал из знаменателя Δ и
+  // сравнение периодов шло по разному числу дней.
+  function resolveDayPlan(dayRow, savedOptimum, profile) {
+    const saved = +savedOptimum || 0;
+    if (saved > 0) return saved;
+    try {
+      const resolve = HEYS.dayNorm && HEYS.dayNorm.resolve;
+      if (typeof resolve !== 'function' || !dayRow) return 0;
+      const r = resolve(dayRow, profile || {}, {});
+      return r && r.kcal > 0 ? r.kcal : 0;
+    } catch (e) { return 0; }
+  }
+
   // Счётчик истории: сколько дней из последних `depth` реально считаются.
   // Один на обе вкладки — шапка Инсайтов, разблокировка окна «30» и порог
   // заглушки Отчётов должны говорить одно и то же число.
@@ -265,6 +280,7 @@
     // Публичное API порога — обе вкладки считают дни одинаково.
     hasAnyData,
     countHistoryDays,
+    resolveDayPlan,
     _test: {
       computeWindow,
       fieldsFilled,

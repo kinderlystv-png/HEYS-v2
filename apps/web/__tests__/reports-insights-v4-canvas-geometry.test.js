@@ -171,15 +171,28 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
   // docs/implementation/REPORTS_INSIGHTS_V4_IMPLEMENTATION_2026-08-29.md.
   // Снятие любого пункта = правка кода + правка этого списка в одном заходе.
   it('отступления названы и не разрастаются молча', () => {
-    // 2026-08-29, третий заход: сняты вид планера (variant v4), время приёма
-    // в «Ритме» (окно из HEYS.MealRecCard._lastPlan) и «Как посчитано»
-    // (раскрывашка планера). Остались три расчётных ограничения.
+    // 2026-08-29, четвёртый заход: Δ питания снята (план прошлых дней
+    // считается движком через HEYS.dayNorm), «лента дней» снята как
+    // ошибочно записанная — спарклайн и так начинает с первого дня с едой
+    // и периодом не ограничен (heys_day_sparkline_data_v1.js).
     const DEVIATIONS = [
-      'Δ питания прошлого окна — только дни с savedDisplayOptimum',
-      'заглушка Отчётов — лента дней периода, не «с первого дня»',
-      'опора счётных паттернов — «N дней наблюдений» без matched/total'
+      'опора «N из M» — только у анализаторов, где счёт по дням есть внутри'
     ];
-    expect(DEVIATIONS.length).toBe(3);
+    expect(DEVIATIONS.length).toBe(1);
+  });
+
+  it('четвёртый заход: план прошлых дней и «N из M» у счётных', () => {
+    const matrix = fs.readFileSync(
+      path.resolve(__dirname, '../heys_discipline_matrix_v1.js'), 'utf8');
+    expect(matrix).toContain('function resolveDayPlan');
+    expect(matrix).toContain('HEYS.dayNorm && HEYS.dayNorm.resolve');
+    const stats = fs.readFileSync(
+      path.resolve(__dirname, '../heys_day_stats_v1.js'), 'utf8');
+    // План прошлого дня подставляется и в Δ матрицы, и в колонку недель
+    expect(stats.match(/resolvePlan\(/g).length).toBeGreaterThanOrEqual(2);
+    const timing = fs.readFileSync(
+      path.resolve(__dirname, '../insights/patterns/timing.js'), 'utf8');
+    expect(timing).toContain('matchedDays: lateDates.size');
   });
 
   it('третий заход: v4-планер, время в «Ритме», «Как посчитано»', () => {
