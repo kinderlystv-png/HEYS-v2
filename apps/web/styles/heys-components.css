@@ -1246,6 +1246,134 @@ body.tour-active .ios-pwa-banner {
   gap: 16px;
 }
 
+/* Карточка сверки нормы — контракт «вид · карточки сверки» канваса
+   norm-correction.v4.dc.html. Стоит выше фактов недели: она меняет число, на
+   которое человек будет есть, а факты только описывают прошедшее. */
+.weekly-wrap-correction {
+  background: var(--v4-c1, #f7efe2);
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Рост нормы и подтверждённая перестройка — единственные праздничные
+   состояния набора: та же карточка на заливке «идёт хорошо». */
+.weekly-wrap-correction--good {
+  background: var(--v4-ok-bg, #eaefe0);
+}
+
+.weekly-wrap-correction__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+}
+
+/* Источник довода стоит на самой карточке: без него экран перестройки
+   превращается в оправдание застоя. */
+.weekly-wrap-correction__evidence {
+  align-self: flex-start;
+  font-size: 9px;
+  font-family: ui-monospace, monospace;
+  background: var(--v4-surface, #f7efe2);
+  color: var(--v4-act, #c67139);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.weekly-wrap-correction__body {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.weekly-wrap-correction__hero {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.weekly-wrap-correction__hero-value {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+.weekly-wrap-correction__hero-caption {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.weekly-wrap-correction__hero-caption.is-up {
+  color: var(--v4-good, #7a8a5e);
+}
+
+.weekly-wrap-correction__hero-caption.is-down {
+  color: var(--v4-bad-text, #b4442a);
+}
+
+/* Пока куратор не решил, есть нужно на действующее число — предложение идёт
+   вторым весом и с пометкой «пока не применено». */
+.weekly-wrap-correction__proposal {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.weekly-wrap-correction__safeguards {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.weekly-wrap-correction__safeguard {
+  font-size: 11px;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.weekly-wrap-correction__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.weekly-wrap-correction__btn {
+  flex: 1 1 auto;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  background: var(--v4-float, #fffaf1);
+  color: var(--v4-ink, #201e1d);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.weekly-wrap-correction__btn--primary {
+  background: var(--v4-act, #c67139);
+  border-color: var(--v4-act, #c67139);
+  color: var(--v4-float, #fffaf1);
+}
+
+.weekly-wrap-correction__btn:focus-visible {
+  outline: 2px solid var(--v4-act, #c67139);
+  outline-offset: 2px;
+}
+
+.weekly-wrap-correction__footnote {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
 .weekly-wrap-step__empty {
   background: var(--v4-hero, #f8fafc);
   border-radius: 12px;

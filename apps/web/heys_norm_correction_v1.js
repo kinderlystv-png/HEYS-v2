@@ -315,13 +315,45 @@
    * появляется, только если куратор уже применил. Иначе экран сказал бы «норму
    * снизили», а в приложении норма прежняя. Факты недели показываются всегда.
    */
-  function buildWeeklySyncCard({ result, tariff, applied, refusalStreak, weeksUnchanged, recomposition }) {
+  function pluralWeeksRu(n) {
+    const abs = Math.abs(n) % 100;
+    const last = abs % 10;
+    if (abs > 10 && abs < 20) return n + ' недель';
+    if (last > 1 && last < 5) return n + ' недели';
+    if (last === 1) return n + ' неделю';
+    return n + ' недель';
+  }
+
+  function formatKcal(value) {
+    // Тысячи разделяем неразрывным пробелом: «2 112» не должно переноситься.
+    return String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
+  }
+
+  function buildWeeklySyncCard({
+    result, tariff, applied, refusalStreak, weeksUnchanged, recomposition,
+    expenditure, deficitPct, basalMetabolism
+  }) {
     const res = result || {};
     const isSelf = tariff === 'self';
     const streak = Number(refusalStreak) || 0;
+    const exp = Number(expenditure) || res.formulaPerDay || 0;
+
+    // Оба числа считаем здесь одним способом: рисующему нечего округлять
+    // самому, и клиент с куратором видят одно и то же.
+    const before = applyFactor({ expenditure: exp, factor: res.currentFactor, deficitPct, basalMetabolism });
+    const after = res.status === 'ready'
+      ? applyFactor({ expenditure: exp, factor: res.nextFactor, deficitPct, basalMetabolism })
+      : before;
+    const norms = {
+      current: before.norm,
+      next: after.norm,
+      deltaKcal: after.norm - before.norm,
+      hitFloor: after.hitFloor
+    };
 
     const card = {
       tariff: isSelf ? 'self' : 'pro',
+      norms,
       // Предохранители есть в обоих тарифах, разный только слой: там, где
       // человека нет, ограничители перестают быть внутренними.
       safeguardsLayer: isSelf ? 'first' : 'second',
@@ -337,28 +369,68 @@
     if (recomposition && recomposition.confirmed) {
       return Object.assign(card, {
         frame: 'recomposition',
-        heroNorm: res.currentNormKcal ?? null,
         evidence: recomposition.source,
         actions: ['ok'],
-        decidedBy: 'nobody'
+        decidedBy: 'nobody',
+        copy: {
+          title: 'Вес стоит, а тело меняется',
+          body: (recomposition.dropCm > 0
+            ? 'Талия ушла на ' + String(recomposition.dropCm).replace('.', ',')
+              + ' см за ' + pluralWeeksRu(recomposition.weeks) + ' при том же весе. '
+            : '')
+            + 'Так выглядит смена состава — норму не трогаем.',
+          footnote: 'Следующий замер — через неделю: подтвердим, что направление держится.',
+          actionLabels: { ok: 'Хорошо' }
+        }
       });
     }
     if (recomposition && recomposition.checkFailed) {
-      return Object.assign(card, { frame: 'recomposition_unverified', actions: ['ok'], decidedBy: 'nobody' });
+      return Object.assign(card, {
+        frame: 'recomposition_unverified',
+        actions: ['ok'],
+        decidedBy: 'nobody',
+        copy: {
+          title: 'Отличить перестройку было нечем',
+          body: 'Замера не было, силовых в эти недели тоже. Две недели ожидания истекли — поправку применяем по весу.',
+          footnote: 'Поправка — про расчёт, а не про старание. Замер в любой момент вернёт ветку перестройки.',
+          actionLabels: { ok: 'Понятно' }
+        }
+      });
     }
 
     if (res.status !== 'ready' || res.direction === 'hold') {
-      return Object.assign(card, { frame: 'matched', actions: ['ok'], decidedBy: 'nobody' });
+      // Самый частый исход не должен занимать больше двух карточек.
+      return Object.assign(card, {
+        frame: 'matched',
+        actions: ['ok'],
+        decidedBy: 'nobody',
+        copy: {
+          title: 'Шли как договаривались',
+          body: 'Вес двигался так, как мы и рассчитывали. Норма остаётся прежней.',
+          heroCaption: 'без изменений',
+          actionLabels: { ok: 'Хорошо' }
+        }
+      });
     }
 
     // Рост система применяет сама и сообщает в тот же день — решение её,
     // уведомление человеку. Отменить можно одной кнопкой.
     if (res.direction === 'up') {
+      // Единственное праздничное состояние — и единственное место, где о
+      // дневнике говорят похвалой, а не упрёком.
       return Object.assign(card, {
         frame: 'raised',
         decidedBy: 'system',
         needsConsent: false,
-        actions: ['revert']
+        actions: ['revert'],
+        celebratory: true,
+        copy: {
+          title: 'Можно есть больше',
+          body: 'Вы ели больше плана, а вес всё равно шёл вниз. Значит, тратите вы больше, чем мы считали, — норму подняли под ваш результат.',
+          heroCaption: '+' + formatKcal(Math.abs(norms.deltaKcal)) + '\u00a0ккал',
+          footnote: 'Такое бывает, когда дневник ведут честно: чем точнее записи, тем точнее норма.',
+          actionLabels: { revert: 'Вернуть прежнюю норму' }
+        }
       });
     }
 
@@ -367,7 +439,19 @@
     // хозяев у одного числа быть не должно.
     if (!isSelf) {
       return applied
-        ? Object.assign(card, { frame: 'lowered', decidedBy: 'curator', actions: ['ok', 'ask_curator'] })
+        ? Object.assign(card, {
+            frame: 'lowered',
+            decidedBy: 'curator',
+            actions: ['ok', 'ask_curator'],
+            copy: {
+              title: 'Норму подстроили под факт',
+              // Причина — система, никогда человек.
+              body: 'Вес и обхваты держатся на месте. Значит, наш расчёт расхода для вас завышен — мы поправили его, а не вас.',
+              heroCaption: '\u2212' + formatKcal(Math.abs(norms.deltaKcal)) + '\u00a0ккал',
+              footnote: 'Решение куратора остаётся в силе — отменить его здесь нельзя, можно спросить, почему так.',
+              actionLabels: { ok: 'Понятно', ask_curator: 'Написать куратору' }
+            }
+          })
         : Object.assign(card, {
             frame: 'pending_curator',
             decidedBy: 'curator',
@@ -375,7 +459,15 @@
             // Герой — действующая норма, предложение вторым весом: иначе человек
             // начнёт есть на число, которое ещё не применено.
             hero: 'currentNorm',
-            actions: ['ask_curator']
+            actions: ['ask_curator'],
+            copy: {
+              title: 'Ваша норма сегодня',
+              body: 'Ешьте на это число. Поправку смотрит куратор — до его решения норма не меняется.',
+              heroCaption: 'без изменений',
+              proposalNote: formatKcal(norms.next) + ' \u00b7 пока не применено',
+              footnote: 'Что решит куратор — придёт в недельной сверке: там будет причина и возможность спросить, если она непонятна.',
+              actionLabels: { ask_curator: 'Спросить куратора' }
+            }
           });
     }
 
@@ -388,7 +480,17 @@
         mismatchPct: Math.abs(res.mismatchPct || 0),
         // Кнопки необязательные: плохо не то, что человек отказывается, а то,
         // что он не знает о расхождении.
-        actions: ['apply', 'measure_waist', 'mute_month']
+        actions: ['apply', 'measure_waist', 'mute_month'],
+        copy: {
+          title: 'Норма не менялась ' + pluralWeeksRu(Number(weeksUnchanged) || 0),
+          body: 'Вы трижды оставили прежнее число — это ваше право, и я его сохраняю. Но расчёт всё это время расходится с фактом, и вес стоит.',
+          footnote: 'Ни одна из кнопок не обязательна. Плохо не то, что вы отказываетесь, — плохо, если вы не знаете, что расчёт разошёлся.',
+          actionLabels: {
+            apply: 'Применить поправку',
+            measure_waist: 'Замерить талию',
+            mute_month: 'Оставить как есть'
+          }
+        }
       });
     }
 
@@ -396,13 +498,175 @@
       frame: 'lowered_needs_consent',
       decidedBy: 'client',
       needsConsent: true,
-      actions: ['apply_tomorrow', 'keep_current']
+      actions: ['apply_tomorrow', 'keep_current'],
+      copy: {
+        title: 'Расчёт разошёлся с фактом',
+        body: 'По вашим записям и весам расход выходит ниже, чем считает формула. Снижение нормы — только с вашего согласия.',
+        heroCaption: '\u2212' + formatKcal(Math.abs(norms.deltaKcal)) + '\u00a0ккал',
+        footnote: 'Без ответа норма не меняется. Рост нормы — наоборот: применяем сами и сразу сообщаем, отменить можно в один тап.',
+        actionLabels: { apply_tomorrow: 'Применить с завтра', keep_current: 'Оставить прежнюю' }
+      }
     });
+  }
+
+  const MONTHS_RU = [
+    'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+  ];
+
+  /**
+   * Прямой довод перестройки: вес стоит, а талия ушла.
+   *
+   * Довод обязан быть подтверждённым замером, и источник обязан ехать на
+   * карточку — без него экран превращается в убедительное оправдание застоя,
+   * то есть в машину опаснее, чем отсутствие поправки вовсе.
+   *
+   * Косвенный довод (замеров нет, но растут рабочие веса) здесь не считается:
+   * метрики роста рабочих весов в проекте пока нет, и заявлять «две недели
+   * заморозки истекли», не заводя саму заморозку, было бы неправдой. Пока
+   * такого довода нет, поправка идёт по весу — это и есть третья ступень.
+   */
+  function detectRecomposition(rawDays, profile) {
+    const analyze = HEYS.InsightsPI?.patternModules?.analyzeHypertrophy;
+    if (!analyze || !rawDays || !rawDays.length) return null;
+
+    let pattern;
+    try {
+      pattern = analyze(rawDays, profile);
+    } catch (e) {
+      return null;
+    }
+    if (!pattern || !pattern.available || pattern.compositionQuality !== 'recomposition') return null;
+
+    // Дата последнего замера талии в окне — она же источник довода на карточке.
+    let evidence = null;
+    for (let i = rawDays.length - 1; i >= 0; i--) {
+      if (rawDays[i]?.measurements?.waist) { evidence = rawDays[i].date; break; }
+    }
+    if (!evidence) return null;
+
+    // Конкретика важнее общей фразы: «талия ушла на 2 см» — это довод, а
+    // «тело меняется» — утешение.
+    const d = new Date(evidence);
+    return {
+      confirmed: true,
+      dropCm: Math.round(Math.abs(pattern.waistTrend || 0) * rawDays.length * 10) / 10,
+      weeks: Math.max(1, Math.round(rawDays.length / 7)),
+      source: 'по замеру от ' + d.getDate() + '\u00a0' + MONTHS_RU[d.getMonth()]
+    };
+  }
+
+  /**
+   * Собрать окно и посчитать карточку сверки от того, что лежит в хранилище.
+   *
+   * Поверхность не должна собирать окно сама: тогда понедельничная шторка,
+   * кабинет куратора и попап цели разошлись бы в границах окна и округлении.
+   * Здесь одна сборка на всех — сюда же приходят тариф и история решений.
+   *
+   * Окно кончается вчерашним днём: сегодняшний ещё пишется, и его неполнота
+   * тянула бы средний съеденный вниз каждую неделю одинаково.
+   */
+  function gather({ lsGet, lsSet, profile, pIndex, now, tariff }) {
+    if (!lsGet) return null;
+
+    const prof = profile || lsGet('heys_profile', {});
+    const base = now instanceof Date ? new Date(now) : new Date();
+    const windowDays = WINDOW_WORKING_DAYS;
+
+    const days = [];
+    const rawDays = [];
+    let expenditureSum = 0;
+    let expenditureDays = 0;
+    let bmr = 0;
+    let deficitPct = 0;
+
+    for (let i = windowDays; i >= 1; i--) {
+      const d = new Date(base);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const day = lsGet('heys_dayv2_' + dateStr, null);
+      if (!day) continue;
+
+      const totals = HEYS.dayCalculations?.calculateDayTotals
+        ? HEYS.dayCalculations.calculateDayTotals(day, pIndex)
+        : (day.dayTot || null);
+      const hasMeals = Array.isArray(day.meals) && day.meals.some((m) => (m.items || []).length > 0);
+
+      days.push({
+        dateStr,
+        kcal: totals ? totals.kcal : 0,
+        isLogged: hasMeals,
+        isIncomplete: !!day.isIncomplete
+      });
+      rawDays.push(Object.assign({}, day, { date: dateStr }));
+
+      // Формульный расход берём тем же движком, что и норма дня, и до
+      // поправки: иначе поправка считалась бы от уже поправленного числа и
+      // сходилась бы к единице сама на себе.
+      const tdee = HEYS.TDEE?.calculate
+        ? HEYS.TDEE.calculate(day, prof, { lsGet, pIndex })
+        : null;
+      if (tdee && tdee.baseExpenditure > 0) {
+        expenditureSum += tdee.baseExpenditure;
+        expenditureDays++;
+        bmr = tdee.bmr || bmr;
+        deficitPct = Number.isFinite(tdee.deficitPct) ? tdee.deficitPct : deficitPct;
+      }
+    }
+
+    const formulaPerDay = expenditureDays ? expenditureSum / expenditureDays : 0;
+    const trend = HEYS.Widgets?.WeightDynamicsV4?.trendForWindow
+      ? HEYS.Widgets.WeightDynamicsV4.trendForWindow({ days: windowDays })
+      : {};
+
+    const historyDays = HEYS.DisciplineMatrix?.countHistoryDays
+      ? HEYS.DisciplineMatrix.countHistoryDays(lsGet)
+      : days.length;
+
+    const result = compute({
+      days,
+      formulaPerDay,
+      trend,
+      currentFactor: Number.isFinite(prof.normCorrectionFactor) ? prof.normCorrectionFactor : 1,
+      historyDays
+    });
+
+    // Сколько раз подряд человек оставил прежнее число и сколько недель норма
+    // из-за этого стоит — читаем из истории решений, а не заводим счётчик:
+    // счётчик разъехался бы с тем, что видно в кураторской карточке.
+    const weeks = readHistory(lsGet);
+    let refusalStreak = 0;
+    for (const w of weeks) {
+      if (w && w.what === 'declined') refusalStreak++;
+      else break;
+    }
+    let weeksUnchanged = 0;
+    for (const w of weeks) {
+      if (w && w.what !== 'applied') weeksUnchanged++;
+      else break;
+    }
+
+    const card = buildWeeklySyncCard({
+      result,
+      recomposition: detectRecomposition(rawDays, prof),
+      tariff: tariff || prof.normCorrectionTariff || 'self',
+      applied: !!prof.normCorrectionAppliedAt,
+      refusalStreak,
+      weeksUnchanged,
+      expenditure: formulaPerDay,
+      deficitPct,
+      basalMetabolism: bmr
+    });
+
+    return { result, card, weeks, lsSet };
   }
 
   HEYS.NormCorrection = {
     REFUSAL_STREAK_LIMIT,
     buildWeeklySyncCard,
+    gather,
+    detectRecomposition,
+    formatKcal,
     HISTORY_KEY,
     HISTORY_MAX,
     readHistory,

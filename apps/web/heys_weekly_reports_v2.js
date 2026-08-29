@@ -459,6 +459,79 @@
         );
     }
 
+    /**
+     * Карточка сверки нормы в понедельничной шторке.
+     *
+     * Кадр, числа и тексты приходят готовыми из HEYS.NormCorrection: шторка
+     * ничего не решает и ничего не округляет. Здесь только вёрстка и запись
+     * выбора человека — иначе кабинет куратора и эта шторка разошлись бы в
+     * словах об одном и том же расхождении.
+     *
+     * Снижение не уезжает во второй слой: это существенное изменение
+     * рекомендации, и оно всегда с причиной.
+     */
+    function NormCorrectionCard({ card, onDecide }) {
+        const h = global.React.createElement;
+        if (!card || !card.copy) return null;
+
+        const copy = card.copy;
+        const showsNumber = card.frame !== 'recomposition' && card.frame !== 'recomposition_unverified';
+        const heroValue = card.hero === 'currentNorm' || card.frame === 'matched' || card.frame === 'pending_curator'
+            ? card.norms.current
+            : card.norms.next;
+
+        return h('div', {
+            className: 'weekly-wrap-correction'
+                + (card.celebratory ? ' weekly-wrap-correction--good' : '')
+                + (card.readOnly ? ' weekly-wrap-correction--reading' : '')
+        },
+            h('div', { className: 'weekly-wrap-correction__title' }, copy.title),
+            card.evidence
+                ? h('span', { className: 'weekly-wrap-correction__evidence' }, card.evidence)
+                : null,
+            h('div', { className: 'weekly-wrap-correction__body' }, copy.body),
+            showsNumber
+                ? h('div', { className: 'weekly-wrap-correction__hero' },
+                    h('span', { className: 'weekly-wrap-correction__hero-value' },
+                        HEYS.NormCorrection.formatKcal(heroValue)
+                    ),
+                    copy.heroCaption
+                        ? h('span', {
+                            className: 'weekly-wrap-correction__hero-caption'
+                                + (card.norms.deltaKcal > 0 ? ' is-up' : (card.norms.deltaKcal < 0 ? ' is-down' : ''))
+                        }, copy.heroCaption)
+                        : null
+                )
+                : null,
+            // Предложение вторым весом: пока куратор не решил, есть нужно на
+            // действующее число, а не на то, которое ещё не применено.
+            copy.proposalNote
+                ? h('div', { className: 'weekly-wrap-correction__proposal' },
+                    'Предложение · ', copy.proposalNote)
+                : null,
+            // Предохранители на Self стоят в первом слое: там, где куратора
+            // нет, ограничители перестают быть внутренними.
+            card.safeguardsLayer === 'first' && card.needsConsent
+                ? h('div', { className: 'weekly-wrap-correction__safeguards' },
+                    card.safeguards.map((text, i) =>
+                        h('div', { className: 'weekly-wrap-correction__safeguard', key: i }, text)
+                    )
+                )
+                : null,
+            h('div', { className: 'weekly-wrap-correction__actions' },
+                card.actions.map((action) => h('button', {
+                    key: action,
+                    className: 'weekly-wrap-correction__btn'
+                        + (action === 'apply_tomorrow' || action === 'apply' ? ' weekly-wrap-correction__btn--primary' : ''),
+                    onClick: () => onDecide && onDecide(action, card)
+                }, copy.actionLabels[action] || action))
+            ),
+            copy.footnote
+                ? h('div', { className: 'weekly-wrap-correction__footnote' }, copy.footnote)
+                : null
+        );
+    }
+
     function WeeklyWrapStep({ data }) {
         const React = global.React;
         if (!React) return null;
@@ -476,6 +549,7 @@
         }, []);
 
         const [weekIndex, setWeekIndex] = useState(0);
+        const [correctionTick, setCorrectionTick] = React.useState(0);
         const [weekBreakdownPopup, setWeekBreakdownPopup] = useState(false);
         const currentWeek = availableWeeks[weekIndex] || null;
         const report = currentWeek?.report || null;
@@ -768,6 +842,70 @@
             );
         };
 
+        // Сверка нормы стоит выше фактов недели: она меняет то, на какое
+        // число человек будет есть, а факты только описывают прошедшее.
+        const correction = React.useMemo(() => {
+            if (!HEYS.NormCorrection?.gather) return null;
+            try {
+                return HEYS.NormCorrection.gather({
+                    lsGet: getLsGet(),
+                    lsSet: getLsSet(),
+                    pIndex: HEYS.products?.buildIndex?.()
+                });
+            } catch (e) {
+                console.warn('[HEYS.weeklyReports] сверка нормы не собралась', e);
+                return null;
+            }
+        }, [correctionTick]);
+
+        const handleCorrectionDecision = React.useCallback((action, card) => {
+            const lsGet = getLsGet();
+            const lsSet = getLsSet();
+            const profile = lsGet('heys_profile', {}) || {};
+            const weekLabel = report?.rangeLabel || '';
+            const now = Date.now();
+
+            // Применяем — двумя скалярами, а не объектом: профиль сливается
+            // перекрытием по родительской метке времени, и вложенный объект мог
+            // бы склеиться половинами разных недель.
+            const applyFactor = (factor) => {
+                lsSet('heys_profile', Object.assign({}, profile, {
+                    normCorrectionFactor: factor,
+                    normCorrectionAppliedAt: new Date(now).toISOString().split('T')[0]
+                }));
+            };
+
+            if (action === 'apply_tomorrow' || action === 'apply') {
+                applyFactor(correction.result.nextFactor);
+                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.nextFactor, what: 'applied', now });
+            } else if (action === 'keep_current') {
+                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.currentFactor, what: 'declined', now });
+            } else if (action === 'revert') {
+                // Рост отменяется возвратом к прежнему множителю — тому, от
+                // которого расчёт и шагнул вверх.
+                applyFactor(correction.result.currentFactor);
+                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.currentFactor, what: 'declined', now });
+            } else if (action === 'mute_month') {
+                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.currentFactor, what: 'postponed', now });
+            } else if (action === 'ask_curator' || action === 'measure_waist') {
+                // Обе кнопки уводят из шторки, а шторка сама живёт в StepModal:
+                // открыть замеры поверх неё нельзя, поэтому сначала закрываем.
+                HEYS.StepModal?.hide?.();
+                requestAnimationFrame(() => {
+                    if (action === 'ask_curator') {
+                        window.dispatchEvent(new CustomEvent('heys:open-messenger'));
+                    } else {
+                        HEYS.StepModal?.show?.({
+                            steps: ['measurements'],
+                            context: { dateKey: new Date(now).toISOString().split('T')[0] }
+                        });
+                    }
+                });
+                return;
+            }
+            setCorrectionTick((t) => t + 1);
+        }, [correction, report]);
+
         return h('div', { className: 'weekly-wrap-step' },
             h('div', { className: 'weekly-wrap-step__title' }, '📊 Итоги недели'),
             h('div', { className: 'weekly-wrap-step__nav' },
@@ -795,6 +933,9 @@
                 }, '→')
             ),
             h('div', { className: 'weekly-wrap-step__hint' }, hintText),
+            correction && correction.card
+                ? h(NormCorrectionCard, { card: correction.card, onDecide: handleCorrectionDecision })
+                : null,
             report && report.daysWithData >= minDaysForView
                 ? h('div', { className: 'weekly-wrap-step__content' },
                     h('div', { className: 'weekly-wrap-step__stats' },

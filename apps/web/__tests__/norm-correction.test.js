@@ -344,3 +344,138 @@ describe('поправка на факт · кадры недельной све
     expect(self.safeguards).toEqual(pro.safeguards);
   });
 });
+
+describe('поправка на факт · тон карточек сверки', () => {
+  const ready = (delta) => NC.compute({
+    days: days(21, delta < 0 ? 2112 : 2500),
+    formulaPerDay: 2400,
+    trend: { deltaKg: delta < 0 ? -0.267 : -0.2, measuredDays: 21, windowDays: 21 },
+    currentFactor: 1,
+    historyDays: 60
+  });
+
+  const allFrames = () => [
+    NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'self', expenditure: 2400, deficitPct: -12, basalMetabolism: 1520 }),
+    NC.buildWeeklySyncCard({ result: ready(1), tariff: 'self', expenditure: 2400, deficitPct: -12, basalMetabolism: 1520 }),
+    NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'pro', applied: true, expenditure: 2400, deficitPct: -12, basalMetabolism: 1520 }),
+    NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'pro', applied: false, expenditure: 2400, deficitPct: -12, basalMetabolism: 1520 }),
+    NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'self', refusalStreak: 3, weeksUnchanged: 6, expenditure: 2400, deficitPct: -12, basalMetabolism: 1520 }),
+    NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'self', recomposition: { confirmed: true, source: 'по замеру от 12 августа' } }),
+    NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'self', recomposition: { checkFailed: true } })
+  ];
+
+  it('у каждого кадра есть заголовок, объяснение и подписи кнопок', () => {
+    for (const c of allFrames()) {
+      expect(c.copy, c.frame).toBeTruthy();
+      expect(c.copy.title, c.frame).toBeTruthy();
+      expect(c.copy.body, c.frame).toBeTruthy();
+      for (const a of c.actions) {
+        expect(c.copy.actionLabels[a], c.frame + '/' + a).toBeTruthy();
+      }
+    }
+  });
+
+  it('в клиентском тексте нет ни «коэффициента», ни «автоматически»', () => {
+    // Имя для клиента — «поправка на факт». «Подняли и сказали» точнее, чем
+    // «автоматически»: молча норма не двигается никогда.
+    for (const c of allFrames()) {
+      const text = JSON.stringify(c.copy);
+      expect(text, c.frame).not.toMatch(/коэффициент/i);
+      expect(text, c.frame).not.toMatch(/автоматическ/i);
+    }
+  });
+
+  it('нет медицинских утверждений, упрёков дневнику и обещаний килограммов', () => {
+    for (const c of allFrames()) {
+      const text = JSON.stringify(c.copy);
+      expect(text, c.frame).not.toMatch(/обмен веществ|медленный обмен|метаболизм/i);
+      expect(text, c.frame).not.toMatch(/неточн|забыва|недооцен/i);
+      expect(text, c.frame).not.toMatch(/сбросите|потеряете|похудеете/i);
+    }
+  });
+
+  it('причина снижения — система, а не человек', () => {
+    const c = NC.buildWeeklySyncCard({
+      result: ready(-1), tariff: 'pro', applied: true,
+      expenditure: 2400, deficitPct: -12, basalMetabolism: 1520
+    });
+    expect(c.copy.body).toContain('мы поправили его, а не вас');
+  });
+
+  it('оба числа приходят из модели, рисующему нечего округлять', () => {
+    const c = NC.buildWeeklySyncCard({
+      result: ready(-1), tariff: 'self', expenditure: 2400, deficitPct: -12, basalMetabolism: 1520
+    });
+    // Сквозной пример контракта: 2112 было, 2049 станет, разница −63.
+    expect(c.norms.current).toBe(2112);
+    expect(c.norms.next).toBe(2049);
+    expect(c.norms.deltaKcal).toBe(-63);
+    expect(c.copy.heroCaption).toBe('−63 ккал');
+  });
+
+  it('счёт недель в заголовке третьего отказа склоняется', () => {
+    const one = NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'self', refusalStreak: 3, weeksUnchanged: 1 });
+    const six = NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'self', refusalStreak: 3, weeksUnchanged: 6 });
+    const two = NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'self', refusalStreak: 3, weeksUnchanged: 22 });
+    expect(one.copy.title).toContain('1 неделю');
+    expect(six.copy.title).toContain('6 недель');
+    expect(two.copy.title).toContain('22 недели');
+  });
+});
+
+describe('поправка на факт · довод перестройки', () => {
+  const dayWith = (date, waist) => ({
+    date,
+    weightMorning: 80,
+    measurements: waist ? { waist } : null,
+    meals: [],
+    trainings: []
+  });
+
+  function stubPattern(quality, waistTrend) {
+    window.HEYS.InsightsPI = {
+      patternModules: {
+        analyzeHypertrophy: () => ({
+          available: true, compositionQuality: quality, waistTrend
+        })
+      }
+    };
+  }
+
+  it('без замера талии довода нет — иначе экран оправдывает застой', () => {
+    stubPattern('recomposition', -0.1);
+    const days = Array.from({ length: 21 }, (_, i) => dayWith('2026-08-' + String(i + 1).padStart(2, '0'), null));
+    expect(NC.detectRecomposition(days, {})).toBe(null);
+  });
+
+  it('замер есть — довод назван источником и числом', () => {
+    stubPattern('recomposition', -0.1);
+    const days = Array.from({ length: 21 }, (_, i) => dayWith('2026-08-' + String(i + 1).padStart(2, '0'), i === 11 ? 78 : null));
+    const r = NC.detectRecomposition(days, {});
+    expect(r.confirmed).toBe(true);
+    expect(r.source).toBe('по замеру от 12 августа');
+    expect(r.dropCm).toBe(2.1);
+    expect(r.weeks).toBe(3);
+  });
+
+  it('другой состав — не перестройка, даже когда замер есть', () => {
+    stubPattern('fat_loss', -0.1);
+    const days = Array.from({ length: 21 }, (_, i) => dayWith('2026-08-' + String(i + 1).padStart(2, '0'), 78));
+    expect(NC.detectRecomposition(days, {})).toBe(null);
+  });
+
+  it('модуль инсайтов не загружен — сверка не падает', () => {
+    delete window.HEYS.InsightsPI;
+    expect(NC.detectRecomposition([dayWith('2026-08-01', 78)], {})).toBe(null);
+  });
+
+  it('в тексте карточки стоит конкретика замера, а не утешение', () => {
+    const card = NC.buildWeeklySyncCard({
+      result: { status: 'ready', direction: 'down', currentFactor: 1, nextFactor: 0.97 },
+      tariff: 'self',
+      recomposition: { confirmed: true, dropCm: 2, weeks: 3, source: 'по замеру от 12 августа' }
+    });
+    expect(card.copy.body).toContain('Талия ушла на 2 см за 3 недели');
+    expect(card.evidence).toBe('по замеру от 12 августа');
+  });
+});
