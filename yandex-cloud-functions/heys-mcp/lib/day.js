@@ -475,6 +475,111 @@ function addMeal(day, meal, { nowMs, clientId }) {
 }
 
 /**
+ * Окно склейки: запись в пределах десяти минут от уже записанного приёма —
+ * та же еда за столом, а не второй приём.
+ *
+ * Коннектор пишет по одной реплике куратора, и «блины» и «кофе к ним» приходят
+ * разными вызовами с разницей в минуты. До склейки день распадался на цепочку
+ * приёмов по одной позиции: 29 августа в 16:12 так легли отдельно блины со
+ * сгущёнкой и отдельно кофе. Дневник это не только показывает лишними
+ * карточками — на таком составе ломается и классификация (кофе рядом с едой
+ * читается кофе-брейком), и разбор окон приёмов.
+ */
+const MEAL_MERGE_WINDOW_MIN = 10;
+
+/** Потолок позиций в приёме — тот же, что у одной записи коннектора. */
+const MEAL_ITEMS_LIMIT = 20;
+
+/**
+ * Ближайший по времени приём в пределах окна.
+ *
+ * `excludeIds` — приёмы, записанные тем же вызовом: `meals[]` куратор разделил
+ * сам, и склеивать их между собой нельзя, иначе «в 15:30 обед, в 15:35 кофе»
+ * превратится в один приём против явно сказанного.
+ */
+function findMealNearTime(day, time, { windowMin = MEAL_MERGE_WINDOW_MIN, excludeIds = [] } = {}) {
+  const target = timeToMinutes(time);
+  if (target === null) return null;
+  const skip = new Set((excludeIds || []).map((id) => String(id)));
+  let best = null;
+  let bestDelta = Infinity;
+  for (const meal of (day && day.meals) || []) {
+    if (!meal || skip.has(String(meal.id))) continue;
+    const minutes = timeToMinutes(meal.time);
+    if (minutes === null) continue;
+    const delta = Math.abs(minutes - target);
+    if (delta > windowMin) continue;
+    // Равные расстояния — берём более поздний приём: он и есть «текущий стол».
+    if (delta < bestDelta || (delta === bestDelta && minutes > timeToMinutes(best.time))) {
+      best = meal;
+      bestDelta = delta;
+    }
+  }
+  return best;
+}
+
+/** Один и тот же продукт в той же граммовке — признак повторной записи. */
+function isSameMealItem(a, b) {
+  const idA = a && a.product_id != null ? String(a.product_id) : '';
+  const idB = b && b.product_id != null ? String(b.product_id) : '';
+  const sameProduct = idA && idB
+    ? idA === idB
+    : String((a && a.name) || '').trim().toLowerCase() === String((b && b.name) || '').trim().toLowerCase();
+  if (!sameProduct) return false;
+  return Math.round(Number(a && a.grams) || 0) === Math.round(Number(b && b.grams) || 0);
+}
+
+/**
+ * Повтор целиком: КАЖДАЯ входящая позиция уже есть в приёме в той же
+ * граммовке.
+ *
+ * Именно «каждая», а не «хотя бы одна»: «ещё один такой же рулет» — законная
+ * добавка, и запрещать её нельзя. А вот когда весь состав совпал до грамма,
+ * это почти всегда одна и та же реплика, записанная дважды: 28 августа так
+ * появились два приёма 15:30 из одних и тех же рулета 160 г и йогурта 100 г.
+ */
+function duplicatesWholeMeal(meal, items) {
+  const existing = (meal && meal.items) || [];
+  if (!existing.length || !Array.isArray(items) || !items.length) return false;
+  return items.every((item) => existing.some((prev) => isSameMealItem(prev, item)));
+}
+
+/**
+ * Дописать позиции в уже записанный приём.
+ *
+ * Шапка приёма остаётся своей: id, время и названное куратором имя не
+ * трогаем — меняется только состав, а тип и авто-подпись пересчитываются по
+ * новому составу. Самочувствие переносим только в пустое поле: сказанное про
+ * приём раньше сильнее того, что пришло с добавкой.
+ */
+function mergeItemsIntoMeal(day, mealId, items, { nowMs, clientId, name, mood, wellbeing, stress } = {}) {
+  const meals = (day && day.meals) || [];
+  const index = meals.findIndex((m) => m && String(m.id) === String(mealId));
+  if (index === -1) return { day, meal: null };
+
+  const merged = {
+    ...meals[index],
+    items: [...((meals[index] && meals[index].items) || []), ...items],
+  };
+  if (name && isAutoMealName(merged.name)) merged.name = String(name);
+  for (const [field, value] of [['mood', mood], ['wellbeing', wellbeing], ['stress', stress]]) {
+    if (value !== undefined && value !== null && value !== '' && !merged[field]) merged[field] = value;
+  }
+
+  const nextMeals = [...meals];
+  nextMeals[index] = merged;
+  const classified = classifyMeal(merged, { ...day, meals: nextMeals });
+  merged.mealType = classified.mealType;
+  if (isAutoMealName(merged.name)) merged.name = classified.name;
+
+  return {
+    day: touch({ ...day, meals: sortMealsByTime(nextMeals) }, nowMs, clientId),
+    meal: merged,
+    classified,
+  };
+}
+
+/**
  * Точечная правка уже записанного приёма.
  *
  * Отдельный путь нужен потому, что «добавь туда ещё» через delete + create
@@ -2793,6 +2898,12 @@ module.exports = {
   dailyNorm,
   NORM_REASONS,
   addMeal,
+  findMealNearTime,
+  mergeItemsIntoMeal,
+  duplicatesWholeMeal,
+  isSameMealItem,
+  MEAL_MERGE_WINDOW_MIN,
+  MEAL_ITEMS_LIMIT,
   updateMeal,
   deleteMeal,
   addWater,

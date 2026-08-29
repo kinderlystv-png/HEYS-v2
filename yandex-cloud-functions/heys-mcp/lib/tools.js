@@ -1397,7 +1397,43 @@ function createTools({
 
       let next = current;
       const written = [];
+      // Приёмы, созданные этим же вызовом: meals[] куратор разделил сам, и
+      // склеивать его собственное разбиение нельзя.
+      const createdMealIds = [];
       for (const input of mealInputs) {
+        const items = input.resolved.map((entry) => mealItemFromResolved(entry, makeId));
+
+        // Склейка по времени: еда за одним столом приходит разными репликами,
+        // и каждая такая реплика заводила отдельный приём.
+        const target = day.findMealNearTime(next, input.time, { excludeIds: createdMealIds });
+        const fits = target && ((target.items || []).length + items.length) <= day.MEAL_ITEMS_LIMIT;
+        if (target && fits) {
+          if (day.duplicatesWholeMeal(target, items) && args.allow_duplicate !== true) {
+            const composition = items.map((i) => `${i.name} ${i.grams} г`).join(', ');
+            throw new ToolError('possible_duplicate',
+              `Похоже на повторную запись: в ${date} в ${target.time} уже записан приём ${target.id} с тем же составом (${composition}). `
+              + 'Спроси куратора, ел ли он это второй раз. Да — повтори этот же вызов с allow_duplicate: true. '
+              + `Нет — записывать нечего, приём уже в дневнике; поправить состав можно через heys_update_meal с meal_id ${target.id}.`);
+          }
+          const mergedResult = day.mergeItemsIntoMeal(next, target.id, items, {
+            nowMs,
+            clientId,
+            name: input.explicitName,
+            mood: input.mood,
+            wellbeing: input.wellbeing,
+            stress: input.stress,
+          });
+          next = mergedResult.day;
+          written.push({
+            meal: mergedResult.meal,
+            classified: mergedResult.classified,
+            resolved: input.resolved,
+            mergedInto: target.time,
+            addedItems: items,
+          });
+          continue;
+        }
+
         const meal = {
           id: makeId('m_'),
           name: input.explicitName || defaultMealName(input.time),
@@ -1405,7 +1441,7 @@ function createTools({
           mood: input.mood,
           wellbeing: input.wellbeing,
           stress: input.stress,
-          items: input.resolved.map((entry) => mealItemFromResolved(entry, makeId)),
+          items,
         };
         // Тип приёма проставляем сами, по времени и составу: без `mealType`
         // дневник подписывает приём собственным расчётом, и запись куратора
@@ -1415,7 +1451,15 @@ function createTools({
         meal.mealType = classified.mealType;
         if (!input.explicitName) meal.name = classified.name;
         next = day.addMeal(next, meal, { nowMs, clientId });
-        written.push({ meal, classified, resolved: input.resolved });
+        createdMealIds.push(meal.id);
+        written.push({
+          meal,
+          classified,
+          resolved: input.resolved,
+          // Приём не влез в соседний по времени — куратор должен знать, что в
+          // дневнике рядом оказались два приёма, а не один.
+          splitFrom: target ? target.time : null,
+        });
       }
 
       // Один writeDay на все приёмы: одна merge-запись вместо цепочки — меньше
@@ -1450,8 +1494,42 @@ function createTools({
         : '';
       const extras = `${portionText}${snapshotText}${dedupedText}${learnedText}`;
 
+      // Склейка меняет ответ по существу: еда легла не новым приёмом, а в уже
+      // записанный. Промолчать нельзя — иначе куратор ищет в дневнике карточку,
+      // которой нет, а модель заводит второй приём «взамен потерянного».
+      const splitNotes = written.filter((w) => w.splitFrom).map((w) => w.splitFrom);
+      const splitText = splitNotes.length
+        ? ` Рядом с приёмом ${splitNotes.join(', ')} уже ${day.MEAL_ITEMS_LIMIT} позиций — записал отдельным приёмом.`
+        : '';
+
       if (written.length === 1) {
-        const { meal, classified } = written[0];
+        const { meal, classified, mergedInto, addedItems } = written[0];
+        if (mergedInto) {
+          const kcalMerged = day.macroTotals([meal]);
+          const addedText = (addedItems || []).map((i) => `${i.name} ${i.id} ${i.grams}г`).join('; ');
+          return {
+            text: `${createdLead}Дописал в приём ${mergedInto} «${meal.name}» ${meal.id} (${date}): ${addedText}.`
+              + ` Приём целиком: ${formatMealLine(meal)} — ≈${kcalMerged.kcal} ккал, Б${kcalMerged.protein} У${kcalMerged.carbs} Ж${kcalMerged.fat}.`
+              + ` Новый приём не заводил: запись пришла в пределах ${day.MEAL_MERGE_WINDOW_MIN} минут от него.${extras}${dayAfterText(after)}`,
+            structured: {
+              date,
+              meal_id: meal.id,
+              merged_into_meal_id: meal.id,
+              merged: true,
+              name: meal.name,
+              meal_type: meal.mealType,
+              time: meal.time,
+              totals: kcalMerged,
+              added_items: (addedItems || []).map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
+              items: meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
+              learned_piece_grams: learned.length ? learned : undefined,
+              portion_defaults: portionNotes.length ? portionNotes : undefined,
+              from_preset_snapshot: snapshotNames.length ? snapshotNames : undefined,
+              created_products: createdProductsStructured(allResolved),
+              day_after: after,
+            },
+          };
+        }
         const kcal = day.macroTotals([meal]);
         // Тип называем вслух, когда подпись приёма его не показывает (набор,
         // своё название): куратор должен видеть, чем запись легла в дневник, и
@@ -1460,7 +1538,7 @@ function createTools({
         // item_id в text — иначе «убери сироп из только что внесённого» снова
         // зовёт get_day (structured в Cursor часто не виден).
         return {
-          text: `${createdLead}Записал: ${formatMealLine(meal)}${typeHint} (${date}). ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${extras}${dayAfterText(after)}`,
+          text: `${createdLead}Записал: ${formatMealLine(meal)}${typeHint} (${date}). ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${splitText}${extras}${dayAfterText(after)}`,
           structured: {
             date,
             meal_id: meal.id,
@@ -1478,16 +1556,22 @@ function createTools({
         };
       }
 
-      const lines = written.map(({ meal }) => {
+      const lines = written.map(({ meal, mergedInto }) => {
         const kcal = day.macroTotals([meal]);
-        return `${formatMealLine(meal)} — ≈${kcal.kcal} ккал`;
+        const prefix = mergedInto ? 'дописал в ' : '';
+        return `${prefix}${formatMealLine(meal)} — ≈${kcal.kcal} ккал`;
       });
+      const mergedCount = written.filter((w) => w.mergedInto).length;
+      const mergedText = mergedCount
+        ? ` Из них ${mergedCount} легло в уже записанные приёмы — новых карточек в дневнике меньше, чем приёмов в вызове.`
+        : '';
       return {
-        text: `${createdLead}Записал ${written.length} приёма(ов) за ${date}: ${lines.join('; ')}.${extras}${dayAfterText(after)}`,
+        text: `${createdLead}Записал ${written.length} приёма(ов) за ${date}: ${lines.join('; ')}.${mergedText}${splitText}${extras}${dayAfterText(after)}`,
         structured: {
           date,
-          meals: written.map(({ meal }) => ({
+          meals: written.map(({ meal, mergedInto }) => ({
             meal_id: meal.id,
+            merged: mergedInto ? true : undefined,
             name: meal.name,
             meal_type: meal.mealType,
             time: meal.time,
@@ -4065,10 +4149,14 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_log_meal',
-    description: 'Создать приём пищи в дневнике. Несколько приёмов из одной реплики («два часа назад X, час назад Y, сейчас Z») — ОДИН вызов с meals: [{time, items}, …]. «Такой же перекус/приём целиком»: heys_get_day → copy_meal { date, meal_id }. «Такой же конверт/одну позицию» из приёма с несколькими блюдами: copy_meal { date, meal_id, item_ids } — граммы с сервера, не из текста get_day. count при «два»/«три». Новые позиции из той же реплики — items рядом с copy_meal в одном вызове. Несколько продуктов, съеденных вместе, — ОДИН вызов с несколькими позициями: items: [{…}, {…}, {…}]. Каждый продукт отдельным вызовом — это отдельные приёмы в дневнике, так не надо; meals[] нужен только когда у еды РАЗНОЕ время. Составной напиток — позициями или preset. Одиночный продукт — items: [{ query или product_id, grams }]. Незнакомый продукт с известным составом — new_product внутри позиции, без отдельного heys_create_product. Гейт чек-ина за сегодня сервер проверяет сам: не закрыт — вернёт checkin_required.',
+    description: 'Создать приём пищи в дневнике. Несколько приёмов из одной реплики («два часа назад X, час назад Y, сейчас Z») — ОДИН вызов с meals: [{time, items}, …]. «Такой же перекус/приём целиком»: heys_get_day → copy_meal { date, meal_id }. «Такой же конверт/одну позицию» из приёма с несколькими блюдами: copy_meal { date, meal_id, item_ids } — граммы с сервера, не из текста get_day. count при «два»/«три». Новые позиции из той же реплики — items рядом с copy_meal в одном вызове. Несколько продуктов, съеденных вместе, — ОДИН вызов с несколькими позициями: items: [{…}, {…}, {…}]. Каждый продукт отдельным вызовом — это отдельные приёмы в дневнике, так не надо; meals[] нужен только когда у еды РАЗНОЕ время. Составной напиток — позициями или preset. Одиночный продукт — items: [{ query или product_id, grams }]. Незнакомый продукт с известным составом — new_product внутри позиции, без отдельного heys_create_product. Гейт чек-ина за сегодня сервер проверяет сам: не закрыт — вернёт checkin_required. Запись в пределах 10 минут от уже записанного приёма дописывается В НЕГО, новый приём не заводится — в ответе это видно строкой «Дописал в приём». Если весь состав совпал с тем приёмом до грамма, сервер вернёт possible_duplicate: спроси куратора, ел ли он это второй раз, и только тогда повтори вызов с allow_duplicate: true.',
     inputSchema: {
       type: 'object',
       properties: {
+        allow_duplicate: {
+          type: 'boolean',
+          description: 'Разрешить запись, которую сервер счёл повтором (possible_duplicate): весь состав совпал с приёмом, записанным в пределах 10 минут. Ставь true ТОЛЬКО после того, как куратор подтвердил, что это была вторая такая же порция. Само по себе, «на всякий случай», не передавай — этот флаг снимает единственную защиту от задвоенной записи.',
+        },
         copy_meal: {
           type: 'object',
           description: 'Скопировать уже записанный приём («как вчера»). meal_id — из heys_get_day. item_ids — только эти позиции (для «такой же конверт»). count умножает граммовку. items/preset не обязательны; если переданы вместе с copy_meal — складываются с копией в один приём.',

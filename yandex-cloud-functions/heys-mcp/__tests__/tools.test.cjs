@@ -3850,3 +3850,101 @@ test('get_profile не зовёт себя ради нормы дня', () => {
   assert.match(schema.description, /Норму дня отсюда не узнают/);
   assert.ok(!/из чего считаются нормы клиента/.test(schema.description));
 });
+
+// ── Склейка по времени и защита от задвоенной записи (29.08.2026) ──────────
+// Коннектор пишет по реплике, и еда за одним столом приходила разными
+// вызовами: 29 августа в дневнике так оказались отдельно блины со сгущёнкой и
+// отдельно кофе (16:12 и 16:12), а в 15:30 — два приёма с одинаковым составом.
+
+/** Уже записанный приём с одной позицией. */
+function dayWithMeal(time, items, { date = '2026-08-01', updatedAt = 10, name = 'Перекус', id = 'm_prev' } = {}) {
+  return { date, updatedAt, meals: [{ id, name, time, mealType: 'snack1', items }] };
+}
+
+const MILK_ITEM = { id: 'it_prev', product_id: 'own-milk', name: 'Молоко ультрапастеризованное 3.5', grams: 100, kcal100: 60 };
+
+test('запись в пределах 10 минут дописывается в уже записанный приём', async () => {
+  const api = fakeApi({ day: dayWithMeal('15:50', [MILK_ITEM]) });
+  const res = await build(api).heys_log_meal({ items: [{ product_id: 'own-americano', grams: 100 }] });
+
+  const meals = api.saves[0].value.meals;
+  assert.equal(meals.length, 1, 'новый приём заводить не должны');
+  assert.equal(meals[0].id, 'm_prev', 'шапка приёма остаётся своей');
+  assert.equal(meals[0].items.length, 2);
+  assert.equal(meals[0].time, '15:50');
+  assert.equal(res.structured.merged, true);
+  assert.equal(res.structured.meal_id, 'm_prev');
+  assert.equal(res.structured.added_items.length, 1);
+  assert.match(res.text, /Дописал в приём 15:50/);
+});
+
+test('за пределами окна приём остаётся отдельным', async () => {
+  const api = fakeApi({ day: dayWithMeal('15:30', [MILK_ITEM]) });
+  const res = await build(api).heys_log_meal({ items: [{ product_id: 'own-americano', grams: 100 }] });
+
+  assert.equal(api.saves[0].value.meals.length, 2);
+  assert.equal(res.structured.merged, undefined);
+});
+
+test('названное куратором имя приёма склейка не переписывает', async () => {
+  const api = fakeApi({ day: dayWithMeal('15:50', [MILK_ITEM], { name: 'Второй завтрак' }) });
+  await build(api).heys_log_meal({ items: [{ product_id: 'own-americano', grams: 100 }], name: 'Кофе' });
+
+  assert.equal(api.saves[0].value.meals[0].name, 'Второй завтрак');
+});
+
+test('повтор того же состава в окне склейки не пишется, а спрашивает куратора', async () => {
+  const api = fakeApi({ day: dayWithMeal('15:50', [MILK_ITEM]) });
+  await assert.rejects(
+    () => build(api).heys_log_meal({ items: [{ product_id: 'own-milk', grams: 100 }] }),
+    (e) => {
+      assert.equal(e.code, 'possible_duplicate');
+      assert.match(e.message, /allow_duplicate/);
+      assert.match(e.message, /m_prev/);
+      return true;
+    },
+  );
+  assert.equal(api.saves.length, 0, 'до ответа куратора в дневник ничего не уходит');
+});
+
+test('allow_duplicate пишет вторую такую же порцию', async () => {
+  const api = fakeApi({ day: dayWithMeal('15:50', [MILK_ITEM]) });
+  await build(api).heys_log_meal({ items: [{ product_id: 'own-milk', grams: 100 }], allow_duplicate: true });
+
+  assert.equal(api.saves[0].value.meals[0].items.length, 2);
+});
+
+test('та же еда в другой граммовке — добавка, а не повтор', async () => {
+  const api = fakeApi({ day: dayWithMeal('15:50', [MILK_ITEM]) });
+  await build(api).heys_log_meal({ items: [{ product_id: 'own-milk', grams: 50 }] });
+
+  assert.equal(api.saves[0].value.meals[0].items.length, 2);
+});
+
+test('совпала часть состава — это дописывание, запись не блокируется', async () => {
+  const api = fakeApi({ day: dayWithMeal('15:50', [MILK_ITEM]) });
+  await build(api).heys_log_meal({
+    items: [{ product_id: 'own-milk', grams: 100 }, { product_id: 'own-americano', grams: 100 }],
+  });
+
+  assert.equal(api.saves[0].value.meals[0].items.length, 3);
+});
+
+test('meals[] куратора между собой не склеиваются', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 3 } });
+  await build(api).heys_log_meal({
+    meals: [
+      { time: '15:50', items: [{ product_id: 'own-milk', grams: 100 }] },
+      { time: '15:54', items: [{ product_id: 'own-americano', grams: 100 }] },
+    ],
+  });
+
+  assert.equal(api.saves[0].value.meals.length, 2);
+});
+
+test('log_meal объявляет склейку и allow_duplicate в схеме', () => {
+  const schema = TOOL_SCHEMAS.find((s) => s.name === 'heys_log_meal');
+  assert.match(schema.description, /в пределах 10 минут/);
+  assert.match(schema.description, /possible_duplicate/);
+  assert.match(schema.inputSchema.properties.allow_duplicate.description, /подтвердил/);
+});
