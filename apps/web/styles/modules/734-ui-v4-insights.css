@@ -476,6 +476,103 @@
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
+/* Контракт «вид · карточки яруса» + кадр «Что съесть сейчас»: карточка на
+   --c1 радиусом 20 полями 16, шапка .mvH 10,5 px/600, вилки .pchip высотой 26
+   обводкой 1,5 px, кнопка .mvCta высотой 44 радиусом 14 на --acs. */
+.meal-rec-card--v4 {
+  background: var(--v4-card, #ffffff);
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.meal-rec-v4__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  margin-bottom: 12px;
+}
+
+.meal-rec-v4__sleep {
+  font-variant-numeric: tabular-nums;
+}
+
+.meal-rec-v4__title {
+  font: 700 14px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+  margin-bottom: 12px;
+}
+
+.meal-rec-v4__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meal-rec-v4__chip {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.5px var(--v4-border, rgba(0, 0, 0, 0.14));
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink, #0f172a);
+}
+
+.meal-rec-v4__why {
+  margin-top: 12px;
+  font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.meal-rec-v4__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 13px;
+  border: none;
+  border-radius: 14px;
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #fff5ef);
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.meal-rec-v4__how {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 4px;
+  border: none;
+  background: none;
+  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  cursor: pointer;
+}
+
+.meal-rec-v4__how-body {
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  padding-top: 11px;
+}
+
+.meal-rec-v4__how-line {
+  margin: 0 0 8px;
+  font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
+}
+
+.meal-rec-v4__how-line:last-child {
+  margin-bottom: 0;
+}
+
 .insights-v4-nutrition__rhythm-line {
   font: 700 13px/1.4 Figtree, system-ui, sans-serif;
   color: var(--v4-ink, #0f172a);

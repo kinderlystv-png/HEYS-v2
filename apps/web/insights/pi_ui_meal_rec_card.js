@@ -799,7 +799,10 @@
     // P3-card: render counter for log throttle (suppresses duplicate card render logs)
     var _mealRecCardRenderCount = 0;
 
-    function MealRecommenderCard({ React, day, prof, pIndex, dayTot, normAbs, optimum }) {
+    // variant: 'v4' — компактный вид для яруса «Питание» Инсайтов (контракт
+    // reports-insights.v4, кадр «Что съесть сейчас»). Движок общий, ветвится
+    // только разметка в самом конце рендера.
+    function MealRecommenderCard({ React, day, prof, pIndex, dayTot, normAbs, optimum, variant }) {
         // R1-1: для прошлых/будущих дат планнер не имеет смысла — currentTime всегда
         // относится к "сегодня", а deadline по сну не применим. Скрываем карточку,
         // чтобы не показывать пользователю фейковые промежутки.
@@ -2064,6 +2067,22 @@
                     } else {
                         planStateRef.current = result.planState || null;
                         computeSuccess = true;
+                        // Публикуем окно следующего приёма — тем же приёмом,
+                        // что каскад публикует window.HEYS._lastCrs. «Ритм
+                        // приёмов» в ярусе Инсайтов берёт время отсюда и не
+                        // зовёт движок второй раз: источник времени один.
+                        try {
+                            const nextMeal = result.mealsPlan?.meals?.find((m) => m.isActionable)
+                                || result.mealsPlan?.meals?.[0]
+                                || null;
+                            global.HEYS.MealRecCard = global.HEYS.MealRecCard || {};
+                            global.HEYS.MealRecCard._lastPlan = {
+                                date: day?.date || todayISO(),
+                                timeStart: nextMeal?.timeStart || null,
+                                timeEnd: nextMeal?.timeEnd || (result.timing?.ideal || null),
+                                lastMealDeadline: result.mealsPlan?.summary?.lastMealDeadline || null
+                            };
+                        } catch (e) { /* публикация окна не критична */ }
                         console.info(`${LOG_PREFIX} ✅ Rendered:`, {
                             idealTime: result.timing?.ideal || '—',
                             protein: result.macros?.protein || 0,
@@ -2772,6 +2791,70 @@
                 : productsModalContent)
             : null;
 
+        // Контракт reports-insights.v4, кадр «Что съесть сейчас»: в ярусе
+        // «Питание» Инсайтов карточка показывается компактным видом — окно
+        // приёма, вилки чипами, объяснение, кнопка «Выбрать продукты · N
+        // вариантов» и обязательная раскрывашка «Как посчитано»
+        // («рекомендация без обоснования читается как приказ»). Движок и
+        // модалка продуктов те же — ветвится только вид.
+        if (variant === 'v4') {
+            const v4Kcal = Math.round(macros?.kcal || primaryPlannedMeal?.macros?.kcal || 0);
+            const v4Prot = Math.round(macros?.protein || primaryPlannedMeal?.macros?.prot || 0);
+            const v4Carbs = Math.round(macros?.carbs || primaryPlannedMeal?.macros?.carbs || 0);
+            // Вилка ±12 % — та же подача, что на кадре: не точка, а диапазон.
+            const spread = (v, pct) => {
+                const d = Math.max(1, Math.round(v * pct));
+                return (v - d) + '–' + (v + d);
+            };
+            const hoursToSleep = primaryPlannedMeal?.hoursToSleep;
+            const chips = [];
+            if (v4Prot > 0) chips.push({ key: 'prot', text: 'белок ' + spread(v4Prot, 0.12) + ' г' });
+            if (v4Carbs > 0) chips.push({ key: 'carbs', text: 'углеводы ' + spread(v4Carbs, 0.55) + ' г' });
+            if (v4Kcal > 0) chips.push({ key: 'kcal', text: spread(v4Kcal, 0.14) + ' ккал' });
+
+            const v4Element = h('div', { className: 'meal-rec-card meal-rec-card--v4' },
+                h('div', { className: 'meal-rec-v4__head' },
+                    h('span', null, 'Что съесть сейчас'),
+                    typeof hoursToSleep === 'number' && hoursToSleep > 0 && h('span', { className: 'meal-rec-v4__sleep' },
+                        'до сна ' + hoursToSleep.toFixed(1).replace('.', ',') + ' ч')
+                ),
+                h('div', { className: 'meal-rec-v4__title' },
+                    (headerTitle || 'Следующий приём')
+                    + (displayTimeRange ? ' с ' + String(displayTimeRange).replace('-', ' до ') : '')
+                ),
+                chips.length > 0 && h('div', { className: 'meal-rec-v4__chips' },
+                    chips.map((c) => h('span', { key: c.key, className: 'meal-rec-v4__chip' }, c.text))
+                ),
+                h('div', { className: 'meal-rec-v4__why' }, logicWhy),
+                h('button', {
+                    type: 'button',
+                    className: 'meal-rec-v4__cta',
+                    onClick: (e) => { e.stopPropagation(); setShowProductsModal(true); }
+                },
+                    displayProductCount > 0
+                        ? 'Выбрать продукты · ' + displayProductCount + ' вариантов'
+                        : 'Выбрать продукты',
+                    h('span', { className: 'meal-rec-v4__cta-chevron', 'aria-hidden': 'true' }, '›')
+                ),
+                h('button', {
+                    type: 'button',
+                    className: 'meal-rec-v4__how',
+                    'aria-expanded': expanded ? 'true' : 'false',
+                    onClick: (e) => { e.stopPropagation(); setExpanded((prev) => !prev); }
+                }, 'Как посчитано ', h('span', { 'aria-hidden': 'true' }, expanded ? '⌃' : '⌄')),
+                expanded && h('div', { className: 'meal-rec-v4__how-body' },
+                    h('p', { className: 'meal-rec-v4__how-line' }, logicFocus),
+                    (displayReasoning || []).slice(0, 4).map((line, idx) =>
+                        h('p', { key: idx, className: 'meal-rec-v4__how-line' }, line)
+                    )
+                ),
+                productsModal
+            );
+
+            console.info(`${LOG_PREFIX} ✅ Card element created (v4 variant)`);
+            return v4Element;
+        }
+
         // Main card container
         const cardElement = h('div', {
             className: `meal-rec-card widget widget--meal-rec-diary ${expanded ? 'meal-rec-card--expanded' : ''}`,
@@ -2803,7 +2886,11 @@
             Math.round(prev.dayTot?.kcal || 0) === Math.round(next.dayTot?.kcal || 0) &&
             Math.round(prev.dayTot?.prot || 0) === Math.round(next.dayTot?.prot || 0) &&
             Math.round(prev.normAbs?.kcal || 0) === Math.round(next.normAbs?.kcal || 0) &&
-            prev.optimum === next.optimum
+            prev.optimum === next.optimum &&
+            // Вид карточки — часть пропсов: без этого смена variant не
+            // перерисовала бы карточку (в проде variant константен, но
+            // мемоизация не должна врать).
+            prev.variant === next.variant
         );
     });
 

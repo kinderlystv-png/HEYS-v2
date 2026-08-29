@@ -2278,6 +2278,8 @@
       }
       const fmtGap = function (g) { return g.toFixed(1).replace('.', ','); };
 
+      // Контракт «вид · карточки яруса»: планер идёт компактным v4-видом
+      // (кадр «Что съесть сейчас») — движок и модалка продуктов те же.
       const plannerCard = (HEYS.MealRecCard && HEYS.MealRecCard.renderCard)
         ? (HEYS.MealRecCard.renderCard({
           React: React,
@@ -2286,7 +2288,8 @@
           pIndex: pIndex,
           dayTot: dayTot,
           normAbs: normAbs,
-          optimum: optimum
+          optimum: optimum,
+          variant: 'v4'
         }) || null)
         : null;
 
@@ -2317,7 +2320,19 @@
             h('span', { className: 'insights-v4-nutrition__head-note' }, 'сегодня')
           ),
           h('div', { className: 'insights-v4-nutrition__rhythm-line' },
-            'Промежутки ' + gaps.map(fmtGap).join(' ч и ') + ' ч.'
+            'Промежутки ' + gaps.map(fmtGap).join(' ч и ') + ' ч.',
+            // Контракт «ритм приёмов»: следующий приём — рекомендацией
+            // времени, не приказом. Время берём из окна, опубликованного
+            // планером выше (HEYS.MealRecCard._lastPlan) — второго вызова
+            // движка нет, источник времени один.
+            (function () {
+              try {
+                const plan = HEYS.MealRecCard && HEYS.MealRecCard._lastPlan;
+                const until = plan && (plan.timeEnd || plan.lastMealDeadline);
+                if (!until || (day && plan.date && plan.date !== day.date)) return null;
+                return ' Следующий приём лучше до ' + String(until).slice(0, 5) + '.';
+              } catch (_) { return null; }
+            })()
           ),
           h('div', { className: 'insights-v4-nutrition__rhythm-track' },
             timed.map(function (x, idx) {

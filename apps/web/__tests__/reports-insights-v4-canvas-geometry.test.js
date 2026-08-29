@@ -171,18 +171,38 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
   // docs/implementation/REPORTS_INSIGHTS_V4_IMPLEMENTATION_2026-08-29.md.
   // Снятие любого пункта = правка кода + правка этого списка в одном заходе.
   it('отступления названы и не разрастаются молча', () => {
-    // 2026-08-29, второй заход: сняты «разбор Score» (отдельный экран
-    // heys-score-screen), «кривая веса» (фикс-30 + сноска + без «~кг/мес») и
-    // лист долга (шторка InsightsV4DebtSheet).
+    // 2026-08-29, третий заход: сняты вид планера (variant v4), время приёма
+    // в «Ритме» (окно из HEYS.MealRecCard._lastPlan) и «Как посчитано»
+    // (раскрывашка планера). Остались три расчётных ограничения.
     const DEVIATIONS = [
-      'планер яруса — существующая карточка MealRecCard, вид не по кадру',
-      'ритм приёмов — без своей рекомендации времени (живёт в планере)',
       'Δ питания прошлого окна — только дни с savedDisplayOptimum',
       'заглушка Отчётов — лента дней периода, не «с первого дня»',
-      'опора счётных паттернов — «N дней наблюдений» без matched/total',
-      'лист «Как посчитано» — в карточке планера, не отдельной шторкой'
+      'опора счётных паттернов — «N дней наблюдений» без matched/total'
     ];
-    expect(DEVIATIONS.length).toBe(6);
+    expect(DEVIATIONS.length).toBe(3);
+  });
+
+  it('третий заход: v4-планер, время в «Ритме», «Как посчитано»', () => {
+    const card = fs.readFileSync(
+      path.resolve(__dirname, '../insights/pi_ui_meal_rec_card.js'), 'utf8');
+    expect(card).toContain("variant === 'v4'");
+    expect(card).toContain('Что съесть сейчас');
+    expect(card).toContain('Как посчитано');
+    expect(card).toContain('_lastPlan');
+    const dashboard = fs.readFileSync(
+      path.resolve(__dirname, '../insights/pi_ui_dashboard.js'), 'utf8');
+    expect(dashboard).toContain("variant: 'v4'");
+    expect(dashboard).toContain('Следующий приём лучше до ');
+    // Вид планера по кадру: чип 26px обводкой 1.5px, кнопка 44/14
+    const chip = cssBlock(insightsCss, 'meal-rec-v4__chip');
+    expect(prop(chip, 'height')).toBe('26px');
+    expect(prop(chip, 'box-shadow')).toContain('1.5px');
+    const cta = cssBlock(insightsCss, 'meal-rec-v4__cta');
+    expect(prop(cta, 'min-height')).toBe('44px');
+    expect(prop(cta, 'border-radius')).toBe('14px');
+    const wrap = cssBlock(insightsCss, 'meal-rec-card--v4');
+    expect(prop(wrap, 'border-radius')).toBe('20px');
+    expect(prop(wrap, 'padding')).toBe('16px');
   });
 
   it('второй заход: экран Score, вес фикс-30, лист долга — в коде', () => {
