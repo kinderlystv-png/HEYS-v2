@@ -6,7 +6,7 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1788025720400';
+const CACHE_VERSION = 'heys-1788036196677';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -210,13 +210,26 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   console.log('[SW] 🚀 Activating...', CACHE_VERSION);
 
-  // 🔥 Timeout для активации — не блокируем UI дольше 5 сек
+  // 🔥 Timeout для активации — не блокируем UI дольше 5 сек.
+  //
+  // Таймер отменяется, когда активация успела раньше. Без отмены он досиживал
+  // свои 5 секунд и писал предупреждение на КАЖДОМ старте, хотя гонку выигрывал
+  // не он: сообщение про таймаут появлялось при полностью успешной активации и
+  // маскировало бы настоящий таймаут, случись он однажды.
+  let activationTimeoutId = null;
   const activationTimeout = new Promise((resolve) => {
-    setTimeout(() => {
+    activationTimeoutId = setTimeout(() => {
+      activationTimeoutId = null;
       console.log('[SW] ⚠️ Activation timeout — proceeding anyway');
       resolve();
     }, 5000);
   });
+  const cancelActivationTimeout = () => {
+    if (activationTimeoutId !== null) {
+      clearTimeout(activationTimeoutId);
+      activationTimeoutId = null;
+    }
+  };
 
   const activationTasks = Promise.all([
     // 1️⃣ Включаем Navigation Preload для ускорения загрузки
@@ -252,6 +265,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     Promise.race([activationTasks, activationTimeout])
       .then(() => {
+        cancelActivationTimeout();
         // clients.claim() — немедленно берём контроль над всеми открытыми страницами
         console.log('[SW] 📡 Claiming all clients...');
         return self.clients.claim();

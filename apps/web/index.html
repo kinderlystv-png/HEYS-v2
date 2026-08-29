@@ -996,16 +996,24 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.98914ca20ebc.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.cf778cf5d656.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.3296dd5f0842.js" as="script" />
     <link rel="preload" href="boot-day.bundle.88d0b5cc2de9.js" as="script" />
     <link rel="preload" href="boot-app.bundle.93e0d6e8a53c.js" as="script" />
     <link rel="preload" href="boot-init.bundle.d472dc64aa0a.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
-         <script src="react-bundle.js"> (внизу body) бандл уже скачан. Sync execution сохранён
-         для совместимости с heys_dark_theme_interceptor.js (использует React.createElement). -->
-    <link rel="preload" href="react-bundle.js" as="script" />
+         <script src="/react-bundle.js"> (внизу body) бандл уже скачан. Sync execution сохранён
+         для совместимости с heys_dark_theme_interceptor.js (использует React.createElement).
+
+         Путь абсолютный намеренно. Относительный «react-bundle.js» резолвится из корня
+         Vite (apps/web/), поэтому сборщик втягивал файл в свой граф и выпускал вторую,
+         хешированную копию assets/react-bundle-<hash>.js: она попадала в dist, уезжала
+         в S3 общим sync и предзагружалась вместо той, что реально исполняется, — лишние
+         ~139 КБ на каждой холодной загрузке. Соседние boot-бандлы этой беды не знают:
+         они лежат в public/ и сборщику не видны. Абсолютный путь ставит react в тот же
+         режим и совпадает с URL тега <script> ниже. -->
+    <link rel="preload" href="/react-bundle.js" as="script" />
 
     <!-- Non-critical JS prefetch deferred to idle after appReady (see postboot onAllDone) -->
 
@@ -3256,7 +3264,7 @@
     <!-- React (синхронный локальный бандл) - 152-ФЗ compliant, без CDN -->
     <!-- ВАЖНО: Загружается СИНХРОННО перед defer-скриптами (blocking script) -->
     <!-- Собирается: npx esbuild src/react-globals-sync.ts --bundle --format=iife --minify -->
-    <script src="react-bundle.js"></script>
+    <script src="/react-bundle.js"></script>
     <!-- Dark theme interceptor — patches React.createElement for CSS var colors -->
     <script src="heys_dark_theme_interceptor.js"></script>
     <!-- Supabase CDN — УДАЛЁН 2025-12-24 (152-ФЗ compliance)
@@ -3269,7 +3277,7 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.98914ca20ebc.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.cf778cf5d656.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.3296dd5f0842.js"></script>
     <script defer src="boot-day.bundle.88d0b5cc2de9.js"></script>
     <script defer src="boot-app.bundle.93e0d6e8a53c.js"></script>
