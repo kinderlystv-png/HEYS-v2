@@ -2490,6 +2490,46 @@
   }
 
   /**
+   * Окно дней по всем клиентам куратора — сырьё панели.
+   *
+   * Посуточная сводка отвечает на «что клиент внёс сегодня», а панели нужны
+   * три недели: поправка считается по окну. Тянуть его 21 вызовом сводки —
+   * 21 круг по сети на каждое открытие, поэтому окно берётся одним запросом.
+   *
+   * @param {string} fromStr - первый день окна YYYY-MM-DD
+   * @param {string} toStr - последний день окна; сервер обрежет диапазон 62 днями
+   * @returns {Promise<{data: Array|null, error: any}>} строка на пару (клиент, дата)
+   */
+  async function getClientsWindow(fromStr, toStr) {
+    const { data, error } = await rpc('get_curator_clients_window', {
+      p_from: fromStr,
+      p_to: toStr
+    });
+    if (error) {
+      err('getClientsWindow failed:', error.message);
+      return { data: null, error };
+    }
+    return { data: Array.isArray(data) ? data : [], error: null };
+  }
+
+  /**
+   * Профильный контекст поправки по всем клиентам куратора.
+   *
+   * Отдельным вызовом, а не колонками окна: профиль от даты не зависит, и на
+   * 21 строке окна он повторился бы двадцать один раз.
+   *
+   * @returns {Promise<{data: Array|null, error: any}>} строка на клиента
+   */
+  async function getClientsNormContext() {
+    const { data, error } = await rpc('get_curator_clients_norm_context', {});
+    if (error) {
+      err('getClientsNormContext failed:', error.message);
+      return { data: null, error };
+    }
+    return { data: Array.isArray(data) ? data : [], error: null };
+  }
+
+  /**
    * Создать нового клиента (без phone/PIN)
    * 🔐 Использует /auth/clients вместо REST API (clients убран из REST по security)
    * @param {string} name - Имя клиента
@@ -3368,6 +3408,8 @@
     // 👥 Clients
     getClients,
     getClientsDaySummary,
+    getClientsWindow,
+    getClientsNormContext,
     createClient,
     updateClient,
     deleteClient,
