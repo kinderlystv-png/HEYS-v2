@@ -27,6 +27,7 @@ export const UI_V4_CANVAS_ZONES = Object.freeze([
   'cycle',
   'reports-insights',
   'norm-correction',
+  'curator-cabinet',
 ]);
 
 export const UI_V4_PIXEL_GATE_ZONES = Object.freeze([

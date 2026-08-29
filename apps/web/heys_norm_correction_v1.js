@@ -324,6 +324,15 @@
     return n + ' недель';
   }
 
+  function pluralDaysRu(n) {
+    const abs = Math.abs(n) % 100;
+    const last = abs % 10;
+    if (abs > 10 && abs < 20) return 'дней';
+    if (last > 1 && last < 5) return 'дня';
+    if (last === 1) return 'день';
+    return 'дней';
+  }
+
   function formatKcal(value) {
     // Тысячи разделяем неразрывным пробелом: «2 112» не должно переноситься.
     return String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
@@ -777,6 +786,21 @@
   // человек может открывать приложение и ничего не вносить.
   const SILENT_DAYS_ALERT = 3;
 
+  // Старшинство состояний строки — из контракта кабинета. Клиент стоит в одной
+  // группе, той, где его состояние старше: иначе счёт групп перестаёт
+  // складываться в число клиентов.
+  const PANEL_STATES = ['awaits', 'decided_today', 'mismatch', 'silent', 'collecting', 'fine'];
+
+  // «Решено сегодня» живёт до конца дня: убрать строку сразу — оставить
+  // сомнение, нажалось ли; держать до понедельника — оставить строку, по
+  // которой делать нечего.
+  function decidedToday(atMs, now) {
+    if (!atMs) return false;
+    const at = new Date(Number(atMs));
+    if (Number.isNaN(at.getTime())) return false;
+    return at.toDateString() === now.toDateString();
+  }
+
   /**
    * Синтетический день для движка расхода из строки серверного окна.
    *
@@ -841,6 +865,7 @@
         hrZones: Array.isArray(row.hr_zones) ? row.hr_zones : [],
         lastDecision: row.last_decision || null,
         lastDecisionWeek: row.last_decision_week || null,
+        lastDecisionAt: row.last_decision_at || null,
         days: []
       });
     }
@@ -915,14 +940,42 @@
         historyDays: days.length
       });
 
+      const isSilent = silentDays >= SILENT_DAYS_ALERT;
+      const mismatchPct = Number.isFinite(result.mismatchPct) ? Math.abs(result.mismatchPct) : null;
+      const answeredToday = decidedToday(entry.lastDecisionAt, base);
+      const hasProposal = result.status === 'ready' && result.direction !== 'hold';
+      // Окно ещё не набралось — это рабочее состояние первых трёх недель, а не
+      // ошибка, и своё слово у него отдельное.
+      const collecting = result.status === 'cold_start' || result.status === 'not_enough_data';
+
+      let state;
+      if (hasProposal && !entry.lastDecision) state = 'awaits';
+      else if (answeredToday) state = 'decided_today';
+      else if (mismatchPct) state = 'mismatch';
+      else if (isSilent) state = 'silent';
+      else if (collecting) state = 'collecting';
+      else state = 'fine';
+
+      // Второе состояние дописывается фразой в той же строке, а не второй
+      // пилюлей: две пилюли читаются как две группы.
+      let alsoNote = null;
+      if (state !== 'silent' && isSilent) {
+        alsoNote = 'не пишет ' + silentDays + ' ' + pluralDaysRu(silentDays);
+      } else if (state === 'silent' && mismatchPct) {
+        alsoNote = 'и расчёт разошёлся';
+      }
+
       out.push({
         clientId: entry.clientId,
+        state,
+        alsoNote,
         silentDays,
-        isSilent: silentDays >= SILENT_DAYS_ALERT,
+        isSilent,
         result,
+        collecting,
         // «Ждёт решения» — расчёт готов, а последнего решения по нему нет.
-        awaitsDecision: result.status === 'ready' && result.direction !== 'hold' && !entry.lastDecision,
-        mismatchPct: Number.isFinite(result.mismatchPct) ? Math.abs(result.mismatchPct) : null,
+        awaitsDecision: state === 'awaits',
+        mismatchPct,
         card: buildCuratorCard({
           result,
           expenditure: expDays ? expSum / expDays : 0,
@@ -933,10 +986,17 @@
       });
     }
 
-    // Порядок панели — кем заняться: сперва ждущие решения, потом молчащие,
-    // потом расхождение по убыванию. Алфавит здесь бесполезен.
+    // Порядок панели — кем заняться. Ручной сортировки и алфавита нет: с ними
+    // панель становится вторым списком людей, а он уже есть во вкладке
+    // «Клиенты».
+    //
+    // Внутри группы контракт просит «по давности, старое выше». Для молчания
+    // давность есть — дни без записей. Для «ждёт решения» её нет и взяться
+    // неоткуда: предложение не хранится, оно пересчитывается заново каждый
+    // раз. Поэтому там сортируем по величине расхождения и не выдаём это за
+    // давность.
     out.sort((a, b) => (
-      (b.awaitsDecision ? 1 : 0) - (a.awaitsDecision ? 1 : 0)
+      PANEL_STATES.indexOf(a.state) - PANEL_STATES.indexOf(b.state)
       || b.silentDays - a.silentDays
       || (b.mismatchPct || 0) - (a.mismatchPct || 0)
     ));
@@ -946,6 +1006,7 @@
   HEYS.NormCorrection = {
     REFUSAL_STREAK_LIMIT,
     SILENT_DAYS_ALERT,
+    PANEL_STATES,
     buildPanelRows,
     dayFromWindowRow,
     profileFromContextRow,

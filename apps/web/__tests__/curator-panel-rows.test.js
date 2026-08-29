@@ -178,7 +178,10 @@ describe('панель куратора · сборка строк', () => {
     expect(answered.awaitsDecision).toBe(false);
   });
 
-  it('порядок — кем заняться, а не алфавит', () => {
+  it('порядок — по старшинству состояний из контракта, а не по тревожности', () => {
+    // Контракт: ждёт решения → расчёт разошёлся → молчит → копят данные →
+    // всё ровно. Молчащий девять дней стоит НИЖЕ расхождения — это решение
+    // владельца, а не интуиция кодера.
     const win = [
       ...days21((i) => ({ weight_morning: 90 - i * 0.0127 })),
       ...days21((i) => (i >= 12 ? { has_day: false } : {})).map((r) => ({ ...r, client_id: 'c2' })),
@@ -188,9 +191,49 @@ describe('панель куратора · сборка строк', () => {
       windowRows: win,
       contextRows: [contextRow(), contextRow({ client_id: 'c2' }), contextRow({ client_id: 'c3' })]
     });
-    // Первым — тот, у кого ждёт решение; вторым — молчащий девять дней.
+    expect(rows.map((r) => r.state)).toEqual(
+      [...rows].sort((a, b) => NC.PANEL_STATES.indexOf(a.state) - NC.PANEL_STATES.indexOf(b.state)).map((r) => r.state)
+    );
     expect(rows[0].clientId).toBe('c1');
-    expect(rows[1].clientId).toBe('c2');
+    expect(rows[0].state).toBe('awaits');
+  });
+
+  it('клиент стоит в одной группе, второе состояние — фразой', () => {
+    // Две пилюли читались бы как две группы, и счёт групп перестал бы
+    // складываться в число клиентов.
+    const silentAndOff = NC.buildPanelRows({
+      windowRows: days21((i) => (i >= 17 ? { has_day: false } : { weight_morning: 90 })),
+      contextRows: [contextRow()]
+    })[0];
+    expect(NC.PANEL_STATES).toContain(silentAndOff.state);
+    if (silentAndOff.state === 'silent' && silentAndOff.mismatchPct) {
+      expect(silentAndOff.alsoNote).toBe('и расчёт разошёлся');
+    }
+  });
+
+  it('решение держится до конца дня, а не исчезает сразу', () => {
+    const today = new Date('2026-08-30T12:00:00');
+    const justAnswered = NC.buildPanelRows({
+      now: today,
+      windowRows: days21((i) => ({ weight_morning: 90 - i * 0.0127 })),
+      contextRows: [contextRow({ last_decision: 'applied', last_decision_at: today.getTime() })]
+    })[0];
+    expect(justAnswered.state).toBe('decided_today');
+
+    const yesterday = NC.buildPanelRows({
+      now: today,
+      windowRows: days21((i) => ({ weight_morning: 90 - i * 0.0127 })),
+      contextRows: [contextRow({ last_decision: 'applied', last_decision_at: new Date('2026-08-29T12:00:00').getTime() })]
+    })[0];
+    expect(yesterday.state).not.toBe('decided_today');
+  });
+
+  it('окно ещё не набралось — это «копят данные», а не ошибка', () => {
+    const rows = NC.buildPanelRows({
+      windowRows: days21((i) => (i > 5 ? { has_day: false } : {})),
+      contextRows: [contextRow()]
+    });
+    expect(rows[0].collecting).toBe(true);
   });
 
   it('клиент без профиля не роняет панель целиком', () => {
