@@ -117,6 +117,32 @@ describe('лист отчётов · день, помеченный «не за�
     expect(report.targetDeficitPct).toBe(Math.round(mean));
   });
 
+  it('норма БЖУ считается для самого дня, а не для пустого', () => {
+    // Раньше движок звали без контекста дня: вес брался из профиля вместо
+    // утреннего, и тренировочный бонус к белку не применялся никогда — норма
+    // в отчёте расходилась с той, что человек видел в дне.
+    const seen = [];
+    window.HEYS.dayCalculations = {
+      computeDailyNorms: (optimum, normPerc, ctx) => {
+        seen.push(ctx);
+        return { prot: 100, fat: 60, carbs: 200 };
+      }
+    };
+    seed(PAST_WEEK, (d, i) => ({
+      meals: MEALS,
+      dayTot: { kcal: 2000 },
+      weightMorning: 90 + i,
+      trainings: [{ type: 'strength' }]
+    }));
+    build();
+
+    expect(seen.length).toBe(7);
+    expect(seen.every((c) => c && c.day)).toBe(true);
+    // День приходит именно тот, а не любой: утренний вес растёт по дням.
+    expect(seen.map((c) => c.day.weightMorning)).toEqual([90, 91, 92, 93, 94, 95, 96]);
+    expect(seen[0].profile).toBeTruthy();
+  });
+
   it('голодный день остаётся в расчёте — это осознанный режим, а не пропуск', () => {
     seed(PAST_WEEK, (d, i) => (i === 2
       ? { meals: MEALS, dayTot: { kcal: 600 }, isFastingDay: true }

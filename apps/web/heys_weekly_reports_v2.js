@@ -125,8 +125,12 @@
             if (day?.isRefeedDay && HEYS.Refeed && !(resolved && resolved.kcal > 0)) {
                 goalOptimum = HEYS.Refeed.getRefeedOptimum(optimum, true);
             }
+            // Без ctx движок считал норму для пустого дня: вес брался из профиля
+            // вместо утреннего, а тренировочный бонус к белку не применялся
+            // никогда. Норма в отчёте систематически расходилась с той, что
+            // человек видел в самом дне.
             const normAbs = HEYS.dayCalculations?.computeDailyNorms
-                ? HEYS.dayCalculations.computeDailyNorms(goalOptimum, normPerc)
+                ? HEYS.dayCalculations.computeDailyNorms(goalOptimum, normPerc, { profile, day, lsGet })
                 : { carbs: 0, prot: 0, fat: 0 };
             const ratio = goalOptimum ? (totals?.kcal || 0) / goalOptimum : 0;
             const isToday = dstr === todayStr;
