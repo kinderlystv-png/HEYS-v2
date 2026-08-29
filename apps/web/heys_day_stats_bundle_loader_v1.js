@@ -9,6 +9,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         'heys_morning_activation_calendar_v1.js',
         'heys_day_stats_vm_v1.js',
         'heys_day_realdata_actions_v1.js',
+        // Матрица «Дисциплина» (контракт reports-insights.v4) — до stats_v1:
+        // buildReportsPeriodMeta зовёт HEYS.DisciplineMatrix при рендере.
+        'heys_discipline_matrix_v1.js',
         'heys_day_stats_v1.js',
         'heys_day_activity_v1.js',
         'heys_day_nutrition_v1.js',

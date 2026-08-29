@@ -71,13 +71,16 @@
   margin-top: 10px;
 }
 
+/* Канвас reports-insights.v4, «геометрия кадра»: ярус .tier — 10 px/700,
+   разрядка .16em, тон --ac (#a75c2b = --v4-sand-act-mid, определённая роль —
+   замороженный список --v4-tier не расширяем). Сведено с .reports-v4-tier. */
 .insights-v4-tier {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+  color: var(--v4-sand-act-mid, #a75c2b);
   margin-bottom: 10px;
 }
 
@@ -294,4 +297,458 @@
 [data-palette="sand-dark"] .insights-v4-patterns,
 [data-palette="blue-dark"] .insights-v4-patterns {
   background: var(--v4-surface, #1e293b);
+}
+
+/* === reports-insights.v4 contract (2026-08-29): окно в блоке, зрелость,
+   риск срыва, ярус «Питание», заглушка нового пользователя, второй слой === */
+
+.insights-v4-hero__praise {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--v4-ink, #0f172a);
+}
+
+.insights-v4-maturity {
+  display: inline-block;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font: 700 9px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--v4-chip, rgba(0, 0, 0, 0.06));
+  color: var(--v4-sand-act-deep, #8a4a20);
+}
+
+.insights-v4-maturity--rule {
+  background: var(--v4-ok-bg, #e6f2e6);
+  color: var(--v4-ok-text, #2e7d32);
+}
+
+.insights-v4-maturity--forecast {
+  background: var(--v4-chip, rgba(0, 0, 0, 0.06));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.insights-v4-attention__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.insights-v4-attention__item--risk {
+  border-radius: 14px;
+  padding: 12px;
+  background: var(--v4-accent-bg, #fdeee4);
+}
+
+.insights-v4-attention__risk-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.insights-v4-attention__risk-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font: 700 9px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--v4-warn, #b3402a);
+  color: var(--v4-btn-on-act, #fff5ef);
+}
+
+.insights-v4-attention__risk-window {
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.insights-v4-window {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.insights-v4-window__label {
+  font: 500 9.5px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  max-width: 64px;
+}
+
+.insights-v4-window__chip {
+  min-height: 34px;
+  padding: 0 9px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  font: 600 11.5px/1.1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.32));
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.insights-v4-window__chip.is-active {
+  background: var(--v4-card, #ffffff);
+  color: var(--v4-sand-act-deep, #8a4a20);
+}
+
+.insights-v4-window__chip.is-locked {
+  cursor: not-allowed;
+}
+
+.insights-v4-window__hint {
+  font: 500 9px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.insights-v4-patterns__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.insights-v4-patterns__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.insights-v4-patterns__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+}
+
+.insights-v4-patterns__row:last-child {
+  border-bottom: none;
+}
+
+.insights-v4-patterns__title {
+  flex: 1;
+  min-width: 0;
+  font: 700 12.5px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+}
+
+.insights-v4-patterns__support {
+  flex: none;
+  font: 500 11px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.insights-v4-nutrition {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.insights-v4-nutrition__card {
+  background: var(--v4-card, #ffffff);
+  border-radius: 20px;
+  padding: 16px;
+}
+
+/* Канвас .mvH: 600 10.5px, разрядка .04em, чернила 55%, без капса. */
+.insights-v4-nutrition__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  margin-bottom: 12px;
+}
+
+.insights-v4-nutrition__head-note {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.insights-v4-nutrition__rhythm-line {
+  font: 700 13px/1.4 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+  margin-bottom: 10px;
+}
+
+.insights-v4-nutrition__rhythm-track {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.insights-v4-nutrition__rhythm-time {
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.insights-v4-nutrition__rhythm-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--v4-chip, rgba(0, 0, 0, 0.07));
+}
+
+.insights-v4-nutrition__bzhu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.insights-v4-nutrition__bzhu-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.insights-v4-nutrition__bzhu-name {
+  flex: none;
+  width: 96px;
+  font: 600 11.5px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insights-v4-nutrition__bzhu-bar {
+  flex: 1;
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--v4-chip, rgba(0, 0, 0, 0.07));
+}
+
+.insights-v4-nutrition__bzhu-seg--prot {
+  background: var(--v4-good, #4c8f4c);
+}
+
+.insights-v4-nutrition__bzhu-seg--fat {
+  background: var(--v4-warn, #c9a03c);
+}
+
+.insights-v4-nutrition__bzhu-seg--carbs {
+  background: var(--v4-sand-act-deep, #b06a34);
+}
+
+.insights-v4-nutrition__bzhu-kcal {
+  flex: none;
+  min-width: 58px;
+  text-align: right;
+  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.insights-v4-nutrition__legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.insights-v4-nutrition__legend-item {
+  font: 500 10px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.insights-v4-nutrition__legend-item::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--v4-ink-4, rgba(0, 0, 0, 0.3));
+}
+
+.insights-v4-nutrition__legend-item--prot::before {
+  background: var(--v4-good, #4c8f4c);
+}
+
+.insights-v4-nutrition__legend-item--fat::before {
+  background: var(--v4-warn, #c9a03c);
+}
+
+.insights-v4-nutrition__legend-item--carbs::before {
+  background: var(--v4-sand-act-deep, #b06a34);
+}
+
+.insights-v4-stub {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insights-v4-stub__hero {
+  background: var(--v4-hero, #f7efe2);
+  border-radius: 26px;
+  padding: 24px 20px;
+}
+
+.insights-v4-stub__title {
+  font: 700 16px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+  margin: 8px 0 14px;
+}
+
+.insights-v4-stub__progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--v4-chip, rgba(0, 0, 0, 0.09));
+  overflow: hidden;
+}
+
+.insights-v4-stub__progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--v4-act, #c67139);
+}
+
+.insights-v4-stub__count {
+  margin-top: 8px;
+  text-align: right;
+  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-sand-act-deep, #8a4a20);
+}
+
+.insights-v4-stub__fill {
+  list-style: none;
+  margin: 0;
+  padding: 2px 16px;
+  background: var(--v4-card, #ffffff);
+  border-radius: 20px;
+}
+
+.insights-v4-stub__fill-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+}
+
+.insights-v4-stub__fill-row:last-child {
+  border-bottom: none;
+}
+
+.insights-v4-stub__fill-state {
+  font-size: 11px;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.insights-v4-stub__fill-state.is-done {
+  color: var(--v4-ok-text, #2e7d32);
+}
+
+.insights-v4-stub__warnings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.insights-v4-stub__warning {
+  background: var(--v4-card, #ffffff);
+  border-radius: 20px;
+  padding: 14px 16px;
+}
+
+.insights-v4-stub__ladder {
+  list-style: none;
+  margin: 0;
+  padding: 2px 16px;
+  background: var(--v4-card, #ffffff);
+  border-radius: 20px;
+}
+
+.insights-v4-stub__ladder-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+}
+
+.insights-v4-stub__ladder-row:last-child {
+  border-bottom: none;
+}
+
+.insights-v4-stub__ladder-day {
+  flex: none;
+  min-width: 22px;
+  font: 800 13px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-sand-act-deep, #8a4a20);
+}
+
+.insights-v4-stub__ladder-day.is-passed {
+  color: var(--v4-ok-text, #2e7d32);
+}
+
+.insights-v4-stub__ladder-text {
+  font: 500 12px/1.4 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
+}
+
+.insights-v4-outcomes,
+.insights-v4-whatif,
+.insights-v4-thresholds {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.insights-v4-outcomes__row,
+.insights-v4-thresholds__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: none;
+  background: var(--v4-card, #ffffff);
+  border-radius: 16px;
+  padding: 14px 16px;
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+  text-align: left;
+}
+
+.insights-v4-outcomes__row {
+  cursor: pointer;
+}
+
+.insights-v4-outcomes__value,
+.insights-v4-thresholds__value {
+  font-size: 11.5px;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.insights-v4-whatif__note,
+.insights-v4-whatif__locked {
+  margin: 0;
+  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }

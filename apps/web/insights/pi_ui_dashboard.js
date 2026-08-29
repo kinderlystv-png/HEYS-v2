@@ -1950,7 +1950,16 @@
     };
 
     // Каскад (heys_cascade_card_v1.js) и Инсайты (этот файл) — разные lazy-
-    const INSIGHTS_V4_PERIODS = [7, 14, 30];
+    // Контракт reports-insights.v4: окно наблюдения 7/30 живёт внутри
+    // «Что заметили», не в шапке вкладки (строка «окно наблюдения»).
+    const INSIGHTS_V4_PERIODS = [7, 30];
+
+    function pluralDaysWord(n) {
+      const mod10 = n % 10, mod100 = n % 100;
+      if (mod10 === 1 && mod100 !== 11) return 'день';
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'дня';
+      return 'дней';
+    }
 
     function buildInsightsCuratorPhrase(actions, warnings) {
       if (actions && actions[0] && actions[0].why) return actions[0].why;
@@ -1961,12 +1970,8 @@
 
     function formatInsightsDaysLabel(days) {
       const n = days || 0;
-      const mod10 = n % 10;
-      const mod100 = n % 100;
-      let word = 'дней';
-      if (mod10 === 1 && mod100 !== 11) word = 'день';
-      else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) word = 'дня';
-      return n + ' ' + word + ' данных';
+      // Контракт «счётчик в шапке»: «N дней данных из 30» по всей истории.
+      return n + ' ' + pluralDaysWord(n) + ' данных из 30';
     }
 
     // Счётчик всей доступной истории (последние 30 дней), независимый от
@@ -1985,102 +1990,371 @@
     }
 
     function InsightsV4Header(props) {
-      const { daysWithData, period, onPeriodChange } = props || {};
+      const { daysWithData } = props || {};
+      // Пилюли периода из шапки сняты (контракт «окно наблюдения»): окно
+      // живёт внутри «Что заметили», в шапке остаётся только счётчик истории.
       return h('div', { className: 'insights-v4-meta' },
         h('div', { className: 'insights-v4-meta__row' },
           h('h2', { className: 'insights-v4-meta__title' }, 'Инсайты'),
           h('span', { className: 'insights-v4-meta__days' }, formatInsightsDaysLabel(daysWithData))
-        ),
-        h('div', { className: 'insights-v4-period-pills' },
-          INSIGHTS_V4_PERIODS.map(function (p) {
-            const disabled = p === 30 && (daysWithData || 0) < 30;
-            return h('button', {
-              key: p,
-              type: 'button',
-              className: 'insights-v4-period-pill' + (period === p ? ' is-active' : '') + (disabled ? ' is-disabled' : ''),
-              disabled: disabled,
-              onClick: function () { if (!disabled && onPeriodChange) onPeriodChange(p); },
-              title: disabled ? ('Доступно после 30 дней данных (сейчас ' + (daysWithData || 0) + ')') : (p + ' дней')
-            }, p + 'д');
-          })
         )
       );
     }
 
     function InsightsTodayHero(props) {
       const { phrase, actions } = props || {};
-      if (!phrase && !(actions && actions.length)) return null;
+      const hasActions = actions && actions.length > 0;
+      // Контракт «сделай сегодня»: пустое состояние блок не скрывает — якорь
+      // вкладки не исчезает, одна строка-похвала без кнопок.
       return h('div', { className: 'insights-v4-hero' },
-        phrase && h('p', { className: 'insights-v4-hero__phrase' }, phrase),
-        actions && actions.length > 0 && h(PriorityActions, { actions: actions, variant: 'v4' })
+        h('div', { className: 'insights-v4-tier' }, 'Сделай сегодня'),
+        hasActions && phrase && h('p', { className: 'insights-v4-hero__phrase' }, phrase),
+        hasActions
+          ? h(PriorityActions, { actions: actions, variant: 'v4' })
+          : h('p', { className: 'insights-v4-hero__praise' },
+            'Сегодня без заданий — ритм держится, вчерашний план закрыт.')
       );
+    }
+
+    // Контракт «стоит внимания»: риск срыва high/critical — всегда первая
+    // карточка, его не выталкивают менее важные предупреждения. Зона словом,
+    // ведущий фактор словами, окно риска; число 0–100 остаётся движку.
+    function buildRelapseRiskAttentionCard() {
+      try {
+        const snap = HEYS.RelapseRisk && HEYS.RelapseRisk.getCurrentSnapshot
+          ? HEYS.RelapseRisk.getCurrentSnapshot()
+          : null;
+        if (!snap || !snap.hasData) return null;
+        if (snap.level !== 'high' && snap.level !== 'critical') return null;
+        const driver = snap.primaryDriver || null;
+        const driverLabel = driver ? String(driver.label || '').toLowerCase() : '';
+        const explanation = (snap.recommendation && snap.recommendation.text)
+          || (driver && driver.explanation)
+          || '';
+        return {
+          kind: 'risk',
+          levelWord: snap.level === 'critical' ? 'критический' : 'высокий',
+          windowLabel: snap.topWindowLabel || '',
+          line: driverLabel
+            ? ('Главное сейчас — ' + driverLabel + (explanation ? ': ' + explanation : '.'))
+            : (explanation || 'Риск срыва повышен — спокойный вечер важнее плана.')
+        };
+      } catch (_) { return null; }
     }
 
     function InsightsV4Attention(props) {
       const { warnings, daysWithData, onOpenPanel } = props || {};
-      if (!warnings || warnings.length === 0) {
+      const riskCard = buildRelapseRiskAttentionCard();
+      const list = warnings || [];
+      if (!riskCard && list.length === 0) {
         return h('div', { className: 'insights-v4-attention insights-v4-attention--ok' },
           h('div', { className: 'insights-v4-tier' }, 'Стоит внимания'),
-          h('p', { className: 'insights-v4-attention__text' }, 'Пока всё спокойно — заметных отклонений в последних днях нет.')
+          h('p', { className: 'insights-v4-attention__text' }, 'Пока всё спокойно — заметных отклонений нет.'),
+          h('p', { className: 'insights-v4-attention__basis' }, 'просмотрено 30 дней истории')
         );
       }
-      const basis = daysWithData ? ('на ' + daysWithData + ' днях') : '';
+      const basis = daysWithData ? ('замечено на ваших данных за ' + daysWithData + ' ' + pluralDaysWord(daysWithData)) : '';
+      // Лимит контракта: 3 карточки + «Ещё N». Риск занимает первый слот.
+      const warningSlots = riskCard ? 2 : 3;
+      const shown = list.slice(0, warningSlots);
+      const hiddenCount = list.length - shown.length;
       return h('div', { className: 'insights-v4-attention' },
         h('div', { className: 'insights-v4-tier' }, 'Стоит внимания'),
         h('ul', { className: 'insights-v4-attention__list' },
-          warnings.slice(0, 3).map(function (w, idx) {
+          riskCard && h('li', { key: 'relapse-risk', className: 'insights-v4-attention__item insights-v4-attention__item--risk' },
+            h('div', { className: 'insights-v4-attention__risk-head' },
+              h('span', { className: 'insights-v4-attention__risk-badge' }, 'риск срыва · ' + riskCard.levelWord),
+              riskCard.windowLabel && h('span', { className: 'insights-v4-attention__risk-window' }, 'окно — ' + riskCard.windowLabel)
+            ),
+            h('div', { className: 'insights-v4-attention__line' }, riskCard.line),
+            h('div', { className: 'insights-v4-attention__meta' },
+              h('span', { className: 'insights-v4-maturity insights-v4-maturity--forecast' }, 'прогноз'),
+              basis && h('span', { className: 'insights-v4-attention__basis' }, basis)
+            )
+          ),
+          shown.map(function (w, idx) {
             return h('li', { key: w.id || w.type || idx, className: 'insights-v4-attention__item' },
-              h('span', { className: 'insights-v4-attention__dot', 'aria-hidden': 'true' }),
               h('div', { className: 'insights-v4-attention__copy' },
                 h('div', { className: 'insights-v4-attention__line' }, w.message || w.detail),
                 w.detail && w.message && h('div', { className: 'insights-v4-attention__sub' }, w.detail),
-                basis && h('div', { className: 'insights-v4-attention__basis' }, basis)
+                h('div', { className: 'insights-v4-attention__meta' },
+                  h('span', { className: 'insights-v4-maturity' }, 'наблюдение'),
+                  basis && h('span', { className: 'insights-v4-attention__basis' }, basis)
+                )
               )
             );
           })
         ),
-        warnings.length > 3 && onOpenPanel && h('button', {
+        hiddenCount > 0 && onOpenPanel && h('button', {
           type: 'button',
           className: 'insights-v4-attention__more',
           onClick: onOpenPanel
-        }, 'Ещё ' + (warnings.length - 3) + ' →')
+        }, 'Ещё ' + hiddenCount + ' →')
       );
     }
 
+    // Контракт «четыре слова»: гипотеза → наблюдение → правило для посчитанных
+    // утверждений; порог «правила» — уверенность от 0,8. «Прогноз» живёт на
+    // модельных выводах (риск срыва, прогноз веса), не здесь.
+    function buildPatternMaturityWord(pattern) {
+      const conf = typeof pattern.confidence === 'number' ? pattern.confidence : null;
+      if (!pattern.available) return 'гипотеза';
+      if (conf === null) return 'наблюдение';
+      if (conf >= 0.8) return 'правило';
+      if (conf >= 0.5) return 'наблюдение';
+      return 'гипотеза';
+    }
+
+    // Контракт «число опоры»: в форме, которую позволяет алгоритм — у счётных
+    // «N из M дней», у корреляционных «N дней наблюдений», у незрелых
+    // «нужно ещё N дней». Одна форма на все семейства не натягивается.
     function buildPatternMaturityLabel(pattern, daysWithData) {
       if (!pattern) return '';
       if (pattern.available) {
-        const analyzed = pattern.daysAnalyzed || daysWithData || 0;
-        const minDays = pattern.minDaysRequired || 7;
-        if (analyzed > 0 && analyzed < minDays) {
-          return analyzed + ' из ' + minDays;
+        const analyzed = pattern.daysAnalyzed || pattern.n || daysWithData || 0;
+        if (typeof pattern.matchedDays === 'number' && typeof pattern.totalDays === 'number') {
+          return pattern.matchedDays + ' из ' + pattern.totalDays + ' ' + pluralDaysWord(pattern.totalDays);
         }
-        if (typeof pattern.confidence === 'number') {
-          return Math.round(pattern.confidence * 100) + '% уверенности';
-        }
+        if (analyzed > 0) return analyzed + ' ' + pluralDaysWord(analyzed) + ' наблюдений';
         return '';
       }
       const need = pattern.minDaysRequired || 7;
       const have = pattern.daysAnalyzed || daysWithData || 0;
       const left = Math.max(0, need - have);
-      if (left > 0) return 'нужно ещё ' + left + ' ' + (left === 1 ? 'день' : left < 5 ? 'дня' : 'дней');
+      if (left > 0) return 'нужно ещё ' + left + ' ' + pluralDaysWord(left);
       return 'мало данных';
     }
 
+    function InsightsV4WindowChips(props) {
+      const { period, onPeriodChange, historyDays } = props || {};
+      return h('div', { className: 'insights-v4-window' },
+        h('span', { className: 'insights-v4-window__label' }, 'окно наблюдения'),
+        INSIGHTS_V4_PERIODS.map(function (p) {
+          const locked = p === 30 && (historyDays || 0) < 30;
+          const left = Math.max(0, 30 - (historyDays || 0));
+          return h('button', {
+            key: p,
+            type: 'button',
+            className: 'insights-v4-window__chip' + (period === p ? ' is-active' : '') + (locked ? ' is-locked' : ''),
+            disabled: locked,
+            onClick: function () { if (!locked && onPeriodChange) onPeriodChange(p); },
+            title: locked ? ('Откроется через ' + left + ' ' + pluralDaysWord(left)) : (p + ' ' + pluralDaysWord(p))
+          },
+            p + (p === 7 ? ' дней' : ''),
+            locked && h('span', { className: 'insights-v4-window__hint' }, 'через ' + left + ' ' + pluralDaysWord(left))
+          );
+        })
+      );
+    }
+
     function InsightsV4Patterns(props) {
-      const { patterns, daysWithData } = props || {};
+      const { patterns, daysWithData, period, onPeriodChange, historyDays } = props || {};
       if (!patterns || patterns.length === 0) return null;
+      // Тумблер «Показать все» снят (контракт «что заметили»): скрытая
+      // незрелость превращала гипотезу в сюрприз — незрелое видно сразу со
+      // словом «гипотеза», лимит незрелых строк — три.
       const available = patterns.filter(function (p) { return p && p.available; });
       const immature = patterns.filter(function (p) { return p && !p.available; }).slice(0, 3);
       if (available.length === 0 && immature.length === 0) return null;
+      const renderRow = function (p, idx) {
+        const word = buildPatternMaturityWord(p);
+        return h('li', { key: p.pattern || idx, className: 'insights-v4-patterns__row' },
+          h('span', { className: 'insights-v4-patterns__title' }, p.title || p.insight || p.pattern),
+          h('span', {
+            className: 'insights-v4-maturity' + (word === 'правило' ? ' insights-v4-maturity--rule' : '')
+          }, word),
+          h('span', { className: 'insights-v4-patterns__support' }, buildPatternMaturityLabel(p, daysWithData))
+        );
+      };
       return h('div', { className: 'insights-v4-patterns' },
-        h('div', { className: 'insights-v4-tier' }, 'Что заметили'),
-        available.length > 0 && h(PatternsList, { patterns: available }),
-        immature.length > 0 && h('ul', { className: 'insights-v4-patterns__immature' },
-          immature.map(function (p, idx) {
-            return h('li', { key: p.pattern || idx, className: 'insights-v4-patterns__immature-item' },
-              h('span', { className: 'insights-v4-patterns__immature-title' }, p.title || p.pattern),
-              h('span', { className: 'insights-v4-patterns__immature-meta' }, buildPatternMaturityLabel(p, daysWithData))
+        h('div', { className: 'insights-v4-patterns__head' },
+          h('div', { className: 'insights-v4-tier' }, 'Что заметили'),
+          h(InsightsV4WindowChips, { period: period, onPeriodChange: onPeriodChange, historyDays: historyDays })
+        ),
+        h('ul', { className: 'insights-v4-patterns__list' },
+          available.map(renderRow),
+          immature.map(renderRow)
+        )
+      );
+    }
+
+    // Контракт «ярус Питание»: планер «Что съесть сейчас» → «Ритм приёмов» →
+    // «БЖУ по приёмам»; планер заканчивается действием, поэтому выше разбора.
+    // Пустой день ярус не показывает вовсе: советовать по нулю данных нечем.
+    // Планер — существующая карточка HEYS.MealRecCard (полный движок с окном,
+    // вилками и «Как посчитано»); v4-вид самой карточки — названное
+    // отступление, ярус даёт ей v4-обвязку.
+    function InsightsV4NutritionTier(props) {
+      const { day, pIndex, profile, dayTot, normAbs, optimum } = props || {};
+      const meals = ((day && day.meals) || []).filter(function (m) {
+        const items = (m && (m.items || m.food || m.list || m.products)) || [];
+        return items.length > 0;
+      });
+      if (meals.length === 0) return null;
+
+      const mealTotals = HEYS.models && HEYS.models.mealTotals;
+      const parseT = function (t) {
+        if (!t || typeof t !== 'string') return null;
+        const m = t.match(/^(\d{1,2}):(\d{2})/);
+        return m ? (+m[1] * 60 + +m[2]) : null;
+      };
+      const timed = meals
+        .map(function (m) { return { meal: m, min: parseT(m.time) }; })
+        .filter(function (x) { return x.min !== null; })
+        .sort(function (a, b) { return a.min - b.min; });
+      const gaps = [];
+      for (let gi = 1; gi < timed.length; gi++) {
+        gaps.push((timed[gi].min - timed[gi - 1].min) / 60);
+      }
+      const fmtGap = function (g) { return g.toFixed(1).replace('.', ','); };
+
+      const plannerCard = (HEYS.MealRecCard && HEYS.MealRecCard.renderCard)
+        ? (HEYS.MealRecCard.renderCard({
+          React: React,
+          day: day,
+          prof: profile,
+          pIndex: pIndex,
+          dayTot: dayTot,
+          normAbs: normAbs,
+          optimum: optimum
+        }) || null)
+        : null;
+
+      const bzhuRows = mealTotals ? timed.map(function (x, idx) {
+        const t = mealTotals(x.meal, pIndex) || {};
+        const kcal = Math.round(+t.kcal || 0);
+        const prot = Math.max(0, +t.prot || 0);
+        const fat = Math.max(0, +t.fat || 0);
+        const carbs = Math.max(0, +t.carbs || 0);
+        const sum = prot + fat + carbs;
+        return {
+          key: idx,
+          name: (x.meal.name || x.meal.title || 'Приём ' + (idx + 1)),
+          time: x.meal.time || '',
+          kcal: kcal,
+          protPct: sum > 0 ? (prot / sum) * 100 : 0,
+          fatPct: sum > 0 ? (fat / sum) * 100 : 0,
+          carbsPct: sum > 0 ? (carbs / sum) * 100 : 0
+        };
+      }) : [];
+
+      return h('div', { className: 'insights-v4-nutrition' },
+        h('div', { className: 'insights-v4-tier' }, 'Питание'),
+        plannerCard,
+        gaps.length > 0 && h('div', { className: 'insights-v4-nutrition__card' },
+          h('div', { className: 'insights-v4-nutrition__head' },
+            h('span', null, 'Ритм приёмов'),
+            h('span', { className: 'insights-v4-nutrition__head-note' }, 'сегодня')
+          ),
+          h('div', { className: 'insights-v4-nutrition__rhythm-line' },
+            'Промежутки ' + gaps.map(fmtGap).join(' ч и ') + ' ч.'
+          ),
+          h('div', { className: 'insights-v4-nutrition__rhythm-track' },
+            timed.map(function (x, idx) {
+              return h(React.Fragment, { key: idx },
+                h('span', { className: 'insights-v4-nutrition__rhythm-time' }, x.meal.time),
+                idx < timed.length - 1 && h('span', { className: 'insights-v4-nutrition__rhythm-bar' })
+              );
+            })
+          )
+        ),
+        bzhuRows.length > 0 && h('div', { className: 'insights-v4-nutrition__card' },
+          h('div', { className: 'insights-v4-nutrition__head' },
+            h('span', null, 'БЖУ по приёмам'),
+            h('span', { className: 'insights-v4-nutrition__head-note' }, 'сегодня')
+          ),
+          h('ul', { className: 'insights-v4-nutrition__bzhu' },
+            bzhuRows.map(function (row) {
+              return h('li', { key: row.key, className: 'insights-v4-nutrition__bzhu-row' },
+                h('span', { className: 'insights-v4-nutrition__bzhu-name' },
+                  row.name + (row.time ? ' · ' + row.time : '')),
+                h('span', { className: 'insights-v4-nutrition__bzhu-bar' },
+                  h('span', { className: 'insights-v4-nutrition__bzhu-seg insights-v4-nutrition__bzhu-seg--prot', style: { width: row.protPct + '%' } }),
+                  h('span', { className: 'insights-v4-nutrition__bzhu-seg insights-v4-nutrition__bzhu-seg--fat', style: { width: row.fatPct + '%' } }),
+                  h('span', { className: 'insights-v4-nutrition__bzhu-seg insights-v4-nutrition__bzhu-seg--carbs', style: { width: row.carbsPct + '%' } })
+                ),
+                h('span', { className: 'insights-v4-nutrition__bzhu-kcal' }, row.kcal)
+              );
+            })
+          ),
+          h('div', { className: 'insights-v4-nutrition__legend' },
+            h('span', { className: 'insights-v4-nutrition__legend-item insights-v4-nutrition__legend-item--prot' }, 'белок'),
+            h('span', { className: 'insights-v4-nutrition__legend-item insights-v4-nutrition__legend-item--fat' }, 'жиры'),
+            h('span', { className: 'insights-v4-nutrition__legend-item insights-v4-nutrition__legend-item--carbs' }, 'углеводы')
+          )
+        )
+      );
+    }
+
+    // Контракт «новый пользователь»: до 7 дней — витрина лестницы, а не
+    // заглушка. Прогресс «N из 7», что заполнить сегодня, ранние
+    // предупреждения (детекторы 3–5 дней) со словом «гипотеза», лестница
+    // «что откроется». Демо-режим и тур сняты — их работу делает этот экран.
+    const INSIGHTS_V4_LADDER = [
+      { day: 3, text: 'первые предупреждения — уже работают' },
+      { day: 7, text: 'советы «Сделай сегодня» и наблюдения' },
+      { day: 14, text: 'личные пороги, правила и «Что если»' },
+      { day: 30, text: 'метаболический фенотип' }
+    ];
+
+    function InsightsV4NewUserStub(props) {
+      const { historyDays, todayDay, warnings } = props || {};
+      const have = historyDays || 0;
+      const left = Math.max(0, 7 - have);
+      const day = todayDay || {};
+      const mealsCount = (day.meals || []).filter(function (m) {
+        const items = (m && (m.items || m.food || m.list || m.products)) || [];
+        return items.length > 0;
+      }).length;
+      const fillRows = [
+        { label: 'Приёмы еды — хотя бы два', done: mealsCount >= 2, doneText: 'есть' },
+        { label: 'Вес утром', done: (+day.weightMorning || 0) > 0, doneText: 'есть' },
+        { label: 'Сон в чек-ине', done: !!(day.sleepStart && day.sleepEnd), doneText: 'есть' }
+      ];
+      const earlyWarnings = (warnings || []).slice(0, 2);
+      return h('div', { className: 'insights-v4-stub' },
+        h('div', { className: 'insights-v4-stub__hero' },
+          h('div', { className: 'insights-v4-tier' }, 'Пока копим данные'),
+          h('div', { className: 'insights-v4-stub__title' },
+            left > 0 ? ('Первые советы — через ' + left + ' ' + pluralDaysWord(left)) : 'Первые советы — уже сегодня'),
+          h('div', { className: 'insights-v4-stub__progress' },
+            h('div', { className: 'insights-v4-stub__progress-fill', style: { width: Math.min(100, Math.round((have / 7) * 100)) + '%' } })
+          ),
+          h('div', { className: 'insights-v4-stub__count' }, have + ' из 7')
+        ),
+        h('div', { className: 'insights-v4-tier' }, 'Что заполнить сегодня'),
+        h('ul', { className: 'insights-v4-stub__fill' },
+          fillRows.map(function (row, idx) {
+            return h('li', { key: idx, className: 'insights-v4-stub__fill-row' },
+              h('span', { className: 'insights-v4-stub__fill-label' }, row.label),
+              h('span', {
+                className: 'insights-v4-stub__fill-state' + (row.done ? ' is-done' : '')
+              }, row.done ? row.doneText : 'пусто')
+            );
+          })
+        ),
+        earlyWarnings.length > 0 && h(React.Fragment, null,
+          h('div', { className: 'insights-v4-tier' }, 'Стоит внимания — уже с трёх дней'),
+          h('ul', { className: 'insights-v4-stub__warnings' },
+            earlyWarnings.map(function (w, idx) {
+              return h('li', { key: w.id || idx, className: 'insights-v4-stub__warning' },
+                h('div', { className: 'insights-v4-attention__line' }, w.message || w.detail),
+                h('div', { className: 'insights-v4-attention__meta' },
+                  h('span', { className: 'insights-v4-maturity' }, 'гипотеза'),
+                  h('span', { className: 'insights-v4-attention__basis' }, have + ' ' + pluralDaysWord(have) + ' наблюдений')
+                )
+              );
+            })
+          )
+        ),
+        h('div', { className: 'insights-v4-tier' }, 'Что откроется дальше'),
+        h('ul', { className: 'insights-v4-stub__ladder' },
+          INSIGHTS_V4_LADDER.map(function (step) {
+            return h('li', { key: step.day, className: 'insights-v4-stub__ladder-row' },
+              h('span', {
+                className: 'insights-v4-stub__ladder-day' + (have >= step.day ? ' is-passed' : '')
+              }, step.day),
+              h('span', { className: 'insights-v4-stub__ladder-text' }, step.text)
             );
           })
         )
@@ -2312,7 +2586,9 @@
       }, [lsGet, activeTab, insightsPeriod, useInsightsV4, selectedDate, effectiveData.profile, effectiveData.pIndex, effectiveData.optimum]);
 
       // 🎭 Используем демо-данные если тур не пройден И реальных данных нет
-      const showDemoMode = !insightsTourCompleted && !realInsights.available;
+      // Демо-режим снят для v4 (контракт «снято · демо-режим и тур»):
+      // фейковые инсайты нарушали «Инсайты обязаны говорить, на чём стоят».
+      const showDemoMode = !useInsightsV4 && !insightsTourCompleted && !realInsights.available;
       const insights = showDemoMode ? DEMO_INSIGHTS : realInsights;
 
       // 🆕 Расчёт статуса 0-100 (или демо)
@@ -2395,7 +2671,10 @@
               if (dayData) days.push({ ...dayData, date: dateStr });
             }
 
-            if (days.length < 7) {
+            // Контракт «ранние предупреждения в заглушке»: детекторы с окнами
+            // 3–5 дней видны уже до полного экрана — гейт опущен с 7 до 3
+            // синхронно с мастер-гейтом движка (pi_early_warning).
+            if (days.length < 3) {
               if (!cancelled) {
                 setEwsWarnings([]);
                 setPriorityActions([]);
@@ -2527,16 +2806,8 @@
       // Получить все метрики для фильтров
       const allMetrics = useMemo(() => getAllMetricsByPriority(), []);
 
-      // 🎯 Автозапуск мини-тура при первом посещении Insights
-      useEffect(() => {
-        // Даём время на рендер секций перед запуском тура
-        const timer = setTimeout(() => {
-          if (HEYS.InsightsTour?.shouldShow?.() && HEYS.InsightsTour.start) {
-            HEYS.InsightsTour.start();
-          }
-        }, 800);
-        return () => clearTimeout(timer);
-      }, []); // Только при первом монтировании
+      // Тур снят (контракт «снято · демо-режим и тур»): его работу делает
+      // заглушка нового пользователя с настоящим прогрессом и лестницей.
 
       // R-INS-P2-2 (2026-05-14): EmptyState порог поднят с 3 до 7 дней.
       // При 3-6 днях юзер раньше видел 12 виджетов с пустыми/половинными
@@ -2550,20 +2821,52 @@
         () => countHistoryDaysWithData(lsGet),
         [lsGet, selectedDate, dataVersion]
       );
+      // Контракт «прогноз веса»: считается на фиксированных 30 днях, с окна
+      // наблюдения снят — на выбираемом окне прогноз можно подобрать приятнее.
+      const weightPrediction30 = useMemo(() => {
+        try {
+          const getter = lsGet || window.HEYS?.utils?.lsGet;
+          const getDays = HEYS.InsightsPI?.calculations?.getDaysData;
+          const predict = HEYS.PredictiveInsights?.predictWeight;
+          if (!getter || typeof getDays !== 'function' || typeof predict !== 'function') return null;
+          return predict(getDays(30, getter), effectiveData.profile);
+        } catch (_) { return null; }
+      }, [lsGet, dataVersion, effectiveData.profile]);
+
+      // «Итоги» второго слоя: короткие, без периодов — длинные сравнения в
+      // Отчётах. Сдвиг веса за ~неделю и за окно 30 дней.
+      const periodOutcomes = useMemo(() => {
+        try {
+          const getter = lsGet || window.HEYS?.utils?.lsGet;
+          const getDays = HEYS.InsightsPI?.calculations?.getDaysData;
+          if (!getter || typeof getDays !== 'function') return null;
+          const weights = getDays(30, getter)
+            .filter((d) => (+d.weightMorning || 0) > 0)
+            .map((d) => ({ w: +d.weightMorning, daysAgo: d.daysAgo }));
+          if (weights.length < 2) return null;
+          const latest = weights[0];
+          const weekRef = weights.find((x) => x.daysAgo >= 6) || null;
+          const monthRef = weights[weights.length - 1];
+          return {
+            week: weekRef ? +(latest.w - weekRef.w).toFixed(1) : null,
+            month: monthRef !== latest ? +(latest.w - monthRef.w).toFixed(1) : null
+          };
+        } catch (_) { return null; }
+      }, [lsGet, dataVersion]);
+
       const MIN_DAYS_FOR_FULL = 7;
-      const shouldShowEmptyState = !insights.available || daysWithData < MIN_DAYS_FOR_FULL;
-      if (shouldShowEmptyState && insightsTourCompleted) {
+      // Контракт «до 7 дней»: витрина лестницы вместо заглушки; демо-режим и
+      // тур сняты, поэтому гейта по туру больше нет — порог только по данным.
+      const shouldShowEmptyState = !insights.available || historyDaysWithData < MIN_DAYS_FOR_FULL;
+      if (useInsightsV4 && shouldShowEmptyState) {
         return h(InsightsErrorBoundary, null,
           h('div', { className: 'insights-tab insights-v4' },
-            h(InsightsV4Header, {
-              daysWithData: historyDaysWithData,
-              period: insightsPeriod,
-              onPeriodChange: setInsightsPeriod
-            }),
+            h(InsightsV4Header, { daysWithData: historyDaysWithData }),
             h('div', { className: 'insights-tab__content insights-v4__content' },
-              h(EmptyState, {
-                daysAnalyzed: daysWithData,
-                minRequired: realInsights.minDaysRequired || MIN_DAYS_FOR_FULL
+              h(InsightsV4NewUserStub, {
+                historyDays: historyDaysWithData,
+                todayDay: effectiveData.dayData,
+                warnings: ewsWarnings
               })
             )
           )
@@ -2585,13 +2888,14 @@
               h('h2', { className: 'insights-v4-detail__title' }, 'Подробно')
             ),
             h('div', { className: 'insights-tab__content insights-v4__content insights-v4-detail__content' },
-              insights.weightPrediction && h(CollapsibleSection, {
+              // Контракт «прогноз веса»: фиксированные 30 дней, не окно чипа.
+              weightPrediction30 && weightPrediction30.available !== false && h(CollapsibleSection, {
                 title: 'Прогноз веса',
                 icon: '⚖️',
                 defaultOpen: true,
                 priority: 'MEDIUM'
               },
-                h(WeightPrediction, { prediction: insights.weightPrediction }),
+                h(WeightPrediction, { prediction: weightPrediction30 }),
                 h('p', { className: 'insights-v4-detail__disclaimer' },
                   'Расчёт при условии точного учёта — не обещание даты на весах.'
                 )
@@ -2618,17 +2922,66 @@
                   selectedDate
                 })
               ),
-              h('div', { className: 'insights-tab__section insights-tab__section--low' },
-                h(SectionHeader, {
-                  title: 'Полнота данных',
-                  icon: '📊',
-                  priority: 'LOW',
-                  infoKey: 'DATA_COMPLETENESS'
-                }),
-                h(DataCompletenessCard, { lsGet, profile: effectiveData.profile })
+              // Контракт «второй слой»: итоги короткие и без периодов —
+              // длинные сравнения остаются в Отчётах.
+              periodOutcomes && (periodOutcomes.week != null || periodOutcomes.month != null) && h('div', { className: 'insights-v4-outcomes' },
+                h('div', { className: 'insights-v4-tier' }, 'Итоги'),
+                [['Неделя', periodOutcomes.week], ['Месяц', periodOutcomes.month]].map(function (pair) {
+                  if (pair[1] == null) return null;
+                  const d = pair[1];
+                  const text = (d > 0 ? '+' : d < 0 ? '−' : '') + Math.abs(d).toFixed(1).replace('.', ',') + ' кг';
+                  return h('button', {
+                    key: pair[0],
+                    type: 'button',
+                    className: 'insights-v4-outcomes__row',
+                    onClick: function () {
+                      const setTab = (HEYS.App && HEYS.App.setTab) || (HEYS.ui && HEYS.ui.switchTab);
+                      if (typeof setTab === 'function') setTab('stats');
+                    }
+                  },
+                    h('span', null, pair[0]),
+                    h('span', { className: 'insights-v4-outcomes__value' }, text + ' ›')
+                  );
+                })
+              ),
+              // Контракт «что если»: порог 14 дней; сдвигается «Оценка дня» из
+              // паттернов, не HEYS Score. До порога — счётчик, не сценарии.
+              h('div', { className: 'insights-v4-whatif' },
+                h('div', { className: 'insights-v4-tier' }, 'Что если…'),
+                historyDaysWithData >= 14
+                  ? h(React.Fragment, null,
+                    HEYS.InsightsPI?.WhatIfScenariosCard && h(HEYS.InsightsPI.WhatIfScenariosCard, {
+                      onClick: function () { setShowWhatIfScenarios(true); }
+                    }),
+                    h('p', { className: 'insights-v4-whatif__note' },
+                      'Сценарий двигает оценку дня из паттернов, а не HEYS Score — каскад за 30 дней один приём не сдвинет.')
+                  )
+                  : h('p', { className: 'insights-v4-whatif__locked' },
+                    'Откроется через ' + Math.max(1, 14 - historyDaysWithData) + ' ' + pluralDaysWord(Math.max(1, 14 - historyDaysWithData)) + ' — сценарий на коротких данных был бы гаданием.')
+              ),
+              // Контракт «второй слой»: повторного счётчика полноты нет —
+              // счётчик один и живёт в шапке; здесь только строки порогов.
+              h('div', { className: 'insights-v4-thresholds' },
+                h('div', { className: 'insights-v4-tier' }, 'Пороги'),
+                h('div', { className: 'insights-v4-thresholds__row' },
+                  h('span', null, 'Персональные пороги'),
+                  h('span', { className: 'insights-v4-thresholds__value' },
+                    historyDaysWithData >= 14 ? 'открыто' : 'через ' + (14 - historyDaysWithData) + ' ' + pluralDaysWord(14 - historyDaysWithData))
+                ),
+                h('div', { className: 'insights-v4-thresholds__row' },
+                  h('span', null, 'Метаболический фенотип'),
+                  h('span', { className: 'insights-v4-thresholds__value' },
+                    historyDaysWithData >= 30 ? 'открыт' : 'через ' + (30 - historyDaysWithData) + ' ' + pluralDaysWord(30 - historyDaysWithData))
+                )
               )
             )
           ),
+          showWhatIfScenarios && HEYS.InsightsPI?.WhatIfScenariosPanel && h(HEYS.InsightsPI.WhatIfScenariosPanel, {
+            onClose: function () { setShowWhatIfScenarios(false); },
+            lsGet: lsGet || (window.HEYS?.utils?.lsGet),
+            profile: effectiveData.profile,
+            pIndex: effectiveData.pIndex
+          }),
           showPatternDebug && window.PatternDebugModal && h(window.PatternDebugModal, {
             lsGet: lsGet || (window.HEYS?.utils?.lsGet),
             profile: effectiveData.profile,
@@ -2642,20 +2995,7 @@
       if (useInsightsV4) {
         return h(InsightsErrorBoundary, null,
           h('div', { className: 'insights-tab insights-v4' },
-            h(InsightsV4Header, {
-              daysWithData: historyDaysWithData,
-              period: insightsPeriod,
-              onPeriodChange: setInsightsPeriod
-            }),
-            showDemoMode && h('div', { className: 'insights-tab__demo-banner' },
-              h('span', { className: 'insights-tab__demo-banner-icon' }, '✨'),
-              h('div', null,
-                h('div', { className: 'insights-tab__demo-banner-title' }, 'Демо-режим'),
-                h('div', { className: 'insights-tab__demo-banner-desc' },
-                  'Пример данных — ваша аналитика появится после 7 дней дневника'
-                )
-              )
-            ),
+            h(InsightsV4Header, { daysWithData: historyDaysWithData }),
             h('div', { className: 'insights-tab__content insights-v4__content' },
               h(InsightsTodayHero, {
                 phrase: curatorPhrase,
@@ -2668,6 +3008,14 @@
                 prof: profile,
                 pIndex
               }),
+              h(InsightsV4NutritionTier, {
+                day: effectiveData.dayData,
+                pIndex: effectiveData.pIndex,
+                profile: effectiveData.profile,
+                dayTot: effectiveData.dayTot,
+                normAbs: effectiveData.normAbs,
+                optimum: effectiveData.optimum
+              }),
               h(InsightsV4Attention, {
                 // Опора «на N днях»: EWS сканирует последние 30 дней целиком,
                 // окно чипа на предупреждения не влияет — честна общая история.
@@ -2677,7 +3025,10 @@
               }),
               h(InsightsV4Patterns, {
                 patterns: insights.patterns,
-                daysWithData: insightsDaysWithData
+                daysWithData: insightsDaysWithData,
+                period: insightsPeriod,
+                onPeriodChange: setInsightsPeriod,
+                historyDays: historyDaysWithData
               }),
               h('button', {
                 type: 'button',

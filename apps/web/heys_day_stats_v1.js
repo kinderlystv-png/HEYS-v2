@@ -40,6 +40,44 @@
     return wd + ' · ' + dm;
   }
 
+  // Контракт «Дисциплина»: entries текущего окна берут ккал/план из точек
+  // спарклайна, прошлое окно той же длины пересчитывается через
+  // dayUtils.getDayData (ккал требует индекс продуктов). Прошлое окно
+  // опционально: без него Δ строк будет «—», матрица не ломается.
+  function buildDisciplineEntries(points, chartPeriod, lsGet, clientId) {
+    const readDay = (dateStr) => {
+      if (typeof lsGet !== 'function' || !dateStr) return null;
+      const scopedKey = clientId ? 'heys_' + clientId + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
+      return lsGet(scopedKey, null) || lsGet('heys_dayv2_' + dateStr, null) || null;
+    };
+    const cur = points.map((p) => ({
+      day: readDay(p.date),
+      kcal: +p.kcal || 0,
+      target: +p.target || 0
+    }));
+    const prev = [];
+    try {
+      const firstDate = points.length ? points[0].date : null;
+      const getDayData = HEYS.dayUtils && HEYS.dayUtils.getDayData;
+      if (firstDate && typeof getDayData === 'function') {
+        const productsMap = HEYS.dayUtils.getProductsMap ? HEYS.dayUtils.getProductsMap() : new Map();
+        const first = new Date(firstDate + 'T12:00:00');
+        for (let i = 1; i <= chartPeriod; i++) {
+          const d = new Date(first);
+          d.setDate(d.getDate() - i);
+          const ds = d.toISOString().slice(0, 10);
+          const info = getDayData(ds, productsMap, {}) || null;
+          prev.push({
+            day: readDay(ds),
+            kcal: info ? +info.kcal || 0 : 0,
+            target: info ? +info.savedDisplayOptimum || 0 : 0
+          });
+        }
+      }
+    } catch (e) { /* Δ опциональна */ }
+    return { cur, prev };
+  }
+
   function buildReportsPeriodMeta(sparklineData, chartPeriod, ratioZones, lsGet, clientId) {
     const points = (sparklineData || []).filter((p) => p && !p.isFuture && !p.isIncomplete);
     const withKcal = points.filter((p) => p.kcal > 0);
@@ -112,12 +150,71 @@
     const balanceSign = balance > 0 ? '+' : balance < 0 ? '−' : '';
     const balanceAbs = Math.abs(balance);
 
+    // Контракт «окно периода»: заголовки блоков следуют периоду.
+    const periodWord = chartPeriod === 7 ? 'неделю'
+      : chartPeriod === 14 ? 'две недели'
+        : chartPeriod === 30 ? 'месяц'
+          : chartPeriod + ' дней';
+
+    // Контракт «мало данных»: порог общий с Инсайтами — дни с любыми данными
+    // за последние 30, не только дни с ккал.
+    const hasAnyData = HEYS.DisciplineMatrix && HEYS.DisciplineMatrix._test
+      ? HEYS.DisciplineMatrix._test.hasAnyData
+      : null;
+    let historyDays = 0;
+    if (typeof lsGet === 'function' && hasAnyData) {
+      const today = new Date();
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const ds = d.toISOString().slice(0, 10);
+        const scopedKey = clientId ? 'heys_' + clientId + '_dayv2_' + ds : 'heys_dayv2_' + ds;
+        const row = lsGet(scopedKey, null) || lsGet('heys_dayv2_' + ds, null);
+        if (row && hasAnyData(row)) historyDays++;
+      }
+    } else {
+      historyDays = withKcal.length;
+    }
+
+    // Контракт «замеры тела»: единственный призыв вкладки — про данные, не
+    // про поведение; стоит последним. Ищем последний день с замерами за 60.
+    let lastMeasureDaysAgo = null;
+    if (typeof lsGet === 'function') {
+      const today = new Date();
+      for (let i = 0; i < 60; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const ds = d.toISOString().slice(0, 10);
+        const scopedKey = clientId ? 'heys_' + clientId + '_dayv2_' + ds : 'heys_dayv2_' + ds;
+        const row = lsGet(scopedKey, null) || lsGet('heys_dayv2_' + ds, null);
+        const meas = row && row.measurements;
+        if (meas && Object.values(meas).some((v) => +v > 0)) {
+          lastMeasureDaysAgo = i;
+          break;
+        }
+      }
+    }
+
+    // Матрица «Дисциплина» — нормы из движка, сводной суммы нет.
+    let discipline = null;
+    try {
+      if (HEYS.DisciplineMatrix && HEYS.DisciplineMatrix.compute) {
+        const entries = buildDisciplineEntries(points, chartPeriod, lsGet, clientId);
+        const prof = (typeof lsGet === 'function' && lsGet('heys_profile', {})) || {};
+        discipline = HEYS.DisciplineMatrix.compute(entries.cur, entries.prev, prof);
+      }
+    } catch (e) { discipline = null; }
+
     return {
       balance,
       balanceSign,
       balanceAbs,
       totalEaten,
       totalPlan,
+      periodWord,
+      historyDays,
+      discipline,
+      lastMeasureDaysAgo,
       dateRange,
       inNorm,
       withData: withKcal.length,
@@ -167,7 +264,7 @@
         )
       ),
       periodMeta.withData > 0 && React.createElement('div', { className: 'reports-v4-hero' },
-        React.createElement('div', { className: 'reports-v4-hero__label' }, 'Баланс за ' + (chartPeriod === 7 ? 'неделю' : chartPeriod + ' дней')),
+        React.createElement('div', { className: 'reports-v4-hero__label' }, 'Баланс за ' + (periodMeta.periodWord || 'период')),
         React.createElement('div', { className: 'reports-v4-hero__value-row' },
           React.createElement('span', { className: 'reports-v4-hero__value' },
             periodMeta.balanceSign + fmtNum(periodMeta.balanceAbs)
@@ -204,7 +301,67 @@
           )
         )
       ),
+      ReportsV4Discipline({ React, discipline: periodMeta.discipline }),
       React.createElement('div', { className: 'reports-v4-tier' }, 'Динамика')
+    );
+  }
+
+  // Контракт «Дисциплина»: честный счёт дней против нормы по каждому трекеру,
+  // «N из M» плюс Δ в п.п.; своей сводной цифры нет — агрегат один, Score.
+  function ReportsV4Discipline(props) {
+    const { React, discipline } = props || {};
+    if (!React || !discipline || !Array.isArray(discipline.rows)) return null;
+    const rows = discipline.rows;
+    if (!rows.length) return null;
+    const fmtDelta = (row) => {
+      if (row.delta == null) return '—';
+      if (row.delta === 0) return '0';
+      const sign = row.delta > 0 ? '+' : '−';
+      return sign + Math.abs(row.delta);
+    };
+    return React.createElement(React.Fragment, null,
+      React.createElement('div', { className: 'reports-v4-tier reports-v4-tier--discipline' },
+        'Дисциплина',
+        React.createElement('span', { className: 'reports-v4-tier__note' }, 'дней в норме · Δ к прошлому периоду')
+      ),
+      React.createElement('div', { className: 'reports-v4-discipline' },
+        rows.map((row) => {
+          if (row.notTracked) {
+            return React.createElement('div', { key: row.key, className: 'reports-v4-discipline__row' },
+              React.createElement('span', { className: 'reports-v4-discipline__name' }, row.label),
+              React.createElement('span', { className: 'reports-v4-discipline__off' }, 'не ведётся')
+            );
+          }
+          if (row.kind === 'count') {
+            const suffix = row.planned > 0 ? (' из плановых ' + row.planned) : ' за период';
+            return React.createElement('div', { key: row.key, className: 'reports-v4-discipline__row' },
+              React.createElement('span', { className: 'reports-v4-discipline__name' }, row.label),
+              React.createElement('span', { className: 'reports-v4-discipline__count' }, row.count + suffix),
+              React.createElement('span', {
+                className: 'reports-v4-discipline__delta'
+                  + (row.delta > 0 ? ' is-up' : row.delta < 0 ? ' is-down' : '')
+              }, fmtDelta(row))
+            );
+          }
+          return React.createElement('div', { key: row.key, className: 'reports-v4-discipline__row' },
+            React.createElement('span', { className: 'reports-v4-discipline__name' }, row.label),
+            React.createElement('span', { className: 'reports-v4-discipline__bar' },
+              React.createElement('span', {
+                className: 'reports-v4-discipline__bar-fill',
+                style: { width: Math.round((row.share || 0) * 100) + '%' }
+              })
+            ),
+            React.createElement('span', { className: 'reports-v4-discipline__score' }, row.inNorm + ' из ' + row.tracked),
+            React.createElement('span', {
+              className: 'reports-v4-discipline__delta'
+                + (row.delta > 0 ? ' is-up' : row.delta < 0 ? ' is-down' : '')
+            }, fmtDelta(row))
+          );
+        }),
+        React.createElement('div', { className: 'reports-v4-discipline__footnote' },
+          'Сводной суммы у матрицы нет — дисциплину одним числом говорит Score выше.'
+        )
+      )
     );
   }
 
@@ -252,6 +409,29 @@
         periodMeta.dayRows.length > 4 && React.createElement('div', { className: 'reports-v4-days__more' },
           'ещё ' + (periodMeta.dayRows.length - 4) + ' ' + (periodMeta.dayRows.length - 4 === 1 ? 'день' : (periodMeta.dayRows.length - 4 < 5 ? 'дня' : 'дней'))
         )
+      ),
+      // Контракт «замеры тела»: единственный призыв вкладки — про данные;
+      // стоит последним: без замеров отчёт верен, просто беднее.
+      React.createElement('div', { className: 'reports-v4-measure' },
+        React.createElement('div', { className: 'reports-v4-measure__copy' },
+          React.createElement('div', { className: 'reports-v4-measure__title' }, 'Замеры тела'),
+          React.createElement('div', { className: 'reports-v4-measure__note' },
+            periodMeta.lastMeasureDaysAgo == null
+              ? 'замеров ещё не было'
+              : periodMeta.lastMeasureDaysAgo === 0
+                ? 'последний замер сегодня'
+                : 'последний замер ' + periodMeta.lastMeasureDaysAgo + ' ' +
+                  (periodMeta.lastMeasureDaysAgo % 10 === 1 && periodMeta.lastMeasureDaysAgo % 100 !== 11 ? 'день'
+                    : periodMeta.lastMeasureDaysAgo % 10 >= 2 && periodMeta.lastMeasureDaysAgo % 10 <= 4 && (periodMeta.lastMeasureDaysAgo % 100 < 10 || periodMeta.lastMeasureDaysAgo % 100 >= 20) ? 'дня' : 'дней') + ' назад')
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'reports-v4-measure__cta',
+          onClick: () => {
+            const setTab = (HEYS.App && HEYS.App.setTab) || (HEYS.ui && HEYS.ui.switchTab);
+            if (typeof setTab === 'function') setTab('diary');
+          }
+        }, 'Заполнить')
       )
     );
   }
@@ -267,6 +447,35 @@
       weightDynamics,
       onBalanceFooterClick
     } = props || {};
+
+    // Контракт «мало данных»: до 7 дней вкладка — заглушка «итоги появятся
+    // с 7 дней». Баланс и матрица скрыты (баланс из 3 дней врёт масштабом,
+    // «2 из 3» — не дисциплина); работают лента дней и тренд веса с трёх
+    // замеров. Порог общий с Инсайтами.
+    if (periodMeta && (periodMeta.historyDays || 0) < 7) {
+      const have = periodMeta.historyDays || 0;
+      return React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'reports-v4-meta' },
+          React.createElement('span', { className: 'reports-v4-meta__title' }, 'Отчёты'),
+          React.createElement('span', { className: 'reports-v4-meta__range' }, periodMeta.dateRange || '')
+        ),
+        React.createElement('div', { className: 'reports-v4-stub' },
+          React.createElement('div', { className: 'reports-v4-tier' }, 'Пока копим данные'),
+          React.createElement('div', { className: 'reports-v4-stub__title' }, 'Итоги появятся с 7 дней'),
+          React.createElement('div', { className: 'reports-v4-stub__progress' },
+            React.createElement('div', {
+              className: 'reports-v4-stub__progress-fill',
+              style: { width: Math.min(100, Math.round((have / 7) * 100)) + '%' }
+            })
+          ),
+          React.createElement('div', { className: 'reports-v4-stub__count' }, have + ' из 7'),
+          React.createElement('div', { className: 'reports-v4-stub__note' },
+            'Уже считается: лента дней — с первого дня, тренд веса — с трёх замеров.')
+        ),
+        weightDynamics,
+        ReportsTabV4Bottom({ React, periodMeta })
+      );
+    }
 
     return React.createElement(React.Fragment, null,
       ReportsTabV4Top({ React, periodMeta, chartPeriod, handlePeriodChange, scoreTile, onBalanceFooterClick }),

@@ -74,9 +74,51 @@ describe('Insights tab v4 structure', () => {
     expect(dashboardSource).toContain("variant: 'v4'");
   });
 
-  it('period pills use 7/14/30 days', () => {
-    expect(dashboardSource).toContain('INSIGHTS_V4_PERIODS = [7, 14, 30]');
-    expect(dashboardSource).toContain('insights-v4-period-pill');
+  // Контракт reports-insights.v4 «окно наблюдения»: чипы 7/30 внутри
+  // «Что заметили», в шапке только счётчик истории.
+  it('окно наблюдения 7/30 живёт внутри блока, не в шапке', () => {
+    expect(dashboardSource).toContain('INSIGHTS_V4_PERIODS = [7, 30]');
+    expect(dashboardSource).toContain('insights-v4-window__chip');
+    expect(dashboardSource).toContain("'окно наблюдения'");
+    const header = dashboardSource.slice(
+      dashboardSource.indexOf('function InsightsV4Header'),
+      dashboardSource.indexOf('function InsightsTodayHero'),
+    );
+    expect(header).not.toContain('period-pill');
+    expect(header).not.toContain('onPeriodChange');
+  });
+
+  it('контракт «Инсайты»: похвала без кнопок, риск первым, зрелость словом', () => {
+    expect(dashboardSource).toContain('Сегодня без заданий — ритм держится, вчерашний план закрыт.');
+    expect(dashboardSource).toContain('buildRelapseRiskAttentionCard');
+    expect(dashboardSource).toContain("'риск срыва · '");
+    expect(dashboardSource).toContain("insights-v4-maturity--forecast' }, 'прогноз'");
+    expect(dashboardSource).toContain('buildPatternMaturityWord');
+    // Тумблер «Показать все» в v4-пути снят: PatternsList больше не зовётся
+    const v4Patterns = dashboardSource.slice(
+      dashboardSource.indexOf('function InsightsV4Patterns'),
+      dashboardSource.indexOf('function InsightsV4NutritionTier'),
+    );
+    expect(v4Patterns).not.toContain('PatternsList');
+  });
+
+  it('контракт «до 7 дней»: заглушка-витрина вместо демо-режима и тура', () => {
+    expect(dashboardSource).toContain('function InsightsV4NewUserStub');
+    expect(dashboardSource).toContain('Что откроется дальше');
+    expect(dashboardSource).toContain('первые предупреждения — уже работают');
+    expect(dashboardSource).toContain('!useInsightsV4 && !insightsTourCompleted');
+    expect(dashboardSource).not.toContain('HEYS.InsightsTour.start()');
+  });
+
+  it('контракт «Подробно»: прогноз на 30, «Что если» с порога 14, без второго счётчика', () => {
+    expect(dashboardSource).toContain('weightPrediction30');
+    expect(dashboardSource).toContain('historyDaysWithData >= 14');
+    expect(dashboardSource).toContain('оценку дня из паттернов, а не HEYS Score');
+    const detail = dashboardSource.slice(
+      dashboardSource.indexOf('if (useInsightsV4 && showInsightsDetail)'),
+      dashboardSource.indexOf('if (useInsightsV4) {\n        return h(InsightsErrorBoundary'),
+    );
+    expect(detail).not.toContain('DataCompletenessCard');
   });
 
   it('shell hides duplicate title and day calendar on insights tab', () => {

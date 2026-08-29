@@ -77,7 +77,8 @@
 }
 
 .reports-v4-hero__value {
-  font-size: 60px;
+  /* Контракт «вид · баланс за неделю»: число со знаком 44 px/600. */
+  font-size: 44px;
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.045em;
@@ -115,7 +116,8 @@
 }
 
 .reports-v4-hero__footer-text {
-  font-size: 12px;
+  /* Контракт: «съедено · план» 11,5 px тоном чернил 50 %. */
+  font-size: 11.5px;
   font-weight: 600;
   line-height: 1.2;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
@@ -508,4 +510,178 @@
 [data-palette="blue-dark"] .reports-v4-period-pill.is-active {
   color: var(--v4-act-text); /* v4-intentional */
   box-shadow: inset 0 -2px 0 0 var(--v4-act); /* v4-intentional */
+}
+
+/* === reports-insights.v4 contract (2026-08-29): матрица «Дисциплина» и
+   заглушка «мало данных» === */
+
+.reports-v4-tier--discipline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.reports-v4-tier__note {
+  font: 500 9.5px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.reports-v4-discipline {
+  background: var(--v4-card, #ffffff);
+  border-radius: 20px;
+  padding: 6px 16px 12px;
+}
+
+.reports-v4-discipline__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+}
+
+.reports-v4-discipline__row:last-of-type {
+  border-bottom: none;
+}
+
+.reports-v4-discipline__name {
+  flex: none;
+  width: 88px;
+  font: 600 11px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+}
+
+.reports-v4-discipline__bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--v4-chip, rgba(0, 0, 0, 0.07));
+  overflow: hidden;
+}
+
+.reports-v4-discipline__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--v4-ok-fill, #6aa06a);
+}
+
+.reports-v4-discipline__score {
+  flex: none;
+  min-width: 56px;
+  text-align: right;
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
+}
+
+.reports-v4-discipline__count {
+  flex: 1;
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
+}
+
+.reports-v4-discipline__delta {
+  flex: none;
+  min-width: 28px;
+  text-align: right;
+  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+}
+
+.reports-v4-discipline__delta.is-up {
+  color: var(--v4-ok-text, #2e7d32);
+}
+
+.reports-v4-discipline__delta.is-down {
+  color: var(--v4-bad-text, #b3402a);
+}
+
+.reports-v4-discipline__off {
+  flex: 1;
+  text-align: right;
+  font: 500 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.reports-v4-discipline__footnote {
+  padding-top: 10px;
+  font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
+}
+
+.reports-v4-stub {
+  background: var(--v4-hero, #f7efe2);
+  border-radius: 26px;
+  padding: 24px 20px;
+  margin-top: 12px;
+}
+
+.reports-v4-stub__title {
+  font: 700 16px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+  margin: 8px 0 14px;
+}
+
+.reports-v4-stub__progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--v4-chip, rgba(0, 0, 0, 0.09));
+  overflow: hidden;
+}
+
+.reports-v4-stub__progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--v4-act, #c67139);
+}
+
+.reports-v4-stub__count {
+  margin-top: 8px;
+  text-align: right;
+  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-sand-act-deep, #8a4a20);
+}
+
+.reports-v4-stub__note {
+  margin-top: 12px;
+  font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
+}
+
+.reports-v4-measure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--v4-card, #ffffff);
+  border-radius: 20px;
+  padding: 14px 16px;
+  margin-top: 12px;
+}
+
+.reports-v4-measure__title {
+  font: 700 12.5px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #0f172a);
+}
+
+.reports-v4-measure__note {
+  margin-top: 3px;
+  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.reports-v4-measure__cta {
+  flex: none;
+  min-height: 40px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 12px;
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #fff5ef);
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  cursor: pointer;
 }

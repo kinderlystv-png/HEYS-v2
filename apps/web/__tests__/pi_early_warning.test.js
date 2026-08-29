@@ -75,7 +75,23 @@ describe('Early Warning System', () => {
         global.HEYS.InsightsPI.earlyWarning._clearDetectCache();
     });
 
-    it('returns unavailable when insufficient data (< 7 days)', () => {
+    // Контракт reports-insights.v4 «ранние предупреждения в заглушке»
+    // (2026-08-29): мастер-гейт опущен с 6 до 3 — детекторы с окнами 3–5 дней
+    // работают на своих окнах, каждый охраняет своё окно сам.
+    it('returns unavailable when insufficient data (< 3 days)', () => {
+        const detect = global.HEYS.InsightsPI.earlyWarning.detect;
+        const pIndex = makePIndex();
+        const days = [
+            makeDay('2026-02-14'),
+            makeDay('2026-02-13')
+        ];
+
+        const result = detect(days, { optimum: 2000 }, pIndex);
+        expect(result.available).toBe(false);
+        expect(result.reason).toBe('insufficient_data');
+    });
+
+    it('runs at 3 days — early detectors window (мастер-гейт опущен)', () => {
         const detect = global.HEYS.InsightsPI.earlyWarning.detect;
         const pIndex = makePIndex();
         const days = [
@@ -85,8 +101,8 @@ describe('Early Warning System', () => {
         ];
 
         const result = detect(days, { optimum: 2000 }, pIndex);
-        expect(result.available).toBe(false);
-        expect(result.reason).toBe('insufficient_data');
+        expect(result.available).toBe(true);
+        expect(Array.isArray(result.warnings)).toBe(true);
     });
 
     it('detects Health Score decline (3 days consecutive)', () => {

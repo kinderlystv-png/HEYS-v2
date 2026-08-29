@@ -1,0 +1,152 @@
+// Тест сверки зоны «Отчёты и Инсайты» с канвасом reports-insights.v4.dc.html.
+// Эталон метода — nutrition-v4-canvas-geometry.test.js: таблица пар
+// «класс кадра → правило продуктового CSS», нормализация форм записи и
+// поимённый список отступлений. Тест читает сам канвас, поэтому расхождение
+// всплывает при правке любой из сторон.
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+const canvasPath = path.resolve(
+  __dirname,
+  '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html'
+);
+const canvas = fs.readFileSync(canvasPath, 'utf8').replace(/\r\n/g, '\n');
+const insightsCss = fs.readFileSync(
+  path.resolve(__dirname, '../styles/modules/734-ui-v4-insights.css'), 'utf8');
+const reportsCss = fs.readFileSync(
+  path.resolve(__dirname, '../styles/modules/733-ui-v4-reports.css'), 'utf8');
+
+// Правило класса из <style> канваса.
+function canvasRule(className) {
+  const m = canvas.match(new RegExp('\\n\\s*\\.' + className + '\\{([^}]*)\\}'));
+  return m ? m[1] : null;
+}
+
+// Значение свойства из продуктового CSS-блока по имени класса.
+function cssBlock(css, selector) {
+  const m = css.match(new RegExp('\\.' + selector + '\\s*\\{([^}]*)\\}'));
+  return m ? m[1] : null;
+}
+
+function prop(block, name) {
+  if (!block) return null;
+  const m = block.match(new RegExp('(?:^|;|\\n)\\s*' + name + '\\s*:\\s*([^;]+)'));
+  return m ? m[1].trim() : null;
+}
+
+// Нормализация форм записи: «.16em» ↔ «0.16em» (и после «:», и после пробела).
+const norm = (v) => (v == null ? null : String(v).replace(/(^|[\s:(])\.(\d)/g, '$10.$2').trim());
+
+describe('Отчёты и Инсайты v4 — сверка с канвасом', () => {
+  it('канвас на месте и держит контракт зоны', () => {
+    expect(canvas).toContain('data-contract');
+    expect(canvas.match(/data-v="/g).length).toBeGreaterThanOrEqual(50);
+  });
+
+  it('ярус .tier: 10px/700, разрядка .16em — в обеих вкладках', () => {
+    const tier = canvasRule('tier');
+    expect(tier).toContain('font:700 10px');
+    expect(norm(tier)).toContain('letter-spacing:0.16em');
+    for (const [css, sel] of [[insightsCss, 'insights-v4-tier'], [reportsCss, 'reports-v4-tier']]) {
+      const block = cssBlock(css, sel);
+      expect(prop(block, 'font-size')).toBe('10px');
+      expect(prop(block, 'font-weight')).toBe('700');
+      expect(norm(prop(block, 'letter-spacing'))).toBe('0.16em');
+      expect(prop(block, 'text-transform')).toBe('uppercase');
+    }
+  });
+
+  it('карточка .grp: радиус 20, поля 16 — карточки яруса «Питание»', () => {
+    const grp = canvasRule('grp');
+    expect(grp).toContain('border-radius:20px');
+    expect(grp).toContain('padding:16px');
+    const card = cssBlock(insightsCss, 'insights-v4-nutrition__card');
+    expect(prop(card, 'border-radius')).toBe('20px');
+    expect(prop(card, 'padding')).toBe('16px');
+  });
+
+  it('список .cd: радиус 20, поля 2/16 — списки заглушки', () => {
+    const cd = canvasRule('cd');
+    expect(cd).toContain('padding:2px 16px');
+    for (const sel of ['insights-v4-stub__fill', 'insights-v4-stub__ladder']) {
+      const block = cssBlock(insightsCss, sel);
+      expect(prop(block, 'border-radius')).toBe('20px');
+      expect(prop(block, 'padding')).toContain('2px 16px');
+    }
+  });
+
+  it('строка .row: 12.5px, поля 13/0, линия чернил 7%', () => {
+    const row = canvasRule('row');
+    expect(row).toContain('padding:13px 0');
+    expect(row).toContain('12.5px');
+    const fill = cssBlock(insightsCss, 'insights-v4-stub__fill-row');
+    expect(prop(fill, 'padding')).toBe('13px 0');
+    expect(prop(fill, 'font')).toContain('12.5px');
+    const patterns = cssBlock(insightsCss, 'insights-v4-patterns__row');
+    expect(prop(patterns, 'padding')).toBe('13px 0');
+  });
+
+  it('шапка карточки .mvH: 10.5px/600, чернила 55%, без капса', () => {
+    const mvH = canvas.match(/\.mvH b\{([^}]*)\}/);
+    expect(mvH && mvH[1]).toContain('10.5px');
+    const head = cssBlock(insightsCss, 'insights-v4-nutrition__head');
+    expect(prop(head, 'font')).toContain('10.5px');
+    expect(prop(head, 'text-transform')).toBe(null);
+    expect(prop(head, 'color')).toContain('0.55');
+  });
+
+  it('строка БЖУ .mrow: имя 96, число 58 вправо, полоса 8px', () => {
+    const mrowB = canvas.match(/\.mrow b\{([^}]*)\}/);
+    expect(mrowB && mrowB[1]).toContain('width:96px');
+    const name = cssBlock(insightsCss, 'insights-v4-nutrition__bzhu-name');
+    expect(prop(name, 'width')).toBe('96px');
+    const kcal = cssBlock(insightsCss, 'insights-v4-nutrition__bzhu-kcal');
+    expect(prop(kcal, 'min-width')).toBe('58px');
+    const mbar = canvasRule('mbar');
+    expect(mbar).toContain('height:8px');
+    const bar = cssBlock(insightsCss, 'insights-v4-nutrition__bzhu-bar');
+    expect(prop(bar, 'height')).toBe('8px');
+  });
+
+  it('чип окна: высота 34, радиус 999 (контракт «вид · окно и бейджи»)', () => {
+    const chip = cssBlock(insightsCss, 'insights-v4-window__chip');
+    expect(prop(chip, 'min-height')).toBe('34px');
+    expect(prop(chip, 'border-radius')).toBe('999px');
+  });
+
+  it('бейдж зрелости: 9px/700 моноширинным, поля 4/7, радиус 999', () => {
+    const badge = cssBlock(insightsCss, 'insights-v4-maturity');
+    expect(prop(badge, 'font')).toContain('9px');
+    expect(prop(badge, 'font')).toContain('ui-monospace');
+    expect(prop(badge, 'padding')).toBe('4px 7px');
+    expect(prop(badge, 'border-radius')).toBe('999px');
+  });
+
+  it('матрица дисциплины: имя 11px шириной 88, полоса 8px радиусом 999', () => {
+    const name = cssBlock(reportsCss, 'reports-v4-discipline__name');
+    expect(prop(name, 'width')).toBe('88px');
+    expect(prop(name, 'font')).toContain('11px');
+    const bar = cssBlock(reportsCss, 'reports-v4-discipline__bar');
+    expect(prop(bar, 'height')).toBe('8px');
+    expect(prop(bar, 'border-radius')).toBe('999px');
+  });
+
+  // Поимённый список отступлений — канон:
+  // docs/implementation/REPORTS_INSIGHTS_V4_IMPLEMENTATION_2026-08-29.md.
+  // Снятие любого пункта = правка кода + правка этого списка в одном заходе.
+  it('отступления названы и не разрастаются молча', () => {
+    const DEVIATIONS = [
+      'планер яруса — существующая карточка MealRecCard, вид не по кадру',
+      'ритм приёмов — без своей рекомендации времени (живёт в планере)',
+      'разбор Score — раскрытие плитки, не отдельный экран',
+      'кривая веса Отчётов следует периоду, не фикс-30; цикл-дни не сведены',
+      'Δ питания прошлого окна — только дни с savedDisplayOptimum',
+      'заглушка Отчётов — лента дней периода, не «с первого дня»',
+      'опора счётных паттернов — «N дней наблюдений» без matched/total',
+      'листы раскрывашек поверх карточек не рисовались (следующий заход)'
+    ];
+    expect(DEVIATIONS.length).toBe(8);
+  });
+});

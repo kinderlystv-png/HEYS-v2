@@ -31,6 +31,28 @@ describe('Reports tab v4 structure', () => {
     expect(statsSource).toContain('Сон и самочувствие');
   });
 
+  // Контракт reports-insights.v4 «Дисциплина» и «мало данных» (2026-08-29).
+  it('дисциплина: матрица без суммы между итогом и динамикой', () => {
+    expect(statsSource).toContain('function ReportsV4Discipline');
+    expect(statsSource).toContain('HEYS.DisciplineMatrix.compute');
+    expect(statsSource).toContain('дней в норме · Δ к прошлому периоду');
+    expect(statsSource).toContain('Сводной суммы у матрицы нет — дисциплину одним числом говорит Score выше.');
+    expect(statsSource).toContain("'не ведётся'");
+    // Дисциплина стоит до тира «Динамика»
+    const top = statsSource.slice(
+      statsSource.indexOf('function ReportsTabV4Top'),
+      statsSource.indexOf('function ReportsV4Discipline'),
+    );
+    expect(top.indexOf('ReportsV4Discipline(')).toBeLessThan(top.indexOf("'Динамика'"));
+  });
+
+  it('заголовки следуют периоду, заглушка до 7 дней скрывает баланс и матрицу', () => {
+    expect(statsSource).toContain("chartPeriod === 30 ? 'месяц'");
+    expect(statsSource).toContain("'Баланс за ' + (periodMeta.periodWord");
+    expect(statsSource).toContain('Итоги появятся с 7 дней');
+    expect(statsSource).toContain('(periodMeta.historyDays || 0) < 7');
+  });
+
   it('hides day-hero metrics on reports v4', () => {
     expect(statsSource).toContain("mobileSubTab === 'stats'");
     expect(statsSource).toContain('!useReportsV4 && React.createElement(\'div\', { className: \'metrics-cards\'');

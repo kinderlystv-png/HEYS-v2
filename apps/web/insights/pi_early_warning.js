@@ -79,7 +79,11 @@
         SLEEP_DEFICIT_HOURS: 7,
         CALORIC_DEBT_DAYS: 2,
         CALORIC_DEBT_THRESHOLD: 1500,
-        MIN_DAYS_FOR_ANALYSIS: 6  // Temporarily lowered from 7 for testing
+        // Контракт reports-insights.v4 «ранние предупреждения в заглушке»
+        // (решение владельца 2026-08-29): мастер-гейт опущен до окон самих
+        // детекторов — натрий держит 3 дня, клетчатка/перетрен 5, каждый
+        // детектор охраняет своё окно сам и на меньшем наборе вернёт null.
+        MIN_DAYS_FOR_ANALYSIS: 3
     };
 
     // Critical patterns (C1-C22) that require immediate attention
