@@ -117,3 +117,51 @@ describe('голос куратора в предупреждениях', () => 
     expect(attention).not.toContain("}, w.message || w.detail)");
   });
 });
+
+// Контракт «запреты копии»: эмодзи, телеграфные заголовки, слова
+// «слишком/плохо/нельзя», проценты риска и медицинские утверждения —
+// в фразах предупреждений не появляются. Проверяем все типы разом,
+// чтобы новый текст не проехал мимо правила.
+describe('запреты копии в фразах предупреждений', () => {
+  const src = read('insights/pi_early_warning.js');
+  const start = src.indexOf('const WARNING_HUMAN_MESSAGES');
+  const chunk = src.slice(start, start + 95000);
+
+  const phrases = (() => {
+    const out = new Map();
+    const re = /([A-Z_]{4,}): \{[\s\S]{0,300}?message: '([^']*)'/g;
+    let m;
+    while ((m = re.exec(chunk))) if (!out.has(m[1])) out.set(m[1], m[2]);
+    return out;
+  })();
+
+  it('фразы собраны для всех типов', () => {
+    expect(phrases.size).toBeGreaterThanOrEqual(24);
+  });
+
+  it('ни эмодзи, ни «слишком/плохо/нельзя», ни процентов риска', () => {
+    const forbidden = [
+      [/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, 'эмодзи'],
+      [/слишком/i, '«слишком»'],
+      [/\bплохо\b/i, '«плохо»'],
+      [/нельзя/i, '«нельзя»'],
+      [/риск \d/i, 'процент риска'],
+      [/score\s*</i, 'служебный score'],
+    ];
+    const bad = [];
+    for (const [key, phrase] of phrases) {
+      for (const [re, label] of forbidden) {
+        if (re.test(phrase)) bad.push(`${key}: ${label}`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it('пять образцов дизайнера стоят дословно', () => {
+    expect(phrases.get('SLEEP_DEBT')).toContain('меньше шести часов вторую ночь');
+    expect(phrases.get('HYDRATION_DEFICIT')).toContain('в среднем 1,4 из 2,0 л');
+    expect(phrases.get('FIBER_DEFICIT')).toContain('овощами в обед');
+    expect(phrases.get('CALORIC_DEBT')).toContain('вечерний перебор');
+    expect(phrases.get('WEEKEND_PATTERN')).toContain('пропущенном обеде');
+  });
+});
