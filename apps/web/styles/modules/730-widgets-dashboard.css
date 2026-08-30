@@ -2922,6 +2922,7 @@ body:has(.page-reports) .hdr::after {
 .widgets-quick-sheet__chips {
   display: flex;
   gap: 6px;
+  margin-top: 9px;
 }
 
 .widgets-quick-sheet__chip {
@@ -3079,13 +3080,14 @@ body:has(.page-reports) .hdr::after {
   bottom: 12px;
   display: flex;
   flex-direction: row-reverse;
+  align-items: center;
   gap: 6px;
   z-index: 2;
 }
 
 .widgets-quick-chip {
   position: relative;
-  height: 28px;
+  min-height: 28px;
   padding: 0 10px;
   border: none;
   border-radius: 999px;
@@ -3093,7 +3095,7 @@ body:has(.page-reports) .hdr::after {
   color: #8a4a20;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   white-space: nowrap;
   cursor: pointer;
   box-shadow:

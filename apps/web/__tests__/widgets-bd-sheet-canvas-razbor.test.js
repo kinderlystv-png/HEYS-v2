@@ -93,6 +93,7 @@ const PICK = {
   },
   gap: (v) => num(v, /зазор ([\d.]+)px/),
   height: (v) => num(v, /высота ([\d.]+)px/),
+  minHeight: (v) => num(v, /высота от ([\d.]+)px/),
   width: (v) => num(v, /ширина ([\d.]+)px/),
   radius: (v) => num(v, /радиус ([\d.]+)px/),
   padding: (v) => num(v, /поля ([^,]+?)(?:,|$)/),
@@ -109,6 +110,7 @@ const PICK = {
 };
 const CSSPROP = {
   marginTop: 'margin-top', marginBottom: 'margin-bottom', gap: 'gap', height: 'height',
+  minHeight: 'min-height',
   width: 'width', radius: 'border-radius', padding: 'padding', fontWeight: 'font-weight',
   fontSize: 'font-size', lineHeight: 'line-height', tracking: 'letter-spacing',
   align: 'align-items', justify: 'justify-content', direction: 'flex-direction',
@@ -122,6 +124,7 @@ const ROLE = {
   '--c1': '#f7efe2', '--c2': '#efe3cf', '--bg': '#fffaf1', '--tx': '#201e1d',
   '--ac': '#8a4a20', '--acs': '#c67139', '--on-acs': '#2b1608',
   '--gr': '#5c6a45', '--gr2': '#7a8a5e', '--gr-bg': '#eaefe0',
+  '--tint': '#f6e6dd', '--wat': '#5e808f',
   '--red': '#b4442a', '--warn': '#c9922e', '--ovl': '#d99a63', '--val-bad': '#a8382b'
 };
 function norm(value) {
@@ -312,6 +315,44 @@ const MAIN = [
   ['«Вернуть стандартный экран»', 0, '.widget-v4-empty__reset', ['align', 'justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']]
 ];
 
+// Кадры «Быстрые действия · …» — карточка плавающей кнопки, одиннадцать штук.
+// Общее у всех — подложка, сама карточка, строка пункта и две кнопки; своё —
+// состояние: раскрыто, один пункт, правка, скрытые чипами.
+const QUICK = [
+  ['Быстрые действия · раскрыто', 'вписан 0, фон rgba(43,22,8,.34)', 0,
+    '.widgets-quick-scrim', ['background']],
+  ['Быстрые действия · раскрыто', 'ширина 232px, фон var(--bg)', 0,
+    '.widgets-quick-sheet', ['background', 'radius', 'padding']],
+  ['Быстрые действия · раскрыто', 'ширина 232px, фон var(--bg)', 1,
+    '.widgets-quick-sheet__row', ['align', 'gap', 'minHeight']],
+  ['Быстрые действия · раскрыто', '«Мессенджер»', 0,
+    '.widgets-quick-sheet__row-label', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Быстрые действия · раскрыто', 'высота 1px, фон rgba(var(--ink),.08)', 0,
+    '.widgets-quick-sheet__divider', ['height', 'background']],
+  ['Быстрые действия · раскрыто', '«1,7 из 2,7»', 0,
+    '.widgets-quick-sheet__meta', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Быстрые действия · раскрыто', 'зазор 6px, отступ сверху 9px', 0,
+    '.widgets-quick-sheet__chips', ['gap', 'marginTop']],
+  ['Быстрые действия · раскрыто', '«200»', 0,
+    '.widgets-quick-sheet__chip', ['minHeight', 'radius', 'background', 'align', 'justify', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Быстрые действия · раскрыто', 'ширина 52px, высота 52px', 0,
+    '.widgets-quick-fab', ['width', 'height', 'radius', 'background', 'align', 'justify']],
+  ['Быстрые действия · один пункт · вода · раскрыто', '«Вода»', 0,
+    ['.widgets-quick-sheet__title', '.widgets-quick-sheet__head'], ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Быстрые действия · один пункт · вода · раскрыто', 'ширина 232px, фон var(--bg)', 1,
+    '.widgets-quick-sheet__head', ['align', 'gap']],
+  // Круг 22 px в режиме правки — это минус снятия пункта, а не иконка строки.
+  ['Быстрые действия · правка · режим', 'ширина 22px, высота 22px', 0,
+    '.widgets-quick-minus', ['width', 'height', 'radius', 'background', 'align', 'justify']],
+  ['Быстрые действия · правка · скрытые', 'высота от 28px, поля 0 10px', 0,
+    ['.widgets-quick-chip', '.widgets-quick-chip__label'],
+    ['minHeight', 'padding', 'radius', 'background', 'align', 'gap', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Быстрые действия · правка · скрытые', 'позиция absolute, зазор 6px, выравнивание center', 0,
+    '.widgets-quick-chips', ['gap', 'align']],
+  ['Быстрые действия · ни одного', 'ширина 40px, высота 40px', 0,
+    '.widgets-settings-fab', ['width', 'height', 'radius', 'background', 'align', 'justify']]
+];
+
 // Кадры «Шторка · …» — лист смены вида, десять штук. Каркас у всех один, но
 // номера подписи, галочки и превью в каждом свои: таблица собирается из самого
 // разбора по форме строки, поэтому переживает перенумерацию кадра.
@@ -430,6 +471,14 @@ describe('каркас листа разбора против разбора к�
       }
     }
     expect(same).toBeGreaterThanOrEqual(1000);
+  });
+
+  it('карточка быстрых действий совпадает со своими кадрами', () => {
+    const drift = [];
+    for (const [frame, anchor, offset, sel, props] of QUICK) {
+      drift.push(...compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] }));
+    }
+    expect(drift).toEqual([]);
   });
 
   it('десять кадров «Шторка · …» совпадают с листом смены вида', () => {
