@@ -1919,6 +1919,17 @@
             setCuratorTab,
         } = props;
 
+        // «2 клиента · система в норме» из кадра: число склоняется, иначе
+        // подпись читается как машинный вывод.
+        const pluralClientsRu = (n) => {
+            const abs = Math.abs(n) % 100;
+            const last = abs % 10;
+            if (abs > 10 && abs < 20) return 'клиентов';
+            if (last > 1 && last < 5) return 'клиента';
+            if (last === 1) return 'клиент';
+            return 'клиентов';
+        };
+
         const curatorPanelClients = HEYS.E2EFixtures?.filterCuratorPanelClients
             ? HEYS.E2EFixtures.filterCuratorPanelClients(clients)
             : (Array.isArray(clients) ? clients : []);
@@ -2067,196 +2078,85 @@
                             React.createElement(
                                 React.Fragment,
                                 null,
-                                // HEADER: Тёмный enterprise хедер с табами
+                                // Контракт «вид · шапка кабинета»: без тёмного блока и без
+                                // фиолетового, заголовок на грунте набора, подпись одной
+                                // строкой — счёт клиентов и состояние системы. Эмодзи ушли
+                                // вместе с тёмной заливкой: строка «что менялось» называет
+                                // их поимённо.
                                 React.createElement(
                                     'div',
-                                    {
-                                        style: {
-                                            background: 'linear-gradient(135deg, #0f172a, #1e293b)',
-                                            color: '#fff',
-                                            padding: '18px 20px 14px'
-                                        }
-                                    },
-                                    // Title + status + logout
+                                    { className: 'cur-cab__head' },
                                     React.createElement(
                                         'div',
-                                        { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 } },
-                                        React.createElement(
-                                            'div',
-                                            { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-                                            React.createElement('div', { style: { fontSize: 24 } }, '👥'),
-                                            React.createElement('div', null,
-                                                React.createElement('div', { style: { fontSize: 16, fontWeight: 700, letterSpacing: 0.2 } }, 'Панель куратора'),
-                                                React.createElement('div', { style: { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 } },
-                                                    clientsSource === 'loading' ? '⏳ Загрузка...'
-                                                        : clientsSource === 'error' ? '⚠️ Ошибка загрузки'
-                                                            : clientsSource === 'cache' ? `${curatorPanelClients.length} клиентов (кэш)`
-                                                                : curatorPanelClients.length ? `${curatorPanelClients.length} клиентов`
-                                                                    : 'Нет клиентов'
-                                                )
+                                        { className: 'cur-cab__head-row' },
+                                        React.createElement('span', { className: 'cur-cab__title-box' },
+                                            React.createElement('span', { className: 'cur-cab__title' }, 'Кабинет куратора'),
+                                            React.createElement('span', { className: 'cur-cab__subtitle' },
+                                                clientsSource === 'loading' ? 'Загружаем клиентов'
+                                                    : clientsSource === 'error' ? 'Клиенты не загрузились'
+                                                        : curatorPanelClients.length
+                                                            ? curatorPanelClients.length + ' '
+                                                              + pluralClientsRu(curatorPanelClients.length)
+                                                              + (clientsSource === 'cache'
+                                                                ? ' · показываем сохранённое'
+                                                                : ' · система в норме')
+                                                            : 'Клиентов пока нет'
                                             )
                                         ),
-                                        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
-                                            React.createElement(OpsDashboardButton),
-                                            React.createElement(
-                                                'button',
-                                                {
-                                                    onClick: () => {
-                                                        console.info('[HEYS.gate] 🚪 Выход куратора');
-                                                        handleSignOut();
-                                                    },
-                                                    title: 'Выйти',
-                                                    style: {
-                                                        width: 32,
-                                                        height: 32,
-                                                        borderRadius: 8,
-                                                        border: '1px solid rgba(255,255,255,0.25)',
-                                                        background: 'rgba(255,255,255,0.08)',
-                                                        color: '#fff',
-                                                        cursor: 'pointer',
-                                                        fontSize: 16,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }
+                                        React.createElement(OpsDashboardButton),
+                                        React.createElement(
+                                            'button',
+                                            {
+                                                type: 'button',
+                                                className: 'cur-cab__back',
+                                                onClick: () => {
+                                                    console.info('[HEYS.gate] 🚪 Выход куратора');
+                                                    handleSignOut();
                                                 },
-                                                '←'
-                                            )
+                                                title: 'Выйти',
+                                                'aria-label': 'Выйти из кабинета'
+                                            },
+                                            '←'
                                         )
                                     ),
-                                    // Tabs в хедере
+
+                                    // Контракт «вид · ряд вкладок кабинета»: пять вкладок в
+                                    // одном ряду и один порядок на весь кабинет. Сетка стояла
+                                    // на четыре колонки при пяти вкладках, и «Диагн.»
+                                    // переносилась на вторую строку — ряд, который контракт
+                                    // требует не переносить вовсе.
                                     React.createElement(
                                         'div',
-                                        {
-                                            style: {
-                                            display: 'grid',
-                                            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-                                            gap: 4,
-                                            background: 'rgba(0,0,0,0.25)',
-                                            borderRadius: 10,
-                                            padding: 4
-                                            }
-                                        },
-                                        React.createElement(
+                                        { className: 'cur-cab__tabs' },
+                                        [
+                                            { key: 'clients', label: 'Клиенты' },
+                                            { key: 'queue', label: 'Очередь' },
+                                            { key: 'panel', label: 'Панель' },
+                                            { key: 'moderation', label: 'Заявки' },
+                                            // «Диагностика» пишется сокращённо: полное слово
+                                            // не оставляет ряду места в 330 px.
+                                            { key: 'diagnostics', label: 'Диагн.' }
+                                        ].map((tab) => React.createElement(
                                             'button',
                                             {
+                                                key: tab.key,
+                                                type: 'button',
+                                                className: 'cur-cab__tab' + (curatorTab === tab.key ? ' is-on' : ''),
                                                 onClick: () => {
-                                                    console.info('[HEYS.gate] 🔘 Переключение на таб Клиенты');
-                                                    setCuratorTab('clients');
-                                                },
-                                                style: {
-                                                    flex: 1,
-                                                    padding: '8px 3px',
-                                                    border: 'none',
-                                                    borderRadius: 8,
-                                                    fontSize: 11,
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    background: curatorTab === 'clients' ? 'rgba(255,255,255,0.95)' : 'transparent',
-                                                    color: curatorTab === 'clients' ? '#0f172a' : 'rgba(255,255,255,0.8)'
+                                                    console.info('[HEYS.gate] 🔘 Переключение на таб ' + tab.label);
+                                                    setCuratorTab(tab.key);
                                                 }
                                             },
-                                            '👥 Клиенты'
-                                        ),
-                                        React.createElement(
-                                            'button',
-                                            {
-                                                onClick: () => {
-                                                    console.info('[HEYS.gate] 🔘 Переключение на таб Очередь');
-                                                    setCuratorTab('queue');
-                                                },
-                                                style: {
-                                                    flex: 1,
-                                                    padding: '8px 3px',
-                                                    border: 'none',
-                                                    borderRadius: 8,
-                                                    fontSize: 11,
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    background: curatorTab === 'queue' ? 'rgba(255,255,255,0.95)' : 'transparent',
-                                                    color: curatorTab === 'queue' ? '#0f172a' : 'rgba(255,255,255,0.8)'
-                                                }
-                                            },
-                                            // P0.11: бейдж "+N" если есть лиды, требующие действия куратора
-                                            HEYS.TrialQueue?.NewLeadsBadge
+                                            // Счётчик новых лидов остаётся на «Очереди»: он
+                                            // сообщает о работе, а не украшает вкладку.
+                                            tab.key === 'queue' && HEYS.TrialQueue?.NewLeadsBadge
                                                 ? React.createElement(
                                                     HEYS.TrialQueue.NewLeadsBadge,
                                                     { curatorId: cloudUser?.id },
-                                                    '📋 Очередь'
+                                                    tab.label
                                                 )
-                                                : '📋 Очередь'
-                                        ),
-                                        // Контракт «вид · ряд вкладок кабинета»: пять вкладок,
-                                        // порядок один на весь канвас, «Панель» третья.
-                                        React.createElement(
-                                            'button',
-                                            {
-                                                onClick: () => {
-                                                    console.info('[HEYS.gate] 🔘 Переключение на таб Панель');
-                                                    setCuratorTab('panel');
-                                                },
-                                                style: {
-                                                    flex: 1,
-                                                    padding: '8px 3px',
-                                                    border: 'none',
-                                                    borderRadius: 8,
-                                                    fontSize: 11,
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    background: curatorTab === 'panel' ? 'rgba(255,255,255,0.95)' : 'transparent',
-                                                    color: curatorTab === 'panel' ? '#0f172a' : 'rgba(255,255,255,0.8)'
-                                                }
-                                            },
-                                            '◆ Панель'
-                                        ),
-                                        React.createElement(
-                                            'button',
-                                            {
-                                                onClick: () => {
-                                                    console.info('[HEYS.gate] 🔘 Переключение на таб Заявки');
-                                                    setCuratorTab('moderation');
-                                                },
-                                                style: {
-                                                    flex: 1,
-                                                    padding: '8px 3px',
-                                                    border: 'none',
-                                                    borderRadius: 8,
-                                                    fontSize: 11,
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    background: curatorTab === 'moderation' ? 'rgba(255,255,255,0.95)' : 'transparent',
-                                                    color: curatorTab === 'moderation' ? '#0f172a' : 'rgba(255,255,255,0.8)'
-                                                }
-                                            },
-                                            React.createElement(PendingProductsBadge, null, '✅ Заявки')
-                                        ),
-                                        React.createElement(
-                                            'button',
-                                            {
-                                                onClick: () => {
-                                                    console.info('[HEYS.gate] 🔘 Переключение на таб Диагностика');
-                                                    setCuratorTab('diagnostics');
-                                                },
-                                                style: {
-                                                    flex: 1,
-                                                    minWidth: 0,
-                                                    padding: '8px 3px',
-                                                    border: 'none',
-                                                    borderRadius: 8,
-                                                    fontSize: 11,
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    background: curatorTab === 'diagnostics' ? 'rgba(255,255,255,0.95)' : 'transparent',
-                                                    color: curatorTab === 'diagnostics' ? '#0f172a' : 'rgba(255,255,255,0.8)'
-                                                }
-                                            },
-                                            '◉ Диагн.'
-                                        )
+                                                : tab.label
+                                        ))
                                     ),
                                     // Warnings (cache/error) в хедере
                                     clientsSource === 'cache' && React.createElement(

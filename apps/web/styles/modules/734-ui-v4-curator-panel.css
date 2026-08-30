@@ -1,4 +1,5 @@
-/* 734-ui-v4-curator-panel.css — пятая вкладка кабинета куратора.
+/* 734-ui-v4-curator-panel.css — кабинет куратора: шапка, ряд вкладок и пятая
+ * вкладка «Панель».
  *
  * Канон — curator-cabinet.v4.dc.html. Панель отвечает на вопрос «кем заняться
  * сегодня», поэтому тревожное и спокойное занимают в ней разное место: группа
@@ -500,4 +501,90 @@
 
 .cur-sheet__btn--wide {
   width: 100%;
+}
+
+/* ── Шапка кабинета и ряд вкладок ─────────────────────────────────────────
+ * Контракт «что менялось»: перекрашен только вид — ни один экран, вкладка,
+ * кнопка и поле не добавлены и не убраны. Тёмная шапка, фиолетовая заливка и
+ * эмодзи уходят; действия остаются все.
+ */
+.cur-cab__head {
+  padding: 16px 18px 0;
+  background: var(--v4-bg, #fffaf1);
+}
+
+.cur-cab__head-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cur-cab__title-box {
+  flex: 1;
+  min-width: 0;
+}
+
+.cur-cab__title {
+  display: block;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--v4-ink, #201e1d);
+}
+
+/* Счёт клиентов и состояние системы одной строкой: два отдельных индикатора
+   занимали место и спорили за внимание, а вместе читаются как одна сводка. */
+.cur-cab__subtitle {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* Возврат — круглая кнопка, а не квадрат с рамкой: в наборе круг значит
+   «увести отсюда», и на тёмной шапке это читалось иначе только из-за фона. */
+.cur-cab__back {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Пять вкладок одним рядом. Сетка стояла на четыре колонки при пяти
+   вкладках, и «Диагн.» переносилась вниз — ряд, который контракт требует не
+   переносить вовсе. */
+.cur-cab__tabs {
+  display: flex;
+  gap: 5px;
+  padding: 0 16px;
+  margin-top: 12px;
+  background: var(--v4-bg, #fffaf1);
+}
+
+.cur-cab__tab {
+  flex: none;
+  padding: 8px 9px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-surface, #f7efe2);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cur-cab__tab.is-on {
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #fff5ef);
 }

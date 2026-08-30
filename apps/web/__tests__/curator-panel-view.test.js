@@ -40,7 +40,14 @@ beforeEach(() => {
 
 describe('панель куратора · место в кабинете', () => {
   it('пятая вкладка, и порядок групп — старшинство контракта', () => {
-    expect(GATE).toContain("setCuratorTab('panel')");
+    // Вкладки перечислены списком, а не пятью копиями кнопки: сетка стояла на
+    // четыре колонки при пяти вкладках, и «Диагн.» переносилась вниз.
+    const tabs = GATE.slice(GATE.indexOf("{ key: 'clients'"), GATE.indexOf("].map((tab)"));
+    expect(tabs.match(/key: '[a-z]+'/g)).toEqual([
+      "key: 'clients'", "key: 'queue'", "key: 'panel'",
+      "key: 'moderation'", "key: 'diagnostics'"
+    ]);
+    expect(GATE).toContain('setCuratorTab(tab.key)');
     expect(GATE).toContain("curatorTab === 'panel'");
     // «В коридоре» стоит между расхождением и копящими: цифры в порядке, но
     // клиент остаётся на виду — в «всё ровно» он был бы свёрнут и пропал.
