@@ -190,7 +190,7 @@
    * живёт в карточке силовой, где виден состав упражнений.
    */
   function buildTrainingsRowValue(params) {
-    const { day, kcalMin, r0, trainingTypes, cardioKcal } = params || {};
+    const { day, kcalMin, r0, trainingTypes, cardioKcal, hasProgram } = params || {};
     const trainings = Array.isArray(day && day.trainings) ? day.trainings : [];
     const performed = trainings.filter((t) => isTrainingSlotUsedMonth(t) && !isMorningActivationTraining(t));
     const planned = trainings.filter((t) => isNotPerformedTrainingMonth(t));
@@ -198,6 +198,9 @@
     if (!performed.length) {
       // Назначенное есть, сделанного нет — «не начаты», а не ноль.
       if (planned.length) return { value: 'не начаты', muted: true, sub: '' };
+      // Программа ведётся, но на сегодня в ней ничего нет — это день отдыха,
+      // а не пропуск: «не отмечено» здесь читалось бы как забывчивость.
+      if (hasProgram) return { value: 'день отдыха', muted: true, sub: '' };
       return { value: 'не отмечено', muted: true, sub: '' };
     }
 
@@ -313,6 +316,7 @@
       visibleTrainings,
       trainingTypes,
       regularTrainingsBlock,
+      programTrainingsBlock,
       ndteData,
       ndteBoostKcal,
       tefData,
@@ -436,7 +440,10 @@
     };
 
     const trainingsRow = buildTrainingsRowValue({
-      day, kcalMin: safeKcalMin, r0: safeR0, trainingTypes, cardioKcal
+      day, kcalMin: safeKcalMin, r0: safeR0, trainingTypes, cardioKcal,
+      // Программа на экране есть, а сделанного за день нет — это не
+      // «не отмечено», а день отдыха по программе (кадр «день отдыха»).
+      hasProgram: !!programTrainingsBlock
     });
 
     const householdHasData = totalHouseholdMin > 0;
@@ -544,6 +551,13 @@
         ),
         heroBreakdown
       ),
+
+      // Три элемента программы стоят выше яруса: назначенная на сегодня
+      // тренировка и правка куратора — самое важное на экране, и они не
+      // могут жить за свёрнутым чевроном (контракт строка 7).
+      programTrainingsBlock && React.createElement('div', {
+        className: 'activity-v4-program'
+      }, programTrainingsBlock),
 
       React.createElement('div', { className: 'activity-v4-tier' }, 'Сегодня'),
 

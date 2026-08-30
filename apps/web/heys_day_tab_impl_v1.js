@@ -1347,7 +1347,14 @@
             }) || null;
         }, [activityContentEnabled, visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR, date]);
 
-        const chargeTrainingBlock = useMemo(() => {
+        // Программа куратора собирается своим проходом и встаёт выше яруса
+        // «Сегодня»: правка куратора, карточка назначенного плана, строка
+        // «Следующая тренировка» (контракт «три элемента программы»).
+        //
+        // Занял слот мёртвого chargeTrainingBlock: он считался на каждой смене
+        // тренировок и выбрасывался — ActivityTabV4 его не разбирал
+        // (разбор «Актив», дефект M).
+        const programTrainingsBlock = useMemo(() => {
             if (!activityContentEnabled) return null;
             return HEYS.dayTrainings?.renderTrainingsBlock?.({
                 haptic,
@@ -1366,7 +1373,7 @@
                 weight,
                 r0,
                 dateKey: date,
-                trainingFilterMode: 'morning_activation'
+                trainingFilterMode: 'program'
             }) || null;
         }, [activityContentEnabled, visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR, date]);
 
@@ -2266,7 +2273,7 @@
                 visibleTrainings,
                 trainingTypes,
                 regularTrainingsBlock,
-                chargeTrainingBlock,
+                programTrainingsBlock,
                 ndteData,
                 ndteBoostKcal,
                 tefData,
@@ -2289,7 +2296,7 @@
                 openHouseholdPicker,
                 openTrainingPicker
             });
-        }, [showActivityContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, train3k, visibleTrainings, trainingTypes, regularTrainingsBlock, chargeTrainingBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, optimum, cycleKcalMultiplier, tdee, caloricDebt, day?.isRefeedDay]);
+        }, [showActivityContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, train3k, visibleTrainings, trainingTypes, regularTrainingsBlock, programTrainingsBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, optimum, cycleKcalMultiplier, tdee, caloricDebt, day?.isRefeedDay]);
 
         if (!HEYS.dayNutritionCard?.buildNutritionCard) {
             throw new Error('[heys_day_v12] HEYS.dayNutritionCard not loaded before heys_day_v12.js');

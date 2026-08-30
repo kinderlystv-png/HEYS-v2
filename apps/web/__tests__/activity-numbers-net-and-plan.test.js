@@ -860,3 +860,121 @@ describe('Ярус «Сегодня» · сведение с канвасом', 
     expect(screen.queryByText('Отметить')).toBeNull();
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// Блок 3 · программа куратора выше яруса «Сегодня»
+// tab-activity.v4.dc.html, строка 7; кадры «план назначен», «день отдыха»
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('Программа куратора · выше яруса', () => {
+  function renderWithProgram(ctxExtra) {
+    const HEYS = loadFiles(['_kernel/heys_kernel_strength_v1.js', 'heys_day_activity_v1.js']);
+    HEYS.TDEE = { calculate: () => ({ kcalMin: [0, 7, 8, 9] }) };
+    const ctx = {
+      day: { date: '2026-08-30', trainings: [] },
+      prof: {},
+      trainingTypes: [{ id: 'strength', label: 'Силовая' }],
+      stepsValue: 6780, stepsGoal: 10000, stepsPercent: 54, stepsColor: '#000', stepsK: 250,
+      bmr: 1520, householdK: 0, totalHouseholdMin: 0,
+      train1k: 0, train2k: 0, train3k: 0,
+      r0: (v) => Math.round(v || 0),
+      visibleTrainings: 0,
+      regularTrainingsBlock: null,
+      programTrainingsBlock: React.createElement('div', null, 'элементы программы'),
+      ndteData: { active: false }, ndteBoostKcal: 0,
+      tefData: {}, tefKcal: 0,
+      dayTargetDef: -15, displayOptimum: 1940, optimum: 1940, cycleKcalMultiplier: 1,
+      tdee: 2280, caloricDebt: null,
+      monthTrainingsRows: [], morningActivationCalendarBlock: null,
+      ...ctxExtra,
+    };
+    render(HEYS.dayActivity.render({ React, ctx, actions: {} }));
+  }
+
+  it('блок программы стоит выше яруса «Сегодня»', () => {
+    renderWithProgram();
+    const root = document.querySelector('.activity-v4');
+    const nodes = [...root.querySelectorAll('.activity-v4-program, .activity-v4-tier')];
+    expect(nodes[0].className).toContain('activity-v4-program');
+    expect(nodes[1].textContent).toBe('Сегодня');
+  });
+
+  it('программа видна без раскрытия — не за чевроном', () => {
+    renderWithProgram();
+    expect(screen.getByText('элементы программы')).toBeTruthy();
+  });
+
+  it('день без сделанного при живой программе — «день отдыха»', () => {
+    renderWithProgram();
+    const row = document.querySelector('.activity-v4-today__row');
+    expect(row.querySelector('.activity-v4-today__value').textContent).toBe('день отдыха');
+  });
+
+  it('без программы тот же день — «не отмечено»', () => {
+    renderWithProgram({ programTrainingsBlock: null });
+    const row = document.querySelector('.activity-v4-today__row');
+    expect(row.querySelector('.activity-v4-today__value').textContent).toBe('не отмечено');
+  });
+
+  it('назначенный план сильнее дня отдыха — «не начаты»', () => {
+    renderWithProgram({
+      day: {
+        date: '2026-08-30',
+        trainings: [{ type: 'strength', z: [0, 45, 0, 0], plan: { status: 'assigned' } }],
+      },
+    });
+    const row = document.querySelector('.activity-v4-today__row');
+    expect(row.querySelector('.activity-v4-today__value').textContent).toBe('не начаты');
+  });
+});
+
+describe('Режим program в блоке тренировок', () => {
+  function build(mode, trainings) {
+    const HEYS = loadFiles(['_kernel/heys_kernel_strength_v1.js', 'heys_day_trainings_v1.js']);
+    HEYS.currentClientId = 'c1';
+    HEYS.utils = { lsGet: (k, d) => (k === 'heys_profile' ? { weight: 80 } : d) };
+    return HEYS.dayTrainings.renderTrainingsBlock({
+      visibleTrainings: trainings.length,
+      householdActivities: [],
+      trainingTypes: [{ id: 'strength', label: 'Силовая' }],
+      TR: trainings,
+      kcalMin: [0, 7, 8, 9],
+      kcalPerMin: (met, w) => (met * 3.5 * w) / 200,
+      weight: 80,
+      r0: (v) => Math.round(v || 0),
+      dateKey: '2026-08-30',
+      trainingFilterMode: mode,
+    });
+  }
+
+  const assigned = { type: 'strength', z: [0, 45, 0, 0], plan: { status: 'assigned' }, strengthEntryMode: 'workout_builder', workoutLog: { exercises: [{ id: 'e', name: 'Присед', approaches: [{ id: 'a', weightKg: '80', reps: 8 }] }] } };
+  const done = { type: 'strength', z: [0, 30, 0, 0] };
+
+  it('назначенное берёт только режим program', () => {
+    expect(build('program', [assigned])).toBeTruthy();
+    // В режиме фактов назначенного нет: иначе карточка встала бы дважды.
+    expect(build('regular', [assigned])).toBeNull();
+  });
+
+  it('сделанное берёт только режим regular', () => {
+    expect(build('regular', [done])).toBeTruthy();
+    const program = build('program', [done]);
+    // Программа без назначенного всё равно рисуется — там живёт строка
+    // «Следующая тренировка», и она больше не исчезает с пустым днём.
+    expect(program).toBeTruthy();
+  });
+
+  it('пустой день не убивает блок программы', () => {
+    expect(build('program', [])).toBeTruthy();
+  });
+
+  it('без клиента программы нет', () => {
+    const HEYS = loadFiles(['heys_day_trainings_v1.js']);
+    HEYS.currentClientId = '';
+    expect(HEYS.dayTrainings.renderTrainingsBlock({
+      visibleTrainings: 0, householdActivities: [], trainingTypes: [], TR: [],
+      kcalMin: [0, 0, 0, 0], weight: 80, r0: (v) => Math.round(v || 0),
+      dateKey: '2026-08-30', trainingFilterMode: 'program',
+    })).toBeNull();
+  });
+});

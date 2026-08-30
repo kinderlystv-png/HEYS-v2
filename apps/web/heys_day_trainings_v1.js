@@ -2919,7 +2919,7 @@
     const safeHouseholdActivities = Array.isArray(householdActivities) ? householdActivities : [];
     const safeTrainingTypes = Array.isArray(trainingTypes) ? trainingTypes : [];
     const safeTrainings = Array.isArray(TR) ? TR : [];
-    const safeTrainingFilterMode = ['regular', 'morning_activation'].includes(trainingFilterMode)
+    const safeTrainingFilterMode = ['regular', 'morning_activation', 'program'].includes(trainingFilterMode)
       ? trainingFilterMode
       : 'all';
 
@@ -2953,12 +2953,28 @@
       return customLabel || trainingType?.label || ('Тренировка ' + (index + 1));
     }
 
+    /**
+     * Программа куратора живёт выше яруса «Сегодня» и собирается своим
+     * проходом (контракт «три элемента программы», строка 7). Поэтому
+     * назначенное и то, на что клиент ещё не ответил, показывает режим
+     * program, а режим regular их не берёт: иначе одна и та же карточка
+     * встала бы дважды — над ярусом и внутри него.
+     */
+    function isProgramEntry(training) {
+      if (!training || typeof training !== 'object') return false;
+      const TKs = (HEYS.TrainingKernel && HEYS.TrainingKernel.strength) || null;
+      if (TKs && TKs.pendingPlanProposal && TKs.pendingPlanProposal(training)) return true;
+      const status = training.plan && training.plan.status;
+      return status === 'assigned' || status === 'skipped';
+    }
+
     function shouldRenderTraining(training) {
       if (safeTrainingFilterMode === 'all') return true;
       const isMorningActivation = isMorningActivationTraining(training);
-      return safeTrainingFilterMode === 'morning_activation'
-        ? isMorningActivation
-        : !isMorningActivation;
+      if (safeTrainingFilterMode === 'morning_activation') return isMorningActivation;
+      if (isMorningActivation) return false;
+      if (safeTrainingFilterMode === 'program') return isProgramEntry(training);
+      return !isProgramEntry(training);
     }
 
     function getTrainingDisplayMeta(displayLabel, trainingType, training) {
@@ -3532,14 +3548,22 @@
       ? safeHouseholdActivities
       : [];
 
-    if (safeTrainingFilterMode !== 'all' && trainingEntries.length === 0 && householdEntries.length === 0) {
+    // Режим программы возвращает пустоту только когда программы нет вовсе:
+    // строка «Следующая тренировка» — это и есть его содержимое в день без
+    // назначенного. Прежде она жила внутри блока фактов и исчезала вместе с
+    // ним в пустой день (контракт «ярус не исчезает пустым», строка 6).
+    if (safeTrainingFilterMode === 'program') {
+      if (!HEYS.currentClientId) return null;
+    } else if (trainingEntries.length === 0 && householdEntries.length === 0
+      && safeTrainingFilterMode !== 'all') {
       return null;
     }
 
     return React.createElement('div', { className: 'compact-trainings' },
-      safeTrainingFilterMode === 'regular' && HEYS.currentClientId && React.createElement(ProgramNextLine, {
+      safeTrainingFilterMode === 'program' && HEYS.currentClientId && React.createElement(ProgramNextLine, {
         clientId: HEYS.currentClientId,
-        // День с планом строку не показывает: карточка плана уже сказала всё.
+        // Строка и карточка взаимоисключающие: строка прячется, когда план
+        // на сегодня есть — карточка уже сказала всё (контракт строка 7).
         hasPlanToday: trainingEntries.some(function (e) { return e.rawT && e.rawT.plan; })
       }),
       safeTrainingFilterMode === 'all' && safeVisibleTrainings === 0 && safeHouseholdActivities.length === 0 && React.createElement('div', {
