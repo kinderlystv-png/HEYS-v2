@@ -481,14 +481,24 @@ describe('protected trial intake contract', () => {
   });
 
   it('shows one owner-aware next action and keeps trial activation out of intake review', () => {
-    expect(queueSource).toContain('Действие куратора: отправить приглашение');
-    expect(queueSource).toContain('Ожидаем завершение анкеты кандидатом');
-    expect(queueSource).toContain('Действие куратора: разобрать анкету');
-    expect(queueSource).toContain('Ожидаем свободное место');
+    // Ожидание названо словом у каждого состояния, где куратору делать нечего:
+    // это единственное, чего не может сказать кнопка. Строчными и без глагола
+    // действия — по контракту «карточка · строка анкеты» это значение поля
+    // «Этап», а не самостоятельная фраза.
+    expect(queueSource).toContain('ждём вход и заполнение');
+    expect(queueSource).toContain('ждём завершение анкеты');
+    expect(queueSource).toContain('ждём уточнение кандидата');
+    expect(queueSource).toContain('ждём свободное место');
+    expect(queueSource).toContain('решение завершено · анкета удалится через 30 дней');
+    // Приписки «Действие куратора: …» больше нет — она повторяла текст кнопки
+    // под собой. Проверка держит само решение, а не прежнюю копию: до этого
+    // здесь стояли четыре литерала, снятые при сведении очереди с кадром, и
+    // гейт краснел, хотя механика не менялась. Ищем в строке кода, а не в
+    // тексте файла: сам запрет объясняется комментарием этими же словами.
+    expect(queueSource).not.toMatch(/['"`]Действие куратора/);
     expect(queueSource).not.toContain("intakeStatus === 'approved_waiting_slot' && freeSlots <= 0");
     expect(queueSource).not.toContain('Назначить дату старта');
     expect(queueSource).not.toContain('trialActivationDialog');
-    expect(queueSource).toContain('Решение завершено · удаление анкеты через 30 дней');
   });
 
   it('logs PIN-client consent through the session-bound RPC with server-owned IP and UA', async () => {

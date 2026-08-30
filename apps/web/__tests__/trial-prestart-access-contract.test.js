@@ -55,6 +55,16 @@ describe('trial prestart access contract', () => {
     expect(queue).not.toContain('ДИАЛОГ: Активация триала');
     expect(queue).not.toContain('onClick: () => handleActivateTrial(');
     expect(gateFlow).toContain('function ClientSubscriptionButton');
-    expect(gateFlow).toContain('Назначьте дату старта');
+    // Активация живёт внутри управления подпиской — это и проверяем: вид
+    // `trial` и его обработчик стоят в самом компоненте. Прежде здесь стояла
+    // подпись «Назначьте дату старта» — копия, а не механика: 30 августа лист
+    // перевели на набор (71f08cb95), подпись стала «Доступ на 7 дней с
+    // выбранной даты», и гейт покраснел, хотя ничего никуда не переехало.
+    const subscriptionComponent = gateFlow.slice(
+      gateFlow.indexOf('function ClientSubscriptionButton'),
+      gateFlow.indexOf('function ClientActionsMenu'),
+    );
+    expect(subscriptionComponent).toContain('const handleActivateTrial =');
+    expect(subscriptionComponent).toContain("setView('trial')");
   });
 });
