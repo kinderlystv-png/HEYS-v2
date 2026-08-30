@@ -751,3 +751,77 @@
   background: var(--v4-bg, #fffaf1);
   border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
+
+/* ── Числа диагностики ────────────────────────────────────────────────────
+ * Контракт «вид · числа диагностики»: сетка 2×2, остальные показатели —
+ * строкой. Правила переехали сюда из строки стилей внутри модуля
+ * диагностики: там они держали жёсткие цвета мимо набора и мимо гейта
+ * перекраски. Прежние пять карточек столбиком занимали два экрана прокрутки.
+ */
+.cdo-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.cdo-metric {
+  border: none;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: var(--v4-surface, #f7efe2);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.cdo-metric strong {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+.cdo-metric span {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* Сбой и отклонение отличаются тоном числа, а не рамкой: рамка вокруг
+   карточки читается как выделение, а число говорит само. */
+.cdo-metric--bad strong {
+  color: var(--v4-bad-text, #b4442a);
+}
+
+.cdo-metric--warn strong {
+  color: var(--v4-warn-text, #8a5a2a);
+}
+
+/* Контекст — строкой: он объясняет масштаб, но не отвечает на вопрос
+   «что сломалось», ради которого вкладку открывают. */
+.cdo-context {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: 16px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.cdo-context-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.cdo-context-value {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}

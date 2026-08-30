@@ -59,6 +59,30 @@ describe('панель куратора · место в кабинете', () =
       .toEqual(window.HEYS.NormCorrection.PANEL_STATES);
   });
 
+  it('числа диагностики — сетка 2×2, контекст строкой', () => {
+    // Пять карточек столбиком занимали два экрана прокрутки, и главное число
+    // тонуло среди контекста.
+    const DIAG = fs.readFileSync(
+      path.resolve(__dirname, '../heys_client_diagnostics_v1.js'), 'utf8');
+    const grid = DIAG.slice(DIAG.indexOf("className: 'cdo-metrics'"),
+      DIAG.indexOf("className: 'cdo-context'"));
+    expect(grid.match(/metric\(/g)).toHaveLength(4);
+    expect(grid).not.toContain('Активных клиентов');
+    expect(DIAG).toContain("className: 'cdo-context'");
+    expect(CSS).toMatch(/\.cdo-metrics[\s\S]{0,140}repeat\(2, minmax\(0, 1fr\)\)/);
+  });
+
+  it('стили диагностики переехали из строки в JS на роли набора', () => {
+    // Там они держали жёсткие цвета мимо набора и мимо гейта перекраски.
+    const DIAG = fs.readFileSync(
+      path.resolve(__dirname, '../heys_client_diagnostics_v1.js'), 'utf8');
+    expect(DIAG).not.toContain('.cdo-metric{border:1px solid #e2e2ed');
+    expect(CSS).toContain('.cdo-metric strong');
+    // Сбой и отклонение — тоном числа, а не рамкой карточки.
+    expect(CSS).toMatch(/\.cdo-metric--bad strong[\s\S]{0,80}--v4-bad-text/);
+    expect(CSS).toMatch(/\.cdo-metric--warn strong[\s\S]{0,80}--v4-warn-text/);
+  });
+
   it('подвкладки очереди — те же чипы, что у фильтра панели', () => {
     // Один приём на весь кабинет: сегмент с числом в скобках и фиолетовая
     // заливка ушли вместе с тёмной шапкой.
