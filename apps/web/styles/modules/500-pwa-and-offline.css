@@ -983,7 +983,7 @@
 
 .mc-scale-value {
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   user-select: none;
   -webkit-user-select: none;
 }
@@ -2443,7 +2443,7 @@
 
 .mc-rest-supp-time {
   font: 500 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   white-space: nowrap;
 }
 
@@ -6674,7 +6674,13 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   color: rgba(0, 0, 0, 0.38);
 }
 
-.mc-modal--daily .mc-kilo-label {
+/* Подпись «Легли»/«Встали» набирается той же строкой, что подпись капсулы веса:
+   у обеих в разделе v4 есть общее правило (.mc-kilo-label, .mc-sleep-label), но
+   ниже по файлу лежит старое `.mc-sleep-label` той же силы — 14 px тоном
+   слейта, — и оно перебивало v4 просто порядком. Капсулу веса от этого уже
+   спасли областью модалки, блок сна остался с прежним видом. */
+.mc-modal--daily .mc-kilo-label,
+.mc-modal--daily .mc-sleep-label {
   font: 600 10px/1 Figtree, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;

@@ -293,10 +293,12 @@
   gap: 10px;
 }
 
+/* Кадр «Чек-ин · вчера по ощущениям», элемент 17. Перевод экрана на v4 забрал
+   значение справа (.yv-slider-value ниже), а подпись слева осталась в прежнем
+   кегле и слейтовом тоне. */
 .yv-slider-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
+  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .yv-slider-value {
@@ -312,10 +314,12 @@
   color: var(--v4-ink-4, #9ca3af);
 }
 
+/* Кадр «Чек-ин · вчера по ощущениям», элемент 23: 11 px/500 тоном чернил 42 %
+   через 12 от дорожки. Тона 42 % у набора нет — ближайший --v4-ink-3. */
 .yv-slider-note {
-  font-size: 12px;
-  color: #4b5563;
-  line-height: 1.45;
+  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  margin-top: 12px;
 }
 
 .yv-option {
@@ -801,8 +805,8 @@
 .yv-force-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 7px;
+  margin-top: 14px;
 }
 
 /* Кадр «Чек-ин · вчера по ощущениям», элемент 09: невыбранная строка силы —
@@ -845,9 +849,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Кадр «Чек-ин · вчера по ощущениям», элемент 14: цифра выбранной силы — тон
+   --ac, а не заливочный --acs. Строка при этом лежит на второй поверхности, и
+   заливочный тон давал на ней 2,9:1 — ниже порога для 11,5 px. */
 .yv-force--on .yv-force-kcal {
   font-weight: 700;
-  color: var(--v4-sand-act, #c67139);
+  color: var(--v4-sand-act-text, #8a4a20);
 }
 
 .yv-slider-block {
@@ -867,14 +874,19 @@
   color: #a86b2a;
 }
 
+/* Тот же довод, что у цифры выбранной силы: текстовый тон акцента, не
+   заливочный. Три ступени (норма · недобор · перебор) — своё решение продукта,
+   кадр рисует одну; см. UI_V4_FINDINGS.md. */
 .yv-slider-value--over {
-  color: var(--v4-sand-act, #c67139);
+  color: var(--v4-sand-act-text, #8a4a20);
 }
 
+/* Контракт «вид дорожки»: «засечки краёв под дорожкой через 8 px». Кадры
+   рисуют 7 — верен контракт. */
 .yv-slider-ticks {
   position: relative;
   height: 14px;
-  margin-top: 7px;
+  margin-top: 8px;
 }
 
 .yv-slider-tick {
@@ -902,9 +914,13 @@
   font-weight: 700;
 }
 
+/* Контракт «вид дорожки»: одна дорожка на продукт — высота 26, радиус 999, фон
+   --c2, заливка --gr2 той же высоты, ручка 20 фоном --bg. Соседняя строка
+   «дорожка» прямо относит сюда и оценку пачки, то есть этот экран. Кадры
+   разбора рисуют дорожке 24 — верен контракт, у мастера дорожка уже 26. */
 .yv-v4-slider-track-wrap {
   position: relative;
-  height: 24px;
+  height: 26px;
   border-radius: 999px;
   background: var(--v4-chip, #efe3cf);
   margin-top: 9px;
@@ -914,7 +930,7 @@
 .yv-v4-slider-norm-zone {
   position: absolute;
   top: 0;
-  height: 24px;
+  height: 26px;
   border-radius: 999px;
   background: var(--v4-sand-tint-green, #eaefe0);
   pointer-events: none;
@@ -937,7 +953,7 @@
   position: absolute;
   left: 0;
   top: 0;
-  height: 24px;
+  height: 26px;
   border-radius: 999px;
   pointer-events: none;
   z-index: 2;
@@ -972,7 +988,7 @@
   position: absolute;
   inset: 0;
   width: 100%;
-  height: 24px;
+  height: 26px;
   margin: 0;
   opacity: 0;
   cursor: pointer;
@@ -1037,6 +1053,21 @@
   font: 700 12px/1 Figtree, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.45);
   cursor: pointer;
+}
+
+/* Кадр «Чек-ин · вчера по ощущениям» размечает содержимое отступами самих
+   блоков: пояснение 7, силы 14, дорожка 16, строка под ней 12. Общий зазор 20 у
+   .yv-step остался от прежней вёрстки и складывался с ними — между силами и
+   дорожкой выходило 36 вместо 16. Шаги с плоским содержимым живут разметкой
+   кадра; шаги со своей обёрткой (.yv-hero) зазор сохраняют. */
+.yv-step--feelings,
+.yv-step--bulk-force {
+  gap: 0;
+}
+
+.yv-step--feelings > .yv-hero-sub,
+.yv-step--bulk-force > .yv-hero-sub {
+  margin-top: 7px;
 }
 
 .mc-modal--daily .yv-step {

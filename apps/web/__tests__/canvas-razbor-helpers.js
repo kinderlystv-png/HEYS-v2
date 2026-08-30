@@ -122,6 +122,8 @@ const PICK = {
   justify: (v) => num(v, /распределение (\S+?)(?:,|$)/),
   direction: (v) => num(v, /направление (\S+?)(?:,|$)/),
   textAlign: (v) => num(v, /выключка (\S+?)(?:,|$)/),
+  transform: (v) => num(v, /регистр (\S+?)(?:,|$)/),
+  flex: (v) => num(v, /флекс (\S+?)(?:,|$)/),
   background: (v) => grabColor(v, 'фон'),
   color: (v) => grabColor(v, 'цвет')
 };
@@ -131,7 +133,7 @@ const CSSPROP = {
   width: 'width', radius: 'border-radius', padding: 'padding', fontWeight: 'font-weight',
   fontSize: 'font-size', lineHeight: 'line-height', tracking: 'letter-spacing',
   align: 'align-items', justify: 'justify-content', direction: 'flex-direction',
-  textAlign: 'text-align',
+  textAlign: 'text-align', transform: 'text-transform', flex: 'flex',
   background: 'background', color: 'color'
 };
 
