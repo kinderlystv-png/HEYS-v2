@@ -185,8 +185,13 @@ describe('панель куратора · место в кабинете', () =
   });
 
   it('нижний ярус: серия слева, превью справа, и одно не съедает другое', () => {
-    const foot = GATE.slice(GATE.indexOf("className: 'cur-cab__foot'"),
-      GATE.indexOf('Ряд действий'));
+    // Конец среза ищется от его начала: файл длинный, и та же прозаическая
+    // фраза встречается выше — тогда срез выходил пустым, а сравнение двух
+    // «не найдено» проходило как успех.
+    const footStart = GATE.indexOf("className: 'cur-cab__foot'");
+    const foot = GATE.slice(footStart, GATE.indexOf('Ряд действий', footStart));
+    expect(footStart).toBeGreaterThan(0);
+    expect(foot.length).toBeGreaterThan(0);
     expect(foot.indexOf('cur-cab__streak')).toBeLessThan(foot.indexOf('cur-cab__preview'));
     // Нет одного — остаётся другое.
     expect(GATE).toContain('(stats.streak > 0 || lastPreview || unreadCount > 0)');

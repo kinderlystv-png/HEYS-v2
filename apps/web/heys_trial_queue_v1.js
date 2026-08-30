@@ -1769,30 +1769,15 @@
       return children;
     }
 
+    // Счёт работы на вкладке — меткой набора, общей с «Заявками». Прежде у
+    // каждой вкладки был свой красный круг: у очереди #dc2626, у заявок
+    // #ef4444. Красный в наборе значит разрушающее действие, а очередь
+    // заявок им не является.
     return React.createElement(
-      'span',
-      { style: { display: 'inline-flex', alignItems: 'center', gap: 6 } },
+      React.Fragment,
+      null,
       children,
-      React.createElement(
-        'span',
-        {
-          style: {
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: 18,
-            height: 18,
-            padding: '0 5px',
-            borderRadius: 9,
-            background: '#dc2626',
-            color: '#fff',
-            fontSize: 11,
-            fontWeight: 700,
-            lineHeight: 1,
-          }
-        },
-        String(count)
-      )
+      React.createElement('span', { className: 'cur-cab__tab-count' }, String(count))
     );
   }
 

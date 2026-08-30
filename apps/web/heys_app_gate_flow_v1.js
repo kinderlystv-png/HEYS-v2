@@ -9,6 +9,11 @@
     const U = HEYS.utils || {};
     const CLIENT_ACTION_MODAL_Z = 12050;
 
+    // Инициалы берём у общего модуля: внутри карточки они приходят пропом, а
+    // листам подписки и меню клиента — нет, у них своя точка входа.
+    const clientInitials = (name) => HEYS.AppClientHelpers?.getClientInitials?.(name)
+        || (name || '—').slice(0, 1).toUpperCase();
+
     function useFallbackPinFieldState() {
         const [value, setValue] = React.useState('');
         return {
@@ -154,8 +159,13 @@
             });
         }
 
+        // Пилюля подписки несёт только слова: `text`, короткую форму `short`
+        // и признак срочности `urgent`. Поля `emoji`, `color` и `bg` из прежней
+        // системы — восемь эмодзи и шестнадцать холодных цветов — не читал
+        // никто: пилюлю рисует метка набора .cur-cab__mch, а лист подписки
+        // берёт только текст.
         if (!endDate || status === 'none') {
-            return { emoji: '⚪', color: '#6b7280', bg: '#f3f4f6', text: 'Нет подписки', urgent: false };
+            return { text: 'Нет подписки', urgent: false };
         }
 
         if (status === 'trial_pending') {
@@ -163,16 +173,15 @@
             const startText = startDate && !Number.isNaN(startDate.getTime())
                 ? startDate.toLocaleDateString('ru-RU')
                 : '?';
-            return { emoji: '🕐', color: '#3b82f6', bg: '#dbeafe', text: `Начнётся ${startText}`, urgent: false };
+            return { text: `Начнётся ${startText}`, urgent: false };
         }
 
         if (daysLeft !== null && daysLeft < 0) {
-            return { emoji: '🔴', color: '#dc2626', bg: '#fee2e2', text: `Просрочена ${Math.abs(daysLeft)} дн.`, urgent: true };
+            return { text: `Просрочена ${Math.abs(daysLeft)} дн.`, urgent: true };
         }
 
         if (daysLeft !== null && daysLeft <= 3) {
             return {
-                emoji: '🟡', color: '#d97706', bg: '#fef3c7',
                 text: `Истекает через ${daysLeft} дн.`,
                 short: `ещё ${daysLeft} дн.`,
                 urgent: true
@@ -181,7 +190,6 @@
 
         if (daysLeft !== null && daysLeft <= 7) {
             return {
-                emoji: '🟡', color: '#ca8a04', bg: '#fef9c3',
                 text: `До ${endDate.toLocaleDateString('ru-RU')}`,
                 short: `до ${shortDate(endDate)}`,
                 urgent: false
@@ -190,7 +198,6 @@
 
         if (status === 'trial') {
             return {
-                emoji: '⏳', color: '#6366f1', bg: '#e0e7ff',
                 text: `Триал до ${endDate.toLocaleDateString('ru-RU')}`,
                 short: `триал до ${shortDate(endDate)}`,
                 urgent: false
@@ -199,7 +206,6 @@
 
         if (status === 'active') {
             return {
-                emoji: '🟢', color: '#16a34a', bg: '#dcfce7',
                 text: `Активна до ${endDate.toLocaleDateString('ru-RU')}`,
                 // Короткая форма — для пилюли в карточке списка: полная
                 // («Активна до 23.09.2026») занимала треть строки и выдавливала
@@ -211,10 +217,10 @@
         }
 
         if (status === 'read_only') {
-            return { emoji: '🔒', color: '#dc2626', bg: '#fee2e2', text: 'Доступ ограничен', urgent: true };
+            return { text: 'Доступ ограничен', urgent: true };
         }
 
-        return { emoji: '⚪', color: '#6b7280', bg: '#f3f4f6', text: status, urgent: false };
+        return { text: status, urgent: false };
     };
 
     // ⚙️ Компонент управления подпиской клиента (портал + enterprise UI)
@@ -701,7 +707,7 @@
 
             return h('div', { className: 'cur-cab__sheet-body' },
                 h('div', { className: 'cur-cab__client-head' },
-                    h('span', { className: 'cur-row__avatar' }, getClientInitials(client.name)),
+                    h('span', { className: 'cur-row__avatar' }, clientInitials(client.name)),
                     h('span', { className: 'cur-cab__client-copy' },
                         h('span', { className: 'cur-row__name' }, client.name),
                         h('span', {
@@ -787,20 +793,17 @@
 
         return h(React.Fragment, null,
             h('button', {
-                className: 'btn-icon',
-                title: 'Управление подпиской',
+                type: 'button',
+                className: 'cur-cab__more',
+                title: 'Подписка и тариф',
+                'aria-label': 'Подписка и тариф',
                 onClick: (e) => {
                     e.stopPropagation();
                     console.info('[HEYS.subs] ⚙️ Открыта панель управления подпиской', { clientId: client.id, clientName: client.name });
                     setOpen(true);
                     setView('main');
-                },
-                style: {
-                    width: 32, height: 32, borderRadius: 8, border: 'none',
-                    background: '#e0e7ff', cursor: 'pointer', fontSize: 14,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }
-            }, '⚙️'),
+            }, '⋯'),
             portal
         );
     }
@@ -860,10 +863,7 @@
                 },
                     React.createElement('div', { className: 'cur-cab__menu-head' },
                         React.createElement('span', { className: 'cur-row__avatar' },
-                            // Инициалы берём у общего модуля: внутри карточки они
-                            // приходят пропом, а меню живёт своей функцией.
-                            HEYS.AppClientHelpers?.getClientInitials?.(client.name)
-                              || (client.name || '—').slice(0, 1).toUpperCase()),
+                            clientInitials(client.name)),
                         React.createElement('span', { className: 'cur-sheet__copy' },
                             React.createElement('span', { className: 'cur-row__name' }, client.name),
                             React.createElement('span', { className: 'cur-sheet__meta' },
@@ -989,20 +989,18 @@
             editPinField.resetDigits();
             setOpen(true);
         };
+        // Запасная кнопка на случай вызова без renderTrigger — круг набора, а
+        // не белый квадрат 30 с карандашом: единственный живой вызов идёт
+        // строкой меню клиента, но второй вид кнопки заводить незачем.
         const triggerBtn = renderTrigger
             ? renderTrigger({ open: openEdit })
             : React.createElement('button', {
-            className: 'btn-icon',
-            title: 'Редактировать профиль',
-            onClick: (e) => {
-                e.stopPropagation();
-                setName(client.name || '');
-                setPhone(client.phone_normalized || client.phone || '');
-                editPinField.resetDigits();
-                setOpen(true);
-            },
-            style: { width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
-        }, '✏️');
+                type: 'button',
+                className: 'cur-cab__more',
+                title: 'Анкета и цели',
+                'aria-label': 'Анкета и цели',
+                onClick: (e) => { e.stopPropagation(); openEdit(); }
+            }, '⋯');
 
         const modalContent = React.createElement('div', {
             className: 'cur-cab__sheet',
@@ -1019,37 +1017,40 @@
                                 'aria-label': 'Закрыть'
                             }, '✕')
                         ),
-            // Body
-            React.createElement('div', { style: { padding: 20, display: 'grid', gap: 16 } },
-                // Name
-                React.createElement('div', null,
-                    React.createElement('label', { style: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 } }, 'Имя клиента'),
+            // Поля — те же, что в листе «Новый клиент»: подпись строчными над
+            // полем, заливка вместо рамки. Прежде здесь стояли подписи 13 px
+            // тоном #374151, белые поля в рамке #d1d5db и синяя кнопка
+            // сохранения #3b82f6 — единственное синее место в кабинете.
+            React.createElement('div', { className: 'cur-cab__sheet-body' },
+                React.createElement('label', { className: 'cur-field' },
+                    React.createElement('span', { className: 'cur-field__label' }, 'Имя клиента'),
                     React.createElement('input', {
+                        className: 'cur-field__input',
                         placeholder: 'Иван Иванов',
                         value: name,
-                        onChange: (e) => setName(e.target.value),
-                        style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none' }
+                        onChange: (e) => setName(e.target.value)
                     })
                 ),
-                // Phone
-                React.createElement('div', null,
-                    React.createElement('label', { style: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 } }, 'Номер телефона'),
+                React.createElement('label', { className: 'cur-field' },
+                    React.createElement('span', { className: 'cur-field__label' }, 'Телефон'),
                     React.createElement('input', {
+                        className: 'cur-field__input',
                         placeholder: '+7 (999) 000-00-00',
+                        type: 'tel',
+                        inputMode: 'tel',
                         value: formatPhone(phone),
-                        onChange: (e) => setPhone((e.target.value || '').replace(/\D/g, '').slice(0, 11)),
-                        style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none', fontFamily: 'monospace' }
+                        onChange: (e) => setPhone((e.target.value || '').replace(/\D/g, '').slice(0, 11))
                     })
                 ),
-                // PIN
-                React.createElement('div', null,
-                    React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 } },
-                        React.createElement('label', { style: { fontSize: 13, fontWeight: 600, color: '#374151' } }, 'Новый PIN'),
-                        client.has_pin
-                            ? React.createElement('span', { style: { fontSize: 12, color: '#6b7280', background: '#f3f4f6', borderRadius: 6, padding: '2px 8px', letterSpacing: '2px' } }, 'Текущий: ••••')
-                            : React.createElement('span', { style: { fontSize: 12, color: '#ef4444', background: '#fef2f2', borderRadius: 6, padding: '2px 8px' } }, 'PIN не установлен')
-                    ),
-                    React.createElement('div', { className: 'muted', style: { fontSize: 12, marginBottom: 8 } }, 'Оставьте пустым, если PIN не меняется'),
+                React.createElement('div', { className: 'cur-field' },
+                    React.createElement('span', { className: 'cur-field__label' }, 'Новый PIN'),
+                    // Состояние PIN — меткой набора, а не серой и красной
+                    // плашками: «не установлен» это факт, а не отказ.
+                    React.createElement('span', {
+                        className: 'cur-cab__mch' + (client.has_pin ? '' : ' is-none')
+                    }, client.has_pin ? 'сейчас ••••' : 'PIN не установлен'),
+                    React.createElement('div', { className: 'cur-cab__tab-note' },
+                        'Оставьте пустым, если PIN не меняется.'),
                     pinKeypadKit
                         ? pinKeypadKit.renderPinKeypadSection({
                             pin: editPinField,
@@ -1057,32 +1058,31 @@
                             keypadRef: editPinKeypadRef,
                         })
                         : React.createElement('input', {
-                            placeholder: 'Оставьте пустым, если не меняется',
+                            className: 'cur-field__input is-pin',
+                            placeholder: '1234',
                             value: pin,
                             type: 'text',
-                            maxLength: 6,
+                            maxLength: 4,
                             onChange: (e) => editPinField.applyPinDigits((e.target.value || '').replace(/\D/g, '').slice(0, 4).split('').concat(['', '', '', '']).slice(0, 4)),
-                            onKeyDown: (e) => { if (e.key === 'Enter') handleSave(); },
-                            style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none', letterSpacing: pin ? '2px' : 'normal' }
+                            onKeyDown: (e) => { if (e.key === 'Enter') handleSave(); }
                         })
                 ),
-                // Buttons
-                React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 10 } },
+                // Действия листа собраны тем же рядом, что в карточке клиента:
+                // главное залито, отмена рядом подложкой. Прежде «Отмена» и
+                // «Сохранить» стояли в долях 1 и 2 — вес назначался шириной,
+                // а не заливкой.
+                React.createElement('div', { className: 'cur-cab__actions' },
                     React.createElement('button', {
-                        onClick: closeModal,
-                        style: { flex: 1, padding: '12px', borderRadius: 10, background: '#f3f4f6', color: '#4b5563', fontWeight: 600, border: 'none', cursor: 'pointer' }
-                    }, 'Отмена'),
-                    React.createElement('button', {
+                        type: 'button',
+                        className: 'cur-cab__open',
                         onClick: handleSave,
-                        disabled: loading || (!name.trim()),
-                        style: {
-                            flex: 2, padding: '12px', borderRadius: 10,
-                            background: name.trim() && !loading ? '#3b82f6' : '#9ca3af',
-                            color: '#fff', fontWeight: 600, border: 'none',
-                            cursor: name.trim() && !loading ? 'pointer' : 'default',
-                            transition: 'background 0.2s', opacity: loading ? 0.7 : 1
-                        }
-                    }, loading ? 'Сохранение...' : 'Сохранить изменения')
+                        disabled: loading || !name.trim()
+                    }, loading ? 'Сохраняем…' : 'Сохранить'),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'cur-cab__open is-soft',
+                        onClick: closeModal
+                    }, 'Отмена')
                 )
             )
         );
@@ -1283,43 +1283,47 @@
                 React.createElement('div', { className: 'cur-cab__tab-note' },
                     'Клиент войдёт по этому телефону и PIN-коду. '
                     + 'Сохраните их — второй раз показать не сможем.'),
-                accessResult && React.createElement('div', {
-                    style: { display: 'grid', gap: 8, padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' }
-                },
-                    React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: '#475569' } }, 'Доступ для клиента'),
-                    accessResult.welcomeMessage && React.createElement(React.Fragment, null,
-                        React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0 } }, 'Сообщение клиенту'),
-                        React.createElement('div', {
-                            style: {
-                                fontSize: 12,
-                                color: '#334155',
-                                whiteSpace: 'pre-wrap',
-                                lineHeight: 1.45,
-                                maxHeight: 180,
-                                overflowY: 'auto',
-                                padding: 10,
-                                borderRadius: 8,
-                                background: '#fff',
-                                border: '1px solid #cbd5e1'
-                            }
-                        }, accessResult.welcomeMessage),
+                // Выданный доступ — та же карточка, что в листе подписки
+                // (.cur-cab__access*). Прежде это была вторая её реализация:
+                // сетка на #f8fafc в холодной рамке, чёрная кнопка #0f172a,
+                // PIN 24 px тоном #111827 и две кнопки копирования в рамках
+                // #cbd5e1. Одна карточка на кабинет: разойдись они, правка PIN
+                // или сообщения требовала бы двух.
+                accessResult && React.createElement('div', { className: 'cur-cab__access' },
+                    React.createElement('div', { className: 'cur-cab__access-title' },
+                        'Доступ для клиента'),
+                    accessResult.phone
+                        ? React.createElement('div', { className: 'cur-cab__tab-note' },
+                            accessResult.phone)
+                        : null,
+                    React.createElement('div', { className: 'cur-cab__access-pin' },
+                        accessResult.pin || '—'),
+                    accessResult.deepLink
+                        ? React.createElement('div', { className: 'cur-cab__access-link' },
+                            accessResult.deepLink)
+                        : null,
+                    accessResult.welcomeMessage
+                        ? React.createElement('div', { className: 'cur-cab__access-msg' },
+                            accessResult.welcomeMessage)
+                        : null,
+                    React.createElement('div', { className: 'cur-cab__actions' },
+                        accessResult.welcomeMessage
+                            ? React.createElement('button', {
+                                type: 'button',
+                                className: 'cur-cab__open',
+                                onClick: () => copyText(accessResult.welcomeMessage, 'Сообщение клиенту скопировано')
+                            }, 'Скопировать сообщение')
+                            : null,
                         React.createElement('button', {
-                            onClick: () => copyText(accessResult.welcomeMessage, 'Сообщение клиенту скопировано'),
-                            style: { padding: '11px', borderRadius: 8, border: 'none', background: '#0f172a', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700 }
-                        }, 'Скопировать сообщение клиенту')
-                    ),
-                    React.createElement('div', { style: { fontSize: 12, color: '#475569' } }, accessResult.phone || ''),
-                    React.createElement('div', { style: { fontSize: 24, fontWeight: 800, letterSpacing: 8, fontFamily: 'monospace', color: '#111827', textAlign: 'center' } }, accessResult.pin || '—'),
-                    accessResult.deepLink && React.createElement('div', { style: { fontSize: 11, color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace' } }, accessResult.deepLink),
-                    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 } },
-                        React.createElement('button', {
-                            onClick: () => copyText(accessResult.pin || '', 'PIN скопирован'),
-                            style: { padding: '10px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', cursor: 'pointer', fontSize: 13, fontWeight: 600 }
+                            type: 'button',
+                            className: 'cur-cab__open is-soft',
+                            onClick: () => copyText(accessResult.pin || '', 'PIN скопирован')
                         }, 'Копировать PIN'),
                         React.createElement('button', {
+                            type: 'button',
+                            className: 'cur-cab__open is-soft',
                             onClick: () => copyText(accessResult.deepLink || '', 'Ссылка скопирована'),
-                            disabled: !accessResult.deepLink,
-                            style: { padding: '10px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', cursor: accessResult.deepLink ? 'pointer' : 'default', fontSize: 13, fontWeight: 600 }
+                            disabled: !accessResult.deepLink
                         }, 'Копировать ссылку')
                     )
                 ),
@@ -1364,18 +1368,10 @@
         }, []);
         return React.createElement(React.Fragment, null,
             children,
+            // Та же метка счёта, что у «Очереди»: одна на кабинет, а не свой
+            // красный круг у каждой вкладки.
             count > 0 && React.createElement('span', {
-                style: {
-                    marginLeft: 6,
-                    background: '#ef4444',
-                    color: '#fff',
-                    borderRadius: 10,
-                    padding: '1px 6px',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    verticalAlign: 'middle',
-                    lineHeight: 1
-                }
+                className: 'cur-cab__tab-count'
             }, count)
         );
     }
@@ -2278,37 +2274,13 @@
                                                 : tab.label
                                         ))
                                     ),
-                                    // Warnings (cache/error) в хедере
-                                    clientsSource === 'cache' && React.createElement(
-                                        'div',
-                                        {
-                                            style: {
-                                                fontSize: 11,
-                                                color: '#fbbf24',
-                                                marginTop: 10,
-                                                padding: '6px 10px',
-                                                background: 'rgba(251, 191, 36, 0.15)',
-                                                borderRadius: 8,
-                                                border: '1px solid rgba(251, 191, 36, 0.3)'
-                                            }
-                                        },
-                                        '☁️ Синхронизация с облаком...'
-                                    ),
-                                    clientsSource === 'error' && React.createElement(
-                                        'div',
-                                        {
-                                            style: {
-                                                fontSize: 11,
-                                                color: '#f87171',
-                                                marginTop: 10,
-                                                padding: '6px 10px',
-                                                background: 'rgba(239, 68, 68, 0.15)',
-                                                borderRadius: 8,
-                                                border: '1px solid rgba(239, 68, 68, 0.3)'
-                                            }
-                                        },
-                                        '❌ Не удалось загрузить клиентов'
-                                    )
+                                    // Состояние загрузки клиентов живёт в подписи
+                                    // шапки — «Загружаем клиентов», «показываем
+                                    // сохранённое», «Клиенты не загрузились».
+                                    // Прежде под рядом вкладок стояли ещё две
+                                    // полосы теми же словами и цветами прежней
+                                    // системы (#fbbf24 и #f87171): один и тот же
+                                    // факт занимал два места и спорил сам с собой.
                                 ),
                                 // CONTENT: Прокручиваемая область
                                 React.createElement(
