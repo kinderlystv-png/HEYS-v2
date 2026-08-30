@@ -1215,3 +1215,54 @@ describe('Метрика рабочих весов отдаёт причину',
     expect(res.changedAt).toBe('2026-08-15');
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// Блок 7 · «Тренировки за месяц» считаются от открытой даты
+// tab-activity.v4.dc.html, строка 26
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('Тренировки за месяц · окно от открытой даты', () => {
+  const TODAY = '2026-08-31';
+  const OPENED = '2026-08-10';
+
+  function collect(anchorDate, storedDates) {
+    const HEYS = loadFiles(['_kernel/heys_kernel_load_v1.js', 'heys_day_activity_v1.js']);
+    const stored = new Set(storedDates);
+    return HEYS.dayActivity.collectMonthTrainingRows({
+      lsGet: (key) => {
+        const dk = key.replace('heys_dayv2_', '');
+        return stored.has(dk) ? { trainings: [{ type: 'cardio', z: [0, 30, 0, 0] }] } : null;
+      },
+      kcalMin: [0, 2, 3, 4],
+      trainingTypes: [{ id: 'cardio', label: 'Кардио' }],
+      r0: (v) => Math.round(v || 0),
+      formatDateDisplay: (dk) => ({ label: dk, sub: '' }),
+      todayISO: () => TODAY,
+      parseISO: (s) => new Date(s + 'T12:00:00'),
+      fmtDate: (d) => d.toISOString().slice(0, 10),
+      anchorDate,
+    });
+  }
+
+  it('окно кончается открытым днём, а не сегодня', () => {
+    // Тренировка ровно в открытый день — она обязана попасть в список.
+    expect(collect(OPENED, [OPENED]).map((r) => r.dateKey)).toEqual([OPENED]);
+  });
+
+  it('позже открытого дня в список не идёт', () => {
+    // 20 августа позже открытого 10-го: при листании назад будущее не показываем.
+    expect(collect(OPENED, ['2026-08-20'])).toHaveLength(0);
+    // А от сегодня тот же день виден — значит дело именно в якоре.
+    expect(collect(TODAY, ['2026-08-20'])).toHaveLength(1);
+  });
+
+  it('за тридцать дней до открытого дня — граница', () => {
+    // 30 дней окна: 12 июля попадает, 11 июля уже нет.
+    expect(collect(OPENED, ['2026-07-12'])).toHaveLength(1);
+    expect(collect(OPENED, ['2026-07-11'])).toHaveLength(0);
+  });
+
+  it('без якоря поведение прежнее — окно от сегодня', () => {
+    expect(collect(undefined, ['2026-08-20'])).toHaveLength(1);
+  });
+});

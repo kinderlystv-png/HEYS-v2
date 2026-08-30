@@ -1419,9 +1419,10 @@
                 formatDateDisplay,
                 todayISO,
                 parseISO,
-                fmtDate
+                fmtDate,
+                anchorDate: date
             }) || [];
-        }, [activityContentEnabled, lsGet, kcalMin, trainingTypes, r0, day?.date, day?.updatedAt, day?.trainings]);
+        }, [activityContentEnabled, lsGet, kcalMin, trainingTypes, r0, date, day?.date, day?.updatedAt, day?.trainings]);
 
         const readMaDayForActivityCalendar = React.useCallback((dk) => {
             // Logical key heys_dayv2_* — HEYS.utils.lsGet applies client scope via nsKey (do not pass heys_<cid>_dayv2_* or key doubles).

@@ -325,7 +325,8 @@
       formatDateDisplay,
       todayISO,
       parseISO,
-      fmtDate
+      fmtDate,
+      anchorDate
     } = params || {};
     const r0 = typeof r0In === 'function' ? r0In : (v) => Math.round(v || 0);
     if (typeof lsGet !== 'function' || typeof todayISO !== 'function' || typeof parseISO !== 'function' || typeof fmtDate !== 'function' || typeof formatDateDisplay !== 'function') {
@@ -333,7 +334,11 @@
     }
     const safeTypes = Array.isArray(trainingTypes) ? trainingTypes : [];
     const rows = [];
-    const endD = parseISO(todayISO());
+    // Окно кончается открытым днём, а не сегодня. Прежде при листании на
+    // прошлую дату шапка была про этот день, а список — про последние 30 дней
+    // от сегодня: два разных окна на одном экране
+    // (контракт «тренировки за месяц», строка 26).
+    const endD = parseISO(anchorDate || todayISO());
     if (!endD || isNaN(endD.getTime())) return [];
 
     for (let i = 0; i < 30; i++) {
