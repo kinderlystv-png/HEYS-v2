@@ -26,8 +26,10 @@ describe('Activity tab v4 structure', () => {
     expect(activitySource).toContain('activity-v4-hero');
     expect(activitySource).toContain('activity-v4-tier');
     expect(activitySource).toContain('Добавить активность');
-    expect(activitySource).toContain('activity-v4-cardio');
-    expect(activitySource).toContain('Отметить');
+    // «Кардио» как имя снято: под ним лежали семь сущностей, и кардио было
+    // одной из них. Ярус раскладывается на три строки — контракт строка 6.
+    expect(activitySource).toContain('activity-v4-today');
+    expect(activitySource).not.toContain('activity-v4-cardio');
   });
 
   it('does not keep legacy formula-card header block', () => {
@@ -42,13 +44,16 @@ describe('Activity tab v4 structure', () => {
     expect(calendarSource).toContain('!isActivityV4 && React.createElement(\'div\', { className: \'ma-habit-cal-weekdays\'');
   });
 
-  it('cardio sits in Сегодня tier before Действие', () => {
-    const cardioIdx = activitySource.indexOf('activity-v4-cardio');
+  it('три строки яруса стоят до «Действия» и «Истории»', () => {
+    const tierIdx = activitySource.indexOf('activity-v4-today');
     const actionIdx = activitySource.indexOf("'Действие'");
     const historyIdx = activitySource.indexOf("'История'");
-    expect(cardioIdx).toBeGreaterThan(-1);
-    expect(cardioIdx).toBeLessThan(actionIdx);
-    expect(cardioIdx).toBeLessThan(historyIdx);
+    expect(tierIdx).toBeGreaterThan(-1);
+    expect(tierIdx).toBeLessThan(actionIdx);
+    expect(tierIdx).toBeLessThan(historyIdx);
+    for (const name of ['Тренировки', 'Бытовая активность', 'Зарядка']) {
+      expect(activitySource).toContain(name);
+    }
   });
 
   it('activity renders only on activity mobile subtab', () => {

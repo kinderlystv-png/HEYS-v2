@@ -163,8 +163,16 @@ describe('C · третья тренировка не теряется', () => {
     const HEYS = loadFiles(['heys_day_activity_v1.js']);
     HEYS.TDEE = { calculate: () => ({ kcalMin: [0, 2, 3, 4] }) };
     const ctx = {
-      day: { date: '2026-08-30' },
+      day: {
+        date: '2026-08-30',
+        trainings: [
+          { type: 'cardio', z: [0, 30, 0, 0] },
+          { type: 'cardio', z: [0, 20, 0, 0] },
+          { type: 'cardio', z: [0, 15, 0, 0] },
+        ],
+      },
       prof: {},
+      trainingTypes: [{ id: 'cardio', label: 'Кардио' }],
       stepsValue: 0,
       stepsGoal: 10000,
       stepsPercent: 0,
@@ -195,23 +203,25 @@ describe('C · третья тренировка не теряется', () => {
     return HEYS;
   }
 
-  it('заголовок «Кардио» суммирует все три слота', () => {
+  it('строка «Тренировки» яруса суммирует все три слота', () => {
     renderActivity();
-    expect(screen.getByText('190 ккал')).toBeTruthy();
-    expect(screen.queryByText('150 ккал')).toBeNull();
+    const row = document.querySelector('.activity-v4-today__row');
+    expect(row.querySelector('.activity-v4-today__name').textContent).toBe('Тренировки');
+    expect(row.querySelector('.activity-v4-today__value').textContent).toBe('190 ккал');
   });
 
   it('строка «Тренировки» в разборе показывает ту же сумму', () => {
     renderActivity();
     fireEvent.click(document.querySelector('.activity-v4-hero__footer'));
-    const row = screen.getByText('Тренировки').closest('.activity-v4-breakdown__row');
+    const row = [...document.querySelectorAll('.activity-v4-breakdown__row')]
+      .find((r) => r.querySelector('.activity-v4-breakdown__name').textContent === 'Тренировки');
     // Разбор пишет число без единицы — единица стоит в шапке карточки.
     expect(row.querySelector('.activity-v4-breakdown__value').textContent).toBe('+190');
   });
 
   it('без третьей тренировки поведение прежнее', () => {
     renderActivity({ train3k: 0 });
-    expect(screen.getByText('150 ккал')).toBeTruthy();
+    expect(document.querySelector('.activity-v4-today__value').textContent).toBe('150 ккал');
   });
 });
 
@@ -716,5 +726,137 @@ describe('Разбор цели · сведение с канвасом', () => 
     expect(names).not.toContain('BMR');
     expect(names).not.toContain('База (без TEF)');
     expect(names[names.length - 1]).not.toBe('Дефицит по договорённости');
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// Блок 2 · ярус «Сегодня» тремя строками вместо аккордеона «Кардио»
+// tab-activity.v4.dc.html, строки 6, 15, 32
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('Ярус «Сегодня» · сведение с канвасом', () => {
+  function renderTier(ctxExtra) {
+    const HEYS = loadFiles(['_kernel/heys_kernel_strength_v1.js', 'heys_day_activity_v1.js']);
+    HEYS.TDEE = { calculate: () => ({ kcalMin: [0, 7, 8, 9] }) };
+    const ctx = {
+      day: { date: '2026-08-30', weightMorning: 80, trainings: [] },
+      prof: {},
+      trainingTypes: [
+        { id: 'cardio', label: 'Кардио' },
+        { id: 'strength', label: 'Силовая' },
+      ],
+      stepsValue: 8420, stepsGoal: 10000, stepsPercent: 67, stepsColor: '#000', stepsK: 312,
+      bmr: 1520, householdK: 0, totalHouseholdMin: 0,
+      train1k: 0, train2k: 0, train3k: 0,
+      r0: (v) => Math.round(v || 0),
+      visibleTrainings: 0,
+      regularTrainingsBlock: null,
+      ndteData: { active: false }, ndteBoostKcal: 0,
+      tefData: {}, tefKcal: 0,
+      dayTargetDef: -15, displayOptimum: 1940, optimum: 1940, cycleKcalMultiplier: 1,
+      tdee: 2280, caloricDebt: null,
+      monthTrainingsRows: [], morningActivationCalendarBlock: null,
+      ...ctxExtra,
+    };
+    render(HEYS.dayActivity.render({ React, ctx, actions: {} }));
+    return [...document.querySelectorAll('.activity-v4-today__row')].map((row) => ({
+      name: row.querySelector('.activity-v4-today__name').textContent,
+      sub: row.querySelector('.activity-v4-today__sub')?.textContent || '',
+      value: row.querySelector('.activity-v4-today__value').textContent,
+    }));
+  }
+
+  it('три строки в порядке контракта', () => {
+    expect(renderTier().map((r) => r.name)).toEqual([
+      'Тренировки', 'Бытовая активность', 'Зарядка',
+    ]);
+  });
+
+  it('слово «Кардио» с экрана снято', () => {
+    renderTier({ regularTrainingsBlock: React.createElement('div', null, 'блок') });
+    expect(screen.queryByText('Кардио')).toBeNull();
+  });
+
+  it('ярус не исчезает в пустой день — строки стоят со словом «не отмечено»', () => {
+    expect(renderTier().map((r) => r.value)).toEqual([
+      'не отмечено', 'не отмечено', 'не отмечено',
+    ]);
+  });
+
+  it('состав дня стоит под именем, объём — фактический', () => {
+    const rows = renderTier({
+      day: {
+        date: '2026-08-30', weightMorning: 80,
+        trainings: [{
+          type: 'strength', z: [0, 45, 0, 0],
+          strengthEntryMode: 'workout_builder',
+          workoutLog: {
+            exercises: [{
+              id: 'e', name: 'Присед', unit: 'weight_reps',
+              approaches: [
+                { id: 'w', type: 'warmup', weightKg: '40', reps: 10, done: true },
+                { id: 'a', weightKg: '95', reps: 20, done: true },
+              ],
+            }],
+          },
+        }],
+      },
+      train1k: 385,
+    });
+    // 95 × 20 = 1900 кг; разминочные 40 × 10 в объём не идут.
+    // Ровно так стоит в кадре «день собран»: «силовая 45 мин · 1,9 т объёма».
+    expect(rows[0].sub).toBe('силовая 45 мин · 1,9 т объёма');
+    expect(rows[0].value).toBe('385 ккал');
+  });
+
+  it('назначенный план даёт «не начаты», а не ноль', () => {
+    const rows = renderTier({
+      day: {
+        date: '2026-08-30',
+        trainings: [{ type: 'strength', z: [0, 45, 0, 0], plan: { status: 'assigned' } }],
+      },
+    });
+    expect(rows[0].value).toBe('не начаты');
+    expect(rows[0].value).not.toBe('0 ккал');
+  });
+
+  it('быт и зарядка пишут числа и время, зарядка — тоном роста', () => {
+    const rows = renderTier({
+      totalHouseholdMin: 60, householdK: 126,
+      day: {
+        date: '2026-08-30',
+        morningActivation: { status: 'done' },
+        trainings: [{ source: 'morning_activation', type: 'strength', z: [8, 0, 0, 0], time: '07:20' }],
+      },
+    });
+    expect(rows[1].value).toBe('60 мин · 126 ккал');
+    expect(rows[2].value).toContain('07:20');
+    const chargeValue = [...document.querySelectorAll('.activity-v4-today__value')][2];
+    expect(chargeValue.className).toContain('activity-v4-today__value--grow');
+  });
+
+  it('«сделаю» — обещанная зарядка, без тона роста', () => {
+    const rows = renderTier({
+      day: { date: '2026-08-30', morningActivation: { status: 'planned' } },
+    });
+    expect(rows[2].value).toBe('сделаю');
+  });
+
+  it('аккордеон остался только внутри тренировок', () => {
+    renderTier({ regularTrainingsBlock: React.createElement('div', null, 'карточки журнала') });
+    expect(screen.queryByText('карточки журнала')).toBeNull();
+    fireEvent.click(document.querySelector('.activity-v4-today__row'));
+    expect(screen.getByText('карточки журнала')).toBeTruthy();
+  });
+
+  it('строка «Голод и энергия» из яруса ушла — в контракте три строки', () => {
+    const names = renderTier().map((r) => r.name);
+    expect(names).not.toContain('Голод и энергия');
+    expect(names).toHaveLength(3);
+  });
+
+  it('свёрнутой строки «Отметить» больше нет — строки стоят каждая своя', () => {
+    renderTier();
+    expect(screen.queryByText('Отметить')).toBeNull();
   });
 });

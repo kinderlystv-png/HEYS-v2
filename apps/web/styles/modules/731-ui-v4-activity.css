@@ -134,7 +134,9 @@ body:has(.activity-v4) .hdr::after {
   justify-content: space-between;
   gap: 12px;
   padding: 13px 0;
-  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  /* Контракт просит 7 %, роль набора даёт 8 % — ближайшая существующая;
+     запасное значение равно роли, чтобы код не обещал ступень, которой нет. */
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .activity-v4-breakdown__row:last-child {
@@ -188,6 +190,75 @@ body:has(.activity-v4) .hdr::after {
   font: 800 13px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
+}
+/* Ярус «Сегодня» — список .cd канваса. Три строки стоят всегда: прежде блок
+   пропадал в пустой день и уносил с собой строку программы
+   (контракт «ярус не исчезает пустым» и «вид · строки яруса», строки 6 и 32). */
+.activity-v4-today {
+  margin-top: 10px;
+  padding: 2px 16px;
+  border-radius: 20px;
+  background: var(--v4-c1, #f7efe2);
+}
+
+.activity-v4-today__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+}
+
+.activity-v4-today__row:last-child {
+  border-bottom: none;
+}
+
+.activity-v4-today__row--action {
+  cursor: pointer;
+}
+
+.activity-v4-today__key {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.activity-v4-today__name {
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.activity-v4-today__sub {
+  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.activity-v4-today__value {
+  flex: none;
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink, #201e1d);
+}
+
+.activity-v4-today__value--strong {
+  font-weight: 700;
+}
+
+/* Зарядка — тоном роста: она про сделанное, а не про число расхода. */
+.activity-v4-today__value--grow {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+/* «не отмечено» — не число, поэтому мельче и приглушено. */
+.activity-v4-today__value--muted {
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.activity-v4-today__body {
+  margin-top: 10px;
 }
 .activity-v4-tier {
   margin: 20px 0 10px;

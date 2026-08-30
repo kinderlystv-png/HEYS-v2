@@ -162,27 +162,69 @@
     return { label: 'Поправка', value: signed, tone: delta > 0 ? 'add' : 'aside' };
   }
 
-  function readHungerSummary(dateKey) {
-    const Storage = HEYS.HungerEnergyStatusStorage;
-    if (!Storage?.readEvents) return null;
-    const rows = Storage.readEvents() || [];
-    const todayRows = rows.filter((row) => {
-      if (!row || typeof row !== 'object') return false;
-      const at = row.recordedAt || row.at || row.createdAt;
-      if (typeof at !== 'string') return false;
-      return at.slice(0, 10) === dateKey;
-    });
-    if (!todayRows.length) return null;
-    const last = todayRows[todayRows.length - 1];
-    const hunger = last.hunger ?? last.hungerLevel ?? last.level;
-    const energy = last.energy ?? last.energyLevel;
-    if (Number.isFinite(hunger) && Number.isFinite(energy)) {
-      return 'голод ' + hunger + ' · энергия ' + energy;
+  /** Число объёма словами кадра: «1,9 т» от тонны, иначе «460 кг». */
+  function formatVolumeShort(kg) {
+    const n = Math.max(0, Number(kg) || 0);
+    if (n <= 0) return '';
+    if (n >= 1000) {
+      const t = n / 1000;
+      return String(t >= 10 ? Math.round(t) : Math.round(t * 10) / 10).replace('.', ',') + ' т';
     }
-    if (Number.isFinite(hunger)) return 'голод ' + hunger;
-    if (Number.isFinite(energy)) return 'энергия ' + energy;
-    if (typeof last.summary === 'string' && last.summary.trim()) return last.summary.trim();
-    return 'отмечено';
+    return Math.round(n) + ' кг';
+  }
+
+  /**
+   * Строка «Тренировки» яруса «Сегодня».
+   *
+   * Слово «Кардио» с экрана снято: под ним лежали семь сущностей — программа,
+   * назначенная силовая, правка куратора, силовые с журналом, хобби, «Пальцы» и
+   * бытовая активность, и кардио было одной из них (контракт «„Кардио" как имя
+   * снято», строка 6).
+   *
+   * Значение читается четырьмя состояниями. «не начаты» вместо нуля — потому
+   * что назначенный план до старта не даёт расхода, и ноль читался бы как
+   * «тренировался и не потратил»: слово честнее числа.
+   *
+   * Тоннаж в составе — фактический, по отмеченным подходам и без назначенного
+   * плана: день с планом обязан давать тот же тоннаж, что пустой. Плановый
+   * живёт в карточке силовой, где виден состав упражнений.
+   */
+  function buildTrainingsRowValue(params) {
+    const { day, kcalMin, r0, trainingTypes, cardioKcal } = params || {};
+    const trainings = Array.isArray(day && day.trainings) ? day.trainings : [];
+    const performed = trainings.filter((t) => isTrainingSlotUsedMonth(t) && !isMorningActivationTraining(t));
+    const planned = trainings.filter((t) => isNotPerformedTrainingMonth(t));
+
+    if (!performed.length) {
+      // Назначенное есть, сделанного нет — «не начаты», а не ноль.
+      if (planned.length) return { value: 'не начаты', muted: true, sub: '' };
+      return { value: 'не отмечено', muted: true, sub: '' };
+    }
+
+    const types = Array.isArray(trainingTypes) ? trainingTypes : [];
+    const parts = [];
+    for (let i = 0; i < performed.length; i++) {
+      const t = performed[i];
+      const type = types.find((x) => x && x.id === t.type);
+      const label = String((type && type.label) || t.activityLabel || 'тренировка').toLowerCase();
+      const minutes = (Array.isArray(t.z) ? t.z : []).reduce((s, m) => s + (Number(m) || 0), 0);
+      parts.push(minutes > 0 ? label + ' ' + minutes + ' мин' : label);
+    }
+
+    const ks = HEYS.TrainingKernel && HEYS.TrainingKernel.strength;
+    let tonnage = 0;
+    if (ks && typeof ks.dayTonnage === 'function') {
+      const bodyWeightKg = Number(day && day.weightMorning) || 0;
+      tonnage = ks.dayTonnage(day, bodyWeightKg > 0 ? { bodyWeightKg } : undefined);
+    }
+    const volume = formatVolumeShort(tonnage);
+    const sub = parts.join(' · ') + (volume ? ' · ' + volume + ' объёма' : '');
+
+    const round = typeof r0 === 'function' ? r0 : (v) => Math.round(v || 0);
+    const kcal = Number.isFinite(cardioKcal)
+      ? cardioKcal
+      : performed.reduce((s, t) => s + trainingKcalFromZones(t, kcalMin || [0, 0, 0, 0], round), 0);
+    return { value: round(kcal) + ' ккал', sub: sub, strong: true };
   }
 
   function openMorningActivationQuickAdd(day, visibleTrainings, openTrainingPicker) {
@@ -269,6 +311,7 @@
       train3k,
       r0,
       visibleTrainings,
+      trainingTypes,
       regularTrainingsBlock,
       ndteData,
       ndteBoostKcal,
@@ -312,7 +355,6 @@
     const chargeDone = hasMorningActivationDone(day);
     const chargePlanned = day?.morningActivation?.status === 'planned';
     const chargeRowValue = formatMorningActivationRowValue(day, chargeTime, chargeKcal);
-    const hungerSummary = readHungerSummary(dateKey);
 
     const monthCount = Array.isArray(monthTrainingsRows) ? monthTrainingsRows.length : 0;
     // Слотов тренировок три, и третий тоже в затратах: без него столбик разбора
@@ -326,25 +368,8 @@
       })
       : morningActivationCalendarBlock;
 
-    const pendingMarks = useMemo(() => {
-      const items = [];
-      if (!(totalHouseholdMin > 0)) items.push('быт');
-      if (!chargeResolved) items.push('зарядка');
-      if (!hungerSummary) items.push('голод');
-      return items;
-    }, [totalHouseholdMin, chargeResolved, hungerSummary]);
-
-    const showCollapsedMark = pendingMarks.length >= 2;
-
     const heroFooter = buildHeroFooterLabel({ dayTargetDef, day, caloricDebt, ndteBoostKcal });
 
-    const openHungerModal = () => {
-      HEYS.HungerEnergyStatusModal?.show?.({
-        source: 'activity-row',
-        date: dateKey,
-        day
-      });
-    };
 
     const activitySheet = sheetOpen && React.createElement(React.Fragment, null,
       React.createElement('div', {
@@ -385,88 +410,57 @@
       )
     );
 
-    const todayRows = [];
-
-    if (totalHouseholdMin > 0) {
-      todayRows.push(React.createElement('div', {
-        key: 'household',
-        className: 'activity-v4-row activity-v4-row--action',
-        onClick: () => openHouseholdPicker?.('stats')
+    // Ярус «Сегодня»: три строки, и они стоят всегда. Прежде весь блок
+    // пропадал, когда нет ни тренировок, ни быта, — и вместе с ним пропадала
+    // строка программы (контракт «ярус не исчезает пустым», строка 6).
+    const todayRow = (key, name, value, opts) => {
+      const o = opts || {};
+      return React.createElement('div', {
+        key: key,
+        className: 'activity-v4-today__row' + (o.onClick ? ' activity-v4-today__row--action' : ''),
+        onClick: o.onClick,
+        role: o.onClick ? 'button' : undefined,
+        'aria-expanded': o.expanded === undefined ? undefined : o.expanded
       },
-        React.createElement('span', { className: 'activity-v4-row__label' }, 'Бытовая активность'),
-        React.createElement('span', { className: 'activity-v4-row__value' },
-          totalHouseholdMin + ' мин · ' + (householdK || 0) + ' ккал'
-        )
-      ));
-    }
+        React.createElement('span', { className: 'activity-v4-today__key' },
+          React.createElement('span', { className: 'activity-v4-today__name' }, name),
+          o.sub && React.createElement('span', { className: 'activity-v4-today__sub' }, o.sub)
+        ),
+        React.createElement('span', {
+          className: 'activity-v4-today__value'
+            + (o.muted ? ' activity-v4-today__value--muted' : '')
+            + (o.strong ? ' activity-v4-today__value--strong' : '')
+            + (o.tone ? ' activity-v4-today__value--' + o.tone : '')
+        }, value)
+      );
+    };
 
-    if ((chargeDone || chargePlanned) && chargeRowValue !== 'не отмечено') {
-      todayRows.push(React.createElement('div', {
-        key: 'charge',
-        className: 'activity-v4-row' + (chargePlanned ? ' activity-v4-row--muted' : '')
-      },
-        React.createElement('span', { className: 'activity-v4-row__label' }, 'Зарядка'),
-        React.createElement('span', { className: 'activity-v4-row__value' + (chargePlanned ? ' activity-v4-row__value--muted' : '') },
-          chargeRowValue
-        )
-      ));
-    }
+    const trainingsRow = buildTrainingsRowValue({
+      day, kcalMin: safeKcalMin, r0: safeR0, trainingTypes, cardioKcal
+    });
 
-    if (hungerSummary) {
-      todayRows.push(React.createElement('div', {
-        key: 'hunger',
-        className: 'activity-v4-row activity-v4-row--action',
-        onClick: openHungerModal
-      },
-        React.createElement('span', { className: 'activity-v4-row__label' }, 'Голод и энергия'),
-        React.createElement('span', { className: 'activity-v4-row__value' }, hungerSummary)
-      ));
-    }
+    const householdHasData = totalHouseholdMin > 0;
+    const chargeHasData = (chargeDone || chargePlanned) && chargeRowValue !== 'не отмечено';
 
-    if (showCollapsedMark) {
-      todayRows.push(React.createElement('div', {
-        key: 'mark-collapsed',
-        className: 'activity-v4-row activity-v4-row--action',
-        onClick: () => setSheetOpen(true)
-      },
-        React.createElement('span', { className: 'activity-v4-row__label' }, 'Отметить'),
-        React.createElement('span', { className: 'activity-v4-row__value activity-v4-row__value--muted' },
-          pendingMarks.join(', ')
-        )
-      ));
-    } else {
-      if (!(totalHouseholdMin > 0)) {
-        todayRows.push(React.createElement('div', {
-          key: 'household-empty',
-          className: 'activity-v4-row activity-v4-row--action',
-          onClick: () => openHouseholdPicker?.('add')
-        },
-          React.createElement('span', { className: 'activity-v4-row__label' }, 'Бытовая активность'),
-          React.createElement('span', { className: 'activity-v4-row__value activity-v4-row__value--muted' }, 'не отмечено')
-        ));
-      }
-      if (!chargeResolved) {
-        todayRows.push(React.createElement('div', {
-          key: 'charge-empty',
-          className: 'activity-v4-row activity-v4-row--action',
-          onClick: () => openMorningActivationQuickAdd(day, visibleTrainings, openTrainingPicker)
-        },
-          React.createElement('span', { className: 'activity-v4-row__label' }, 'Зарядка'),
-          React.createElement('span', { className: 'activity-v4-row__value activity-v4-row__value--muted' }, 'не отмечено')
-        ));
-      }
-      if (!hungerSummary) {
-        todayRows.push(React.createElement('div', {
-          key: 'hunger-empty',
-          className: 'activity-v4-row activity-v4-row--action',
-          onClick: openHungerModal
-        },
-          React.createElement('span', { className: 'activity-v4-row__label' }, 'Голод и энергия'),
-          React.createElement('span', { className: 'activity-v4-row__value activity-v4-row__value--muted' }, 'не отмечено')
-        ));
-      }
-    }
-
+    const todayRows = [
+      todayRow('trainings', 'Тренировки', trainingsRow.value, {
+        sub: trainingsRow.sub,
+        muted: trainingsRow.muted,
+        strong: trainingsRow.strong,
+        onClick: regularTrainingsBlock ? () => setCardioOpen((v) => !v) : undefined,
+        expanded: regularTrainingsBlock ? cardioOpen : undefined
+      }),
+      todayRow('household', 'Бытовая активность',
+        householdHasData ? (totalHouseholdMin + ' мин · ' + (householdK || 0) + ' ккал') : 'не отмечено', {
+          muted: !householdHasData,
+          onClick: () => openHouseholdPicker?.(householdHasData ? 'stats' : 'add')
+        }),
+      todayRow('charge', 'Зарядка', chargeHasData ? chargeRowValue : 'не отмечено', {
+        muted: !chargeHasData,
+        tone: chargeHasData && !chargePlanned ? 'grow' : undefined,
+        onClick: chargeResolved ? undefined : () => openMorningActivationQuickAdd(day, visibleTrainings, openTrainingPicker)
+      })
+    ];
     // Разбор цели: цепочка обязана прийти к числу, из которого её открыли
     // (контракт «разбор приходит к числу», строка 8). Прежняя редакция
     // кончалась процентом дефицита, и в день с долгом человек видел 2 210
@@ -611,23 +605,13 @@
         React.createElement('div', { className: 'activity-v4-steps__hint' }, stepsK + ' ккал · правка ползунком')
       ),
 
-      regularTrainingsBlock && React.createElement('div', { className: 'activity-v4-cardio' },
-        React.createElement('button', {
-          type: 'button',
-          className: 'activity-v4-cardio__toggle',
-          onClick: () => setCardioOpen((v) => !v),
-          'aria-expanded': cardioOpen
-        },
-          React.createElement('span', null, 'Кардио'),
-          React.createElement('span', { className: 'activity-v4-cardio__toggle-value' },
-            cardioKcal > 0 ? cardioKcal + ' ккал' : 'не отмечено'
-          )
-        ),
-        cardioOpen && React.createElement('div', { className: 'activity-v4-cardio__body' }, regularTrainingsBlock)
-      ),
+      React.createElement('div', { className: 'activity-v4-today' }, todayRows),
 
-      todayRows.length > 0 && React.createElement('div', { className: 'activity-v4-rows' }, todayRows),
-
+      // Аккордеон остался только внутри тренировок — для карточек с журналом
+      // подходов (контракт строка 6). Раскрывается тапом по строке выше.
+      cardioOpen && regularTrainingsBlock && React.createElement('div', {
+        className: 'activity-v4-today__body'
+      }, regularTrainingsBlock),
       React.createElement('div', { className: 'activity-v4-tier' }, 'Действие'),
       React.createElement('button', {
         type: 'button',
