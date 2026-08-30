@@ -1223,7 +1223,7 @@
     return Math.abs(diff / tempoWeekKg);
   }
 
-  function bdWeightChartGeometry(series, width = 300, height = 72, padY = 6) {
+  function bdWeightChartGeometry(series, width = 268, height = 72, padY = 6) {
     const rows = series || [];
     if (!rows.length) return { trendPath: '', dots: [] };
     const trendVals = rows.map((r) => r.smoothed).filter(Number.isFinite);
@@ -3030,10 +3030,10 @@
       );
     }
     if (chart.kind === 'weightDualCurve') {
-      const geom = bdWeightChartGeometry(chart.series || [], 300, 72, 6);
+      const geom = bdWeightChartGeometry(chart.series || [], 268, 72, 6);
       return React.createElement('svg', {
         className: 'widget-bd-sheet__weight-chart',
-        viewBox: '0 0 300 72',
+        viewBox: '0 0 268 72',
         preserveAspectRatio: 'none',
         'aria-hidden': 'true'
       },

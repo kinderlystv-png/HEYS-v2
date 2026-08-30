@@ -94,6 +94,19 @@ describe('контуры иконок против раздела «Разбор
     expect(table).toContain('M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z');
   });
 
+  // Поле рисунка задаёт и масштаб линии: при preserveAspectRatio="none" оно
+  // растягивается в контейнер, и разная ширина поля даёт разную толщину одной
+  // и той же линии в соседних листах. У графика веса стояло 300 против 268 у
+  // профиля воды и сплайна тренда.
+  it('графики листов рисуются в поле одной ширины', () => {
+    const variants = fs.readFileSync(path.join(WEB, 'heys_widgets_variants_v4.js'), 'utf8');
+    const boxes = [...variants.matchAll(/viewBox: '0 0 (\d+) (\d+)'/g)]
+      .map((m) => ({ w: Number(m[1]), h: Number(m[2]) }))
+      .filter((b) => b.w > 200);
+    expect(boxes.length).toBeGreaterThan(1);
+    expect(new Set(boxes.map((b) => b.w))).toEqual(new Set([268]));
+  });
+
   it('осознанные исключения не разрослись', () => {
     expect(NOT_OURS.size).toBe(7);
   });
