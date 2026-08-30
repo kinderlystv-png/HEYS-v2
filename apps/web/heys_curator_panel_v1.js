@@ -152,7 +152,7 @@
     const h = React.createElement;
     const { clients, onOpenClient } = props || {};
 
-    const [rows, setRows] = React.useState(null);
+    const [allRows, setRows] = React.useState(null);
     const [error, setError] = React.useState(null);
     const [sheet, setSheet] = React.useState(null);
     const [filter, setFilter] = React.useState(null);
@@ -201,6 +201,10 @@
         if (cancelled) return;
         if (win.error || ctx.error) { setError('load'); return; }
         setRows(build({ windowRows: win.data, contextRows: ctx.data, now }));
+        // Сервер отдаёт всех клиентов куратора; показываем только тех, кого
+        // показывает кабинет. Фильтр применяется ниже, при отрисовке: список
+        // может доехать позже ответа сервера.
+
       }).catch(() => { if (!cancelled) setError('load'); });
       return () => { cancelled = true; };
     }, [tick]);
@@ -294,7 +298,7 @@
     }
     // Пока едет движок, у панели нет ни строк, ни ошибки — это то же «считаем»,
     // что и во время запроса.
-    if (!rows) {
+    if (!allRows) {
       return h('div', { className: 'cur-panel__stub' }, 'Считаем…');
     }
     if (!(clients || []).length) {
@@ -310,6 +314,21 @@
           tierLine('У кого расчёт расходится с фактом'),
           tierLine('Кто перестал вести дневник')
         ])
+      );
+    }
+
+    // Панель не показывает больше, чем кабинет: dev-фикстуры скрыты фильтром
+    // кабинета, и строка по клиенту, которого нет в списке, спорила бы с числом
+    // клиентов в шапке над ней. Заодно исчезает «Клиент» вместо имени.
+    const known = new Set((clients || []).map((c) => c && c.id).filter(Boolean));
+    const rows = allRows.filter((r) => known.has(r.clientId));
+    if (!rows.length) {
+      return h('div', { className: 'cur-panel' },
+        h('div', { className: 'cur-panel__empty' },
+          h('div', { className: 'cur-panel__empty-title' }, 'По вашим клиентам данных нет'),
+          h('div', { className: 'cur-panel__empty-note' },
+            'Сервер ответил, но ни одной строки по клиентам из списка не пришло.')
+        )
       );
     }
 
