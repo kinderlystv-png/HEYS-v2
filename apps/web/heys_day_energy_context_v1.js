@@ -39,6 +39,12 @@
             train2k = 0,
             train3k = 0,
             stepsKcal: stepsK = 0,
+            // Шаги могут быть не фактом, а медианой прошлых дней: она меняет
+            // норму дня, поэтому признак обязан доехать до экрана, а не
+            // оставаться внутри расчёта (разбор «Актив» 2026-08-30, дефект L).
+            steps: stepsResolved = 0,
+            stepsEstimated = false,
+            stepsMissing = false,
             householdKcal: householdK = 0,
             totalHouseholdMin = 0,
             ndteBoost: ndteBoostKcal = 0,
@@ -103,6 +109,9 @@
             train2k,
             train3k,
             stepsK,
+            stepsResolved,
+            stepsEstimated,
+            stepsMissing,
             householdK,
             totalHouseholdMin,
             ndteBoostKcal,

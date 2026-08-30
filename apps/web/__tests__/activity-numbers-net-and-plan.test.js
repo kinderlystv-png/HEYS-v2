@@ -382,3 +382,104 @@ describe('T · состав подхода переживает пересбор
     expect(shape).toContain('carryApproachSnapshotFields({');
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// Предусловие решения 7 · тоннаж дня знает массу тела
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('bodyWeightKg · тоннаж дня совпадает с конструктором', () => {
+  const PULLUPS = {
+    id: 'ex_0',
+    name: 'Подтягивания',
+    unit: 'bodyweight',
+    bodyweightFactor: 0.95,
+    approaches: [{ id: 'a0', weightKg: '', reps: 10, done: true }],
+  };
+
+  function dayWith(weightMorning) {
+    return {
+      date: '2026-08-30',
+      weightMorning,
+      trainings: [{
+        type: 'strength',
+        strengthEntryMode: 'workout_builder',
+        workoutLog: { exercises: [PULLUPS] },
+      }],
+    };
+  }
+
+  function loadWithStore(day) {
+    const HEYS = loadFiles(['_kernel/heys_kernel_strength_v1.js', 'heys_day_trainings_v1.js']);
+    HEYS.utils = {
+      lsGet: (key, def) => {
+        if (key === 'heys_profile') return { weight: 70 };
+        if (key.indexOf('dayv2_') !== -1) return day;
+        return def;
+      },
+    };
+    return HEYS;
+  }
+
+  it('упражнение на своём весе больше не даёт ноль', () => {
+    const day = dayWith(80);
+    const HEYS = loadWithStore(day);
+    const expected = HEYS.TrainingKernel.strength
+      .trainingTonnage(day.trainings[0], { bodyWeightKg: 80 }).totalVolume;
+
+    // 80 × 0.95 × 10 = 760 — столько же показывает конструктор.
+    expect(expected).toBe(760);
+    expect(HEYS.dayTrainings.computeDayTotalTonnage('2026-08-30')).toBe(expected);
+    // Без массы тела ядро отдаёт ноль — именно это и было на дне.
+    expect(HEYS.TrainingKernel.strength
+      .trainingTonnage(day.trainings[0], {}).totalVolume).toBe(0);
+  });
+
+  it('берётся вес того дня, а не сегодняшний из профиля', () => {
+    const HEYS = loadWithStore(dayWith(80));
+    expect(HEYS.dayTrainings.computeDayTotalTonnage('2026-08-30')).toBe(760);
+  });
+
+  it('без утреннего веса падаем на профиль, а не на ноль', () => {
+    const HEYS = loadWithStore(dayWith(''));
+    // 70 × 0.95 × 10 = 665
+    expect(HEYS.dayTrainings.computeDayTotalTonnage('2026-08-30')).toBe(665);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// L1 · признак оценённых шагов доезжает до экрана
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('L1 · контекст дня отдаёт признак оценки шагов', () => {
+  function build(tdeeResult) {
+    const HEYS = loadFiles(['heys_day_energy_context_v1.js']);
+    HEYS.TDEE = { calculate: () => tdeeResult };
+    return HEYS.dayEnergyContext.buildEnergyContext({
+      day: { date: '2026-08-30', meals: [] },
+      prof: {},
+      lsGet: () => ({}),
+      r0: (v) => Math.round(v || 0),
+      HEYS,
+    });
+  }
+
+  it('медиана вместо факта видна вызывающему', () => {
+    const ctx = build({ stepsKcal: 210, steps: 7400, stepsEstimated: true, stepsMissing: false });
+    expect(ctx.stepsEstimated).toBe(true);
+    expect(ctx.stepsResolved).toBe(7400);
+    expect(ctx.stepsMissing).toBe(false);
+  });
+
+  it('«нет данных» отличимо от факта и от оценки', () => {
+    const ctx = build({ stepsKcal: 0, steps: 0, stepsEstimated: false, stepsMissing: true });
+    expect(ctx.stepsMissing).toBe(true);
+    expect(ctx.stepsEstimated).toBe(false);
+  });
+
+  it('обычный факт не помечается ничем', () => {
+    const ctx = build({ stepsKcal: 300, steps: 9000, stepsEstimated: false, stepsMissing: false });
+    expect(ctx.stepsEstimated).toBe(false);
+    expect(ctx.stepsMissing).toBe(false);
+    expect(ctx.stepsResolved).toBe(9000);
+  });
+});

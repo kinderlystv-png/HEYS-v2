@@ -75,6 +75,30 @@
     return approach;
   }
 
+  /**
+   * Масса тела для тоннажа: упражнения со своим весом считаются как
+   * `масса × коэффициент`, и без массы ядро отдаёт по ним ноль
+   * (`unmeasuredExercises`). Конструктор её передаёт
+   * (strength/heys_strength_builder_ui_v1.js), а день — нет, и одна и та же
+   * тренировка показывала разный тоннаж в двух местах (разбор «Актив»
+   * 2026-08-30, предусловие решения 7).
+   *
+   * Берём вес того дня, а не сегодняшний: тоннаж прошлой тренировки не должен
+   * меняться от того, что человек сегодня взвесился. Правило то же, что у TDEE.
+   */
+  function bodyWeightForDay(dayData) {
+    const fromDay = +(dayData && dayData.weightMorning) || 0;
+    if (fromDay > 0) return fromDay;
+    const U = HEYS.utils || {};
+    if (typeof U.lsGet !== 'function') return 0;
+    try {
+      const prof = U.lsGet('heys_profile', {}) || {};
+      return +prof.weight || 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   function readDayFromStore(dateStr) {
     const U = HEYS.utils || {};
     if (typeof U.lsGet !== 'function') return null;
@@ -318,12 +342,14 @@
    * computeDayTotalTonnage жили две независимые реализации, и разойтись они
    * могли молча.
    */
-  function calcWorkoutBuilderVolumeKg(wl) {
+  function calcWorkoutBuilderVolumeKg(wl, bodyWeightKg) {
     const ks = HEYS.TrainingKernel && HEYS.TrainingKernel.strength;
     if (!ks) return 0;
+    // Масса тела обязательна: без неё упражнения со своим весом дают ноль,
+    // и подпись «~N кг объёма» занижала тренировку из подтягиваний до нуля.
     return ks.trainingTonnage({
       type: 'strength', strengthEntryMode: 'workout_builder', workoutLog: wl,
-    }).plannedVolume;
+    }, { bodyWeightKg: +bodyWeightKg || 0 }).plannedVolume;
   }
 
   /** Синхронные поля sets / reps / weightKg для облака и старых снимков — с первой строки approaches. */
@@ -703,7 +729,8 @@
     if (!dateKey) return 0;
     const ks = HEYS.TrainingKernel && HEYS.TrainingKernel.strength;
     if (!ks) return 0; // ядро не загружено — прод-safety, копии формулы здесь больше нет
-    return ks.dayTonnage(readDayFromStore(dateKey));
+    const dayData = readDayFromStore(dateKey);
+    return ks.dayTonnage(dayData, { bodyWeightKg: bodyWeightForDay(dayData) });
   }
 
   /** Сколько workout_builder-тренировок на дне. */
@@ -2943,7 +2970,7 @@
         Array.isArray(wl.exercises) &&
         wl.exercises.length
       ) {
-        const vol = calcWorkoutBuilderVolumeKg(wl);
+        const vol = calcWorkoutBuilderVolumeKg(wl, weight);
         let volBit = '';
         if (vol > 0) {
           volBit =
@@ -4169,6 +4196,9 @@
     carryApproachSnapshotFields,
     carryExerciseSnapshotFields,
     cloneExercisesForReplay,
+    // Тестовый шов — тоннаж дня: он обязан совпадать с числом в конструкторе,
+    // а совпадает только когда знает массу тела.
+    computeDayTotalTonnage,
     moveOptionsFor,
     appendTrainingToDay,
     ProgramPathScreen,
