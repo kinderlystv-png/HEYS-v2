@@ -150,6 +150,29 @@
     };
   };
 
+  /**
+   * Внесены ли шаги за этот день.
+   *
+   * Ноль бывает двух видов: «прошёл ноль» и «не вносил», и от различия зависит
+   * норма дня — во втором случае подставляется медиана. Исходный контракт
+   * различал их через `steps === null`, но `ensureDay` приводит поле к числу
+   * (`+d.steps || 0`), и на экране дня оценка не включалась никогда.
+   *
+   * Различает метка домена: `stepsUpdatedAt` ставит каждый писатель шагов
+   * (ползунок, чек-ин, очистка дня), она переживает слияние отдельной группой
+   * и с 2026-08-31 переживает ensureDay. Явный ноль от неё отличим, а
+   * неоткрытый день — нет (решение владельца «Б», разбор «Актив» §15.2).
+   *
+   * null/undefined тоже остаётся признаком: дни, записанные не приложением,
+   * поля steps могут не иметь вовсе.
+   */
+  const hasStepsFact = (dayData) => {
+    const d = dayData || {};
+    if (d.steps === null || d.steps === undefined) return false;
+    if ((Number(d.steps) || 0) > 0) return true;
+    return (Number(d.stepsUpdatedAt) || 0) > 0;
+  };
+
   const hasAnyStepsFactEver = (readDay, anchorDate, maxDays = 90) => {
     const anchor = anchorDate instanceof Date && !Number.isNaN(anchorDate.getTime())
       ? new Date(anchorDate) : new Date();
@@ -157,8 +180,7 @@
       const d = new Date(anchor);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = readDay(key, {}) || {};
-      if (dayData.steps !== null && dayData.steps !== undefined) return true;
+      if (hasStepsFact(readDay(key, {}))) return true;
     }
     return false;
   };
@@ -169,11 +191,9 @@
    */
   const resolveStepsInput = (day, profile, options = {}) => {
     const d = day || {};
-    const rawSteps = d.steps;
-
-    if (rawSteps !== null && rawSteps !== undefined) {
+    if (hasStepsFact(d)) {
       return {
-        steps: Number(rawSteps) || 0,
+        steps: Number(d.steps) || 0,
         stepsEstimated: false,
         stepsMissing: false
       };
@@ -525,6 +545,7 @@
     stepsKcal,
     resolveStepsInput,
     hasAnyStepsFactEver,
+    hasStepsFact,
     trainingKcal,
     kcalPerMin,
     // Для тех, кто собирает расход по частям (heys_day_utils.getActiveDaysForMonth):

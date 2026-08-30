@@ -795,6 +795,31 @@
     return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
   }
 
+  /**
+   * Метки доменов правки и поля их групп, которые ensureDay обязан пронести
+   * нетронутыми. Источник правды — DAY_USER_MUTATION_GROUPS в
+   * heys_sync_merge_v1.js; здесь копия, потому что модель грузится раньше слоя
+   * синхронизации и зависеть от него не может. Расхождение ловит тест.
+   *
+   * Значения не нормализуем: merge сравнивает их как есть, и приведение типов
+   * здесь означало бы, что модель тихо переписывает то, по чему разрешается
+   * спор между устройствами.
+   */
+  const DAY_MUTATION_PASSTHROUGH = [
+    'stepsUpdatedAt',
+    'waterUpdatedAt', 'waterEntries',
+    'weightUpdatedAt',
+    'householdUpdatedAt',
+    'cycleUpdatedAt', 'cycleStatus', 'cycleAnsweredAt',
+    'sleepNoteUpdatedAt',
+    'dayCommentUpdatedAt',
+    'dayScoreUpdatedAt', 'dayScoreManual',
+    'supplementsPlannedUpdatedAt',
+    'supplementsTakenUpdatedAt',
+    'deficitUpdatedAt',
+    'dayStatusUpdatedAt'
+  ];
+
   function ensureDay(d, prof) {
     d = d || {};
 
@@ -872,6 +897,24 @@
       morningActivation: (d.morningActivation && typeof d.morningActivation === 'object') ? d.morningActivation : undefined,
       recipe_backfill_log: Array.isArray(d.recipe_backfill_log) ? d.recipe_backfill_log : undefined
     };
+    // Метки правок по доменам и поля их групп — passthrough, тот же приём, что у
+    // _curatorEdits и morningActivation выше: ensureDay собирает день
+    // перечислением полей, и всё неназванное стирается на каждой загрузке.
+    //
+    // На этих метках держится пофайловое разрешение конфликтов между
+    // устройствами: DAY_USER_MUTATION_GROUPS в heys_sync_merge_v1.js решает
+    // спор по метке домена, а не по корневому updatedAt, который двигают ещё и
+    // фоновые записи. Без метки merge сваливался на грубое правило — шаги,
+    // например, на Math.max, и отмена правки на одном устройстве не доезжала до
+    // второго. Метки жили только между правкой и следующей загрузкой дня
+    // (разбор «Актив» 2026-08-31, §15.3).
+    //
+    // Список обязан совпадать с группами слияния — это держит
+    // day-mutation-stamps.test.js.
+    for (let i = 0; i < DAY_MUTATION_PASSTHROUGH.length; i++) {
+      const key = DAY_MUTATION_PASSTHROUGH[i];
+      if (d[key] !== undefined) base[key] = d[key];
+    }
     // 🆕 v3.7.3: Не создаём пустые тренировки, только очищаем невалидные
     if (!Array.isArray(base.trainings)) base.trainings = [];
     // Фильтруем пустые/невалидные тренировки (без времени И без зон).

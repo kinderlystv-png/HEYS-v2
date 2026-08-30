@@ -57,18 +57,28 @@ beforeAll(() => {
 describe('HEYS.TDEE steps (heys/798770 PR A)', () => {
   const profile = { weight: 75, height: 175, age: 35, gender: 'Мужской', weightGoal: 70, deficitPctTarget: -20 };
 
-  it('steps null vs steps 0 — разный optimum при явном нуле', () => {
-    const nullDay = global.HEYS.TDEE.calculate({ steps: null, weightMorning: 75 }, profile, {
+  // Признак «шаги внесены» переехал с формы значения на метку домена
+  // (stepsUpdatedAt) — решение владельца «Б», 2026-08-31. Причина: ensureDay
+  // приводит steps к числу (`+d.steps || 0`), поэтому null до экрана дня не
+  // доживал и явный ноль был неотличим от незаполненного дня. Смысл проверки
+  // прежний — «прошёл ноль» обязан отличаться от «не вносил».
+  // Разбор: docs/implementation/ACTIVITY_TAB_AS_IS.md §15.2.
+  it('явный ноль отличается от незаполненного дня — по метке правки', () => {
+    const calc = (day) => global.HEYS.TDEE.calculate({ weightMorning: 75, ...day }, profile, {
       readDay: () => ({}),
       anchorDate: '2026-08-18',
     });
-    const zeroDay = global.HEYS.TDEE.calculate({ steps: 0, weightMorning: 75 }, profile, {
-      readDay: () => ({}),
-      anchorDate: '2026-08-18',
-    });
-    expect(nullDay.stepsMissing).toBe(true);
-    expect(zeroDay.stepsMissing).toBe(false);
-    expect(zeroDay.stepsKcal).toBe(0);
+
+    // Поля нет вовсе — дню шагов не вносили.
+    expect(calc({ steps: null }).stepsMissing).toBe(true);
+    // Ноль без метки — тоже незаполненный день: так его пишет ensureDay.
+    expect(calc({ steps: 0 }).stepsMissing).toBe(true);
+
+    // Ноль с меткой — человек действительно отметил ноль шагов.
+    const explicitZero = calc({ steps: 0, stepsUpdatedAt: 1730000000000 });
+    expect(explicitZero.stepsMissing).toBe(false);
+    expect(explicitZero.stepsEstimated).toBe(false);
+    expect(explicitZero.stepsKcal).toBe(0);
   });
 
   it('медиана шагов — оценка при ≥3 фактах в окне', () => {

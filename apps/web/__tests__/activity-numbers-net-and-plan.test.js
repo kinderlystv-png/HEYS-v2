@@ -483,3 +483,123 @@ describe('L1 · контекст дня отдаёт признак оценки
     expect(ctx.stepsResolved).toBe(9000);
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// L2 · оценка шагов по медиане включается на экране дня
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('L2 · «прошёл ноль» и «не вносил» — разные состояния', () => {
+  function loadTdee() {
+    if (!globalThis.window) globalThis.window = globalThis;
+    globalThis.window.HEYS = globalThis.HEYS = {};
+    /* eslint-disable-next-line no-eval */
+    eval(fs.readFileSync(path.join(WEB_DIR, 'heys_tdee_v1.js'), 'utf8'));
+    return globalThis.HEYS;
+  }
+
+  /** История: дни с настоящими шагами + один явный ноль + пустые дни. */
+  function makeReadDay(entries) {
+    return (key) => entries[key] || {};
+  }
+
+  function daysBack(n, from = '2026-08-31') {
+    const d = new Date(from + 'T12:00:00');
+    d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0, 10);
+  }
+
+  it('ноль с меткой правки — это факт «прошёл ноль», не оценка', () => {
+    const HEYS = loadTdee();
+    expect(HEYS.TDEE.hasStepsFact({ steps: 0, stepsUpdatedAt: 1730000000000 })).toBe(true);
+    const res = HEYS.TDEE.resolveStepsInput(
+      { date: '2026-08-31', steps: 0, stepsUpdatedAt: 1730000000000 }, {}, { readDay: () => ({}) },
+    );
+    expect(res).toMatchObject({ steps: 0, stepsEstimated: false, stepsMissing: false });
+  });
+
+  it('ноль без метки — незаполненный день, а не нулевая активность', () => {
+    const HEYS = loadTdee();
+    expect(HEYS.TDEE.hasStepsFact({ steps: 0 })).toBe(false);
+    expect(HEYS.TDEE.hasStepsFact({})).toBe(false);
+    expect(HEYS.TDEE.hasStepsFact({ steps: 8000 })).toBe(true);
+  });
+
+  it('незаполненный день берёт медиану прошлых, и это помечено', () => {
+    const HEYS = loadTdee();
+    HEYS.Steps = {
+      STEPS_HISTORY_LOOKBACK_DAYS: 14,
+      STEPS_HISTORY_MIN_DAYS: 3,
+      collectRecentStepsHistory: (readDay, anchor, lookback) => {
+        const out = [];
+        for (let i = 1; i <= lookback; i++) {
+          const d = new Date(anchor);
+          d.setDate(d.getDate() - i);
+          const day = readDay(d.toISOString().slice(0, 10), {}) || {};
+          if (HEYS.TDEE.hasStepsFact(day)) out.push(Number(day.steps) || 0);
+        }
+        return out;
+      },
+      medianStepsValue: (v) => {
+        const s = [...v].sort((a, b) => a - b);
+        const mid = Math.floor(s.length / 2);
+        return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
+      },
+    };
+
+    const entries = {
+      [daysBack(1)]: { steps: 6000, stepsUpdatedAt: 1 },
+      [daysBack(2)]: { steps: 8000, stepsUpdatedAt: 1 },
+      [daysBack(3)]: { steps: 10000, stepsUpdatedAt: 1 },
+      // Незаполненные дни в медиану не идут — иначе она уползала бы в ноль.
+      [daysBack(4)]: { steps: 0 },
+      [daysBack(5)]: {},
+    };
+
+    const res = HEYS.TDEE.resolveStepsInput(
+      { date: '2026-08-31', steps: 0 }, {}, { readDay: makeReadDay(entries) },
+    );
+    expect(res.stepsEstimated).toBe(true);
+    expect(res.stepsMissing).toBe(false);
+    expect(res.steps).toBe(8000); // медиана 6000/8000/10000, нули не учтены
+  });
+
+  it('у нового человека оценки нет — «нет данных», а не выдуманное число', () => {
+    const HEYS = loadTdee();
+    HEYS.Steps = {
+      STEPS_HISTORY_LOOKBACK_DAYS: 14,
+      STEPS_HISTORY_MIN_DAYS: 3,
+      collectRecentStepsHistory: () => [],
+      medianStepsValue: () => 0,
+    };
+    const res = HEYS.TDEE.resolveStepsInput(
+      { date: '2026-08-31', steps: 0 }, {}, { readDay: () => ({}) },
+    );
+    expect(res).toMatchObject({ steps: 0, stepsEstimated: false, stepsMissing: true });
+  });
+
+  it('оценка не попадает в расчёт долга — там она обнуляется', () => {
+    const HEYS = loadTdee();
+    HEYS.Steps = {
+      STEPS_HISTORY_LOOKBACK_DAYS: 14,
+      STEPS_HISTORY_MIN_DAYS: 3,
+      collectRecentStepsHistory: () => [7000, 8000, 9000],
+      medianStepsValue: () => 8000,
+    };
+    const out = HEYS.TDEE.calculate(
+      { date: '2026-08-31', steps: 0, trainings: [] },
+      { weight: 80, height: 180, age: 35 },
+      { readDay: (k) => ({ steps: 8000, stepsUpdatedAt: 1, date: k }) },
+    );
+    expect(out.stepsEstimated).toBe(true);
+    expect(out.stepsKcal).toBeGreaterThan(0);
+    expect(out.stepsKcalForDebt).toBe(0);
+  });
+
+  it('сборщик истории в heys_steps_v1 спрашивает тот же предикат', () => {
+    const src = fs.readFileSync(path.join(WEB_DIR, 'heys_steps_v1.js'), 'utf8');
+    expect(src).toContain('hasStepsFactForHistory(dayData)');
+    expect(src).toContain('HEYS.TDEE && HEYS.TDEE.hasStepsFact');
+    // Прежнее правило «любое не-null считается фактом» ушло.
+    expect(src).not.toContain("// steps === 0 — явный ввод; null/undefined — нет данных");
+  });
+});

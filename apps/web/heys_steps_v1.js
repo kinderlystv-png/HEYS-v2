@@ -2868,6 +2868,16 @@
     return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
   }
 
+  /** Канон — HEYS.TDEE.hasStepsFact; фолбэк на случай порядка загрузки модулей. */
+  function hasStepsFactForHistory(dayData) {
+    const canonical = HEYS.TDEE && HEYS.TDEE.hasStepsFact;
+    if (typeof canonical === 'function') return !!canonical(dayData);
+    const d = dayData || {};
+    if (d.steps === null || d.steps === undefined) return false;
+    if ((Number(d.steps) || 0) > 0) return true;
+    return (Number(d.stepsUpdatedAt) || 0) > 0;
+  }
+
   function collectRecentStepsHistory(readDay, today, lookbackDays = STEPS_HISTORY_LOOKBACK_DAYS) {
     const stepsData = [];
     const anchor = today instanceof Date && !Number.isNaN(today.getTime()) ? new Date(today) : new Date();
@@ -2876,8 +2886,11 @@
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
       const dayData = readDay(key, {}) || {};
-      // steps === 0 — явный ввод; null/undefined — нет данных (heys/798770)
-      if (dayData.steps !== null && dayData.steps !== undefined) {
+      // «Есть факт» спрашиваем там же, где его спрашивает расчёт нормы
+      // (HEYS.TDEE.hasStepsFact): иначе медиана считалась бы по одному правилу,
+      // а решение «подставлять ли её» — по другому. Ноль с меткой правки это
+      // факт «прошёл ноль», ноль без метки — незаполненный день.
+      if (hasStepsFactForHistory(dayData)) {
         stepsData.push(Number(dayData.steps) || 0);
       }
     }
