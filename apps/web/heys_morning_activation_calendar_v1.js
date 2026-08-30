@@ -14,6 +14,28 @@
   const VIEW_MONTH = 'calendar_month';
   const REPLACEMENT_FIRST_HALF_TRAINING = 'first_half_training';
 
+  /**
+   * «Август 2026», как в кадре. `toLocaleDateString` с month+year в русской
+   * локали добавляет « г.» и не поднимает первую букву — кадр просит ни того,
+   * ни другого, а `text-transform` в CSS чинил бы только регистр.
+   */
+  const MONTH_NAMES_RU = [
+    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+  ];
+  function formatMonthTitle(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    return MONTH_NAMES_RU[date.getMonth()] + ' ' + date.getFullYear();
+  }
+
+  /** Четыре тона сетки, подписанные словами (контракт «легенда календаря»). */
+  const LEGEND_ITEMS = [
+    { status: 'done', label: 'сделана' },
+    { status: 'replacement', label: 'тренировкой' },
+    { status: 'missed', label: 'пропуск' },
+    { status: 'none', label: 'не вели' }
+  ];
+
   function profileLsGet() {
     const u = HEYS.utils || {};
     if (typeof u.lsGet === 'function') return u.lsGet.bind(u);
@@ -168,7 +190,7 @@
    * Прошлые дни без зарядки и без явного done → для календаря считаем пропуском (красный),
    * даже если не открывали модалку и нет записей в дне.
    */
-  function habitCalendarDisplayStatus(dateKey, readDayFn, effectiveTodayKey) {
+  function habitCalendarDisplayStatus(dateKey, readDayFn, effectiveTodayKey, horizonKey) {
     const todayKey = effectiveTodayKey || getTodayKeyFallback();
     const dayData = (typeof readDayFn === 'function' ? readDayFn(dateKey) : null) || {};
     const state = normalizeMorningActivationState(dateKey, dayData, readDayFn);
@@ -180,8 +202,48 @@
     if (dateKey > todayKey) return null;
     // Сегодня: ещё можно сделать зарядку — нейтрально, пока нет done/пропуска/факта зарядки
     if (dateKey === todayKey) return null;
-    // Прошлый HEYS-день без отметки «сделано» и без карточки зарядки → как пропуск
+    // До первой отметки зарядку не вели — это не пропуск, а отсутствие истории.
+    // Прежде первый экран нового человека давал 27 красных точек и «0 из 28»,
+    // то есть пропуском считались дни до установки приложения
+    // (контракт «календарь зарядки с горизонтом», строка 16).
+    if (horizonKey && dateKey < horizonKey) return 'none';
+    // Прошлый HEYS-день после первой отметки, без «сделано» и без карточки → пропуск
     return 'missed';
+  }
+
+  /**
+   * Первый день, с которого привычку вели. Возвращает null, когда запись есть и
+   * раньше окна: тогда горизонта нет и считается всё окно.
+   *
+   * Заглядываем назад ограниченно — как `hasAnyStepsFactEver` у расхода: полный
+   * скан хранилища ради серого цвета клеток не стоит своей цены.
+   */
+  const HORIZON_LOOKBACK_DAYS = 180;
+  /** Записей нет вовсе: горизонт впереди всех дат, значит серым красится всё. */
+  const NO_HABIT_HORIZON = '9999-12-31';
+  function findHabitHorizonKey(dayKeys, readDayFn) {
+    if (!Array.isArray(dayKeys) || !dayKeys.length) return null;
+    const read = typeof readDayFn === 'function' ? readDayFn : () => ({});
+    const hasRecord = (dk) => {
+      const d = read(dk) || {};
+      if (hasMorningActivationEvidence(d)) return true;
+      if (hasMorningActivationReplacementEvidence(d)) return true;
+      const stored = d.morningActivation;
+      return !!(stored && typeof stored === 'object' && stored.status);
+    };
+
+    const windowStart = parseIsoDateKeyToLocalDate(dayKeys[0]);
+    if (windowStart) {
+      for (let i = 1; i <= HORIZON_LOOKBACK_DAYS; i++) {
+        const d = new Date(windowStart);
+        d.setDate(d.getDate() - i);
+        if (hasRecord(formatDateToIsoKeyLocal(d))) return null;
+      }
+    }
+    for (let i = 0; i < dayKeys.length; i++) {
+      if (hasRecord(dayKeys[i])) return dayKeys[i];
+    }
+    return NO_HABIT_HORIZON;
   }
 
   function getMorningActivationCalendarViewPreference() {
@@ -218,6 +280,19 @@
     const dayEntries = [];
     const monthDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1, 12, 0, 0, 0);
 
+    const dayKeys = [];
+    for (let offset = 0; offset < effectiveDays; offset++) {
+      const d = isMonthView
+        ? new Date(anchorDate.getFullYear(), anchorDate.getMonth(), offset + 1, 12, 0, 0, 0)
+        : (() => {
+          const x = new Date(anchorDate);
+          x.setDate(anchorDate.getDate() - (effectiveDays - 1 - offset));
+          return x;
+        })();
+      dayKeys.push(formatDateToIsoKeyLocal(d));
+    }
+    const horizonKey = findHabitHorizonKey(dayKeys, readDayFn);
+
     for (let offset = 0; offset < effectiveDays; offset++) {
       const date = isMonthView
         ? new Date(anchorDate.getFullYear(), anchorDate.getMonth(), offset + 1, 12, 0, 0, 0)
@@ -227,7 +302,7 @@
           return d;
         })();
       const dateKey = formatDateToIsoKeyLocal(date);
-      const display = habitCalendarDisplayStatus(dateKey, readDayFn, heysTodayKey);
+      const display = habitCalendarDisplayStatus(dateKey, readDayFn, heysTodayKey, horizonKey);
       dayEntries.push({
         dateKey,
         dayOfMonth: date.getDate(),
@@ -250,14 +325,20 @@
     const doneCount = dayEntries.filter((item) => item.status === 'done' || item.status === 'replacement').length;
     const replacementCount = dayEntries.filter((item) => item.status === 'replacement').length;
     const missedCount = dayEntries.filter((item) => item.status === 'missed').length;
+    // Знаменатель — дни, которые привычку уже вели: считать «из 28» там, где
+    // половина окна старше первой отметки, значит записывать в пропуски время
+    // до установки приложения (контракт строка 16).
+    const trackedCount = dayEntries.filter((item) => item.status !== 'none').length;
     return {
       grid,
       doneCount,
+      trackedCount,
+      horizonKey,
       replacementCount,
       missedCount,
       viewMode: isMonthView ? VIEW_MONTH : VIEW_28_DAYS,
       title: isMonthView
-        ? monthDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+        ? formatMonthTitle(monthDate)
         : 'Последние 28 дней'
     };
   }
@@ -301,10 +382,11 @@
     );
 
     const isActivityV4 = (layoutClass || '').includes('ma-habit-cal--activity-v4');
-    const activeDays = calendarData.grid.filter((cell) => !cell.isEmpty).length;
+    // Знаменатель — дни, которые привычку уже вели, а не длина окна.
+    const activeDays = calendarData.trackedCount;
     const v4Heading = 'Зарядка · ' + calendarData.doneCount + ' из ' + activeDays;
 
-    const periodRow = !isActivityV4 && calendarViewMode === VIEW_MONTH
+    const periodRow = calendarViewMode === VIEW_MONTH
       ? React.createElement('div', { className: 'ma-habit-cal-period ma-habit-cal-period--month' },
         React.createElement('button', {
           type: 'button',
@@ -389,15 +471,24 @@
           if (cell.isEmpty) {
             return React.createElement('div', { key: cell.id, className: 'ma-habit-cal-cell ma-habit-cal-cell--empty' });
           }
+          // «Не вели» и «нет отметки» — разные состояния и разные тона: первое
+          // про время до начала привычки, второе про сегодня, когда ещё можно
+          // сделать. Раньше оба красились одним нейтральным.
           const rowStatus = cell.status === 'done'
             ? 'is-done'
-            : (cell.status === 'replacement' ? 'is-replacement' : (cell.status === 'missed' ? 'is-missed' : 'is-neutral'));
+            : (cell.status === 'replacement'
+              ? 'is-replacement'
+              : (cell.status === 'missed'
+                ? 'is-missed'
+                : (cell.status === 'none' ? 'is-none' : 'is-neutral')));
           const weekend = isWeekendDateKey(cell.dateKey);
           const statusTitle = cell.status === 'done'
             ? 'сделано'
             : (cell.status === 'replacement'
               ? 'тренировка вместо зарядки'
-              : (cell.status === 'missed' ? 'пропущено' : 'нет отметки'));
+              : (cell.status === 'missed'
+                ? 'пропущено'
+                : (cell.status === 'none' ? 'не вели' : 'нет отметки')));
           const title = `${cell.dateKey}: ${statusTitle}`;
           return React.createElement('div', {
             key: cell.id,
@@ -415,6 +506,21 @@
         React.createElement('span', null, `Сделано: ${calendarData.doneCount}`),
         calendarData.replacementCount > 0 && React.createElement('span', null, `Тренировкой: ${calendarData.replacementCount}`),
         React.createElement('span', null, `Пропущено: ${calendarData.missedCount}`)
+      ),
+
+      // Легенда: без подписей серый читается как пропуск, а два зелёных не
+      // различаются вовсе (контракт «легенда календаря»).
+      isActivityV4 && React.createElement('div', { className: 'ma-habit-cal-legend' },
+        LEGEND_ITEMS.map((item) => React.createElement('span', {
+          key: 'lg-' + item.status,
+          className: 'ma-habit-cal-legend-item'
+        },
+          React.createElement('span', {
+            className: 'ma-habit-cal-legend-dot is-' + item.status,
+            'aria-hidden': 'true'
+          }),
+          item.label
+        ))
       )
     );
   }

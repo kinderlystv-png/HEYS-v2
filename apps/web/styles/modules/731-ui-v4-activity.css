@@ -751,3 +751,73 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-missed {
   background: var(--v4-warn-soft, #eab308);
 }
+
+/* Легенда календаря — ряд из четырёх пар «точка + слово» с переносом
+   (контракт «вид · календарь зарядки», строка 23). Без подписей серый читается
+   как пропуск, а два зелёных не различаются вовсе. */
+.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 12px;
+}
+
+.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 10.5px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex: none;
+  background: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
+}
+
+.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-done {
+  background: var(--v4-good, #7a8a5e);
+}
+
+.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-replacement {
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
+.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-missed {
+  background: var(--v4-bad-text, #b4442a);
+}
+
+/* «Не вели» — тон времени до первой отметки: это не результат, и красить его
+   как плохой результат нельзя. */
+.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-cell.is-none,
+.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-none {
+  background: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
+  opacity: 0.34;
+}
+
+/* Строка листания месяцев: стрелки по краям названия (контракт строка 20). */
+.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-period--month {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 2px 0;
+}
+
+.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-period-nav {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 4px 10px;
+  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act, #c67139);
+}
+
+.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-period-label--month {
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
