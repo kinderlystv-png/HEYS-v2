@@ -86,6 +86,42 @@
         return statusRaw || 'none';
     };
 
+    // Тип тренировки словом — тот же словарь, что в пикере клиента
+    // (heys_day_picker_modals.js): куратор и клиент называют её одинаково.
+    const TRAINING_TYPE = {
+        cardio: 'кардио',
+        strength: 'силовая',
+        hobby: 'хобби',
+        fingers: 'пальцы'
+    };
+
+    function pluralMeals(n) {
+        const abs = Math.abs(n) % 100;
+        const last = abs % 10;
+        if (abs > 10 && abs < 20) return 'приёмов';
+        if (last === 1) return 'приём';
+        if (last > 1 && last < 5) return 'приёма';
+        return 'приёмов';
+    }
+
+    // Вход сегодня называется часом, вход раньше — днями: «04:05» на позавчера
+    // читается как сегодняшняя ночь и врёт о свежести.
+    function visitAgo(iso) {
+        const at = new Date(iso);
+        if (Number.isNaN(at.getTime())) return '';
+        const now = new Date();
+        if (at.toDateString() === now.toDateString()) {
+            return at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        }
+        const days = Math.max(1, Math.round((now - at) / 86400000));
+        if (days === 1) return 'вчера';
+        const abs = days % 100;
+        const last = abs % 10;
+        const word = (abs > 10 && abs < 20) ? 'дней'
+            : last === 1 ? 'день' : (last > 1 && last < 5) ? 'дня' : 'дней';
+        return days + ' ' + word + ' назад';
+    }
+
     // Дата пилюли в списке — день и месяц; год дописывается, только когда он
     // не этот. «до 23.09.2026» в карточке значит ровно то же, что «до 23.09»,
     // но занимает вдвое больше строки, которую делит с именем клиента.
@@ -1993,6 +2029,7 @@
             U,
             getClientStats,
             daySummary,
+            normContext,
             formatLastActive,
             getAvatarColor,
             getClientInitials,
@@ -2491,25 +2528,49 @@
                                                                     const trainings = num(day.trainings_count);
                                                                     const weight = num(day.weight_morning);
                                                                     const sleep = num(day.sleep_hours);
+                                                                    // Цели клиента: вода считается от веса тем же правилом, что
+                                                                    // у него на экране (30 мл на кг), шаги и сон он задаёт сам.
+                                                                    // Нет цели — метка остаётся «есть запись», а не объявляет
+                                                                    // отклонение от выдуманного числа.
+                                                                    const goal = (normContext && normContext[c.id]) || null;
+                                                                    const waterGoal = goal && Number(goal.weight) ? Number(goal.weight) * 30 : null;
+                                                                    const stepsGoal = goal && Number(goal.steps_goal) ? Number(goal.steps_goal) : null;
+                                                                    const sleepGoal = goal && Number(goal.sleep_norm_hours)
+                                                                        ? Number(goal.sleep_norm_hours) : null;
+                                                                    // Отклонение — только вниз от цели: перевыполненная норма воды
+                                                                    // или шагов не то, о чём куратор идёт разговаривать.
+                                                                    const tone = (value, target) => {
+                                                                        if (!value) return 'none';
+                                                                        if (!target) return 'ok';
+                                                                        return value < target * 0.8 ? 'off' : 'ok';
+                                                                    };
                                                                     const hhmm = (h) => Math.floor(h) + ':'
                                                                         + String(Math.round((h - Math.floor(h)) * 60)).padStart(2, '0');
                                                                     return React.createElement('div', {
                                                                         className: 'cur-cab__mchs'
                                                                     },
+                                                                        // У калорий цели здесь нет: норма дня выходит из TDEE,
+                                                                        // дефицита и поправки на факт — её считает движок, и
+                                                                        // второй его экземпляр в карточке разошёлся бы с панелью.
                                                                         mch(meals ? Math.round(num(day.kcal)) + ' ккал' : 'еды нет',
                                                                             meals ? 'ok' : 'none'),
                                                                         mch(water ? (water / 1000).toFixed(1).replace('.', ',') + ' л' : 'воды нет',
-                                                                            water ? 'ok' : 'none'),
+                                                                            tone(water, waterGoal)),
                                                                         mch(steps ? steps.toLocaleString('ru-RU') : 'шагов нет',
-                                                                            steps ? 'ok' : 'none'),
+                                                                            tone(steps, stepsGoal)),
                                                                         // Вес — величина без нормы: у него нет «хорошо» и
                                                                         // «плохо», поэтому он остаётся нейтральным.
                                                                         mch(weight ? String(Math.round(weight * 10) / 10).replace('.', ',') + ' кг' : 'веса нет',
                                                                             weight ? null : 'none'),
                                                                         // Час без слова читается как время суток, а не как длительность сна:
                                                                     // «6:00» в ряду с «892 ккал» и «1,0 л» ничего не называет.
-                                                                    mch(sleep ? 'сон ' + hhmm(sleep) : 'сна нет', sleep ? 'ok' : 'none'),
-                                                                        mch(trainings ? num(day.training_min) + ' мин' : 'без тренировки',
+                                                                    mch(sleep ? 'сон ' + hhmm(sleep) : 'сна нет', tone(sleep, sleepGoal)),
+                                                                        // Тип тренировки словом: «силовая 55 мин» говорит, о чём
+                                                                        // спрашивать, а «55 мин» — только что она была.
+                                                                        mch(trainings
+                                                                            ? (TRAINING_TYPE[day.training_type] || 'тренировка')
+                                                                                + ' ' + num(day.training_min) + ' мин'
+                                                                            : 'без тренировки',
                                                                             trainings ? 'ok' : 'none')
                                                                     );
                                                                 })(),
@@ -2518,6 +2579,24 @@
                                                                 // превью последнего сообщения справа. Обе строки называют,
                                                                 // о чём говорить с человеком, а метки выше — что у него в
                                                                 // дне. Нет одного — остаётся другое.
+
+                                                                // Кадр «Кабинет · Клиенты»: последняя строка карточки — самое
+                                                                // свежее событие. Приём дня старше входа: он говорит, что человек
+                                                                // вёл дневник, а вход — лишь что открывал приложение.
+                                                                (() => {
+                                                                    const d = daySummary && daySummary[c.id];
+                                                                    if (!d) return null;
+                                                                    const eaten = Number(d.meals_count) || 0;
+                                                                    if (eaten && d.last_meal_time) {
+                                                                        return React.createElement('div', { className: 'cur-cab__event' },
+                                                                            eaten + ' ' + pluralMeals(eaten) + ' · последний в ' + d.last_meal_time);
+                                                                    }
+                                                                    if (d.last_visit_at) {
+                                                                        return React.createElement('div', { className: 'cur-cab__event' },
+                                                                            'Последний вход ' + visitAgo(d.last_visit_at));
+                                                                    }
+                                                                    return null;
+                                                                })(),
 
                                                                 // Нижний ярус: серия слева, последнее сообщение справа. Обе
                                                                 // строки говорят, о чём беседовать с человеком, а метки выше —

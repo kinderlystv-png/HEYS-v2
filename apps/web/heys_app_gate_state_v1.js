@@ -87,6 +87,24 @@
             return () => { cancelled = true; clearInterval(timer); };
         }, [clientId, clientsCount, cloudUser]);
 
+        // 🎯 Цели клиента: по ним метка дня становится отклонением, а не просто
+        // «запись есть». Отдельным запросом от сводки, потому что цели не
+        // зависят от даты: возвращать их вместе с каждым днём значит слать одно
+        // и то же при каждом обновлении сводки, а она обновляется раз в пять
+        // минут. Тот же RPC читает панель — второго источника целей нет.
+        const [normContext, setNormContext] = React.useState(null);
+        React.useEffect(() => {
+            if (clientId || !cloudUser || !clientsCount || !HEYS.YandexAPI?.getClientsNormContext) return undefined;
+            let cancelled = false;
+            HEYS.YandexAPI.getClientsNormContext().then(({ data, error }) => {
+                if (cancelled || error || !data) return;
+                const byClient = {};
+                data.forEach((row) => { if (row?.client_id) byClient[row.client_id] = row; });
+                setNormContext(byClient);
+            }).catch(() => { /* цели необязательны — метка останется «есть запись» */ });
+            return () => { cancelled = true; };
+        }, [clientId, clientsCount, cloudUser]);
+
         React.useEffect(() => {
             let cancelled = false;
             const applyDetails = (value) => {
@@ -133,6 +151,7 @@
             U,
             getClientStats,
             daySummary,
+            normContext,
             formatLastActive,
             getAvatarColor,
             getClientInitials,

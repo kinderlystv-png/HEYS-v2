@@ -457,6 +457,113 @@
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
+/* Данных мало — лист говорит это заголовком, а не показывает пустые блоки. */
+.cur-sheet__gap {
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-hero, #efe3cf);
+}
+
+.cur-sheet__gap-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.32;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cur-sheet__gap-body {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
+}
+
+/* История поправки: ступенька между двумя пунктирами — единицей сверху и целью
+   снизу. Без неё лист не отвечает на вопрос «что я решал в прошлый раз», и
+   куратор решает заново каждую неделю. */
+.cur-sheet__hist {
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.cur-sheet__hist-legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.38));
+}
+
+.cur-sheet__hist-legend .is-target {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.cur-sheet__hist-svg {
+  margin-top: 8px;
+  display: block;
+}
+
+.cur-sheet__hist-dash {
+  stroke: var(--v4-track, rgba(0, 0, 0, 0.12));
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+/* Нижний пунктир — цель, и он тоном цели: два одинаковых пунктира читались бы
+   как разметка, а не как «отсюда и досюда». */
+.cur-sheet__hist-dash.is-target {
+  stroke: var(--v4-act, #c67139);
+  opacity: 0.45;
+}
+
+.cur-sheet__hist-line {
+  stroke: var(--v4-act, #c67139);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cur-sheet__hist-dot {
+  fill: var(--v4-act, #c67139);
+}
+
+.cur-sheet__hist-dates {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  font-variant-numeric: tabular-nums;
+}
+
+.cur-sheet__hist-what {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cur-sheet__hist-factor {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Кто решил — тише самого решения: это подпись к числу, а не второе число. */
+.cur-sheet__hist-who {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
 /* Предложение нормы — главным числом экрана. В первом слое остаётся вывод и
    действие; как оно получилось, разбирает столбец ниже. */
 .cur-sheet__rec {
@@ -903,6 +1010,25 @@
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--v4-line, rgba(0, 0, 0, 0.08));
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 38%, transparent);
+}
+
+/* Строка события под метками: что человек сделал последним. Акцентная только
+   когда нужно действие — «Последний вход 3 дня назад» акцентом звало бы туда,
+   где куратор ничего не решит, а «4 приёма · последний в 19:40» это просто
+   свежая запись. */
+.cur-cab__event {
+  margin-top: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* Отклонение от цели: тёплое предупреждение, не красный — красный в наборе
+   значит разрушающее действие, а недобор воды или шагов им не является. */
+.cur-cab__mch.is-off {
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent);
+  color: var(--v4-warn-text, #a1471c);
 }
 
 /* Нижний ярус: серия слева, превью последнего сообщения справа с обрезкой.

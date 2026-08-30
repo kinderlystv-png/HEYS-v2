@@ -245,6 +245,20 @@
       "path": "scripts/db/migrations/2026-08-28_registration_server_norms.sql",
       "description": "Calculate and persist first-registration nutrition norms from the confirmed profile on the server",
       "destructive": false
+    },
+    {
+      "id": "2026-08-30_curator_panel_window_and_norm_context",
+      "order": 33,
+      "path": "scripts/db/migrations/2026-08-30_curator_panel_window_and_norm_context.sql",
+      "description": "Curator panel: client day window and profile norm context in two read-only RPCs",
+      "destructive": false
+    },
+    {
+      "id": "2026-08-31_curator_day_summary_event_and_goals",
+      "order": 34,
+      "path": "scripts/db/migrations/2026-08-31_curator_day_summary_event_and_goals.sql",
+      "description": "Day summary: last meal time, training type, last visit; norm context: steps and sleep goals",
+      "destructive": false
     }
   ]
 }

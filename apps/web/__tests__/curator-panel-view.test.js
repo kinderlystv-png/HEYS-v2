@@ -826,4 +826,62 @@ describe('панель куратора · окно', () => {
     expect(label).toContain('text-transform: uppercase');
     expect(label).toContain('0.08em');
   });
+
+  it('метка дня различает три состояния, а не два', () => {
+    const src = GATE.split(String.fromCharCode(10))
+      .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+      .join(String.fromCharCode(10));
+    // Цели приходят профильным контекстом — тем же, что читает панель.
+    expect(src).toContain('normContext');
+    expect(src).toContain('goal.steps_goal');
+    expect(src).toContain('goal.sleep_norm_hours');
+    // Вода считается от веса тем же правилом, что у клиента на экране.
+    expect(src).toContain('Number(goal.weight) * 30');
+    // Нет цели — метка остаётся «есть запись», а не объявляет отклонение.
+    const tone = src.slice(src.indexOf('const tone = (value, target)'),
+      src.indexOf('const hhmm'));
+    expect(tone).toContain("if (!value) return 'none';");
+    expect(tone).toContain("if (!target) return 'ok';");
+    // Отклонение только вниз: перевыполненная норма не повод для разговора.
+    expect(tone).toContain('value < target * 0.8');
+    // Тон отклонения тёплый: красный в наборе значит разрушающее действие.
+    const off = CSS.slice(CSS.indexOf('.cur-cab__mch.is-off'),
+      CSS.indexOf('.cur-cab__mch.is-off') + 260);
+    expect(off).toContain('--v4-warn');
+    expect(off).not.toContain('--v4-bad');
+  });
+
+  it('строка события: приём дня старше входа', () => {
+    const src = GATE.split(String.fromCharCode(10))
+      .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+      .join(String.fromCharCode(10));
+    const at = src.indexOf("className: 'cur-cab__event'");
+    expect(at).toBeGreaterThan(0);
+    // Приём проверяется первым: он говорит, что человек вёл дневник, а вход —
+    // лишь что открывал приложение.
+    const block = src.slice(src.indexOf('const eaten = Number(d.meals_count)'), at + 400);
+    expect(block.indexOf('last_meal_time')).toBeLessThan(block.indexOf('last_visit_at'));
+    expect(src).toContain('pluralMeals');
+    expect(src).toContain('visitAgo');
+  });
+
+  it('вход сегодня называется часом, вход раньше — днями', () => {
+    // «04:05» на позавчерашнем входе читается как сегодняшняя ночь.
+    const fn = GATE.slice(GATE.indexOf('function visitAgo'),
+      GATE.indexOf('// Дата пилюли в списке'));
+    expect(fn).toContain('toDateString() === now.toDateString()');
+    expect(fn).toContain("'вчера'");
+    expect(fn).toContain("' назад'");
+  });
+
+  it('тип тренировки назван словарём клиента, а не своим', () => {
+    // Куратор и клиент называют тренировку одинаково.
+    const dict = GATE.slice(GATE.indexOf('const TRAINING_TYPE'),
+      GATE.indexOf('function pluralMeals'));
+    for (const [id, word] of [['cardio', 'кардио'], ['strength', 'силовая'],
+      ['hobby', 'хобби'], ['fingers', 'пальцы']]) {
+      expect(dict, id).toContain(word);
+    }
+    expect(GATE).toContain('TRAINING_TYPE[day.training_type]');
+  });
 });
