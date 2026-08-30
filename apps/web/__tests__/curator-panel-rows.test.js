@@ -281,3 +281,15 @@ describe('панель куратора · сборка строк', () => {
     expect(rows[0].silentDays).toBe(21);
   });
 });
+
+describe('панель куратора · коридор', () => {
+  it('расчёт в мёртвой зоне даёт своё состояние, а не «всё ровно»', () => {
+    // Клиент остаётся на виду: в «всё ровно» группа свёрнута, и он пропал бы
+    // с глаз вместе со своими числами.
+    const NC = window.HEYS.NormCorrection;
+    expect(NC.PANEL_STATES.indexOf('in_corridor'))
+      .toBeGreaterThan(NC.PANEL_STATES.indexOf('mismatch'));
+    expect(NC.PANEL_STATES.indexOf('in_corridor'))
+      .toBeLessThan(NC.PANEL_STATES.indexOf('fine'));
+  });
+});

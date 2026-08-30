@@ -30,6 +30,7 @@
     { state: 'decided_today', title: 'Решено сегодня', chip: 'решено' },
     { state: 'silent', title: 'Молчат', chip: 'молчат' },
     { state: 'mismatch', title: 'Расчёт разошёлся', chip: 'разошёлся' },
+    { state: 'in_corridor', title: 'В коридоре', chip: 'в коридоре' },
     { state: 'collecting', title: 'Копят данные', chip: 'копят' },
     { state: 'fine', title: 'Всё ровно', chip: 'всё ровно' }
   ];
@@ -115,6 +116,11 @@
         return 'дни ' + nb(logged, windowDays())
           + ' · взвешивания ' + nb(weighIns, gateWeighIns());
       }
+      case 'in_corridor':
+        // Расчёт в зоне — не «сошлось само собой», а «разница есть, но она
+        // меньше зоны». Куратор видит и разницу, и норму, и что делать нечего.
+        return 'в коридоре · разница ' + String(row.driftPct).replace('.', ',')
+          + ' %' + (rec ? ' · норма ' + nbsp(rec.norm) : '');
       case 'fine':
         // Развёрнутая группа без этой строки давала имя и пустую точку рядом:
         // строка есть, сказать ей нечего. «Всё ровно» — это результат расчёта
@@ -543,8 +549,11 @@
             rec ? h(React.Fragment, null,
               h('div', { className: 'cur-sheet__how-title' }, 'Как получилась поправка'),
               h('div', { className: 'cur-sheet__facts' },
+                // С десятой, как дрейф в строке панели: целые проценты
+                // округляли 0,5 до 1, и строка спорила с листом.
                 factRow(React, 'Факт против формулы',
-                  (card.mismatchPct > 0 ? '+' : '−') + Math.abs(card.mismatchPct) + ' %'),
+                  (card.mismatchPctExact > 0 ? '+' : '−')
+                  + String(Math.abs(card.mismatchPctExact)).replace('.', ',') + ' %'),
                 // Цель показывается отдельной строкой только когда шаг её не
                 // догнал. Совпадая с применяемым, она была дублем — и
                 // заставляла искать разницу там, где её нет.
@@ -552,8 +561,10 @@
                   ? factRow(React, 'Цель поправки',
                     '×' + String(rec.targetFactorShown).replace('.', ','))
                   : null,
+                // Два знака всегда: «×1» в колонке рядом с «×0,97» читается
+                // как другая величина, а не как «поправки нет».
                 factRow(React, card.stepCapped ? 'Применяем' : 'Поправка',
-                  '×' + String(rec.stepFactor).replace('.', ','))
+                  '×' + rec.stepFactor.toFixed(2).replace('.', ','))
               ),
               // Шаг ограничен — без этой строки куратор видит ×0,97 при цели
               // ×0,92 и не понимает, почему движок «не дослушал» расчёт.

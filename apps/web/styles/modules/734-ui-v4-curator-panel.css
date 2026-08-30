@@ -228,6 +228,8 @@
 .cur-row__dot--mismatch { background: var(--v4-warn-1, #d99a63); }
 .cur-row__dot--silent { background: var(--v4-bad-text, #b4442a); }
 .cur-row__dot--decided_today { background: var(--v4-good, #7a8a5e); }
+/* Коридор — спокойное состояние: цифры в порядке, решать нечего. */
+.cur-row__dot--in_corridor { background: var(--v4-good, #7a8a5e); }
 
 .cur-row__age {
   flex: 0 0 auto;

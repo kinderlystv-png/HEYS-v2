@@ -42,9 +42,14 @@ describe('панель куратора · место в кабинете', () =
   it('пятая вкладка, и порядок групп — старшинство контракта', () => {
     expect(GATE).toContain("setCuratorTab('panel')");
     expect(GATE).toContain("curatorTab === 'panel'");
+    // «В коридоре» стоит между расхождением и копящими: цифры в порядке, но
+    // клиент остаётся на виду — в «всё ровно» он был бы свёрнут и пропал.
     expect(CP.GROUPS.map((g) => g.state)).toEqual([
-      'awaits', 'decided_today', 'silent', 'mismatch', 'collecting', 'fine'
+      'awaits', 'decided_today', 'silent', 'mismatch',
+      'in_corridor', 'collecting', 'fine'
     ]);
+    expect(CP.GROUPS.map((g) => g.state))
+      .toEqual(window.HEYS.NormCorrection.PANEL_STATES);
   });
 
   it('вход в дневник не заводит вторую механику переключения', () => {
@@ -145,6 +150,28 @@ describe('панель куратора · строка клиента', () => {
     expect(CP.windowDays()).toBe(NC.WINDOW_WORKING_DAYS);
     expect(CP.stateLine(row({ state: 'collecting' })))
       .toContain('из ' + NC.GATE_WEIGH_INS);
+  });
+
+  it('в коридоре — разница названа числом, а не спрятана', () => {
+    // «Сошлось» тут не само собой: разница есть, просто меньше зоны. Куратор
+    // видит и её, и норму, и что решать нечего.
+    const line = CP.stateLine(row({
+      state: 'in_corridor', driftPct: 1.1,
+      card: { recommendation: { norm: 2047, currentNorm: 2047, stepFactor: 1 } }
+    }));
+    expect(line).toBe('в коридоре · разница 1,1 % · норма 2 047');
+    // Пилюли нет: у коридора нет длительности, а пилюля меряет только её.
+    expect(CP.agePill(row({ state: 'in_corridor', ageDays: null }))).toBe(null);
+  });
+
+  it('расхождение в строке и в листе — одно число, а не два округления', () => {
+    // Строка панели брала дрейф с десятой, лист — целые проценты: 0,5 %
+    // округлялось до 1 %, и экран спорил сам с собой.
+    expect(SRC).toContain('card.mismatchPctExact');
+    expect(SRC).not.toContain('Math.abs(card.mismatchPct)');
+    // Поправка — всегда два знака: «×1» рядом с «×0,97» читается как другая
+    // величина, а не как «поправки нет».
+    expect(SRC).toContain("rec.stepFactor.toFixed(2)");
   });
 
   it('«всё ровно» говорит числом, а не пустой строкой с точкой', () => {

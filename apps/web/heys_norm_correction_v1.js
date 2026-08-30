@@ -131,6 +131,10 @@
 
     const targetFactor = factPerDay / formulaPerDay;
     const mismatchPct = Math.round((targetFactor - 1) * 100);
+    // То же расхождение с десятой: целые проценты годятся для фразы «факт ниже
+    // формулы на 11 %», но рядом с дрейфом коридора спорят с ним — 0,5 %
+    // округлялось до 1 %, и строка панели противоречила листу.
+    const mismatchPctExact = Math.round((targetFactor - 1) * 1000) / 10;
 
     // Слагаемые пути «съедено → факт» отдаём наружу: куратору показывают не
     // вывод, а механизм, и пересчитывать его в панели значило бы завести
@@ -151,6 +155,7 @@
         factPerDay: Math.round(factPerDay),
         targetFactor: Math.round(targetFactor * 1000) / 1000,
         mismatchPct,
+        mismatchPctExact,
         path,
         nextFactor: currentFactor
       });
@@ -178,6 +183,7 @@
       eatenPerDay: Math.round(eatenPerDay),
       factPerDay: Math.round(factPerDay),
       mismatchPct,
+      mismatchPctExact,
       targetFactor: Math.round(targetFactor * 1000) / 1000,
       path,
       // Расхождение внутри мёртвой зоны — не расхождение: норма стоит, и
@@ -286,6 +292,7 @@
         ? { value: res.factPerDay, source: 'съедено минус движение веса' }
         : null,
       mismatchPct: Number.isFinite(res.mismatchPct) ? Math.abs(res.mismatchPct) : null,
+      mismatchPctExact: Number.isFinite(res.mismatchPctExact) ? res.mismatchPctExact : null,
       // Качество данных — словом «хватает» или «мало», а не голым числом.
       quality: [
         {
@@ -1041,7 +1048,11 @@
   // Молчание стоит выше расхождения: молчащий клиент рискует уйти совсем, а
   // расхождение расчёта ждёт до понедельника и само не портится. Человек
   // важнее числа — решение владельца, 30 августа.
-  const PANEL_STATES = ['awaits', 'decided_today', 'silent', 'mismatch', 'collecting', 'fine'];
+  // «В коридоре» — своё состояние, а не «всё ровно»: расчёт у такого клиента
+  // сошёлся не сам собой, а попал в зону, и куратор должен видеть это числом.
+  // В «всё ровно» строка была бы свёрнута и клиент пропал бы с глаз.
+  const PANEL_STATES = ['awaits', 'decided_today', 'silent', 'mismatch',
+    'in_corridor', 'collecting', 'fine'];
 
   /**
    * Дни с последнего понедельника — возраст пересчёта поправки.
@@ -1227,11 +1238,16 @@
       // ошибка, и своё слово у него отдельное.
       const collecting = result.status === 'cold_start' || result.status === 'not_enough_data';
 
+      // Расчёт попал в мёртвую зону — состояние своё: цифры в порядке, но
+      // сказать это надо числом, а не молчанием.
+      const inCorridor = result.status === 'ready' && !!result.deadZone;
+
       let state;
       if (hasProposal && !entry.lastDecision) state = 'awaits';
       else if (answeredToday) state = 'decided_today';
       else if (isSilent) state = 'silent';
       else if (mismatchPct) state = 'mismatch';
+      else if (inCorridor) state = 'in_corridor';
       else if (collecting) state = 'collecting';
       else state = 'fine';
 
@@ -1259,6 +1275,8 @@
         isSilent,
         result,
         collecting,
+        inCorridor,
+        driftPct: Number.isFinite(result.driftPct) ? result.driftPct : null,
         // «Ждёт решения» — расчёт готов, а последнего решения по нему нет.
         awaitsDecision: state === 'awaits',
         mismatchPct,
