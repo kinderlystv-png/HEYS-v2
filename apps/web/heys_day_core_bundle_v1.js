@@ -5693,7 +5693,9 @@
          */
         function openStepsGoalPicker() {
             if (HEYS.showCheckin && HEYS.showCheckin.steps) {
-                HEYS.showCheckin.steps();
+                // Дата открытого дня, а не сегодня: цель это план того дня,
+                // который человек смотрит.
+                HEYS.showCheckin.steps(date);
             }
         }
 

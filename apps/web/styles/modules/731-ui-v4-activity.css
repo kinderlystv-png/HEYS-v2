@@ -57,10 +57,13 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-hero {
-  margin-top: 14px;
-  padding: 26px 22px 22px;
-  border-radius: 26px;
-  background: var(--v4-hero, #f8fafc);
+  /* .grp кадра на --c2: радиус 20, поля 16, отступ сверху 12
+     (контракт «вид · hero цели дня», строка 34). Прежние 26/26/22/14
+     остались от редакции до контракта. */
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-hero, #efe3cf);
 }
 
 .activity-v4-hero__label {
@@ -68,54 +71,59 @@ body:has(.activity-v4) .hdr::after {
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-2, #64748b);
+  /* Кадр просит 42 %, ближайшая ступень набора — 45 %. */
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .activity-v4-hero__value-row {
   display: flex;
   align-items: baseline;
-  gap: 9px;
-  margin-top: 14px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .activity-v4-hero__value {
-  font-size: 64px;
-  font-weight: 600;
-  line-height: 0.9;
-  letter-spacing: -0.045em;
+  /* 30/800 с трекингом −.02em — число кадра. 64/600 осталось от прежней
+     редакции, до контракта. */
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
   color: var(--v4-ink, #0f172a);
   font-variant-numeric: tabular-nums;
 }
 
 .activity-v4-hero__unit {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--v4-ink-2, #64748b);
+  /* Контракт (строка 34) называет 12,5 px/600; кадр рисует 13 px — верен
+     контракт. Кадр просит 45 % — это ступень набора, --v4-ink-3. */
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
+/* Строка причины и ссылка «из чего ›» стоят прямо под числом: зазор 10,
+   отступ сверху 9, без разделителя сверху (контракт строка 34). Прежняя
+   редакция отбивала их линией #e2e8f0 — она из набора выпадала. */
 .activity-v4-hero__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  margin-top: 22px;
-  padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
+  margin-top: 9px;
+  padding: 0;
+  border: none;
   background: none;
-  border-left: none;
-  border-right: none;
-  border-bottom: none;
   cursor: pointer;
   text-align: left;
-  font: 600 12px/1.2 Figtree, system-ui, sans-serif;
-  color: #475569;
+  /* Кадр просит 50 %, ближайшая ступень набора — 55 %. */
+  font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
-.activity-v4-hero__footer-chevron {
+.activity-v4-hero__footer-link {
   flex: none;
-  opacity: 0.55;
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* Разбор цели — список .cd канваса: на --c1, радиус 20, поля 2/16, строка 13 px
@@ -130,6 +138,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-breakdown__row {
   display: flex;
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -247,6 +256,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-today__row {
   display: flex;
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -311,45 +321,45 @@ body:has(.activity-v4) .hdr::after {
   line-height: 1;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--v4-ink-2, #64748b);
+  /* Ярус акцентным тоном — так он в кадре: это указатель, а не подпись. */
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .activity-v4-steps {
   padding: 16px;
   border-radius: 20px;
-  background: var(--v4-ok-bg, rgba(255, 255, 255, 0.65));
+  /* Карточка .grp кадра — первая поверхность. Шалфейная заливка была решением
+     прежней редакции, до контракта; контракт старше кадра и старше её. */
+  background: var(--v4-c1, #f7efe2);
 }
 
 .activity-v4-steps__head {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 12px;
+  gap: 10px;
 }
 
 .activity-v4-steps__label {
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--v4-ink-2, #64748b);
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
 }
 
 .activity-v4-steps__values {
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--v4-ink, #0f172a);
+  /* Имя и число кадра одного кегля: 600 12,5 px/1 (кадр «день собран», 21–23).
+     Прежние 13/700 остались от редакции до контракта. */
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
 
 .activity-v4-steps__goal {
-  font-weight: 500;
-  color: var(--v4-ink-3, #94a3b8);
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .activity-v4-steps__track-wrap {
   position: relative;
-  margin-top: 11px;
+  margin-top: 10px;
 }
 
 .activity-v4-steps__track {
@@ -363,7 +373,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-steps__fill {
   height: 8px;
   border-radius: 999px;
-  background: #7a8a5e;
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .activity-v4-steps__slider {
@@ -383,83 +393,30 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-steps__hint {
-  margin-top: 11px;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
-  color: var(--v4-ink-2, #64748b);
-}
-
-.activity-v4-rows {
-  margin-top: 10px;
-  padding: 2px 16px;
-  border-radius: 20px;
-  background: var(--v4-surface, rgba(255, 255, 255, 0.65));
-}
-
-.activity-v4-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 13px 0;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.activity-v4-row:last-child {
-  border-bottom: none;
-}
-
-.activity-v4-row--action {
-  cursor: pointer;
-}
-
-.activity-v4-row__label {
-  color: #475569;
-}
-
-.activity-v4-row__value {
+  /* Подпись стоит в подвале карточки — свой отступ ей не нужен, его даёт
+     .activity-v4-steps__foot. Кадр просит 42 %, ступень набора — 45 %. */
   flex: none;
-  color: var(--v4-ink, #0f172a);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
+  font: 500 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
-.activity-v4-row__value--muted {
-  color: var(--v4-ink-2, #64748b);
-  font-weight: 500;
-}
-
+/* .btn кадра: текст по центру, минимальная высота 48, радиус 999,
+   700 13px/1 (контракт «лист действия», строка 29). Прежняя редакция
+   разносила текст и «+» по краям полями 17/22. */
 .activity-v4-cta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   width: 100%;
-  padding: 17px 22px;
+  min-height: 48px;
+  padding: 0 22px;
   border: none;
   border-radius: 999px;
-  background: #ea580c;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-  color: #ffffff;
-  cursor: pointer;
-}
-
-/* v4-intentional: sand/blue CTA uses palette act role */
-[data-palette="sand"] .activity-v4-cta,
-[data-palette="sand-dark"] .activity-v4-cta,
-[data-palette="blue"] .activity-v4-cta,
-[data-palette="blue-dark"] .activity-v4-cta {
-  background: var(--v4-act); /* v4-intentional */
-}
-
-[data-palette="sand"] .activity-v4-cta,
-[data-palette="sand-dark"] .activity-v4-cta {
+  background: var(--v4-act, #c67139);
+  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  /* Роли «текст на акценте» в наборе нет — цвет назван поимённо, как и был. */
   color: #2b1608;
+  cursor: pointer;
 }
 
 [data-palette="blue"] .activity-v4-cta,
@@ -467,86 +424,35 @@ body:has(.activity-v4) .hdr::after {
   color: var(--v4-ink, #ffffff);
 }
 
-.activity-v4-cta__icon {
-  flex: none;
-  font-size: 17px;
-  line-height: 1;
-}
-
+/* Ярус «История» — список .cd кадра: на первой поверхности, радиус 20,
+   поля 2/16 (контракт «вид · ярус История», строка 24). Прежняя редакция
+   держала здесь .grp с полями 16 и разворачивала календарь всегда. */
 .activity-v4-history {
-  padding: 16px;
+  padding: 2px 16px;
   border-radius: 20px;
-  background: var(--v4-surface, rgba(255, 255, 255, 0.65));
+  background: var(--v4-c1, #f7efe2);
 }
 
-.activity-v4-history__month-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-top: 14px;
-  padding: 14px 0 0;
-  border-top: 1px solid #e2e8f0;
-  background: none;
-  border-left: none;
-  border-right: none;
-  border-bottom: none;
-  width: 100%;
-  cursor: pointer;
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1.2;
-  text-align: left;
+.activity-v4-history__link {
+  flex: none;
+  /* Кадр просит 42 %, ближайшая ступень набора — 45 %. */
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
-.activity-v4-history__month-label {
-  color: #475569;
+/* Календарь — второй слой строки «Зарядка»: свой заголовок он здесь не
+   повторяет, строка выше уже назвала счёт. */
+.activity-v4-history__cal {
+  padding-bottom: 13px;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
-.activity-v4-history__month-value {
-  color: var(--v4-ink, #0f172a);
-  font-variant-numeric: tabular-nums;
+.activity-v4-history__cal .ma-habit-cal-heading {
+  display: none;
 }
 
 .activity-v4-history__month-list {
   margin-top: 8px;
-}
-
-.activity-v4-cardio {
-  margin-top: 10px;
-  border-radius: 20px;
-  background: var(--v4-surface, rgba(255, 255, 255, 0.65));
-  overflow: hidden;
-}
-
-.activity-v4-cardio__toggle {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 13px 16px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1.2;
-  text-align: left;
-  color: #475569;
-}
-
-.activity-v4-cardio__toggle-value {
-  color: var(--v4-ink, #0f172a);
-  font-variant-numeric: tabular-nums;
-}
-
-.activity-v4-cardio__body {
-  padding: 0 8px 8px;
-}
-
-.activity-v4-cardio__body .compact-train-card:first-child {
-  margin-top: 0;
 }
 
 .activity-v4-sheet-backdrop {
@@ -616,71 +522,41 @@ body:has(.activity-v4) .hdr::after {
   text-transform: none;
 }
 
+/* Чипы режима — .badge кадра: 9 px моноширинной, поля 4/7, радиус 999;
+   выбранный на акценте, второй на второй поверхности тоном акцента
+   (контракт «вид · календарь зарядки», строка 30). Прежняя редакция рисовала
+   их текстом с подчёркиванием. Площадь нажатия добита прозрачной вставкой:
+   пилюля кадра ниже 44 px, а палец меньше не становится. */
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn {
-  min-width: 44px;
-  min-height: 44px;
-  margin: -16px -6px;
-  padding: 0 6px;
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  padding: 4px 7px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  font: 700 9px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn::after {
+  content: '';
+  position: absolute;
+  inset: -14px -8px;
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active {
-  border-bottom: 2px solid #ea580c;
-  color: #ea580c;
+  border-bottom: none;
+  background: var(--v4-act, #c67139);
+  color: #2b1608;
 }
 
-/* v4-intentional: sand/blue calendar mode active uses palette roles */
-[data-palette="sand"] .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active,
-[data-palette="sand-dark"] .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active,
 [data-palette="blue"] .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active,
 [data-palette="blue-dark"] .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active {
-  border-bottom-color: var(--v4-act); /* v4-intentional */
-  color: var(--v4-act-text); /* v4-intentional */
-}
-
-/* v4-intentional: sand/blue hero value uses act-text */
-[data-palette="sand"] .activity-v4-hero__value,
-[data-palette="sand-dark"] .activity-v4-hero__value,
-[data-palette="blue"] .activity-v4-hero__value,
-[data-palette="blue-dark"] .activity-v4-hero__value {
-  color: var(--v4-act-text); /* v4-intentional */
-}
-
-/* v4-intentional: sand/blue tier label uses act-text */
-[data-palette="sand"] .activity-v4-tier,
-[data-palette="sand-dark"] .activity-v4-tier,
-[data-palette="blue"] .activity-v4-tier,
-[data-palette="blue-dark"] .activity-v4-tier {
-  color: var(--v4-act-text); /* v4-intentional */
-}
-
-/* v4-intentional: sand/blue steps card uses ok-bg */
-[data-palette="sand"] .activity-v4-steps,
-[data-palette="sand-dark"] .activity-v4-steps,
-[data-palette="blue"] .activity-v4-steps,
-[data-palette="blue-dark"] .activity-v4-steps {
-  background: var(--v4-ok-bg); /* v4-intentional */
-}
-
-/* v4-intentional: sand/blue list surfaces use palette surface */
-[data-palette="sand"] .activity-v4-rows,
-[data-palette="sand-dark"] .activity-v4-rows,
-[data-palette="blue"] .activity-v4-rows,
-[data-palette="blue-dark"] .activity-v4-rows,
-[data-palette="sand"] .activity-v4-history,
-[data-palette="sand-dark"] .activity-v4-history,
-[data-palette="blue"] .activity-v4-history,
-[data-palette="blue-dark"] .activity-v4-history,
-[data-palette="sand"] .activity-v4-cardio,
-[data-palette="sand-dark"] .activity-v4-cardio,
-[data-palette="blue"] .activity-v4-cardio,
-[data-palette="blue-dark"] .activity-v4-cardio {
-  background: var(--v4-surface); /* v4-intentional */
+  color: var(--v4-ink, #eef3f8);
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-head-dot {
@@ -697,7 +573,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-group {
   display: flex;
-  gap: 14px;
+  gap: 6px;
   flex: none;
 }
 
@@ -724,32 +600,33 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-done {
-  background: var(--v4-ok-fill, #22c55e);
+  background: var(--v4-ok-text, #5c6a45);
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-replacement {
-  background: var(--v4-act, #2563eb);
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-missed {
-  background: var(--v4-warn-soft, #eab308);
+  background: var(--v4-bad-text, #b4442a);
   color: transparent;
 }
 
+.activity-v4 .ma-habit-cal--activity-v4 /* «Сегодня» кадр красит чернилами 16 %; ближайшая ступень набора — 30 %. */
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-neutral {
-  background: var(--v4-act, #2563eb);
+  background: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-done {
-  background: var(--v4-ok-fill, #22c55e);
+  background: var(--v4-ok-text, #5c6a45);
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-replacement {
-  background: var(--v4-act, #2563eb);
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-missed {
-  background: var(--v4-warn-soft, #eab308);
+  background: var(--v4-bad-text, #b4442a);
 }
 
 /* Легенда календаря — ряд из четырёх пар «точка + слово» с переносом
@@ -758,8 +635,8 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
-  margin-top: 12px;
+  gap: 12px;
+  margin-top: 14px;
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-item {
@@ -779,7 +656,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-done {
-  background: var(--v4-good, #7a8a5e);
+  background: var(--v4-ok-text, #5c6a45);
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-replacement {
@@ -803,8 +680,8 @@ body:has(.activity-v4) .hdr::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 12px;
+  margin-top: 10px;
   padding: 2px 0;
 }
 
@@ -814,7 +691,7 @@ body:has(.activity-v4) .hdr::after {
   cursor: pointer;
   padding: 4px 10px;
   font: 700 13px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-act, #c67139);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-period-label--month {
@@ -827,11 +704,26 @@ body:has(.activity-v4) .hdr::after {
    упражнений» не результат, и красить их как плохой результат нельзя. */
 .activity-v4-history__row {
   display: flex;
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 13px 0;
   border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+}
+
+.activity-v4-history__row--action {
+  width: 100%;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.activity-v4-history__row--last {
+  border-bottom: none;
 }
 
 .activity-v4-history__key {

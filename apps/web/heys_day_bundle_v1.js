@@ -2151,9 +2151,9 @@
                 // (строка «панель оценки»), а не помечает прочитанным.
                 displayAdviceCount > 0 && React.createElement('div', { className: 'advice-list-hints' },
                     React.createElement('span', { className: 'advice-list-hint-item' }, '← оценить'),
-                    React.createElement('span', { className: 'advice-list-hint-divider' }, '•'),
+                    React.createElement('span', { className: 'advice-list-hint-divider' }, '·'),
                     React.createElement('span', { className: 'advice-list-hint-item' }, 'скрыть →'),
-                    React.createElement('span', { className: 'advice-list-hint-divider' }, '•'),
+                    React.createElement('span', { className: 'advice-list-hint-divider' }, '·'),
                     React.createElement('span', { className: 'advice-list-hint-item' }, 'тап — открыть')
                 ),
                 showSwipeFeedback && lastDismissedAdvice.action === 'hidden' && renderAdviceHideUndoPanel(React, {
@@ -2311,9 +2311,30 @@
                     },
                 })),
             !toastSwiped && React.createElement('div', { className: 'advice-v4-toast-card' },
-                React.createElement('p', { className: 'advice-v4-toast-card__text' }, displayedAdvice.text),
-                React.createElement('p', { className: 'advice-v4-toast-card__meta' },
-                    `${categoryRu} · тап — подробнее`
+                // Кадр «Совет · всплывающий»: полоса состояния, текст с подписью
+                // и крестик одним рядом — та же тройка, что у карточки в шторке.
+                // Полоса несёт состояние, не категорию (строка «полоса слева»).
+                React.createElement('div', { className: 'advice-v4-toast-card__row' },
+                    React.createElement('span', {
+                        className: 'advice-v4-toast-card__stripe'
+                            + (displayedAdvice.type === 'success' ? ' advice-v4-toast-card__stripe--ok' : ''),
+                        'aria-hidden': 'true',
+                    }),
+                    React.createElement('div', { className: 'advice-v4-toast-card__body' },
+                        React.createElement('p', { className: 'advice-v4-toast-card__text' }, displayedAdvice.text),
+                        React.createElement('p', { className: 'advice-v4-toast-card__meta' },
+                            `${categoryRu} · тап — подробнее`
+                        )
+                    ),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'advice-v4-toast-card__close',
+                        'aria-label': 'Убрать совет',
+                        onClick: (e) => {
+                            e.stopPropagation();
+                            dismissToast && dismissToast();
+                        },
+                    }, renderAdviceV4Icon(React, 'close'))
                 ),
                 React.createElement('div', { className: 'advice-v4-toast-card__actions' },
                     React.createElement('button', {

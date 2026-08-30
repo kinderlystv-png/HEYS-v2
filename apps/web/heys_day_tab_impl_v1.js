@@ -1453,16 +1453,20 @@
         // Вёл ли человек привычку хоть один день. Спрашиваем у самого календаря,
         // а не заводим свой скан: горизонт и «сколько дней вели» — его понятие
         // (контракт «пустые состояния», строка 33).
-        const chargeTrackedDays = useMemo(() => {
-            if (!activityContentEnabled) return 0;
+        const chargeCounts = useMemo(() => {
+            const empty = { tracked: 0, done: 0 };
+            if (!activityContentEnabled) return empty;
             const build = HEYS.morningActivationCalendar?.buildMorningActivationCalendarData;
-            if (typeof build !== 'function' || !date) return 0;
+            if (typeof build !== 'function' || !date) return empty;
             try {
-                return build(date, 'last_28_days', readMaDayForActivityCalendar).trackedCount || 0;
+                const data = build(date, 'last_28_days', readMaDayForActivityCalendar);
+                return { tracked: data.trackedCount || 0, done: data.doneCount || 0 };
             } catch (_) {
-                return 0;
+                return empty;
             }
         }, [activityContentEnabled, date, readMaDayForActivityCalendar, day?.updatedAt]);
+        const chargeTrackedDays = chargeCounts.tracked;
+        const chargeDoneDays = chargeCounts.done;
 
         // Компактный блок сна и оценки дня в SaaS стиле (две плашки в розовом контейнере)
         // 🚀 PERF R7: memoize sideBlock — skip on popup/animation/water changes
@@ -2335,6 +2339,7 @@
                 monthTrainingsRows,
                 workingWeights,
                 chargeTrackedDays,
+                chargeDoneDays,
                 morningActivationCalendarBlock,
                 r0,
                 setDay,

@@ -39,6 +39,7 @@
             monthTrainingsRows,
             workingWeights,
             chargeTrackedDays,
+            chargeDoneDays,
             morningActivationCalendarBlock,
             r0,
             setDay,
@@ -67,6 +68,7 @@
             monthTrainingsRows,
             workingWeights,
             chargeTrackedDays,
+            chargeDoneDays,
             morningActivationCalendarBlock,
             r0
         };

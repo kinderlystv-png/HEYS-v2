@@ -402,6 +402,7 @@
       monthTrainingsRows,
       workingWeights,
       chargeTrackedDays,
+      chargeDoneDays,
       morningActivationCalendarBlock,
       kcalMin
     } = ctx;
@@ -421,6 +422,7 @@
     const [sheetOpen, setSheetOpen] = useState(false);
     const [cardioOpen, setCardioOpen] = useState(false);
     const [monthOpen, setMonthOpen] = useState(false);
+    const [calOpen, setCalOpen] = useState(false);
 
     const dateKey = day?.date || day?.dateKey || '';
     const safeKcalMin = Array.isArray(kcalMin) && kcalMin.length === 4
@@ -653,7 +655,11 @@
           'aria-expanded': heroOpen
         },
           React.createElement('span', null, heroFooter),
-          React.createElement('span', { className: 'activity-v4-hero__footer-chevron', 'aria-hidden': 'true' }, heroOpen ? '\u2039' : '\u203A')
+          // Справа кадр даёт не голый шеврон, а подпись действия: «из чего ›»
+          // в свёрнутом виде и «свернуть ›» в раскрытом (контракт строка 34).
+          React.createElement('span', {
+            className: 'activity-v4-hero__footer-link'
+          }, (heroOpen ? 'свернуть' : 'из чего') + ' ›')
         ),
         heroBreakdown
       ),
@@ -763,8 +769,7 @@
         className: 'activity-v4-cta',
         onClick: () => setSheetOpen(true)
       },
-        React.createElement('span', null, 'Добавить активность'),
-        React.createElement('span', { className: 'activity-v4-cta__icon', 'aria-hidden': 'true' }, '+')
+        'Добавить активность'
       ),
 
       React.createElement('div', { className: 'activity-v4-tier' }, 'История'),
@@ -779,17 +784,31 @@
             + ' сравнивать: календарь — с первого дня, веса — с двух недель и двух'
             + ' общих упражнений.')
         )
+        // Ярус — список .cd из трёх строк, как в кадре «день собран»: сам
+        // календарь стоит за строкой «Зарядка», а не развёрнут всегда
+        // (контракт «вид · ярус История», строка 24).
         : React.createElement('div', { className: 'activity-v4-history' },
-        calendarBlock,
+        React.createElement('button', {
+          type: 'button',
+          className: 'activity-v4-history__row activity-v4-history__row--action',
+          onClick: () => setCalOpen((v) => !v),
+          'aria-expanded': calOpen
+        },
+          React.createElement('span', { className: 'activity-v4-history__name' },
+            'Зарядка · ' + (Number(chargeDoneDays) || 0) + ' из ' + (Number(chargeTrackedDays) || 0)),
+          React.createElement('span', { className: 'activity-v4-history__link' }, '28 дней \u203A')
+        ),
+        calOpen && React.createElement('div', { className: 'activity-v4-history__cal' }, calendarBlock),
         workingWeightsRow,
         React.createElement('button', {
           type: 'button',
-          className: 'activity-v4-history__month-row',
+          className: 'activity-v4-history__row activity-v4-history__row--action'
+            + ' activity-v4-history__row--last',
           onClick: () => setMonthOpen((v) => !v),
           'aria-expanded': monthOpen
         },
-          React.createElement('span', { className: 'activity-v4-history__month-label' }, 'Тренировки за месяц'),
-          React.createElement('span', { className: 'activity-v4-history__month-value' }, monthCount + ' \u203A')
+          React.createElement('span', { className: 'activity-v4-history__name' }, 'Тренировки за месяц'),
+          React.createElement('span', { className: 'activity-v4-history__delta' }, monthCount + ' \u203A')
         ),
         monthOpen && monthCount > 0 && React.createElement('div', { className: 'activity-v4-history__month-list month-trainings-list' },
           monthTrainingsRows.map((row, ri) => React.createElement('div', {

@@ -1108,7 +1108,10 @@ describe('Рабочие веса · строка истории', () => {
       },
       actions: {},
     }));
-    const row = document.querySelector('.activity-v4-history__row');
+    // Строка весов — та, у которой есть состав: первой в ярусе теперь стоит
+    // «Зарядка · N из M», за ней прячется календарь (контракт строка 24).
+    const row = [...document.querySelectorAll('.activity-v4-history__row')]
+      .find((el) => el.querySelector('.activity-v4-history__sub'));
     if (!row) return null;
     return {
       name: row.querySelector('.activity-v4-history__name').textContent,
@@ -1346,9 +1349,21 @@ describe('Лист действия и пустая «История»', () => {
   });
 
   it('появился один день привычки — история показывает себя, а не прозу', () => {
-    renderTab({ chargeTrackedDays: 1 });
-    expect(screen.getByText('календарь')).toBeTruthy();
+    renderTab({ chargeTrackedDays: 1, chargeDoneDays: 1 });
+    // Первый слой — строка со счётом; сам календарь стоит за ней
+    // (контракт «вид · ярус История», строка 24).
+    expect(screen.getByText('Зарядка · 1 из 1')).toBeTruthy();
+    expect(screen.queryByText('календарь')).toBeNull();
     expect(screen.queryByText('История начнётся с первой отметки')).toBeNull();
+  });
+
+  it('строка «Зарядка» открывает календарь вторым слоем', () => {
+    renderTab({ chargeTrackedDays: 24, chargeDoneDays: 18 });
+    const row = screen.getByText('Зарядка · 18 из 24').closest('button');
+    expect(row.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(row);
+    expect(screen.getByText('календарь')).toBeTruthy();
+    expect(row.getAttribute('aria-expanded')).toBe('true');
   });
 
   it('тренировка за месяц тоже снимает пустоту', () => {
