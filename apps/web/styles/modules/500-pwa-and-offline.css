@@ -1355,6 +1355,38 @@
   margin-top: 12px;
 }
 
+.mc-rest-card--coffee {
+  margin-top: 12px;
+}
+
+/* Подпись порога справа от заголовка: тон приглушённый, а не зелёный, как у
+   серии холодного душа, — она напоминает правило, а не хвалит за серию. */
+.mc-rest-coffee-note {
+  font: 500 11px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  white-space: nowrap;
+  flex: none;
+}
+
+/* На 375 четыре пилюли встают в один ряд, но контракт «Чек-ин · остальное · 16»
+   держит перенос и минимальную ширину 64 — на узком экране или крупном шрифте
+   ряд ломается, а не сжимает пилюли ниже читаемого. */
+.mc-rest-coffee-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 11px;
+}
+
+.mc-rest-coffee-actions .mc-pill {
+  min-width: 64px;
+  padding: 0 8px;
+}
+
+.mc-rest-coffee-why {
+  margin-top: 10px;
+}
+
 .mc-rest-routine-actions {
   display: flex;
   gap: 8px;

@@ -17,6 +17,10 @@
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.Widgets = HEYS.Widgets || {};
 
+  // Порог кофеина «Готовности ко сну»: восемь часов до отбоя. То же число
+  // держит разбор виджета (BD_CAFFEINE_LEAD_MIN).
+  const CAFFEINE_LEAD_MIN = 8 * 60;
+
   // === DEMO DATA для WidgetsTour ===
   // Реалистичные данные для демонстрации возможностей виджетов
   const DEMO_WIDGET_DATA = {
@@ -1064,10 +1068,32 @@
         ? { hasData: true, done: stepsData.steps / stepsGoal >= 1, value: stepsData.steps, goal: stepsGoal }
         : { hasData: false, done: false, value: stepsData?.steps ?? null, goal: stepsGoal || null };
 
+      // Кофеин: ответ из чек-ина, порог «за 8 часов до отбоя». Отбой берём тот
+      // же, что у «Еды до сна», — второго отбоя в виджете нет. Границы «до
+      // 12:00» и «после 17» считаем по числу, названному на самой пилюле;
+      // своё время идёт как есть. Не ответил — пункта в счётчике нет.
+      const coffeeMinutes = HEYS.Steps?.getLastCoffeeMinutes?.(day);
+      // Отбой после полуночи лежит на оси следующих суток — иначе кофе в
+      // восемь утра оказался бы «позже» отбоя в час ночи.
+      const bedForCoffee = Number.isFinite(coffeeMinutes) && sleepWindow.bedtime < coffeeMinutes
+        ? sleepWindow.bedtime + 24 * 60
+        : sleepWindow.bedtime;
+      const caffeine = coffeeMinutes === undefined
+        ? { hasData: false, done: false, value: null, goal: sleepWindow.bedtime }
+        : coffeeMinutes === null
+          ? { hasData: true, done: true, value: null, goal: sleepWindow.bedtime }
+          : {
+            hasData: true,
+            done: bedForCoffee - coffeeMinutes >= CAFFEINE_LEAD_MIN,
+            value: coffeeMinutes,
+            goal: sleepWindow.bedtime
+          };
+
       const items = [
         Object.assign({ key: 'water', label: 'Вода' }, water),
         Object.assign({ key: 'food', label: 'Еда до сна' }, food),
-        Object.assign({ key: 'steps', label: 'Шаги' }, steps)
+        Object.assign({ key: 'steps', label: 'Шаги' }, steps),
+        Object.assign({ key: 'caffeine', label: 'Кофеин' }, caffeine)
       ];
       // Пункт без данных выпадает из счётчика: «1 из 2», а не ноль в счёт.
       const counted = items.filter((item) => item.hasData);

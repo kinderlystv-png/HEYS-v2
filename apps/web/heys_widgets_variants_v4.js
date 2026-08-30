@@ -1767,8 +1767,9 @@
   const BD_CAFFEINE_LEAD_MIN = 8 * 60;
   const BD_FOOD_LEAD_MIN = 3 * 60;
 
-  // Закрытые пункты одного дня. Кофеин остаётся null, пока его негде отметить:
-  // ноль в счёт означал бы «пункт открыт», а мы про него ничего не знаем.
+  // Закрытые пункты одного дня. Кофеин остаётся null, пока на него не ответили
+  // в чек-ине: ноль в счёт означал бы «пункт открыт», а мы про него ничего не
+  // знаем.
   function bdSleepReadyDay(day, profile, pIndex) {
     const out = { water: null, food: null, steps: null, caffeine: null };
     const waterGoal = Number(profile?.waterGoalMl) || Number(profile?.waterGoal) || 0;
@@ -1785,6 +1786,17 @@
       const last = Math.max(...times);
       const bedOnAxis = bed < last ? bed + 24 * 60 : bed;
       out.food = bedOnAxis - last >= BD_FOOD_LEAD_MIN;
+    }
+
+    // Отбой без ответа — 23:00, как у плитки: «нет данных» у кофеина означает
+    // «не ответил про кофе», и подменять этим неизвестный отбой нельзя, иначе
+    // плитка и разбор скажут о том же дне разное.
+    const coffee = HEYS.Steps?.getLastCoffeeMinutes?.(day);
+    if (coffee === null) out.caffeine = true;
+    else if (Number.isFinite(coffee)) {
+      const bedForCoffee = Number.isFinite(bed) ? bed : 23 * 60;
+      const bedOnAxis = bedForCoffee < coffee ? bedForCoffee + 24 * 60 : bedForCoffee;
+      out.caffeine = bedOnAxis - coffee >= BD_CAFFEINE_LEAD_MIN;
     }
     return out;
   }

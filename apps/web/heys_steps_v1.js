@@ -796,6 +796,34 @@
 
   const MORNING_ACTIVATION_CHECKIN_STATUSES = new Set(['done', 'planned', 'skipped']);
 
+  // Последний кофе шага «Остальное». Три варианта отвечают границей, названной
+  // на самой пилюле, четвёртый — своим временем; порог читает виджет
+  // «Готовность ко сну», второго алгоритма нет.
+  const MORNING_COFFEE_CHOICES = ['before12', 'exact', 'after17', 'none'];
+
+  /**
+   * Минута последнего кофе из ответа чек-ина — одно чтение поля на всех, кто
+   * считает порог. `null` — не пил, `undefined` — не отвечал: ноль здесь
+   * означал бы полночь, а не отсутствие ответа.
+   * Бакеты отвечают числом, названным на самой пилюле: «до 12:00» — 12:00,
+   * «после 17» — 17:00. Кому важна минута, тот выбирает своё время.
+   */
+  function getLastCoffeeMinutes(dayData) {
+    const coffee = dayData && dayData.lastCoffee;
+    if (!coffee) return undefined;
+    if (coffee.choice === 'none') return null;
+    if (coffee.choice === 'before12') return 12 * 60;
+    if (coffee.choice === 'after17') return 17 * 60;
+    if (coffee.choice === 'exact') {
+      const parts = String(coffee.time || '').split(':');
+      const hours = Number(parts[0]);
+      const minutes = Number(parts[1]);
+      if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return undefined;
+      return hours * 60 + minutes;
+    }
+    return undefined;
+  }
+
   function isMorningActivationCheckinStatus(status) {
     return MORNING_ACTIVATION_CHECKIN_STATUSES.has(status);
   }
@@ -6761,6 +6789,32 @@
     const setColdClock = (hours, minutes) => {
       onChange({ ...data, coldTime: `${pad2(hours)}:${pad2(minutes)}` });
     };
+
+    // Последний кофе: четыре варианта, из них один со своим временем. Шаг
+    // проходится без ответа — тогда пункт кофеина в «Готовности ко сну»
+    // остаётся без данных и в счётчик не идёт (контракт «кофе не обязателен»).
+    const coffeeChoice = data.coffeeChoice || null;
+    const coffeeFocus = data.coffeeOpen === true;
+    const coffeeClock = parseColdTime(data.coffeeTime || nowTime());
+    const setCoffeeChoice = (choice) => {
+      onChange({ ...data, coffeeChoice: choice, coffeeOpen: false, coffeeTime: null });
+    };
+    const openCoffeeLayer = () => {
+      onChange({
+        ...data,
+        coffeeChoice: 'exact',
+        coffeeTime: data.coffeeTime || nowTime(),
+        coffeeOpen: true,
+        coldOpen: false,
+        measurementsOpen: false
+      });
+    };
+    const setCoffeeClock = (hours, minutes) => {
+      onChange({ ...data, coffeeTime: `${pad2(hours)}:${pad2(minutes)}` });
+    };
+    const clearCoffeeMark = () => {
+      onChange({ ...data, coffeeChoice: null, coffeeTime: null, coffeeOpen: false });
+    };
     const TimePicker = HEYS.StepModal?.TimePicker;
 
     const lastMeasurements = (HEYS.Steps && typeof HEYS.Steps.getLastMeasurements === 'function')
@@ -6928,6 +6982,40 @@
       );
     }
 
+    if (coffeeFocus) {
+      return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer' },
+        React.createElement('div', { className: 'mc-rest-cold' },
+          React.createElement('div', { className: 'mc-rest-cold-head' },
+            React.createElement('div', { className: 'mc-rest-cold-title' }, 'Последний кофе'),
+            React.createElement('div', { className: 'mc-rest-coffee-note' }, 'до отбоя 8 ч')
+          ),
+          React.createElement('div', { className: 'mc-rest-cold-hint' },
+            'Во сколько была последняя чашка — считаем от неё до отбоя.'
+          ),
+          React.createElement('div', { className: 'mc-rest-cold-time' },
+            React.createElement('div', { className: 'mc-sleep-label mc-rest-cold-when-label' }, 'Когда'),
+            TimePicker && React.createElement(TimePicker, {
+              hours: coffeeClock.hours,
+              minutes: coffeeClock.minutes,
+              onHoursChange: (hours) => setCoffeeClock(hours, coffeeClock.minutes),
+              onMinutesChange: (minutes) => setCoffeeClock(coffeeClock.hours, minutes),
+              onTimeChange: setCoffeeClock,
+              hoursLabel: '',
+              minutesLabel: '',
+              display: null,
+              linkedScroll: true,
+              compact: true,
+              className: 'mc-rest-cold-clock'
+            })
+          )
+        ),
+        renderClearMark(clearCoffeeMark),
+        React.createElement('div', {
+          className: 'mc-recorded-hint mc-rest-clear-mark-hint'
+        }, 'Кофе можно не отмечать — тогда пункт «Готовность ко сну» просто останется без данных.')
+      );
+    }
+
     if (coldFocus) {
       return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer' },
         React.createElement('div', { className: 'mc-rest-cold' },
@@ -7026,6 +7114,33 @@
       )
     );
 
+    // Кадр «Чек-ин · остальное»: блок стоит первым из редких — до добавок и
+    // рутины. Форма карточки — общая для шага (радиус 20, поля 16/17), как у
+    // добавок и рутины: кадр рисует вторую форму, но контракт «вид карточки
+    // шага» старше кадра (см. .mc-rest-card в 500-pwa-and-offline.css).
+    const coffeeCard = React.createElement('div', { className: 'mc-rest-card mc-rest-card--coffee' },
+      React.createElement('div', { className: 'mc-rest-cold-head' },
+        React.createElement('div', { className: 'mc-rest-card-title' }, 'Последний кофе'),
+        React.createElement('div', { className: 'mc-rest-coffee-note' }, 'до отбоя 8 ч')
+      ),
+      React.createElement('div', { className: 'mc-rest-coffee-actions' },
+        [
+          { id: 'before12', label: 'до 12:00' },
+          { id: 'exact', label: data.coffeeTime ? String(data.coffeeTime).slice(0, 5) : 'своё время' },
+          { id: 'after17', label: 'после 17' },
+          { id: 'none', label: 'не пил' }
+        ].map((row) => React.createElement('button', {
+          key: row.id,
+          type: 'button',
+          className: 'mc-pill mc-pill--choice' + (coffeeChoice === row.id ? ' is-on' : ''),
+          onClick: row.id === 'exact' ? openCoffeeLayer : () => setCoffeeChoice(row.id)
+        }, row.label))
+      ),
+      React.createElement('div', { className: 'mc-rest-card-hint mc-rest-coffee-why' },
+        'Нужно для пункта «Готовность ко сну»: кофе позже восьми часов до отбоя мешает сну. Точное время — тапом по «своё время».'
+      )
+    );
+
     const measurementsDeferred = cycleWeekTop;
     const measurementsNode = showMeasurements && (measurementsDeferred
       ? React.createElement('div', {
@@ -7063,6 +7178,7 @@
       className: 'mc-rest-step' + (cycleWeekTop ? ' mc-rest-step--cycle-week' : '')
     },
       cycleWeekTop ? cycleRow : coldCard,
+      coffeeCard,
       showSupplementsCard && React.createElement('div', { className: 'mc-rest-card mc-rest-card--supplements' },
         React.createElement('button', {
           type: 'button',
@@ -7154,7 +7270,7 @@
     canSkip: false,
     nextLabel: 'Готово',
     component: MorningRestStepComponent,
-    showHeaderBack: (data) => !!(data && (data.coldOpen === true || data.measurementsOpen === true || data.supplementsOpen === true)),
+    showHeaderBack: (data) => !!(data && (data.coldOpen === true || data.coffeeOpen === true || data.measurementsOpen === true || data.supplementsOpen === true)),
     hideProgressDots: (data) => !!(data && data.supplementsOpen === true),
     headerCaption: (data) => {
       if (!data?.supplementsOpen) return null;
@@ -7196,6 +7312,7 @@
       }
       next.measurementsOpen = false;
       next.coldOpen = false;
+      next.coffeeOpen = false;
       return next;
     },
     getInitialData: (context) => {
@@ -7212,6 +7329,7 @@
         : true;
       const planned = supplementsConsentOn ? (HEYS.Supplements?.getPlanned?.() || []) : [];
       const cold = dayData.coldExposure || {};
+      const coffee = dayData.lastCoffee || {};
       const maState = normalizeMorningActivationState(dateKey, dayData);
       const routineStatus = isMorningActivationCheckinStatus(maState.status) ? maState.status : null;
       const cycleDayValue = Number(dayData.cycleDay);
@@ -7226,6 +7344,9 @@
         coldTime: cold.time || null,
         coldPicked: !!cold.type,
         coldOpen: false,
+        coffeeChoice: MORNING_COFFEE_CHOICES.includes(coffee.choice) ? coffee.choice : null,
+        coffeeTime: coffee.choice === 'exact' && coffee.time ? coffee.time : null,
+        coffeeOpen: false,
         cycleDay,
         cycleOpen: false,
         cycleEndedOnDay: Number.isFinite(Number(dayData.cycleEndedOnDay)) ? Number(dayData.cycleEndedOnDay) : null,
@@ -7254,6 +7375,19 @@
         time: data.coldType && data.coldType !== 'none' ? (data.coldTime || new Date().toTimeString().slice(0, 5)) : null,
         answeredAt: Date.now()
       };
+      // Без ответа поле не заводим и старое убираем: «нет данных» у пункта
+      // кофеина — это отсутствие записи, а не отдельное значение.
+      const coffeeAnswered = MORNING_COFFEE_CHOICES.includes(data.coffeeChoice)
+        && (data.coffeeChoice !== 'exact' || !!data.coffeeTime);
+      if (coffeeAnswered) {
+        dayData.lastCoffee = {
+          choice: data.coffeeChoice,
+          time: data.coffeeChoice === 'exact' ? data.coffeeTime : null,
+          answeredAt: Date.now()
+        };
+      } else if (dayData.lastCoffee) {
+        delete dayData.lastCoffee;
+      }
       if (Array.isArray(data.selected)) {
         dayData.supplementsPlanned = data.selected;
         dayData.supplementsPlannedUpdatedAt = Date.now();
@@ -7430,6 +7564,8 @@
     MorningRoutine: MorningRoutineStepComponent,  // 🌟 Мотивирующий финал
     getLastMeasurementByField,
     getMeasurementsHistory,
+    getLastCoffeeMinutes,
+    MORNING_COFFEE_CHOICES,
     // Утилиты
     getLastKnownWeight,
     getYesterdayWeight,

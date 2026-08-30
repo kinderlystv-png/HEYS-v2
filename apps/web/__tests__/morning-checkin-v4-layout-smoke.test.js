@@ -168,7 +168,8 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(STEPS_SRC).toContain("mc-pill--choice");
     expect(STEPS_SRC).toContain('openColdLayer');
     expect(STEPS_SRC).toContain("mc-rest-step--layer");
-    expect(STEPS_SRC).toContain('showHeaderBack: (data) => !!(data && (data.coldOpen === true || data.measurementsOpen === true || data.supplementsOpen === true))');
+    // Каждый лист шага — со стрелкой назад: холод, кофе, замеры, добавки.
+    expect(STEPS_SRC).toContain('showHeaderBack: (data) => !!(data && (data.coldOpen === true || data.coffeeOpen === true || data.measurementsOpen === true || data.supplementsOpen === true))');
     expect(STEPS_SRC).toContain('applyHeaderBack:');
     expect(STEPS_SRC).toContain('mc-rest-cold-head');
     expect(STEPS_SRC).toContain('mc-rest-cold-streak');

@@ -21316,7 +21316,7 @@
         },
         "прокрутка на неделе периода": {
           "v": "=",
-          "f": "mc-rest-step--cycle-week { padding-bottom: 70px } даёт дополнительную прокрутку шага на днях 1–7 — heys_steps_v1.js, 500-pwa-and-offline.css. Запас 29 px вместо 181 — следствие блока «Последний кофе» (§8 протокола), механика прокрутки не менялась",
+          "f": "mc-rest-step--cycle-week { padding-bottom: 70px } даёт дополнительную прокрутку шага на днях 1–7 — heys_steps_v1.js, 500-pwa-and-offline.css. Запас 29 px вместо 181 — следствие блока «Последний кофе» (§8 MORNING_CHECKIN_V4_PROTOCOL.md), механика прокрутки не менялась",
           "h": "1e555518aaf7"
         },
         "доступность · период в стопке": {
@@ -21331,12 +21331,12 @@
         },
         "последний кофе": {
           "v": "=",
-          "f": "heys_steps_v1.js — coffeeCard в MorningRestStepComponent: четыре пилюли, подпись «до отбоя 8 ч», строка «зачем спрашиваем»; блок первый из редких, до добавок и рутины. Подпись средней пилюли до ответа — «своё время» (кадр даёт только выбранное состояние), см. §8 MORNING_CHECKIN_V4_PROTOCOL.md",
+          "f": "heys_steps_v1.js — coffeeCard в MorningRestStepComponent: четыре пилюли, подпись «до отбоя 8 ч», строка «зачем спрашиваем»; блок первый из редких, до добавок и рутины. Подпись средней пилюли до ответа — «своё время» (кадр даёт только выбранное состояние), запись в UI_V4_FINDINGS.md",
           "h": "d34d325e4204"
         },
         "кофе не обязателен": {
           "v": "=",
-          "f": "widgets/widget_data.js getSleepReadyData — пункт caffeine с hasData:false при отсутствии day.lastCoffee, счётчик считает только пункты с данными; heys_steps_v1.js save() удаляет поле при снятии ответа. Смоук checkin-last-coffee-v4.test.js",
+          "f": "widgets/widget_data.js getSleepReadyData — пункт caffeine с hasData:false без day.lastCoffee, счётчик берёт только пункты с данными; heys_steps_v1.js save() удаляет поле при снятии ответа. Смоук checkin-last-coffee-v4.test.js",
           "h": "541d8abc5c98"
         }
       }

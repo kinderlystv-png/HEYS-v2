@@ -5943,6 +5943,12 @@
     }
     if (item.key === 'water') return `${formatLitersRu(item.value)} из ${formatRuUnit(formatLitersRu(item.goal), 'л')}`;
     if (item.key === 'food') return `окно ${formatHoursWords(item.value)}`;
+    // Кофеин отвечает временем, а не числом: «не пил» — ответ, а не пустота.
+    if (item.key === 'caffeine') {
+      if (item.value == null) return 'не пил';
+      const h = Math.floor(item.value / 60);
+      return `в ${String(h).padStart(2, '0')}:${String(item.value % 60).padStart(2, '0')}`;
+    }
     return `${formatRuThousands(item.value)} из ${formatRuThousands(item.goal)}`;
   }
 
