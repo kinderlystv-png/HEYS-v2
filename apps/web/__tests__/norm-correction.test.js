@@ -395,6 +395,26 @@ describe('поправка на факт · модель кураторской 
     expect(card.recommendation.norm).toBe(card.recommendation.currentNorm);
   });
 
+  it('клиент видит основания решения, а не только результат', () => {
+    // Контракт требует два числа в обоих тарифах: на Self в кадре «снижение
+    // ждёт согласия», на Pro в блоке «Что он смотрит».
+    const result = ready();
+    for (const tariff of ['self', 'pro']) {
+      const card = NC.buildWeeklySyncCard({ result, tariff, expenditure: 2400, deficitPct: -12 });
+      expect(card.evidenceRows.map((r) => r.label), tariff)
+        .toEqual(['Формула говорит', 'Факт говорит']);
+      expect(card.evidenceRows[0].value, tariff).toBe(2400);
+      expect(card.evidenceRows[1].value, tariff).toBe(result.factPerDay);
+    }
+
+    // Нечего показывать — строк нет, а не нули.
+    const cold = NC.buildWeeklySyncCard({
+      result: NC.compute({ days: [], formulaPerDay: 2400, trend: {}, historyDays: 3 }),
+      tariff: 'self', expenditure: 2400, deficitPct: -12
+    });
+    expect(cold.evidenceRows).toBeNull();
+  });
+
   it('точка недели в истории стоит по шкале, а не «примерно»', () => {
     const card = NC.buildCuratorCard({
       result: ready(), expenditure: 2400, deficitPct: -12,

@@ -517,6 +517,21 @@
                     ))
                 )
                 : null,
+            // Два числа расхождения — то, на чём стоит решение. Без них
+            // карточка сообщала результат и просила согласия, не показав
+            // основания: «норма снизилась» без «формула говорит одно, факт
+            // другое» — это просьба поверить на слово.
+            card.evidenceRows
+                ? h('div', { className: 'weekly-wrap-correction__facts' },
+                    card.evidenceRows.map((f) => h('div', {
+                        className: 'weekly-wrap-correction__fact', key: f.label
+                    },
+                        h('span', { className: 'weekly-wrap-correction__fact-label' }, f.label),
+                        h('span', { className: 'weekly-wrap-correction__fact-value' },
+                            HEYS.NormCorrection.formatKcal(f.value))
+                    ))
+                )
+                : null,
             // Довода перестройки не было — так и сказано. Молчание здесь
             // контракт называет дефектом, а не отсутствием кадра.
             copy.evidenceNote

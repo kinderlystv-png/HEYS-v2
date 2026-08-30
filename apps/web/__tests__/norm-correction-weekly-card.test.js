@@ -106,3 +106,16 @@ describe('поправка на факт · карточка сверки в ш�
     expect(block).toMatch(/is-down \{[^}]*--v4-bad-text/);
   });
 });
+
+describe('поправка · основания решения у клиента', () => {
+  it('карточка рисует два числа расхождения, а не только результат', () => {
+    // Без них карточка сообщала результат и просила согласия, не показав
+    // основания. Сами числа проверяются в norm-correction.test.js.
+    expect(SRC).toContain('card.evidenceRows');
+    expect(SRC).toContain("className: 'weekly-wrap-correction__facts'");
+    // Стоят выше кнопок: основание читается до решения, а не после.
+    expect(SRC.indexOf('card.evidenceRows'))
+      .toBeLessThan(SRC.indexOf("weekly-wrap-correction__actions"));
+    expect(CSS).toContain('.weekly-wrap-correction__facts');
+  });
+});
