@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { auditColour, flush as auditFlush } from './role-purpose-audit.mjs';
+
 // Разборщик раздела канваса «Разбор кадров · элемент за элементом»: строки
 // разбора читаются из самого канваса, правила — из продуктового CSS, и пара
 // «элемент кадра → правило продукта» сверяется по названным свойствам.
@@ -255,11 +257,22 @@ function compare({ razbor, rules, frame, pairs }) {
       const want = norm(PICK[kind](value), rules.localVars);
       if (want == null) { drift.push(`${frame} · ${index}: в кадре нет «${kind}»`); continue; }
       const got = norm(merged[CSSPROP[kind]], rules.localVars);
+      // Пара сошлась по песочному значению — это ещё не значит, что взята та
+      // роль: 94 пары ролей в наборе совпадают в песочной и расходятся дальше.
+      // Аудит включается переменной HEYS_ROLE_PURPOSE_AUDIT и ничего не роняет.
+      if (want === got && (kind === 'background' || kind === 'color')) {
+        auditColour({
+          frame, index, selector: chain[chain.length - 1], kind,
+          frameValue: PICK[kind](value), codeValue: merged[CSSPROP[kind]],
+          localVars: rules.localVars, rules, cssProp: CSSPROP[kind]
+        });
+      }
       if (want !== got) {
         drift.push(`${chain[chain.length - 1]} { ${CSSPROP[kind]} } — кадр: ${want} · код: ${got}`);
       }
     }
   }
+  auditFlush();
   return drift;
 }
 
