@@ -2358,7 +2358,9 @@
         return taken ? 'занято ' + taken + ' ' + pluralSeats(taken) : 'мест пока не знаем';
       }
       const free = Math.max(0, max - taken);
-      return free ? 'свободно ' + free + ' ' + pluralSeats(free) : 'свободных мест нет';
+      // «свободно 3 из 3» — и сколько можно взять, и каков предел: одно число
+      // без второго заставляет держать предел в голове.
+      return free ? 'свободно ' + free + ' из ' + max : 'свободных мест нет';
     }
 
     function pluralSeats(n) {
