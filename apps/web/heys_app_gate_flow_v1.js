@@ -800,7 +800,7 @@
         },
             React.createElement('span', { className: 'cur-cab__menu-label' }, label),
             React.createElement('span', { className: 'cur-cab__menu-hint' },
-                tone === 'bad' ? 'удалить' : 'открыть')
+                tone === 'bad' ? 'запросить' : 'открыть')
         );
 
         return React.createElement(React.Fragment, null,
@@ -1245,8 +1245,8 @@
                 // Подпись формы, а не предупреждение: замок 🔒 на холодной
                 // плашке читался тревогой там, где просто объясняют вход.
                 React.createElement('div', { className: 'cur-cab__tab-note' },
-                    'Клиент будет входить по этому телефону и PIN-коду. '
-                    + 'Сохраните их — второй раз PIN не показывается.'),
+                    'Клиент войдёт по этому телефону и PIN-коду. '
+                    + 'Сохраните их — второй раз показать не сможем.'),
                 accessResult && React.createElement('div', {
                     style: { display: 'grid', gap: 8, padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' }
                 },
@@ -1533,7 +1533,7 @@
                     React.createElement('div', { className: 'cur-panel__empty-title' },
                         'Подтверждать нечего'),
                     React.createElement('div', { className: 'cur-panel__empty-note' },
-                        'Клиенты не присылали продуктов, которых нет в общей базе. '
+                        'Клиенты не присылали правок, которые нужно смотреть. '
                         + 'Новая заявка появится здесь.')
                 ),
                 // Ярус ведёт в соседние вкладки. Чисел у него нет: счёт очереди
@@ -1543,7 +1543,7 @@
                     React.createElement('div', { className: 'cur-group__title' },
                         'Где ещё есть работа'),
                     React.createElement('div', { className: 'cur-group__card' },
-                        [['queue', 'Очередь и анкеты'], ['panel', 'Панель состояний']]
+                        [['queue', 'Очередь · анкеты'], ['panel', 'Панель · ждут решения']]
                             .map(([key, label]) => React.createElement('button', {
                                 key,
                                 type: 'button',

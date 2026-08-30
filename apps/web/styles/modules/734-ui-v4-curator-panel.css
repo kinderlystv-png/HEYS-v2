@@ -791,7 +791,11 @@
   border-radius: 999px;
   background: var(--v4-hero, #efe3cf);
   color: var(--v4-act-text, #8a4a20);
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1;
   cursor: pointer;
 }
@@ -881,6 +885,7 @@
   border-radius: 8px;
   font-size: 11px;
   font-weight: 600;
+  line-height: 1;
   white-space: nowrap;
   /* Нейтральная величина без нормы — вес: у него нет «хорошо» и «плохо». */
   background: var(--v4-hero, #efe3cf);
@@ -950,6 +955,7 @@
  * перекраски. Прежние пять карточек столбиком занимали два экрана прокрутки.
  */
 .cdo-metrics {
+  margin-top: 10px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
@@ -967,15 +973,18 @@
 }
 
 .cdo-metric strong {
+  letter-spacing: -0.01em;
   display: block;
   font-size: 20px;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1;
   color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
 
 .cdo-metric span {
+  margin-top: 5px;
+  line-height: 1.3;
   font-size: 10.5px;
   font-weight: 600;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
@@ -1169,10 +1178,21 @@
   border-radius: 999px;
   background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #fff5ef);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+}
+
+/* В служебном листе кнопка крупнее: 48 и 13 px против 44 и 12,5 в карточке.
+   Кадры так и рисуют — в списке кнопка одна из многих, в листе она итог
+   разговора, и рука идёт к ней не глядя. */
+.cur-cab__sheet-body .cur-cab__open {
+  min-height: 48px;
+  font-size: 13px;
 }
 
 /* Заголовок вкладки внутри содержимого: шапка кабинета одна на все пять
@@ -1211,7 +1231,7 @@
    куратор и так пришёл делать, а не то, к чему его надо подтолкнуть. */
 .cur-cab__open.is-soft {
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-act-text, #8a4a20);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.58));
 }
 
 /* Отклонение — круг 32 тоном «разрушающее действие». Прежде это был красный
@@ -1261,12 +1281,14 @@
 
 .cur-kv {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 40px;
-  padding: 9px 0;
+  padding: 13px 0;
   border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .cur-kv:last-child {
@@ -1432,13 +1454,16 @@
 /* Поле формы: подпись над полем, поле 44 радиусом 14 на грунте набора.
    Прежде подпись была 13 px тоном #374151, а поле — белым с рамкой #d1d5db:
    всё мимо набора. */
+/* Отступы полей — свои у подписи и у поля, как в кадре: общий зазор
+   контейнера уравнял бы расстояние над подписью и под ней. */
 .cur-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: block;
 }
 
 .cur-field__label {
+  display: block;
+  margin-top: 14px;
+  line-height: 1;
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -1449,9 +1474,13 @@
 /* Поле без рамки: в кадре оно отличается от листа заливкой, а не контуром —
    рамка вокруг заливки обводит то, что и так видно. */
 .cur-field__input {
+  display: flex;
+  align-items: center;
   width: 100%;
   min-height: 44px;
+  margin-top: 7px;
   padding: 0 14px;
+  line-height: 1;
   border: none;
   border-radius: 14px;
   background: var(--v4-surface, #fbf6ee);
@@ -1476,14 +1505,20 @@
 /* Создание клиента — вторичная кнопка набора: действие редкое и не должно
    весить больше, чем «Открыть дневник» в карточках над ним. Прежде это была
    голубая пунктирная плашка с ➕ и синим текстом. */
+/* Вторичная кнопка набора: подложка и тон чернил, а не акцентный коричневый.
+   Акцентный тон на подложке читается вторым главным действием — в кадре у
+   неё именно приглушённый текст. */
 .cur-cab__create {
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   border: none;
   border-radius: 999px;
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-act-text, #8a4a20);
-  font-size: 12.5px;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.58));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;

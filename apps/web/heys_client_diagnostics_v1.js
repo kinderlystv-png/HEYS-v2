@@ -446,10 +446,10 @@
       // в лист: это доля от посещений, а не четвёртое независимое число, и
       // рядом с ними читалось как ещё один счёт.
       h('div', { className: 'cdo-metrics' },
-        metric('Активных клиентов', summary.active_clients),
-        metric('Посещений', summary.visits || summary.launches),
-        metric('Сбои', summary.failed, 'failed', 'bad'),
-        metric('Отклонения', Number(summary.degraded || 0) + Number(summary.abandoned || 0), 'problems', 'warn')
+        metric('активных клиентов', summary.active_clients),
+        metric('посещений', summary.visits || summary.launches),
+        metric('сбоев', summary.failed, 'failed', 'bad'),
+        metric('отклонений', Number(summary.degraded || 0) + Number(summary.abandoned || 0), 'problems', 'warn')
       ),
       h('div', { className: 'cdo-list' },
         h('div', { className: 'cdo-list-row' },
