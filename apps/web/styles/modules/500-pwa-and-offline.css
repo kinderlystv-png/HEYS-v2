@@ -5893,10 +5893,14 @@
   min-width: 0;
 }
 
+/* Цвета листа — ролями набора, а не их значениями. Стояли литералы, равные
+   песочным ролям (#201e1d, #8a4a20, #c67139): в песочном светлом они верны, а в
+   любом тёмном лист переставал следовать набору — чернила оставались почти
+   чёрными на тёмном фоне. Роль сама меняется вместе с набором, значение — нет. */
 .ca-modal__header-title {
   font-size: 15.5px;
   font-weight: 700;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   line-height: 1.3;
   text-wrap: pretty;
 }
@@ -5977,7 +5981,7 @@
   line-height: 1;
   font-variant-numeric: tabular-nums;
   /* Акцент дельты — палитровый; base = sand light canvas `.ghv`. */
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .ca-modal__items {
@@ -6027,7 +6031,7 @@
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.4;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   text-wrap: pretty;
 }
 
@@ -6080,7 +6084,7 @@
 
 .ca-modal__meal-divider {
   height: 1px;
-  background: rgba(0, 0, 0, 0.07);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
   margin: 9px 0;
 }
 
@@ -6108,7 +6112,7 @@
   font-size: 11px;
   font-weight: 700;
   /* Единственная цветная ссылка в теле листа (canvas `.ghv` «и ещё…»). */
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   text-align: left;
 }
@@ -6138,7 +6142,7 @@
   line-height: 1;
   white-space: nowrap;
   /* Тот же акцент, что у дельты даты; base = sand light canvas `.ghv`. */
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* Закрывающая строка раскрытой группы: «и ещё 9 правок приёмов» —
@@ -6203,7 +6207,7 @@
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .ca-modal__repeat-kcal {
@@ -6212,7 +6216,7 @@
   font-size: 11px;
   font-weight: 700;
   line-height: 1.3;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .ca-modal__repeat-members {
@@ -6256,8 +6260,10 @@
 
 .ca-modal__ack-btn {
   flex: 1;
-  background: #c67139;
-  color: var(--v4-act-ink, #2b1608);
+  background: var(--v4-act, #c67139);
+  /* Роль объявлена как --v4-btn-on-act; --v4-act-ink в наборе нет вовсе, и
+     кнопка держалась запасным значением — в тёмном наборе текст не темнел. */
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 .ca-modal__later-btn:active,
@@ -6328,7 +6334,7 @@
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: #c67139;
+  background: var(--v4-act, #c67139);
   box-shadow: 0 0 0 2px var(--v4-bg, #fffaf1);
   pointer-events: none;
 }
