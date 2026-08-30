@@ -1365,7 +1365,7 @@
     }
 
     // Таб модерации — загружает полный список, показывает имя клиента, approve/reject
-    function ModerationTab({ clients }) {
+    function ModerationTab({ clients, setCuratorTab }) {
         const [pending, setPending] = React.useState([]);
         const [loading, setLoading] = React.useState(true);
         // Bulk approve: null когда idle, объект { total, done } во время обработки.
@@ -1535,15 +1535,43 @@
         }
 
         if (pending.length === 0) {
-            // Контракт «вид · пустые состояния кабинета»: иллюстраций во весь
-            // экран — зелёной галочки — нет. Она сообщала «молодец», хотя
-            // сообщать надо состояние: очередь пуста, делать нечего.
+            // Кадр «Заявки · пусто». Иллюстраций во весь экран — зелёной
+            // галочки — нет: она сообщала «молодец», хотя сообщать надо
+            // состояние. Пустота залита тоном «идёт хорошо» и ведёт туда,
+            // где работа есть: пустой экран обязан отвечать на «куда дальше».
+            //
+            // Кадр обещает «придёт уведомлением» — этого в продукте нет:
+            // пуша о новой заявке не существует ни в одной функции. Обещание
+            // из текста снято, расхождение записано в UI_V4_FINDINGS.
             return React.createElement('div', { className: 'cur-panel' },
-                React.createElement('div', { className: 'cur-panel__empty' },
-                    React.createElement('div', { className: 'cur-panel__empty-title' }, 'Заявок на модерацию нет'),
+                React.createElement('div', { className: 'cur-cab__tab-head' },
+                    React.createElement('div', { className: 'cur-cab__tab-title' }, 'Заявки'),
+                    React.createElement('div', { className: 'cur-cab__tab-note' },
+                        'правки клиентов, требующие подтверждения')
+                ),
+                React.createElement('div', { className: 'cur-panel__empty cur-panel__empty--ok' },
+                    React.createElement('div', { className: 'cur-panel__empty-title' },
+                        'Подтверждать нечего'),
                     React.createElement('div', { className: 'cur-panel__empty-note' },
-                        'Клиенты присылают продукты, которых нет в общей базе. Как только пришлют — они появятся здесь.')
-                )
+                        'Клиенты не присылали продуктов, которых нет в общей базе. '
+                        + 'Новая заявка появится здесь.')
+                ),
+                // Ярус ведёт в соседние вкладки. Чисел у него нет: счёт очереди
+                // и панели живёт внутри их модулей, и тянуть его сюда значило бы
+                // завести третий запрос ради двух строк. Отступление от кадра.
+                setCuratorTab ? React.createElement(React.Fragment, null,
+                    React.createElement('div', { className: 'cur-group__title' },
+                        'Где ещё есть работа'),
+                    React.createElement('div', { className: 'cur-group__card' },
+                        [['queue', 'Очередь и анкеты'], ['panel', 'Панель состояний']]
+                            .map(([key, label]) => React.createElement('button', {
+                                key,
+                                type: 'button',
+                                className: 'cur-row cur-row--line',
+                                onClick: () => setCuratorTab(key)
+                            }, React.createElement('span', { className: 'cur-row__line' }, label)))
+                    )
+                ) : null
             );
         }
 
@@ -2498,7 +2526,9 @@
                                                                         // «плохо», поэтому он остаётся нейтральным.
                                                                         mch(weight ? String(Math.round(weight * 10) / 10).replace('.', ',') + ' кг' : 'веса нет',
                                                                             weight ? null : 'none'),
-                                                                        mch(sleep ? hhmm(sleep) : 'сна нет', sleep ? 'ok' : 'none'),
+                                                                        // Час без слова читается как время суток, а не как длительность сна:
+                                                                    // «6:00» в ряду с «892 ккал» и «1,0 л» ничего не называет.
+                                                                    mch(sleep ? 'сон ' + hhmm(sleep) : 'сна нет', sleep ? 'ok' : 'none'),
                                                                         mch(trainings ? num(day.training_min) + ' мин' : 'без тренировки',
                                                                             trainings ? 'ok' : 'none')
                                                                     );
@@ -2592,7 +2622,7 @@
                                             // второй копии switchClient здесь заводить нельзя.
                                             onOpenClient: () => setCuratorTab('clients')
                                         }),
-                                    curatorTab === 'moderation' && React.createElement(ModerationTab, { clients }),
+                                    curatorTab === 'moderation' && React.createElement(ModerationTab, { clients, setCuratorTab }),
 
                                     // === TAB: DIAGNOSTICS (client launches and sync) ===
                                     curatorTab === 'diagnostics' && HEYS.ClientDiagnostics?.Overview

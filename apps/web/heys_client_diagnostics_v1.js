@@ -28,12 +28,12 @@
       '.cd-timeline{border-top:1px solid #ececf3;padding:8px 16px 14px}.cd-full-log{width:100%;padding:0 14px;margin:4px 0 8px;border-color:var(--v4-act, #c67139);background:var(--v4-act, #c67139);color:var(--v4-btn-on-act, #fff5ef);font-weight:700}.cd-event{position:relative;padding:8px 0 8px 22px;font-size:13px}.cd-event:before{content:"";position:absolute;left:4px;top:14px;width:8px;height:8px;border-radius:50%;background:#7779ad}.cd-event--failed:before{background:#b94a4a}.cd-event-time{color:#88899c;margin-right:8px}.cd-event-context{display:block;color:#77788d;font-size:12px;margin-top:2px;word-break:break-word}',
       '.cd-section-title{font-size:15px;font-weight:750;margin:22px 0 10px}.cd-login{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;background:#fff;border:1px solid #e7e7ef;border-radius:11px;margin-bottom:7px;font-size:13px}.cd-login-time{white-space:nowrap;color:#6f7085}.cd-login-ua{color:#7b7c90;word-break:break-word}',
       '.cd-empty,.cd-loading,.cd-error{padding:36px 18px;text-align:center;color:#74758c;background:#fff;border:1px solid #e6e6ef;border-radius:14px}.cd-error{color:#963d3d;border-color:#efcccc}',
-      '/* .cdo, .cdo-head, .cdo-title, .cdo-note — там же */.cdo-actions{display:flex;gap:8px;flex-wrap:wrap}/* кнопки .cdo-* переехали в styles/modules/734 — там роли набора */.cdo-updated{font-size:12px;color:#7b7c91;text-align:right;margin-top:5px}',
+      '/* .cdo, .cdo-head, .cdo-title, .cdo-note, .cdo-actions, .cdo-list — в styles/modules/734: там роли набора и гейт перекраски */',
       '/* .cdo-metrics и .cdo-metric переехали в styles/modules/734: там они на ролях набора и под гейтом перекраски */',
       '/* .cdo-megalog и .cdo-mega-btn — там же */',
       '/* .cdo-filters и .cdo-control — там же */.cdo-search{grid-column:span 2}.cdo-list{display:flex;flex-direction:column;gap:9px}.cdo-session{background:#fff;border:1px solid #e4e4ee;border-radius:14px;overflow:hidden}.cdo-session--failed{border-color:#e6b5b5;background:#fffafa}.cdo-session--degraded,.cdo-session--abandoned{border-color:#ead6a1}.cdo-row{display:grid;grid-template-columns:minmax(180px,1.4fr) minmax(120px,.8fr) minmax(170px,1.1fr) minmax(120px,.8fr) auto;gap:12px;align-items:center;width:100%;padding:14px;border:0;background:transparent;text-align:left;color:inherit;cursor:pointer}.cdo-client{font-weight:750}.cdo-small{font-size:12px;color:#75768b;margin-top:3px}.cdo-problem{font-size:13px;color:#873d3d}.cdo-ok{font-size:13px;color:#347052}.cdo-chevron{color:#7779ad;font-size:18px}.cdo-detail{border-top:1px solid #e9e9f1;padding:14px}.cdo-detail-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:8px}.cdo-full-log{border-color:var(--v4-act, #c67139);background:var(--v4-act, #c67139);color:var(--v4-btn-on-act, #fff5ef)}.cdo-timeline{display:flex;flex-direction:column}.cdo-event{display:grid;grid-template-columns:80px 190px 1fr;gap:10px;position:relative;padding:8px 8px 8px 20px;font-size:13px}.cdo-event:before{content:"";position:absolute;left:4px;top:14px;width:8px;height:8px;border-radius:50%;background:#7779ad}.cdo-event--failed:before{background:#b94a4a}.cdo-event-context{color:#76778b;word-break:break-word}.cdo-empty{padding:34px 18px;text-align:center;background:#fff;border:1px solid #e5e5ee;border-radius:14px;color:#727389}.cdo-more{align-self:center;margin:12px auto 0;display:block}',
       '@media(max-width:640px){.cd-backdrop{padding:0;align-items:flex-end}.cd-modal{max-height:94vh;border-radius:20px 20px 0 0}.cd-head{padding:18px 16px 14px}.cd-toolbar{padding:12px 16px}.cd-body{padding:14px 16px 24px}.cd-toolbar .cd-control{flex:1 1 120px;min-width:0;width:auto}.cd-copy{width:100%;margin-left:0}.cd-device{width:100%;margin-left:0}.cd-session-btn{padding:14px}}'
-      ,'@media(max-width:760px){.cdo-head{display:block}.cdo-actions{margin-top:12px}.cdo-actions>*{flex:1}.cdo-actions .cdo-primary{flex-basis:100%}.cdo-updated{text-align:left}.cdo-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.cdo-search{grid-column:span 2}.cdo-row{grid-template-columns:1fr auto;padding:13px}.cdo-row>div:nth-child(2),.cdo-row>div:nth-child(3),.cdo-row>div:nth-child(4){grid-column:1 / -1}.cdo-chevron{grid-column:2;grid-row:1}.cdo-event{grid-template-columns:68px 1fr}.cdo-event-context{grid-column:2}.cdo-detail{padding:10px}.cdo-primary,.cdo-secondary,.cdo-more,.cdo-control{min-height:44px}}',
+      ,'@media(max-width:760px){.cdo-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.cdo-search{grid-column:span 2}.cdo-row{grid-template-columns:1fr auto;padding:13px}.cdo-row>div:nth-child(2),.cdo-row>div:nth-child(3),.cdo-row>div:nth-child(4){grid-column:1 / -1}.cdo-chevron{grid-column:2;grid-row:1}.cdo-event{grid-template-columns:68px 1fr}.cdo-event-context{grid-column:2}.cdo-detail{padding:10px}.cdo-primary,.cdo-secondary,.cdo-more,.cdo-control{min-height:44px}}',
       '@media(max-width:480px){.cdo-filters{grid-template-columns:1fr}.cdo-search{grid-column:span 1}}'
     ].join('');
     document.head.appendChild(style);
@@ -433,33 +433,52 @@
     var summary = data.summary || {};
     return h('section', { className: 'cdo', 'aria-label': 'Диагностика клиентских посещений' },
       h('div', { className: 'cdo-head' },
-        h('div', null, h('div', { className: 'cdo-title' }, 'Диагностика'), h('div', { className: 'cdo-note' }, 'Посещения, входы и синхронизация клиентов. Ошибки показаны без содержимого дневника.')),
-        h('div', null,
-          h('div', { className: 'cdo-actions' },
-            h('button', { type: 'button', className: 'cdo-primary' + (filters.status === 'problems' ? ' is-active' : ''), onClick: function () { update('status', filters.status === 'problems' ? 'all' : 'problems'); } }, filters.status === 'problems' ? 'Показать все' : 'Показать сбои'),
-            h('button', { type: 'button', className: 'cdo-secondary', onClick: function () { load(false); }, disabled: loading }, loading ? 'Обновляю…' : 'Обновить'),
-            h('button', { type: 'button', className: 'cdo-secondary', onClick: copyReport, disabled: !(data.sessions || []).length }, 'Скопировать отчёт')
-          ),
-          h('div', { className: 'cdo-updated' }, updatedAt ? 'Обновлено ' + updatedAt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) + ' · автообновление 60 сек' : 'Автообновление 60 сек')
-        )
+        h('div', { className: 'cdo-title' }, 'Диагностика'),
+        h('div', { className: 'cdo-note' },
+          'посещения, входы и синхронизация · без содержимого дневников')
       ),
-      // Контракт «вид · числа диагностики»: сетка 2×2, остальные показатели —
-      // строкой. Прежние пять карточек столбиком занимали два экрана
-      // прокрутки, и главное число тонуло среди контекста.
+      // Кадр «Диагностика»: четыре числа сеткой, под ними лист, под ним два
+      // действия. Прежде порядок был обратный — сначала три кнопки, потом
+      // «Автообновление» строкой, потом числа: вкладку открывают ради чисел,
+      // а они лежали третьим экраном.
       //
-      // В сетку идёт то, ради чего открывают вкладку: сколько заходов, сколько
-      // прошло штатно, сколько сломалось, сколько отклонилось. «Активных
-      // клиентов» — не диагностика, а контекст, и уходит строкой.
+      // В сетку идёт то, ради чего открывают вкладку. «Штатно» ушло из сетки
+      // в лист: это доля от посещений, а не четвёртое независимое число, и
+      // рядом с ними читалось как ещё один счёт.
       h('div', { className: 'cdo-metrics' },
+        metric('Активных клиентов', summary.active_clients),
         metric('Посещений', summary.visits || summary.launches),
-        metric('Штатно · ' + Number(summary.success_rate || 0) + '%', summary.ready, 'ready'),
         metric('Сбои', summary.failed, 'failed', 'bad'),
         metric('Отклонения', Number(summary.degraded || 0) + Number(summary.abandoned || 0), 'problems', 'warn')
       ),
-      h('div', { className: 'cdo-context' },
-        h('span', { className: 'cdo-context-label' }, 'Активных клиентов'),
-        h('span', { className: 'cdo-context-value' }, String(Number(summary.active_clients) || 0))
+      h('div', { className: 'cdo-list' },
+        h('div', { className: 'cdo-list-row' },
+          h('span', { className: 'cdo-list-key' }, 'Штатно'),
+          h('span', { className: 'cdo-list-val is-ok' },
+            Number(summary.success_rate || 0) + ' %')
+        ),
+        // «Обновить» стоит значением строки про автообновление, а не третьей
+        // кнопкой в главном ряду: она уточняет, когда данные свежие, и не
+        // спорит с «Показать сбои». В кадре её нет — там автообновление просто
+        // подписано; живой вкладке кнопка нужна, автообновление раз в минуту.
+        h('div', { className: 'cdo-list-row' },
+          h('span', { className: 'cdo-list-key' },
+            updatedAt
+              ? 'Обновлено ' + updatedAt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+              : 'Автообновление'),
+          h('button', {
+            type: 'button', className: 'cdo-refresh',
+            onClick: function () { load(false); }, disabled: loading
+          }, loading ? 'обновляю…' : 'обновить')
+        )
       ),
+      h('div', { className: 'cdo-actions' },
+        h('button', { type: 'button', className: 'cdo-primary' + (filters.status === 'problems' ? ' is-active' : ''), onClick: function () { update('status', filters.status === 'problems' ? 'all' : 'problems'); } }, filters.status === 'problems' ? 'Показать все' : 'Показать сбои'),
+        h('button', { type: 'button', className: 'cdo-secondary', onClick: copyReport, disabled: !(data.sessions || []).length }, 'Скопировать отчёт')
+      ),
+      // Второе копирование — другого объёма: отчёт берёт текущий фильтр,
+      // мегалог собирает все сбои за день. В кадре его нет; убрать значило бы
+      // отнять у куратора единственный способ отдать разработчику полный день.
       h('div', { className: 'cdo-megalog' },
         h('button', { type: 'button', className: 'cdo-mega-btn', onClick: copyDailyMegaLog, disabled: megaLoading }, megaLoading ? 'Собираю…' : 'Скопировать сбои за день')
       ),

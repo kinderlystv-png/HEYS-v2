@@ -15,6 +15,10 @@ const CSS = fs.readFileSync(
   path.resolve(__dirname, '../styles/modules/734-ui-v4-curator-panel.css'),
   'utf8'
 );
+const DIAG = fs.readFileSync(
+  path.resolve(__dirname, '../heys_client_diagnostics_v1.js'),
+  'utf8'
+);
 const MAIN = fs.readFileSync(path.resolve(__dirname, '../styles/main.css'), 'utf8');
 const BUNDLE = fs.readFileSync(
   path.resolve(__dirname, '../../../scripts/legacy-bundle-config.mjs'),
@@ -114,23 +118,18 @@ describe('панель куратора · место в кабинете', () =
     expect(QUEUE).toContain('elsewhere.length ? React.createElement');
   });
 
-  it('числа диагностики — сетка 2×2, контекст строкой', () => {
+  it('числа диагностики — сетка 2×2', () => {
     // Пять карточек столбиком занимали два экрана прокрутки, и главное число
-    // тонуло среди контекста.
-    const DIAG = fs.readFileSync(
-      path.resolve(__dirname, '../heys_client_diagnostics_v1.js'), 'utf8');
+    // тонуло среди контекста. Состав сетки — кадр «Диагностика»; порядок и
+    // «Штатно» долей в листе проверяет тест кадра ниже.
     const grid = DIAG.slice(DIAG.indexOf("className: 'cdo-metrics'"),
-      DIAG.indexOf("className: 'cdo-context'"));
+      DIAG.indexOf("className: 'cdo-list'"));
     expect(grid.match(/metric\(/g)).toHaveLength(4);
-    expect(grid).not.toContain('Активных клиентов');
-    expect(DIAG).toContain("className: 'cdo-context'");
     expect(CSS).toMatch(/\.cdo-metrics[\s\S]{0,140}repeat\(2, minmax\(0, 1fr\)\)/);
   });
 
   it('стили диагностики переехали из строки в JS на роли набора', () => {
     // Там они держали жёсткие цвета мимо набора и мимо гейта перекраски.
-    const DIAG = fs.readFileSync(
-      path.resolve(__dirname, '../heys_client_diagnostics_v1.js'), 'utf8');
     expect(DIAG).not.toContain('.cdo-metric{border:1px solid #e2e2ed');
     expect(CSS).toContain('.cdo-metric strong');
     // Сбой и отклонение — тоном числа, а не рамкой карточки.
@@ -575,5 +574,49 @@ describe('панель куратора · окно', () => {
   it('тариф в шапке не притворяется вычисленным', () => {
     // Панель — вкладка куратора, признак Pro и есть наличие куратора.
     expect(SRC).not.toContain("? 'Pro' : 'Pro'");
+  });
+
+  it('кадр «Заявки · пусто»: состояние, а не галочка, и ведёт дальше', () => {
+    const src = GATE.split(String.fromCharCode(10))
+      .filter((l) => !l.trim().startsWith('//')).join(String.fromCharCode(10));
+    const at = src.indexOf('if (pending.length === 0)');
+    const empty = src.slice(at, src.indexOf('bulkEligibleCount', at));
+    // Пустота залита тоном «идёт хорошо» и названа состоянием.
+    expect(empty).toContain('cur-panel__empty--ok');
+    expect(empty).toContain("'Подтверждать нечего'");
+    // У вкладки свой заголовок: шапка кабинета говорит, где вы, заголовок —
+    // что перед вами.
+    expect(empty).toContain("cur-cab__tab-title");
+    expect(empty).toContain("'Заявки'");
+    // Ярус ведёт в соседние вкладки.
+    expect(empty).toContain("'Где ещё есть работа'");
+    expect(empty).toContain("setCuratorTab(key)");
+    // Продукт не шлёт пуш о новой заявке — обещать его нельзя.
+    expect(empty).not.toContain('уведомлением');
+  });
+
+  it('кадр «Диагностика»: числа выше кнопок, «Штатно» долей в листе', () => {
+    const src = DIAG.split(String.fromCharCode(10))
+      .filter((l) => !l.trim().startsWith('//')).join(String.fromCharCode(10));
+    const metrics = src.indexOf("className: 'cdo-metrics'");
+    const list = src.indexOf("className: 'cdo-list'");
+    const actions = src.indexOf("className: 'cdo-actions'");
+    // Вкладку открывают ради чисел — они идут первыми, кнопки последними.
+    expect(metrics).toBeGreaterThan(0);
+    expect(metrics).toBeLessThan(list);
+    expect(list).toBeLessThan(actions);
+    // В сетке четыре числа кадра, «Штатно» ушло из неё в лист долей.
+    const grid = src.slice(metrics, list);
+    for (const key of ['Активных клиентов', 'Посещений', 'Сбои', 'Отклонения']) {
+      expect(grid, key).toContain(key);
+    }
+    expect(grid).not.toContain('Штатно');
+    expect(src.slice(list, actions)).toContain("'Штатно'");
+    // В главном ряду два действия; «Обновить» — значение строки про свежесть.
+    const row = src.slice(actions, src.indexOf('cdo-megalog', actions));
+    expect(row).toContain('Показать сбои');
+    expect(row).toContain('Скопировать отчёт');
+    expect(row).not.toContain('cdo-refresh');
+    expect(src.slice(list, actions)).toContain('cdo-refresh');
   });
 });

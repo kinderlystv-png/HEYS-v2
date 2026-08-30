@@ -809,30 +809,72 @@
   color: var(--v4-warn-text, #8a5a2a);
 }
 
-/* Контекст — строкой: он объясняет масштаб, но не отвечает на вопрос
-   «что сломалось», ради которого вкладку открывают. */
-.cdo-context {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  margin-bottom: 14px;
-  border-radius: 16px;
+/* Лист под числами: доля штатных и свежесть данных. Прежде «Штатно» стояло
+   четвёртым числом в сетке и читалось как ещё один счёт, хотя это доля от
+   посещений; «Автообновление» висело отдельной строкой над числами. */
+.cdo-list {
+  border-radius: 20px;
+  padding: 2px 14px;
+  margin-bottom: 12px;
   background: var(--v4-surface, #f7efe2);
 }
 
-.cdo-context-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+.cdo-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
 }
 
-.cdo-context-value {
-  font-size: 12.5px;
-  font-weight: 700;
+.cdo-list-row:last-child {
+  border-bottom: none;
+}
+
+.cdo-list-key {
+  font-size: 12px;
+  font-weight: 600;
   color: var(--v4-ink, #201e1d);
+}
+
+.cdo-list-val {
+  font-size: 12px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cdo-list-val.is-ok {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+/* «Обновить» — значение строки про свежесть, а не третья кнопка главного
+   ряда: она уточняет данные и не должна спорить с «Показать сбои». */
+.cdo-refresh {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--v4-act-text, #8a4a20);
+  cursor: pointer;
+}
+
+.cdo-refresh:disabled {
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  cursor: default;
+}
+
+/* Два действия в ряд: главное залито, второе на подложке набора. */
+.cdo-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cdo-actions > * {
+  flex: 1 1 0;
 }
 
 /* ── Служебные листы кабинета ─────────────────────────────────────────────
@@ -950,6 +992,28 @@
   cursor: pointer;
 }
 
+/* Заголовок вкладки внутри содержимого: шапка кабинета одна на все пять
+   вкладок и говорит, где вы; заголовок вкладки говорит, что перед вами. */
+.cur-cab__tab-head {
+  margin-bottom: 4px;
+}
+
+.cur-cab__tab-title {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cur-cab__tab-note {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 4px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
 /* Прокручиваемая область вкладок: поля экрана 16 по бокам, грунт набора.
    Прежде здесь стояли 20 и холодный #f8fafc из прежней системы. */
 .cur-cab__content {
@@ -1021,11 +1085,7 @@
 }
 
 .cdo-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .cdo-title {
@@ -1116,13 +1176,6 @@
   min-width: 0;
 }
 
-.cdo-updated {
-  margin-top: 5px;
-  font-size: 11px;
-  font-weight: 600;
-  text-align: right;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
-}
 
 /* Подсказка подвкладки — подпись, а не голубая полоса: она объясняет, что в
    списке, и не должна выглядеть предупреждением. */
