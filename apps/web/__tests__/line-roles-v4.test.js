@@ -109,6 +109,17 @@ const ALLOWED = new Map(
       '7 % · curator-edits/gamification/questionnaire держат свои 7 %; блок песочно-залочен',
     '734-ui-v4-insights.css | .insights-priority-action--v4 | border-top':
       '8 % · разделитель внутри песочно-залоченного героя: --v4-line там перевернётся в синем тёмном',
+    // Дорожка прогресса заглушки — не линия-разделитель, а подложка полосы:
+    // контракт reports-insights просит под ней чернила 9 %, и роли под этот
+    // тон в наборе нет. Прежде обе брали var(--v4-chip), то есть цвет самой
+    // карточки заглушки, и дорожки не было видно вовсе — только залитый кусок.
+    // Заводить роль ради одного значения значило бы принять решение по
+    // палитре побочным эффектом починки заглушки; появится третье-четвёртое
+    // место — это будет отдельное решение владельца.
+    '733-ui-v4-reports.css | .reports-v4-stub__progress | background':
+      '9 % · дорожка заглушки Отчётов, роли под этот тон в наборе нет',
+    '734-ui-v4-insights.css | .insights-v4-stub__progress | background':
+      '9 % · дорожка заглушки Инсайтов, роли под этот тон в наборе нет',
     '730-widgets-dashboard.css | .widget-v4-insulin-wave__flatline | stroke':
       '14 % · home-widgets, «волна · пустой день»',
     '730-widgets-dashboard.css | .widget-v4-insulin-wave__overnight-stroke | stroke':
