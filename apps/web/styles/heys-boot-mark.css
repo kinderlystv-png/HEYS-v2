@@ -12,9 +12,9 @@ html {
     );
 }
 html[data-theme="sand"], html[data-theme-id="sand"],
-html[data-theme="light"], html[data-theme="classic"] { background: #fffaf1; }
+html[data-theme="light"] { background: #fffaf1; }
 html[data-theme="sand-dark"], html[data-theme-id="sand-dark"],
-html[data-theme="dark"], html[data-theme="classic-dark"] { background: #141210; }
+html[data-theme="dark"] { background: #141210; }
 html[data-theme="blue"], html[data-theme-id="blue"] { background: #ffffff; }
 html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1a26; }
 
@@ -100,10 +100,7 @@ body:has(> .heys-boot-mark.is-fail) {
 html[data-heys-session="0"] .heys-boot-mark { display: none !important; }
 html[data-theme-id="sand-dark"] #heys-boot-visual-guard,
 html[data-theme-id="sand-dark"] .heys-boot-visual-guard,
-html[data-theme-id="classic-dark"] #heys-boot-visual-guard,
-html[data-theme-id="classic-dark"] .heys-boot-visual-guard,
-html[data-theme="sand-dark"] #heys-boot-visual-guard,
-html[data-theme="classic-dark"] #heys-boot-visual-guard { background: #141210; }
+html[data-theme="sand-dark"] #heys-boot-visual-guard { background: #141210; }
 html[data-theme-id="blue"] #heys-boot-visual-guard,
 html[data-theme-id="blue"] .heys-boot-visual-guard,
 html[data-theme="blue"] #heys-boot-visual-guard { background: #ffffff; }
@@ -112,12 +109,8 @@ html[data-theme-id="blue-dark"] .heys-boot-visual-guard,
 html[data-theme="blue-dark"] #heys-boot-visual-guard { background: #0d1a26; }
 html[data-theme-id="sand-dark"] .heys-boot-mark,
 html[data-theme-id="sand-dark"] .heys-wait-mark,
-html[data-theme-id="classic-dark"] .heys-boot-mark,
-html[data-theme-id="classic-dark"] .heys-wait-mark,
 html[data-theme="sand-dark"] .heys-boot-mark,
-html[data-theme="classic-dark"] .heys-boot-mark,
-html[data-theme="sand-dark"] .heys-wait-mark,
-html[data-theme="classic-dark"] .heys-wait-mark {
+html[data-theme="sand-dark"] .heys-wait-mark {
     --boot-disc: #2f2820;
     --boot-stroke: #cf8144;
     --boot-letter: #e2a468;

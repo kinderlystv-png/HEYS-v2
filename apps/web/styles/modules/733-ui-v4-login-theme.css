@@ -177,7 +177,6 @@
 }
 
 [data-theme="dark"] .heys-auth-logo .lab path,
-[data-theme="classic-dark"] .heys-auth-logo .lab path,
 [data-theme="sand-dark"] .heys-auth-logo .lab path,
 [data-theme="blue-dark"] .heys-auth-logo .lab path {
   fill: rgba(242, 237, 230, 0.5);
@@ -1314,11 +1313,9 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-shell,
-[data-theme="classic-dark"] .heys-auth-shell,
 [data-theme="sand-dark"] .heys-auth-shell,
 [data-theme="blue-dark"] .heys-auth-shell,
 [data-theme="dark"] #heys-login-gate.heys-auth-shell,
-[data-theme="classic-dark"] #heys-login-gate.heys-auth-shell,
 [data-theme="sand-dark"] #heys-login-gate.heys-auth-shell,
 [data-theme="blue-dark"] #heys-login-gate.heys-auth-shell {
   background: #2f2820;
@@ -1326,7 +1323,6 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-card,
-[data-theme="classic-dark"] .heys-auth-card,
 [data-theme="sand-dark"] .heys-auth-card,
 [data-theme="blue-dark"] .heys-auth-card {
   background: #141210;
@@ -1336,48 +1332,39 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-title,
-[data-theme="classic-dark"] .heys-auth-title,
 [data-theme="sand-dark"] .heys-auth-title,
 [data-theme="blue-dark"] .heys-auth-title,
 [data-theme="dark"] .heys-auth-brand,
-[data-theme="classic-dark"] .heys-auth-brand,
 [data-theme="sand-dark"] .heys-auth-brand,
 [data-theme="blue-dark"] .heys-auth-brand {
   color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme="dark"] .heys-auth-subtitle,
-[data-theme="classic-dark"] .heys-auth-subtitle,
 [data-theme="sand-dark"] .heys-auth-subtitle,
 [data-theme="blue-dark"] .heys-auth-subtitle,
 [data-theme="dark"] .heys-auth-label,
-[data-theme="classic-dark"] .heys-auth-label,
 [data-theme="sand-dark"] .heys-auth-label,
 [data-theme="blue-dark"] .heys-auth-label {
   color: var(--v4-ink-3, rgba(242, 237, 230, 0.5));
 }
 
 [data-theme="dark"] .heys-auth-pin-section.is-active .heys-auth-label,
-[data-theme="classic-dark"] .heys-auth-pin-section.is-active .heys-auth-label,
 [data-theme="sand-dark"] .heys-auth-pin-section.is-active .heys-auth-label,
 [data-theme="blue-dark"] .heys-auth-pin-section.is-active .heys-auth-label,
 [data-theme="dark"] .heys-auth-pin-section:not(.is-muted) .heys-auth-label,
-[data-theme="classic-dark"] .heys-auth-pin-section:not(.is-muted) .heys-auth-label,
 [data-theme="sand-dark"] .heys-auth-pin-section:not(.is-muted) .heys-auth-label,
 [data-theme="blue-dark"] .heys-auth-pin-section:not(.is-muted) .heys-auth-label {
   color: #cf8144;
 }
 
 [data-theme="dark"] .heys-auth-field,
-[data-theme="classic-dark"] .heys-auth-field,
 [data-theme="sand-dark"] .heys-auth-field,
 [data-theme="blue-dark"] .heys-auth-field,
 [data-theme="dark"] .heys-auth-pin-input,
-[data-theme="classic-dark"] .heys-auth-pin-input,
 [data-theme="sand-dark"] .heys-auth-pin-input,
 [data-theme="blue-dark"] .heys-auth-pin-input,
 [data-theme="dark"] .heys-auth-key,
-[data-theme="classic-dark"] .heys-auth-key,
 [data-theme="sand-dark"] .heys-auth-key,
 [data-theme="blue-dark"] .heys-auth-key {
   background: #2f2820;
@@ -1385,31 +1372,24 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-field:focus-within,
-[data-theme="classic-dark"] .heys-auth-field:focus-within,
 [data-theme="sand-dark"] .heys-auth-field:focus-within,
 [data-theme="blue-dark"] .heys-auth-field:focus-within,
 [data-theme="dark"] .heys-auth-field.is-active,
-[data-theme="classic-dark"] .heys-auth-field.is-active,
 [data-theme="sand-dark"] .heys-auth-field.is-active,
 [data-theme="blue-dark"] .heys-auth-field.is-active,
 [data-theme="dark"] .heys-auth-field.is-complete,
-[data-theme="classic-dark"] .heys-auth-field.is-complete,
 [data-theme="sand-dark"] .heys-auth-field.is-complete,
 [data-theme="blue-dark"] .heys-auth-field.is-complete,
 [data-theme="dark"] .heys-auth-pin-input:focus,
-[data-theme="classic-dark"] .heys-auth-pin-input:focus,
 [data-theme="sand-dark"] .heys-auth-pin-input:focus,
 [data-theme="blue-dark"] .heys-auth-pin-input:focus,
 [data-theme="dark"] .heys-auth-pin-input.is-active:not(.is-complete),
-[data-theme="classic-dark"] .heys-auth-pin-input.is-active:not(.is-complete),
 [data-theme="sand-dark"] .heys-auth-pin-input.is-active:not(.is-complete),
 [data-theme="blue-dark"] .heys-auth-pin-input.is-active:not(.is-complete),
 [data-theme="dark"] .heys-auth-pin-input.is-filled,
-[data-theme="classic-dark"] .heys-auth-pin-input.is-filled,
 [data-theme="sand-dark"] .heys-auth-pin-input.is-filled,
 [data-theme="blue-dark"] .heys-auth-pin-input.is-filled,
 [data-theme="dark"] .heys-auth-pin-input.is-complete,
-[data-theme="classic-dark"] .heys-auth-pin-input.is-complete,
 [data-theme="sand-dark"] .heys-auth-pin-input.is-complete,
 [data-theme="blue-dark"] .heys-auth-pin-input.is-complete {
   background: #2f2820;
@@ -1417,74 +1397,60 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-field.is-complete,
-[data-theme="classic-dark"] .heys-auth-field.is-complete,
 [data-theme="sand-dark"] .heys-auth-field.is-complete,
 [data-theme="blue-dark"] .heys-auth-field.is-complete,
 [data-theme="dark"] .heys-auth-pin-input.is-filled,
-[data-theme="classic-dark"] .heys-auth-pin-input.is-filled,
 [data-theme="sand-dark"] .heys-auth-pin-input.is-filled,
 [data-theme="blue-dark"] .heys-auth-pin-input.is-filled,
 [data-theme="dark"] .heys-auth-pin-input.is-complete,
-[data-theme="classic-dark"] .heys-auth-pin-input.is-complete,
 [data-theme="sand-dark"] .heys-auth-pin-input.is-complete,
 [data-theme="blue-dark"] .heys-auth-pin-input.is-complete {
   box-shadow: none;
 }
 
 [data-theme="dark"] .heys-auth-phone-input,
-[data-theme="classic-dark"] .heys-auth-phone-input,
 [data-theme="sand-dark"] .heys-auth-phone-input,
 [data-theme="blue-dark"] .heys-auth-phone-input,
 [data-theme="dark"] .heys-auth-input,
-[data-theme="classic-dark"] .heys-auth-input,
 [data-theme="sand-dark"] .heys-auth-input,
 [data-theme="blue-dark"] .heys-auth-input,
 [data-theme="dark"] .heys-auth-pin-overlay,
-[data-theme="classic-dark"] .heys-auth-pin-overlay,
 [data-theme="sand-dark"] .heys-auth-pin-overlay,
 [data-theme="blue-dark"] .heys-auth-pin-overlay {
   color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme="dark"] .heys-auth-prefix,
-[data-theme="classic-dark"] .heys-auth-prefix,
 [data-theme="sand-dark"] .heys-auth-prefix,
 [data-theme="blue-dark"] .heys-auth-prefix {
   color: var(--v4-ink-3, rgba(242, 237, 230, 0.5));
 }
 
 [data-theme="dark"] .heys-auth-phone-input::placeholder,
-[data-theme="classic-dark"] .heys-auth-phone-input::placeholder,
 [data-theme="sand-dark"] .heys-auth-phone-input::placeholder,
 [data-theme="blue-dark"] .heys-auth-phone-input::placeholder,
 [data-theme="dark"] .heys-auth-input::placeholder,
-[data-theme="classic-dark"] .heys-auth-input::placeholder,
 [data-theme="sand-dark"] .heys-auth-input::placeholder,
 [data-theme="blue-dark"] .heys-auth-input::placeholder {
   color: var(--v4-ink-4, rgba(242, 237, 230, 0.46));
 }
 
 [data-theme="dark"] .heys-auth-pin-box.is-filled::after,
-[data-theme="classic-dark"] .heys-auth-pin-box.is-filled::after,
 [data-theme="sand-dark"] .heys-auth-pin-box.is-filled::after,
 [data-theme="blue-dark"] .heys-auth-pin-box.is-filled::after,
 [data-theme="dark"] .heys-auth-pin-box.is-complete::after,
-[data-theme="classic-dark"] .heys-auth-pin-box.is-complete::after,
 [data-theme="sand-dark"] .heys-auth-pin-box.is-complete::after,
 [data-theme="blue-dark"] .heys-auth-pin-box.is-complete::after {
   background: #8faa6d;
 }
 
 [data-theme="dark"] .heys-auth-key--muted,
-[data-theme="classic-dark"] .heys-auth-key--muted,
 [data-theme="sand-dark"] .heys-auth-key--muted,
 [data-theme="blue-dark"] .heys-auth-key--muted,
 [data-theme="dark"] .heys-auth-key.heys-auth-key--delete,
-[data-theme="classic-dark"] .heys-auth-key.heys-auth-key--delete,
 [data-theme="sand-dark"] .heys-auth-key.heys-auth-key--delete,
 [data-theme="blue-dark"] .heys-auth-key.heys-auth-key--delete,
 [data-theme="dark"] .heys-auth-key.heys-auth-key--delete.is-available,
-[data-theme="classic-dark"] .heys-auth-key.heys-auth-key--delete.is-available,
 [data-theme="sand-dark"] .heys-auth-key.heys-auth-key--delete.is-available,
 [data-theme="blue-dark"] .heys-auth-key.heys-auth-key--delete.is-available {
   background: #23201b;
@@ -1492,25 +1458,21 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-support-line,
-[data-theme="classic-dark"] .heys-auth-support-line,
 [data-theme="sand-dark"] .heys-auth-support-line,
 [data-theme="blue-dark"] .heys-auth-support-line {
   color: var(--v4-ink-3, rgba(242, 237, 230, 0.5));
 }
 
 [data-theme="dark"] .heys-auth-support-link,
-[data-theme="classic-dark"] .heys-auth-support-link,
 [data-theme="sand-dark"] .heys-auth-support-link,
 [data-theme="blue-dark"] .heys-auth-support-link,
 [data-theme="dark"] .heys-auth-link-btn,
-[data-theme="classic-dark"] .heys-auth-link-btn,
 [data-theme="sand-dark"] .heys-auth-link-btn,
 [data-theme="blue-dark"] .heys-auth-link-btn {
   color: #e2a468;
 }
 
 [data-theme="dark"] .heys-auth-service-entry,
-[data-theme="classic-dark"] .heys-auth-service-entry,
 [data-theme="sand-dark"] .heys-auth-service-entry,
 [data-theme="blue-dark"] .heys-auth-service-entry {
   color: var(--v4-ink-4, rgba(242, 237, 230, 0.12));
@@ -1553,7 +1515,6 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-card--pep .heys-auth-reset-note,
-[data-theme="classic-dark"] .heys-auth-card--pep .heys-auth-reset-note,
 [data-theme="sand-dark"] .heys-auth-card--pep .heys-auth-reset-note,
 [data-theme="blue-dark"] .heys-auth-card--pep .heys-auth-reset-note {
   background: #23201b;
@@ -1701,7 +1662,6 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-pep-dock,
-[data-theme="classic-dark"] .heys-auth-pep-dock,
 [data-theme="sand-dark"] .heys-auth-pep-dock,
 [data-theme="blue-dark"] .heys-auth-pep-dock {
   background: #2f2820;

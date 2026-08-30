@@ -51,14 +51,6 @@
   --nut-dim-icon: #94a3b8;
 }
 
-[data-theme-id='classic-dark'] .nutrition-v4,
-[data-theme-id='classic-dark'] .nutrition-v4-sheet-backdrop,
-[data-theme='dark'][data-palette='classic'] .nutrition-v4,
-[data-theme='dark'][data-palette='classic'] .nutrition-v4-sheet-backdrop {
-  --nut-dim: #94a3b8;
-  --nut-dim-icon: #7c8ca3;
-}
-
 [data-theme-id='sand'] .nutrition-v4,
 [data-theme-id='sand'] .nutrition-v4-sheet-backdrop,
 [data-theme='sand'][data-palette='sand'] .nutrition-v4,

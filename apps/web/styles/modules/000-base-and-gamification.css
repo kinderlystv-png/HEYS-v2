@@ -156,7 +156,10 @@ input[type="password"] {
    * [data-theme$="dark"] в 200-dark-and-effects.css. sand-dark/blue-dark несут
    * своё значение data-theme (не литеральное "dark"), та строка их не ловит,
    * и фон страницы оставался белым при тёмных карточках поверх него. Приведено
-   * к тому же паттерну, что уже в critical.css. */
+   * к тому же паттерну, что уже в critical.css.
+   * 2026-08-31: набора classic-dark больше нет — каноничную палитру сняли
+   * 24.08, и её мёртвые селекторы вычищены. Абзац оставлен как история
+   * находки, а не как описание текущего состояния. */
   --bg: var(--v4-bg, var(--color-white));
   --card: var(--v4-bg, var(--color-white));
   --text: var(--v4-ink, #111827);
@@ -3971,8 +3974,7 @@ html[data-theme-id="blue"] {
 }
 
 html[data-theme-id="sand-dark"],
-html[data-theme-id="blue-dark"],
-html[data-theme-id="classic-dark"] {
+html[data-theme-id="blue-dark"] {
   --dp-shadow-rgb: 0, 0, 0;
 }
 
@@ -8548,9 +8550,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
 }
 
 [data-theme-id="blue"] .date-picker-sheet .date-picker-btn.today-btn,
-[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-btn.today-btn,
-[data-theme-id="classic"] .date-picker-sheet .date-picker-btn.today-btn,
-[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-btn.today-btn {
+[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-btn.today-btn {
   color: #ffffff;
 }
 
