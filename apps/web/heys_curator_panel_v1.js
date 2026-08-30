@@ -26,12 +26,12 @@
   // расхождения: молчащий рискует уйти совсем, а расхождение ждёт до
   // понедельника и само не портится.
   const GROUPS = [
-    { state: 'awaits', title: 'Ждут решения' },
-    { state: 'decided_today', title: 'Решено сегодня' },
-    { state: 'silent', title: 'Молчат' },
-    { state: 'mismatch', title: 'Расчёт разошёлся' },
-    { state: 'collecting', title: 'Копят данные' },
-    { state: 'fine', title: 'Всё ровно' }
+    { state: 'awaits', title: 'Ждут решения', chip: 'ждут решения' },
+    { state: 'decided_today', title: 'Решено сегодня', chip: 'решено' },
+    { state: 'silent', title: 'Молчат', chip: 'молчат' },
+    { state: 'mismatch', title: 'Расчёт разошёлся', chip: 'разошёлся' },
+    { state: 'collecting', title: 'Копят данные', chip: 'копят' },
+    { state: 'fine', title: 'Всё ровно', chip: 'всё ровно' }
   ];
 
   function fmtDate(d) {
@@ -111,8 +111,9 @@
         // видимым у взвешиваний и в пилюле, а дни показывают наполнение окна.
         const logged = row.result ? row.result.loggedDays : 0;
         const weighIns = row.result ? row.result.weighIns : 0;
-        return 'дни ' + logged + ' из ' + windowDays()
-          + ' · взвешивания ' + weighIns + ' из ' + gateWeighIns();
+        const nb = (a, b) => a + ' из ' + b;
+        return 'дни ' + nb(logged, windowDays())
+          + ' · взвешивания ' + nb(weighIns, gateWeighIns());
       }
       case 'fine':
         // Развёрнутая группа без этой строки давала имя и пустую точку рядом:
@@ -233,6 +234,22 @@
       setTick((t) => t + 1);
     }, []);
 
+    // Ярус со ссылками под пустым состоянием: пустой экран обязан сказать, где
+    // работа есть, а не только что её нет здесь.
+    const tier = (title, rows2) => h(React.Fragment, null,
+      h('div', { className: 'cur-group__title' }, title),
+      h('div', { className: 'cur-group__card' }, rows2)
+    );
+    const tierLine = (text, value, onClick) => h(onClick ? 'button' : 'div', {
+      key: text,
+      type: onClick ? 'button' : undefined,
+      className: 'cur-row cur-row--line' + (onClick ? '' : ' is-static'),
+      onClick
+    },
+      h('span', { className: 'cur-row__line' }, text),
+      value != null ? h('span', { className: 'cur-row__count' }, value) : null
+    );
+
     if (error === 'modules') {
       return h('div', { className: 'cur-panel__stub' }, 'Панель не загрузилась');
     }
@@ -240,10 +257,18 @@
       return h('div', { className: 'cur-panel__stub' }, 'Считаем…');
     }
     if (!(clients || []).length) {
-      return h('div', { className: 'cur-panel__empty' },
-        h('div', { className: 'cur-panel__empty-title' }, 'Клиентов пока нет'),
-        h('div', { className: 'cur-panel__empty-note' },
-          'Как только появится первый — он встанет сюда своим состоянием.')
+      return h('div', { className: 'cur-panel' },
+        h('div', { className: 'cur-panel__empty' },
+          h('div', { className: 'cur-panel__empty-title' }, 'Клиентов пока нет'),
+          h('div', { className: 'cur-panel__empty-note' },
+            'Панель заполнится сама, когда появится первый: состояние считается'
+            + ' из его дневника, ничего настраивать не нужно.')
+        ),
+        tier('Что здесь будет', [
+          tierLine('Кто ждёт решения по норме'),
+          tierLine('У кого расчёт расходится с фактом'),
+          tierLine('Кто перестал вести дневник')
+        ])
       );
     }
 
@@ -255,19 +280,45 @@
 
     const working = rows.filter((r) => r.state !== 'fine');
     if (!working.length) {
-      return h('div', { className: 'cur-panel__empty cur-panel__empty--ok' },
-        h('div', { className: 'cur-panel__empty-title' }, 'Сегодня всё ровно'),
-        h('div', { className: 'cur-panel__empty-note' },
-          'Это нормальный день, а не пустой экран: все ' + rows.length
-          + ' пишут и держатся нормы.')
+      return h('div', { className: 'cur-panel' },
+        h('div', { className: 'cur-panel__empty cur-panel__empty--ok' },
+          h('div', { className: 'cur-panel__empty-title' }, 'Сегодня всё ровно'),
+          // Без числа в начале: «Все 2 пишут» читается как опечатка, а счёт
+          // и так стоит строкой ниже.
+          h('div', { className: 'cur-panel__empty-note' },
+            'Все пишут дневник, ни у кого расчёт не расходится, решений от вас'
+            + ' никто не ждёт. Это не пустой экран — это результат.')
+        ),
+        tier('Что можно посмотреть', [
+          tierLine('Все клиенты с состоянием', rows.length,
+            () => { if (onOpenClient) onOpenClient(); })
+        ])
       );
     }
 
+    // Карточка «Поправка считается не для всех» стоит над своей группой, а не
+    // над всем экраном: без неё куратор видит клиентов без чисел и не знает,
+    // это ошибка или ещё рано, — но и отодвигать ею работу нельзя. Контракт
+    // строки так и говорит: карточка, ниже группа со счётом.
+    const collecting = byState.get('collecting') || [];
+    const gatesCard = collecting.length ? h('div', { className: 'cur-panel__empty' },
+      h('div', { className: 'cur-panel__empty-title' }, 'Поправка считается не для всех'),
+      h('div', { className: 'cur-panel__empty-note' },
+        'У ' + collecting.length + ' из ' + rows.length + ' не набраны гейты: нужно '
+        + engine().GATE_LOGGED_DAYS + ' дней с записями и ' + gateWeighIns()
+        + ' настоящих взвешиваний внутри окна ' + windowDays() + ' '
+        + pluralDays(windowDays()) + '. Оценка на четырёх днях хуже, чем её отсутствие.')
+    ) : null;
+
     // Чипы меняют состав, а не порядок: выбран один — группы не показываются,
     // строки идут сплошняком.
-    const chips = GROUPS
-      .filter((g) => (byState.get(g.state) || []).length && g.state !== 'fine')
-      .map((g) => ({ state: g.state, title: g.title, count: byState.get(g.state).length }));
+    // Первым стоит «все» — обратный путь из фильтра должен быть виден, а не
+    // угадываться повторным тапом по выбранному чипу.
+    const chips = [{ state: null, title: 'все', count: rows.length }].concat(
+      GROUPS
+        .filter((g) => (byState.get(g.state) || []).length && g.state !== 'fine')
+        .map((g) => ({ state: g.state, title: g.chip, count: byState.get(g.state).length }))
+    );
 
     const renderRow = (row) => h('button', {
       key: row.clientId,
@@ -291,22 +342,26 @@
     const fine = byState.get('fine') || [];
 
     return h('div', { className: 'cur-panel' },
-      chips.length > 1 ? h('div', { className: 'cur-panel__chips' },
+      chips.length > 2 ? h('div', { className: 'cur-panel__chips' },
         chips.map((c) => h('button', {
-          key: c.state,
+          key: c.state || 'all',
           type: 'button',
           className: 'cur-chip' + (filter === c.state ? ' is-on' : '')
             + (c.state === 'collecting' ? ' is-muted' : ''),
-          onClick: () => setFilter(filter === c.state ? null : c.state)
-        }, c.title.toLowerCase() + ' · ' + c.count))
+          onClick: () => setFilter(c.state)
+        }, c.title + ' · ' + c.count))
       ) : null,
 
+      // Группа — одна карточка с разделителями, а не стопка отдельных плиток:
+      // так кадр канваса и читает список, и счёт группы относится к карточке,
+      // а не к воздуху между плитками.
       filter
-        ? h('div', { className: 'cur-panel__flat' }, (byState.get(filter) || []).map(renderRow))
+        ? h('div', { className: 'cur-group__card' }, (byState.get(filter) || []).map(renderRow))
         : GROUPS.filter((g) => g.state !== 'fine' && (byState.get(g.state) || []).length)
-          .map((g) => h('div', { className: 'cur-group', key: g.state },
+          .map((g) => h(React.Fragment, { key: g.state },
             h('div', { className: 'cur-group__title' }, g.title + ' · ' + byState.get(g.state).length),
-            byState.get(g.state).map(renderRow)
+            g.state === 'collecting' ? gatesCard : null,
+            h('div', { className: 'cur-group__card' }, byState.get(g.state).map(renderRow))
           )),
 
       // Самая частая группа занимает одну строку: тревожное и спокойное не
@@ -320,7 +375,7 @@
           h('span', null, 'Всё ровно · ' + fine.length),
           h('span', { className: 'cur-fine__more' }, fineOpen ? 'скрыть' : 'показать')
         ),
-        fineOpen ? h('div', { className: 'cur-fine__list' }, fine.map(renderRow)) : null
+        fineOpen ? h('div', { className: 'cur-group__card cur-fine__list' }, fine.map(renderRow)) : null
       ) : null,
 
       sheet ? CuratorPanelSheet({ React, row: sheet, name: nameOf(sheet.clientId), range,

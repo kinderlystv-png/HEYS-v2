@@ -83,12 +83,14 @@ describe('панель куратора · строка клиента', () => {
   it('копят данные — знаменатель дней это длина окна, а не гейт', () => {
     // Гейт в знаменателе давал «дни 11 из 10» — счёт, обогнавший собственный
     // знаменатель. Контракт («14 дней из 21 · взвешиваний 4 из 6») тут прав.
+    // Дробь не переносится посреди себя — «3 из» и «6» на разных строках
+    // читаются как два разных числа.
     const line = CP.stateLine(row({ state: 'collecting' }));
-    expect(line).toBe('дни 14 из 21 · взвешивания 4 из 6');
+    expect(line).toBe('дни 14 из 21 · взвешивания 4 из 6');
     expect(CP.stateLine(row({
       state: 'collecting',
       result: { loggedDays: 21, weighIns: 2, missing: { weighIns: 4 } }
-    }))).toBe('дни 21 из 21 · взвешивания 2 из 6');
+    }))).toBe('дни 21 из 21 · взвешивания 2 из 6');
   });
 
   it('оба числа строки принадлежат движку, а не панели', () => {
@@ -96,7 +98,7 @@ describe('панель куратора · строка клиента', () => {
     const NC = window.HEYS.NormCorrection;
     expect(CP.windowDays()).toBe(NC.WINDOW_WORKING_DAYS);
     expect(CP.stateLine(row({ state: 'collecting' })))
-      .toContain('из ' + NC.GATE_WEIGH_INS);
+      .toContain('из ' + NC.GATE_WEIGH_INS);
   });
 
   it('«всё ровно» говорит числом, а не пустой строкой с точкой', () => {
@@ -179,9 +181,16 @@ describe('панель куратора · решение и границы', ()
   });
 
   it('чипы меняют состав, а не порядок', () => {
-    // Выбран один — группы не показываются, строки идут сплошняком.
-    expect(SRC).toContain("h('div', { className: 'cur-panel__flat' }");
+    // Выбран один — группы не показываются, строки идут одной карточкой.
+    expect(SRC).toContain("h('div', { className: 'cur-group__card' }, (byState.get(filter)");
     expect(SRC).not.toContain('sort(');
+  });
+
+  it('первый чип — «все», и он же обратный путь из фильтра', () => {
+    // Без него выход из фильтра приходится угадывать повторным тапом по
+    // выбранному чипу.
+    expect(SRC).toContain("[{ state: null, title: 'все', count: rows.length }]");
+    expect(SRC).toContain('onClick: () => setFilter(c.state)');
   });
 
   it('акцент только там, где нужно решение', () => {

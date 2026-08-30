@@ -6,19 +6,15 @@
  */
 
 .cur-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 16px;
+  padding: 6px 18px 18px;
 }
 
 .cur-panel__stub,
 .cur-panel__empty {
-  margin: 16px;
-  padding: 18px 20px;
+  margin-bottom: 10px;
+  padding: 16px;
   border-radius: 20px;
-  background: var(--v4-c1, #f7efe2);
-  text-align: center;
+  background: var(--v4-surface, #f7efe2);
 }
 
 /* «Работать не с кем» — нормальный день, а не пустой экран: заливка «идёт
@@ -30,14 +26,16 @@
 .cur-panel__empty-title {
   font-size: 16px;
   font-weight: 700;
+  line-height: 1.32;
   color: var(--v4-ink, #201e1d);
-  margin-bottom: 6px;
 }
 
 .cur-panel__empty-note {
   font-size: 12px;
-  line-height: 1.45;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font-weight: 500;
+  line-height: 1.55;
+  margin-top: 8px;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
 }
 
 /* Чипы фильтра меняют состав, но не порядок: выбран один — группы не
@@ -46,10 +44,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  margin-top: 12px;
 }
 
 .cur-chip {
-  padding: 5px 10px;
+  padding: 4px 7px;
   border: none;
   border-radius: 999px;
   background: var(--v4-hero, #efe3cf);
@@ -57,6 +56,9 @@
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   font-size: 9px;
   font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
 }
 
@@ -74,33 +76,75 @@
   color: var(--v4-btn-on-act, #fff5ef);
 }
 
-.cur-group,
-.cur-panel__flat {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* Заголовок группы несёт счёт и стоит акцентом: он отделяет группы друг от
+   друга, и приглушённый тон здесь читался как подпись к карточке. */
+.cur-group__title {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--v4-act-text, #8a4a20);
+  margin-top: 20px;
+  margin-bottom: 10px;
 }
 
-.cur-group__title {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
-  margin-bottom: 2px;
+/* Группа — одна карточка со строками через разделитель. Стопка отдельных
+   плиток даёт тот же список, но счёт группы в ней относится к воздуху между
+   плитками, а не к чему-то видимому. */
+.cur-group__card {
+  background: var(--v4-surface, #f7efe2);
+  border-radius: 20px;
+  padding: 2px 14px;
 }
 
 .cur-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   width: 100%;
-  padding: 12px 14px;
+  padding: 11px 0;
   border: none;
-  border-radius: 20px;
-  background: var(--v4-c1, #f7efe2);
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  background: none;
   text-align: left;
   cursor: pointer;
+}
+
+.cur-row:last-child {
+  border-bottom: none;
+}
+
+/* Строка яруса под пустым состоянием: тот же ряд карточки, но без аватара и
+   без состояния — она ведёт, а не рассказывает. */
+.cur-row--line {
+  gap: 12px;
+  padding: 13px 0;
+}
+
+.cur-row--line.is-static {
+  cursor: default;
+}
+
+.cur-row__line {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cur-row--line.is-static .cur-row__line {
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
+}
+
+.cur-row__count {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-act-text, #8a4a20);
+  font-variant-numeric: tabular-nums;
 }
 
 .cur-row__avatar {
@@ -110,10 +154,12 @@
   border-radius: 999px;
   background: var(--v4-hero, #efe3cf);
   color: var(--v4-act-text, #8a4a20);
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 11.5px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .cur-row__copy {
@@ -125,20 +171,24 @@
 }
 
 .cur-row__name {
+  display: block;
   font-size: 12.5px;
   font-weight: 700;
+  line-height: 1.25;
   color: var(--v4-ink, #201e1d);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Блок, а не флекс: строка состояния переносится на вторую строку, и точка
+   обязана остаться у первой, а не уехать в вертикальный центр обеих. */
 .cur-row__state {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
   font-size: 11px;
   font-weight: 600;
+  line-height: 1.35;
+  margin-top: 3px;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
 }
 
@@ -150,9 +200,12 @@
 
 .cur-row__dot {
   flex: 0 0 auto;
+  display: inline-block;
   width: 7px;
   height: 7px;
   border-radius: 999px;
+  margin-right: 6px;
+  vertical-align: 1px;
   background: var(--v4-track, rgba(0, 0, 0, 0.12));
 }
 
@@ -163,13 +216,16 @@
 
 .cur-row__age {
   flex: 0 0 auto;
-  padding: 3px 7px;
+  padding: 4px 7px;
   border-radius: 999px;
   background: var(--v4-hero, #efe3cf);
   color: var(--v4-act-text, #8a4a20);
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   font-size: 9px;
   font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -196,9 +252,6 @@
 }
 
 .cur-fine__list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
   margin-top: 6px;
 }
 
@@ -250,7 +303,7 @@
   gap: 6px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: var(--v4-c1, #f7efe2);
+  background: var(--v4-surface, #f7efe2);
 }
 
 .cur-sheet__fact {
