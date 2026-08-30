@@ -286,6 +286,10 @@
    Прежние 52 px и 20/17 px пришли из кадров; строка их сняла. */
 .heys-auth-field {
   display: flex;
+  /* Кадр «Вход · Вход клиента», элемент 09, ставит префикс и номер на общую
+     базовую линию — но у кадра поля 14/16 и своей высоты нет, а строка «вид
+     карточки и боксов кода» фиксирует высоту 44. При ней baseline прижимает
+     строку к верху бокса (проверено в браузере), поэтому здесь center. */
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -525,7 +529,9 @@
   background: transparent;
   color: #a1471c;
   font-size: 11.5px;
-  font-weight: 500;
+  /* Строка «вид слота ошибки»: «высота фиксирована под одну строку 11,5 px/600».
+     Стояло 500 — кегль совпадал, начертание нет. */
+  font-weight: 600;
   line-height: 1.35;
   text-align: center;
   white-space: normal;
@@ -560,7 +566,8 @@
   background: transparent;
   color: #a1471c;
   font-size: 11.5px;
-  font-weight: 500;
+  /* Та же строка «вид слота ошибки»: 11,5 px/600. */
+  font-weight: 600;
   line-height: 1.35;
   white-space: normal;
   display: -webkit-box;

@@ -79,14 +79,16 @@ describe('login v4 canvas structure', () => {
     expect(css).toMatch(/backdrop-filter:\s*none/);
   });
 
-  // Строка «вид карточки и боксов кода» (двенадцатая сборка): поле телефона —
-  // высота 44, текст 13 px/600. Прежние 52/20/17 держались кадрами; строка
-  // старше кадра, и трёхсторонний спор закрыт её числами.
-  it('keeps login phone type at 13/600 in a 44px field against phone-input-large', () => {
-    expect(css).toMatch(/\.heys-auth-shell input\.phone-input-large[\s\S]*?font-size:\s*13px\s*!important/);
+  // Поле телефона: высота 44 и радиус 16 — из строки «вид карточки и боксов
+  // кода», кегли — с кадров зоны (префикс 15, номер 17). Строка называет «текст
+  // 13 px/600» и расходится с собственными кадрами; решением владельца
+  // 30 августа верны кадры, и код ушёл с 13 обратно на 15/17. Проверка держала
+  // прежние 13 и с того дня стояла красной — приведена к решению.
+  it('keeps login phone type at 15/17 in a 44px field against phone-input-large', () => {
+    expect(css).toMatch(/\.heys-auth-shell input\.phone-input-large[\s\S]*?font-size:\s*17px\s*!important/);
     expect(css).toMatch(/\.heys-auth-shell input\.phone-input-large[\s\S]*?font-weight:\s*600\s*!important/);
     expect(css).toMatch(/\.heys-auth-shell input\.phone-input-large[\s\S]*?width:\s*auto\s*!important/);
-    expect(css).toMatch(/\.heys-auth-shell \.phone-prefix-large[\s\S]*?font-size:\s*13px\s*!important/);
+    expect(css).toMatch(/\.heys-auth-shell \.phone-prefix-large[\s\S]*?font-size:\s*15px\s*!important/);
     expect(css).toMatch(/\.heys-auth-field\s*\{[\s\S]*?height:\s*44px/);
     expect(css).toMatch(/\.heys-auth-field\s*\{[\s\S]*?min-height:\s*44px/);
     expect(css).toMatch(/\.heys-auth-field\s*\{[\s\S]*?border-radius:\s*16px/);

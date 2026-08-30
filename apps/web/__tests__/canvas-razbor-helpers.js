@@ -155,6 +155,10 @@ function roleValues() {
 function norm(value) {
   if (value == null) return null;
   let s = String(value).trim().toLowerCase();
+  // `!important` — про приоритет каскада, а не про значение: у кадра его нет
+  // по построению, и без снятия сверка звала бы расхождением каждое такое
+  // правило (в теме входа их полтора десятка).
+  s = s.replace(/\s*!important\s*$/, '');
   s = s.replace(/var\(\s*(--[a-z0-9-]+)\s*\)/g, (_, r) => ROLE[r] || `var(${r})`);
   s = s.replace(
     /var\(\s*(--[a-z0-9-]+)\s*,\s*([^()]*(?:\([^()]*\)[^()]*)*)\)/g,
