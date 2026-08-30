@@ -687,7 +687,7 @@
   }
 
   function ReportsTabV4Bottom(props) {
-    const { React, periodMeta } = props || {};
+    const { React, periodMeta, openReportsModal } = props || {};
     if (!React || !periodMeta) return null;
 
     return React.createElement(React.Fragment, null,
@@ -726,6 +726,24 @@
       //
       // Замер сделан сегодня — призывать не к чему, и ярус не рисуется вовсе,
       // а не говорит «всё в порядке».
+      // Контракт «вид · вход в лист периодов»: строка-вход в .cd между
+      // «Днями» и «Что с этим делать». Чисел в ней нет — счёт недель и
+      // месяцев живёт в самом листе, и второй его источник разошёлся бы с
+      // первым. Прежде вход был только карточкой «ОТЧЕТЫ ПО МЕСЯЦАМ И
+      // НЕДЕЛЯМ» капсом с эмодзи 📙 в другом месте вкладки: на самих Отчётах
+      // человек до списка периодов не доходил.
+      typeof openReportsModal === 'function' && React.createElement('button', {
+        type: 'button',
+        className: 'reports-v4-periods',
+        onClick: openReportsModal
+      },
+        React.createElement('span', { className: 'reports-v4-periods__text' },
+          'По месяцам и неделям'),
+        React.createElement('span', {
+          className: 'reports-v4-periods__chevron', 'aria-hidden': 'true'
+        }, '›')
+      ),
+
       periodMeta.lastMeasureDaysAgo !== 0 && React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'reports-v4-tier' }, 'Что с этим делать'),
         React.createElement('div', { className: 'reports-v4-measure' },
@@ -766,7 +784,8 @@
       scoreTile,
       kcalDynamics,
       weightDynamics,
-      onBalanceFooterClick
+      onBalanceFooterClick,
+      openReportsModal
     } = props || {};
 
     // Контракт «мало данных»: до 7 дней вкладка — заглушка «итоги появятся
@@ -794,7 +813,7 @@
             'Уже считается: лента дней — с первого дня, тренд веса — с трёх замеров.')
         ),
         weightDynamics,
-        ReportsTabV4Bottom({ React, periodMeta })
+        ReportsTabV4Bottom({ React, periodMeta, openReportsModal })
       );
     }
 
@@ -802,7 +821,7 @@
       ReportsTabV4Top({ React, periodMeta, chartPeriod, handlePeriodChange, scoreTile, onBalanceFooterClick }),
       kcalDynamics,
       weightDynamics,
-      ReportsTabV4Bottom({ React, periodMeta })
+      ReportsTabV4Bottom({ React, periodMeta, openReportsModal })
     );
   }
 
@@ -835,6 +854,7 @@
       handlePeriodChange,
       setChartPeriod,
       setBalanceCardExpanded,
+      openReportsModal,
       r0,
       r1,
       setSparklinePopup,
@@ -4060,7 +4080,7 @@
         }, 'целевой вес'),
         ' в профиле — прогноз будет точнее!'
       ),
-      useReportsV4 && ReportsTabV4Bottom({ React, periodMeta: reportsPeriodMeta }),
+      useReportsV4 && ReportsTabV4Bottom({ React, periodMeta: reportsPeriodMeta, openReportsModal }),
       // Popup с деталями веса при клике на точку — V2 STYLE
       sparklinePopup && sparklinePopup.type === 'weight' && (() => {
         const point = sparklinePopup.point;

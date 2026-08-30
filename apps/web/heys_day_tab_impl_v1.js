@@ -2112,6 +2112,11 @@
             handlePeriodChange,
             setChartPeriod,
             setBalanceCardExpanded,
+            // Вход в лист периодов у Отчётов свой — строка «По месяцам и
+            // неделям» между «Днями» и «Что с этим делать». Модалка та же,
+            // что открывает карточка дневника: двух списков периодов в
+            // продукте нет.
+            openReportsModal,
             setSparklinePopup,
             setWeekNormPopup,
             setWeekDeficitPopup,
@@ -2267,6 +2272,8 @@
                 tefKcal,
                 dayTargetDef,
                 displayOptimum,
+                optimum,
+                cycleKcalMultiplier,
                 tdee,
                 caloricDebt,
                 monthTrainingsRows,
@@ -2281,7 +2288,7 @@
                 openHouseholdPicker,
                 openTrainingPicker
             });
-        }, [showActivityContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, train3k, visibleTrainings, regularTrainingsBlock, chargeTrainingBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
+        }, [showActivityContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, train3k, visibleTrainings, regularTrainingsBlock, chargeTrainingBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, optimum, cycleKcalMultiplier, tdee, caloricDebt, day?.isRefeedDay]);
 
         if (!HEYS.dayNutritionCard?.buildNutritionCard) {
             throw new Error('[heys_day_v12] HEYS.dayNutritionCard not loaded before heys_day_v12.js');

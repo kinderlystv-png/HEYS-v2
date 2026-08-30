@@ -927,6 +927,39 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
 }
 
+/* Контракт «вид · вход в лист периодов»: строка-вход в списочной карточке —
+   слово слева, шеврон тоном акцента справа. Чисел в строке нет: счёт недель и
+   месяцев живёт в самом листе, и второй его источник разошёлся бы с первым
+   при первой же правке расчёта. */
+.reports-v4-periods {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  padding: 2px 16px;
+  border: none;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+  cursor: pointer;
+}
+
+.reports-v4-periods__text {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--v4-ink, #201e1d);
+}
+
+.reports-v4-periods__chevron {
+  flex: none;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--v4-act-text, #8a4a20);
+}
+
 .reports-v4-measure {
   display: flex;
   align-items: center;
@@ -951,12 +984,16 @@
 
 .reports-v4-measure__cta {
   flex: none;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 16px;
   border: none;
-  border-radius: 12px;
-  background: var(--v4-act, #c67139);
-  color: var(--v4-btn-on-act, #fff5ef);
+  border-radius: 999px;
+  /* Кнопка не на акценте: строка контракта «карточка · призыв о замерах»
+     говорит прямо — это напоминание, а не главное действие вкладки. Залитая
+     акцентом, она спорила с «Открыть дневник» и «Записать замер» звала
+     сильнее, чем сам отчёт. */
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
   font: 700 12px/1 Figtree, system-ui, sans-serif;
   cursor: pointer;
 }
