@@ -291,6 +291,17 @@
       };
     });
 
+    // Тренд веса живёт от трёх настоящих замеров: оценённые по профилю или по
+    // среднему в счёт не идут — иначе «есть» стояло бы у человека, который
+    // ни разу не вставал на весы.
+    const measuredWeightDays = points.filter((p) => {
+      const w = +p.weightMorning || 0;
+      if (!(w > 0)) return false;
+      return !(p.weightMorningEstimated === true
+        || p.weightMorningSource === 'estimated_avg'
+        || p.weightMorningSource === 'estimated_profile');
+    }).length;
+
     const fatGrams = balance !== 0 ? Math.round(Math.abs(balance) / 7.7) : 0;
     const fatText = fatGrams >= 1000
       ? (fatGrams / 1000).toFixed(1).replace('.', ',') + ' кг'
@@ -368,6 +379,7 @@
       wellbeingCount: wellbeingVals.length,
       showWellbeingBlock,
       dayRows,
+      measuredWeightDays,
       fatText,
       balancePhrase: balance > 0
         ? 'Съедено больше плана — это ≈ ' + fatText + ' жира'
@@ -805,15 +817,39 @@
         React.createElement('div', { className: 'reports-v4-stub' },
           React.createElement('div', { className: 'reports-v4-tier' }, 'Пока копим данные'),
           React.createElement('div', { className: 'reports-v4-stub__title' }, 'Итоги появятся с 7 дней'),
-          React.createElement('div', { className: 'reports-v4-stub__progress' },
-            React.createElement('div', {
-              className: 'reports-v4-stub__progress-fill',
-              style: { width: Math.min(100, Math.round((have / 7) * 100)) + '%' }
-            })
-          ),
-          React.createElement('div', { className: 'reports-v4-stub__count' }, have + ' из 7'),
+          // Причина порога словами: без неё «7 дней» выглядит нашей прихотью.
           React.createElement('div', { className: 'reports-v4-stub__note' },
-            'Уже считается: лента дней — с первого дня, тренд веса — с трёх замеров.')
+            'Отчёт сравнивает дни между собой — ' + pluralDaysReports(have)
+              .replace(/^/, have + ' ') + ' для сравнения мало.'),
+          // Счёт стоит справа от полосы, как в кадре: под ней он читался
+          // подписью к дорожке, а не тем же числом, что она показывает.
+          React.createElement('div', { className: 'reports-v4-stub__track' },
+            React.createElement('div', { className: 'reports-v4-stub__progress' },
+              React.createElement('div', {
+                className: 'reports-v4-stub__progress-fill',
+                style: { width: Math.min(100, Math.round((have / 7) * 100)) + '%' }
+              })
+            ),
+            React.createElement('div', { className: 'reports-v4-stub__count' }, have + ' из 7')
+          )
+        ),
+        // Контракт «карточка · список „уже считается“»: четыре строки с
+        // состоянием справа, порядок постоянный. Прежде это была одна фраза, в
+        // которой из четырёх пунктов названы два, — человек не знал, работают
+        // ли баланс и матрица и когда они появятся.
+        React.createElement('div', { className: 'reports-v4-tier' }, 'Уже считается'),
+        React.createElement('div', { className: 'reports-v4-ready' },
+          [['Дни', have > 0], ['Тренд веса', (periodMeta.measuredWeightDays || 0) >= 3],
+            ['Баланс', false], ['Матрица дисциплины', false]].map(function (pair) {
+            return React.createElement('div', {
+              key: pair[0], className: 'reports-v4-ready__row'
+            },
+              React.createElement('span', { className: 'reports-v4-ready__name' }, pair[0]),
+              React.createElement('span', {
+                className: 'reports-v4-ready__state' + (pair[1] ? ' is-on' : '')
+              }, pair[1] ? 'есть' : 'с 7 дней')
+            );
+          })
         ),
         weightDynamics,
         ReportsTabV4Bottom({ React, periodMeta, openReportsModal })
