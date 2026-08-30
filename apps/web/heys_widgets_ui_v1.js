@@ -2560,6 +2560,7 @@
         className: 'widget-day-score widget-day-score--short widget-v4-stack widget-day-score--week'
       },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Оценка · 7 дней'),
           scoreSlashTen('widget-day-score__week-score', 21),
           weekBarCols(weekScores)
         )
@@ -3128,20 +3129,16 @@
     const stateLabel = v4.hasMeals === false
       ? (v4.emptyStateLabel || '')
       : (v4.underWaveLabel || '');
+    // Строка «волна · счётчик приёмов» (переписана дизайнером 31 августа):
+    // счётчик стоит под графиком, а не в углу плитки — угол занимает кружок
+    // удаления в режиме расстановки, и два элемента в одной точке спорят за
+    // касание. Слева счётчик тоном состояния, справа — конец текущей волны или
+    // счётчик стыков; слова состояния кадр под графиком не рисует.
     return React.createElement('div', { className: 'widget-v4-stack' },
-      React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
-        v4Kicker('Инсулиновая волна'),
-        React.createElement('span', {
-          className: 'widget-v4-row__meta widget-v4-row__meta--count'
-        }, mealLabel)
-      ),
+      v4Kicker('Инсулиновая волна'),
       InsulinWaveDaySvg({ v4 }),
       React.createElement('div', { className: 'widget-v4-stack__footer widget-v4-insulin-wave__footer' },
-        overlapLabel
-          ? React.createElement('span', { className: toneClass }, overlapLabel)
-          : React.createElement('span', {
-            className: toneClass
-          }, isLipolysis ? 'без критичных' : 'идёт волна'),
+        React.createElement('span', { className: toneClass }, overlapLabel || mealLabel),
         React.createElement('span', { className: 'widget-v4-muted' },
           // Стыки в дне есть — справа стоит их счётчик, иначе строка состояния.
           v4.jointCountLabel || stateLabel || '—')
@@ -3203,7 +3200,7 @@
         ? v4ValueStateClass(v4HealthTrendState(compactDelta))
         : '';
       return React.createElement('div', { className: 'widget-v4-stack widget-trend-compact' },
-        v4Kicker(`Тренд · ${formatRuUnit(periodDays, 'дней')}`),
+        v4Kicker(`Тренд здоровья · ${formatRuUnit(periodDays, 'дней')}`),
         React.createElement('div', { className: 'widget-trend-compact__row' },
           React.createElement('span', {
             className: 'widget-trend-compact__value ' + compactTone
@@ -4296,7 +4293,7 @@
       const maxBin = Math.max(1, ...bins);
       return React.createElement('div', { className: 'widget-water widget-water--2x1 widget-v4-stack' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
-          v4Kicker(` Вода · ${formatRuDecimal(drunk / 1000, 1)} / ${formatRuUnit(formatRuDecimal(target / 1000, 1), 'л')}`),
+          v4Kicker(`Вода · ${formatRuDecimal(drunk / 1000, 1)} / ${formatRuUnit(formatRuDecimal(target / 1000, 1), 'л')}`),
           React.createElement('span', { className: 'widget-v4-row__meta widget-v4-val--bad' }, rhythmLabel)
         ),
         React.createElement('div', { className: 'widget-v4-water-rhythm' },
@@ -4430,7 +4427,7 @@
       const sleepState = v4SleepValueState(hours, target);
       const sign = delta > 0 ? '+' : (delta < 0 ? '−' : '');
       return React.createElement('div', { className: 'widget-sleep widget-sleep--micro widget-v4-mini' },
-        v4Kicker('Сон'),
+        v4Kicker('Сон · к норме'),
         React.createElement('div', {
           className: 'widget-v4-mini__value ' + v4ValueStateClass(sleepState)
         },
@@ -4444,7 +4441,7 @@
     if (variantId === 'week_debt') {
       const debt = Number(data.weekDebtHours) || 0;
       return React.createElement('div', { className: 'widget-sleep widget-sleep--2x1 widget-v4-row widget-v4-row--tight' },
-        v4Kicker('Сон'),
+        v4Kicker('Недосып за 7 дней'),
         React.createElement('span', { className: 'widget-v4-row__value widget-v4-val--warn' },
           formatRuDecimal(debt, 1),
           React.createElement('span', { className: 'widget-v4-unit' }, ' ч долг')
@@ -9875,7 +9872,7 @@
     const cellsWord = needCells === 1 ? 'клетка' : (needCells < 5 ? 'клетки' : 'клеток');
     return React.createElement('div', { className: 'widget-v4-catalog__blocked' },
       React.createElement('span', { className: 'widget-v4-catalog__blocked-text' },
-        `нужно ${needCells} ${cellsWord} — освободите место`
+        `Нужно ${needCells} ${cellsWord} — освободите место`
       ),
       React.createElement('button', {
         type: 'button',

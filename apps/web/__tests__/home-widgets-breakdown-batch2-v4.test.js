@@ -124,7 +124,9 @@ describe('листы разбора batch2 на живых днях', () => {
     expect(model.chart.rows[0].name).toBe('Овощи');
     expect(model.chart.rows[0].pct).toBe(100);
     expect(model.chart.rows.length).toBeLessThanOrEqual(5);
-    expect(model.insight).toBe('Больше всего даёт овощи');
+    // Кадр пишет «дают овощи» — согласование под множественное; имя продукта
+    // приходит из каталога, поэтому формулировка обходится без глагола.
+    expect(model.insight).toBe('Главный источник — овощи');
     expect(model.stats.find((r) => r.label === 'Среднее за неделю')).toBeTruthy();
     expect(model.norm).toMatch(/^Норма \d+ г — 14 г на 1 000 ккал вашей нормы$/);
     expect(model.action.label).toBe('Добавить приём');
@@ -152,7 +154,8 @@ describe('листы разбора batch2 на живых днях', () => {
     const row = model.chart.series.find((r) => r.start != null);
     expect(row.end - row.start).toBe(120);
     expect(model.stats.find((r) => r.label === 'Самый поздний приём')?.value).toBe('21:30');
-    expect(model.insight).toBe('Обычно вы едите за 2 ч 0 мин до сна');
+    // Круглый час называется часом, а не «2 ч 0 мин».
+    expect(model.insight).toBe('Обычно вы едите за 2 ч до сна');
   });
 
   it('качество еды — вредность героем и столбик из двух частей', () => {
@@ -182,8 +185,9 @@ describe('листы разбора batch2 на живых днях', () => {
     expect(model.chart.past.length).toBe(24);
     expect(model.stats.find((r) => r.label === 'Первый приём обычно')?.value).toBe('08:30');
     // Самый большой разрыв — обед 13:00 → ужин 19:00.
-    expect(model.stats.find((r) => r.label === 'Самый большой разрыв')?.value).toBe('6 ч 0 мин');
-    expect(model.insight).toBe('Между обедом и ужином обычно 6 ч 0 мин');
+    expect(model.stats.find((r) => r.label === 'Самый большой разрыв')?.value).toBe('6 ч');
+    // Во фразе круглый час зовётся словом — кадр «Разбор · Ритм приёмов».
+    expect(model.insight).toBe('Между обедом и ужином обычно 6 часов');
   });
 
   it('готовность ко сну — счётчик героем, кофеин четвёртым с «нет данных»', () => {

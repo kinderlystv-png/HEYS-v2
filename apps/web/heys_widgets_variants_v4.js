@@ -78,7 +78,7 @@
   const CATALOG = {
     calories: [
       { id: 'hero', title: 'Как сейчас', subtitle: 'остаток, полоса, съедено из нормы', size: '2x2', tileBg: 'sand' },
-      { id: 'line', title: 'Строка', subtitle: 'та же цифра в 2×1', size: '2x1' },
+      { id: 'line', title: 'Строка', subtitle: 'та же цифра в 2×1, полоса снята', size: '2x1' },
       { id: 'dinner', title: 'Хватит на ужин', subtitle: 'остаток против вашего обычного ужина', size: '2x2' },
       { id: 'activity', title: 'С активностью', subtitle: 'остаток с учётом сожжённого', size: '2x1' }
     ],
@@ -100,7 +100,7 @@
       { id: 'window', title: 'Окно сна', subtitle: 'во сколько лёг — виден сдвиг', size: '2x1' }
     ],
     dayScore: [
-      { id: 'mini', title: 'Как сейчас', subtitle: 'число из десяти', size: '1x1', isDefault: true },
+      { id: 'mini', title: 'Как сейчас', subtitle: 'только итог', size: '1x1', isDefault: true },
       { id: 'factors', title: 'Из чего сложилась', subtitle: 'пять слагаемых — что просело', size: '2x1' },
       { id: 'week_chart', title: 'Семь дней', subtitle: 'итог в ряду недели', size: '2x1' }
     ],
@@ -145,30 +145,30 @@
     // принадлежит канвасу (карточки по возрастанию формата, дефолт первым).
     fiber: [
       { id: 'now', title: 'Как сейчас', subtitle: 'граммы и полоса до нормы', size: '1x1', isDefault: true },
-      { id: 'add', title: 'Добрать', subtitle: 'сколько осталось и чем добрать', size: '2x1' },
-      { id: 'week', title: 'Неделя', subtitle: 'семь дней столбиками против нормы', size: '2x2' }
+      { id: 'add', title: 'Добрать', subtitle: 'сколько и чем добрать', size: '2x1' },
+      { id: 'week', title: 'Неделя', subtitle: 'семь дней столбиками', size: '2x2' }
     ],
     protein: [
       { id: 'now', title: 'Как сейчас', subtitle: 'граммы и полоса до нормы', size: '1x1', isDefault: true },
-      { id: 'add', title: 'Добрать', subtitle: 'сколько осталось до нормы', size: '2x1' },
-      { id: 'by_meal', title: 'По приёмам', subtitle: 'сколько белка дал каждый приём', size: '2x2' }
+      { id: 'add', title: 'Добрать', subtitle: 'остаток и продукты', size: '2x1' },
+      { id: 'by_meal', title: 'По приёмам', subtitle: 'куда пришёл белок', size: '2x2' }
     ],
     sleepWindow: [
-      { id: 'now', title: 'Как сейчас', subtitle: 'сколько до отбоя после еды', size: '1x1', isDefault: true },
-      { id: 'evening', title: 'Вечер', subtitle: 'полоса от последнего приёма до отбоя', size: '2x1' }
+      { id: 'now', title: 'Как сейчас', subtitle: 'время до отбоя одним числом', size: '1x1', isDefault: true },
+      { id: 'evening', title: 'Вечер', subtitle: 'полоса от приёма до отбоя', size: '2x1' }
     ],
     foodQuality: [
-      { id: 'now', title: 'Как сейчас', subtitle: 'индекс из 10 и полоса', size: '1x1', isDefault: true },
-      { id: 'why', title: 'Что снизило', subtitle: 'дельта и причина одной строкой', size: '2x1' },
+      { id: 'now', title: 'Как сейчас', subtitle: 'индекс из 10 с полосой', size: '1x1', isDefault: true },
+      { id: 'why', title: 'Что снизило', subtitle: 'дельта и причина', size: '2x1' },
       { id: 'week', title: 'Неделя', subtitle: 'семь дней столбиками', size: '2x2' }
     ],
     mealRhythm: [
-      { id: 'day_line', title: 'Лента дня', subtitle: 'точки приёмов на полосе дня', size: '2x1', isDefault: true },
-      { id: 'intervals', title: 'Интервалы', subtitle: 'средний промежуток и три последних', size: '2x2' }
+      { id: 'day_line', title: 'Лента дня', subtitle: 'приёмы точками на полосе дня', size: '2x1', isDefault: true },
+      { id: 'intervals', title: 'Интервалы', subtitle: 'промежутки и среднее', size: '2x2' }
     ],
     sleepReady: [
-      { id: 'checklist', title: 'Чек-лист', subtitle: 'вода, еда до сна и шаги точками', size: '2x1', isDefault: true },
-      { id: 'review', title: 'Разбор', subtitle: 'те же три строки числами и время до отбоя', size: '2x2' }
+      { id: 'checklist', title: 'Чек-лист', subtitle: 'три пункта точками', size: '2x1', isDefault: true },
+      { id: 'review', title: 'Разбор', subtitle: 'те же пункты с числами', size: '2x2' }
     ],
     crashRisk: [
       // Дефолт «За месяц» с кривой — решение владельца 20 августа: переключатель
@@ -786,6 +786,23 @@
     return h * 60 + m;
   }
 
+  // В предложении круглый час зовётся словом: кадр «Разбор · Ритм приёмов»
+  // пишет «обычно 6 часов», а не «6 ч» — сокращение годится для строки числа,
+  // но во фразе читается как обрывок.
+  function bdFormatDurationWords(totalMin) {
+    const total = Math.max(0, Math.round(Number(totalMin) || 0));
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    if (h <= 0) return `${m} мин`;
+    if (m !== 0) return `${h} ч ${m} мин`;
+    const tail = h % 100;
+    if (tail >= 11 && tail <= 14) return `${h} часов`;
+    const last = h % 10;
+    if (last === 1) return `${h} час`;
+    if (last >= 2 && last <= 4) return `${h} часа`;
+    return `${h} часов`;
+  }
+
   function bdFormatHm(minutes) {
     if (!Number.isFinite(minutes)) return '—';
     const total = ((Math.round(minutes) % 1440) + 1440) % 1440;
@@ -1230,7 +1247,10 @@
   }
 
   function bdStepsWeekdayTable(week, goal) {
-    const weekdayNames = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+    // Таблица разбора называет дни полностью: сокращения годятся для оси под
+    // графиком, но в строке «Суббота — самый слабый день недели» «сб» читается
+    // как обрывок. Кадр «Разбор · Шаги» пишет их полными.
+    const weekdayNames = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
     const byWd = Array.from({ length: 7 }, () => ({ sum: 0, n: 0 }));
     (week || []).forEach((row) => {
       if (!row.hasData) return;
@@ -1470,7 +1490,10 @@
       heroKicker: 'Сегодня',
       heroValue: Number.isFinite(today) ? bdFormatNum(today) : '—',
       heroUnit: norm > 0 ? ` из ${bdFormatNum(norm)} г` : ' г',
-      insight: sources.length ? `Больше всего даёт ${sources[0].name.toLowerCase()}` : null,
+      // Кадр пишет «Больше всего дают овощи в обед» — согласование под
+      // множественное число, а имя продукта приходит из каталога и может быть
+      // любого. Формулировка без глагола верна для обоих случаев.
+      insight: sources.length ? `Главный источник — ${sources[0].name.toLowerCase()}` : null,
       chartLabel: null,
       chart: sources.length ? { kind: 'sourceRows', rows: sources } : null,
       stats: [
@@ -1727,7 +1750,7 @@
       : null;
     const slotLabel = (key) => BD_MEAL_SLOTS.find((s) => s.key === key)?.between || '';
     const gapPhrase = maxGap != null && maxGapPair && maxGapPair[0] && maxGapPair[1]
-      ? `Между ${slotLabel(maxGapPair[0])} и ${slotLabel(maxGapPair[1])} обычно ${bdFormatDurationMin(maxGap)}`
+      ? `Между ${slotLabel(maxGapPair[0])} и ${slotLabel(maxGapPair[1])} обычно ${bdFormatDurationWords(maxGap)}`
       : null;
     return {
       type: 'mealRhythm',
@@ -2121,6 +2144,8 @@
     const h = Math.floor(total / 60);
     const m = total % 60;
     if (h <= 0) return `${m} мин`;
+    // «6 ч 0 мин» — не ответ: круглый час называется часом.
+    if (m === 0) return `${h} ч`;
     return `${h} ч ${m} мин`;
   }
 

@@ -129,6 +129,10 @@ function renderTile(data, { size = '2x2', variantId = 'day_as_is' } = {}) {
 }
 
 const meta = (c) => c.querySelector('.widget-v4-row__meta')?.textContent ?? null;
+// Строка «волна · счётчик приёмов» (31 августа): счётчик стоит под графиком,
+// а не в углу — угол занимает кружок удаления в расстановке.
+const counter = (c) =>
+  c.querySelector('.widget-v4-insulin-wave__footer > span')?.textContent ?? null;
 const notes = (c) =>
   [...c.querySelectorAll('.widget-v4-insulin-wave__note')].map((n) => n.textContent);
 const tileLabel = (c) => c.querySelector('.widget')?.getAttribute('aria-label') ?? null;
@@ -243,18 +247,20 @@ describe('данные: какое состояние выбирает расч�
 });
 
 describe('плитка: что видно в каждом состоянии', () => {
-  it('обычное состояние — счётчик приёмов в углу на месте', () => {
+  it('обычное состояние — счётчик приёмов стоит под графиком', () => {
     const data = boot({ days: DAYS_TODAY });
     const { container } = renderTile(data);
-    expect(meta(container)).toBe('1 приём');
+    expect(counter(container)).toBe('1 приём');
+    // В углу его больше нет: место занимает кружок удаления в расстановке.
+    expect(meta(container)).toBeNull();
     expect(container.querySelector('.widget-v4-insulin-wave--overnight')).toBeNull();
   });
 
   it('ночная оценка — счётчика нет вовсе, вместо него две подписи', () => {
     const data = boot({ days: DAYS_OVERNIGHT });
     const { container } = renderTile(data);
-    // Счётчик про сегодня, а сегодня приёмов нет: угол пуст.
-    expect(container.querySelector('.widget-v4-row__meta')).toBeNull();
+    // Счётчик про сегодня, а сегодня приёмов нет: под графиком его нет.
+    expect(container.querySelector('.widget-v4-insulin-wave__footer')).toBeNull();
     expect(container.textContent).not.toMatch(/\d+ приём/);
     const [first, second] = notes(container);
     expect(first).toBe('оценка по вчерашнему дню');
