@@ -19,6 +19,7 @@
             householdActivities,
             train1k,
             train2k,
+            train3k,
             visibleTrainings,
             regularTrainingsBlock,
             chargeTrainingBlock,
@@ -51,7 +52,7 @@
             stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK,
             // Household & Training
             bmr, householdK, totalHouseholdMin, householdActivities,
-            train1k, train2k, visibleTrainings, regularTrainingsBlock, chargeTrainingBlock,
+            train1k, train2k, train3k, visibleTrainings, regularTrainingsBlock, chargeTrainingBlock,
             // Metabolism (NDTE, TEF)
             ndteData, ndteBoostKcal, tefData, tefKcal,
             // Caloric calculations

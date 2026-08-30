@@ -27,6 +27,28 @@
     };
   }
 
+  /**
+   * Цена минуты активности — та же, что у расчёта: над покоем, а не брутто.
+   * Попап объясняет число, которое стоит рядом на карточке, и обязан приходить
+   * к нему же. Брутто-MET давал 45 мин Z2 при 80 кг = 378 ккал против 315 на
+   * чипе — попап опровергал цифру, из которой его открыли (разбор «Актив»
+   * 2026-08-30, дефект A).
+   */
+  function netKcalPerMin(met, weight, kcalPerMinFn) {
+    const tdeeNet = HEYS.TDEE && HEYS.TDEE.netKcalPerMin;
+    if (typeof tdeeNet === 'function') {
+      const v = +tdeeNet(met, weight);
+      if (Number.isFinite(v)) return v;
+    }
+    if (typeof kcalPerMinFn !== 'function') return 0;
+    return kcalPerMinFn(Math.max((+met || 0) - 1, 0), weight);
+  }
+
+  /** Подпись формулы читается как расчёт: «минуты × (MET − 1) × вес × 0.0175». */
+  function netFormulaExpression(minutes, met, weight) {
+    return minutes + ' × (' + met + ' − 1) × ' + weight + ' × 0.0175';
+  }
+
   function renderTrainingPopups(params) {
     if (!React || !ReactDOM) return null;
 
@@ -113,7 +135,12 @@
                 const T = (TR && TR[ti]) || { z: [0, 0, 0, 0] };
                 const minutes = +T.z[zi] || 0;
                 const met = (mets && mets[zi]) || [2.5, 6, 8, 10][zi];
-                const kcal = safeR0(minutes * (typeof kcalPerMin === 'function' ? kcalPerMin(met, weight) : 0));
+                // Чип зоны считает по kcalMin (нетто) — попап обязан взять тот
+                // же массив, а не пересчитывать своей формулой.
+                const perMin = (kcalMin && Number.isFinite(+kcalMin[zi]))
+                  ? +kcalMin[zi]
+                  : netKcalPerMin(met, weight, kcalPerMin);
+                const kcal = safeR0(minutes * perMin);
 
                 return React.createElement(React.Fragment, null,
                   React.createElement('div', { className: 'zone-formula-header' },
@@ -136,7 +163,7 @@
                   ),
                   React.createElement('div', { className: 'zone-formula-calc' },
                     React.createElement('div', { className: 'zone-formula-expression' },
-                      minutes + ' × ' + met + ' × ' + weight + ' × 0.0175 − 1'
+                      netFormulaExpression(minutes, met, weight)
                     ),
                     React.createElement('div', { className: 'zone-formula-result' },
                       '= ' + kcal + ' ккал'
@@ -189,7 +216,7 @@
                 const h = (householdActivities && householdActivities[hi]) || { minutes: 0 };
                 const minutes = +h.minutes || 0;
                 const met = 2.5;
-                const kcal = safeR0(minutes * (typeof kcalPerMin === 'function' ? kcalPerMin(met, weight) : 0));
+                const kcal = safeR0(minutes * netKcalPerMin(met, weight, kcalPerMin));
 
                 return React.createElement(React.Fragment, null,
                   React.createElement('div', { className: 'zone-formula-header' },
@@ -212,7 +239,7 @@
                   ),
                   React.createElement('div', { className: 'zone-formula-calc' },
                     React.createElement('div', { className: 'zone-formula-expression' },
-                      minutes + ' × ' + met + ' × ' + weight + ' × 0.0175 − 1'
+                      netFormulaExpression(minutes, met, weight)
                     ),
                     React.createElement('div', { className: 'zone-formula-result' },
                       '= ' + kcal + ' ккал'

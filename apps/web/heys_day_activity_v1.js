@@ -31,8 +31,29 @@
     return customLabel || trainingType?.label || ('Тренировка ' + (index + 1));
   }
 
+  /**
+   * Назначенное куратором, но не выполненное — не факт дня. Предикат
+   * канонический (`TK.load.isNotPerformedTraining`), локальный фолбэк повторяет
+   * тот же список статусов: порядок загрузки модулей не гарантирован.
+   *
+   * Тот же отсев уже делают TDEE (`trainingKcal` возвращает 0) и тоннаж
+   * (`dayTonnage` пропускает план). Здесь его не было, и список «Тренировки за
+   * месяц» показывал строки «0 ккал» за тренировки, которых не было
+   * (разбор «Актив» 2026-08-30, дефект E).
+   */
+  const NOT_PERFORMED_PLAN_STATUSES = ['assigned', 'skipped', 'moved'];
+  function isNotPerformedTrainingMonth(t) {
+    const TK = HEYS.TrainingKernel;
+    if (TK && TK.load && typeof TK.load.isNotPerformedTraining === 'function') {
+      return !!TK.load.isNotPerformedTraining(t);
+    }
+    if (!t || !t.plan) return false;
+    return NOT_PERFORMED_PLAN_STATUSES.indexOf(t.plan.status) !== -1;
+  }
+
   function isTrainingSlotUsedMonth(t) {
     if (!t || typeof t !== 'object') return false;
+    if (isNotPerformedTrainingMonth(t)) return false;
     if (t.source === 'morning_activation') return true;
     const z = Array.isArray(t.z) ? t.z : [];
     if (z.some((m) => Number(m) > 0)) return true;
@@ -219,6 +240,7 @@
       totalHouseholdMin,
       train1k,
       train2k,
+      train3k,
       r0,
       visibleTrainings,
       regularTrainingsBlock,
@@ -265,7 +287,10 @@
     const hungerSummary = readHungerSummary(dateKey);
 
     const monthCount = Array.isArray(monthTrainingsRows) ? monthTrainingsRows.length : 0;
-    const cardioKcal = safeR0((train1k || 0) + (train2k || 0));
+    // Слотов тренировок три, и третий тоже в затратах: без него столбик разбора
+    // не сходился с «Затратами», а заголовок аккордеона занижал день
+    // (разбор «Актив» 2026-08-30, дефект C).
+    const cardioKcal = safeR0((train1k || 0) + (train2k || 0) + (train3k || 0));
 
     const calendarBlock = morningActivationCalendarBlock && React.isValidElement?.(morningActivationCalendarBlock)
       ? React.cloneElement(morningActivationCalendarBlock, {

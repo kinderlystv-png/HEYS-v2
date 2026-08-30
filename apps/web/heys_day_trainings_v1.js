@@ -12,6 +12,69 @@
   /** Как в шаге «Зоны пульса» / настройках профиля (индекс 0…3). */
   const WB_KCAL_ZONE_LABELS = ['Разминка', 'Жиросжигание', 'Аэробная', 'Анаэробная'];
 
+  /**
+   * Цена минуты быта — над покоем, как в расчёте дня (TDEE `householdKcal`).
+   * Брутто-MET на бейдже давал 60 мин при 80 кг = 210 ккал против 126 в строке
+   * «Бытовая активность» ярусом выше: два разных числа про одну и ту же запись
+   * на одном экране (разбор «Актив» 2026-08-30, дефект B).
+   */
+  const HOUSEHOLD_MET = 2.5;
+  function householdNetKcalPerMin(weight, kcalPerMinFn) {
+    const tdeeNet = HEYS.TDEE && HEYS.TDEE.netKcalPerMin;
+    if (typeof tdeeNet === 'function') {
+      const v = +tdeeNet(HOUSEHOLD_MET, weight);
+      if (Number.isFinite(v)) return v;
+    }
+    if (typeof kcalPerMinFn !== 'function') return 0;
+    return kcalPerMinFn(HOUSEHOLD_MET - 1, weight);
+  }
+
+  /**
+   * Поля подхода вне базовой формы `{id, weightKg, reps, done}`, от которых
+   * зависит арифметика: тип (разминка вне тоннажа), сбросы, довес, время и
+   * метры. Список зеркалит `TK.strength.normalizeApproach` — расходиться им
+   * нельзя, иначе тоннаж на дне и в конструкторе разъедется.
+   */
+  const APPROACH_CARRY_FIELDS = ['type', 'extraWeightKg', 'drops', 'durationSec', 'distanceM'];
+  /** Отметка боли — факт прошедшего подхода, а не его состав: в повтор не едет. */
+  const APPROACH_FACT_FIELDS = ['discomfort', 'discomfortNote'];
+  /** Снимок справочника на упражнении: от него считается тоннаж своего веса. */
+  const EXERCISE_CARRY_FIELDS = ['exerciseId', 'unit', 'bodyweightFactor', 'primaryGroup', 'secondaryGroups'];
+
+  function carryApproachSnapshotFields(out, src, keepFacts) {
+    const ks = HEYS.TrainingKernel && HEYS.TrainingKernel.strength;
+    const from = (ks && typeof ks.normalizeApproach === 'function')
+      ? ks.normalizeApproach(src)
+      : (src && typeof src === 'object' ? src : {});
+    const keys = keepFacts ? APPROACH_CARRY_FIELDS.concat(APPROACH_FACT_FIELDS) : APPROACH_CARRY_FIELDS;
+    for (let i = 0; i < keys.length; i++) {
+      const v = from[keys[i]];
+      if (v === undefined || v === null) continue;
+      out[keys[i]] = Array.isArray(v) ? v.slice() : v;
+    }
+    return out;
+  }
+
+  function carryExerciseSnapshotFields(out, src) {
+    const e = src && typeof src === 'object' ? src : {};
+    for (let i = 0; i < EXERCISE_CARRY_FIELDS.length; i++) {
+      const v = e[EXERCISE_CARRY_FIELDS[i]];
+      if (v === undefined || v === null) continue;
+      out[EXERCISE_CARRY_FIELDS[i]] = Array.isArray(v) ? v.slice() : v;
+    }
+    return out;
+  }
+
+  /** Повтор прошлой тренировки — это план, а не её копия: отметки сбрасываются. */
+  function resetCarriedDropsDone(approach) {
+    if (approach && Array.isArray(approach.drops)) {
+      approach.drops = approach.drops.map(function (d) {
+        return Object.assign({}, d, { done: false });
+      });
+    }
+    return approach;
+  }
+
   function readDayFromStore(dateStr) {
     const U = HEYS.utils || {};
     if (typeof U.lsGet !== 'function') return null;
@@ -711,15 +774,15 @@
     return srcExercises.map(function (ex, i) {
       const aps = Array.isArray(ex.approaches) && ex.approaches.length > 0
         ? ex.approaches.map(function (a, ai) {
-          return {
+          return resetCarriedDropsDone(carryApproachSnapshotFields({
             id: 'ap_replay_' + ts + '_' + i + '_' + ai,
             weightKg: a.weightKg != null ? String(a.weightKg) : '',
             reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10,
             done: false
-          };
+          }, a, false));
         })
         : [{ id: 'ap_replay_' + ts + '_' + i + '_0', weightKg: '', reps: 10, done: false }];
-      return {
+      return carryExerciseSnapshotFields({
         id: 'ex_replay_' + ts + '_' + i,
         name: String(ex.name || ''),
         approaches: aps,
@@ -728,7 +791,7 @@
         rpe: ex.rpe != null ? Math.max(0, Math.min(10, parseInt(ex.rpe, 10) || 0)) : 0,
         restSec: ex.restSec != null && REST_PRESETS.indexOf(+ex.restSec) >= 0 ? +ex.restSec : 90,
         restManual: !!ex.restManual
-      };
+      }, ex);
     });
   }
 
@@ -3195,13 +3258,18 @@
           restSec: e.restSec != null && REST_PRESETS.indexOf(+e.restSec) >= 0 ? +e.restSec : 90,
           restManual: !!e.restManual
         };
+        // Единица, коэффициент своего веса и id справочника — снимок, снятый при
+        // добавлении упражнения: от них зависит тоннаж. Пересборка их не знала,
+        // и любая правка через эту функцию превращала упражнение на своём весе
+        // в обычное (разбор «Актив» 2026-08-30, дефект T).
+        carryExerciseSnapshotFields(base, e);
         let approaches = Array.isArray(e.approaches) && e.approaches.length > 0
-          ? e.approaches.map((a, ai) => ({
+          ? e.approaches.map((a, ai) => carryApproachSnapshotFields({
             id: a.id || 'ap_' + i + '_' + ai,
             weightKg: a.weightKg != null ? String(a.weightKg) : '',
             reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10,
             done: !!a.done
-          }))
+          }, a, true))
           : null;
         if (!approaches || approaches.length === 0) {
           const legacySets = e.sets != null ? Math.max(1, parseInt(e.sets, 10) || 1) : 1;
@@ -4052,7 +4120,7 @@
         );
       }),
       householdEntries.map((h, hi) => {
-        const hKcal = safeR0((+h.minutes || 0) * (typeof kcalPerMin === 'function' ? kcalPerMin(2.5, weight) : 0));
+        const hKcal = safeR0((+h.minutes || 0) * householdNetKcalPerMin(weight, kcalPerMin));
         const householdTitle = getHouseholdDisplayTitle(h);
         const isCustomTitle = householdTitle !== 'Бытовая активность';
         return React.createElement('div', {
@@ -4095,6 +4163,12 @@
     // Тестовый шов — прямой рендер обзора программы куратора в изоляции от
     // всего остального compact-trainings дерева (много обязательных пропов).
     ProgramNextLine,
+    // Тестовый шов — перенос полей подхода и упражнения при пересборке журнала.
+    // От него зависит тоннаж (разминка вне счёта, сбросы в счёте, свой вес по
+    // коэффициенту), а сама пересборка живёт внутри renderTrainingsBlock.
+    carryApproachSnapshotFields,
+    carryExerciseSnapshotFields,
+    cloneExercisesForReplay,
     moveOptionsFor,
     appendTrainingToDay,
     ProgramPathScreen,

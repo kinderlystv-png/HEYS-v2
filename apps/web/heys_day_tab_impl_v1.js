@@ -2257,6 +2257,7 @@
                 householdActivities,
                 train1k,
                 train2k,
+                train3k,
                 visibleTrainings,
                 regularTrainingsBlock,
                 chargeTrainingBlock,
@@ -2280,7 +2281,7 @@
                 openHouseholdPicker,
                 openTrainingPicker
             });
-        }, [showActivityContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, visibleTrainings, regularTrainingsBlock, chargeTrainingBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
+        }, [showActivityContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, train3k, visibleTrainings, regularTrainingsBlock, chargeTrainingBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
 
         if (!HEYS.dayNutritionCard?.buildNutritionCard) {
             throw new Error('[heys_day_v12] HEYS.dayNutritionCard not loaded before heys_day_v12.js');
