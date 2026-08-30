@@ -39,6 +39,7 @@ function loadMorning({
   yesterdayReady = true,
   dateKey = DATE_KEY,
   todayKey = DATE_KEY,
+  curatorSession = false,
 } = {}) {
   const dayKey = `heys_${CLIENT_ID}_dayv2_${dateKey}`;
   const progressKey = `heys_${CLIENT_ID}_morning_checkin_progress_v1_${dateKey}`;
@@ -73,6 +74,8 @@ function loadMorning({
     },
   };
   if (fullSync) window.HEYS.cloud = { _lastClientSync: fullSync };
+  // Кураторская сессия: тот же признак, что читает продукт.
+  window.HEYS.auth = { isCuratorSession: () => curatorSession };
   if (subscriptionStatus) {
     window.HEYS.Subscription = {
       getCachedStatus: () => subscriptionStatus,
@@ -870,6 +873,17 @@ describe('morning check-in journal resume', () => {
 
     expect(plan.steps).toEqual(['weight']);
     expect(values.get(PROGRESS_KEY).steps.weight.status).toBe('planned');
+  });
+
+  it('у куратора чек-ин не открывается вовсе — это самоотчёт клиента', () => {
+    // Куратор входит в дневник клиента той же оболочкой, и currentClientId у
+    // него выставлен на клиента. Без гарда мастер спросил бы у него вес, сон и
+    // настроение, а записанное ушло бы клиенту как его собственный чек-ин.
+    const open = loadMorning({ day: {}, profile: {} });
+    expect(open.HEYS.shouldShowMorningCheckin()).toBe(true);
+
+    const curator = loadMorning({ day: {}, profile: {}, curatorSession: true });
+    expect(curator.HEYS.shouldShowMorningCheckin()).toBe(false);
   });
 
   it('не открывает чек-ин, когда куратор заполнил все core-поля', () => {

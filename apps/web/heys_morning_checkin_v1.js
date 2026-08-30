@@ -1237,6 +1237,19 @@
       return false;
     }
 
+    // Чек-ин — самоотчёт человека о собственном утре: вес, сон, качество сна,
+    // настроение. Куратор входит в дневник клиента той же оболочкой, и
+    // currentClientId у него выставлен на клиента, то есть без этой проверки
+    // мастер мог открыться у него — с вопросами, на которые он ответить не
+    // может, а записанное ушло бы клиенту как его собственный чек-ин.
+    //
+    // Строка контракта «режим куратора»: экран открывается только у клиента.
+    // Правки задним числом куратор вносит своим листом, и они приходят клиенту
+    // плашкой — это отдельный путь, он остаётся.
+    if (HEYS.auth?.isCuratorSession?.()) {
+      return false;
+    }
+
     // First-login order is strict: legal consents must block registration.
     // On reload the registration flag can persist, so do not reopen profile
     // steps until the consent check has completed successfully.
