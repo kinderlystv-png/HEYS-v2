@@ -568,6 +568,9 @@ describe('поправка на факт · кадры недельной све
     expect(pro.safeguardsLayer).toBe('second');
     // Содержание одно и то же — иначе это два разных набора правил.
     expect(self.safeguards).toEqual(pro.safeguards);
+    // Парами «ключ — значение», как остальные строки карточки: сплошной фразой
+    // предохранитель читается как обещание, а парой — как граница механизма.
+    expect(self.safeguards[0]).toEqual({ label: 'Шаг за неделю', value: 'не больше 3 %' });
   });
 });
 
@@ -682,6 +685,86 @@ describe('поправка на факт · довод перестройки', 
     expect(r.source).toBe('по замеру от 12 августа');
     expect(r.dropCm).toBe(2.1);
     expect(r.weeks).toBe(3);
+  });
+
+  it('график перестройки: вес держится плоско, талия идёт вниз', () => {
+    stubPattern('recomposition', -0.1);
+    // Вес шатается на двести граммов, талия уходит на три сантиметра. Если
+    // нормировать каждую линию по своему размаху, обе нарисуются одинаковым
+    // склоном и график скажет обратное тому, что показывает.
+    const days = Array.from({ length: 21 }, (_, i) => {
+      const d = dayWith('2026-08-' + String(i + 1).padStart(2, '0'),
+        i % 7 === 0 ? 78 - (i / 7) * 1.5 : null);
+      d.weightMorning = 80 + (i % 2 ? 0.2 : 0);
+      return d;
+    });
+    const chart = NC.detectRecomposition(days, {}).chart;
+    expect(chart).toBeTruthy();
+
+    const spread = (points) => Math.max(...points.map((pt) => pt[1]))
+      - Math.min(...points.map((pt) => pt[1]));
+    // Талия занимает почти всю полосу, вес — узкую ленту у середины.
+    expect(spread(chart.waist)).toBeGreaterThan(0.9);
+    expect(spread(chart.weight)).toBeLessThan(0.2);
+    // И идёт она вниз, а не вверх: последняя точка ниже первой.
+    expect(chart.waist[chart.waist.length - 1][1]).toBeLessThan(chart.waist[0][1]);
+    // Числа стоят подписями — ось значений не рисуется.
+    expect(chart.lastWaist).toContain('см');
+    expect(chart.lastWeight).toContain('кг');
+  });
+
+  it('одной линии не бывает: нет второй величины — нет и графика', () => {
+    stubPattern('recomposition', -0.1);
+    // Замер один-единственный: линия из одной точки не линия, а «вес и талия»
+    // под одной линией было бы обманом.
+    const days = Array.from({ length: 21 }, (_, i) => {
+      const d = dayWith('2026-08-' + String(i + 1).padStart(2, '0'), i === 11 ? 78 : null);
+      d.weightMorning = 80;
+      return d;
+    });
+    expect(NC.detectRecomposition(days, {}).chart).toBe(null);
+  });
+
+  it('подтверждённая перестройка — праздничное состояние, как и рост', () => {
+    // Строка «вид · карточки сверки»: заливка «идёт хорошо» у роста и у
+    // подтверждённой перестройки. Вес стоит, а тело меняется — хорошая новость.
+    const result = NC.compute({
+      days: Array.from({ length: 21 }, (_, i) => ({
+        date: '2026-08-' + String(i + 1).padStart(2, '0'), kcal: 2000, isLogged: true
+      })),
+      formulaPerDay: 2400,
+      trend: { deltaKg: -0.6, measuredDays: 9, windowDays: 21 },
+      currentFactor: 1,
+      historyDays: 60
+    });
+    const card = NC.buildWeeklySyncCard({
+      result, tariff: 'self',
+      recomposition: { confirmed: true, dropCm: 2, weeks: 3, source: 'по замеру от 12 августа' }
+    });
+    expect(card.frame).toBe('recomposition');
+    expect(card.celebratory).toBe(true);
+  });
+
+  it('числа клиентской карточки называют свою природу', () => {
+    // Строка «числа называют свою природу»: под каждым ключом подпись. Два
+    // числа подряд без неё читаются как одна величина, померенная дважды.
+    const card = NC.buildWeeklySyncCard({
+      result: NC.compute({
+        days: Array.from({ length: 21 }, (_, i) => ({
+          date: '2026-08-' + String(i + 1).padStart(2, '0'), kcal: 2000, isLogged: true
+        })),
+        formulaPerDay: 2400,
+        trend: { deltaKg: -0.6, measuredDays: 9, windowDays: 21 },
+        currentFactor: 1,
+        historyDays: 60
+      }),
+      tariff: 'self'
+    });
+    expect(card.evidenceRows[0].hint).toBe('расход по формуле');
+    expect(card.evidenceRows[1].hint).toBe('расход по весу и записям');
+    // Тон разводит расчёт и измерение — тот же приём, что в листе куратора.
+    expect(card.evidenceRows[1].tone).toBe('fact');
+    expect(card.evidenceRows[0].tone).toBeUndefined();
   });
 
   it('другой состав — не перестройка, даже когда замер есть', () => {

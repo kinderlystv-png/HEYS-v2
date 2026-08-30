@@ -1270,16 +1270,34 @@ body.tour-active .ios-pwa-banner {
   color: var(--v4-ink, #201e1d);
 }
 
+/* В режиме чтения заголовок называет число под собой, а не открывает новую
+   мысль: шестнадцать пикселей делали из подписи второй заголовок. */
+.weekly-wrap-correction__title.is-key {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
 /* Источник довода стоит на самой карточке: без него экран перестройки
-   превращается в оправдание застоя. */
+   превращается в оправдание застоя.
+
+   Строка контракта «пилюля зрелости и опоры»: 9 px моноширинным трекингом
+   .06em прописными, поля 4/7, радиус 999, фон набора, тон акцентного текста.
+   Прежде это был прямоугольник радиусом 4 тоном заливки --v4-act — заливочный
+   цвет на тексте даёт меньший контраст, чем текстовый. */
 .weekly-wrap-correction__evidence {
   align-self: flex-start;
   font-size: 9px;
-  font-family: ui-monospace, monospace;
-  background: var(--v4-surface, #f7efe2);
-  color: var(--v4-act, #c67139);
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: ui-monospace, Menlo, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+  padding: 4px 7px;
+  border-radius: 999px;
 }
 
 .weekly-wrap-correction__body {
@@ -1291,7 +1309,7 @@ body.tour-active .ios-pwa-banner {
 .weekly-wrap-correction__hero {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 10px;
 }
 
 .weekly-wrap-correction__hero-value {
@@ -1304,11 +1322,14 @@ body.tour-active .ios-pwa-banner {
 .weekly-wrap-correction__hero-caption {
   font-size: 12px;
   font-weight: 700;
+  line-height: 1;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
+/* Рост тоном --gr контракта: --v4-good — вторая, более светлая зелень набора,
+   и на подписи она читается слабее самого числа. */
 .weekly-wrap-correction__hero-caption.is-up {
-  color: var(--v4-good, #7a8a5e);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .weekly-wrap-correction__hero-caption.is-down {
@@ -1330,6 +1351,72 @@ body.tour-active .ios-pwa-banner {
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
 }
 
+/* График перестройки: 262×56, две линии на одной сетке — своей карточкой, как
+   в кадре. Ось значений не рисуется: числа уже сказаны прозой над графиком. */
+.weekly-wrap-correction__chart {
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--v4-surface, #f7efe2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.weekly-wrap-correction__line {
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+/* Вес держится — тон чернил; талия уходит — заливка акцента. Кадр и строка
+   «рекомпозиция» называют именно эту пару; строка «карточка · график
+   рекомпозиции» называет другую (чернила 35 % и --gr2), расхождение отдано
+   дизайнеру записью в UI_V4_FINDINGS. */
+.weekly-wrap-correction__line.is-weight {
+  stroke: color-mix(in srgb, var(--v4-ink, #201e1d) 32%, transparent);
+}
+
+.weekly-wrap-correction__line.is-waist {
+  stroke: var(--v4-act, #c67139);
+}
+
+.weekly-wrap-correction__legend {
+  display: flex;
+  gap: 14px;
+}
+
+.weekly-wrap-correction__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.weekly-wrap-correction__legend-item.is-weight {
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+}
+
+.weekly-wrap-correction__legend-item.is-waist {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.weekly-wrap-correction__swatch {
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.weekly-wrap-correction__swatch.is-weight {
+  background: color-mix(in srgb, var(--v4-ink, #201e1d) 32%, transparent);
+}
+
+.weekly-wrap-correction__swatch.is-waist {
+  background: var(--v4-act, #c67139);
+}
+
 /* Строки фактов: довод назван слабым словом, а не оформлением. */
 .weekly-wrap-correction__facts {
   display: flex;
@@ -1342,14 +1429,61 @@ body.tour-active .ios-pwa-banner {
 
 .weekly-wrap-correction__fact {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
   font-size: 12.5px;
   font-weight: 600;
+  line-height: 1;
 }
 
-.weekly-wrap-correction__fact-label {
+/* Ярус раздела карточки: слово акцентом, прописными, разрядкой — называет
+   раздел, а не спорит со строками в нём. */
+.weekly-wrap-correction__tier {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+/* Ключ и его подпись — колонкой: подпись отвечает на вопрос, который иначе
+   задают вслух, — «это же с дефицитом?». */
+.weekly-wrap-correction__fact-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.weekly-wrap-correction__fact-hint {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
+/* Тон разводит расчёт и измерение — тот же приём, что в листе куратора. */
+.weekly-wrap-correction__fact-value.is-fact {
+  font-weight: 700;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+/* Предохранитель — граница механизма, а не число недели: он тише значений и
+   кеглем, и тоном. */
+.weekly-wrap-correction__fact-value.is-quiet {
+  font-size: 11px;
+  font-weight: 600;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* Ключ строки — обычными чернилами, как в кадре: пару «ключ — значение»
+   разводит место в строке и тон значения, а не приглушённый ключ. Приглушённый
+   ключ рядом с приглушённым значением давал строку, которую не видно вовсе. */
+.weekly-wrap-correction__fact-label {
+  color: var(--v4-ink, #201e1d);
 }
 
 .weekly-wrap-correction__fact-value {
@@ -1377,6 +1511,25 @@ body.tour-active .ios-pwa-banner {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+/* Строка контракта «вид · разница тарифов»: на Pro предохранители во втором
+   слое — строкой «Предохранители · развернуть». Прятать их совсем нельзя: там,
+   где решает куратор, человек всё равно вправе знать границы механизма. */
+.weekly-wrap-correction__safeguards-more > summary {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--v4-act-text, #8a4a20);
+  cursor: pointer;
+  list-style: none;
+}
+
+.weekly-wrap-correction__safeguards-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.weekly-wrap-correction__safeguards-more[open] > summary {
+  margin-bottom: 6px;
+}
+
 .weekly-wrap-correction__actions {
   display: flex;
   flex-wrap: wrap;
@@ -1384,23 +1537,25 @@ body.tour-active .ios-pwa-banner {
   margin-top: 4px;
 }
 
+/* Строка контракта «кнопки»: пилюля 48 радиусом 999. Прямоугольник радиусом 12
+   с рамкой делал вторичные кнопки похожими на поля ввода — та же правка, что в
+   листе куратора. */
 .weekly-wrap-correction__btn {
   flex: 1 1 auto;
-  min-height: 40px;
+  min-height: 48px;
   padding: 0 14px;
-  border-radius: 12px;
-  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
-  background: var(--v4-float, #fffaf1);
-  color: var(--v4-ink, #201e1d);
+  border-radius: 999px;
+  border: none;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.58));
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .weekly-wrap-correction__btn--primary {
   background: var(--v4-act, #c67139);
-  border-color: var(--v4-act, #c67139);
-  color: var(--v4-float, #fffaf1);
+  color: var(--v4-btn-on-act, #fff5ef);
 }
 
 .weekly-wrap-correction__btn:focus-visible {

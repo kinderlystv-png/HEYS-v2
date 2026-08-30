@@ -11,9 +11,11 @@
 // кадры отличаются составом, а не видом: те же классы, другие состояния, и
 // повторять по ним ту же таблицу значило бы сверять одно правило трижды.
 //
-// Клиентские кадры сюда не входят: они живут в понедельничной шторке
-// (`weekly-wrap-correction__*`) и ещё не сведены — гейт на несведённом экране
-// выключают в первый же день.
+// Клиентские кадры сверяются второй таблицей: они живут в понедельничной
+// шторке (`weekly-wrap-correction__*`) и своём файле стилей. Кадров сверки
+// десять, но вид у них один — меняются число, тон и состав строк, — поэтому
+// таблиц две: «снизилась» за общий вид карточки и «рекомпозиция» за график,
+// которого у остальных нет.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -26,8 +28,13 @@ const CANVAS = path.resolve(
   '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html',
 );
 const CSS = path.resolve(__dirname, '../styles/modules/734-ui-v4-curator-panel.css');
+// Карточка сверки живёт в общих компонентах, а не в модуле кабинета.
+const CSS_CLIENT = path.resolve(__dirname, '../styles/heys-components.css');
 
 const FRAME = 'Куратор · поправка предложена';
+const FRAME_DOWN = 'Сверка · норма снизилась';
+const FRAME_REC = 'Сверка · рекомпозиция';
+const FRAME_SELF = 'Self · снижение ждёт согласия';
 
 // Элементы кадра → правила листа. Номера — из самого разбора; якоря там, где
 // номер уехал бы от вставки одного элемента.
@@ -80,6 +87,35 @@ const EXCEPTIONS = [
   '.cur-sheet__rec-split | 8 % роли линии против 9 % кадра',
 ];
 
+// Клиентская карточка: общий вид по кадру «Сверка · норма снизилась».
+const PAIRS_DOWN = [
+  [8, '.weekly-wrap-correction__hero', ['align', 'gap']],
+  [10, '.weekly-wrap-correction__hero-caption', ['fontWeight', 'fontSize', 'lineHeight']],
+  // 12 — сама строка списка, шрифт у неё от .row кадра; проверяем по значению.
+  [16, '.weekly-wrap-correction__fact', ['fontWeight', 'fontSize', 'lineHeight']],
+];
+
+// Кадр Self: природа числа подписью, тон факта, ярус и предохранители.
+const PAIRS_SELF = [
+  [10, '.weekly-wrap-correction__fact-copy', ['direction', 'gap']],
+  [12, '.weekly-wrap-correction__fact-hint', ['fontWeight', 'fontSize', 'lineHeight']],
+  // Кегль и интерлиньяж значение берёт у самой строки — так же, как их видит
+  // браузер: цепочка идёт от общего к частному.
+  [14, ['.weekly-wrap-correction__fact', '.weekly-wrap-correction__fact-value',
+    '.weekly-wrap-correction__fact-value.is-fact'],
+  ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [21, ['.weekly-wrap-correction__fact', '.weekly-wrap-correction__fact-value',
+    '.weekly-wrap-correction__fact-value.is-quiet'],
+  ['fontWeight', 'fontSize', 'lineHeight']],
+];
+
+// График перестройки: карточка, две линии, легенда плашками.
+const PAIRS_REC = [
+  [11, '.weekly-wrap-correction__legend', ['gap']],
+  [12, '.weekly-wrap-correction__legend-item', ['align', 'gap', 'fontWeight', 'fontSize', 'lineHeight']],
+  [13, '.weekly-wrap-correction__swatch', ['width', 'height', 'radius']],
+];
+
 describe('лист поправки против разбора кадров канваса', () => {
   const canvas = fs.readFileSync(CANVAS, 'utf8');
   const razbor = readRazbor(canvas);
@@ -102,5 +138,23 @@ describe('лист поправки против разбора кадров к�
 
   it('осознанные отступления не разрослись', () => {
     expect(EXCEPTIONS.length).toBe(7);
+  });
+});
+
+describe('карточка сверки против разбора кадров канваса', () => {
+  const canvas = fs.readFileSync(CANVAS, 'utf8');
+  const razbor = readRazbor(canvas);
+  const rules = readRules(fs.readFileSync(CSS_CLIENT, 'utf8'));
+
+  it('общий вид карточки совпадает с кадром «норма снизилась»', () => {
+    expect(compare({ razbor, rules, frame: FRAME_DOWN, pairs: PAIRS_DOWN })).toEqual([]);
+  });
+
+  it('график перестройки и его легенда совпадают с кадром', () => {
+    expect(compare({ razbor, rules, frame: FRAME_REC, pairs: PAIRS_REC })).toEqual([]);
+  });
+
+  it('природа числа, тон факта и предохранители совпадают с кадром Self', () => {
+    expect(compare({ razbor, rules, frame: FRAME_SELF, pairs: PAIRS_SELF })).toEqual([]);
   });
 });

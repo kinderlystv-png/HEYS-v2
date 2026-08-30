@@ -470,8 +470,70 @@
      * Снижение не уезжает во второй слой: это существенное изменение
      * рекомендации, и оно всегда с причиной.
      */
-    function NormCorrectionCard({ card, onDecide }) {
+    /**
+     * График перестройки: 262×56, две линии на одной сетке.
+     *
+     * Вес тоном чернил 32 %, талия тоном заливки акцента — так кадр разводит
+     * «то, что стоит» и «то, что уходит». Легенда снизу плашками 10×3, без
+     * чисел: числа уже сказаны прозой над графиком («талия ушла на 2 см»), и
+     * второй раз они спорили бы сами с собой округлением.
+     *
+     * Своей арифметики здесь нет: точки нормированы движком, а этот код только
+     * растягивает их по сетке. Масштаб — утверждение о данных, и выбирать его
+     * рисующему нельзя.
+     */
+    function NormCorrectionChart({ chart }) {
         const h = global.React.createElement;
+        const W = 262;
+        const H = 56;
+        const path = (points) => points
+            .map((p, i) => (i ? 'L' : 'M') + (p[0] * W).toFixed(1)
+                + ' ' + ((1 - p[1]) * H).toFixed(1))
+            .join(' ');
+        const line = (points, kind) => h('path', {
+            className: 'weekly-wrap-correction__line is-' + kind,
+            d: path(points), fill: 'none'
+        });
+        const legend = (kind, label) => h('span', {
+            className: 'weekly-wrap-correction__legend-item is-' + kind
+        },
+            h('span', { className: 'weekly-wrap-correction__swatch is-' + kind }),
+            label
+        );
+        return h('div', { className: 'weekly-wrap-correction__chart' },
+            h('svg', {
+                viewBox: '0 0 ' + W + ' ' + H,
+                width: '100%', height: H,
+                role: 'img',
+                'aria-label': 'Вес ' + chart.lastWeight + ', талия ' + chart.lastWaist
+            },
+                line(chart.weight, 'weight'),
+                line(chart.waist, 'waist')
+            ),
+            h('div', { className: 'weekly-wrap-correction__legend' },
+                legend('weight', 'вес'),
+                legend('waist', 'талия')
+            )
+        );
+    }
+
+    // Предохранители — те же строки «ключ · значение», что и остальные списки
+    // карточки: свой вид ради трёх строк завёл бы второй язык списка.
+    function safeguardList(items) {
+        const h = global.React.createElement;
+        return h('div', { className: 'weekly-wrap-correction__facts' },
+            items.map((s) => h('div', {
+                className: 'weekly-wrap-correction__fact', key: s.label
+            },
+                h('span', { className: 'weekly-wrap-correction__fact-label' }, s.label),
+                h('span', { className: 'weekly-wrap-correction__fact-value is-quiet' }, s.value)
+            ))
+        );
+    }
+
+    function NormCorrectionCard({ card, onDecide }) {
+        const React = global.React;
+        const h = React.createElement;
         if (!card || !card.copy) return null;
 
         const copy = card.copy;
@@ -485,7 +547,10 @@
                 + (card.celebratory ? ' weekly-wrap-correction--good' : '')
                 + (card.readOnly ? ' weekly-wrap-correction--reading' : '')
         },
-            h('div', { className: 'weekly-wrap-correction__title' }, copy.title),
+            h('div', {
+                className: 'weekly-wrap-correction__title'
+                    + (card.titleAs === 'key' ? ' is-key' : '')
+            }, copy.title),
             card.evidence
                 ? h('span', {
                     // Косвенный довод слабее подтверждённого замером, и пилюля
@@ -496,6 +561,11 @@
                 }, card.evidence)
                 : null,
             h('div', { className: 'weekly-wrap-correction__body' }, copy.body),
+            // Две линии одного графика: вес держится, талия уходит. Точки
+            // приходят из движка нормированными — масштаб это утверждение о
+            // данных, и выбирать его рисующему нельзя. Ось значений не
+            // рисуется: числа стоят подписями у последних точек.
+            card.chart ? h(NormCorrectionChart, { chart: card.chart }) : null,
             showsNumber
                 ? h('div', { className: 'weekly-wrap-correction__hero' },
                     h('span', { className: 'weekly-wrap-correction__hero-value' },
@@ -521,14 +591,26 @@
             // карточка сообщала результат и просила согласия, не показав
             // основания: «норма снизилась» без «формула говорит одно, факт
             // другое» — это просьба поверить на слово.
+            card.evidenceRows && card.evidenceTitle
+                ? h('div', { className: 'weekly-wrap-correction__tier' }, card.evidenceTitle)
+                : null,
             card.evidenceRows
                 ? h('div', { className: 'weekly-wrap-correction__facts' },
                     card.evidenceRows.map((f) => h('div', {
                         className: 'weekly-wrap-correction__fact', key: f.label
                     },
-                        h('span', { className: 'weekly-wrap-correction__fact-label' }, f.label),
-                        h('span', { className: 'weekly-wrap-correction__fact-value' },
-                            HEYS.NormCorrection.formatKcal(f.value))
+                        h('span', { className: 'weekly-wrap-correction__fact-copy' },
+                            h('span', { className: 'weekly-wrap-correction__fact-label' }, f.label),
+                            // Природа числа — подписью под ключом: без неё два
+                            // числа подряд читаются как одно, померенное дважды.
+                            f.hint
+                                ? h('span', { className: 'weekly-wrap-correction__fact-hint' }, f.hint)
+                                : null
+                        ),
+                        h('span', {
+                            className: 'weekly-wrap-correction__fact-value'
+                                + (f.tone ? ' is-' + f.tone : '')
+                        }, HEYS.NormCorrection.formatKcal(f.value))
                     ))
                 )
                 : null,
@@ -544,14 +626,20 @@
                     'Предложение · ', copy.proposalNote)
                 : null,
             // Предохранители на Self стоят в первом слое: там, где куратора
-            // нет, ограничители перестают быть внутренними.
+            // нет, ограничители перестают быть внутренними. На Pro — во втором,
+            // строкой «Предохранители · развернуть»: решает куратор, но границы
+            // механизма человек вправе прочитать и там.
             card.safeguardsLayer === 'first' && card.needsConsent
-                ? h('div', { className: 'weekly-wrap-correction__safeguards' },
-                    card.safeguards.map((text, i) =>
-                        h('div', { className: 'weekly-wrap-correction__safeguard', key: i }, text)
-                    )
+                ? h(React.Fragment, null,
+                    h('div', { className: 'weekly-wrap-correction__tier' }, 'Предохранители'),
+                    safeguardList(card.safeguards)
                 )
-                : null,
+                : (card.safeguardsLayer === 'second' && card.safeguards
+                    ? h('details', { className: 'weekly-wrap-correction__safeguards-more' },
+                        h('summary', null, 'Предохранители · развернуть'),
+                        safeguardList(card.safeguards)
+                    )
+                    : null),
             h('div', { className: 'weekly-wrap-correction__actions' },
                 card.actions.map((action) => h('button', {
                     key: action,

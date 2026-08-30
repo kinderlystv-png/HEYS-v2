@@ -93,6 +93,49 @@ describe('поправка на факт · карточка сверки в ш�
     expect(CSS).toMatch(/\.weekly-wrap-correction--good\s*\{[^}]*--v4-ok-bg/);
   });
 
+  it('график перестройки рисуется шторкой, но считается движком', () => {
+    // Масштаб — это утверждение о данных: выбрать его рисующему нельзя, иначе
+    // «вес стоит» и «талия уходит» разъедутся между кабинетом и шторкой.
+    expect(SRC).toContain('function NormCorrectionChart');
+    expect(SRC).toContain('card.chart');
+    const start = SRC.indexOf('function NormCorrectionChart');
+    const body = SRC.slice(start, SRC.indexOf('function NormCorrectionCard'));
+    // Ни нормировки, ни поиска размаха — только растяжка готовых точек.
+    expect(body).not.toMatch(/Math\.min|Math\.max|\/ *range|reduce/);
+    // Сетка кадра и две линии своими ролями.
+    expect(body).toContain('const W = 262');
+    expect(body).toContain('const H = 56');
+    // Вес тоном чернил, талия заливкой акцента — пара кадра.
+    expect(CSS).toMatch(/__line\.is-weight[\s\S]{0,120}--v4-ink/);
+    expect(CSS).toMatch(/__line\.is-waist[\s\S]{0,120}--v4-act/);
+    // Легенда плашками 10×3 — без чисел: они уже сказаны прозой над графиком.
+    expect(CSS).toMatch(/__swatch \{[^}]*width: 10px;[^}]*height: 3px/);
+    // В самой легенде чисел нет — только слова и плашки; числа остаются в
+    // подписи для чтения с экрана, где прозы над графиком не слышно.
+    expect(body).toContain("legend('weight', 'вес')");
+    expect(body).toContain("legend('waist', 'талия')");
+    expect(body).toContain("'aria-label'");
+  });
+
+  it('предохранители на Pro не исчезают, а уходят во второй слой', () => {
+    // Строка «вид · разница тарифов»: на Self они в первом слое, на Pro —
+    // строкой «Предохранители · развернуть». Совсем прятать нельзя: границы
+    // механизма человек вправе прочитать и там, где решает куратор.
+    expect(SRC).toContain("card.safeguardsLayer === 'second'");
+    expect(SRC).toContain('Предохранители · развернуть');
+    expect(CSS).toContain('.weekly-wrap-correction__safeguards-more');
+  });
+
+  it('кнопки карточки — пилюли 48, как во всей зоне', () => {
+    // Строка «кнопки»: пилюля 48 радиусом 999. Прямоугольник с рамкой делал
+    // вторичные кнопки похожими на поля ввода.
+    const btn = CSS.slice(CSS.indexOf('.weekly-wrap-correction__btn {'),
+      CSS.indexOf('.weekly-wrap-correction__btn:focus-visible'));
+    expect(btn).toMatch(/min-height: 48px/);
+    expect(btn).toMatch(/border-radius: 999px/);
+    expect(btn).not.toMatch(/border: 1px/);
+  });
+
   it('карточка одета по контракту: радиус 20, заголовок 16/700, число 30/800', () => {
     const block = CSS.slice(
       CSS.indexOf('.weekly-wrap-correction {'),
@@ -102,7 +145,9 @@ describe('поправка на факт · карточка сверки в ш�
     expect(block).toMatch(/__title \{[^}]*font-size: 16px;[^}]*font-weight: 700/);
     expect(block).toMatch(/__hero-value \{[^}]*font-size: 30px;[^}]*font-weight: 800/);
     // Рост и снижение разными ролями — иначе направление читается только словом.
-    expect(block).toMatch(/is-up \{[^}]*--v4-good/);
+    // Рост тоном --gr контракта: --v4-good это вторая, светлая зелень набора, и
+    // на подписи она читается слабее самого числа.
+    expect(block).toMatch(/is-up \{[^}]*--v4-ok-text/);
     expect(block).toMatch(/is-down \{[^}]*--v4-bad-text/);
   });
 });
