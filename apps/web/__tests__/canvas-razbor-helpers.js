@@ -28,6 +28,15 @@ function readRazbor(source) {
 function readRules(css) {
   const clean = css.replace(/\/\*[\s\S]*?\*\//g, '');
   const rules = new Map();
+  // Свои переменные файла — `--boot-disc`, `--nut-dim` и подобные. Берём первое
+  // определение: дальше по файлу их переопределяют тёмные и синие наборы, а
+  // сверяемся мы с песочным. Без этого продуктовое `var(--boot-disc)` не с чем
+  // сравнить, и сверка звала расхождением каждое такое место.
+  const localVars = new Map();
+  for (const m of clean.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;{}]+);/g)) {
+    if (!localVars.has(m[1])) localVars.set(m[1], m[2].trim());
+  }
+  rules.localVars = localVars;
   for (const match of clean.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     for (const selector of match[1].split(',')) {
       const key = selector.trim();
@@ -160,7 +169,7 @@ function roleValues() {
   return ROLE_VALUES;
 }
 
-function norm(value) {
+function norm(value, localVars) {
   if (value == null) return null;
   let s = String(value).trim().toLowerCase();
   // `!important` — про приоритет каскада, а не про значение: у кадра его нет
@@ -177,6 +186,11 @@ function norm(value) {
   // подстановки сверка сравнивала бы имя роли с цветом кадра и звала бы
   // расхождением каждое такое место.
   s = s.replace(/var\(\s*(--v4-[a-z0-9-]+)\s*\)/g, (whole, role) => roleValues().get(role) || whole);
+  // Своя переменная сверяемого файла — последняя ступень: роли набора и роли
+  // канваса уже разобраны выше, здесь остаётся то, что файл объявил сам.
+  if (localVars) {
+    s = s.replace(/var\(\s*(--[a-z0-9-]+)\s*\)/g, (whole, name) => localVars.get(name) || whole);
+  }
   s = s.replace(/rgba\(var\(--ink\)\s*,\s*\.?(\d+)\)/g, (_, d) => `rgba(0,0,0,.${d})`);
   // Чернила канваса — 32,30,29, и сам он печатает их в разборе то через
   // `var(--ink)`, то литералом `rgba(0,0,0,…)`. Продукт пишет тот же цвет
@@ -238,9 +252,9 @@ function compare({ razbor, rules, frame, pairs }) {
       Object.assign(merged, rules.get(s));
     }
     for (const kind of props) {
-      const want = norm(PICK[kind](value));
+      const want = norm(PICK[kind](value), rules.localVars);
       if (want == null) { drift.push(`${frame} · ${index}: в кадре нет «${kind}»`); continue; }
-      const got = norm(merged[CSSPROP[kind]]);
+      const got = norm(merged[CSSPROP[kind]], rules.localVars);
       if (want !== got) {
         drift.push(`${chain[chain.length - 1]} { ${CSSPROP[kind]} } — кадр: ${want} · код: ${got}`);
       }
