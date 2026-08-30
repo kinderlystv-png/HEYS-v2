@@ -937,3 +937,144 @@
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Диагностика: шапка, кнопки, поля ─────────────────────────────────────
+ * Правила переехали из строки стилей внутри модуля: там они держали #434587
+ * и #fff мимо набора и мимо гейта перекраски, который такие цвета и ловит.
+ * Потому диагностика оставалась фиолетовой, когда остальной кабинет уже был
+ * перекрашен: её цвета были для проверки невидимы.
+ */
+.cdo {
+  max-width: 1180px;
+  margin: 0 auto;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cdo-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.cdo-title {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cdo-note {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.cdo-primary,
+.cdo-secondary,
+.cdo-more {
+  min-height: 48px;
+  border: none;
+  border-radius: 14px;
+  padding: 0 15px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Главное действие вкладки — одно, и оно залито. «Показать сбои» отвечает на
+   вопрос, ради которого вкладку открывают. */
+.cdo-primary {
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #fff5ef);
+}
+
+.cdo-primary.is-active {
+  background: var(--v4-act-text, #8a4a20);
+}
+
+.cdo-secondary,
+.cdo-more {
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.cdo-megalog {
+  margin-bottom: 14px;
+}
+
+.cdo-mega-btn {
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 14px;
+  padding: 10px 16px;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cdo-mega-btn:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.cdo-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: 16px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.cdo-control {
+  min-height: 44px;
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  border-radius: 12px;
+  background: var(--v4-bg, #fffaf1);
+  color: var(--v4-ink, #201e1d);
+  padding: 0 11px;
+  font: inherit;
+  min-width: 0;
+}
+
+.cdo-updated {
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* Подсказка подвкладки — подпись, а не голубая полоса: она объясняет, что в
+   списке, и не должна выглядеть предупреждением. */
+.cur-cab__subtabs-hint {
+  padding: 10px 16px 0;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  text-wrap: pretty;
+}
+
+.cur-cab__queue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px 0;
+}
+
+.cur-cab__queue-state {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}

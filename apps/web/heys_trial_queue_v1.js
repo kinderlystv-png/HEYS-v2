@@ -2339,7 +2339,7 @@
       completed: ['Готово к разбору', '#e9f7ed', '#25613a'],
       needs_clarification: ['Нужны уточнения', '#fff0e5', '#934b13'],
       approved: ['Одобрен', '#dcfce7', '#166534'],
-      approved_waiting_slot: ['Одобрен, ждёт место', '#eef0ff', '#434587'],
+      approved_waiting_slot: ['Одобрен, ждёт место', 'var(--v4-hero, #efe3cf)', 'var(--v4-act-text, #8a4a20)'],
       rejected: ['Отказ', '#fee2e2', '#991b1b'],
     };
     // Контракт «кнопка называет действие сама»: приписка «Действие куратора: …»
@@ -2676,7 +2676,7 @@
             border: 'none',
             background: (actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id)
               ? '#d1d5db'
-              : '#434587',
+              : 'var(--v4-act, #c67139)',
             color: '#fff',
             cursor: (actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id) ? 'not-allowed' : 'pointer',
             fontSize: 13,
@@ -2802,8 +2802,8 @@
             disabled: actionLoading === 'invite-' + item.client_id,
             style: {
               minHeight: 44, padding: '10px 12px', borderRadius: 10, border: 'none',
-              background: actionLoading === 'invite-' + item.client_id ? '#d1d5db' : '#434587',
-              color: '#fff', cursor: actionLoading === 'invite-' + item.client_id ? 'not-allowed' : 'pointer',
+              background: actionLoading === 'invite-' + item.client_id ? '#d1d5db' : 'var(--v4-act, #c67139)',
+              color: 'var(--v4-btn-on-act, #fff5ef)', cursor: actionLoading === 'invite-' + item.client_id ? 'not-allowed' : 'pointer',
               fontSize: 12, fontWeight: 700,
             }
           }, actionLoading === 'invite-' + item.client_id
@@ -2857,35 +2857,21 @@
         background: '#f8fafc'
       }
     },
-      React.createElement('div', {
-        style: {
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px',
-          background: '#fff',
-          borderBottom: '1px solid #e5e7eb'
-        }
-      },
-        React.createElement('div', {
-          style: { display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#6b7280' }
-        },
-          React.createElement('span', null, isAccepting ? '🟢 Очередь открыта' : '🔴 Очередь закрыта'),
-          React.createElement('span', null, `Слотов: ${grouped.assigned.length}/${stats?.limits?.max_active_trials || 3}`)
+      // Состояние очереди и занятые слоты — одной строкой словами. Кружки 🟢
+      // и 🔴 повторяли то, что и так написано рядом, а красный в наборе
+      // значит разрушающее действие, а не «закрыто».
+      React.createElement('div', { className: 'cur-cab__queue-head' },
+        React.createElement('span', { className: 'cur-cab__queue-state' },
+          (isAccepting ? 'Очередь открыта' : 'Очередь закрыта')
+          + ' · слотов ' + grouped.assigned.length
+          + ' из ' + (stats?.limits?.max_active_trials ?? '?')
         ),
         React.createElement('button', {
+          type: 'button',
+          className: 'cur-chip',
           onClick: handleToggleAccepting,
-          disabled: toggleLoading || !stats,
-          style: {
-            padding: '6px 10px',
-            borderRadius: 8,
-            border: '1px solid #e5e7eb',
-            background: '#fff',
-            cursor: toggleLoading ? 'not-allowed' : 'pointer',
-            fontSize: 12,
-            fontWeight: 600
-          }
-        }, toggleLoading ? '⏳' : isAccepting ? 'Закрыть' : 'Открыть')
+          disabled: toggleLoading || !stats
+        }, toggleLoading ? 'меняем…' : isAccepting ? 'закрыть' : 'открыть')
       ),
       // Контракт «вид · подвкладки очереди»: чипы со счётом через точку, а не
       // сегмент с числом в скобках. Те же чипы, что у фильтра панели — один
@@ -2902,15 +2888,10 @@
           title: tab.hint
         }, tab.label.toLowerCase() + ' · ' + tab.count))
       ),
+      // Подсказка подвкладки — подпись, а не голубая полоса: она объясняет,
+      // что в списке, и не должна выглядеть предупреждением.
       React.createElement('div', {
-        style: {
-          padding: '10px 16px',
-          background: '#f0f9ff',
-          borderBottom: '1px solid #bfdbfe',
-          fontSize: 12,
-          color: '#1e40af',
-          lineHeight: 1.5
-        }
+        className: 'cur-cab__subtabs-hint'
       }, tabs.find(t => t.id === activeTab)?.hint || ''),
       React.createElement('div', {
         style: {
@@ -2993,7 +2974,7 @@
             fontSize: 12,
             fontWeight: 600
           }
-        }, loading ? '⏳' : '🔄 Обновить')
+        }, loading ? 'Обновляем…' : 'Обновить')
       ),
 
       // ========== ДИАЛОГ: Конвертация лида (v3.0) ==========
@@ -3062,7 +3043,7 @@
                 padding: '10px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                background: '#434587',
+                background: 'var(--v4-act, #c67139)',
                 color: '#fff',
                 cursor: 'pointer',
                 fontSize: '14px',
@@ -3156,7 +3137,7 @@
                 padding: '11px',
                 borderRadius: '10px',
                 border: 'none',
-                background: pinResult.inviteStatus === 'invite_sent' ? '#d8dfdc' : '#434587',
+                background: pinResult.inviteStatus === 'invite_sent' ? '#d8dfdc' : 'var(--v4-act, #c67139)',
                 color: '#fff',
                 cursor: pinResult.inviteStatus === 'invite_sent' ? 'default' : 'pointer',
                 fontSize: '13px',
@@ -3416,7 +3397,7 @@
                         React.createElement('div', { style: { fontSize: 12, color: '#64748b' } },
                           `Ответ кандидата: ${renderAnswerValue(originalValue, section, key)}`),
                         React.createElement('details', null,
-                          React.createElement('summary', { style: { cursor: 'pointer', fontSize: 12, color: '#434587', fontWeight: 700 } },
+                          React.createElement('summary', { style: { cursor: 'pointer', fontSize: 12, color: 'var(--v4-act, #c67139)', fontWeight: 700 } },
                             `История уточнений: ${correctionHistory.length}`),
                           React.createElement('div', { style: { display: 'grid', gap: 8, marginTop: 8 } },
                             correctionHistory.map((correction) => React.createElement('div', {
@@ -3446,7 +3427,7 @@
                           },
                           style: {
                             justifySelf: 'start', minHeight: 40, padding: '7px 10px', borderRadius: 9,
-                            border: '1px solid #cbd5e1', background: '#fff', color: '#434587',
+                            border: '1px solid #cbd5e1', background: '#fff', color: 'var(--v4-act, #c67139)',
                             cursor: 'pointer', fontWeight: 700, fontSize: 12,
                           },
                         }, isCorrected ? 'Добавить уточнение' : 'Уточнить ответ')
@@ -3493,7 +3474,7 @@
                           React.createElement('input', {
                             type: 'checkbox', checked: answerCorrection.confirmedFromCandidate,
                             onChange: (event) => setAnswerCorrection((current) => ({ ...current, confirmedFromCandidate: event.target.checked, requestId: null })),
-                            style: { marginTop: 2, accentColor: '#434587' },
+                            style: { marginTop: 2, accentColor: 'var(--v4-act, #c67139)' },
                           }),
                           'Ответ уточнён со слов кандидата'
                         ),
@@ -3514,7 +3495,7 @@
                           React.createElement('button', {
                             type: 'button', onClick: submitAnswerCorrection,
                             disabled: actionLoading === 'correction-' + intakeDialog.client_id,
-                            style: { flex: 1, minHeight: 42, padding: '8px 11px', borderRadius: 9, border: 0, background: '#434587', color: '#fff', cursor: 'pointer', fontWeight: 700 },
+                            style: { flex: 1, minHeight: 42, padding: '8px 11px', borderRadius: 9, border: 0, background: 'var(--v4-act, #c67139)', color: '#fff', cursor: 'pointer', fontWeight: 700 },
                           }, actionLoading === 'correction-' + intakeDialog.client_id ? 'Сохраняем…' : 'Сохранить уточнение')
                         )
                       ) : null
@@ -3534,7 +3515,7 @@
               onClick: () => setDecisionSheetOpen(true),
               style: {
                 width: '100%', minHeight: 46, padding: '11px 16px',
-                border: 0, borderRadius: 12, background: '#434587',
+                border: 0, borderRadius: 12, background: 'var(--v4-act, #c67139)',
                 color: '#fff', fontWeight: 700, cursor: 'pointer',
               }
             }, 'Зафиксировать решение')
@@ -3638,7 +3619,7 @@
                   disabled: actionLoading === 'review-' + intakeDialog.client_id,
                   style: {
                     flex: 1, minHeight: 44, padding: '10px 14px',
-                    border: 0, borderRadius: 10, background: '#434587',
+                    border: 0, borderRadius: 10, background: 'var(--v4-act, #c67139)',
                     color: '#fff', fontWeight: 700, cursor: 'pointer',
                     opacity: actionLoading === 'review-' + intakeDialog.client_id ? 0.65 : 1,
                   }

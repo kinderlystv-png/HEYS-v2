@@ -75,6 +75,26 @@ describe('панель куратора · место в кабинете', () =
     expect(CSS).toMatch(/\.cur-cab__sheet-close[\s\S]{0,160}border-radius: 999px/);
   });
 
+  it('в кабинете не осталось фиолетового, голубого и статусных кружков', () => {
+    // Цвета жили в строках стилей внутри JS — мимо набора и мимо гейта
+    // перекраски, который такие цвета и ловит. Потому диагностика оставалась
+    // фиолетовой, когда остальной кабинет был уже перекрашен.
+    const files = ['../heys_trial_queue_v1.js', '../heys_client_diagnostics_v1.js']
+      .map((f) => fs.readFileSync(path.resolve(__dirname, f), 'utf8'))
+      .map((t) => t.split(SPLIT_LINES).filter((l) => !l.trim().startsWith('//')).join(' '));
+    for (const code of files) {
+      expect(code).not.toContain('#434587');
+      expect(code).not.toContain('#f0f9ff');
+      expect(code).not.toContain('🟢 Очередь');
+      expect(code).not.toContain('🔄 Обновить');
+    }
+    // Главное действие вкладки залито акцентом, второстепенные — подложкой.
+    const primary = CSS.slice(CSS.indexOf('.cdo-primary {'), CSS.indexOf('.cdo-primary.is-active'));
+    expect(primary).toContain('--v4-act');
+    const secondary = CSS.slice(CSS.indexOf('.cdo-secondary,'), CSS.indexOf('.cdo-megalog'));
+    expect(secondary).toContain('--v4-hero');
+  });
+
   it('пустые состояния очереди ведут туда, где работа есть', () => {
     // Эмодзи 📭 и 💤 сообщали настроение, а не состояние, и уводили от
     // единственного вопроса пустого экрана — «куда идти дальше».
