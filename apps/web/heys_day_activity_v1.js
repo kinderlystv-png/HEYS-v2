@@ -401,6 +401,7 @@
       caloricDebt,
       monthTrainingsRows,
       workingWeights,
+      chargeTrackedDays,
       morningActivationCalendarBlock,
       kcalMin
     } = ctx;
@@ -447,6 +448,13 @@
 
     const heroFooter = buildHeroFooterLabel({ dayTargetDef, day, caloricDebt, ndteBoostKcal });
 
+    // «У нового человека» — не «нет данных за сегодня», а нет истории вовсе:
+    // ни одного дня привычки, ни одной тренировки за месяц, весам нечего
+    // сравнивать. Пока хоть что-то есть, ярус показывает это, а не прозу.
+    const historyIsEmpty = !(Number(chargeTrackedDays) > 0)
+      && monthCount === 0
+      && !(workingWeights && workingWeights.available);
+
     const weightsRow = buildWorkingWeightsRow(workingWeights);
     const workingWeightsRow = weightsRow && React.createElement('div', {
       className: 'activity-v4-history__row'
@@ -463,6 +471,25 @@
     );
 
 
+    // Пункт листа: имя и под ним — что именно спросят. Без подписи «Зарядка»
+    // и «Тренировка» выглядят одинаково весомо, хотя спрашивают разное.
+    const sheetItem = ({ key, icon, name, sub, onPick }) => React.createElement('button', {
+      key: key,
+      type: 'button',
+      className: 'activity-v4-sheet__btn',
+      onClick: () => {
+        setSheetOpen(false);
+        onPick();
+        haptic?.('light');
+      }
+    },
+      React.createElement('span', { className: 'activity-v4-sheet__icon', 'aria-hidden': 'true' }, icon),
+      React.createElement('span', { className: 'activity-v4-sheet__text' },
+        React.createElement('span', { className: 'activity-v4-sheet__name' }, name),
+        React.createElement('span', { className: 'activity-v4-sheet__sub' }, sub)
+      )
+    );
+
     const activitySheet = sheetOpen && React.createElement(React.Fragment, null,
       React.createElement('div', {
         className: 'activity-v4-sheet-backdrop',
@@ -472,33 +499,24 @@
       }),
       React.createElement('div', { className: 'activity-v4-sheet', role: 'dialog', 'aria-label': 'Добавить активность' },
         React.createElement('div', { className: 'activity-v4-sheet__title' }, 'Добавить активность'),
-        visibleTrainings < 3 && React.createElement('button', {
-          type: 'button',
-          className: 'activity-v4-sheet__btn',
-          onClick: () => {
-            setSheetOpen(false);
-            openTrainingPicker?.(visibleTrainings || 0);
-            haptic?.('light');
-          }
-        }, '🏋️', ' Тренировка'),
-        React.createElement('button', {
-          type: 'button',
-          className: 'activity-v4-sheet__btn',
-          onClick: () => {
-            setSheetOpen(false);
-            openHouseholdPicker?.('add');
-            haptic?.('light');
-          }
-        }, '🏠', ' Бытовая активность'),
-        !chargeResolved && React.createElement('button', {
-          type: 'button',
-          className: 'activity-v4-sheet__btn',
-          onClick: () => {
-            setSheetOpen(false);
-            openMorningActivationQuickAdd(day, visibleTrainings, openTrainingPicker);
-            haptic?.('light');
-          }
-        }, '⚡', ' Зарядка')
+        // Слотов тренировки три. Когда все заняты, пункт исчезает, а не гаснет:
+        // погашенная кнопка обещает действие, которого нет
+        // (контракт «лист действия · три пункта», строка 22).
+        visibleTrainings < 3 && sheetItem({
+          key: 'training', icon: '🏋️', name: 'Тренировка',
+          sub: 'время, тип, минуты по зонам',
+          onPick: () => openTrainingPicker?.(visibleTrainings || 0)
+        }),
+        sheetItem({
+          key: 'charge', icon: '⚡', name: 'Зарядка',
+          sub: 'сделал · сделаю · не сегодня',
+          onPick: () => openMorningActivationQuickAdd(day, visibleTrainings, openTrainingPicker)
+        }),
+        sheetItem({
+          key: 'household', icon: '🏠', name: 'Бытовая активность',
+          sub: 'минуты',
+          onPick: () => openHouseholdPicker?.('add')
+        })
       )
     );
 
@@ -750,7 +768,18 @@
       ),
 
       React.createElement('div', { className: 'activity-v4-tier' }, 'История'),
-      React.createElement('div', { className: 'activity-v4-history' },
+      historyIsEmpty
+        // Показывать нечего и предлагать нечего — заголовок и проза, без кнопок
+        // (контракт «вид · пустые состояния», строка 33).
+        ? React.createElement('div', { className: 'activity-v4-history-empty' },
+          React.createElement('div', { className: 'activity-v4-history-empty__title' },
+            'История начнётся с первой отметки'),
+          React.createElement('div', { className: 'activity-v4-history-empty__text' },
+            'Календарь зарядки и рост рабочих весов появятся, когда будет что'
+            + ' сравнивать: календарь — с первого дня, веса — с двух недель и двух'
+            + ' общих упражнений.')
+        )
+        : React.createElement('div', { className: 'activity-v4-history' },
         calendarBlock,
         workingWeightsRow,
         React.createElement('button', {

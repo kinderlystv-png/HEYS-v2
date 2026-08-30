@@ -1450,6 +1450,20 @@
             });
         }, [activityContentEnabled, date, readMaDayForActivityCalendar, day?.updatedAt]);
 
+        // Вёл ли человек привычку хоть один день. Спрашиваем у самого календаря,
+        // а не заводим свой скан: горизонт и «сколько дней вели» — его понятие
+        // (контракт «пустые состояния», строка 33).
+        const chargeTrackedDays = useMemo(() => {
+            if (!activityContentEnabled) return 0;
+            const build = HEYS.morningActivationCalendar?.buildMorningActivationCalendarData;
+            if (typeof build !== 'function' || !date) return 0;
+            try {
+                return build(date, 'last_28_days', readMaDayForActivityCalendar).trackedCount || 0;
+            } catch (_) {
+                return 0;
+            }
+        }, [activityContentEnabled, date, readMaDayForActivityCalendar, day?.updatedAt]);
+
         // Компактный блок сна и оценки дня в SaaS стиле (две плашки в розовом контейнере)
         // 🚀 PERF R7: memoize sideBlock — skip on popup/animation/water changes
         const sideBlock = useMemo(() => {
@@ -2320,6 +2334,7 @@
                 caloricDebt,
                 monthTrainingsRows,
                 workingWeights,
+                chargeTrackedDays,
                 morningActivationCalendarBlock,
                 r0,
                 setDay,

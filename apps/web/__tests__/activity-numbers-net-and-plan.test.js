@@ -1101,6 +1101,10 @@ describe('Рабочие веса · строка истории', () => {
         tdee: 2280, caloricDebt: null,
         monthTrainingsRows: [], morningActivationCalendarBlock: null,
         workingWeights,
+        // День привычки есть: иначе ярус «История» целиком заменяется прозой
+        // (блок 10), и строке весов там неоткуда взяться. Человек, у которого
+        // метрика вообще что-то говорит, историю уже ведёт.
+        chargeTrackedDays: 1,
       },
       actions: {},
     }));
@@ -1264,5 +1268,97 @@ describe('Тренировки за месяц · окно от открытой
 
   it('без якоря поведение прежнее — окно от сегодня', () => {
     expect(collect(undefined, ['2026-08-20'])).toHaveLength(1);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// Блоки 8 и 10 · лист действия и пустая «История»
+// tab-activity.v4.dc.html, строки 22 и 33; кадр «новый человек»
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('Лист действия и пустая «История»', () => {
+  function renderTab(ctxExtra) {
+    const HEYS = loadFiles(['heys_day_activity_v1.js']);
+    HEYS.TDEE = { calculate: () => ({ kcalMin: [0, 7, 8, 9] }) };
+    render(HEYS.dayActivity.render({
+      React,
+      ctx: {
+        day: { date: '2026-08-30', trainings: [] }, prof: {}, trainingTypes: [],
+        stepsValue: 0, stepsGoal: 10000, stepsPercent: 0, stepsColor: '#000', stepsK: 0,
+        stepsEstimated: false, stepsMissing: false,
+        bmr: 1520, householdK: 0, totalHouseholdMin: 0,
+        train1k: 0, train2k: 0, train3k: 0, r0: (v) => Math.round(v || 0),
+        visibleTrainings: 0, regularTrainingsBlock: null, programTrainingsBlock: null,
+        ndteData: { active: false }, ndteBoostKcal: 0, tefData: {}, tefKcal: 0,
+        dayTargetDef: -15, displayOptimum: 1940, optimum: 1940, cycleKcalMultiplier: 1,
+        tdee: 2280, caloricDebt: null,
+        monthTrainingsRows: [], morningActivationCalendarBlock: React.createElement('div', null, 'календарь'),
+        workingWeights: null,
+        chargeTrackedDays: 0,
+        ...ctxExtra,
+      },
+      actions: {},
+    }));
+  }
+
+  const openSheet = () => fireEvent.click(document.querySelector('.activity-v4-cta'));
+  const sheetItems = () => [...document.querySelectorAll('.activity-v4-sheet__btn')].map((b) => ({
+    name: b.querySelector('.activity-v4-sheet__name').textContent,
+    sub: b.querySelector('.activity-v4-sheet__sub').textContent,
+  }));
+
+  it('лист даёт три пункта в порядке контракта, с подписями', () => {
+    renderTab();
+    openSheet();
+    expect(sheetItems()).toEqual([
+      { name: 'Тренировка', sub: 'время, тип, минуты по зонам' },
+      { name: 'Зарядка', sub: 'сделал · сделаю · не сегодня' },
+      { name: 'Бытовая активность', sub: 'минуты' },
+    ]);
+  });
+
+  it('третий слот занят — пункт исчезает, а не гаснет', () => {
+    renderTab({ visibleTrainings: 3 });
+    openSheet();
+    const names = sheetItems().map((i) => i.name);
+    expect(names).toEqual(['Зарядка', 'Бытовая активность']);
+    // Именно исчезает: погашенной кнопки в листе нет.
+    expect(document.querySelector('.activity-v4-sheet__btn[disabled]')).toBeNull();
+  });
+
+  it('зарядка остаётся в листе и после ответа — решение можно переменить', () => {
+    renderTab({ day: { date: '2026-08-30', trainings: [], morningActivation: { status: 'done' } } });
+    openSheet();
+    expect(sheetItems().map((i) => i.name)).toContain('Зарядка');
+  });
+
+  it('нет истории вовсе — заголовок и проза, без кнопок', () => {
+    renderTab();
+    expect(screen.getByText('История начнётся с первой отметки')).toBeTruthy();
+    expect(screen.getByText(
+      'Календарь зарядки и рост рабочих весов появятся, когда будет что'
+      + ' сравнивать: календарь — с первого дня, веса — с двух недель и двух'
+      + ' общих упражнений.',
+    )).toBeTruthy();
+    const empty = document.querySelector('.activity-v4-history-empty');
+    expect(empty.querySelector('button')).toBeNull();
+    expect(screen.queryByText('календарь')).toBeNull();
+  });
+
+  it('появился один день привычки — история показывает себя, а не прозу', () => {
+    renderTab({ chargeTrackedDays: 1 });
+    expect(screen.getByText('календарь')).toBeTruthy();
+    expect(screen.queryByText('История начнётся с первой отметки')).toBeNull();
+  });
+
+  it('тренировка за месяц тоже снимает пустоту', () => {
+    renderTab({ monthTrainingsRows: [{ dateKey: '2026-08-20', dateLine: '20 авг', typeLabel: 'Кардио', kcal: 200 }] });
+    expect(screen.queryByText('История начнётся с первой отметки')).toBeNull();
+  });
+
+  it('строки яруса «Сегодня» стоят и в пустой истории — вид не меняется', () => {
+    renderTab();
+    const names = [...document.querySelectorAll('.activity-v4-today__name')].map((n) => n.textContent);
+    expect(names).toEqual(['Тренировки', 'Бытовая активность', 'Зарядка']);
   });
 });
