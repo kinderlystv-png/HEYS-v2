@@ -23,6 +23,8 @@ const BUNDLE = fs.readFileSync(
 
 const ENGINE = fs.readFileSync(path.resolve(__dirname, '../heys_norm_correction_v1.js'), 'utf8');
 
+const SPLIT_LINES = new RegExp('\r?\n');
+
 let CP;
 beforeEach(() => {
   window.HEYS = {};
@@ -53,6 +55,28 @@ describe('панель куратора · место в кабинете', () =
       .split(/\r?\n/).filter((l) => !l.trim().startsWith('//')).join(' ');
     expect(body).not.toContain('switchClient');
     expect(body).toContain("setCuratorTab('clients')");
+  });
+
+  it('движок едет ленивым куском — панель ждёт его, а не объявляет поломку', () => {
+    // CuratorPanel лежит в boot-app и рисуется сразу; NormCorrection,
+    // WorkingWeights и тренд веса — в postboot-3-ui-lazy. Разовая проверка
+    // модулей давала «Панель не загрузилась» навсегда.
+    const BUNDLE_OF = (file) => {
+      let cur = null;
+      for (const line of BUNDLE.split(SPLIT_LINES)) {
+        const b = /^\s*'([a-z0-9-]+)':\s*\[/.exec(line);
+        if (b) cur = b[1];
+        if (line.includes("'" + file + "'")) return cur;
+      }
+      return null;
+    };
+    expect(BUNDLE_OF('heys_curator_panel_v1.js')).toBe('boot-app');
+    expect(BUNDLE_OF('heys_norm_correction_v1.js')).toBe('postboot-3-ui-lazy');
+    // Значит панель обязана дотянуть кусок сама.
+    expect(SRC).toContain('HEYS.__loadPostboot3Ui');
+    expect(SRC).toContain('waitedForEngine.current');
+    // И ровно один раз: иначе неудачная загрузка крутит перерисовку по кругу.
+    expect(SRC).toContain('waitedForEngine.current = true');
   });
 
   it('стили подключены и живут своим модулем', () => {

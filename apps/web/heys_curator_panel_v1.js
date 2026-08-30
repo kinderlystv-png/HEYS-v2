@@ -162,14 +162,34 @@
     // подписывает его датами, и пересчитать «примерно те же» значило бы
     // подписать одно окно датами другого.
     const [range, setRange] = React.useState(null);
+    // Ленивый кусок тянем один раз: без этого неудачная загрузка крутила бы
+    // перерисовку по кругу.
+    const waitedForEngine = React.useRef(false);
 
     React.useEffect(() => {
       let cancelled = false;
       const api = HEYS.YandexAPI;
       const build = HEYS.NormCorrection && HEYS.NormCorrection.buildPanelRows;
-      if (!api || !api.getClientsWindow || !build) {
+      if (!api || !api.getClientsWindow) {
         setError('modules');
         return undefined;
+      }
+      // Движок поправки, рабочие веса и тренд веса едут ленивым куском
+      // (postboot-3-ui-lazy), а сама панель живёт в boot-app и рисуется
+      // раньше. Раньше это читалось как «панель не загрузилась» — и читалось
+      // навсегда, потому что проверка была разовой. Тянем кусок и
+      // перерисовываемся; вторая неудача — уже настоящая поломка.
+      if (!build) {
+        const loader = HEYS.__loadPostboot3Ui;
+        if (waitedForEngine.current || typeof loader !== 'function') {
+          setError('modules');
+          return undefined;
+        }
+        waitedForEngine.current = true;
+        Promise.resolve(loader())
+          .catch(() => null)
+          .then(() => { if (!cancelled) setTick((t) => t + 1); });
+        return () => { cancelled = true; };
       }
       const now = new Date();
       const { from, to } = windowRange(now);
@@ -253,6 +273,9 @@
     if (error === 'modules') {
       return h('div', { className: 'cur-panel__stub' }, 'Панель не загрузилась');
     }
+    // Пока едет движок, у панели нет ни строк, ни ошибки — это то же «считаем»,
+    // что и во время запроса.
+
     if (!rows) {
       return h('div', { className: 'cur-panel__stub' }, 'Считаем…');
     }
