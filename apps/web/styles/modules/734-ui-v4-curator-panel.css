@@ -348,6 +348,94 @@
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
+/* Механизм расчёта столбцом, без раскрывашки: куратор решает по нему, а не по
+   итогу. Лист прокручивается, высота ему не предел. */
+.cur-sheet__how-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cur-sheet__how-title {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.cur-sheet__how-note {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  text-wrap: pretty;
+}
+
+/* Доли расхода полосками: пропорция читается глазом за то же время, за какое
+   читается одно число, — а решает куратор именно по пропорции. */
+.cur-sheet__bars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.cur-sheet__bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cur-sheet__bar-label {
+  flex: 0 0 auto;
+  /* «Бытовая активность» — самая длинная метка набора; при 96 px она ломалась
+     на две строки и ряд становился выше соседних. */
+  width: 108px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.cur-sheet__bar {
+  flex: 1 1 auto;
+  min-width: 36px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
+  overflow: hidden;
+}
+
+.cur-sheet__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--v4-act, #c67139);
+}
+
+.cur-sheet__bar-value {
+  flex: 0 0 auto;
+  width: 44px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+.cur-sheet__bar-share {
+  flex: 0 0 auto;
+  width: 34px;
+  text-align: right;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  font-variant-numeric: tabular-nums;
+}
+
 .cur-sheet__cta,
 .cur-sheet__btn {
   min-height: 48px;

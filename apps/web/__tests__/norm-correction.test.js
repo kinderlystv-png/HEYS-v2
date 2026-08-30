@@ -265,6 +265,63 @@ describe('поправка на факт · модель кураторской 
     expect(flat.whereMismatchSits).toBeNull();
   });
 
+  it('разбор расхода: доли дают ровно сто и нули не показываются', () => {
+    // Простое округление каждой доли давало 72 + 13 + 13 + 3 = 101, и сумма
+    // спорила сама с собой. Нули — не факт о человеке, а шум от того, что он
+    // не тренировался.
+    const card = NC.buildCuratorCard({
+      result: ready(), expenditure: 2004, deficitPct: -15, basalMetabolism: 1446,
+      breakdown: { bmr: 1446, trainings: 253, steps: 253, household: 53 }
+    });
+    expect(card.expenditureParts.map((p) => p.sharePct).reduce((a, b) => a + b, 0)).toBe(100);
+    expect(card.expenditureParts.map((p) => p.label)).toEqual([
+      'Базовый обмен', 'Тренировки', 'Шаги', 'Бытовая активность'
+    ]);
+
+    const noTraining = NC.buildCuratorCard({
+      result: ready(), expenditure: 1800, deficitPct: -15, basalMetabolism: 1446,
+      breakdown: { bmr: 1446, trainings: 0, steps: 300, household: 54 }
+    });
+    expect(noTraining.expenditureParts.map((p) => p.key)).toEqual(['bmr', 'steps', 'household']);
+    expect(noTraining.expenditureParts.map((p) => p.sharePct).reduce((a, b) => a + b, 0)).toBe(100);
+  });
+
+  it('путь «съедено → факт → норма» показан числами, а не подразумевается', () => {
+    const card = NC.buildCuratorCard({
+      result: ready(), expenditure: 2400, deficitPct: -15, basalMetabolism: 1400
+    });
+    // Съеденное, движение веса и энергия запаса — из движка, не из вёрстки.
+    expect(card.path.eatenPerDay).toBe(card.path.eatenPerDay);
+    expect(Number.isFinite(card.path.storedPerDay)).toBe(true);
+    expect(card.path.deltaKg).toBeCloseTo(-0.267, 3);
+    // Последний переход: расход с поправкой и дефицит по договорённости.
+    expect(card.recommendation.correctedExpenditure)
+      .toBe(Math.round(2400 * card.recommendation.stepFactor));
+    expect(card.recommendation.deficitPct).toBe(-15);
+    // Норма — это расход с поправкой минус дефицит, и числа сходятся.
+    expect(card.recommendation.norm)
+      .toBe(Math.round(card.recommendation.correctedExpenditure * 0.85));
+  });
+
+  it('ограничение шага названо только когда оно сработало', () => {
+    // Цель ×0,93 при шаге не больше 3 % даёт ×0,97 — разрыв виден.
+    const capped = NC.compute({
+      days: days(21, 2050), formulaPerDay: 2400,
+      trend: { deltaKg: -0.5, measuredDays: 21, windowDays: 21 },
+      currentFactor: 1, historyDays: 60
+    });
+    expect(capped.status).toBe('ready');
+    expect(Math.abs(capped.targetFactor - capped.nextFactor)).toBeGreaterThan(0.005);
+    expect(capped.stepCapped).toBe(true);
+
+    const free = NC.compute({
+      days: days(21, 2380), formulaPerDay: 2400,
+      trend: { deltaKg: -0.05, measuredDays: 21, windowDays: 21 },
+      currentFactor: 1, historyDays: 60
+    });
+    expect(free.stepCapped).toBe(false);
+  });
+
   it('точка недели в истории стоит по шкале, а не «примерно»', () => {
     const card = NC.buildCuratorCard({
       result: ready(), expenditure: 2400, deficitPct: -12,

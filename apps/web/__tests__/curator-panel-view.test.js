@@ -207,8 +207,41 @@ describe('панель куратора · решение и границы', ()
 
   it('панель ничего не пересчитывает — числа приходят из модели', () => {
     expect(SRC).toContain('HEYS.NormCorrection && HEYS.NormCorrection.buildPanelRows');
-    // Ни одной собственной арифметики нормы.
-    expect(SRC).not.toMatch(/deficitPct|baseExpenditure|\* *0\.9/);
+    // Читать число движка можно, выводить своё — нет. Раньше запрет стоял на
+    // само слово deficitPct, и разбор расчёта в листе его нарушал, хотя
+    // дефицит там только показывается: rec.deficitPct приходит готовым.
+    expect(SRC).not.toContain('baseExpenditure');
+    expect(SRC).not.toContain('7700');
+    // Ни одной формулы нормы: ни доли дефицита, ни умножения на поправку.
+    expect(SRC).not.toMatch(/\/ *100|\* *0\.9|1 \+ [a-z]*[Dd]eficit/);
+  });
+
+  it('механизм расчёта стоит столбцом, а не за раскрывашкой', () => {
+    // Решение владельца 30 августа: куратор решает не по итогу, а по тому,
+    // откуда итог взялся, — прятать это значит прятать предмет решения.
+    expect(SRC).toContain("h('div', { className: 'cur-sheet__how-body' }");
+    expect(SRC).not.toContain('howOpen');
+    for (const title of ['Из чего расход', 'Как получился факт',
+      'Как получилась поправка', 'Как получилась норма', 'На чём считали']) {
+      expect(SRC, title).toContain("'" + title + "'");
+    }
+    // Лист прокручивается — высота ему не предел.
+    expect(CSS).toMatch(/\.cur-sheet[\s\S]{0,200}overflow-y: auto/);
+  });
+
+  it('лист не считает сам — все числа разбора приходят из карточки', () => {
+    const body = SRC.slice(SRC.indexOf('cur-sheet__how-body'), SRC.indexOf("'Применить с завтра'"));
+    // Ни одной собственной арифметики: только форматирование пришедших чисел.
+    expect(body).not.toMatch(/[*/]\s*(?:100|7700|0\.85)/);
+    expect(body).toContain('card.expenditureParts');
+    expect(body).toContain('card.path');
+    expect(body).toContain('rec.correctedExpenditure');
+  });
+
+  it('качество данных названо словом, а не дробью', () => {
+    // «21 из 10» читалось так же плохо, как «дни 11 из 10» в самой панели.
+    expect(SRC).toContain("q.value + ' · хватает'");
+    expect(SRC).toContain("' · мало, нужно '");
   });
 
   it('«где сидит расхождение» показывается только в кураторском листе', () => {

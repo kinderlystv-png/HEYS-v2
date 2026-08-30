@@ -122,6 +122,15 @@
     const targetFactor = factPerDay / formulaPerDay;
     const mismatchPct = Math.round((targetFactor - 1) * 100);
 
+    // Слагаемые пути «съедено → факт» отдаём наружу: куратору показывают не
+    // вывод, а механизм, и пересчитывать его в панели значило бы завести
+    // второй расчёт того же числа.
+    const path = {
+      eatenPerDay: Math.round(eatenPerDay),
+      deltaKg: Number.isFinite(trend.deltaKg) ? trend.deltaKg : null,
+      storedPerDay: Math.round(storedPerDay)
+    };
+
     if (targetFactor < FACTOR_MIN || targetFactor > FACTOR_MAX) {
       return Object.assign({}, base, {
         status: 'out_of_range',
@@ -132,6 +141,7 @@
         factPerDay: Math.round(factPerDay),
         targetFactor: Math.round(targetFactor * 1000) / 1000,
         mismatchPct,
+        path,
         nextFactor: currentFactor
       });
     }
@@ -150,6 +160,10 @@
       factPerDay: Math.round(factPerDay),
       mismatchPct,
       targetFactor: Math.round(targetFactor * 1000) / 1000,
+      path,
+      // Шаг ограничен, и это надо показать: без строки «цель ×0,92, шаг не
+      // больше 3 %» куратор видит ×0,97 и не понимает, почему не ×0,92.
+      stepCapped: Math.abs(targetFactor - nextFactor) > 0.005,
       nextFactor,
       // Рост система применяет сама и сообщает в тот же день; снижение требует
       // явного согласия. Делим не по «с подтверждением или без», а по тому,
@@ -194,9 +208,52 @@
    * куратора, — числа берутся отсюда, и они те же, что увидит клиент: одно
    * окно, одно округление.
    */
-  function buildCuratorCard({ result, expenditure, deficitPct, basalMetabolism, history }) {
+  function buildCuratorCard({ result, expenditure, deficitPct, basalMetabolism, breakdown, history }) {
     const res = result || {};
     const exp = Number(expenditure) || res.formulaPerDay || 0;
+
+    // Разбор расхода долями: куратор решает не по итогу, а по тому, откуда
+    // итог взялся. Доли считаются от суммы слагаемых, а не от baseExpenditure:
+    // совпадать они обязаны, но если однажды разойдутся, лучше пусть сумма
+    // долей останется честной сотней, чем молча не сойдётся.
+    const EXPENDITURE_PARTS = [
+      { key: 'bmr', label: 'Базовый обмен' },
+      { key: 'trainings', label: 'Тренировки' },
+      { key: 'steps', label: 'Шаги' },
+      { key: 'household', label: 'Бытовая активность' }
+    ];
+    let expenditureParts = null;
+    if (breakdown) {
+      const total = EXPENDITURE_PARTS.reduce(
+        (sum, p) => sum + (Number(breakdown[p.key]) || 0), 0
+      );
+      if (total > 0) {
+        // Нулевые слагаемые не показываем: строка «Тренировки 0 ккал · 0 %»
+        // не факт о человеке, а шум от того, что он не тренировался.
+        const rows = EXPENDITURE_PARTS
+          .map((p) => ({ key: p.key, label: p.label, raw: Number(breakdown[p.key]) || 0 }))
+          .filter((p) => p.raw >= 0.5);
+        const sum = rows.reduce((acc, p) => acc + p.raw, 0);
+        // Проценты по наибольшим остаткам: простое округление каждой доли
+        // давало 72 + 13 + 13 + 3 = 101, и сумма долей спорила сама с собой.
+        const exact = rows.map((p) => (p.raw / sum) * 100);
+        const floors = exact.map((v) => Math.floor(v));
+        let left = 100 - floors.reduce((a, b) => a + b, 0);
+        const order = exact
+          .map((v, i) => ({ i, frac: v - Math.floor(v) }))
+          .sort((a, b) => b.frac - a.frac);
+        for (const o of order) {
+          if (left <= 0) break;
+          floors[o.i] += 1;
+          left--;
+        }
+        expenditureParts = rows.map((p, i) => ({
+          key: p.key, label: p.label,
+          value: Math.round(p.raw),
+          sharePct: floors[i]
+        }));
+      }
+    }
 
     const card = {
       status: res.status,
@@ -234,6 +291,11 @@
           ? 'В расходе — формула занижает: человек тратит больше, чем она считает. Или в точности записей — в дневник попало больше, чем съедено. Поправка выравнивает результат в обоих случаях, но лечится это по-разному.'
           : 'В расходе — формула завышает. Или в точности записей — часть съеденного не попала в дневник. Поправка выравнивает результат в обоих случаях, но лечится это по-разному.')
         : null,
+      // Второй слой листа: из чего сложился расход и как из съеденного
+      // получилось предложение. В первом слое остаётся вывод и действие.
+      expenditureParts,
+      path: res.path || null,
+      stepCapped: !!res.stepCapped,
       recommendation: null,
       actions: []
     };
@@ -247,6 +309,11 @@
         currentNorm: before.norm,
         stepFactor: res.nextFactor,
         targetFactor: res.targetFactor,
+        // Последний переход — от расхода к норме — без этих двух чисел не
+        // объясним: куратор видит факт 2 045 и норму 1 738 и не знает, что
+        // между ними стоит дефицит по договорённости.
+        correctedExpenditure: after.correctedExpenditure,
+        deficitPct: Number(deficitPct) || 0,
         hitFloor: after.hitFloor
       };
       card.actions = ['apply_tomorrow', 'postpone', 'freeze'];
@@ -1062,6 +1129,7 @@
       let expDays = 0;
       let bmr = 0;
       let deficitPct = 0;
+      const parts = { bmr: 0, trainings: 0, steps: 0, household: 0 };
       for (const row of entry.days) {
         if (!row.has_day) continue;
         days.push({
@@ -1082,6 +1150,13 @@
           expDays++;
           bmr = tdee.bmr || bmr;
           deficitPct = Number.isFinite(tdee.deficitPct) ? tdee.deficitPct : deficitPct;
+          // Слагаемые расхода копим тем же проходом: baseExpenditure это в
+          // точности их сумма (bmr + тренировки + шаги + быт), поэтому доли
+          // сходятся в сто процентов без подгонки.
+          parts.bmr += tdee.bmr || 0;
+          parts.trainings += tdee.trainingsKcal || 0;
+          parts.steps += tdee.stepsKcal || 0;
+          parts.household += tdee.householdKcal || 0;
         }
       }
 
@@ -1157,6 +1232,12 @@
           expenditure: expDays ? expSum / expDays : 0,
           deficitPct,
           basalMetabolism: bmr,
+          breakdown: expDays ? {
+            bmr: parts.bmr / expDays,
+            trainings: parts.trainings / expDays,
+            steps: parts.steps / expDays,
+            household: parts.household / expDays
+          } : null,
           history: []
         })
       });

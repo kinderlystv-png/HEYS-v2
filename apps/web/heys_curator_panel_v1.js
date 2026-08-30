@@ -488,6 +488,108 @@
           ? h('div', { className: 'cur-sheet__where' }, card.whereMismatchSits)
           : null,
 
+        // Механизм показан столбцом сразу, а не за раскрывашкой: решение
+        // владельца 30 августа. Куратор решает не по итогу, а по тому, откуда
+        // итог взялся, и прятать это значило бы прятать сам предмет решения.
+        // Лист прокручивается — высота ему не предел. Свернуть в аккордеон
+        // можно потом, если станет мешать.
+        (card.expenditureParts || card.path) ? h(React.Fragment, null,
+          h('div', { className: 'cur-sheet__how-body' },
+
+            card.expenditureParts && card.expenditureParts.length ? h(React.Fragment, null,
+              h('div', { className: 'cur-sheet__how-title' }, 'Из чего расход'),
+              h('div', { className: 'cur-sheet__bars' },
+                card.expenditureParts.map((p) => h('div', { key: p.key, className: 'cur-sheet__bar-row' },
+                  h('span', { className: 'cur-sheet__bar-label' }, p.label),
+                  h('span', { className: 'cur-sheet__bar' },
+                    h('span', {
+                      className: 'cur-sheet__bar-fill',
+                      style: { width: p.sharePct + '%' }
+                    })
+                  ),
+                  h('span', { className: 'cur-sheet__bar-value' }, nbsp(p.value)),
+                  h('span', { className: 'cur-sheet__bar-share' }, p.sharePct + ' %')
+                ))
+              )
+            ) : null,
+
+            card.path ? h(React.Fragment, null,
+              h('div', { className: 'cur-sheet__how-title' }, 'Как получился факт'),
+              h('div', { className: 'cur-sheet__facts' },
+                factRow(React, 'Съедено в среднем', nbsp(card.path.eatenPerDay) + ' ккал'),
+                // Знак объясняем словом, а не минусом: «вес ушёл» и «запас
+                // отдал энергию» — это одно и то же, но минус перед числом
+                // читается как ошибка.
+                card.path.deltaKg != null
+                  ? factRow(React, 'Вес за окно',
+                    (card.path.deltaKg > 0 ? '+' : '−')
+                    + String(Math.abs(Math.round(card.path.deltaKg * 10) / 10)).replace('.', ',')
+                    + ' кг')
+                  : null,
+                card.path.storedPerDay
+                  ? factRow(React,
+                    card.path.storedPerDay < 0 ? 'Запас отдал' : 'Запас принял',
+                    nbsp(Math.abs(card.path.storedPerDay)) + ' ккал в день')
+                  : null,
+                card.fact ? factRow(React, 'Факт', nbsp(card.fact.value) + ' ккал') : null
+              ),
+              h('div', { className: 'cur-sheet__how-note' },
+                'Факт — это съеденное минус то, что ушло из запаса: вес двигается'
+                + ' только на разнице между съеденным и потраченным.')
+            ) : null,
+
+            rec ? h(React.Fragment, null,
+              h('div', { className: 'cur-sheet__how-title' }, 'Как получилась поправка'),
+              h('div', { className: 'cur-sheet__facts' },
+                factRow(React, 'Факт против формулы',
+                  (card.mismatchPct > 0 ? '+' : '−') + Math.abs(card.mismatchPct) + ' %'),
+                factRow(React, 'Цель поправки',
+                  '×' + String(rec.targetFactor).replace('.', ',')),
+                factRow(React, 'Применяем',
+                  '×' + String(rec.stepFactor).replace('.', ','))
+              ),
+              // Шаг ограничен — без этой строки куратор видит ×0,97 при цели
+              // ×0,92 и не понимает, почему движок «не дослушал» расчёт.
+              h('div', { className: 'cur-sheet__how-title' }, 'Как получилась норма'),
+              h('div', { className: 'cur-sheet__facts' },
+                rec.correctedExpenditure
+                  ? factRow(React, 'Расход с поправкой', nbsp(rec.correctedExpenditure) + ' ккал')
+                  : null,
+                factRow(React, 'Дефицит по договорённости',
+                  (rec.deficitPct > 0 ? '+' : '−') + Math.abs(rec.deficitPct) + ' %'),
+                factRow(React, 'Норма дня', nbsp(rec.norm) + ' ккал')
+              ),
+              h('div', { className: 'cur-sheet__how-note' },
+                'Дефицит поправка не трогает: он остаётся обещанием клиенту.'
+                + ' Меняется только расход, от которого он считается.'),
+              card.stepCapped
+                ? h('div', { className: 'cur-sheet__how-note' },
+                  'За неделю норма двигается не больше чем на 3 %: к цели идём'
+                  + ' за несколько недель, а не рывком. Остаток догоним в'
+                  + ' следующие сверки, если расхождение сохранится.')
+                : null,
+              rec.hitFloor
+                ? h('div', { className: 'cur-sheet__how-note' },
+                  'Норма упёрлась в базовый обмен — ниже него поправка не опускает'
+                  + ' ни при каком расчёте.')
+                : null
+            ) : null,
+
+            card.quality && card.quality.length ? h(React.Fragment, null,
+              h('div', { className: 'cur-sheet__how-title' }, 'На чём считали'),
+              // Контракт поправки: качество данных словом «хватает» или «мало».
+              // Дробь «21 из 10» здесь читалась так же плохо, как «дни 11 из 10»
+              // в самой панели: счёт обгоняет собственный знаменатель.
+              h('div', { className: 'cur-sheet__facts' },
+                card.quality.map((q) => factRow(React, q.label,
+                  q.enough
+                    ? q.value + ' · хватает'
+                    : q.value + ' · мало, нужно ' + q.need))
+              )
+            ) : null
+          )
+        ) : null,
+
         rec ? h(React.Fragment, null,
           h('button', {
             type: 'button',
