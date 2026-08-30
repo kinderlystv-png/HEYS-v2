@@ -1151,6 +1151,106 @@
   cursor: pointer;
 }
 
+/* Контракт «карточка · отказ расчёта»: разбор упал — человек должен увидеть,
+   что именно упало и что осталось. Две кнопки и ярус доступного вместо
+   прежнего значка ⚠️ с фразой «Не удалось отрисовать инсайты»: она называла
+   поломку нашими словами и не давала выхода, кроме «обнови экран». */
+.insights-v4-fail {
+  margin: 12px 0;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.insights-v4-fail__title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.32;
+  color: var(--v4-ink, #201e1d);
+}
+
+.insights-v4-fail__note {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 60%, transparent);
+}
+
+/* Повтор — главное действие: разбор местный, и второй заход чаще всего
+   срабатывает. «Написать куратору» ниже и на подложке: это выход для случая,
+   когда не сработал и он. */
+.insights-v4-fail__retry,
+.insights-v4-fail__ask {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.insights-v4-fail__retry {
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #fff5ef);
+}
+
+.insights-v4-fail__ask {
+  margin-top: 9px;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.58));
+}
+
+.insights-v4-fail__tier {
+  margin: 20px 0 10px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.insights-v4-fail__list {
+  border-radius: 20px;
+  padding: 2px 14px;
+  background: var(--v4-bg, #fffaf1);
+}
+
+.insights-v4-fail__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.insights-v4-fail__row:last-child {
+  border-bottom: none;
+}
+
+.insights-v4-fail__row-name {
+  color: var(--v4-ink, #201e1d);
+}
+
+/* «Работает» тоном нормы, «вернётся сам» — приглушённо: первое утверждение о
+   том, что можно делать сейчас, второе — обещание без срока. */
+.insights-v4-fail__row-state {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.insights-v4-fail__row-state.is-ok {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
 /* Контракт «карточка · „На сегодня всё“»: ярус «Питание» после последнего
    приёма не пустеет и не меняет язык. Плоская карточка набора вместо прежней
    синей плашки с эмодзи и бейджем «Планнер». Кнопок нет — предлагать нечего. */

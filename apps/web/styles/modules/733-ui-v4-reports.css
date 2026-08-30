@@ -698,21 +698,14 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
 }
 
-.reports-v4-discipline__zero-note {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: -4px 0 9px 98px;
-}
-
-.reports-v4-discipline__zero-share {
+/* Средняя доля вместо Δ у нулевой строки: контракт «карточка · нулевая строка
+   матрицы» ставит её на место дельты, а не третьим ярусом под строкой. Ширина
+   больше, чем у Δ, — «в среднем 71 %» длиннее «+3», а колонка одна. */
+.reports-v4-discipline__avg {
+  flex: none;
+  text-align: right;
   font: 600 10px/1.3 Figtree, system-ui, sans-serif;
-  color: var(--v4-act, #d99a63);
-}
-
-.reports-v4-discipline__zero-hint {
-  font: 500 10px/1.3 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 /* Контракт «месяц нулей — вопрос к норме»: единственный выход — к куратору. */

@@ -506,18 +506,21 @@
               React.createElement('span', {
                 className: 'reports-v4-discipline__score' + (row.isZeroRow ? ' is-zero' : '')
               }, row.inNorm + ' из ' + row.tracked),
-              React.createElement('span', {
-                className: 'reports-v4-discipline__delta'
-                  + (row.delta > 0 ? ' is-up' : row.delta < 0 ? ' is-down' : '')
-              }, fmtDelta(row))
-            ),
-            row.isZeroRow && row.avgShare != null && React.createElement('div', {
-              className: 'reports-v4-discipline__zero-note'
-            },
-              React.createElement('span', { className: 'reports-v4-discipline__zero-share' },
-                'в среднем ' + Math.round(row.avgShare * 100) + ' % нормы'),
-              React.createElement('span', { className: 'reports-v4-discipline__zero-hint' },
-                'ни одного дня в норме')
+              // Контракт «карточка · нулевая строка матрицы»: при недостижимой
+              // норме справа стоит средняя доля ВМЕСТО Δ, а не под строкой
+              // третьим ярусом. Δ там сказать нечего — ноль дней в норме и в
+              // прошлом периоде, и «0» рядом с «0 из 5» читается вторым нулём
+              // о том же. Прежде подпись висела отдельной строкой снизу и
+              // повторяла факт словами «ни одного дня в норме», который уже
+              // сказан счётом слева.
+              row.isZeroRow && row.avgShare != null
+                ? React.createElement('span', {
+                  className: 'reports-v4-discipline__avg'
+                }, 'в среднем ' + Math.round(row.avgShare * 100) + ' %')
+                : React.createElement('span', {
+                  className: 'reports-v4-discipline__delta'
+                    + (row.delta > 0 ? ' is-up' : row.delta < 0 ? ' is-down' : '')
+                }, fmtDelta(row))
             )
           );
         }),

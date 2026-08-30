@@ -287,11 +287,51 @@
 
       render() {
         if (this.state.hasError) {
+          // Контракт «карточка · отказ расчёта»: заголовок «Разбор не
+          // собрался», две кнопки и ярус «Что осталось доступным». Прежде
+          // здесь стоял значок ⚠️ с фразой «Не удалось отрисовать инсайты» —
+          // техническая формулировка о том, что сломалось у нас, и без
+          // единого выхода, кроме «обнови экран».
+          //
+          // Ярус нужен, чтобы человек не решил, что встал весь продукт: разбор
+          // считается на устройстве и падает сам по себе, а дневник, приёмы и
+          // Отчёты продолжают работать.
           return h('div', { className: 'insights-tab' },
-            h('div', { className: 'insights-empty' },
-              h('div', { className: 'insights-empty__icon' }, '⚠️'),
-              h('div', { className: 'insights-empty__title' }, 'Не удалось отрисовать инсайты'),
-              h('div', { className: 'insights-empty__subtitle' }, 'Обнови экран — данные сохранены')
+            h('div', { className: 'insights-v4-fail' },
+              h('div', { className: 'insights-v4-fail__title' }, 'Разбор не собрался'),
+              h('div', { className: 'insights-v4-fail__note' },
+                'Расчёт оборвался на этом устройстве. Записи целы — потерять их '
+                + 'разбор не может, он только читает.'),
+              h('button', {
+                type: 'button',
+                className: 'insights-v4-fail__retry',
+                onClick: function () {
+                  if (global.location && typeof global.location.reload === 'function') {
+                    global.location.reload();
+                  }
+                }
+              }, 'Попробовать снова'),
+              h('button', {
+                type: 'button',
+                className: 'insights-v4-fail__ask',
+                onClick: function () {
+                  global.open('https://t.me/heyslab_support_bot', '_blank', 'noopener,noreferrer');
+                }
+              }, 'Написать куратору'),
+              h('div', { className: 'insights-v4-fail__tier' }, 'Что осталось доступным'),
+              h('div', { className: 'insights-v4-fail__list' },
+                [['Дневник и приёмы', 'работает'],
+                  ['Отчёты', 'работает'],
+                  ['Разбор', 'вернётся сам']].map(function (pair) {
+                  return h('div', { key: pair[0], className: 'insights-v4-fail__row' },
+                    h('span', { className: 'insights-v4-fail__row-name' }, pair[0]),
+                    h('span', {
+                      className: 'insights-v4-fail__row-state'
+                        + (pair[1] === 'работает' ? ' is-ok' : '')
+                    }, pair[1])
+                  );
+                })
+              )
             )
           );
         }
