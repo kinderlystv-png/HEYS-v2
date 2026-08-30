@@ -757,8 +757,10 @@
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
 }
 
+/* Кадр «Отчёты · мало данных»: карточка на второй поверхности --c2. Роль
+   верна, запасное значение обещало первую. */
 .reports-v4-stub {
-  background: var(--v4-hero, #f7efe2);
+  background: var(--v4-hero, #efe3cf);
   border-radius: 26px;
   padding: 24px 20px;
   margin-top: 12px;
@@ -975,8 +977,10 @@
   color: var(--v4-ink, #0f172a);
 }
 
+/* Кадр «Разбор Score»: герой на второй поверхности --c2. Роль верна,
+   запасное значение обещало первую. */
 .heys-score-screen__hero {
-  background: var(--v4-hero, #f7efe2);
+  background: var(--v4-hero, #efe3cf);
   border-radius: 26px;
   padding: 20px;
   margin-bottom: 16px;

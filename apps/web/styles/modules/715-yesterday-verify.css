@@ -732,9 +732,12 @@
   flex: 1.35;
 }
 
+/* Строка «вид строк-ответов»: «Так и было · N ккал» и «По ощущениям» — фон
+   --c1, первая поверхность. --v4-chip — вторая (#efe3cf); тёмная тема ниже
+   берёт --v4-card, то есть первую. */
 .yv-pack-secondary {
   flex: 1;
-  background: var(--v4-chip, #f7efe2);
+  background: var(--v4-c1, #f7efe2);
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
 }
 

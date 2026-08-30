@@ -693,8 +693,10 @@
   gap: 12px;
 }
 
+/* Кадр «Инсайты · новый пользователь»: карточка на второй поверхности --c2.
+   Роль верна, запасное значение обещало первую. */
 .insights-v4-stub__hero {
-  background: var(--v4-hero, #f7efe2);
+  background: var(--v4-hero, #efe3cf);
   border-radius: 26px;
   padding: 24px 20px;
 }

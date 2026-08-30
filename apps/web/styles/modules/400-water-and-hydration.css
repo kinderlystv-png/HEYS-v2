@@ -2497,12 +2497,17 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   background: rgba(32, 30, 29, 0.34);
 }
 
+/* Кадр «Советы · шторка»: лист лежит на фоне экрана --bg. Роль --v4-surface —
+   это первая поверхность #f7efe2, то есть ровно та, на которой стоят карточки
+   советов внутри листа: после сведения карточек на --v4-c1 лист и карточки
+   стали одного цвета, а обводки и тени у карточек нет. Тёмная тема ниже
+   красит лист в #141210 — это фон, а не поверхность. */
 .advice-list-container--v4 {
   max-width: 100%;
   width: 100%;
   max-height: min(82vh, 760px);
   border-radius: 26px 26px 0 0;
-  background: var(--v4-surface, #fffaf1);
+  background: var(--v4-bg, #fffaf1);
   box-shadow:
     0 1px 2px rgba(80, 50, 20, 0.09),
     0 -8px 40px rgba(80, 50, 20, 0.12);
@@ -3173,12 +3178,15 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   -webkit-backdrop-filter: blur(2px);
 }
 
+/* Кадр «Научное описание»: лист на фоне экрана --bg, как и остальные листы
+   советов. --v4-surface — первая поверхность (#f7efe2), и лист стоял на ней,
+   объявляя запасным значением фон. Тёмная тема ниже даёт #141210 — фон. */
 .advice-v4-science {
   display: flex;
   flex-direction: column;
   max-height: min(88vh, 760px);
   border-radius: 26px 26px 0 0;
-  background: var(--v4-surface, #fffaf1);
+  background: var(--v4-bg, #fffaf1);
   color: #201e1d;
   box-shadow: 0 -8px 40px rgba(80, 50, 20, 0.12);
 }
@@ -3198,12 +3206,15 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: #8a4a20;
 }
 
+/* Круглые кнопки 30 px на канвасе стоят на первой поверхности --c1 (кадр
+   «Совет · всплывающий»). --v4-hero — вторая (#efe3cf); тёмная тема ниже
+   красит кнопку в #23201b, то есть в первую. */
 .advice-v4-science__close {
   width: 30px;
   height: 30px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-hero, #f7efe2);
+  background: var(--v4-c1, #f7efe2);
   color: rgba(32, 30, 29, 0.55);
   font-size: 20px;
   line-height: 1;
@@ -3247,8 +3258,10 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   margin-top: 10px;
 }
 
+/* Кадр «Научное описание», блок «Исследования»: первая поверхность --c1
+   (тёмная ниже — #23201b). --v4-hero — вторая. */
 .advice-v4-science__source {
-  background: var(--v4-hero, #f7efe2);
+  background: var(--v4-c1, #f7efe2);
   border-radius: 16px;
   padding: 12px 14px;
 }
