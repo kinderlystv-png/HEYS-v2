@@ -2555,9 +2555,14 @@
         { label: 'Шаги', mine: prof.stepsGoal ? String(prof.stepsGoal) : null, common: '8 000' },
         { label: 'Сон', mine: prof.sleepHours ? hhmm(+prof.sleepHours) : null, common: '7:30' },
         { label: 'Между приёмами', mine: t.idealMealGapMin ? hhmm(t.idealMealGapMin / 60) : null, common: '3:00' },
-        { label: 'Перебор дня', mine: null, common: '+20 %' },
-        { label: 'Недосып', mine: null, common: '6:00' }
+        // У этих двух личного порога нет не потому, что данных мало, а потому
+        // что движок их не считает вовсе. Раньше обе пустоты выглядели
+        // одинаковым прочерком, и человек ждал числа, которое не появится
+        // никогда.
+        { label: 'Перебор дня', mine: null, noDetector: true, common: '+20 %' },
+        { label: 'Недосып', mine: null, noDetector: true, common: '6:00' }
       ];
+      const missing = rows.filter(function (r) { return r.noDetector; });
 
       return h('div', { className: 'insights-v4-thresh' },
         h('div', { className: 'insights-v4-thresh__head-row' },
@@ -2575,7 +2580,10 @@
           rows.map(function (row, idx) {
             return h('div', { key: idx, className: 'insights-v4-thresh__row' },
               h('span', { className: 'insights-v4-thresh__name' }, row.label),
-              h('span', { className: 'insights-v4-thresh__mine' }, personal && row.mine ? row.mine : '—'),
+              h('span', {
+                className: 'insights-v4-thresh__mine'
+                  + (personal && row.noDetector ? ' is-none' : '')
+              }, personal && row.mine ? row.mine : '—'),
               h('span', { className: 'insights-v4-thresh__common' }, row.common)
             );
           })
@@ -2583,7 +2591,15 @@
         h('div', { className: 'insights-v4-thresh__where' },
           personal
             ? 'Эти числа движок подставляет вместо общих: в предупреждения, в планер и в оценку дня. Считаются сами, меняются раз в неделю.'
-            : 'Пока считаем по общим числам: личные появятся с 14 дней данных. Считаются сами, править их не нужно.')
+            : 'Пока считаем по общим числам: личные появятся с 14 дней данных. Считаются сами, править их не нужно.',
+          // Два прочерка означают разное, и это надо сказать вслух: один
+          // заполнится сам, второй не заполнится никогда без нового детектора.
+          personal && missing.length
+            ? h('span', { className: 'insights-v4-thresh__gap' },
+              'У ' + missing.map(function (r) { return '«' + r.label.toLowerCase() + '»'; }).join(' и ')
+              + (missing.length > 1 ? ' личных чисел нет' : ' личного числа нет')
+              + ': эти пороги движок пока не считает. Данных это не ждёт — работаем по общему.')
+            : null)
       );
     }
 

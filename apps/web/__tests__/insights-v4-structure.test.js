@@ -159,6 +159,24 @@ describe('экраны «Подробно»: фенотип и пороги', ()
     expect(thresh).not.toContain("h('button'");
   });
 
+  it('два прочерка в порогах означают разное, и это сказано вслух', () => {
+    // «—» до 14 дней заполнится сам; «—» у «перебора дня» и «недосыпа» не
+    // заполнится никогда: детектора нет. Одинаковый прочерк заставлял ждать
+    // числа, которое не появится.
+    const thresh = dashboardSource.slice(
+      dashboardSource.indexOf('function InsightsV4Thresholds'),
+      dashboardSource.indexOf('// Контракт «новый пользователь»'),
+    );
+    expect(thresh).toContain("{ label: 'Перебор дня', mine: null, noDetector: true");
+    expect(thresh).toContain("{ label: 'Недосып', mine: null, noDetector: true");
+    expect(thresh).toContain('insights-v4-thresh__gap');
+    expect(thresh).toContain('эти пороги движок пока не считает');
+    // Приглушён только тот прочерк, который ничего не ждёт.
+    expect(thresh).toContain("personal && row.noDetector ? ' is-none' : ''");
+    // Список берётся из самих строк — второй копии имён не заводим.
+    expect(thresh).toContain("rows.filter(function (r) { return r.noDetector; })");
+  });
+
   it('старые карточки фенотипа и полноты в «Подробно» не монтируются', () => {
     const detail = dashboardSource.slice(
       dashboardSource.indexOf('if (useInsightsV4 && showInsightsDetail)'),

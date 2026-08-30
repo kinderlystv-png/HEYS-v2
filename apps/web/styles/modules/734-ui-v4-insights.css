@@ -899,6 +899,18 @@
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
 }
 
+/* Прочерк «этого мы не считаем» приглушён: он не ждёт данных, и надеяться на
+   него не нужно. Прочерк «ещё наберётся» остаётся акцентным. */
+.insights-v4-thresh__mine.is-none {
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.insights-v4-thresh__gap {
+  display: block;
+  margin-top: 8px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
 .insights-v4-thresh__where {
   margin-top: 10px;
   background: var(--v4-card, #ffffff);
