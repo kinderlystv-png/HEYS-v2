@@ -12943,6 +12943,21 @@ html[data-theme-id="blue-dark"] .widget-wd-sheet__opt.is-active {
   background: rgba(207, 129, 68, 0.18);
 }
 
+/* Превью 3×2 шириной 218 px не оставляет места подписи рядом: кадр «Шторка ·
+   Кольца БЖУ» складывает строку колонкой, подпись и галочка уходят своим рядом
+   под превью. */
+.widget-wd-sheet__opt--stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.widget-wd-sheet__opt-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
 .widget-wd-sheet__preview {
   width: 143px;
   height: 64px;

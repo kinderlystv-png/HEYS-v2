@@ -314,6 +314,24 @@
     return n;
   }
 
+  // Подпись варианта и галочка. В сложенной строке (превью 3×2) они уходят
+  // своим рядом под превью — кадр «Шторка · Кольца БЖУ».
+  function wdSheetOptText(item, isOn, wideStack) {
+    const text = React.createElement('div', { className: 'widget-wd-sheet__opt-text' },
+      React.createElement('div', { className: 'widget-wd-sheet__opt-title' }, item.title),
+      React.createElement('div', { className: 'widget-wd-sheet__opt-sub' }, item.subtitle)
+    );
+    const check = isOn
+      ? React.createElement('span', { className: 'widget-wd-sheet__check', 'aria-hidden': 'true' },
+        React.createElement('svg', {
+          width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none',
+          stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round'
+        }, React.createElement('path', { d: 'M5 13l4 4L19 7' })))
+      : null;
+    if (!wideStack) return React.createElement(React.Fragment, null, text, check);
+    return React.createElement('div', { className: 'widget-wd-sheet__opt-row' }, text, check);
+  }
+
   function previewSizeClass(size) {
     if (size === '1x1') return 'widget-wd-sheet__preview--1x1';
     if (size === '3x2') return 'widget-wd-sheet__preview--3x2';
@@ -403,30 +421,23 @@
             return React.createElement('button', {
               key: item.id,
               type: 'button',
-              className: 'widget-wd-sheet__opt' + (isOn ? ' is-active' : ''),
+              // Превью 3×2 шириной 218 px не оставляет места подписи рядом:
+              // кадр «Шторка · Кольца БЖУ» складывает строку колонкой.
+              className: 'widget-wd-sheet__opt'
+                + (wideStack ? ' widget-wd-sheet__opt--stacked' : '')
+                + (isOn ? ' is-active' : ''),
               onPointerDown: stopEventBubble,
               onClick: (event) => {
                 stopEventBubble(event);
                 onSelect(item.id);
               }
             },
-              wideStack
-                ? React.createElement('div', { className: 'widget-wd-sheet__preview-stack' },
-                  React.createElement('div', { className: previewClass },
-                    renderPreview(item.id, { compact: true, previewSize: item.size })
-                  )
-                )
-                : React.createElement('div', { className: previewClass },
-                  renderPreview(item.id, { compact: true, previewSize: item.size })
-                ),
-              React.createElement('div', { className: 'widget-wd-sheet__opt-text' },
-                React.createElement('div', { className: 'widget-wd-sheet__opt-title' }, item.title),
-                React.createElement('div', { className: 'widget-wd-sheet__opt-sub' }, item.subtitle)
+              React.createElement('div', { className: previewClass },
+                renderPreview(item.id, { compact: true, previewSize: item.size })
               ),
-              isOn ? React.createElement('span', { className: 'widget-wd-sheet__check', 'aria-hidden': 'true' },
-                React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
-                  React.createElement('path', { d: 'M5 13l4 4L19 7' })
-                )) : null
+              // В сложенной строке подпись и галочка стоят своим рядом под
+              // превью; в обычной — тем же рядом, что и превью.
+              wdSheetOptText(item, isOn, wideStack)
             );
           })
         )

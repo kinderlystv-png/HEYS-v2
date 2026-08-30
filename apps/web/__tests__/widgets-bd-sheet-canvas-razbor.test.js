@@ -83,7 +83,14 @@ function grabColor(value, word) {
 const num = (v, re) => { const m = re.exec(v); return m ? m[1] : null; };
 const PICK = {
   marginTop: (v) => (/отступ сверху auto/.test(v) ? 'auto' : num(v, /отступ сверху ([\d.]+)px/)),
-  marginBottom: (v) => (/отступ снизу auto/.test(v) ? 'auto' : num(v, /отступ снизу ([\d.]+)px/)),
+  marginBottom: (v) => {
+    if (/отступ снизу auto/.test(v)) return 'auto';
+    const own = num(v, /отступ снизу ([\d.]+)px/);
+    if (own != null) return own;
+    // Кадр пишет сокращением: «отступы 0 auto 13px».
+    const short = /отступы\s+(\S+)\s+(\S+)\s+(\S+)/.exec(v);
+    return short ? short[3].replace('px', '') : null;
+  },
   gap: (v) => num(v, /зазор ([\d.]+)px/),
   height: (v) => num(v, /высота ([\d.]+)px/),
   width: (v) => num(v, /ширина ([\d.]+)px/),
@@ -248,6 +255,51 @@ const MAIN = [
   [84, '.widget-v4-empty__reset', ['align', 'justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']]
 ];
 
+// Кадры «Шторка · …» — лист смены вида, десять штук. Каркас у всех один, но
+// номера подписи, галочки и превью в каждом свои: таблица собирается из самого
+// разбора по форме строки, поэтому переживает перенумерацию кадра.
+function shutterPairs(razbor) {
+  const frames = [...new Set([...razbor.keys()]
+    .map((k) => k.split('|')[0])
+    .filter((f) => /^Шторка · [^·]+$/.test(f)))];
+  const pairs = [];
+  for (const frame of frames) {
+    pairs.push([frame, 11, '.widget-wd-sheet__grab', ['width', 'height', 'radius', 'background', 'marginBottom']]);
+    pairs.push([frame, 12, '.widget-wd-sheet__subtitle', ['marginTop']]);
+    pairs.push([frame, 13, '.widget-wd-sheet__list', ['direction', 'gap', 'marginTop']]);
+    // Строка варианта: превью 3×2 не оставляет места подписи рядом, и кадр
+    // складывает её колонкой.
+    const row = razbor.get(`${frame}|14`) || '';
+    pairs.push(/направление column/.test(row)
+      ? [frame, 14, '.widget-wd-sheet__opt--stacked', ['direction', 'gap']]
+      : [frame, 14, '.widget-wd-sheet__opt', ['align', 'gap']]);
+    let title = null;
+    let check = null;
+    let preview = null;
+    for (let i = 15; i <= 60 && !(title && check && preview); i += 1) {
+      const value = razbor.get(`${frame}|${i}`);
+      if (value == null) continue;
+      if (!title && /шрифт 700 11\.5px\/1\.3/.test(value)) {
+        title = [frame, i, '.widget-wd-sheet__opt-title', ['fontWeight', 'fontSize', 'lineHeight', 'color']];
+      }
+      if (!check && /^флекс none, цвет var\(--ac\)$/.test(value)) {
+        check = [frame, i, '.widget-wd-sheet__check', ['color']];
+      }
+      if (!preview) {
+        const size = /^плитка: ширина (\d+)px, высота (\d+)px/.exec(value);
+        if (size) {
+          const key = size[1] === '68' ? '1x1' : size[1] === '218' ? '3x2' : (size[2] === '64' ? '2x1' : '2x2');
+          preview = [frame, i,
+            ['.widget-wd-sheet__preview', `.widget-wd-sheet__preview--${key}`], ['width', 'height']];
+        }
+      }
+    }
+    for (const p of [title, check, preview]) if (p) pairs.push(p);
+  }
+  return pairs;
+}
+
+
 const EXCEPTIONS = new Map([
   // Кадр рисует круг 30×30 без зоны нажатия. Палец меньше 44 px не ловит,
   // поэтому круг остался 30 px, а зона растянута псевдоэлементом ::before.
@@ -258,7 +310,13 @@ const EXCEPTIONS = new Map([
   ['factorRows|экран', 'экранное время не заводим, решение владельца 30.08'],
   // Тот же кадр даёт «обработанное» третьей частью столбика качества еды.
   // Признак продукта в базе не размечен — столбик из двух частей.
-  ['stackedDays|обработанное', 'третья часть ждёт разметки базы']
+  ['stackedDays|обработанное', 'третья часть ждёт разметки базы'],
+  // Инвариант product-модалок (CLAUDE.md): dim подложки берётся из токена
+  // --v4-modal-backdrop-dim (0.45), кадры шторки рисуют 0.42.
+  ['.widget-wd-sheet__scrim|background', 'dim из токена набора, инвариант старше кадра'],
+  // Лист стоит на нижнем крае экрана: без env(safe-area-inset-bottom) его низ
+  // уезжает под домашний индикатор. Кадр рисует телефон без выреза.
+  ['.widget-wd-sheet|padding', 'нижнее поле держит safe-area, кадр её не рисует']
 ]);
 
 describe('каркас листа разбора против разбора кадров канваса', () => {
@@ -317,6 +375,17 @@ describe('каркас листа разбора против разбора к�
     expect(same).toBeGreaterThanOrEqual(1000);
   });
 
+  it('десять кадров «Шторка · …» совпадают с листом смены вида', () => {
+    const pairs = shutterPairs(razbor);
+    // Десять кадров: каркас, подпись, галочка и размер превью в каждом.
+    expect(new Set(pairs.map((p) => p[0])).size).toBe(10);
+    const drift = [];
+    for (const [frame, index, sel, props] of pairs) {
+      drift.push(...compare({ razbor, rules, frame, pairs: [[index, sel, props]] }));
+    }
+    expect(drift).toEqual([]);
+  });
+
   // Дефект, который нашло превью 30 августа: столбик недели рисовался
   // вложенным <i> с высотой в процентах внутри флекс-элемента, у которого
   // своей высоты нет, — проценты считать было не от чего, и все столбики
@@ -331,6 +400,6 @@ describe('каркас листа разбора против разбора к�
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(3);
+    expect(EXCEPTIONS.size).toBe(5);
   });
 });
