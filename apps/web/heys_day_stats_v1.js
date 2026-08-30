@@ -3325,7 +3325,22 @@
                     React.createElement('div', { style: goalStyles.row },
                       React.createElement('span', { style: ncName },
                         'Поправка на факт',
-                        nc.appliedAt && React.createElement('span', { style: ncPill }, 'с ' + nc.appliedAt)
+                        nc.appliedAt && React.createElement('span', { style: ncPill }, 'с ' + nc.appliedAt),
+                        // Источник показывается так же, как в разборе долга
+                        // калорий: одна иконка со ссылкой. Правило одно на
+                        // продукт — там, где у механики есть проверенная
+                        // работа, она видна; сама ссылка живёт у константы в
+                        // движке, а не в разметке.
+                        HEYS.NormCorrection?.EVIDENCE?.adaptation
+                          && React.createElement('a', {
+                            href: 'https://pubmed.ncbi.nlm.nih.gov/'
+                              + HEYS.NormCorrection.EVIDENCE.adaptation + '/',
+                            target: '_blank',
+                            rel: 'noopener',
+                            title: 'Почему расчёт расходится с фактом',
+                            onClick: (e) => e.stopPropagation(),
+                            style: { marginLeft: 6, textDecoration: 'none', fontSize: 11 }
+                          }, '📚')
                       ),
                       React.createElement('span', { style: ncValue },
                         '×' + nc.factor.toFixed(2).replace('.', ','))

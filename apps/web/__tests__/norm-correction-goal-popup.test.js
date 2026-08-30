@@ -105,3 +105,28 @@ describe('разбор цели · откуда взялась поправка'
     expect(block).not.toContain('7700');
   });
 });
+
+describe('разбор цели · источник поправки', () => {
+  const SRC = fs.readFileSync(
+    path.resolve(__dirname, '../heys_day_stats_v1.js'), 'utf8');
+  const ENGINE = fs.readFileSync(
+    path.resolve(__dirname, '../heys_norm_correction_v1.js'), 'utf8');
+
+  it('ссылка живёт у константы в движке, а не в разметке экрана', () => {
+    // Пятнадцать экранов с копиями ссылок расходятся при первой правке;
+    // ссылка у механики переживает переезд экрана.
+    expect(ENGINE).toContain('const EVIDENCE = {');
+    expect(ENGINE).toContain("adaptation: '20107198'");
+    expect(SRC).toContain('HEYS.NormCorrection?.EVIDENCE?.adaptation');
+    // Своего номера у экрана нет.
+    const block = SRC.slice(SRC.indexOf("'Поправка на факт',"), SRC.indexOf("'Расход после поправки'"));
+    expect(block).not.toMatch(/pubmed[^']*\/\d/);
+  });
+
+  it('показывается тем же способом, что источник в разборе долга', () => {
+    // Правило одно на продукт: иконка со ссылкой, а не своя форма на каждом
+    // экране.
+    expect(SRC).toContain("'📚'");
+    expect(SRC).toContain("rel: 'noopener'");
+  });
+});
