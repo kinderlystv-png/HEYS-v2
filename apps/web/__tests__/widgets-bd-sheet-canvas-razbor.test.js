@@ -505,6 +505,25 @@ describe('каркас листа разбора против разбора к�
     expect(variants).not.toMatch(/widget-bd-sheet__bar'[\s\S]{0,200}createElement\('i'/);
   });
 
+  // Кадр data-demo="protocol" — отвергнутый вариант, "loop" — петля, которая
+  // живёт только на канвасе. Строка «демо» запрещает их реализовывать, и это
+  // проверяется машиной: иначе следующий проход сведёт код с отказом дизайнера.
+  it('ни одна таблица пар не сводит код с отвергнутым кадром', () => {
+    const kind = new Map();
+    const re = /data-demo="(stop|loop|protocol)"[^>]*data-screen-label="([^"]+)"|data-screen-label="([^"]+)"[^>]*data-demo="(stop|loop|protocol)"/g;
+    let m;
+    while ((m = re.exec(source))) kind.set(m[2] || m[3], m[1] || m[4]);
+    const used = new Set([
+      ...CHARTS.map((p) => p[0]),
+      ...QUICK.map((p) => p[0]),
+      ...shutterPairs(razbor).map((p) => p[0]),
+      'Разбор · Калории',
+      'Главная · дефолтная раскладка'
+    ]);
+    const rejected = [...used].filter((frame) => kind.get(frame) !== 'stop');
+    expect(rejected).toEqual([]);
+  });
+
   it('осознанные отступления не разрослись', () => {
     expect(EXCEPTIONS.size).toBe(5);
   });
