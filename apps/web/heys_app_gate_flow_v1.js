@@ -86,6 +86,16 @@
         return statusRaw || 'none';
     };
 
+    // Дата пилюли в списке — день и месяц; год дописывается, только когда он
+    // не этот. «до 23.09.2026» в карточке значит ровно то же, что «до 23.09»,
+    // но занимает вдвое больше строки, которую делит с именем клиента.
+    const shortDate = (d) => {
+        const opts = d.getFullYear() === new Date().getFullYear()
+            ? { day: '2-digit', month: '2-digit' }
+            : { day: '2-digit', month: '2-digit', year: 'numeric' };
+        return d.toLocaleDateString('ru-RU', opts);
+    };
+
     const getSubscriptionBadge = (client) => {
         const status = getEffectiveSubscriptionStatus(client);
         // active_until приоритетнее trial_ends_at для вычисления end date
@@ -125,19 +135,43 @@
         }
 
         if (daysLeft !== null && daysLeft <= 3) {
-            return { emoji: '🟡', color: '#d97706', bg: '#fef3c7', text: `Истекает через ${daysLeft} дн.`, urgent: true };
+            return {
+                emoji: '🟡', color: '#d97706', bg: '#fef3c7',
+                text: `Истекает через ${daysLeft} дн.`,
+                short: `ещё ${daysLeft} дн.`,
+                urgent: true
+            };
         }
 
         if (daysLeft !== null && daysLeft <= 7) {
-            return { emoji: '🟡', color: '#ca8a04', bg: '#fef9c3', text: `До ${endDate.toLocaleDateString('ru-RU')}`, urgent: false };
+            return {
+                emoji: '🟡', color: '#ca8a04', bg: '#fef9c3',
+                text: `До ${endDate.toLocaleDateString('ru-RU')}`,
+                short: `до ${shortDate(endDate)}`,
+                urgent: false
+            };
         }
 
         if (status === 'trial') {
-            return { emoji: '⏳', color: '#6366f1', bg: '#e0e7ff', text: `Триал до ${endDate.toLocaleDateString('ru-RU')}`, urgent: false };
+            return {
+                emoji: '⏳', color: '#6366f1', bg: '#e0e7ff',
+                text: `Триал до ${endDate.toLocaleDateString('ru-RU')}`,
+                short: `триал до ${shortDate(endDate)}`,
+                urgent: false
+            };
         }
 
         if (status === 'active') {
-            return { emoji: '🟢', color: '#16a34a', bg: '#dcfce7', text: `Активна до ${endDate.toLocaleDateString('ru-RU')}`, urgent: false };
+            return {
+                emoji: '🟢', color: '#16a34a', bg: '#dcfce7',
+                text: `Активна до ${endDate.toLocaleDateString('ru-RU')}`,
+                // Короткая форма — для пилюли в карточке списка: полная
+                // («Активна до 23.09.2026») занимала треть строки и выдавливала
+                // имя клиента в многоточие. В листе подписки остаётся полная:
+                // там дата — предмет разговора, а не метка.
+                short: `до ${shortDate(endDate)}`,
+                urgent: false
+            };
         }
 
         if (status === 'read_only') {
@@ -1142,30 +1176,15 @@
             }
         };
 
-        // Кнопка открытия
-        const triggerBtn = React.createElement(
-            'button',
-            {
-                onClick: () => setOpen(true),
-                style: {
-                    width: '100%',
-                    padding: '16px',
-                    borderRadius: 14,
-                    background: '#eff6ff',
-                    border: '1px dashed #60a5fa',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                },
-                onMouseEnter: (e) => { e.currentTarget.style.background = '#dbeafe'; e.currentTarget.style.borderColor = '#3b82f6'; },
-                onMouseLeave: (e) => { e.currentTarget.style.background = '#eff6ff'; e.currentTarget.style.borderColor = '#60a5fa'; }
-            },
-            React.createElement('span', { style: { fontSize: 20, lineHeight: 1 } }, '➕'),
-            React.createElement('span', { style: { fontSize: 15, fontWeight: 600, color: '#2563eb' } }, 'Создать нового клиента')
-        );
+        // Кадр «Кабинет · Клиенты»: вторичная кнопка набора внизу списка.
+        // Прежде она была голубой пунктирной плашкой с ➕ и синим текстом —
+        // единственное синее место кабинета, и весила больше, чем «Открыть
+        // дневник» в карточках над ней, хотя создание клиента редкое действие.
+        const triggerBtn = React.createElement('button', {
+            type: 'button',
+            className: 'cur-cab__create',
+            onClick: () => setOpen(true)
+        }, 'Создать клиента');
 
         const modalContent = React.createElement('div', {
             className: 'cur-cab__sheet',
@@ -2270,12 +2289,9 @@
                                 React.createElement(
                                     'div',
                                     {
-                                        style: {
-                                            flex: 1,
-                                            overflow: 'auto',
-                                            background: 'var(--surface, #f8fafc)',
-                                            padding: '18px 20px'
-                                        }
+                                        // Поля экрана 16 по бокам и грунт набора: 20 и
+                                        // холодный #f8fafc остались от прежней системы.
+                                        className: 'cur-cab__content'
                                     },
                                     // === TAB: CLIENTS ===
                                     curatorTab === 'clients' && React.createElement(React.Fragment, null,
@@ -2318,7 +2334,8 @@
                                                     marginBottom: 16,
                                                     display: 'flex',
                                                     flexDirection: 'column',
-                                                    gap: 8
+                                                    // Зазор между карточками 10 — тот же, что у клиента.
+                                                    gap: 10
                                                 }
                                             },
                                             curatorPanelClients.length
@@ -2367,138 +2384,83 @@
                                                                 HEYS.Toast?.warning?.('Не удалось скопировать ID') || alert('Не удалось скопировать ID');
                                                             }
                                                         };
-                                                        return React.createElement(
-                                                            'div',
-                                                            {
-                                                                key: c.id,
-                                                                className: 'client-card',
-                                                                onMouseEnter: (e) => {
-                                                                    if (!isLast) e.currentTarget.style.transform = 'translateY(-2px)';
-                                                                    e.currentTarget.style.boxShadow = '0 10px 25px -10px rgba(0,0,0,0.2)';
-                                                                },
-                                                                onMouseLeave: (e) => {
-                                                                    e.currentTarget.style.transform = 'translateY(0)';
-                                                                    e.currentTarget.style.boxShadow = 'none';
-                                                                },
-                                                                style: {
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: 12,
-                                                                    padding: '14px 16px',
-                                                                    borderRadius: 14,
-                                                                    background: '#fff',
-                                                                    border: isLast ? '2px solid #4285f4' : '1px solid var(--border, #e5e7eb)',
-                                                                    cursor: 'pointer',
-                                                                    transition: 'all 0.2s',
-                                                                    animation: `fadeSlideIn 0.3s ease ${idx * 0.05}s both`
-                                                                },
-                                                                onClick: () => {
-                                                                    setTimeout(async () => {
-                                                                        console.info('[HEYS.gate] 👤 Выбор клиента', { clientId: c.id, clientName: c.name });
+                                                        return (() => {
+                                                            // Кадр «Кабинет · Клиенты»: карточка читается одним взглядом —
+                                                            // строка «кто», строка «что в дне», ряд «что делать». Прежде
+                                                            // аватар стоял отдельным столбцом слева, имя обрезалось до
+                                                            // «Алексан…», а единственная кнопка «⋯» лежала под карточкой:
+                                                            // главного действия у карточки не было вовсе, открывался
+                                                            // дневник нажатием в пустое место.
+                                                            const openDiary = () => {
+                                                                setTimeout(async () => {
+                                                                    console.info('[HEYS.gate] 👤 Выбор клиента', { clientId: c.id, clientName: c.name });
 
-                                                                        // 🔧 v69 FIX: Запоминаем старый clientId ДО обновления
-                                                                        const _prevClientId_gate = (window.HEYS?.currentClientId) || '';
+                                                                    // 🔧 v69 FIX: Запоминаем старый clientId ДО обновления
+                                                                    const _prevClientId_gate = (window.HEYS?.currentClientId) || '';
 
-                                                                        // 🔧 v69 CRITICAL: НЕ меняем currentClientId до завершения switchClient!
-                                                                        // Иначе React видит нового клиента, а данные в state ещё от старого →
-                                                                        // debounced flush сохраняет старые данные под нового клиента = контаминация.
-                                                                        // Вместо этого: ставим флаг switching, ждём switchClient, потом обновляем ID.
-                                                                        if (HEYS.cloud) {
-                                                                            HEYS.cloud._switchClientInProgress = true;
-                                                                        }
+                                                                    // 🔧 v69 CRITICAL: НЕ меняем currentClientId до завершения switchClient!
+                                                                    // Иначе React видит нового клиента, а данные в state ещё от старого →
+                                                                    // debounced flush сохраняет старые данные под нового клиента = контаминация.
+                                                                    // Вместо этого: ставим флаг switching, ждём switchClient, потом обновляем ID.
+                                                                    if (HEYS.cloud) {
+                                                                        HEYS.cloud._switchClientInProgress = true;
+                                                                    }
 
-                                                                        // Уведомляем UI, показываем skeleton (без смены currentClientId)
-                                                                        window.dispatchEvent(new CustomEvent('heys:client-switching', { detail: { clientId: c.id } }));
+                                                                    // Уведомляем UI, показываем skeleton (без смены currentClientId)
+                                                                    window.dispatchEvent(new CustomEvent('heys:client-switching', { detail: { clientId: c.id } }));
 
-                                                                        if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                                                    if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                                                        try {
+                                                                            await HEYS.cloud.switchClient(c.id, _prevClientId_gate);
+                                                                        } catch (err) {
+                                                                            console.error('[HEYS.gate] ❌ Ошибка sync, retry через 3с:', err);
                                                                             try {
+                                                                                await new Promise(r => setTimeout(r, 3000));
                                                                                 await HEYS.cloud.switchClient(c.id, _prevClientId_gate);
-                                                                            } catch (err) {
-                                                                                console.error('[HEYS.gate] ❌ Ошибка sync, retry через 3с:', err);
-                                                                                try {
-                                                                                    await new Promise(r => setTimeout(r, 3000));
-                                                                                    await HEYS.cloud.switchClient(c.id, _prevClientId_gate);
-                                                                                } catch (err2) {
-                                                                                    console.error('[HEYS.gate] ❌ Retry failed:', err2);
-                                                                                    window.dispatchEvent(new CustomEvent('heys:sync-error', {
-                                                                                        detail: { clientId: c.id, error: err2?.message || String(err2) }
-                                                                                    }));
-                                                                                }
+                                                                            } catch (err2) {
+                                                                                console.error('[HEYS.gate] ❌ Retry failed:', err2);
+                                                                                window.dispatchEvent(new CustomEvent('heys:sync-error', {
+                                                                                    detail: { clientId: c.id, error: err2?.message || String(err2) }
+                                                                                }));
                                                                             }
                                                                         }
-
-                                                                        // 🔧 v69: Теперь switchClient завершился, данные нового клиента загружены.
-                                                                        // Безопасно обновляем currentClientId и уведомляем React.
-                                                                        writeGlobalValue('heys_last_client_id', c.id);
-                                                                        writeGlobalValue('heys_client_current', c.id);
-                                                                        window.HEYS = window.HEYS || {};
-                                                                        window.HEYS.currentClientId = c.id;
-                                                                        setClientId(c.id);
-                                                                        console.info('[HEYS.gate] ✅ Клиент переключён (после sync)', { clientId: c.id });
-                                                                        window.__heysLastDispatchedClientId = c.id;
-                                                                        window.dispatchEvent(new CustomEvent('heys:client-changed', {
-                                                                            detail: { clientId: c.id, source: 'curator-client-open', startVisit: true }
-                                                                        }));
-                                                                    }, 0);
-                                                                }
-                                                            },
-                                                            // Аватар с цветом по букве + 💬 badge непрочитанных
-                                                            React.createElement(
-                                                                'div',
-                                                                { style: { position: 'relative', flexShrink: 0 } },
-                                                                // Аватар 34 того же вида, что в панели: цветной круг с тенью
-                                                                // выделял случайную букву имени сильнее, чем состояние дня —
-                                                                // а решает куратор по состоянию.
-                                                                React.createElement('span', {
-                                                                    className: 'cur-row__avatar'
-                                                                }, getClientInitials(c.name)),
-                                                                unreadCount > 0 && React.createElement('div', {
-                                                                    className: 'curator-card-unread-badge',
-                                                                    style: {
-                                                                        position: 'absolute',
-                                                                        top: -4,
-                                                                        right: -4,
-                                                                        minWidth: 20,
-                                                                        height: 20,
-                                                                        padding: '0 5px',
-                                                                        borderRadius: 10,
-                                                                        background: '#dc2626',
-                                                                        color: '#fff',
-                                                                        fontSize: 11,
-                                                                        fontWeight: 700,
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        border: '2px solid #fff',
-                                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
                                                                     }
-                                                                }, String(unreadCount))
-                                                            ),
-                                                            // Контент карточки (Инфо + Кнопки)
-                                                            React.createElement(
-                                                                'div',
-                                                                { style: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 } },
 
-                                                                // Контракт «вид · карточка клиента»: шапка одной строкой —
-                                                                // аватар, имя с телефоном, пилюля подписки. Прежде имя и
-                                                                // телефон стояли отдельным рядом, бейдж со статистикой —
-                                                                // вторым, и карточка читалась сверху вниз тремя заходами
-                                                                // вместо одного взгляда.
+                                                                    // 🔧 v69: Теперь switchClient завершился, данные нового клиента загружены.
+                                                                    // Безопасно обновляем currentClientId и уведомляем React.
+                                                                    writeGlobalValue('heys_last_client_id', c.id);
+                                                                    writeGlobalValue('heys_client_current', c.id);
+                                                                    window.HEYS = window.HEYS || {};
+                                                                    window.HEYS.currentClientId = c.id;
+                                                                    setClientId(c.id);
+                                                                    console.info('[HEYS.gate] ✅ Клиент переключён (после sync)', { clientId: c.id });
+                                                                    window.__heysLastDispatchedClientId = c.id;
+                                                                    window.dispatchEvent(new CustomEvent('heys:client-changed', {
+                                                                        detail: { clientId: c.id, source: 'curator-client-open', startVisit: true }
+                                                                    }));
+                                                                }, 0);
+                                                            };
+                                                            return React.createElement('div', {
+                                                                key: c.id,
+                                                                className: 'cur-cab__card' + (isLast ? ' is-last' : '')
+                                                            },
+                                                                // Шапка: аватар, имя с телефоном, срок подписки.
                                                                 React.createElement('div', { className: 'cur-cab__client-head' },
+                                                                    React.createElement('span', { className: 'cur-row__avatar' },
+                                                                        getClientInitials(c.name)),
                                                                     React.createElement('span', { className: 'cur-cab__client-copy' },
                                                                         React.createElement('span', { className: 'cur-row__name' }, c.name),
                                                                         c.phone_normalized && React.createElement('span', {
                                                                             className: 'cur-cab__client-phone'
-                                                                        }, c.phone_normalized)
+                                                                        }, HEYS.auth?.formatPhone?.(c.phone_normalized) || c.phone_normalized)
                                                                     ),
                                                                     (() => {
                                                                         const badge = getSubscriptionBadge(c);
-                                                                        // Пилюля подписки — метка данных того же набора, что
-                                                                        // метки дня: своя рамка и эмодзи ей не нужны.
+                                                                        // Пилюля подписки — метка данных того же набора, что метки
+                                                                        // дня: своя рамка и эмодзи ей не нужны.
                                                                         return React.createElement('span', {
-                                                                            className: 'cur-cab__mch'
-                                                                                + (badge.urgent ? ' is-warn' : ' is-ok')
-                                                                        }, badge.text);
+                                                                            className: 'cur-cab__mch' + (badge.urgent ? ' is-warn' : ' is-ok')
+                                                                        }, badge.short || badge.text);
                                                                     })()
                                                                 ),
 
@@ -2546,32 +2508,43 @@
                                                                 // превью последнего сообщения справа. Обе строки называют,
                                                                 // о чём говорить с человеком, а метки выше — что у него в
                                                                 // дне. Нет одного — остаётся другое.
-                                                                (stats.streak > 0 || lastPreview) && React.createElement('div', {
-                                                                    className: 'cur-cab__foot'
-                                                                },
-                                                                    stats.streak > 0
-                                                                        ? React.createElement('span', { className: 'cur-cab__streak' },
-                                                                            stats.streak + ' ' + (stats.streak === 1 ? 'день' : stats.streak < 5 ? 'дня' : 'дней') + ' подряд')
-                                                                        : null,
-                                                                    lastPreview
-                                                                        ? React.createElement('span', {
-                                                                            className: 'cur-cab__preview'
-                                                                                + (unreadCount > 0 ? ' is-unread' : '')
-                                                                        },
-                                                                            (lastPreview.sender_role === 'curator' ? 'Вы: ' : '')
-                                                                            + (lastPreview.body
-                                                                                || (lastPreview.intent_type === 'meal' ? 'приём пищи'
-                                                                                    : lastPreview.intent_type === 'training' ? 'тренировка'
-                                                                                        : lastPreview.intent_type === 'weight' ? 'вес' : '')))
-                                                                        : null
-                                                                ),
 
-                                                                // Меню действий клиента вместо прежнего ряда кружков.
-                                                                    // Контракт «меню клиента вместо пяти кружков»: пять
-                                                                    // безымянных круглых кнопок собраны в лист со
-                                                                    // строками. Удаление стоит последним и своим тоном —
-                                                                    // в прежнем ряду оно было рядом с «посмотреть» и
-                                                                    // такого же вида.
+                                                                // Нижний ярус: серия слева, последнее сообщение справа. Обе
+                                                                // строки говорят, о чём беседовать с человеком, а метки выше —
+                                                                // что у него в дне. Непрочитанные названы словом: красный
+                                                                // кружок поверх аватара кричал тревогой о том, что тревогой не
+                                                                // является, а красный в наборе значит разрушающее действие.
+                                                                (stats.streak > 0 || lastPreview || unreadCount > 0)
+                                                                    && React.createElement('div', { className: 'cur-cab__foot' },
+                                                                        React.createElement('span', { className: 'cur-cab__streak' },
+                                                                            unreadCount > 0
+                                                                                ? unreadCount + ' непрочитанных'
+                                                                                : stats.streak > 0
+                                                                                    ? stats.streak + ' ' + (stats.streak === 1 ? 'день'
+                                                                                        : stats.streak < 5 ? 'дня' : 'дней') + ' подряд'
+                                                                                    : ''),
+                                                                        lastPreview
+                                                                            ? React.createElement('span', {
+                                                                                className: 'cur-cab__preview'
+                                                                                    + (unreadCount > 0 ? ' is-unread' : '')
+                                                                            },
+                                                                                (lastPreview.sender_role === 'curator' ? 'Вы: ' : '')
+                                                                                + (lastPreview.body
+                                                                                    || (lastPreview.intent_type === 'meal' ? 'приём пищи'
+                                                                                        : lastPreview.intent_type === 'training' ? 'тренировка'
+                                                                                            : lastPreview.intent_type === 'weight' ? 'вес' : '')))
+                                                                            : null
+                                                                    ),
+                                                        
+                                                                // Ряд действий: главное названо словом и залито, «⋯» рядом.
+                                                                // Прежде главного действия у карточки не было — дневник
+                                                                // открывался нажатием в пустое место, и об этом надо было знать.
+                                                                React.createElement('div', { className: 'cur-cab__actions' },
+                                                                    React.createElement('button', {
+                                                                        type: 'button',
+                                                                        className: 'cur-cab__open',
+                                                                        onClick: openDiary
+                                                                    }, 'Открыть дневник'),
                                                                     React.createElement(ClientActionsMenu, {
                                                                         client: c,
                                                                         curatorId: cloudUser?.id,
@@ -2579,21 +2552,20 @@
                                                                         copyClientId,
                                                                         removeClient
                                                                     })
-                                                            )
-                                                        );
+                                                                )
+                                                            );
+                                                        })();
                                                     })
-                                                : React.createElement(
-                                                    'div',
-                                                    {
-                                                        style: {
-                                                            textAlign: 'center',
-                                                            padding: '40px 20px',
-                                                            color: 'var(--muted)'
-                                                        }
-                                                    },
-                                                    React.createElement('div', { style: { fontSize: 48, marginBottom: 12 } }, '📋'),
-                                                    React.createElement('div', { style: { fontSize: 15 } }, 'Пока нет клиентов'),
-                                                    React.createElement('div', { style: { fontSize: 13, marginTop: 4 } }, 'Создайте первого клиента ниже')
+                                                // Пустота — та же карточка, что у остальных пустот
+                                                // кабинета. Эмодзи 📋 в полэкрана сообщало настроение,
+                                                // а не состояние, и в наборе эмодзи нет нигде.
+                                                : React.createElement('div', { className: 'cur-panel__empty' },
+                                                    React.createElement('div', { className: 'cur-panel__empty-title' },
+                                                        'Клиентов пока нет'),
+                                                    React.createElement('div', { className: 'cur-panel__empty-note' },
+                                                        'Здесь появится список людей, чьи дневники вы ведёте: '
+                                                        + 'состояние дня, срок подписки и вход в дневник. '
+                                                        + 'Первого создайте кнопкой внизу.')
                                                 ),
                                         ),
                                     ),
@@ -2628,18 +2600,9 @@
                                 ),
 
                                 // FOOTER: Кнопка создания (прибита к низу)
-                                curatorTab === 'clients' && React.createElement(
-                                    'div',
-                                    {
-                                        style: {
-                                            padding: '16px 20px',
-                                            background: '#fff',
-                                            borderTop: '1px solid var(--border, #e2e8f0)',
-                                            flexShrink: 0
-                                        }
-                                    },
-                                    React.createElement(CreateClientModal, props)
-                                )
+                                curatorTab === 'clients' && React.createElement('div', {
+                                    className: 'cur-cab__create-bar'
+                                }, React.createElement(CreateClientModal, props))
                             )
                         )
                     )

@@ -183,11 +183,58 @@ describe('панель куратора · место в кабинете', () =
 
   it('нижний ярус: серия слева, превью справа, и одно не съедает другое', () => {
     const foot = GATE.slice(GATE.indexOf("className: 'cur-cab__foot'"),
-      GATE.indexOf('Меню действий клиента'));
+      GATE.indexOf('Ряд действий'));
     expect(foot.indexOf('cur-cab__streak')).toBeLessThan(foot.indexOf('cur-cab__preview'));
     // Нет одного — остаётся другое.
-    expect(GATE).toContain('(stats.streak > 0 || lastPreview)');
+    expect(GATE).toContain('(stats.streak > 0 || lastPreview || unreadCount > 0)');
     expect(CSS).toMatch(/\.cur-cab__preview[\s\S]{0,200}text-overflow: ellipsis/);
+  });
+
+  it('кадр «Кабинет · Клиенты»: главное действие названо словом', () => {
+    // Прежде главного действия у карточки не было вовсе: дневник открывался
+    // нажатием в пустое место, а единственная кнопка «⋯» лежала под карточкой.
+    const card = GATE.slice(GATE.indexOf("className: 'cur-cab__card'"),
+      GATE.indexOf('Пустота — та же карточка'));
+    expect(card).toContain("'Открыть дневник'");
+    // «⋯» стоит после главного действия и в том же ряду.
+    expect(card.indexOf("cur-cab__open")).toBeLessThan(card.indexOf('ClientActionsMenu'));
+    expect(card).toContain("className: 'cur-cab__actions'");
+    // Пилюля 44 во всю ширину на акценте — строка контракта «вид · карточка
+    // клиента»: «Действие — пилюля 44 на --acs во всю ширину плюс круглая ⋯».
+    expect(CSS).toMatch(/\.cur-cab__open \{[\s\S]{0,220}min-height: 44px/);
+    expect(CSS).toMatch(/\.cur-cab__open \{[\s\S]{0,320}--v4-act/);
+    expect(CSS).toMatch(/\.cur-cab__more \{[\s\S]{0,160}width: 40px/);
+  });
+
+  it('в карточке нет ни синего, ни белой заливки, ни красного кружка', () => {
+    const src = GATE.split(String.fromCharCode(10))
+      .filter((l) => !l.trim().startsWith('//')).join(String.fromCharCode(10));
+    const card = src.slice(src.indexOf("className: 'cur-cab__card'"),
+      src.indexOf('Пустота — та же карточка'));
+    // Прежняя карточка: белый фон, синяя рамка «вы здесь были», красный
+    // кружок с числом непрочитанных поверх аватара.
+    for (const dead of ['#4285f4', "background: '#fff'", 'curator-card-unread-badge',
+      '#dc2626']) {
+      expect(card, dead).not.toContain(dead);
+    }
+    // Непрочитанные названы словом в нижнем ярусе.
+    expect(src).toContain("' непрочитанных'");
+    // Кнопка создания клиента — вторичная набора, а не голубая плашка с ➕.
+    expect(card).not.toContain('#eff6ff');
+    // Кнопка создания — вторичная набора, а не голубая плашка с эмодзи.
+    const at = src.indexOf("className: 'cur-cab__create'");
+    const create = src.slice(at - 400, src.indexOf('const modalContent', at));
+    expect(create).not.toContain('#eff6ff');
+    expect(create).not.toContain('Создать нового клиента');
+    expect(create).toContain("'Создать клиента'");
+  });
+
+  it('пилюля подписки в списке короткая, а в листе — полная', () => {
+    // «Активна до 23.09.2026» занимала треть строки и выдавливала имя
+    // клиента в многоточие; в листе подписки дата — предмет разговора.
+    expect(GATE).toContain('badge.short || badge.text');
+    expect(GATE).toMatch(/short: `до \$\{shortDate\(endDate\)\}`/);
+    expect(GATE).toMatch(/text: `Активна до \$\{endDate\.toLocaleDateString/);
   });
 
   it('пять кружков собраны в лист, и ни одно действие не потерялось', () => {
