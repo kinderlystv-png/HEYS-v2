@@ -852,12 +852,16 @@
   color: var(--v4-ink, #0f172a);
 }
 
+/* Пилюля состояния по строке контракта «пилюля и метка»: моно 9 px весом 700
+   с трекингом .06em. Вес 500 делал её светлее подписи рядом, хотя это метка
+   состояния недели, а не примечание. */
 .reports-v4-weeks__partial {
   flex: none;
   padding: 3px 6px;
   border-radius: 999px;
   background: var(--v4-chip-2, rgba(0, 0, 0, 0.05));
-  font: 500 9px/1 ui-monospace, Menlo, monospace;
+  font: 700 9px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.06em;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
 }
 
@@ -866,6 +870,15 @@
   flex: none;
   width: 56px;
   text-align: right;
+}
+
+/* Подписи колонок набраны теснее слова «неделя»: у него .1em, у них .06em.
+   Разрядка заголовка шире, потому что он один и стоит слева свободно, а
+   подписи стиснуты между числами и от лишней разрядки расползаются. */
+.reports-v4-weeks__head-kcal,
+.reports-v4-weeks__head-weight,
+.reports-v4-weeks__head-score {
+  letter-spacing: 0.06em;
 }
 
 .reports-v4-weeks__head-weight,

@@ -827,47 +827,12 @@
   box-shadow: 0 2px 4px rgba(16, 185, 129, 0.4);
 }
 
-[data-theme$="dark"] .kcal-realdata-card {
-  background: linear-gradient(135deg, rgba(124, 45, 18, 0.96) 0%, rgba(154, 52, 18, 0.98) 100%);
-  border-color: rgba(251, 146, 60, 0.35);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
-}
+/* Карточка «Мало калорий» красится ролями набора и потому в тёмной теме
+   ничего не переопределяет: прежние #fed7aa / #fdba74 и оранжевый градиент
+   были второй, ручной версией той же карточки — при правке светлой они
+   расходились молча. */
 
-[data-theme$="dark"] .kcal-realdata-card__title {
-  color: #fed7aa;
-}
 
-[data-theme$="dark"] .kcal-realdata-card__text {
-  color: #fdba74;
-}
-
-[data-theme$="dark"] .kcal-realdata-card__badge {
-  color: #fed7aa;
-  background: rgba(0, 0, 0, 0.18);
-  border-color: rgba(251, 146, 60, 0.25);
-}
-
-[data-theme$="dark"] .kcal-realdata-card__button {
-  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
-  color: #431407;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
-}
-
-[data-theme$="dark"] .kcal-realdata-card__button--secondary {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(251, 146, 60, 0.35);
-  color: #fed7aa;
-  box-shadow: none;
-}
-
-[data-theme$="dark"] .kcal-realdata-card__recommendation {
-  color: #fed7aa;
-}
-
-[data-theme$="dark"] .kcal-realdata-card__impact {
-  color: #fdba74;
-  opacity: 0.95;
-}
 
 /* Sparkline chart */
 [data-theme$="dark"] .sparkline-container {

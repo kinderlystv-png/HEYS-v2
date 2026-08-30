@@ -543,7 +543,10 @@
       ),
       React.createElement('div', { className: 'reports-v4-weeks' },
         React.createElement('div', { className: 'reports-v4-weeks__head' },
-          React.createElement('span', { className: 'reports-v4-weeks__head-date' }, ''),
+          // Контракт «карточка · шапка колонок таблицы недель»: слева стоит
+          // слово «неделя». Пустая ячейка оставляла три подписи справа висеть
+          // без объяснения, что за строки под ними.
+          React.createElement('span', { className: 'reports-v4-weeks__head-date' }, 'неделя'),
           React.createElement('span', { className: 'reports-v4-weeks__head-kcal' }, 'к плану'),
           React.createElement('span', { className: 'reports-v4-weeks__head-weight' }, 'вес'),
           React.createElement('span', { className: 'reports-v4-weeks__head-score' }, 'sc')

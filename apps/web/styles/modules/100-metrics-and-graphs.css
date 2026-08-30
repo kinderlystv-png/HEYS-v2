@@ -251,13 +251,15 @@
   vertical-align: middle;
 }
 
+/* Контракт «вид · карточка подтверждения дня»: карточка на --tint радиусом 20
+   полями 16. Прежде здесь стоял оранжевый градиент с рамкой и тенью — приём
+   прошлой системы: предупреждение в наборе тёплое и плоское, а градиент с
+   цветной тенью читается тревогой, которой в этом сообщении нет. */
 .kcal-realdata-card {
   margin-top: 12px;
-  padding: 12px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(255, 237, 213, 0.96) 0%, rgba(254, 215, 170, 0.98) 100%);
-  border: 1px solid rgba(249, 115, 22, 0.28);
-  box-shadow: 0 8px 20px rgba(249, 115, 22, 0.12);
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-tint, #f6e6dd);
 }
 
 .kcal-realdata-card__header {
@@ -278,17 +280,17 @@
 }
 
 .kcal-realdata-card__title {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
-  color: #9a3412;
-  line-height: 1.3;
+  color: var(--v4-warn-text, #a1471c);
+  line-height: 1.35;
 }
 
 .kcal-realdata-card__text {
   margin-top: 4px;
   font-size: 12px;
-  line-height: 1.4;
-  color: #7c2d12;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 62%, transparent);
 }
 
 .kcal-realdata-card__footer {
@@ -319,7 +321,7 @@
   border-radius: 8px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--v4-warn-3, #a1471c);
+  color: var(--v4-warn-text, #a1471c);
   background: var(--v4-bg, #fffaf1);
   border: none;
 }
@@ -343,7 +345,7 @@
 }
 
 .kcal-realdata-card__button--secondary {
-  color: var(--v4-warn-3, #a1471c);
+  color: var(--v4-warn-text, #a1471c);
   background: var(--v4-bg, #fffaf1);
   border: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 10%, transparent);
   box-shadow: none;

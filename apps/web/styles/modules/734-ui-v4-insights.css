@@ -315,7 +315,10 @@
   padding: 4px 7px;
   border-radius: 999px;
   font: 700 9px/1 ui-monospace, Menlo, monospace;
-  letter-spacing: 0.04em;
+  /* Трекинг .06em — общий для всех пилюль состояния зоны (строка контракта
+     «пилюля и метка»). Своё .04em здесь делало бейдж зрелости теснее пилюли
+     недели, хотя это одна и та же форма. */
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   background: var(--v4-chip, rgba(0, 0, 0, 0.06));
   color: var(--v4-sand-act-deep, #8a4a20);
