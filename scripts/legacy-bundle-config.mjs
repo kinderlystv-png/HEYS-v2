@@ -78,6 +78,11 @@ export const LEGACY_BUNDLES = {
         // mobility/fingers и на момент открытия обычного дня ещё не подгружен.
         '_kernel/heys_kernel_strength_v1.js',
         '_kernel/heys_kernel_load_v1.js',
+        // Реестр источников — тот же механизм, что у пальцев и мобильности.
+        // Данные дневной части идут следом: ядро обязано быть раньше, иначе
+        // createRegistry ещё не объявлен и записи молча не регистрируются.
+        '_kernel/heys_kernel_bibliography_v1.js',
+        'heys_day_bibliography_v1.js',
         'heys_day_utils.js',
         'heys_day_pickers.js',
         'heys_day_popups.js',
