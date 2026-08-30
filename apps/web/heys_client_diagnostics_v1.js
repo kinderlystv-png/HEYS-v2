@@ -457,24 +457,27 @@
           h('span', { className: 'cdo-list-val is-ok' },
             Number(summary.success_rate || 0) + ' %')
         ),
-        // «Обновить» стоит значением строки про автообновление, а не третьей
-        // кнопкой в главном ряду: она уточняет, когда данные свежие, и не
-        // спорит с «Показать сбои». В кадре её нет — там автообновление просто
-        // подписано; живой вкладке кнопка нужна, автообновление раз в минуту.
         h('div', { className: 'cdo-list-row' },
           h('span', { className: 'cdo-list-key' },
             updatedAt
               ? 'Обновлено ' + updatedAt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
               : 'Автообновление'),
-          h('button', {
-            type: 'button', className: 'cdo-refresh',
-            onClick: function () { load(false); }, disabled: loading
-          }, loading ? 'обновляю…' : 'обновить')
+          h('span', { className: 'cdo-list-val' }, 'каждые 60 с')
         )
       ),
+      // Строка контракта «диагностика · три действия»: три кнопки в общем ряду
+      // и все на подложке набора. Кадр рисует две и заливает «Показать сбои»
+      // акцентом — при расхождении верен контракт. Заливка снята потому, что
+      // ни одно из трёх не является главным: фильтр, копирование и обновление
+      // равны по весу, и акцент на одном из них назначал бы старшинство,
+      // которого нет.
+      //
+      // «Обновить» вернулась в ряд из строки листа: автообновление раз в
+      // минуту не заменяет живой вкладке ручного.
       h('div', { className: 'cdo-actions' },
-        h('button', { type: 'button', className: 'cdo-primary' + (filters.status === 'problems' ? ' is-active' : ''), onClick: function () { update('status', filters.status === 'problems' ? 'all' : 'problems'); } }, filters.status === 'problems' ? 'Показать все' : 'Показать сбои'),
-        h('button', { type: 'button', className: 'cdo-secondary', onClick: copyReport, disabled: !(data.sessions || []).length }, 'Скопировать отчёт')
+        h('button', { type: 'button', className: 'cdo-secondary' + (filters.status === 'problems' ? ' is-active' : ''), onClick: function () { update('status', filters.status === 'problems' ? 'all' : 'problems'); } }, filters.status === 'problems' ? 'Показать все' : 'Показать сбои'),
+        h('button', { type: 'button', className: 'cdo-secondary', onClick: copyReport, disabled: !(data.sessions || []).length }, 'Скопировать отчёт'),
+        h('button', { type: 'button', className: 'cdo-secondary', onClick: function () { load(false); }, disabled: loading }, loading ? 'Обновляю…' : 'Обновить')
       ),
       // Второе копирование — другого объёма: отчёт берёт текущий фильтр,
       // мегалог собирает все сбои за день. В кадре его нет; убрать значило бы

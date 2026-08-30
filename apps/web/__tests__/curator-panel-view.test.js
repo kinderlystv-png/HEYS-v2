@@ -364,7 +364,9 @@ describe('панель куратора · строка клиента', () => {
       state: 'in_corridor', driftPct: 1.1,
       card: { recommendation: { norm: 2047, currentNorm: 2047, stepFactor: 1 } }
     }));
-    expect(line).toBe('в коридоре · разница 1,1 % · норма 2 047');
+    // Слов «в коридоре» в строке нет: их сказал заголовок группы прямо над
+    // ней, а повтор съедает место у чисел — ради них строку и читают.
+    expect(line).toBe('разница 1,1 % · норма 2 047');
     // Пилюли нет: у коридора нет длительности, а пилюля меряет только её.
     expect(CP.agePill(row({ state: 'in_corridor', ageDays: null }))).toBe(null);
   });
@@ -613,10 +615,17 @@ describe('панель куратора · окно', () => {
     expect(grid).not.toContain('Штатно');
     expect(src.slice(list, actions)).toContain("'Штатно'");
     // В главном ряду два действия; «Обновить» — значение строки про свежесть.
+    // Строка контракта «диагностика · три действия»: три кнопки в общем ряду и
+    // все на подложке набора. Кадр рисует две и заливает «Показать сбои» — при
+    // расхождении верен контракт, а заливка снята потому, что старшинства
+    // между фильтром, копированием и обновлением нет.
     const row = src.slice(actions, src.indexOf('cdo-megalog', actions));
     expect(row).toContain('Показать сбои');
     expect(row).toContain('Скопировать отчёт');
-    expect(row).not.toContain('cdo-refresh');
-    expect(src.slice(list, actions)).toContain('cdo-refresh');
+    expect(row).toContain('Обновить');
+    expect(row).not.toContain('cdo-primary');
+    // Строка про свежесть кнопку больше не держит: у неё значение-подпись.
+    expect(src.slice(list, actions)).not.toContain('cdo-refresh');
+    expect(src.slice(list, actions)).toContain('каждые 60 с');
   });
 });

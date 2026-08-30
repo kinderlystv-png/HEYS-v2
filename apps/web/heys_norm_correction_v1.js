@@ -1336,8 +1336,12 @@
       }
 
       // Длительность состояния — своя у каждой группы, но смысл один.
+      // Коридор меряется тем же, чем расхождение, — длиной окна расчёта:
+      // строка контракта «группа "В коридоре"» ставит справа «21 дн». Без
+      // этого числа «разница 2 %» не говорит, за какой срок она набрана.
       const ageDays = state === 'silent' ? silentDays
-        : state === 'mismatch' ? (result.windowDays || entry.days.length)
+        : (state === 'mismatch' || state === 'in_corridor')
+          ? (result.windowDays || entry.days.length)
           : state === 'awaits' ? daysSinceMonday(base)
             : null;
 
