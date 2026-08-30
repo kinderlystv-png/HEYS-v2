@@ -1594,111 +1594,103 @@
         }
 
         const bulkEligibleCount = pending.filter(item => !getPendingRequest(item)).length;
+        const pluralRu = (n, one, few, many) => {
+            const abs = Math.abs(n) % 100;
+            const last = abs % 10;
+            if (abs > 10 && abs < 20) return many;
+            if (last === 1) return one;
+            if (last > 1 && last < 5) return few;
+            return many;
+        };
 
+        // Заголовок вкладки живёт внутри её содержимого — шапка кабинета одна на
+        // все пять и говорит, где вы. Прежде он стоял только у пустого экрана, и
+        // список заявок начинался безымянной серой плашкой со счётчиком.
         return React.createElement('div', {
             className: 'cur-cab__pane',
             style: { display: 'flex', flexDirection: 'column', gap: 10 }
         },
-            // Bulk-approve панель: счётчик заявок + кнопка «Одобрить все».
-            React.createElement('div', {
-                style: {
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    background: '#f1f5f9', borderRadius: 10, padding: '10px 14px', gap: 12,
-                    border: '1px solid rgba(148,163,184,0.25)'
-                }
-            },
-                React.createElement('div', { style: { fontSize: 13, color: '#475569' } },
+            React.createElement('div', { className: 'cur-cab__tab-head' },
+                React.createElement('div', { className: 'cur-cab__tab-title' }, 'Заявки'),
+                React.createElement('div', { className: 'cur-cab__tab-note' },
                     bulkProgress
-                        ? `Обрабатываю ${bulkProgress.done}/${bulkProgress.total}...`
-                        : `Заявок на модерацию: ${pending.length}${bulkEligibleCount !== pending.length ? ` · новых продуктов для массового approve: ${bulkEligibleCount}` : ''}`
-                ),
-                React.createElement('button', {
-                    onClick: approveAllPending,
-                    disabled: !!bulkProgress || bulkEligibleCount === 0,
-                    title: bulkEligibleCount === 0 ? 'Массовое одобрение доступно только для новых продуктов' : 'Одобрить новые продукты сразу',
-                    style: {
-                        padding: '8px 14px', borderRadius: 8, border: 'none',
-                        background: bulkProgress || bulkEligibleCount === 0 ? '#cbd5e1' : '#16a34a',
-                        color: '#fff', fontWeight: 600, fontSize: 13,
-                        cursor: bulkProgress ? 'wait' : 'pointer',
-                        opacity: bulkEligibleCount === 0 ? 0.5 : 1,
-                        display: 'flex', alignItems: 'center', gap: 6
-                    }
-                }, bulkProgress ? '⏳ Обрабатываю...' : `✅ Одобрить новые (${bulkEligibleCount})`)
+                        ? 'Одобряем ' + bulkProgress.done + ' из ' + bulkProgress.total
+                        : pending.length + ' '
+                          + pluralRu(pending.length, 'заявка', 'заявки', 'заявок')
+                          + ' на подтверждении'
+                          + (bulkEligibleCount !== pending.length
+                              ? ' · новых продуктов ' + bulkEligibleCount
+                              : ''))
             ),
+            // Массовое одобрение — вторичной кнопкой во всю ширину: работа, за
+            // которой куратор и пришёл, а не то, к чему его надо подтолкнуть.
+            // Прежде это была зелёная кнопка с галочкой в серой плашке с
+            // холодной рамкой — единственное зелёное место в кабинете.
+            bulkEligibleCount > 0 && React.createElement('button', {
+                type: 'button',
+                className: 'cur-cab__open is-soft',
+                onClick: approveAllPending,
+                disabled: !!bulkProgress,
+                title: 'Одобрить новые продукты сразу'
+            }, bulkProgress ? 'Одобряем…' : 'Одобрить новые (' + bulkEligibleCount + ')'),
+            // Карточка заявки — та же плоская карточка, что у клиента: вид
+            // заявки меткой набора, имя, состав метками дня, автор и дата
+            // подписью, действия рядом. Прежде это была белая карточка с
+            // холодной рамкой и тенью, три цветные пилюли вида и две
+            // квадратные кнопки с эмодзи ✅ и ❌.
             pending.map(item => {
                 const p = item.product_data || {};
                 const clientName = clientMap[item.client_id] || item.client_id?.slice(0, 8) || '—';
                 const pendingLabel = getPendingLabel(item);
-                return React.createElement('div', {
-                    key: item.id,
-                    style: {
-                        background: '#fff',
-                        borderRadius: 12,
-                        padding: '14px 16px',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                        border: '1px solid rgba(148,163,184,0.2)'
-                    }
-                },
-                    React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 } },
-                        React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-                            React.createElement('div', {
-                                style: {
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    padding: '2px 8px',
-                                    borderRadius: 999,
-                                    background: pendingLabel === 'Новый вариант' ? '#e0e7ff' : pendingLabel === 'Штрихкоды' ? '#dbeafe' : '#f1f5f9',
-                                    color: '#334155',
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    marginBottom: 6
-                                }
-                            }, pendingLabel),
-                            React.createElement('div', {
-                                style: { fontWeight: 600, fontSize: 15, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
-                            }, p.name || item.name_norm),
-                            React.createElement('div', {
-                                style: { fontSize: 12, color: '#64748b', display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 4 }
-                            },
-                                React.createElement('span', null, `${calcKcal(p)} ккал`),
-                                React.createElement('span', null, `Б:${p.protein100 || 0}`),
-                                React.createElement('span', null, `У:${(p.simple100 || 0) + (p.complex100 || 0)}`),
-                                React.createElement('span', null, `Ж:${(p.badFat100 || 0) + (p.goodFat100 || 0) + (p.trans100 || 0)}`),
-                                p.gi && React.createElement('span', null, `ГИ:${p.gi}`),
-                                (p.barcode || item.barcode) && React.createElement('span', {
-                                    title: 'Штрихкод упаковки'
-                                }, `▦ ${p.barcode || item.barcode}${Array.isArray(p.barcodes) && p.barcodes.length > 1 ? ` +${p.barcodes.length - 1}` : ''}`)
-                            ),
-                            React.createElement('div', { style: { fontSize: 11, color: '#94a3b8', display: 'flex', gap: 10 } },
-                                React.createElement('span', null, `👤 ${clientName}`),
-                                React.createElement('span', null, `📅 ${new Date(item.created_at).toLocaleDateString('ru-RU')}`)
-                            )
+                const barcode = p.barcode || item.barcode;
+                const extraBarcodes = Array.isArray(p.barcodes) && p.barcodes.length > 1
+                    ? ' +' + (p.barcodes.length - 1)
+                    : '';
+                return React.createElement('div', { key: item.id, className: 'cur-cab__card' },
+                    React.createElement('div', { className: 'cur-cab__client-head' },
+                        React.createElement('span', { className: 'cur-cab__client-copy' },
+                            React.createElement('span', { className: 'cur-row__name' },
+                                p.name || item.name_norm)
                         ),
-                        React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0 } },
-                            React.createElement('button', {
-                                onClick: () => approvePending(item),
-                                disabled: !!bulkProgress,
-                                title: bulkProgress ? 'Идёт массовое одобрение' : 'Одобрить',
-                                style: {
-                                    width: 36, height: 36, borderRadius: 8, border: 'none',
-                                    background: '#dcfce7', cursor: bulkProgress ? 'wait' : 'pointer', fontSize: 16,
-                                    opacity: bulkProgress ? 0.5 : 1,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                }
-                            }, '✅'),
-                            React.createElement('button', {
-                                onClick: () => rejectPending(item),
-                                disabled: !!bulkProgress,
-                                title: bulkProgress ? 'Идёт массовое одобрение' : 'Отклонить',
-                                style: {
-                                    width: 36, height: 36, borderRadius: 8, border: 'none',
-                                    background: '#fee2e2', cursor: bulkProgress ? 'wait' : 'pointer', fontSize: 16,
-                                    opacity: bulkProgress ? 0.5 : 1,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                }
-                            }, '❌')
-                        )
+                        React.createElement('span', { className: 'cur-cab__mch' }, pendingLabel)
+                    ),
+                    React.createElement('div', { className: 'cur-cab__mchs' },
+                        React.createElement('span', { className: 'cur-cab__mch' },
+                            calcKcal(p) + ' ккал'),
+                        React.createElement('span', { className: 'cur-cab__mch' },
+                            'Б ' + (p.protein100 || 0)),
+                        React.createElement('span', { className: 'cur-cab__mch' },
+                            'У ' + ((p.simple100 || 0) + (p.complex100 || 0))),
+                        React.createElement('span', { className: 'cur-cab__mch' },
+                            'Ж ' + ((p.badFat100 || 0) + (p.goodFat100 || 0) + (p.trans100 || 0))),
+                        p.gi ? React.createElement('span', { className: 'cur-cab__mch' },
+                            'ГИ ' + p.gi) : null,
+                        barcode ? React.createElement('span', {
+                            className: 'cur-cab__mch',
+                            title: 'Штрихкод упаковки'
+                        }, 'штрихкод ' + barcode + extraBarcodes) : null
+                    ),
+                    React.createElement('div', { className: 'cur-cab__source' },
+                        React.createElement('span', null, clientName),
+                        React.createElement('span', null,
+                            new Date(item.created_at).toLocaleDateString('ru-RU'))
+                    ),
+                    React.createElement('div', { className: 'cur-cab__actions' },
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'cur-cab__open',
+                            onClick: () => approvePending(item),
+                            disabled: !!bulkProgress,
+                            title: bulkProgress ? 'Идёт массовое одобрение' : 'Одобрить'
+                        }, 'Одобрить'),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'cur-cab__deny',
+                            onClick: () => rejectPending(item),
+                            disabled: !!bulkProgress,
+                            title: bulkProgress ? 'Идёт массовое одобрение' : 'Отклонить',
+                            'aria-label': 'Отклонить заявку'
+                        }, '✕')
                     )
                 );
             })

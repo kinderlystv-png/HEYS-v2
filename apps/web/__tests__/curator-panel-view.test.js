@@ -196,8 +196,12 @@ describe('панель куратора · место в кабинете', () =
   it('кадр «Кабинет · Клиенты»: главное действие названо словом', () => {
     // Прежде главного действия у карточки не было вовсе: дневник открывался
     // нажатием в пустое место, а единственная кнопка «⋯» лежала под карточкой.
-    const card = GATE.slice(GATE.indexOf("className: 'cur-cab__card'"),
-      GATE.indexOf('Пустота — та же карточка'));
+    // Якорь по «is-last»: карточкой набора собрана не только строка клиента —
+    // с 31 августа тем же классом стоит карточка заявки во вкладке «Заявки», и
+    // она в файле выше. Голый `className: 'cur-cab__card'` приводил в неё.
+    const cardStart = GATE.indexOf("className: 'cur-cab__card' + (isLast");
+    const card = GATE.slice(cardStart,
+      GATE.indexOf('Пустота — та же карточка', cardStart));
     expect(card).toContain("'Открыть дневник'");
     // «⋯» стоит после главного действия и в том же ряду.
     expect(card.indexOf("cur-cab__open")).toBeLessThan(card.indexOf('ClientActionsMenu'));
@@ -212,8 +216,12 @@ describe('панель куратора · место в кабинете', () =
   it('в карточке нет ни синего, ни белой заливки, ни красного кружка', () => {
     const src = GATE.split(String.fromCharCode(10))
       .filter((l) => !l.trim().startsWith('//')).join(String.fromCharCode(10));
-    const card = src.slice(src.indexOf("className: 'cur-cab__card'"),
-      src.indexOf('Пустота — та же карточка'));
+    // Тот же якорь, что и выше. Конец — по строке пустого состояния, а не по
+    // комментарию: комментарии из `src` вырезаны, и прежний конец не находился
+    // вовсе — срез молча шёл до конца файла и ловил чужие экраны.
+    const cardStart = src.indexOf("className: 'cur-cab__card' + (isLast");
+    const card = src.slice(cardStart,
+      src.indexOf("'Клиентов пока нет'", cardStart));
     // Прежняя карточка: белый фон, синяя рамка «вы здесь были», красный
     // кружок с числом непрочитанных поверх аватара.
     for (const dead of ['#4285f4', "background: '#fff'", 'curator-card-unread-badge',
