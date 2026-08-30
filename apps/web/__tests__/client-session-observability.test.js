@@ -469,13 +469,21 @@ describe('client session observability', () => {
   });
 
   it('adds the all-client diagnostics tab with server filters and safe reports', () => {
-    expect(gateSource).toContain("setCuratorTab('diagnostics')");
+    // Вкладка заведена рядом с остальными и переключается общим обработчиком
+    // ряда. Прежде проверка искала `setCuratorTab('diagnostics')`, сетку
+    // `repeat(4, minmax(0, 1fr))` и подпись «◉ Диагн.»: ряд собирался четырьмя
+    // отдельными кнопками в сетке на четыре колонки при пяти вкладках, и
+    // «Диагн.» переносилась вниз. Ряд стал списком с общим onClick, сетка —
+    // флексом .cur-cab__tabs, значок из подписи ушёл вместе с остальными.
+    expect(gateSource).toContain("{ key: 'diagnostics', label: 'Диагн.' }");
+    expect(gateSource).toContain('setCuratorTab(tab.key)');
     expect(gateSource).toContain('HEYS.ClientDiagnostics.Overview');
-    expect(gateSource).toContain("gridTemplateColumns: 'repeat(4, minmax(0, 1fr))'");
-    expect(gateSource).toContain("'◉ Диагн.'");
     expect(diagnosticsSource).toContain("HEYS.YandexAPI.rpc('get_curator_observability_overview'");
     expect(diagnosticsSource).toContain('Показать сбои');
-    expect(diagnosticsSource).toContain('Автообновление 60 сек');
+    // Период обновления назван строкой листа «ключ — значение», а не одной
+    // фразой «Автообновление 60 сек»: ключ слева, значение справа.
+    expect(diagnosticsSource).toContain("'Автообновление'");
+    expect(diagnosticsSource).toContain("'каждые 60 с'");
     expect(diagnosticsSource).toContain('p_problem_stage');
     expect(diagnosticsSource).toContain('p_cursor_started_at');
   });

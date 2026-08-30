@@ -1227,6 +1227,173 @@
   white-space: normal;
 }
 
+/* ── Лист посещений «Диагностики» ─────────────────────────────────────────
+ * Кадр «Диагностика» рисует четыре числа, лист и ряд действий — на этом он
+ * заканчивается: фильтры и сам список посещений кадра не имеют. Поэтому здесь
+ * не сверка с кадром, а перевод на набор: те же поверхности, радиусы и тона,
+ * что у карточек кабинета. Прежде правила жили строкой стилей внутри модуля
+ * диагностики — мимо набора и мимо гейта перекраски: белая заливка, холодные
+ * рамки #e4e4ee, свои красный #873d3d, зелёный #347052 и сиреневый #7779ad.
+ */
+.cdo-sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Посещение — плоская карточка набора. Состояние несёт метка внутри строки, а
+   не рамка карточки: рамкой в кабинете помечено «вы здесь были», и второй
+   смысл у той же формы читался бы как первый. */
+.cdo-session {
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.cdo-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* Три средних столбца встают под именем: на 375 px пятиколоночная сетка
+   давала по 40 px на столбец. «Галочка» остаётся справа от имени. */
+.cdo-row > div:nth-child(2),
+.cdo-row > div:nth-child(3),
+.cdo-row > div:nth-child(4) {
+  grid-column: 1 / -1;
+}
+
+.cdo-chevron {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: 18px;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.cdo-client {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cdo-small {
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 3px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* Проблема — тоном разрушающего, штатный этап — тоном «идёт хорошо». */
+.cdo-problem {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--v4-bad-text, #b4442a);
+}
+
+.cdo-ok {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.cdo-detail {
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  padding: 12px 16px 14px;
+}
+
+.cdo-detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.cdo-timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Событие лога: время, имя, разбор. Точка слева — тоном акцента, у сбоя —
+   тоном разрушающего. Столбец времени фиксирован, остальное переносится. */
+.cdo-event {
+  display: grid;
+  grid-template-columns: 68px 1fr;
+  gap: 8px;
+  position: relative;
+  padding: 8px 8px 8px 20px;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.cdo-event::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 13px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--v4-act-text, #8a4a20);
+}
+
+.cdo-event--failed::before {
+  background: var(--v4-bad-text, #b4442a);
+}
+
+.cdo-event-context {
+  grid-column: 2;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  word-break: break-word;
+}
+
+.cdo-more {
+  align-self: center;
+  margin: 12px auto 0;
+  display: block;
+}
+
+/* Метка состояния посещения — метка данных набора, как метки дня в карточке
+   клиента: та же высота, радиус и кегль. Тона три — «идёт хорошо», тёплое
+   предупреждение и разрушающее; «загружается» остаётся нейтральным. */
+.cd-status {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  background: var(--v4-hero, #efe3cf);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+}
+
+.cd-status--ready {
+  background: var(--v4-ok-bg, #eaefe0);
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.cd-status--failed {
+  background: color-mix(in srgb, var(--v4-bad-text, #b4442a) 14%, transparent);
+  color: var(--v4-bad-text, #b4442a);
+}
+
+.cd-status--degraded,
+.cd-status--abandoned {
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent);
+  color: var(--v4-warn-text, #a1471c);
+}
+
 /* ── Служебные листы кабинета ─────────────────────────────────────────────
  * Контракт «вид · служебные листы»: модалки с тёмной шапкой заменены листом
  * снизу. Классы общие с листом поправки и меню клиента — форма окна одна на

@@ -23,7 +23,7 @@
       '.cd-session{background:#fff;border:1px solid #e4e4ee;border-radius:14px;margin-bottom:10px;overflow:hidden}.cd-session--failed{border-color:#e6b5b5}.cd-session--degraded,.cd-session--abandoned{border-color:#ead6a1}',
       '.cd-session-btn{width:100%;border:0;background:transparent;text-align:left;padding:15px 16px;cursor:pointer;color:inherit}',
       '.cd-session-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.cd-status{display:inline-flex;align-items:center;min-height:25px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:750}',
-      '.cd-status--ready{background:#e8f5ee;color:#27734b}.cd-status--failed{background:#fdecec;color:#a53b3b}.cd-status--degraded,.cd-status--abandoned{background:#fff5dc;color:#84601e}.cd-status--starting{background:#ececf7;color:#555789}',
+      '/* .cd-status--* — в styles/modules/734: метку состояния рисует и лист «Диагностики», там роли набора и гейт перекраски */',
       '.cd-time{font-weight:700;font-size:14px}.cd-device{font-size:13px;color:#696a80;margin-left:auto}.cd-meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;color:#7b7c91;font-size:12px}',
       '.cd-timeline{border-top:1px solid #ececf3;padding:8px 16px 14px}.cd-full-log{width:100%;padding:0 14px;margin:4px 0 8px;border-color:var(--v4-act, #c67139);background:var(--v4-act, #c67139);color:var(--v4-btn-on-act, #fff5ef);font-weight:700}.cd-event{position:relative;padding:8px 0 8px 22px;font-size:13px}.cd-event:before{content:"";position:absolute;left:4px;top:14px;width:8px;height:8px;border-radius:50%;background:#7779ad}.cd-event--failed:before{background:#b94a4a}.cd-event-time{color:#88899c;margin-right:8px}.cd-event-context{display:block;color:#77788d;font-size:12px;margin-top:2px;word-break:break-word}',
       '.cd-section-title{font-size:15px;font-weight:750;margin:22px 0 10px}.cd-login{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;background:#fff;border:1px solid #e7e7ef;border-radius:11px;margin-bottom:7px;font-size:13px}.cd-login-time{white-space:nowrap;color:#6f7085}.cd-login-ua{color:#7b7c90;word-break:break-word}',
@@ -31,10 +31,10 @@
       '/* .cdo, .cdo-head, .cdo-title, .cdo-note, .cdo-actions, .cdo-list — в styles/modules/734: там роли набора и гейт перекраски */',
       '/* .cdo-metrics и .cdo-metric переехали в styles/modules/734: там они на ролях набора и под гейтом перекраски */',
       '/* .cdo-megalog и .cdo-mega-btn — там же */',
-      '/* .cdo-filters и .cdo-control — там же */.cdo-search{grid-column:span 2}.cdo-list{display:flex;flex-direction:column;gap:9px}.cdo-session{background:#fff;border:1px solid #e4e4ee;border-radius:14px;overflow:hidden}.cdo-session--failed{border-color:#e6b5b5;background:#fffafa}.cdo-session--degraded,.cdo-session--abandoned{border-color:#ead6a1}.cdo-row{display:grid;grid-template-columns:minmax(180px,1.4fr) minmax(120px,.8fr) minmax(170px,1.1fr) minmax(120px,.8fr) auto;gap:12px;align-items:center;width:100%;padding:14px;border:0;background:transparent;text-align:left;color:inherit;cursor:pointer}.cdo-client{font-weight:750}.cdo-small{font-size:12px;color:#75768b;margin-top:3px}.cdo-problem{font-size:13px;color:#873d3d}.cdo-ok{font-size:13px;color:#347052}.cdo-chevron{color:#7779ad;font-size:18px}.cdo-detail{border-top:1px solid #e9e9f1;padding:14px}.cdo-detail-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:8px}.cdo-full-log{border-color:var(--v4-act, #c67139);background:var(--v4-act, #c67139);color:var(--v4-btn-on-act, #fff5ef)}.cdo-timeline{display:flex;flex-direction:column}.cdo-event{display:grid;grid-template-columns:80px 190px 1fr;gap:10px;position:relative;padding:8px 8px 8px 20px;font-size:13px}.cdo-event:before{content:"";position:absolute;left:4px;top:14px;width:8px;height:8px;border-radius:50%;background:#7779ad}.cdo-event--failed:before{background:#b94a4a}.cdo-event-context{color:#76778b;word-break:break-word}.cdo-empty{padding:34px 18px;text-align:center;background:#fff;border:1px solid #e5e5ee;border-radius:14px;color:#727389}.cdo-more{align-self:center;margin:12px auto 0;display:block}',
+      '/* .cdo-filters и .cdo-control — там же */.cdo-search{grid-column:span 2}',
+      '/* .cdo-sessions, .cdo-session, .cdo-row, .cdo-client, .cdo-small, .cdo-problem, .cdo-ok, .cdo-chevron, .cdo-detail, .cdo-timeline, .cdo-event и .cdo-more — там же: лист вкладки собран набором */',
       '@media(max-width:640px){.cd-backdrop{padding:0;align-items:flex-end}.cd-modal{max-height:94vh;border-radius:20px 20px 0 0}.cd-head{padding:18px 16px 14px}.cd-toolbar{padding:12px 16px}.cd-body{padding:14px 16px 24px}.cd-toolbar .cd-control{flex:1 1 120px;min-width:0;width:auto}.cd-copy{width:100%;margin-left:0}.cd-device{width:100%;margin-left:0}.cd-session-btn{padding:14px}}'
-      ,'@media(max-width:760px){.cdo-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.cdo-search{grid-column:span 2}.cdo-row{grid-template-columns:1fr auto;padding:13px}.cdo-row>div:nth-child(2),.cdo-row>div:nth-child(3),.cdo-row>div:nth-child(4){grid-column:1 / -1}.cdo-chevron{grid-column:2;grid-row:1}.cdo-event{grid-template-columns:68px 1fr}.cdo-event-context{grid-column:2}.cdo-detail{padding:10px}.cdo-primary,.cdo-secondary,.cdo-more,.cdo-control{min-height:44px}}',
-      '@media(max-width:480px){.cdo-filters{grid-template-columns:1fr}.cdo-search{grid-column:span 1}}'
+      ,'/* адаптив вкладки — в styles/modules/734 вместе с самими правилами */'
     ].join('');
     document.head.appendChild(style);
   }
@@ -398,7 +398,7 @@
         setData(function (prev) { return append ? Object.assign({}, next, { sessions: (prev.sessions || []).concat(next.sessions || []) }) : next; });
         setUpdatedAt(new Date());
       } catch (loadError) {
-        setError('Не удалось загрузить диагностику. Повторите позже.');
+        setError('Сервер не ответил на запрос посещений.');
         HEYS.analytics?.trackError?.(loadError, { context: 'curator_observability_overview' });
       } finally { setLoading(false); }
     }, [filters, data.next_cursor]);
@@ -497,10 +497,30 @@
         h('select', { className: 'cdo-control', value: filters.stage, onChange: function (e) { update('stage', e.target.value); }, 'aria-label': 'Проблемный этап' }, option('', 'Все этапы'), option('boot', 'Загрузка'), option('sync', 'Синхронизация'), option('write', 'Сохранение'), option('runtime', 'Работа приложения'), option('warning', 'Предупреждение')),
         h('select', { className: 'cdo-control', value: filters.sort, onChange: function (e) { update('sort', e.target.value); }, 'aria-label': 'Сортировка' }, option('problems', 'Сначала проблемы'), option('newest', 'Сначала новые'), option('duration', 'Самые долгие'))
       ),
-      error && h('div', { className: 'cd-error' }, error),
-      !error && loading && !(data.sessions || []).length && h('div', { className: 'cdo-empty' }, 'Загружаю диагностику…'),
-      !error && !loading && !(data.sessions || []).length && h('div', { className: 'cdo-empty' }, filters.status === 'problems' ? 'Сбоев за выбранный период нет' : 'Посещений за выбранный период нет'),
-      h('div', { className: 'cdo-list' }, (data.sessions || []).map(function (session) {
+      // Отказ и пустота — приёмами кабинета: карточка с причиной и одной
+      // кнопкой повтора, как у панели. Прежде это были свои .cd-error и
+      // .cdo-empty — белые плашки с холодной рамкой и своим красным.
+      error && h('div', { className: 'cur-panel__empty' },
+        h('div', { className: 'cur-panel__empty-title' }, 'Диагностика не загрузилась'),
+        h('div', { className: 'cur-panel__empty-note' }, error),
+        h('button', {
+          type: 'button',
+          className: 'cur-panel__retry',
+          onClick: function () { load(false); }
+        }, 'Повторить')
+      ),
+      !error && loading && !(data.sessions || []).length
+        && h('div', { className: 'cur-panel__stub' }, 'Считаем…'),
+      !error && !loading && !(data.sessions || []).length
+        && h('div', { className: 'cur-panel__empty' },
+          h('div', { className: 'cur-panel__empty-title' },
+            filters.status === 'problems'
+              ? 'Сбоев за выбранный период нет'
+              : 'Посещений за выбранный период нет'),
+          h('div', { className: 'cur-panel__empty-note' },
+            'Период и остальные условия — в фильтрах выше.')
+        ),
+      h('div', { className: 'cdo-sessions' }, (data.sessions || []).map(function (session) {
         var status = STATUS[session.outcome] || STATUS.starting;
         var key = session.client_id + ':' + (session.visit_id || session.boot_id);
         var isOpen = !!expanded[key];
@@ -525,7 +545,7 @@
             h('div', { className: 'cdo-timeline' }, (session.events || []).length ? session.events.map(function (event, index) {
               var failed = event.status === 'failed' || event.level === 'error';
               return h('div', { key: String(event.at) + ':' + index, className: 'cdo-event' + (failed ? ' cdo-event--failed' : '') }, h('span', { className: 'cdo-small' }, new Date(event.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })), h('strong', null, eventLabel(event.name)), h('span', { className: 'cdo-event-context' }, contextLabel(event.context)));
-            }) : h('div', { className: 'cdo-empty' }, 'Структурированных событий нет'))
+            }) : h('div', { className: 'cdo-small' }, 'Структурированных событий нет'))
           )
         );
       })),

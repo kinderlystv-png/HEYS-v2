@@ -128,6 +128,12 @@ describe('curator daily diagnostics megalog', () => {
     const filtersIndex = diagnosticsSource.indexOf("h('div', { className: 'cdo-filters' }");
     expect(actionIndex).toBeGreaterThan(0);
     expect(actionIndex).toBeLessThan(filtersIndex);
-    expect(diagnosticsSource).toContain('Скопировать мегалог проблем за сегодня');
+    // Кнопка называет объём, а не механику: «Скопировать сбои за день» против
+    // прежнего «Скопировать мегалог проблем за сегодня» — длинная фраза ломалась
+    // в кнопке на три строки, и слово «мегалог» знает только разработчик.
+    // Проверяем, что действие осталось отдельным от «Скопировать отчёт»: тот
+    // берёт текущий фильтр, это — все сбои за день.
+    expect(diagnosticsSource).toContain("'Скопировать сбои за день'");
+    expect(diagnosticsSource).toContain('fetchAllDailyProblemVisits');
   });
 });
