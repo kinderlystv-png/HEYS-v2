@@ -2345,12 +2345,39 @@
     // Контракт «кнопка называет действие сама»: приписка «Действие куратора: …»
     // повторяла текст кнопки под собой. Остались только те строки, что
     // сообщают ожидание — их кнопкой не выразить, потому что делать нечего.
+    /**
+     * «свободно 3 места» — то, чем куратор думает, беря человека в работу.
+     *
+     * «слотов 0 из 3» заставляло вычитать в уме, а при неизвестном пределе
+     * показывало «из ?». Предел неизвестен, пока не приехала статистика, —
+     * тогда честнее сказать про занятые места, чем врать про свободные.
+     */
+    function freeSeatsLabel(taken, stats) {
+      const max = stats && stats.limits && stats.limits.max_active_trials;
+      if (!max && max !== 0) {
+        return taken ? 'занято ' + taken + ' ' + pluralSeats(taken) : 'мест пока не знаем';
+      }
+      const free = Math.max(0, max - taken);
+      return free ? 'свободно ' + free + ' ' + pluralSeats(free) : 'свободных мест нет';
+    }
+
+    function pluralSeats(n) {
+      const abs = Math.abs(n) % 100;
+      const last = abs % 10;
+      if (abs > 10 && abs < 20) return 'мест';
+      if (last === 1) return 'место';
+      if (last > 1 && last < 5) return 'места';
+      return 'мест';
+    }
+
+    // Значения поля «Этап» в списке анкеты, а не самостоятельные фразы —
+    // потому строчными: ключ уже сказал, о чём речь.
     const INTAKE_NEXT = {
-      invite_sent: 'Ожидаем вход и заполнение кандидатом',
-      in_progress: 'Ожидаем завершение анкеты кандидатом',
-      needs_clarification: 'Ожидаем уточнение кандидата',
-      approved_waiting_slot: 'Ожидаем свободное место',
-      rejected: 'Решение завершено · удаление анкеты через 30 дней',
+      invite_sent: 'ждём вход и заполнение',
+      in_progress: 'ждём завершение анкеты',
+      needs_clarification: 'ждём уточнение кандидата',
+      approved_waiting_slot: 'ждём свободное место',
+      rejected: 'решение завершено · анкета удалится через 30 дней',
     };
 
     const ANSWER_LABELS = {
@@ -2565,287 +2592,178 @@
       );
     };
 
-    const LeadRow = ({ item }) => React.createElement('div', {
-      style: {
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 12,
-        padding: '12px 14px',
-        borderRadius: 12,
-        background: '#fff',
-        border: '1px solid var(--border, #e5e7eb)',
-        transition: 'box-shadow 0.2s',
-        flexWrap: 'wrap'
-      },
-      onMouseEnter: (e) => { e.currentTarget.style.boxShadow = '0 6px 16px -8px rgba(0,0,0,0.25)'; },
-      onMouseLeave: (e) => { e.currentTarget.style.boxShadow = 'none'; }
-    },
-      React.createElement('div', { style: { display: 'flex', gap: 12, flex: '1 1 200px', alignItems: 'center' } },
-        React.createElement('div', {
-          style: {
-            width: 40,
-            height: 40,
-            borderRadius: '50%',
-            background: item.messenger === 'telegram' ? '#0088cc'
-              : item.messenger === 'whatsapp' ? '#25d366'
-                : item.messenger === 'max' ? '#8b5cf6' : '#9ca3af',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 16,
-            flexShrink: 0
-          }
-        }, item.messenger === 'telegram' ? '📱' : item.messenger === 'whatsapp' ? '💬' : item.messenger === 'max' ? '🟣' : '👤'),
-        React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-          React.createElement('div', {
-            style: {
-              fontWeight: 700,
-              fontSize: 15,
-              color: 'var(--text, #111827)',
-              lineHeight: 1.3,
-              wordBreak: 'break-word'
-            }
-          },
-            item.name || '—',
-            item.status === 'contacted' && React.createElement('span', {
-              style: {
-                display: 'inline-block',
-                marginLeft: 8,
-                padding: '2px 6px',
-                borderRadius: 5,
-                background: '#fef3c7',
-                color: '#92400e',
-                fontSize: 10,
-                fontWeight: 700,
-                verticalAlign: 'middle'
-              }
-            }, 'В работе')
-          ),
-          React.createElement('div', {
-            style: {
-              fontSize: 13,
-              color: '#6b7280',
-              fontFamily: 'monospace',
-              lineHeight: 1.3,
-              marginTop: 4
-            }
-          }, item.phone || '—'),
-          React.createElement('div', {
-            style: {
-              fontSize: 11,
-              color: '#9ca3af',
-              marginTop: 6,
-              display: 'flex',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 6
-            }
-          },
-            React.createElement('span', null, formatDate(item.created_at)),
-            item.utm_source && React.createElement('span', { style: { opacity: 0.5 } }, '|'),
-            item.utm_source && React.createElement('span', {
-              style: {
-                background: '#f3f4f6',
-                color: '#4b5563',
-                padding: '2px 6px',
-                borderRadius: 4,
-                wordBreak: 'break-all'
-              }
-            }, item.utm_source),
-            item.intent === 'direct_purchase' && React.createElement('span', {
-              style: {
-                background: '#fee2e2',
-                color: '#dc2626',
-                padding: '2px 6px',
-                borderRadius: 4,
-                fontWeight: 'bold',
-                marginLeft: 'auto'
-              }
-            }, '🔥 КУПИЛ')
-          )
-        )
-      ),
-      React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto', alignItems: 'center', alignSelf: 'center' } },
-        React.createElement('button', {
-          onClick: () => handleConvertLead(item),
-          disabled: actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id,
-          style: {
-            padding: '8px 12px',
-            borderRadius: 8,
-            border: 'none',
-            background: (actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id)
-              ? '#d1d5db'
-              : 'var(--v4-act, #c67139)',
-            color: '#fff',
-            cursor: (actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id) ? 'not-allowed' : 'pointer',
-            fontSize: 13,
-            fontWeight: 600,
-            whiteSpace: 'nowrap'
-          }
-        }, actionLoading === 'lead-' + item.id ? 'Создаём…' : 'Создать приглашение'),
-        React.createElement('button', {
-          onClick: () => handleRejectLead(item),
-          disabled: actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id,
-          style: {
-            padding: '8px 10px',
-            borderRadius: 8,
-            border: '1px solid #fecaca',
-            background: '#fef2f2',
-            color: '#dc2626',
-            cursor: (actionLoading === 'lead-' + item.id || actionLoading === 'lead-reject-' + item.id) ? 'not-allowed' : 'pointer',
-            fontSize: 13,
-            fontWeight: 600
-          }
-        }, actionLoading === 'lead-reject-' + item.id ? '⏳' : '❌')
-      )
-    );
+    // Инициалы считает панель — там же, где их считает список клиентов.
+    // Своя копия правила «одна буква у имени, две у имени с фамилией» стала
+    // бы третьей в кабинете и разошлась бы с ними при первой правке.
+    const getInitials = (name) => {
+      const shared = HEYS.CuratorPanel && HEYS.CuratorPanel.initials;
+      if (shared) return shared(name);
+      const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+      return parts.length ? (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase() : '—';
+    };
 
+    /**
+     * Строка решения — контракт «карточка · строка решения».
+     *
+     * Прежде вместо инициалов стоял цветной кружок с эмодзи мессенджера:
+     * иконка одинакова у всех, кто пришёл одним каналом, и людей друг от
+     * друга не отличает — а список читают, чтобы найти человека. Канал
+     * остался меткой источника словом.
+     *
+     * Отклонение было красным квадратом с ❌; в наборе нет ни квадратных
+     * кнопок, ни эмодзи, а красный значит разрушающее действие — здесь он
+     * уместен, но формой круга 32, как в кадре.
+     */
+    const LeadRow = ({ item }) => {
+      const busy = actionLoading === 'lead-' + item.id
+        || actionLoading === 'lead-reject-' + item.id;
+      const source = item.utm_source || item.messenger || null;
+      return React.createElement('div', { className: 'cur-cab__card' },
+        React.createElement('div', { className: 'cur-cab__client-head' },
+          React.createElement('span', { className: 'cur-row__avatar' },
+            getInitials(item.name)),
+          React.createElement('span', { className: 'cur-cab__client-copy' },
+            React.createElement('span', { className: 'cur-row__name' }, item.name || '—'),
+            // Телефон и дата решения одной строкой через точку-разделитель:
+            // раньше дата стояла третьим рядом и отодвигала действия вниз.
+            React.createElement('span', { className: 'cur-cab__client-phone' },
+              (item.phone || '—')
+              + (item.created_at ? ' · ' + formatDate(item.created_at) : ''))
+          ),
+          item.status === 'contacted'
+            ? React.createElement('span', { className: 'cur-cab__mch' }, 'в работе')
+            : null
+        ),
+        source || item.intent === 'direct_purchase'
+          ? React.createElement('div', { className: 'cur-cab__source' },
+            source ? React.createElement('span', null, String(source).toLowerCase()) : null,
+            // «Купил напрямую» — не украшение, а причина взять человека
+            // первым: он уже заплатил и ждёт доступ.
+            item.intent === 'direct_purchase'
+              ? React.createElement('span', { className: 'is-act' }, 'купил напрямую')
+              : null
+          )
+          : null,
+        React.createElement('div', { className: 'cur-cab__actions' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'cur-cab__open is-soft',
+            onClick: () => handleConvertLead(item),
+            disabled: busy
+          }, actionLoading === 'lead-' + item.id ? 'Создаём…' : 'Создать приглашение'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'cur-cab__deny',
+            title: 'Отклонить',
+            'aria-label': 'Отклонить: ' + (item.name || 'кандидат'),
+            onClick: () => handleRejectLead(item),
+            disabled: busy
+          }, actionLoading === 'lead-reject-' + item.id ? '…' : '✕')
+        )
+      );
+    };
+
+    /**
+     * Строка анкеты — контракт «карточка · строка анкеты».
+     *
+     * Прежде это была белая плашка с синим градиентным аватаром, тремя
+     * разноцветными пилюлями подряд (состояние, «Анкета: …», давность) и
+     * рядом кнопок, где отклонение стояло красным квадратом с эмодзи.
+     * Читалось это тремя заходами: кто → в каком состоянии → что делать.
+     *
+     * Стало: шапка «кто», список «в каком состоянии» и ряд «что делать» —
+     * тот же порядок, что у карточки клиента в «Клиентах».
+     */
     const ClientRow = ({ item, allowActions, allowRemove = false }) => {
       const intake = intakeByClient[item.client_id] || null;
-      const intakeVisual = intake ? (INTAKE_STATUS[intake.status] || [intake.status, '#f3f4f6', '#4b5563']) : null;
-      const statusColor = item.status === 'assigned'
-        ? { bg: '#dcfce7', text: '#16a34a', label: 'Активен' }
-        : item.status === 'rejected' || item.status === 'expired'
-          ? { bg: '#fee2e2', text: '#dc2626', label: 'Отклонён' }
-          : { bg: '#fef9c3', text: '#ca8a04', label: 'Ожидает' };
+      const intakeLabel = intake
+        ? (INTAKE_STATUS[intake.status] || [intake.status])[0]
+        : null;
+      // Состояние места в очереди — словом строчными: пилюля здесь метка
+      // данных того же набора, что метки дня, и своего цвета ей не нужно.
+      const seat = item.status === 'assigned' ? 'активен'
+        : (item.status === 'rejected' || item.status === 'expired') ? 'отклонён'
+          : 'ожидает';
+      const busy = actionLoading === item.client_id
+        || actionLoading === 'invite-' + item.client_id
+        || actionLoading === 'intake-' + item.client_id;
+      const canResume = intake
+        && ['invite_prepared', 'invited', 'invite_sent'].includes(intake.status);
+      const canOpen = intake
+        && ['completed', 'needs_clarification', 'approved', 'approved_waiting_slot', 'rejected']
+          .includes(intake.status);
 
-      return React.createElement('div', {
-        style: {
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 12,
-          padding: '14px 16px',
-          borderRadius: 12,
-          background: '#fff',
-          border: '1px solid var(--border, #e5e7eb)',
-          transition: 'box-shadow 0.2s',
-          flexWrap: 'wrap'
-        },
-        onMouseEnter: (e) => { e.currentTarget.style.boxShadow = '0 6px 16px -8px rgba(0,0,0,0.25)'; },
-        onMouseLeave: (e) => { e.currentTarget.style.boxShadow = 'none'; }
-      },
-        React.createElement('div', { style: { display: 'flex', gap: 12, flex: '1 1 200px', alignItems: 'center' } },
-          React.createElement('div', {
-            style: {
-              width: 42,
-              height: 42,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 16,
-              fontWeight: 700,
-              flexShrink: 0
-            }
-          }, (item.client_name || item.name || '?')[0].toUpperCase()),
-          React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-            React.createElement('div', {
-              style: {
-                fontWeight: 700,
-                fontSize: 15,
-                color: 'var(--text, #111827)',
-                lineHeight: 1.3,
-                wordBreak: 'break-word'
-              }
-            }, item.client_name || item.name || '—'),
-            React.createElement('div', {
-              style: {
-                fontSize: 13,
-                color: '#6b7280',
-                fontFamily: 'monospace',
-                lineHeight: 1.3,
-                marginTop: 4
-              }
-            }, item.client_phone || item.phone_normalized || '—'),
-            React.createElement('div', {
-              style: {
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '2px 8px',
-                borderRadius: 6,
-                background: statusColor.bg,
-                color: statusColor.text,
-                fontSize: 11,
-                fontWeight: 700,
-                marginTop: 6
-              }
-            }, statusColor.label),
-            intakeVisual && React.createElement('div', {
-              style: {
-                display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 6,
-                background: intakeVisual[1], color: intakeVisual[2], fontSize: 11,
-                fontWeight: 700, marginTop: 6, marginLeft: 6,
-              }
-            }, `Анкета: ${intakeVisual[0]}`)
-            ,
-            intake && React.createElement('div', {
-              style: { marginTop: 7, fontSize: 11, color: '#7b8794', lineHeight: 1.35 }
-            },
-              `Обновлено: ${formatDate(intake.updated_at)}`,
-              Number(intake.inactive_days) > 0 ? ` · без активности ${intake.inactive_days} дн.` : ''
-            ),
-            intake && React.createElement('div', {
-              style: {
-                marginTop: 5, fontSize: 12, lineHeight: 1.35,
-                color: Number(intake.inactive_days) >= 7 ? '#9a4d12' : '#4f5d55',
-                fontWeight: 650,
-              }
-            }, INTAKE_NEXT[intake.status] || 'Проверьте текущий этап')
-          )
+      const kv = (key, value, tone) => React.createElement('div',
+        { key, className: 'cur-kv' },
+        React.createElement('span', { className: 'cur-kv__key' }, key),
+        React.createElement('span', {
+          className: 'cur-kv__val' + (tone ? ' is-' + tone : '')
+        }, value)
+      );
+
+      return React.createElement('div', { className: 'cur-cab__card' },
+        React.createElement('div', { className: 'cur-cab__client-head' },
+          React.createElement('span', { className: 'cur-row__avatar' },
+            getInitials(item.client_name || item.name)),
+          React.createElement('span', { className: 'cur-cab__client-copy' },
+            React.createElement('span', { className: 'cur-row__name' },
+              item.client_name || item.name || '—'),
+            React.createElement('span', { className: 'cur-cab__client-phone' },
+              item.client_phone || item.phone_normalized || '—')
+          ),
+          React.createElement('span', { className: 'cur-cab__mch' }, seat)
         ),
-        allowActions && React.createElement('div', { style: { display: 'flex', gap: 6, flexShrink: 0, marginLeft: 'auto', alignItems: 'center', alignSelf: 'center' } },
-          intake && ['invite_prepared', 'invited', 'invite_sent'].includes(intake.status) && React.createElement('button', {
+
+        // Список состояния анкеты. Три пилюли подряд читались как три разных
+        // предмета; здесь ключ называет, о чём речь, а значение отвечает.
+        intake ? React.createElement('div', { className: 'cur-group__card cur-cab__kvs' },
+          kv('Анкета', intakeLabel, 'ok'),
+          kv('Обновлена', formatDate(intake.updated_at)),
+          // Давность без активности — не отдельная строка, а уточнение к
+          // дате: строка «без активности 9 дн.» рядом с датой обновления
+          // говорила то же самое второй раз.
+          kv('Этап', INTAKE_NEXT[intake.status] || 'проверьте текущий',
+            Number(intake.inactive_days) >= 7 ? 'warn' : null)
+        ) : null,
+
+        allowActions ? React.createElement('div', { className: 'cur-cab__actions' },
+          canResume ? React.createElement('button', {
+            type: 'button',
+            className: 'cur-cab__open',
             onClick: () => resumePreparedInvite(item, intake.status),
-            disabled: actionLoading === 'invite-' + item.client_id,
-            style: {
-              minHeight: 44, padding: '10px 12px', borderRadius: 10, border: 'none',
-              background: actionLoading === 'invite-' + item.client_id ? '#d1d5db' : 'var(--v4-act, #c67139)',
-              color: 'var(--v4-btn-on-act, #fff5ef)', cursor: actionLoading === 'invite-' + item.client_id ? 'not-allowed' : 'pointer',
-              fontSize: 12, fontWeight: 700,
-            }
+            disabled: busy
           }, actionLoading === 'invite-' + item.client_id
             ? 'Восстановление…'
-            : intake.status === 'invite_sent' ? 'Перевыпустить доступ' : 'Открыть приглашение'),
-          intake && ['completed', 'needs_clarification', 'approved', 'approved_waiting_slot', 'rejected'].includes(intake.status) && React.createElement('button', {
+            : intake.status === 'invite_sent' ? 'Перевыпустить доступ' : 'Открыть приглашение')
+            : null,
+          canOpen ? React.createElement('button', {
+            type: 'button',
+            // Главная кнопка залита только когда анкету и правда пора
+            // разбирать; в остальных состояниях разбирать нечего, и заливка
+            // звала бы туда, где куратор ничего не решит.
+            className: canResume ? 'cur-cab__open is-soft' : 'cur-cab__open',
             onClick: () => openIntake(item),
-            disabled: actionLoading === 'intake-' + item.client_id,
-            style: {
-              padding: '8px 11px', borderRadius: 8, border: '1px solid #bfdbfe',
-              background: '#eff6ff', color: '#1d4f83', cursor: 'pointer', fontSize: 12, fontWeight: 700,
-            }
-          }, actionLoading === 'intake-' + item.client_id ? 'Загрузка…' : 'Открыть анкету'),
-          intakesReady && !intake && React.createElement('button', {
+            disabled: busy
+          }, actionLoading === 'intake-' + item.client_id ? 'Загрузка…'
+            : intake.status === 'completed' ? 'Разобрать анкету' : 'Открыть анкету')
+            : null,
+          intakesReady && !intake ? React.createElement('button', {
+            type: 'button',
+            className: 'cur-cab__deny',
+            title: 'Отклонить',
+            'aria-label': 'Отклонить: ' + (item.client_name || 'кандидат'),
             onClick: () => handleReject(item),
-            disabled: actionLoading === item.client_id,
-            style: {
-              padding: '8px 10px',
-              borderRadius: 8,
-              border: '1px solid #fecaca',
-              background: '#fef2f2',
-              color: '#dc2626',
-              cursor: actionLoading === item.client_id ? 'not-allowed' : 'pointer',
-              fontSize: 12,
-              fontWeight: 700
-            }
-          }, '❌'),
-          allowRemove && !intake && React.createElement('button', {
+            disabled: busy
+          }, '✕') : null,
+          allowRemove && !intake ? React.createElement('button', {
+            type: 'button',
+            className: 'cur-cab__deny',
+            title: 'Убрать из очереди',
+            'aria-label': 'Убрать из очереди: ' + (item.client_name || 'кандидат'),
             onClick: () => handleRemove(item),
-            disabled: actionLoading === item.client_id,
-            style: {
-              padding: '8px 10px',
-              borderRadius: 8,
-              border: '1px solid #fecaca',
-              background: '#fff7f7',
-              color: '#dc2626',
-              cursor: actionLoading === item.client_id ? 'not-allowed' : 'pointer',
-              fontSize: 12,
-              fontWeight: 700
-            }
-          }, '🗑️')
-        )
+            disabled: busy
+          }, '−') : null
+        ) : null
       );
     };
 
@@ -2860,11 +2778,17 @@
       // Состояние очереди и занятые слоты — одной строкой словами. Кружки 🟢
       // и 🔴 повторяли то, что и так написано рядом, а красный в наборе
       // значит разрушающее действие, а не «закрыто».
+      // Кадр «Очередь · Анкеты»: заголовок вкладки, под ним состояние и
+      // свободные места, справа пилюля закрытия. Прежде это была одна строка
+      // «Очередь открыта · слотов 0 из 3»: заголовка у вкладки не было вовсе,
+      // а «слотов 0 из 3» заставляло вычитать, сколько ещё можно взять, —
+      // куратор думает свободными местами, а не занятыми.
       React.createElement('div', { className: 'cur-cab__queue-head' },
-        React.createElement('span', { className: 'cur-cab__queue-state' },
-          (isAccepting ? 'Очередь открыта' : 'Очередь закрыта')
-          + ' · слотов ' + grouped.assigned.length
-          + ' из ' + (stats?.limits?.max_active_trials ?? '?')
+        React.createElement('div', { className: 'cur-cab__tab-head' },
+          React.createElement('div', { className: 'cur-cab__tab-title' }, 'Очередь'),
+          React.createElement('div', { className: 'cur-cab__tab-note' },
+            (isAccepting ? 'открыта' : 'закрыта')
+            + ' · ' + freeSeatsLabel(grouped.assigned.length, stats))
         ),
         React.createElement('button', {
           type: 'button',
@@ -2909,7 +2833,7 @@
         !loading && error && React.createElement('div', {
           style: { padding: '12px 16px', background: '#fee2e2', color: '#b91c1c', borderRadius: 10, fontSize: 13 }
         },
-          React.createElement('div', null, '❌ ' + error),
+          React.createElement('div', null, error),
           React.createElement('button', {
             type: 'button', onClick: () => loadData(false),
             style: { marginTop: 10, minHeight: 40, padding: '8px 12px', borderRadius: 8, border: '1px solid #efb4b4', background: '#fff', color: '#8f1d1d', cursor: 'pointer', fontWeight: 700 },
@@ -2953,28 +2877,26 @@
           })
         )
       ),
-      React.createElement('div', {
-        style: {
-          display: 'flex',
-          justifyContent: 'flex-end',
-          padding: '10px 16px',
-          background: '#fff',
-          borderTop: '1px solid #e5e7eb'
-        }
-      },
+      // Служебный подвал — контракт «служебный подвал очереди». Кнопка во всю
+      // ширину, а не мелкая справа: очередь не перезапрашивается сама, и это
+      // единственный способ увидеть свежий список. Под разделителем — предел
+      // мест и длина триала: здесь они только показываются, правятся в
+      // системных настройках. Прежде та же пара стояла в самом низу экрана
+      // отдельной серой плашкой с эмодзи и вертикальной чертой.
+      React.createElement('div', { className: 'cur-cab__queue-foot' },
         React.createElement('button', {
+          type: 'button',
+          className: 'cur-cab__open is-soft',
           onClick: () => loadData(false),
-          disabled: loading,
-          style: {
-            padding: '6px 12px',
-            borderRadius: 8,
-            border: '1px solid #e5e7eb',
-            background: '#fff',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: 12,
-            fontWeight: 600
-          }
-        }, loading ? 'Обновляем…' : 'Обновить')
+          disabled: loading
+        }, loading ? 'Обновляем…' : 'Обновить'),
+        stats ? React.createElement('div', { className: 'cur-cab__queue-limits' },
+          React.createElement('span', { className: 'cur-cab__queue-limits-key' },
+            'Настройки очереди:'),
+          React.createElement('span', { className: 'cur-cab__queue-limits-val' },
+            'мест ' + (stats.limits?.max_active_trials ?? 3)
+            + ' · триал ' + (stats.limits?.trial_days ?? 7) + ' дней')
+        ) : null
       ),
 
       // ========== ДИАЛОГ: Конвертация лида (v3.0) ==========
@@ -3639,23 +3561,8 @@
           ),
           style: { width: '100%', marginTop: 18, padding: 11, borderRadius: 9, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer', fontWeight: 650 }
         }, 'Скопировать сообщение клиенту')
-      )),
+      ))
 
-      // ========== SETTINGS HINT ==========
-      stats && React.createElement('div', {
-        style: {
-          marginTop: '24px',
-          padding: '12px 16px',
-          background: 'var(--bg-secondary, #f3f4f6)',
-          borderRadius: '10px',
-          fontSize: '12px',
-          color: '#6b7280'
-        }
-      },
-        React.createElement('strong', null, '⚙️ Настройки: '),
-        `Макс. слотов: ${stats.limits?.max_active_trials || 3} | `,
-        `Длительность триала: ${stats.limits?.trial_days || 7} дней`
-      )
     );
   }
 

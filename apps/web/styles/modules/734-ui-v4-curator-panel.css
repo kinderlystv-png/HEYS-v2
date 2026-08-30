@@ -1023,6 +1023,133 @@
   padding: 14px 16px 18px;
 }
 
+/* Вторичная заливка главного действия: кнопка остаётся главной в своём ряду,
+   но не зовёт акцентом. «Создать приглашение» и «Обновить» — работа, которую
+   куратор и так пришёл делать, а не то, к чему его надо подтолкнуть. */
+.cur-cab__open.is-soft {
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+}
+
+/* Отклонение — круг 32 тоном «разрушающее действие». Прежде это был красный
+   квадрат с эмодзи ❌: в наборе нет ни квадратных кнопок, ни эмодзи, а размер
+   вровень с главной кнопкой уравнивал отказ с работой. */
+.cur-cab__deny {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 999px;
+  /* Подложка та же, что у прочих круглых кнопок, красным только знак: своя
+     красная заливка делала бы отказ заметнее работы, стоящей рядом. */
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-bad-text, #b4442a);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cur-cab__deny:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Метка источника кандидата — словом строчными, а не цветной пилюлей: канал,
+   из которого человек пришёл, это справка, а не состояние. */
+.cur-cab__source {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+}
+
+.cur-cab__source .is-act {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+/* Список «ключ — значение» в карточке анкеты. Прежде состояние жило в трёх
+   разноцветных пилюлях подряд, и они читались как три разных предмета. */
+.cur-cab__kvs {
+  margin-top: 12px;
+}
+
+.cur-kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+}
+
+.cur-kv:last-child {
+  border-bottom: none;
+}
+
+.cur-kv__key {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cur-kv__val {
+  flex: 1 1 auto;
+  text-align: right;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.5));
+}
+
+.cur-kv__val.is-ok {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+/* Долгое молчание кандидата — тёплое предупреждение, не красный: человек ещё
+   не отказал, он просто не отвечает. */
+.cur-kv__val.is-warn {
+  color: var(--v4-warn-text, #a1471c);
+}
+
+/* Служебный подвал очереди: обновление во всю ширину, под разделителем —
+   пределы, которые здесь только показываются. */
+.cur-cab__queue-foot {
+  flex-shrink: 0;
+  padding: 12px 16px 16px;
+  background: var(--v4-bg, #f6f1e8);
+}
+
+/* Кнопка подвала занимает ширину сама: вне ряда действий у неё нет соседа,
+   от которого досталась бы доля флекса, и она съёживалась до подписи. */
+.cur-cab__queue-foot .cur-cab__open {
+  width: 100%;
+}
+
+.cur-cab__queue-limits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.cur-cab__queue-limits-key {
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+}
+
+.cur-cab__queue-limits-val {
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Создание клиента — вторичная кнопка набора: действие редкое и не должно
    весить больше, чем «Открыть дневник» в карточках над ним. Прежде это была
    голубая пунктирная плашка с ➕ и синим текстом. */

@@ -15,6 +15,10 @@ const CSS = fs.readFileSync(
   path.resolve(__dirname, '../styles/modules/734-ui-v4-curator-panel.css'),
   'utf8'
 );
+const QUEUE = fs.readFileSync(
+  path.resolve(__dirname, '../heys_trial_queue_v1.js'),
+  'utf8'
+);
 const DIAG = fs.readFileSync(
   path.resolve(__dirname, '../heys_client_diagnostics_v1.js'),
   'utf8'
@@ -647,5 +651,69 @@ describe('панель куратора · окно', () => {
       CSS.indexOf('.cur-row__age'));
     expect(dot).not.toContain('--v4-good');
     expect(dot).toContain('22%');
+  });
+
+  // Кабинетная часть модуля: клиентский виджет статуса заявки живёт в том же
+  // файле, кадрами кабинета не описан и под эти правила не подпадает.
+  const admin = () => {
+    const src = QUEUE.split(String.fromCharCode(10))
+      .filter((l) => {
+        const x = l.trim();
+        return !x.startsWith('//') && !x.startsWith('*') && !x.startsWith('/*');
+      })
+      .join(String.fromCharCode(10));
+    return src.slice(src.indexOf('const LeadRow'),
+      src.indexOf('ДИАЛОГ: Конвертация лида'));
+  };
+
+  it('кадр «Очередь · Анкеты»: шапка, список состояния, одна главная кнопка', () => {
+    const src = admin();
+    // Заголовок вкладки с состоянием и свободными местами.
+    expect(src).toContain("className: 'cur-cab__tab-title' }, 'Очередь'");
+    expect(src).toContain('freeSeatsLabel');
+    // «слотов 0 из 3» заставляло вычитать, сколько ещё можно взять.
+    expect(src).not.toContain('слотов ');
+    // Состояние анкеты — список «ключ — значение», а не три пилюли подряд.
+    const row = src.slice(src.indexOf('const ClientRow'), src.indexOf('const QueueEmpty') > 0
+      ? src.indexOf('const QueueEmpty') : src.length);
+    for (const key of ["'Анкета'", "'Обновлена'", "'Этап'"]) {
+      expect(row, key).toContain(key);
+    }
+    expect(row).toContain("className: 'cur-kv'");
+  });
+
+  it('кадр «Очередь · Решения»: инициалы вместо иконки, отказ кругом', () => {
+    const src = admin();
+    const lead = src.slice(src.indexOf('const LeadRow'), src.indexOf('const ClientRow'));
+    // Иконка мессенджера одинакова у всех, кто пришёл одним каналом, и людей
+    // друг от друга не отличает.
+    expect(lead).toContain('getInitials');
+    expect(lead).not.toContain('📱');
+    expect(lead).not.toContain('linear-gradient');
+    // Отклонение — круг 32, а не красный квадрат с эмодзи.
+    expect(lead).toContain("className: 'cur-cab__deny'");
+    expect(lead).not.toContain('❌');
+    expect(CSS).toMatch(/\.cur-cab__deny \{[\s\S]{0,200}width: 32px/);
+    // Телефон и дата решения одной строкой.
+    expect(lead).toContain("' · ' + formatDate(item.created_at)");
+  });
+
+  it('служебный подвал очереди: обновление и пределы под разделителем', () => {
+    const src = admin();
+    expect(src).toContain("className: 'cur-cab__queue-foot'");
+    expect(src).toContain("'Настройки очереди:'");
+    // Прежняя серая плашка внизу экрана с эмодзи и вертикальной чертой снята.
+    expect(src).not.toContain('Макс. слотов');
+    expect(src).not.toContain('⚙️ Настройки');
+    // Кнопка занимает ширину: вне ряда действий соседа у неё нет.
+    expect(CSS).toMatch(/\.cur-cab__queue-foot \.cur-cab__open \{[\s\S]{0,80}width: 100%/);
+    expect(CSS).toMatch(/\.cur-cab__queue-limits \{[\s\S]{0,260}border-top/);
+  });
+
+  it('в очереди не осталось эмодзи-кнопок и жёстких цветов', () => {
+    const src = admin();
+    for (const dead of ['🗑️', '❌', '🔥 КУПИЛ', '#0088cc', '#25d366', '#fef2f2']) {
+      expect(src, dead).not.toContain(dead);
+    }
   });
 });
