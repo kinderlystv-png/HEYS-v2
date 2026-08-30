@@ -15324,8 +15324,11 @@ body:has(:is(
     }
   }
 
+  /* Роль сама даёт тёмное значение, правило нужно только ради него же —
+     запасное здесь обещало #2f2820, то есть вторую поверхность, тогда как
+     --v4-c1 в тёмных наборах это #23201b. */
   [data-theme$="dark"] .meal-photo-thumb.skeleton {
-    background: var(--v4-c1, #2f2820);
+    background: var(--v4-c1, #23201b);
   }
 
   /* Disabled photo button */
