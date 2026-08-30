@@ -11377,7 +11377,8 @@
       },
         React.createElement('svg', {
           className: 'widgets-longpress-hint__icon',
-          width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+          // Строка «вид подсказки жеста»: значок 22 px тоном --ac.
+          width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none',
           stroke: 'currentColor', strokeWidth: 2.4,
           strokeLinecap: 'round', strokeLinejoin: 'round',
           'aria-hidden': 'true'
@@ -11509,6 +11510,18 @@
         React.createElement('span', { className: 'widget-v4-hold-hint__pill' }, 'удерживайте, чтобы сменить вид')
       ),
 
+      // Кадр «Смена вида · новый вид»: подтверждение — шалфейный близнец
+      // пилюли удержания под сеткой, а не тёмный тост внизу экрана. Пилюли
+      // взаимоисключающие: либо человек держит, либо только что сменил вид.
+      variantSavedToast && React.createElement('div', {
+        className: 'widgets-tab__hold-hint',
+        role: 'status'
+      },
+        React.createElement('span', {
+          className: 'widget-v4-hold-hint__pill widget-v4-hold-hint__pill--saved'
+        }, 'вид сохранён')
+      ),
+
       isEditMode && React.createElement(CatalogStrip, {
         onSelect: handleCatalogSelect,
         onReplace: handleCatalogReplace,
@@ -11586,11 +11599,6 @@
           onWaterChip: handleBreakdownWaterChip
         })
         : null,
-      variantSavedToast && React.createElement('div', {
-        className: 'widget-wd-toast',
-        role: 'status'
-      }, 'вид сохранён'),
-
       React.createElement('div', { className: 'widgets-edit-controls' }),
 
       renderMobileFabs(),

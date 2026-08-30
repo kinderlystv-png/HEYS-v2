@@ -12048,6 +12048,14 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   color: #8a4a20;
 }
 
+/* Подтверждение смены вида — тот же силуэт, другой тон: кадр «Смена вида ·
+   новый вид» ставит шалфейную пилюлю там же, где терракотовая подсказка
+   удержания. Один силуэт на два сообщения читается как одна механика. */
+.widget-v4-hold-hint__pill--saved {
+  background: rgba(122, 138, 94, 0.18);
+  color: var(--v4-sand-ok-text, #5c6a45);
+}
+
 .widget-v4-edit-footer__history {
   display: flex;
   gap: 14px;
@@ -13004,39 +13012,6 @@ html[data-theme-id="blue-dark"] .widget-wd-sheet__opt.is-active {
   flex: none;
   color: #8a4a20;
   display: flex;
-}
-
-.widget-wd-toast {
-  position: fixed;
-  left: 50%;
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
-  z-index: 1300;
-  padding: 0 14px;
-  min-height: 34px;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  background: rgba(32, 30, 29, 0.92);
-  color: #f7efe2;
-  font-size: 12px;
-  font-weight: 700;
-  animation: widget-wd-toast-in 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-@keyframes widget-wd-toast-in {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-[data-theme$="dark"] .widget-wd__remainder {
-  color: rgba(242, 237, 230, 0.4);
 }
 
 [data-theme$="dark"] .widget-wd__bar-track {
@@ -14519,17 +14494,16 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   gap: 11px;
   padding: 13px 15px;
   border-radius: 18px;
-  background: #201e1d;
-  box-shadow: 0 10px 26px -10px rgba(32, 30, 29, 0.55);
+  background: var(--v4-tint, #f6e6dd);
+  box-shadow:
+    0 1px 2px rgba(80, 50, 20, 0.1),
+    0 12px 30px -12px rgba(80, 50, 20, 0.3);
 }
 
 .widgets-longpress-hint__icon {
   flex: 0 0 auto;
   margin-top: 1px;
-  /* Тон из тёмного набора числом, а не ролью: контракт задаёт плашке зашитый
-     фон #201e1d, то есть слой намеренно вне четырёх палитр — как офлайн-баннер,
-     у которого строка «вид офлайн-баннера» тоже называет фон и тон явно. */
-  color: #cf8144;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .widgets-longpress-hint__text {
@@ -14541,12 +14515,12 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 .widgets-longpress-hint__title {
   font: 700 12px/1.35 Figtree, system-ui, sans-serif;
-  color: #f2ede6;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widgets-longpress-hint__sub {
-  font: 500 11px/1.35 Figtree, system-ui, sans-serif;
-  color: rgba(242, 237, 230, 0.62);
+  font: 500 11px/1.45 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.6);
 }
 
 /* Источники вклада — кадр «Разбор · Клетчатка», элементы 84–92. */

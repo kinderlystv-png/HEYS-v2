@@ -315,6 +315,20 @@ const MAIN = [
   ['«Вернуть стандартный экран»', 0, '.widget-v4-empty__reset', ['align', 'justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']]
 ];
 
+// Три кадра смены вида, не считая листа: удержание, принятый выбор и новый
+// вид. Здесь живут пилюли подсказки и подтверждения и состояния самой плитки.
+const VIEW_STATES = [
+  ['Смена вида · удержание', 'плитка: сдвиг scale(.965)', 0,
+    '.widget-v4-tile--holding', []],
+  ['Смена вида · удержание', '«удерживайте, чтобы сменить вид»', 0,
+    '.widget-v4-hold-hint__pill', ['align', 'gap', 'padding', 'minHeight', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Смена вида · новый вид', '«вид сохранён»', 0,
+    ['.widget-v4-hold-hint__pill', '.widget-v4-hold-hint__pill--saved'],
+    ['align', 'gap', 'padding', 'minHeight', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Смена вида · выбор принят', 'прозрачность .28, сдвиг scale(.94)', 0,
+    '.widget-v4-tile--exit', []]
+];
+
 // Кадры «Быстрые действия · …» — карточка плавающей кнопки, одиннадцать штук.
 // Общее у всех — подложка, сама карточка, строка пункта и две кнопки; своё —
 // состояние: раскрыто, один пункт, правка, скрытые чипами.
@@ -353,28 +367,40 @@ const QUICK = [
     '.widgets-settings-fab', ['width', 'height', 'radius', 'background', 'align', 'justify']]
 ];
 
-// Кадры «Шторка · …» — лист смены вида, десять штук. Каркас у всех один, но
-// номера подписи, галочки и превью в каждом свои: таблица собирается из самого
-// разбора по форме строки, поэтому переживает перенумерацию кадра.
+// Лист смены вида. Кадров шестнадцать и названы они двумя способами: десять
+// «Шторка · …» для видов первого пакета и шесть «Смена вида · <виджет>» для
+// шести видов пакета 22 августа. Разметка у них одна, поэтому и таблица одна.
+// Каркас общий, но номера подписи, галочки и превью в каждом кадре свои:
+// таблица собирается из самого разбора по форме строки и переживает
+// перенумерацию.
+const VIEW_SHEET_FRAME = /^(Шторка · [^·]+|Смена вида · (?:Клетчатка|Белок|Окно до сна|Качество еды|Ритм приёмов|Готовность ко сну))$/;
+
 function shutterPairs(razbor) {
   const frames = [...new Set([...razbor.keys()]
     .map((k) => k.split('|')[0])
-    .filter((f) => /^Шторка · [^·]+$/.test(f)))];
+    .filter((f) => VIEW_SHEET_FRAME.test(f)))];
   const pairs = [];
   for (const frame of frames) {
-    pairs.push([frame, 11, '.widget-wd-sheet__grab', ['width', 'height', 'radius', 'background', 'marginBottom']]);
-    pairs.push([frame, 12, '.widget-wd-sheet__subtitle', ['marginTop']]);
-    pairs.push([frame, 13, '.widget-wd-sheet__list', ['direction', 'gap', 'marginTop']]);
+    // Кадры «Шторка» показывают экран под листом и нумеруются с него, кадры
+    // «Смена вида» — только лист. Каркас ищем по его первой строке, ручке.
+    const grab = [...razbor.keys()]
+      .filter((k) => k.slice(0, k.lastIndexOf('|')) === frame)
+      .map((k) => Number(k.slice(k.lastIndexOf('|') + 1)))
+      .filter((i) => /^ширина 36px, высота 4px/.test(razbor.get(`${frame}|${i}`) || ''))[0];
+    if (grab == null) continue;
+    pairs.push([frame, grab, '.widget-wd-sheet__grab', ['width', 'height', 'radius', 'background', 'marginBottom']]);
+    pairs.push([frame, grab + 1, '.widget-wd-sheet__subtitle', ['marginTop']]);
+    pairs.push([frame, grab + 2, '.widget-wd-sheet__list', ['direction', 'gap', 'marginTop']]);
     // Строка варианта: превью 3×2 не оставляет места подписи рядом, и кадр
     // складывает её колонкой.
-    const row = razbor.get(`${frame}|14`) || '';
+    const row = razbor.get(`${frame}|${grab + 3}`) || '';
     pairs.push(/направление column/.test(row)
-      ? [frame, 14, '.widget-wd-sheet__opt--stacked', ['direction', 'gap']]
-      : [frame, 14, '.widget-wd-sheet__opt', ['align', 'gap']]);
+      ? [frame, grab + 3, '.widget-wd-sheet__opt--stacked', ['direction', 'gap']]
+      : [frame, grab + 3, '.widget-wd-sheet__opt', ['align', 'gap']]);
     let title = null;
     let check = null;
     let preview = null;
-    for (let i = 15; i <= 60 && !(title && check && preview); i += 1) {
+    for (let i = grab + 4; i <= grab + 46 && !(title && check && preview); i += 1) {
       const value = razbor.get(`${frame}|${i}`);
       if (value == null) continue;
       if (!title && /шрифт 700 11\.5px\/1\.3/.test(value)) {
@@ -473,6 +499,20 @@ describe('каркас листа разбора против разбора к�
     expect(same).toBeGreaterThanOrEqual(1000);
   });
 
+  it('состояния смены вида совпадают со своими кадрами', () => {
+    const drift = [];
+    for (const [frame, anchor, offset, sel, props] of VIEW_STATES) {
+      if (!props.length) {
+        // Правило есть — числа его сверяет соседняя таблица; здесь важно, что
+        // состояние вообще заведено и кадру есть что показать.
+        expect(rules.has(Array.isArray(sel) ? sel[0] : sel), sel).toBe(true);
+        continue;
+      }
+      drift.push(...compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] }));
+    }
+    expect(drift).toEqual([]);
+  });
+
   it('карточка быстрых действий совпадает со своими кадрами', () => {
     const drift = [];
     for (const [frame, anchor, offset, sel, props] of QUICK) {
@@ -481,10 +521,10 @@ describe('каркас листа разбора против разбора к�
     expect(drift).toEqual([]);
   });
 
-  it('десять кадров «Шторка · …» совпадают с листом смены вида', () => {
+  it('шестнадцать кадров листа смены вида совпадают с продуктом', () => {
     const pairs = shutterPairs(razbor);
     // Десять кадров: каркас, подпись, галочка и размер превью в каждом.
-    expect(new Set(pairs.map((p) => p[0])).size).toBe(10);
+    expect(new Set(pairs.map((p) => p[0])).size).toBe(16);
     const drift = [];
     for (const [frame, index, sel, props] of pairs) {
       drift.push(...compare({ razbor, rules, frame, pairs: [[index, sel, props]] }));
