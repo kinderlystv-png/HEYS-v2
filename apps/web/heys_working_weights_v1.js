@@ -89,13 +89,25 @@
     return out;
   }
 
+  /** Дата первой силовой тренировки в наборе дней. */
+  function firstStrengthDate(days) {
+    for (const day of days || []) {
+      const trainings = Array.isArray(day && day.trainings) ? day.trainings : [];
+      const hasStrength = trainings.some((tr) => tr && String(tr.type) === 'strength'
+        && tr.workoutLog && Array.isArray(tr.workoutLog.exercises) && tr.workoutLog.exercises.length);
+      if (hasStrength && day.date) return day.date;
+    }
+    return null;
+  }
+
   /**
    * Растут ли рабочие веса за окно.
    *
    * @param {object} input
    * @param {Array<object>} input.days дни окна, по возрастанию даты
    * @returns {{available:boolean, growing:boolean, reason?:string,
-   *   shared:number, grew:number, fell:number, deltaPct:number|null, weeks:number}}
+   *   shared:number, grew:number, fell:number, deltaPct:number|null, weeks:number,
+   *   haveDays?:number, needDays?:number, changedAt?:string|null}}
    */
   function analyze({ days } = {}) {
     const all = Array.isArray(days) ? days.slice(-WINDOW_DAYS) : [];
@@ -104,7 +116,12 @@
       shared: 0, grew: 0, fell: 0, deltaPct: null, growing: false
     };
     if (all.length < WINDOW_DAYS / 2) {
-      return Object.assign(base, { available: false, reason: 'short_window' });
+      // Сколько дней уже есть и сколько нужно — чтобы поверхность могла
+      // сказать «данных 9 дней из 14», а не просто «рано».
+      return Object.assign(base, {
+        available: false, reason: 'short_window',
+        haveDays: all.length, needDays: Math.round(WINDOW_DAYS / 2)
+      });
     }
 
     const half = Math.floor(all.length / 2);
@@ -127,7 +144,15 @@
 
     if (shared < MIN_SHARED_EXERCISES) {
       // Сменил программу — сравнивать нечего, и это не «не растут».
-      return Object.assign(base, { available: false, reason: 'no_shared_exercises', shared });
+      //
+      // Дату смены отдаём отсюда, а не считаем на поверхности: определение
+      // принадлежит метрике. Считаем ею первый силовой день второй половины
+      // окна — раньше него сравнивать было с чем, позже начинается то, что
+      // сравнивать не с чем.
+      return Object.assign(base, {
+        available: false, reason: 'no_shared_exercises', shared,
+        changedAt: firstStrengthDate(all.slice(half))
+      });
     }
 
     const deltaPct = sumEarly > 0 ? ((sumLate - sumEarly) / sumEarly) * 100 : 0;

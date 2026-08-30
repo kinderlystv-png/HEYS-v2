@@ -230,6 +230,71 @@
     return { value: round(kcal) + ' ккал', sub: sub, strong: true };
   }
 
+  const MONTHS_RU_GEN = [
+    'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+  ];
+  function formatDayMonth(dateKey) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+    if (!m) return '';
+    return String(Number(m[3])) + ' ' + MONTHS_RU_GEN[Number(m[2]) - 1];
+  }
+
+  function pluralRu(n, one, few, many) {
+    const a = Math.abs(n) % 100;
+    const b = a % 10;
+    if (a > 10 && a < 20) return many;
+    if (b > 1 && b < 5) return few;
+    if (b === 1) return one;
+    return many;
+  }
+
+  /**
+   * Строка «Рабочие веса» яруса «История».
+   *
+   * В поправке на факт эта же метрика — довод, и звучит она отрицательно
+   * («норму не трогаем»). Здесь она факт о тренировках, и формулировка
+   * положительная (контракт «рост рабочих весов на вкладке», строка 17).
+   *
+   * Пустот две, и они разного смысла: «рано сравнивать» — данных мало,
+   * «нет общих упражнений» — сменил программу. Второе не результат, и красить
+   * его как плохой результат нельзя (строки 18 и 25).
+   */
+  function buildWorkingWeightsRow(analysis) {
+    if (!analysis) return null;
+    if (!analysis.available) {
+      if (analysis.reason === 'short_window') {
+        const have = Number(analysis.haveDays) || 0;
+        const need = Number(analysis.needDays) || 14;
+        return {
+          sub: 'данных ' + have + ' ' + pluralRu(have, 'день', 'дня', 'дней') + ' из ' + need,
+          value: 'рано сравнивать',
+          muted: true
+        };
+      }
+      if (analysis.reason === 'no_shared_exercises') {
+        const when = formatDayMonth(analysis.changedAt);
+        return {
+          sub: when ? 'программа сменилась ' + when : 'программа сменилась',
+          value: 'нет общих упражнений',
+          muted: true
+        };
+      }
+      return null;
+    }
+    const delta = Number(analysis.deltaPct) || 0;
+    const weeks = Number(analysis.weeks) || 4;
+    const shared = Number(analysis.shared) || 0;
+    const sign = delta > 0 ? '+' : (delta < 0 ? '−' : '');
+    const value = sign + String(Math.abs(Math.round(delta * 10) / 10)).replace('.', ',') + ' %';
+    return {
+      sub: 'за ' + weeks + ' ' + pluralRu(weeks, 'неделю', 'недели', 'недель')
+        + ' · ' + shared + ' ' + pluralRu(shared, 'общее упражнение', 'общих упражнения', 'общих упражнений'),
+      value,
+      tone: delta > 0 ? 'grow' : (delta < 0 ? 'drop' : 'flat')
+    };
+  }
+
   function openMorningActivationQuickAdd(day, visibleTrainings, openTrainingPicker) {
     const dateKey = day?.date || day?.dateKey || (HEYS.StepModal?.utils?.getTodayKey?.() || new Date().toISOString().slice(0, 10));
     if (HEYS.StepModal?.show && HEYS.StepModal?.registry?.morning_activation_followup) {
@@ -330,6 +395,7 @@
       tdee,
       caloricDebt,
       monthTrainingsRows,
+      workingWeights,
       morningActivationCalendarBlock,
       kcalMin
     } = ctx;
@@ -375,6 +441,21 @@
       : morningActivationCalendarBlock;
 
     const heroFooter = buildHeroFooterLabel({ dayTargetDef, day, caloricDebt, ndteBoostKcal });
+
+    const weightsRow = buildWorkingWeightsRow(workingWeights);
+    const workingWeightsRow = weightsRow && React.createElement('div', {
+      className: 'activity-v4-history__row'
+    },
+      React.createElement('span', { className: 'activity-v4-history__key' },
+        React.createElement('span', { className: 'activity-v4-history__name' }, 'Рабочие веса'),
+        React.createElement('span', { className: 'activity-v4-history__sub' }, weightsRow.sub)
+      ),
+      React.createElement('span', {
+        className: 'activity-v4-history__delta'
+          + (weightsRow.muted ? ' activity-v4-history__delta--muted' : '')
+          + (weightsRow.tone ? ' activity-v4-history__delta--' + weightsRow.tone : '')
+      }, weightsRow.value)
+    );
 
 
     const activitySheet = sheetOpen && React.createElement(React.Fragment, null,
@@ -666,6 +747,7 @@
       React.createElement('div', { className: 'activity-v4-tier' }, 'История'),
       React.createElement('div', { className: 'activity-v4-history' },
         calendarBlock,
+        workingWeightsRow,
         React.createElement('button', {
           type: 'button',
           className: 'activity-v4-history__month-row',

@@ -821,3 +821,57 @@ body:has(.activity-v4) .hdr::after {
   font: 600 12.5px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
+
+/* Строка «Рабочие веса» в ярусе «История» — контракт строки 19 и 25.
+   Тона обеих пустот одинаковые: ни «рано сравнивать», ни «нет общих
+   упражнений» не результат, и красить их как плохой результат нельзя. */
+.activity-v4-history__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+}
+
+.activity-v4-history__key {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.activity-v4-history__name {
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.activity-v4-history__sub {
+  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.activity-v4-history__delta {
+  flex: none;
+  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink, #201e1d);
+}
+
+.activity-v4-history__delta--grow {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.activity-v4-history__delta--drop {
+  color: var(--v4-bad-text, #b4442a);
+}
+
+/* Ноль — не падение: приглушаем, а не красим тревогой. */
+.activity-v4-history__delta--flat {
+  color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
+}
+
+.activity-v4-history__delta--muted {
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}

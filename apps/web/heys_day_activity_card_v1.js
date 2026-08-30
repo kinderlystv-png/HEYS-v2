@@ -37,6 +37,7 @@
             tdee,
             caloricDebt,
             monthTrainingsRows,
+            workingWeights,
             morningActivationCalendarBlock,
             r0,
             setDay,
@@ -63,6 +64,7 @@
             // Caloric calculations
             dayTargetDef, displayOptimum, optimum, cycleKcalMultiplier, tdee, caloricDebt,
             monthTrainingsRows,
+            workingWeights,
             morningActivationCalendarBlock,
             r0
         };

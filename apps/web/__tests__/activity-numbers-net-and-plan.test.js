@@ -1077,3 +1077,141 @@ describe('Цель шагов · дата открытого дня', () => {
     expect(src.slice(start, start + 400)).toContain('HEYS.showCheckin.steps(date)');
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// Блок 6 · рост рабочих весов в ярусе «История»
+// tab-activity.v4.dc.html, строки 17, 18, 19, 25; кадр «Рабочие веса»
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('Рабочие веса · строка истории', () => {
+  function renderHistory(workingWeights) {
+    const HEYS = loadFiles(['heys_day_activity_v1.js']);
+    HEYS.TDEE = { calculate: () => ({ kcalMin: [0, 7, 8, 9] }) };
+    render(HEYS.dayActivity.render({
+      React,
+      ctx: {
+        day: { date: '2026-08-30', trainings: [] }, prof: {}, trainingTypes: [],
+        stepsValue: 0, stepsGoal: 10000, stepsPercent: 0, stepsColor: '#000', stepsK: 0,
+        stepsEstimated: false, stepsMissing: false,
+        bmr: 1520, householdK: 0, totalHouseholdMin: 0,
+        train1k: 0, train2k: 0, train3k: 0, r0: (v) => Math.round(v || 0),
+        visibleTrainings: 0, regularTrainingsBlock: null, programTrainingsBlock: null,
+        ndteData: { active: false }, ndteBoostKcal: 0, tefData: {}, tefKcal: 0,
+        dayTargetDef: -15, displayOptimum: 1940, optimum: 1940, cycleKcalMultiplier: 1,
+        tdee: 2280, caloricDebt: null,
+        monthTrainingsRows: [], morningActivationCalendarBlock: null,
+        workingWeights,
+      },
+      actions: {},
+    }));
+    const row = document.querySelector('.activity-v4-history__row');
+    if (!row) return null;
+    return {
+      name: row.querySelector('.activity-v4-history__name').textContent,
+      sub: row.querySelector('.activity-v4-history__sub').textContent,
+      value: row.querySelector('.activity-v4-history__delta').textContent,
+      cls: row.querySelector('.activity-v4-history__delta').className,
+    };
+  }
+
+  it('рост — положительная формулировка с составом', () => {
+    const row = renderHistory({ available: true, growing: true, deltaPct: 4, weeks: 4, shared: 6 });
+    expect(row.name).toBe('Рабочие веса');
+    expect(row.sub).toBe('за 4 недели · 6 общих упражнений');
+    expect(row.value).toBe('+4 %');
+    expect(row.cls).toContain('activity-v4-history__delta--grow');
+  });
+
+  it('падение красится своим тоном, а не тоном роста', () => {
+    const row = renderHistory({ available: true, growing: false, deltaPct: -3.5, weeks: 4, shared: 3 });
+    expect(row.value).toBe('−3,5 %');
+    expect(row.cls).toContain('activity-v4-history__delta--drop');
+  });
+
+  it('ноль — не падение: приглушён, а не тревожен', () => {
+    const row = renderHistory({ available: true, growing: false, deltaPct: 0, weeks: 4, shared: 2 });
+    expect(row.value).toBe('0 %');
+    expect(row.cls).toContain('activity-v4-history__delta--flat');
+    expect(row.cls).not.toContain('--drop');
+  });
+
+  it('мало данных — «рано сравнивать» и сколько дней есть', () => {
+    const row = renderHistory({
+      available: false, reason: 'short_window', haveDays: 9, needDays: 14,
+    });
+    expect(row.sub).toBe('данных 9 дней из 14');
+    expect(row.value).toBe('рано сравнивать');
+  });
+
+  it('смена программы — другая фраза, и это не «не растут»', () => {
+    const row = renderHistory({
+      available: false, reason: 'no_shared_exercises', shared: 1, changedAt: '2026-08-12',
+    });
+    expect(row.sub).toBe('программа сменилась 12 августа');
+    expect(row.value).toBe('нет общих упражнений');
+    expect(row.value).not.toContain('не растут');
+  });
+
+  it('обе пустоты одного тона — ни одна не результат', () => {
+    const short = renderHistory({ available: false, reason: 'short_window', haveDays: 9, needDays: 14 });
+    cleanup();
+    const changed = renderHistory({ available: false, reason: 'no_shared_exercises', changedAt: '2026-08-12' });
+    expect(short.cls).toContain('activity-v4-history__delta--muted');
+    expect(changed.cls).toContain('activity-v4-history__delta--muted');
+    expect(short.cls).not.toContain('--drop');
+    expect(changed.cls).not.toContain('--drop');
+  });
+
+  it('метрика не загрузилась — строки просто нет', () => {
+    expect(renderHistory(null)).toBeNull();
+  });
+
+  it('склонения не ломаются на единице и на пяти', () => {
+    expect(renderHistory({ available: true, deltaPct: 2, weeks: 1, shared: 1 }).sub)
+      .toBe('за 1 неделю · 1 общее упражнение');
+    // Второй рендер в том же тесте: без очистки querySelector вернул бы первую строку.
+    cleanup();
+    expect(renderHistory({ available: true, deltaPct: 2, weeks: 5, shared: 22 }).sub)
+      .toBe('за 5 недель · 22 общих упражнения');
+  });
+});
+
+describe('Метрика рабочих весов отдаёт причину', () => {
+  function loadWW() {
+    if (!globalThis.window) globalThis.window = globalThis;
+    globalThis.window.HEYS = globalThis.HEYS = {};
+    /* eslint-disable-next-line no-eval */
+    eval(fs.readFileSync(path.join(WEB_DIR, 'heys_working_weights_v1.js'), 'utf8'));
+    return globalThis.HEYS.WorkingWeights;
+  }
+
+  const strengthDay = (date, name, weight) => ({
+    date,
+    trainings: [{
+      type: 'strength',
+      workoutLog: { exercises: [{ name, approaches: [{ weightKg: String(weight), reps: 5 }] }] },
+    }],
+  });
+
+  it('мало данных — сколько есть и сколько нужно', () => {
+    const WW = loadWW();
+    const res = WW.analyze({ days: [strengthDay('2026-08-01', 'Присед', 80)] });
+    expect(res.reason).toBe('short_window');
+    expect(res.haveDays).toBe(1);
+    expect(res.needDays).toBe(14);
+  });
+
+  it('нет общих упражнений — дата смены программы', () => {
+    const WW = loadWW();
+    const days = [];
+    for (let i = 0; i < 14; i++) {
+      days.push(strengthDay('2026-08-' + String(i + 1).padStart(2, '0'), 'Присед', 80));
+    }
+    for (let i = 14; i < 28; i++) {
+      days.push(strengthDay('2026-08-' + String(i + 1).padStart(2, '0'), 'Жим', 60));
+    }
+    const res = WW.analyze({ days });
+    expect(res.reason).toBe('no_shared_exercises');
+    expect(res.changedAt).toBe('2026-08-15');
+  });
+});

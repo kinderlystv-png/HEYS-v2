@@ -1380,6 +1380,35 @@
         }, [activityContentEnabled, visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR, date]);
 
         // Сводка тренировок за 30 дней (чтение из localStorage по префиксу дня)
+        // Рост рабочих весов на вкладке. Метрика уже написана и до сих пор жила
+        // только внутри поправки на факт, где она довод («норму не трогаем»);
+        // здесь она факт о тренировках, и формулировка положительная
+        // (контракт «рост рабочих весов на вкладке», строка 17).
+        //
+        // Модуль лежит в постбут-чанке, порядок загрузки не гарантирован:
+        // пока его нет, строки просто нет — deferred-рендер вернётся сюда сам.
+        const workingWeights = useMemo(() => {
+            if (!activityContentEnabled) return null;
+            const analyze = HEYS.WorkingWeights?.analyze;
+            if (typeof analyze !== 'function') return null;
+            const windowDays = HEYS.WorkingWeights.WINDOW_DAYS || 28;
+            const endD = parseISO(date);
+            if (!endD || isNaN(endD.getTime())) return null;
+            const days = [];
+            for (let i = windowDays - 1; i >= 0; i--) {
+                const d = new Date(endD);
+                d.setDate(d.getDate() - i);
+                const dk = fmtDate(d);
+                const stored = lsGet('heys_dayv2_' + dk, null);
+                if (stored && typeof stored === 'object') days.push({ ...stored, date: dk });
+            }
+            try {
+                return analyze({ days });
+            } catch (_) {
+                return null;
+            }
+        }, [activityContentEnabled, lsGet, date, day?.updatedAt, day?.trainings]);
+
         const monthTrainingsRows = useMemo(() => {
             if (!activityContentEnabled) return [];
             return HEYS.dayActivity?.collectMonthTrainingRows?.({
@@ -2289,6 +2318,7 @@
                 tdee,
                 caloricDebt,
                 monthTrainingsRows,
+                workingWeights,
                 morningActivationCalendarBlock,
                 r0,
                 setDay,
@@ -2300,7 +2330,7 @@
                 openHouseholdPicker,
                 openTrainingPicker
             });
-        }, [showActivityContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, stepsEstimated, stepsMissing, bmr, householdK, totalHouseholdMin, train1k, train2k, train3k, visibleTrainings, trainingTypes, regularTrainingsBlock, programTrainingsBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, optimum, cycleKcalMultiplier, tdee, caloricDebt, day?.isRefeedDay]);
+        }, [showActivityContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, stepsEstimated, stepsMissing, bmr, householdK, totalHouseholdMin, train1k, train2k, train3k, visibleTrainings, trainingTypes, regularTrainingsBlock, programTrainingsBlock, monthTrainingsRows, workingWeights, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, optimum, cycleKcalMultiplier, tdee, caloricDebt, day?.isRefeedDay]);
 
         if (!HEYS.dayNutritionCard?.buildNutritionCard) {
             throw new Error('[heys_day_v12] HEYS.dayNutritionCard not loaded before heys_day_v12.js');
