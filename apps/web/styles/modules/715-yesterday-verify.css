@@ -805,8 +805,13 @@
   margin-top: 16px;
 }
 
+/* Кадр «Чек-ин · вчера по ощущениям», элемент 09: невыбранная строка силы —
+   фон --c1, радиус 14, поля 0 13, высота от 42. Выбранная (элемент 12) — --c2 с
+   рамкой inset 2px --acs, и она ниже уже права через --v4-chip. Роль
+   --v4-sand-hero это тоже вторая поверхность, поэтому выбор строки не менял
+   цвет — отличала только рамка. */
 .yv-force {
-  background: var(--v4-sand-hero, #f7efe2);
+  background: var(--v4-c1, #f7efe2);
   border: none;
   border-radius: 14px;
   padding: 0 13px;
@@ -974,9 +979,11 @@
   z-index: 1;
 }
 
+/* Кадр «Чек-ин · пачка незакрытых дней», элемент 08: строка дня — фон --c1,
+   радиус 16, поля 11/13, высота от 44. --v4-sand-hero это вторая поверхность. */
 .yv-pack-day {
   width: 100%;
-  background: var(--v4-sand-hero, #f7efe2);
+  background: var(--v4-c1, #f7efe2);
   border: none;
   border-radius: 16px;
   padding: 11px 13px;
