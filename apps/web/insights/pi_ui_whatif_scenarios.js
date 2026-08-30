@@ -28,7 +28,6 @@
         // Meal composition
         add_protein: {
             category: 'meal',
-            emoji: '🥩',
             label: 'Добавить белок',
             description: 'Увеличить белок в выбранном приёме',
             params: [
@@ -38,7 +37,6 @@
         },
         add_fiber: {
             category: 'meal',
-            emoji: '🥦',
             label: 'Добавить клетчатку',
             description: 'Увеличить клетчатку в рационе',
             params: [
@@ -48,7 +46,6 @@
         },
         reduce_carbs: {
             category: 'meal',
-            emoji: '🍞',
             label: 'Снизить углеводы',
             description: 'Уменьшить быстрые углеводы',
             params: [
@@ -60,7 +57,6 @@
         // Meal timing
         increase_meal_gap: {
             category: 'timing',
-            emoji: '⏳',
             label: 'Увеличить промежуток',
             description: 'Растянуть интервал между приёмами',
             params: [
@@ -69,7 +65,6 @@
         },
         shift_meal_time: {
             category: 'timing',
-            emoji: '🕐',
             label: 'Сдвинуть время',
             description: 'Перенести приём пищи',
             params: [
@@ -79,7 +74,6 @@
         },
         skip_late_meal: {
             category: 'timing',
-            emoji: '🚫',
             label: 'Пропустить поздний приём',
             description: 'Убрать приём после 19:00',
             params: []
@@ -88,7 +82,6 @@
         // Sleep
         increase_sleep: {
             category: 'sleep',
-            emoji: '😴',
             label: 'Увеличить сон',
             description: 'Спать больше часов',
             params: [
@@ -97,7 +90,6 @@
         },
         adjust_bedtime: {
             category: 'sleep',
-            emoji: '🛏️',
             label: 'Сдвинуть отбой',
             description: 'Изменить время засыпания',
             params: [
@@ -108,7 +100,6 @@
         // Activity
         add_training: {
             category: 'activity',
-            emoji: '🏋️',
             label: 'Добавить тренировку',
             description: 'Включить силовую/кардио',
             params: [
@@ -118,7 +109,6 @@
         },
         increase_steps: {
             category: 'activity',
-            emoji: '🚶',
             label: 'Увеличить шаги',
             description: 'Больше ходьбы',
             params: [
@@ -128,10 +118,14 @@
     };
 
     const CATEGORY_CONFIG = {
-        meal: { emoji: '🍽️', label: 'Питание', color: '#10b981' },
-        timing: { emoji: '⏰', label: 'Тайминг', color: '#f59e0b' },
-        sleep: { emoji: '😴', label: 'Сон', color: '#6366f1' },
-        activity: { emoji: '💪', label: 'Активность', color: '#ec4899' }
+        // Контракт «состав · чипы „Что если“»: четыре категории и в этом
+        // порядке — Питание, Тайминг, Сон, Активность. Те же имена, что у
+        // факторов каскада. Эмодзи и собственные цвета сняты: чип красится
+        // ролью набора, а категорию называет слово.
+        meal: { label: 'Питание' },
+        timing: { label: 'Тайминг' },
+        sleep: { label: 'Сон' },
+        activity: { label: 'Активность' }
     };
 
     /**
@@ -185,31 +179,34 @@
             onClick: handleCardClick,
             style: { cursor: 'pointer' }
         },
-            // Header
+            // Контракт «копия · что запрещено»: эмодзи, латиница и жаргон.
+            // Прежде карточка называлась «What-If Scenarios» с бейджем «Beta»,
+            // значком 🔮 и рядом превью из четырёх эмодзи — три запрета сразу.
+            // Категории и так названы словами внутри панели.
             h('div', { className: 'insights-card__header' },
-                h('span', { className: 'insights-card__icon' }, '🔮'),
-                h('h3', { className: 'insights-card__title' }, 'What-If Scenarios'),
-                h('span', { className: 'insights-card__badge' }, 'Beta')
+                h('h3', { className: 'insights-card__title' }, 'Что если…')
             ),
 
-            // Body
             h('div', { className: 'insights-card__body' },
                 h('p', { className: 'insights-card__description' },
-                    'Предскажи как изменятся твои паттерны, если добавить белок, сдвинуть приём или улучшить сон.'
+                    'Посмотрите, как сдвинется оценка дня, если добавить белок, '
+                    + 'перенести приём или лечь раньше.'
                 ),
+                // Категории строкой вместо ряда значков: слово называет, что
+                // внутри, а значок заставляет угадывать.
                 h('div', { className: 'whatif-scenarios-card__preview' },
-                    ['🥩', '⏰', '😴', '💪'].map((emoji, idx) =>
-                        h('div', {
-                            key: idx,
-                            className: 'whatif-scenarios-card__preview-icon'
-                        }, emoji)
-                    )
+                    ['Питание', 'Тайминг', 'Сон', 'Активность'].map(function (name) {
+                        return h('span', {
+                            key: name,
+                            className: 'whatif-scenarios-card__preview-name'
+                        }, name);
+                    })
                 )
             ),
 
             // Footer
             h('div', { className: 'insights-card__footer' },
-                h('span', { className: 'insights-card__cta' }, 'Попробовать сценарий →')
+                h('span', { className: 'insights-card__cta' }, 'Попробовать сценарий')
             )
         );
     }
@@ -424,7 +421,7 @@
                 onClick: handleRunSimulation,
                 disabled: isSimulating || daysData.length < 7
             },
-                isSimulating ? '⏳ Симулируем...' : '🔮 Запустить симуляцию'
+                isSimulating ? '⏳ Симулируем...' : 'Посчитать'
             ),
             daysData.length < 7 && h('p', {
                 className: 'whatif-scenarios-panel__warning'
@@ -433,7 +430,7 @@
 
         // UI: Simulation results
         const simulationResults = simulation && simulation.available && h('div', { className: 'whatif-scenarios-panel__results' },
-            h('h4', { className: 'whatif-scenarios-panel__results-title' }, '🔮 Прогноз изменений'),
+            h('h4', { className: 'whatif-scenarios-panel__results-title' }, 'Что изменится'),
 
             // Prediction cards: baseline → predicted
             simulation.impact && simulation.impact.length > 0 && h('div', { className: 'whatif-scenarios-panel__predictions' },
@@ -449,7 +446,11 @@
                             h('span', {
                                 className: `whatif-scenarios-panel__prediction-delta ${isPositive ? 'positive' : 'negative'}`
                             }, `${isPositive ? '+' : ''}${item.delta} баллов`),
-                            item.significance === 'high' && h('span', { className: 'whatif-scenarios-panel__prediction-badge' }, '🔥')
+                            // Значимость называется словом: «🔥» рядом с числом
+                            // баллов читался оценкой сценария, а не силой связи.
+                            item.significance === 'high' && h('span', {
+                                className: 'whatif-scenarios-panel__prediction-badge'
+                            }, 'связь сильная')
                         ),
                         item.desc && h('div', { className: 'whatif-scenarios-panel__prediction-desc' }, item.desc),
                         h('div', { className: 'whatif-scenarios-panel__prediction-bar' },
@@ -520,7 +521,7 @@
             },
                 // Header
                 h('div', { className: 'whatif-scenarios-panel__header' },
-                    h('h2', { className: 'whatif-scenarios-panel__title' }, '🔮 What-If Scenarios'),
+                    h('h2', { className: 'whatif-scenarios-panel__title' }, 'Что если…'),
                     h('button', {
                         className: 'whatif-scenarios-panel__close',
                         onClick: onClose,

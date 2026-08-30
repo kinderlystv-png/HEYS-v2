@@ -1151,6 +1151,35 @@
   cursor: pointer;
 }
 
+/* Категории «Что если» строкой под описанием карточки-входа: слово называет,
+   что внутри, а прежний ряд из четырёх эмодзи заставлял угадывать. */
+.whatif-scenarios-card__preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.whatif-scenarios-card__preview-name {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+/* Значимость связи — словом, тоном подписи: «🔥» рядом с числом баллов
+   читался оценкой сценария, а не силой связи. */
+.whatif-scenarios-panel__prediction-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
 /* Контракт «карточка · отказ расчёта»: разбор упал — человек должен увидеть,
    что именно упало и что осталось. Две кнопки и ярус доступного вместо
    прежнего значка ⚠️ с фразой «Не удалось отрисовать инсайты»: она называла
