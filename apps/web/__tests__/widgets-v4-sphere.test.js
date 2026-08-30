@@ -67,11 +67,13 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(block).toContain('--v4-ink: #f2ede6');
     });
 
-    it('БЖУ 3×2 — кольца 56px, ряд по центру с щелью 6px', () => {
+    // Строка контракта «вид · кольца БЖУ»: svg 46 × 46. До 31 августа код
+    // рисовал 56 — кольца были на 22 % крупнее кадра и съедали воздух 3×2.
+    it('БЖУ 3×2 — кольца 46px, ряд по центру с щелью 6px', () => {
         const start = uiSrc.indexOf('function v4SageRing');
         const chunk = uiSrc.slice(start, start + 1400);
-        expect(chunk).toContain('width: 56');
-        expect(chunk).toContain('height: 56');
+        expect(chunk).toContain('width: 46');
+        expect(chunk).toContain('height: 46');
         expect(cssSrc).toContain('.widget-v4-macros');
         expect(cssSrc).toContain('justify-content: center');
         expect(cssSrc).toContain('gap: 6px');

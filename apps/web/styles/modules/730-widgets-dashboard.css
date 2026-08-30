@@ -10823,6 +10823,13 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 
 /* Канвас «Риск-радар»: слово уровня тем же кеглем и весом, что у остальных
    героев плиток — 26px/600, шкала на 24px. */
+/* Кадр «Главная · дефолтная раскладка»: слово уровня стоит через 9 px от
+   подписи — у общей строки героя отступ 10. Оба класса на одном элементе, и
+   общее правило стоит ниже по файлу, поэтому здесь нужна пара классов. */
+.widget-v4-hero-num.widget-risk-scale-hero {
+  margin-top: 9px;
+}
+
 .widget-risk-scale-hero .widget-v4-hero-num__val--risk {
   font-size: 24px;
 }
@@ -11500,9 +11507,16 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
 }
 
 /* Кадр «Главная · дефолтная раскладка», элемент 29: подпись волны прижата к
-   низу плитки — свой отступ сверху она не заводит, воздух даёт сам график. */
+   низу плитки — свой отступ сверху она не заводит, воздух даёт сам график.
+   Строка «вид · инсулиновая волна»: обе подписи под графиком — 9,5 px/700. */
 .widget-v4-insulin-wave__footer {
   margin-top: auto;
+}
+
+.widget-v4-stack__footer.widget-v4-insulin-wave__footer > span {
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 body:has(.widgets-tab) .widget--water .widget-water__bar,
@@ -11534,8 +11548,8 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 
 .widget-v4-macro svg {
   display: block;
-  width: 56px;
-  height: 56px;
+  width: 46px;
+  height: 46px;
   margin: 0 auto;
   flex-shrink: 0;
 }

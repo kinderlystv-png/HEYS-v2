@@ -2404,7 +2404,7 @@
     const tgtRounded = Math.round(tgt);
     return React.createElement('div', { className: `widget-v4-macro${hasOver ? ' widget-v4-macro--over' : ''}` },
       React.createElement('div', { className: 'widget-v4-kicker widget-v4-macro__label' }, label),
-      React.createElement('svg', { width: 56, height: 56, viewBox: '0 0 44 44', 'aria-hidden': 'true' },
+      React.createElement('svg', { width: 46, height: 46, viewBox: '0 0 44 44', 'aria-hidden': 'true' },
         React.createElement('circle', {
           cx: 22, cy: 22, r: 18, fill: 'none',
           stroke: 'var(--v4-line, rgba(0,0,0,.09))', strokeWidth: 5

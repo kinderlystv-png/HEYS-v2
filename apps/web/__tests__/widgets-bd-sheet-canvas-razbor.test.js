@@ -103,6 +103,7 @@ const PICK = {
   align: (v) => num(v, /выравнивание (\S+?)(?:,|$)/),
   justify: (v) => num(v, /распределение (\S+?)(?:,|$)/),
   direction: (v) => num(v, /направление (\S+?)(?:,|$)/),
+  textAlign: (v) => num(v, /выключка (\S+?)(?:,|$)/),
   background: (v) => grabColor(v, 'фон'),
   color: (v) => grabColor(v, 'цвет')
 };
@@ -111,6 +112,7 @@ const CSSPROP = {
   width: 'width', radius: 'border-radius', padding: 'padding', fontWeight: 'font-weight',
   fontSize: 'font-size', lineHeight: 'line-height', tracking: 'letter-spacing',
   align: 'align-items', justify: 'justify-content', direction: 'flex-direction',
+  textAlign: 'text-align',
   background: 'background', color: 'color'
 };
 
@@ -136,9 +138,32 @@ function norm(value) {
 }
 
 // Одна сверка на все таблицы: «строка разбора → правило продукта → свойства».
+// Номер элемента по якорю: приметная строка плитки плюс смещение внутри неё.
+// Якорь обязан находиться ровно один раз — иначе гейт говорит об этом, а не
+// молча сверяет чужой элемент.
+function resolveIndex(razbor, frame, anchor) {
+  if (typeof anchor === 'number') return { index: anchor };
+  const hits = [];
+  for (const [key, value] of razbor) {
+    const at = key.lastIndexOf('|');
+    if (key.slice(0, at) !== frame) continue;
+    if (value.includes(anchor)) hits.push(Number(key.slice(at + 1)));
+  }
+  if (hits.length !== 1) {
+    return { error: `${frame}: якорь «${anchor}» найден ${hits.length} раз, нужен один` };
+  }
+  return { index: hits[0] };
+}
+
 function compare({ razbor, rules, frame, pairs }) {
   const drift = [];
-  for (const [index, sel, props] of pairs) {
+  for (const pair of pairs) {
+    const anchored = pair.length === 4;
+    const found = resolveIndex(razbor, frame, pair[0]);
+    if (found.error) { drift.push(found.error); continue; }
+    const index = found.index + (anchored ? pair[1] : 0);
+    const sel = anchored ? pair[2] : pair[1];
+    const props = anchored ? pair[3] : pair[2];
     const value = razbor.get(`${frame}|${String(Number(index))}`);
     if (!value) { drift.push(`${frame} · ${index}: строки разбора нет`); continue; }
     const chain = Array.isArray(sel) ? sel : [sel];
@@ -201,58 +226,90 @@ const CHARTS = [
 // Кадр «Главная · дефолтная раскладка» — плитка за плиткой. Он же подложка
 // всех восемнадцати листов разбора: больше тысячи строк снимка побайтово
 // повторяют эти, поэтому закрытие кадра закрывает и их.
+//
+// Пары держатся не на номерах элементов, а на якоре: плитка опознаётся по
+// своей приметной строке, остальное берётся смещением внутри неё. Дизайнер
+// переставляет плитки в кадре (31 августа порядок вернулся к контракту, и
+// элементы 61–73 перенумеровались) — таблица это переживает, а якорь, который
+// перестал быть единственным, гейт называет вслух.
 const MAIN = [
   // Калории, плитка-герой 2×2
-  [14, 'body:has(.widgets-tab) .widget--calories', ['background', 'padding']],
-  [15, '.widget-calories__hero-value', ['align', 'gap']],
-  [16, '.widget-calories__hero-value .widget-calories__value--lg', ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'color']],
-  [17, '.widget-calories__hero-remaining-label', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
-  [18, '.widget-calories__hero-bar-wrap', ['marginTop']],
-  [19, '.widget-calories__hero-bar', ['height', 'radius', 'background']],
-  [20, '.widget-calories__hero-bar-fill', ['height', 'radius', 'background']],
-  [21, '.widget-calories__hero-bar-foot', ['justify', 'align', 'marginTop']],
-  [22, '.widget-calories__hero-bar-col', ['direction', 'gap']],
-  [23, '.widget-calories__hero-bar-num', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [24, '.widget-calories__hero-bar-cap', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [25, '.widget-calories__hero-bar-col--end', ['align']],
-  [26, '.widget-calories__hero-bar-num--good', ['color']],
-  // Инсулиновая волна 2×2
-  [29, ['.widget-v4-stack__footer', '.widget-v4-insulin-wave__footer'], ['marginTop', 'justify', 'align']],
+  ['плитка: фон var(--c2), поля 14px', 0, 'body:has(.widgets-tab) .widget--calories', ['background', 'padding']],
+  ['плитка: фон var(--c2), поля 14px', 1, '.widget-calories__hero-value', ['align', 'gap']],
+  ['плитка: фон var(--c2), поля 14px', 2, '.widget-calories__hero-value .widget-calories__value--lg', ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'color']],
+  ['плитка: фон var(--c2), поля 14px', 3, '.widget-calories__hero-remaining-label', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  ['плитка: фон var(--c2), поля 14px', 4, '.widget-calories__hero-bar-wrap', ['marginTop']],
+  ['плитка: фон var(--c2), поля 14px', 5, '.widget-calories__hero-bar', ['height', 'radius', 'background']],
+  ['плитка: фон var(--c2), поля 14px', 6, '.widget-calories__hero-bar-fill', ['height', 'radius', 'background']],
+  ['плитка: фон var(--c2), поля 14px', 7, '.widget-calories__hero-bar-foot', ['justify', 'align', 'marginTop']],
+  ['плитка: фон var(--c2), поля 14px', 8, '.widget-calories__hero-bar-col', ['direction', 'gap']],
+  ['плитка: фон var(--c2), поля 14px', 9, '.widget-calories__hero-bar-num', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['плитка: фон var(--c2), поля 14px', 10, '.widget-calories__hero-bar-cap', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['плитка: фон var(--c2), поля 14px', 11, '.widget-calories__hero-bar-col--end', ['align']],
+  ['плитка: фон var(--c2), поля 14px', 12, '.widget-calories__hero-bar-num--good', ['color']],
+
+  // Инсулиновая волна 2×2 — подпись под графиком
+  ['отступ сверху auto, распределение space-between, выравнивание baseline', 0,
+    ['.widget-v4-stack__footer', '.widget-v4-insulin-wave__footer'], ['marginTop', 'justify', 'align']],
+  ['«3 приёма»', 0, ['.widget-v4-row__meta', '.widget-v4-row__meta--count'], ['fontWeight', 'fontSize', 'lineHeight']],
+
   // Кольца БЖУ 3×2
-  [32, '.widget-v4-macros', ['gap', 'marginTop', 'marginBottom']],
+  ['зазор 6px, отступ сверху auto, отступ снизу auto', 0, '.widget-v4-macros', ['gap', 'marginTop', 'marginBottom']],
+  ['зазор 6px, отступ сверху auto, отступ снизу auto', 1, '.widget-v4-macro', ['textAlign']],
+  ['«Белки» — ключ', 0, '.widget-v4-macro__label', ['marginBottom']],
+  ['«96» — моноцифры', 0, ['.widget-v4-macro__fact', '.widget-v4-macro__fact--bad'], ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['«/ 150»', 0, '.widget-v4-macro__fact-tgt', ['color']],
+  ['«48» — моноцифры', 0, '.widget-v4-macro__fact', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+
   // Шаги 2×1
-  [39, ['.widget-v4-row', '.widget-v4-row--tight'], ['justify', 'align', 'gap']],
-  [41, '.widget-v4-row__meta', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [42, '.widget-v4-stepbars', ['align', 'gap', 'height', 'marginTop']],
-  [43, '.widget-v4-stepbars__bar', ['radius', 'background']],
-  [45, '.widget-v4-stepbars__bar.is-goal', ['background']],
+  ['распределение space-between, выравнивание baseline, зазор 6px', 0,
+    ['.widget-v4-row', '.widget-v4-row--tight'], ['justify', 'align', 'gap']],
+  ['«в среднем 8 940»', 0, '.widget-v4-row__meta', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['«в среднем 8 940»', 1, '.widget-v4-stepbars', ['align', 'gap', 'height', 'marginTop']],
+  ['«в среднем 8 940»', 2, '.widget-v4-stepbars__bar', ['radius', 'background']],
+  ['«в среднем 8 940»', 4, '.widget-v4-stepbars__bar.is-goal', ['background']],
+
   // Тепловая карта 2×1
-  [51, '.widget-v4-heat', ['gap', 'marginTop']],
-  [52, ['.widget-v4-heat__bar', '.widget-v4-heat__bar--d3'], ['height', 'radius', 'background']],
-  [53, ['.widget-v4-heat__bar', '.widget-v4-heat__bar--d1'], ['height', 'radius', 'background']],
-  [54, ['.widget-v4-heat__bar', '.widget-v4-heat__bar--d2'], ['height', 'radius', 'background']],
+  ['зазор 4px, отступ сверху auto', 0, '.widget-v4-heat', ['gap', 'marginTop']],
+  ['зазор 4px, отступ сверху auto', 1, ['.widget-v4-heat__bar', '.widget-v4-heat__bar--d3'], ['height', 'radius', 'background']],
+  ['зазор 4px, отступ сверху auto', 2, ['.widget-v4-heat__bar', '.widget-v4-heat__bar--d1'], ['height', 'radius', 'background']],
+  ['зазор 4px, отступ сверху auto', 3, ['.widget-v4-heat__bar', '.widget-v4-heat__bar--d2'], ['height', 'radius', 'background']],
+
+  // Сон 1×1
+  ['«6,4» — моноцифры', 0, '.widget-v4-mini__value', ['marginTop']],
+
   // Риск-радар 2×2, вид «Шкала»
-  [56, ['.widget-v4-hero-num__val', '.widget-risk-scale-hero .widget-v4-hero-num__val--risk'], ['fontWeight', 'fontSize', 'lineHeight']],
-  // Вес за месяц и Тренд здоровья 2×1
-  [62, '.widget-trend-compact__row', ['align', 'justify', 'gap', 'marginTop']],
-  [66, 'body:has(.widgets-tab) .widget--healthTrend', ['background']],
-  [67, '.widget-trend-compact__spark', ['marginBottom']],
+  ['«низкий»', -1, ['.widget-v4-hero-num', '.widget-v4-hero-num.widget-risk-scale-hero'], ['align', 'gap', 'marginTop']],
+  ['«низкий»', 0, ['.widget-v4-hero-num__val', '.widget-risk-scale-hero .widget-v4-hero-num__val--risk'], ['fontWeight', 'fontSize', 'lineHeight']],
+  ['«низкий»', 1, '.widget-risk-steps', ['gap', 'marginTop']],
+  ['«низкий»', 2, '.widget-risk-steps__seg', ['height', 'radius']],
+  ['«поднимут:', 0, '.widget-risk-rise', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+
+  // Тренд здоровья 2×1: заливка плитки, низ и спарклайн
+  ['плитка: фон var(--gr-bg)', 0, 'body:has(.widgets-tab) .widget--healthTrend', ['background']],
+  ['плитка: фон var(--gr-bg)', 1, '.widget-trend-compact__row', ['align', 'justify', 'gap', 'marginTop']],
+  ['плитка: фон var(--gr-bg)', 3, '.widget-trend-compact__spark', ['marginBottom']],
+
   // Вес 2×1, вид «Число и неделя»
-  [68, '.widget-weight__number-week-delta', ['fontWeight', 'fontSize', 'lineHeight']],
-  [69, '.widget-weight__number-week-spark', ['marginBottom']],
+  ['«−0,9 за неделю»', 0, '.widget-weight__number-week-delta', ['fontWeight', 'fontSize', 'lineHeight']],
+  ['«−0,9 за неделю»', 1, '.widget-weight__number-week-spark', ['marginBottom']],
+
   // Белок и Клетчатка 1×1
-  [71, '.widget-v4-goalbar', ['height', 'radius', 'background', 'marginTop']],
-  [72, '.widget-v4-goalbar__fill', ['radius']],
-  // Ярус «Рекомендуемый экран»
-  [75, '.widget-v4-recommended__card', ['radius', 'background', 'padding', 'align', 'gap']],
-  [77, '.widget-v4-recommended__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [78, '.widget-v4-recommended__desc', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
-  [79, '.widget-v4-recommended__btn', ['align', 'padding', 'radius', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['высота 4px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 7px', 0, '.widget-v4-goalbar', ['height', 'radius', 'background', 'marginTop']],
+  ['высота 4px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 7px', 1, '.widget-v4-goalbar__fill', ['radius']],
+
+  // Ярус «Рекомендуемый экран» и пустой экран
+  ['радиус 20px, фон var(--c1), поля 26px 20px', 0, '.widget-v4-empty', ['radius', 'background', 'padding']],
+  ['радиус 20px, фон var(--c1), поля 16px', 0, '.widget-v4-recommended__card', ['radius', 'background', 'padding', 'align', 'gap']],
+  ['«Вернуть рекомендуемый экран»', 0, '.widget-v4-recommended__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['«Вернуть рекомендуемый экран»', 1, '.widget-v4-recommended__desc', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  ['«Вернуть рекомендуемый экран»', 2, '.widget-v4-recommended__btn', ['align', 'padding', 'radius', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+
   // Пустой экран
-  [81, ['.widgets-empty__title', '.widget-v4-empty .widgets-empty__title'], ['fontWeight', 'fontSize', 'color']],
-  [82, '.widget-v4-empty .widgets-empty__desc', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
-  [83, '.widget-v4-empty__btn', ['align', 'gap', 'marginTop', 'padding', 'radius', 'background', 'fontWeight', 'fontSize', 'color']],
-  [84, '.widget-v4-empty__reset', ['align', 'justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']]
+  ['«Виджетов нет»', 0, ['.widgets-empty__title', '.widget-v4-empty .widgets-empty__title'], ['fontWeight', 'fontSize', 'color']],
+  ['«Виджетов нет»', 1, '.widget-v4-empty .widgets-empty__desc', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  ['«Виджетов нет»', 2, '.widget-v4-empty__btn', ['align', 'gap', 'marginTop', 'padding', 'radius', 'background', 'fontWeight', 'fontSize', 'color']],
+  ['«Вернуть стандартный экран»', 0, '.widget-v4-empty__reset', ['align', 'justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']]
 ];
 
 // Кадры «Шторка · …» — лист смены вида, десять штук. Каркас у всех один, но
