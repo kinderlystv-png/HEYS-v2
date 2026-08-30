@@ -1885,10 +1885,16 @@
 
   function modalIconSvg() {
     return `
+      <!-- Точки кривых — из раздела «Разбор кадров · графика» канваса
+           curator-edits: строка «как читать графику» говорит, что точки
+           приведены как есть и приблизительная форма это другой рисунок.
+           Прежний лист был с острыми углами и тремя строками текста, у кадра
+           углы скруглены радиусом 2 и строк две. -->
       <svg class="ca-modal__header-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M7 3.75h7.2L18.25 7.8V20.25H7V3.75Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-        <path d="M14 4v4h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-        <path d="M9.5 11.25h5M9.5 14.25h5M9.5 17.25h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+        <path d="M14 3v5h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+        <path d="M9 13h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        <path d="M9 17h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
       </svg>
     `;
   }
