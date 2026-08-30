@@ -1,8 +1,8 @@
-// Каркас листа разбора против раздела канваса «Разбор кадров · элемент за
-// элементом» (пакет 30 августа). Раздел даёт каждому нарисованному элементу
-// собственные числа, и каркас листа во всех восемнадцати кадрах «Разбор · …»
-// один и тот же — здесь он сверяется с продуктовым CSS по строкам контракта,
-// а не по кадру глазами.
+// Кадры Главной против раздела канваса «Разбор кадров · элемент за элементом»
+// (пакет 30 августа). Раздел даёт каждому нарисованному элементу собственные
+// числа; здесь по ним сверяются с продуктовым CSS каркас листа разбора (общий
+// у восемнадцати кадров «Разбор · …») и сам кадр «Главная · дефолтная
+// раскладка» — плитка за плиткой.
 //
 // Метод: строки контракта читаются из самого канваса, поэтому расхождение
 // всплывает при правке любой из сторон.
@@ -43,118 +43,211 @@ function readRules(css) {
         const prop = decl.slice(0, at).trim();
         const value = decl.slice(at + 1).trim();
         rules.get(key)[prop] = value;
-        // Сокращение `margin: 12px 0 0` тоже даёт верхний отступ.
-        if (prop === 'margin') rules.get(key)['margin-top'] = value.split(/\s+/)[0];
+        // Сокращения: `margin: 12px 0 0` и `font: 700 13px/1 inherit`.
+        if (prop === 'margin') {
+          const parts = value.split(/\s+/);
+          rules.get(key)['margin-top'] = parts[0];
+          rules.get(key)['margin-bottom'] = parts[2] ?? parts[0];
+        }
+        if (prop === 'font') {
+          const f = /^(\d+)\s+([\d.]+)px\/([\d.]+)/.exec(value);
+          if (f) {
+            rules.get(key)['font-weight'] = f[1];
+            rules.get(key)['font-size'] = `${f[2]}px`;
+            rules.get(key)['line-height'] = f[3];
+          }
+        }
       }
     }
   }
   return rules;
 }
 
-// Числа из фразы разбора: «шрифт 600 44px/.9 Figtree», «отступ сверху 16px»…
-function pick(value, kind) {
-  const num = (re) => {
-    const m = re.exec(value);
-    return m ? m[1] : null;
-  };
-  switch (kind) {
-    case 'marginTop': return num(/отступ сверху ([\d.]+)px/);
-    case 'gap': return num(/зазор ([\d.]+)px/);
-    case 'height': return num(/высота ([\d.]+)px/);
-    case 'width': return num(/ширина ([\d.]+)px/);
-    case 'radius': return num(/радиус ([\d.]+)px/);
-    case 'padding': return num(/поля ([^,]+)/);
-    case 'fontWeight': return num(/шрифт (\d+) [\d.]+px/);
-    case 'fontSize': return num(/шрифт \d+ ([\d.]+)px/);
-    case 'lineHeight': return num(/шрифт \d+ [\d.]+px\/([\d.]+)/);
-    case 'tracking': return num(/трекинг (-?[\d.]+)em/);
-    default: return null;
+// Числа и роли из фразы разбора: «шрифт 600 44px/.9 Figtree», «отступ сверху
+// 16px», «фон var(--acs)». Цвет бывает вложенным — rgba(var(--ink),.42), —
+// поэтому скобки считаются, а не режутся первым «)».
+function grabColor(value, word) {
+  const at = value.indexOf(`${word} `);
+  if (at < 0) return null;
+  const i = at + word.length + 1;
+  if (value[i] === '#') { const m = /^#[0-9a-f]{3,8}/i.exec(value.slice(i)); return m ? m[0] : null; }
+  if (!/^(var|rgba|rgb)\(/.test(value.slice(i))) return null;
+  let depth = 0; let j = i;
+  for (; j < value.length; j += 1) {
+    if (value[j] === '(') depth += 1;
+    else if (value[j] === ')') { depth -= 1; if (depth === 0) { j += 1; break; } }
   }
+  return value.slice(i, j);
 }
 
-// Нормализация: канвас пишет «.9», продукт — «0.9»; кегль продукта бывает в rem.
+const num = (v, re) => { const m = re.exec(v); return m ? m[1] : null; };
+const PICK = {
+  marginTop: (v) => (/отступ сверху auto/.test(v) ? 'auto' : num(v, /отступ сверху ([\d.]+)px/)),
+  marginBottom: (v) => (/отступ снизу auto/.test(v) ? 'auto' : num(v, /отступ снизу ([\d.]+)px/)),
+  gap: (v) => num(v, /зазор ([\d.]+)px/),
+  height: (v) => num(v, /высота ([\d.]+)px/),
+  width: (v) => num(v, /ширина ([\d.]+)px/),
+  radius: (v) => num(v, /радиус ([\d.]+)px/),
+  padding: (v) => num(v, /поля ([^,]+?)(?:,|$)/),
+  fontWeight: (v) => num(v, /шрифт (\d+) [\d.]+px/),
+  fontSize: (v) => num(v, /шрифт \d+ ([\d.]+)px/),
+  lineHeight: (v) => num(v, /шрифт \d+ [\d.]+px\/([\d.]+)/),
+  tracking: (v) => num(v, /трекинг (-?[\d.]+)em/),
+  align: (v) => num(v, /выравнивание (\S+?)(?:,|$)/),
+  justify: (v) => num(v, /распределение (\S+?)(?:,|$)/),
+  direction: (v) => num(v, /направление (\S+?)(?:,|$)/),
+  background: (v) => grabColor(v, 'фон'),
+  color: (v) => grabColor(v, 'цвет')
+};
+const CSSPROP = {
+  marginTop: 'margin-top', marginBottom: 'margin-bottom', gap: 'gap', height: 'height',
+  width: 'width', radius: 'border-radius', padding: 'padding', fontWeight: 'font-weight',
+  fontSize: 'font-size', lineHeight: 'line-height', tracking: 'letter-spacing',
+  align: 'align-items', justify: 'justify-content', direction: 'flex-direction',
+  background: 'background', color: 'color'
+};
+
+// Роли канваса → песочные значения набора; продуктовая роль → её запасное.
+// За тем, что роль вообще заведена, отдельно следит ui:v4:check.
+const ROLE = {
+  '--c1': '#f7efe2', '--c2': '#efe3cf', '--bg': '#fffaf1', '--tx': '#201e1d',
+  '--ac': '#8a4a20', '--acs': '#c67139', '--on-acs': '#2b1608',
+  '--gr': '#5c6a45', '--gr2': '#7a8a5e', '--gr-bg': '#eaefe0',
+  '--red': '#b4442a', '--warn': '#c9922e', '--ovl': '#d99a63', '--val-bad': '#a8382b'
+};
 function norm(value) {
   if (value == null) return null;
-  return String(value)
-    .trim()
-    .replace(/([\d.]+)rem/g, (_, n) => `${parseFloat(n) * 16}px`)
-    .replace(/^\./, '0.')
-    .replace(/^-\./, '-0.')
-    .replace(/(px|em)$/, '');
+  let s = String(value).trim().toLowerCase();
+  s = s.replace(/var\(\s*(--[a-z0-9-]+)\s*\)/g, (_, r) => ROLE[r] || `var(${r})`);
+  s = s.replace(/var\(\s*--[a-z0-9-]+\s*,\s*([^()]*(?:\([^()]*\)[^()]*)*)\)/g, '$1');
+  s = s.replace(/rgba\(var\(--ink\)\s*,\s*\.?(\d+)\)/g, (_, d) => `rgba(0,0,0,.${d})`);
+  s = s.replace(/([\d.]+)rem/g, (_, n) => `${parseFloat(n) * 16}px`);
+  s = s.replace(/\s+/g, ' ').replace(/,\s*/g, ',');
+  s = s.replace(/(^|[\s(,])\.(\d)/g, '$10.$2').replace(/(^|[\s(,])-\.(\d)/g, '$1-0.$2');
+  s = s.replace(/(px|em)\b/g, '');
+  return s;
+}
+
+// Одна сверка на все таблицы: «строка разбора → правило продукта → свойства».
+function compare({ razbor, rules, frame, pairs }) {
+  const drift = [];
+  for (const [index, sel, props] of pairs) {
+    const value = razbor.get(`${frame}|${String(Number(index))}`);
+    if (!value) { drift.push(`${frame} · ${index}: строки разбора нет`); continue; }
+    const chain = Array.isArray(sel) ? sel : [sel];
+    const merged = {};
+    for (const s of chain) {
+      if (!rules.has(s)) { drift.push(`${frame} · ${index}: нет правила ${s}`); continue; }
+      Object.assign(merged, rules.get(s));
+    }
+    for (const kind of props) {
+      const want = norm(PICK[kind](value));
+      if (want == null) { drift.push(`${frame} · ${index}: в кадре нет «${kind}»`); continue; }
+      const got = norm(merged[CSSPROP[kind]]);
+      if (want !== got) {
+        drift.push(`${chain[chain.length - 1]} { ${CSSPROP[kind]} } — кадр: ${want} · код: ${got}`);
+      }
+    }
+  }
+  return drift;
 }
 
 // Элементы каркаса кадра «Разбор · Калории» → правила продукта. Каркас общий
 // у всех восемнадцати листов, поэтому одного кадра достаточно.
+// Каркас листа разбора: элементы кадра «Разбор · Калории» → правила продукта.
+// Каркас общий у всех восемнадцати листов, поэтому одного кадра достаточно.
 const SHELL = [
-  ['75', '.widget-bd-sheet__grab', [['width', 'width'], ['height', 'height']]],
-  ['76', '.widget-bd-sheet__head', [['gap', 'gap']]],
-  ['77', '.widget-bd-sheet__title', [
-    ['fontWeight', 'font-weight'], ['fontSize', 'font-size'], ['lineHeight', 'line-height']
-  ]],
-  ['78', '.widget-bd-sheet__close', [['width', 'width'], ['height', 'height']]],
-  ['79', '.widget-bd-sheet__kicker', [
-    ['marginTop', 'margin-top'], ['fontWeight', 'font-weight'], ['fontSize', 'font-size']
-  ]],
-  ['80', '.widget-bd-sheet__hero', [['marginTop', 'margin-top'], ['gap', 'gap']]],
-  ['81', '.widget-bd-sheet__hero-val', [
-    ['fontWeight', 'font-weight'], ['fontSize', 'font-size'],
-    ['lineHeight', 'line-height'], ['tracking', 'letter-spacing']
-  ]],
-  ['82', '.widget-bd-sheet__hero-unit', [['fontWeight', 'font-weight'], ['fontSize', 'font-size']]],
-  ['83', '.widget-bd-sheet__insight', [
-    ['marginTop', 'margin-top'], ['fontWeight', 'font-weight'], ['fontSize', 'font-size'],
-    ['lineHeight', 'line-height']
-  ]],
-  ['84', '.widget-bd-sheet__bars', [
-    ['marginTop', 'margin-top'], ['gap', 'gap'], ['height', 'height']
-  ]],
-  ['95', '.widget-bd-sheet__stats', [['marginTop', 'margin-top'], ['gap', 'gap']]],
-  ['96', '.widget-bd-sheet__stat-row', [['gap', 'gap']]],
-  ['97', '.widget-bd-sheet__stat-label', [
-    ['fontWeight', 'font-weight'], ['fontSize', 'font-size'], ['lineHeight', 'line-height']
-  ]],
-  ['98', '.widget-bd-sheet__stat-value', [
-    ['fontWeight', 'font-weight'], ['fontSize', 'font-size'], ['lineHeight', 'line-height']
-  ]],
-  ['99', '.widget-bd-sheet__norm', [
-    ['marginTop', 'margin-top'], ['fontWeight', 'font-weight'], ['fontSize', 'font-size'],
-    ['lineHeight', 'line-height']
-  ]],
-  ['100', '.widget-bd-sheet__action', [['marginTop', 'margin-top']]]
+  [75, '.widget-bd-sheet__grab', ['width', 'height']],
+  [76, '.widget-bd-sheet__head', ['gap']],
+  [77, '.widget-bd-sheet__title', ['fontWeight', 'fontSize', 'lineHeight']],
+  [78, '.widget-bd-sheet__close', ['width', 'height']],
+  [79, '.widget-bd-sheet__kicker', ['marginTop', 'fontWeight', 'fontSize']],
+  [80, '.widget-bd-sheet__hero', ['marginTop', 'gap']],
+  [81, '.widget-bd-sheet__hero-val', ['fontWeight', 'fontSize', 'lineHeight', 'tracking']],
+  [82, '.widget-bd-sheet__hero-unit', ['fontWeight', 'fontSize']],
+  [83, '.widget-bd-sheet__insight', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight']],
+  [84, '.widget-bd-sheet__bars', ['marginTop', 'gap', 'height']],
+  [95, '.widget-bd-sheet__stats', ['marginTop', 'gap']],
+  [96, '.widget-bd-sheet__stat-row', ['gap']],
+  [97, '.widget-bd-sheet__stat-label', ['fontWeight', 'fontSize', 'lineHeight']],
+  [98, '.widget-bd-sheet__stat-value', ['fontWeight', 'fontSize', 'lineHeight']],
+  [99, '.widget-bd-sheet__norm', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight']],
+  [100, '.widget-bd-sheet__action', ['marginTop']]
 ];
 
 // Новые виды графика шести листов пакета 22 августа: кадр → правило продукта.
 const CHARTS = [
-  ['Разбор · Клетчатка', '84', '.widget-bd-sheet__sources', [['marginTop', 'margin-top'], ['gap', 'gap']]],
-  ['Разбор · Клетчатка', '87', '.widget-bd-sheet__source-bar', [['height', 'height'], ['marginTop', 'margin-top']]],
-  ['Разбор · Белок', '84', '.widget-bd-sheet__meal-bars', [
-    ['marginTop', 'margin-top'], ['gap', 'gap'], ['height', 'height']
-  ]],
-  ['Разбор · Белок', '90', '.widget-bd-sheet__meal-axis', [
-    ['gap', 'gap'], ['marginTop', 'margin-top'], ['fontWeight', 'font-weight'], ['fontSize', 'font-size']
-  ]],
-  ['Разбор · Качество еды', '84', '.widget-bd-sheet__stack', [
-    ['marginTop', 'margin-top'], ['gap', 'gap'], ['height', 'height']
-  ]],
-  ['Разбор · Качество еды', '85', '.widget-bd-sheet__stack-col', [['gap', 'gap']]],
-  ['Разбор · Готовность ко сну', '84', '.widget-bd-sheet__evening', [
-    ['marginTop', 'margin-top'], ['gap', 'gap']
-  ]],
-  ['Разбор · Готовность ко сну', '85', '.widget-bd-sheet__evening-row', [['gap', 'gap']]],
-  ['Разбор · Готовность ко сну', '86', '.widget-bd-sheet__evening-label', [
-    ['width', 'width'], ['fontWeight', 'font-weight'], ['fontSize', 'font-size']
-  ]],
-  ['Разбор · Готовность ко сну', '87', '.widget-bd-sheet__evening-track', [['height', 'height']]],
-  ['Разбор · Готовность ко сну', '92', '.widget-bd-sheet__evening-dots', [
-    ['gap', 'gap'], ['marginTop', 'margin-top']
-  ]],
-  ['Разбор · Готовность ко сну', '94', '.widget-bd-sheet__evening-dot', [
-    ['width', 'width'], ['height', 'height']
-  ]]
+  ['Разбор · Клетчатка', 84, '.widget-bd-sheet__sources', ['marginTop', 'gap']],
+  ['Разбор · Клетчатка', 87, '.widget-bd-sheet__source-bar', ['height', 'marginTop']],
+  ['Разбор · Белок', 84, '.widget-bd-sheet__meal-bars', ['marginTop', 'gap', 'height']],
+  ['Разбор · Белок', 90, '.widget-bd-sheet__meal-axis', ['gap', 'marginTop', 'fontWeight', 'fontSize']],
+  ['Разбор · Качество еды', 84, '.widget-bd-sheet__stack', ['marginTop', 'gap', 'height']],
+  ['Разбор · Качество еды', 85, '.widget-bd-sheet__stack-col', ['gap']],
+  ['Разбор · Готовность ко сну', 84, '.widget-bd-sheet__evening', ['marginTop', 'gap']],
+  ['Разбор · Готовность ко сну', 85, '.widget-bd-sheet__evening-row', ['gap']],
+  ['Разбор · Готовность ко сну', 86, '.widget-bd-sheet__evening-label', ['width', 'fontWeight', 'fontSize']],
+  ['Разбор · Готовность ко сну', 87, '.widget-bd-sheet__evening-track', ['height']],
+  ['Разбор · Готовность ко сну', 91, '.widget-bd-sheet__evening-dots', ['gap', 'marginTop']],
+  ['Разбор · Готовность ко сну', 93, '.widget-bd-sheet__evening-dot', ['width', 'height']]
 ];
 
-// Отступления, названные вслух: каждое стоит на строке контракта или на
-// инварианте продукта, который старше кадра.
+// Кадр «Главная · дефолтная раскладка» — плитка за плиткой. Он же подложка
+// всех восемнадцати листов разбора: больше тысячи строк снимка побайтово
+// повторяют эти, поэтому закрытие кадра закрывает и их.
+const MAIN = [
+  // Калории, плитка-герой 2×2
+  [14, 'body:has(.widgets-tab) .widget--calories', ['background', 'padding']],
+  [15, '.widget-calories__hero-value', ['align', 'gap']],
+  [16, '.widget-calories__hero-value .widget-calories__value--lg', ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'color']],
+  [17, '.widget-calories__hero-remaining-label', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  [18, '.widget-calories__hero-bar-wrap', ['marginTop']],
+  [19, '.widget-calories__hero-bar', ['height', 'radius', 'background']],
+  [20, '.widget-calories__hero-bar-fill', ['height', 'radius', 'background']],
+  [21, '.widget-calories__hero-bar-foot', ['justify', 'align', 'marginTop']],
+  [22, '.widget-calories__hero-bar-col', ['direction', 'gap']],
+  [23, '.widget-calories__hero-bar-num', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [24, '.widget-calories__hero-bar-cap', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [25, '.widget-calories__hero-bar-col--end', ['align']],
+  [26, '.widget-calories__hero-bar-num--good', ['color']],
+  // Инсулиновая волна 2×2
+  [29, ['.widget-v4-stack__footer', '.widget-v4-insulin-wave__footer'], ['marginTop', 'justify', 'align']],
+  // Кольца БЖУ 3×2
+  [32, '.widget-v4-macros', ['gap', 'marginTop', 'marginBottom']],
+  // Шаги 2×1
+  [39, ['.widget-v4-row', '.widget-v4-row--tight'], ['justify', 'align', 'gap']],
+  [41, '.widget-v4-row__meta', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [42, '.widget-v4-stepbars', ['align', 'gap', 'height', 'marginTop']],
+  [43, '.widget-v4-stepbars__bar', ['radius', 'background']],
+  [45, '.widget-v4-stepbars__bar.is-goal', ['background']],
+  // Тепловая карта 2×1
+  [51, '.widget-v4-heat', ['gap', 'marginTop']],
+  [52, ['.widget-v4-heat__bar', '.widget-v4-heat__bar--d3'], ['height', 'radius', 'background']],
+  [53, ['.widget-v4-heat__bar', '.widget-v4-heat__bar--d1'], ['height', 'radius', 'background']],
+  [54, ['.widget-v4-heat__bar', '.widget-v4-heat__bar--d2'], ['height', 'radius', 'background']],
+  // Риск-радар 2×2, вид «Шкала»
+  [56, ['.widget-v4-hero-num__val', '.widget-risk-scale-hero .widget-v4-hero-num__val--risk'], ['fontWeight', 'fontSize', 'lineHeight']],
+  // Вес за месяц и Тренд здоровья 2×1
+  [62, '.widget-trend-compact__row', ['align', 'justify', 'gap', 'marginTop']],
+  [66, 'body:has(.widgets-tab) .widget--healthTrend', ['background']],
+  [67, '.widget-trend-compact__spark', ['marginBottom']],
+  // Вес 2×1, вид «Число и неделя»
+  [68, '.widget-weight__number-week-delta', ['fontWeight', 'fontSize', 'lineHeight']],
+  [69, '.widget-weight__number-week-spark', ['marginBottom']],
+  // Белок и Клетчатка 1×1
+  [71, '.widget-v4-goalbar', ['height', 'radius', 'background', 'marginTop']],
+  [72, '.widget-v4-goalbar__fill', ['radius']],
+  // Ярус «Рекомендуемый экран»
+  [75, '.widget-v4-recommended__card', ['radius', 'background', 'padding', 'align', 'gap']],
+  [77, '.widget-v4-recommended__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [78, '.widget-v4-recommended__desc', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  [79, '.widget-v4-recommended__btn', ['align', 'padding', 'radius', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  // Пустой экран
+  [81, ['.widgets-empty__title', '.widget-v4-empty .widgets-empty__title'], ['fontWeight', 'fontSize', 'color']],
+  [82, '.widget-v4-empty .widgets-empty__desc', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  [83, '.widget-v4-empty__btn', ['align', 'gap', 'marginTop', 'padding', 'radius', 'background', 'fontWeight', 'fontSize', 'color']],
+  [84, '.widget-v4-empty__reset', ['align', 'justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']]
+];
+
 const EXCEPTIONS = new Map([
   // Кадр рисует круг 30×30 без зоны нажатия. Палец меньше 44 px не ловит,
   // поэтому круг остался 30 px, а зона растянута псевдоэлементом ::before.
@@ -184,37 +277,44 @@ describe('каркас листа разбора против разбора к�
   });
 
   it('каркас листа совпадает с кадром «Разбор · Калории»', () => {
-    const drift = [];
-    for (const [index, selector, props] of SHELL) {
-      const value = razbor.get(`Разбор · Калории|${index}`);
-      expect(value, `нет строки разбора ${index}`).toBeTruthy();
-      const rule = rules.get(selector);
-      expect(rule, `нет правила ${selector}`).toBeTruthy();
-      for (const [kind, cssProp] of props) {
-        const want = norm(pick(value, kind));
-        if (want == null) continue;
-        const got = norm(rule[cssProp]);
-        if (want !== got) drift.push(`${selector} { ${cssProp} } — кадр: ${want}, код: ${got}`);
-      }
-    }
-    expect(drift).toEqual([]);
+    expect(compare({ razbor, rules, frame: 'Разбор · Калории', pairs: SHELL })).toEqual([]);
   });
 
   it('новые виды графика совпадают со своими кадрами', () => {
     const drift = [];
-    for (const [frame, index, selector, props] of CHARTS) {
-      const value = razbor.get(`${frame}|${index}`);
-      expect(value, `нет строки разбора ${frame} ${index}`).toBeTruthy();
-      const rule = rules.get(selector);
-      expect(rule, `нет правила ${selector}`).toBeTruthy();
-      for (const [kind, cssProp] of props) {
-        const want = norm(pick(value, kind));
-        if (want == null) continue;
-        const got = norm(rule[cssProp]);
-        if (want !== got) drift.push(`${selector} { ${cssProp} } — кадр: ${want}, код: ${got}`);
-      }
+    for (const [frame, index, sel, props] of CHARTS) {
+      drift.push(...compare({ razbor, rules, frame, pairs: [[index, sel, props]] }));
     }
     expect(drift).toEqual([]);
+  });
+
+  // Кадр Главной — плитка за плиткой. Он же подложка восемнадцати листов
+  // разбора, поэтому его закрытие закрывает 1 044 строки снимка следом.
+  it('кадр «Главная · дефолтная раскладка» совпадает с плитками', () => {
+    expect(compare({
+      razbor, rules, frame: 'Главная · дефолтная раскладка', pairs: MAIN
+    })).toEqual([]);
+  });
+
+  it('подложка листов разбора — тот же экран, что и кадр Главной', () => {
+    // Строки 02…72 каждого листа повторяют строки 01…71 кадра Главной: под
+    // шторкой стоит он же. Совпадение проверяется, чтобы закрытие кадра
+    // Главной честно закрывало и подложку.
+    const main = [];
+    for (let i = 1; i <= 87; i += 1) {
+      const v = razbor.get(`Главная · дефолтная раскладка|${i}`);
+      if (v != null) main.push(v);
+    }
+    const frames = [...new Set([...razbor.keys()]
+      .map((k) => k.split('|')[0])
+      .filter((f) => f.startsWith('Разбор · ')))];
+    let same = 0;
+    for (const frame of frames) {
+      for (let i = 2; i <= 72; i += 1) {
+        if (razbor.get(`${frame}|${i}`) === main[i - 2]) same += 1;
+      }
+    }
+    expect(same).toBeGreaterThanOrEqual(1000);
   });
 
   // Дефект, который нашло превью 30 августа: столбик недели рисовался

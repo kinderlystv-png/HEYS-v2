@@ -2047,6 +2047,42 @@
     );
   }
 
+  // Спарклайн плитки «Вес» 2×1: 58 × 22, семь последних настоящих взвешиваний,
+  // точка на последнем дне. Строка «состав дефолта»: «слева от числа спарклайн
+  // 58 × 22 тоном --gr2 с точкой на последнем дне». Тон фиксированный: линия
+  // говорит «как шло», а состояние несёт число.
+  function WidgetV4WeekSpark({ points, toneClass = '' }) {
+    const clean = (points || [])
+      .filter((p) => Number.isFinite(p?.weight) && !p.excluded && !p.estimated)
+      .slice(-7);
+    if (clean.length < 2) return null;
+    const weights = clean.map((p) => p.weight);
+    const min = Math.min(...weights);
+    const span = Math.max(0.1, Math.max(...weights) - min);
+    const coords = clean.map((p, i) => {
+      const x = 2 + (i / (clean.length - 1)) * 54;
+      const y = 17 - ((p.weight - min) / span) * 12;
+      return [Number(x.toFixed(1)), Number(y.toFixed(1))];
+    });
+    const last = coords[coords.length - 1];
+    return React.createElement('span', {
+      className: ('widget-weight__number-week-spark ' + toneClass).trim()
+    },
+      React.createElement('svg', {
+        width: 58, height: 22, viewBox: '0 0 58 22', fill: 'none', 'aria-hidden': 'true'
+      },
+        React.createElement('polyline', {
+          points: coords.map((c) => c.join(',')).join(' '),
+          stroke: 'currentColor',
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        }),
+        React.createElement('circle', { cx: last[0], cy: last[1], r: 2.4, fill: 'currentColor' })
+      )
+    );
+  }
+
   function formatRuDecimal(value, digits = 1) {
     const n = Number(value);
     if (!Number.isFinite(n)) return '—';
@@ -3095,7 +3131,9 @@
     return React.createElement('div', { className: 'widget-v4-stack' },
       React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
         v4Kicker('Инсулиновая волна'),
-        React.createElement('span', { className: 'widget-v4-row__meta' }, mealLabel)
+        React.createElement('span', {
+          className: 'widget-v4-row__meta widget-v4-row__meta--count'
+        }, mealLabel)
       ),
       InsulinWaveDaySvg({ v4 }),
       React.createElement('div', { className: 'widget-v4-stack__footer widget-v4-insulin-wave__footer' },
@@ -4824,7 +4862,8 @@
       );
     }
 
-    // SHORT (2×1) — «Число и неделя»: подпись слева, дельта и число справа, без спарклайна
+    // SHORT (2×1) — «Число и неделя»: подпись слева, дельта справа, ниже
+    // спарклайн недели и число у правого края (строка «состав дефолта»).
     if (size === '2x1') {
       if (variantId === 'number_week') {
         const weekText = Number.isFinite(weekChange)
@@ -4848,6 +4887,10 @@
               : React.createElement('span', { className: 'widget-weight__number-week-delta is-empty' }, '—')
           ),
           React.createElement('div', { className: 'widget-weight__number-week-row' },
+            React.createElement(WidgetV4WeekSpark, {
+              points: sparklinePoints,
+              toneClass: v4ValueStateClass(weekState)
+            }),
             React.createElement('span', { className: 'widget-weight__number-week-val' },
               hasCurrent ? formatRuDecimal(current, 1) : '—'
             )
@@ -5415,8 +5458,10 @@
       React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
         v4Kicker('Шаги'),
         avg != null
+          // Строка «вид · столбики шагов»: подпись «в среднем 8 940» стоит
+          // тоном чернил 42 %, состояние несут сами столбики.
           ? React.createElement('span', {
-            className: 'widget-v4-row__meta ' + v4ValueStateClass(state)
+            className: 'widget-v4-row__meta'
           }, `в среднем ${formatRuThousands(avg)}`)
           : null
       ),
@@ -6479,7 +6524,8 @@
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
           v4Kicker('Тепловая карта'),
           React.createElement('span', {
-            className: 'widget-v4-row__meta ' + v4ValueStateClass(v4HeatmapMetaState(filled, 7))
+            className: 'widget-v4-row__meta widget-v4-row__meta--count '
+              + v4ValueStateClass(v4HeatmapMetaState(filled, 7))
           }, `${filled} из 7`)
         ),
         React.createElement('div', { className: 'widget-v4-heat' },

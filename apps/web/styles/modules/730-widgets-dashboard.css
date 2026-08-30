@@ -4263,8 +4263,8 @@ body:has(.page-reports) .hdr::after {
 
 .widget-weight--number-week .widget-weight__number-week-row {
   display: flex;
-  align-items: baseline;
-  justify-content: flex-end;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: 8px;
   width: 100%;
   margin-top: auto;
@@ -4276,6 +4276,15 @@ body:has(.page-reports) .hdr::after {
   line-height: 1;
   white-space: nowrap;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
+/* Спарклайн недели слева от числа — кадр «Главная · дефолтная раскладка»,
+   элемент 69: своей ширины не занимает больше нужного, стоит на нижнем крае.
+   Цвет несёт тон-класс: строка «значение» — «роль красит число и линию». */
+.widget-weight__number-week-spark {
+  display: flex;
+  flex: none;
+  margin-bottom: 3px;
 }
 
 .widget-weight__number-week-val {
@@ -10485,7 +10494,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 .widget-calories__hero-main {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
   margin-top: 0;
   flex-shrink: 0;
 }
@@ -10518,7 +10527,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-weight: 500;
   line-height: 1;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
-  margin-top: 0;
+  margin-top: 7px;
   flex-shrink: 0;
 }
 
@@ -10577,7 +10586,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-sand-ink, #201e1d);
+  color: rgba(0, 0, 0, 0.85);
   font-variant-numeric: tabular-nums;
 }
 
@@ -10680,11 +10689,13 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-size: 14px;
 }
 
-.widget-v4-row__meta.widget-v4-val--good,
-.widget-v4-row__meta.widget-v4-val--bad,
-.widget-v4-row__meta.widget-v4-val--warn,
-.widget-v4-row__meta.widget-v4-val--act,
-.widget-v4-row__meta.widget-v4-val--neutral {
+/* Тон меняет цвет, но не кегль: кадр красит и мелкое сравнение («−0,9 за
+   неделю» тоном --gr), и крупный счётчик («5 из 7» тем же тоном). */
+.widget-v4-row__meta--count.widget-v4-val--good,
+.widget-v4-row__meta--count.widget-v4-val--bad,
+.widget-v4-row__meta--count.widget-v4-val--warn,
+.widget-v4-row__meta--count.widget-v4-val--act,
+.widget-v4-row__meta--count.widget-v4-val--neutral {
   font-size: 9.5px;
   font-weight: 700;
   line-height: 1;
@@ -10710,9 +10721,18 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   line-height: 1;
 }
 
+/* Шапка плитки: подпись и число стоят на общей базовой линии (кадры «Шаги»,
+   «Вес», «Вес за месяц», «Тренд здоровья»). Исключение — тепловая карта: там
+   справа счётчик, и кадр выравнивает его по центру. */
 .widget-v4-row--tight {
   height: auto;
+  align-items: baseline;
+  gap: 6px;
   flex-shrink: 0;
+}
+
+.widget-heatmap .widget-v4-row--tight {
+  align-items: center;
 }
 
 .widget-heatmap--2x1.widget-v4-stack,
@@ -10721,13 +10741,22 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   justify-content: space-between;
 }
 
+/* В шапке плитки кадр держит два разных числа. По умолчанию это сравнение
+   («в среднем 8 940», «−0,9 за неделю», «до цели 3,6») — 9 px/600 чернилами.
+   Счётчик («3 приёма», «5 из 7») крупнее и жирнее, ему нужен --count. */
 .widget-v4-row__meta {
-  font-size: 9.5px;
-  font-weight: 700;
+  font-size: 9px;
+  font-weight: 600;
   line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
   flex-shrink: 0;
   /* «формат чисел»: строки стоят столбцом — цифры табличные. */
   font-variant-numeric: tabular-nums;
+}
+
+.widget-v4-row__meta--count {
+  font-size: 9.5px;
+  font-weight: 700;
 }
 
 .widget-v4-unit {
@@ -11470,8 +11499,10 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
   color: rgba(0, 0, 0, 0.35);
 }
 
+/* Кадр «Главная · дефолтная раскладка», элемент 29: подпись волны прижата к
+   низу плитки — свой отступ сверху она не заводит, воздух даёт сам график. */
 .widget-v4-insulin-wave__footer {
-  margin-top: 9px;
+  margin-top: auto;
 }
 
 body:has(.widgets-tab) .widget--water .widget-water__bar,
@@ -13435,7 +13466,6 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 .widget-trend-compact__spark {
   flex: none;
   margin-bottom: 2px;
-  color: currentColor;
 }
 
 /* Перебор красит число и его подпись — эти правила стоят после базовых цветов
