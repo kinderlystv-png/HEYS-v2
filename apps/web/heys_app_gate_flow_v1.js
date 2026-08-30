@@ -2557,10 +2557,8 @@
                                                                             }
                                                                         }, badge.emoji + ' ' + badge.text);
                                                                     })(),
-                                                                    // Streak
-                                                                    stats.streak > 0 && React.createElement('span', {
-                                                                        style: { color: stats.streak >= 3 ? '#16a34a' : 'var(--muted)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }
-                                                                    }, '🔥 ' + stats.streak + ' дн.'),
+                                                                    // Серия переехала в нижний ярус карточки — контракт
+                                                                    // «карточка клиента · нижний ярус».
                                                                     // Last Active
                                                                     stats.lastActiveDate && React.createElement('span', { style: { fontSize: 12, color: 'var(--muted)' } },
                                                                         '📅 ' + formatLastActive(stats.lastActiveDate)
@@ -2569,54 +2567,68 @@
                                                                     isLast && React.createElement('span', { style: { color: '#4285f4', fontWeight: 500, fontSize: 12 } }, '✓')
                                                                 ),
 
-                                                                // 📊 Сводка дня с сервера: что клиент внёс сегодня, а что нет
+                                                                // Контракт «вид · карточка клиента»: метки дня одним набором и
+                                                                // одним порядком — ккал, вода, шаги, вес, сон, тренировка.
+                                                                // Так карточки сравниваются глазом по столбцу, а не читаются
+                                                                // каждая заново. Метка данных не нажимается и потому не
+                                                                // выглядит кнопкой.
                                                                 (() => {
                                                                     const day = daySummary && daySummary[c.id];
                                                                     if (!day) return null;
-                                                                    const cell = (icon, text, filled) => React.createElement('span', {
-                                                                        key: icon,
-                                                                        style: {
-                                                                            fontSize: 12,
-                                                                            fontWeight: 600,
-                                                                            color: filled ? 'var(--muted)' : '#dc2626',
-                                                                            whiteSpace: 'nowrap'
-                                                                        }
-                                                                    }, icon + ' ' + text);
-                                                                    const meals = Number(day.meals_count) || 0;
-                                                                    const water = Number(day.water_ml) || 0;
-                                                                    const steps = Number(day.steps) || 0;
-                                                                    const trainings = Number(day.trainings_count) || 0;
+                                                                    const mch = (text, tone) => React.createElement('span', {
+                                                                        key: text,
+                                                                        className: 'cur-cab__mch' + (tone ? ' is-' + tone : '')
+                                                                    }, text);
+                                                                    const num = (v) => Number(v) || 0;
+                                                                    const meals = num(day.meals_count);
+                                                                    const water = num(day.water_ml);
+                                                                    const steps = num(day.steps);
+                                                                    const trainings = num(day.trainings_count);
+                                                                    const weight = num(day.weight_morning);
+                                                                    const sleep = num(day.sleep_hours);
+                                                                    const hhmm = (h) => Math.floor(h) + ':'
+                                                                        + String(Math.round((h - Math.floor(h)) * 60)).padStart(2, '0');
                                                                     return React.createElement('div', {
-                                                                        className: 'curator-card-day-summary',
-                                                                        style: { display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }
+                                                                        className: 'cur-cab__mchs'
                                                                     },
-                                                                        cell('🍽', meals ? `${meals} · ${Math.round(Number(day.kcal) || 0)} ккал` : 'еды нет', meals > 0),
-                                                                        cell('💧', water ? `${(water / 1000).toFixed(1)} л` : 'воды нет', water > 0),
-                                                                        cell('👟', steps ? steps.toLocaleString('ru-RU') : 'шагов нет', steps > 0),
-                                                                        cell('🏋', trainings ? `${Number(day.training_min) || 0} мин` : 'без тренировки', trainings > 0)
+                                                                        mch(meals ? Math.round(num(day.kcal)) + ' ккал' : 'еды нет',
+                                                                            meals ? 'ok' : 'none'),
+                                                                        mch(water ? (water / 1000).toFixed(1).replace('.', ',') + ' л' : 'воды нет',
+                                                                            water ? 'ok' : 'none'),
+                                                                        mch(steps ? steps.toLocaleString('ru-RU') : 'шагов нет',
+                                                                            steps ? 'ok' : 'none'),
+                                                                        // Вес — величина без нормы: у него нет «хорошо» и
+                                                                        // «плохо», поэтому он остаётся нейтральным.
+                                                                        mch(weight ? String(Math.round(weight * 10) / 10).replace('.', ',') + ' кг' : 'веса нет',
+                                                                            weight ? null : 'none'),
+                                                                        mch(sleep ? hhmm(sleep) : 'сна нет', sleep ? 'ok' : 'none'),
+                                                                        mch(trainings ? num(day.training_min) + ' мин' : 'без тренировки',
+                                                                            trainings ? 'ok' : 'none')
                                                                     );
                                                                 })(),
 
-                                                                // 💬 Preview последнего сообщения (если есть)
-                                                                lastPreview && React.createElement('div', {
-                                                                    className: 'curator-card-msg-preview',
-                                                                    style: {
-                                                                        fontSize: 12,
-                                                                        color: unreadCount > 0 ? 'var(--text, #111)' : 'var(--muted, #888)',
-                                                                        fontWeight: unreadCount > 0 ? 600 : 400,
-                                                                        whiteSpace: 'nowrap',
-                                                                        overflow: 'hidden',
-                                                                        textOverflow: 'ellipsis',
-                                                                        maxWidth: '100%',
-                                                                        marginTop: 2
-                                                                    }
+                                                                // Контракт «карточка клиента · нижний ярус»: серия слева,
+                                                                // превью последнего сообщения справа. Обе строки называют,
+                                                                // о чём говорить с человеком, а метки выше — что у него в
+                                                                // дне. Нет одного — остаётся другое.
+                                                                (stats.streak > 0 || lastPreview) && React.createElement('div', {
+                                                                    className: 'cur-cab__foot'
                                                                 },
-                                                                    '💬 ' +
-                                                                    (lastPreview.sender_role === 'curator' ? 'Ты: ' : '') +
-                                                                    (lastPreview.body ||
-                                                                     (lastPreview.intent_type === 'meal' ? 'съел...' :
-                                                                      lastPreview.intent_type === 'training' ? 'тренировался' :
-                                                                      lastPreview.intent_type === 'weight' ? 'вес' : ''))
+                                                                    stats.streak > 0
+                                                                        ? React.createElement('span', { className: 'cur-cab__streak' },
+                                                                            stats.streak + ' ' + (stats.streak === 1 ? 'день' : stats.streak < 5 ? 'дня' : 'дней') + ' подряд')
+                                                                        : null,
+                                                                    lastPreview
+                                                                        ? React.createElement('span', {
+                                                                            className: 'cur-cab__preview'
+                                                                                + (unreadCount > 0 ? ' is-unread' : '')
+                                                                        },
+                                                                            (lastPreview.sender_role === 'curator' ? 'Вы: ' : '')
+                                                                            + (lastPreview.body
+                                                                                || (lastPreview.intent_type === 'meal' ? 'приём пищи'
+                                                                                    : lastPreview.intent_type === 'training' ? 'тренировка'
+                                                                                        : lastPreview.intent_type === 'weight' ? 'вес' : '')))
+                                                                        : null
                                                                 ),
 
                                                                 // Меню действий клиента вместо прежнего ряда кружков.

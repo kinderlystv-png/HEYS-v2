@@ -59,6 +59,35 @@ describe('панель куратора · место в кабинете', () =
       .toEqual(window.HEYS.NormCorrection.PANEL_STATES);
   });
 
+  it('метки дня — один набор и один порядок', () => {
+    // «Так карточки сравниваются глазом по столбцу»: порядок держит сравнение,
+    // а не украшает карточку.
+    const block = GATE.slice(GATE.indexOf("className: 'cur-cab__mchs'"),
+      GATE.indexOf("className: 'cur-cab__foot'"));
+    const order = block.match(/'(ккал|л'|шагов|кг'|сна|мин')/g);
+    expect(block.indexOf('ккал')).toBeLessThan(block.indexOf("' л'"));
+    expect(block.indexOf("' л'")).toBeLessThan(block.indexOf('toLocaleString'));
+    expect(block.indexOf('toLocaleString')).toBeLessThan(block.indexOf("' кг'"));
+    expect(block.indexOf("' кг'")).toBeLessThan(block.indexOf('hhmm(sleep)'));
+    expect(block.indexOf('hhmm(sleep)')).toBeLessThan(block.indexOf("' мин'"));
+    expect(order).toBeTruthy();
+    // Вес — величина без нормы: у него нет «хорошо» и «плохо».
+    expect(block).toContain("weight ? null : 'none'");
+    // Метка данных не кнопка: 24 px против интерактивного чипа в 44.
+    expect(CSS).toMatch(/\.cur-cab__mch \{[\s\S]{0,200}height: 24px/);
+    // Отсутствие записи не отклонение и красным не красится.
+    expect(CSS).toMatch(/\.cur-cab__mch\.is-none[\s\S]{0,160}background: transparent/);
+  });
+
+  it('нижний ярус: серия слева, превью справа, и одно не съедает другое', () => {
+    const foot = GATE.slice(GATE.indexOf("className: 'cur-cab__foot'"),
+      GATE.indexOf('Меню действий клиента'));
+    expect(foot.indexOf('cur-cab__streak')).toBeLessThan(foot.indexOf('cur-cab__preview'));
+    // Нет одного — остаётся другое.
+    expect(GATE).toContain('(stats.streak > 0 || lastPreview)');
+    expect(CSS).toMatch(/\.cur-cab__preview[\s\S]{0,200}text-overflow: ellipsis/);
+  });
+
   it('пять кружков собраны в лист, и ни одно действие не потерялось', () => {
     // Контракт «меню клиента вместо пяти кружков». Прежний ряд: диагностика,
     // id, правка, подписка, удаление — все пять остаются, у каждого имя.
