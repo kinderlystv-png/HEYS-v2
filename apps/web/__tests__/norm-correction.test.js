@@ -415,6 +415,41 @@ describe('поправка на факт · модель кураторской 
     expect(cold.evidenceRows).toBeNull();
   });
 
+  it('«сошлось» называет факт, а не хвалит, и знает свою серию', () => {
+    // Этот исход человек видит каждую спокойную неделю. Похвала, повторённая
+    // четыре недели, обесценивает себя и вызывает вопрос, читает ли систему
+    // кто-нибудь.
+    const flat = NC.compute({
+      days: days(21, 2400), formulaPerDay: 2400,
+      trend: { deltaKg: 0, measuredDays: 21, windowDays: 21 },
+      currentFactor: 1, historyDays: 60
+    });
+    const first = NC.buildWeeklySyncCard({ result: flat, tariff: 'self', matchedStreak: 1 });
+    expect(first.copy.title).toBe('Расчёт сходится с фактом');
+    expect(first.copy.title).not.toContain('договаривались');
+    expect(first.copy.body).not.toContain('неделя подряд');
+
+    const fourth = NC.buildWeeklySyncCard({ result: flat, tariff: 'self', matchedStreak: 4 });
+    expect(fourth.copy.body).toContain('четвёртая неделя подряд без правок');
+    expect(fourth.copy.body).toContain('внутри 2 %');
+    expect(fourth.matchedStreak).toBe(4);
+  });
+
+  it('серия спокойных недель опирается на историю, а не на память экрана', () => {
+    // При исходе «сошлось» человек ничего не нажимает и куратор ничего не
+    // решает — без записи серию негде взять.
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../heys_norm_correction_v1.js'), 'utf8');
+    expect(src).toContain("what: 'matched'");
+    expect(src).toContain("if (w && w.what === 'matched') matchedStreak++");
+    // Раз в неделю, а не на каждый заход.
+    expect(src).toContain('!(weeks[0] && weeks[0].weekLabel === weekKey)');
+    // И только когда писать вообще разрешено.
+    expect(src).toContain('canWrite && matchedNow');
+    // У исхода есть своё слово в истории решений.
+    expect(src).toContain("matched: 'сошлось'");
+  });
+
   it('точка недели в истории стоит по шкале, а не «примерно»', () => {
     const card = NC.buildCuratorCard({
       result: ready(), expenditure: 2400, deficitPct: -12,

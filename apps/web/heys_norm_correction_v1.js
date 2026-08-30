@@ -243,6 +243,7 @@
     postponed: 'отложил',
     frozen: 'заморозил',
     declined: 'отказался',
+    matched: 'сошлось',
     cold_start: 'холодный старт'
   };
 
@@ -500,6 +501,14 @@
     return 'недель';
   }
 
+  // «Четвёртая неделя подряд» — порядковым словом: «4-я неделя» в прозе
+  // выглядит служебной пометкой, а строка обращается к человеку.
+  const WEEK_ORDINAL = ['', 'первая', 'вторая', 'третья', 'четвёртая', 'пятая',
+    'шестая', 'седьмая', 'восьмая', 'девятая', 'десятая'];
+  function weekOrdinalRu(n) {
+    return WEEK_ORDINAL[n] || (n + '-я');
+  }
+
   function pluralWeeksRu(n) {
     return n + ' ' + weeksWordRu(n);
   }
@@ -519,7 +528,7 @@
   }
 
   function buildWeeklySyncCard({
-    result, tariff, applied, refusalStreak, weeksUnchanged, recomposition,
+    result, tariff, applied, refusalStreak, weeksUnchanged, matchedStreak, recomposition,
     justRaised, expenditure, deficitPct, basalMetabolism
   }) {
     const res = result || {};
@@ -675,14 +684,22 @@
     }
 
     if (res.status !== 'ready' || res.direction === 'hold') {
+      const streak = Number(matchedStreak) || 0;
       // Самый частый исход не должен занимать больше двух карточек.
       return Object.assign(card, {
         frame: 'matched',
         actions: ['ok'],
         decidedBy: 'nobody',
+        // Этот исход человек видит каждую спокойную неделю, поэтому фраза
+        // называет факт, а не хвалит: похвала, повторённая четыре недели,
+        // обесценивает себя и вызывает вопрос, читает ли систему кто-нибудь.
+        matchedStreak: streak,
         copy: {
-          title: 'Шли как договаривались',
-          body: 'Вес двигался так, как мы и рассчитывали. Норма остаётся прежней.',
+          title: 'Расчёт сходится с фактом',
+          body: streak > 1
+            ? weekOrdinalRu(streak) + ' неделя подряд без правок: расхождение'
+              + ' внутри ' + Math.round(DEAD_ZONE * 100) + ' %. Норма остаётся прежней.'
+            : 'Вес двигался так, как рассчитывали. Норма остаётся прежней.',
           heroCaption: 'без изменений',
           actionLabels: { ok: 'Хорошо' }
         }
@@ -1016,6 +1033,14 @@
       if (w && w.what !== 'applied') weeksUnchanged++;
       else break;
     }
+    // Серия спокойных недель. Без записи в историю её негде взять: при исходе
+    // «сошлось» человек ничего не нажимает и куратор ничего не решает, а
+    // строка «четвёртая неделя подряд» обязана на что-то опираться.
+    let matchedStreak = 0;
+    for (const w of weeks) {
+      if (w && w.what === 'matched') matchedStreak++;
+      else break;
+    }
 
     // Косвенный довод замораживает норму, но заморозка отсчитывается от первой
     // просьбы о замере — значит эту просьбу надо поставить в тот же момент,
@@ -1050,9 +1075,23 @@
       justRaised = { previousFactor };
     }
 
+    // Неделя закрылась совпадением — записываем это раз в неделю, как и
+    // применённый рост. Иначе серия обнуляется при каждом заходе, а история
+    // решений не отличает «сходилось» от «человек молчал».
+    const matchedNow = result.status === 'ready' && result.direction === 'hold';
+    const weekKey = weekLabel || base.toISOString().split('T')[0];
+    if (canWrite && matchedNow && !(weeks[0] && weeks[0].weekLabel === weekKey)) {
+      recordDecision({
+        lsGet, lsSet, weekLabel: weekKey,
+        factor: result.nextFactor, what: 'matched', now: base.getTime()
+      });
+      matchedStreak++;
+    }
+
     const card = buildWeeklySyncCard({
       result,
       justRaised,
+      matchedStreak,
       recomposition: recomposition,
       tariff: activeTariff,
       // «Применено» — про эту неделю, а не про то, что поправку когда-то
