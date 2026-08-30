@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="./v4-canvas.css" rel="stylesheet">
+<script src="./contract-audit.js"></script>
+<style>
+  body{margin:0;background:var(--page);font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  a{color:var(--ac);text-decoration:none}
+  a:hover{color:var(--acs)}
+  .ph{width:330px;height:auto;min-height:0;display:block;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)}
+  .sc{flex:none;min-height:0;overflow:visible;padding:6px 18px 18px}
+  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(var(--ink),.42)}
+  .n{font-variant-numeric:tabular-nums}
+  .tier{font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:20px 0 10px}
+  .grp{background:var(--c1);border-radius:20px;padding:16px}
+  .cd{background:var(--c1);border-radius:20px;padding:2px 14px}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif}
+  .lab{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
+  .lab b{font:700 12.5px/1 Figtree,sans-serif;color:#201e1d}
+  .lab span{font:500 11px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.45)}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 0}
+  .ttl{font:700 15px/1 Figtree,sans-serif;color:var(--tx)}
+  .btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--acs);font:700 13px/1 Figtree,sans-serif;color:var(--on-acs)}
+  .btn2c{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c2);font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.58)}
+  .badge{font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;padding:4px 7px;border-radius:999px;background:var(--c2);color:var(--ac)}
+  .p{font:500 12px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.6);margin-top:8px;text-wrap:pretty}
+  .sm{font:500 11px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty}
+  .h1{font:700 16px/1.32 Figtree,sans-serif;color:var(--tx);text-wrap:pretty}
+  .big{font:800 30px/1 Figtree,sans-serif;color:var(--tx);letter-spacing:-.02em}
+  .pl{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:26px 0 10px}
+  .an{width:302px;flex:none}
+  .anh{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ac);margin:0 0 12px}
+  .ab{border-left:2px solid rgba(var(--ink),.14);padding:0 0 0 12px;margin:0 0 15px}
+  .ab b{display:block;font:700 12px/1.35 Figtree,sans-serif;color:var(--tx)}
+  .ab span{display:block;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.58);margin-top:3px;text-wrap:pretty}
+  .ab i{display:block;font:600 10.5px/1.5 Figtree,sans-serif;color:var(--ac);font-style:normal;margin-top:5px;text-wrap:pretty}
+  .sect{display:flex;align-items:baseline;gap:10px;margin:44px 0 14px}
+  .sect .lt{flex:none;font:700 10px/1 ui-monospace,Menlo,monospace;padding:6px 9px;background:var(--c2);color:var(--ac);border-radius:999px}
+  .sect .tt{font:700 15px/1.2 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em}
+  .sect .st{font:500 11.5px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45)}
+  .spec{display:grid;grid-template-columns:210px 1fr;gap:6px 18px;padding:9px 0;border-bottom:1px solid rgba(var(--ink),.07);align-items:baseline}
+  .spec>b{font:700 11.5px/1.4 Figtree,sans-serif;color:var(--tx)}
+  .spec>span[data-v]{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.62);text-wrap:pretty}
+  .spec>span[data-v]::after{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;font-style:normal;text-wrap:pretty}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(var(--ink),.38);margin:18px 0 2px}
+  .tabs{display:flex;gap:5px;padding:0 16px;margin-top:12px}
+  .tab{flex:none;padding:8px 9px;border-radius:999px;font:700 10.5px/1 Figtree,sans-serif;background:var(--c1);color:rgba(var(--ink),.5);white-space:nowrap}
+  .tab.on{background:var(--acs);color:var(--on-acs)}
+  .av{flex:none;width:34px;height:34px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--ac)}
+  .cl{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid rgba(var(--ink),.07)}
+  .cln{display:block;font:700 12.5px/1.25 Figtree,sans-serif;color:var(--tx)}
+  .cls{display:block;font:600 11px/1.35 Figtree,sans-serif;margin-top:3px}
+  .dot{flex:none;width:7px;height:7px;border-radius:999px;margin-right:6px;display:inline-block;vertical-align:1px}
+  .mch{font:600 11px/1 Figtree,sans-serif;padding:0 8px;height:24px;display:inline-flex;align-items:center;border-radius:8px;background:var(--c2);color:rgba(var(--ink),.5);white-space:nowrap}
+  .mch.ok{background:var(--gr-bg);color:var(--gr)}
+  .mch.no{background:var(--tint);color:var(--ac2)}
+  .mch.mute{background:transparent;box-shadow:inset 0 0 0 1px var(--v4-line);color:rgba(var(--ink),.38)}
+  .ico{flex:none;width:40px;height:40px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--ac)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-radius:28px 28px 0 0;padding:20px 18px 16px}
+  .fld{background:var(--c1);border-radius:14px;min-height:44px;display:flex;align-items:center;padding:0 14px;font:600 14px/1 Figtree,sans-serif;color:var(--tx);margin-top:7px}
+  .flab{font:700 10.5px/1 Figtree,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:rgba(var(--ink),.45);margin-top:14px}
+  .st2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+  .stc{background:var(--c1);border-radius:16px;padding:12px 14px}
+  .stv{font:800 20px/1 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em}
+  .stk{font:600 10.5px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:5px}
+</style>
+</helmet>
+<div style="background:var(--page);padding:44px 46px 70px;width:max-content;min-width:100%;">
+  <div style="max-width:1080px;">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <h1 style="font:800 22px/1.2 Figtree,sans-serif;color:#201e1d;letter-spacing:-.01em;margin:0;">Кабинет куратора</h1>
+      <span style="font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:7px 11px;border-radius:999px;background:#b4442a;color:#fff;">В ПРОД — ПАНЕЛЬ НОВАЯ, ОСТАЛЬНОЕ ТОЛЬКО ВИД</span>
+      <div data-ctrbar style="font:700 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);"></div>
+      <div data-protbar style="font:700 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);"></div>
+    </div>
+    <p style="font:500 13px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);margin:14px 0 0;text-wrap:pretty;">Канвас про весь кабинет куратора. <b>Новое здесь одно — «Панель»</b>, пятая вкладка: она отвечает на вопрос «кем заняться сегодня». Остальные вкладки — «Клиенты», «Очередь», «Заявки», «Диагностика» и служебные листы — существуют в продукте, и у них менялся <b>только вид</b>: ни один экран, действие или поле не добавлены и не убраны. Ушли тёмная шапка с фиолетовой заливкой, эмодзи, безымянные круглые кнопки и лишние отступы; пришли те же карточки, чипы и листы, что во всём продукте. Вкладка «Клиенты» рядом остаётся списком людей — имя, телефон, подписка, вход в дневник; панель показывает не людей, а их состояние, и порядок в ней не алфавитный. Работает куратор всё равно в дневнике: панель говорит «к кому идти», дневник — «что делать». Пять вопросов задания получили ответ кадром, а не письмом: старшинство состояний в строке, порядок и фильтр, открытие карточки листом, срок жизни решения, разница с соседними вкладками.</p>
+    <p style="font:500 11px/1.6 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.45);margin:10px 0 0;">curator-cabinet · протокол: journal/2026-08.md · экраны искать по data-screen-label · соседи: norm-correction.v4.dc.html (карточка поправки — канон), reports-insights.v4.dc.html (вкладки клиента глазами куратора)</p>
+    <div style="margin-top:18px;padding:18px 20px;background:#fffaf1;border-radius:20px;">
+      <div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);">Четыре состояния и их старшинство</div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 34px;margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>1 · Ждёт решения</span><span style="color:rgba(0,0,0,.55);text-align:right;">поправка посчитана, куратор не ответил</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>2 · Молчит</span><span style="color:rgba(0,0,0,.55);text-align:right;">дней без записей</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>3 · Расчёт разошёлся</span><span style="color:rgba(0,0,0,.55);text-align:right;">факт против формулы, в процентах</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>4 · Всё ровно</span><span style="color:rgba(0,0,0,.55);text-align:right;">свёрнуто в одну строку счётом</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Заполняется сегодня</span><span style="color:rgba(0,0,0,.55);text-align:right;">молчит, еда, вода, шаги, вес, сон</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Ждёт сервера</span><span style="color:rgba(0,0,0,.55);text-align:right;">окно 21 день, профиль, история решений, талия</span></div>
+      </div>
+      <div style="font:500 11.5px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:10px;text-wrap:pretty;">Два верхних состояния сегодня заполнить нечем — поэтому «данных пока нет» нарисовано наравне с полным видом, а не приписано мелким шрифтом. Сервер доделывается под кадр, а не кадр под сервер.</div>
+    </div>
+  </div>
+
+  <div class="sect"><span class="lt">А</span><span class="tt">Панель — полный вид</span><span class="st">состояния сверху вниз по старшинству · «всё ровно» свёрнуто</span></div>
+  <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
+    <div>
+      <div class="lab"><b>Панель · есть работа</b><span>четыре состояния разом · строка несёт одно</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Панель · есть работа" data-vid="вид · строка клиента">
+        <div class="top"><span class="ttl">Кабинет</span><span class="k n">14 клиентов</span></div>
+        <div class="tabs"><span class="tab">Клиенты</span><span class="tab">Очередь</span><span class="tab on">Панель</span><span class="tab">Заявки</span><span class="tab">Диагн.</span></div>
+        <div class="sc">
+          <div class="tier">Ждут решения · 2</div>
+          <div class="cd">
+            <div class="cl">
+              <span class="av">АК</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Анна К.</span><span class="cls" style="color:var(--ac);"><span class="dot" style="background:var(--acs);"></span>поправка ×0,97 · норма 2 112 → 2 049</span></span>
+              <span class="badge n">3 дн</span>
+            </div>
+            <div class="cl" style="border-bottom:none;">
+              <span class="av">МД</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Максим Д.</span><span class="cls" style="color:var(--ac);"><span class="dot" style="background:var(--acs);"></span>поправка ×1,03 · норма 2 480 → 2 554</span></span>
+              <span class="badge n">1 дн</span>
+            </div>
+          </div>
+          <div class="tier">Молчат · 3</div>
+          <div class="cd">
+            <div class="cl">
+              <span class="av">ПВ</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Павел В.</span><span class="cls" style="color:rgba(var(--ink),.55);">не пишет 6 дней · последний вес 12 авг</span></span>
+              <span class="badge n">6 дн</span>
+            </div>
+            <div class="cl">
+              <span class="av">ЕЛ</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Елена Л.</span><span class="cls" style="color:rgba(var(--ink),.55);">не пишет 4 дня <span style="color:var(--ac);">· и расчёт разошёлся</span></span></span>
+              <span class="badge n">4 дн</span>
+            </div>
+            <div class="cl" style="border-bottom:none;">
+              <span class="av">СГ</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Сергей Г.</span><span class="cls" style="color:rgba(var(--ink),.55);">не пишет 3 дня · вода и шаги пустые</span></span>
+              <span class="badge n">3 дн</span>
+            </div>
+          </div>
+          <div class="tier">Расчёт разошёлся · 1</div>
+          <div class="cd">
+            <div class="cl" style="border-bottom:none;">
+              <span class="av">ИС</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Ирина С.</span><span class="cls" style="color:rgba(var(--ink),.55);"><span class="dot" style="background:var(--gr2);"></span>факт ниже формулы на 8 % · данных хватает</span></span>
+              <span class="badge n">21 дн</span>
+            </div>
+          </div>
+          <div class="tier">Всё ровно</div>
+          <div class="cd">
+            <div class="cl" style="border-bottom:none;">
+              <span style="flex:1;font:600 12px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.55);">Восемь клиентов пишут и держатся нормы</span>
+              <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">показать</span>
+            </div>
+          </div>
+          <div class="sm">Строка несёт одно состояние — самое старшее. Второе дописывается тем же шрифтом акцентом («и расчёт разошёлся»), а не второй пилюлей: две метки в строке заставляют выбирать, куда смотреть.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Панель · данных пока нет</b><span>окно, профиль и история ещё не отдаются сервером</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Панель · данных пока нет">
+        <div class="top"><span class="ttl">Кабинет</span><span class="k n">14 клиентов</span></div>
+        <div class="tabs"><span class="tab">Клиенты</span><span class="tab">Очередь</span><span class="tab on">Панель</span><span class="tab">Заявки</span><span class="tab">Диагн.</span></div>
+        <div class="sc">
+          <div class="grp" style="margin-top:12px;">
+            <div class="h1">Поправка считается не для всех</div>
+            <div class="p">У девяти клиентов из четырнадцати не набраны гейты расчёта: нужно десять дней с записями и шесть настоящих взвешиваний внутри окна 21 день. Пока их нет, расхождение расчёта я не покажу — оценка на четырёх днях хуже, чем её отсутствие.</div>
+          </div>
+          <div class="tier">Молчат · 3</div>
+          <div class="cd">
+            <div class="cl">
+              <span class="av">ПВ</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Павел В.</span><span class="cls" style="color:rgba(var(--ink),.55);">не пишет 6 дней · последний вес 12 авг</span></span>
+              <span class="badge n">6 дн</span>
+            </div>
+            <div class="cl" style="border-bottom:none;">
+              <span class="av">СГ</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Сергей Г.</span><span class="cls" style="color:rgba(var(--ink),.55);">не пишет 3 дня · вода и шаги пустые</span></span>
+              <span class="badge n">3 дн</span>
+            </div>
+          </div>
+          <div class="tier">Копят данные · 9</div>
+          <div class="cd">
+            <div class="cl">
+              <span class="av">ИС</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Ирина С.</span><span class="cls" style="color:rgba(var(--ink),.42);">дни 14 из 10 · взвешивания 4 из 6</span></span>
+              <span style="font:700 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">нужно 2</span>
+            </div>
+            <div class="cl" style="border-bottom:none;">
+              <span class="av">НБ</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Наталья Б.</span><span class="cls" style="color:rgba(var(--ink),.42);">дни 6 из 10 · взвешивания 2 из 6</span></span>
+              <span style="font:700 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">нужно 4</span>
+            </div>
+          </div>
+          <div class="sm">Счёт называет оба гейта и чего именно не хватает: «дни 14 из 10» уже пройдены, мешают взвешивания — поэтому справа «нужно 2», а не число дней. Знаменатель 21 в строку не идёт: это длина окна, а не условие.</div>
+        </div>
+      </div>
+    </div>
+    <div class="an" data-nomirror>
+      <div class="anh">Как читается панель</div>
+      <div class="ab" data-anchor="Ждут решения · 2"><b>Одно состояние на строку, старшинство жёсткое</b><span>Ждёт решения → молчит → расчёт разошёлся → всё ровно. Клиент попадает в ту группу, где его состояние старше, и второй раз в списке не появляется — иначе счёт групп перестаёт складываться в число клиентов.</span><i>второе состояние дописывается акцентной фразой в той же строке: «не пишет 4 дня · и расчёт разошёлся»</i></div>
+      <div class="ab" data-anchor="Всё ровно"><b>«Всё ровно» занимает одну строку</b><span>Самое частое состояние не должно занимать столько же места, сколько тревожное. Восемь спокойных клиентов — одна строка со счётом и словом «показать»; развернуть можно, но по умолчанию они не отвлекают.</span></div>
+      <div class="ab" data-anchor="Поправка считается не для всех"><b>«Копят данные» — рабочее состояние, не пустота</b><span>Первые три недели у любого клиента данных не хватает, и это нормально. Панель говорит, кому сколько осталось, вместо того чтобы показывать расхождение по четырём дням.</span><i>здесь же честно сказано, что оценка на неполном окне хуже её отсутствия — это правило зоны, а не отговорка</i></div>
+      <div class="ab"><b>Число в пилюле — давность, не важность</b><span>Справа всегда один смысл: сколько дней назад это началось. У «ждёт решения» — сколько висит без ответа, у «молчит» — сколько без записей, у «копят» — сколько осталось. Пилюля акцентная только там, где нужно решение.</span></div>
+    </div>
+  </div>
+
+  <div class="sect"><span class="lt">Б</span><span class="tt">Карточка открывается листом</span><span class="st">канон карточки — norm-correction.v4.dc.html, здесь только способ открытия</span></div>
+  <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
+    <div>
+      <div class="lab"><b>Панель · лист поверх</b><span>тап по строке · панель остаётся под шторкой</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Панель · лист поверх" data-vid="вид · лист поверх панели">
+        <div class="top"><span class="ttl">Кабинет</span><span class="k n">14 клиентов</span></div>
+        <div class="tabs"><span class="tab">Клиенты</span><span class="tab">Очередь</span><span class="tab on">Панель</span><span class="tab">Заявки</span><span class="tab">Диагн.</span></div>
+        <div class="sc" style="opacity:.35;">
+          <div class="tier">Ждут решения · 2</div>
+          <div class="cd">
+            <div class="cl" style="border-bottom:none;">
+              <span class="av">АК</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Анна К.</span><span class="cls" style="color:var(--ac);">поправка ×0,97</span></span>
+              <span class="badge n">3 дн</span>
+            </div>
+          </div>
+          <div style="height:290px;"></div>
+        </div>
+        <div style="position:absolute;inset:0;background:var(--scrim);"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-radius:28px 28px 0 0;padding:20px 18px 16px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="av">АК</span>
+            <span style="flex:1;"><span class="cln">Анна К.</span><span class="cls" style="color:rgba(var(--ink),.45);">окно 21 день · 10–30 авг</span></span>
+            <span class="badge">Pro</span>
+          </div>
+          <div class="cd" style="margin-top:12px;">
+            <div class="row"><span style="color:var(--tx);">Формула говорит</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 400</span></div>
+            <div class="row"><span style="color:var(--tx);">Факт говорит</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">2 210</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Норма дня станет</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 049</span></div>
+          </div>
+          <div class="btn" style="margin-top:14px;">Применить с завтра</div>
+          <div style="display:flex;gap:8px;margin-top:9px;">
+            <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c2);font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.58);">Отложить</span>
+            <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c2);font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.58);">Заморозить</span>
+          </div>
+          <div class="btn2c" style="margin-top:9px;">Открыть дневник Анны</div>
+          <div class="sm">Три действия те же, что в кураторской карточке norm-correction: применить, отложить, заморозить. Лист показывает её числа и ничего не пересчитывает.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Панель · решение принято</b><span>что видно сразу после ответа куратора</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Панель · решение принято">
+        <div class="top"><span class="ttl">Кабинет</span><span class="k n">14 клиентов</span></div>
+        <div class="tabs"><span class="tab">Клиенты</span><span class="tab">Очередь</span><span class="tab on">Панель</span><span class="tab">Заявки</span><span class="tab">Диагн.</span></div>
+        <div class="sc">
+          <div class="tier">Ждут решения · 1</div>
+          <div class="cd">
+            <div class="cl" style="border-bottom:none;">
+              <span class="av">МД</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Максим Д.</span><span class="cls" style="color:var(--ac);">поправка ×1,03 · норма 2 480 → 2 554</span></span>
+              <span class="badge n">1 дн</span>
+            </div>
+          </div>
+          <div class="tier">Решено сегодня · 1</div>
+          <div class="cd">
+            <div class="cl" style="border-bottom:none;">
+              <span class="av">АК</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Анна К.</span><span class="cls" style="color:var(--gr);">норма 2 049 · применена с 31 авг</span></span>
+              <span style="font:700 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">вы</span>
+            </div>
+          </div>
+          <div class="tier">Молчат · 3</div>
+          <div class="cd">
+            <div class="cl" style="border-bottom:none;">
+              <span class="av">ПВ</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Павел В.</span><span class="cls" style="color:rgba(var(--ink),.55);">не пишет 6 дней</span></span>
+              <span class="badge n">6 дн</span>
+            </div>
+          </div>
+          <div class="sm">«Решено сегодня» стоит до конца дня и исчезает само. Строка нужна, чтобы куратор видел результат своего действия: без неё клиент просто пропадает из списка, и остаётся сомнение, нажалось ли.</div>
+        </div>
+      </div>
+    </div>
+    <div class="an" data-nomirror>
+      <div class="anh">Открытие и срок решения</div>
+      <div class="ab" data-anchor="окно 21 день · 10–30 авг"><b>Лист поверх панели, не отдельный экран</b><span>Куратор просматривает несколько клиентов подряд — уход на экран и возврат сбивают место в списке. Лист закрывается вниз, панель под ним остаётся на той же позиции.</span><i>разворот строки не подошёл: в карточке шесть чисел и две кнопки, внутри строки они превращают список в стену</i></div>
+      <div class="ab" data-anchor="Решено сегодня · 1"><b>Решение держится до конца дня</b><span>Не «исчезает сразу» и не «до следующего понедельника»: первое лишает куратора подтверждения, второе держит в панели строку, по которой делать больше нечего. День — ровно тот срок, пока человек ещё помнит, что нажимал.</span></div>
+      <div class="ab" data-anchor="Открыть дневник Анны"><b>Вход в дневник — вторая кнопка, не первая</b><span>Панель отвечает «к кому идти». Но решение по поправке принимается здесь же, поэтому первая кнопка — применение, а дневник рядом: «посмотреть, прежде чем решить».</span></div>
+    </div>
+  </div>
+
+  <div class="sect"><span class="lt">В</span><span class="tt">Порядок, фильтр и пустые состояния</span><span class="st">чем панель отличается от «Клиентов», «Очереди» и «Модерации»</span></div>
+  <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
+    <div>
+      <div class="lab"><b>Панель · фильтр состоянием</b><span>порядок руками не меняется, состав — да</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Панель · фильтр состоянием" data-vid="вид · чипы фильтра">
+        <div class="top"><span class="ttl">Кабинет</span><span class="k n">14 клиентов</span></div>
+        <div class="tabs"><span class="tab">Клиенты</span><span class="tab">Очередь</span><span class="tab on">Панель</span><span class="tab">Заявки</span><span class="tab">Диагн.</span></div>
+        <div class="sc">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+            <span class="badge" style="background:var(--acs);color:var(--on-acs);">все · 14</span>
+            <span class="badge">ждут решения · 2</span>
+            <span class="badge">разошёлся · 1</span>
+            <span class="badge">молчат · 3</span>
+            <span class="badge" style="color:rgba(var(--ink),.45);">копят · 9</span>
+          </div>
+          <div class="grp" style="margin-top:12px;">
+            <div style="font:700 12.5px/1.3 Figtree,sans-serif;color:var(--tx);">Порядок не настраивается</div>
+            <div class="p">Сверху всегда то, где нужно решение, ниже молчащие, потом расхождение расчёта. Внутри группы — по давности, старое выше. Алфавит и поиск живут во вкладке «Клиенты»: там ищут человека, здесь смотрят состояние.</div>
+          </div>
+          <div class="tier">Ждут решения · 2</div>
+          <div class="cd">
+            <div class="cl">
+              <span class="av">АК</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Анна К.</span><span class="cls" style="color:var(--ac);">поправка ×0,97</span></span>
+              <span class="badge n">3 дн</span>
+            </div>
+            <div class="cl" style="border-bottom:none;">
+              <span class="av">МД</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Максим Д.</span><span class="cls" style="color:var(--ac);">поправка ×1,03</span></span>
+              <span class="badge n">1 дн</span>
+            </div>
+          </div>
+          <div class="sm">Чип меняет состав списка, не порядок. Выбран один — группы не показываются, строки идут сплошняком.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Панель · работать не с кем</b><span>все пишут и держатся нормы</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Панель · работать не с кем" data-vid="вид · пустые состояния">
+        <div class="top"><span class="ttl">Кабинет</span><span class="k n">14 клиентов</span></div>
+        <div class="tabs"><span class="tab">Клиенты</span><span class="tab">Очередь</span><span class="tab on">Панель</span><span class="tab">Заявки</span><span class="tab">Диагн.</span></div>
+        <div class="sc">
+          <div class="grp" style="margin-top:12px;background:var(--gr-bg);">
+            <div class="h1">Сегодня всё ровно</div>
+            <div class="p">Все четырнадцать пишут дневник, ни у кого расчёт не расходится, решений от вас никто не ждёт. Это не пустой экран — это результат.</div>
+          </div>
+          <div class="tier">Что можно посмотреть</div>
+          <div class="cd">
+            <div class="cl">
+              <span style="flex:1;font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Все клиенты с состоянием</span>
+              <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">14</span>
+            </div>
+            <div class="cl">
+              <span style="flex:1;font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Непрочитанные сообщения</span>
+              <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">3</span>
+            </div>
+            <div class="cl" style="border-bottom:none;">
+              <span style="flex:1;font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Заявки в модерации</span>
+              <span style="font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">нет</span>
+            </div>
+          </div>
+          <div class="sm">Пустая панель не выглядит сломанной: она называет причину и ведёт туда, где работа всё-таки есть.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Панель · клиентов ещё нет</b><span>у нового куратора</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Панель · клиентов ещё нет">
+        <div class="top"><span class="ttl">Кабинет</span><span class="k">0 клиентов</span></div>
+        <div class="tabs"><span class="tab">Клиенты</span><span class="tab">Очередь</span><span class="tab on">Панель</span><span class="tab">Заявки</span><span class="tab">Диагн.</span></div>
+        <div class="sc">
+          <div class="grp" style="margin-top:12px;">
+            <div class="h1">Клиентов пока нет</div>
+            <div class="p">Панель заполнится сама, когда появится первый: состояние считается из его дневника, ничего настраивать не нужно.</div>
+            <div class="btn2c" style="margin-top:14px;">Как добавить клиента</div>
+          </div>
+          <div class="tier">Что здесь будет</div>
+          <div class="cd">
+            <div class="cl"><span style="flex:1;font:600 12px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.55);">Кто ждёт решения по норме</span></div>
+            <div class="cl"><span style="flex:1;font:600 12px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.55);">У кого расчёт расходится с фактом</span></div>
+            <div class="cl" style="border-bottom:none;"><span style="flex:1;font:600 12px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.55);">Кто перестал писать</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="an" data-nomirror>
+      <div class="anh">Порядок и соседние вкладки</div>
+      <div class="ab" data-anchor="Порядок не настраивается"><b>Порядок задан правилом, а не куратором</b><span>Ручная сортировка означала бы, что панель — второй список людей. Она про очередь дел, и очередь определяет старшинство состояния, а не привычка. Менять можно состав — чипами.</span></div>
+      <div class="ab" data-anchor="Сегодня всё ровно"><b>Три пустоты, три разных текста</b><span>«Клиентов нет» — у нового куратора, с рассказом, что здесь будет. «Всё ровно» — результат, а не пустота, и ведёт в соседние вкладки. «Копят данные» — рабочее состояние первых недель.</span></div>
+      <div class="ab"><b>Чем панель отличается от соседей</b><span>«Клиенты» — список людей: найти и войти. «Очередь» — входящие сообщения: ответить. «Модерация» — заявки и правки: подтвердить. «Панель» — состояние дневников: решить, кем заняться. Ни один список не поглощает другой, и один клиент может стоять в трёх сразу.</span><i>поэтому в панели нет ни поиска, ни счётчика сообщений в строке: и то и другое — работа соседних вкладок</i></div>
+    </div>
+  </div>
+
+  <div class="sect"><span class="lt">Г</span><span class="tt">Клиенты — шапка кабинета и список</span><span class="st">структура та же, вид приведён к системе: без тёмного блока и фиолетового</span></div>
+  <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
+    <div>
+      <div class="lab"><b>Кабинет · Клиенты</b><span>две карточки клиентов · шапка, вкладки, список</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Кабинет · Клиенты" data-vid="вид · шапка кабинета">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="flex:1;min-width:0;"><span style="display:block;font:800 17px/1.15 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em;">Кабинет куратора</span><span style="display:block;font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">2 клиента · система в норме</span></span>
+            <span class="ico">←</span>
+          </div>
+        </div>
+        <div class="tabs"><span class="tab on">Клиенты</span><span class="tab">Очередь</span><span class="tab">Панель</span><span class="tab">Заявки</span><span class="tab">Диагн.</span></div>
+        <div class="sc">
+          <div class="grp" style="margin-top:12px;">
+            <div style="display:flex;align-items:center;gap:11px;">
+              <span class="av">АЛ</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Александра</span><span class="cls n" style="color:rgba(var(--ink),.45);">+7 962 459-71-11</span></span>
+              <span class="badge" style="background:var(--gr-bg);color:var(--gr);">до 23.09</span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+              <span class="mch mute">еды нет</span>
+              <span class="mch mute">воды нет</span>
+              <span class="mch mute">шагов нет</span>
+              <span class="mch mute">без тренировки</span>
+            </div>
+            <div style="font:600 11.5px/1.45 Figtree,sans-serif;color:var(--ac);margin-top:10px;">В 16:40 забить надо 500 мл</div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--acs);font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);">Открыть дневник</span>
+              <span class="ico">⋯</span>
+            </div>
+          </div>
+          <div class="grp" style="margin-top:10px;">
+            <div style="display:flex;align-items:center;gap:11px;">
+              <span class="av">АП</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Антон П.</span><span class="cls n" style="color:rgba(var(--ink),.45);">+7 962 455-61-11</span></span>
+              <span class="badge" style="background:var(--gr-bg);color:var(--gr);">до 06.09</span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+              <span class="mch mute">еды нет</span>
+              <span class="mch mute">воды нет</span>
+              <span class="mch mute">шагов нет</span>
+              <span class="mch mute">без тренировки</span>
+            </div>
+            <div style="font:600 11.5px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:10px;">Последний вход 04:05</div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--acs);font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);">Открыть дневник</span>
+              <span class="ico">⋯</span>
+            </div>
+          </div>
+          <div class="btn2c" style="margin-top:12px;">Создать клиента</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Кабинет · Клиенты с данными</b><span>день заполнен · метрики числами, а не отсутствием</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Кабинет · Клиенты с данными" data-vid="вид · карточка клиента">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="flex:1;min-width:0;"><span style="display:block;font:800 17px/1.15 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em;">Кабинет куратора</span><span style="display:block;font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">14 клиентов · система в норме</span></span>
+            <span class="ico">←</span>
+          </div>
+        </div>
+        <div class="tabs"><span class="tab on">Клиенты</span><span class="tab">Очередь</span><span class="tab">Панель</span><span class="tab">Заявки</span><span class="tab">Диагн.</span></div>
+        <div class="sc">
+          <div class="grp" style="margin-top:12px;">
+            <div style="display:flex;align-items:center;gap:11px;">
+              <span class="av">АЛ</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Александра</span><span class="cls n" style="color:rgba(var(--ink),.45);">+7 962 459-71-11</span></span>
+              <span class="badge" style="background:var(--gr-bg);color:var(--gr);">до 23.09</span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+              <span class="mch ok n">1 840 ккал</span>
+              <span class="mch ok n">1,6 л</span>
+              <span class="mch ok n">11 200 шагов</span>
+              <span class="mch n">53,1 кг</span>
+              <span class="mch ok n">сон 7:20</span>
+              <span class="mch ok">силовая 55 мин</span>
+            </div>
+            <div style="font:600 11.5px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:10px;">4 приёма · последний в 19:40</div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--acs);font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);">Открыть дневник</span>
+              <span class="ico">⋯</span>
+            </div>
+          </div>
+          <div class="grp" style="margin-top:10px;">
+            <div style="display:flex;align-items:center;gap:11px;">
+              <span class="av">АП</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Антон П.</span><span class="cls n" style="color:rgba(var(--ink),.45);">+7 962 455-61-11</span></span>
+              <span class="badge" style="background:var(--c2);color:var(--ac);">до 06.09</span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+              <span class="mch no n">3 120 ккал</span>
+              <span class="mch ok n">2,5 л</span>
+              <span class="mch no n">5 000 шагов</span>
+              <span class="mch n">91,1 кг</span>
+              <span class="mch mute">сна нет</span>
+              <span class="mch mute">без тренировки</span>
+            </div>
+            <div style="font:600 11.5px/1.45 Figtree,sans-serif;color:var(--ac);margin-top:10px;">Перебор 640 ккал · третий день подряд</div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--acs);font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);">Открыть дневник</span>
+              <span class="ico">⋯</span>
+            </div>
+          </div>
+          <div class="sm">Чип с числом набран тоном --tx, чип отсутствия — приглушённый: заполненный день должен читаться заполненным с одного взгляда, а пустой не притворяться данными.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Кабинет · меню клиента</b><span>пять круглых кнопок собраны в один лист</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Кабинет · меню клиента">
+        <div style="padding:16px 18px 0;opacity:.35;">
+          <div style="font:800 17px/1.15 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em;">Кабинет куратора</div>
+        </div>
+        <div class="sc" style="opacity:.35;">
+          <div class="grp" style="margin-top:12px;">
+            <div style="display:flex;align-items:center;gap:11px;"><span class="av">АЛ</span><span style="flex:1;"><span class="cln">Александра</span></span></div>
+          </div>
+          <div style="height:262px;"></div>
+        </div>
+        <div style="position:absolute;inset:0;background:var(--scrim);"></div>
+        <div class="sheet">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="av">АЛ</span>
+            <span style="flex:1;"><span class="cln">Александра</span><span class="cls" style="color:rgba(var(--ink),.45);">подписка активна до 23.09</span></span>
+          </div>
+          <div class="cd" style="margin-top:12px;">
+            <div class="row"><span style="color:var(--tx);">Дневник клиента</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--ac);">открыть</span></div>
+            <div class="row"><span style="color:var(--tx);">Подписка и тариф</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--ac);">открыть</span></div>
+            <div class="row"><span style="color:var(--tx);">Анкета и цели</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--ac);">открыть</span></div>
+            <div class="row"><span style="color:var(--tx);">Настройки клиента</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--ac);">открыть</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--val-bad);">Удалить клиента</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--val-bad);">запросить</span></div>
+          </div>
+          <div class="sm">Пять безымянных кружков заменены строками с названиями: у иконок глаза, карточки, карандаша, шестерни и корзины не было подписей, и «удалить» стоял рядом с «посмотреть».</div>
+        </div>
+      </div>
+    </div>
+    <div class="an" data-nomirror>
+      <div class="anh">Что изменилось в виде</div>
+      <div class="ab" data-anchor="Кабинет куратора"><b>Шапка без тёмного блока</b><span>Тёмная плашка с фиолетовой кнопкой была единственным местом в продукте с такой заливкой. Теперь шапка — обычный заголовок на грунте: имя кабинета, счёт клиентов и состояние системы одной подписью, возврат — круглая кнопка 40 px.</span><i>структура не менялась: тот же заголовок, тот же счётчик, тот же возврат — сменились только тон и вес</i></div>
+      <div class="ab" data-anchor="еды нет"><b>Метрики дня — чипами в одну строку</b><span>Было пять строк с эмодзи, каждая занимала свою высоту. Стало шесть чипов в две строки без иконок: смысл тот же, высота карточки меньше почти вдвое.</span><i>эмодзи в системе нет нигде — ни в клиентской части, ни в кабинете</i></div>
+      <div class="ab" data-anchor="1 840 ккал"><b>Заполненный день и пустой отличаются тоном</b><span>Число набрано тоном текста, отсутствие — приглушённым. Порядок чипов всегда один: ккал, вода, шаги, вес, сон, тренировка — тогда карточки сравниваются глазом по столбцу, а не перечитыванием.</span><i>строка события под чипами акцентная только когда есть что сказать: «перебор 640 ккал · третий день подряд» — да, «4 приёма · последний в 19:40» — нет</i></div>
+      <div class="ab" data-anchor="Дневник клиента"><b>Одно явное действие вместо пяти кружков</b><span>Главное действие названо словом — «Открыть дневник», остальное ушло в лист по кнопке «⋯». Пять безымянных иконок в ряд заставляли угадывать, и «удалить» стояло рядом с «посмотреть».</span></div>
+      <div class="ab"><b>Отступы: 16 вместо 24</b><span>Поля карточек 16, зазор между карточками 10, поля экрана 18 — те же значения, что во всём продукте. На телефоне это возвращает половину карточки клиента в первый экран.</span></div>
+    </div>
+  </div>
+
+  <div class="sect"><span class="lt">Д</span><span class="tt">Очередь и Заявки</span><span class="st">подвкладки со счётчиками, пустые состояния</span></div>
+  <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
+    <div>
+      <div class="lab"><b>Очередь · Анкеты</b><span>подвкладки со счётом · карточка заявки</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Очередь · Анкеты" data-vid="вид · подвкладки очереди">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="flex:1;"><span style="display:block;font:800 17px/1.15 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em;">Очередь</span><span style="display:block;font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">открыта · свободно 3 места</span></span>
+            <span class="badge" style="background:var(--c2);color:rgba(var(--ink),.5);">закрыть</span>
+          </div>
+        </div>
+        <div class="sc">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;">
+            <span class="badge" style="color:rgba(var(--ink),.45);">лиды · 0</span>
+            <span class="badge" style="background:var(--acs);color:var(--on-acs);">анкеты · 1</span>
+            <span class="badge">решения · 7</span>
+            <span class="badge" style="color:rgba(var(--ink),.45);">триалы · 0</span>
+          </div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:10px;text-wrap:pretty;">Приглашения, заполнение, уточнения и анкеты к разбору.</div>
+          <div class="grp" style="margin-top:12px;">
+            <div style="display:flex;align-items:center;gap:11px;">
+              <span class="av">Л</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Лала</span><span class="cls n" style="color:rgba(var(--ink),.45);">+7 777 777-77-77</span></span>
+              <span class="badge">ожидает</span>
+            </div>
+            <div class="cd" style="margin-top:12px;">
+              <div class="row"><span style="color:var(--tx);">Анкета</span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--gr);">готова к разбору</span></div>
+              <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Обновлена</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">13 авг, 13:46</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--acs);font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);margin-top:12px;">Разобрать анкету</div>
+          </div>
+          <div class="sm">Строка «Действие куратора: разобрать анкету» убрана — она повторяла кнопку. Кнопка называет действие сама.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Очередь · Решения</b><span>кандидаты · два действия в строке</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Очередь · Решения">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="flex:1;"><span style="display:block;font:800 17px/1.15 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em;">Очередь</span><span style="display:block;font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">открыта · свободно 3 места</span></span>
+            <span class="badge" style="background:var(--c2);color:rgba(var(--ink),.5);">закрыть</span>
+          </div>
+        </div>
+        <div class="sc">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;">
+            <span class="badge" style="color:rgba(var(--ink),.45);">лиды · 0</span>
+            <span class="badge">анкеты · 1</span>
+            <span class="badge" style="background:var(--acs);color:var(--on-acs);">решения · 7</span>
+            <span class="badge" style="color:rgba(var(--ink),.45);">триалы · 0</span>
+          </div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:10px;text-wrap:pretty;">Одобренные, ожидающие место и отклонённые кандидаты.</div>
+          <div class="grp" style="margin-top:12px;">
+            <div style="display:flex;align-items:center;gap:11px;">
+              <span class="av">АЛ</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Александра</span><span class="cls n" style="color:rgba(var(--ink),.45);">+7 962 459-71-11 · 10 авг</span></span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--acs);font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);">Создать приглашение</span>
+              <span class="ico" style="color:var(--val-bad);">✕</span>
+            </div>
+          </div>
+          <div class="grp" style="margin-top:10px;">
+            <div style="display:flex;align-items:center;gap:11px;">
+              <span class="av">АН</span>
+              <span style="flex:1;min-width:0;"><span class="cln">Антон</span><span class="cls n" style="color:rgba(var(--ink),.45);">+7 999 999-99-99 · 30 июл</span></span>
+              <span class="badge">organic</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--acs);font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);">Создать приглашение</span>
+              <span class="ico" style="color:var(--val-bad);">✕</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Заявки · пусто</b><span>без зелёной галочки во весь экран</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Заявки · пусто" data-vid="вид · пустые состояния кабинета">
+        <div style="padding:16px 18px 0;">
+          <div style="font:800 17px/1.15 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em;">Заявки</div>
+          <div style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">правки клиентов, требующие подтверждения</div>
+        </div>
+        <div class="sc">
+          <div class="grp" style="margin-top:14px;background:var(--gr-bg);">
+            <div class="h1">Подтверждать нечего</div>
+            <div class="p">Клиенты не присылали правок, которые нужно смотреть. Новая заявка появится здесь и придёт уведомлением.</div>
+          </div>
+          <div class="tier">Где ещё есть работа</div>
+          <div class="cd">
+            <div class="row"><span style="color:var(--tx);">Очередь · анкеты</span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">1</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Панель · ждут решения</span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">2</span></div>
+          </div>
+          <div class="sm">Вместо зелёной галочки в полэкрана — та же карточка, что у остальных пустот, и ссылки туда, где работа есть.</div>
+        </div>
+      </div>
+    </div>
+    <div class="an" data-nomirror>
+      <div class="anh">Очередь и пустоты</div>
+      <div class="ab" data-anchor="анкеты · 1"><b>Подвкладки — чипы со счётом, не сегмент</b><span>Четыре сегмента с числом в скобках под словом занимали две строки и растягивали шапку. Чипы «анкеты · 1» переносятся, читаются одной строкой и совпадают с чипами фильтра панели.</span><i>пустые подвкладки притушены тоном, но не скрыты: ноль — тоже ответ</i></div>
+      <div class="ab" data-anchor="Разобрать анкету"><b>Кнопка называет действие сама</b><span>Строка «Действие куратора: разобрать анкету» над кнопкой «Открыть анкету» — это подпись к подписи. Осталась одна кнопка с глаголом.</span></div>
+      <div class="ab" data-anchor="Подтверждать нечего"><b>Пустота — карточка, а не иллюстрация</b><span>Зелёная галочка в половину экрана сообщала меньше, чем строка текста. Пустое состояние выглядит как остальные в системе и ведёт туда, где работа есть.</span></div>
+    </div>
+  </div>
+
+  <div class="sect"><span class="lt">Е</span><span class="tt">Диагностика и служебные листы</span><span class="st">числа сеткой, действия рядом, тёмных шапок нет</span></div>
+  <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
+    <div>
+      <div class="lab"><b>Диагностика</b><span>шесть чисел сеткой вместо шести карточек столбиком</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Диагностика" data-vid="вид · числа диагностики">
+        <div style="padding:16px 18px 0;">
+          <div style="font:800 17px/1.15 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em;">Диагностика</div>
+          <div style="font:600 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">посещения, входы и синхронизация · без содержимого дневников</div>
+        </div>
+        <div class="sc">
+          <div class="st2">
+            <div class="stc"><div class="stv n">0</div><div class="stk">активных клиентов</div></div>
+            <div class="stc"><div class="stv n">0</div><div class="stk">посещений</div></div>
+            <div class="stc"><div class="stv n">0</div><div class="stk">сбоев</div></div>
+            <div class="stc"><div class="stv n">0</div><div class="stk">отклонений</div></div>
+          </div>
+          <div class="cd" style="margin-top:10px;">
+            <div class="row"><span style="color:var(--tx);">Штатно</span><span class="n" style="font:700 12px/1 Figtree,sans-serif;color:var(--gr);">100 %</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Автообновление</span><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">каждые 60 с</span></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--acs);font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);">Показать сбои</span>
+            <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--c2);font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.58);">Скопировать отчёт</span>
+          </div>
+          <div class="sm">Кнопка «Скопировать мегалог проблем за сегодня» переименована в «Скопировать отчёт» и встала в общий ряд: длинная фраза в кнопке ломалась на три строки.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Подписка клиента</b><span>лист снизу · три числа шапкой, действия по весу</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Подписка клиента" data-vid="вид · служебные листы">
+        <div class="sc" style="opacity:.35;padding-top:16px;">
+          <div class="grp"><div style="display:flex;align-items:center;gap:11px;"><span class="av">АЛ</span><span style="flex:1;"><span class="cln">Александра</span></span></div></div>
+          <div style="height:350px;"></div>
+        </div>
+        <div style="position:absolute;inset:0;background:var(--scrim);"></div>
+        <div class="sheet">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="av">АЛ</span>
+            <span style="flex:1;"><span class="cln">Александра</span><span class="cls" style="color:var(--gr);">активна до 23.09.2026</span></span>
+          </div>
+          <div class="cd" style="margin-top:12px;">
+            <div class="row"><span style="color:var(--tx);">Тариф</span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--tx);">Pro · активен</span></div>
+            <div class="row"><span style="color:var(--tx);">Триал</span><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">не было</span></div>
+            <div class="row"><span style="color:var(--tx);">Telegram</span><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">не привязан</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">ID клиента</span><span class="n" style="font:600 11.5px/1 ui-monospace,Menlo,monospace;color:rgba(var(--ink),.5);">4545ee50…</span></div>
+          </div>
+          <div class="btn" style="margin-top:14px;">Продлить подписку</div>
+          <div class="btn2c" style="margin-top:9px;">Ещё пять действий</div>
+          <div class="sm">Шесть кнопок в столбик были равны по весу, включая «Сбросить подписку». Осталось одно главное действие, остальные — по кнопке, опасные внизу списка красным.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Новый клиент</b><span>та же форма · поля и клавиатура из «Входа»</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Новый клиент">
+        <div style="padding:16px 18px 0;opacity:.35;">
+          <div style="font:800 17px/1.15 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em;">Кабинет куратора</div>
+        </div>
+        <div class="sc" style="opacity:.35;">
+          <div class="grp" style="margin-top:12px;">
+            <div style="display:flex;align-items:center;gap:11px;"><span class="av">АЛ</span><span style="flex:1;"><span class="cln">Александра</span></span></div>
+          </div>
+          <div style="height:300px;"></div>
+        </div>
+        <div style="position:absolute;inset:0;background:var(--scrim);"></div>
+        <div class="sheet">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="flex:1;font:700 15px/1 Figtree,sans-serif;color:var(--tx);">Новый клиент</span>
+            <span class="ico">✕</span>
+          </div>
+          <div class="flab">Имя</div>
+          <div class="fld" style="color:rgba(var(--ink),.35);">Иван Иванов</div>
+          <div class="flab">Телефон</div>
+          <div class="fld n" style="color:rgba(var(--ink),.35);">+7 (999) 000-00-00</div>
+          <div class="flab">PIN — 4 цифры</div>
+          <div style="display:flex;gap:8px;margin-top:7px;">
+            <span style="flex:1;height:56px;border-radius:16px;background:var(--c1);box-shadow:inset 0 0 0 2px var(--acs);"></span>
+            <span style="flex:1;height:56px;border-radius:16px;background:var(--c1);"></span>
+            <span style="flex:1;height:56px;border-radius:16px;background:var(--c1);"></span>
+            <span style="flex:1;height:56px;border-radius:16px;background:var(--c1);"></span>
+          </div>
+          <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:12px;text-wrap:pretty;">Клиент войдёт по этому телефону и PIN-коду. Сохраните их — второй раз показать не сможем.</div>
+          <div class="btn" style="margin-top:14px;">Создать клиента</div>
+        </div>
+      </div>
+    </div>
+    <div class="an" data-nomirror>
+      <div class="anh">Служебные экраны</div>
+      <div class="ab" data-anchor="активных клиентов"><b>Числа сеткой два на два</b><span>Шесть карточек с одним числом каждая занимали два экрана прокрутки. Сетка 2×2 плюс две строки — тот же набор, одна ширма.</span></div>
+      <div class="ab" data-anchor="Продлить подписку"><b>Опасное действие не равно обычному</b><span>Шесть кнопок в столбик были одного веса: «Продлить» и «Сбросить подписку» выглядели одинаково. Одно главное действие на виду, остальные — по кнопке, разрушающие внизу и красным.</span><i>структура не тронута: все шесть действий на месте, изменился только их вес</i></div>
+      <div class="ab" data-anchor="PIN — 4 цифры"><b>Форма и клавиатура — из «Входа»</b><span>Поля, боксы PIN и своя клавиатура уже описаны в login.v4.dc.html. Здесь та же геометрия: бокс 56 высотой, радиус 16, активный с обводкой --acs — чтобы куратор и клиент видели одну и ту же вещь.</span><i>клавиатуру в кадре не рисую: канон её вида — «Вход», и второй источник не заводим</i></div>
+      <div class="ab"><b>Ops dashboard оставлен как есть</b><span>Серверные проверки, receipts и heartbeats — служебный экран для нас, а не для куратора. Приводить его к системе смысла нет: там важна плотность лога, а не воздух.</span></div>
+    </div>
+  </div>
+
+  <div class="ctr" data-contract style="background:var(--c2);border-radius:26px;padding:22px 24px;margin-top:38px;max-width:1080px;">
+    <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(var(--ink),.42);">Контракт канваса</div>
+
+    <div class="ctrH">Что это и чьё</div>
+    <div class="spec"><b>фича</b><span data-v="пятая вкладка кабинета куратора: список клиентов состоянием, лист поправки поверх панели, фильтр состоянием, три пустых состояния"></span></div>
+    <div class="spec"><b>границы</b><span data-v="моё — содержимое вкладки от ряда вкладок до последней строки списка. Ряд вкладок кабинета, его шапка, аватары и вход в дневник существуют в продукте и здесь только показаны; карточка поправки целиком — norm-correction.v4.dc.html"></span></div>
+    <div class="spec"><b>источник</b><span data-v="главный для панели, порядка состояний и пустот. Карточка поправки, её числа и слова — norm-correction.v4.dc.html; при расхождении верен он. Вкладки клиента глазами куратора — reports-insights.v4.dc.html, строки раздела «Куратор и вкладки»"></span></div>
+    <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label; все кадры статичные (data-demo='stop')"></span></div>
+
+    <div class="ctrH">Состояния и порядок</div>
+    <div class="spec"><b>четыре состояния</b><span data-v="ждёт решения (поправка посчитана, ответа нет) · расчёт разошёлся (факт против формулы в процентах, данных хватает) · молчит (дней без записей) · всё ровно. Пятое служебное — «копят данные»: окно 21 день ещё не набралось"></span></div>
+    <div class="spec"><b>одно состояние на строку</b><span data-v="клиент стоит в одной группе — той, где его состояние старше, и второй раз в списке не появляется: иначе счёт групп перестаёт складываться в число клиентов. Второе состояние дописывается акцентной фразой в той же строке («не пишет 4 дня · и расчёт разошёлся»), а не второй пилюлей"></span></div>
+    <div class="spec"><b>старшинство</b><span data-v="ждёт решения → молчит → расчёт разошёлся → копят данные → всё ровно. Внутри группы — по давности, старое выше"></span><i>исправлено 30 августа: молчание стояло ниже расхождения. Молчащий десять дней клиент рискует уйти совсем, а расхождение расчёта ждёт до понедельника и само не портится — человек важнее числа</i></div>
+    <div class="spec"><b>порядок не настраивается</b><span data-v="ручной сортировки и алфавита нет — иначе панель становится вторым списком людей. Поиск и алфавит живут во вкладке «Клиенты». Чипы фильтра меняют состав, не порядок: выбран один — группы не показываются, строки идут сплошняком"></span></div>
+    <div class="spec"><b>«всё ровно» свёрнуто</b><span data-v="самая частая группа занимает одну строку со счётом и словом «показать» — тревожное и спокойное не должны занимать одинаковое место. Развернуть можно, по умолчанию свёрнуто"></span></div>
+    <div class="spec" style="border-bottom:none"><b>вид · строка клиента</b><span data-v="блок .cd на --c1 радиусом 20, поля 2/14. Строка: аватар 34×34 радиусом 999 на --c2 с инициалами 11,5 px/700 тоном --ac; имя 12,5 px/700 --tx; состояние 11 px/600 под именем — тоном --ac, когда нужно решение, иначе чернила 55 %; точка состояния 7 px (--acs у решения, --gr2 у расхождения); справа пилюля 9 px моношириной на --c2 тоном --ac, у неактивных — просто число тоном чернил 38 %. Разделители 1 px чернил 7 %, у последней строки нет"></span></div>
+    <div class="spec"><b>вид · ряд вкладок</b><span data-v="горизонтальный ряд пилюль в полях 16: активная — заливка --acs с текстом --on-acs, остальные — --c1 с текстом чернил 50 %, шрифт 10,5 px/700, поля 8/9, радиус 999, зазор 5, перенос запрещён. Пять вкладок в 330 px умещаются целиком именно при этих числах — ряд не прокручивается и не переносится; если появится шестая, сокращается подпись, а не заводится прокрутка: прокручиваемый ряд скрывает от куратора половину кабинета"></span></div>
+    <div class="spec"><b>вид · чипы фильтра</b><span data-v="пилюли 9 px моношириной: выбранная — --acs с --on-acs, остальные — --c2 с --ac, «копят» — тоном чернил 45 %. Каждая несёт счёт через точку («молчат · 3»); ряд переносится, зазор 6"></span></div>
+
+    <div class="ctrH">Открытие карточки и срок решения</div>
+    <div class="spec"><b>лист поверх панели</b><span data-v="тап по строке открывает лист снизу, панель под ним остаётся на той же позиции прокрутки: куратор смотрит клиентов подряд, и уход на отдельный экран сбивает место в списке. Разворот строки отвергнут — в карточке шесть чисел и две кнопки"></span></div>
+    <div class="spec"><b>состав листа</b><span data-v="шапка с инициалами, именем, окном («окно 21 день · 10–30 авг») и тарифом; три строки чисел — формула, факт, норма дня станет; четыре действия в этом порядке: «Применить с завтра» пилюлей 48 на --acs, ниже ряд из двух — «Отложить» и «Заморозить» на --c2, последней «Открыть дневник» на --c2 во всю ширину. Отложить и заморозить обязательны: без них строка уходит из «ждут решения» только применением. Полная карточка — качество данных, «где может сидеть расхождение», история решений — в norm-correction, лист показывает её же и ничего не пересчитывает"></span></div>
+    <div class="spec"><b>что меряет пилюля</b><span data-v="число справа всегда значит одно — сколько дней длится состояние, и никогда не важность. У молчания это дни без записей, у расхождения — длина окна расчёта, у «ждут решения» — дни с понедельника, когда предложение посчиталось. Последнее берётся из календаря, а не из хранилища: предложение не хранится и пересчитывается каждый понедельник заново, поэтому «дни с первого расчёта» посчитать нельзя и мерить их не пытаемся"></span></div>
+    <div class="spec"><b>решение держится до конца дня</b><span data-v="после ответа куратора строка уходит из «ждут решения» в группу «Решено сегодня» и исчезает в конце дня. Не сразу — иначе клиент просто пропадает и остаётся сомнение, нажалось ли; и не до понедельника — иначе в панели висит строка, по которой делать нечего. Справа вместо давности стоит «вы»"></span></div>
+    <div class="spec" style="border-bottom:none"><b>вид · лист поверх панели</b><span data-v="панель под листом с прозрачностью 35 %, поверх — заливка --scrim, лист на --bg радиусом 28 сверху с полями 20/18/16. Кнопки общим рядом 48: главная --acs, вторая --c2"></span></div>
+
+    <div class="ctrH">Пустые состояния</div>
+    <div class="spec"><b>клиентов нет</b><span data-v="у нового куратора: «Клиентов пока нет», обещание, что панель заполнится сама, вход «Как добавить клиента» и список из трёх строк, что здесь будет"></span></div>
+    <div class="spec"><b>всё ровно</b><span data-v="карточка на --gr-bg «Сегодня всё ровно» с фразой «Это не пустой экран — это результат», ниже ярус «Что можно посмотреть» с тремя входами: все клиенты, непрочитанные сообщения, заявки в модерации. Пустая панель не выглядит сломанной и ведёт туда, где работа есть"></span></div>
+    <div class="spec"><b>копят данные</b><span data-v="карточка «Поправка считается не для всех» с числом клиентов и причиной (меньше десяти дней с записями или меньше шести взвешиваний), ниже группа со счётом «14 дней из 21 · взвешиваний 4 из 6». Это рабочее состояние первых трёх недель, а не ошибка"></span></div>
+    <div class="spec" style="border-bottom:none"><b>вид · пустые состояния</b><span data-v="все три — карточка .grp на --c1 радиусом 20 полями 16 с заголовком 16 px/700 и текстом 12 px тоном чернил 60 %; у «всё ровно» фон --gr-bg. Ярусы под ними — .cd теми же строками, что у живого списка: пустота не меняет вид, только текст"></span></div>
+
+    <div class="ctrH">Правила, унаследованные строками</div>
+    <div class="spec"><b>куратор не даёт согласий</b><span data-v="панель наследует границу «факт против согласия» из reports-insights: факты куратор вписывает, «Принять норму» за клиента не нажимает. Исключение названо там же — на Pro нормой распоряжается куратор, поэтому кнопка применения поправки в листе его, а не клиентская"></span></div>
+    <div class="spec"><b>числа совпадают с клиентскими</b><span data-v="одно окно, одно округление: панель показывает то же, что клиент увидит в понедельник. Своего расчёта у панели нет"></span></div>
+    <div class="spec"><b>«где сидит расхождение» — только куратору</b><span data-v="строка о том, ошибается формула или дневник неточен, живёт в карточке norm-correction и клиенту не показывается никогда: она про выбор лечения, а не про человека"></span></div>
+    <div class="spec" style="border-bottom:none"><b>вид · чужие поверхности</b><span data-v="вид карточки поправки целиком — norm-correction.v4.dc.html; вид вкладок клиента, которые куратор открывает в его дневнике, — reports-insights.v4.dc.html. Здесь эти поверхности не перерисовываются и своих значений не получают: числа в листе панели показаны, чтобы назвать состав, а канон вида остаётся в названных файлах"></span></div>
+
+    <div class="ctrH">Кабинет · вид приведён к системе</div>
+    <div class="spec"><b>что менялось</b><span data-v="только вид: ни один экран, вкладка, кнопка и поле не добавлены и не убраны, действия остались все. Сменились тон, вес, отступы и способ показа — тёмная шапка, фиолетовая заливка, эмодзи и безымянные круглые кнопки уходят"></span><i>структура и функционал — решение владельца: «сделать чище и свободнее, не меняя функционал и структуру»</i></div>
+    <div class="spec"><b>вид · шапка кабинета</b><span data-v="без тёмного блока и без фиолетового: заголовок 17 px/800 тоном --tx на грунте --bg, под ним подпись 11 px/600 тоном чернил 45 % — счёт клиентов и состояние системы одной строкой. Возврат — круглая кнопка 40 px на --c2 тоном --ac справа. Поля 16/18"></span></div>
+    <div class="spec"><b>вид · ряд вкладок кабинета</b><span data-v="вкладок пять и порядок один на весь кабинет: Клиенты · Очередь · Панель · Заявки · Диагн. Иконок и эмодзи нет — только слово; «Диагностика» пишется сокращённо, иначе ряд не влезает в 330 px. «Модерация» — прежнее имя вкладки «Заявки», в кадрах его больше нет. Геометрия пилюль — строка «вид · ряд вкладок»"></span><i>исправлено 30 августа: в панельных кадрах стоял ряд из четырёх вкладок с «Модерацией», в кадрах кабинета — из пяти. Один кабинет на одном канвасе не может иметь двух наборов вкладок</i></div>
+    <div class="spec"><b>вид · карточка клиента</b><span data-v="карточка .grp на --c1 радиусом 20 полями 16, зазор между карточками 10. Шапка: аватар 34 с инициалами, имя 12,5 px/700, телефон 11 px/600 моноцифрами тоном чернил 45 %, справа пилюля подписки на --gr-bg тоном --gr («до 23.09»). Метрики дня — метки .mch высотой 24 радиусом 8, шрифт 11 px/600, поля по 8, зазор 6 (не интерактивный чип .chip из v4-canvas.css: тот 44 px и означает кнопку выбора — метка данных не нажимается и не должна выглядеть кнопкой), переносятся; набор один и порядок один: ккал, вода, шаги, вес, сон, тренировка — так карточки сравниваются глазом по столбцу. Фон чипа несёт три состояния и только их: <b>норма закрыта</b> — --gr-bg тоном --gr; <b>отклонение</b> — --tint тоном --ac2 (тёплый предупреждающий, не красный: красный в системе значит «разрушающее действие»); <b>данных нет</b> — прозрачный чип с рамкой --v4-line тоном чернил 38 %. Нейтральные величины без нормы (вес) остаются на --c2: у них нет «хорошо» и «плохо». Ниже строка события 11,5 px/600 (--ac, когда нужно действие). Действие — пилюля 44 на --acs во всю ширину плюс круглая «⋯» 40 px"></span></div>
+    <div class="spec"><b>меню клиента вместо пяти кружков</b><span data-v="пять безымянных круглых кнопок (глаз, карточка, карандаш, шестерня, корзина) собраны в лист по «⋯»: строки с названиями — дневник, подписка и тариф, анкета и цели, настройки, удаление. Удаление стоит последним и тоном --val-bad: в прежнем ряду оно было рядом с «посмотреть» и такого же вида"></span></div>
+    <div class="spec"><b>вид · подвкладки очереди</b><span data-v="чипы со счётом через точку («анкеты · 1»), а не сегмент с числом в скобках под словом: выбранный — --acs с --on-acs, непустые — --c2 с --ac, пустые притушены тоном чернил 45 % и не скрываются. Ряд переносится, зазор 6. Те же чипы, что у фильтра панели — один приём на кабинет"></span></div>
+    <div class="spec"><b>кнопка называет действие сама</b><span data-v="строки «Действие куратора: …» над кнопками убраны: они повторяли текст кнопки. Кнопка несёт глагол — «Разобрать анкету», «Создать приглашение», «Показать сбои». Длинные фразы в кнопках сокращены до двух слов («Скопировать мегалог проблем за сегодня» → «Скопировать отчёт»)"></span></div>
+    <div class="spec"><b>вид · числа диагностики</b><span data-v="сетка 2×2 из карточек .stc на --c1 радиусом 16 полями 12/14: число 20 px/800 --tx, подпись 10,5 px/600 чернил 45 %, зазор 8. Остальные показатели — строками .cd. Прежние шесть карточек столбиком занимали два экрана прокрутки"></span></div>
+    <div class="spec"><b>вид · служебные листы</b><span data-v="модалки с тёмной шапкой заменены листом снизу: скрим --scrim, лист --bg радиусом 28 сверху, поля 20/18/16, закрытие — круглая «✕» 40 px в шапке листа. Внутри одно главное действие пилюлей 48 на --acs, второстепенные по кнопке --c2, разрушающие — последними и тоном --val-bad"></span></div>
+    <div class="spec"><b>вид · пустые состояния кабинета</b><span data-v="те же карточки, что в панели: .grp на --c1 (у «работать не с кем» — --gr-bg) с заголовком 16 px/700 и текстом 12 px чернил 60 %, ниже ярус со ссылками туда, где работа есть. Иллюстраций во весь экран — зелёной галочки — нет"></span></div>
+    <div class="spec" style="border-bottom:none"><b>Ops dashboard не трогаем</b><span data-v="серверные проверки, receipts и heartbeats — служебный экран для разработки, а не для куратора: там важна плотность лога, а не воздух. К системе не приводится и кадром не описан"></span></div>
+
+    <div class="ctrH">Демо</div>
+    <div class="spec" style="border-bottom:none"><b>все кадры статичны</b><span data-v="data-demo='stop' на каждом кадре: петель и таймингов на канвасе нет, пиксельные сравнения можно делать по любому кадру"></span></div>
+
+    <div class="ctrH">Открыто до передачи</div>
+    <div class="spec"><b>серверные поля</b><span data-v="окно 21 день, профиль клиента (вес, рост, возраст, пол, дефицит), зоны пульса, история решений и замеры талии сводка отдаёт — накачено 30 августа. Кадр «данных пока нет» остаётся, но означает другое: не «сервер не умеет», а «у этого клиента гейты расчёта не набраны». Строка закрыта"></span><i>прежняя редакция говорила, что сводка этих полей не отдаёт — верно на утро 30 августа, к вечеру устарело</i></div>
+    <div class="spec"><b>талия в сводке</b><span data-v="замеры талии в сводке есть, и вето рекомпозиции работает: у строки «расчёт разошёлся» появляется пометка «талия ушла», и такой клиент из группы уходит — норму ему не снижают. Строка закрыта, порог вето — 1,5 см за 3–4 недели, канон в norm-correction"></span></div>
+    <div class="spec" style="border-bottom:none"><b>признак тарифа</b><span data-v="Pro — это наличие куратора, а не оплаченный план: план проставляется только при оплате, и клиент без платежа не Self, а Pro с неактивной подпиской. Иначе группа «ждут решения» пуста у всех, потому что решение уходит человеку, у которого куратор есть. Активность подписки — отдельный признак: она красит пилюлю срока, но не переносит право решения"></span><i>решение владельца 30 августа по вопросу кодера: тариф определяется связью с куратором, оплата — состоянием подписки</i></div>
+    <div class="spec"><b>вход куратора с телефона</b><span data-v="кадры нарисованы шириной 330 px — кабинет живёт в том же приложении. Отдельная широкая раскладка для десктопа не решена: панель на ней, вероятно, встанет двумя колонками, но это отдельное решение владельца"></span></div>
+  </div>
+
+  <div style="max-width:1080px;margin-top:52px;padding:20px 22px;background:#fffaf1;border-radius:20px;">
+    <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);">Пять вопросов задания — ответы кадром</div>
+    <div style="font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);margin-top:10px;text-wrap:pretty;"><b>Строка несёт одно состояние</b> — старшее; второе дописывается акцентной фразой, не второй пилюлей. <b>Наверх поднимает старшинство состояния</b>, внутри группы — давность; руками порядок не меняется, чипы меняют состав. <b>Карточка открывается листом поверх панели</b>, чтобы место в списке не терялось. <b>Решение держится до конца дня</b> в группе «Решено сегодня» — не исчезает сразу и не висит до понедельника. <b>Соседние вкладки не поглощаются</b>: «Клиенты» — найти человека, «Очередь» — ответить, «Модерация» — подтвердить, «Панель» — решить, кем заняться; один клиент может стоять в трёх сразу.</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;1500px&quot;,&quot;height&quot;:&quot;900px&quot;},&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;annotations&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;showContracts&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;showProtocol&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
+class Component extends DCLogic {
+  tw() {
+    const b = (v, d) => (v === undefined || v === null ? d : v === true || v === 'true');
+    return {
+      all: b(this.props.allPalettes, false),
+      ann: b(this.props.annotations, true),
+      ctr: b(this.props.showContracts, false),
+      prot: b(this.props.showProtocol, false),
+    };
+  }
+  contracts() {
+    const bar = document.querySelector('[data-ctrbar]');
+    if (!bar) return;
+    const rows = document.querySelectorAll('[data-contract] .spec').length;
+    const rm = rows % 10, rh = rows % 100;
+    const rw = rm === 1 && rh !== 11 ? 'строка' : (rm >= 2 && rm <= 4 && (rh < 12 || rh > 14) ? 'строки' : 'строк');
+    bar.textContent = document.querySelectorAll('[data-contract]').length + ' контракт на канвасе, ' + rows + ' ' + rw;
+  }
+  protocols() {
+    const bar = document.querySelector('[data-protbar]');
+    const n = document.querySelectorAll('[data-demo="protocol"]').length;
+    if (bar) {
+      bar.textContent = n ? n + ' отвергнутых кадров скрыты твиком «Протокол»' : '';
+      bar.style.display = n && !this.tw().prot ? '' : 'none';
+    }
+    return n;
+  }
+  buildMirrors() {
+    if (this.mirrorsBuilt) return;
+    this.mirrorsBuilt = true;
+    const rows = Array.from(document.querySelectorAll('[data-mrow]'));
+    const pals = [['dk', 'Тёмная палитра'], ['bl', 'Синяя палитра'], ['bldk', 'Сине-тёмная палитра']];
+    rows.forEach((row) => {
+      let after = row;
+      pals.forEach(([cls, cap]) => {
+        const capEl = document.createElement('div');
+        capEl.className = 'pl';
+        capEl.setAttribute('data-mirror', '');
+        capEl.textContent = cap;
+        const clone = row.cloneNode(true);
+        clone.removeAttribute('data-mrow');
+        clone.setAttribute('data-mirror', '');
+        clone.className = 'pal ' + cls;
+        clone.style.display = 'flex';
+        clone.style.gap = '30px';
+        clone.style.alignItems = 'flex-start';
+        clone.querySelectorAll('[data-nomirror]').forEach((n) => n.remove());
+        clone.querySelectorAll('[data-screen-label]').forEach((n) => {
+          n.setAttribute('data-screen-label', n.getAttribute('data-screen-label') + ' · ' + cap.split(' ')[0].toLowerCase());
+        });
+        after.insertAdjacentElement('afterend', capEl);
+        capEl.insertAdjacentElement('afterend', clone);
+        after = clone;
+      });
+      const sandCap = document.createElement('div');
+      sandCap.className = 'pl';
+      sandCap.setAttribute('data-mirror', '');
+      sandCap.textContent = 'Песочная палитра';
+      row.insertAdjacentElement('beforebegin', sandCap);
+    });
+  }
+  apply() {
+    const t = this.tw();
+    document.querySelectorAll('[data-mirror]').forEach((n) => { n.style.display = t.all ? '' : 'none'; });
+    document.querySelectorAll('.an').forEach((n) => { n.style.display = t.ann ? '' : 'none'; });
+    document.querySelectorAll('[data-contract]').forEach((n) => { n.style.display = t.ctr ? '' : 'none'; });
+    document.querySelectorAll('[data-demo="protocol"]').forEach((n) => { n.style.display = t.prot ? '' : 'none'; });
+    this.contracts();
+    this.protocols();
+  }
+  componentDidMount() { this.buildMirrors(); this.apply(); }
+  componentDidUpdate() { this.apply(); }
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
