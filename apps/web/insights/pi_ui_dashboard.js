@@ -3446,11 +3446,20 @@
                 onPeriodChange: setInsightsPeriod,
                 historyDays: historyDaysWithData
               }),
+              // Контракт «вид · вход „Подробно“»: слово тоном чернил и шеврон
+              // тоном акцента отдельным знаком. Стрелка внутри текста красила
+              // акцентом всю строку — вход звал сильнее, чем блоки над ним,
+              // хотя за ним второй слой, а не действие.
               h('button', {
                 type: 'button',
                 className: 'insights-v4-detail-link',
                 onClick: function () { setShowInsightsDetail(true); }
-              }, 'Подробно →')
+              },
+                h('span', { className: 'insights-v4-detail-link__text' }, 'Подробно'),
+                h('span', {
+                  className: 'insights-v4-detail-link__chevron', 'aria-hidden': 'true'
+                }, '›')
+              )
             ),
             debtSheetOpen && h(InsightsV4DebtSheet, {
               onClose: function () { setDebtSheetOpen(false); }
