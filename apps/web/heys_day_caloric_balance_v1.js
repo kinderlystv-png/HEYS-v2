@@ -6,6 +6,12 @@
 
   HEYS.dayCaloricBalance = HEYS.dayCaloricBalance || {};
 
+  // Номер работы берётся из реестра дневной части по id. Раньше он стоял
+  // числом с подписью в комментарии рядом: подпись видел только читатель кода,
+  // и разъехаться они могли молча. Реестра нет — поле пустое, ссылка не
+  // рисуется; выдуманный номер хуже отсутствующего.
+  const SOURCE = (id) => (HEYS.DayBibliography && HEYS.DayBibliography.get(id) || {}).pmid || '';
+
   HEYS.dayCaloricBalance.computeCaloricBalance = function computeCaloricBalance(ctx) {
     const {
       React,
@@ -190,7 +196,7 @@
             : tefPct < 8
               ? `⚠️ Низкий TEF ${tefPct}%. Добавь белка для ускорения метаболизма`
               : `✓ TEF ${tefPct}% — стандартный термический эффект`,
-          pmid: '15507147' // Westerterp, 2004
+          pmid: SOURCE('westerterp2004')
         };
 
         // --- 2. EPOC Analysis (Excess Post-exercise Oxygen Consumption) ---
@@ -231,7 +237,7 @@
           kcal: epocKcal,
           insight: epocInsight,
           hasTraining: todayTrainings.length > 0,
-          pmid: '16825252' // LaForgia, 2006
+          pmid: SOURCE('laforgia2006')
         };
 
         // --- 3. Adaptive Thermogenesis ---
@@ -249,7 +255,7 @@
             : adaptiveReduction >= 0.05
               ? `📉 Лёгкая адаптация метаболизма (−${Math.round(adaptiveReduction * 100)}%). Избегай длительного дефицита`
               : null,
-          pmid: '20107198' // Rosenbaum & Leibel, 2010
+          pmid: SOURCE('rosenbaum2010')
         };
 
         // --- 4. Hormonal Balance (Leptin/Ghrelin) ---
@@ -273,7 +279,7 @@
             : ghrelinChange > 5
               ? `💤 Лёгкий недосып влияет на аппетит (+${ghrelinChange}% грелин)`
               : null,
-          pmid: '15602591' // Spiegel, 2004
+          pmid: SOURCE('spiegel2004')
         };
 
         // --- 5. Insulin Timing Analysis ---
@@ -309,7 +315,7 @@
               : breakfastRatio >= 0.25
                 ? `✅ Отличное распределение! Завтрак ${Math.round(breakfastRatio * 100)}% калорий`
                 : null,
-          pmid: '23512957' // Jakubowicz, 2013
+          pmid: SOURCE('jakubowicz2013')
         };
 
         // --- 6. Cortisol & Stress Analysis ---
@@ -343,7 +349,7 @@
               : highStressDays >= 3
                 ? `📊 ${highStressDays} стрессовых дней за неделю. Это влияет на пищевое поведение`
                 : null,
-          pmid: '11070333' // Epel, 2001
+          pmid: SOURCE('epel2001')
         };
 
         // --- 7. Circadian Rhythm Analysis ---
@@ -366,7 +372,7 @@
               : lastMealHour > 0 && lastMealHour <= 19
                 ? `✅ Последний приём в ${lastMealTime} — отлично для метаболизма!`
                 : null,
-          pmid: '23357955' // Garaulet, 2013
+          pmid: SOURCE('garaulet2013')
         };
 
         // --- 8. Meal Frequency Analysis ---
@@ -385,7 +391,7 @@
               : avgMealKcal > 600 && mealCount >= 3
                 ? `⚠️ Большие порции (${Math.round(avgMealKcal)} ккал/приём). Раздели на меньшие`
                 : null,
-          pmid: '21123467' // Leidy, 2011
+          pmid: SOURCE('leidy2011')
         };
 
         // --- 9. Metabolic Window Analysis ---
@@ -427,7 +433,7 @@
               : postWorkoutMealFound && postWorkoutProtein >= 20
                 ? `✅ Отлично! ${Math.round(postWorkoutProtein)}г белка после тренировки`
                 : null,
-          pmid: '9694422' // Ivy & Kuo, 1998
+          pmid: SOURCE('ivy1998')
         };
 
         // --- 10. Weight Prediction (Hall Model) ---
@@ -446,7 +452,7 @@
               ? `📈 При текущем темпе: +${monthlyPrediction.toFixed(1)}кг за месяц`
               : `📉 При текущем темпе: ${monthlyPrediction.toFixed(1)}кг за месяц`
             : `⚖️ Вес стабилен (изменение <0.5кг/мес)`,
-          pmid: '21872751' // Hall, 2011
+          pmid: SOURCE('hall2011')
         };
 
         // --- 11. Fat Quality Analysis (Omega Balance) ---
@@ -480,7 +486,7 @@
               : goodFatRatio >= 0.6
                 ? `✅ Отличный баланс жиров! ${Math.round(goodFatRatio * 100)}% полезных`
                 : null,
-          pmid: '18408140' // Simopoulos, 2008
+          pmid: SOURCE('simopoulos2008')
         };
 
         // --- 12. Insulin Wave Integration ---
@@ -527,13 +533,13 @@
           ? {
             type: 'correlation',
             text: `😴 ${sleepCalorieCorrelation.badSleepOvereatDays} дня: недосып → переедание. Сон влияет на аппетит!`,
-            pmid: '15602591'
+            pmid: SOURCE('spiegel2004')
           }
           : sleepCalorieCorrelation.goodSleepBalancedDays >= 3
             ? {
               type: 'positive',
               text: `✅ Хороший сон = контроль аппетита (${sleepCalorieCorrelation.goodSleepBalancedDays} сбалансированных дня)`,
-              pmid: '15602591'
+              pmid: SOURCE('spiegel2004')
             }
             : null;
 
@@ -915,7 +921,7 @@
             emoji: '🔄',
             text: `Твой паттерн: ${sleepOvereatPattern} из ${pastDays.length} дней — недосып → переедание`,
             action: 'Это твоя главная точка роста! Фокус на сон = контроль веса',
-            pmid: '15602591',
+            pmid: SOURCE('spiegel2004'),
             timeRelevance: 1.5,
             isPersonal: true
           });
@@ -964,7 +970,7 @@
             emoji: '😴',
             text: `Недосып: ${avgSleepHours.toFixed(1)}ч в среднем при норме ${sleepNorm}ч (−${sleepDeficitHours.toFixed(1)}ч)`,
             action: 'Ложись на 30 мин раньше сегодня. Недосып → +15% голода, −20% силы воли',
-            pmid: '15602591',
+            pmid: SOURCE('spiegel2004'),
             timeRelevance: 1.6,
             isPersonal: true
           });
@@ -1308,7 +1314,7 @@
           daysAnalyzed: 0,
           severity: 'none', // none | mild | moderate | critical
           recommendation: null,
-          pmid: '20095013'
+          pmid: SOURCE('mettler2010')
         };
 
         const proteinDays = pastDays.filter((d) => d.prot > 0 && d.target > 0);
@@ -1447,7 +1453,7 @@
           factors: [],
           bingeRisk: 0, // 0-100%
           recommendation: null,
-          pmid: '11070333' // Epel 2001
+          pmid: SOURCE('epel2001')
         };
 
         // Факторы риска

@@ -438,10 +438,13 @@
                 extendedSummary.proteinDeficitDays === 0 ? 'Белок ОК' : 'дн. мало белка'
               ),
               extendedSummary.proteinDeficitDays >= 3 && h('a', {
-                href: 'https://pubmed.ncbi.nlm.nih.gov/20095013/',
+                href: window.HEYS?.DayBibliography?.get?.('mettler2010')?.url,
                 target: '_blank',
                 className: 'insights-wrap__extended-pmid',
-                title: 'Mettler 2010 — белок при дефиците'
+                title: (() => {
+                  const src = window.HEYS?.DayBibliography?.get?.('mettler2010');
+                  return src ? src.author + ' ' + src.year + ' — ' + src.keyFinding : '';
+                })()
               }, '🔬')
             ),
 
@@ -455,12 +458,17 @@
               h('span', { className: 'insights-wrap__extended-label' },
                 extendedSummary.highStressDays === 0 ? 'Стресс ОК' : 'дн. стресс ≥6'
               ),
-              extendedSummary.highStressDays >= 3 && h('a', {
-                href: 'https://pubmed.ncbi.nlm.nih.gov/11070333/',
-                target: '_blank',
-                className: 'insights-wrap__extended-pmid',
-                title: 'Epel 2001 — стресс и переедание'
-              }, '🔬')
+              extendedSummary.highStressDays >= 3 && (() => {
+                // Тот же Epel 2001, что у риска срыва в дне и у кольца, —
+                // из реестра дневной части, а не третьей копией ссылки.
+                const src = window.HEYS?.DayBibliography?.get?.('epel2001');
+                return src && h('a', {
+                  href: src.url,
+                  target: '_blank',
+                  className: 'insights-wrap__extended-pmid',
+                  title: src.author + ' ' + src.year + ' — ' + src.keyFinding
+                }, '🔬');
+              })()
             ),
 
             // Training Days

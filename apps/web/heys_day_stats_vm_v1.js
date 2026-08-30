@@ -2073,8 +2073,10 @@
         }
       ],
       links: [
-        { text: 'Herman & Polivy 1984', url: 'https://pubmed.ncbi.nlm.nih.gov/6727817/' },
-        { text: 'Tomiyama 2018', url: 'https://pubmed.ncbi.nlm.nih.gov/29866473/' }
+        // Реестр дневной части: подпись и ссылка идут из одной записи, а не
+        // из двух строк разметки, которые могут разъехаться.
+        ...(window.HEYS?.DayBibliography?.resolve?.(['herman1984', 'tomiyama2018']) || [])
+          .map((s) => ({ text: s.author + ' ' + s.year, url: s.url }))
       ]
     };
   }

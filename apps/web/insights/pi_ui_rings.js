@@ -107,13 +107,17 @@
           }, '🧠'),
           h('span', { className: 'insights-ring__emotional-pct' }, `${emotionalWarning.bingeRisk}%`),
           // PMID link
-          emotionalWarning.level !== 'low' && h('a', {
-            href: 'https://pubmed.ncbi.nlm.nih.gov/11070333/',
-            target: '_blank',
-            className: 'insights-ring__pmid',
-            title: 'Epel 2001 — кортизол и пищевое поведение',
-            onClick: (e) => e.stopPropagation()
-          }, '🔬')
+          emotionalWarning.level !== 'low' && (() => {
+            // Из реестра дневной части: третья копия той же ссылки.
+            const src = window.HEYS?.DayBibliography?.get?.('epel2001');
+            return src && h('a', {
+              href: src.url,
+              target: '_blank',
+              className: 'insights-ring__pmid',
+              title: src.author + ' ' + src.year + ' — ' + src.keyFinding,
+              onClick: (e) => e.stopPropagation()
+            }, '🔬');
+          })()
         )
       ),
       showTooltip && h('div', { className: 'insights-ring__tooltip' },

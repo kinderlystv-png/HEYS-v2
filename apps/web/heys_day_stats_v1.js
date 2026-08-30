@@ -1811,14 +1811,17 @@
                 )
               ),
               // PMID ссылка
-              React.createElement('a', {
-                href: 'https://pubmed.ncbi.nlm.nih.gov/20095013/',
-                target: '_blank',
-                rel: 'noopener',
-                onClick: (e) => e.stopPropagation(),
-                style: insightRowsMeta.proteinDebt?.pmidStyle,
-                title: 'Mettler 2010: Белок сохраняет мышцы при дефиците'
-              }, '📚')
+              (() => {
+                const src = HEYS.DayBibliography?.get?.('mettler2010');
+                return src && React.createElement('a', {
+                  href: src.url,
+                  target: '_blank',
+                  rel: 'noopener',
+                  onClick: (e) => e.stopPropagation(),
+                  style: insightRowsMeta.proteinDebt?.pmidStyle,
+                  title: src.author + ' ' + src.year + ': ' + src.keyFinding
+                }, '📚');
+              })()
             ),
 
             // 🆕 v3.20: EMOTIONAL RISK — Предупреждение о риске срыва
@@ -1840,15 +1843,20 @@
                   caloricDebt.emotionalRisk.recommendation || caloricDebt.emotionalRisk.factors.join(' • ')
                 )
               ),
-              // PMID ссылка
-              React.createElement('a', {
-                href: 'https://pubmed.ncbi.nlm.nih.gov/11070333/',
-                target: '_blank',
-                rel: 'noopener',
-                onClick: (e) => e.stopPropagation(),
-                style: insightRowsMeta.emotionalRisk?.pmidStyle,
-                title: 'Epel 2001: Кортизол → тяга к сладкому'
-              }, '📚')
+              // Источник — из реестра. Один и тот же Epel 2001 стоял тремя
+              // разными подписями здесь, в дашборде и в кольце инсайтов:
+              // ссылка в разметке не знает, что у неё есть двойники.
+              (() => {
+                const src = HEYS.DayBibliography?.get?.('epel2001');
+                return src && React.createElement('a', {
+                  href: src.url,
+                  target: '_blank',
+                  rel: 'noopener',
+                  onClick: (e) => e.stopPropagation(),
+                  style: insightRowsMeta.emotionalRisk?.pmidStyle,
+                  title: src.author + ' ' + src.year + ': ' + src.keyFinding
+                }, '📚');
+              })()
             ),
 
             // 🆕 v3.20: CIRCADIAN CONTEXT — Срочность по времени суток
@@ -1873,14 +1881,17 @@
                 )
               ),
               // PMID ссылка
-              React.createElement('a', {
-                href: 'https://pubmed.ncbi.nlm.nih.gov/9331550/',
-                target: '_blank',
-                rel: 'noopener',
-                onClick: (e) => e.stopPropagation(),
-                style: insightRowsMeta.circadianContext?.pmidStyle,
-                title: 'Van Cauter 1997: Циркадные ритмы инсулина'
-              }, '📚')
+              (() => {
+                const src = HEYS.DayBibliography?.get?.('vancauter1997');
+                return src && React.createElement('a', {
+                  href: src.url,
+                  target: '_blank',
+                  rel: 'noopener',
+                  onClick: (e) => e.stopPropagation(),
+                  style: insightRowsMeta.circadianContext?.pmidStyle,
+                  title: src.author + ' ' + src.year + ': ' + src.keyFinding
+                }, '📚');
+              })()
             ),
 
             // 🆕 v3.20: TRAINING DAY CONTEXT — Приоритет питания
@@ -1901,14 +1912,17 @@
                 )
               ),
               // PMID ссылка
-              React.createElement('a', {
-                href: 'https://pubmed.ncbi.nlm.nih.gov/23360586/',
-                target: '_blank',
-                rel: 'noopener',
-                onClick: (e) => e.stopPropagation(),
-                style: insightRowsMeta.trainingDayContext?.pmidStyle,
-                title: 'Aragon 2013: Нутриент тайминг для мышц'
-              }, '📚')
+              (() => {
+                const src = HEYS.DayBibliography?.get?.('aragon2013');
+                return src && React.createElement('a', {
+                  href: src.url,
+                  target: '_blank',
+                  rel: 'noopener',
+                  onClick: (e) => e.stopPropagation(),
+                  style: insightRowsMeta.trainingDayContext?.pmidStyle,
+                  title: src.author + ' ' + src.year + ': ' + src.keyFinding
+                }, '📚');
+              })()
             ),
 
             // 🆕 v3.20: BMI CONTEXT — Персонализированная рекомендация
@@ -1919,14 +1933,17 @@
             },
               React.createElement('span', null, 'ℹ️'),
               React.createElement('span', null, caloricDebt.bmiContext.recommendation),
-              React.createElement('a', {
-                href: 'https://pubmed.ncbi.nlm.nih.gov/510806/',
-                target: '_blank',
-                rel: 'noopener',
-                onClick: (e) => e.stopPropagation(),
-                style: insightRowsMeta.bmiContext?.pmidStyle,
-                title: 'DeFronzo 1979: Возраст и инсулинорезистентность'
-              }, '📚')
+              (() => {
+                const src = HEYS.DayBibliography?.get?.('defronzo1979');
+                return src && React.createElement('a', {
+                  href: src.url,
+                  target: '_blank',
+                  rel: 'noopener',
+                  onClick: (e) => e.stopPropagation(),
+                  style: insightRowsMeta.bmiContext?.pmidStyle,
+                  title: src.author + ' ' + src.year + ': ' + src.keyFinding
+                }, '📚');
+              })()
             ),
 
             // Refeed suggestion (если нужен)
@@ -2703,10 +2720,13 @@
                 },
                   'Эффект вчера трени',
                   React.createElement('a', {
-                    href: 'https://pubmed.ncbi.nlm.nih.gov/18583478/',
+                    href: HEYS.DayBibliography?.get?.('magkos2008')?.url,
                     target: '_blank',
                     rel: 'noopener noreferrer',
-                    title: 'PMID: 18583478 — Magkos 2008',
+                    title: (() => {
+                      const src = HEYS.DayBibliography?.get?.('magkos2008');
+                      return src ? src.author + ' ' + src.year + ': ' + src.keyFinding : '';
+                    })(),
                     style: tdeeStyles.ndteLink,
                     onClick: (e) => e.stopPropagation()
                   }, '📚')
@@ -2736,10 +2756,13 @@
                     d.bmiContext.category === 'underweight' ? 'недовес' :
                       d.bmiContext.category === 'overweight' ? 'избыток' : 'ожирение') + ')',
                   React.createElement('a', {
-                    href: 'https://pubmed.ncbi.nlm.nih.gov/10953022/',
+                    href: HEYS.DayBibliography?.get?.('kahn2000')?.url,
                     target: '_blank',
                     rel: 'noopener noreferrer',
-                    title: 'PMID: 10953022 — Kahn & Flier 2000',
+                    title: (() => {
+                      const src = HEYS.DayBibliography?.get?.('kahn2000');
+                      return src ? src.author + ' ' + src.year + ': ' + src.keyFinding : '';
+                    })(),
                     style: tdeeStyles.bmiRowLink,
                     onClick: (e) => e.stopPropagation()
                   }, '📚')

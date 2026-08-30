@@ -7,6 +7,12 @@
 
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.InsightsPI = HEYS.InsightsPI || {};
+
+  // Номер работы берётся из реестра дневной части по id. Раньше он стоял
+  // числом с подписью в комментарии рядом: подпись видел только читатель кода,
+  // и разъехаться они могли молча. Реестра нет — поле пустое, ссылка не
+  // рисуется; выдуманный номер хуже отсутствующего.
+  const SOURCE = (id) => (HEYS.DayBibliography && HEYS.DayBibliography.get(id) || {}).pmid || '';
   const DEV = HEYS.dev || global.HEYS?.dev || {};
   const devLog = DEV.log ? DEV.log.bind(DEV) : () => { };
 
@@ -276,7 +282,7 @@
           : tefPct < 8
             ? `Низкий TEF. Добавь белка для ускорения метаболизма`
             : `Стандартный термический эффект`,
-        pmid: '15507147'
+        pmid: SOURCE('westerterp2004')
       };
 
       // === EPOC (Excess Post-exercise Oxygen Consumption) ===
@@ -310,7 +316,7 @@
           : epocKcal > 20
             ? `+${epocKcal} ккал от EPOC эффекта`
             : trainings.length > 0 ? 'Небольшой EPOC эффект' : 'Нет тренировки',
-        pmid: '16825252'
+        pmid: SOURCE('laforgia2006')
       };
 
       // === Гормональный баланс (Leptin/Ghrelin) ===
@@ -367,7 +373,7 @@
           : adaptiveReduction >= 0.05
             ? `Лёгкая адаптация метаболизма`
             : 'Метаболизм в норме',
-        pmid: '20107198'
+        pmid: SOURCE('rosenbaum2010')
       };
 
       return {
@@ -1322,7 +1328,7 @@
         confirmedCount: causalLinks.length,
         totalAnalyzed: lagAnalysis.length,
         hasData: lagAnalysis.length > 0,
-        pmid: '7608935' // Granger 1969 — causality testing
+        pmid: SOURCE('granger1969')
       };
     },
 
@@ -1437,7 +1443,7 @@
         dataPoints: mealGLs.length,
         hasData: true,
         thresholds: { low: 25, moderate: 36, elevated: 50 },
-        pmid: '16936182' // Monnier 2006 — glycemic variability
+        pmid: SOURCE('monnier2006')
       };
     },
 
@@ -1632,7 +1638,7 @@
         riskLabel,
         recovery,
         hasData: Object.keys(components).length >= 3,
-        pmid: '9428090' // McEwen 1998 — allostatic load
+        pmid: SOURCE('mcewen1998')
       };
     },
 
@@ -1788,7 +1794,7 @@
         dataPoints: deviations.length,
         hasData: true,
         science: 'Scheffer et al. 2009 — Early Warning Signals for Critical Transitions (Nature)',
-        pmid: '19727193' // Scheffer 2009
+        pmid: SOURCE('scheffer2009')
       };
     },
 
@@ -1910,7 +1916,7 @@
         recommendations,
         hasData: true,
         model: 'Borbély 2-Process Model (1982)',
-        pmid: '6128309' // Borbély 1982
+        pmid: SOURCE('borbely1982')
       };
     },
 
@@ -1947,7 +1953,7 @@
         factors: [],
         bingeRisk: 0, // 0-100%
         recommendation: null,
-        pmid: '11070333', // Epel 2001
+        pmid: SOURCE('epel2001'), // Epel 2001
         hasRisk: false
       };
 

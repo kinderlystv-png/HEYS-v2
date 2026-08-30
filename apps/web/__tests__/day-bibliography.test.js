@@ -20,6 +20,18 @@ const STATS = fs.readFileSync(
 const BUNDLE = fs.readFileSync(
   path.resolve(__dirname, '../../../scripts/legacy-bundle-config.mjs'), 'utf8');
 
+// Все места, где код называет источник по id: экраны дня, инсайты, движок
+// поправки. Реестр не должен содержать записей, к которым никто не обращается.
+const CODE = [
+  '../heys_day_stats_v1.js',
+  '../heys_day_stats_vm_v1.js',
+  '../heys_day_caloric_balance_v1.js',
+  '../insights/pi_ui_dashboard.js',
+  '../insights/pi_ui_rings.js',
+  '../insights/pi_analytics_api.js',
+  '../heys_norm_correction_v1.js',
+].map((rel) => fs.readFileSync(path.resolve(__dirname, rel), 'utf8')).join(' ');
+
 let B;
 beforeEach(() => {
   window.HEYS = {};
@@ -58,7 +70,10 @@ describe('источники дневной части · реестр', () => {
 
   it('пропуск виден: missing возвращает id без записи', () => {
     expect(B.missing(['leibel1995'])).toEqual([]);
-    expect(B.missing(['westerterp2004'])).toEqual(['westerterp2004']);
+    // Работа из продукта, у которой в коде нет ни автора, ни года: PMID
+    // 10365981 у сводки избытка. Записи нет — и это видно вызовом, а не
+    // чтением разметки.
+    expect(B.missing(['pmid10365981'])).toEqual(['pmid10365981']);
   });
 
   it('поправка ссылается на id реестра, а не на номер работы', () => {
@@ -81,8 +96,9 @@ describe('источники дневной части · реестр', () => {
   });
 
   it('долг реестра не растёт молча', () => {
-    // Тринадцать адресов в разметке дневной части ещё ждут записей: у их
-    // работ в коде нет автора и года, и заводить записи угадыванием нельзя.
+    // Осталcя один адрес в разметке: 10365981 у сводки избытка — единственная
+    // ссылка дневной части, у которой в коде нет ни автора, ни года, так что
+    // запись пришлось бы угадывать. Остальные разошлись по реестру.
     // Счётчик держит долг от роста — новая ссылка мимо реестра уронит тест.
     const FILES = [
       '../heys_day_stats_v1.js',
@@ -94,13 +110,18 @@ describe('источники дневной части · реестр', () => {
       const src = fs.readFileSync(path.resolve(__dirname, rel), 'utf8');
       return sum + (src.match(/pubmed\.ncbi\.nlm\.nih\.gov\/\d/g) || []).length;
     }, 0);
-    expect(hard).toBeLessThanOrEqual(13);
+    expect(hard).toBeLessThanOrEqual(1);
   });
 
-  it('реестр начат проверенными записями, а не всеми PMID разом', () => {
-    // 106 номеров в коде без автора и года: завести их записями значило бы
+  it('в реестре только проверенные записи, а не все PMID разом', () => {
+    // Записи заведены на источники, у которых автор и год стоят в коде: в
+    // подписи ссылки, в структуре разбора баланса или в списке аналитики.
+    // Остальные номера в продукте — голые, и завести их записями значило бы
     // выдумать метаданные. Долг остаётся долгом и виден через missing().
-    expect(B.registry.size).toBeGreaterThanOrEqual(3);
-    expect(B.registry.size).toBeLessThan(20);
+    expect(B.registry.size).toBe(25);
+    // Каждая запись обязана быть достижима из кода по своему id — иначе
+    // реестр начнёт копить работы, на которые никто не ссылается.
+    const orphans = B.SOURCES.filter((s) => !CODE.includes("'" + s.id + "'"));
+    expect(orphans.map((s) => s.id)).toEqual([]);
   });
 });
