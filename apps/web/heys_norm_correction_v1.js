@@ -35,6 +35,16 @@
   // Не больше трёх процентов за обновление: до цели ×0,92 доходим примерно за
   // три недели. Иначе задержка воды дёргала бы норму туда-сюда.
   const MAX_STEP = 0.03;
+  const DEAD_ZONE = 0.02;
+
+  // Мёртвая зона поправки: расхождение внутри неё — исход «сошлось», норма не
+  // двигается и куратора не спрашивают. Без зоны норма ходила каждую неделю на
+  // любой шум: пример контракта «сошлось» (ели 2 095, вес −0,3 кг за неделю,
+  // k 1,01) давал кадр «Можно есть больше» и +15 ккал. Ширина — решение
+  // владельца 30 августа: два процента при шаге в три оставляют поправке
+  // рабочий диапазон и отсекают шум. Считается от действующего коэффициента,
+  // а не от единицы: у клиента с уже применённой поправкой ×0,95 расхождение
+  // мерится от неё.
 
   const WINDOW_MIN_DAYS = 14;
   const WINDOW_WORKING_DAYS = 21;
@@ -152,7 +162,16 @@
       currentFactor * (1 - MAX_STEP),
       currentFactor * (1 + MAX_STEP)
     );
-    const nextFactor = Math.round(clamp(stepped, FACTOR_MIN, FACTOR_MAX) * 100) / 100;
+    // Округление до десятитысячных — не косметика: ровно на границе двойная
+    // точность даёт 0,020000000000000018, и клиент с расхождением в аккуратные
+    // два процента выпадал из зоны, которая его должна принимать.
+    const drift = currentFactor
+      ? Math.round(Math.abs(targetFactor / currentFactor - 1) * 10000) / 10000
+      : 0;
+    const inDeadZone = drift <= DEAD_ZONE;
+    const nextFactor = inDeadZone
+      ? currentFactor
+      : Math.round(clamp(stepped, FACTOR_MIN, FACTOR_MAX) * 100) / 100;
 
     return Object.assign({}, base, {
       status: 'ready',
@@ -161,9 +180,13 @@
       mismatchPct,
       targetFactor: Math.round(targetFactor * 1000) / 1000,
       path,
+      // Расхождение внутри мёртвой зоны — не расхождение: норма стоит, и
+      // экрану это надо сказать словом, а не молчанием.
+      deadZone: inDeadZone,
+      driftPct: Math.round(drift * 1000) / 10,
       // Шаг ограничен, и это надо показать: без строки «цель ×0,92, шаг не
       // больше 3 %» куратор видит ×0,97 и не понимает, почему не ×0,92.
-      stepCapped: Math.abs(targetFactor - nextFactor) > 0.005,
+      stepCapped: !inDeadZone && Math.abs(targetFactor - nextFactor) > 0.005,
       nextFactor,
       // Рост система применяет сама и сообщает в тот же день; снижение требует
       // явного согласия. Делим не по «с подтверждением или без», а по тому,
@@ -286,7 +309,7 @@
       // формулы 2 230 — расчёт просит поднять норму, а строка говорила
       // «формула завышает». При нулевом расхождении строки нет вовсе: объяснять
       // нечего.
-      whereMismatchSits: (res.status === 'ready' && res.mismatchPct)
+      whereMismatchSits: (res.status === 'ready' && res.mismatchPct && !res.deadZone)
         ? (res.mismatchPct > 0
           ? 'В расходе — формула занижает: человек тратит больше, чем она считает. Или в точности записей — в дневник попало больше, чем съедено. Поправка выравнивает результат в обоих случаях, но лечится это по-разному.'
           : 'В расходе — формула завышает. Или в точности записей — часть съеденного не попала в дневник. Поправка выравнивает результат в обоих случаях, но лечится это по-разному.')
@@ -320,7 +343,10 @@
         deficitPct: Number(deficitPct) || 0,
         hitFloor: after.hitFloor
       };
-      card.actions = ['apply_tomorrow', 'postpone', 'freeze'];
+      // Внутри мёртвой зоны решать нечего: применение не сдвинуло бы норму ни
+      // на калорию, а кнопка, которая ничего не меняет, обесценивает те,
+      // которые меняют.
+      card.actions = res.deadZone ? [] : ['apply_tomorrow', 'postpone', 'freeze'];
     } else {
       card.reason = res.reason;
       card.missing = res.missing || null;
@@ -1189,7 +1215,12 @@
       });
 
       const isSilent = silentDays >= SILENT_DAYS_ALERT;
-      const mismatchPct = Number.isFinite(result.mismatchPct) ? Math.abs(result.mismatchPct) : null;
+      // Внутри мёртвой зоны расхождения нет: норма стоит по решению движка, и
+      // выводить клиента в «расчёт разошёлся» значило бы звать куратора туда,
+      // где делать нечего.
+      const mismatchPct = (Number.isFinite(result.mismatchPct) && !result.deadZone)
+        ? Math.abs(result.mismatchPct)
+        : null;
       const answeredToday = decidedToday(entry.lastDecisionAt, base);
       const hasProposal = result.status === 'ready' && result.direction !== 'hold';
       // Окно ещё не набралось — это рабочее состояние первых трёх недель, а не

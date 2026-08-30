@@ -233,10 +233,11 @@ describe('поправка на факт · модель кураторской 
   it('объяснение выбирается стороной расхождения, а не одно на оба', () => {
     // У живого клиента факт 2 273 против формулы 2 230: расчёт просит поднять
     // норму, а строка говорила «формула завышает» — прямо против чисел над ней.
+    // Расхождение берём заведомо вне мёртвой зоны: внутри неё объяснять нечего.
     const up = NC.buildCuratorCard({
       result: NC.compute({
-        days: days(21, 2450), formulaPerDay: 2400,
-        trend: { deltaKg: 0.1, measuredDays: 21, windowDays: 21 },
+        days: days(21, 2650), formulaPerDay: 2400,
+        trend: { deltaKg: 0.3, measuredDays: 21, windowDays: 21 },
         currentFactor: 1, historyDays: 60
       }),
       expenditure: 2400, deficitPct: -12
@@ -337,6 +338,61 @@ describe('поправка на факт · модель кураторской 
       currentFactor: 1, historyDays: 60
     });
     expect(free.stepCapped).toBe(false);
+  });
+
+  it('мёртвая зона: расхождение до 2 % — это «сошлось», а не изменение', () => {
+    // Пример контракта «четыре недели одного клиента»: ели 2 095, вес −0,3 кг
+    // за неделю (−0,9 за окно) — ровно k 1,01. Без зоны это давало кадр
+    // «Можно есть больше» и +15 ккал.
+    const matched = NC.compute({
+      days: days(21, 2095), formulaPerDay: 2400,
+      trend: { deltaKg: -0.9, measuredDays: 21, windowDays: 21 },
+      currentFactor: 1, historyDays: 60
+    });
+    expect(matched.targetFactor).toBe(1.01);
+    expect(matched.deadZone).toBe(true);
+    expect(matched.nextFactor).toBe(1);
+    expect(matched.direction).toBe('hold');
+    expect(NC.buildWeeklySyncCard({ result: matched, tariff: 'self' }).frame).toBe('matched');
+
+    // Ровно на границе — ещё совпадение; за ней — уже изменение.
+    const edge = (target) => NC.compute({
+      days: days(21, 2400 * target), formulaPerDay: 2400,
+      trend: { deltaKg: 0, measuredDays: 21, windowDays: 21 },
+      currentFactor: 1, historyDays: 60
+    });
+    expect(edge(1.02).deadZone).toBe(true);
+    expect(edge(1.025).deadZone).toBe(false);
+    expect(edge(1.025).direction).toBe('up');
+  });
+
+  it('зона мерится от действующей поправки, а не от единицы', () => {
+    // У клиента с применённой ×0,95 расхождение считается от неё: иначе он
+    // навсегда остался бы «разошедшимся» просто потому, что поправка не 1,00.
+    const r = NC.compute({
+      days: days(21, 2280), formulaPerDay: 2400,
+      trend: { deltaKg: 0, measuredDays: 21, windowDays: 21 },
+      currentFactor: 0.95, historyDays: 60
+    });
+    expect(r.targetFactor).toBe(0.95);
+    expect(r.deadZone).toBe(true);
+    expect(r.nextFactor).toBe(0.95);
+  });
+
+  it('внутри зоны решать нечего — и кнопок решения нет', () => {
+    const card = NC.buildCuratorCard({
+      result: NC.compute({
+        days: days(21, 2095), formulaPerDay: 2400,
+        trend: { deltaKg: -0.9, measuredDays: 21, windowDays: 21 },
+        currentFactor: 1, historyDays: 60
+      }),
+      expenditure: 2400, deficitPct: -12
+    });
+    expect(card.actions).toEqual([]);
+    // Объяснять расхождение тоже нечего: его нет.
+    expect(card.whereMismatchSits).toBeNull();
+    // Норма при этом показывается — она и есть ответ «осталась прежней».
+    expect(card.recommendation.norm).toBe(card.recommendation.currentNorm);
   });
 
   it('точка недели в истории стоит по шкале, а не «примерно»', () => {
