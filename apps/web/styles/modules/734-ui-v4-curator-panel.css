@@ -588,3 +588,83 @@
   background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #fff5ef);
 }
+
+/* Меню клиента: пять безымянных круглых кнопок собраны в лист со строками.
+   Круглая «⋯» остаётся единственной кнопкой в карточке — она открывает, а не
+   делает, и потому не спорит с главным действием карточки. */
+.cur-cab__more {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cur-cab__menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--v4-z-curator-sheet, 10001);
+  background: var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+  display: flex;
+  align-items: flex-end;
+}
+
+.cur-cab__menu {
+  width: 100%;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  border-radius: 24px 24px 0 0;
+  background: var(--v4-bg, #fffaf1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cur-cab__menu-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cur-cab__menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 0;
+  border: none;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cur-cab__menu-row:last-child {
+  border-bottom: none;
+}
+
+.cur-cab__menu-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cur-cab__menu-hint {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+/* Удаление — последним и своим тоном: в прежнем ряду оно стояло рядом с
+   «посмотреть» и такого же вида, так что промах стоил клиента. */
+.cur-cab__menu-row.is-bad .cur-cab__menu-label,
+.cur-cab__menu-row.is-bad .cur-cab__menu-hint {
+  color: var(--v4-bad-text, #b4442a);
+}

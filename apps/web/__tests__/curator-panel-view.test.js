@@ -59,6 +59,27 @@ describe('панель куратора · место в кабинете', () =
       .toEqual(window.HEYS.NormCorrection.PANEL_STATES);
   });
 
+  it('пять кружков собраны в лист, и ни одно действие не потерялось', () => {
+    // Контракт «меню клиента вместо пяти кружков». Прежний ряд: диагностика,
+    // id, правка, подписка, удаление — все пять остаются, у каждого имя.
+    const menu = GATE.slice(GATE.indexOf('function ClientActionsMenu'),
+      GATE.indexOf('function EditClientButton'));
+    for (const label of ['Анкета и цели', 'Подписка и тариф',
+      'Диагностика загрузок', 'Скопировать id', 'Удалить клиента']) {
+      expect(menu, label).toContain("'" + label + "'");
+    }
+    // Удаление последним и своим тоном: в прежнем ряду оно стояло рядом с
+    // «посмотреть» и такого же вида.
+    expect(menu.indexOf("'Удалить клиента'"))
+      .toBeGreaterThan(menu.indexOf("'Скопировать id'"));
+    expect(menu).toContain("'bad'");
+    expect(CSS).toContain('.cur-cab__menu-row.is-bad');
+    // Модальная логика осталась в своих компонентах — наружу вынесен вид.
+    expect(GATE).toContain('renderTrigger');
+    expect(menu).toContain('renderTrigger: ({ open: openEdit })');
+    expect(menu).toContain('renderTrigger: ({ open: openSubs })');
+  });
+
   it('вход в дневник не заводит вторую механику переключения', () => {
     // switchClient живёт в списке клиентов и остаётся одной механикой на
     // весь кабинет.

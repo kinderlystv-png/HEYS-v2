@@ -148,7 +148,11 @@
     };
 
     // ⚙️ Компонент управления подпиской клиента (портал + enterprise UI)
-    function ClientSubscriptionButton({ client, curatorId, onUpdate }) {
+    // renderTrigger — необязательный: контракт «меню клиента вместо пяти
+    // кружков» собирает безымянные круглые кнопки в лист со строками, а вся
+    // модальная логика остаётся здесь. Без него компонент рисует прежнюю
+    // кнопку, поэтому старые места вызова не трогаются.
+    function ClientSubscriptionButton({ client, curatorId, onUpdate, renderTrigger }) {
         const [open, setOpen] = React.useState(false);
         const [view, setView] = React.useState('main'); // main | trial | extend
         const [loading, setLoading] = React.useState(false);
@@ -747,6 +751,16 @@
             ? ReactDOM.createPortal(modalOverlay, document.body)
             : modalOverlay;
 
+        const openSubs = (e) => {
+            if (e && e.stopPropagation) e.stopPropagation();
+            console.info('[HEYS.subs] ⚙️ Открыта панель управления подпиской', { clientId: client.id });
+            setOpen(true);
+            setView('main');
+        };
+        if (renderTrigger) {
+            return h(React.Fragment, null, renderTrigger({ open: openSubs, badge }), open ? portal : null);
+        }
+
         return h(React.Fragment, null,
             h('button', {
                 className: 'btn-icon',
@@ -768,7 +782,104 @@
     }
 
     // ✏️ Модалка редактирования клиента (имя, телефон, PIN)
-    function EditClientButton({ client, editClient }) {
+    /**
+     * Меню клиента: пять безымянных круглых кнопок собраны в один лист.
+     *
+     * Контракт «меню клиента вместо пяти кружков». Действий не убавилось и не
+     * прибавилось — у каждого появилось имя. Удаление стоит последним и своим
+     * тоном: в прежнем ряду оно было рядом с «посмотреть» и такого же вида,
+     * так что промах стоил клиента.
+     *
+     * Состав отличается от кадра. В кадре пункты «Подписка и тариф», «Анкета и
+     * цели», «Настройки»; в кабинете настроек клиента нет, а есть диагностика
+     * загрузок и копирование id — их и называем. Выдумывать пункт, ведущий в
+     * никуда, нельзя, а прятать существующее действие запрещает строка «что
+     * менялось».
+     */
+    function ClientActionsMenu({ client, curatorId, editClient, copyClientId, removeClient }) {
+        const [open, setOpen] = React.useState(false);
+        const close = () => setOpen(false);
+
+        const row = (label, onClick, tone) => React.createElement('button', {
+            key: label,
+            type: 'button',
+            className: 'cur-cab__menu-row' + (tone ? ' is-' + tone : ''),
+            onClick: (e) => {
+                e.stopPropagation();
+                close();
+                onClick(e);
+            }
+        },
+            React.createElement('span', { className: 'cur-cab__menu-label' }, label),
+            React.createElement('span', { className: 'cur-cab__menu-hint' },
+                tone === 'bad' ? 'удалить' : 'открыть')
+        );
+
+        return React.createElement(React.Fragment, null,
+            React.createElement('button', {
+                type: 'button',
+                className: 'cur-cab__more',
+                title: 'Ещё действия',
+                'aria-label': 'Ещё действия: ' + (client.name || 'клиент'),
+                onClick: (e) => { e.stopPropagation(); setOpen(true); }
+            }, '⋯'),
+
+            open ? React.createElement('div', {
+                className: 'cur-cab__menu-scrim',
+                onClick: (e) => { e.stopPropagation(); close(); }
+            },
+                React.createElement('div', {
+                    className: 'cur-cab__menu',
+                    role: 'dialog',
+                    'aria-modal': 'true',
+                    onClick: (e) => e.stopPropagation()
+                },
+                    React.createElement('div', { className: 'cur-cab__menu-head' },
+                        React.createElement('span', { className: 'cur-row__avatar' },
+                            // Инициалы берём у общего модуля: внутри карточки они
+                            // приходят пропом, а меню живёт своей функцией.
+                            HEYS.AppClientHelpers?.getClientInitials?.(client.name)
+                              || (client.name || '—').slice(0, 1).toUpperCase()),
+                        React.createElement('span', { className: 'cur-sheet__copy' },
+                            React.createElement('span', { className: 'cur-row__name' }, client.name),
+                            React.createElement('span', { className: 'cur-sheet__meta' },
+                                getSubscriptionBadge(client).text)
+                        )
+                    ),
+                    React.createElement('div', { className: 'cur-group__card' },
+                        // «Анкета и цели» и «Подписка и тариф» — те же компоненты,
+                        // что раньше рисовали кружки: наружу вынесен только вид
+                        // кнопки, вся модальная логика осталась внутри них.
+                        React.createElement(EditClientButton, {
+                            client, editClient,
+                            renderTrigger: ({ open: openEdit }) => row('Анкета и цели', openEdit)
+                        }),
+                        React.createElement(ClientSubscriptionButton, {
+                            client, curatorId,
+                            onUpdate: () => window.dispatchEvent(new CustomEvent('heys:clients-updated')),
+                            renderTrigger: ({ open: openSubs }) => row('Подписка и тариф', openSubs)
+                        }),
+                        row('Диагностика загрузок', () => {
+                            HEYS.ClientDiagnostics?.show?.({ clientId: client.id, clientName: client.name });
+                        }),
+                        row('Скопировать id', (e) => {
+                            console.info('[HEYS.gate] 🆔 Копирование ID', { clientId: client.id });
+                            copyClientId(e);
+                        }),
+                        row('Удалить клиента', () => {
+                            const confirmed = confirm('Удалить клиента "' + client.name
+                                + '"?\n\nПосле удаления появится кнопка отмены.');
+                            if (!confirmed) return;
+                            removeClient(client.id, { enableUndo: true, name: client.name });
+                        }, 'bad')
+                    )
+                )
+            ) : null
+        );
+    }
+
+    // renderTrigger — то же, что у подписки: строка листа вместо кружка.
+    function EditClientButton({ client, editClient, renderTrigger }) {
         const [open, setOpen] = React.useState(false);
         const [loading, setLoading] = React.useState(false);
         const [name, setName] = React.useState(client.name || '');
@@ -847,7 +958,16 @@
             }
         };
 
-        const triggerBtn = React.createElement('button', {
+        const openEdit = (e) => {
+            if (e && e.stopPropagation) e.stopPropagation();
+            setName(client.name || '');
+            setPhone(client.phone_normalized || client.phone || '');
+            editPinField.resetDigits();
+            setOpen(true);
+        };
+        const triggerBtn = renderTrigger
+            ? renderTrigger({ open: openEdit })
+            : React.createElement('button', {
             className: 'btn-icon',
             title: 'Редактировать профиль',
             onClick: (e) => {
@@ -2499,56 +2619,19 @@
                                                                       lastPreview.intent_type === 'weight' ? 'вес' : ''))
                                                                 ),
 
-                                                                // 3. Нижний ряд: Кнопки (выровнены вправо)
-                                                                React.createElement(
-                                                                    'div',
-                                                                    {
-                                                                        style: { display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 4 },
-                                                                        onClick: (e) => e.stopPropagation()
-                                                                    },
-                                                                    React.createElement('button', {
-                                                                        className: 'btn-icon',
-                                                                        title: 'Диагностика загрузок',
-                                                                        'aria-label': `Диагностика загрузок: ${c.name}`,
-                                                                        onClick: (e) => {
-                                                                            e.stopPropagation();
-                                                                            HEYS.ClientDiagnostics?.show?.({ clientId: c.id, clientName: c.name });
-                                                                        },
-                                                                        style: { width: 30, height: 30, borderRadius: 6, border: '1px solid #c7c8df', background: '#f5f5fb', color: '#434587', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
-                                                                    }, '◉'),
-                                                                    React.createElement('button', {
-                                                                        className: 'btn-icon',
-                                                                        title: 'Скопировать ID',
-                                                                        onClick: (e) => {
-                                                                            console.info('[HEYS.gate] 🆔 Копирование ID', { clientId: c.id });
-                                                                            copyClientId(e);
-                                                                        },
-                                                                        style: { width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
-                                                                    }, '🆔'),
-                                                                    React.createElement(EditClientButton, {
-                                                                        client: c,
-                                                                        editClient
-                                                                    }),
-                                                                    // Settings
-                                                                    React.createElement(ClientSubscriptionButton, {
+                                                                // Меню действий клиента вместо прежнего ряда кружков.
+                                                                    // Контракт «меню клиента вместо пяти кружков»: пять
+                                                                    // безымянных круглых кнопок собраны в лист со
+                                                                    // строками. Удаление стоит последним и своим тоном —
+                                                                    // в прежнем ряду оно было рядом с «посмотреть» и
+                                                                    // такого же вида.
+                                                                    React.createElement(ClientActionsMenu, {
                                                                         client: c,
                                                                         curatorId: cloudUser?.id,
-                                                                        onUpdate: () => window.dispatchEvent(new CustomEvent('heys:clients-updated'))
-                                                                    }),
-                                                                    React.createElement('button', {
-                                                                        className: 'btn-icon',
-                                                                        title: 'Удалить',
-                                                                        onClick: () => {
-                                                                            const confirmed = confirm(`Удалить клиента "${c.name}"?\n\nПосле удаления появится кнопка отмены.`);
-                                                                            if (!confirmed) return;
-                                                                            removeClient(c.id, {
-                                                                                enableUndo: true,
-                                                                                name: c.name
-                                                                            });
-                                                                        },
-                                                                        style: { width: 30, height: 30, borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
-                                                                    }, '🗑️')
-                                                                )
+                                                                        editClient,
+                                                                        copyClientId,
+                                                                        removeClient
+                                                                    })
                                                             )
                                                         );
                                                     })
