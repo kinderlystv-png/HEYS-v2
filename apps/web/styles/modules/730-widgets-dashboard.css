@@ -13722,33 +13722,32 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   height: 4px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.14);
-  margin: 0 auto 12px;
+  margin: 0 auto 14px;
 }
 
 .widget-bd-sheet__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 12px;
 }
 
 .widget-bd-sheet__title {
   font-size: 15px;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1;
   color: var(--v4-ink, #201e1d);
 }
 
 .widget-bd-sheet__close {
   position: relative;
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
+  flex: none;
+  width: 30px;
+  height: 30px;
   border: none;
   padding: 0;
-  margin: -8px -8px -8px 0;
-  background: none;
+  border-radius: 999px;
+  background: var(--v4-sand-surface, #f7efe2);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -13756,38 +13755,44 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   color: rgba(0, 0, 0, 0.55);
 }
 
+/* Кадр рисует круг 30×30, но палец меньше 44 px не ловит: зона нажатия
+   растянута псевдоэлементом, сам круг остаётся 30 px. */
+.widget-bd-sheet__close::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
 .widget-bd-sheet__close svg {
   position: relative;
   z-index: 1;
 }
 
-.widget-bd-sheet__stub {
-  margin: 0 0 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
-}
-
 .widget-bd-sheet__kicker {
   font-size: 10px;
   font-weight: 700;
+  line-height: 1;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(0, 0, 0, 0.4);
-  margin-bottom: 10px;
+  margin-top: 16px;
 }
 
 .widget-bd-sheet__hero {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-top: 9px;
 }
 
 .widget-bd-sheet__hero-val {
   font-size: 44px;
   font-weight: 600;
-  line-height: 1;
+  line-height: 0.9;
   letter-spacing: -0.03em;
   color: var(--v4-act-text, #cf8144);
   font-variant-numeric: tabular-nums;
@@ -13800,11 +13805,12 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__insight {
-  margin: 0 0 12px;
-  font-size: 12px;
-  font-weight: 500;
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
   line-height: 1.4;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.72));
+  color: var(--v4-ink, #201e1d);
+  text-wrap: pretty;
 }
 
 .widget-bd-sheet__chart-label {
@@ -13813,34 +13819,34 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(0, 0, 0, 0.38);
-  margin-bottom: 8px;
+  margin-top: 16px;
+}
+
+/* График сразу под своей надписью — свой верхний отступ он не добавляет. */
+.widget-bd-sheet__chart-label + * {
+  margin-top: 8px;
 }
 
 .widget-bd-sheet__bars {
   position: relative;
   display: flex;
   align-items: flex-end;
-  gap: 4px;
-  height: 72px;
-  margin-bottom: 16px;
+  gap: 6px;
+  height: 56px;
+  margin-top: 16px;
 }
 
 .widget-bd-sheet__bar {
   flex: 1;
-  display: flex;
-  align-items: flex-end;
   min-height: 4px;
+  border-radius: 6px 6px 3px 3px;
+  background: var(--v4-act, #c67139);
 }
 
-.widget-bd-sheet__bar > i {
-  display: block;
-  width: 100%;
-  border-radius: 3px 3px 1px 1px;
-  background: rgba(0, 0, 0, 0.12);
-}
-
-.widget-bd-sheet__bar.is-today > i {
-  background: var(--v4-act-text, #cf8144);
+/* Кадр не выделяет сегодняшний столбик заливкой — день называет ось под
+   графиком (последняя подпись тоном --ac). Столбики красит только состояние. */
+.widget-bd-sheet__bar.is-bad {
+  background: var(--v4-bad-text, #b4442a);
 }
 
 .widget-bd-sheet__bar-target {
@@ -13848,8 +13854,8 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   left: 0;
   right: 0;
   height: 1px;
-  background: rgba(0, 0, 0, 0.22);
-  bottom: 55%;
+  background: rgba(0, 0, 0, 0.18);
+  bottom: 62%;
   pointer-events: none;
 }
 
@@ -13857,7 +13863,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   display: block;
   width: 100%;
   height: 72px;
-  margin-bottom: 16px;
+  margin-top: 16px;
   color: var(--v4-act-text, #cf8144);
 }
 
@@ -13869,7 +13875,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   display: block;
   width: 100%;
   height: 72px;
-  margin-bottom: 16px;
+  margin-top: 16px;
 }
 
 .widget-bd-sheet__weight-dot {
@@ -13886,7 +13892,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   align-items: flex-end;
   gap: 2px;
   height: 66px;
-  margin-bottom: 6px;
+  margin-top: 16px;
 }
 
 .widget-bd-sheet__water-profile-gap {
@@ -13924,7 +13930,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__water-axis {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-top: 6px;
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
@@ -13935,7 +13941,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-bottom: 16px;
+  margin-top: 16px;
 }
 
 .widget-bd-sheet__grid-row {
@@ -13966,7 +13972,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 3px;
-  margin-bottom: 16px;
+  margin-top: 16px;
 }
 
 .widget-bd-sheet__heat-cell {
@@ -13992,7 +13998,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-bottom: 6px;
+  margin-top: 16px;
 }
 
 .widget-bd-sheet__sleep-timeline-row {
@@ -14043,7 +14049,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__sleep-axis {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-top: 6px;
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
@@ -14052,15 +14058,15 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 .widget-bd-sheet__wave-placeholder {
   height: 32px;
-  margin-bottom: 16px;
+  margin-top: 16px;
   border-radius: 6px;
 }
 
 .widget-bd-sheet__wave-week {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin-bottom: 16px;
+  gap: 6px;
+  margin-top: 16px;
 }
 
 .widget-bd-sheet__wave-week-row {
@@ -14110,7 +14116,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   display: flex;
   position: relative;
   height: 32px;
-  margin-bottom: 16px;
+  margin-top: 16px;
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.06);
   overflow: hidden;
@@ -14130,7 +14136,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   display: flex;
   flex-direction: column;
   gap: 11px;
-  margin-bottom: 16px;
+  margin-top: 14px;
 }
 
 .widget-bd-sheet__hero-track {
@@ -14186,7 +14192,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   display: flex;
   flex-direction: column;
   gap: 11px;
-  margin-bottom: 12px;
+  margin-top: 16px;
 }
 
 .widget-bd-sheet__stat-row {
@@ -14207,33 +14213,41 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__stat-label {
   font-size: 11px;
   font-weight: 500;
+  line-height: 1.3;
   color: rgba(0, 0, 0, 0.5);
 }
 
 .widget-bd-sheet__stat-value {
+  flex: none;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
 }
 
 .widget-bd-sheet__norm {
-  margin: 0 0 16px;
-  font-size: 11px;
+  margin: 14px 0 0;
+  font-size: 11.5px;
   font-weight: 500;
   line-height: 1.4;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(0, 0, 0, 0.55);
+  text-wrap: pretty;
 }
 
 .widget-bd-sheet__chips {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-top: 16px;
 }
 
 .widget-bd-sheet__chip,
 .widget-bd-sheet__action {
-  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
   border: none;
   border-radius: 999px;
   background: var(--v4-act, #cf8144);
@@ -14248,16 +14262,23 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__action {
-  display: block;
   width: 100%;
+  margin-top: 16px;
 }
 
 .widget-bd-sheet__factors,
 .widget-bd-sheet__drivers {
   display: flex;
   flex-direction: column;
+  margin-top: 14px;
+}
+
+.widget-bd-sheet__factors {
+  gap: 9px;
+}
+
+.widget-bd-sheet__drivers {
   gap: 8px;
-  margin-bottom: 12px;
 }
 
 .widget-bd-sheet__factor-row {
@@ -14349,7 +14370,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-top: 16px;
 }
 
 .widget-bd-sheet__contrib-row {
@@ -14465,4 +14486,235 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widgets-longpress-hint__sub {
   font: 500 11px/1.35 Figtree, system-ui, sans-serif;
   color: rgba(242, 237, 230, 0.62);
+}
+
+/* Источники вклада — кадр «Разбор · Клетчатка», элементы 84–92. */
+.widget-bd-sheet__sources {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.widget-bd-sheet__source-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.widget-bd-sheet__source-name {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+}
+
+.widget-bd-sheet__source-val {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.widget-bd-sheet__source-bar {
+  display: block;
+  height: 5px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.widget-bd-sheet__source-bar > i {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
+/* Распределение по приёмам — кадр «Разбор · Белок», элементы 84–91. */
+.widget-bd-sheet__meal-bars {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 72px;
+  margin-top: 16px;
+}
+
+.widget-bd-sheet__meal-bar {
+  flex: 1;
+  border-radius: 6px 6px 3px 3px;
+  background: var(--v4-act, #c67139);
+}
+
+.widget-bd-sheet__meal-axis {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.widget-bd-sheet__meal-axis > span {
+  flex: 1;
+  text-align: center;
+}
+
+/* Составные столбики дней — кадр «Разбор · Качество еды», элементы 84–104. */
+.widget-bd-sheet__stack {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 76px;
+  margin-top: 16px;
+}
+
+.widget-bd-sheet__stack-col {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.widget-bd-sheet__stack-seg {
+  display: block;
+  border-radius: 3px;
+}
+
+.widget-bd-sheet__stack-seg.is-sweet {
+  background: var(--v4-warn-soft, #c9922e);
+}
+
+/* Остальное занимает то, что не забрало сладкое: столбик — весь рацион дня,
+   и сумма долей с зазором не должна вылезать за высоту блока. */
+.widget-bd-sheet__stack-seg.is-rest {
+  flex: 1;
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
+.widget-bd-sheet__stack-seg.is-empty {
+  height: 4px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Циферблат суток — кадр «Разбор · Ритм приёмов», элемент 83. */
+.widget-bd-sheet__clock-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.widget-bd-sheet__clock-ring {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.1);
+  stroke-width: 1;
+}
+
+.widget-bd-sheet__clock-ring.is-inner {
+  stroke: rgba(0, 0, 0, 0.05);
+}
+
+.widget-bd-sheet__clock-night {
+  fill: rgba(0, 0, 0, 0.05);
+}
+
+.widget-bd-sheet__clock-dot {
+  fill: var(--v4-act, #c67139);
+}
+
+.widget-bd-sheet__clock-dot.is-past {
+  fill: var(--v4-act-text, #8a4a20);
+  opacity: 0.3;
+}
+
+/* Факторы вечера — кадр «Разбор · Готовность ко сну», элементы 84–98. */
+.widget-bd-sheet__evening {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.widget-bd-sheet__evening-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.widget-bd-sheet__evening-label {
+  flex: none;
+  width: 82px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.widget-bd-sheet__evening-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.widget-bd-sheet__evening-fill {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
+.widget-bd-sheet__evening-fill.is-warn {
+  background: var(--v4-warn-soft, #c9922e);
+}
+
+.widget-bd-sheet__evening-fill.is-bad {
+  background: var(--v4-bad-text, #b4442a);
+}
+
+/* Пункт без данных дорожки не рисует вовсе — пустая читалась бы как «открыт». */
+.widget-bd-sheet__evening-empty {
+  flex: 1;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.38);
+}
+
+.widget-bd-sheet__evening-dots {
+  display: flex;
+  gap: 5px;
+  margin-top: 14px;
+}
+
+.widget-bd-sheet__evening-dot-cell {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+}
+
+.widget-bd-sheet__evening-dot {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.widget-bd-sheet__evening-dot.is-good {
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
+.widget-bd-sheet__evening-dot.is-warn {
+  background: var(--v4-warn-soft, #c9922e);
+}
+
+.widget-bd-sheet__evening-dot.is-bad {
+  background: var(--v4-bad-text, #b4442a);
 }

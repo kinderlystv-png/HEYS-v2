@@ -15,7 +15,7 @@ const BATCH1 = [
   'calories', 'water', 'weight', 'sleep', 'steps', 'insulinWave', 'macros',
   'dayScore', 'relapseRisk', 'healthTrend', 'heatmap', 'crashRisk'
 ];
-const BATCH2_STUB = ['fiber', 'protein', 'sleepWindow', 'foodQuality', 'mealRhythm', 'sleepReady'];
+const BATCH2 = ['fiber', 'protein', 'sleepWindow', 'foodQuality', 'mealRhythm', 'sleepReady'];
 
 function bootVariants() {
   const heys = window.HEYS || {};
@@ -49,7 +49,7 @@ describe('home-widgets breakdown sheets v4', () => {
 
   it('экспорт batch1/batch2 и wiring тапа в UI', () => {
     expect(VARIANTS_SRC).toContain('BREAKDOWN_BATCH1');
-    expect(VARIANTS_SRC).toContain('BREAKDOWN_STUB_TYPES');
+    expect(VARIANTS_SRC).toContain('BREAKDOWN_BATCH2');
     expect(VARIANTS_SRC).toContain('buildBreakdownModel');
     expect(VARIANTS_SRC).toContain('WidgetBreakdownSheet');
     expect(VARIANTS_SRC).toContain('function bdSplinePath');
@@ -64,7 +64,7 @@ describe('home-widgets breakdown sheets v4', () => {
     expect(VARIANTS_SRC).toContain('bdHeatmapBreakdownInsight');
     expect(VARIANTS_SRC).toContain('bdWeightPlateauBands');
 
-    for (const t of [...BATCH1, ...BATCH2_STUB]) {
+    for (const t of [...BATCH1, ...BATCH2]) {
       expect(VARIANTS_SRC).toContain(`'${t}'`);
     }
 
@@ -132,14 +132,27 @@ describe('home-widgets breakdown sheets v4', () => {
       }
     });
 
-    it('batch2 — stub «за сегодня»', () => {
-      for (const type of BATCH2_STUB) {
+    // Шесть видов пакета 22 августа с 30 августа открывают свой лист, а не
+    // заглушку: у каждого кикер, норма и кнопка кадра, заглушечного признака
+    // stubOnly в модели больше нет.
+    it('batch2 — свой лист вместо заглушки', () => {
+      const KICKERS = {
+        fiber: 'Сегодня',
+        protein: 'Сегодня',
+        sleepWindow: 'До сна после еды',
+        foodQuality: 'Сегодня',
+        mealRhythm: 'Приёмов за день',
+        sleepReady: 'Сегодня вечером'
+      };
+      for (const type of BATCH2) {
         expect(V4.opensBreakdown(type)).toBe(true);
         const model = V4.buildBreakdownModel({ id: 'w2', type, size: '1x1' });
-        expect(model.stubOnly, type).toBe(true);
-        expect(model.insight, type).toBeNull();
-        expect(model.chart, type).toBeNull();
+        expect(model.stubOnly, type).toBeUndefined();
+        expect(model.heroKicker, type).toBe(KICKERS[type]);
+        expect(model.action?.label, type).toBeTruthy();
       }
+      expect(VARIANTS_SRC).not.toContain('buildStubBreakdown');
+      expect(CSS_SRC).not.toContain('.widget-bd-sheet__stub');
     });
 
     it('status открывается как dayScore', () => {
@@ -173,7 +186,7 @@ describe('home-widgets breakdown sheets v4', () => {
       expect(model.action.kind).toBe('addMeal');
       expect(model.insight == null || model.insight.includes('Обычно к этому часу')).toBe(true);
       const dinnerRow = model.stats.find((r) => r.label === 'Обычно на ужин остаётся');
-      expect(dinnerRow?.value).toBe('620 ккал');
+      expect(dinnerRow?.value).toBe('620');
       expect(VARIANTS_SRC).toContain('function bdTypicalDinnerKcal');
     });
 
@@ -388,8 +401,10 @@ describe('home-widgets breakdown sheets v4', () => {
       expect(model.chart?.plateaus?.length).toBeGreaterThan(0);
       expect(model.insight).toMatch(/плато — вес стоит с/i);
       expect(model.stats?.length).toBe(4);
-      expect(model.stats[3]?.tone).toBe('good');
-      expect(model.stats[3]?.value).toMatch(/кг$/);
+      expect(model.stats[0]?.label).toBe('Эта неделя');
+      expect(model.stats[0]?.tone).toBe('good');
+      expect(model.stats[0]?.value).toMatch(/кг$/);
+      expect(model.stats[3]?.label).toBe('Три назад');
       expect(model.norm).toMatch(/Здоровый темп — до 1 % веса в неделю/);
       expect(CSS_SRC).toContain('.widget-bd-sheet__weight-plateau');
     });
@@ -426,7 +441,7 @@ describe('home-widgets breakdown sheets v4', () => {
       expect(model.insightBeforeHero).toBe(true);
       expect(model.chartLabel).toBeNull();
       expect(model.chart?.kind).toBe('grid3x7');
-      expect(model.stats.find((r) => r.label === 'Белок — % нормы в среднем')?.value).toMatch(/ %$/);
+      expect(model.stats.find((r) => r.label === 'Белок в среднем')?.value).toMatch(/ % нормы$/);
       expect(model.stats.find((r) => r.label === 'Жиры')?.value).toMatch(/ %$/);
       expect(VARIANTS_SRC).toContain('widget-bd-sheet__hero-track-bar');
       expect(CSS_SRC).toContain('.widget-bd-sheet__hero-track-bar');

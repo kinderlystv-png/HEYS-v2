@@ -597,12 +597,12 @@
         },
         "состав дефолта": {
           "v": "=",
-          "f": "DEFAULT_LAYOUT в heys_widgets_core_v1.js — те же тринадцать плиток в том же порядке, вид у каждой задан settings.displayVariant",
+          "f": "DEFAULT_LAYOUT в heys_widgets_core_v1.js — те же тринадцать плиток в том же порядке, вид задан settings.displayVariant",
           "h": "bbff4939cdbd"
         },
         "порядок — часть дефолта": {
           "v": "=",
-          "f": "порядок = порядок массива DEFAULT_LAYOUT, позиций у плиток нет; счёт плиток в карточке сброса приведён к тринадцати",
+          "f": "порядок = порядок массива DEFAULT_LAYOUT; счёт плиток в карточке сброса приведён к тринадцати",
           "h": "0484f603900f"
         },
         "вид в дефолте": {
@@ -1332,8 +1332,8 @@
         },
         "разбор · Качество еды": {
           "v": "=",
-          "f": "stub batch2 — score/10 hero",
-          "h": "b992649db747"
+          "f": "buildFoodQualityBreakdown: герой — вредность дня и порог 5 карточки «Питания», столбик из двух частей (простые углеводы --warn / остальное --gr2), высота — калории дня",
+          "h": "7ead22e775d9"
         },
         "разбор · Ритм приёмов": {
           "v": "=",
@@ -1342,8 +1342,8 @@
         },
         "разбор · Готовность ко сну": {
           "v": "=",
-          "f": "stub batch2 — score/10",
-          "h": "05791bc0445b"
+          "f": "buildSleepReadyBreakdown: счётчик закрытых пунктов героем, четыре пункта, кофеин от личного отбоя минус восемь часов",
+          "h": "e239dbe226a3"
         },
         "каноничная палитра снята": {
           "v": "=",
@@ -1467,27 +1467,27 @@
         },
         "углы под кнопками при расстановке": {
           "v": "=",
-          "f": "flow-укладка углов не резервирует: heys_widgets_core_v1.js, комментарий «кнопки плавают поверх сетки, запрета на угловые клетки нет»",
+          "f": "flow-укладка углов не резервирует: спец-обработки углов в коде нет",
           "h": "e3565d74c5e5"
         },
         "снято · зоны углов": {
           "v": "=",
-          "f": "правило снято и в коде его нет: спец-обработки углов в flow-укладке не осталось",
+          "f": "правило снято, и спец-обработки углов в flow-укладке не осталось",
           "h": "ecf969a9f36d"
         },
         "снято · запрет 1×1 в углу": {
           "v": "=",
-          "f": "правило снято и в коде его нет: спец-обработки углов в flow-укладке не осталось",
+          "f": "правило снято, и спец-обработки углов в flow-укладке не осталось",
           "h": "5c18c5f12ef2"
         },
         "снято · сдвиг прежних раскладок": {
           "v": "=",
-          "f": "правило снято и в коде его нет: спец-обработки углов в flow-укладке не осталось",
+          "f": "правило снято, и спец-обработки углов в flow-укладке не осталось",
           "h": "db40925c006c"
         },
         "снято · смещение 2×1 в углу": {
           "v": "=",
-          "f": "правило снято и в коде его нет: спец-обработки углов в flow-укладке не осталось",
+          "f": "правило снято, и спец-обработки углов в flow-укладке не осталось",
           "h": "42d1b6010b08"
         },
         "как читать разбор": {
@@ -10672,82 +10672,82 @@
         },
         "Разбор · Клетчатка · 84": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "2d9ddc169eae"
         },
         "Разбор · Клетчатка · 85": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "de8b8c095c09"
         },
         "Разбор · Клетчатка · 86": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "53fbb1be116a"
         },
         "Разбор · Клетчатка · 87": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "5ead5f98982a"
         },
         "Разбор · Клетчатка · 88": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "15813169b6bf"
         },
         "Разбор · Клетчатка · 89": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "71ef93921fab"
         },
         "Разбор · Клетчатка · 90": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "914af417f554"
         },
         "Разбор · Клетчатка · 91": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "30fa683a7fdb"
         },
         "Разбор · Клетчатка · 92": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "d1fddcfe5ffb"
         },
         "Разбор · Клетчатка · 93": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "9105f1e48fca"
         },
         "Разбор · Клетчатка · 94": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "471c23930d4d"
         },
         "Разбор · Клетчатка · 95": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "f94b3f0d63f0"
         },
         "Разбор · Клетчатка · 96": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "dd42a22ec729"
         },
         "Разбор · Клетчатка · 97": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "368959463197"
         },
         "Разбор · Клетчатка · 98": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "b389a4a476e2"
         },
         "Разбор · Клетчатка · 99": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "da8919fc0e3b"
         },
         "Разбор · Белок · 01": {
@@ -11167,77 +11167,77 @@
         },
         "Разбор · Белок · 84": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "4829ea6d160a"
         },
         "Разбор · Белок · 85": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "7528955ca2e1"
         },
         "Разбор · Белок · 86": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "f3749fb6f1a3"
         },
         "Разбор · Белок · 87": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "cf302c29a2f3"
         },
         "Разбор · Белок · 88": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "6b61ca1e51ad"
         },
         "Разбор · Белок · 89": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "167c3cbdedd9"
         },
         "Разбор · Белок · 90": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "f3adc4dcccba"
         },
         "Разбор · Белок · 91": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "17f0ac335d28"
         },
         "Разбор · Белок · 92": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "9105f1e48fca"
         },
         "Разбор · Белок · 93": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "471c23930d4d"
         },
         "Разбор · Белок · 94": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "f94b3f0d63f0"
         },
         "Разбор · Белок · 95": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "c74dbe3e2e0e"
         },
         "Разбор · Белок · 96": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "34079079e4bd"
         },
         "Разбор · Белок · 97": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "cf6484c1cedd"
         },
         "Разбор · Белок · 98": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "da8919fc0e3b"
         },
         "Разбор · Окно до сна · 01": {
@@ -11657,22 +11657,22 @@
         },
         "Разбор · Окно до сна · 84": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "cc9e4e4c01e3"
         },
         "Разбор · Окно до сна · 85": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "d116851f82d0"
         },
         "Разбор · Окно до сна · 86": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "a2eeceeabee2"
         },
         "Разбор · Окно до сна · 87": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "9ea3425adced"
         },
         "Разбор · Окно до сна · 88": {
@@ -11747,37 +11747,37 @@
         },
         "Разбор · Окно до сна · 102": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "a7e3590bc778"
         },
         "Разбор · Окно до сна · 103": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "9105f1e48fca"
         },
         "Разбор · Окно до сна · 104": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "471c23930d4d"
         },
         "Разбор · Окно до сна · 105": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "442a0aa1624e"
         },
         "Разбор · Окно до сна · 106": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "8dce51d3f286"
         },
         "Разбор · Окно до сна · 107": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "5e17e3da77ea"
         },
         "Разбор · Окно до сна · 108": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "877b89bf351e"
         },
         "Разбор · Качество еды · 01": {
@@ -12183,166 +12183,141 @@
         "Разбор · Качество еды · 81": {
           "v": "=",
           "f": "каркас листа .widget-bd-sheet__* — сверяется тестом widgets-bd-sheet-canvas-razbor",
-          "h": "3539b763187d"
+          "h": "712913cf9af9"
         },
         "Разбор · Качество еды · 82": {
           "v": "=",
           "f": "каркас листа .widget-bd-sheet__* — сверяется тестом widgets-bd-sheet-canvas-razbor",
-          "h": "a2ba9074e0b6"
+          "h": "3b9b0b8e1fd8"
         },
         "Разбор · Качество еды · 83": {
           "v": "=",
           "f": "каркас листа .widget-bd-sheet__* — сверяется тестом widgets-bd-sheet-canvas-razbor",
-          "h": "0e53b149aefe"
+          "h": "4eeae84290bd"
         },
         "Разбор · Качество еды · 84": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "18b16d40b0d0"
         },
         "Разбор · Качество еды · 85": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "6c9a983da9f0"
         },
         "Разбор · Качество еды · 86": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "9052b0c01d24"
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "3dd7e867677b"
         },
         "Разбор · Качество еды · 87": {
           "v": "≠",
           "f": "третья часть столбика — «обработанное» — признаком продукта не размечена; столбик из двух частей, сладкое из простых углеводов (решение владельца 30.08)",
-          "h": "27053a4b077d"
-        },
-        "Разбор · Качество еды · 88": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
           "h": "5378092499c9"
         },
+        "Разбор · Качество еды · 88": {
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "3c975dbf133b"
+        },
         "Разбор · Качество еды · 89": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "8483d558ef2f"
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "c3590381e2f6"
         },
         "Разбор · Качество еды · 90": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "7f495441562a"
         },
         "Разбор · Качество еды · 91": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "c3590381e2f6"
-        },
-        "Разбор · Качество еды · 92": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "27066779dec5"
-        },
-        "Разбор · Качество еды · 93": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "1217c6828afd"
-        },
-        "Разбор · Качество еды · 94": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "b8720167302e"
         },
-        "Разбор · Качество еды · 95": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "61ec125f18dd"
+        "Разбор · Качество еды · 92": {
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "2985853cdb3e"
         },
-        "Разбор · Качество еды · 96": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "af78dafe4632"
-        },
-        "Разбор · Качество еды · 97": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
+        "Разбор · Качество еды · 93": {
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "db676de5d6b6"
         },
-        "Разбор · Качество еды · 98": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "8da60173bdf4"
+        "Разбор · Качество еды · 94": {
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "09170f002798"
         },
-        "Разбор · Качество еды · 99": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "1c240f1b88aa"
-        },
-        "Разбор · Качество еды · 100": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
+        "Разбор · Качество еды · 95": {
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "f2f604bd523f"
         },
+        "Разбор · Качество еды · 96": {
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "1d906b587fa2"
+        },
+        "Разбор · Качество еды · 97": {
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "7917d6fe17ae"
+        },
+        "Разбор · Качество еды · 98": {
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "dca499dbe6f9"
+        },
+        "Разбор · Качество еды · 99": {
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "bdd90543de76"
+        },
+        "Разбор · Качество еды · 100": {
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "a7e3590bc778"
+        },
         "Разбор · Качество еды · 101": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "2c83196c5602"
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "b4f37e613fa9"
         },
         "Разбор · Качество еды · 102": {
           "v": "?",
           "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "8662683c87a8"
+          "h": "9105f1e48fca"
         },
         "Разбор · Качество еды · 103": {
           "v": "?",
           "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "7917d6fe17ae"
+          "h": "471c23930d4d"
         },
         "Разбор · Качество еды · 104": {
           "v": "?",
           "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "bdd90543de76"
+          "h": "eacc4576365e"
         },
         "Разбор · Качество еды · 105": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "a7e3590bc778"
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "97e3b8a8f923"
         },
         "Разбор · Качество еды · 106": {
           "v": "?",
           "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "b4f37e613fa9"
+          "h": "b0075539fac1"
         },
         "Разбор · Качество еды · 107": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "9105f1e48fca"
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "9de02a03fac7"
         },
         "Разбор · Качество еды · 108": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "471c23930d4d"
-        },
-        "Разбор · Качество еды · 109": {
-          "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "eacc4576365e"
-        },
-        "Разбор · Качество еды · 110": {
-          "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "97e3b8a8f923"
-        },
-        "Разбор · Качество еды · 111": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "b0075539fac1"
-        },
-        "Разбор · Качество еды · 112": {
-          "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "9de02a03fac7"
-        },
-        "Разбор · Качество еды · 113": {
-          "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "da8919fc0e3b"
         },
         "Разбор · Ритм приёмов · 01": {
@@ -12757,37 +12732,37 @@
         },
         "Разбор · Ритм приёмов · 83": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "f5e1dcdf1cb1"
         },
         "Разбор · Ритм приёмов · 84": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "9105f1e48fca"
         },
         "Разбор · Ритм приёмов · 85": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "471c23930d4d"
         },
         "Разбор · Ритм приёмов · 86": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "65a61e044e4d"
         },
         "Разбор · Ритм приёмов · 87": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "6221cffb4c7d"
         },
         "Разбор · Ритм приёмов · 88": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "4a46053357b2"
         },
         "Разбор · Ритм приёмов · 89": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "da8919fc0e3b"
         },
         "Разбор · Готовность ко сну · 01": {
@@ -13193,126 +13168,121 @@
         "Разбор · Готовность ко сну · 81": {
           "v": "=",
           "f": "каркас листа .widget-bd-sheet__* — сверяется тестом widgets-bd-sheet-canvas-razbor",
-          "h": "3a11b47cc6d1"
+          "h": "8e06544a03ec"
         },
         "Разбор · Готовность ко сну · 82": {
           "v": "=",
           "f": "каркас листа .widget-bd-sheet__* — сверяется тестом widgets-bd-sheet-canvas-razbor",
-          "h": "a2ba9074e0b6"
+          "h": "50e01366ce93"
         },
         "Разбор · Готовность ко сну · 83": {
           "v": "=",
           "f": "каркас листа .widget-bd-sheet__* — сверяется тестом widgets-bd-sheet-canvas-razbor",
-          "h": "ff6cefc637a5"
+          "h": "333314a41f19"
         },
         "Разбор · Готовность ко сну · 84": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "2d9ddc169eae"
         },
         "Разбор · Готовность ко сну · 85": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "869d1e5dd696"
         },
         "Разбор · Готовность ко сну · 86": {
           "v": "≠",
           "f": "четыре фактора вечера, но экранного времени не заводим (решение владельца 30.08): кофеин, поздняя еда, активность, вода",
-          "h": "8a6293d3e9e7"
+          "h": "3a7099a3ea18"
         },
         "Разбор · Готовность ко сну · 87": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "ebb7b9223928"
         },
         "Разбор · Готовность ко сну · 88": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "b751ee376716"
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "17ab991a65ed"
         },
         "Разбор · Готовность ко сну · 89": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "cd75b7a1c419"
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "d7cfc9f1a98a"
         },
         "Разбор · Готовность ко сну · 90": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "f136c4dae957"
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "4f75cadf7546"
         },
         "Разбор · Готовность ко сну · 91": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "1281febaa36a"
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "2acc8b62637a"
         },
         "Разбор · Готовность ко сну · 92": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "2acc8b62637a"
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "1bef70cc60dc"
         },
         "Разбор · Готовность ко сну · 93": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "1bef70cc60dc"
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "17196cd4eec4"
         },
         "Разбор · Готовность ко сну · 94": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "17196cd4eec4"
-        },
-        "Разбор · Готовность ко сну · 95": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "fb3dc2a7cc7a"
         },
-        "Разбор · Готовность ко сну · 96": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
+        "Разбор · Готовность ко сну · 95": {
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "4b83e38bb5b8"
+        },
+        "Разбор · Готовность ко сну · 96": {
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "a7e3590bc778"
         },
         "Разбор · Готовность ко сну · 97": {
           "v": "=",
           "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "a7e3590bc778"
+          "h": "b4f37e613fa9"
         },
         "Разбор · Готовность ко сну · 98": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "b4f37e613fa9"
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "9105f1e48fca"
         },
         "Разбор · Готовность ко сну · 99": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "9105f1e48fca"
-        },
-        "Разбор · Готовность ко сну · 100": {
-          "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "471c23930d4d"
         },
-        "Разбор · Готовность ко сну · 101": {
-          "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+        "Разбор · Готовность ко сну · 100": {
+          "v": "≠",
+          "f": "кадр называет строку «Средняя готовность», но балла готовности в продукте нет — строка говорит «Закрыто в среднем N из M», как велит сама строка контракта",
           "h": "06a76386d5e1"
+        },
+        "Разбор · Готовность ко сну · 101": {
+          "v": "≠",
+          "f": "то же: значением идёт среднее число закрытых пунктов, а не балл",
+          "h": "e117b042d860"
         },
         "Разбор · Готовность ко сну · 102": {
           "v": "=",
           "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "e117b042d860"
+          "h": "f66f4075add2"
         },
         "Разбор · Готовность ко сну · 103": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "f66f4075add2"
+          "v": "=",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
+          "h": "52c232ed183f"
         },
         "Разбор · Готовность ко сну · 104": {
           "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
-          "h": "e56c1df71b90"
-        },
-        "Разбор · Готовность ко сну · 105": {
-          "v": "=",
-          "f": "лист собран по кадру 30 августа: числа блока сверяются тестом widgets-bd-sheet-canvas-razbor и смоуком home-widgets-breakdown-batch2-v4",
+          "f": "лист собран по кадру 30 августа: числа блока держит тест widgets-bd-sheet-canvas-razbor, поведение — смоук home-widgets-breakdown-batch2-v4",
           "h": "3fd3ff1dcd1a"
         },
         "Смена вида · Клетчатка · 01": {
@@ -20303,17 +20273,12 @@
         "Разбор · Качество еды · текст": {
           "v": "?",
           "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "8037cdfbdcb0"
+          "h": "97a8c432c077"
         },
         "Разбор · Ритм приёмов · текст": {
           "v": "?",
           "f": "Строка добавлена дизайнером, вердикта нет",
           "h": "810b0d638d36"
-        },
-        "Разбор · Готовность ко сну · текст": {
-          "v": "?",
-          "f": "Строка добавлена дизайнером, вердикта нет",
-          "h": "4791d01c59ba"
         },
         "Смена вида · Клетчатка · текст": {
           "v": "?",
@@ -20394,6 +20359,26 @@
           "v": "?",
           "f": "Строка добавлена дизайнером, вердикта нет",
           "h": "7052af18d253"
+        },
+        "кофеин без данных": {
+          "v": "?",
+          "f": "Строка добавлена дизайнером, вердикта нет",
+          "h": "f22d5b77b2db"
+        },
+        "лист не рисует того, чего нет в дневнике": {
+          "v": "?",
+          "f": "Строка добавлена дизайнером, вердикта нет",
+          "h": "bc2f8545e724"
+        },
+        "Разбор · Готовность ко сну · текст 1/2": {
+          "v": "?",
+          "f": "Строка добавлена дизайнером, вердикта нет",
+          "h": "d837a5fdfd19"
+        },
+        "Разбор · Готовность ко сну · текст 2/2": {
+          "v": "?",
+          "f": "Строка добавлена дизайнером, вердикта нет",
+          "h": "a15a9c3543a0"
         }
       }
     },

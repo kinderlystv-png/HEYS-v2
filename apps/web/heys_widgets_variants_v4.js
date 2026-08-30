@@ -666,10 +666,12 @@
     'calories', 'water', 'weight', 'sleep', 'steps', 'insulinWave', 'macros',
     'dayScore', 'relapseRisk', 'healthTrend', 'heatmap', 'crashRisk'
   ];
-  const BREAKDOWN_STUB_TYPES = new Set([
+  // Шесть видов пакета 22 августа. С 30 августа у каждого свой лист разбора
+  // по кадру канваса — заглушки больше нет.
+  const BREAKDOWN_BATCH2 = [
     'fiber', 'protein', 'sleepWindow', 'foodQuality', 'mealRhythm', 'sleepReady'
-  ]);
-  const BREAKDOWN_ALL_TYPES = [...BREAKDOWN_BATCH1, ...BREAKDOWN_STUB_TYPES];
+  ];
+  const BREAKDOWN_ALL_TYPES = [...BREAKDOWN_BATCH1, ...BREAKDOWN_BATCH2];
 
   function resolveBreakdownType(widget) {
     if (!widget?.type) return null;
@@ -700,6 +702,83 @@
     if (!nums.length) return null;
     const mid = Math.floor(nums.length / 2);
     return nums.length % 2 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+  }
+
+  // Ось недели под графиком: семь подписей дней, последняя — сегодняшний день
+  // тоном акцента. Кадры «Разбор · Калории / Шаги / БЖУ / Оценка дня».
+  function bdWeekdayAxis(daysBack) {
+    const names = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+    const labels = [];
+    const today = new Date();
+    for (let i = (daysBack || 7) - 1; i >= 0; i -= 1) {
+      const dt = new Date(today);
+      dt.setDate(dt.getDate() - i);
+      labels.push(names[dt.getDay()]);
+    }
+    return { labels };
+  }
+
+  // ── Приёмы дня по типам ────────────────────────────────────────────────
+  // Листы «Белок», «Клетчатка», «Ритм приёмов», «Окно до сна» и «Качество еды»
+  // читают день не итогами, а приёмами: им нужны тип приёма, время и вклад
+  // отдельного продукта. Индекс продуктов строится один раз на вызов.
+  function bdProductIndex() {
+    const products = HEYS.products?.getAll?.() || [];
+    return HEYS.dayUtils?.buildProductIndex ? HEYS.dayUtils.buildProductIndex(products) : null;
+  }
+
+  // between — творительный падеж для фразы «Между обедом и ужином»: без него
+  // вывод читается как машинный («Между обед и ужин»).
+  const BD_MEAL_SLOTS = [
+    { key: 'breakfast', label: 'Завтрак', between: 'завтраком', types: ['breakfast'] },
+    { key: 'lunch', label: 'Обед', between: 'обедом', types: ['lunch'] },
+    { key: 'dinner', label: 'Ужин', between: 'ужином', types: ['dinner'] },
+    { key: 'snack', label: 'Перекусы', between: 'перекусами', types: ['snack', 'snack1', 'snack2', 'snack3', 'coffee_break', 'night'] }
+  ];
+
+  function bdSlotOfType(type) {
+    const slot = BD_MEAL_SLOTS.find((s) => s.types.includes(type));
+    return slot ? slot.key : 'snack';
+  }
+
+  // Приёмы одного дня: тип, минуты от полуночи и итоги приёма.
+  function bdDayMeals(day, pIndex) {
+    const meals = (Array.isArray(day?.meals) ? day.meals : [])
+      .filter((m) => Array.isArray(m?.items) && m.items.length > 0);
+    if (!meals.length) return [];
+    const withTime = meals
+      .map((meal) => ({ meal, minutes: bdTimeToMinutes(meal?.time) }))
+      .sort((a, b) => (a.minutes ?? 1e9) - (b.minutes ?? 1e9));
+    return withTime.map((row, i) => {
+      let type = row.meal?.type || row.meal?.mealType || null;
+      if (!type && HEYS.dayUtils?.getMealType) {
+        try {
+          type = HEYS.dayUtils.getMealType(i, row.meal, withTime.map((r) => r.meal), pIndex)?.type || null;
+        } catch (_) { type = null; }
+      }
+      const totals = HEYS.models?.mealTotals ? HEYS.models.mealTotals(row.meal, pIndex) : {};
+      return {
+        meal: row.meal,
+        minutes: row.minutes,
+        slot: bdSlotOfType(type || (i === 0 ? 'breakfast' : 'snack')),
+        totals: totals || {}
+      };
+    });
+  }
+
+  function bdTimeToMinutes(hm) {
+    const match = /^(\d{1,2}):(\d{2})/.exec(String(hm || '').trim());
+    if (!match) return null;
+    const h = Number(match[1]);
+    const m = Number(match[2]);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return h * 60 + m;
+  }
+
+  function bdFormatHm(minutes) {
+    if (!Number.isFinite(minutes)) return '—';
+    const total = ((Math.round(minutes) % 1440) + 1440) % 1440;
+    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
   }
 
   function bdDaySeries(daysBack) {
@@ -1051,10 +1130,14 @@
     return `${weekPhrase} плато — вес почти не менялся`;
   }
 
+  // Кадр «Разбор · Динамика веса» перечисляет недели от текущей к дальним и
+  // называет их словом, а не номером.
+  const BD_WEEK_LABELS = ['Эта неделя', 'Прошлая', 'Две назад', 'Три назад'];
+
   function bdWeightWeeklyDeltaStats(series, weekCount = 4) {
     const tail = (series || []).slice(-weekCount * 7);
     const rows = [];
-    for (let w = 0; w < weekCount; w += 1) {
+    for (let w = weekCount - 1; w >= 0; w -= 1) {
       const chunk = tail.slice(w * 7, (w + 1) * 7).filter((d) => Number.isFinite(d.smoothed));
       let value = '—';
       if (chunk.length >= 2) {
@@ -1068,7 +1151,7 @@
         }
       }
       rows.push({
-        label: `Неделя ${w + 1}`,
+        label: BD_WEEK_LABELS[weekCount - 1 - w] || `Неделя ${w + 1}`,
         value,
         tone: w === weekCount - 1 ? 'good' : null
       });
@@ -1297,47 +1380,489 @@
     return null;
   }
 
-  function buildStubBreakdown(type, title, widget) {
+  // ── Листы разбора шести видов пакета 22 августа ────────────────────────
+  // Кадры «Разбор · Клетчатка / Белок / Окно до сна / Качество еды /
+  // Ритм приёмов / Готовность ко сну». До 30 августа все шесть открывались
+  // заглушкой — герой и кнопка без картинки и разбора.
+
+  // Вклад отдельных продуктов за неделю: имя, граммы вклада, доля от лучшего.
+  function bdWeekItemContributions(field, limit) {
+    const pIndex = bdProductIndex();
+    const byName = new Map();
+    bdDaySeries(7).forEach(({ day }) => {
+      (Array.isArray(day?.meals) ? day.meals : []).forEach((meal) => {
+        (Array.isArray(meal?.items) ? meal.items : []).forEach((item) => {
+          const product = HEYS.dayUtils?.getProductFromItem
+            ? HEYS.dayUtils.getProductFromItem(item, pIndex)
+            : null;
+          const grams = Number(item?.grams) || 0;
+          if (!product || grams <= 0) return;
+          const per100 = Number(product[field + '100'] ?? product[field]) || 0;
+          const value = (per100 * grams) / 100;
+          if (value <= 0) return;
+          const name = product.name || item?.name || '';
+          if (!name) return;
+          byName.set(name, (byName.get(name) || 0) + value);
+        });
+      });
+    });
+    const rows = [...byName.entries()]
+      .map(([name, value]) => ({ name, value: Math.round(value * 10) / 10 }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, limit || 5);
+    const top = rows[0]?.value || 0;
+    return rows.map((row) => ({
+      name: row.name,
+      valueLabel: `${bdFormatNum(row.value, 1)} г`,
+      pct: top > 0 ? Math.round((row.value / top) * 100) : 0
+    }));
+  }
+
+  // Сколько дней недели набрали норму — общая строка «Норма набрана».
+  function bdNormHitsWeek(valueOf, norm) {
+    if (!(norm > 0)) return null;
+    let hits = 0;
+    bdDaySeries(7).forEach(({ day }) => {
+      const value = valueOf(day);
+      if (Number.isFinite(value) && value >= norm) hits += 1;
+    });
+    return hits;
+  }
+
+  function bdDayWord(n) {
+    const tail = n % 100;
+    if (tail >= 11 && tail <= 14) return 'дней';
+    const last = n % 10;
+    if (last === 1) return 'день';
+    if (last >= 2 && last <= 4) return 'дня';
+    return 'дней';
+  }
+
+  function buildFiberBreakdown(title) {
     const d = bdLayer();
-    const base = typeof d.getDataForWidget === 'function'
-      ? d.getDataForWidget(widget)
-      : {};
-    let heroKicker = 'Сегодня';
-    let heroValue = '—';
-    let heroUnit = '';
-    if (type === 'fiber' || type === 'protein') {
-      heroKicker = type === 'fiber' ? 'Клетчатка' : 'Белок';
-      heroValue = base.fiber != null ? bdFormatNum(base.fiber || base.protein) : bdFormatNum(base.value);
-      heroUnit = ' г';
-      if (base.norm) heroValue = `${heroValue} из ${bdFormatNum(base.norm)}`;
-    } else if (type === 'sleepWindow') {
-      heroKicker = 'Окно до сна';
-      heroValue = base.label || base.windowLabel || '—';
-    } else if (type === 'foodQuality') {
-      heroKicker = 'Качество еды';
-      heroValue = base.score != null ? bdFormatNum(base.score, 1) : '—';
-      heroUnit = ' / 10';
-    } else if (type === 'mealRhythm') {
-      heroKicker = 'Приёмы';
-      heroValue = bdFormatNum(base.mealCount || base.count || 0);
-    } else if (type === 'sleepReady') {
-      heroKicker = 'Готовность';
-      heroValue = base.score != null ? bdFormatNum(base.score) : '—';
-      heroUnit = ' / 10';
-    }
+    const data = typeof d.getFiberWidgetData === 'function' ? d.getFiberWidgetData() : {};
+    const norm = Number(data?.norm) || 0;
+    const today = Number(data?.fiber);
+    const sources = bdWeekItemContributions('fiber', 5);
+    const weekValues = (data.week || []).filter((r) => r.hasData).map((r) => Number(r.value));
+    const avg = weekValues.length
+      ? Math.round(weekValues.reduce((a, b) => a + b, 0) / weekValues.length)
+      : null;
+    const hits = bdNormHitsWeek((day) => Number(d._getDayTotalsFor?.(day)?.fiber), norm);
+    const left = norm > 0 && Number.isFinite(today) ? Math.max(0, Math.round(norm - today)) : null;
+    const hint = Array.isArray(data.sources) && data.sources.length
+      ? ` — ${data.sources.slice(0, 2).join(' и ').toLowerCase()}`
+      : '';
     return {
-      type,
+      type: 'fiber',
       title,
-      stubOnly: true,
-      heroKicker,
-      heroValue,
-      heroUnit,
-      insight: null,
+      heroKicker: 'Сегодня',
+      heroValue: Number.isFinite(today) ? bdFormatNum(today) : '—',
+      heroUnit: norm > 0 ? ` из ${bdFormatNum(norm)} г` : ' г',
+      insight: sources.length ? `Больше всего даёт ${sources[0].name.toLowerCase()}` : null,
       chartLabel: null,
-      chart: null,
-      stats: [],
-      norm: null,
+      chart: sources.length ? { kind: 'sourceRows', rows: sources } : null,
+      stats: [
+        avg != null ? { label: 'Среднее за неделю', value: `${bdFormatNum(avg)} г` } : null,
+        hits != null ? { label: 'Норма набрана', value: `${hits} ${bdDayWord(hits)} из 7` } : null,
+        left != null && left > 0
+          ? { label: 'Добрать сегодня', value: `${bdFormatNum(left)} г${hint}` }
+          : null
+      ].filter(Boolean),
+      norm: norm > 0 ? `Норма ${bdFormatNum(norm)} г — 14 г на 1 000 ккал вашей нормы` : null,
       action: { kind: 'addMeal', label: 'Добавить приём' },
+      waterChips: false
+    };
+  }
+
+  function buildProteinBreakdown(title) {
+    const d = bdLayer();
+    const data = typeof d.getProteinWidgetData === 'function' ? d.getProteinWidgetData() : {};
+    // Норма белка приходит из колец БЖУ и лежит в поле target.
+    const norm = Number(data?.target) || 0;
+    const today = Number(data?.protein);
+    const pIndex = bdProductIndex();
+    const sums = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
+    const dayTotals = [];
+    let daysWithMeals = 0;
+    bdDaySeries(7).forEach(({ day }) => {
+      const meals = bdDayMeals(day, pIndex);
+      if (!meals.length) return;
+      daysWithMeals += 1;
+      let dayProt = 0;
+      meals.forEach((m) => {
+        const prot = Number(m.totals?.prot) || 0;
+        sums[m.slot] += prot;
+        dayProt += prot;
+      });
+      dayTotals.push(dayProt);
+    });
+    const bars = BD_MEAL_SLOTS.map((slot) => ({
+      label: slot.label,
+      value: daysWithMeals ? sums[slot.key] / daysWithMeals : 0
+    }));
+    const total = bars.reduce((a, b) => a + b.value, 0);
+    const top = total > 0 ? bars.slice().sort((a, b) => b.value - a.value)[0] : null;
+    const topShare = top && total > 0 ? Math.round((top.value / total) * 100) : null;
+    const avg = dayTotals.length
+      ? Math.round(dayTotals.reduce((a, b) => a + b, 0) / dayTotals.length)
+      : null;
+    const hits = norm > 0 ? dayTotals.filter((v) => v >= norm).length : null;
+    const breakfast = bars.find((b) => b.label === 'Завтрак');
+    return {
+      type: 'protein',
+      title,
+      heroKicker: 'Сегодня',
+      heroValue: Number.isFinite(today) ? bdFormatNum(today) : '—',
+      heroUnit: norm > 0 ? ` из ${bdFormatNum(norm)} г` : ' г',
+      insight: topShare != null && topShare >= 40 && top
+        ? `${topShare} % белка приходит на ${top.label.toLowerCase()}`
+        : null,
+      chartLabel: null,
+      // Риска — равная доля: четыре приёма по четверти нормы.
+      chart: total > 0 ? { kind: 'mealBars', bars, targetShare: 1 / bars.length } : null,
+      stats: [
+        avg != null ? { label: 'Среднее за неделю', value: `${bdFormatNum(avg)} г` } : null,
+        hits != null ? { label: 'Норма набрана', value: `${hits} ${bdDayWord(hits)} из 7` } : null,
+        breakfast && breakfast.value > 0
+          ? { label: 'На завтрак обычно', value: `${bdFormatNum(Math.round(breakfast.value))} г` }
+          : null
+      ].filter(Boolean),
+      norm: norm > 0 ? `Норма ${bdFormatNum(norm)} г — 1,6 г на килограмм веса` : null,
+      action: { kind: 'addMeal', label: 'Добавить приём' },
+      waterChips: false
+    };
+  }
+
+  // Окно между последним приёмом и отбоем: лента 14 дней на оси 18:00 → 06:00.
+  const BD_SLEEPWIN_AXIS_START = 18 * 60;
+  const BD_SLEEPWIN_AXIS_SPAN = 12 * 60;
+
+  function buildSleepWindowBreakdown(title) {
+    const d = bdLayer();
+    const pIndex = bdProductIndex();
+    const rows = [];
+    const windows = [];
+    let latestMeal = null;
+    bdDaySeries(14).forEach(({ iso, day, isToday }) => {
+      const meals = bdDayMeals(day, pIndex);
+      const times = meals.map((m) => m.minutes).filter(Number.isFinite);
+      const bedRaw = bdTimeToMinutes(day?.sleepStart);
+      if (!times.length || !Number.isFinite(bedRaw)) {
+        rows.push({ iso, isToday, start: null, end: null });
+        return;
+      }
+      const lastMeal = Math.max(...times);
+      // Отбой после полуночи лежит за концом суток — переносим на ось вперёд.
+      const bed = bedRaw < lastMeal ? bedRaw + 24 * 60 : bedRaw;
+      windows.push(bed - lastMeal);
+      if (latestMeal == null || lastMeal > latestMeal) latestMeal = lastMeal;
+      rows.push({ iso, isToday, start: lastMeal, end: bed });
+    });
+    const todayData = typeof d.getSleepWindowData === 'function' ? d.getSleepWindowData() : {};
+    const avg = windows.length
+      ? Math.round(windows.reduce((a, b) => a + b, 0) / windows.length)
+      : null;
+    const long = windows.filter((w) => w >= 180).length;
+    const heroMin = Number(todayData?.minutes);
+    const heroHours = Number.isFinite(heroMin) ? Math.floor(heroMin / 60) : null;
+    return {
+      type: 'sleepWindow',
+      title,
+      heroKicker: 'До сна после еды',
+      heroValue: heroHours ? bdFormatNum(heroHours) : (Number.isFinite(heroMin) ? bdFormatNum(heroMin) : '—'),
+      heroUnit: heroHours
+        ? ` ч ${heroMin % 60} мин`
+        : (Number.isFinite(heroMin) ? ' мин' : ''),
+      insight: avg != null ? `Обычно вы едите за ${bdFormatDurationMin(avg)} до сна` : null,
+      chartLabel: null,
+      chart: windows.length
+        ? {
+          kind: 'sleepStrip',
+          series: rows,
+          axisStart: BD_SLEEPWIN_AXIS_START,
+          axisSpan: BD_SLEEPWIN_AXIS_SPAN,
+          axisTicks: ['18:00', '21:00', '00:00', '03:00']
+        }
+        : null,
+      stats: [
+        avg != null ? { label: 'Среднее окно', value: bdFormatDurationMin(avg) } : null,
+        windows.length ? { label: 'Окно 3 ч и больше', value: `${long} ${bdDayWord(long)} из 14` } : null,
+        latestMeal != null ? { label: 'Самый поздний приём', value: bdFormatHm(latestMeal) } : null
+      ].filter(Boolean),
+      norm: 'Хорошо, когда между едой и сном 3 часа — это про качество сна, не про калории',
+      action: { kind: 'fixSleep', label: 'Поправить время сна' },
+      waterChips: false
+    };
+  }
+
+  // Порог вредности один на весь продукт — тот же, что на карточке «Питания».
+  const BD_HARM_THRESHOLD = 5;
+
+  function buildFoodQualityBreakdown(title) {
+    const d = bdLayer();
+    const pIndex = bdProductIndex();
+    // Столбик дня — две части: простые углеводы тоном --warn и остальное тоном
+    // --gr2. Высота столбика — калории дня, доля — состав. Третьей части кадра,
+    // «обработанное», в базе нет: это признак продукта, а не число, и она ждёт
+    // разметки (решение владельца 30 августа).
+    const columns = [];
+    let sweetSum = 0;
+    let kcalSum = 0;
+    let eveningSweet = 0;
+    let eveningKcal = 0;
+    let daySweet = 0;
+    let dayKcal = 0;
+    const harms = [];
+    let worst = null;
+    bdDaySeries(7).forEach(({ iso, day, isToday }) => {
+      const meals = bdDayMeals(day, pIndex);
+      let sweetKcal = 0;
+      let totalKcal = 0;
+      meals.forEach((m) => {
+        const kcal = Number(m.totals?.kcal) || 0;
+        const sweet = (Number(m.totals?.simple) || 0) * 4;
+        sweetKcal += sweet;
+        totalKcal += kcal;
+        if (Number.isFinite(m.minutes) && m.minutes >= 19 * 60) {
+          eveningSweet += sweet;
+          eveningKcal += kcal;
+        } else {
+          daySweet += sweet;
+          dayKcal += kcal;
+        }
+      });
+      const dayHarm = Number(d._getDayTotalsFor?.(day)?.harm);
+      if (totalKcal > 0 && Number.isFinite(dayHarm)) {
+        harms.push(dayHarm);
+        if (!worst || dayHarm > worst.harm) worst = { iso, harm: dayHarm };
+      }
+      sweetSum += sweetKcal;
+      kcalSum += totalKcal;
+      columns.push({
+        iso,
+        isToday,
+        hasData: totalKcal > 0,
+        kcal: totalKcal,
+        sweetPct: totalKcal > 0 ? Math.min(100, (sweetKcal / totalKcal) * 100) : 0
+      });
+    });
+    const maxKcal = Math.max(...columns.map((c) => c.kcal), 1);
+    columns.forEach((c) => { c.heightPct = c.hasData ? Math.max(12, (c.kcal / maxKcal) * 100) : 0; });
+
+    const harm = Number(d._getDayTotals?.()?.harm);
+    const avgHarm = harms.length ? harms.reduce((a, b) => a + b, 0) / harms.length : null;
+    const sweetShare = kcalSum > 0 ? Math.round((sweetSum / kcalSum) * 100) : null;
+    const eveningShare = eveningKcal > 0 ? eveningSweet / eveningKcal : null;
+    const dayShare = dayKcal > 0 ? daySweet / dayKcal : null;
+    const ratio = eveningShare != null && dayShare > 0 ? eveningShare / dayShare : null;
+    const weekdayNames = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+    const worstWd = worst ? weekdayNames[new Date(`${worst.iso}T12:00:00`).getDay()] : null;
+    return {
+      type: 'foodQuality',
+      title,
+      heroKicker: 'Сегодня',
+      heroValue: Number.isFinite(harm) ? bdFormatNum(harm, 1) : '—',
+      heroUnit: ` из 10 · порог ${BD_HARM_THRESHOLD}`,
+      insight: sweetShare != null ? `Простых углеводов — ${sweetShare} % рациона` : null,
+      chartLabel: null,
+      chart: columns.some((c) => c.hasData) ? { kind: 'stackedDays', columns } : null,
+      chartAxis: bdWeekdayAxis(7),
+      stats: [
+        avgHarm != null ? { label: 'Средняя вредность', value: bdFormatNum(avgHarm, 1) } : null,
+        worstWd ? { label: 'Худший день', value: worstWd } : null,
+        ratio != null && ratio >= 1.3
+          ? { label: 'После 19:00 доля простых', value: `в ${bdFormatNum(ratio, 1)} раза выше`, tone: 'bad' }
+          : null
+      ].filter(Boolean),
+      norm: `Порог вредности ${BD_HARM_THRESHOLD} — константа шкалы; доли простых нормы нет, `
+        + 'она сравнивается только с вашими днями',
+      action: { kind: 'addMeal', label: 'Добавить приём' },
+      waterChips: false
+    };
+  }
+
+  function buildMealRhythmBreakdown(title) {
+    const d = bdLayer();
+    const data = typeof d.getMealRhythmData === 'function' ? d.getMealRhythmData() : {};
+    const pIndex = bdProductIndex();
+    const todayDots = [];
+    const pastDots = [];
+    const counts = [];
+    const firsts = [];
+    let maxGap = null;
+    let maxGapPair = null;
+    bdDaySeries(7).forEach(({ day, isToday }) => {
+      const meals = bdDayMeals(day, pIndex);
+      const times = meals.map((m) => m.minutes).filter(Number.isFinite);
+      if (!times.length) return;
+      counts.push(times.length);
+      firsts.push(Math.min(...times));
+      times.forEach((t) => (isToday ? todayDots : pastDots).push(t));
+      for (let i = 1; i < meals.length; i += 1) {
+        if (!Number.isFinite(meals[i].minutes) || !Number.isFinite(meals[i - 1].minutes)) continue;
+        const gap = meals[i].minutes - meals[i - 1].minutes;
+        if (maxGap == null || gap > maxGap) {
+          maxGap = gap;
+          maxGapPair = [meals[i - 1].slot, meals[i].slot];
+        }
+      }
+    });
+    const avgCount = counts.length
+      ? Math.round((counts.reduce((a, b) => a + b, 0) / counts.length) * 10) / 10
+      : null;
+    const avgFirst = firsts.length
+      ? Math.round(firsts.reduce((a, b) => a + b, 0) / firsts.length)
+      : null;
+    const slotLabel = (key) => BD_MEAL_SLOTS.find((s) => s.key === key)?.between || '';
+    const gapPhrase = maxGap != null && maxGapPair && maxGapPair[0] && maxGapPair[1]
+      ? `Между ${slotLabel(maxGapPair[0])} и ${slotLabel(maxGapPair[1])} обычно ${bdFormatDurationMin(maxGap)}`
+      : null;
+    return {
+      type: 'mealRhythm',
+      title,
+      heroKicker: 'Приёмов за день',
+      heroValue: data.hasData ? bdFormatNum(data.count || 0) : '—',
+      heroUnit: '',
+      insight: gapPhrase,
+      chartLabel: null,
+      chart: todayDots.length || pastDots.length
+        ? { kind: 'dayClock', today: todayDots, past: pastDots }
+        : null,
+      stats: [
+        avgCount != null ? { label: 'Среднее число приёмов', value: bdFormatNum(avgCount, 1) } : null,
+        maxGap != null ? { label: 'Самый большой разрыв', value: bdFormatDurationMin(maxGap) } : null,
+        avgFirst != null ? { label: 'Первый приём обычно', value: bdFormatHm(avgFirst) } : null
+      ].filter(Boolean),
+      norm: 'Ровный ритм — 3–5 приёмов с разрывом не больше 5 часов',
+      action: { kind: 'addMeal', label: 'Добавить приём' },
+      waterChips: false
+    };
+  }
+
+  // Четыре пункта вечера. Пункт закрыт: вода не ниже нормы, последний приём не
+  // позже трёх часов до отбоя, шаги не ниже цели, последний кофе не позже
+  // восьми часов до отбоя. Поля «последний кофе» в дневнике ещё нет, поэтому
+  // кофеин честно говорит «нет данных» и в счётчик не входит. Экранное время не
+  // заводим — самоотчёт, а чек-ин мы сознательно укорачивали (решение владельца
+  // 30 августа).
+  const BD_SLEEPREADY_FACTORS = [
+    { key: 'water', label: 'Вода' },
+    { key: 'food', label: 'Еда до сна' },
+    { key: 'steps', label: 'Шаги' },
+    { key: 'caffeine', label: 'Кофеин' }
+  ];
+
+  const BD_CAFFEINE_LEAD_MIN = 8 * 60;
+  const BD_FOOD_LEAD_MIN = 3 * 60;
+
+  // Закрытые пункты одного дня. Кофеин остаётся null, пока его негде отметить:
+  // ноль в счёт означал бы «пункт открыт», а мы про него ничего не знаем.
+  function bdSleepReadyDay(day, profile, pIndex) {
+    const out = { water: null, food: null, steps: null, caffeine: null };
+    const waterGoal = Number(profile?.waterGoalMl) || Number(profile?.waterGoal) || 0;
+    const waterMl = Number(day?.waterMl);
+    if (waterGoal > 0 && Number.isFinite(waterMl)) out.water = waterMl / waterGoal >= 0.9;
+
+    const stepsGoal = Number(profile?.stepsGoal) || 0;
+    const steps = Number(day?.steps);
+    if (stepsGoal > 0 && Number.isFinite(steps)) out.steps = steps >= stepsGoal;
+
+    const bed = bdTimeToMinutes(day?.sleepStart);
+    const times = bdDayMeals(day, pIndex).map((m) => m.minutes).filter(Number.isFinite);
+    if (Number.isFinite(bed) && times.length) {
+      const last = Math.max(...times);
+      const bedOnAxis = bed < last ? bed + 24 * 60 : bed;
+      out.food = bedOnAxis - last >= BD_FOOD_LEAD_MIN;
+    }
+    return out;
+  }
+
+  function buildSleepReadyBreakdown(title) {
+    const d = bdLayer();
+    const pIndex = bdProductIndex();
+    const profile = typeof d._getProfile === 'function' ? d._getProfile() : {};
+    const days = bdDaySeries(7).map(({ day, isToday }) => ({
+      isToday,
+      state: bdSleepReadyDay(day, profile, pIndex)
+    }));
+    const today = days.find((r) => r.isToday)?.state || {};
+
+    const factors = BD_SLEEPREADY_FACTORS.map((f) => {
+      const value = today[f.key];
+      if (value == null) return { key: f.key, label: f.label, pct: 0, tone: 'none' };
+      // Полоса — насколько пункт закрыт: закрытый шалфейный во всю дорожку.
+      return {
+        key: f.key,
+        label: f.label,
+        pct: value ? 100 : 34,
+        tone: value ? 'good' : 'warn'
+      };
+    });
+
+    // Семь точек — сколько пунктов закрывалось каждым вечером недели.
+    const counted = (state) => BD_SLEEPREADY_FACTORS
+      .map((f) => state[f.key])
+      .filter((v) => v != null);
+    const dots = days.map(({ state }) => {
+      const known = counted(state);
+      if (!known.length) return { tone: 'none' };
+      const share = known.filter(Boolean).length / known.length;
+      return { tone: share >= 0.99 ? 'good' : share >= 0.5 ? 'warn' : 'bad' };
+    });
+
+    const todayKnown = counted(today);
+    const done = todayKnown.filter(Boolean).length;
+    const total = todayKnown.length;
+    const noCaffeine = today.caffeine == null;
+
+    // Какой пункт чаще всего остаётся открытым за неделю.
+    const openCount = new Map();
+    for (const f of BD_SLEEPREADY_FACTORS) {
+      const known = days.map((r) => r.state[f.key]).filter((v) => v != null);
+      if (known.length) openCount.set(f.label, known.filter((v) => !v).length / known.length);
+    }
+    const mostOpen = [...openCount.entries()].sort((a, b) => b[1] - a[1])[0] || null;
+
+    const closedPerDay = days
+      .map((r) => counted(r.state))
+      .filter((k) => k.length)
+      .map((k) => k.filter(Boolean).length);
+    const avgClosed = closedPerDay.length
+      ? closedPerDay.reduce((a, b) => a + b, 0) / closedPerDay.length
+      : null;
+
+    const bed = bdTimeToMinutes(typeof d._getDay === 'function' ? d._getDay()?.sleepStart : null);
+    const cutoff = Number.isFinite(bed) ? bdFormatHm(bed - BD_CAFFEINE_LEAD_MIN) : null;
+
+    return {
+      type: 'sleepReady',
+      title,
+      heroKicker: 'Сегодня вечером',
+      // Герой — счётчик закрытых пунктов, а не балл: балла продукт не считает.
+      heroValue: total ? bdFormatNum(done) : '—',
+      heroUnit: total
+        ? ` из ${bdFormatNum(total)}${noCaffeine ? ' · кофеин ждёт данных' : ''}`
+        : '',
+      insight: mostOpen && mostOpen[1] > 0 ? `Чаще всего открыты ${mostOpen[0].toLowerCase()}` : null,
+      chartLabel: null,
+      chart: { kind: 'factorRows', factors, dots },
+      chartAxis: bdWeekdayAxis(7),
+      stats: [
+        avgClosed != null && total
+          ? { label: 'Закрыто в среднем', value: `${bdFormatNum(avgClosed, 1)} из ${bdFormatNum(total)}` }
+          : null,
+        mostOpen && mostOpen[1] > 0
+          ? { label: 'Реже всего закрываются', value: mostOpen[0].toLowerCase(), tone: 'bad' }
+          : null,
+        noCaffeine ? { label: 'Кофеин', value: 'нет данных' } : null
+      ].filter(Boolean),
+      norm: 'Пункт закрыт: вода не ниже нормы, последний приём не позже трёх часов до отбоя, '
+        + `шаги не ниже цели, последний кофе не позже восьми часов до отбоя${cutoff ? ` — сегодня это ${cutoff}` : ''}`,
+      action: {
+        kind: 'checkin',
+        label: bdMorningCheckinDone() ? 'Поправить ответы' : 'Заполнить чек-ин'
+      },
       waterChips: false
     };
   }
@@ -1361,20 +1886,21 @@
     return {
       type: 'calories',
       title,
-      heroKicker: 'Осталось',
+      heroKicker: 'Осталось на сегодня',
       heroValue: bdFormatNum(Math.max(0, target - (today.eaten || 0))),
       heroUnit: ' ккал',
       insight: typicalNow != null
         ? `Обычно к этому часу вы съедаете ${bdFormatNum(typicalNow)}`
         : null,
-      chartLabel: 'Съедено за 7 дней',
+      chartLabel: null,
       chart: { kind: 'bars7', series, targetLine: target },
+      chartAxis: bdWeekdayAxis(7),
       stats: [
-        med != null ? { label: 'Типичный день', value: `${bdFormatNum(Math.round(med))} ккал` } : null,
+        med != null ? { label: 'Типичный день', value: bdFormatNum(Math.round(med)) } : null,
         min != null && max != null
           ? { label: 'Разброс', value: `от ${bdFormatNum(min)} до ${bdFormatNum(max)}` }
           : null,
-        { label: 'Обычно на ужин остаётся', value: `${bdFormatNum(dinnerLeft)} ккал` }
+        { label: 'Обычно на ужин остаётся', value: bdFormatNum(dinnerLeft) }
       ].filter(Boolean),
       norm: `Норма ${bdFormatNum(target)} ккал — расчёт куратора от веса, цели и активности`,
       action: { kind: 'addMeal', label: 'Добавить приём' },
@@ -1534,6 +2060,10 @@
     const weekdayNames = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
     const wdRows = bdStepsWeekdayTable(week, goal);
     const hits = week.filter((r) => r.hasData && r.value >= goal).length;
+    const withData = week.filter((r) => r.hasData);
+    const weakestIso = withData.length
+      ? withData.slice().sort((a, b) => (a.value || 0) - (b.value || 0))[0].iso
+      : null;
     return {
       type: 'steps',
       title,
@@ -1543,8 +2073,19 @@
       insight: wdRows.find((r) => r.tone === 'bad')
         ? `${wdRows.find((r) => r.tone === 'bad').label} — самый слабый день недели`
         : null,
-      chartLabel: '7 дней',
-      chart: { kind: 'bars7', series: week.map((r) => ({ kcal: r.value || 0, isToday: r.isToday, hit: r.hasData })), targetLine: goal },
+      chartLabel: null,
+      // Кадр «Разбор · Шаги» красит красным самый слабый день недели, а не
+      // сегодняшний: столбики говорят о провале, а не о том, какой сейчас день.
+      chart: {
+        kind: 'bars7',
+        series: week.map((r) => ({
+          kcal: r.value || 0,
+          hit: r.hasData,
+          tone: r.hasData && weakestIso && r.iso === weakestIso ? 'bad' : null
+        })),
+        targetLine: goal
+      },
+      chartAxis: bdWeekdayAxis(7),
       stats: wdRows.concat([{ label: 'Цель закрыта', value: `${hits} дня из 7` }]),
       norm: `Цель ${bdFormatNum(goal)} шагов — вы поставили её в чек-ине`,
       action: { kind: 'addActivity', label: 'Добавить активность' },
@@ -1660,7 +2201,7 @@
     const heroMin = isOvernight
       ? (v4.overnightRestMinutes ?? v4.calmWindowMinutes ?? wave.remaining)
       : (v4.calmWindowMinutes ?? v4.freeWindowMinutes ?? wave.remaining);
-    const heroKicker = isOvernight ? 'Оценка по вчерашнему дню' : 'Свободное окно';
+    const heroKicker = isOvernight ? 'Оценка по вчерашнему дню' : 'Свободных окон сегодня';
     const avgCalm = week.avgCalmMinutes ?? v4.calmWindowMinutes;
     const stats = [
       avgCalm != null ? { label: 'Среднее окно', value: bdFormatDurationMin(avgCalm) } : null,
@@ -1777,8 +2318,8 @@
       chart: { kind: 'grid3x7', series },
       stats: [
         {
-          label: 'Белок — % нормы в среднем',
-          value: `${avgPct.protein} %`,
+          label: 'Белок в среднем',
+          value: `${avgPct.protein} % нормы`,
           tone: avgPct.protein > 0 && avgPct.protein < 90 ? 'bad' : null
         },
         { label: 'Жиры', value: `${avgPct.fat} %` },
@@ -1821,8 +2362,9 @@
       insight: maxWeakDays > 0 && dominantInsightLabel
         ? `Чаще всего вниз тянет ${dominantInsightLabel}`
         : null,
-      chartLabel: '7 дней',
+      chartLabel: null,
       chart: { kind: 'bars7score', series: week },
+      chartAxis: bdWeekdayAxis(7),
       stats: [
         month.avg != null ? { label: 'Средняя за месяц', value: bdFormatNum(month.avg / 10, 1) } : null,
         month.bestWd ? { label: 'Лучший день', value: month.bestWd } : null,
@@ -2228,11 +2770,12 @@
     return {
       type: 'crashRisk',
       title,
-      heroKicker: 'За месяц',
+      heroKicker: 'Вес за месяц',
       heroValue: heroVal,
       heroUnit: ' кг',
       insight: bdWeightPlateauInsight(plateaus, series90) || dyn.placeholder || null,
-      chartLabel: '90 дней',
+      chartLabel: null,
+      chartAxis: { left: '90 дней назад', right: 'сейчас' },
       chart: {
         kind: 'weightCurve',
         spark: series90.map((p) => ({ weight: p.smoothed, date: p.date })),
@@ -2251,7 +2794,15 @@
     const type = resolveBreakdownType(widget);
     if (!type) return null;
     const title = WIDGET_TYPE_LABELS[type] || widget.type;
-    if (BREAKDOWN_STUB_TYPES.has(type)) return buildStubBreakdown(type, title, widget);
+    switch (type) {
+      case 'fiber': return buildFiberBreakdown(title);
+      case 'protein': return buildProteinBreakdown(title);
+      case 'sleepWindow': return buildSleepWindowBreakdown(title);
+      case 'foodQuality': return buildFoodQualityBreakdown(title);
+      case 'mealRhythm': return buildMealRhythmBreakdown(title);
+      case 'sleepReady': return buildSleepReadyBreakdown(title);
+      default: break;
+    }
     switch (type) {
       case 'calories': return buildCaloriesBreakdown(title, widget);
       case 'water': return buildWaterBreakdown(title);
@@ -2280,8 +2831,9 @@
           const h = Math.max(4, Math.round((val / max) * 100));
           return React.createElement('span', {
             key: i,
-            className: 'widget-bd-sheet__bar' + (row.isToday ? ' is-today' : '')
-          }, React.createElement('i', { style: { height: `${h}%` } }));
+            className: 'widget-bd-sheet__bar' + (row.tone === 'bad' ? ' is-bad' : ''),
+            style: { height: `${h}%` }
+          });
         }),
         chart.targetLine ? React.createElement('span', { className: 'widget-bd-sheet__bar-target' }) : null
       );
@@ -2292,8 +2844,9 @@
       return React.createElement('div', { className: 'widget-bd-sheet__bars widget-bd-sheet__bars--bins' },
         bins.map((v, i) => React.createElement('span', {
           key: i,
-          className: 'widget-bd-sheet__bar'
-        }, React.createElement('i', { style: { height: `${Math.max(8, (v / max) * 100)}%` } })))
+          className: 'widget-bd-sheet__bar',
+          style: { height: `${Math.max(8, (v / max) * 100)}%` }
+        }))
       );
     }
     if (chart.kind === 'waterHourProfile' || chart.kind === 'riskHourProfile') {
@@ -2511,6 +3064,141 @@
         }))
       );
     }
+    // Источники вклада строками — кадр «Разбор · Клетчатка».
+    if (chart.kind === 'sourceRows') {
+      const rows = chart.rows || [];
+      return React.createElement('div', { className: 'widget-bd-sheet__sources' },
+        rows.map((row, i) => React.createElement('div', { key: i, className: 'widget-bd-sheet__source' },
+          React.createElement('div', { className: 'widget-bd-sheet__source-head' },
+            React.createElement('span', { className: 'widget-bd-sheet__source-name' }, row.name),
+            React.createElement('span', { className: 'widget-bd-sheet__source-val' }, row.valueLabel)
+          ),
+          React.createElement('span', { className: 'widget-bd-sheet__source-bar', 'aria-hidden': 'true' },
+            React.createElement('i', { style: { width: `${Math.max(0, Math.min(100, row.pct))}%` } })
+          )
+        ))
+      );
+    }
+    // Распределение по приёмам — кадр «Разбор · Белок».
+    if (chart.kind === 'mealBars') {
+      const bars = chart.bars || [];
+      const total = bars.reduce((sum, b) => sum + (Number(b.value) || 0), 0);
+      const max = Math.max(...bars.map((b) => Number(b.value) || 0), 1);
+      const targetPct = chart.targetShare && total > 0
+        ? Math.max(0, Math.min(100, ((total * chart.targetShare) / max) * 100))
+        : null;
+      return React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'widget-bd-sheet__meal-bars' },
+          targetPct != null
+            ? React.createElement('span', {
+              className: 'widget-bd-sheet__bar-target',
+              style: { bottom: `${targetPct}%` }
+            })
+            : null,
+          bars.map((bar, i) => React.createElement('span', {
+            key: i,
+            className: 'widget-bd-sheet__meal-bar',
+            style: { height: `${Math.max(4, ((Number(bar.value) || 0) / max) * 100)}%` }
+          }))
+        ),
+        React.createElement('div', { className: 'widget-bd-sheet__meal-axis' },
+          bars.map((bar, i) => React.createElement('span', { key: i }, bar.label)))
+      );
+    }
+    // Составные столбики дней — кадр «Разбор · Качество еды». Частей две:
+    // сладкое сверху и остальное снизу; третья появится с разметкой базы.
+    if (chart.kind === 'stackedDays') {
+      const columns = chart.columns || [];
+      return React.createElement('div', { className: 'widget-bd-sheet__stack' },
+        columns.map((col, i) => React.createElement('span', {
+          key: i,
+          className: 'widget-bd-sheet__stack-col',
+          // Высота столбика — калории дня, доля внутри — состав.
+          style: { height: `${Math.max(6, Math.round(col.heightPct || 0))}%` }
+        },
+          col.hasData
+            ? React.createElement(React.Fragment, null,
+              React.createElement('i', {
+                className: 'widget-bd-sheet__stack-seg is-sweet',
+                style: { height: `${Math.max(2, Math.round(col.sweetPct))}%` }
+              }),
+              React.createElement('i', { className: 'widget-bd-sheet__stack-seg is-rest' })
+            )
+            : React.createElement('i', { className: 'widget-bd-sheet__stack-seg is-empty' })
+        ))
+      );
+    }
+    // Циферблат суток — кадр «Разбор · Ритм приёмов»: внешнее кольцо сегодня,
+    // внутреннее — приёмы прошлых шести дней, ночной сектор затемнён.
+    if (chart.kind === 'dayClock') {
+      const size = 150;
+      const c = size / 2;
+      const outer = 62;
+      const inner = 52;
+      const dot = (min, r, radius, cls, key) => {
+        const angle = ((min % 1440) / 1440) * Math.PI * 2 - Math.PI / 2;
+        return React.createElement('circle', {
+          key,
+          cx: c + Math.cos(angle) * r,
+          cy: c + Math.sin(angle) * r,
+          r: radius,
+          className: cls
+        });
+      };
+      const NIGHT_FROM = 21 * 60;
+      const NIGHT_TO = 27 * 60;
+      const arc = (fromMin, toMin, r) => {
+        const a0 = (fromMin / 1440) * Math.PI * 2 - Math.PI / 2;
+        const a1 = (toMin / 1440) * Math.PI * 2 - Math.PI / 2;
+        const large = toMin - fromMin > 720 ? 1 : 0;
+        return `M ${c} ${c} L ${c + Math.cos(a0) * r} ${c + Math.sin(a0) * r}`
+          + ` A ${r} ${r} 0 ${large} 1 ${c + Math.cos(a1) * r} ${c + Math.sin(a1) * r} Z`;
+      };
+      return React.createElement('div', { className: 'widget-bd-sheet__clock-wrap' },
+        React.createElement('svg', {
+          className: 'widget-bd-sheet__clock',
+          width: size,
+          height: size,
+          viewBox: `0 0 ${size} ${size}`,
+          'aria-hidden': 'true'
+        },
+          // Ночь 21:00 → 03:00 двумя секторами через полночь, радиусом кольца.
+          React.createElement('path', { d: arc(NIGHT_FROM, 24 * 60, outer), className: 'widget-bd-sheet__clock-night' }),
+          React.createElement('path', { d: arc(0, NIGHT_TO - 24 * 60, outer), className: 'widget-bd-sheet__clock-night' }),
+          React.createElement('circle', { cx: c, cy: c, r: outer, className: 'widget-bd-sheet__clock-ring' }),
+          React.createElement('circle', { cx: c, cy: c, r: inner, className: 'widget-bd-sheet__clock-ring is-inner' }),
+          (chart.past || []).map((min, i) => dot(min, inner, 2.4, 'widget-bd-sheet__clock-dot is-past', `p${i}`)),
+          (chart.today || []).map((min, i) => dot(min, outer, 4.5, 'widget-bd-sheet__clock-dot', `t${i}`))
+        )
+      );
+    }
+    // Факторы вечера строками и точки недели — кадр «Разбор · Готовность ко сну».
+    if (chart.kind === 'factorRows') {
+      const factors = chart.factors || [];
+      const dots = chart.dots || [];
+      return React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'widget-bd-sheet__evening' },
+          factors.map((f) => React.createElement('div', { key: f.key, className: 'widget-bd-sheet__evening-row' },
+            React.createElement('span', { className: 'widget-bd-sheet__evening-label' }, f.label),
+            f.tone === 'none'
+              // Пустая дорожка читается как «пункт открыт». Пока отмечать
+              // нечем, пункт говорит это словами.
+              ? React.createElement('span', { className: 'widget-bd-sheet__evening-empty' }, 'нет данных')
+              : React.createElement('span', { className: 'widget-bd-sheet__evening-track', 'aria-hidden': 'true' },
+                React.createElement('i', {
+                  className: `widget-bd-sheet__evening-fill is-${f.tone}`,
+                  style: { width: `${Math.max(0, Math.min(100, f.pct))}%` }
+                })
+              )
+          ))
+        ),
+        dots.length
+          ? React.createElement('div', { className: 'widget-bd-sheet__evening-dots' },
+            dots.map((d, i) => React.createElement('span', { key: i, className: 'widget-bd-sheet__evening-dot-cell' },
+              React.createElement('i', { className: `widget-bd-sheet__evening-dot is-${d.tone}` }))))
+          : null
+      );
+    }
     if (chart.kind === 'riskScale') {
       const pct = Math.min(100, Math.max(0, chart.score || 0));
       return React.createElement('div', { className: 'widget-bd-sheet__risk-track' },
@@ -2550,9 +3238,6 @@
           }, React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round' },
             React.createElement('path', { d: 'M18 6L6 18M6 6l12 12' })))
         ),
-        model.stubOnly
-          ? React.createElement('p', { className: 'widget-bd-sheet__stub' }, 'за сегодня')
-          : null,
         React.createElement('div', { className: 'widget-bd-sheet__kicker' }, model.heroKicker),
         model.insightBeforeHero && model.insight
           ? React.createElement('p', { className: 'widget-bd-sheet__insight' }, model.insight)
@@ -2584,8 +3269,15 @@
         model.chartLabel ? React.createElement('div', { className: 'widget-bd-sheet__chart-label' }, model.chartLabel) : null,
         React.createElement(WidgetBreakdownChart, { chart: model.chart }),
         model.chartAxis ? React.createElement('div', { className: 'widget-bd-sheet__sleep-axis widget-bd-sheet__chart-axis' },
-          React.createElement('span', null, model.chartAxis.left),
-          React.createElement('span', { className: 'is-accent' }, model.chartAxis.right)
+          Array.isArray(model.chartAxis.labels)
+            ? model.chartAxis.labels.map((label, i) => React.createElement('span', {
+              key: i,
+              className: i === model.chartAxis.labels.length - 1 ? 'is-accent' : undefined
+            }, label))
+            : [
+              React.createElement('span', { key: 'l' }, model.chartAxis.left),
+              React.createElement('span', { key: 'r', className: 'is-accent' }, model.chartAxis.right)
+            ]
         ) : null,
         model.factorBars?.length ? React.createElement('div', { className: 'widget-bd-sheet__factors' },
           model.factorBars.map((f) => React.createElement('div', {
@@ -2714,7 +3406,7 @@
     WIDGET_TYPE_LABELS,
     WIDGET_TILE_BG,
     BREAKDOWN_BATCH1,
-    BREAKDOWN_STUB_TYPES,
+    BREAKDOWN_BATCH2,
     BREAKDOWN_ALL_TYPES,
     resolveBreakdownType,
     opensBreakdown,

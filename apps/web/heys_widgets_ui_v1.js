@@ -9851,7 +9851,7 @@
         React.createElement('span', { className: 'widget-v4-recommended__copy' },
           React.createElement('span', { className: 'widget-v4-recommended__title' }, 'Вернуть рекомендуемый экран'),
           React.createElement('span', { className: 'widget-v4-recommended__desc' },
-            'Одиннадцать плиток в порядке, который мы проверили. Ваш состав и виды заменятся — стрелка отмены вернёт как было'
+            'Тринадцать плиток в порядке, который мы проверили. Ваш состав и виды заменятся — стрелка отмены вернёт как было'
           )
         ),
         React.createElement('button', {
