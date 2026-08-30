@@ -8540,7 +8540,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
    заметно мельче кадра. */
 .date-picker-sheet .date-picker-btn.today-btn {
   background: #c67139;
-  color: var(--v4-act-ink, #2b1608);
+  color: var(--v4-btn-on-act, #2b1608);
   border-radius: 999px;
   padding: 15px;
   font-size: 13px;
@@ -10038,6 +10038,8 @@ body:has([data-heys-visible-frame="consent"]) .tabs {
    an overlay is mounted instead of relying only on z-index. */
 body:has(:is(
   .modal-backdrop,
+  /* Кабинет куратора: экран, а не модалка, но док под ним прятать так же. */
+  .cur-cab,
   .time-picker-backdrop,
   .confirm-modal-backdrop,
   .date-picker-backdrop,
@@ -18251,8 +18253,11 @@ html.heys-bg-paused *::after {
 /* Достигнутое — галочка тоном --gr на квадрате --gr-bg; недостигнутое —
    замок чернилами 30 % на --c2. Обводка значка идёт currentColor.
    Роли берутся парами: --v4-ok-bg с --v4-ok-text и --v4-sand-hero с
-   --v4-sand-ink. Смешивать наборы нельзя — палитро-зависимый фон под
-   песочно-закреплёнными чернилами даёт в сине-тёмной светлое на светлом.
+   --v4-sand-ink. Смешивать наборы нельзя: семейство --v4-sand-* меняет
+   светлоту целиком и за палитрой не следует, поэтому роль набора под
+   песочными чернилами разъедется с ними всюду, где светлота семейства и
+   набора расходится. (До 31.08 это было видно прямо в сине-тёмной: там
+   семейство держало светлые значения — см. cbf713f1f.)
    Чернила 30 % у замка — прозрачностью значка, а не ролью --v4-ink-30:
    та следует набору, а квадрат под ней песочный во всех четырёх. */
 .game-v4-sheet__ach-row.is-unlocked .game-v4-sheet__ach-medal {
