@@ -2132,7 +2132,8 @@
         targetLine: goal
       },
       chartAxis: bdWeekdayAxis(7),
-      stats: wdRows.concat([{ label: 'Цель закрыта', value: `${hits} дня из 7` }]),
+      stats: wdRows.concat([{ label: 'Цель закрыта', value: `${hits} дня из 7`, isTotal: true }]),
+      statsTable: true,
       norm: `Цель ${bdFormatNum(goal)} шагов — вы поставили её в чек-ине`,
       action: { kind: 'addActivity', label: 'Добавить активность' },
       waterChips: false
@@ -2833,6 +2834,7 @@
         plateaus
       },
       stats: bdWeightWeeklyDeltaStats(series90, 4),
+      statsTable: true,
       norm: dyn.remainderLabel && dyn.remainderLabel.includes('темп')
         ? dyn.remainderLabel
         : bdWeightHealthyTempoNorm(prof),
@@ -3376,10 +3378,17 @@
             );
           })
         ) : null,
-        model.stats?.length ? React.createElement('div', { className: 'widget-bd-sheet__stats' },
+        // Строки «разбор · Шаги» и «разбор · Динамика веса» просят таблицу, а
+        // не разбор числами: строк много, они однородны, и между ними нужна
+        // сетка отступов, а не зазор. Итог отделяется линией.
+        model.stats?.length ? React.createElement('div', {
+          className: 'widget-bd-sheet__stats' + (model.statsTable ? ' widget-bd-sheet__stats--table' : '')
+        },
           model.stats.map((row, i) => React.createElement('div', {
             key: i,
-            className: 'widget-bd-sheet__stat-row' + (row.tone === 'bad' ? ' is-bad' : row.tone === 'good' ? ' is-good' : '')
+            className: 'widget-bd-sheet__stat-row'
+              + (row.tone === 'bad' ? ' is-bad' : row.tone === 'good' ? ' is-good' : '')
+              + (row.isTotal ? ' is-total' : '')
           },
             React.createElement('span', { className: 'widget-bd-sheet__stat-label' }, row.label),
             React.createElement('span', { className: 'widget-bd-sheet__stat-value' }, row.value)

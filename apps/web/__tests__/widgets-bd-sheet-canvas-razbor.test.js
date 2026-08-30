@@ -237,6 +237,17 @@ const CHARTS = [
   ['Разбор · Тренд здоровья', 88, '.widget-bd-sheet__contrib-row', ['align', 'gap']],
   ['Разбор · Тренд здоровья', 89, '.widget-bd-sheet__contrib-label', ['width', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
   ['Разбор · Карта активности', 84, '.widget-bd-sheet__grid7x5', ['marginTop', 'direction', 'gap']],
+  // Профиль по часам у риска — тот же, что у воды, но со своими номерами.
+  ['Разбор · Риск-радар', 83, '.widget-bd-sheet__water-profile', ['marginTop', 'height', 'align', 'gap']],
+  ['Разбор · Риск-радар', 84, '.widget-bd-sheet__water-profile-gap', ['background', 'radius']],
+  ['Разбор · Риск-радар', 85, '.widget-bd-sheet__water-profile-bar > i', ['radius', 'background']],
+  ['Разбор · Риск-радар', 99, '.widget-bd-sheet__water-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  // Разбор таблицей: строки «разбор · Шаги» и «разбор · Динамика веса».
+  ['Разбор · Шаги', 95, ['.widget-bd-sheet__stats', '.widget-bd-sheet__stats--table'], ['marginTop', 'direction']],
+  ['Разбор · Шаги', 96, ['.widget-bd-sheet__stat-row', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-row'], ['align', 'justify', 'padding']],
+  ['Разбор · Шаги', 97, ['.widget-bd-sheet__stat-label', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-label'], ['fontWeight', 'fontSize', 'lineHeight']],
+  ['Разбор · Шаги', 98, ['.widget-bd-sheet__stat-value', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-value'], ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · Шаги', 103, ['.widget-bd-sheet__stat-row', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-row.is-total'], ['align', 'justify', 'marginTop']],
   // Шесть листов пакета 22 августа.
   ['Разбор · Клетчатка', 84, '.widget-bd-sheet__sources', ['marginTop', 'gap']],
   ['Разбор · Клетчатка', 87, '.widget-bd-sheet__source-bar', ['height', 'marginTop']],
