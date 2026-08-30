@@ -13,6 +13,9 @@
 .cur-panel__stub,
 .cur-panel__empty {
   margin-bottom: 10px;
+  /* Карточка пустого состояния переиспользуется в очереди: там своя обёртка
+     со своими полями, и собственный отступ ей не нужен. */
+  margin-top: 0;
   padding: 16px;
   border-radius: 20px;
   background: var(--v4-surface, #f7efe2);

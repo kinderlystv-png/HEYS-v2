@@ -2537,6 +2537,35 @@
       { id: 'active', label: 'Триалы', count: grouped.assigned.length + trialClients.length, hint: 'Текущие и запланированные пробные недели.' }
     ];
 
+    // Контракт «вид · пустые состояния кабинета»: те же карточки, что в
+    // панели, и ярус со ссылками туда, где работа есть. Иллюстраций во весь
+    // экран нет — и эмодзи вместо них тоже: 📭 и 💤 сообщали настроение, а не
+    // состояние, и уводили от единственного вопроса пустого экрана — «куда
+    // идти дальше».
+    const QueueEmpty = ({ title, note, tabs, activeTab, setActiveTab }) => {
+      const elsewhere = (tabs || []).filter((t) => t.id !== activeTab && t.count);
+      return React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'cur-panel__empty' },
+          React.createElement('div', { className: 'cur-panel__empty-title' }, title),
+          React.createElement('div', { className: 'cur-panel__empty-note' }, note)
+        ),
+        elsewhere.length ? React.createElement(React.Fragment, null,
+          React.createElement('div', { className: 'cur-group__title' }, 'Где сейчас работа'),
+          React.createElement('div', { className: 'cur-group__card' },
+            elsewhere.map((t) => React.createElement('button', {
+              key: t.id,
+              type: 'button',
+              className: 'cur-row cur-row--line',
+              onClick: () => setActiveTab(t.id)
+            },
+              React.createElement('span', { className: 'cur-row__line' }, t.label),
+              React.createElement('span', { className: 'cur-row__count' }, String(t.count))
+            ))
+          )
+        ) : null
+      );
+    };
+
     const LeadRow = ({ item }) => React.createElement('div', {
       style: {
         display: 'flex',
@@ -2906,12 +2935,16 @@
             style: { marginTop: 10, minHeight: 40, padding: '8px 12px', borderRadius: 8, border: '1px solid #efb4b4', background: '#fff', color: '#8f1d1d', cursor: 'pointer', fontWeight: 700 },
           }, 'Повторить загрузку')
         ),
-        !loading && !error && activeTab === 'new' && (actionableLeads.length ? actionableLeads.map(item => React.createElement(LeadRow, { key: item.id, item })) : React.createElement('div', {
-          style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
-        }, '📭 Нет заявок, требующих подготовки анкеты')),
-        !loading && !error && activeTab === 'pending' && (questionnaireQueue.length ? questionnaireQueue.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true, allowRemove: false })) : React.createElement('div', {
-          style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
-        }, 'Нет анкет, требующих действия')),
+        !loading && !error && activeTab === 'new' && (actionableLeads.length ? actionableLeads.map(item => React.createElement(LeadRow, { key: item.id, item })) : React.createElement(QueueEmpty, {
+          title: 'Заявок в работе нет',
+          note: 'Новые придут сами — с квиза и из мессенджеров. Здесь они появятся с шагом «подготовить анкету».',
+          tabs, activeTab, setActiveTab
+        })),
+        !loading && !error && activeTab === 'pending' && (questionnaireQueue.length ? questionnaireQueue.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true, allowRemove: false })) : React.createElement(QueueEmpty, {
+          title: 'Анкет к разбору нет',
+          note: 'Приглашения отправлены, ответов пока не пришло. Как только анкета заполнится, она встанет сюда.',
+          tabs, activeTab, setActiveTab
+        })),
         !loading && !error && activeTab === 'active' && ((grouped.assigned.length + trialClients.length) ? [
           ...grouped.assigned.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item })),
           ...trialClients.map(client => React.createElement(ClientRow, {
@@ -2924,16 +2957,20 @@
               created_at: client.created_at
             }
           }))
-        ] : React.createElement('div', {
-          style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
-        }, '💤 Нет активных триалов')),
+        ] : React.createElement(QueueEmpty, {
+          title: 'Активных триалов нет',
+          note: 'Пробные недели заканчиваются и начинаются здесь. Пока идти некуда — работа в соседних подвкладках.',
+          tabs, activeTab, setActiveTab
+        })),
         !loading && !error && activeTab === 'rejected' && (
           (rejectedLeads.length || decisionQueue.length) ? [
             ...rejectedLeads.map(item => React.createElement(LeadRow, { key: 'lead-' + item.id, item })),
             ...decisionQueue.map(item => React.createElement(ClientRow, { key: item.client_id || item.queue_id, item, allowActions: true }))
-          ] : React.createElement('div', {
-            style: { textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 14 }
-          }, 'Решений пока нет')
+          ] : React.createElement(QueueEmpty, {
+            title: 'Решений пока нет',
+            note: 'Одобренные, ожидающие место и отклонённые кандидаты собираются здесь после разбора анкеты.',
+            tabs, activeTab, setActiveTab
+          })
         )
       ),
       React.createElement('div', {

@@ -59,6 +59,25 @@ describe('панель куратора · место в кабинете', () =
       .toEqual(window.HEYS.NormCorrection.PANEL_STATES);
   });
 
+  it('пустые состояния очереди ведут туда, где работа есть', () => {
+    // Эмодзи 📭 и 💤 сообщали настроение, а не состояние, и уводили от
+    // единственного вопроса пустого экрана — «куда идти дальше».
+    const QUEUE = fs.readFileSync(
+      path.resolve(__dirname, '../heys_trial_queue_v1.js'), 'utf8');
+    expect(QUEUE).toContain('const QueueEmpty');
+    // Комментарии снимаем: в объяснении, почему эмодзи убраны, они и названы.
+    const code = QUEUE.split(SPLIT_LINES)
+      .filter((l) => !l.trim().startsWith('//')).join(' ');
+    expect(code).not.toContain('📭');
+    expect(code).not.toContain('💤');
+    // Карточка та же, что в панели, — не копия стилей.
+    expect(QUEUE).toContain("className: 'cur-panel__empty'");
+    // Ярус показывает только непустые соседние подвкладки.
+    expect(QUEUE).toContain("tabs || []).filter((t) => t.id !== activeTab && t.count)");
+    // Нечего предложить — яруса нет, а не пустой заголовок.
+    expect(QUEUE).toContain('elsewhere.length ? React.createElement');
+  });
+
   it('числа диагностики — сетка 2×2, контекст строкой', () => {
     // Пять карточек столбиком занимали два экрана прокрутки, и главное число
     // тонуло среди контекста.
