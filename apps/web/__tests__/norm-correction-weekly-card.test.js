@@ -104,7 +104,9 @@ describe('поправка на факт · карточка сверки в ш�
     expect(body).not.toMatch(/Math\.min|Math\.max|\/ *range|reduce/);
     // Сетка кадра и две линии своими ролями.
     expect(body).toContain('const W = 262');
-    expect(body).toContain('const H = 56');
+    // Кадр рисует 262×76; строка контракта говорила 56 — спор решён в пользу
+    // кадра.
+    expect(body).toContain('const H = 76');
     // Вес тоном чернил, талия заливкой акцента — пара кадра.
     expect(CSS).toMatch(/__line\.is-weight[\s\S]{0,120}--v4-ink/);
     expect(CSS).toMatch(/__line\.is-waist[\s\S]{0,120}--v4-act/);

@@ -1351,7 +1351,15 @@ body.tour-active .ios-pwa-banner {
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
 }
 
-/* График перестройки: 262×56, две линии на одной сетке — своей карточкой, как
+/* Исход прошлой недели: строка о том, чем кончилось прошлое предложение. Тише
+   прозы — это контекст, а не новость этой недели. */
+.weekly-wrap-correction__previous {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* График перестройки: 262×76, две линии на одной сетке — своей карточкой, как
    в кадре. Ось значений не рисуется: числа уже сказаны прозой над графиком. */
 .weekly-wrap-correction__chart {
   padding: 12px;
@@ -1363,7 +1371,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-correction__line {
-  stroke-width: 1.5;
+  stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
   fill: none;
@@ -1379,6 +1387,15 @@ body.tour-active .ios-pwa-banner {
 
 .weekly-wrap-correction__line.is-waist {
   stroke: var(--v4-act, #c67139);
+}
+
+/* Точка на последнем дне — своим тоном линии: она отвечает «а сейчас-то где». */
+.weekly-wrap-correction__dot.is-weight {
+  fill: color-mix(in srgb, var(--v4-ink, #201e1d) 32%, transparent);
+}
+
+.weekly-wrap-correction__dot.is-waist {
+  fill: var(--v4-act, #c67139);
 }
 
 .weekly-wrap-correction__legend {

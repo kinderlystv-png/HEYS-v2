@@ -251,6 +251,25 @@
     cold_start: 'холодный старт'
   };
 
+  // Кто решил — часть решения, а не догадка читающего: «применил» без хозяина
+  // одинаково подходит куратору и клиенту, а в истории это разные вещи.
+  const WHO_HUMAN = { curator: 'куратор', client: 'клиент', system: 'система' };
+
+  // Безличные исходы хозяина не имеют: «сошлось» и «холодный старт» никто не
+  // выбирал, а «отложено» может прийти и от куратора, и от тишины клиента.
+  const IMPERSONAL = new Set(['matched', 'cold_start', 'postponed', 'frozen']);
+
+  function decisionWord(what, by) {
+    const verb = WHAT_HUMAN[what] || what;
+    if (IMPERSONAL.has(what)) {
+      return what === 'postponed' ? 'отложено'
+        : what === 'frozen' ? 'заморожено'
+          : verb;
+    }
+    const who = WHO_HUMAN[by];
+    return who ? who + ' ' + verb : verb;
+  }
+
   /**
    * Модель кураторской карточки: строки и числа, без вёрстки.
    *
@@ -393,7 +412,8 @@
         weekLabel: row.weekLabel,
         factor: row.factor,
         what: row.what,
-        whatWord: WHAT_HUMAN[row.what] || row.what,
+        by: row.by || null,
+        whatWord: decisionWord(row.what, row.by),
         scaleShare: Math.round(share * 100) / 100
       };
     });
@@ -464,12 +484,15 @@
    * косметическая — испортится график истории, но не норма: действующее
    * значение живёт скалярами в профиле и сливается отдельно.
    */
-  function recordDecision({ lsGet, lsSet, weekLabel, factor, what, now }) {
+  function recordDecision({ lsGet, lsSet, weekLabel, factor, what, now, by }) {
     const weeks = readHistory(lsGet).filter((w) => w && w.weekLabel !== weekLabel);
     weeks.unshift({
       weekLabel,
       factor: Number(factor),
       what,
+      // Хозяин решения. У записей, сделанных до этого поля, его нет — история
+      // тогда называет только действие, и это честнее выдуманного хозяина.
+      by: by || null,
       at: now || null
     });
     if (lsSet) {
@@ -533,7 +556,10 @@
 
   function buildWeeklySyncCard({
     result, tariff, applied, refusalStreak, weeksUnchanged, matchedStreak, recomposition,
-    justRaised, expenditure, deficitPct, basalMetabolism
+    justRaised, expenditure, deficitPct, basalMetabolism,
+    // Решение этой недели и предыдущей: первое отвечает человеку на его же
+    // нажатие, второе не даёт прошлому предложению исчезнуть молча.
+    lastDecision, previousDecision
   }) {
     const res = result || {};
     const isSelf = tariff === 'self';
@@ -578,6 +604,18 @@
       // тарифах — на Self в кадре «снижение ждёт согласия», на Pro в блоке
       // «Что он смотрит», — а карточка показывала только результат. Человек
       // читал «норма снизилась» и не видел, на чём это основано.
+      // Чем кончилось прошлое предложение — строкой на карточке. Канала
+      // «что решил куратор» между кабинетом и шторкой нет, и до него это
+      // единственный способ не потерять исход: иначе «увидел заранее»
+      // превращается в «увидел и не понял». Кто решил, видно по тому, что
+      // записано: «отказался» пишет только клиент, «отложил» и «заморозил» —
+      // только кураторский лист.
+      previousNote: previousDecision && previousDecision.what !== 'applied'
+        && previousDecision.what !== 'matched'
+        ? (previousDecision.what === 'declined'
+          ? 'На прошлой неделе норму оставили прежней.'
+          : 'На прошлой неделе куратор оставил норму прежней.')
+        : null,
       // Природа числа — подписью под ключом: строка контракта «числа называют
       // свою природу». Два числа подряд без неё читаются как одна величина,
       // померенная дважды. Тон у факта тот же, что в кураторском листе, — он
@@ -795,6 +833,38 @@
               actionLabels: { ask_curator: 'Спросить куратора' }
             }
           });
+    }
+
+    // Отказ не уходит в тишину. Человек нажал «Оставить прежнюю» — и должен
+    // увидеть, что его услышали: без этого третий отказ подряд читается как
+    // поломка расчёта, а не как его собственное решение. Кадр стоит выше
+    // «третьего отказа»: это состояние «вы только что решили», а разговор про
+    // серию — на следующей неделе, когда решать снова.
+    if (lastDecision && lastDecision.what === 'declined') {
+      return Object.assign(card, {
+        frame: 'refusal_accepted',
+        decidedBy: 'client',
+        needsConsent: false,
+        hero: 'currentNorm',
+        actions: ['ok'],
+        titleAs: null,
+        facts: [
+          { label: 'Норма дня', value: formatKcal(norms.current) + '\u00a0ккал' },
+          { label: 'Поправка вернётся', value: 'в понедельник' },
+          { label: 'Отказ учли', value: 'да' }
+        ],
+        copy: {
+          title: 'Норма осталась прежней',
+          body: 'Оставили ' + formatKcal(norms.current) + ' — так и будет.'
+            + ' Поправка не исчезла: вернётся в понедельник с обновлёнными'
+            + ' данными, и расхождение к тому времени может стать другим.',
+          heroCaption: 'без изменений',
+          footnote: 'Отказ — сигнал, а не ошибка. На Pro его видит куратор и'
+            + ' спросит, что мешает; на Self после третьего раза мы покажем,'
+            + ' сколько недель норма не менялась.',
+          actionLabels: { ok: 'Понятно' }
+        }
+      });
     }
 
     // Self: снижение требует явного согласия клиента.
@@ -1163,7 +1233,8 @@
       }));
       recordDecision({
         lsGet, lsSet, weekLabel: weekLabel || base.toISOString().split('T')[0],
-        factor: result.nextFactor, what: 'applied', now: base.getTime()
+        factor: result.nextFactor, what: 'applied', now: base.getTime(),
+        by: 'system'
       });
       justRaised = { previousFactor };
     }
@@ -1181,8 +1252,15 @@
       matchedStreak++;
     }
 
+    // Решение этой недели — то, на что человек только что нажал; предыдущей —
+    // то, чем кончилось прошлое предложение.
+    const thisWeekDecision = (weeks[0] && weeks[0].weekLabel === weekKey) ? weeks[0] : null;
+    const prevWeekDecision = weeks.find((w) => w && w.weekLabel !== weekKey) || null;
+
     const card = buildWeeklySyncCard({
       result,
+      lastDecision: thisWeekDecision,
+      previousDecision: prevWeekDecision,
       justRaised,
       matchedStreak,
       recomposition: recomposition,

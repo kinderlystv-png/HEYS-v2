@@ -276,7 +276,9 @@
       const what = action === 'apply_tomorrow' ? 'applied'
         : action === 'freeze' ? 'frozen' : 'postponed';
       await api.mergeSaveKV(clientId, NC.HISTORY_KEY, {
-        weeks: [{ weekLabel, factor: result.nextFactor, what, at: now }],
+        // Хозяин решения едет вместе с ним: в истории «применил» без него
+        // одинаково подходит куратору и клиенту, а это разные вещи.
+        weeks: [{ weekLabel, factor: result.nextFactor, what, by: 'curator', at: now }],
         updatedAt: now
       });
 
@@ -515,6 +517,18 @@
         // главным по карточке в обоих канвасах («при расхождении верен он»).
         // Сначала два числа, потом сам процент расхождения, потом где он может
         // сидеть, потом на чём считали, и только затем предложение.
+        // Данных мало — лист говорит это заголовком, а не показывает пустые
+        // блоки. Кадр «Куратор · данных не хватает»: почему не считаем, чего
+        // именно не хватает и что с этим делать.
+        card.status === 'not_enough_data' ? h('div', { className: 'cur-sheet__gap' },
+          h('div', { className: 'cur-sheet__gap-title' }, 'Поправку не считаем'),
+          h('div', { className: 'cur-sheet__gap-body' }, card.reason),
+          // Что будет дальше — обязательно: без этого «не считаем» читается как
+          // поломка, а не как ожидание данных.
+          h('div', { className: 'cur-sheet__gap-note' },
+            'Норма остаётся прежней. Карточка вернётся, когда окно наберёт данные.')
+        ) : null,
+
         h('div', { className: 'cur-sheet__tier' }, 'Норма против факта'),
 
         h('div', { className: 'cur-sheet__facts' },
@@ -564,7 +578,10 @@
           : null,
 
         card.quality && card.quality.length ? h(React.Fragment, null,
-          h('div', { className: 'cur-sheet__tier' }, 'Качество данных'),
+          // Кадр нехватки называет этот блок иначе: там он не описывает
+          // качество, а перечисляет, чего именно не хватает.
+          h('div', { className: 'cur-sheet__tier' },
+            card.status === 'not_enough_data' ? 'Чего не хватает' : 'Качество данных'),
           // Контракт поправки: качество данных словом «хватает» или «мало».
           // Дробь «21 из 10» здесь читалась так же плохо, как «дни 11 из 10» в
           // самой панели: счёт обгоняет собственный знаменатель. Тон при этом
@@ -701,6 +718,43 @@
           )
         ) : null,
 
+        // История решений: без неё лист не отвечает на вопрос «что я решал в
+        // прошлый раз», и куратор решает заново каждую неделю. Точка недели
+        // стоит по шкале между 1,00 и целью — долю считает движок, чтобы
+        // рисующий не выдумывал её сам.
+        (card.history && card.history.length)
+          ? h(React.Fragment, null,
+            h('div', { className: 'cur-sheet__tier' }, 'История поправки'),
+            h('div', { className: 'cur-sheet__hist' },
+              h('div', { className: 'cur-sheet__hist-legend' },
+                h('span', null, 'пунктир сверху — 1,00'),
+                h('span', { className: 'is-target' },
+                  'пунктир снизу — цель ×'
+                  + (rec ? String(rec.targetFactorShown).replace('.', ',') : '—'))
+              ),
+              historyChart(React, card.history),
+              h('div', { className: 'cur-sheet__hist-dates' },
+                card.history.slice().reverse().map((w) => h('span', { key: w.weekLabel },
+                  w.weekLabel))
+              )
+            ),
+            h('div', { className: 'cur-sheet__facts' },
+              card.history.map((w) => h('div', {
+                className: 'cur-sheet__fact', key: w.weekLabel
+              },
+                h('span', { className: 'cur-sheet__fact-label' }, w.weekLabel),
+                h('span', { className: 'cur-sheet__hist-what' },
+                  h('span', { className: 'cur-sheet__hist-factor' },
+                    '\u00d7' + w.factor.toFixed(2).replace('.', ',')),
+                  h('span', { className: 'cur-sheet__hist-who' }, w.whatWord)
+                )
+              ))
+            ),
+            h('div', { className: 'cur-sheet__how-note' },
+              'Видно и то, что система предложила, и то, что человек с этим сделал.')
+          )
+          : null,
+
         // Действия прилипают к низу листа: разбор расчёта сделал лист длинным,
         // и главное действие уехало за прокрутку. Читать механизм и решать —
         // одно движение, а не два.
@@ -733,6 +787,43 @@
           }, 'Открыть дневник')
         )
       )
+    );
+  }
+
+  /**
+   * Ступенька истории поправки между двумя пунктирами.
+   *
+   * Верхний пунктир — единица, нижний — цель; точка недели стоит по доле пути
+   * между ними, и долю считает движок (scaleShare). Своей арифметики здесь нет:
+   * масштаб — утверждение о данных, и рисующий его не выбирает.
+   */
+  function historyChart(React, history) {
+    const W = 262;
+    const TOP = 16;
+    const BOTTOM = 46;
+    // История приходит от свежей недели к старой — рисуем слева направо.
+    const weeks = history.slice().reverse();
+    const x = (i) => (weeks.length > 1 ? 4 + (i * (W - 8)) / (weeks.length - 1) : W / 2);
+    const y = (w) => TOP + (Number(w.scaleShare) || 0) * (BOTTOM - TOP);
+    const d = weeks.map((w, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(w).toFixed(1)).join(' ');
+    const last = weeks[weeks.length - 1];
+    const dash = (cy, className) => React.createElement('line', {
+      className: 'cur-sheet__hist-dash' + (className ? ' ' + className : ''),
+      x1: 4, y1: cy, x2: W - 4, y2: cy
+    });
+    return React.createElement('svg', {
+      className: 'cur-sheet__hist-svg',
+      viewBox: '0 0 ' + W + ' 60', width: '100%', height: 60,
+      role: 'img',
+      'aria-label': 'История поправки за ' + weeks.length + ' нед.'
+    },
+      dash(TOP),
+      dash(BOTTOM, 'is-target'),
+      React.createElement('path', { className: 'cur-sheet__hist-line', d, fill: 'none' }),
+      React.createElement('circle', {
+        className: 'cur-sheet__hist-dot',
+        cx: x(weeks.length - 1).toFixed(1), cy: y(last).toFixed(1), r: 4
+      })
     );
   }
 

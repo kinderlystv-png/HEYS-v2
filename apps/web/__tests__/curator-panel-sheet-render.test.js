@@ -195,4 +195,58 @@ describe('лист поправки · рендер', () => {
     expect(host.querySelector('.cur-sheet__rec')).toBe(null);
     expect(text(host, '.cur-sheet__actions button')).toEqual(['Открыть дневник']);
   });
+
+  it('история решений видна в листе, а не только в движке', () => {
+    // Без неё лист не отвечает на вопрос «что я решал в прошлый раз», и куратор
+    // решает заново каждую неделю.
+    const { result, card: c } = card({
+      history: [
+        { weekLabel: '26 авг', factor: 0.97, what: 'applied', by: 'curator' },
+        { weekLabel: '19 авг', factor: 1, what: 'declined', by: 'client' },
+        { weekLabel: '12 авг', factor: 1, what: 'postponed', by: 'curator' },
+        { weekLabel: '5 авг', factor: 1, what: 'cold_start' }
+      ]
+    });
+    const host = render({ clientId: 'c1', card: c, result });
+    const hist = host.querySelector('.cur-sheet__hist');
+    expect(hist).toBeTruthy();
+    // Ступенька между двумя пунктирами: верхний — единица, нижний — цель.
+    expect(hist.querySelectorAll('.cur-sheet__hist-dash').length).toBe(2);
+    expect(hist.querySelector('.cur-sheet__hist-dash.is-target')).toBeTruthy();
+    expect(hist.querySelector('.cur-sheet__hist-line')).toBeTruthy();
+    // Даты недель — слева направо, от старой к свежей.
+    expect(text(hist, '.cur-sheet__hist-dates span'))
+      .toEqual(['5 авг', '12 авг', '19 авг', '26 авг']);
+    // И кто решил: «применил» без хозяина одинаково подходит обоим.
+    expect(host.textContent).toContain('куратор применил');
+    expect(host.textContent).toContain('клиент отказался');
+    // Безличные исходы хозяина не имеют — их никто не выбирал.
+    expect(host.textContent).toContain('отложено');
+    expect(host.textContent).not.toContain('куратор отложил');
+  });
+
+  it('точка недели стоит по шкале, а не «примерно»', () => {
+    // 0,97 при цели 0,92 — три десятых с небольшим пути от единицы.
+    const { card: c } = card({
+      history: [{ weekLabel: '26 авг', factor: 0.97, what: 'applied', by: 'curator' }]
+    });
+    const share = c.history[0].scaleShare;
+    expect(share).toBeGreaterThan(0);
+    expect(share).toBeLessThan(1);
+  });
+
+  it('данных мало — лист говорит это заголовком, а не пустыми блоками', () => {
+    const { result, card: c } = card({ loggedDays: 5 });
+    expect(c.status).toBe('not_enough_data');
+    const host = render({ clientId: 'c1', card: c, result });
+    const gap = host.querySelector('.cur-sheet__gap');
+    expect(gap).toBeTruthy();
+    expect(gap.querySelector('.cur-sheet__gap-title').textContent)
+      .toBe('Поправку не считаем');
+    expect(gap.querySelector('.cur-sheet__gap-body').textContent.length)
+      .toBeGreaterThan(20);
+    // И блок гейтов меняет имя: он перечисляет нехватку, а не описывает качество.
+    expect(host.textContent).toContain('Чего не хватает');
+    expect(host.textContent).not.toContain('Качество данных');
+  });
 });

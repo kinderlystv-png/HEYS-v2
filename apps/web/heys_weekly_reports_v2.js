@@ -485,7 +485,9 @@
     function NormCorrectionChart({ chart }) {
         const h = global.React.createElement;
         const W = 262;
-        const H = 56;
+        // Кадр рисует 262×76; строка «карточка · график рекомпозиции» говорила
+        // 56 — дизайнер решил спор в пользу кадра.
+        const H = 76;
         const path = (points) => points
             .map((p, i) => (i ? 'L' : 'M') + (p[0] * W).toFixed(1)
                 + ' ' + ((1 - p[1]) * H).toFixed(1))
@@ -494,6 +496,17 @@
             className: 'weekly-wrap-correction__line is-' + kind,
             d: path(points), fill: 'none'
         });
+        // Точка на последнем дне: она отвечает на вопрос «а сейчас-то где»,
+        // который иначе решается взглядом по краю линии.
+        const dot = (points, kind) => {
+            const last = points[points.length - 1];
+            return h('circle', {
+                className: 'weekly-wrap-correction__dot is-' + kind,
+                cx: (last[0] * W).toFixed(1),
+                cy: ((1 - last[1]) * H).toFixed(1),
+                r: 4
+            });
+        };
         const legend = (kind, label) => h('span', {
             className: 'weekly-wrap-correction__legend-item is-' + kind
         },
@@ -508,7 +521,9 @@
                 'aria-label': 'Вес ' + chart.lastWeight + ', талия ' + chart.lastWaist
             },
                 line(chart.weight, 'weight'),
-                line(chart.waist, 'waist')
+                line(chart.waist, 'waist'),
+                dot(chart.weight, 'weight'),
+                dot(chart.waist, 'waist')
             ),
             h('div', { className: 'weekly-wrap-correction__legend' },
                 legend('weight', 'вес'),
@@ -561,6 +576,11 @@
                 }, card.evidence)
                 : null,
             h('div', { className: 'weekly-wrap-correction__body' }, copy.body),
+            // Предложение не исчезает молча: чем кончилось прошлое — видно
+            // здесь, пока нет канала «что решил куратор» из кабинета в шторку.
+            card.previousNote
+                ? h('div', { className: 'weekly-wrap-correction__previous' }, card.previousNote)
+                : null,
             // Две линии одного графика: вес держится, талия уходит. Точки
             // приходят из движка нормированными — масштаб это утверждение о
             // данных, и выбирать его рисующему нельзя. Ось значений не
@@ -1005,17 +1025,17 @@
 
             if (action === 'apply_tomorrow' || action === 'apply') {
                 applyFactor(correction.result.nextFactor, true);
-                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.nextFactor, what: 'applied', now });
+                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.nextFactor, what: 'applied', now, by: 'client' });
             } else if (action === 'keep_current') {
-                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.currentFactor, what: 'declined', now });
+                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.currentFactor, what: 'declined', now, by: 'client' });
             } else if (action === 'revert') {
                 // Рост уже применён, поэтому текущий множитель — это поднятое
                 // число. Возвращаемся к тому, от которого расчёт шагнул вверх.
                 const back = Number.isFinite(card?.previousFactor) ? card.previousFactor : 1;
                 applyFactor(back, false);
-                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: back, what: 'declined', now });
+                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: back, what: 'declined', now, by: 'client' });
             } else if (action === 'mute_month') {
-                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.currentFactor, what: 'postponed', now });
+                HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.currentFactor, what: 'postponed', now, by: 'client' });
             } else if (action === 'ask_curator' || action === 'measure_waist') {
                 // Обе кнопки уводят из шторки, а шторка сама живёт в StepModal:
                 // открыть замеры поверх неё нельзя, поэтому сначала закрываем.
