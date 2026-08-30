@@ -1757,7 +1757,7 @@
 
 .mc-rest-cycle-day-btn.is-on {
   background: var(--v4-sand-act, #c67139);
-  color: var(--v4-act-ink, #2b1608);
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 .mc-rest-cycle-week-actions {
@@ -1777,7 +1777,7 @@
 
 .mc-rest-cycle-btn--primary {
   background: var(--v4-sand-act, #c67139);
-  color: var(--v4-act-ink, #2b1608);
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 .mc-rest-cycle-btn--secondary {
@@ -1948,7 +1948,7 @@
 
 .cycle-card-v4__day-btn--active {
   background: var(--v4-sand-act, #c67139);
-  color: var(--v4-act-ink, #2b1608);
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 .cycle-card-v4__badges {
@@ -2121,7 +2121,7 @@
 
 .cycle-v4-btn--primary {
   background: var(--v4-sand-act, #c67139);
-  color: var(--v4-act-ink, #2b1608);
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 .cycle-v4-btn--danger {
@@ -2199,7 +2199,7 @@
 
 .cycle-date-picker-cell.is-today {
   background: var(--v4-sand-act, #c67139);
-  color: var(--v4-act-ink, #2b1608);
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 .cycle-date-picker-cell.is-selected {

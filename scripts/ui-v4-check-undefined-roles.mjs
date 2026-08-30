@@ -55,10 +55,6 @@ const BARE_SKIP_FILES = new Set([
 // только вместе с решением, почему роль остаётся необъявленной.
 const BASELINE = {
   'v4-accent': ['styles/modules/000-base-and-gamification.css'],
-  'v4-act-ink': [
-    'styles/modules/000-base-and-gamification.css',
-    'styles/modules/500-pwa-and-offline.css',
-  ],
   'v4-act-line': [
     'styles/modules/733-ui-v4-reports.css',
     'styles/modules/734-ui-v4-insights.css',
