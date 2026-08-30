@@ -4610,7 +4610,7 @@
       weight: +p.weight || 70,
       weightGoal: +p.weightGoal || 0,
       deficitPctTarget: +p.deficitPctTarget || 0,
-      stepsGoal: +p.stepsGoal || 7000,
+      stepsGoal: +p.stepsGoal || 10000,
       insulinWaveHours: +p.insulinWaveHours || 3,
       cycleTrackingEnabled: !!p.cycleTrackingEnabled,
       firstName: p.firstName || '',

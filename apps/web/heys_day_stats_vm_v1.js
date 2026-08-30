@@ -205,7 +205,7 @@
       weight,
       weightMorning: day?.weightMorning || null,
       steps: day?.steps || 0,
-      stepsGoal: prof?.stepsGoal || 7000,
+      stepsGoal: prof?.stepsGoal || 10000,
       weightSparklineData,
       weightTrend,
       kcalTrend,

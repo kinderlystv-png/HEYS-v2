@@ -10,7 +10,7 @@
         const safeDay = day || {};
         const safeProf = prof || {};
 
-        const [savedStepsGoal, setSavedStepsGoal] = useState(() => safeProf.stepsGoal || 7000);
+        const [savedStepsGoal, setSavedStepsGoal] = useState(() => safeProf.stepsGoal || 10000);
         const initialStepsSyncDoneRef = useRef(false);
         const lastDispatchedStepsRef = useRef(safeDay.steps || 0);
         const latestStepsRef = useRef(safeDay.steps || 0);
@@ -45,7 +45,7 @@
         }, [getProfile]);
 
         const stepsMax = 30000;
-        const stepsGoal = Math.min(stepsMax, Math.max(1, savedStepsGoal || 7000));
+        const stepsGoal = Math.min(stepsMax, Math.max(1, savedStepsGoal || 10000));
         const stepsValue = safeDay.steps || 0;
         const hasOverflowZone = stepsGoal < stepsMax;
 

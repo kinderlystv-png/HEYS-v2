@@ -534,7 +534,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
 
                 // Resolve dynamic targets (steps_goal)
                 if (m.type === 'steps_goal') {
-                    mission.target = profile.stepsGoal || 7000;
+                    mission.target = profile.stepsGoal || 10000;
                     mission.desc = `Пройди ${mission.target.toLocaleString('ru-RU')} шагов`;
                 }
                 // Remove runtime-only fields
@@ -579,7 +579,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-1-game: execute start')
                 mission.target = adjustedTarget;
 
                 if (m.type === 'steps_goal') {
-                    mission.target = profile.stepsGoal || 7000;
+                    mission.target = profile.stepsGoal || 10000;
                     mission.desc = `Пройди ${mission.target.toLocaleString('ru-RU')} шагов`;
                 }
                 delete mission.condition;

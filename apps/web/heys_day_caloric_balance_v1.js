@@ -981,7 +981,7 @@
         const avgSteps = daysWithSteps.length > 0
           ? Math.round(daysWithSteps.reduce((s, d) => s + (d.steps || 0), 0) / daysWithSteps.length)
           : 0;
-        const stepsGoal = prof.stepsGoal || 7000;
+        const stepsGoal = prof.stepsGoal || 10000;
         const stepsPct = avgSteps / stepsGoal;
 
         if (avgSteps > 0 && avgSteps < 3000 && daysWithSteps.length >= 3) {
