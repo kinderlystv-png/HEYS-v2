@@ -273,9 +273,27 @@
     if (error === 'modules') {
       return h('div', { className: 'cur-panel__stub' }, 'Панель не загрузилась');
     }
+    // Сервер отказал — это надо сказать и дать повторить. Раньше ветки не было
+    // вовсе: setError('load') отрабатывал, rows оставались пустыми, и экран
+    // навсегда застревал на «Считаем…» — состоянии, которое обещает, что
+    // сейчас всё появится.
+    if (error === 'load') {
+      return h('div', { className: 'cur-panel' },
+        h('div', { className: 'cur-panel__empty' },
+          h('div', { className: 'cur-panel__empty-title' }, 'Данные не пришли'),
+          h('div', { className: 'cur-panel__empty-note' },
+            'Сервер не ответил на запрос окна или профилей. Панель считает по ним'
+            + ' и без них показывать нечего.'),
+          h('button', {
+            type: 'button',
+            className: 'cur-panel__retry',
+            onClick: () => { setError(null); setTick((t) => t + 1); }
+          }, 'Повторить')
+        )
+      );
+    }
     // Пока едет движок, у панели нет ни строк, ни ошибки — это то же «считаем»,
     // что и во время запроса.
-
     if (!rows) {
       return h('div', { className: 'cur-panel__stub' }, 'Считаем…');
     }

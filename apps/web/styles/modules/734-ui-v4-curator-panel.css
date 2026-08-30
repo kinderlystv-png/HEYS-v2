@@ -38,6 +38,21 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
 }
 
+/* Повтор после отказа — единственная кнопка на этом экране: без неё куратору
+   остаётся только уйти и вернуться. */
+.cur-panel__retry {
+  min-height: 48px;
+  width: 100%;
+  margin-top: 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #fff5ef);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Чипы фильтра меняют состав, но не порядок: выбран один — группы не
    показываются, строки идут сплошняком. */
 .cur-panel__chips {

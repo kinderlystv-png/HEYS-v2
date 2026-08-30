@@ -79,6 +79,17 @@ describe('панель куратора · место в кабинете', () =
     expect(SRC).toContain('waitedForEngine.current = true');
   });
 
+  it('отказ сервера назван и его можно повторить', () => {
+    // Ветки для него не было вовсе: setError('load') отрабатывал, строк не
+    // появлялось, и экран навсегда застревал на «Считаем…» — состоянии,
+    // которое обещает, что сейчас всё появится.
+    expect(SRC).toContain("error === 'load'");
+    expect(SRC).toContain('Данные не пришли');
+    expect(SRC).toContain("'Повторить'");
+    expect(SRC).toContain('setError(null); setTick((t) => t + 1)');
+    expect(CSS).toContain('.cur-panel__retry');
+  });
+
   it('стили подключены и живут своим модулем', () => {
     expect(MAIN).toContain("734-ui-v4-curator-panel.css");
     expect(BUNDLE).toContain('heys_curator_panel_v1.js');
