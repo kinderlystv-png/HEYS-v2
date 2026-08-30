@@ -218,6 +218,7 @@ describe('поправка на факт · модель кураторской 
 
   it('«где может сидеть расхождение» — только куратору и только когда есть что объяснять', () => {
     const card = NC.buildCuratorCard({ result: ready(), expenditure: 2400, deficitPct: -12 });
+    expect(card.result || card.mismatchPct).toBeTruthy();
     expect(card.whereMismatchSits).toContain('формула завышает');
     expect(card.whereMismatchSits).toContain('не попала в дневник');
 
@@ -227,6 +228,41 @@ describe('поправка на факт · модель кураторской 
       expenditure: 2400, deficitPct: -12
     });
     expect(cold.whereMismatchSits).toBeNull();
+  });
+
+  it('объяснение выбирается стороной расхождения, а не одно на оба', () => {
+    // У живого клиента факт 2 273 против формулы 2 230: расчёт просит поднять
+    // норму, а строка говорила «формула завышает» — прямо против чисел над ней.
+    const up = NC.buildCuratorCard({
+      result: NC.compute({
+        days: days(21, 2450), formulaPerDay: 2400,
+        trend: { deltaKg: 0.1, measuredDays: 21, windowDays: 21 },
+        currentFactor: 1, historyDays: 60
+      }),
+      expenditure: 2400, deficitPct: -12
+    });
+    expect(up.recommendation.stepFactor).toBeGreaterThan(1);
+    expect(up.whereMismatchSits).toContain('формула занижает');
+    expect(up.whereMismatchSits).not.toContain('формула завышает');
+
+    const down = NC.buildCuratorCard({ result: ready(), expenditure: 2400, deficitPct: -12 });
+    expect(down.recommendation.stepFactor).toBeLessThan(1);
+    expect(down.whereMismatchSits).toContain('формула завышает');
+  });
+
+  it('расхождения нет — объяснять нечего', () => {
+    // Строка «где сидит расхождение» при нулевом расхождении утверждала бы,
+    // что расхождение есть.
+    const flat = NC.buildCuratorCard({
+      result: NC.compute({
+        days: days(21, 2400), formulaPerDay: 2400,
+        trend: { deltaKg: 0, measuredDays: 21, windowDays: 21 },
+        currentFactor: 1, historyDays: 60
+      }),
+      expenditure: 2400, deficitPct: -12
+    });
+    expect(flat.mismatchPct).toBe(0);
+    expect(flat.whereMismatchSits).toBeNull();
   });
 
   it('точка недели в истории стоит по шкале, а не «примерно»', () => {
