@@ -306,6 +306,8 @@
       stepsPercent,
       stepsColor,
       stepsK,
+      stepsEstimated,
+      stepsMissing,
       bmr,
       householdK,
       totalHouseholdMin,
@@ -565,8 +567,13 @@
         React.createElement('div', { className: 'activity-v4-steps__head' },
           React.createElement('span', { className: 'activity-v4-steps__label' }, 'Шаги'),
           React.createElement('span', { className: 'activity-v4-steps__values' },
+            // Пилюля стоит перед числом: подставленное значение видно раньше,
+            // чем прочитано (контракт «оценённые шаги помечены», строка 14).
+            stepsEstimated && React.createElement('span', {
+              className: 'activity-v4-steps__pill'
+            }, 'оценка'),
             React.createElement('span', {
-              className: 'activity-v4-steps__value',
+              className: 'activity-v4-steps__value' + (stepsEstimated ? ' activity-v4-steps__value--estimated' : ''),
               onClick: (e) => {
                 e.stopPropagation();
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -587,13 +594,24 @@
               style: { cursor: 'pointer' }
             }, stepsValue.toLocaleString()),
             ' ',
-            React.createElement('span', { className: 'activity-v4-steps__goal' }, '/ ' + stepsGoal.toLocaleString())
+            React.createElement('span', {
+              className: 'activity-v4-steps__goal',
+              // Цель — план дня, а не настройка: её спрашивают каждое утро и
+              // считают от медианы с модификаторами. Тап открывает тот же шаг
+              // чек-ина (контракт «факт и цель правятся по-разному», строка 12).
+              onClick: (e) => {
+                e.stopPropagation();
+                openStepsGoalPicker?.();
+                haptic?.('light');
+              },
+              style: { cursor: 'pointer' }
+            }, '/ ' + stepsGoal.toLocaleString())
           )
         ),
         React.createElement('div', { className: 'activity-v4-steps__track-wrap no-swipe-zone' },
           React.createElement('div', { className: 'activity-v4-steps__track' },
             React.createElement('div', {
-              className: 'activity-v4-steps__fill',
+              className: 'activity-v4-steps__fill' + (stepsEstimated ? ' activity-v4-steps__fill--estimated' : ''),
               style: { width: stepsPercent + '%' }
             })
           ),
@@ -616,7 +634,16 @@
             )
           )
         ),
-        React.createElement('div', { className: 'activity-v4-steps__hint' }, stepsK + ' ккал · правка ползунком')
+        React.createElement('div', { className: 'activity-v4-steps__foot' },
+          React.createElement('span', { className: 'activity-v4-steps__kcal' }, stepsK + ' ккал'),
+          React.createElement('span', { className: 'activity-v4-steps__hint' },
+            // При оценке подпись зовёт поставить факт: править ползунком
+            // подставленное число бессмысленно, пока его не заменили своим.
+            stepsEstimated ? 'поставьте факт ползунком' : 'факт — ползунком, цель — тапом')
+        ),
+        stepsEstimated && React.createElement('div', { className: 'activity-v4-steps__note' },
+          'Числа за этот день нет — взята медиана ваших последних 14 дней.'
+          + ' Она участвует в расходе и в цели, поэтому помечена.')
       ),
 
       React.createElement('div', { className: 'activity-v4-today' }, todayRows),

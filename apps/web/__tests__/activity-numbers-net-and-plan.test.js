@@ -978,3 +978,102 @@ describe('Режим program в блоке тренировок', () => {
     })).toBeNull();
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// Блок 4 · шаги: пометка оценки и правка цели тапом
+// tab-activity.v4.dc.html, строки 12–14, 29, 30; кадр «шаги оценены»
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('Шаги · пометка оценки и правка цели', () => {
+  function renderSteps(ctxExtra, actionsExtra) {
+    const HEYS = loadFiles(['heys_day_activity_v1.js']);
+    HEYS.TDEE = { calculate: () => ({ kcalMin: [0, 7, 8, 9] }) };
+    const ctx = {
+      day: { date: '2026-08-28', trainings: [] },
+      prof: {},
+      trainingTypes: [],
+      stepsValue: 8420, stepsGoal: 10000, stepsPercent: 67, stepsColor: '#000', stepsK: 312,
+      stepsEstimated: false, stepsMissing: false,
+      bmr: 1520, householdK: 0, totalHouseholdMin: 0,
+      train1k: 0, train2k: 0, train3k: 0,
+      r0: (v) => Math.round(v || 0),
+      visibleTrainings: 0, regularTrainingsBlock: null, programTrainingsBlock: null,
+      ndteData: { active: false }, ndteBoostKcal: 0, tefData: {}, tefKcal: 0,
+      dayTargetDef: -15, displayOptimum: 1940, optimum: 1940, cycleKcalMultiplier: 1,
+      tdee: 2280, caloricDebt: null,
+      monthTrainingsRows: [], morningActivationCalendarBlock: null,
+      ...ctxExtra,
+    };
+    render(HEYS.dayActivity.render({ React, ctx, actions: { ...actionsExtra } }));
+  }
+
+  it('обычный день: подпись зовёт править и факт, и цель', () => {
+    renderSteps();
+    expect(screen.getByText('факт — ползунком, цель — тапом')).toBeTruthy();
+    expect(screen.getByText('312 ккал')).toBeTruthy();
+    expect(document.querySelector('.activity-v4-steps__pill')).toBeNull();
+    expect(document.querySelector('.activity-v4-steps__note')).toBeNull();
+  });
+
+  it('оценка: пилюля стоит перед числом', () => {
+    renderSteps({ stepsEstimated: true, stepsValue: 7900, stepsK: 293 });
+    const values = document.querySelector('.activity-v4-steps__values');
+    expect(values.firstElementChild.className).toContain('activity-v4-steps__pill');
+    expect(values.firstElementChild.textContent).toBe('оценка');
+  });
+
+  it('оценка: число и заливка приглушены', () => {
+    renderSteps({ stepsEstimated: true, stepsValue: 7900 });
+    expect(document.querySelector('.activity-v4-steps__value').className)
+      .toContain('activity-v4-steps__value--estimated');
+    expect(document.querySelector('.activity-v4-steps__fill').className)
+      .toContain('activity-v4-steps__fill--estimated');
+  });
+
+  it('оценка: подпись зовёт поставить факт, а не править цель', () => {
+    renderSteps({ stepsEstimated: true });
+    expect(screen.getByText('поставьте факт ползунком')).toBeTruthy();
+    expect(screen.queryByText('факт — ползунком, цель — тапом')).toBeNull();
+  });
+
+  it('оценка: сноска объясняет, откуда число, дословно', () => {
+    renderSteps({ stepsEstimated: true });
+    expect(screen.getByText(
+      'Числа за этот день нет — взята медиана ваших последних 14 дней.'
+      + ' Она участвует в расходе и в цели, поэтому помечена.',
+    )).toBeTruthy();
+  });
+
+  it('тап по цели открывает правку плана дня', () => {
+    let opened = 0;
+    renderSteps({}, { openStepsGoalPicker: () => { opened += 1; } });
+    fireEvent.click(document.querySelector('.activity-v4-steps__goal'));
+    expect(opened).toBe(1);
+  });
+
+  it('тап по цели не задевает подсказку факта', () => {
+    let metric = 0;
+    renderSteps({}, { openStepsGoalPicker: () => {}, setMetricPopup: () => { metric += 1; } });
+    fireEvent.click(document.querySelector('.activity-v4-steps__goal'));
+    expect(metric).toBe(0);
+  });
+});
+
+describe('Цель шагов · дата открытого дня', () => {
+  it('showCheckin.steps передаёт дату в контекст шага', () => {
+    const src = fs.readFileSync(path.join(WEB_DIR, 'heys_morning_checkin_v1.js'), 'utf8');
+    const start = src.indexOf('steps: (dateKey, onComplete)');
+    expect(start).toBeGreaterThan(-1);
+    const block = src.slice(start, start + 600);
+    expect(block).toContain('context: { dateKey: actualDateKey || getTodayKey() }');
+    // Порядок как у weight и sleep: первым может прийти onComplete.
+    expect(block).toContain("typeof dateKey === 'function'");
+  });
+
+  it('обработчик дня отдаёт дату открытого дня, а не сегодня', () => {
+    const src = fs.readFileSync(path.join(WEB_DIR, 'heys_day_day_handlers.js'), 'utf8');
+    const start = src.indexOf('function openStepsGoalPicker()');
+    expect(start).toBeGreaterThan(-1);
+    expect(src.slice(start, start + 400)).toContain('HEYS.showCheckin.steps(date)');
+  });
+});

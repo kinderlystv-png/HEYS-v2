@@ -13,6 +13,8 @@
             stepsPercent,
             stepsColor,
             stepsK,
+            stepsEstimated,
+            stepsMissing,
             bmr,
             householdK,
             totalHouseholdMin,
@@ -52,7 +54,7 @@
         const activityCtx = {
             day, prof,
             // Steps
-            stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK,
+            stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, stepsEstimated, stepsMissing,
             // Household & Training
             bmr, householdK, totalHouseholdMin, householdActivities,
             train1k, train2k, train3k, visibleTrainings, trainingTypes, regularTrainingsBlock, programTrainingsBlock,

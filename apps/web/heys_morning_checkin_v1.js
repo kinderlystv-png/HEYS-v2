@@ -2952,14 +2952,23 @@
       }
     },
 
-    // Только шаги (цель)
-    steps: (onComplete) => {
+    // Только шаги (цель дня, а не настройка).
+    //
+    // Дата обязательна: шаг пишет profile.stepsGoal и stepsGoalConfirmedDate,
+    // и без контекста оба уезжали на сегодня. С прошлой даты это ставило план
+    // не тому дню, который человек открыл (контракт «факт и цель правятся
+    // по-разному», строка 12). Порядок аргументов как у weight и sleep:
+    // первым может прийти onComplete — старые вызовы не ломаются.
+    steps: (dateKey, onComplete) => {
       if (HEYS.StepModal) {
+        const actualDateKey = typeof dateKey === 'function' ? null : dateKey;
+        const actualOnComplete = typeof dateKey === 'function' ? dateKey : onComplete;
         HEYS.StepModal.show({
           steps: ['stepsGoal'],
           title: 'Цель шагов',
           showProgress: false,
-          onComplete
+          context: { dateKey: actualDateKey || getTodayKey() },
+          onComplete: actualOnComplete
         });
       }
     },

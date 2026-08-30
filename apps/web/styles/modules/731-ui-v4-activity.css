@@ -194,6 +194,50 @@ body:has(.activity-v4) .hdr::after {
 /* Ярус «Сегодня» — список .cd канваса. Три строки стоят всегда: прежде блок
    пропадал в пустой день и уносил с собой строку программы
    (контракт «ярус не исчезает пустым» и «вид · строки яруса», строки 6 и 32). */
+/* Оценённые шаги — контракт «вид · оценённые шаги», строка 30. Приём тот же,
+   что у расчётного веса: подставленное значение видно всегда и не
+   притворяется фактом. */
+.activity-v4-steps__pill {
+  margin-right: 7px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--v4-surface, #f7efe2);
+  font: 500 9px/1.4 ui-monospace, Menlo, monospace;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.activity-v4-steps__value--estimated {
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+/* Заливка полосы гаснет: число подставлено, и полоса не должна выглядеть
+   достижением. Контракт просит чернила 16 %, ближайшая роль набора — 30 %;
+   отступление названо в протоколе. */
+/* Два класса в селекторе намеренно: базовое правило заливки стоит ниже по
+   файлу, и с равной специфичностью выигрывало бы оно. */
+.activity-v4-steps__fill.activity-v4-steps__fill--estimated {
+  background: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
+}
+
+.activity-v4-steps__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.activity-v4-steps__kcal {
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.activity-v4-steps__note {
+  margin-top: 10px;
+  font: 500 11px/1.55 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
 .activity-v4-today {
   margin-top: 10px;
   padding: 2px 16px;
@@ -309,14 +353,15 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-steps__track {
-  height: 5px;
+  /* Контракт «вид · шаги», строка 29: полоса высотой 8, радиус 999. */
+  height: 8px;
   border-radius: 999px;
   background: var(--v4-line, rgba(0, 0, 0, 0.08));
   overflow: hidden;
 }
 
 .activity-v4-steps__fill {
-  height: 5px;
+  height: 8px;
   border-radius: 999px;
   background: #7a8a5e;
 }
