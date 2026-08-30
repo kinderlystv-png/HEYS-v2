@@ -341,7 +341,8 @@ describe('home-widgets breakdown sheets v4', () => {
       d._getNormAbs = () => ({});
       d._getWaterGoal = () => 2000;
       const model = V4.buildBreakdownModel({ id: 'ht', type: 'healthTrend', size: '2x2' });
-      expect(model.heroKicker).toBe('За месяц');
+      // Кикер называет срез, а не виджет: имя листа уже стоит в заголовке.
+      expect(model.heroKicker).toBe('За 30 дней');
       expect(model.heroUnit).toBe(' пунктов');
       expect(model.heroValue).toBe('+6');
       expect(model.chart?.kind).toBe('spline30');

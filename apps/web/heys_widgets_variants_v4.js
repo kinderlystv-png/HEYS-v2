@@ -2695,7 +2695,10 @@
     return {
       type: 'healthTrend',
       title,
-      heroKicker: 'За месяц',
+      // Кадр 31 августа поставил кикером «Тренд здоровья · 30 дней» — то же
+      // слово, что в заголовке листа двумя строками выше. Остальные семнадцать
+      // листов называют кикером срез, а не виджет; здесь тот же срез.
+      heroKicker: 'За 30 дней',
       heroValue: heroScore > 0 ? `+${bdFormatNum(heroScore)}` : bdFormatNum(heroScore),
       heroUnit: ' пунктов',
       insight,
