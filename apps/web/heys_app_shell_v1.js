@@ -5530,7 +5530,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                         + FAB_VISIBILITY_OPTIONS.length
                                     ),
                                     React.createElement('span', { className: 'hdr-settings-sheet__fab-ok' },
-                                        'Ни одной — тоже можно'
+                                        // Кадр «Настройки · чипы быстрых действий», элемент 22:
+                                        // «Ни одного». Считаются пункты списка, а не кнопки.
+                                        'Ни одного — тоже можно'
                                     )
                                 )
                             ),

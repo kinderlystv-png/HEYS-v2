@@ -9903,9 +9903,14 @@ body:has([data-heys-visible-frame="consent"]) .tabs {
   flex-shrink: 0;
 }
 
+/* Вид нижней навигации ни один канвас не описывает — home-widgets прямо
+   говорит «вид нижней навигации не мой». Роль оставлена как есть: --v4-hero это
+   вторая поверхность, и пилюля активной вкладки видна на полосе (--v4-bg).
+   Запасное значение обещало сам фон полосы, то есть невидимую пилюлю; приведено
+   к значению роли. Тёмная тема ниже уже права литералами #141210 / #2f2820. */
 .tabs--v4-primary .tab.tab-primary-nav.active {
   color: var(--v4-sand-act-text, #8a4a20);
-  background: var(--v4-hero, #fffaf1);
+  background: var(--v4-hero, #efe3cf);
   box-shadow: none;
 }
 
@@ -10646,7 +10651,11 @@ body:has(:is(
 
 .hdr-settings-sheet__row {
   display: flex;
-  align-items: flex-start;
+  /* Кадр «Настройки · список», элемент 14: строка выровнена по центру. Стояло
+     flex-start — в строке высотой от 44 подпись и значение прилипали к верху.
+     Перенос при этом остаётся: длинная подпись уводит значение на вторую
+     строку, и там центр читается так же. */
+  align-items: center;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 4px 10px;
@@ -16219,10 +16228,18 @@ body:has(:is(
   animation: profileSectionExpand 0.2s ease-out;
 }
 
+/* Девять поверхностей вкладки профиля стояли на --v4-sand-hero (вторая
+   поверхность #efe3cf), объявляя запасным значением первую #f7efe2. Роль не
+   меняю: кадра у этой вкладки нет — INDEX пакета дизайна не сопоставляет ей ни
+   одного канваса, и в ui-v4-contract-verdicts.json зоны под неё тоже нет.
+   settings-system.v4.dc.html описывает не эти экраны, а замену профиля тремя
+   группами в шторке настроек — это переделка, а не перекраска. Поэтому здесь
+   выправлено только запасное значение: рендер прежний, но код перестал обещать
+   не тот цвет. Остальные восемь мест ниже по файлу — та же правка. */
 .profile-section--expanded .profile-section__fields {
   padding: 12px;
   border-radius: 12px;
-  background: var(--v4-sand-hero, #f7efe2);
+  background: var(--v4-sand-hero, #efe3cf);
   border: 1px solid rgba(138, 74, 32, 0.06);
 }
 
@@ -16277,7 +16294,7 @@ body:has(:is(
 
 /* Tone tokens — единая песочная палитра, как на других вкладках v4 */
 .profile-section[class*="tone-"] {
-  --profile-tone-wash: var(--v4-sand-hero, #f7efe2);
+  --profile-tone-wash: var(--v4-sand-hero, #efe3cf);
   --profile-tone-swatch: var(--v4-sand-tint, #f3e0d2);
   --profile-tone-ink: var(--v4-sand-act, #c67139);
   --profile-tone-line: rgba(198, 113, 57, 0.18);
@@ -16681,7 +16698,7 @@ body:has(:is(
   padding: 12px;
   border-radius: 10px;
   margin-bottom: 8px;
-  background: var(--v4-sand-hero, #f7efe2);
+  background: var(--v4-sand-hero, #efe3cf);
   border: 1px solid rgba(138, 74, 32, 0.08);
 }
 
@@ -16762,7 +16779,7 @@ body:has(:is(
 .profile-ios-install {
   padding: 14px;
   border-radius: 12px;
-  background: var(--v4-sand-hero, #f7efe2);
+  background: var(--v4-sand-hero, #efe3cf);
   border: 1px solid rgba(138, 74, 32, 0.12);
   color: #201e1d;
 }
@@ -16812,7 +16829,7 @@ body:has(:is(
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 13px;
-  background: var(--v4-sand-hero, #f7efe2);
+  background: var(--v4-sand-hero, #efe3cf);
   color: #201e1d;
   border: 1px solid rgba(138, 74, 32, 0.1);
 }
@@ -16837,7 +16854,7 @@ body:has(:is(
 }
 
 .profile-subscription-card {
-  background: var(--v4-sand-hero, #f7efe2) !important;
+  background: var(--v4-sand-hero, #efe3cf) !important;
   border: 1px solid rgba(198, 113, 57, 0.18) !important;
   border-radius: 12px;
 }
@@ -16884,7 +16901,7 @@ body:has(:is(
   margin-top: 12px;
   padding: 14px 16px;
   border-radius: 12px;
-  background: var(--v4-sand-hero, #f7efe2);
+  background: var(--v4-sand-hero, #efe3cf);
   border: 1px solid rgba(138, 74, 32, 0.1);
 }
 
@@ -17000,7 +17017,7 @@ body:has(:is(
   gap: 6px;
   padding: 6px 10px;
   border-radius: 8px;
-  background: var(--v4-sand-hero, #f7efe2);
+  background: var(--v4-sand-hero, #efe3cf);
   border: 1px solid rgba(138, 74, 32, 0.08);
 }
 
@@ -17116,7 +17133,7 @@ body:has(:is(
 .profile-goal-progress {
   margin-top: 12px;
   padding: 10px 12px;
-  background: var(--v4-sand-hero, #f7efe2);
+  background: var(--v4-sand-hero, #efe3cf);
   border-radius: 8px;
   border: 1px solid rgba(138, 74, 32, 0.08);
 }

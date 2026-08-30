@@ -45,11 +45,14 @@ function readRules(css) {
           rules.get(key)['margin-bottom'] = parts[2] ?? parts[0];
         }
         if (prop === 'font') {
-          const f = /^(\d+)\s+([\d.]+)px\/([\d.]+)/.exec(value);
+          // Кегль пишут и в px, и в rem: `font: 600 0.8125rem/1.2` — те же 13 px.
+          const f = /^(\d+)\s+([\d.]+)(px|rem)\/([\d.]+)/.exec(value);
           if (f) {
             rules.get(key)['font-weight'] = f[1];
-            rules.get(key)['font-size'] = `${f[2]}px`;
-            rules.get(key)['line-height'] = f[3];
+            rules.get(key)['font-size'] = f[3] === 'rem'
+              ? `${parseFloat(f[2]) * 16}px`
+              : `${f[2]}px`;
+            rules.get(key)['line-height'] = f[4];
           }
         }
       }

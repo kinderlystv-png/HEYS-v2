@@ -1882,13 +1882,18 @@
   background: var(--v4-sand-surface, #f7efe2);
 }
 
+/* Строка «вид · карточка дня»: «пустая — фон --c1… заполненная — фон --c2».
+   Стояла --v4-sand-surface-soft (#fffaf1), то есть фон экрана: заполненная
+   карточка выходила светлее пустой, и заполнение читалось как ослабление. */
 .cycle-card-v4--filled {
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  background: var(--v4-chip-2, #efe3cf);
 }
 
+/* Кадр «Цикл · карточка дня, заполнено», элемент 02: название фазы 15 px и
+   «День N» 12 px стоят на общей базовой линии. */
 .cycle-card-v4__head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 10px;
   width: 100%;
@@ -1906,6 +1911,8 @@
 
 .cycle-card-v4__phase {
   font-size: 15px;
+  /* Кадр «Цикл · карточка дня, заполнено», элемент 03: 15 px/1,2. */
+  line-height: 1.2;
   color: var(--v4-sand-act-text, #8a4a20);
 }
 
@@ -2006,10 +2013,11 @@
   cursor: pointer;
 }
 
+/* Кадр «Цикл · карточка дня, заполнено», элемент 06: ряд действий через 14. */
 .cycle-card-v4__actions {
   display: flex;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .cycle-card-v4__cancel,
