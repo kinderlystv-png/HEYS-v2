@@ -564,6 +564,14 @@
     }
 
     const dateKey = (typeof dateKeyArg === 'string' && dateKeyArg) ? dateKeyArg : getTodayKey();
+    // Только про сегодня. Спрашивать «почему не сделал» про вчерашний день —
+    // допрос, а не сбор данных: человек уже не помнит, а ответ ничего не меняет
+    // (контракт «причина пропуска зарядки», строка 21).
+    if (dateKey !== getTodayKey()) {
+      logMorningActivationTrace(_tag, 'SKIP: not today', { dateKey, trigger });
+      traceMorningActivationDecision('skip_reason_open_blocked', { trigger, dateKey, reason: 'not_today' });
+      return;
+    }
     const dayData = readDayDataMergedForMaFollowup(dateKey);
     const ma = dayData?.morningActivation || {};
 

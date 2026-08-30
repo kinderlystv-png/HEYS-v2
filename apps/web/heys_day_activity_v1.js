@@ -99,7 +99,7 @@
 
   function hasMorningActivationResolved(day) {
     const status = day?.morningActivation?.status;
-    if (status === 'done' || status === 'planned' || status === 'skipped') return true;
+    if (status === 'done' || status === 'planned' || status === 'skipped' || status === 'missed') return true;
     if (Number(day?.morningActivation?.checkinAnsweredAt) > 0) return true;
     return hasMorningActivationDone(day);
   }

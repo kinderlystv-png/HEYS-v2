@@ -794,7 +794,10 @@
     };
   }
 
-  const MORNING_ACTIVATION_CHECKIN_STATUSES = new Set(['done', 'planned', 'skipped']);
+  // 'missed' здесь наравне с остальными: это тоже ответ человека («не сегодня»),
+  // а не отсутствие ответа. 'skipped' оставлен для дней, записанных прежней
+  // версией, — переписывать историю задним числом мы не будем.
+  const MORNING_ACTIVATION_CHECKIN_STATUSES = new Set(['done', 'planned', 'skipped', 'missed']);
 
   // Последний кофе шага «Остальное». Три варианта отвечают границей, названной
   // на самой пилюле, четвёртый — своим временем; порог читает виджет
@@ -1011,14 +1014,28 @@
     }
     if (answer === 'skipped') {
       cancelMorningActivationPlannedReminder();
-      return persistMorningActivationState(dateKey, {
+      // Статус пропуска начинает писаться (решение владельца 31 августа).
+      // Раньше «не сегодня» писало 'skipped', которого не знал никто ниже:
+      // календарь красил день пропуском только по фолбэку «прошлый день без
+      // записи», слияние не считало ответ окончательным, а ветка вопроса
+      // о причине была недостижима вовсе — её открытие требует 'missed'.
+      const saved = persistMorningActivationState(dateKey, {
         ...basePatch,
-        status: 'skipped',
+        status: 'missed',
+        skipReasonPending: true,
         intensity: null,
         intensitySource: null,
         postState: null,
         postEffect: null
       }, source);
+      // Причину спрашиваем в тот же день. Обработчик сам дождётся первого
+      // приёма пищи: два вопроса подряд — это допрос, а не сбор данных.
+      try {
+        global.dispatchEvent(new CustomEvent('heys:ma-skip-reason-check', {
+          detail: { dateKey }
+        }));
+      } catch (_) { /* noop */ }
+      return saved;
     }
     return null;
   }

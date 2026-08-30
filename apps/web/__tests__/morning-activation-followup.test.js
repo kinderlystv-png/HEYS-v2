@@ -506,7 +506,11 @@ describe('morning activation followup decision', () => {
     }));
   });
 
-  it('saves morning activation as skipped from followup', () => {
+  // Решение владельца 31 августа: «не сегодня» пишет статус пропуска, который
+  // узнаёт остальная механика — календарь, слияние и ветка вопроса о причине.
+  // Прежний 'skipped' не знал никто ниже, и ветка причины была недостижима
+  // (ACTIVITY_TAB_AS_IS.md §9 P, tab-activity.v4.dc.html строка 21).
+  it('saves morning activation as missed from followup', () => {
     const dateKey = '2026-06-09';
     const clientId = 'client-1';
     const day = mealDay({ date: dateKey });
@@ -556,8 +560,10 @@ describe('morning activation followup decision', () => {
     const saved = JSON.parse(localStorage.getItem(scopedKey));
     expect(onNext).toHaveBeenCalledTimes(1);
     expect(saved.morningActivation).toMatchObject({
-      status: 'skipped',
+      status: 'missed',
       intensity: null,
+      // Причину спросим в тот же день — вопрос помечен ожидающим.
+      skipReasonPending: true,
     });
     expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
       type: 'heys:morning-activation-followup-completed',
@@ -565,6 +571,12 @@ describe('morning activation followup decision', () => {
         dateKey,
         source: 'morning-activation-skipped',
       }),
+    }));
+    // Вопрос о причине заводится тем же ответом и на тот же день: прежде это
+    // событие не приходило ни разу, потому что статус пропуска никто не писал.
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'heys:ma-skip-reason-check',
+      detail: expect.objectContaining({ dateKey }),
     }));
   });
 
