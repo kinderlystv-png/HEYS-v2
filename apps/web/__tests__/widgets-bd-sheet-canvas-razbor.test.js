@@ -352,6 +352,34 @@ const MAIN = [
   ['«Вернуть стандартный экран»', 0, '.widget-v4-empty__reset', ['align', 'justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']]
 ];
 
+// Формы, которые повторяются из кадра в кадр: один и тот же элемент продукта
+// нарисован в подложке каждого листа и каждой шторки. Пара на форму закрывает
+// его везде, где форма в кадре одна.
+const SHAPES = [
+  ['шрифт 600 26px/1 Figtree', '.widget-v4-hero-num__val', ['fontWeight', 'fontSize', 'lineHeight']],
+  ['радиус 6px 6px 3px 3px, фон var(--acs)', '.widget-bd-sheet__bar > i', ['radius', 'background']],
+  ['высота 5px, радиус 999px, фон var(--gr2)', '.widget-bd-sheet__hero-track-fill', ['height', 'radius', 'background']],
+  ['высота 8px, радиус 999px, фон var(--acs)', '.widget-bd-sheet__wave-week-seg.is-active', ['height', 'radius']]
+];
+
+// Отвергнутые кадры и «живой прогон» отсеиваются здесь же, а не только гейтом:
+// форма из них в таблицу не попадает.
+function shapePairs(razbor, stopFrames) {
+  const frames = [...new Set([...razbor.keys()].map((k) => k.split('|')[0]))]
+    .filter((f) => stopFrames.has(f));
+  const pairs = [];
+  for (const frame of frames) {
+    for (const [anchor, sel, props] of SHAPES) {
+      const hits = [...razbor.keys()].filter((k) => {
+        const at = k.lastIndexOf('|');
+        return k.slice(0, at) === frame && (razbor.get(k) || '').includes(anchor);
+      });
+      if (hits.length === 1) pairs.push([frame, anchor, 0, sel, props]);
+    }
+  }
+  return pairs;
+}
+
 // Хвост листа разбора — разбор числами, норма и действие — одинаков во всех
 // восемнадцати листах, но номера элементов у каждого свои. Таблица собирается
 // из разбора по форме строки: каждая форма внутри кадра встречается один раз
@@ -517,6 +545,14 @@ describe('каркас листа разбора против разбора к�
   const razbor = readRazbor(source);
   const rules = readRules(fs.readFileSync(CSS, 'utf8'));
 
+  // Кадры, годные для сверки геометрии: только data-demo="stop".
+  const stopFrames = new Set();
+  {
+    const re = /data-demo="(stop|loop|protocol)"[^>]*data-screen-label="([^"]+)"|data-screen-label="([^"]+)"[^>]*data-demo="(stop|loop|protocol)"/g;
+    let m;
+    while ((m = re.exec(source))) if ((m[1] || m[4]) === 'stop') stopFrames.add(m[2] || m[3]);
+  }
+
   it('раздел «Разбор кадров» в канвасе есть и покрывает восемнадцать листов', () => {
     expect(source).toContain('Разбор кадров · элемент за элементом');
     const sheets = new Set(
@@ -566,6 +602,16 @@ describe('каркас листа разбора против разбора к�
       }
     }
     expect(same).toBeGreaterThanOrEqual(1000);
+  });
+
+  it('повторяющиеся формы совпадают в каждом кадре, где встречаются', () => {
+    const pairs = shapePairs(razbor, stopFrames);
+    expect(pairs.length).toBeGreaterThan(30);
+    const drift = [];
+    for (const [frame, anchor, offset, sel, props] of pairs) {
+      drift.push(...compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] }));
+    }
+    expect(drift).toEqual([]);
   });
 
   it('хвост листа разбора одинаков во всех восемнадцати листах', () => {
