@@ -16781,7 +16781,7 @@ body:has(:is(
   border-radius: 12px;
   background: var(--v4-sand-hero, #efe3cf);
   border: 1px solid rgba(138, 74, 32, 0.12);
-  color: #201e1d;
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .profile-ios-install__title {
@@ -16830,7 +16830,7 @@ body:has(:is(
   border-radius: 8px;
   font-size: 13px;
   background: var(--v4-sand-hero, #efe3cf);
-  color: #201e1d;
+  color: var(--v4-sand-ink, #201e1d);
   border: 1px solid rgba(138, 74, 32, 0.1);
 }
 

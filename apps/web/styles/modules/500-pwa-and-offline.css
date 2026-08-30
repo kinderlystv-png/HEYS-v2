@@ -1185,7 +1185,7 @@
 .mc-pill--choice {
   flex: 1;
   background: var(--v4-sand-surface-soft, #fffaf1);
-  color: #201e1d;
+  color: var(--v4-sand-ink, #201e1d);
   font-weight: 600;
   box-shadow: inset 0 0 0 1.5px rgba(32, 30, 29, 0.22);
 }
@@ -1625,7 +1625,7 @@
   background: var(--v4-sand-hero, #efe3cf);
   box-shadow: inset 0 0 0 2px var(--v4-sand-act, #c67139);
   font-weight: 700;
-  color: #201e1d;
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .mc-rest-type.is-on .mc-rest-wave {
