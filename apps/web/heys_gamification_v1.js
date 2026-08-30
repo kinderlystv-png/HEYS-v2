@@ -5719,6 +5719,36 @@
 
   // ========== EVENT LISTENERS ==========
 
+  // Модуль вешает слушатели на верхнем уровне, а window один на всё окружение.
+  // Если исходник выполнится повторно — повторно подгруженным бандлом в проде
+  // или новым eval'ом в тесте, — обработчики прежней загрузки останутся висеть,
+  // и одно действие человека обработается столько раз, сколько раз загружен
+  // модуль. Реестр слотов живёт на window: перед тем как повесить новый
+  // обработчик, снимаем прежний из того же слота. Живой остаётся ровно одна
+  // подписка, и это подписка последней загрузки — та, чьё состояние движка
+  // сейчас лежит в HEYS.game.
+  const LISTENER_SLOTS_KEY = '__heysGamificationListenerSlots';
+
+  /** Ставит подписку в слот, сняв прежнюю. `attach` возвращает функцию снятия. */
+  function registerListenerSlot(slot, attach) {
+    if (typeof window === 'undefined') return;
+    const slots = window[LISTENER_SLOTS_KEY] || (window[LISTENER_SLOTS_KEY] = new Map());
+    const detachPrev = slots.get(slot);
+    if (typeof detachPrev === 'function') detachPrev();
+    const detach = attach();
+    slots.set(slot, typeof detach === 'function' ? detach : () => {});
+  }
+
+  // Слот — пара «место регистрации + событие»: одно и то же событие модуль
+  // слушает дважды (опыт и пересчёт миссий), и эти подписки не должны
+  // вытеснять друг друга.
+  function bindWindowListener(slot, type, handler) {
+    registerListenerSlot(slot + '|' + type, () => {
+      window.addEventListener(type, handler);
+      return () => window.removeEventListener(type, handler);
+    });
+  }
+
   function handlePassiveEvent(reason, payload) {
     if (reason === 'steps_updated') {
       const stepsValue = payload?.steps || 0;
@@ -5733,28 +5763,28 @@
   // доезжает до _addXPInternal через extraData и там решает, положен ли опыт
   // (см. гейт «стопка на прошлом дне»). Отправитель, который дату ещё не шлёт,
   // работает как раньше: undefined значит «сегодня».
-  window.addEventListener('heysProductAdded', (e) => {
+  bindWindowListener('xp', 'heysProductAdded', (e) => {
     // Продукт живёт в каталоге, а не в дне — даты у него нет по построению.
     game.addXP(0, 'product_added', e.detail?.sourceEl);
   });
 
-  window.addEventListener('heysMealAdded', (e) => {
+  bindWindowListener('xp', 'heysMealAdded', (e) => {
     game.addXP(0, 'meal_added', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
-  window.addEventListener('heysStepsUpdated', (e) => {
+  bindWindowListener('xp', 'heysStepsUpdated', (e) => {
     game.addXP(0, 'steps_updated', e.detail?.sourceEl, { steps: e.detail?.steps || 0, date: e.detail?.date });
   });
 
-  window.addEventListener('heys:checkin-complete', (e) => {
+  bindWindowListener('xp', 'heys:checkin-complete', (e) => {
     game.addXP(0, 'checkin_complete', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
-  window.addEventListener('heysSupplementsTaken', (e) => {
+  bindWindowListener('xp', 'heysSupplementsTaken', (e) => {
     game.addXP(0, 'supplements_taken', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
-  window.addEventListener('heysWaterAdded', (e) => {
+  bindWindowListener('xp', 'heysWaterAdded', (e) => {
     game.addXP(0, 'water_added', e.detail?.sourceEl, {
       date: e.detail?.date,
       ml: e.detail?.ml,
@@ -5763,19 +5793,19 @@
     });
   });
 
-  window.addEventListener('heysTrainingAdded', (e) => {
+  bindWindowListener('xp', 'heysTrainingAdded', (e) => {
     game.addXP(0, 'training_added', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
-  window.addEventListener('heysHouseholdActivityAdded', (e) => {
+  bindWindowListener('xp', 'heysHouseholdActivityAdded', (e) => {
     game.addXP(0, 'household_added', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
-  window.addEventListener('heysSleepLogged', (e) => {
+  bindWindowListener('xp', 'heysSleepLogged', (e) => {
     game.addXP(0, 'sleep_logged', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
-  window.addEventListener('heysWeightLogged', (e) => {
+  bindWindowListener('xp', 'heysWeightLogged', (e) => {
     game.addXP(0, 'weight_logged', e.detail?.sourceEl, { date: e.detail?.date });
   });
 
@@ -5784,7 +5814,7 @@
   let _lastSyncTime = 0; // Время последнего sync (для cooldown)
   const SYNC_COOLDOWN_MS = 5000; // 5 секунд cooldown между реакциями на sync
 
-  window.addEventListener('heysSyncCompleted', (e) => {
+  bindWindowListener('xp', 'heysSyncCompleted', (e) => {
     const syncTrace = startGameSyncTrace('event:heysSyncCompleted');
     const now = Date.now();
 
@@ -5879,7 +5909,7 @@
 
   // ========== CLIENT SWITCH (Bug fix v3.1 → v4.0) ==========
   // Куратор переключает клиента — полностью сбрасываем кеш и перезагружаем данные
-  window.addEventListener('heys:client-changed', (e) => {
+  bindWindowListener('xp', 'heys:client-changed', (e) => {
     const newClientId = e?.detail?.clientId || 'unknown';
     console.info('[🎮 Gamification] 🔄 Client changed →', newClientId);
 
@@ -6207,26 +6237,26 @@
   // ========== EVENT LISTENERS FOR MISSION RESYNC ==========
   // Recalculate mission progress when day data changes
   if (typeof window !== 'undefined') {
-    window.addEventListener('heysProductAdded', () => {
+    bindWindowListener('missions', 'heysProductAdded', () => {
       if (HEYS.game?.recalculateDailyMissionsProgress) {
         HEYS.game.recalculateDailyMissionsProgress();
       }
     });
 
-    window.addEventListener('heysWaterAdded', () => {
+    bindWindowListener('missions', 'heysWaterAdded', () => {
       if (HEYS.game?.recalculateDailyMissionsProgress) {
         HEYS.game.recalculateDailyMissionsProgress();
       }
     });
 
     // 🔄 Откат прогресса при удалении item или meal
-    window.addEventListener('heysItemRemoved', () => {
+    bindWindowListener('missions', 'heysItemRemoved', () => {
       if (HEYS.game?.recalculateDailyMissionsProgress) {
         HEYS.game.recalculateDailyMissionsProgress();
       }
     });
 
-    window.addEventListener('heysMealDeleted', () => {
+    bindWindowListener('missions', 'heysMealDeleted', () => {
       if (HEYS.game?.recalculateDailyMissionsProgress) {
         HEYS.game.recalculateDailyMissionsProgress();
       }
@@ -6238,27 +6268,33 @@
     // fallback на старый window.addEventListener (тоже с rIC внутри).
     const dispatcher = (typeof window !== 'undefined') && window.HEYS?.events?.dayUpdated;
     if (dispatcher && typeof dispatcher.subscribe === 'function') {
-      dispatcher.subscribe(() => {
+      // Слот один на оба транспорта: если прошлая загрузка ушла в fallback, а
+      // эта нашла dispatcher, старая подписка снимается, а не остаётся второй.
+      registerListenerSlot('missions|dayUpdated', () => dispatcher.subscribe(() => {
         if (HEYS.game?.recalculateDailyMissionsProgress) {
           HEYS.game.recalculateDailyMissionsProgress();
         }
-      }, { priority: 'idle' });
+      }, { priority: 'idle' }));
     } else {
-      window.addEventListener('heys:day-updated', () => {
-        const run = () => {
-          // 🛡️ 2026-05-30 Wave 4 audit: skip recalculate если идёт курaторский
-          // switch — таска была запланирована через rIC до switch'а и может
-          // прочитать state старого клиента уже после смены currentClientId.
-          if (window.HEYS?.cloud?._switchClientInProgress === true) return;
-          if (HEYS.game?.recalculateDailyMissionsProgress) {
-            HEYS.game.recalculateDailyMissionsProgress();
+      registerListenerSlot('missions|dayUpdated', () => {
+        const onDayUpdated = () => {
+          const run = () => {
+            // 🛡️ 2026-05-30 Wave 4 audit: skip recalculate если идёт курaторский
+            // switch — таска была запланирована через rIC до switch'а и может
+            // прочитать state старого клиента уже после смены currentClientId.
+            if (window.HEYS?.cloud?._switchClientInProgress === true) return;
+            if (HEYS.game?.recalculateDailyMissionsProgress) {
+              HEYS.game.recalculateDailyMissionsProgress();
+            }
+          };
+          if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(run, { timeout: 2000 });
+          } else {
+            setTimeout(run, 300);
           }
         };
-        if (typeof requestIdleCallback === 'function') {
-          requestIdleCallback(run, { timeout: 2000 });
-        } else {
-          setTimeout(run, 300);
-        }
+        window.addEventListener('heys:day-updated', onDayUpdated);
+        return () => window.removeEventListener('heys:day-updated', onDayUpdated);
       });
     }
   }
