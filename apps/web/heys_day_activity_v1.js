@@ -136,6 +136,32 @@
       : 'от затрат без термического эффекта';
   }
 
+  /**
+   * Причина уровня цели — ровно одна строка или ни одной.
+   *
+   * Долг, загрузка и снижение исключают друг друга по построению: в
+   * `displayOptimum` это `if / else if / else` (heys_day_caloric_display_state.js).
+   * Величина берётся как разница показанной цели и базовой — так строка всегда
+   * сходится с числом под ней, чем бы поправка ни была посчитана
+   * (контракт «причина уровня одна», строка 10).
+   */
+  function buildLevelReasonRow(ctx) {
+    const { day, caloricDebt, optimum, displayOptimum, r0 } = ctx || {};
+    const base = Number(optimum) || 0;
+    const shown = Number(displayOptimum) || 0;
+    const delta = (typeof r0 === 'function' ? r0(shown - base) : Math.round(shown - base));
+    if (!base || !delta) return null;
+    const signed = (delta > 0 ? '+' : '−') + Math.abs(delta);
+    if (day && day.isRefeedDay) return { label: 'День загрузки', value: signed, tone: 'add' };
+    if ((caloricDebt && caloricDebt.dailyBoost) > 0) {
+      return { label: 'Компенсация долга', value: signed, tone: 'add' };
+    }
+    if ((caloricDebt && caloricDebt.dailyReduction) > 0) {
+      return { label: 'Снижение по плану', value: signed, tone: 'aside' };
+    }
+    return { label: 'Поправка', value: signed, tone: delta > 0 ? 'add' : 'aside' };
+  }
+
   function readHungerSummary(dateKey) {
     const Storage = HEYS.HungerEnergyStatusStorage;
     if (!Storage?.readEvents) return null;
@@ -250,6 +276,8 @@
       tefKcal,
       dayTargetDef,
       displayOptimum,
+      optimum,
+      cycleKcalMultiplier,
       tdee,
       caloricDebt,
       monthTrainingsRows,
@@ -439,45 +467,68 @@
       }
     }
 
-    const heroBreakdown = heroOpen && React.createElement('div', { className: 'activity-v4-hero__breakdown' },
-      React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
-        React.createElement('span', null, 'BMR'),
-        React.createElement('span', null, bmr + ' ккал')
-      ),
-      React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
-        React.createElement('span', null, '+ Шаги'),
-        React.createElement('span', null, stepsK + ' ккал')
-      ),
-      householdK > 0 && React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
-        React.createElement('span', null, '+ Быт'),
-        React.createElement('span', null, householdK + ' ккал')
-      ),
-      cardioKcal > 0 && React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
-        React.createElement('span', null, '+ Тренировки'),
-        React.createElement('span', null, cardioKcal + ' ккал')
-      ),
-      ndteData?.active && ndteBoostKcal > 0 && React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
-        React.createElement('span', null, 'Тренировка вчера'),
-        React.createElement('span', null, '+' + ndteBoostKcal + ' ккал')
-      ),
-      React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
-        React.createElement('span', null, 'База (без TEF)'),
-        React.createElement('span', null, baseExpenditure + ' ккал')
-      ),
-      tefKcal > 0 && React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
-        React.createElement('span', null, '+ TEF'),
-        React.createElement('span', null, tefKcal + ' ккал')
-      ),
-      React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
-        React.createElement('span', null, 'Затраты'),
-        React.createElement('span', null, tdee + ' ккал')
-      ),
-      dayTargetDef !== 0 && React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
-        React.createElement('span', null, dayTargetDef < 0 ? 'Дефицит' : 'Профицит'),
-        React.createElement('span', null, formatDeficitLabel(dayTargetDef))
-      )
-    );
+    // Разбор цели: цепочка обязана прийти к числу, из которого её открыли
+    // (контракт «разбор приходит к числу», строка 8). Прежняя редакция
+    // кончалась процентом дефицита, и в день с долгом человек видел 2 210
+    // сверху и приходил к 1 940 внизу.
+    //
+    // Причина уровня одна: долг, загрузка и снижение взаимоисключающие
+    // (в displayOptimum это if / else if / else), а цикл — множитель внутри
+    // расчёта, до них. Значит строк поправки максимум две, порядок фиксирован:
+    // цикл → одна из трёх → «Цель дня» (строка 10).
+    const breakdownRow = (key, value, opts) => {
+      const o = opts || {};
+      return React.createElement('div', {
+        key: 'br-' + key,
+        className: 'activity-v4-breakdown__row' + (o.total ? ' activity-v4-breakdown__row--total' : '')
+      },
+        React.createElement('span', { className: 'activity-v4-breakdown__key' },
+          React.createElement('span', { className: 'activity-v4-breakdown__name' }, key),
+          o.note && React.createElement('span', { className: 'activity-v4-breakdown__note' }, o.note)
+        ),
+        React.createElement('span', {
+          className: 'activity-v4-breakdown__value'
+            + (o.tone ? ' activity-v4-breakdown__value--' + o.tone : '')
+            + (o.total ? ' activity-v4-breakdown__value--total' : '')
+        }, value)
+      );
+    };
 
+    const breakdownRows = [];
+    breakdownRows.push(breakdownRow('Базовый обмен', String(bmr)));
+    // «Каждая строка только при значении больше нуля» — правило состава
+    // (строка 9). NDTE в кадре не нарисована, потому что у показанного дня её
+    // не было; она такая же часть базы, и правило к ней то же.
+    if (stepsK > 0) breakdownRows.push(breakdownRow('Шаги', '+' + stepsK, { tone: 'add' }));
+    if (householdK > 0) breakdownRows.push(breakdownRow('Быт', '+' + householdK, { tone: 'add' }));
+    if (cardioKcal > 0) breakdownRows.push(breakdownRow('Тренировки', '+' + cardioKcal, { tone: 'add' }));
+    if (ndteData && ndteData.active && ndteBoostKcal > 0) {
+      breakdownRows.push(breakdownRow('Тренировка вчера', '+' + ndteBoostKcal, { tone: 'add' }));
+    }
+    breakdownRows.push(breakdownRow('База без термического эффекта', String(baseExpenditure), {
+      note: 'от неё считается цель', total: true
+    }));
+    if (tefKcal > 0) {
+      breakdownRows.push(breakdownRow('Термический эффект еды', '+' + tefKcal, {
+        note: 'в затратах есть, в цели нет', tone: 'aside'
+      }));
+    }
+    breakdownRows.push(breakdownRow('Затраты', String(tdee), { total: true }));
+    if (dayTargetDef !== 0) {
+      breakdownRows.push(breakdownRow('Дефицит по договорённости', formatDeficitLabel(dayTargetDef), { tone: 'aside' }));
+    }
+    const cycleMult = Number(cycleKcalMultiplier);
+    if (Number.isFinite(cycleMult) && cycleMult !== 1) {
+      breakdownRows.push(breakdownRow('Цикл', '×' + (Math.round(cycleMult * 100) / 100), { tone: 'aside' }));
+    }
+    const levelReason = buildLevelReasonRow({ day, caloricDebt, optimum, displayOptimum, r0: safeR0 });
+    if (levelReason) {
+      breakdownRows.push(breakdownRow(levelReason.label, levelReason.value, { tone: levelReason.tone }));
+    }
+    breakdownRows.push(breakdownRow('Цель дня', String(displayOptimum), { total: true }));
+
+    const heroBreakdown = heroOpen
+      && React.createElement('div', { className: 'activity-v4-breakdown' }, breakdownRows);
     return React.createElement('div', {
       className: 'compact-activity activity-section activity-v4',
       'data-curator-target': 'activity'

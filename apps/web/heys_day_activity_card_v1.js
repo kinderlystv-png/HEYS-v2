@@ -29,6 +29,8 @@
             tefKcal,
             dayTargetDef,
             displayOptimum,
+            optimum,
+            cycleKcalMultiplier,
             tdee,
             caloricDebt,
             monthTrainingsRows,
@@ -56,7 +58,7 @@
             // Metabolism (NDTE, TEF)
             ndteData, ndteBoostKcal, tefData, tefKcal,
             // Caloric calculations
-            dayTargetDef, displayOptimum,             tdee, caloricDebt,
+            dayTargetDef, displayOptimum, optimum, cycleKcalMultiplier, tdee, caloricDebt,
             monthTrainingsRows,
             morningActivationCalendarBlock,
             r0

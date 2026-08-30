@@ -201,11 +201,12 @@ describe('C · третья тренировка не теряется', () => {
     expect(screen.queryByText('150 ккал')).toBeNull();
   });
 
-  it('строка «+ Тренировки» в разборе показывает ту же сумму', () => {
+  it('строка «Тренировки» в разборе показывает ту же сумму', () => {
     renderActivity();
-    fireEvent.click(screen.getByText('от затрат без термического эффекта · −15 %'));
-    const row = screen.getByText('+ Тренировки').parentElement;
-    expect(row.textContent).toContain('190 ккал');
+    fireEvent.click(document.querySelector('.activity-v4-hero__footer'));
+    const row = screen.getByText('Тренировки').closest('.activity-v4-breakdown__row');
+    // Разбор пишет число без единицы — единица стоит в шапке карточки.
+    expect(row.querySelector('.activity-v4-breakdown__value').textContent).toBe('+190');
   });
 
   it('без третьей тренировки поведение прежнее', () => {
@@ -601,5 +602,119 @@ describe('L2 · «прошёл ноль» и «не вносил» — разн�
     expect(src).toContain('HEYS.TDEE && HEYS.TDEE.hasStepsFact');
     // Прежнее правило «любое не-null считается фактом» ушло.
     expect(src).not.toContain("// steps === 0 — явный ввод; null/undefined — нет данных");
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// Блок 1 · разбор цели приходит к числу, из которого его открыли
+// tab-activity.v4.dc.html, строки 8–11 и кадр «Актив · разбор цели»
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('Разбор цели · сведение с канвасом', () => {
+  function renderBreakdown(ctxExtra) {
+    const HEYS = loadFiles(['heys_day_activity_v1.js']);
+    HEYS.TDEE = { calculate: () => ({ kcalMin: [0, 2, 3, 4] }) };
+    const ctx = {
+      day: { date: '2026-08-30' },
+      prof: {},
+      stepsValue: 8420, stepsGoal: 10000, stepsPercent: 67, stepsColor: '#000', stepsK: 312,
+      bmr: 1520,
+      householdK: 126, totalHouseholdMin: 60,
+      train1k: 385, train2k: 0, train3k: 0,
+      r0: (v) => Math.round(v || 0),
+      visibleTrainings: 1,
+      regularTrainingsBlock: React.createElement('div', null, 'блок'),
+      ndteData: { active: false }, ndteBoostKcal: 0,
+      tefData: {}, tefKcal: 188,
+      dayTargetDef: -15,
+      displayOptimum: 2210,
+      optimum: 1992,
+      cycleKcalMultiplier: 1,
+      tdee: 2531,
+      caloricDebt: { dailyBoost: 218 },
+      monthTrainingsRows: [],
+      morningActivationCalendarBlock: null,
+      ...ctxExtra,
+    };
+    render(HEYS.dayActivity.render({ React, ctx, actions: {} }));
+    // Разбор открывается тапом по строке причины под числом; сам текст
+    // причины меняется вместе с состоянием дня, поэтому жмём кнопку.
+    fireEvent.click(document.querySelector('.activity-v4-hero__footer'));
+    return [...document.querySelectorAll('.activity-v4-breakdown__row')].map((row) => [
+      row.querySelector('.activity-v4-breakdown__name').textContent,
+      row.querySelector('.activity-v4-breakdown__value').textContent,
+    ]);
+  }
+
+  it('последняя строка — «Цель дня» с числом из hero', () => {
+    const rows = renderBreakdown();
+    expect(rows[rows.length - 1]).toEqual(['Цель дня', '2210']);
+    // То же число стоит наверху карточки.
+    expect(screen.getAllByText('2210').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('состав и порядок строк — как в контракте', () => {
+    expect(renderBreakdown().map((r) => r[0])).toEqual([
+      'Базовый обмен',
+      'Шаги',
+      'Быт',
+      'Тренировки',
+      'База без термического эффекта',
+      'Термический эффект еды',
+      'Затраты',
+      'Дефицит по договорённости',
+      'Компенсация долга',
+      'Цель дня',
+    ]);
+  });
+
+  it('строка составляющей появляется только при значении больше нуля', () => {
+    const names = renderBreakdown({ householdK: 0, train1k: 0, tefKcal: 0 }).map((r) => r[0]);
+    expect(names).not.toContain('Быт');
+    expect(names).not.toContain('Тренировки');
+    expect(names).not.toContain('Термический эффект еды');
+    expect(names).toContain('Базовый обмен');
+  });
+
+  it('причина уровня ровно одна и сходится с разницей целей', () => {
+    const rows = renderBreakdown();
+    const reasons = rows.filter((r) => ['Компенсация долга', 'День загрузки', 'Снижение по плану'].includes(r[0]));
+    expect(reasons).toHaveLength(1);
+    expect(reasons[0][1]).toBe('+218'); // 2210 − 1992
+  });
+
+  it('день загрузки вытесняет долг — ветки взаимоисключающие', () => {
+    const names = renderBreakdown({
+      day: { date: '2026-08-30', isRefeedDay: true },
+      caloricDebt: { dailyBoost: 218 },
+    }).map((r) => r[0]);
+    expect(names).toContain('День загрузки');
+    expect(names).not.toContain('Компенсация долга');
+  });
+
+  it('цикл — отдельная строка и стоит до причины уровня', () => {
+    const names = renderBreakdown({ cycleKcalMultiplier: 1.05 }).map((r) => r[0]);
+    expect(names.indexOf('Цикл')).toBeGreaterThan(-1);
+    expect(names.indexOf('Цикл')).toBeLessThan(names.indexOf('Компенсация долга'));
+  });
+
+  it('без поправки цепочка всё равно кончается «Целью дня»', () => {
+    const rows = renderBreakdown({ displayOptimum: 1940, optimum: 1940, caloricDebt: null });
+    const names = rows.map((r) => r[0]);
+    expect(names).not.toContain('Компенсация долга');
+    expect(rows[rows.length - 1]).toEqual(['Цель дня', '1940']);
+  });
+
+  it('две подписи под ключами стоят дословно', () => {
+    renderBreakdown();
+    expect(screen.getByText('от неё считается цель')).toBeTruthy();
+    expect(screen.getByText('в затратах есть, в цели нет')).toBeTruthy();
+  });
+
+  it('прежняя редакция, кончавшаяся процентом, ушла', () => {
+    const names = renderBreakdown().map((r) => r[0]);
+    expect(names).not.toContain('BMR');
+    expect(names).not.toContain('База (без TEF)');
+    expect(names[names.length - 1]).not.toBe('Дефицит по договорённости');
   });
 });

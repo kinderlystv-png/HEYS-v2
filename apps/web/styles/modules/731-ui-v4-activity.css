@@ -118,23 +118,77 @@ body:has(.activity-v4) .hdr::after {
   opacity: 0.55;
 }
 
-.activity-v4-hero__breakdown {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px dashed #e2e8f0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: #475569;
+/* Разбор цели — список .cd канваса: на --c1, радиус 20, поля 2/16, строка 13 px
+   по вертикали, разделитель 1 px чернил 7 %, у последней нет
+   (контракт «вид · разбор цели», строка 28). */
+.activity-v4-breakdown {
+  margin-top: 10px;
+  padding: 2px 16px;
+  border-radius: 20px;
+  background: var(--v4-c1, #f7efe2);
 }
 
-.activity-v4-hero__breakdown-row {
+.activity-v4-breakdown__row {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 4px 0;
-  font-variant-numeric: tabular-nums;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
 }
 
+.activity-v4-breakdown__row:last-child {
+  border-bottom: none;
+}
+
+.activity-v4-breakdown__key {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.activity-v4-breakdown__name {
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.activity-v4-breakdown__note {
+  font: 500 10px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.activity-v4-breakdown__value {
+  flex: none;
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink, #201e1d);
+}
+
+/* Плюсы — тоном роста, вычитаемое и справочное приглушены: контракт делит
+   значения на три вида, и без деления «+188» читается как прибавка к цели. */
+.activity-v4-breakdown__value--add {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.activity-v4-breakdown__value--aside {
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.activity-v4-breakdown__row--total .activity-v4-breakdown__name {
+  font-weight: 700;
+}
+
+.activity-v4-breakdown__value--total {
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+}
+
+.activity-v4-breakdown__row:last-child .activity-v4-breakdown__value--total {
+  font: 800 13px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink, #201e1d);
+}
 .activity-v4-tier {
   margin: 20px 0 10px;
   font-size: 10px;
