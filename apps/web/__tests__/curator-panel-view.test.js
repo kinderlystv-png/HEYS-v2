@@ -59,6 +59,22 @@ describe('панель куратора · место в кабинете', () =
       .toEqual(window.HEYS.NormCorrection.PANEL_STATES);
   });
 
+  it('служебные листы — одна форма окна на весь кабинет', () => {
+    // Три похожих модалки расходятся при первой правке: каждая требовала бы
+    // своей. Классы общие с листом поправки и меню клиента.
+    expect(GATE).toContain("className: 'cur-cab__sheet'");
+    expect(GATE).toContain("className: 'cur-cab__sheet-scrim'");
+    expect(GATE).toContain("className: 'cur-cab__sheet-head'");
+    // Тёмных шапок в кабинете не осталось.
+    const code = GATE.split(SPLIT_LINES)
+      .filter((l) => !l.trim().startsWith('//')).join(' ');
+    expect(code).not.toContain('#0f172a, #1e293b');
+    expect(code).not.toContain('#0f172a, #334155');
+    // Лист прижат к низу, закрытие круглое 40 px.
+    expect(CSS).toMatch(/\.cur-cab__sheet-scrim[\s\S]{0,220}align-items: flex-end/);
+    expect(CSS).toMatch(/\.cur-cab__sheet-close[\s\S]{0,160}border-radius: 999px/);
+  });
+
   it('пустые состояния очереди ведут туда, где работа есть', () => {
     // Эмодзи 📭 и 💤 сообщали настроение, а не состояние, и уводили от
     // единственного вопроса пустого экрана — «куда идти дальше».

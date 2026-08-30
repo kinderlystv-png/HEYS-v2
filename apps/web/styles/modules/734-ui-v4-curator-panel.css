@@ -828,3 +828,65 @@
   color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Служебные листы кабинета ─────────────────────────────────────────────
+ * Контракт «вид · служебные листы»: модалки с тёмной шапкой заменены листом
+ * снизу. Классы общие с листом поправки и меню клиента — форма окна одна на
+ * весь кабинет, а не три похожих. Разойдись они, каждая правка требовала бы
+ * трёх правок.
+ */
+.cur-cab__sheet-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.cur-cab__sheet {
+  width: 100%;
+  max-width: 520px;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 0 0 calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 28px 28px 0 0;
+  background: var(--v4-bg, #fffaf1);
+  display: flex;
+  flex-direction: column;
+}
+
+.cur-cab__sheet-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 20px 18px 16px;
+  background: var(--v4-bg, #fffaf1);
+}
+
+.cur-cab__sheet-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--v4-ink, #201e1d);
+}
+
+/* Закрытие — круглая кнопка 40 px, как все уводящие кнопки набора: квадрат
+   28 px на тёмной шапке был мал для пальца. */
+.cur-cab__sheet-close {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}

@@ -683,42 +683,19 @@
             )
         );
 
-        const modalContent = h('div', {
-            style: {
-                width: 480,
-                maxWidth: '92vw',
-                maxHeight: '86vh',
-                background: 'var(--card, #fff)',
-                borderRadius: 18,
-                boxShadow: '0 30px 80px rgba(0,0,0,0.35)',
-                border: '1px solid rgba(148,163,184,0.25)',
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden'
-            }
-        },
-            h('div', {
-                style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '16px 18px',
-                    background: 'linear-gradient(135deg, #0f172a, #1e293b)',
-                    color: '#fff'
-                }
-            },
-                h('div', { style: { fontSize: 13, fontWeight: 700, letterSpacing: 0.2 } }, 'Панель управления подпиской'),
+        // Контракт «вид · служебные листы»: модалка с тёмной шапкой заменена
+        // листом снизу. Геометрия, скрим и закрытие — общие с листом поправки
+        // и меню клиента: один приём на весь кабинет, а не третий вид окна.
+        const modalContent = h('div', { className: 'cur-cab__sheet' },
+            h('div', { className: 'cur-cab__sheet-head' },
+                h('div', { className: 'cur-cab__sheet-title' }, 'Подписка и тариф'),
+                // Закрытие — круглая кнопка 40 px, как у всех уводящих кнопок
+                // набора: квадрат 28 px на тёмной шапке был мал для пальца.
                 h('button', {
+                    type: 'button',
+                    className: 'cur-cab__sheet-close',
                     onClick: closeModal,
-                    style: {
-                        width: 28,
-                        height: 28,
-                        borderRadius: 8,
-                        border: '1px solid rgba(255,255,255,0.3)',
-                        background: 'rgba(255,255,255,0.08)',
-                        color: '#fff',
-                        cursor: 'pointer'
-                    }
+                    'aria-label': 'Закрыть'
                 }, '✕')
             ),
             h('div', {
@@ -732,18 +709,11 @@
             )
         );
 
+        // Скрим набора: те же размытие и затемнение, что у листа поправки и
+        // меню клиента. Лист прижат к низу — рука дотягивается.
         const modalOverlay = open && h('div', {
-            style: {
-                position: 'fixed',
-                inset: 0,
-                background: 'rgba(2,6,23,0.55)',
-                backdropFilter: 'blur(6px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: CLIENT_ACTION_MODAL_Z,
-                padding: '24px'
-            },
+            className: 'cur-cab__sheet-scrim',
+            style: { zIndex: CLIENT_ACTION_MODAL_Z },
             onClick: (e) => { if (e.target === e.currentTarget) closeModal(); }
         }, modalContent);
 
@@ -981,27 +951,20 @@
         }, '✏️');
 
         const modalContent = React.createElement('div', {
-            style: {
-                width: 440, maxWidth: '92vw', background: '#fff',
-                borderRadius: 20, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-                display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                animation: 'scaleIn 0.2s ease-out'
-            },
+            className: 'cur-cab__sheet',
             onClick: (e) => e.stopPropagation()
         },
-            // Header
-            React.createElement('div', {
-                style: {
-                    padding: '16px 20px', background: 'linear-gradient(135deg, #0f172a, #334155)',
-                    color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                }
-            },
-                React.createElement('div', { style: { fontWeight: 700, fontSize: 16 } }, 'Редактировать профиль'),
-                React.createElement('button', {
-                    onClick: closeModal,
-                    style: { width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }
-                }, '✕')
-            ),
+                        // Тот же лист, что у подписки и меню клиента: одна форма
+                        // окна на весь кабинет, а не третий вид.
+                        React.createElement('div', { className: 'cur-cab__sheet-head' },
+                            React.createElement('div', { className: 'cur-cab__sheet-title' }, 'Анкета и цели'),
+                            React.createElement('button', {
+                                type: 'button',
+                                className: 'cur-cab__sheet-close',
+                                onClick: closeModal,
+                                'aria-label': 'Закрыть'
+                            }, '✕')
+                        ),
             // Body
             React.createElement('div', { style: { padding: 20, display: 'grid', gap: 16 } },
                 // Name
@@ -1072,11 +1035,8 @@
 
         const modalOverlay = open && ReactDOM.createPortal(
             React.createElement('div', {
-                style: {
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    zIndex: CLIENT_ACTION_MODAL_Z, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
-                },
+                className: 'cur-cab__sheet-scrim',
+                style: { zIndex: CLIENT_ACTION_MODAL_Z },
                 onClick: closeModal
             }, modalContent),
             document.body
@@ -1208,35 +1168,17 @@
         );
 
         const modalContent = React.createElement('div', {
-            style: {
-                width: 440,
-                maxWidth: '92vw',
-                maxHeight: '90vh',
-                background: '#fff',
-                borderRadius: 20,
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-                animation: 'scaleIn 0.2s ease-out'
-            },
+            className: 'cur-cab__sheet',
             onClick: (e) => e.stopPropagation()
         },
-            // Header
-            React.createElement('div', {
-                style: {
-                    padding: '16px 20px',
-                    background: 'linear-gradient(135deg, #0f172a, #334155)',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                }
-            },
-                React.createElement('div', { style: { fontWeight: 700, fontSize: 16 } }, 'Новый клиент'),
+            // Тот же лист, что у подписки и анкеты: одна форма окна на кабинет.
+            React.createElement('div', { className: 'cur-cab__sheet-head' },
+                React.createElement('div', { className: 'cur-cab__sheet-title' }, 'Новый клиент'),
                 React.createElement('button', {
+                    type: 'button',
+                    className: 'cur-cab__sheet-close',
                     onClick: closeModal,
-                    style: { width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }
+                    'aria-label': 'Закрыть'
                 }, '✕')
             ),
             // Body
@@ -1360,14 +1302,8 @@
 
         const modalOverlay = open && ReactDOM.createPortal(
             React.createElement('div', {
-                style: {
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    zIndex: CLIENT_ACTION_MODAL_Z,
-                    background: 'rgba(15, 23, 42, 0.65)',
-                    backdropFilter: 'blur(4px)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: 20
-                },
+                className: 'cur-cab__sheet-scrim',
+                style: { zIndex: CLIENT_ACTION_MODAL_Z },
                 onClick: closeModal
             }, modalContent),
             document.body
