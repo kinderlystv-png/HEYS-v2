@@ -2172,37 +2172,20 @@
                             }
                         );
                     })()
+                    // Кабинет — экран, а не окно: строка контракта «сетка и грунт
+                    // кабинета» говорит «экран 330 px, грунт --bg». Прежде он
+                    // рендерился легаси-модалкой поверх пустой страницы, и это
+                    // читалось карточкой в карточке: .modal давал поля 20 и
+                    // белую заливку !important рамкой вокруг песочного грунта,
+                    // плюс радиус 18, холодная рамка чужой системы и тёмный
+                    // скрим по краям — за которым ничего нет, кабинет здесь
+                    // сам корень. Вид живёт в 734-ui-v4-curator-panel.css.
                     : React.createElement(
                         'div',
-                        {
-                            className: 'modal-backdrop',
-                            style: {
-                                background: 'rgba(2,6,23,0.55)',
-                                backdropFilter: 'blur(6px)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '10px' // minimal padding
-                            }
-                        },
+                        { className: 'cur-cab' },
                         React.createElement(
                             'div',
-                            {
-                                className: 'modal client-select-modal',
-                                style: {
-                                    width: 520,
-                                    maxWidth: '96vw',
-                                    height: '92vh', // Fixed high height to maximize space
-                                    maxHeight: '1000px', // Reasonable cap on huge screens
-                                    background: 'var(--card, #fff)',
-                                    borderRadius: 18,
-                                    boxShadow: '0 30px 80px rgba(0,0,0,0.35)',
-                                    border: '1px solid rgba(148,163,184,0.25)',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    overflow: 'hidden'
-                                }
-                            },
+                            { className: 'cur-cab__shell' },
                             React.createElement(
                                 React.Fragment,
                                 null,
