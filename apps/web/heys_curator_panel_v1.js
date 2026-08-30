@@ -522,8 +522,10 @@
                 // читается как ошибка.
                 card.path.deltaKg != null
                   ? factRow(React, 'Вес за окно',
+                    // Один знак всегда: «−1 кг» в колонке рядом с «−0,2 кг»
+                    // читается как число другой точности.
                     (card.path.deltaKg > 0 ? '+' : '−')
-                    + String(Math.abs(Math.round(card.path.deltaKg * 10) / 10)).replace('.', ',')
+                    + Math.abs(card.path.deltaKg).toFixed(1).replace('.', ',')
                     + ' кг')
                   : null,
                 card.path.storedPerDay
@@ -543,9 +545,14 @@
               h('div', { className: 'cur-sheet__facts' },
                 factRow(React, 'Факт против формулы',
                   (card.mismatchPct > 0 ? '+' : '−') + Math.abs(card.mismatchPct) + ' %'),
-                factRow(React, 'Цель поправки',
-                  '×' + String(rec.targetFactor).replace('.', ',')),
-                factRow(React, 'Применяем',
+                // Цель показывается отдельной строкой только когда шаг её не
+                // догнал. Совпадая с применяемым, она была дублем — и
+                // заставляла искать разницу там, где её нет.
+                card.stepCapped
+                  ? factRow(React, 'Цель поправки',
+                    '×' + String(rec.targetFactorShown).replace('.', ','))
+                  : null,
+                factRow(React, card.stepCapped ? 'Применяем' : 'Поправка',
                   '×' + String(rec.stepFactor).replace('.', ','))
               ),
               // Шаг ограничен — без этой строки куратор видит ×0,97 при цели
@@ -590,29 +597,34 @@
           )
         ) : null,
 
-        rec ? h(React.Fragment, null,
+        // Действия прилипают к низу листа: разбор расчёта сделал лист длинным,
+        // и главное действие уехало за прокрутку. Читать механизм и решать —
+        // одно движение, а не два.
+        h('div', { className: 'cur-sheet__actions' },
+          rec ? h(React.Fragment, null,
+            h('button', {
+              type: 'button',
+              className: 'cur-sheet__cta',
+              onClick: () => onDecide(row, 'apply_tomorrow')
+            }, 'Применить с завтра'),
+            h('div', { className: 'cur-sheet__row' },
+              h('button', {
+                type: 'button', className: 'cur-sheet__btn',
+                onClick: () => onDecide(row, 'postpone')
+              }, 'Отложить'),
+              h('button', {
+                type: 'button', className: 'cur-sheet__btn',
+                onClick: () => onDecide(row, 'freeze')
+              }, 'Заморозить')
+            )
+          ) : null,
+
           h('button', {
             type: 'button',
-            className: 'cur-sheet__cta',
-            onClick: () => onDecide(row, 'apply_tomorrow')
-          }, 'Применить с завтра'),
-          h('div', { className: 'cur-sheet__row' },
-            h('button', {
-              type: 'button', className: 'cur-sheet__btn',
-              onClick: () => onDecide(row, 'postpone')
-            }, 'Отложить'),
-            h('button', {
-              type: 'button', className: 'cur-sheet__btn',
-              onClick: () => onDecide(row, 'freeze')
-            }, 'Заморозить')
-          )
-        ) : null,
-
-        h('button', {
-          type: 'button',
-          className: 'cur-sheet__btn cur-sheet__btn--wide',
-          onClick: () => { onClose(); if (onOpenClient) onOpenClient(row.clientId); }
-        }, 'Открыть дневник')
+            className: 'cur-sheet__btn cur-sheet__btn--wide',
+            onClick: () => { onClose(); if (onOpenClient) onOpenClient(row.clientId); }
+          }, 'Открыть дневник')
+        )
       )
     );
   }

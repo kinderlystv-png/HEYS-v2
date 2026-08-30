@@ -436,6 +436,22 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Действия прилипают к низу листа: разбор расчёта сделал лист длинным, и
+   главное действие уезжало за прокрутку. Подложка непрозрачная — под липким
+   рядом проезжают числа, и просвечивать им нельзя. */
+.cur-sheet__actions {
+  position: sticky;
+  bottom: calc(-18px - env(safe-area-inset-bottom, 0px));
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 2px -16px calc(-18px - env(safe-area-inset-bottom, 0px));
+  padding: 10px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  background: var(--v4-bg, #fffaf1);
+  box-shadow: 0 -8px 16px -8px var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
+}
+
 .cur-sheet__cta,
 .cur-sheet__btn {
   min-height: 48px;

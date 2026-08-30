@@ -238,6 +238,25 @@ describe('панель куратора · решение и границы', ()
     expect(body).toContain('rec.correctedExpenditure');
   });
 
+  it('действия прилипают к низу листа', () => {
+    // Разбор расчёта сделал лист длинным, и главное действие уезжало за
+    // прокрутку: читать механизм и решать — одно движение, а не два.
+    expect(SRC).toContain("className: 'cur-sheet__actions'");
+    expect(CSS).toMatch(/\.cur-sheet__actions[\s\S]{0,120}position: sticky/);
+    // Под липким рядом проезжают числа — просвечивать им нельзя.
+    expect(CSS).toMatch(/\.cur-sheet__actions[\s\S]{0,400}background: var\(--v4-bg/);
+  });
+
+  it('цель поправки показывается только когда шаг её не догнал', () => {
+    // Совпадая с применяемым, строка была дублем и заставляла искать разницу
+    // там, где её нет: «цель ×1,008» рядом с «применяем ×1,01».
+    const block = SRC.slice(SRC.indexOf('Как получилась поправка'), SRC.indexOf('Как получилась норма'));
+    expect(block).toContain("factRow(React, 'Цель поправки'");
+    expect(block).toContain('card.stepCapped');
+    expect(SRC).toContain("card.stepCapped ? 'Применяем' : 'Поправка'");
+    expect(SRC).toContain('rec.targetFactorShown');
+  });
+
   it('качество данных названо словом, а не дробью', () => {
     // «21 из 10» читалось так же плохо, как «дни 11 из 10» в самой панели.
     expect(SRC).toContain("q.value + ' · хватает'");

@@ -303,6 +303,23 @@ describe('поправка на факт · модель кураторской 
       .toBe(Math.round(card.recommendation.correctedExpenditure * 0.85));
   });
 
+  it('цель к показу округлена как применяемое', () => {
+    // Иначе рядом встают «цель ×1,008» и «применяем ×1,01», и разница в
+    // записи читается как разница в решении.
+    const card = NC.buildCuratorCard({
+      result: NC.compute({
+        days: days(21, 2380), formulaPerDay: 2400,
+        trend: { deltaKg: -0.05, measuredDays: 21, windowDays: 21 },
+        currentFactor: 1, historyDays: 60
+      }),
+      expenditure: 2400, deficitPct: -15
+    });
+    const shown = String(card.recommendation.targetFactorShown);
+    expect(shown.split('.')[1] || '').toHaveLength(
+      String(card.recommendation.stepFactor).split('.')[1]?.length || 0
+    );
+  });
+
   it('ограничение шага названо только когда оно сработало', () => {
     // Цель ×0,93 при шаге не больше 3 % даёт ×0,97 — разрыв виден.
     const capped = NC.compute({
