@@ -483,9 +483,18 @@
         ),
 
         h('div', { className: 'cur-sheet__facts' },
-          card.formula ? factRow(React, 'Формула говорит', nbsp(card.formula.value)) : null,
-          card.fact ? factRow(React, 'Факт говорит', nbsp(card.fact.value)) : null,
-          rec ? factRow(React, 'Норма дня станет', nbsp(rec.norm)) : null
+          card.formula ? factRow(React, 'Формула говорит', nbsp(card.formula.value),
+            'расход по формуле') : null,
+          card.fact ? factRow(React, 'Факт говорит', nbsp(card.fact.value),
+            'расход по весу и записям') : null,
+          // «Станет» обещает изменение: когда норма не двигается, слово лжёт.
+          // Подпись про дефицит обязательна — без неё третье число читается
+          // как третий расход, а в нём дефицит уже вычтен.
+          rec ? factRow(React,
+            rec.norm === rec.currentNorm ? 'Норма дня остаётся' : 'Норма дня станет',
+            nbsp(rec.norm),
+            'с дефицитом ' + (rec.deficitPct > 0 ? '+' : '−')
+              + Math.abs(rec.deficitPct) + ' %') : null
         ),
 
         // Только куратору: строка про то, где сидит расхождение, клиенту не
@@ -653,9 +662,15 @@
     );
   }
 
-  function factRow(React, label, value) {
+  function factRow(React, label, value, hint) {
     return React.createElement('div', { className: 'cur-sheet__fact', key: label },
-      React.createElement('span', { className: 'cur-sheet__fact-label' }, label),
+      React.createElement('span', { className: 'cur-sheet__fact-copy' },
+        React.createElement('span', { className: 'cur-sheet__fact-label' }, label),
+        // Подпись под меткой — там, где иначе пришлось бы догадываться: «норма
+        // дня» стоит рядом с двумя числами расхода и читается как третье
+        // число расхода, хотя дефицит в ней уже вычтен.
+        hint ? React.createElement('span', { className: 'cur-sheet__fact-hint' }, hint) : null
+      ),
       React.createElement('span', { className: 'cur-sheet__fact-value' }, value)
     );
   }
