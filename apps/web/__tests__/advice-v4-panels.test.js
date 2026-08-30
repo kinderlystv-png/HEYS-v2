@@ -143,12 +143,15 @@ describe('advice v4 panels from canvas', () => {
     expect(cssSource).toMatch(/\.advice-v4-detail-overlay[\s\S]*?background:\s*var\(--v4-bg,\s*#fffaf1\)/);
     expect(cssSource).toMatch(/\.advice-v4-detail__close[\s\S]*?background:\s*#f7efe2/);
 
-    // Строка «вид детали совета»: три яруса — карточки --c1 радиусом 18,
-    // поля 14/16, зазор 8 (tips.v4.dc.html).
+    // Строка «деталь» и кадр «Совет · деталь» (элемент 07): герой — вторая
+    // поверхность --c2 радиусом 22 с полями 18. Соседняя строка «вид детали
+    // совета» описывает все три яруса одинаковыми карточками --c1 r18 14/16;
+    // расхождение строк отдано дизайнеру, форма взята по двум источникам из
+    // трёх (см. tips-v4-canvas-razbor.test.js и UI_V4_FINDINGS.md).
     const hero = cssSource.match(/\.advice-v4-detail__hero \{([^}]*)\}/)[1];
-    expect(hero).toMatch(/background:\s*var\(--v4-c1/);
-    expect(hero).toMatch(/border-radius:\s*18px/);
-    expect(hero).toMatch(/padding:\s*14px 16px/);
+    expect(hero).toMatch(/background:\s*var\(--v4-chip/);
+    expect(hero).toMatch(/border-radius:\s*22px/);
+    expect(hero).toMatch(/padding:\s*18px/);
 
     const science = cssSource.match(/\.advice-v4-detail__science-box \{([^}]*)\}/)[1];
     expect(science).toMatch(/background:\s*(?:var\(--v4-sand-surface,\s*#f7efe2\)|#f7efe2)/);

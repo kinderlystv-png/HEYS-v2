@@ -2052,7 +2052,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-panel--sync .advice-v4-panel__hint--sync {
   margin-top: 4px;
   font: 500 11px/1.4 Figtree, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.5));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .advice-v4-panel__head {
@@ -2654,13 +2654,17 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-rate-note {
   margin-top: 12px;
   font: 500 11px/1.4 Figtree, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.5));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   text-wrap: pretty;
 }
 
+/* Строка «вид карточки совета»: фон --c1 — первая поверхность. Роль первой
+   поверхности в наборе называется --v4-c1 / --v4-surface; --v4-hero это уже
+   вторая (#efe3cf), и карточка стояла на ней, объявляя запасным значением
+   первую. Видно было по цвету, а сверка запасное значение и читала. */
 .advice-list-container--v4 .advice-list-item-v4 {
   border: none;
-  background: var(--v4-hero, #f7efe2);
+  background: var(--v4-c1, #f7efe2);
   border-radius: 18px;
   padding: 14px 15px;
   gap: 11px;
@@ -2725,10 +2729,18 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   margin-top: 16px;
   padding-top: 0;
   border-top: none;
+  /* Кадр «Советы · шторка», элемент 18: зазор 9. База списка даёт 8 — это
+     дореформенная строка подсказок, и трогать её здесь нечем. */
+  gap: 9px;
   font: 600 10.5px/1 Figtree, sans-serif;
   color: rgba(32, 30, 29, 0.42);
   letter-spacing: 0;
   text-transform: none;
+}
+
+/* Кадр «Советы · шторка», элемент 19: разделитель тоном 50 %. */
+.advice-list-container--v4 .advice-list-hint-divider {
+  opacity: 0.5;
 }
 
 .advice-list-container--v4.advice-list-container--feedback-open .advice-list-items {
@@ -2803,11 +2815,18 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   padding: 0 18px 12px;
 }
 
+/* Строка «деталь»: «Ярусы разной формы намеренно: герой на второй поверхности
+   --c2 радиусом 22, „Детали" без карточки прямо на фоне, наука на первой
+   поверхности --c1 радиусом 18». Соседняя строка «вид детали совета» описывает
+   все три яруса одинаковыми карточками --c1 r18 14/16 — и расходится с этой и с
+   самим кадром «Совет · деталь» (элемент 07). Взята форма, которую называют два
+   источника из трёх; расхождение строк отдано дизайнеру записью в
+   UI_V4_FINDINGS.md. */
 .advice-v4-detail__hero {
-  background: var(--v4-c1, var(--v4-surface, #f7efe2));
-  border-radius: 18px;
-  padding: 14px 16px;
-  margin-top: 8px;
+  background: var(--v4-chip, #efe3cf);
+  border-radius: 22px;
+  padding: 18px;
+  margin-top: 20px;
 }
 
 .advice-v4-detail__hero-label {
@@ -2926,7 +2945,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 [data-theme$='dark'] .advice-v4-detail__hero {
-  background: var(--v4-c1, var(--v4-surface, #2f2820));
+  background: var(--v4-chip, #2f2820);
 }
 
 [data-theme$='dark'] .advice-v4-detail__science-box {
@@ -3286,18 +3305,69 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   margin: 0;
 }
 
+/* Кадр «Совет · всплывающий»: плашка на первой поверхности --c1, а не на фоне
+   экрана. Роль первой поверхности — --v4-c1; --v4-hero это вторая. */
 .advice-v4-toast-card {
   border-radius: 22px;
-  background: var(--v4-surface, #fffaf1);
-  padding: 16px 16px 14px;
+  background: var(--v4-c1, #f7efe2);
+  padding: 16px;
   box-shadow:
     0 1px 2px rgba(80, 50, 20, 0.09),
     0 14px 40px rgba(80, 50, 20, 0.14);
 }
 
+/* Кадр рисует ту же тройку, что карточка в шторке: полоса состояния, текст,
+   крестик. Строка «полоса слева» — полоса несёт только состояние. */
+.advice-v4-toast-card__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.advice-v4-toast-card__stripe {
+  width: 4px;
+  align-self: stretch;
+  min-height: 22px;
+  border-radius: 999px;
+  background: var(--v4-sand-act, #c67139);
+  flex: none;
+}
+
+.advice-v4-toast-card__stripe--ok {
+  background: var(--v4-sand-ok-fill, #7a8a5e);
+}
+
+.advice-v4-toast-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Строка «области нажатия» даёт крестику детали круг 30 с областью 44; тем же
+   приёмом крестик плашки остаётся 26 и получает прозрачный припуск. */
+.advice-v4-toast-card__close {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-chip, #efe3cf);
+  color: rgba(32, 30, 29, 0.55);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.advice-v4-toast-card__close::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
+}
+
 .advice-v4-toast-card__text {
   margin: 0;
-  font: 600 13px/1.45 Figtree, sans-serif;
+  font: 600 12.5px/1.4 Figtree, sans-serif;
   color: #201e1d;
   text-wrap: pretty;
   /* Контракт «язык, выделение, часовой пояс» (tips): тот же текст совета,
@@ -3306,8 +3376,8 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .advice-v4-toast-card__meta {
-  margin: 8px 0 0;
-  font: 600 10px/1 Figtree, sans-serif;
+  margin: 6px 0 0;
+  font: 500 11px/1.4 Figtree, sans-serif;
   color: rgba(32, 30, 29, 0.42);
 }
 
@@ -3322,14 +3392,16 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   flex: 1;
   border: none;
   border-radius: 999px;
-  padding: 11px 12px;
-  font: 700 12px/1 Figtree, sans-serif;
+  /* Горизонтальных полей нет: кнопки делят ряд поровну, и ненулевая база
+     при border-box увела бы доли от кадра — тот же приём, что у ряда оценки. */
+  padding: 11px 0;
+  font: 700 11.5px/1 Figtree, sans-serif;
   cursor: pointer;
 }
 
 .advice-v4-toast-card__secondary {
-  background: var(--v4-hero, #f7efe2);
-  color: rgba(32, 30, 29, 0.62);
+  background: var(--v4-chip, #efe3cf);
+  color: rgba(32, 30, 29, 0.55);
 }
 
 .advice-v4-toast-card__primary {

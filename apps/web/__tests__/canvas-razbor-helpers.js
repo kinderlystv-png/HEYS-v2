@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 // Разборщик раздела канваса «Разбор кадров · элемент за элементом»: строки
 // разбора читаются из самого канваса, правила — из продуктового CSS, и пара
 // «элемент кадра → правило продукта» сверяется по названным свойствам.
@@ -125,11 +129,36 @@ const ROLE = {
   '--tint': '#f6e6dd', '--wat': '#5e808f',
   '--red': '#b4442a', '--warn': '#c9922e', '--ovl': '#d99a63', '--val-bad': '#a8382b'
 };
+// Значения ролей продукта берутся из самого набора, а не из запасных значений,
+// написанных рядом с `var()`. Запасное — это то, что нарисуется, если роль не
+// заведена; ui:v4:check гарантирует, что заведена всегда, поэтому рисует роль.
+// Разошлись они — и сверка по запасному молча одобряет чужой цвет: так
+// карточка совета годами стояла на второй поверхности, объявляя первую.
+let ROLE_VALUES = null;
+function roleValues() {
+  if (ROLE_VALUES) return ROLE_VALUES;
+  ROLE_VALUES = new Map();
+  const css = fs.readFileSync(
+    path.resolve(fileURLToPath(import.meta.url), '../../styles/modules/002-ui-v4-palette-roles.css'),
+    'utf8',
+  );
+  // Песочный набор — базовый; тёмные и синие кадры сверяются своими зонами.
+  const at = css.indexOf('[data-theme-id="sand"]');
+  const end = css.indexOf('[data-theme-id=', at + 1);
+  for (const m of css.slice(at, end < 0 ? undefined : end).matchAll(/(--v4-[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
+    ROLE_VALUES.set(m[1], m[2].trim());
+  }
+  return ROLE_VALUES;
+}
+
 function norm(value) {
   if (value == null) return null;
   let s = String(value).trim().toLowerCase();
   s = s.replace(/var\(\s*(--[a-z0-9-]+)\s*\)/g, (_, r) => ROLE[r] || `var(${r})`);
-  s = s.replace(/var\(\s*--[a-z0-9-]+\s*,\s*([^()]*(?:\([^()]*\)[^()]*)*)\)/g, '$1');
+  s = s.replace(
+    /var\(\s*(--[a-z0-9-]+)\s*,\s*([^()]*(?:\([^()]*\)[^()]*)*)\)/g,
+    (_, role, fallback) => (roleValues().get(role) || fallback),
+  );
   s = s.replace(/rgba\(var\(--ink\)\s*,\s*\.?(\d+)\)/g, (_, d) => `rgba(0,0,0,.${d})`);
   // Чернила канваса — 32,30,29, и сам он печатает их в разборе то через
   // `var(--ink)`, то литералом `rgba(0,0,0,…)`. Продукт пишет тот же цвет
