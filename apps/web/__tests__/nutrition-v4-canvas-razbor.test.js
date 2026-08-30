@@ -1,0 +1,66 @@
+// Кадры «Питания» против раздела канваса «Разбор кадров · элемент за элементом»
+// (пакет 30 августа) — в дополнение к `nutrition-v4-canvas-geometry.test.js`.
+//
+// Тот сверяет классы канваса с классами продукта и потому видит только то, что
+// в канвасе вынесено в его собственный `<style>`. Разбор даёт числа и тем
+// элементам, которые в кадрах написаны инлайном: действия свайпа в листе правки
+// приёма и блок «Волна сейчас». Их прежняя сверка не покрывала.
+//
+// Большая часть разбора этой зоны — доли демонстрационных полос («ширина 22 %»)
+// и сокращения вида «шапка», «имя экрана»; сверять там нечего, и в пары такие
+// строки не идут.
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+import { compare, readRazbor, readRules } from './canvas-razbor-helpers.js';
+
+const CANVAS = path.resolve(
+  __dirname,
+  '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/nutrition-tab.v4.dc.html',
+);
+const CSS = path.resolve(__dirname, '../styles/modules/732-ui-v4-nutrition.css');
+
+const S = '.nutrition-v4-sheet__swipe-actions button';
+
+// Кадр «Питание · лист правки приёма»: три действия свайпа. Обратимые — тинтом,
+// необратимое — сплошной заливкой (строка «цвет свайп-действий»).
+const SWIPE = [
+  [6, '.nutrition-v4-sheet__swipe', ['radius']],
+  [7, '.nutrition-v4-sheet__swipe-actions', ['justify']],
+  [8, [S, `${S}.is-copy`], ['align', 'padding', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [9, S, ['align', 'padding', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [10, [S, `${S}.is-danger`], ['align', 'padding', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
+// Кадр «Питание · блок · Волна сейчас»: время до спада и подпись рядом с ним.
+const WAVE = [
+  [5, '.nutrition-v4-wave-now', ['align', 'gap']],
+  [6, '.nutrition-v4-wave-now b', ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'color']],
+  [7, '.nutrition-v4-wave-now span', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
+describe('«Питание» · разбор кадров канваса', () => {
+  const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
+  const rules = readRules(fs.readFileSync(CSS, 'utf8'));
+
+  it('кадр «Питание · лист правки приёма» совпадает с действиями свайпа', () => {
+    expect(compare({ razbor, rules, frame: 'Питание · лист правки приёма', pairs: SWIPE })).toEqual([]);
+  });
+
+  it('кадр «Питание · блок · Волна сейчас» совпадает с блоком волны', () => {
+    expect(compare({ razbor, rules, frame: 'Питание · блок · Волна сейчас', pairs: WAVE })).toEqual([]);
+  });
+
+  // Разбор зовёт приглушённые чернила --dim, продукт — --nut-dim; значение у
+  // обоих одно, и разборщик сводит имена. Проверка держит это равенство: разойдись
+  // они, сверка выше молча одобрила бы чужой тон.
+  it('приглушённые чернила «Питания» — тот же тон, что в канвасе', () => {
+    const css = fs.readFileSync(CSS, 'utf8');
+    const sand = css.slice(css.indexOf("[data-theme-id='sand'] .nutrition-v4"));
+    expect(sand).toMatch(/--nut-dim:\s*#6b5f4f/);
+    const canvas = fs.readFileSync(CANVAS, 'utf8');
+    expect(canvas).toContain('--dim:#6b5f4f');
+  });
+});
