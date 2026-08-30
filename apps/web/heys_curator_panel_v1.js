@@ -502,26 +502,141 @@
           )
         ),
 
+        // Порядок листа — контракта поправки, а не кабинета: он назван
+        // главным по карточке в обоих канвасах («при расхождении верен он»).
+        // Сначала два числа, потом сам процент расхождения, потом где он может
+        // сидеть, потом на чём считали, и только затем предложение.
+        h('div', { className: 'cur-sheet__tier' }, 'Норма против факта'),
+
         h('div', { className: 'cur-sheet__facts' },
+          // Подпись под меткой берётся у движка, а не пишется здесь заново:
+          // «BMR + шаги + тренировки» и «съедено минус движение веса» — слова
+          // контракта, и второй их экземпляр в разметке разошёлся бы.
           card.formula ? factRow(React, 'Формула говорит', nbsp(card.formula.value),
-            'расход по формуле') : null,
+            card.formula.source) : null,
+          // Факт тоном акцента: тон разводит расчёт и измерение — иначе два
+          // числа подряд читаются как одна величина, померенная дважды.
           card.fact ? factRow(React, 'Факт говорит', nbsp(card.fact.value),
-            'расход по весу и записям') : null,
-          // «Станет» обещает изменение: когда норма не двигается, слово лжёт.
-          // Подпись про дефицит обязательна — без неё третье число читается
-          // как третий расход, а в нём дефицит уже вычтен.
-          rec ? factRow(React,
-            rec.norm === rec.currentNorm ? 'Норма дня остаётся' : 'Норма дня станет',
-            nbsp(rec.norm),
-            'с дефицитом ' + (rec.deficitPct > 0 ? '+' : '−')
-              + Math.abs(rec.deficitPct) + ' %') : null
+            card.fact.source, 'fact') : null
         ),
 
+        // Расхождение — отдельной плашкой, а не строкой среди прочих: это то
+        // число, ради которого лист открыли. Диапазон назван тут же, иначе
+        // «8 %» не говорит, много это или в порядке вещей.
+        card.mismatchPct != null ? h('div', { className: 'cur-sheet__mismatch' },
+          h('div', { className: 'cur-sheet__mismatch-row' },
+            h('span', { className: 'cur-sheet__fact-label' }, 'Расхождение'),
+            // С десятой, как дрейф в строке панели: целые проценты округляли
+            // 0,5 до 1, и строка спорила с листом об одном числе.
+            h('span', { className: 'cur-sheet__mismatch-value' },
+              String(Math.abs(card.mismatchPctExact != null
+                ? card.mismatchPctExact
+                : card.mismatchPct)).replace('.', ',') + ' %')
+          ),
+          h('div', { className: 'cur-sheet__mismatch-note' },
+            card.status === 'out_of_range'
+              ? 'Вышло за рабочий диапазон 0,90–1,15 — поправка не идёт:'
+                + ' за его пределами вероятнее ошибка данных, чем экзотический обмен.'
+              : 'Внутри рабочего диапазона 0,90–1,15: формула ошибается на'
+                + ' человеке примерно на столько же. За его пределами поправка'
+                + ' не идёт — там вероятнее ошибка данных, чем экзотический обмен.')
+        ) : null,
+
         // Только куратору: строка про то, где сидит расхождение, клиенту не
-        // показывается никогда — она про выбор лечения, а не про него.
+        // показывается никогда. Заголовок и сноска обязательны контрактом: без
+        // них проза читается как вывод о клиенте, а это вывод о том, что чинить.
         card.whereMismatchSits
-          ? h('div', { className: 'cur-sheet__where' }, card.whereMismatchSits)
+          ? h('div', { className: 'cur-sheet__where' },
+            h('div', { className: 'cur-sheet__where-title' }, 'Где может сидеть расхождение'),
+            h('div', { className: 'cur-sheet__where-body' }, card.whereMismatchSits),
+            h('div', { className: 'cur-sheet__where-note' },
+              'Клиенту эта строка не показывается: она про выбор лечения, а не про клиента.')
+          )
           : null,
+
+        card.quality && card.quality.length ? h(React.Fragment, null,
+          h('div', { className: 'cur-sheet__tier' }, 'Качество данных'),
+          // Контракт поправки: качество данных словом «хватает» или «мало».
+          // Дробь «21 из 10» здесь читалась так же плохо, как «дни 11 из 10» в
+          // самой панели: счёт обгоняет собственный знаменатель. Тон при этом
+          // контрактный — набрано зелёным, не набрано предупреждением.
+          h('div', { className: 'cur-sheet__facts' },
+            card.quality.map((q) => factRow(React, q.label,
+              q.enough
+                ? q.value + ' · хватает'
+                : q.value + ' · мало, нужно ' + q.need,
+              null, q.enough ? 'ok' : 'warn'))
+          )
+        ) : null,
+
+        // Предложение — главным числом, а не третьей строкой среди расходов:
+        // «в первом слое остаётся вывод и действие». Рядом Δ и действующая
+        // норма, чтобы новое число было с чем сравнить.
+        rec ? h('div', { className: 'cur-sheet__rec' },
+          h('div', { className: 'cur-sheet__rec-head' },
+            h('span', { className: 'cur-sheet__rec-value' }, nbsp(rec.norm)),
+            rec.deltaKcal
+              ? h('span', {
+                className: 'cur-sheet__rec-delta' + (rec.deltaKcal > 0 ? ' is-up' : '')
+              }, (rec.deltaKcal > 0 ? '+' : '\u2212')
+                + Math.abs(rec.deltaKcal) + ' ккал в день')
+              : null
+          ),
+          // Подпись про дефицит обязательна: иначе норма читается как третий
+          // расход, а в ней дефицит уже вычтен. «Станет» обещает изменение —
+          // при неизменной норме слово лжёт, поэтому его тут нет вовсе.
+          h('div', { className: 'cur-sheet__rec-caption' },
+            (rec.norm === rec.currentNorm
+              ? 'норма дня остаётся'
+              : 'норма дня · сейчас ' + nbsp(rec.currentNorm))
+            + ' · с дефицитом ' + (rec.deficitPct > 0 ? '+' : '\u2212')
+            + Math.abs(rec.deficitPct) + ' %'),
+
+          h('div', { className: 'cur-sheet__rec-split' }),
+
+          h('div', { className: 'cur-sheet__rec-row' },
+            h('span', { className: 'cur-sheet__fact-label' }, 'Поправка этой недели'),
+            // Два знака всегда: «×1» в колонке рядом с «×0,97» читается как
+            // другая величина, а не как «поправки нет».
+            h('span', { className: 'cur-sheet__rec-num' },
+              '\u00d7' + rec.stepFactor.toFixed(2).replace('.', ','))
+          ),
+          rec.correctedExpenditure ? h('div', { className: 'cur-sheet__rec-row' },
+            h('span', { className: 'cur-sheet__fact-label' }, 'Расход после поправки'),
+            h('span', { className: 'cur-sheet__rec-num' }, nbsp(rec.correctedExpenditure))
+          ) : null,
+          // Цель показывается только когда шаг её не догнал. Совпадая с
+          // применяемым, она была дублем — и заставляла искать разницу там,
+          // где её нет.
+          card.stepCapped ? h('div', { className: 'cur-sheet__rec-row' },
+            h('span', { className: 'cur-sheet__fact-label' }, 'Цель поправки'),
+            h('span', { className: 'cur-sheet__rec-num is-target' },
+              '\u00d7' + String(rec.targetFactorShown).replace('.', ','))
+          ) : null,
+
+          card.stepCapped
+            ? h('div', { className: 'cur-sheet__rec-note' },
+              'Шаг ограничен тремя процентами: до цели дойдём примерно за три'
+              + ' недели. Остаток догоним в следующие сверки, если расхождение'
+              + ' сохранится.')
+            : null,
+          // Молчать здесь нельзя: куратор видит расхождение в 1–2 % и не
+          // понимает, почему поправка равна единице и решать нечего.
+          row.result && row.result.deadZone
+            ? h('div', { className: 'cur-sheet__rec-note' },
+              'Расхождение до 2 % считаем совпадением: на таком отрезке это шум'
+              + ' записей и весов, а не обмен. Норма остаётся прежней, решать'
+              + ' нечего.')
+            : null,
+          h('div', { className: 'cur-sheet__rec-note' },
+            'Дефицит поправка не трогает: он остаётся обещанием клиенту.'
+            + ' Меняется только расход, от которого он считается.'),
+          rec.hitFloor
+            ? h('div', { className: 'cur-sheet__rec-note' },
+              'Норма упёрлась в базовый обмен — ниже него поправка не опускает'
+              + ' ни при каком расчёте.')
+            : null
+        ) : null,
 
         // Механизм показан столбцом сразу, а не за раскрывашкой: решение
         // владельца 30 августа. Куратор решает не по итогу, а по тому, откуда
@@ -573,76 +688,6 @@
               h('div', { className: 'cur-sheet__how-note' },
                 'Факт — это съеденное минус то, что ушло из запаса: вес двигается'
                 + ' только на разнице между съеденным и потраченным.')
-            ) : null,
-
-            rec ? h(React.Fragment, null,
-              h('div', { className: 'cur-sheet__how-title' }, 'Как получилась поправка'),
-              h('div', { className: 'cur-sheet__facts' },
-                // С десятой, как дрейф в строке панели: целые проценты
-                // округляли 0,5 до 1, и строка спорила с листом.
-                factRow(React, 'Факт против формулы',
-                  (card.mismatchPctExact > 0 ? '+' : '−')
-                  + String(Math.abs(card.mismatchPctExact)).replace('.', ',') + ' %'),
-                // Цель показывается отдельной строкой только когда шаг её не
-                // догнал. Совпадая с применяемым, она была дублем — и
-                // заставляла искать разницу там, где её нет.
-                card.stepCapped
-                  ? factRow(React, 'Цель поправки',
-                    '×' + String(rec.targetFactorShown).replace('.', ','))
-                  : null,
-                // Два знака всегда: «×1» в колонке рядом с «×0,97» читается
-                // как другая величина, а не как «поправки нет».
-                factRow(React, card.stepCapped ? 'Применяем' : 'Поправка',
-                  '×' + rec.stepFactor.toFixed(2).replace('.', ','))
-              ),
-              // Пояснения к поправке стоят при поправке, а не после нормы:
-              // объяснение через два блока от числа, к которому относится,
-              // приходится искать.
-              card.stepCapped
-                ? h('div', { className: 'cur-sheet__how-note' },
-                  'За неделю норма двигается не больше чем на 3 %: к цели идём'
-                  + ' за несколько недель, а не рывком. Остаток догоним в'
-                  + ' следующие сверки, если расхождение сохранится.')
-                : null,
-              // Молчать здесь нельзя: куратор видит расхождение в 1–2 % и не
-              // понимает, почему поправка равна единице и решать нечего.
-              row.result && row.result.deadZone
-                ? h('div', { className: 'cur-sheet__how-note' },
-                  'Расхождение до 2 % считаем совпадением: на таком отрезке это'
-                  + ' шум записей и весов, а не обмен. Норма остаётся прежней,'
-                  + ' решать нечего.')
-                : null,
-
-              h('div', { className: 'cur-sheet__how-title' }, 'Как получилась норма'),
-              h('div', { className: 'cur-sheet__facts' },
-                rec.correctedExpenditure
-                  ? factRow(React, 'Расход с поправкой', nbsp(rec.correctedExpenditure) + ' ккал')
-                  : null,
-                factRow(React, 'Дефицит по договорённости',
-                  (rec.deficitPct > 0 ? '+' : '−') + Math.abs(rec.deficitPct) + ' %'),
-                factRow(React, 'Норма дня', nbsp(rec.norm) + ' ккал')
-              ),
-              h('div', { className: 'cur-sheet__how-note' },
-                'Дефицит поправка не трогает: он остаётся обещанием клиенту.'
-                + ' Меняется только расход, от которого он считается.'),
-              rec.hitFloor
-                ? h('div', { className: 'cur-sheet__how-note' },
-                  'Норма упёрлась в базовый обмен — ниже него поправка не опускает'
-                  + ' ни при каком расчёте.')
-                : null
-            ) : null,
-
-            card.quality && card.quality.length ? h(React.Fragment, null,
-              h('div', { className: 'cur-sheet__how-title' }, 'На чём считали'),
-              // Контракт поправки: качество данных словом «хватает» или «мало».
-              // Дробь «21 из 10» здесь читалась так же плохо, как «дни 11 из 10»
-              // в самой панели: счёт обгоняет собственный знаменатель.
-              h('div', { className: 'cur-sheet__facts' },
-                card.quality.map((q) => factRow(React, q.label,
-                  q.enough
-                    ? q.value + ' · хватает'
-                    : q.value + ' · мало, нужно ' + q.need))
-              )
             ) : null
           )
         ) : null,
@@ -682,7 +727,13 @@
     );
   }
 
-  function factRow(React, label, value, hint) {
+  /**
+   * Строка «ключ · значение» листа.
+   *
+   * tone — роль числа, а не украшение: 'fact' разводит измерение и расчёт,
+   * 'ok' и 'warn' говорят о гейте данных. Без тона число нейтрально.
+   */
+  function factRow(React, label, value, hint, tone) {
     return React.createElement('div', { className: 'cur-sheet__fact', key: label },
       React.createElement('span', { className: 'cur-sheet__fact-copy' },
         React.createElement('span', { className: 'cur-sheet__fact-label' }, label),
@@ -691,7 +742,9 @@
         // число расхода, хотя дефицит в ней уже вычтен.
         hint ? React.createElement('span', { className: 'cur-sheet__fact-hint' }, hint) : null
       ),
-      React.createElement('span', { className: 'cur-sheet__fact-value' }, value)
+      React.createElement('span', {
+        className: 'cur-sheet__fact-value' + (tone ? ' is-' + tone : '')
+      }, value)
     );
   }
 
@@ -701,6 +754,9 @@
     shortRange,
     GROUPS,
     Component: CuratorPanel,
+    // Лист наружу — ради рендер-теста: чтение исходника не показывает, что из
+    // полутора десятков условных веток получается на экране.
+    Sheet: CuratorPanelSheet,
     stateLine,
     agePill,
     initials

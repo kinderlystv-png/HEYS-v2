@@ -1,0 +1,106 @@
+// Лист поправки в кабинете куратора против раздела «Разбор кадров» канваса
+// norm-correction.v4.dc.html.
+//
+// Метод выбран по канвасу: геометрия кадров живёт в собственных классах их
+// `<style>` (.cd, .grp, .row, .tier, .big, .p, .sm), а продуктовая — в классах
+// `cur-sheet__*`. Значит работает сверка парами «элемент разбора → правило
+// продукта»; строки читаются из самого канваса, поэтому расхождение всплывает
+// при правке любой из сторон.
+//
+// Сводится один кадр — «Куратор · поправка предложена». Остальные кураторские
+// кадры отличаются составом, а не видом: те же классы, другие состояния, и
+// повторять по ним ту же таблицу значило бы сверять одно правило трижды.
+//
+// Клиентские кадры сюда не входят: они живут в понедельничной шторке
+// (`weekly-wrap-correction__*`) и ещё не сведены — гейт на несведённом экране
+// выключают в первый же день.
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+import { compare, readRazbor, readRules } from './canvas-razbor-helpers.js';
+
+const CANVAS = path.resolve(
+  __dirname,
+  '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html',
+);
+const CSS = path.resolve(__dirname, '../styles/modules/734-ui-v4-curator-panel.css');
+
+const FRAME = 'Куратор · поправка предложена';
+
+// Элементы кадра → правила листа. Номера — из самого разбора; якоря там, где
+// номер уехал бы от вставки одного элемента.
+const PAIRS = [
+  // Плашка расхождения: .grp на подложке набора.
+  [13, '.cur-sheet__mismatch', ['background']],
+  [14, '.cur-sheet__mismatch-row', ['align', 'justify', 'gap']],
+  [16, '.cur-sheet__mismatch-value', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [17, '.cur-sheet__mismatch-note', ['marginTop']],
+  // «Где может сидеть расхождение»: заголовок, проза, сноска.
+  [19, '.cur-sheet__where-title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  // Предложение нормы.
+  [26, '.cur-sheet__rec-head', ['align', 'gap']],
+  [28, '.cur-sheet__rec-delta', ['fontWeight', 'fontSize', 'lineHeight']],
+  [29, '.cur-sheet__rec-caption', ['marginTop']],
+  [30, '.cur-sheet__rec-split', ['height']],
+  [31, '.cur-sheet__rec-row', ['justify', 'align', 'gap']],
+  [32, '.cur-sheet__rec-num', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [34, ['.cur-sheet__rec-num', '.cur-sheet__rec-num.is-target'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  // Ряд решений: пилюли 48 радиусом 999, вторичные делят ширину пополам.
+  [36, '.cur-sheet__row', ['gap']],
+];
+
+// Осознанные отступления — поимённо, иначе список молча растёт.
+const EXCEPTIONS = [
+  // 10 и 12: кадр пишет числу строки 14 px, а строка контракта «карточка ·
+  // формула против факта» — 12,5 px/700. При расхождении верен контракт.
+  '.cur-sheet__fact-value | кегль 12,5 против 14 в кадре',
+  // 23: то же у качества данных — кадр 12,5/600, контракт «карточка · качество
+  // данных» 12 px/700. Взят контракт.
+  '.cur-sheet__fact-value | у качества данных кегль и насыщенность контракта',
+  // 24: «хватает» отдельным словом тоном --gr. В продукте гейт стоит одной
+  // строкой «18 · хватает» и красится тоном значения: два узла ради одного
+  // факта разъезжались бы по ширине, а сравнивают их по колонке.
+  '.cur-sheet__fact-value.is-ok | слово и число одной строкой',
+  // 09: подпись под меткой отбита сверху четырьмя пикселями; в продукте это
+  // зазор колонки `.cur-sheet__fact-copy` в 2 px — метка и подпись читаются
+  // как один блок, а не как две строки.
+  '.cur-sheet__fact-hint | отбивка зазором колонки, а не отступом',
+  // 35–37: ряд решений прилипает к низу листа и отбит от прокрутки своим
+  // правилом — отступ сверху у кнопок кадра к нему не сводится.
+  '.cur-sheet__actions | липкий ряд вместо отступов кадра',
+  // 28: у канваса два красных — --red #b4442a и --val-bad #a8382b, — а в наборе
+  // роль одна: --v4-bad-text #b4442a. Число Δ берёт её. Отдана дизайнеру
+  // записью в UI_V4_FINDINGS: либо второй роли не нужно, либо её надо завести.
+  '.cur-sheet__rec-delta | цвет: у набора одна роль красного, у канваса две',
+  // 30: делитель берёт роль линии (8 %), кадр рисует чернила 9 %. Собственное
+  // значение вывело бы его из-под палитры, а разница не читается.
+  '.cur-sheet__rec-split | 8 % роли линии против 9 % кадра',
+];
+
+describe('лист поправки против разбора кадров канваса', () => {
+  const canvas = fs.readFileSync(CANVAS, 'utf8');
+  const razbor = readRazbor(canvas);
+  const rules = readRules(fs.readFileSync(CSS, 'utf8'));
+
+  it('разбор кадра вообще прочитан', () => {
+    const mine = [...razbor.keys()].filter((k) => k.startsWith(`${FRAME}|`));
+    expect(mine.length).toBeGreaterThan(30);
+  });
+
+  it('каждая пара указывает на существующее правило', () => {
+    const missing = PAIRS.flatMap(([, sel]) => (Array.isArray(sel) ? sel : [sel]))
+      .filter((s) => typeof s === 'string' && s.startsWith('.') && !rules.has(s));
+    expect(missing).toEqual([]);
+  });
+
+  it('числа листа совпадают с кадром', () => {
+    expect(compare({ razbor, rules, frame: FRAME, pairs: PAIRS })).toEqual([]);
+  });
+
+  it('осознанные отступления не разрослись', () => {
+    expect(EXCEPTIONS.length).toBe(7);
+  });
+});
