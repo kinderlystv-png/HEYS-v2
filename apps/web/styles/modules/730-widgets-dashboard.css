@@ -11560,8 +11560,12 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   flex-shrink: 0;
 }
 
+/* Строка контракта «длинное значение в узком формате»: число не переносится.
+   «198 / 180» в колонке кольца шириной 61 px ломалось на две строки и роняло
+   плитку — поймано превью 31 августа. */
 .widget-v4-macro__fact {
   margin-top: 5px;
+  white-space: nowrap;
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: #201e1d;
@@ -11571,11 +11575,15 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   color: var(--v4-bad-text, #a8382b);
 }
 
+/* Кадр Главной пишет « / 150» одним узлом тоном чернил 42 %: косая относится
+   к норме, а не к факту, и в цвет состояния не красится. */
+.widget-v4-macro__fact-sep,
 .widget-v4-macro__fact-tgt {
   font-weight: 600;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
+.widget-v4-macro__fact--bad .widget-v4-macro__fact-sep,
 .widget-v4-macro__fact--bad .widget-v4-macro__fact-tgt {
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
@@ -11916,7 +11924,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-catalog__blocked {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 0 2px;
 }
 
@@ -13515,10 +13523,12 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 9px;
 }
 
+/* Кадр даёт «Б» ключом: тот же вес и разрядка, что у подписей колец, и
+   интерлиньяж 1 — иначе буква в строке 5 px стоит не по центру дорожки. */
 .widget-v4-macro-bar-row__label {
   width: 8px;
   flex: none;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
+  line-height: 1;
 }
 
 .widget-v4-macro-bar-row__track {
@@ -13536,8 +13546,11 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   background: var(--v4-ok, #7a8a5e);
 }
 
-.widget-v4-macro-bar-row__fill--over {
-  background: var(--v4-warn, #a8382b);
+/* Кадр «Шторка · Кольца БЖУ», полоса вида 2×1: заполнение красится тем же
+   компаратором, что и числа, и берёт роль плохого значения. Прежняя роль
+   янтаря с красным запасным значением была ролью не того смысла. */
+.widget-v4-macro-bar-row__fill--bad {
+  background: var(--v4-bad-text, #a8382b);
 }
 
 .widget-v4-macro-bar-row__norm {
@@ -13555,6 +13568,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   width: 46px;
   text-align: right;
   font-weight: 700;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
@@ -13564,8 +13578,9 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   gap: 5px;
   font-size: 26px;
   font-weight: 600;
+  line-height: 1;
   letter-spacing: -0.03em;
-  margin-top: 6px;
+  margin-top: 9px;
 }
 
 .widget-v4-deficit-rows {
@@ -13575,6 +13590,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   margin-top: auto;
   font-size: 10px;
   font-weight: 600;
+  line-height: 1;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
 }
 

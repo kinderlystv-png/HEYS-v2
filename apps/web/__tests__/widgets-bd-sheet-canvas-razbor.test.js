@@ -100,7 +100,9 @@ const PICK = {
   padding: (v) => num(v, /поля ([^,]+?)(?:,|$)/),
   fontWeight: (v) => num(v, /шрифт (\d+) [\d.]+px/),
   fontSize: (v) => num(v, /шрифт \d+ ([\d.]+)px/),
-  lineHeight: (v) => num(v, /шрифт \d+ [\d.]+px\/([\d.]+)/),
+  // Кадр пишет интерлиньяж и внутри шрифта, и отдельным словом, когда кегль
+  // задан не здесь: «ширина 8px, флекс none, интерлиньяж 1».
+  lineHeight: (v) => num(v, /шрифт \d+ [\d.]+px\/([\d.]+)/) ?? num(v, /интерлиньяж ([\d.]+)/),
   tracking: (v) => num(v, /трекинг (-?[\d.]+)em/),
   align: (v) => num(v, /выравнивание (\S+?)(?:,|$)/),
   justify: (v) => num(v, /распределение (\S+?)(?:,|$)/),
@@ -435,6 +437,56 @@ const VIEW_STATES = [
     '.widget-v4-tile--exit', []]
 ];
 
+// Кадр «Шторка · Кольца БЖУ» — четыре вида плитки БЖУ в превью листа смены
+// вида: кольца 3×2, три полосы 2×1, «что выбивается» 2×2 и «только белок» 1×1.
+// Числа превью совпадают с полноразмерным кадром Главной там, где вид тот же.
+const MACROS = [
+  ['Шторка · Кольца БЖУ', 'зазор 6px, отступ сверху auto, отступ снизу auto', 0,
+    '.widget-v4-macros', ['gap', 'marginTop', 'marginBottom']],
+  ['Шторка · Кольца БЖУ', 'зазор 6px, отступ сверху auto, отступ снизу auto', 1,
+    '.widget-v4-macro', ['textAlign']],
+  ['Шторка · Кольца БЖУ', 'зазор 6px, отступ сверху auto, отступ снизу auto', 2,
+    '.widget-v4-macro__label', ['marginBottom']],
+  ['Шторка · Кольца БЖУ', 'зазор 6px, отступ сверху auto, отступ снизу auto', 3,
+    ['.widget-v4-macro__fact', '.widget-v4-macro__fact--bad'],
+    ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  // «/ 150» — норма и косая одним тоном чернил: косая относится к норме.
+  ['Шторка · Кольца БЖУ', 'зазор 6px, отступ сверху auto, отступ снизу auto', 4,
+    '.widget-v4-macro__fact-sep', ['color']],
+  ['Шторка · Кольца БЖУ', 'зазор 6px, отступ сверху auto, отступ снизу auto', 4,
+    '.widget-v4-macro__fact-tgt', ['color']],
+
+  ['Шторка · Кольца БЖУ', 'направление column, зазор 4px, отступ сверху auto', 0,
+    '.widget-v4-macro-bars', ['direction', 'gap', 'marginTop']],
+  ['Шторка · Кольца БЖУ', 'направление column, зазор 4px, отступ сверху auto', 1,
+    '.widget-v4-macro-bar-row', ['align', 'gap']],
+  ['Шторка · Кольца БЖУ', 'направление column, зазор 4px, отступ сверху auto', 2,
+    ['.widget-v4-kicker', '.widget-v4-macro-bar-row__label'], ['width', 'lineHeight']],
+  ['Шторка · Кольца БЖУ', 'направление column, зазор 4px, отступ сверху auto', 3,
+    '.widget-v4-macro-bar-row__track', ['height', 'radius', 'background']],
+  ['Шторка · Кольца БЖУ', 'направление column, зазор 4px, отступ сверху auto', 4,
+    ['.widget-v4-macro-bar-row__fill', '.widget-v4-macro-bar-row__fill--bad'],
+    ['height', 'radius', 'background']],
+  ['Шторка · Кольца БЖУ', 'направление column, зазор 4px, отступ сверху auto', 5,
+    ['.widget-v4-macro-bar-row', '.widget-v4-macro-bar-row__nums'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'width', 'textAlign']],
+  ['Шторка · Кольца БЖУ', 'позиция absolute, ширина 2px, высота 9px', 0,
+    '.widget-v4-macro-bar-row__norm', ['width', 'height', 'radius', 'background']],
+
+  ['Шторка · Кольца БЖУ', 'выравнивание baseline, зазор 5px, отступ сверху 9px', 0,
+    '.widget-v4-deficit-hero', ['align', 'gap', 'marginTop']],
+  ['Шторка · Кольца БЖУ', 'выравнивание baseline, зазор 5px, отступ сверху 9px', 1,
+    '.widget-v4-deficit-hero', ['fontWeight', 'fontSize', 'lineHeight', 'tracking']],
+  ['Шторка · Кольца БЖУ', 'отступ сверху auto, направление column, зазор 6px', 0,
+    '.widget-v4-deficit-rows', ['marginTop', 'direction', 'gap']],
+  ['Шторка · Кольца БЖУ', 'отступ сверху auto, направление column, зазор 6px', 1,
+    ['.widget-v4-deficit-rows', '.widget-v4-deficit-rows__row'],
+    ['justify', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+
+  ['Шторка · Кольца БЖУ', 'высота 4px, радиус 999px, фон rgba(var(--ink),.08)', 0,
+    '.widget-v4-goalbar', ['height', 'radius', 'background']]
+];
+
 // Кадры «Быстрые действия · …» — карточка плавающей кнопки, одиннадцать штук.
 // Общее у всех — подложка, сама карточка, строка пункта и две кнопки; своё —
 // состояние: раскрыто, один пункт, правка, скрытые чипами.
@@ -647,6 +699,14 @@ describe('каркас листа разбора против разбора к�
     expect(drift).toEqual([]);
   });
 
+  it('четыре вида плитки БЖУ совпадают со своим кадром', () => {
+    const drift = [];
+    for (const [frame, anchor, offset, sel, props] of MACROS) {
+      drift.push(...compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] }));
+    }
+    expect(drift).toEqual([]);
+  });
+
   it('карточка быстрых действий совпадает со своими кадрами', () => {
     const drift = [];
     for (const [frame, anchor, offset, sel, props] of QUICK) {
@@ -690,6 +750,7 @@ describe('каркас листа разбора против разбора к�
     const used = new Set([
       ...CHARTS.map((p) => p[0]),
       ...QUICK.map((p) => p[0]),
+      ...MACROS.map((p) => p[0]),
       ...shutterPairs(razbor).map((p) => p[0]),
       'Разбор · Калории',
       'Главная · дефолтная раскладка'

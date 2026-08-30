@@ -2194,14 +2194,20 @@
     const fillPct = t > 0 ? Math.min(100, ratio * 100) : 0;
     const over = ratio > 1;
     const normMarkerPct = over && t > 0 ? Math.round((t / v) * 100) : null;
-    const valClass = toneClass === 'protein' && v < t - t * 0.05
-      ? 'widget-v4-val--warn'
-      : (over ? 'widget-v4-val--warn' : 'widget-v4-val--good');
+    // Строка контракта «БЖУ»: «порог общий, в коде один компаратор с флагом
+    // направления» — белок плох на недоборе, жиры и углеводы на переборе.
+    // Кадр 2×1 красит и полосу, и числа: «96 / 150» тоном --val-bad, «48 / 62»
+    // — чернилами. Прежние здесь свои 5 % и янтарь с зеленью были и вторым
+    // компаратором, и не теми ролями.
+    const bad = macroDeviationBad(v, t, toneClass);
+    const valClass = bad ? 'widget-v4-val--bad' : '';
     return React.createElement('div', { className: 'widget-v4-macro-bar-row' },
-      React.createElement('span', { className: 'widget-v4-macro-bar-row__label' }, shortLabel),
+      React.createElement('span', {
+        className: 'widget-v4-kicker widget-v4-macro-bar-row__label'
+      }, shortLabel),
       React.createElement('span', { className: 'widget-v4-macro-bar-row__track' },
         React.createElement('span', {
-          className: 'widget-v4-macro-bar-row__fill' + (over ? ' widget-v4-macro-bar-row__fill--over' : ''),
+          className: 'widget-v4-macro-bar-row__fill' + (bad ? ' widget-v4-macro-bar-row__fill--bad' : ''),
           style: { width: `${fillPct}%` }
         }),
         normMarkerPct != null
@@ -2211,7 +2217,7 @@
           })
           : null
       ),
-      React.createElement('span', { className: 'widget-v4-macro-bar-row__nums ' + valClass },
+      React.createElement('span', { className: ('widget-v4-macro-bar-row__nums ' + valClass).trim() },
         `${formatRuNumber(Math.round(v))} / ${formatRuNumber(Math.round(t))}`
       )
     );
@@ -6177,13 +6183,16 @@
 
     if (variantId === 'deficits') {
       const items = [
-        { label: 'белки', value: animProtein, target: animProteinTarget },
-        { label: 'углеводы', value: animCarbs, target: animCarbsTarget },
-        { label: 'жиры', value: animFat, target: animFatTarget }
+        { label: 'белки', value: animProtein, target: animProteinTarget, toneClass: 'protein' },
+        { label: 'углеводы', value: animCarbs, target: animCarbsTarget, toneClass: 'carbs' },
+        { label: 'жиры', value: animFat, target: animFatTarget, toneClass: 'fat' }
       ].map((item) => ({
         ...item,
         delta: item.value - item.target,
-        abs: Math.abs(item.value - item.target)
+        abs: Math.abs(item.value - item.target),
+        // Тот же компаратор, что у колец и полос: знак дельты сам по себе не
+        // говорит, плохо это или нет — недобор белка плох, недобор жиров нет.
+        bad: macroDeviationBad(item.value, item.target, item.toneClass)
       }));
       const worst = [...items].sort((a, b) => b.abs - a.abs)[0];
       const others = items.filter((item) => item.label !== worst.label);
@@ -6192,7 +6201,7 @@
         const sign = d > 0 ? '+' : '−';
         return `${sign}${formatRuNumber(Math.round(Math.abs(d)))}`;
       };
-      const worstClass = worst.delta < 0 ? 'widget-v4-val--warn' : 'widget-v4-val--act';
+      const worstClass = worst.bad ? 'widget-v4-val--bad' : 'widget-v4-val--neutral';
       return React.createElement('div', { className: 'widget-macros widget-macros--deficits widget-v4-stack' },
         v4Kicker('БЖУ · что выбивается'),
         React.createElement('div', { className: 'widget-v4-deficit-hero ' + worstClass },
@@ -6208,7 +6217,7 @@
               row.label === 'углеводы' ? 'Углеводы' : (row.label === 'жиры' ? 'Жиры' : 'Белки')
             ),
             React.createElement('span', {
-              className: row.delta > 0 ? 'widget-v4-val--warn' : 'widget-v4-val--neutral'
+              className: row.bad ? 'widget-v4-val--bad' : 'widget-v4-val--neutral'
             }, fmtDelta(row.delta))
           ))
         )
@@ -6216,12 +6225,25 @@
     }
 
     if (variantId === 'protein_only') {
+      // Кадр «Шторка · Кольца БЖУ», вид «Только белок»: ключ «Белки», под
+      // числом норма и дорожка до неё. Прежние «96 г» без нормы и без полосы
+      // не отвечали на единственный вопрос вида — далеко ли до цели.
+      const proteinTgt = Math.round(animProteinTarget || 0);
+      const proteinBad = macroDeviationBad(animProtein, animProteinTarget, 'protein');
+      const proteinPct = animProteinTarget > 0
+        ? (animProtein / animProteinTarget) * 100
+        : 0;
       return React.createElement('div', { className: 'widget-macros widget-macros--1x1 widget-v4-mini' },
-        v4Kicker('Белок'),
-        React.createElement('div', { className: 'widget-v4-mini__value' },
+        v4Kicker('Белки'),
+        React.createElement('div', {
+          className: 'widget-v4-mini__value ' + (proteinBad ? 'widget-v4-val--bad' : 'widget-v4-val--neutral')
+        },
           formatRuNumber(Math.round(animProtein)),
-          React.createElement('span', { className: 'widget-v4-unit' }, ' г')
-        )
+          proteinTgt > 0
+            ? React.createElement('span', { className: 'widget-v4-unit' }, `/${formatRuNumber(proteinTgt)}`)
+            : React.createElement('span', { className: 'widget-v4-unit' }, ' г')
+        ),
+        proteinTgt > 0 ? v4GoalBar(proteinPct, proteinBad ? 'bad' : 'good') : null
       );
     }
 
