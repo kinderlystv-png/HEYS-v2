@@ -2524,10 +2524,11 @@
       );
     }
 
-    // Контракт «состав порогов»: восемь строк, у каждой два числа — личное и
-    // общее. Колонка «общий» обязательна: без неё личное читается как
-    // произвольное. До 14 дней колонка «ваш» пуста, слово зрелости —
-    // «наблюдение» вместо «правила». Экран только читает.
+    // Контракт «три яруса по источнику»: экран делится не по темам, а по
+    // тому, откуда взято число. Прежняя единая таблица смешивала наблюдённые
+    // пороги с арифметикой от профиля — восемь строк под словом
+    // «персональные» обещали, что система изучила восемь параметров, а
+    // изучила два. Имя экрана — «Пороги расчёта» по строке «имя экрана».
     function InsightsV4Thresholds(props) {
       const { lsGet, profile, pIndex, historyDays } = props || {};
       const personal = (historyDays || 0) >= 14;
@@ -2548,58 +2549,136 @@
         const whole = Math.floor(h24);
         return whole + ':' + String(Math.round((h24 - whole) * 60)).padStart(2, '0');
       };
-      const rows = [
-        { label: 'Поздний ужин', mine: t.lateEatingHour ? hhmm(t.lateEatingHour) : null, common: '21:00' },
-        { label: 'Минимум белка', mine: t.proteinPerMealG ? Math.round(t.proteinPerMealG * 4) + ' г' : null, common: '100 г' },
-        { label: 'Вода', mine: weight ? (Math.round(weight * 30 / 100) / 10).toFixed(1).replace('.', ',') + ' л' : null, common: '2,0 л' },
-        { label: 'Шаги', mine: prof.stepsGoal ? String(prof.stepsGoal) : null, common: '8 000' },
-        { label: 'Сон', mine: prof.sleepHours ? hhmm(+prof.sleepHours) : null, common: '7:30' },
-        { label: 'Между приёмами', mine: t.idealMealGapMin ? hhmm(t.idealMealGapMin / 60) : null, common: '3:00' },
-        // У этих двух личного порога нет не потому, что данных мало, а потому
-        // что движок их не считает вовсе. Раньше обе пустоты выглядели
-        // одинаковым прочерком, и человек ждал числа, которое не появится
-        // никогда.
-        { label: 'Перебор дня', mine: null, noDetector: true, common: '+20 %' },
-        { label: 'Недосып', mine: null, noDetector: true, common: '6:00' }
+
+      // Перебор дня — арифметика от уставки дефицита, а не наблюдение: норма
+      // дня это расход × (1 + d/100), и превышение, после которого день
+      // перестаёт быть дефицитным, равно −d/(1+d/100). Поправка на факт в этом
+      // отношении сокращается — она множит и расход, и норму. При дефиците
+      // −15 % выходит 18 %, ровно число прежней редакции контракта.
+      const deficit = Number(prof.deficitPctTarget);
+      const overshoot = Number.isFinite(deficit) && deficit < 0
+        ? Math.round((-deficit / (1 + deficit / 100)))
+        : null;
+
+      // Источник числа — свойство строки, а не место в разметке: появится
+      // детектор — строка сама переедет в свой ярус, и счёт «N из 8» сойдётся
+      // без второй правки.
+      const ROWS = [
+        {
+          label: 'Поздний ужин', source: 'observed', common: '21:00',
+          mine: t.lateEatingHour ? hhmm(t.lateEatingHour) : null
+        },
+        {
+          label: 'Между приёмами', source: 'observed', common: '3:00',
+          mine: t.idealMealGapMin ? hhmm(t.idealMealGapMin / 60) : null
+        },
+        {
+          label: 'Вода', source: 'profile', common: '2,0 л',
+          mine: weight ? (Math.round(weight * 30 / 100) / 10).toFixed(1).replace('.', ',') + ' л' : null
+        },
+        {
+          label: 'Шаги', source: 'profile', common: '8 000',
+          // Тысячи разделяем неразрывным пробелом: «8 400» рядом с «8 000»
+          // должно читаться одной шкалой, а не двумя разными записями.
+          mine: prof.stepsGoal
+            ? String(prof.stepsGoal).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+            : null
+        },
+        {
+          label: 'Сон', source: 'profile', common: '7:30',
+          mine: prof.sleepHours ? hhmm(+prof.sleepHours) : null
+        },
+        {
+          label: 'Минимум белка', source: 'profile', common: '100 г',
+          mine: t.proteinPerMealG ? Math.round(t.proteinPerMealG * 4) + ' г' : null
+        },
+        {
+          label: 'Перебор дня', source: 'profile', common: '+20 %',
+          mine: overshoot != null ? '+' + overshoot + ' %' : null,
+          // Без дефицита перебирать нечего: у поддержания и набора порог не
+          // определён, и выдумывать его нельзя.
+          why: 'нет дефицита — перебирать нечего'
+        },
+        {
+          label: 'Недосып', source: 'observed', common: '6:00', mine: null,
+          why: 'нужен сигнал последствия'
+        }
       ];
-      const missing = rows.filter(function (r) { return r.noDetector; });
+
+      // Пустота пустоте рознь, и ярус решает это по наличию числа, а не по
+      // сроку: «ваш» пуст до 14 дней у наблюдённого порога — строка всё равно
+      // остаётся в своём ярусе, потому что детектор есть.
+      const observed = ROWS.filter((r) => r.source === 'observed' && r.mine != null);
+      const fromProfile = ROWS.filter((r) => r.source === 'profile' && r.mine != null);
+      const notYet = ROWS.filter((r) => r.mine == null);
+
+      const tier = (title, count, rows, midLabel, midTone, note) => h(
+        React.Fragment, null,
+        h('div', { className: 'insights-v4-thresh__tier-row' },
+          h('div', { className: 'insights-v4-tier' }, title),
+          count ? h('span', { className: 'insights-v4-thresh__count' }, count) : null
+        ),
+        h('div', { className: 'insights-v4-thresh__table' },
+          midLabel ? h('div', { className: 'insights-v4-thresh__head' },
+            h('span', { className: 'insights-v4-thresh__name' }, 'порог'),
+            h('span', {
+              className: 'insights-v4-thresh__mine insights-v4-thresh__mine--' + midTone
+            }, midLabel),
+            h('span', { className: 'insights-v4-thresh__common' }, 'общий')
+          ) : null,
+          rows.map((row) => (
+            midLabel
+              ? h('div', { key: row.label, className: 'insights-v4-thresh__row' },
+                h('span', { className: 'insights-v4-thresh__name' }, row.label),
+                h('span', {
+                  className: 'insights-v4-thresh__mine insights-v4-thresh__mine--' + midTone
+                }, personal || row.source === 'profile' ? row.mine : '—'),
+                h('span', { className: 'insights-v4-thresh__common' }, row.common)
+              )
+              // Третий ярус колонок не имеет вовсе: числа там нет, а есть
+              // причина, и она пишется словом.
+              : h('div', { key: row.label, className: 'insights-v4-thresh__row' },
+                h('span', { className: 'insights-v4-thresh__name is-muted' }, row.label),
+                h('span', { className: 'insights-v4-thresh__why' }, row.why)
+              )
+          ))
+        ),
+        note ? h('div', { className: 'insights-v4-thresh__note' }, note) : null
+      );
 
       return h('div', { className: 'insights-v4-thresh' },
         h('div', { className: 'insights-v4-thresh__head-row' },
-          h('div', { className: 'insights-v4-tier' }, 'Персональные пороги'),
+          h('div', { className: 'insights-v4-tier' }, 'Пороги расчёта'),
           h('span', {
             className: 'insights-v4-maturity' + (personal ? ' insights-v4-maturity--rule' : '')
-          }, personal ? 'правило' : 'наблюдение')
+          }, personal ? 'правило · 14 дней' : 'наблюдение')
         ),
-        h('div', { className: 'insights-v4-thresh__table' },
-          h('div', { className: 'insights-v4-thresh__head' },
-            h('span', { className: 'insights-v4-thresh__name' }, 'порог'),
-            h('span', { className: 'insights-v4-thresh__mine' }, 'ваш'),
-            h('span', { className: 'insights-v4-thresh__common' }, 'общий')
-          ),
-          rows.map(function (row, idx) {
-            return h('div', { key: idx, className: 'insights-v4-thresh__row' },
-              h('span', { className: 'insights-v4-thresh__name' }, row.label),
-              h('span', {
-                className: 'insights-v4-thresh__mine'
-                  + (personal && row.noDetector ? ' is-none' : '')
-              }, personal && row.mine ? row.mine : '—'),
-              h('span', { className: 'insights-v4-thresh__common' }, row.common)
-            );
-          })
-        ),
+
+        observed.length ? tier(
+          'Посчитано по вашим дням',
+          // Счёт утверждает готовность, поэтому до 14 дней его нет: рядом с
+          // прочерками «2 из 8» спорило бы с собственным заголовком.
+          personal ? observed.length + ' из ' + ROWS.length : null,
+          observed, 'ваш', 'own',
+          personal
+            ? 'Только эти выведены из наблюдения: медиана ваших дней, смешанная с общим приором. Поэтому слово «правило».'
+            : 'Эти пороги выводятся из наблюдения, но пока данных мало — считаем по общим числам. Личные появятся с 14 дней.'
+        ) : null,
+
+        fromProfile.length ? tier(
+          'Из вашего профиля', null, fromProfile, 'расчёт', 'calc',
+          'Это арифметика от вашего профиля — вес, цель, рост: вес × 30 на воду, вес × коэффициент цели на белок. Наблюдением они не становятся, поэтому стоят отдельным ярусом и тоном спокойнее.'
+        ) : null,
+
+        notYet.length ? tier(
+          'Пока не считаем', null, notYet, null, null,
+          'Пустая строка с причиной честнее уверенного числа из ничего: детектор ради заполнения строки не пишется.'
+        ) : null,
+
         h('div', { className: 'insights-v4-thresh__where' },
           personal
             ? 'Эти числа движок подставляет вместо общих: в предупреждения, в планер и в оценку дня. Считаются сами, меняются раз в неделю.'
-            : 'Пока считаем по общим числам: личные появятся с 14 дней данных. Считаются сами, править их не нужно.',
-          // Два прочерка означают разное, и это надо сказать вслух: один
-          // заполнится сам, второй не заполнится никогда без нового детектора.
-          personal && missing.length
-            ? h('span', { className: 'insights-v4-thresh__gap' },
-              'У ' + missing.map(function (r) { return '«' + r.label.toLowerCase() + '»'; }).join(' и ')
-              + (missing.length > 1 ? ' личных чисел нет' : ' личного числа нет')
-              + ': эти пороги движок пока не считает. Данных это не ждёт — работаем по общему.')
-            : null)
+            : 'Пока считаем по общим числам: личные появятся с 14 дней данных. Считаются сами, править их не нужно.')
       );
     }
 

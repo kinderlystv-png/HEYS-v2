@@ -899,25 +899,63 @@
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
 }
 
-/* Прочерк «этого мы не считаем» приглушён: он не ждёт данных, и надеяться на
-   него не нужно. Прочерк «ещё наберётся» остаётся акцентным. */
-.insights-v4-thresh__mine.is-none {
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+/* Контракт «вид · ярусы порогов». Средняя колонка называется по источнику
+   числа и красится по нему же: наблюдённое — акцентом, расчётное — спокойным
+   тоном. Один и тот же вид у двух разных вещей и был главной ложью экрана. */
+.insights-v4-thresh__mine--own {
+  color: var(--v4-sand-act-deep, #8a4a20);
 }
 
-.insights-v4-thresh__gap {
-  display: block;
-  margin-top: 8px;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
-}
-
-.insights-v4-thresh__where {
-  margin-top: 10px;
-  background: var(--v4-card, #ffffff);
-  border-radius: 20px;
-  padding: 16px;
-  font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+.insights-v4-thresh__mine--calc {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
+}
+
+.insights-v4-thresh__head .insights-v4-thresh__mine--calc {
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.5));
+}
+
+.insights-v4-thresh__tier-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* Счёт «2 из 8» стоит у первого яруса: он и говорит, сколько система про
+   человека действительно узнала. */
+.insights-v4-thresh__count {
+  flex: none;
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+/* Третий ярус: имя приглушено, справа причина словом, колонок нет вовсе. */
+.insights-v4-thresh__name.is-muted {
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.insights-v4-thresh__why {
+  flex: none;
+  font: 600 10.5px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
+.insights-v4-thresh__note {
+  margin-top: 10px;
+  margin-bottom: 18px;
+  font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  text-wrap: pretty;
+}
+
+/* «Где они работают» — подпись, а не карточка: под каждым ярусом теперь стоит
+   своя подпись, и залитый блок внизу читался пятой таблицей данных. */
+.insights-v4-thresh__where {
+  margin-top: 2px;
+  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
+  text-wrap: pretty;
 }
 
 .insights-v4-stub__all-done {

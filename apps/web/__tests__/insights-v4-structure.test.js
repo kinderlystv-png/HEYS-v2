@@ -148,8 +148,9 @@ describe('экраны «Подробно»: фенотип и пороги', ()
     expect(dashboardSource).toContain('function InsightsV4Thresholds');
     expect(dashboardSource).toContain("'общий'");
     expect(dashboardSource).toContain("'ваш'");
-    // до 14 дней — «наблюдение», после — «правило»
-    expect(dashboardSource).toContain("personal ? 'правило' : 'наблюдение'");
+    // до 14 дней — «наблюдение», после — «правило · 14 дней»: срок в пилюле
+    // из кадра, он и объясняет, откуда взялось слово
+    expect(dashboardSource).toContain("personal ? 'правило · 14 дней' : 'наблюдение'");
     expect(dashboardSource).toContain('править их не нужно');
     // ни одной кнопки внутри экранов
     const thresh = dashboardSource.slice(
@@ -159,22 +160,65 @@ describe('экраны «Подробно»: фенотип и пороги', ()
     expect(thresh).not.toContain("h('button'");
   });
 
-  it('два прочерка в порогах означают разное, и это сказано вслух', () => {
-    // «—» до 14 дней заполнится сам; «—» у «перебора дня» и «недосыпа» не
-    // заполнится никогда: детектора нет. Одинаковый прочерк заставлял ждать
-    // числа, которое не появится.
+  it('пороги разделены на три яруса по источнику числа', () => {
+    // Контракт «три яруса по источнику»: восемь строк под словом
+    // «персональные» обещали, что система изучила восемь параметров, а
+    // изучила два.
     const thresh = dashboardSource.slice(
       dashboardSource.indexOf('function InsightsV4Thresholds'),
       dashboardSource.indexOf('// Контракт «новый пользователь»'),
     );
-    expect(thresh).toContain("{ label: 'Перебор дня', mine: null, noDetector: true");
-    expect(thresh).toContain("{ label: 'Недосып', mine: null, noDetector: true");
-    expect(thresh).toContain('insights-v4-thresh__gap');
-    expect(thresh).toContain('эти пороги движок пока не считает');
-    // Приглушён только тот прочерк, который ничего не ждёт.
-    expect(thresh).toContain("personal && row.noDetector ? ' is-none' : ''");
-    // Список берётся из самих строк — второй копии имён не заводим.
-    expect(thresh).toContain("rows.filter(function (r) { return r.noDetector; })");
+    expect(thresh).toContain('Посчитано по вашим дням');
+    expect(thresh).toContain('Из вашего профиля');
+    expect(thresh).toContain('Пока не считаем');
+    // Имя экрана обещает ровно столько, сколько есть.
+    expect(thresh).toContain("'Пороги расчёта'");
+    expect(thresh).not.toContain('Персональные пороги');
+    // Средняя колонка называется по источнику: «ваш» у наблюдения, «расчёт» у
+    // арифметики от профиля.
+    expect(thresh).toContain("'ваш', 'own'");
+    expect(thresh).toContain("'расчёт', 'calc'");
+  });
+
+  it('ярус выбирается свойством строки, а не местом в разметке', () => {
+    // Появится детектор — строка сама переедет, и счёт «N из 8» сойдётся без
+    // второй правки.
+    const thresh = dashboardSource.slice(
+      dashboardSource.indexOf('function InsightsV4Thresholds'),
+      dashboardSource.indexOf('// Контракт «новый пользователь»'),
+    );
+    expect(thresh).toContain("ROWS.filter((r) => r.source === 'observed' && r.mine != null)");
+    expect(thresh).toContain("ROWS.filter((r) => r.source === 'profile' && r.mine != null)");
+    expect(thresh).toContain('ROWS.filter((r) => r.mine == null)');
+    expect(thresh).toContain("observed.length + ' из ' + ROWS.length");
+  });
+
+  it('две пустоты названы каждая своей причиной', () => {
+    const thresh = dashboardSource.slice(
+      dashboardSource.indexOf('function InsightsV4Thresholds'),
+      dashboardSource.indexOf('// Контракт «новый пользователь»'),
+    );
+    expect(thresh).toContain('нужен сигнал последствия');
+    expect(thresh).toContain('нет дефицита — перебирать нечего');
+    expect(thresh).toContain('insights-v4-thresh__why');
+    // Третий ярус колонок не имеет вовсе.
+    expect(thresh).toContain('midLabel ? h(');
+  });
+
+  it('перебор дня считается от уставки дефицита, а не выдуман', () => {
+    // Норма дня = расход × (1 + d/100); превышение, после которого день
+    // перестаёт быть дефицитным, равно −d/(1+d/100). При −15 % это 18 % —
+    // ровно число прежней редакции контракта.
+    const thresh = dashboardSource.slice(
+      dashboardSource.indexOf('function InsightsV4Thresholds'),
+      dashboardSource.indexOf('// Контракт «новый пользователь»'),
+    );
+    expect(thresh).toContain('Math.round((-deficit / (1 + deficit / 100)))');
+    const overshoot = (d) => Math.round(-d / (1 + d / 100));
+    expect(overshoot(-15)).toBe(18);
+    expect(overshoot(-20)).toBe(25);
+    // Без дефицита порога нет, и выдумывать его нельзя.
+    expect(thresh).toContain('deficit < 0');
   });
 
   it('старые карточки фенотипа и полноты в «Подробно» не монтируются', () => {
