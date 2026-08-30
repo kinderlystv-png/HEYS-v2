@@ -566,20 +566,9 @@
                 factRow(React, card.stepCapped ? 'Применяем' : 'Поправка',
                   '×' + rec.stepFactor.toFixed(2).replace('.', ','))
               ),
-              // Шаг ограничен — без этой строки куратор видит ×0,97 при цели
-              // ×0,92 и не понимает, почему движок «не дослушал» расчёт.
-              h('div', { className: 'cur-sheet__how-title' }, 'Как получилась норма'),
-              h('div', { className: 'cur-sheet__facts' },
-                rec.correctedExpenditure
-                  ? factRow(React, 'Расход с поправкой', nbsp(rec.correctedExpenditure) + ' ккал')
-                  : null,
-                factRow(React, 'Дефицит по договорённости',
-                  (rec.deficitPct > 0 ? '+' : '−') + Math.abs(rec.deficitPct) + ' %'),
-                factRow(React, 'Норма дня', nbsp(rec.norm) + ' ккал')
-              ),
-              h('div', { className: 'cur-sheet__how-note' },
-                'Дефицит поправка не трогает: он остаётся обещанием клиенту.'
-                + ' Меняется только расход, от которого он считается.'),
+              // Пояснения к поправке стоят при поправке, а не после нормы:
+              // объяснение через два блока от числа, к которому относится,
+              // приходится искать.
               card.stepCapped
                 ? h('div', { className: 'cur-sheet__how-note' },
                   'За неделю норма двигается не больше чем на 3 %: к цели идём'
@@ -594,6 +583,19 @@
                   + ' шум записей и весов, а не обмен. Норма остаётся прежней,'
                   + ' решать нечего.')
                 : null,
+
+              h('div', { className: 'cur-sheet__how-title' }, 'Как получилась норма'),
+              h('div', { className: 'cur-sheet__facts' },
+                rec.correctedExpenditure
+                  ? factRow(React, 'Расход с поправкой', nbsp(rec.correctedExpenditure) + ' ккал')
+                  : null,
+                factRow(React, 'Дефицит по договорённости',
+                  (rec.deficitPct > 0 ? '+' : '−') + Math.abs(rec.deficitPct) + ' %'),
+                factRow(React, 'Норма дня', nbsp(rec.norm) + ' ккал')
+              ),
+              h('div', { className: 'cur-sheet__how-note' },
+                'Дефицит поправка не трогает: он остаётся обещанием клиенту.'
+                + ' Меняется только расход, от которого он считается.'),
               rec.hitFloor
                 ? h('div', { className: 'cur-sheet__how-note' },
                   'Норма упёрлась в базовый обмен — ниже него поправка не опускает'
