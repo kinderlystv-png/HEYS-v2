@@ -782,12 +782,15 @@
 
             return React.createElement('div', { className: 'game-v4-sheet__panel' },
                 !firstDay && React.createElement('div', { className: 'game-v4-sheet__hero game-v4-sheet__hero--cream' },
-                    React.createElement('div', { className: 'game-v4-sheet__eyebrow' }, 'Открыто'),
+                    // Кадр «Достижения», элемент 06: ключ «Достигнуто». «Открыто»
+                    // говорит о доступе, а достижение — о сделанном (строка
+                    // «слова на экране»: названы делом человека).
+                    React.createElement('div', { className: 'game-v4-sheet__eyebrow' }, 'Достигнуто'),
                     // Строка «доступность»: герой — одна фраза, полоса — progressbar с «20 из 36».
                     React.createElement('div', {
                         className: 'game-v4-sheet__hero-metric',
                         role: 'img',
-                        'aria-label': `открыто ${stats.unlockedCount} из ${stats.totalAchievements || 36}`
+                        'aria-label': `достигнуто ${stats.unlockedCount} из ${stats.totalAchievements || 36}`
                     },
                         React.createElement('span', { className: 'game-v4-sheet__hero-num game-v4-sheet__hero-num--md' },
                             stats.unlockedCount

@@ -73,9 +73,9 @@ apps/web/heys_auth_v1.js::heys_pending_client_name
 apps/web/heys_auth_v1.js::CLIENT_DEVICE_ID_KEY
 apps/web/heys_auth_v1.js::PEP_ACCEPTED_STORAGE_KEY
 apps/web/heys_consents_v1.js::localStorage.setItem(key, JSON.stringify(data))
-apps/web/heys_cascade_card_v1.js:1273
-apps/web/heys_cascade_card_v1.js:3877
-apps/web/heys_cascade_card_v1.js:3886
+apps/web/heys_cascade_card_v1.js:1276
+apps/web/heys_cascade_card_v1.js:3880
+apps/web/heys_cascade_card_v1.js:3889
 apps/web/heys_app_backup_import_v1.js:286
 apps/web/heys_app_backup_import_v1.js:296
 apps/web/heys_cloud_storage_utils_v1.js:108

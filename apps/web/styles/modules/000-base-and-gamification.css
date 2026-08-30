@@ -17890,7 +17890,8 @@ html.heys-bg-paused *::after {
 .game-v4-sheet__header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  /* Кадр «Достижения», элемент 02: зазор шапки 12. */
+  gap: 12px;
 }
 
 .game-v4-sheet__back {
@@ -17963,11 +17964,12 @@ html.heys-bg-paused *::after {
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
 }
 
+/* Кадр «Достижения», элемент 07: зазор 9, отступ сверху 12. */
 .game-v4-sheet__hero-metric {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 9px;
+  margin-top: 12px;
 }
 
 .game-v4-sheet__hero-num {
@@ -17982,10 +17984,13 @@ html.heys-bg-paused *::after {
   font-size: 56px;
 }
 
+/* Кадр «Достижения», элемент 09: единица тоном чернил 38 %. Роль с этим тоном
+   в наборе есть — --v4-ink-4; стояла --v4-ink-3 (45 %) с запасным значением
+   .38, то есть код обещал одно, а рисовал другое. */
 .game-v4-sheet__hero-unit {
   font-size: 12px;
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .game-v4-sheet__hero-accent {
@@ -18012,8 +18017,9 @@ html.heys-bg-paused *::after {
   color: var(--v4-sand-ink, #201e1d);
 }
 
+/* Кадр «Достижения», элемент 18: ряд сегментов через 14 от подписи. */
 .game-v4-sheet__streak-bars {
-  margin-top: 18px;
+  margin-top: 14px;
 }
 
 /* Строка «области нажатия»: сегменты ряда дней не нажимаются вовсе. */
@@ -18093,12 +18099,14 @@ html.heys-bg-paused *::after {
   color: var(--v4-sand-ok-text, #5c6a45);
 }
 
+/* Кадр просит чернила 50 %; у набора три тона — 55 / 45 / 38. Оставлен
+   ближайший сверху --v4-ink-2, запасное значение приведено к самой роли. */
 .game-v4-sheet__card-sub {
   margin-top: 6px;
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 /* Строка «области нажатия»: полоса прогресса не нажимается вовсе. */
@@ -18130,11 +18138,13 @@ html.heys-bg-paused *::after {
   background: var(--v4-sand-ok-fill, #7a8a5e);
 }
 
+/* Кадр «Достижения», элемент 21: отступ сверху 10, тон чернил 40 %. Ближайшая
+   роль набора — --v4-ink-4 (38 %); стояла --v4-ink-3 (45 %) с запасным .4. */
 .game-v4-sheet__card-meta {
-  margin-top: 9px;
+  margin-top: 10px;
   font-size: 10.5px;
   font-weight: 500;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.4));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .game-v4-sheet__card-meta--ok {
@@ -18317,11 +18327,13 @@ html.heys-bg-paused *::after {
    справа 11,5/600 тоном чернил 45 % табличными цифрами; пройденные гаснут до
    45 %, текущий — чернилами с весом 700. Разделитель — 1 px чернил 7 %.
    Строка «области нажатия»: вся ширина на высоту не меньше 44. */
+/* Строка «вид · строки XP и таблица наград»: «строка 13 px по вертикали»; зазор
+   13 даёт кадр «Уровни», элемент 15 — тот же, что у строки достижения. */
 .game-v4-sheet__ladder-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 0;
+  gap: 13px;
+  padding: 13px 0;
   min-height: 44px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.07);
 }
