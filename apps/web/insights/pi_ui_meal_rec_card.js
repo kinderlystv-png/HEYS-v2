@@ -2378,40 +2378,33 @@
             const bodyText = isTooLate
                 ? `${macros?.plannerEmptyReason || 'Новый плотный приём сейчас не вписывается.'} ${plannerDecision?.alternatives?.[0] || 'При сильном голоде выбери небольшой лёгкий приём.'}`
                 : 'Планнер не нашёл полезного дополнительного приёма в текущем остатке дня.';
-            // Keep a visible explanation instead of hiding an empty planner result.
+            // Контракт «карточка · „На сегодня всё“»: плоская карточка набора —
+            // заголовок, проза с фактом, ряд из пилюли «день закрыт» и подписи
+            // «планер вернётся утром». Кнопок в ней нет: предлагать нечего.
+            //
+            // Прежде здесь стояла карточка прошлой системы: эмодзи 🌙 и 💧,
+            // синие tailwind-классы text-blue-800/700, бейдж «Планнер» и
+            // раскрывашка «Подробнее». Ярус «Питание» после последнего приёма
+            // не должен ни пустеть, ни менять язык на чужой.
             return h('div', {
-                className: 'meal-rec-card widget widget--meal-rec-diary-water p-4 rounded-2xl',
-                style: { position: 'relative' }
+                className: 'meal-rec-done',
+                role: 'status',
+                'aria-label': isTooLate ? 'Планер закрыл день' : 'Приём сейчас не требуется'
             },
-                h('div', { className: 'flex items-center gap-3 mb-2' },
-                    h('span', { className: 'text-3xl' }, isTooLate ? '🌙' : '💧'),
-                    h('div', null,
-                        h('div', { className: 'meal-rec-card__badge mb-1' }, 'Планнер'),
-                        h('div', { className: 'font-semibold text-blue-800 text-base' }, titleText),
-                    )
+                h('div', { className: 'meal-rec-done__title' },
+                    isTooLate ? 'На сегодня всё' : titleText),
+                h('div', { className: 'meal-rec-done__note' }, bodyText),
+                h('div', { className: 'meal-rec-done__foot' },
+                    h('span', { className: 'meal-rec-done__pill' },
+                        isTooLate ? 'день закрыт' : 'норма закрыта'),
+                    h('span', { className: 'meal-rec-done__hint' }, 'планер вернётся утром')
                 ),
-                h('div', { className: 'text-sm text-blue-700 leading-relaxed' },
-                    bodyText
-                ),
-                isTooLate && plannerDecision && h('details', {
-                    className: 'mt-3 text-sm text-blue-700'
-                },
-                    h('summary', { style: { cursor: 'pointer', fontWeight: 600 } }, 'Подробнее'),
-                    h('div', { style: { marginTop: 8, display: 'grid', gap: 6 } },
-                        plannerDecision.sleepContext && h('div', null,
-                            `Сон: около ${plannerDecision.sleepContext.displayTime} · ${plannerDecision.sleepContext.explanation}`
-                        ),
-                        (plannerDecision.topFactors || []).slice(0, 4).map((factor, index) =>
-                            h('div', { key: `planner-factor-${index}` }, `• ${factor}`)
-                        ),
-                        plannerDecision.confidence === 'low' && h('div', null, 'Время сна оценено с низкой уверенностью.')
-                    )
-                ),
-                // Незаметная точка диагностики (как в основной карточке)
+                // Точка диагностики остаётся: она служебная и живёт во всех
+                // состояниях карточки одинаково.
                 h('span', {
                     className: 'meal-rec-card__diag-dot',
                     style: { position: 'absolute', top: 8, right: 10 },
-                    onClick: (e) => { e.stopPropagation(); handleCopyDiagnostics(); },
+                    onClick: handleDiagCopy,
                     title: diagCopyStatus === 'ok' ? 'Диагностика скопирована' :
                            diagCopyStatus === 'err' ? 'Не удалось скопировать' :
                            'Скопировать диагностику',
