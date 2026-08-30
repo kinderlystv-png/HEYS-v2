@@ -122,7 +122,61 @@
     <div class="spec"><b>тоста подтверждения нет</b><span data-v="всплывающего уведомления об успехе или ошибке действия не рисуем: успех подтверждается самим содержимым, ошибка — на месте действия. Снимается роль подтверждения у heys_toast_v1 (зелёное «Действие отменено» с кнопкой), а не компонент целиком"></span><i>решение 21 августа: одно всплывающее место про возврат — этот бар. Роль подтверждения дублировала его кнопку «Отменить», поэтому уходит она</i></div>
     <div class="spec" style="border-bottom:none"><b>всплывающий совет — не мой</b><span data-v="второй потребитель heys_toast_v1 — всплывающий совет и плашка «Всё отлично! Советов нет». Он остаётся и описан в tips.v4.dc.html (кадр «Всплывающий совет»); этот контракт его не снимает и вида ему не задаёт"></span><i>один файл кода в двух ролях: без этой строки «прежний компонент снимается» читается как «удалить heys_toast_v1», а на нём висят советы</i></div>
 
-  </div>
+          <div class="ctrH">Разбор кадров · элемент за элементом</div>
+    <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 01</b><span data-v="высота 300px, фон var(--bg), распределение flex-start"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 02</b><span data-v="«Питание» — поля 16px 18px 0, шрифт 700 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 03</b><span data-v="отступы 12px 18px 0, высота 44px, радиус 16px, фон var(--c1)"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 04</b><span data-v="отступы 8px 18px 0, высота 44px, радиус 16px, фон var(--c1)"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 05</b><span data-v="позиция absolute, фон var(--c1), радиус 22px, поля 11px 13px, выравнивание center, зазор 11px, рамка inset 0 0 0 1px rgba(var(--ink),.12),0 10px 28px rgba(var(--shadow),.22)"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 06</b><span data-v="флекс none, позиция relative, ширина 30px, высота 30px"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 07</b><span data-v="«5» — моноцифры: позиция absolute, вписан 0, выравнивание center, распределение center, шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 08</b><span data-v="«Перекус удалён» — флекс 1, шрифт 600 12px/1.35 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 09</b><span data-v="«Отменить» — флекс none, высота от 34px, выравнивание center, поля 0 13px, радиус 999px, фон rgba(var(--ink),.07), шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 10</b><span data-v="позиция absolute, высота 64px, фон var(--c1), разделитель сверху 1px solid rgba(var(--ink),.07), выравнивание center, распределение space-around, поля 0 18px"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 11</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 12</b><span data-v="«Питание» — шрифт 600 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Отмена · пачка · 01</b><span data-v="высота 300px, фон var(--bg), распределение flex-start"></span></div>
+    <div class="spec"><b>Отмена · пачка · 02</b><span data-v="«Питание» — поля 16px 18px 0, шрифт 700 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Отмена · пачка · 03</b><span data-v="отступы 12px 18px 0, высота 44px, радиус 16px, фон var(--c1)"></span></div>
+    <div class="spec"><b>Отмена · пачка · 04</b><span data-v="отступы 8px 18px 0, высота 44px, радиус 16px, фон var(--c1)"></span></div>
+    <div class="spec"><b>Отмена · пачка · 05</b><span data-v="позиция absolute, фон var(--c1), радиус 22px, поля 11px 13px, выравнивание center, зазор 11px, рамка inset 0 0 0 1px rgba(var(--ink),.12),0 10px 28px rgba(var(--shadow),.22)"></span></div>
+    <div class="spec"><b>Отмена · пачка · 06</b><span data-v="флекс none, позиция relative, ширина 30px, высота 30px"></span></div>
+    <div class="spec"><b>Отмена · пачка · 07</b><span data-v="«4» — моноцифры: позиция absolute, вписан 0, выравнивание center, распределение center, шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Отмена · пачка · 08</b><span data-v="«Удалено 3 продукта» — флекс 1, шрифт 600 12px/1.35 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Отмена · пачка · 09</b><span data-v="«Отменить» — флекс none, высота от 34px, выравнивание center, поля 0 13px, радиус 999px, фон rgba(var(--ink),.07), шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Отмена · пачка · 10</b><span data-v="позиция absolute, высота 64px, фон var(--c1), разделитель сверху 1px solid rgba(var(--ink),.07), выравнивание center, распределение space-around, поля 0 18px"></span></div>
+    <div class="spec"><b>Отмена · пачка · 11</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Отмена · пачка · 12</b><span data-v="«Питание» — шрифт 600 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Отмена · продукт · 01</b><span data-v="высота 300px, фон var(--bg), распределение flex-start"></span></div>
+    <div class="spec"><b>Отмена · продукт · 02</b><span data-v="«Питание» — поля 16px 18px 0, шрифт 700 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Отмена · продукт · 03</b><span data-v="отступы 12px 18px 0, высота 44px, радиус 16px, фон var(--c1)"></span></div>
+    <div class="spec"><b>Отмена · продукт · 04</b><span data-v="отступы 8px 18px 0, высота 44px, радиус 16px, фон var(--c1)"></span></div>
+    <div class="spec"><b>Отмена · продукт · 05</b><span data-v="позиция absolute, фон var(--c1), радиус 22px, поля 11px 13px, выравнивание center, зазор 11px, рамка inset 0 0 0 1px rgba(var(--ink),.12),0 10px 28px rgba(var(--shadow),.22)"></span></div>
+    <div class="spec"><b>Отмена · продукт · 06</b><span data-v="флекс none, позиция relative, ширина 30px, высота 30px"></span></div>
+    <div class="spec"><b>Отмена · продукт · 07</b><span data-v="«2» — моноцифры: позиция absolute, вписан 0, выравнивание center, распределение center, шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Отмена · продукт · 08</b><span data-v="«Рис бурый удалён» — флекс 1, шрифт 600 12px/1.35 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Отмена · продукт · 09</b><span data-v="«Отменить» — флекс none, высота от 34px, выравнивание center, поля 0 13px, радиус 999px, фон rgba(var(--ink),.07), шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Отмена · продукт · 10</b><span data-v="позиция absolute, высота 64px, фон var(--c1), разделитель сверху 1px solid rgba(var(--ink),.07), выравнивание center, распределение space-around, поля 0 18px"></span></div>
+    <div class="spec"><b>Отмена · продукт · 11</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Отмена · продукт · 12</b><span data-v="«Питание» — шрифт 600 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="ctrH">Разбор графики · SVG в кадрах</div>
+    <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · рисунок 01</b><span data-v="поле рисунка 30×30 (viewBox 0 0 30 30)"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · рисунок 02</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs), прозрачность .22"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · рисунок 03</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs)"></span></div>
+    <div class="spec"><b>Отмена · пачка · рисунок 01</b><span data-v="поле рисунка 30×30 (viewBox 0 0 30 30)"></span></div>
+    <div class="spec"><b>Отмена · пачка · рисунок 02</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs), прозрачность .22"></span></div>
+    <div class="spec"><b>Отмена · пачка · рисунок 03</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs)"></span></div>
+    <div class="spec"><b>Отмена · продукт · рисунок 01</b><span data-v="поле рисунка 30×30 (viewBox 0 0 30 30)"></span></div>
+    <div class="spec"><b>Отмена · продукт · рисунок 02</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs), прозрачность .22"></span></div>
+    <div class="spec"><b>Отмена · продукт · рисунок 03</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs)"></span></div>
+    <div class="ctrH">Текст кадров дословно</div>
+    <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · текст</b><span data-v="Питание › Перекус удалён › Отменить › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Отмена · пачка · текст</b><span data-v="Питание › Удалено 3 продукта › Отменить › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Отмена · продукт · текст</b><span data-v="Питание › Рис бурый удалён › Отменить › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+</div>
 
     <div class="h">Кадры</div>
   <div class="pal" data-mir="m1" style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;">

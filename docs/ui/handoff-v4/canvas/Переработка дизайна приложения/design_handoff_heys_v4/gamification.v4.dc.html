@@ -17,7 +17,7 @@
   body{margin:0;background:var(--page);font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   *{box-sizing:border-box}
   a{color:var(--ac);text-decoration:none}
-  .ph{width:330px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)}
+  .ph{width:375px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)}
   .sc{min-height:600px;padding:6px 18px 16px}
   .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(var(--ink),.42)}
   .n{font-variant-numeric:tabular-nums}
@@ -144,7 +144,7 @@
   <div class="spec" style="border-bottom:none"><b>серия зарядки</b><span data-v="на обзоре не показывается — своя механика с наградами на 3, 7 и 14 дней живёт в «Активе»"></span><i>две серии рядом читаются как одна сбитая</i></div>
 
   <div class="ctrH">XP, множитель, лимиты</div>
-  <div class="spec"><b>вид · строки XP и таблица наград</b><span data-v="один список на все перечисления: фон #f7efe2, радиус 20, поля 2/16, строка 13 px по вертикали без разделителей; название действия 12,5 px/700 чернилами, номинал справа 11,5 px/600 вторичным, подпись «сегодня N» тем же кеглем тоном 50 %. Ярус («Лестница», «Награды») — 10 px/700 капителью. Карточка героя над списком: фон #efe3cf, радиус 26, поля 24/20/20, число уровня 64 px/600, значок ступени 34 px радиусом 12 на #eaefe0"></span><i>значения сняты с кадров «Уровни» и «Награды»: раздел описывал только правила начисления</i></div>
+  <div class="spec"><b>вид · строки XP и таблица наград</b><span data-v="один список на все перечисления: фон #f7efe2, радиус 20, поля 2/16, строка 13 px по вертикали. Разделители эта строка не задаёт — их описывают строки «вид строки достижения» и «вид строки уровня в списке» (линия 1 px тоном чернил 7 %), и там они обязательны; название действия 12,5 px/700 чернилами, номинал справа 11,5 px/600 вторичным, подпись «сегодня N» тем же кеглем тоном 50 %. Ярус («Лестница», «Награды») — 10 px/700 капителью. Карточка героя над списком: фон #efe3cf, радиус 26, поля 24/20/20, число уровня 64 px/600, значок ступени 34 px радиусом 12 на #eaefe0"></span><i>значения сняты с кадров «Уровни» и «Награды»: раздел описывал только правила начисления</i></div>
   <div class="spec"><b>множитель</b><span data-v="до ×9 к номиналу, произведение двух: серии и числа действий за день. Строка называет текущее значение, причину и что даст следующая ступень"></span><i>без объяснения таблица «Приём пищи +3» выглядит враньём, когда приходит 7</i></div>
     <div class="spec"><b>повторный тап и поворот</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «повторный тап · правило продукта» и «ориентация · правило продукта»: 350 мс защиты там, где повтор создаёт лишнюю сущность; интерфейс всегда портретный, ширина окна гибкая. Местных отличий нет: экран ничего не пишет, защищать нечего"></span></div>
     <div class="spec"><b>что пишется</b><span data-v="XP, уровень и достигнутые достижения пишутся в профиль как счётчики и список id; события начисления копятся отдельным журналом с датой и причиной. Экран журнал не показывает — он нужен куратору и разбору спорных начислений"></span><i>без журнала «почему у меня 40 XP» неотвечаемо, а с журналом на экране геймификация превращается в бухгалтерию</i></div>
@@ -196,6 +196,323 @@
     <div class="spec"><b>чего нет</b><span data-v="частиц, конфетти, летящих XP, вспышки, свечения, масштабирования карточки, звука и вибрации. Полоса прогресса не анимируется отдельно — она просто начинается с новой ступени, когда экран вернулся"></span><i>вибрация и звук на уровне — то же празднование, только громче; тихая минута тем и работает, что тихая</i></div>
     <div class="spec"><b>уменьшенное движение · тихая минута</b><span data-v="при системной настройке «уменьшить движение» гашение экрана и линия не проигрываются вовсе, число меняется мгновенно. Момент остаётся в том, что число другое — этого достаточно"></span><i>здесь настройка снимает именно движение, а не празднование: правило и следствие совпали</i></div>
     <div class="spec"><b>прерывание</b><span data-v="человек ушёл с экрана или в фон посреди минуты — она не доигрывается и второй раз не показывается: уровень уже новый, и напоминать об этом нечем"></span><i>догоняющая церемония через час читается как сбой, а не как поздравление</i></div>
+                <div class="ctrH">Разбор кадров · элемент за элементом</div>
+    <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 01</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 03</b><span data-v="«Прогресс» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 05</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 06</b><span data-v="«Первая миссия» — ключ"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 07</b><span data-v="«Запишите два приёма пищи» — шрифт 700 17px/1.35 Figtree, цвет var(--tx), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 08</b><span data-v="«Питание · +15 XP» — шрифт 500 12.5px/1.5 Figtree, цвет rgba(var(--ink),.5), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 09</b><span data-v="высота 8px, радиус 999px, фон rgba(var(--ink),.09), отступ сверху 18px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 10</b><span data-v="ширина 50%, высота 8px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 11</b><span data-v="«Один из двух» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 11px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 12</b><span data-v="«Ещё сегодня» — ярус"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 13</b><span data-v="карточка .grp"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 14</b><span data-v="распределение space-between, выравнивание baseline, зазор 12px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 15</b><span data-v="«Первые продукты» — шрифт 700 13px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 16</b><span data-v="«+20 XP» — моноцифры: флекс none, шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 17</b><span data-v="«Добавь 5 продуктов · Питание» — шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.5), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 18</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 19</b><span data-v="ширина 20%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 20</b><span data-v="«20 %» — моноцифры: шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.4), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 21</b><span data-v="карточка .grp: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 22</b><span data-v="ширина 34%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 23</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 24</b><span data-v="выравнивание center, зазор 13px, поля 13px 0, разделитель 1px solid rgba(var(--ink),.07)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 25</b><span data-v="ширина 34px, высота 34px, флекс none, радиус 12px, фон var(--gr-bg), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 26</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 27</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 28</b><span data-v="«Первый приём» — шрифт 700 12.5px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 29</b><span data-v="«+40 XP» — моноцифры: флекс none, шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 30</b><span data-v="«Добавить первый приём пищи» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.42), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 31</b><span data-v="выравнивание center, зазор 13px, поля 13px 0"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 32</b><span data-v="ширина 34px, высота 34px, флекс none, радиус 12px, фон var(--c2), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 33</b><span data-v="«Первый чек-ин» — шрифт 700 12.5px/1.3 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 34</b><span data-v="«Остальные четыре — по тапу на группу. Другие групп» — шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.42), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 35</b><span data-v="выравнивание center, распределение space-between, фон var(--c1), радиус 20px, поля 16px 18px, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 36</b><span data-v="«Уровень 2 · 120 XP» — шрифт 600 12.5px/1.4 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 37</b><span data-v="«до 3-го 180» — моноцифры: шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 38</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 39</b><span data-v="флекс 1, выключка center"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 40</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 41</b><span data-v="«Главная» — шрифт 700 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · 42</b><span data-v="«Питание» — шрифт 600 8.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 01</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 03</b><span data-v="«Прогресс» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 05</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 06</b><span data-v="«Серия» — ключ"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 07</b><span data-v="выравнивание baseline, зазор 9px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 08</b><span data-v="«5» — моноцифры: шрифт 600 64px/.9 Figtree, цвет var(--ac), трекинг -.045em"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 09</b><span data-v="«дней» — шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 10</b><span data-v="«Вчера пропуск — серия сохранена, второй её прервёт» — шрифт 600 12.5px/1.5 Figtree, цвет var(--ac), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 11</b><span data-v="«Держите калории в коридоре — серия продолжится» — шрифт 500 11.5px/1.5 Figtree, цвет rgba(var(--ink),.45), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 12</b><span data-v="зазор 5px, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 13</b><span data-v="флекс 1, высота 7px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 14</b><span data-v="флекс 1, высота 7px, радиус 999px, фон transparent, рамка inset 0 0 0 1.5px var(--acs)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 15</b><span data-v="флекс 1, высота 7px, радиус 999px, фон rgba(var(--ink),.1)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 16</b><span data-v="распределение space-between, отступ сверху 10px, шрифт 600 10.5px/1 Figtree, цвет rgba(var(--ink),.4)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 17</b><span data-v="«Миссии дня» — ярус"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 18</b><span data-v="карточка .grp"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 19</b><span data-v="распределение space-between, выравнивание baseline, зазор 12px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 20</b><span data-v="«Белковый старт» — шрифт 700 13px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 21</b><span data-v="«+15 XP» — моноцифры: флекс none, шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 22</b><span data-v="«Набери 50 % нормы белка · Качество» — шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.5), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 23</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 24</b><span data-v="ширина 64%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 25</b><span data-v="«64 %» — моноцифры: шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.4), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 26</b><span data-v="карточка .grp: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 27</b><span data-v="ширина 41%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 28</b><span data-v="ширина 100%, высота 6px, радиус 999px, фон var(--gr2)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 29</b><span data-v="«18 · Эксперт» — шрифт 700 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 30</b><span data-v="«до 19-го 3 202 XP» — моноцифры: флекс none, шрифт 700 11.5px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 31</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 14px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 32</b><span data-v="ширина 36%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 33</b><span data-v="«29 298 из 32 500 XP» — моноцифры: шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.4), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 34</b><span data-v="выравнивание flex-end, зазор 7px, высота 74px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 35</b><span data-v="флекс 1, направление column, выравнивание center, зазор 7px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 36</b><span data-v="ширина 100%, высота 13px, радиус 6px 6px 3px 3px, фон #d9c9ab"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 37</b><span data-v="ширина 100%, высота 14px, радиус 6px 6px 3px 3px, фон #d9c9ab"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 38</b><span data-v="ширина 100%, высота 11px, радиус 6px 6px 3px 3px, фон #d9c9ab"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 39</b><span data-v="ширина 100%, высота 5px, радиус 6px 6px 3px 3px, фон #d9c9ab"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 40</b><span data-v="ширина 100%, высота 3px, радиус 6px 6px 3px 3px, фон #d9c9ab"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 41</b><span data-v="ширина 100%, высота 12px, радиус 6px 6px 3px 3px, фон #d9c9ab"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 42</b><span data-v="ширина 100%, высота 74px, радиус 6px 6px 3px 3px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 43</b><span data-v="зазор 7px, отступ сверху 8px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 44</b><span data-v="«Вт» — флекс 1, выключка center, шрифт 600 9.5px/1 Figtree, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 45</b><span data-v="«За семь дней 340 XP · сегодня 194 — из них 25 за м» — моноцифры: шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.42), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 46</b><span data-v="карточка .grp: фон var(--gr-bg)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 47</b><span data-v="«+100 XP» — моноцифры: флекс none, шрифт 700 11.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 48</b><span data-v="«Клетчатка не ниже нормы семь дней» — шрифт 500 11.5px/1.45 Figtree, цвет rgba(var(--ink),.5), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 49</b><span data-v="зазор 5px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 50</b><span data-v="флекс 1, высота 7px, радиус 999px, фон var(--gr2)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 51</b><span data-v="флекс 1, высота 7px, радиус 999px, фон rgba(var(--ink),.12)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 52</b><span data-v="«Осталось два дня» — моноцифры: шрифт 600 11px/1 Figtree, цвет var(--gr), отступ сверху 11px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 53</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 54</b><span data-v="флекс 1, выключка center"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 55</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 56</b><span data-v="«Главная» — шрифт 700 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · 57</b><span data-v="«Питание» — шрифт 600 8.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Достижения · 01</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Достижения · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Достижения · 03</b><span data-v="«Достижения» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Достижения · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Достижения · 05</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Достижения · 06</b><span data-v="«Достигнуто» — ключ"></span></div>
+    <div class="spec"><b>Достижения · 07</b><span data-v="выравнивание baseline, зазор 9px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Достижения · 08</b><span data-v="«20» — моноцифры: шрифт 600 56px/.9 Figtree, цвет var(--ac), трекинг -.045em"></span></div>
+    <div class="spec"><b>Достижения · 09</b><span data-v="«из 36» — шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Достижения · 10</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.09), отступ сверху 18px"></span></div>
+    <div class="spec"><b>Достижения · 11</b><span data-v="ширина 56%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Достижения · 12</b><span data-v="«Ближе всего» — ярус"></span></div>
+    <div class="spec"><b>Достижения · 13</b><span data-v="карточка .grp"></span></div>
+    <div class="spec"><b>Достижения · 14</b><span data-v="распределение space-between, выравнивание baseline, зазор 12px"></span></div>
+    <div class="spec"><b>Достижения · 15</b><span data-v="«Клетчатка-чемпион» — шрифт 700 13px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Достижения · 16</b><span data-v="«+100 XP» — моноцифры: флекс none, шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Достижения · 17</b><span data-v="«Клетчатка не ниже нормы семь дней» — шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.5), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Достижения · 18</b><span data-v="зазор 5px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Достижения · 19</b><span data-v="флекс 1, высота 7px, радиус 999px, фон var(--gr2)"></span></div>
+    <div class="spec"><b>Достижения · 20</b><span data-v="флекс 1, высота 7px, радиус 999px, фон rgba(var(--ink),.1)"></span></div>
+    <div class="spec"><b>Достижения · 21</b><span data-v="«5 из 7 дней» — моноцифры: шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.4), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Достижения · 22</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Достижения · 23</b><span data-v="выравнивание center, зазор 13px, поля 13px 0, разделитель 1px solid rgba(var(--ink),.07)"></span></div>
+    <div class="spec"><b>Достижения · 24</b><span data-v="ширина 34px, высота 34px, флекс none, радиус 12px, фон var(--gr-bg), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Достижения · 25</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Достижения · 26</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Достижения · 27</b><span data-v="«Первый день» — шрифт 700 12.5px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Достижения · 28</b><span data-v="«+150 XP» — моноцифры: флекс none, шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Достижения · 29</b><span data-v="«Серия не меньше дня» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.42), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Достижения · 30</b><span data-v="выравнивание center, зазор 13px, поля 13px 0"></span></div>
+    <div class="spec"><b>Достижения · 31</b><span data-v="ширина 34px, высота 34px, флекс none, радиус 12px, фон var(--c2), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Достижения · 32</b><span data-v="«Семь дней подряд» — шрифт 700 12.5px/1.3 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Достижения · 33</b><span data-v="«В группе показываются достигнутые и два ближайших» — шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.42), отступы 12px 0 0"></span></div>
+    <div class="spec"><b>Достижения · 34</b><span data-v="выравнивание center, распределение space-between, фон var(--c1), радиус 20px, поля 16px 18px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Достижения · 35</b><span data-v="«Ещё пять групп» — шрифт 700 12.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Достижения · 36</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Достижения · 37</b><span data-v="флекс 1, выключка center"></span></div>
+    <div class="spec"><b>Достижения · 38</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
+    <div class="spec"><b>Достижения · 39</b><span data-v="«Главная» — шрифт 700 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Достижения · 40</b><span data-v="«Питание» — шрифт 600 8.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 01</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 02</b><span data-v="выравнивание center, зазор 12px, прозрачность .2"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 03</b><span data-v="«Уровни» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 05</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px, позиция relative, обрез hidden"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 06</b><span data-v="«Уровень» — ключ"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 07</b><span data-v="выравнивание baseline, зазор 9px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 08</b><span data-v="«17» — моноцифры: шрифт 600 64px/.9 Figtree, цвет var(--ac), трекинг -.045em"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 09</b><span data-v="«Наставник» — шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 10</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.09), отступ сверху 18px"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 11</b><span data-v="ширина 36%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 12</b><span data-v="прозрачность .2"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 13</b><span data-v="«Ступени» — ярус"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 14</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 15</b><span data-v="распределение space-between, выравнивание baseline, поля 13px 0, разделитель 1px solid rgba(var(--ink),.07)"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 16</b><span data-v="«17 · Наставник» — шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 17</b><span data-v="«15 400 XP» — моноцифры: шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 18</b><span data-v="«16 · Практик» — шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · 19</b><span data-v="распределение space-between, выравнивание baseline, поля 13px 0"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 01</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 02</b><span data-v="выравнивание center, зазор 12px, прозрачность .2"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 03</b><span data-v="«Уровни» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 05</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px, позиция relative, обрез hidden"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 06</b><span data-v="«Уровень» — ключ"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 07</b><span data-v="выравнивание baseline, зазор 9px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 08</b><span data-v="«18» — моноцифры: шрифт 600 64px/.9 Figtree, цвет var(--ac), трекинг -.045em"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 09</b><span data-v="«Эксперт» — шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 10</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.09), отступ сверху 18px"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 11</b><span data-v="ширина 36%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 12</b><span data-v="прозрачность .2"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 13</b><span data-v="«Ступени» — ярус"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 14</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 15</b><span data-v="распределение space-between, выравнивание baseline, поля 13px 0, разделитель 1px solid rgba(var(--ink),.07)"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 16</b><span data-v="«17 · Наставник» — шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 17</b><span data-v="«15 400 XP» — моноцифры: шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 18</b><span data-v="«16 · Практик» — шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · 19</b><span data-v="распределение space-between, выравнивание baseline, поля 13px 0"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 01</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 02</b><span data-v="выравнивание center, зазор 12px, прозрачность .2"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 03</b><span data-v="«Уровни» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 05</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px, позиция relative, обрез hidden"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 06</b><span data-v="«Уровень» — ключ"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 07</b><span data-v="выравнивание baseline, зазор 9px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 08</b><span data-v="«18» — моноцифры: шрифт 600 64px/.9 Figtree, цвет var(--ac), трекинг -.045em"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 09</b><span data-v="«Эксперт» — шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 10</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.09), отступ сверху 18px"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 11</b><span data-v="ширина 4%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 12</b><span data-v="прозрачность .2"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 13</b><span data-v="«Ступени» — ярус"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 14</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 15</b><span data-v="распределение space-between, выравнивание baseline, поля 13px 0, разделитель 1px solid rgba(var(--ink),.07)"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 16</b><span data-v="«17 · Наставник» — шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 17</b><span data-v="«15 400 XP» — моноцифры: шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 18</b><span data-v="«16 · Практик» — шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · 19</b><span data-v="распределение space-between, выравнивание baseline, поля 13px 0"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 01</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 02</b><span data-v="выравнивание center, зазор 12px, прозрачность 1"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 03</b><span data-v="«Уровни» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 05</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px, позиция relative, обрез hidden"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 06</b><span data-v="«Уровень» — ключ"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 07</b><span data-v="выравнивание baseline, зазор 9px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 08</b><span data-v="«18» — моноцифры: шрифт 600 64px/.9 Figtree, цвет var(--ac), трекинг -.045em"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 09</b><span data-v="«Эксперт» — шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 10</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.09), отступ сверху 18px"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 11</b><span data-v="ширина 36%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 12</b><span data-v="прозрачность 1"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 13</b><span data-v="«Ступени» — ярус"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 14</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 15</b><span data-v="распределение space-between, выравнивание baseline, поля 13px 0, разделитель 1px solid rgba(var(--ink),.07)"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 16</b><span data-v="«17 · Наставник» — шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 17</b><span data-v="«15 400 XP» — моноцифры: шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 18</b><span data-v="«16 · Практик» — шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · 19</b><span data-v="распределение space-between, выравнивание baseline, поля 13px 0"></span></div>
+    <div class="spec"><b>Уровни · 01</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Уровни · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Уровни · 03</b><span data-v="«Уровни» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Уровни · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Уровни · 05</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Уровни · 06</b><span data-v="«Уровень» — ключ"></span></div>
+    <div class="spec"><b>Уровни · 07</b><span data-v="выравнивание baseline, зазор 9px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Уровни · 08</b><span data-v="«18» — моноцифры: шрифт 600 64px/.9 Figtree, цвет var(--ac), трекинг -.045em"></span></div>
+    <div class="spec"><b>Уровни · 09</b><span data-v="«Эксперт» — шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Уровни · 10</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.09), отступ сверху 18px"></span></div>
+    <div class="spec"><b>Уровни · 11</b><span data-v="ширина 36%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Уровни · 12</b><span data-v="моноцифры: распределение space-between, отступ сверху 10px, шрифт 600 10.5px/1 Figtree, цвет rgba(var(--ink),.4)"></span></div>
+    <div class="spec"><b>Уровни · 13</b><span data-v="«Лестница» — ярус"></span></div>
+    <div class="spec"><b>Уровни · 14</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Уровни · 15</b><span data-v="выравнивание center, зазор 13px, поля 13px 0, разделитель 1px solid rgba(var(--ink),.07)"></span></div>
+    <div class="spec"><b>Уровни · 16</b><span data-v="«15» — моноцифры: ширина 34px, высота 34px, флекс none, радиус 12px, фон var(--gr-bg), выравнивание center, распределение center, шрифт 700 13px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Уровни · 17</b><span data-v="«Эксперт» — флекс 1, шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Уровни · 18</b><span data-v="«15 500» — моноцифры: флекс none, шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Уровни · 19</b><span data-v="«18» — моноцифры: ширина 34px, высота 34px, флекс none, радиус 12px, фон var(--acs), выравнивание center, распределение center, шрифт 700 13px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Уровни · 20</b><span data-v="«19» — моноцифры: ширина 34px, высота 34px, флекс none, радиус 12px, фон var(--c2), выравнивание center, распределение center, шрифт 700 13px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Уровни · 21</b><span data-v="«Эксперт» — флекс 1, шрифт 700 12.5px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Уровни · 22</b><span data-v="выравнивание center, зазор 13px, поля 13px 0"></span></div>
+    <div class="spec"><b>Уровни · 23</b><span data-v="карточка .grp: фон var(--gr-bg)"></span></div>
+    <div class="spec"><b>Уровни · 24</b><span data-v="распределение space-between, выравнивание baseline, зазор 12px"></span></div>
+    <div class="spec"><b>Уровни · 25</b><span data-v="«Сейчас ×3,6» — шрифт 700 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Уровни · 26</b><span data-v="«серия ×2,5 через два дня» — моноцифры: флекс none, шрифт 700 11.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Уровни · 27</b><span data-v="«Серия 5 дней даёт ×2, двенадцать действий за день» — шрифт 500 11.5px/1.45 Figtree, цвет rgba(var(--ink),.5), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Уровни · 28</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Уровни · 29</b><span data-v="«День выполнен» — цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Уровни · 30</b><span data-v="«+50 · ещё нет» — выравнивание center, зазор 8px, шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Уровни · 31</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Уровни · 32</b><span data-v="«Работают все 17 действий. Показаны восемь строк по» — шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.42), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Уровни · 33</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Уровни · 34</b><span data-v="флекс 1, выключка center"></span></div>
+    <div class="spec"><b>Уровни · 35</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
+    <div class="spec"><b>Уровни · 36</b><span data-v="«Главная» — шрифт 700 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Уровни · 37</b><span data-v="«Питание» — шрифт 600 8.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="ctrH">Разбор графики · SVG в кадрах</div>
+    <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
+    <div class="spec"><b>Геймификация · первый день · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Геймификация · первый день · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · рисунок 04</b><span data-v="кривая, точки M5 13l4 4L19 7"></span></div>
+    <div class="spec"><b>Геймификация · первый день · рисунок 05</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Геймификация · первый день · рисунок 06</b><span data-v="прямоугольник 16×11, радиус 2.5"></span></div>
+    <div class="spec"><b>Геймификация · первый день · рисунок 07</b><span data-v="кривая, точки M8 10V7a4 4 0 018 0v3"></span></div>
+    <div class="spec"><b>Геймификация · первый день · рисунок 08</b><span data-v="кривая, точки M3 10l9-7 9 7v10H3z"></span></div>
+    <div class="spec"><b>Геймификация · первый день · рисунок 09</b><span data-v="кривая, точки M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"></span></div>
+    <div class="spec"><b>Геймификация · первый день · рисунок 10</b><span data-v="кривая, точки M3 16l5-7 4 3 4-7 5 5"></span></div>
+    <div class="spec"><b>Геймификация · первый день · рисунок 11</b><span data-v="кривая, точки M4 20V10M10 20V4M16 20v-7"></span></div>
+    <div class="spec"><b>Геймификация · первый день · рисунок 12</b><span data-v="кривая, точки M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"></span></div>
+    <div class="spec"><b>Геймификация · обзор · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Геймификация · обзор · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Геймификация · обзор · рисунок 03</b><span data-v="кривая, точки M3 10l9-7 9 7v10H3z"></span></div>
+    <div class="spec"><b>Геймификация · обзор · рисунок 04</b><span data-v="кривая, точки M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"></span></div>
+    <div class="spec"><b>Геймификация · обзор · рисунок 05</b><span data-v="кривая, точки M3 16l5-7 4 3 4-7 5 5"></span></div>
+    <div class="spec"><b>Геймификация · обзор · рисунок 06</b><span data-v="кривая, точки M4 20V10M10 20V4M16 20v-7"></span></div>
+    <div class="spec"><b>Геймификация · обзор · рисунок 07</b><span data-v="кривая, точки M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"></span></div>
+    <div class="spec"><b>Достижения · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Достижения · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Достижения · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Достижения · рисунок 04</b><span data-v="кривая, точки M5 13l4 4L19 7"></span></div>
+    <div class="spec"><b>Достижения · рисунок 05</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Достижения · рисунок 06</b><span data-v="прямоугольник 16×11, радиус 2.5"></span></div>
+    <div class="spec"><b>Достижения · рисунок 07</b><span data-v="кривая, точки M8 10V7a4 4 0 018 0v3"></span></div>
+    <div class="spec"><b>Достижения · рисунок 08</b><span data-v="кривая, точки M9 6l6 6-6 6"></span></div>
+    <div class="spec"><b>Достижения · рисунок 09</b><span data-v="кривая, точки M3 10l9-7 9 7v10H3z"></span></div>
+    <div class="spec"><b>Достижения · рисунок 10</b><span data-v="кривая, точки M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"></span></div>
+    <div class="spec"><b>Достижения · рисунок 11</b><span data-v="кривая, точки M3 16l5-7 4 3 4-7 5 5"></span></div>
+    <div class="spec"><b>Достижения · рисунок 12</b><span data-v="кривая, точки M4 20V10M10 20V4M16 20v-7"></span></div>
+    <div class="spec"><b>Достижения · рисунок 13</b><span data-v="кривая, точки M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · рисунок 03</b><span data-v="поле рисунка ?×? (viewBox 0 0 100 100)"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · рисунок 04</b><span data-v="прямоугольник 98.6×98.6, радиус 9, заливка none"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Уровни · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Уровни · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Уровни · рисунок 03</b><span data-v="кривая, точки M3 10l9-7 9 7v10H3z"></span></div>
+    <div class="spec"><b>Уровни · рисунок 04</b><span data-v="кривая, точки M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"></span></div>
+    <div class="spec"><b>Уровни · рисунок 05</b><span data-v="кривая, точки M3 16l5-7 4 3 4-7 5 5"></span></div>
+    <div class="spec"><b>Уровни · рисунок 06</b><span data-v="кривая, точки M4 20V10M10 20V4M16 20v-7"></span></div>
+    <div class="spec"><b>Уровни · рисунок 07</b><span data-v="кривая, точки M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"></span></div>
+    <div class="ctrH">Текст кадров дословно</div>
+    <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
+    <div class="spec"><b>Геймификация · первый день · текст</b><span data-v="Прогресс › Первая миссия › Запишите два приёма пищи › Питание · +15 XP › Один из двух › Ещё сегодня › Первые продукты › +20 XP › Добавь 5 продуктов · Питание › 20 % › Половина воды › +15 XP › Набери 50 % нормы воды · Вода › 34 % › Первые шаги · 3 из 9 › Первый приём › +40 XP › Добавить первый приём пищи › Первый продукт › +60 XP › Добавить продукт в приём › Водный старт › +100 XP › Первый раз добавить воду › Первый чек-ин › Завершить утренний чек-ин › Первые шаги › Указать шаги хотя бы раз › Остальные четыре — по тапу на группу. Другие группы появятся, когда в них будет что показать. › Уровень 2 · 120 XP › до 3-го 180 › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Геймификация · обзор · текст</b><span data-v="Прогресс › Серия › дней › Вчера пропуск — серия сохранена, второй её прервёт › Держите калории в коридоре — серия продолжится › 5 заработанных · вчера прощено › до награды 2 › Миссии дня › Белковый старт › +15 XP › Набери 50 % нормы белка · Качество › 64 % › Почти в норме › +30 XP › Набери 90 % нормы калорий · Питание › 41 % › Водный марафон › +25 XP › Запиши воду 5 раз · Вода › 100 % › Уровень › 18 · Эксперт › до 19-го 3 202 XP › 29 298 из 32 500 XP › XP за неделю › Вт › Ср › Чт › Пт › Сб › Вс › Пн › За семь дней 340 XP · сегодня 194 — из них 25 за миссию › Ближе всего › Клетчатка-чемпион › +100 XP › Клетчатка не ниже нормы семь дней › Осталось два дня › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Достижения · текст 1/2</b><span data-v="Достижения › Достигнуто › 20 › из 36 › Ближе всего › Клетчатка-чемпион › +100 XP › Клетчатка не ниже нормы семь дней › 5 из 7 дней › Серия · 4 из 5 › Первый день › +150 XP › Серия не меньше дня › Два дня подряд › +20 XP › Серия не меньше двух дней › Три дня подряд › +40 XP › Серия не меньше трёх дней › Пять дней подряд › +60 XP › Серия не меньше пяти дней › Семь дней подряд › Серия не меньше семи дней › Качество дня · 1 из 4 › Баланс БЖУ › +100 XP › Все макросы в коридоре 90–110 % › Клетчатка-чемпион › Клетчатка не ниже нормы семь дней · 5 из 7 › Идеальная неделя › Семь идеальных дней подряд › Метаболизм · 1 из 5 › Срыв предотвращён › +150 XP › Предупреждение о риске — и день удержан › Стабильный метаболизм › Оценка не ниже 70 семь дней › Мастер контроля › Низкий риск срыва 14 дней"></span></div>
+    <div class="spec"><b>Достижения · текст 2/2</b><span data-v="В группе показываются достигнутые и два ближайших недостигнутых; дальние недостигнутые — по тапу на группу. Порядок закрытых — по остатку до выполнения, а не по номеру. › Ещё пять групп › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Новый уровень · 0 мс · текст</b><span data-v="Уровни › Уровень › 17 › Наставник › Ступени › 17 · Наставник › 15 400 XP › 16 · Практик › 13 200 XP › 15 · Эксперт › 12 200 XP"></span></div>
+    <div class="spec"><b>Новый уровень · 420 мс · текст</b><span data-v="Уровни › Уровень › 18 › Эксперт › Ступени › 17 · Наставник › 15 400 XP › 16 · Практик › 13 200 XP › 15 · Эксперт › 12 200 XP"></span></div>
+    <div class="spec"><b>Новый уровень · 1200 мс · текст</b><span data-v="Уровни › Уровень › 18 › Эксперт › Ступени › 17 · Наставник › 15 400 XP › 16 · Практик › 13 200 XP › 15 · Эксперт › 12 200 XP"></span></div>
+    <div class="spec"><b>Новый уровень · 1600 мс · текст</b><span data-v="Уровни › Уровень › 18 › Эксперт › Ступени › 17 · Наставник › 15 400 XP › 16 · Практик › 13 200 XP › 15 · Эксперт › 12 200 XP"></span></div>
+    <div class="spec"><b>Уровни · текст 1/2</b><span data-v="Уровни › Уровень › 18 › Эксперт › 29 298 XP › до 19-го 3 202 › Лестница › 15 › Эксперт › 15 500 › 16 › Эксперт › 19 000 › 17 › Эксперт › 23 000 › 18 › Эксперт · сейчас › 27 500 › 19 › Эксперт › 32 500 › 20 › Мастер › 38 000 › 25 › Мастер · последний › 78 000 › Множитель › Сейчас ×3,6 › серия ×2,5 через два дня › Серия 5 дней даёт ×2, двенадцать действий за день — ×1,8. Множители перемножаются, поэтому приём пищи сегодня стоит 11 XP, а не 3. › Откуда XP › День выполнен › +50 · ещё нет › Идеальный день › +25 · ещё нет › Тренировка › +15 · 0 из 2 за сегодня › Утренний чек-ин › +10 · сделано › Зарядка › +8 · сделано › Сон и вес › +5 каждое · записаны › Приём пищи › +3 · 3 из 4 за сегодня › Вода › +2 · 5 из 5, лимит исчерпан"></span></div>
+    <div class="spec"><b>Уровни · текст 2/2</b><span data-v="Работают все 17 действий. Показаны восемь строк по убыванию номинала, «Быт», «Добавки», «Продукт», «Шаги» и «Совет» — раскрытием. «День выполнен» и «Идеальный день» стоят первыми: это крупнейшие награды и главный смысл фразы «заполнить день». › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
 </div>
 
 <div style="display:flex;gap:30px;align-items:flex-start;">

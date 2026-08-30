@@ -107,7 +107,31 @@
     <div class="spec"><b>safe-area и кнопка назад</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «safe-area · правило продукта» и «аппаратная кнопка назад · правило продукта». Местное отличие: на системном кадре врезки задаёт платформа, наших правил там нет; в загрузчике знак центруется между врезками, аппаратная кнопка выходит из приложения"></span></div>
     <div class="spec" style="border-bottom:none"><b>появление Главной</b><span data-v="один кадр: круг гаснет, экран приезжает целиком"></span><i>скелетонов в продукте нет — причина записана в spinners.v4.dc.html</i></div>
 
-  </div>
+          <div class="ctrH">Разбор кадров · элемент за элементом</div>
+    <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
+    <div class="spec"><b>Стык · загрузчик · 01</b><span data-v="выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Стык · загрузчик · 02</b><span data-v="ширина 64px, высота 64px"></span></div>
+    <div class="spec"><b>Стык · Главная · 01</b><span data-v="поля 18px 18px 0"></span></div>
+    <div class="spec"><b>Стык · Главная · 02</b><span data-v="выравнивание center, зазор 9px"></span></div>
+    <div class="spec"><b>Стык · Главная · 03</b><span data-v="«18» — моноцифры: шрифт 800 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Стык · Главная · 04</b><span data-v="флекс 1, высота 3px, радиус 999px, фон rgba(var(--ink),.09)"></span></div>
+    <div class="spec"><b>Стык · Главная · 05</b><span data-v="ширина 34%, высота 3px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Стык · Главная · 06</b><span data-v="«Эксперт» — шрифт 600 10px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Стык · Главная · 07</b><span data-v="выравнивание center, зазор 8px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Стык · Главная · 08</b><span data-v="ширина 34px, высота 34px, флекс none, радиус 999px, фон var(--c1)"></span></div>
+    <div class="spec"><b>Стык · Главная · 09</b><span data-v="«вс, 9 августа» — флекс 1, высота 36px, радиус 999px, фон var(--c1), выравнивание center, распределение center, шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Стык · Главная · 10</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Стык · Главная · 11</b><span data-v="колонки repeat(4,1fr), зазор 8px"></span></div>
+    <div class="spec"><b>Стык · Главная · 12</b><span data-v="радиус 16px, фон var(--c1)"></span></div>
+    <div class="ctrH">Разбор графики · SVG в кадрах</div>
+    <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
+    <div class="spec"><b>Стык · загрузчик · рисунок 01</b><span data-v="поле рисунка 58×58 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Стык · загрузчик · рисунок 02</b><span data-v="точка r 9.2 в (12,12), обводка rgba(var(--ink),.13)"></span></div>
+    <div class="spec"><b>Стык · загрузчик · рисунок 03</b><span data-v="кривая, точки M12 2.8a9.2 9.2 0 019.2 9.2, линия var(--acs), толщина 2.6"></span></div>
+    <div class="ctrH">Текст кадров дословно</div>
+    <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
+    <div class="spec"><b>Стык · Главная · текст</b><span data-v="18 › Эксперт › вс, 9 августа"></span></div>
+</div>
 
   <div class="secH" style="margin-top:0;">Две последовательности запуска: iPhone и Android</div>
   <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">

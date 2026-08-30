@@ -24,7 +24,7 @@
   .spin{animation:spin 1.1s linear infinite}
   .wrap{animation:fadein .15s ease-out both}
   .rm{animation:breathe 1.6s ease-in-out infinite}
-  .ph{width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);display:flex;flex-direction:column}
+  .ph{width:375px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);display:flex;flex-direction:column}
   .n{font-variant-numeric:tabular-nums}
   .lab{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
   .lab b{font:700 12.5px/1 Figtree,sans-serif;color:var(--tx)}
@@ -137,7 +137,124 @@
     <div class="spec"><b>когда нет</b><span data-v="загрузка вкладки заканчивается содержимым — знак просто исчезает"></span><i>подтверждать нечего, галочка стала бы лишним экраном между человеком и данными</i></div>
     <div class="spec"><b>холодный старт</b><span data-v="галочкой не заканчивается — в отличие от обновления PWA"></span><i>там галочка оплачена событием: сборка сменилась без спроса и могла не встать, «Готово!» — расписка, что обошлось. У запуска события нет: открыть приложение — норма, подтверждение успеха — само содержимое. Плюс 300–500 мс налога на самом частом кадре продукта</i></div>
     <div class="spec" style="border-bottom:none"><b>локальные записи</b><span data-v="приём еды, вес, зарядка, тренировка подтверждают себя сами — знак не успевает появиться по порогу 300 мс"></span><i>«Чек-ин записан» — исключение смысловое: это конец утреннего ритуала, а не отчёт о сохранении</i></div>
-  </div>
+              <div class="ctrH">Разбор кадров · элемент за элементом</div>
+    <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
+    <div class="spec"><b>Спиннер · с подписью · 01</b><span data-v="выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · с подписью · 02</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--c2), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · с подписью · 03</b><span data-v="«Загружаем» — шрифт 700 15px/1.35 Figtree, цвет var(--tx), отступ сверху 18px"></span></div>
+    <div class="spec"><b>Спиннер · с подписью · 04</b><span data-v="«Пара секунд.» — шрифт 500 12px/1.5 Figtree, цвет rgba(0,0,0,.5), отступ сверху 7px"></span></div>
+    <div class="spec"><b>Спиннер · без подписи · 01</b><span data-v="выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · без подписи · 02</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--c2), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · без подписи · 03</b><span data-v="«Загружаем» — позиция absolute, шрифт 0/0 a"></span></div>
+    <div class="spec"><b>Спиннер · успех · 01</b><span data-v="выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · успех · 02</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--gr-bg), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · успех · 03</b><span data-v="«Сохранено» — шрифт 700 15px/1.35 Figtree, цвет var(--tx), отступ сверху 18px"></span></div>
+    <div class="spec"><b>Спиннер · успех · 04</b><span data-v="«Профиль обновлён.» — шрифт 500 12px/1.5 Figtree, цвет rgba(0,0,0,.5), отступ сверху 7px"></span></div>
+    <div class="spec"><b>Спиннер · ошибка · 01</b><span data-v="выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · ошибка · 02</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--tint), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · ошибка · 03</b><span data-v="«Не удалось» — шрифт 700 15px/1.35 Figtree, цвет var(--tx), отступ сверху 18px"></span></div>
+    <div class="spec"><b>Спиннер · ошибка · 04</b><span data-v="«Проверьте связь.» — шрифт 500 12px/1.5 Figtree, цвет rgba(0,0,0,.5), отступ сверху 7px"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · 01</b><span data-v="распределение center, поля 0 18px"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · 02</b><span data-v="«Три кадра одного перехода, 200 мс» — шрифт 600 10.5px/1 Figtree, трекинг .04em, цвет rgba(0,0,0,.45), выключка center"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · 03</b><span data-v="выравнивание center, распределение center, зазор 14px, отступ сверху 22px"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · 04</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--c2), выравнивание center, распределение center, флекс none"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · 05</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон #eef0e6, выравнивание center, распределение center, флекс none"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · 06</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--gr-bg), выравнивание center, распределение center, флекс none"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · 07</b><span data-v="распределение center, зазор 14px, отступ сверху 10px, шрифт 600 10px/1 Figtree, цвет rgba(0,0,0,.35)"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · 08</b><span data-v="«крутится» — ширина 56px, выключка center"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · 09</b><span data-v="«Знак не исчезает и не подменяется другим: дуга дор» — фон var(--c1), радиус 16px, поля 12px 14px, отступ сверху 22px, шрифт 500 11.5px/1.55 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 01</b><span data-v="поля 0"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 02</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 03</b><span data-v="ширина 44px"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 04</b><span data-v="«Отчёты» — имя экрана"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 05</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 06</b><span data-v="фон var(--c2), радиус 22px, поля 18px"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 07</b><span data-v="«Баланс за период» — ключ"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 08</b><span data-v="выравнивание baseline, зазор 8px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 09</b><span data-v="«−1 435» — моноцифры: шрифт 600 40px/.9 Figtree, цвет var(--ac), трекинг -.035em"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 10</b><span data-v="«ккал» — шрифт 600 11px/1 Figtree, цвет rgba(0,0,0,.38)"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 11</b><span data-v="фон var(--c1), радиус 20px, поля 18px, отступ сверху 12px, высота от 132px"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 12</b><span data-v="«−0,8» — моноцифры: шрифт 600 30px/.9 Figtree, цвет var(--tx), трекинг -.03em"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 13</b><span data-v="«Данные считаются на устройстве и показываются сраз» — шрифт 500 11px/1.5 Figtree, цвет rgba(0,0,0,.42), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 14</b><span data-v="подвал"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 15</b><span data-v="главная кнопка: зазор 9px"></span></div>
+    <div class="spec"><b>Спиннер · без анимации · 01</b><span data-v="выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · без анимации · 02</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--c2), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · без анимации · 03</b><span data-v="«Загружаем» — шрифт 700 15px/1.35 Figtree, цвет var(--tx), отступ сверху 18px"></span></div>
+    <div class="spec"><b>Спиннер · без анимации · 04</b><span data-v="«Вращение выключено, дуга дышит прозрачностью.» — шрифт 500 12px/1.5 Figtree, цвет rgba(0,0,0,.5), отступ сверху 7px, выключка center"></span></div>
+    <div class="spec"><b>Спиннер · холодный старт · 01</b><span data-v="поля 0"></span></div>
+    <div class="spec"><b>Спиннер · холодный старт · 02</b><span data-v="флекс 1, направление column, выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · холодный старт · 03</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--c2), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · не удалось запустить · 01</b><span data-v="выравнивание center, распределение center, поля 0 26px"></span></div>
+    <div class="spec"><b>Спиннер · не удалось запустить · 02</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--tint), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · не удалось запустить · 03</b><span data-v="«Не удалось загрузить приложение» — шрифт 700 17px/1.3 Figtree, цвет var(--tx), отступ сверху 18px, выключка center"></span></div>
+    <div class="spec"><b>Спиннер · не удалось запустить · 04</b><span data-v="«Похоже, нет связи. Ваши данные на месте — они хран» — шрифт 500 12.5px/1.55 Figtree, цвет rgba(0,0,0,.55), отступ сверху 9px, выключка center"></span></div>
+    <div class="spec"><b>Спиннер · не удалось запустить · 05</b><span data-v="ширина 100%, отступ сверху 24px"></span></div>
+    <div class="spec"><b>Спиннер · не удалось запустить · 06</b><span data-v="«Повторить» — главная кнопка"></span></div>
+    <div class="spec"><b>Спиннер · долгий старт · 01</b><span data-v="выравнивание center, распределение center, поля 0 26px"></span></div>
+    <div class="spec"><b>Спиннер · долгий старт · 02</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--c2), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · долгий старт · 03</b><span data-v="«Медленная сеть, продолжаем загружать» — шрифт 600 12.5px/1.55 Figtree, цвет rgba(0,0,0,.55), отступ сверху 18px, выключка center"></span></div>
+    <div class="spec"><b>Спиннер · долгий старт · 04</b><span data-v="«Повторить» — высота от 44px, выравнивание center, распределение center, шрифт 700 12px/1 Figtree, цвет var(--ac), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Спиннер · вторая неудача · 01</b><span data-v="выравнивание center, распределение center, поля 0 26px"></span></div>
+    <div class="spec"><b>Спиннер · вторая неудача · 02</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--tint), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Спиннер · вторая неудача · 03</b><span data-v="«Всё ещё не получается» — шрифт 700 17px/1.3 Figtree, цвет var(--tx), отступ сверху 18px, выключка center"></span></div>
+    <div class="spec"><b>Спиннер · вторая неудача · 04</b><span data-v="«Данные на месте. Если связь есть, а приложение не» — шрифт 500 12.5px/1.55 Figtree, цвет rgba(0,0,0,.55), отступ сверху 9px, выключка center"></span></div>
+    <div class="spec"><b>Спиннер · вторая неудача · 05</b><span data-v="ширина 100%, отступ сверху 24px, направление column, зазор 8px"></span></div>
+    <div class="spec"><b>Спиннер · вторая неудача · 06</b><span data-v="«Написать куратору» — главная кнопка"></span></div>
+    <div class="spec"><b>Спиннер · вторая неудача · 07</b><span data-v="«Повторить ещё раз» — высота от 44px, выравнивание center, распределение center, шрифт 700 12px/1 Figtree, цвет rgba(0,0,0,.5)"></span></div>
+    <div class="ctrH">Разбор графики · SVG в кадрах</div>
+    <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
+    <div class="spec"><b>Спиннер · с подписью · рисунок 01</b><span data-v="поле рисунка 26×26 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Спиннер · с подписью · рисунок 02</b><span data-v="кривая, точки M21 12a9 9 0 11-9-9, прозрачность .22"></span></div>
+    <div class="spec"><b>Спиннер · с подписью · рисунок 03</b><span data-v="кривая, точки M12 3a9 9 0 019 9"></span></div>
+    <div class="spec"><b>Спиннер · без подписи · рисунок 01</b><span data-v="поле рисунка 26×26 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Спиннер · без подписи · рисунок 02</b><span data-v="кривая, точки M21 12a9 9 0 11-9-9, прозрачность .22"></span></div>
+    <div class="spec"><b>Спиннер · без подписи · рисунок 03</b><span data-v="кривая, точки M12 3a9 9 0 019 9"></span></div>
+    <div class="spec"><b>Спиннер · успех · рисунок 01</b><span data-v="поле рисунка 26×26 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Спиннер · успех · рисунок 02</b><span data-v="кривая, точки M5 13l4 4L19 7"></span></div>
+    <div class="spec"><b>Спиннер · ошибка · рисунок 01</b><span data-v="поле рисунка 26×26 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Спиннер · ошибка · рисунок 02</b><span data-v="кривая, точки M12 7v6M12 17h.01"></span></div>
+    <div class="spec"><b>Спиннер · ошибка · рисунок 03</b><span data-v="точка r 9 в (12,12)"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · рисунок 01</b><span data-v="поле рисунка 26×26 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · рисунок 02</b><span data-v="кривая, точки M21 12a9 9 0 11-9-9, прозрачность .22"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · рисунок 03</b><span data-v="кривая, точки M12 3a9 9 0 019 9"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · рисунок 04</b><span data-v="точка r 9 в (12,12), прозрачность .55"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · рисунок 05</b><span data-v="кривая, точки M7.5 12.5l2.5 2.5, прозрачность .8"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · рисунок 06</b><span data-v="кривая, точки M5 13l4 4L19 7"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · рисунок 01</b><span data-v="поле рисунка 100%×46 (viewBox 0 0 260 46)"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · рисунок 02</b><span data-v="ломаная, точки 6,14 46,24 86,22 126,32 166,28 206,38 254,34, линия var(--acs), толщина 2.5"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · рисунок 03</b><span data-v="точка r 4 в (254,34), заливка var(--acs)"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · рисунок 04</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · рисунок 05</b><span data-v="кривая, точки M21 12a9 9 0 11-9-9, прозрачность .3"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · рисунок 06</b><span data-v="кривая, точки M12 3a9 9 0 019 9"></span></div>
+    <div class="spec"><b>Спиннер · без анимации · рисунок 01</b><span data-v="поле рисунка 26×26 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Спиннер · без анимации · рисунок 02</b><span data-v="кривая, точки M21 12a9 9 0 11-9-9, прозрачность .22"></span></div>
+    <div class="spec"><b>Спиннер · без анимации · рисунок 03</b><span data-v="кривая, точки M12 3a9 9 0 019 9"></span></div>
+    <div class="spec"><b>Спиннер · холодный старт · рисунок 01</b><span data-v="поле рисунка 26×26 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Спиннер · холодный старт · рисунок 02</b><span data-v="кривая, точки M21 12a9 9 0 11-9-9, прозрачность .22"></span></div>
+    <div class="spec"><b>Спиннер · холодный старт · рисунок 03</b><span data-v="кривая, точки M12 3a9 9 0 019 9"></span></div>
+    <div class="spec"><b>Спиннер · не удалось запустить · рисунок 01</b><span data-v="поле рисунка 26×26 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Спиннер · не удалось запустить · рисунок 02</b><span data-v="кривая, точки M12 7v6M12 17h.01"></span></div>
+    <div class="spec"><b>Спиннер · не удалось запустить · рисунок 03</b><span data-v="точка r 9 в (12,12)"></span></div>
+    <div class="spec"><b>Спиннер · долгий старт · рисунок 01</b><span data-v="поле рисунка 26×26 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Спиннер · долгий старт · рисунок 02</b><span data-v="кривая, точки M21 12a9 9 0 11-9-9, прозрачность .22"></span></div>
+    <div class="spec"><b>Спиннер · долгий старт · рисунок 03</b><span data-v="кривая, точки M12 3a9 9 0 019 9"></span></div>
+    <div class="spec"><b>Спиннер · вторая неудача · рисунок 01</b><span data-v="поле рисунка 26×26 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Спиннер · вторая неудача · рисунок 02</b><span data-v="кривая, точки M12 7v6M12 17h.01"></span></div>
+    <div class="spec"><b>Спиннер · вторая неудача · рисунок 03</b><span data-v="точка r 9 в (12,12)"></span></div>
+    <div class="ctrH">Текст кадров дословно</div>
+    <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
+    <div class="spec"><b>Спиннер · с подписью · текст</b><span data-v="Загружаем › Пара секунд."></span></div>
+    <div class="spec"><b>Спиннер · без подписи · текст</b><span data-v="Загружаем"></span></div>
+    <div class="spec"><b>Спиннер · успех · текст</b><span data-v="Сохранено › Профиль обновлён."></span></div>
+    <div class="spec"><b>Спиннер · ошибка · текст</b><span data-v="Не удалось › Проверьте связь."></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · текст</b><span data-v="Три кадра одного перехода, 200 мс › крутится › дуга сходится › галочка › Знак не исчезает и не подменяется другим: дуга дорисовывается до круга и складывается в галочку на том же месте. Только для четырёх мест с ответом сервера: при загрузке вкладки галочки нет — там знак просто уходит."></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · текст</b><span data-v="Отчёты › Баланс за период › −1 435 › ккал › Динамика веса › −0,8 › кг за неделю › Данные считаются на устройстве и показываются сразу. Отдельный блок не ждёт — ждёт только кнопка, за которой стоит запрос к серверу. › Сохраняем"></span></div>
+    <div class="spec"><b>Спиннер · без анимации · текст</b><span data-v="Загружаем › Вращение выключено, дуга дышит прозрачностью."></span></div>
+    <div class="spec"><b>Спиннер · не удалось запустить · текст</b><span data-v="Не удалось загрузить приложение › Похоже, нет связи. Ваши данные на месте — они хранятся на устройстве. › Повторить"></span></div>
+    <div class="spec"><b>Спиннер · долгий старт · текст</b><span data-v="Медленная сеть, продолжаем загружать › Повторить"></span></div>
+    <div class="spec"><b>Спиннер · вторая неудача · текст</b><span data-v="Всё ещё не получается › Данные на месте. Если связь есть, а приложение не открывается — напишите куратору, он посмотрит. › Написать куратору › Повторить ещё раз"></span></div>
+</div>
 
 <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:52px 0 14px;">Общий знак ожидания · спиннер</div>
   <div style="display:flex;gap:30px;align-items:flex-start;">

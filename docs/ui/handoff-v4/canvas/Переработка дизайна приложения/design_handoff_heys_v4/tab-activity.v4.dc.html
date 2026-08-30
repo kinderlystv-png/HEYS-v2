@@ -11,436 +11,816 @@
 <meta name="design_doc_mode" content="canvas">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="./v4-canvas.css" rel="stylesheet">
 <script src="./contract-audit.js"></script>
 <style>
-  body{margin:0;background:#e9dfcd;font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{margin:0;background:var(--page);font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   *{box-sizing:border-box}
-  a{color:#8a4a20;text-decoration:none}
-  .ph{width:330px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12)}
-  .sc{min-height:600px;padding:6px 18px 16px}
-  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.42)}
+  a{color:var(--ac);text-decoration:none}
+  a:hover{color:var(--acs)}
+  .ph{width:375px;height:auto;min-height:0;display:block;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)}
+  .sc{flex:none;min-height:0;overflow:visible;padding:6px 18px 18px}
+  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(var(--ink),.42)}
   .n{font-variant-numeric:tabular-nums}
-  .tier{font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#a75c2b;margin:20px 0 10px}
-  .cd{background:#f7efe2;border-radius:20px;padding:2px 16px}
-  .grp{background:#f7efe2;border-radius:20px;padding:16px}
-  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif}
-  .row > :last-child{flex:none}
-  .h{font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:26px 0 12px}
-  .nt{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.07)}
-  .nt > b,.ntl > b{font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;display:block}
-  .nt > span,.ntl > span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);display:block;margin-top:4px}
-  .olab{display:flex;align-items:baseline;gap:8px;font:500 11.5px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-bottom:9px}
-  .oid{font:700 10px/1 ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#201e1d;border-radius:999px}
-  .g{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:64px;gap:8px}
-  .w{background:#f7efe2;border-radius:16px;padding:11px;overflow:hidden;display:flex;flex-direction:column}
-  .v{font:600 21px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em}
-  .u{font-size:10px;font-weight:500;color:rgba(0,0,0,.35)}
-  #g1 .k{font:600 9px/1.1 Figtree,sans-serif;letter-spacing:.03em;color:rgba(0,0,0,.45)}
-  #g1 .sc{padding:14px 16px 16px}
-  .dk .ph{background:#141210;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45)}
-  .dk .cd,.dk .grp,.dk .w{background:#23201b}
-  .dk .row{border-bottom-color:rgba(242,237,230,.1)}
-  .dk .tier{color:#e2a468}
-  .dk .k{color:rgba(242,237,230,.5)}
-  .dk .v{color:#f2ede6}
-  .dk .u{color:rgba(242,237,230,.4)}
-  .dk #g1d .k{color:rgba(242,237,230,.5)}
-  .bl .ph{background:#fff;box-shadow:0 1px 2px rgba(16,24,38,.08),0 14px 40px rgba(16,24,38,.12)}
-  .bl .cd,.bl .grp,.bl .w{background:#eef3f9}
-  .bl .row{border-bottom-color:rgba(16,24,38,.08)}
-  .bl .tier{color:#1d5e96}
-  .logo path,.logo rect{fill:#201e1d}
-  .logo > g > g > path,.logo > g > g > rect{stroke:#201e1d;stroke-width:2.6;stroke-linejoin:round;paint-order:stroke}
-  .logo .lab path{fill:rgba(0,0,0,.42);stroke:none}
-  .logo .lp path{fill:#52A0D8;stroke:none}
-  .dk .logo path,.dk .logo rect{fill:#f2ede6}
-  .dk .logo > g > g > path{stroke:none}
-  .dk .logo > g > g > rect{stroke:#f2ede6;stroke-width:1.8}
-  .dk .logo .lab path{fill:rgba(242,237,230,.5);stroke:none}
-  .dk .logo .lp path{fill:#52A0D8;stroke:none}
-  .bl .logo path,.bl .logo rect{fill:#101826}
-  .bl .logo > g > g > path,.bl .logo > g > g > rect{stroke:#101826}
-  .bl .logo .lab path{fill:rgba(16,24,38,.45);stroke:none}
-  .bl .logo .lp path{fill:#52A0D8;stroke:none}
-  .cn .logo path,.cn .logo rect{fill:#1e293b}
-  .cn .logo > g > g > path,.cn .logo > g > g > rect{stroke:#1e293b}
-  .cn .logo .lab path{fill:#94a3b8;stroke:none}
-  .cn .logo .lp path{fill:#52A0D8;stroke:none}
-
-  .svc{color:rgba(0,0,0,.11)}
-  .dk .svc{color:rgba(242,237,230,.12)}
-  .bl .svc{color:rgba(16,24,38,.12)}
-  .bd .ph{background:#0d1a26;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45)}
-  .bd .cd,.bd .grp,.bd .w{background:#182a3a}
-  .bd .row{border-bottom-color:rgba(238,243,248,.1)}
-  .bd .tier{color:#8fc1e8}
-  .bd .k{color:rgba(238,243,248,.5)}
-  .bd .v{color:#eef3f8}
-  .bd .u{color:rgba(238,243,248,.4)}
-  .bd .logo path,.bd .logo rect{fill:#eef3f8}
-  .bd .logo > g > g > path{stroke:none}
-  .bd .logo > g > g > rect{stroke:#eef3f8;stroke-width:1.8}
-  .bd .logo .lab path{fill:rgba(238,243,248,.5);stroke:none}
-  .bd .logo .lp path{fill:#52A0D8;stroke:none}
-  .bd .svc{color:rgba(238,243,248,.12)}
+  .tier{font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:20px 0 10px}
+  .grp{background:var(--c1);border-radius:20px;padding:16px}
+  .cd{background:var(--c1);border-radius:20px;padding:2px 16px}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif}
+  .lab{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
+  .lab b{font:700 12.5px/1 Figtree,sans-serif;color:#201e1d}
+  .lab span{font:500 11px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.45)}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 0}
+  .ttl{font:700 15px/1 Figtree,sans-serif;color:var(--tx)}
+  .btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--acs);font:700 13px/1 Figtree,sans-serif;color:var(--on-acs)}
+  .btn2c{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c2);font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.58)}
+  .badge{font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;padding:4px 7px;border-radius:999px;background:var(--c2);color:var(--ac)}
+  .p{font:500 12px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.6);margin-top:8px;text-wrap:pretty}
+  .sm{font:500 11px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty}
+  .big{font:800 30px/1 Figtree,sans-serif;color:var(--tx);letter-spacing:-.02em}
+  .pl{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:26px 0 10px}
+  .an{width:302px;flex:none}
+  .anh{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ac);margin:0 0 12px}
+  .ab{border-left:2px solid rgba(var(--ink),.14);padding:0 0 0 12px;margin:0 0 15px}
+  .ab b{display:block;font:700 12px/1.35 Figtree,sans-serif;color:var(--tx)}
+  .ab span{display:block;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.58);margin-top:3px;text-wrap:pretty}
+  .ab i{display:block;font:600 10.5px/1.5 Figtree,sans-serif;color:var(--ac);font-style:normal;margin-top:5px;text-wrap:pretty}
+  .sect{display:flex;align-items:baseline;gap:10px;margin:44px 0 14px}
+  .sect .lt{flex:none;font:700 10px/1 ui-monospace,Menlo,monospace;padding:6px 9px;background:var(--c2);color:var(--ac);border-radius:999px}
+  .sect .tt{font:700 15px/1.2 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em}
+  .sect .st{font:500 11.5px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45)}
+  .spec{display:grid;grid-template-columns:210px 1fr;gap:6px 18px;padding:9px 0;border-bottom:1px solid rgba(var(--ink),.07);align-items:baseline}
+  .spec>b{font:700 11.5px/1.4 Figtree,sans-serif;color:var(--tx)}
+  .spec>span[data-v]{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.62);text-wrap:pretty}
+  .spec>span[data-v]::after{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;font-style:normal;text-wrap:pretty}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(var(--ink),.38);margin:18px 0 2px}
+  .trk{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid rgba(var(--ink),.07)}
+  .bar{flex:1;height:8px;border-radius:999px;background:rgba(var(--ink),.07);overflow:hidden}
+  .dot{flex:none;width:9px;height:9px;border-radius:999px}
 </style>
 </helmet>
-<div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
-<div style="display:flex;align-items:flex-start;gap:11px;background:#f0d8c4;border-radius:18px;padding:13px 16px;margin:0 0 22px;max-width:960px;"><span style="font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;background:#a8382b;color:#fff5ef;border-radius:999px;flex:none;">МАКЕТ НЕ СОГЛАСОВАН</span><span style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.62);text-wrap:pretty;">Контракта у этого канваса нет, и до вердикта владельца не будет: числа в разметке не спецификация, метки кадров не гарантированы. По этому файлу не реализовывать ничего. Канвасы, готовые к работе, названы в INDEX.md.</span></div>
+<div style="background:var(--page);padding:44px 46px 70px;width:max-content;min-width:100%;">
+  <div style="max-width:1080px;">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <h1 style="font:800 22px/1.2 Figtree,sans-serif;color:#201e1d;letter-spacing:-.01em;margin:0;">Вкладка «Актив»</h1>
+      <span style="font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:7px 11px;border-radius:999px;background:#b4442a;color:#fff;">В ПРОД — ПО РЕШЕНИЯМ 30 АВГУСТА</span>
+      <div data-protbar style="font:700 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);"></div>
+    </div>
+    <p style="font:500 13px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);margin:14px 0 0;text-wrap:pretty;">Канон — ветка <b>main</b>, не stable: там вкладка прошлого поколения, и восстанавливать нечего. Прежний файл был мудбордом без кадров и контракта — этот написан по десяти решениям владельца и разбору кода (<span style="font-family:ui-monospace,Menlo,monospace;">ACTIVITY_TAB_AS_IS.md</span>, §13). Главное решение: «Кардио» как имя семи сущностей снято — ярус «Сегодня» раскладывается на тренировки, быт и зарядку, а программа куратора выходит наверх.</p>
+    <p style="font:500 11px/1.6 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.45);margin:10px 0 0;">tab-activity · протокол: docs/implementation/ACTIVITY_TAB_AS_IS.md · экраны искать по data-screen-label · канон чисел: heys_tdee_v1.js (TDEE.calculate) · соседи: home-widgets (плитки шагов), reports-insights (матрица дисциплины), norm-correction (рост рабочих весов как довод)</p>
+    <div style="margin-top:18px;padding:18px 20px;background:#fffaf1;border-radius:20px;">
+      <div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);">Предусловия — кадры верны только после них</div>
+      <div style="font:500 12px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-top:10px;text-wrap:pretty;">Пять дефектов портят числа прямо сейчас и закрываются до сведения экрана: <b>A</b> попапы формулы считают брутто вместо нетто · <b>B</b> бейдж быта внутри блока тренировок — брутто (расхождение в 1,67 раза на одном экране) · <b>C</b> третья тренировка не доходит до разбора и до «Тренировок» · <b>E</b> назначенный план засчитывается как сделанная тренировка · <b>T</b> запасной путь теряет разминку и дропсеты. Плюс два предусловия кадров: <b>L</b> — оценка шагов по медиане на экране дня не срабатывает вовсе, поэтому пометку рисовать не на чем; <b>bodyWeightKg</b> в дневном тоннаже — без него упражнения на своём весе дают ноль, и число в ярусе разойдётся с конструктором.</div>
+    </div>
+  </div>
 
-<div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;"><span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#5c6a45;color:#f2f5ec;border-radius:999px;">HEYS v4 · ВКЛАДКА</span><span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Вкладка «Актив»: цель дня, действие, история</span></div>
-<p style="margin:0 0 34px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Актив в пилотном виде: цель дня от затрат, одно крупное действие и история тренировок. Экран нарисован в четырёх палитрах: песочная с тёмной парой и синяя с сине-тёмной. Разметка, подписи и данные в палитрах совпадают — отличается только таблица значений. Виджеты Главной, расстановка и правила плитки живут в «Виджеты Главной v4»; общие решения по палитрам и логотипу продублированы в колонках справа, чтобы канвас читался в одиночку.</p>
-<div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:0 0 14px;">Песочная палитра</div>
-<div style="display:flex;gap:30px;align-items:flex-start;">
-<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Актив</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">пилот</span></div><div class="ph" id="w1" data-screen-label="Визуал v4 · Актив">
-        <div style="padding:16px 18px 0;">
-          <div style="display:flex;align-items:center;gap:9px;">
-            <span style="font:800 12px/1 Figtree,sans-serif;color:#8a4a20;" class="n">18</span>
-            <span style="flex:1;height:3px;border-radius:999px;background:rgba(0,0,0,.09);"><span style="display:block;width:34%;height:3px;border-radius:999px;background:#c67139;"></span></span>
-            <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">Эксперт</span>
-            <span style="display:flex;align-items:center;gap:0;margin-left:2px;"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px 0;flex:none;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"/></svg><span class="n" style="position:absolute;top:-4px;right:-5px;font:800 9px/1 Figtree,sans-serif;color:#8a4a20;">7</span></span></span>
-            <span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px -8px -14px 0;flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"/><circle cx="11" cy="7" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span></span>
-          </div>
-          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:18px;">
-            <span style="font:700 15px/1 Figtree,sans-serif;color:#201e1d;">Актив</span>
-            <span style="display:flex;align-items:center;gap:7px;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>вс, 9 августа</span>
-          </div>
-        </div>
+  <div class="sect"><span class="lt">А</span><span class="tt">День собран</span><span class="st">полный экран · ярусы по сущностям</span></div>
+  <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
+    <div>
+      <div class="lab"><b>Актив · день собран</b><span>цель, программа, три сущности, история</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Актив · день собран" data-vid="вид · hero цели дня">
+        <div class="top"><span class="ttl">Актив</span><span class="k n">сб · 30 авг</span></div>
         <div class="sc">
-          <div style="background:#efe3cf;border-radius:26px;padding:26px 22px 22px;margin-top:14px;">
+          <div class="grp" style="background:var(--c2);margin-top:12px;">
             <div class="k">Цель дня</div>
-            <div style="display:flex;align-items:baseline;gap:9px;margin-top:14px;"><span class="n" style="font:600 64px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.045em;">1931</span><span style="font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">ккал</span></div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:22px;padding-top:16px;border-top:1px solid rgba(0,0,0,.09);">
-              <span style="font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.5);">от затрат без термического эффекта · −10 %</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:10px;"><span class="big n">2 210</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">ккал</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;">
+              <span style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);">компенсация долга</span>
+              <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">из чего ›</span>
             </div>
           </div>
-
-          <div class="tier">Сегодня</div>
-          <div class="grp" style="background:#eaefe0;">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;">
-            <span style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Шаги</span>
-            <span class="n" style="font:700 13px/1 Figtree,sans-serif;color:#201e1d;">1 980 <span style="font-weight:500;color:rgba(0,0,0,.35);">/ 9 100</span></span>
-          </div>
-          <div style="height:5px;border-radius:999px;background:rgba(0,0,0,.07);margin-top:11px;"><div style="width:22%;height:5px;border-radius:999px;background:#7a8a5e;"></div></div>
-          <div style="font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:11px;">107 ккал · правка ползунком</div>
-          </div>
-
           <div class="cd" style="margin-top:10px;">
-            <div class="row"><span style="color:rgba(0,0,0,.55);">Бытовая активность</span><span class="n" style="color:#201e1d;">30 мин · 72 ккал</span></div>
-            <div class="row"><span style="color:rgba(0,0,0,.55);">Зарядка</span><span class="n" style="color:#201e1d;">11:50 · 19 ккал</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:rgba(0,0,0,.55);">Голод и энергия</span><span style="color:rgba(0,0,0,.55);font-weight:500;">не отмечено</span></div>
-          </div>
-
-          <div class="tier">Действие</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;border-radius:999px;background:#c67139;padding:17px 22px;">
-            <span style="font:700 13px/1 Figtree,sans-serif;color:#2b1608;">Добавить активность</span>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2b1608" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          </div>
-
-          <div class="tier">История</div>
-          <div class="grp">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="k">Зарядка · 6 из 14</span><span style="display:flex;gap:14px;font:600 11px/1 Figtree,sans-serif;"><span style="color:#8a4a20;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;padding:0 6px;margin:-16px -6px;border-bottom:2px solid #c67139;">28 дней</span><span style="color:rgba(0,0,0,.38);min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;padding:0 6px;margin:-16px -6px;">Месяц</span></span></div>
-          <div style="display:grid;grid-template-columns:repeat(14,1fr);gap:5px;">
-            <div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:#7a8a5e;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:#7a8a5e;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:#7a8a5e;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:#7a8a5e;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div>
-            <div style="aspect-ratio:1;border-radius:999px;background:#7a8a5e;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:#7a8a5e;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:#c67139;"></div>
-          </div>
-          <div class="row" style="margin-top:14px;padding:14px 0 0;border-top:1px solid rgba(0,0,0,.07);border-bottom:none;"><span style="color:rgba(0,0,0,.55);">Тренировки за месяц</span><span class="n" style="color:#201e1d;">3 ›</span></div>
-          </div>
-        </div>
-        <div style="display:flex;padding:4px 10px 16px;background:#fffaf1;">
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Главная</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Питание</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#8a4a20;">Актив</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Отчёты</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Инсайты</span></div></div>
-        </div>
-      </div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="ph" id="w1d" data-screen-label="Визуал v4 · Актив · тёмная">
-        <div style="padding:16px 18px 0;">
-          <div style="display:flex;align-items:center;gap:9px;">
-            <span style="font:800 12px/1 Figtree,sans-serif;color:#e2a468;" class="n">18</span>
-            <span style="flex:1;height:3px;border-radius:999px;background:rgba(242,237,230,.13);"><span style="display:block;width:34%;height:3px;border-radius:999px;background:#cf8144;"></span></span>
-            <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.46);">Эксперт</span>
-            <span style="display:flex;align-items:center;gap:0;margin-left:2px;"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px 0;flex:none;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"/></svg><span class="n" style="position:absolute;top:-4px;right:-5px;font:800 9px/1 Figtree,sans-serif;color:#e2a468;">7</span></span></span>
-            <span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px -8px -14px 0;flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"/><circle cx="11" cy="7" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span></span>
-          </div>
-          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:18px;">
-            <span style="font:700 15px/1 Figtree,sans-serif;color:#f2ede6;">Актив</span>
-            <span style="display:flex;align-items:center;gap:7px;font:500 11px/1 Figtree,sans-serif;color:rgba(242,237,230,.46);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>вс, 9 августа</span>
-          </div>
-        </div>
-        <div class="sc">
-          <div style="background:#2f2820;border-radius:26px;padding:26px 22px 22px;margin-top:14px;">
-            <div class="k">Цель дня</div>
-            <div style="display:flex;align-items:baseline;gap:9px;margin-top:14px;"><span class="n" style="font:600 64px/.9 Figtree,sans-serif;color:#e2a468;letter-spacing:-.045em;">1931</span><span style="font:600 12px/1 Figtree,sans-serif;color:rgba(242,237,230,.46);">ккал</span></div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:22px;padding-top:16px;border-top:1px solid rgba(242,237,230,.13);">
-              <span style="font:600 12px/1 Figtree,sans-serif;color:rgba(242,237,230,.58);">от затрат без термического эффекта · −10 %</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.38)" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+            <div class="row" style="border-bottom:none;">
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Программа · сегодня силовая</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">Ноги и спина · 5 упражнений</span></span>
+              <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">начать ›</span>
             </div>
           </div>
-
           <div class="tier">Сегодня</div>
-          <div class="grp" style="background:#242c20;">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;">
-            <span style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Шаги</span>
-            <span class="n" style="font:700 13px/1 Figtree,sans-serif;color:#f2ede6;">1 980 <span style="font-weight:500;color:rgba(242,237,230,.43);">/ 9 100</span></span>
-          </div>
-          <div style="height:5px;border-radius:999px;background:rgba(242,237,230,.11000000000000001);margin-top:11px;"><div style="width:22%;height:5px;border-radius:999px;background:#8faa6d;"></div></div>
-          <div style="font:500 11px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:11px;">107 ккал · правка ползунком</div>
-          </div>
-
-          <div class="cd" style="margin-top:10px;">
-            <div class="row"><span style="color:rgba(242,237,230,.63);">Бытовая активность</span><span class="n" style="color:#f2ede6;">30 мин · 72 ккал</span></div>
-            <div class="row"><span style="color:rgba(242,237,230,.63);">Зарядка</span><span class="n" style="color:#f2ede6;">11:50 · 19 ккал</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:rgba(242,237,230,.63);">Голод и энергия</span><span style="color:rgba(242,237,230,.63);font-weight:500;">не отмечено</span></div>
-          </div>
-
-          <div class="tier">Действие</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;border-radius:999px;background:#cf8144;padding:17px 22px;">
-            <span style="font:700 13px/1 Figtree,sans-serif;color:#1a0f04;">Добавить активность</span>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1a0f04" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          </div>
-
-          <div class="tier">История</div>
           <div class="grp">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="k">Зарядка · 6 из 14</span><span style="display:flex;gap:14px;font:600 11px/1 Figtree,sans-serif;"><span style="color:#e2a468;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;padding:0 6px;margin:-16px -6px;border-bottom:2px solid #cf8144;">28 дней</span><span style="color:rgba(242,237,230,.46);min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;padding:0 6px;margin:-16px -6px;">Месяц</span></span></div>
-          <div style="display:grid;grid-template-columns:repeat(14,1fr);gap:5px;">
-            <div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:#8faa6d;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:#8faa6d;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:#8faa6d;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:#8faa6d;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div>
-            <div style="aspect-ratio:1;border-radius:999px;background:#8faa6d;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:#8faa6d;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(242,237,230,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:#cf8144;"></div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+              <span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Шаги</span>
+              <span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">8 420 <span style="color:rgba(var(--ink),.38);">/ 10 000</span></span>
+            </div>
+            <div class="bar" style="margin-top:10px;"><span style="display:block;width:67%;height:8px;border-radius:999px;background:var(--gr2);"></span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;">
+              <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">312 ккал</span>
+              <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">факт — ползунком, цель — тапом</span>
+            </div>
           </div>
-          <div class="row" style="margin-top:14px;padding:14px 0 0;border-top:1px solid rgba(242,237,230,.11000000000000001);border-bottom:none;"><span style="color:rgba(242,237,230,.63);">Тренировки за месяц</span><span class="n" style="color:#f2ede6;">3 ›</span></div>
+          <div class="cd" style="margin-top:10px;">
+            <div class="row">
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Тренировки</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">силовая 45 мин · 1,9 т объёма</span></span>
+              <span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">385 ккал</span>
+            </div>
+            <div class="row">
+              <span style="color:var(--tx);">Бытовая активность</span>
+              <span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">60 мин · 126 ккал</span>
+            </div>
+            <div class="row" style="border-bottom:none;">
+              <span style="color:var(--tx);">Зарядка</span>
+              <span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--gr);">07:20 · 34 ккал</span>
+            </div>
           </div>
+          <div class="tier">Действие</div>
+          <div class="btn">Добавить активность</div>
+          <div class="tier">История</div>
+          <div class="cd">
+            <div class="row"><span style="color:var(--tx);">Зарядка · 18 из 24</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">28 дней ›</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Рабочие веса</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">за 4 недели · 6 общих упражнений</span></span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--gr);">+4 %</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Тренировки за месяц</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">11 ›</span></div>
+          </div>
+          <div class="sm">Слово «Кардио» с экрана снято: под ним лежали семь разных сущностей, и кардио было одной из них.</div>
         </div>
-        <div style="display:flex;padding:4px 10px 16px;background:#23201b;">
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Главная</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Питание</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#e2a468;">Актив</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Отчёты</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Инсайты</span></div></div>
-        </div>
-      </div></div></div>
-<div style="width:400px;flex:none;">
-<div class="h" style="margin-top:0;">Решения по Активу</div><div style="background:#fffaf1;border-radius:24px;padding:20px;">
-        <div class="nt"><b>Три яруса как правило, не как список</b><span>«Сегодня» — всё, что объясняет сегодняшнюю цель и что за неё сделано. «Действие» — одна точка входа. «История» — всё старше суток. Особые состояния не выпадают в непонятное место: у них заранее назначен ярус.</span></div>
-        <div class="nt"><b>Причина уровня цели — одна или ни одной</b><span>Ветки взаимоисключающие: рефид перекрывает долг, буст вчерашней тренировки не показывается отдельно — он внутри затрат. Компенсация долга даёт строку-причину под числом, обычная разбивка прячется в свёрнутые «Затраты».</span></div>
-        <div class="nt"><b>Незаполненные факты схлопываются в одну строку</b><span>Заполненные — отдельными строками, всё неотмеченное собирается в «Отметить: быт, зарядка, голод». Слот всегда на месте, но старт дня не выглядит списком укоров.</span></div>
-        <div class="nt"><b>Строка «Кардио» ведёт в существующий блок</b><span>Компонент тренировок с зонами пульса не заменяется — строка это его свёрнутый заголовок. Раскрывается на месте.</span></div>
-        <div class="nt"><b>Тач-цель 44 pt при подчёркнутых переключателях</b><span>«28 дней / Месяц» набраны текстом, но область нажатия задана min-width и min-height с компенсирующим отрицательным margin — визуально ничего не меняется.</span></div>
-        <div class="nt"><b>Полосы и точки — из ступеней</b><span>Шаги, бытовая активность и зарядка красятся ступенью шкалы, а не литералом. У обратных показателей шкала инвертируется — направление задаётся в шкале, не на экране.</span></div>
-        <div class="nt"><b>Числа — плейсхолдеры</b><span>Цель, затраты, компенсация и шаги берутся из формул кода. Раскладка рассчитана на четырёхзначные числа и на минус в любой строке-причине.</span></div>
-        <div class="ntl"><b>Замена литерала — только при равенстве</b><span>Роль обязана совпадать с заменяемым цветом в том наборе, который был у клиента до перекраски. Не совпадает — литерал остаётся или для него заводится своя роль: запасное значение в var() уже никогда не срабатывает, поэтому расхождение уедет в продакшн молча.</span></div>
       </div>
-
-
-<div class="h">Что меняется</div><div style="background:#efe3cf;border-radius:24px;padding:20px;"><div class="nt"><b>Правила экрана входа — в «Вход v4»</b><span>Здесь их больше нет: своя клавиатура, слот ошибки, отсутствие кнопки «Войти», служебный вход иконкой — всё это про экран входа и живёт в его канвасе. В колонке остаются только правила, общие для всех вкладок: палитра, типографика, тени и знак.</span></div><div class="nt"><b>Синий градиент → песочный фон</b><span>Экран входа был единственным местом с градиентом и синей палитрой. Теперь он на том же грунте, что и приложение: человек не переезжает из одного продукта в другой после ввода PIN.</span></div><div class="nt"><b>Системный шрифт → Figtree</b><span>И табличные цифры в телефоне и PIN — иначе номер дёргается при наборе.</span></div><div class="nt"><b>Красная ошибка → терракотовая</b><span>Роль сохраняется — «требует внимания», но цвет из палитры. Ошибка становится плашкой под PIN, а не отдельным блоком с рамкой.</span></div><div class="ntl"><b>Тень 0 25px 50px → две мягкие</b><span>Карточка перестаёт висеть над экраном: та же пара теней, что у макетов вкладок.</span></div></div>
-<div class="h">Открыто</div><div style="background:#f0d8c4;border-radius:24px;padding:20px;"><div class="nt"><b>Логотип — канонический файл</b><span>Не набор шрифтом, а <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;">logo-horizontal.svg</span> из лэндинга: собственные контуры букв, столбик плюсов, «lab». Приложение и сайт показывают один знак, файл в файл.</span></div><div class="nt"><b>У каждой темы свой знак — по одному правилу</b><span>Контуры канонического файла не тронуты, меняется только заливка: «HEYS» набирает вес обводкой по своему же контуру и красится в чернила темы (#201e1d, на тёмной — #f2ede6, в синей — #101826), «lab» остаётся тонким и приглушённым. Искры берут акцент темы — терракоту на песочной и тёмной, синий в синей: они и так самая заметная деталь знака, поэтому именно они связывают его с окружением. Форма нигде не меняется, вариантов знака не появляется — появляется одно правило перекраски: буквы чернилами, «lab» приглушённым, искры акцентом.</span></div><div class="ntl"><b>Исключение — тёмная тема</b><span>Синие буквы на угле проваливаются, поэтому там знак берёт бумажный #f2ede6, плюсы остаются синими — ровно как в шапке лэндинга на тёмном фоне. Эта перекраска уже существует на сайте.</span></div></div>
-</div>
-</div>
-<div style="margin-top:56px;padding-top:38px;border-top:1px solid rgba(0,0,0,.12);">
-<div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:0 0 14px;">Синяя палитра</div>
-<div style="display:flex;gap:30px;align-items:flex-start;">
-<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Актив</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">пилот</span></div><div class="bl"><div class="ph" id="w1p" data-screen-label="Визуал v4 · Актив · синяя">
-        <div style="padding:16px 18px 0;">
-          <div style="display:flex;align-items:center;gap:9px;">
-            <span style="font:800 12px/1 Figtree,sans-serif;color:#1d5e96;" class="n">18</span>
-            <span style="flex:1;height:3px;border-radius:999px;background:rgba(0,0,0,.09);"><span style="display:block;width:34%;height:3px;border-radius:999px;background:#2e7cc0;"></span></span>
-            <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">Эксперт</span>
-            <span style="display:flex;align-items:center;gap:0;margin-left:2px;"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px 0;flex:none;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"/></svg><span class="n" style="position:absolute;top:-4px;right:-5px;font:800 9px/1 Figtree,sans-serif;color:#1d5e96;">7</span></span></span>
-            <span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px -8px -14px 0;flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"/><circle cx="11" cy="7" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span></span>
-          </div>
-          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:18px;">
-            <span style="font:700 15px/1 Figtree,sans-serif;color:#101826;">Актив</span>
-            <span style="display:flex;align-items:center;gap:7px;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>вс, 9 августа</span>
-          </div>
-        </div>
+    </div>
+    <div>
+      <div class="lab"><b>Актив · разбор цели</b><span>hero раскрыт · цепочка приходит к числу</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Актив · разбор цели" data-vid="вид · разбор цели">
+        <div class="top"><span class="ttl">Актив</span><span class="k n">сб · 30 авг</span></div>
         <div class="sc">
-          <div style="background:#e2edf7;border-radius:26px;padding:26px 22px 22px;margin-top:14px;">
+          <div class="grp" style="background:var(--c2);margin-top:12px;">
             <div class="k">Цель дня</div>
-            <div style="display:flex;align-items:baseline;gap:9px;margin-top:14px;"><span class="n" style="font:600 64px/.9 Figtree,sans-serif;color:#1d5e96;letter-spacing:-.045em;">1931</span><span style="font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">ккал</span></div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:22px;padding-top:16px;border-top:1px solid rgba(0,0,0,.09);">
-              <span style="font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.5);">от затрат без термического эффекта · −10 %</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:10px;"><span class="big n">2 210</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">ккал</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;">
+              <span style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);">компенсация долга</span>
+              <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">свернуть ›</span>
             </div>
           </div>
-
-          <div class="tier">Сегодня</div>
-          <div class="grp" style="background:#e4efe7;">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;">
-            <span style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Шаги</span>
-            <span class="n" style="font:700 13px/1 Figtree,sans-serif;color:#101826;">1 980 <span style="font-weight:500;color:rgba(0,0,0,.35);">/ 9 100</span></span>
-          </div>
-          <div style="height:5px;border-radius:999px;background:rgba(0,0,0,.07);margin-top:11px;"><div style="width:22%;height:5px;border-radius:999px;background:#3e9a6b;"></div></div>
-          <div style="font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:11px;">107 ккал · правка ползунком</div>
-          </div>
-
           <div class="cd" style="margin-top:10px;">
-            <div class="row"><span style="color:rgba(0,0,0,.55);">Бытовая активность</span><span class="n" style="color:#101826;">30 мин · 72 ккал</span></div>
-            <div class="row"><span style="color:rgba(0,0,0,.55);">Зарядка</span><span class="n" style="color:#101826;">11:50 · 19 ккал</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:rgba(0,0,0,.55);">Голод и энергия</span><span style="color:rgba(0,0,0,.55);font-weight:500;">не отмечено</span></div>
+            <div class="row"><span style="color:var(--tx);">Базовый обмен</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">1 520</span></div>
+            <div class="row"><span style="color:var(--tx);">Шаги</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--gr);">+312</span></div>
+            <div class="row"><span style="color:var(--tx);">Быт</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--gr);">+126</span></div>
+            <div class="row"><span style="color:var(--tx);">Тренировки</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--gr);">+385</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">База без термического эффекта</span><span style="font:500 10px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.42);">от неё считается цель</span></span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 343</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Термический эффект еды</span><span style="font:500 10px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.42);">в затратах есть, в цели нет</span></span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">+188</span></div>
+            <div class="row"><span style="color:var(--tx);">Затраты</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">2 531</span></div>
+            <div class="row"><span style="color:var(--tx);">Дефицит по договорённости</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">−15 %</span></div>
+            <div class="row"><span style="color:var(--tx);">Компенсация долга</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--gr);">+218</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Цель дня</span><span class="n" style="font:800 13px/1 Figtree,sans-serif;color:var(--tx);">2 210</span></div>
           </div>
+          <div class="sm">Цепочка кончается тем числом, из которого её открыли. Причина уровня одна: долг, загрузка и снижение исключают друг друга, а цикл — множитель внутри расчёта, до них.</div>
+        </div>
+      </div>
+    </div>
+    <div class="an" data-nomirror>
+      <div class="anh">Что решено и почему</div>
+      <div class="ab" data-anchor="Программа · сегодня силовая"><b>Программа вышла из-под чеврона</b><span>Прежде назначенная на сегодня тренировка жила за свёрнутым аккордеоном со значением «не отмечено» — самое важное на вкладке и самое спрятанное. Теперь строка стоит над ярусом «Сегодня».</span><i>наверх выходят три разных элемента: строка «Следующая тренировка», карточка назначенного плана и правка куратора, перехватывающая день. Строка и план взаимоисключающие — строка прячется, когда план на сегодня есть</i></div>
+      <div class="ab" data-anchor="Тренировки"><b>Три сущности вместо одного «Кардио»</b><span>Тренировки, быт и зарядка — разные вещи с разными действиями, и в данных они лежат в разных полях. Аккордеон остаётся только внутри тренировок, для карточек с журналом подходов.</span><i>при пустом дне блок не исчезает: прежде вместе с ним пропадала и строка программы</i></div>
+      <div class="ab" data-anchor="База без термического эффекта"><b>Разбор приходит к числу над ним</b><span>Прежняя цепочка кончалась процентом дефицита, и в день с долгом человек видел «2 210» сверху, а внизу приходил к 1 940. Теперь последняя строка — «Цель дня» с тем же числом.</span><i>термический эффект показан отдельно и подписан: он есть в затратах и не участвует в цели — иначе норма догоняла бы съеденное</i></div>
+      <div class="ab" data-anchor="факт — ползунком, цель — тапом"><b>Правка цели вернулась на вкладку</b><span>Это не настройка: шаг спрашивают каждое утро заново, рекомендация считается от медианы, а подпись под слайдером говорит «План на день». Поля цели в профиле нет вовсе.</span><i>тап открывает тот же шаг чек-ина; дату он обязан получать, иначе с прошлого дня ставит план сегодняшнему</i></div>
+      <div class="ab" data-anchor="1,9 т объёма"><b>Тоннаж фактический</b><span>По отмеченным подходам, без назначенного плана: день с планом обязан давать тот же тоннаж, что пустой. Плановый живёт внутри карточки силовой, где он про эту тренировку.</span></div>
+    </div>
+  </div>
 
-          <div class="tier">Действие</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;border-radius:999px;background:#2e7cc0;padding:17px 22px;">
-            <span style="font:700 13px/1 Figtree,sans-serif;color:#ffffff;">Добавить активность</span>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          </div>
-
-          <div class="tier">История</div>
-          <div class="grp">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="k">Зарядка · 6 из 14</span><span style="display:flex;gap:14px;font:600 11px/1 Figtree,sans-serif;"><span style="color:#1d5e96;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;padding:0 6px;margin:-16px -6px;border-bottom:2px solid #2e7cc0;">28 дней</span><span style="color:rgba(0,0,0,.38);min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;padding:0 6px;margin:-16px -6px;">Месяц</span></span></div>
-          <div style="display:grid;grid-template-columns:repeat(14,1fr);gap:5px;">
-            <div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:#3e9a6b;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:#3e9a6b;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:#3e9a6b;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:#3e9a6b;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div>
-            <div style="aspect-ratio:1;border-radius:999px;background:#3e9a6b;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:#3e9a6b;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(0,0,0,.06);"></div><div style="aspect-ratio:1;border-radius:999px;background:#2e7cc0;"></div>
-          </div>
-          <div class="row" style="margin-top:14px;padding:14px 0 0;border-top:1px solid rgba(0,0,0,.07);border-bottom:none;"><span style="color:rgba(0,0,0,.55);">Тренировки за месяц</span><span class="n" style="color:#101826;">3 ›</span></div>
-          </div>
-        </div>
-        <div style="display:flex;padding:4px 10px 16px;background:#ffffff;">
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Главная</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Питание</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#1d5e96;">Актив</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Отчёты</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Инсайты</span></div></div>
-        </div>
-      </div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="bd"><div class="ph" id="w1pd" data-screen-label="Визуал v4 · Актив · сине-тёмная">
-        <div style="padding:16px 18px 0;">
-          <div style="display:flex;align-items:center;gap:9px;">
-            <span style="font:800 12px/1 Figtree,sans-serif;color:#8fc1e8;" class="n">18</span>
-            <span style="flex:1;height:3px;border-radius:999px;background:rgba(238,243,248,.13);"><span style="display:block;width:34%;height:3px;border-radius:999px;background:#2e7cc0;"></span></span>
-            <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.46);">Эксперт</span>
-            <span style="display:flex;align-items:center;gap:0;margin-left:2px;"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px 0;flex:none;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"/></svg><span class="n" style="position:absolute;top:-4px;right:-5px;font:800 9px/1 Figtree,sans-serif;color:#8fc1e8;">7</span></span></span>
-            <span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px -8px -14px 0;flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"/><circle cx="11" cy="7" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span></span>
-          </div>
-          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:18px;">
-            <span style="font:700 15px/1 Figtree,sans-serif;color:#eef3f8;">Актив</span>
-            <span style="display:flex;align-items:center;gap:7px;font:500 11px/1 Figtree,sans-serif;color:rgba(238,243,248,.46);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>вс, 9 августа</span>
-          </div>
-        </div>
+  <div class="sect"><span class="lt">Б</span><span class="tt">Пустой день и новый человек</span><span class="st">чего не бывает и что вместо</span></div>
+  <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
+    <div>
+      <div class="lab"><b>Актив · новый человек</b><span>ни шагов, ни тренировок, истории нет</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Актив · новый человек" data-vid="вид · пустые состояния">
+        <div class="top"><span class="ttl">Актив</span><span class="k n">сб · 30 авг</span></div>
         <div class="sc">
-          <div style="background:#1d3348;border-radius:26px;padding:26px 22px 22px;margin-top:14px;">
+          <div class="grp" style="background:var(--c2);margin-top:12px;">
             <div class="k">Цель дня</div>
-            <div style="display:flex;align-items:baseline;gap:9px;margin-top:14px;"><span class="n" style="font:600 64px/.9 Figtree,sans-serif;color:#8fc1e8;letter-spacing:-.045em;">1931</span><span style="font:600 12px/1 Figtree,sans-serif;color:rgba(238,243,248,.46);">ккал</span></div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:22px;padding-top:16px;border-top:1px solid rgba(238,243,248,.13);">
-              <span style="font:600 12px/1 Figtree,sans-serif;color:rgba(238,243,248,.58);">от затрат без термического эффекта · −10 %</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.38)" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:10px;"><span class="big n">1 940</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">ккал</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;">
+              <span style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);">от затрат без термического эффекта · −15 %</span>
+              <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">из чего ›</span>
             </div>
           </div>
-
           <div class="tier">Сегодня</div>
-          <div class="grp" style="background:#17302a;">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;">
-            <span style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Шаги</span>
-            <span class="n" style="font:700 13px/1 Figtree,sans-serif;color:#eef3f8;">1 980 <span style="font-weight:500;color:rgba(238,243,248,.43);">/ 9 100</span></span>
+          <div class="grp">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+              <span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Шаги</span>
+              <span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">0 / 10 000</span>
+            </div>
+            <div class="bar" style="margin-top:10px;"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;">
+              <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">0 ккал</span>
+              <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">факт — ползунком, цель — тапом</span>
+            </div>
           </div>
-          <div style="height:5px;border-radius:999px;background:rgba(238,243,248,.11000000000000001);margin-top:11px;"><div style="width:22%;height:5px;border-radius:999px;background:#4caf7d;"></div></div>
-          <div style="font:500 11px/1 Figtree,sans-serif;color:rgba(238,243,248,.5);margin-top:11px;">107 ккал · правка ползунком</div>
-          </div>
-
           <div class="cd" style="margin-top:10px;">
-            <div class="row"><span style="color:rgba(238,243,248,.63);">Бытовая активность</span><span class="n" style="color:#eef3f8;">30 мин · 72 ккал</span></div>
-            <div class="row"><span style="color:rgba(238,243,248,.63);">Зарядка</span><span class="n" style="color:#eef3f8;">11:50 · 19 ккал</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:rgba(238,243,248,.63);">Голод и энергия</span><span style="color:rgba(238,243,248,.63);font-weight:500;">не отмечено</span></div>
+            <div class="row"><span style="color:var(--tx);">Тренировки</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">не отмечено</span></div>
+            <div class="row"><span style="color:var(--tx);">Бытовая активность</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">не отмечено</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Зарядка</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">не отмечено</span></div>
           </div>
-
           <div class="tier">Действие</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;border-radius:999px;background:#2e7cc0;padding:17px 22px;">
-            <span style="font:700 13px/1 Figtree,sans-serif;color:#ffffff;">Добавить активность</span>
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          </div>
-
+          <div class="btn">Добавить активность</div>
           <div class="tier">История</div>
           <div class="grp">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="k">Зарядка · 6 из 14</span><span style="display:flex;gap:14px;font:600 11px/1 Figtree,sans-serif;"><span style="color:#8fc1e8;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;padding:0 6px;margin:-16px -6px;border-bottom:2px solid #2e7cc0;">28 дней</span><span style="color:rgba(238,243,248,.46);min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;padding:0 6px;margin:-16px -6px;">Месяц</span></span></div>
-          <div style="display:grid;grid-template-columns:repeat(14,1fr);gap:5px;">
-            <div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:#4caf7d;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:#4caf7d;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:#4caf7d;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:#4caf7d;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div>
-            <div style="aspect-ratio:1;border-radius:999px;background:#4caf7d;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:#4caf7d;"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:rgba(238,243,248,.1);"></div><div style="aspect-ratio:1;border-radius:999px;background:#2e7cc0;"></div>
+            <div style="font:700 13px/1.35 Figtree,sans-serif;color:var(--tx);">История начнётся с первой отметки</div>
+            <div class="p">Календарь зарядки и рост рабочих весов появятся, когда будет что сравнивать: календарь — с первого дня, веса — с двух недель и двух общих упражнений.</div>
           </div>
-          <div class="row" style="margin-top:14px;padding:14px 0 0;border-top:1px solid rgba(238,243,248,.11000000000000001);border-bottom:none;"><span style="color:rgba(238,243,248,.63);">Тренировки за месяц</span><span class="n" style="color:#eef3f8;">3 ›</span></div>
+          <div class="sm">Красных точек «пропущено» до первой записи нет: дни до начала — не факт о человеке.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Актив · шаги оценены</b><span>факта нет, подставлена медиана</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Актив · шаги оценены" data-vid="вид · оценённые шаги">
+        <div class="top"><span class="ttl">Актив</span><span class="k n">чт · 28 авг</span></div>
+        <div class="sc">
+          <div class="tier">Сегодня</div>
+          <div class="grp">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+              <span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Шаги</span>
+              <span style="display:flex;align-items:center;gap:7px;"><span class="badge" style="color:rgba(var(--ink),.5);">оценка</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">7 900 <span style="color:rgba(var(--ink),.38);">/ 10 000</span></span></span>
+            </div>
+            <div class="bar" style="margin-top:10px;"><span style="display:block;width:63%;height:8px;border-radius:999px;background:rgba(var(--ink),.16);"></span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;">
+              <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">293 ккал</span>
+              <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">поставьте факт ползунком</span>
+            </div>
+            <div class="sm" style="margin-top:10px;">Числа за этот день нет — взята медиана ваших последних 14 дней. Она участвует в расходе и в цели, поэтому помечена.</div>
+          </div>
+          <div class="cd" style="margin-top:10px;">
+            <div class="row"><span style="color:var(--tx);">Тренировки</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">не отмечено</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Бытовая активность</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">40 мин · 84 ккал</span></div>
+          </div>
+          <div class="sm">Пометка — тот же приём, что у расчётного веса: подставленное значение видно всегда и не притворяется фактом.</div>
+        </div>
+      </div>
+    </div>
+    <div class="an" data-nomirror>
+      <div class="anh">Пустоты и подстановки</div>
+      <div class="ab" data-anchor="История начнётся с первой отметки"><b>Календарь получил горизонт</b><span>Прежде первый экран нового человека — 27 красных точек и «0 из 28»: пропуском считался любой прошлый день без отметки, включая дни до установки приложения.</span><i>горизонт от первой записи; дни до неё — серые «не вели»</i></div>
+      <div class="ab" data-anchor="оценка"><b>Подставленное число помечено</b><span>Медиана 14 дней меняет расход и цель дня, значит человек это видит: пилюля «оценка», приглушённый тон числа и полосы, подпись, из чего взято.</span><i>предусловие: сейчас на экране дня механизм не срабатывает вовсе — сначала правка, потом пометка, иначе рисуем состояние, которого не бывает</i></div>
+      <div class="ab"><b>Два пустых состояния рабочих весов</b><span>«Меньше двух недель данных» и «сменил программу, сравнивать нечего» — разные фразы. Второе нельзя показывать как «не растут»: это не про результат, а про отсутствие общих упражнений.</span></div>
+    </div>
+  </div>
+
+  <div class="sect"><span class="lt">В</span><span class="tt">Программа куратора</span><span class="st">три элемента, которые выходят наверх</span></div>
+  <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
+    <div>
+      <div class="lab"><b>Актив · план назначен</b><span>карточка плана над ярусом</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Актив · план назначен" data-vid="вид · программа куратора">
+        <div class="top"><span class="ttl">Актив</span><span class="k n">сб · 30 авг</span></div>
+        <div class="sc">
+          <div class="grp" style="margin-top:12px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+              <span style="font:700 13.5px/1.3 Figtree,sans-serif;color:var(--tx);">Сегодня по программе</span>
+              <span class="badge">от куратора</span>
+            </div>
+            <div class="p">Ноги и спина · 5 упражнений · ориентировочно 50 минут. В расход не идёт, пока не начнёте.</div>
+            <div class="btn" style="margin-top:14px;">Начать</div>
+            <div style="display:flex;gap:8px;margin-top:9px;">
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c2);font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.58);">Перенести</span>
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c2);font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.58);">Пропустить</span>
+            </div>
+            <div class="sm">Перенос не требует согласования: пока куратор ответит, день уйдёт.</div>
+          </div>
+          <div class="tier">Сегодня</div>
+          <div class="cd">
+            <div class="row"><span style="color:var(--tx);">Шаги</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">4 120 / 10 000</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Тренировки</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">не начаты</span></div>
+          </div>
+          <div class="sm">Назначенный план даёт ноль калорий до старта — поэтому в строке тренировок стоит «не начаты», а не число.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Актив · правка куратора</b><span>перехватывает день до ответа</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Актив · правка куратора">
+        <div class="top"><span class="ttl">Актив</span><span class="k n">сб · 30 авг</span></div>
+        <div class="sc">
+          <div class="grp" style="background:var(--tint);margin-top:12px;">
+            <div style="font:700 13.5px/1.35 Figtree,sans-serif;color:var(--ac2);">Куратор поправил сегодняшнюю тренировку</div>
+            <div class="p">Вместо силовой на ноги — кардио 40 минут: вы отметили боль в колене вчера.</div>
+            <div style="display:flex;gap:8px;margin-top:14px;">
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--acs);font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);">Принять</span>
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--ink),.1);font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.58);">Оставить прежнюю</span>
+            </div>
+            <div class="sm">Ответить можно, пока не закрыт ни один подход. Начали по прежнему плану — правка снимается сама.</div>
+          </div>
+          <div class="tier">Сегодня</div>
+          <div class="cd">
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Шаги</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 340 / 10 000</span></div>
+          </div>
+          <div class="sm">Пока правка не отвечена, она стоит первой на экране: до ответа непонятно, какая тренировка сегодня.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Актив · день отдыха</b><span>программа есть, на сегодня ничего</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Актив · день отдыха">
+        <div class="top"><span class="ttl">Актив</span><span class="k n">вс · 31 авг</span></div>
+        <div class="sc">
+          <div class="cd" style="margin-top:12px;">
+            <div class="row" style="border-bottom:none;">
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Следующая тренировка — завтра</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">Грудь и руки · по программе</span></span>
+              <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">программа ›</span>
+            </div>
+          </div>
+          <div class="tier">Сегодня</div>
+          <div class="cd">
+            <div class="row"><span style="color:var(--tx);">Шаги</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">6 780 / 10 000</span></div>
+            <div class="row"><span style="color:var(--tx);">Тренировки</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">день отдыха</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Зарядка</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--gr);">08:05 · была</span></div>
+          </div>
+          <div class="sm">Строка «Следующая тренировка» больше не пропадает вместе с блоком: прежде в пустой день она исчезала, и программы на экране не было вовсе.</div>
+        </div>
+      </div>
+    </div>
+    <div class="an" data-nomirror>
+      <div class="anh">Порядок трёх элементов</div>
+      <div class="ab" data-anchor="Куратор поправил сегодняшнюю тренировку"><b>Правка стоит выше плана</b><span>Она перехватывает день: до ответа непонятно, какая тренировка сегодня. Отвечать можно, пока не закрыт ни один подход, — начали по прежнему, и правка снимается сама.</span></div>
+      <div class="ab" data-anchor="Следующая тренировка — завтра"><b>Строка и план взаимоисключающие</b><span>Есть план на сегодня — стоит карточка плана; нет — строка «Следующая тренировка». Обе одновременно не показываются, и в этом порядке они и написаны в коде.</span><i>тон предупреждения у правки, обычная карточка у плана: правка требует ответа, план — действия</i></div>
+      <div class="ab" data-anchor="не начаты"><b>«Не начаты», а не «0 ккал»</b><span>Назначенный план не даёт расхода до старта, и ноль в строке читался бы как «тренировался и не потратил». Слово честнее числа.</span></div>
+    </div>
+  </div>
+
+  <div class="sect"><span class="lt">Г</span><span class="tt">История и запись</span><span class="st">календарь, журнал подходов, пустоты весов, лист действия</span></div>
+  <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
+    <div>
+      <div class="lab"><b>Календарь зарядки</b><span>28 дней и месяц с листанием</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Календарь зарядки" data-vid="вид · календарь зарядки">
+        <div class="top"><span class="ttl">Зарядка</span><span class="k n">18 из 24</span></div>
+        <div class="sc">
+          <div style="display:flex;gap:6px;margin-top:12px;">
+            <span class="badge" style="background:var(--acs);color:var(--on-acs);">28 дней</span>
+            <span class="badge">Месяц</span>
+          </div>
+          <div class="grp" style="margin-top:12px;">
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:9px;">
+              <span class="dot" style="background:rgba(var(--ink),.1);"></span><span class="dot" style="background:rgba(var(--ink),.1);"></span><span class="dot" style="background:rgba(var(--ink),.1);"></span><span class="dot" style="background:rgba(var(--ink),.1);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--val-bad);"></span>
+              <span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--gr2);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--val-bad);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--gr);"></span>
+              <span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--val-bad);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--gr2);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--val-bad);"></span>
+              <span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--val-bad);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:rgba(var(--ink),.16);"></span>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;">
+              <span style="display:flex;align-items:center;gap:6px;font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);"><span class="dot" style="background:var(--gr);"></span>сделана</span>
+              <span style="display:flex;align-items:center;gap:6px;font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);"><span class="dot" style="background:var(--gr2);"></span>тренировкой</span>
+              <span style="display:flex;align-items:center;gap:6px;font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);"><span class="dot" style="background:var(--val-bad);"></span>пропуск</span>
+              <span style="display:flex;align-items:center;gap:6px;font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);"><span class="dot" style="background:rgba(var(--ink),.1);"></span>не вели</span>
+            </div>
+          </div>
+          <div class="cd" style="margin-top:10px;">
+            <div class="row" style="border-bottom:none;">
+              <span style="display:flex;align-items:center;gap:12px;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--ac);">‹</span><span style="color:var(--tx);">Август 2026</span><span style="font:700 13px/1 Figtree,sans-serif;color:var(--ac);">›</span></span>
+              <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">режим «Месяц»</span>
+            </div>
+          </div>
+          <div class="sm">Четыре дня в начале окна — серые: до них зарядку не вели. Пропуском считается только день после первой отметки.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Тренировки · журнал подходов</b><span>аккордеон внутри тренировок</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Тренировки · журнал подходов" data-vid="вид · карточка силовой">
+        <div class="top"><span class="ttl">Актив</span><span class="k n">сб · 30 авг</span></div>
+        <div class="sc">
+          <div class="tier">Сегодня</div>
+          <div class="cd">
+            <div class="row" style="border-bottom:none;">
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Тренировки</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">силовая 45 мин · 1,9 т объёма</span></span>
+              <span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">385 ккал</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--ac);">›</span></span>
+            </div>
+          </div>
+          <div class="grp" style="margin-top:10px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+              <span style="font:700 13px/1.3 Figtree,sans-serif;color:var(--tx);">Ноги и спина</span>
+              <span class="k n">18:40</span>
+            </div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:5px;">Конструктор · 5 упражнений · 1,9 т фактического объёма</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
+              <span class="badge" style="color:rgba(var(--ink),.5);">Z1 · —</span>
+              <span class="badge">Z2 · 45 мин · 315</span>
+              <span class="badge" style="color:rgba(var(--ink),.5);">Z3 · —</span>
+              <span class="badge" style="color:rgba(var(--ink),.5);">Z4 · —</span>
+            </div>
+            <div class="cd" style="background:var(--bg);margin-top:12px;">
+              <div class="row"><span style="color:var(--tx);">Приседания</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">4 × 8 · 80 кг</span></div>
+              <div class="row"><span style="color:var(--tx);">Тяга штанги</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">4 × 10 · 60 кг</span></div>
+              <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Подтягивания</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">3 × 8 · свой вес</span></div>
+            </div>
+            <div class="btn2c" style="margin-top:12px;">Открыть конструктор</div>
+            <div class="sm">Плановый объём — 2,1 т: он живёт здесь, где виден состав, и в ярус «Сегодня» не идёт.</div>
           </div>
         </div>
-        <div style="display:flex;padding:4px 10px 16px;background:#13222f;">
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Главная</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Питание</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#8fc1e8;">Актив</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Отчёты</span></div></div>
-          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Инсайты</span></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Рабочие веса · нечего сравнивать</b><span>две пустоты, разные по смыслу</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Рабочие веса · нечего сравнивать" data-vid="вид · пустоты рабочих весов">
+        <div class="top"><span class="ttl">Актив</span><span class="k n">сб · 30 авг</span></div>
+        <div class="sc">
+          <div class="tier">История</div>
+          <div class="cd">
+            <div class="row">
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Рабочие веса</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">данных 9 дней из 14</span></span>
+              <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">рано сравнивать</span>
+            </div>
+            <div class="row" style="border-bottom:none;">
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Рабочие веса</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">программа сменилась 12 августа</span></span>
+              <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">нет общих упражнений</span>
+            </div>
+          </div>
+          <div class="sm">Два состояния показаны рядом только на канвасе — в продукте строка одна. «Нет общих упражнений» не значит «веса не растут»: сравнивать нечего, а не результат плохой.</div>
+          <div class="tier">Лист действия</div>
+          <div class="cd">
+            <div class="row"><span style="color:var(--tx);">Тренировка</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">время, тип, минуты по зонам</span></div>
+            <div class="row"><span style="color:var(--tx);">Зарядка</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">сделал · сделаю · не сегодня</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Бытовая активность</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">минуты</span></div>
+          </div>
+          <div class="sm">Третий слот тренировки занят — пункт «Тренировка» в листе не показывается, а не гаснет.</div>
         </div>
-      </div></div></div>
-<div style="width:400px;flex:none;">
-<div class="h" style="margin-top:0;">Что это доказывает</div><div style="background:#fffaf1;border-radius:24px;padding:20px;"><div class="nt"><b>Тема — колонка значений</b><span>Песочная, песочная тёмная, синяя и сине-тёмная получены из одного слоя заменой таблицы. Ни один блок не переехал — это и есть проверка гипотезы про токены.</span></div><div class="nt"><b>Ролей по-прежнему четыре</b><span>Герой, «идёт хорошо», нейтраль, действие и внимание. Пока тема меняет только их значения, палитр может быть сколько угодно.</span></div><div class="ntl"><b>Цена не в дизайне, а в миграции</b><span>Пока 148 захардкоженных цветов сидят в JS, они не поменяются ни от какой темы. Сначала словарь, потом выбор палитры пользователем.</span></div></div>
-<div class="h">Три места ручного решения</div><div style="background:#f0d8c4;border-radius:24px;padding:20px;"><div class="nt"><b>«Внимание»</b><span>Терракота в синей гамме не работает — роль берёт розово-красный из палитры лэндинга. Единственный немеханический перевод.</span></div><div class="nt"><b>Вода</b><span>В песочной голубой был исключением ради узнавания; в синей он сливается с акцентом, поэтому носитель берёт более тёмный тон.</span></div><div class="ntl"><b>Знак</b><span>Буквы идут за чернилами темы, искры — за акцентом. В синей гамме искры совпадают с родным #52A0D8, то есть знак возвращается к своему исходному виду.</span></div></div>
+      </div>
+    </div>
+    <div class="an" data-nomirror>
+      <div class="anh">Решения этой секции</div>
+      <div class="ab" data-anchor="Август 2026"><b>Листание месяцев возвращается</b><span>Кнопка «Месяц» вела в сетку без подписи, какой это месяц, и без стрелок. Теперь подпись и стрелки на месте: по месяцам видно тренд привычки, а 28 дней отвечают только на «как сейчас».</span><i>решение владельца 31 августа</i></div>
+      <div class="ab" data-anchor="не вели"><b>Легенда обязательна</b><span>Четыре тона без подписей — четыре загадки: серый читался как «пропуск», а зелёный и сине-зелёный не различались вовсе. «Тренировкой» — день, где зарядку заменила тренировка.</span></div>
+      <div class="ab" data-anchor="Плановый объём — 2,1 т"><b>Плановый тоннаж только в карточке</b><span>В ярусе «Сегодня» стоит фактический — по отмеченным подходам. Плановый живёт там, где виден состав: рядом с ним понятно, что именно не сделано.</span></div>
+      <div class="ab" data-anchor="программа сменилась 12 августа"><b>Две пустоты — две фразы</b><span>«Рано сравнивать» про количество данных, «нет общих упражнений» про их состав. Слить их в одну значило бы сказать человеку, сменившему программу, что его веса не растут.</span></div>
+      <div class="ab" data-anchor="Третий слот тренировки занят"><b>Пункт исчезает, а не гаснет</b><span>Слотов три; когда все заняты, добавлять нечего. Погашенная кнопка обещает действие, которого нет.</span></div>
+    </div>
+  </div>
+
+  <div class="ctr" data-contract style="background:var(--c2);border-radius:26px;padding:22px 24px;margin-top:38px;max-width:1080px;">
+    <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(var(--ink),.42);">Контракт канваса</div>
+
+    <div class="ctrH">Что это и чьё</div>
+    <div class="spec"><b>фича</b><span data-v="вкладка «Актив»: цель дня с разбором, программа куратора, ярус «Сегодня» тремя сущностями, действие, история (календарь зарядки, рост рабочих весов, тренировки за месяц)"></span></div>
+    <div class="spec"><b>границы</b><span data-v="моё — содержимое вкладки от шапки до последней строки истории. Шапка приложения, капсула даты и FAB-стопка существуют в продукте и здесь только показаны; вид капсулы — date-remainders.v4.dc.html, плитки шагов на Главной — home-widgets.v4.dc.html"></span></div>
+    <div class="spec"><b>источник</b><span data-v="главный для вкладки и порядка ярусов. Канон всех калорий — HEYS.TDEE.calculate (heys_tdee_v1.js), канон цели с поправкой — displayOptimum; при расхождении верен код, а не кадр. Матрица дисциплины в Отчётах и плитка шагов на Главной читают те же числа — reports-insights.v4.dc.html и home-widgets.v4.dc.html"></span></div>
+    <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label; все кадры статичные (data-demo='stop'); ширина 375 px"></span></div>
+
+    <div class="ctrH">Ярусы и порядок</div>
+    <div class="spec"><b>порядок сверху вниз</b><span data-v="цель дня (hero) → программа куратора, если есть → ярус «Сегодня» → ярус «Действие» → ярус «История». Порядок не настраивается"></span></div>
+    <div class="spec"><b>«Кардио» как имя снято</b><span data-v="под этим словом лежали семь сущностей: программа, назначенная силовая, правка куратора, силовые с журналом, хобби, «Пальцы» и бытовая активность — кардио было одной из них. Ярус «Сегодня» раскладывается на три строки: «Тренировки», «Бытовая активность», «Зарядка»; аккордеон остаётся только внутри тренировок, для карточек с журналом подходов"></span><i>решение владельца 30 августа</i></div>
+    <div class="spec"><b>ярус не исчезает пустым</b><span data-v="прежде весь блок пропадал, когда нет ни тренировок, ни быта, — и вместе с ним пропадала строка программы. Теперь строки стоят всегда, при отсутствии данных — «не отмечено» тоном чернил 38 %"></span></div>
+    <div class="spec" style="border-bottom:none"><b>три элемента программы</b><span data-v="правка куратора (перехватывает день, тон предупреждения) → карточка назначенного плана → строка «Следующая тренировка». Строка и карточка взаимоисключающие: строка прячется, когда план на сегодня есть. Все три стоят выше яруса «Сегодня»"></span></div>
+
+    <div class="ctrH">Цель дня и разбор</div>
+    <div class="spec"><b>разбор приходит к числу</b><span data-v="последняя строка цепочки — «Цель дня» с тем же числом, что в hero. Прежняя редакция кончалась процентом дефицита, и в день с долгом человек видел 2 210 сверху и приходил к 1 940 внизу"></span></div>
+    <div class="spec"><b>состав разбора</b><span data-v="базовый обмен → шаги → быт → тренировки (каждая строка только при значении больше нуля) → «База без термического эффекта» с подписью «от неё считается цель» → «Термический эффект еды» с подписью «в затратах есть, в цели нет» → «Затраты» → дефицит по договорённости → одна причина уровня → «Цель дня»"></span></div>
+    <div class="spec"><b>причина уровня одна</b><span data-v="долг, загрузка и снижение взаимоисключающие — в коде это if/else if/else, одновременно ровно одна. Цикл — множитель внутри расчёта, применяется до всех трёх. Значит строк поправки максимум две, и порядок фиксирован: цикл → одна из трёх → «Цель дня»"></span></div>
+    <div class="spec" style="border-bottom:none"><b>термический эффект не в цели</b><span data-v="цель считается от базы без TEF, затраты — с ним. Обе строки стоят рядом и подписаны, иначе разница читается как ошибка: без подписи человек вычитает и не находит объяснения"></span></div>
+
+    <div class="ctrH">Шаги</div>
+    <div class="spec"><b>цель шагов 10 000</b><span data-v="единственный дефолт зоны. 7 000 — не дефолт, а нижняя граница клампа рекомендации, случайно попавшая в эту роль через дневной нормализатор; 8 000 в Инсайтах ни на чём не основано. Владелец поля один — модель профиля; читатели спрашивают её, а не подставляют своё число"></span><i>решение владельца 30 августа: спор был не «7 000 против 10 000», а «дефолт модели против константы движка»</i></div>
+    <div class="spec"><b>факт и цель правятся по-разному</b><span data-v="факт — ползунком под полосой, цель — тапом по числу цели; подпись «факт — ползунком, цель — тапом» относится к обоим. Тап открывает тот же шаг чек-ина и обязан передавать дату открытого дня, иначе с прошлой даты план ставится сегодняшнему"></span></div>
+    <div class="spec"><b>цель — план дня, не настройка</b><span data-v="шаг спрашивают каждое утро заново, рекомендация считается от медианы с клампом и модификаторами по сну и энергии, подпись под слайдером говорит «План на день — его видит куратор». Поля цели в профиле нет вовсе"></span></div>
+    <div class="spec" style="border-bottom:none"><b>оценённые шаги помечены</b><span data-v="когда факта за день нет и подставлена медиана 14 дней: пилюля «оценка» тоном чернил 50 %, число и заливка полосы приглушены до чернил 16 %, подпись «Числа за этот день нет — взята медиана ваших последних 14 дней. Она участвует в расходе и в цели, поэтому помечена», справа «поставьте факт ползунком» вместо обычной подписи"></span><i>предусловие: на экране дня механизм оценки сейчас не срабатывает вовсе — пометка рисуется после его починки, иначе это состояние, которого не бывает</i></div>
+
+    <div class="ctrH">Тренировки, быт, зарядка</div>
+    <div class="spec"><b>строка тренировок</b><span data-v="имя «Тренировки», под ним состав дня («силовая 45 мин · 1,9 т объёма»), справа сумма ккал 12,5 px/700. Тоннаж — фактический, по отмеченным подходам, без назначенного плана: день с планом обязан давать тот же тоннаж, что пустой. Плановый показывается только внутри карточки силовой"></span><i>предусловие: дневной тоннаж не получает массу тела, поэтому упражнения на своём весе дают ноль — до починки число разойдётся с конструктором</i></div>
+    <div class="spec"><b>назначенный план — «не начаты»</b><span data-v="план до старта не даёт расхода, и ноль в строке читался бы как «тренировался и не потратил». Слово честнее числа"></span></div>
+    <div class="spec"><b>строка быта</b><span data-v="«60 мин · 126 ккал» — минуты и калории нетто, те же, что в разборе цели. Бейдж той же активности внутри карточки обязан показывать то же число. Расхождение нетто и брутто равно MET / (MET − 1) и у сущностей разное: у быта (MET 2,5) это 1,67 раза — самое грубое на экране, у зон тренировок от 1,2 (Z2) до 1,11 (Z4)"></span><i>множитель назван формулой, а не одним числом: 1,67 верно только для быта, и обобщать его на зоны нельзя</i></div>
+    <div class="spec" style="border-bottom:none"><b>строка зарядки</b><span data-v="«07:20 · 34 ккал» тоном --gr, когда была; «сделаю» — когда обещана; «не отмечено» — когда не решено. Зарядка не тип тренировки, а признак: она опознаётся источником записи, ярлыком «зарядка» или сигнатурой зон — и в строку тренировок не попадает, иначе двойной счёт"></span></div>
+
+    <div class="ctrH">История</div>
+    <div class="spec"><b>календарь зарядки с горизонтом</b><span data-v="счёт «18 из 24» считает дни от первой записи, а не от начала окна. Дни до первой отметки — серые «не вели», не красные: прежде первый экран нового человека давал 27 красных точек и «0 из 28», то есть пропуском считались дни до установки приложения"></span></div>
+    <div class="spec"><b>рост рабочих весов на вкладке</b><span data-v="строка «Рабочие веса · +4 %» с подписью «за 4 недели · 6 общих упражнений». Метрика уже написана: окно 28 дней делится пополам, сравниваются максимумы одних и тех же упражнений, нужно два общих, рост при 2 % и более. В норме она остаётся доводом («норму не трогаем»), здесь становится фактом о тренировках — формулировка положительная"></span></div>
+    <div class="spec"><b>два пустых состояния весов</b><span data-v="«меньше двух недель данных» и «сменил программу, сравнивать нечего» — разные фразы. Второе не показывается как «не растут»: это не про результат, а про отсутствие общих упражнений"></span></div>
+    <div class="spec"><b>вид · ярус История</b><span data-v="блок .cd на --c1 радиусом 20 полями 2/16, строка 13 px по вертикали, разделитель 1 px чернил 7 %, у последней нет. «Зарядка · 18 из 24» — имя 12,5 px/600 --tx, справа ссылка «28 дней ›» 11 px/600 чернил 42 %. «Рабочие веса» — имя 12,5 px/600 --tx, под ним состав «за 4 недели · 6 общих упражнений» 11 px/1,3 чернил 45 %, справа Δ «+4 %» 12,5 px/700 моноцифрами тоном --gr (падение — --val-bad, ноль — чернила 35 %). «Тренировки за месяц» — имя и справа счёт с шевроном 12,5 px/600 --tx моноцифрами. У нового человека вместо всех трёх — .grp с заголовком 13 px/700 и прозой 12 px/1,55 чернил 60 %, без кнопок"></span></div>
+    <div class="spec"><b>режим «Месяц» с листанием</b><span data-v="кнопка «Месяц» ведёт в календарную сетку с подписью месяца и стрелками ‹ › для листания: по месяцам виден тренд привычки, а окно 28 дней отвечает только на «как сейчас». Прежде переключение давало сетку без подписи, какой это месяц, и без возможности листать"></span><i>решение владельца 31 августа: листание возвращается, оба режима остаются</i></div>
+    <div class="spec"><b>легенда календаря</b><span data-v="четыре тона подписаны словами: «сделана» --gr, «тренировкой» --gr2 (зарядку заменила тренировка), «пропуск» --val-bad, «не вели» чернила 10 %. Без подписей серый читается как пропуск, а два зелёных не различаются вовсе"></span></div>
+    <div class="spec"><b>причина пропуска зарядки</b><span data-v="день, отмеченный «не сегодня», спрашивает причину одним рядом коротких вариантов — статус для этого начинает писаться. Вопрос задаётся в тот же день, а не назавтра: спрашивать «почему не сделал» через сутки — допрос, а не сбор данных. Отказ отвечать не блокирует ничего, день остаётся пропуском"></span><i>решение владельца 31 августа: ветка была недостижима — статус не писал никто; начинаем писать</i></div>
+    <div class="spec"><b>плановый тоннаж только в карточке</b><span data-v="в ярусе «Сегодня» стоит фактический объём по отмеченным подходам; плановый («2,1 т») живёт в карточке силовой рядом с составом упражнений — там понятно, что именно не сделано. В ярус он не идёт: два тоннажа в одной строке требуют выбора, какой из них ответ"></span></div>
+    <div class="spec"><b>лист действия · три пункта</b><span data-v="«Тренировка» (время, тип, минуты по зонам), «Зарядка» (сделал · сделаю · не сегодня), «Бытовая активность» (минуты). Слотов тренировки три: когда все заняты, пункт из листа исчезает, а не гаснет — погашенная кнопка обещает действие, которого нет"></span></div>
+    <div class="spec"><b>вид · календарь зарядки</b><span data-v="сетка 7 колонок с зазором 9 в .grp на --c1: точка 9 px радиусом 999 — сделана --gr, тренировкой --gr2, пропуск --val-bad, «не вели» чернила 10 %, сегодня чернила 16 %. Чипы режима 9 px моноширинной: выбранный --acs с --on-acs, второй --c2 с --ac. Легенда — ряд из четырёх пар «точка + слово» 10,5 px чернил 50 % с переносом. Строка листания — .cd со стрелками 13 px/700 тоном --ac по краям названия месяца"></span></div>
+    <div class="spec"><b>вид · карточка силовой</b><span data-v=".grp на --c1: имя 13 px/700 --tx и время 10,5 px чернил 42 % по краям, под ними состав 11 px/1,4 чернил 45 %. Чипы зон — 9 px моноширинной на --c2: активная зона тоном --ac со значением «45 мин · 315», пустые тоном чернил 50 % со прочерком. Список упражнений — вложенный .cd на --bg строками 12,5 px/600 --tx и «4 × 8 · 80 кг» 11,5 px/600 чернил 55 % моноцифрами. Кнопка «Открыть конструктор» 48 на --c2"></span></div>
+    <div class="spec" style="border-bottom:none"><b>вид · пустоты рабочих весов</b><span data-v="строка .cd: имя 12,5 px/600 --tx, под ним причина 11 px/1,3 чернил 45 % («данных 9 дней из 14» либо «программа сменилась 12 августа»), справа состояние 11 px/600 чернил 38 % («рано сравнивать» либо «нет общих упражнений»). Тона состояний одинаковые: обе пустоты — не результат, и красить их как плохой результат нельзя"></span></div>
+    <div class="spec" style="border-bottom:none"><b>тренировки за месяц</b><span data-v="счёт за 30 дней от открытой даты, а не от сегодня: при листании на прошлый день hero про этот день, а список — про последние 30 дней от сегодня. Назначенные и пропущенные планы в счёт не идут — иначе в списке стоят строки «0 ккал» за тренировки, которых не было"></span></div>
+
+    <div class="ctrH">Вид</div>
+    <div class="spec"><b>вид · hero цели дня</b><span data-v="карточка .grp на --c2 радиусом 20 полями 16: ярус «Цель дня» 10,5 px/600 чернил 42 %, число 30 px/800 с трекингом −.02em, единица 12,5 px/600 чернил 45 % по базовой линии; ниже строка причины 11,5 px чернил 50 % слева и «из чего ›» 11,5 px/700 тоном --ac справа"></span></div>
+    <div class="spec"><b>вид · разбор цели</b><span data-v="блок .cd на --c1 радиусом 20 полями 2/16: строка 13 px по вертикали, разделитель 1 px чернил 7 %, у последней нет. Ключ 12,5 px/600 --tx слева, значение справа моноцифрами — плюсы тоном --gr, вычитаемое и справочное чернилами 55 %, итоговые строки 12,5–13 px/700–800 --tx. Подписи под ключом 10 px/1,3 чернил 42 %"></span></div>
+    <div class="spec"><b>вид · шаги</b><span data-v="карточка .grp: имя 12,5 px/600 --tx и «8 420 / 10 000» моноцифрами (цель тоном чернил 38 %), полоса высотой 8 радиусом 999 на подложке чернил 7 % с заливкой --gr2, под ней ккал 11 px/600 чернил 50 % слева и подпись про правку 11 px чернил 42 % справа"></span></div>
+    <div class="spec"><b>вид · оценённые шаги</b><span data-v="то же, но: пилюля «оценка» 9 px моноширинной на --c2 тоном чернил 50 % перед числом, число и цель тоном чернил 55 и 38 %, заливка полосы чернил 16 % вместо --gr2, сноска 11 px/1,55 чернил 42 % внутри карточки"></span></div>
+    <div class="spec"><b>вид · программа куратора</b><span data-v="карточка плана — .grp на --c1: заголовок 13,5 px/700, пилюля «от куратора» 9 px моно на --c2 тоном --ac справа, проза 12 px/1,55 чернил 60 %, главная кнопка 48 на --acs, ниже ряд из двух по 48 на --c2 пополам с зазором 8. Правка куратора — та же карточка на --tint с заголовком тоном --ac2 и двумя кнопками 48 (принять на --acs, отказ на --bg с рамкой чернил 10 %). Строка «Следующая тренировка» — .cd со ссылкой «программа ›» 11,5 px/700 тоном --ac"></span></div>
+    <div class="spec"><b>вид · строки яруса «Сегодня»</b><span data-v="блок .cd: имя 12,5 px/600 --tx слева, под ним состав 11 px/1,3 чернил 45 %, справа значение 12,5 px/600–700 моноцифрами (--tx у чисел, --gr у зарядки), «не отмечено» — 11 px/600 чернил 38 %"></span></div>
+    <div class="spec" style="border-bottom:none"><b>вид · пустые состояния</b><span data-v="ярус «История» у нового человека — .grp с заголовком 13 px/700 и прозой 12 px/1,55 чернил 60 %, без кнопок: показывать нечего и предлагать нечего. Строки яруса «Сегодня» остаются на месте со значением «не отмечено» — пустота не меняет вид, только текст"></span></div>
+
+    <div class="ctrH">Демо</div>
+    <div class="spec" style="border-bottom:none"><b>все кадры статичны</b><span data-v="data-demo='stop' на каждом кадре: петель и таймингов на канвасе нет, пиксельные сравнения можно делать по любому кадру"></span></div>
+
+    <div class="ctrH">Открыто до передачи</div>
+    <div class="spec"><b>предусловия кадров</b><span data-v="кадр «шаги оценены» верен только после починки механизма оценки на экране дня, строка тоннажа — после передачи массы тела в дневной расчёт. До этого оба помечаются «—», а не вердиктом: рисовать состояние, которого не бывает, нельзя"></span></div>
+    <div class="spec" style="border-bottom:none"><b>переключатель «Месяц» в календаре</b><span data-v="кнопка режима нарисована, а подписи месяца, стрелок листания и легенды в этой раскладке нет — переключение ведёт в сетку без ответа, какой это месяц. Кадр календаря в режиме месяца не рисуется до решения: возвращать листание или оставить только 28 дней"></span></div>
+          <div class="ctrH">Разбор кадров · элемент за элементом</div>
+    <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
+    <div class="spec"><b>Актив · день собран · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Актив · день собран · 02</b><span data-v="«Актив» — имя экрана"></span></div>
+    <div class="spec"><b>Актив · день собран · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Актив · день собран · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Актив · день собран · 05</b><span data-v="карточка .grp: фон var(--c2), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Актив · день собран · 06</b><span data-v="«Цель дня» — ключ"></span></div>
+    <div class="spec"><b>Актив · день собран · 07</b><span data-v="выравнивание baseline, зазор 8px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · день собран · 08</b><span data-v="«2 210» — главное число + моноцифры"></span></div>
+    <div class="spec"><b>Актив · день собран · 09</b><span data-v="«ккал» — шрифт 600 13px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Актив · день собран · 10</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 9px"></span></div>
+    <div class="spec"><b>Актив · день собран · 11</b><span data-v="«компенсация долга» — шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Актив · день собран · 12</b><span data-v="«из чего ›» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Актив · день собран · 13</b><span data-v="список .cd: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · день собран · 14</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Актив · день собран · 15</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Актив · день собран · 16</b><span data-v="«Программа · сегодня силовая» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · день собран · 17</b><span data-v="«Ноги и спина · 5 упражнений» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Актив · день собран · 18</b><span data-v="«Сегодня» — ярус"></span></div>
+    <div class="spec"><b>Актив · день собран · 19</b><span data-v="карточка .grp"></span></div>
+    <div class="spec"><b>Актив · день собран · 20</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Актив · день собран · 21</b><span data-v="«Шаги» — шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · день собран · 22</b><span data-v="«8 420» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · день собран · 23</b><span data-v="«/ 10 000» — цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Актив · день собран · 24</b><span data-v="отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · день собран · 25</b><span data-v="ширина 67%, высота 8px, радиус 999px, фон var(--gr2)"></span></div>
+    <div class="spec"><b>Актив · день собран · 26</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · день собран · 27</b><span data-v="«312 ккал» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Актив · день собран · 28</b><span data-v="«факт — ползунком, цель — тапом» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · день собран · 29</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Актив · день собран · 30</b><span data-v="«385 ккал» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · день собран · 31</b><span data-v="«07:20 · 34 ккал» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Актив · день собран · 32</b><span data-v="«Добавить активность» — главная кнопка"></span></div>
+    <div class="spec"><b>Актив · день собран · 33</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Актив · день собран · 34</b><span data-v="«28 дней ›» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · день собран · 35</b><span data-v="«+4 %» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Актив · день собран · 36</b><span data-v="«Слово «Кардио» с экрана снято: под ним лежали семь» — сноска"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 02</b><span data-v="«Актив» — имя экрана"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 05</b><span data-v="карточка .grp: фон var(--c2), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 06</b><span data-v="«Цель дня» — ключ"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 07</b><span data-v="выравнивание baseline, зазор 8px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 08</b><span data-v="«2 210» — главное число + моноцифры"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 09</b><span data-v="«ккал» — шрифт 600 13px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 10</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 9px"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 11</b><span data-v="«компенсация долга» — шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 12</b><span data-v="«свернуть ›» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 13</b><span data-v="список .cd: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 14</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 15</b><span data-v="«Базовый обмен» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 16</b><span data-v="«1 520» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 17</b><span data-v="«+312» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 18</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 19</b><span data-v="«от неё считается цель» — шрифт 500 10px/1.3 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 20</b><span data-v="«2 343» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 21</b><span data-v="«+188» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 22</b><span data-v="«+218» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 23</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 24</b><span data-v="«2 210» — моноцифры: шрифт 800 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 25</b><span data-v="«Цепочка кончается тем числом, из которого её откры» — сноска"></span></div>
+    <div class="spec"><b>Актив · новый человек · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Актив · новый человек · 02</b><span data-v="«Актив» — имя экрана"></span></div>
+    <div class="spec"><b>Актив · новый человек · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Актив · новый человек · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Актив · новый человек · 05</b><span data-v="карточка .grp: фон var(--c2), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Актив · новый человек · 06</b><span data-v="«Цель дня» — ключ"></span></div>
+    <div class="spec"><b>Актив · новый человек · 07</b><span data-v="выравнивание baseline, зазор 8px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · новый человек · 08</b><span data-v="«1 940» — главное число + моноцифры"></span></div>
+    <div class="spec"><b>Актив · новый человек · 09</b><span data-v="«ккал» — шрифт 600 13px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 10</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 9px"></span></div>
+    <div class="spec"><b>Актив · новый человек · 11</b><span data-v="«от затрат без термического эффекта · −15 %» — шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 12</b><span data-v="«из чего ›» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 13</b><span data-v="«Сегодня» — ярус"></span></div>
+    <div class="spec"><b>Актив · новый человек · 14</b><span data-v="карточка .grp"></span></div>
+    <div class="spec"><b>Актив · новый человек · 15</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Актив · новый человек · 16</b><span data-v="«Шаги» — шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 17</b><span data-v="«0 / 10 000» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 18</b><span data-v="отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · новый человек · 19</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · новый человек · 20</b><span data-v="«0 ккал» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 21</b><span data-v="«факт — ползунком, цель — тапом» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 22</b><span data-v="список .cd: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · новый человек · 23</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Актив · новый человек · 24</b><span data-v="«Тренировки» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 25</b><span data-v="«не отмечено» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 26</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Актив · новый человек · 27</b><span data-v="«Добавить активность» — главная кнопка"></span></div>
+    <div class="spec"><b>Актив · новый человек · 28</b><span data-v="«История начнётся с первой отметки» — шрифт 700 13px/1.35 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 29</b><span data-v="«Календарь зарядки и рост рабочих весов появятся, к» — проза"></span></div>
+    <div class="spec"><b>Актив · новый человек · 30</b><span data-v="«Красных точек «пропущено» до первой записи нет: дн» — сноска"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 02</b><span data-v="«Актив» — имя экрана"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 03</b><span data-v="«чт · 28 авг» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 05</b><span data-v="«Сегодня» — ярус"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 06</b><span data-v="карточка .grp"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 07</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 08</b><span data-v="«Шаги» — шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 09</b><span data-v="выравнивание center, зазор 7px"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 10</b><span data-v="«оценка» — пилюля: цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 11</b><span data-v="«7 900» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 12</b><span data-v="«/ 10 000» — цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 13</b><span data-v="отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 14</b><span data-v="ширина 63%, высота 8px, радиус 999px, фон rgba(var(--ink),.16)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 15</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 16</b><span data-v="«293 ккал» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 17</b><span data-v="«поставьте факт ползунком» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 18</b><span data-v="«Числа за этот день нет — взята медиана ваших после» — сноска: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 19</b><span data-v="список .cd: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 20</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 21</b><span data-v="«Тренировки» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 22</b><span data-v="«не отмечено» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 23</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 24</b><span data-v="«40 мин · 84 ккал» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 25</b><span data-v="«Пометка — тот же приём, что у расчётного веса: под» — сноска"></span></div>
+    <div class="spec"><b>Актив · план назначен · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Актив · план назначен · 02</b><span data-v="«Актив» — имя экрана"></span></div>
+    <div class="spec"><b>Актив · план назначен · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Актив · план назначен · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Актив · план назначен · 05</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Актив · план назначен · 06</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Актив · план назначен · 07</b><span data-v="«Сегодня по программе» — шрифт 700 13.5px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · план назначен · 08</b><span data-v="«от куратора» — пилюля"></span></div>
+    <div class="spec"><b>Актив · план назначен · 09</b><span data-v="«Ноги и спина · 5 упражнений · ориентировочно 50 ми» — проза"></span></div>
+    <div class="spec"><b>Актив · план назначен · 10</b><span data-v="«Начать» — главная кнопка: отступ сверху 14px"></span></div>
+    <div class="spec"><b>Актив · план назначен · 11</b><span data-v="зазор 8px, отступ сверху 9px"></span></div>
+    <div class="spec"><b>Актив · план назначен · 12</b><span data-v="«Перенести» — флекс 1, выравнивание center, распределение center, высота от 48px, радиус 999px, фон var(--c2), шрифт 700 12.5px/1 Figtree, цвет rgba(var(--ink),.58)"></span></div>
+    <div class="spec"><b>Актив · план назначен · 13</b><span data-v="«Перенос не требует согласования: пока куратор отве» — сноска"></span></div>
+    <div class="spec"><b>Актив · план назначен · 14</b><span data-v="«Сегодня» — ярус"></span></div>
+    <div class="spec"><b>Актив · план назначен · 15</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Актив · план назначен · 16</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Актив · план назначен · 17</b><span data-v="«Шаги» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · план назначен · 18</b><span data-v="«4 120 / 10 000» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · план назначен · 19</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Актив · план назначен · 20</b><span data-v="«не начаты» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 02</b><span data-v="«Актив» — имя экрана"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 05</b><span data-v="карточка .grp: фон var(--tint), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 06</b><span data-v="«Куратор поправил сегодняшнюю тренировку» — шрифт 700 13.5px/1.35 Figtree, цвет var(--ac2)"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 07</b><span data-v="«Вместо силовой на ноги — кардио 40 минут: вы отмет» — проза"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 08</b><span data-v="зазор 8px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 09</b><span data-v="«Принять» — флекс 1, выравнивание center, распределение center, высота от 48px, радиус 999px, фон var(--acs), шрифт 700 12.5px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 10</b><span data-v="«Оставить прежнюю» — флекс 1, выравнивание center, распределение center, высота от 48px, радиус 999px, фон var(--bg), рамка inset 0 0 0 1px rgba(var(--ink),.1), шрифт 700 12.5px/1 Figtree, цвет rgba(var(--ink),.58)"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 11</b><span data-v="«Ответить можно, пока не закрыт ни один подход. Нач» — сноска"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 12</b><span data-v="«Сегодня» — ярус"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 13</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 14</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 15</b><span data-v="«Шаги» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · правка куратора · 16</b><span data-v="«2 340 / 10 000» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 02</b><span data-v="«Актив» — имя экрана"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 03</b><span data-v="«вс · 31 авг» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 05</b><span data-v="список .cd: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 06</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 07</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 08</b><span data-v="«Следующая тренировка — завтра» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 09</b><span data-v="«Грудь и руки · по программе» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 10</b><span data-v="«программа ›» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 11</b><span data-v="«Сегодня» — ярус"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 12</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 13</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 14</b><span data-v="«6 780 / 10 000» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 15</b><span data-v="«день отдыха» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 16</b><span data-v="«08:05 · была» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 17</b><span data-v="«Строка «Следующая тренировка» больше не пропадает» — сноска"></span></div>
+    <div class="spec"><b>Календарь зарядки · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Календарь зарядки · 02</b><span data-v="«Зарядка» — имя экрана"></span></div>
+    <div class="spec"><b>Календарь зарядки · 03</b><span data-v="«18 из 24» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Календарь зарядки · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Календарь зарядки · 05</b><span data-v="зазор 6px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Календарь зарядки · 06</b><span data-v="«28 дней» — пилюля: фон var(--acs), цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Календарь зарядки · 07</b><span data-v="«Месяц» — пилюля"></span></div>
+    <div class="spec"><b>Календарь зарядки · 08</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Календарь зарядки · 09</b><span data-v="колонки repeat(7,1fr), зазор 9px"></span></div>
+    <div class="spec"><b>Календарь зарядки · 10</b><span data-v="точка: фон rgba(var(--ink),.1)"></span></div>
+    <div class="spec"><b>Календарь зарядки · 11</b><span data-v="точка: фон var(--gr)"></span></div>
+    <div class="spec"><b>Календарь зарядки · 12</b><span data-v="точка: фон var(--val-bad)"></span></div>
+    <div class="spec"><b>Календарь зарядки · 13</b><span data-v="точка: фон var(--gr2)"></span></div>
+    <div class="spec"><b>Календарь зарядки · 14</b><span data-v="точка: фон rgba(var(--ink),.16)"></span></div>
+    <div class="spec"><b>Календарь зарядки · 15</b><span data-v="зазор 12px, перенос строк wrap, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Календарь зарядки · 16</b><span data-v="выравнивание center, зазор 6px, шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Календарь зарядки · 17</b><span data-v="список .cd: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Календарь зарядки · 18</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Календарь зарядки · 19</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Календарь зарядки · 20</b><span data-v="«‹» — шрифт 700 13px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Календарь зарядки · 21</b><span data-v="«Август 2026» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Календарь зарядки · 22</b><span data-v="«режим «Месяц»» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Календарь зарядки · 23</b><span data-v="«Четыре дня в начале окна — серые: до них зарядку н» — сноска"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 02</b><span data-v="«Актив» — имя экрана"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 05</b><span data-v="«Сегодня» — ярус"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 06</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 07</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 08</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 09</b><span data-v="«Тренировки» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 10</b><span data-v="«силовая 45 мин · 1,9 т объёма» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 11</b><span data-v="выравнивание center, зазор 8px"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 12</b><span data-v="«385 ккал» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 13</b><span data-v="«›» — шрифт 700 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 14</b><span data-v="карточка .grp: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 15</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 16</b><span data-v="«Ноги и спина» — шрифт 700 13px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 17</b><span data-v="«Конструктор · 5 упражнений · 1,9 т фактического об» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.45), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 18</b><span data-v="зазор 6px, перенос строк wrap, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 19</b><span data-v="«Z1 · —» — пилюля: цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 20</b><span data-v="«Z2 · 45 мин · 315» — пилюля"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 21</b><span data-v="список .cd: фон var(--bg), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 22</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 23</b><span data-v="«4 × 8 · 80 кг» — моноцифры: шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 24</b><span data-v="«Открыть конструктор» — вторичная кнопка: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 25</b><span data-v="«Плановый объём — 2,1 т: он живёт здесь, где виден» — сноска"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 02</b><span data-v="«Актив» — имя экрана"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 05</b><span data-v="«История» — ярус"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 06</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 07</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 08</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 09</b><span data-v="«Рабочие веса» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 10</b><span data-v="«данных 9 дней из 14» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 11</b><span data-v="«рано сравнивать» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 12</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 13</b><span data-v="«Два состояния показаны рядом только на канвасе — в» — сноска"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 14</b><span data-v="«время, тип, минуты по зонам» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="ctrH">Текст кадров дословно</div>
+    <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
+    <div class="spec"><b>Актив · день собран · текст</b><span data-v="Актив › сб · 30 авг › Цель дня › 2 210 › ккал › компенсация долга › из чего › › Программа · сегодня силовая › Ноги и спина · 5 упражнений › начать › › Сегодня › Шаги › 8 420 › / 10 000 › 312 ккал › факт — ползунком, цель — тапом › Тренировки › силовая 45 мин · 1,9 т объёма › 385 ккал › Бытовая активность › 60 мин · 126 ккал › Зарядка › 07:20 · 34 ккал › Действие › Добавить активность › История › Зарядка · 18 из 24 › 28 дней › › Рабочие веса › за 4 недели · 6 общих упражнений › +4 % › Тренировки за месяц › 11 › › Слово «Кардио» с экрана снято: под ним лежали семь разных сущностей, и кардио было одной из них."></span></div>
+    <div class="spec"><b>Актив · разбор цели · текст</b><span data-v="Актив › сб · 30 авг › Цель дня › 2 210 › ккал › компенсация долга › свернуть › › Базовый обмен › 1 520 › Шаги › +312 › Быт › +126 › Тренировки › +385 › База без термического эффекта › от неё считается цель › 2 343 › Термический эффект еды › в затратах есть, в цели нет › +188 › Затраты › 2 531 › Дефицит по договорённости › −15 % › Компенсация долга › +218 › Цель дня › 2 210 › Цепочка кончается тем числом, из которого её открыли. Причина уровня одна: долг, загрузка и снижение исключают друг друга, а цикл — множитель внутри расчёта, до них."></span></div>
+    <div class="spec"><b>Актив · новый человек · текст</b><span data-v="Актив › сб · 30 авг › Цель дня › 1 940 › ккал › от затрат без термического эффекта · −15 % › из чего › › Сегодня › Шаги › 0 / 10 000 › 0 ккал › факт — ползунком, цель — тапом › Тренировки › не отмечено › Бытовая активность › не отмечено › Зарядка › не отмечено › Действие › Добавить активность › История › История начнётся с первой отметки › Календарь зарядки и рост рабочих весов появятся, когда будет что сравнивать: календарь — с первого дня, веса — с двух недель и двух общих упражнений. › Красных точек «пропущено» до первой записи нет: дни до начала — не факт о человеке."></span></div>
+    <div class="spec"><b>Актив · шаги оценены · текст</b><span data-v="Актив › чт · 28 авг › Сегодня › Шаги › оценка › 7 900 › / 10 000 › 293 ккал › поставьте факт ползунком › Числа за этот день нет — взята медиана ваших последних 14 дней. Она участвует в расходе и в цели, поэтому помечена. › Тренировки › не отмечено › Бытовая активность › 40 мин · 84 ккал › Пометка — тот же приём, что у расчётного веса: подставленное значение видно всегда и не притворяется фактом."></span></div>
+    <div class="spec"><b>Актив · план назначен · текст</b><span data-v="Актив › сб · 30 авг › Сегодня по программе › от куратора › Ноги и спина · 5 упражнений · ориентировочно 50 минут. В расход не идёт, пока не начнёте. › Начать › Перенести › Пропустить › Перенос не требует согласования: пока куратор ответит, день уйдёт. › Сегодня › Шаги › 4 120 / 10 000 › Тренировки › не начаты › Назначенный план даёт ноль калорий до старта — поэтому в строке тренировок стоит «не начаты», а не число."></span></div>
+    <div class="spec"><b>Актив · правка куратора · текст</b><span data-v="Актив › сб · 30 авг › Куратор поправил сегодняшнюю тренировку › Вместо силовой на ноги — кардио 40 минут: вы отметили боль в колене вчера. › Принять › Оставить прежнюю › Ответить можно, пока не закрыт ни один подход. Начали по прежнему плану — правка снимается сама. › Сегодня › Шаги › 2 340 / 10 000 › Пока правка не отвечена, она стоит первой на экране: до ответа непонятно, какая тренировка сегодня."></span></div>
+    <div class="spec"><b>Актив · день отдыха · текст</b><span data-v="Актив › вс · 31 авг › Следующая тренировка — завтра › Грудь и руки · по программе › программа › › Сегодня › Шаги › 6 780 / 10 000 › Тренировки › день отдыха › Зарядка › 08:05 · была › Строка «Следующая тренировка» больше не пропадает вместе с блоком: прежде в пустой день она исчезала, и программы на экране не было вовсе."></span></div>
+    <div class="spec"><b>Календарь зарядки · текст</b><span data-v="Зарядка › 18 из 24 › 28 дней › Месяц › сделана › тренировкой › пропуск › не вели › Август 2026 › режим «Месяц» › Четыре дня в начале окна — серые: до них зарядку не вели. Пропуском считается только день после первой отметки."></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · текст</b><span data-v="Актив › сб · 30 авг › Сегодня › Тренировки › силовая 45 мин · 1,9 т объёма › 385 ккал › Ноги и спина › 18:40 › Конструктор · 5 упражнений · 1,9 т фактического объёма › Z1 · — › Z2 · 45 мин · 315 › Z3 · — › Z4 · — › Приседания › 4 × 8 · 80 кг › Тяга штанги › 4 × 10 · 60 кг › Подтягивания › 3 × 8 · свой вес › Открыть конструктор › Плановый объём — 2,1 т: он живёт здесь, где виден состав, и в ярус «Сегодня» не идёт."></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · текст</b><span data-v="Актив › сб · 30 авг › История › Рабочие веса › данных 9 дней из 14 › рано сравнивать › Рабочие веса › программа сменилась 12 августа › нет общих упражнений › Два состояния показаны рядом только на канвасе — в продукте строка одна. «Нет общих упражнений» не значит «веса не растут»: сравнивать нечего, а не результат плохой. › Лист действия › Тренировка › время, тип, минуты по зонам › Зарядка › сделал · сделаю · не сегодня › Бытовая активность › минуты › Третий слот тренировки занят — пункт «Тренировка» в листе не показывается, а не гаснет."></span></div>
 </div>
 </div>
-</div>
-<p style="margin:30px 0 0;font:500 12.5px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.5);">Соседние вкладки: «Вкладка — Питание v4», «Вкладка — Отчёты v4», «Вкладка — Инсайты v4». Виджеты Главной — «Виджеты Главной v4».</p>
-</div></x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;showContracts&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;1500px&quot;,&quot;height&quot;:&quot;900px&quot;},&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;annotations&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;showContracts&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;showProtocol&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
 class Component extends DCLogic {
-  componentDidMount() { this.applyTweaks(); }
-  componentDidUpdate() { this.applyTweaks(); }
-  renderVals() { return {}; }
-
   tw() {
-    const standalone = window.parent === window;
-    return { all: this.props.allPalettes ?? standalone, rules: this.props.rules ?? true };
+    const b = (v, d) => (v === undefined || v === null ? d : v === true || v === 'true');
+    return {
+      all: b(this.props.allPalettes, false),
+      ann: b(this.props.annotations, true),
+      ctr: b(this.props.showContracts, false),
+      prot: b(this.props.showProtocol, false),
+    };
   }
   contracts() {
-    const on = this.props.showContracts ?? false;
-    const list = [...document.querySelectorAll('[data-contract]')];
-    if (!list.length) return;
-    list.forEach(el => { el.style.display = on ? '' : 'none'; });
-    let bar = document.querySelector('[data-ctrbar]');
-    if (!bar) {
-      bar = document.createElement('div');
-      bar.setAttribute('data-ctrbar', '');
-      bar.style.cssText = 'font:600 11px/1.6 ui-monospace,Menlo,monospace;color:#8a4a20;margin:0 0 22px;white-space:nowrap;';
-      const anchor = document.querySelector('p');
-      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
-      else list[0].parentNode.insertBefore(bar, list[0]);
-    }
-    const n = list.length, m = n % 10, h = n % 100, one = m === 1 && h !== 11;
-    const word = one ? 'контракт' : (m >= 2 && m <= 4 && (h < 12 || h > 14) ? 'контракта' : 'контрактов');
+    const bar = document.querySelector('[data-ctrbar]');
+    if (!bar) return;
     const rows = document.querySelectorAll('[data-contract] .spec').length;
     const rm = rows % 10, rh = rows % 100;
     const rw = rm === 1 && rh !== 11 ? 'строка' : (rm >= 2 && rm <= 4 && (rh < 12 || rh > 14) ? 'строки' : 'строк');
-    bar.textContent = n + ' ' + word + ' на канвасе' + (rows ? ', ' + rows + ' ' + rw : '') + ' · ' + (on ? (one ? 'показан' : 'показаны') + ' ниже' : (one ? 'скрыт' : 'скрыты') + ' твиком «Контракты»');
+    bar.textContent = document.querySelectorAll('[data-contract]').length + ' контракт на канвасе, ' + rows + ' ' + rw;
   }
-  applyTweaks() {
+  protocols() {
+    const bar = document.querySelector('[data-protbar]');
+    const n = document.querySelectorAll('[data-demo="protocol"]').length;
+    if (bar) {
+      bar.textContent = n ? n + ' отвергнутых кадров скрыты твиком «Протокол»' : '';
+      bar.style.display = n && !this.tw().prot ? '' : 'none';
+    }
+    return n;
+  }
+  buildMirrors() {
+    if (this.mirrorsBuilt) return;
+    this.mirrorsBuilt = true;
+    const rows = Array.from(document.querySelectorAll('[data-mrow]'));
+    const pals = [['dk', 'Тёмная палитра'], ['bl', 'Синяя палитра'], ['bldk', 'Сине-тёмная палитра']];
+    rows.forEach((row) => {
+      let after = row;
+      pals.forEach(([cls, cap]) => {
+        const capEl = document.createElement('div');
+        capEl.className = 'pl';
+        capEl.setAttribute('data-mirror', '');
+        capEl.textContent = cap;
+        const clone = row.cloneNode(true);
+        clone.removeAttribute('data-mrow');
+        clone.setAttribute('data-mirror', '');
+        clone.className = 'pal ' + cls;
+        clone.style.display = 'flex';
+        clone.style.gap = '30px';
+        clone.style.alignItems = 'flex-start';
+        clone.querySelectorAll('[data-nomirror]').forEach((n) => n.remove());
+        clone.querySelectorAll('[data-screen-label]').forEach((n) => {
+          n.setAttribute('data-screen-label', n.getAttribute('data-screen-label') + ' · ' + cap.split(' ')[0].toLowerCase());
+        });
+        after.insertAdjacentElement('afterend', capEl);
+        capEl.insertAdjacentElement('afterend', clone);
+        after = clone;
+      });
+      const sandCap = document.createElement('div');
+      sandCap.className = 'pl';
+      sandCap.setAttribute('data-mirror', '');
+      sandCap.textContent = 'Песочная палитра';
+      row.insertAdjacentElement('beforebegin', sandCap);
+    });
+  }
+  apply() {
+    const t = this.tw();
+    document.querySelectorAll('[data-mirror]').forEach((n) => { n.style.display = t.all ? '' : 'none'; });
+    document.querySelectorAll('.an').forEach((n) => { n.style.display = t.ann ? '' : 'none'; });
+    document.querySelectorAll('[data-contract]').forEach((n) => { n.style.display = t.ctr ? '' : 'none'; });
+    document.querySelectorAll('[data-demo="protocol"]').forEach((n) => { n.style.display = t.prot ? '' : 'none'; });
     this.contracts();
-    const t = this.tw(), hide = t.all ? '' : 'none', off = t.rules ? '' : 'none';
-    const lab = /^(т[её]мная|синяя|сине-т[её]мная|синяя\s+т[её]мная)(\s+палитра)?$/i;
-
-    document.querySelectorAll('.pl').forEach(pl => {
-      const row = pl.nextElementSibling;
-      if (!row) return;
-      const h = /песочн/i.test(pl.textContent) ? '' : hide;
-      const host = pl.parentElement;
-      if (host && host.firstElementChild === pl && host.lastElementChild === row && host.children.length === 2) host.style.display = h;
-      else { pl.style.display = h; row.style.display = h; }
-    });
-
-    document.querySelectorAll('div, span').forEach(el => {
-      if (el.children.length || !lab.test((el.textContent || '').trim())) return;
-      el.style.display = hide;
-      const row = el.nextElementSibling;
-      if (row && row.querySelector && (row.classList.contains('ph') || row.querySelector('.ph, .w, .g'))) row.style.display = hide;
-    });
-
-    document.querySelectorAll('[data-mirdst]').forEach(d => { d.style.display = hide; });
-
-    document.querySelectorAll('div[style*="width:300px"]').forEach(col => {
-      if (col.querySelector('.nt, .ntl') && !col.querySelector('.ph, .w')) col.style.display = off;
-    });
-    const boxes = new Set();
-    document.querySelectorAll('.nt, .ntl').forEach(n => { n.style.display = off; boxes.add(n.parentElement); });
-    boxes.forEach(box => {
-      if (!box) return;
-      const other = [...box.children].some(c => !c.classList.contains('nt') && !c.classList.contains('ntl'));
-      box.style.display = other ? '' : off;
-      const head = box.previousElementSibling;
-      if (head && head.classList.contains('h') && !other) head.style.display = off;
-    });
+    this.protocols();
   }
+  componentDidMount() { this.buildMirrors(); this.apply(); }
+  componentDidUpdate() { this.apply(); }
+  renderVals() { return {}; }
 }
 </script>
 </body>

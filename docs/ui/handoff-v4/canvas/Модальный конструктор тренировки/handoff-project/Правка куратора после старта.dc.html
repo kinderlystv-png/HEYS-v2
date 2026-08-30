@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#e9e7e2;font-family:-apple-system,system-ui,"Segoe UI",sans-serif}
+a{color:#1d4ed8}a:hover{color:#1e40af}
+.turn{padding:40px 44px 34px;border-bottom:1px solid rgba(0,0,0,.09);scroll-margin-top:16px}
+.thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}
+.tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.tnm{font:600 13px/1.2 system-ui;color:#1a1a1a}
+.note{margin:0 0 10px;max-width:900px;font:400 12.5px/1.6 system-ui;color:rgba(0,0,0,.55)}
+.rule{margin:0 0 24px;max-width:900px;padding:11px 13px;border-left:3px solid #1d4ed8;background:rgba(37,99,235,.06);font:400 12.5px/1.6 system-ui;color:#1e293b}
+.opts{display:flex;flex-wrap:nowrap;gap:32px;align-items:flex-start}
+.opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.4 system-ui;color:rgba(0,0,0,.55);max-width:375px}
+.opt:target .oid{background:#1d4ed8;color:#fff}
+.next{margin:24px 0 0;font:12px/1.6 system-ui;color:rgba(0,0,0,.5)}
+.sx::-webkit-scrollbar{display:none}
+.sx{scrollbar-width:none}
+</style>
+</helmet>
+
+<section class="turn" id="t16">
+<div class="thd"><a class="tid" href="#t16">16</a><span class="tnm">Перенос, обзор программы и конец цикла</span></div>
+<p class="note">Три пункта из запроса. <a class="oid" href="#16a">16a</a>–<a class="oid" href="#16b">16b</a> — перенос: <b>отдельный механизм не нужен</b>, это обычное назначение плюс след в обе стороны. <a class="oid" href="#16c">16c</a>–<a class="oid" href="#16d">16d</a> — разбор обзора: первый слой сейчас неверный, второй почти верный. <a class="oid" href="#16e">16e</a> — конец цикла. <a class="oid" href="#16f">16f</a> — ответы на пять вопросов по переносу одним листом.</p>
+<div class="rule"><b>Перенести ≠ пропустить, и это главное различие.</b> Перенос заранее освобождает исходный день и <b>не считается пропуском</b> — в отчёте куратора это отдельная строка. Пропуск задним числом остаётся пропуском навсегда: прошедший день не воскрешают, замена приходит новой тренировкой на свободный день. Одно правило закрывает и конструктор, и программу.</div>
+
+<div class="opts">
+
+<div class="opt" id="16a">
+<div class="olabel"><a class="oid" href="#16a">16a</a>Клиент переносит сам · день ещё не прошёл</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div class="sx" style="width:375px;height:812px;box-sizing:border-box;overflow:auto;background:#f1f5f9;padding:56px 12px 40px">
+
+<div style="background:#fff;border:1px solid rgba(37,99,235,.3);border-radius:16px;padding:14px;margin-bottom:12px">
+<div style="display:inline-block;margin-bottom:9px;padding:3px 9px;border-radius:999px;background:rgba(37,99,235,.12);color:#1d4ed8;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em">План на сегодня</div>
+<div style="font-size:17px;font-weight:800;letter-spacing:-.01em;color:#0f172a;margin-bottom:3px">День B · верх тела</div>
+<div style="font-size:12.5px;color:#64748b;margin-bottom:13px">7 упражнений · назначил Артём</div>
+<button type="button" style="box-sizing:border-box;width:100%;height:48px;border-radius:12px;border:none;background:#1d4ed8;color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">Начать тренировку</button>
+<div style="display:flex;gap:8px">
+<button type="button" onClick="{{ openMove }}" style="box-sizing:border-box;flex:1;height:44px;border-radius:11px;border:1px solid #e2e8f0;background:#f8fafc;color:#475569;font-size:12.5px;font-weight:800;cursor:pointer">Не смогу сегодня</button>
+</div>
+</div>
+
+<div style="{{ moveStyle }}">
+<div style="background:#fff;border:1px solid rgba(37,99,235,.3);border-radius:16px;padding:14px;margin-bottom:12px">
+<div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:4px">Когда сможешь?</div>
+<div style="font-size:12.5px;line-height:1.55;color:#64748b;margin-bottom:12px">Тренировка переедет целиком, вместе с весами. Артём увидит новую дату.</div>
+<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px">
+<sc-for list="{{ moveDays }}" as="d" hint-placeholder-count="5">
+<button type="button" onClick="{{ d.pick }}" style="{{ d.s }}">
+<span style="{{ d.dot }}"></span>
+<span style="flex:1;min-width:0;text-align:left;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:800;color:{{ d.tc }}">{{ d.t }}</span><span style="font-size:11.5px;color:#64748b">{{ d.d }}</span></span>
+<span style="{{ d.badge }}">{{ d.b }}</span>
+</button>
+</sc-for>
+</div>
+<button type="button" style="{{ moveBtn }}">{{ moveLabel }}</button>
+<button type="button" style="box-sizing:border-box;width:100%;height:44px;margin-top:8px;border-radius:11px;border:none;background:transparent;color:#64748b;font-size:12.5px;font-weight:700;cursor:pointer">Совсем пропустить</button>
+</div>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);font-size:12px;line-height:1.6;color:#334155"><b>Почему клиент переносит сам, без подтверждения.</b> Перенос не меняет содержание тренировки — только дату. Ждать ответа куратора здесь нельзя: пока он ответит, день уйдёт, и перенос превратится в пропуск. Куратор ставит программу, а не расписание по часам.</div>
+</div>
+</x-import>
+</div>
+
+<div class="opt" id="16b">
+<div class="olabel"><a class="oid" href="#16b">16b</a>След в обе стороны · и день, который уже прошёл</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div class="sx" style="width:375px;height:812px;box-sizing:border-box;overflow:auto;background:#f1f5f9;padding:56px 12px 40px">
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:7px">Понедельник 10.08 · откуда перенесли</div>
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:13px;margin-bottom:14px">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:#f1f5f9;color:#64748b;font-size:15px">→</span>
+<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:#0f172a">День B перенесён на субботу</div><div style="font-size:11.5px;color:#64748b;margin-top:1px">Не пропуск — тренировка ждёт 15 августа</div></div>
+</div>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:7px">Суббота 15.08 · куда перенесли</div>
+<div style="background:#fff;border:1px solid rgba(37,99,235,.3);border-radius:16px;padding:14px;margin-bottom:16px">
+<div style="display:flex;align-items:center;gap:7px;margin-bottom:9px">
+<span style="padding:3px 9px;border-radius:999px;background:rgba(37,99,235,.12);color:#1d4ed8;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em">План</span>
+<span style="padding:3px 9px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:10.5px;font-weight:700">с понедельника</span>
+</div>
+<div style="font-size:17px;font-weight:800;letter-spacing:-.01em;color:#0f172a;margin-bottom:3px">День B · верх тела</div>
+<div style="font-size:12.5px;color:#64748b;margin-bottom:13px">7 упражнений · назначил Артём</div>
+<button type="button" style="box-sizing:border-box;width:100%;height:48px;border-radius:12px;border:none;background:#1d4ed8;color:#fff;font-size:14px;font-weight:800;cursor:pointer">Начать тренировку</button>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:7px">А это — день, который уже прошёл</div>
+<div style="background:#fff;border:1px solid rgba(245,158,11,.45);border-radius:16px;padding:13px;margin-bottom:12px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:rgba(245,158,11,.14);color:#b45309;font-size:15px">✕</span>
+<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:#0f172a">Вторник 4.08 пропущен</div><div style="font-size:11.5px;color:#64748b;margin-top:1px">Так и останется — прошедший день не переигрываем</div></div>
+</div>
+<div style="padding:10px 11px;border-radius:11px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;line-height:1.5;color:#475569">Артём поставил замену на воскресенье 16.08 — это <b>отдельная тренировка</b>, а не воскресший вторник.</div>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);font-size:12px;line-height:1.6;color:#334155"><b>Лимит трёх тренировок в дне решается выбором, а не диалогом.</b> День, где мест нет, просто не предлагается — с пометкой «занят». Никаких «что убрать» посреди переноса.</div>
+</div>
+</x-import>
+</div>
+
+<div class="opt" id="16c">
+<div class="olabel"><a class="oid" href="#16c">16c</a>Обзор · что не так сейчас и что вместо</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div class="sx" style="width:375px;height:812px;box-sizing:border-box;overflow:auto;background:#f1f5f9;padding:56px 12px 40px">
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#b91c1c;margin-bottom:7px">Как сейчас · день без тренировки</div>
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px;margin-bottom:9px">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="font-size:17px">🗓️</span>
+<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700;color:#0f172a">Следующая по плану: День C · 13.08</div><div style="font-size:11.5px;color:#64748b;margin-top:1px">На этой неделе ещё 2</div></div>
+<span style="font-size:11.5px;font-weight:700;color:#1d4ed8">Подробнее ⌄</span>
+</div>
+</div>
+<div style="padding:11px 12px;border-radius:12px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.28);font-size:12px;line-height:1.55;color:#334155;margin-bottom:18px"><b>Три проблемы.</b> Это календарь, а не действие: сегодня по нему делать нечего. Он занимает место карточки каждый день, а меняется раз в неделю. И он <b>исчезает, когда всё выполнено</b> — то есть пропадает ровно в лучший момент программы.</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#15803d;margin-bottom:7px">Предложение · строка, а не карточка</div>
+<div style="display:flex;align-items:center;gap:8px;padding:9px 2px;margin-bottom:9px">
+<span style="flex:1;min-width:0;font-size:12.5px;color:#64748b">Следующая тренировка — <b style="color:#334155">в четверг</b></span>
+<span style="font-size:12px;font-weight:700;color:#1d4ed8">Программа ›</span>
+</div>
+<div style="padding:11px 12px;border-radius:12px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.4);font-size:12px;line-height:1.55;color:#334155;margin-bottom:18px">В день без тренировки достаточно строки. Карточку занимает только то, что делают сегодня.</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#15803d;margin-bottom:7px">А в день тренировки строки нет вовсе</div>
+<div style="background:#fff;border:1px solid rgba(37,99,235,.3);border-radius:16px;padding:14px;margin-bottom:9px">
+<div style="display:inline-block;margin-bottom:9px;padding:3px 9px;border-radius:999px;background:rgba(37,99,235,.12);color:#1d4ed8;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em">План на сегодня</div>
+<div style="font-size:17px;font-weight:800;letter-spacing:-.01em;color:#0f172a;margin-bottom:3px">День B · верх тела</div>
+<div style="font-size:12.5px;color:#64748b;margin-bottom:13px">7 упражнений · первая из трёх на неделе</div>
+<button type="button" style="box-sizing:border-box;width:100%;height:48px;border-radius:12px;border:none;background:#1d4ed8;color:#fff;font-size:14px;font-weight:800;cursor:pointer">Начать тренировку</button>
+</div>
+<div style="padding:11px 12px;border-radius:12px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.4);font-size:12px;line-height:1.55;color:#334155">Карточка плана уже говорит всё нужное. Место в неделе — единственное, что стоит забрать из виджета, а не дата следующей.</div>
+</div>
+</x-import>
+</div>
+
+<div class="opt" id="16d">
+<div class="olabel"><a class="oid" href="#16d">16d</a>Второй слой · путь, а не таблица статусов</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div style="width:375px;height:812px;box-sizing:border-box;display:flex;flex-direction:column;background:#f1f5f9">
+<div style="flex:0 0 auto;padding:54px 14px 12px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px">
+<button type="button" style="width:36px;height:36px;border-radius:11px;border:1px solid #e2e8f0;background:#f8fafc;color:#475569;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">‹</button>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-.01em">Программа Артёма</div><div style="font-size:11px;color:#64748b">Четыре недели · идёт третья</div></div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:14px">
+
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;margin-bottom:12px">
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:11px"><span style="flex:1;font-size:13.5px;font-weight:800;color:#0f172a">Сделано 5 из 12</span><span style="font-size:11.5px;font-weight:700;color:#64748b">впереди 6</span></div>
+<sc-for list="{{ weeks16 }}" as="w" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
+<span style="flex:0 0 62px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:{{ w.c }}">{{ w.t }}</span>
+<div style="flex:1;display:flex;gap:6px">
+<sc-for list="{{ w.cells }}" as="c" hint-placeholder-count="3"><span style="{{ c.s }}">{{ c.g }}</span></sc-for>
+</div>
+</div>
+</sc-for>
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;padding-top:11px;border-top:1px solid #f1f5f9">
+<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#64748b"><span style="width:14px;height:14px;border-radius:5px;background:#15803d;display:inline-block"></span>сделано</span>
+<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#64748b"><span style="width:14px;height:14px;border-radius:5px;background:rgba(245,158,11,.35);display:inline-block"></span>пропущено</span>
+<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#64748b"><span style="width:14px;height:14px;border-radius:5px;border:1.5px solid #cbd5e1;display:inline-block"></span>впереди</span>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid rgba(37,99,235,.3);border-radius:16px;padding:14px;margin-bottom:12px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1d4ed8;margin-bottom:7px">Ближайшая</div>
+<div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:2px">Четверг 13.08 · День C</div>
+<div style="font-size:12px;color:#64748b">Ноги · 6 упражнений</div>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);font-size:12px;line-height:1.6;color:#334155"><b>Слово «статус» убрано, колонка дат тоже.</b> Клиенту нужен путь: сколько прошёл и сколько осталось. Даты он вспомнит по неделям, а список «14.08 · День B · назначено» — это отчёт куратора, случайно показанный клиенту.</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="opt" id="16e">
+<div class="olabel"><a class="oid" href="#16e">16e</a>Программа пройдена · про сделанное, а не про пропуски</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div class="sx" style="width:375px;height:812px;box-sizing:border-box;overflow:auto;background:#f1f5f9;padding:56px 12px 40px">
+
+<div style="background:#fff;border:1px solid rgba(37,99,235,.3);border-radius:16px;padding:16px;margin-bottom:12px">
+<div style="display:inline-block;margin-bottom:11px;padding:3px 9px;border-radius:999px;background:rgba(37,99,235,.12);color:#1d4ed8;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em">Четыре недели позади</div>
+<div style="font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.2;color:#0f172a;margin-bottom:6px">Программа пройдена</div>
+<div style="font-size:13px;line-height:1.55;color:#475569;margin-bottom:14px">С 8 июля по 5 августа. Девять тренировок из двенадцати — и вот что за ними стоит.</div>
+
+<div style="display:flex;gap:8px;margin-bottom:12px">
+<sc-for list="{{ done16 }}" as="d" hint-placeholder-count="3">
+<div style="flex:1;min-width:0;padding:11px 10px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0">
+<div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;margin-bottom:3px">{{ d.l }}</div>
+<div style="font-size:17px;font-weight:800;color:#0f172a;font-variant-numeric:tabular-nums">{{ d.v }}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="{{ growBox }}">
+<div style="{{ growKick }}">{{ growTitle }}</div>
+<div style="{{ growLineStyle }}">{{ growLine }}</div>
+<sc-for list="{{ grew16 }}" as="g" hint-placeholder-count="3">
+<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0"><span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:#334155">{{ g.n }}</span><span style="font-size:12.5px;font-weight:800;color:{{ g.c }};font-variant-numeric:tabular-nums">{{ g.v }}</span></div>
+</sc-for>
+<button type="button" onClick="{{ toggleGrow }}" style="box-sizing:border-box;width:100%;min-height:44px;margin-top:9px;border-radius:10px;border:1px dashed #cbd5e1;background:rgba(255,255,255,.6);color:#64748b;font-size:11.5px;font-weight:800;cursor:pointer">{{ growToggleLabel }}</button>
+</div>
+
+<div style="font-size:12px;color:#64748b;margin-bottom:14px">Три тренировки пропущены — на итог это повлияло мало.</div>
+<button type="button" style="box-sizing:border-box;width:100%;height:48px;border-radius:12px;border:none;background:#1d4ed8;color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">Написать Артёму</button>
+<div style="font-size:12px;text-align:center;color:#64748b">Артём уже видит итоги и готовит следующую</div>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);font-size:12px;line-height:1.6;color:#334155"><b>Чего здесь намеренно нет.</b> Разбора «жим 70 вместо 75 три раза» и поимённого списка пропусков. У куратора это рабочий инструмент, у клиента тот же текст читается как перечень провалов — а он месяц ходил в зал. Пропуски названы одной строкой и без имён: факт, но не приговор.</div>
+
+<div style="margin-top:12px;padding:12px 13px;border-radius:14px;background:#fff;border:1px solid #e2e8f0">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:8px">Контракт блока роста</div>
+<div style="font-size:12px;line-height:1.65;color:#334155"><b>Берём рабочие веса</b>, не тоннаж: тоннаж растёт и от лишних подходов. Упражнение попадает в блок, если встречалось <b>минимум в трёх тренировках цикла</b> — иначе это шум, а не тренд. Сравниваем первое и последнее значение, порог — <b>один шаг</b>: 2,5 кг или одно повторение. Показываем максимум три строки по относительному приросту.<br><br><b>Когда роста нет</b> — заголовок меняется на «Что удержано», и вместо весов идут постоянство, средняя частота и самое частое упражнение — тоннаж и число подходов к этому месту уже названы в шапке карточки. «Что выросло» с пустым списком — издевательство над человеком, который месяц ходил в зал.</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="opt" id="16f">
+<div class="olabel"><a class="oid" href="#16f">16f</a>Пять вопросов по переносу · ответы одним листом</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div style="width:375px;height:812px;box-sizing:border-box;display:flex;flex-direction:column;background:#f1f5f9">
+<div style="flex:0 0 auto;padding:54px 14px 12px;background:#fff;border-bottom:1px solid #e2e8f0">
+<div style="font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-.01em">Перенос · решения</div>
+<div style="font-size:11px;color:#64748b;margin-top:2px">Отдельного механизма не заводим</div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:14px">
+<sc-for list="{{ qa16 }}" as="q" hint-placeholder-count="5">
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:13px;margin-bottom:9px">
+<div style="display:flex;align-items:flex-start;gap:9px;margin-bottom:7px">
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(37,99,235,.12);color:#1d4ed8;font-size:11px;font-weight:800">{{ q.n }}</span>
+<span style="flex:1;min-width:0;font-size:13.5px;font-weight:800;line-height:1.35;color:#0f172a">{{ q.q }}</span>
+</div>
+<div style="font-size:12.5px;line-height:1.6;color:#475569;padding-left:31px">{{ q.a }}</div>
+</div>
+</sc-for>
+<div style="padding:12px 13px;border-radius:14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.4);font-size:12px;line-height:1.6;color:#334155;margin-top:5px"><b>Итого по стоимости.</b> Новых операций нет — только пометка происхождения на назначенной тренировке и отметка «перенесено» на исходном дне. Отчёт куратора получает третью строку рядом с «выполнено» и «пропущено».</div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+<p class="next">Дальше: «покажи, как перенос выглядит у куратора» · «сведи 16 в сборку экранов» · «экран конца цикла для куратора»</p>
+</section>
+
+<section class="turn" id="t15">
+<div class="thd"><a class="tid" href="#t15">15</a><span class="tnm">Граница защиты, связки и пропущенный день</span></div>
+<p class="note">Два блокера из ревью решены экранами, а не абзацем в хэндофе, плюс <a class="oid" href="#15d">15d</a> — правка пропущенного дня, который сервер сейчас отбивает наравне с начатым. Заодно поправлено обещание приватности на <a class="oid" href="#14d">14d</a>: куратор ответ видит, но причину спрашивать не будет.</p>
+<div class="rule"><b>Граница защиты — подход, а не упражнение.</b> В прошлой версии начатое упражнение защищалось целиком, и это убивало главный сценарий: куратор видит первый подход, понимает, что вес тяжёл, и хочет сбавить оставшиеся. Правильно так: <b>отмеченный подход неприкосновенен, незакрытые правятся, начатое упражнение нельзя убрать из плана.</b> Ничего сделанного не переписывается — безопасность сохраняется, а живая правка начинает работать.</div>
+
+<div class="opts">
+
+<div class="opt" id="15a">
+<div class="olabel"><a class="oid" href="#15a">15a</a>Куратор правит упражнение, которое клиент уже начал</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div class="sx" style="width:375px;height:812px;box-sizing:border-box;overflow:auto;background:#f1f5f9;padding:56px 12px 40px">
+
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:11px"><span style="flex:1;font-size:16px;font-weight:800;letter-spacing:-.01em;color:#0f172a">Разведение гантелей</span><span style="font-size:11.5px;font-weight:700;color:#64748b">1 из 3 сделано</span></div>
+
+<div style="background:#fff;border:1px solid rgba(37,99,235,.3);border-radius:16px;padding:13px;margin-bottom:12px">
+<div style="display:inline-block;margin-bottom:8px;padding:3px 9px;border-radius:999px;background:rgba(37,99,235,.12);color:#1d4ed8;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em">Артём сбавил вес</div>
+<div style="font-size:12.5px;line-height:1.55;color:#334155;margin-bottom:11px">Он увидел первый подход и предлагает оставшиеся сделать легче. Тот, что ты уже закрыл, останется как есть.</div>
+
+<sc-for list="{{ setsE }}" as="s" hint-placeholder-count="3">
+<div style="{{ s.row }}">
+<span style="{{ s.num }}">{{ s.n }}</span>
+<div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px">
+<span style="{{ s.wasStyle }}">{{ s.was }}</span>
+<span style="{{ s.arrow }}">→</span>
+<span style="{{ s.nowStyle }}">{{ s.now }}</span>
+</div>
+<span style="{{ s.tagStyle }}">{{ s.tag }}</span>
+</div>
+</sc-for>
+
+<div style="display:flex;align-items:flex-start;gap:9px;margin-top:10px;padding:10px 11px;border-radius:11px;background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.4)">
+<span style="font-size:14px">🔒</span>
+<span style="flex:1;min-width:0;font-size:11.5px;line-height:1.5;color:#334155">Первый подход остаётся на 40 кг — он уже сделан, и в объём пойдёт именно так.</span>
+</div>
+
+<div style="display:flex;gap:8px;margin-top:11px">
+<button type="button" style="flex:1;min-height:48px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:13px;font-weight:800;cursor:pointer">Дожму сам</button>
+<button type="button" style="flex:1;min-height:48px;border-radius:12px;border:none;background:#1d4ed8;color:#fff;font-size:13px;font-weight:800;cursor:pointer">Сбавить</button>
+</div>
+</div>
+
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-bottom:12px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:9px">Что правится, а что нет</div>
+<sc-for list="{{ rulesE }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid #f1f5f9">
+<span style="{{ r.mark }}">{{ r.sign }}</span>
+<span style="flex:1;min-width:0;font-size:12px;line-height:1.55;color:#334155">{{ r.t }}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);font-size:11.5px;line-height:1.6;color:#334155"><b>Почему подход, а не упражнение.</b> Защищать упражнение целиком проще для объяснения, но тогда самый частый повод вмешаться — «сбавь вес, я вижу, что тяжело» — становится невозможен ровно в тот момент, когда он нужен.</div>
+</div>
+</x-import>
+</div>
+
+<div class="opt" id="15b">
+<div class="olabel"><a class="oid" href="#15b">15b</a>Правка не доехала · это видно обоим</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div class="sx" style="width:375px;height:812px;box-sizing:border-box;overflow:auto;background:#f1f5f9;padding:56px 12px 40px">
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:7px">Куратор убрал то, что уже начато</div>
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:13px;margin-bottom:14px">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:rgba(34,197,94,.14);color:#15803d;font-size:13px">🔒</span>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:#0f172a">Разведение гантелей</div><div style="font-size:11.5px;color:#64748b">1 подход · 40 кг × 12</div></div>
+</div>
+<div style="padding:10px 11px;border-radius:11px;background:#f8fafc;border:1px solid #e2e8f0;font-size:11.5px;line-height:1.55;color:#475569">Артём убирал его из плана, но ты уже начал — упражнение осталось в тренировке. Сделанный подход идёт в объём как обычно.</div>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:7px">В итогах тренировки</div>
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:13px;margin-bottom:14px">
+<b style="display:block;font-size:14.5px;font-weight:800;color:#0f172a">Верх тела B · завершена</b>
+<span style="display:block;margin:3px 0 11px;font-size:11.5px;color:#64748b">18 подходов · 4 120 кг · 52 мин</span>
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:8px">Правка Артёма легла не полностью</div>
+<sc-for list="{{ landedF }}" as="l" hint-placeholder-count="3">
+<div style="display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid #f1f5f9">
+<span style="{{ l.mark }}">{{ l.sign }}</span>
+<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;color:#0f172a">{{ l.n }}</div><div style="font-size:11px;line-height:1.4;color:#64748b;margin-top:1px">{{ l.d }}</div></div>
+</div>
+</sc-for>
+<div style="margin-top:9px;font-size:11.5px;line-height:1.55;color:#64748b">Эта же строка уйдёт Артёму. Без неё он будет думать, что клиент проигнорировал правку, и повторит её на следующей неделе.</div>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.28);font-size:11.5px;line-height:1.6;color:#334155"><b>Молчаливого «не применилось» быть не может.</b> Если часть правки не легла, об этом сказано обеим сторонам и названо упражнение. Иначе куратор объясняет клиенту то, чего тот не видел.</div>
+</div>
+</x-import>
+</div>
+
+<div class="opt" id="15c">
+<div class="olabel"><a class="oid" href="#15c">15c</a>Связка · то же правило этажом выше</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div class="sx" style="width:375px;height:812px;box-sizing:border-box;overflow:auto;background:#f1f5f9;padding:56px 12px 40px">
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:7px">Связка не начата · меняется целиком</div>
+<div style="background:#fff;border:1px solid rgba(37,99,235,.3);border-radius:16px;padding:13px;margin-bottom:14px">
+<div style="display:inline-block;margin-bottom:8px;padding:3px 9px;border-radius:999px;background:rgba(37,99,235,.12);color:#1d4ed8;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em">Артём заменил связку</div>
+<div style="display:flex;align-items:stretch;gap:9px;margin-bottom:10px">
+<div style="flex:1;min-width:0;padding:10px;border-radius:11px;background:#f8fafc;border:1px solid #e2e8f0">
+<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#64748b;margin-bottom:6px">Было</div>
+<div style="font-size:12px;font-weight:700;color:#475569;line-height:1.5">A1 Подтягивания<br>A2 Тяга блока<br><span style="font-size:11px;color:#64748b">3 раунда</span></div>
+</div>
+<div style="flex:0 0 auto;display:flex;align-items:center;font-size:15px;color:#64748b">→</div>
+<div style="flex:1;min-width:0;padding:10px;border-radius:11px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.3)">
+<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#1d4ed8;margin-bottom:6px">Станет</div>
+<div style="font-size:12px;font-weight:700;color:#0f172a;line-height:1.5">A1 Тяга блока<br>A2 Тяга гантели<br><span style="font-size:11px;color:#64748b">3 раунда</span></div>
+</div>
+</div>
+<div style="font-size:11.5px;line-height:1.55;color:#64748b">Связка меняется как один блок: вынуть из неё одно упражнение куратор не может — раунды перестанут сходиться.</div>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:7px">Связка начата · состав заморожен</div>
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:13px;margin-bottom:14px">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:rgba(34,197,94,.14);color:#15803d;font-size:13px">🔒</span>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:#0f172a">Связка A · раунд 2 из 3</div><div style="font-size:11.5px;color:#64748b">Подтягивания ⇄ Тяга блока</div></div>
+</div>
+<sc-for list="{{ roundsG }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+<span style="{{ r.lab }}">{{ r.t }}</span>
+<sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="2"><span style="{{ c.box }}">{{ c.v }}</span></sc-for>
+</div>
+</sc-for>
+<div style="margin-top:9px;padding:10px 11px;border-radius:11px;background:#f8fafc;border:1px solid #e2e8f0;font-size:11.5px;line-height:1.55;color:#475569">Менять состав нельзя — закрытые раунды перестанут сходиться с новыми участниками. Веса в незакрытых клетках Артём поправить может.</div>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);font-size:11.5px;line-height:1.6;color:#334155"><b>Одно правило на два объекта.</b> Подход: отметил — заморожен, остальное правится. Связка: начал — состав заморожен, веса правятся. Разбирать связку правка не имеет права ни в каком случае — это тот же инвариант, что и у клиента, где разорвать связку можно только через «Разъединить».</div>
+</div>
+</x-import>
+</div>
+
+<div class="opt" id="15d">
+<div class="olabel"><a class="oid" href="#15d">15d</a>Пропущенный день · защищать нечего, но и звать назад нельзя</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div class="sx" style="width:375px;height:812px;box-sizing:border-box;overflow:auto;background:#f1f5f9;padding:56px 12px 40px">
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:7px">Пропущен сегодня · замена на месте</div>
+<div style="margin:0 0 14px;padding:13px;border-radius:16px;border:1px solid rgba(37,99,235,.3);background:#fff">
+<div style="display:inline-block;margin-bottom:6px;padding:3px 9px;border-radius:999px;background:rgba(37,99,235,.12);color:#1d4ed8;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em">Артём предлагает замену</div>
+<b style="display:block;font-size:14.5px;font-weight:800;color:#0f172a">Верх тела B ты отпустил</b>
+<span style="display:block;margin:3px 0 10px;font-size:11.5px;color:#64748b">Причина: болит плечо</span>
+
+<div style="display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border-radius:12px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);margin-bottom:10px">
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#fff;color:#1d4ed8;font-size:12px;font-weight:800">А</span>
+<span style="flex:1;min-width:0;font-size:12.5px;line-height:1.55;color:#334155">Собрал тебе то же самое без жимов над головой. Плечо не тронем, спину и ноги сделаем.</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:11px">
+<sc-for list="{{ swapH }}" as="s" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:11px;background:#f8fafc;border:1px solid #e2e8f0">
+<span style="{{ s.mark }}">{{ s.sign }}</span>
+<span style="flex:1;min-width:0;font-size:12.5px;font-weight:600;color:#0f172a">{{ s.t }}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="display:flex;gap:8px">
+<button type="button" style="flex:1;min-height:48px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:13px;font-weight:800;cursor:pointer">Не сегодня</button>
+<button type="button" style="flex:1;min-height:48px;border-radius:12px;border:none;background:#1d4ed8;color:#fff;font-size:13px;font-weight:800;cursor:pointer">Посмотреть</button>
+</div>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:7px">Пропущен во вторник · сегодня понедельник</div>
+<div style="margin:0 0 14px;padding:13px;border-radius:16px;border:1px solid #e2e8f0;background:#fff">
+<b style="display:block;font-size:14.5px;font-weight:800;color:#0f172a">Артём собрал замену вместо вторника</b>
+<span style="display:block;margin:3px 0 10px;font-size:11.5px;color:#64748b">Та же группа, но полегче · без жимов над головой</span>
+<div style="display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:11px;background:#f8fafc;border:1px solid #e2e8f0;margin-bottom:11px">
+<span style="font-size:12px;font-weight:700;color:#64748b">Пропущено 4 авг</span>
+<span style="font-size:13px;color:#cbd5e1">·</span>
+<span style="flex:1;font-size:13px;font-weight:800;color:#0f172a">Замена сегодня, 10 авг</span>
+</div>
+<div style="font-size:11.5px;line-height:1.55;color:#64748b;margin-bottom:11px">Вторник остаётся пропущенным — задним числом его никто не переписывает. Это отдельная тренировка на сегодня.</div>
+<button type="button" style="width:100%;min-height:48px;border-radius:12px;border:1px solid rgba(37,99,235,.35);background:rgba(37,99,235,.06);color:#1d4ed8;font-size:13px;font-weight:800;cursor:pointer">Посмотреть, что предлагает</button>
+</div>
+
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px;margin-bottom:14px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:9px">Правила для этого случая</div>
+<sc-for list="{{ skipRules }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid #f1f5f9">
+<span style="{{ r.mark }}">{{ r.sign }}</span>
+<span style="flex:1;min-width:0;font-size:12px;line-height:1.55;color:#334155">{{ r.t }}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);font-size:11.5px;line-height:1.6;color:#334155"><b>Защищать здесь нечего — но и давить нельзя.</b> Отмеченных подходов нет, поэтому правка безопасна технически. Опасность другая: пропуск был решением человека, и предложение не должно читаться как «ну всё-таки сделай». Поэтому день остаётся пропущенным, пока клиент сам не возьмёт замену, а отказ называется «не сегодня» и причины не спрашивает.</div>
+</div>
+</x-import>
+</div>
+
+</div>
+<p class="next">Дальше: «внеси 14 и 15 в сборку экранов» · «а если куратор предлагает замену, а клиент уже начал другую тренировку»</p>
+</section>
+
+<section class="turn" id="t14">
+<div class="thd"><a class="tid" href="#t14">14</a><span class="tnm">Куратор правит план после того, как клиент его открыл</span></div>
+<p class="note">Пять экранов на 375 px, в вокабуляре <code>.sb-plan-card</code>: синий <code>#1d4ed8</code> на белом, бейдж-пилюля, шторка как у пропуска. Все пять открытых вопросов закрыты; спорные места помечены прямо на экранах.</p>
+<div class="rule"><b>Правило, из которого следует всё остальное:</b> предложение никогда не трогает отмеченные подходы. Оно применяется только к тому, что клиент ещё не делал. Поэтому «принять» безопасно всегда, и вопрос «а не сотрёт ли это мою работу» просто не возникает — вместо диалога о рисках достаточно одной кнопки.</div>
+
+<div class="opts">
+
+<div class="opt" id="14a">
+<div class="olabel"><a class="oid" href="#14a">14a</a>Клиент открыл план, но ничего не делал · карточка дня</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div class="sx" style="width:375px;height:812px;box-sizing:border-box;overflow:auto;background:#f1f5f9;padding:56px 12px 40px">
+
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:12px"><span style="flex:1;font-size:17px;font-weight:800;letter-spacing:-.02em;color:#0f172a">Понедельник, 10 августа</span><span style="font-size:12px;color:#64748b">1 840 ккал</span></div>
+
+<div style="margin:8px 0;padding:13px;border-radius:16px;border:1px solid rgba(37,99,235,.3);background:#fff">
+<div style="display:inline-block;margin-bottom:6px;padding:3px 9px;border-radius:999px;background:rgba(37,99,235,.12);color:#1d4ed8;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em">Артём поменял план</div>
+<b style="display:block;font-size:14.5px;font-weight:800;color:#0f172a">Сегодня по плану · Верх тела B</b>
+<span style="display:block;margin:3px 0 11px;font-size:11.5px;color:#64748b">Поменял сегодня в 09:14 · ты его ещё не начинал</span>
+
+<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:11px">
+<sc-for list="{{ briefA }}" as="b" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:11px;background:#f8fafc;border:1px solid #e2e8f0">
+<span style="{{ b.mark }}">{{ b.sign }}</span>
+<span style="flex:1;min-width:0;font-size:12.5px;font-weight:600;color:#0f172a">{{ b.t }}</span>
+</div>
+</sc-for>
+</div>
+
+<button type="button" onClick="{{ openSheet }}" style="box-sizing:border-box;width:100%;min-height:48px;border-radius:12px;border:none;background:#1d4ed8;color:#fff;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">Посмотреть, что изменилось</button>
+<div style="display:flex;gap:8px">
+<button type="button" style="flex:1;min-height:48px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:13px;font-weight:800;cursor:pointer">Оставить прежний</button>
+<button type="button" style="flex:0 0 auto;min-height:48px;padding:0 16px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:13px;font-weight:800;cursor:pointer">Отпустить</button>
+</div>
+</div>
+
+<div style="margin:14px 0 8px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b">И то же самое в переписке</div>
+<div style="display:flex;gap:9px;margin-bottom:12px">
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,.12);color:#1d4ed8;font-size:13px;font-weight:800">А</span>
+<div style="flex:1;min-width:0;background:#fff;border:1px solid #e2e8f0;border-radius:4px 16px 16px 16px;padding:11px 13px">
+<div style="font-size:13px;line-height:1.5;color:#0f172a;margin-bottom:9px">Поменял тебе понедельник — плечо ещё не готово к жиму под углом. Посмотри, там две замены.</div>
+<button type="button" onClick="{{ openSheet }}" style="width:100%;min-height:44px;border-radius:10px;border:1px solid rgba(37,99,235,.35);background:rgba(37,99,235,.06);color:#1d4ed8;font-size:12.5px;font-weight:800;cursor:pointer">Что изменилось</button>
+<div style="font-size:10.5px;color:#64748b;margin-top:7px">09:14</div>
+</div>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);font-size:11.5px;line-height:1.6;color:#334155"><b>Почему в двух местах.</b> Решение живёт на карточке дня — там, где тренировка. В переписке остаётся то, ради чего человек туда заходит: слова куратора и ссылка. Дублировать кнопки «Принять» в чат не нужно — иначе одно решение будет в двух местах и разъедется.</div>
+
+<div style="{{ sheetA }}">
+<div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(15,23,42,.45)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;padding:10px 14px 34px;max-height:78%;overflow:auto" class="sx">
+<div style="width:38px;height:4px;border-radius:999px;background:#cbd5e1;margin:0 auto 12px"></div>
+<div style="font-size:16px;font-weight:800;color:#0f172a;letter-spacing:-.01em;margin-bottom:3px">Что поменял Артём</div>
+<div style="font-size:11.5px;color:#64748b;margin-bottom:12px">Верх тела B · было 6 упражнений, станет 6</div>
+<sc-for list="{{ diffA }}" as="d" hint-placeholder-count="4">
+<div style="{{ d.row }}">
+<span style="{{ d.mark }}">{{ d.sign }}</span>
+<div style="flex:1;min-width:0">
+<div style="font-size:13.5px;font-weight:800;color:#0f172a">{{ d.n }}</div>
+<div style="font-size:11.5px;line-height:1.4;color:#64748b;margin-top:1px">{{ d.d }}</div>
+</div>
+</div>
+</sc-for>
+<div style="display:flex;gap:8px;margin-top:12px">
+<button type="button" onClick="{{ closeSheet }}" style="flex:1;min-height:48px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:13px;font-weight:800;cursor:pointer">Оставить прежний</button>
+<button type="button" onClick="{{ closeSheet }}" style="flex:1;min-height:48px;border-radius:12px;border:none;background:#1d4ed8;color:#fff;font-size:13px;font-weight:800;cursor:pointer">Взять новый</button>
+</div>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="opt" id="14b">
+<div class="olabel"><a class="oid" href="#14b">14b</a>Правка пришла посреди тренировки · полоска, не модалка</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div style="width:375px;height:812px;box-sizing:border-box;display:flex;flex-direction:column;background:#f1f5f9">
+<div style="flex:0 0 auto;padding:56px 14px 0;background:#fff;border-bottom:1px solid #e2e8f0">
+<div style="display:flex;align-items:center;gap:10px;padding-bottom:9px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid #e2e8f0;background:#f8fafc;color:#475569;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-.01em">Верх тела B</div><div style="font-size:11px;color:#64748b">по плану Артёма · идёт 24:10</div></div>
+<span style="display:inline-flex;align-items:center;height:28px;padding:0 9px;border-radius:999px;border:1px solid rgba(34,197,94,.45);background:rgba(34,197,94,.12);color:#15803d;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums">7 / 18 ✓</span>
+</div>
+</div>
+
+<div style="flex:0 0 auto;padding:10px 12px 0">
+<div style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:14px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.35)">
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#fff;color:#1d4ed8;font-size:13px;font-weight:800">А</span>
+<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:800;color:#1d4ed8">Артём подправил план</div><div style="font-size:11px;line-height:1.4;color:#475569;margin-top:1px">Сделанное не тронется — только то, что впереди</div></div>
+<button type="button" onClick="{{ openSheet }}" style="flex:0 0 auto;min-height:44px;padding:0 13px;border-radius:11px;border:1px solid rgba(37,99,235,.4);background:#fff;color:#1d4ed8;font-size:12px;font-weight:800;cursor:pointer">Смотреть</button>
+</div>
+</div>
+
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:10px 12px 20px">
+<sc-for list="{{ listB }}" as="e" hint-placeholder-count="6">
+<div style="{{ e.card }}">
+<div style="display:flex;align-items:center;gap:9px">
+<span style="{{ e.num }}">{{ e.i }}</span>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.n }}</div><div style="font-size:11.5px;color:{{ e.meta }}">{{ e.d }}</div></div>
+<span style="{{ e.tag }}">{{ e.t }}</span>
+</div>
+</div>
+</sc-for>
+<div style="margin-top:6px;padding:11px 12px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;font-size:11.5px;line-height:1.6;color:#334155">Три упражнения уже с отметками — их предложение не касается вообще. Правка ляжет только на то, что ниже линии.</div>
+</div>
+
+<div style="flex:0 0 auto;padding:10px 12px 34px;background:#fff;border-top:1px solid #e2e8f0">
+<button type="button" style="width:100%;min-height:48px;border-radius:12px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:13.5px;font-weight:800;cursor:pointer">Завершить · 11 не закрыто</button>
+</div>
+
+<div style="{{ sheetA }}">
+<div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(15,23,42,.45)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;padding:10px 14px 34px">
+<div style="width:38px;height:4px;border-radius:999px;background:#cbd5e1;margin:0 auto 12px"></div>
+<div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:11px">Правка коснётся двух упражнений</div>
+<div style="display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border-radius:12px;background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.4);margin-bottom:9px">
+<span style="font-size:15px">🔒</span>
+<span style="flex:1;min-width:0;font-size:12px;line-height:1.5;color:#334155"><b>Жим лёжа, тяга и разведение остаются как есть.</b> Ты их уже сделал — это факт, его не переписывают.</span>
+</div>
+<sc-for list="{{ diffB }}" as="d" hint-placeholder-count="2">
+<div style="{{ d.row }}">
+<span style="{{ d.mark }}">{{ d.sign }}</span>
+<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:#0f172a">{{ d.n }}</div><div style="font-size:11.5px;line-height:1.4;color:#64748b;margin-top:1px">{{ d.d }}</div></div>
+</div>
+</sc-for>
+<div style="display:flex;gap:8px;margin-top:12px">
+<button type="button" onClick="{{ closeSheet }}" style="flex:1;min-height:48px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:13px;font-weight:800;cursor:pointer">Дальше по-своему</button>
+<button type="button" onClick="{{ closeSheet }}" style="flex:1;min-height:48px;border-radius:12px;border:none;background:#1d4ed8;color:#fff;font-size:13px;font-weight:800;cursor:pointer">Взять правку</button>
+</div>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="opt" id="14c">
+<div class="olabel"><a class="oid" href="#14c">14c</a>Разбор целиком · сделанное отдельным блоком сверху</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div style="width:375px;height:812px;box-sizing:border-box;display:flex;flex-direction:column;background:#f1f5f9">
+<div style="flex:0 0 auto;padding:56px 14px 12px;background:#fff;border-bottom:1px solid #e2e8f0">
+<div style="display:flex;align-items:center;gap:10px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid #e2e8f0;background:#f8fafc;color:#475569;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-.01em">Что поменял Артём</div><div style="font-size:11px;color:#64748b">Верх тела B · сегодня в 09:14</div></div>
+</div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:12px 12px 20px">
+
+<div style="background:#fff;border:1px solid rgba(34,197,94,.45);border-radius:14px;padding:12px;margin-bottom:12px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-size:15px">🔒</span><span style="flex:1;font-size:13.5px;font-weight:800;color:#15803d">Останется как есть · 3 упражнения</span></div>
+<sc-for list="{{ keptC }}" as="k" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f1f5f9"><span style="flex:1;min-width:0;font-size:12.5px;font-weight:600;color:#0f172a">{{ k.n }}</span><span style="font-size:11.5px;font-weight:700;color:#15803d;font-variant-numeric:tabular-nums">{{ k.v }}</span></div>
+</sc-for>
+<div style="margin-top:8px;font-size:11.5px;line-height:1.5;color:#64748b">Заморожены именно эти подходы, а не упражнения целиком: незакрытые подходы разведения правка ещё может тронуть — см. <a href="#15a" style="font-weight:700">15a</a>.</div>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin:0 0 7px 2px">Впереди · это и поменяется</div>
+<sc-for list="{{ aheadC }}" as="a" hint-placeholder-count="4">
+<div style="background:#fff;border:1px solid #e2e8f0;border-left:3px solid {{ a.c }};border-radius:12px;padding:11px 12px;margin-bottom:8px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:{{ a.gap }}">
+<span style="{{ a.mark }}">{{ a.sign }}</span>
+<span style="flex:1;min-width:0;font-size:13.5px;font-weight:800;color:#0f172a">{{ a.n }}</span>
+</div>
+<div style="{{ a.wasStyle }}">
+<span style="flex:1;min-width:0;font-size:12px;font-weight:600;color:#475569;text-decoration:line-through;text-decoration-thickness:1.5px">{{ a.was }}</span>
+<span style="font-size:13px;color:#475569">→</span>
+<span style="flex:1;min-width:0;text-align:right;font-size:12.5px;font-weight:800;color:#0f172a">{{ a.now }}</span>
+</div>
+<div style="{{ a.noteStyle }}">{{ a.note }}</div>
+</div>
+</sc-for>
+
+<div style="padding:11px 12px;border-radius:12px;background:#fff;border:1px solid #e2e8f0;font-size:11.5px;line-height:1.6;color:#334155;margin-top:4px">Взять можно только целиком. Разбирать правку по одному упражнению — значит собрать план, которого куратор не задумывал, и потом объяснять расхождение обоим.</div>
+</div>
+<div style="flex:0 0 auto;padding:10px 12px 34px;background:#fff;border-top:1px solid #e2e8f0;display:flex;gap:8px">
+<button type="button" style="flex:1;min-height:48px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:13px;font-weight:800;cursor:pointer">Дальше по-своему</button>
+<button type="button" style="flex:1;min-height:48px;border-radius:12px;border:none;background:#1d4ed8;color:#fff;font-size:13px;font-weight:800;cursor:pointer">Взять правку</button>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="opt" id="14d">
+<div class="olabel"><a class="oid" href="#14d">14d</a>Ответ дан · и след в истории, если ответа не было</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div class="sx" style="width:375px;height:812px;box-sizing:border-box;overflow:auto;background:#f1f5f9;padding:56px 12px 40px">
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:7px">Взял правку</div>
+<div style="margin:0 0 14px;padding:13px;border-radius:16px;border:1px solid rgba(34,197,94,.45);background:#fff">
+<div style="display:inline-block;margin-bottom:6px;padding:3px 9px;border-radius:999px;background:rgba(34,197,94,.14);color:#15803d;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em">Правка принята</div>
+<b style="display:block;font-size:14.5px;font-weight:800;color:#0f172a">Верх тела B · обновлён</b>
+<span style="display:block;margin:3px 0 11px;font-size:11.5px;color:#64748b">Сделанные 7 подходов на месте · впереди 2 других упражнения</span>
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ afterD }}" as="a" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0"><span style="{{ a.mark }}">{{ a.sign }}</span><span style="flex:1;min-width:0;font-size:12.5px;font-weight:600;color:#0f172a">{{ a.t }}</span></div>
+</sc-for>
+</div>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:7px">Отказался — план остался прежним</div>
+<div style="margin:0 0 14px;padding:13px;border-radius:16px;border:1px solid #e2e8f0;background:#fff">
+<b style="display:block;font-size:14.5px;font-weight:800;color:#0f172a">Верх тела B · как был</b>
+<span style="display:block;margin:3px 0 10px;font-size:11.5px;color:#64748b">Артём увидит ответ, но объяснять причину не нужно — можно просто оставить как есть</span>
+<button type="button" style="width:100%;min-height:44px;border-radius:11px;border:1px solid #e2e8f0;background:#f8fafc;color:#475569;font-size:12.5px;font-weight:800;cursor:pointer">Посмотреть, что он предлагал</button>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:7px">Не ответил и закрыл тренировку</div>
+<div style="margin:0 0 14px;padding:13px;border-radius:16px;border:1px solid #e2e8f0;background:#fff">
+<b style="display:block;font-size:14.5px;font-weight:800;color:#0f172a">Верх тела B · завершена</b>
+<span style="display:block;margin:3px 0 10px;font-size:11.5px;color:#64748b">18 подходов · 4 120 кг · 52 мин</span>
+<div style="display:flex;align-items:flex-start;gap:9px;padding:10px 11px;border-radius:11px;background:#f8fafc;border:1px solid #e2e8f0">
+<span style="font-size:14px">💬</span>
+<span style="flex:1;min-width:0;font-size:11.5px;line-height:1.5;color:#475569">Артём предлагал замену, ты успел закончить раньше. Правка не применялась — тренировка засчитана так, как ты её сделал.</span>
+</div>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);font-size:11.5px;line-height:1.6;color:#334155"><b>Предложение не блокирует завершение.</b> Тренировка закрывается как обычно, предложение гаснет само и остаётся строкой в истории дня. Иначе человек с гантелей в руке будет вынужден разбирать чужую правку, чтобы просто закончить.</div>
+</div>
+</x-import>
+</div>
+
+<div class="opt" id="14e">
+<div class="olabel"><a class="oid" href="#14e">14e</a>Сторона куратора · пока ответа нет</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="375" height="812" hint-size="375px,812px">
+<div class="sx" style="width:375px;height:812px;box-sizing:border-box;overflow:auto;background:#f1f5f9;padding:56px 12px 40px">
+
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:rgba(37,99,235,.12);color:#1d4ed8;font-size:14px;font-weight:800">М</span>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:#0f172a">Марина К.</div><div style="font-size:11px;color:#64748b">Pro Спорт · программа «Верх-низ»</div></div>
+</div>
+
+<div style="margin:0 0 12px;padding:13px;border-radius:16px;border:1px solid rgba(245,158,11,.5);background:#fff">
+<div style="display:inline-block;margin-bottom:6px;padding:3px 9px;border-radius:999px;background:rgba(245,158,11,.16);color:#b45309;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em">Ждёт ответа Марины</div>
+<b style="display:block;font-size:14.5px;font-weight:800;color:#0f172a">Понедельник · Верх тела B</b>
+<span style="display:block;margin:3px 0 11px;font-size:11.5px;color:#64748b">Отправлено в 09:14 · она уже начала тренировку</span>
+<div style="padding:10px 11px;border-radius:11px;background:#f8fafc;border:1px solid #e2e8f0;font-size:11.5px;line-height:1.5;color:#475569;margin-bottom:11px">Пока клиент не ответил, план в приложении прежний. Ваша правка применится только если Марина её возьмёт.</div>
+<div style="display:flex;gap:8px">
+<button type="button" style="flex:1;min-height:44px;border-radius:11px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:12.5px;font-weight:800;cursor:pointer">Отозвать</button>
+<button type="button" style="flex:1;min-height:44px;border-radius:11px;border:1px solid rgba(37,99,235,.35);background:rgba(37,99,235,.06);color:#1d4ed8;font-size:12.5px;font-weight:800;cursor:pointer">Переписать</button>
+</div>
+</div>
+
+<div style="margin:0 0 12px;padding:12px 13px;border-radius:14px;background:#fff;border:1px solid #e2e8f0">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:9px">Живое предложение всегда одно</div>
+<div style="font-size:12px;line-height:1.6;color:#334155">Новая правка заменяет прежнюю, а не встаёт в очередь. Иначе клиент откроет три предложения подряд и не поймёт, какое из них сейчас в силе — а куратор не поймёт, на какое ему ответили.</div>
+</div>
+
+<div style="margin:0 0 12px;padding:13px;border-radius:16px;border:1px solid #e2e8f0;background:#fff">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:9px">Как это видно в ленте клиента</div>
+<sc-for list="{{ feedE }}" as="f" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #f1f5f9">
+<span style="{{ f.dot }}"></span>
+<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;color:#0f172a">{{ f.t }}</div><div style="font-size:11px;color:#64748b">{{ f.d }}</div></div>
+<span style="font-size:11px;color:#64748b;font-variant-numeric:tabular-nums">{{ f.time }}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.28);font-size:11.5px;line-height:1.6;color:#334155"><b>Чего здесь намеренно нет.</b> Куратор не видит, читал ли клиент правку — только ответил или нет. Отметка «прочитано» превращает тренировку в переписку, где обе стороны следят друг за другом, и человек начинает открывать приложение с чувством, что за ним смотрят.</div>
+</div>
+</x-import>
+</div>
+
+</div>
+<p class="next">Дальше: «покажи, что уходит в схему для предложения» · «а если куратор правит план, который клиент уже пропустил» · «внеси 14a–14e в сборку экранов»</p>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2200,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  state = { sheet: false };
+
+  renderVals16() {
+    const S = this.state;
+    const pick = S.moveDay == null ? null : S.moveDay;
+    const DAYS = [
+      { t: 'Завтра, вторник 11 августа', acc: 'вторник', d: 'Свободно', full: 0 },
+      { t: 'Среда, 12 августа', acc: 'среду', d: 'Свободно', full: 0 },
+      { t: 'Четверг, 13 августа', acc: 'четверг', d: 'Уже стоит День C', full: 1 },
+      { t: 'Пятница, 14 августа', acc: 'пятницу', d: 'Свободно', full: 0 },
+      { t: 'Суббота, 15 августа', acc: 'субботу', d: 'Свободно', full: 0 }
+    ];
+    const W = [
+      { t: 'Неделя 1', cells: ['d', 'd', 'd'] },
+      { t: 'Неделя 2', cells: ['d', 'd', 's'] },
+      { t: 'Неделя 3', cells: ['n', 'n', 'n'] },
+      { t: 'Неделя 4', cells: ['n', 'n', 'n'] }
+    ];
+    const cellStyle = (k) => 'flex:1;min-width:0;display:flex;align-items:center;justify-content:center;height:34px;border-radius:9px;font-size:13px;font-weight:800;' + (k === 'd'
+      ? 'background:#15803d;color:#fff'
+      : k === 's'
+        ? 'background:rgba(245,158,11,.35);color:#7c4a03'
+        : 'border:1.5px solid #cbd5e1;background:#fff;color:#cbd5e1');
+
+    return {
+      openMove: () => this.setState({ move: !S.move }),
+      moveStyle: S.move ? '' : 'display:none',
+      moveDays: DAYS.map((x, i) => {
+        const on = pick === i;
+        return {
+          t: x.t, d: x.d, b: x.full ? 'занят' : '', tc: x.full ? '#94a3b8' : '#0f172a',
+          pick: () => { if (!x.full) this.setState({ moveDay: i }); },
+          s: 'display:flex;align-items:center;gap:11px;width:100%;min-height:56px;padding:9px 12px;border-radius:12px;cursor:' + (x.full ? 'not-allowed' : 'pointer') + ';border:1.5px solid ' + (on ? '#1d4ed8' : '#e2e8f0') + ';background:' + (on ? 'rgba(37,99,235,.06)' : x.full ? '#f8fafc' : '#fff'),
+          dot: 'flex:0 0 auto;display:inline-flex;width:20px;height:20px;border-radius:50%;border:2px solid ' + (on ? '#1d4ed8' : '#cbd5e1') + ';background:' + (on ? '#1d4ed8' : 'transparent') + ';box-shadow:' + (on ? 'inset 0 0 0 3px #fff' : 'none'),
+          badge: x.full ? 'flex:0 0 auto;padding:3px 9px;border-radius:999px;background:#f1f5f9;color:#94a3b8;font-size:10.5px;font-weight:800' : 'display:none'
+        };
+      }),
+      moveLabel: pick == null ? 'Выбери день' : 'Перенести на ' + DAYS[pick].acc,
+      moveBtn: 'box-sizing:border-box;width:100%;height:48px;border-radius:12px;border:none;font-size:14px;font-weight:800;cursor:' + (pick == null ? 'not-allowed' : 'pointer') + ';background:' + (pick == null ? '#e2e8f0' : '#1d4ed8') + ';color:' + (pick == null ? '#94a3b8' : '#fff'),
+
+      weeks16: W.map((w, i) => ({
+        t: w.t, c: i === 2 ? '#1d4ed8' : '#94a3b8',
+        cells: w.cells.map((k) => ({ g: k === 'd' ? '✓' : k === 's' ? '✕' : '', s: cellStyle(k) }))
+      })),
+      done16: S.noGrow
+        ? [{ l: 'Тренировок', v: '9' }, { l: 'Тоннаж', v: '68 т' }, { l: 'Подходов', v: '187' }]
+        : [{ l: 'Тренировок', v: '9' }, { l: 'Тоннаж', v: '68 т' }, { l: 'Рекордов', v: '4' }],
+      toggleGrow: () => this.setState({ noGrow: !S.noGrow }),
+      growToggleLabel: S.noGrow ? 'Вернуть случай с ростом' : 'Показать случай без роста',
+      growTitle: S.noGrow ? 'Что удержано' : 'Что выросло',
+      growBox: 'padding:12px;border-radius:12px;margin-bottom:12px;background:' + (S.noGrow ? 'rgba(37,99,235,.07)' : 'rgba(34,197,94,.08)') + ';border:1px solid ' + (S.noGrow ? 'rgba(37,99,235,.3)' : 'rgba(34,197,94,.4)'),
+      growKick: 'font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;color:' + (S.noGrow ? '#1d4ed8' : '#15803d'),
+      growLine: S.noGrow ? 'Вес в этом цикле держался на месте — и это тоже результат: девять тренировок за четыре недели, ни одной пустой недели.' : '',
+      growLineStyle: S.noGrow ? 'font-size:12.5px;line-height:1.55;color:#334155;margin-bottom:9px' : 'display:none',
+      grew16: (S.noGrow
+        ? [{ n: 'Недель подряд', v: '4' }, { n: 'Тренировок в неделю', v: '2,3' }, { n: 'Самое частое', v: 'Жим лёжа' }]
+        : [{ n: 'Жим лёжа', v: '75 → 85 кг' }, { n: 'Тяга штанги', v: '60 → 70 кг' }, { n: 'Подтягивания', v: '8 → 12 повт.' }]
+      ).map((g) => ({ n: g.n, v: g.v, c: S.noGrow ? '#1d4ed8' : '#15803d' })),
+      qa16: [
+        { n: 1, q: 'Кто инициирует перенос', a: 'Оба, но входы разные. Клиент двигает свою дату сам — это не меняет содержание тренировки. Куратор «переносит» обычным назначением на другой день: для него это уже существующая операция.' },
+        { n: 2, q: 'Что остаётся на исходном дне', a: 'Строка «перенесено на субботу» — и день закрыт. Пропуском он не считается: человек не отказался, он передвинул. В отчёте это третья строка рядом с «выполнено» и «пропущено».' },
+        { n: 3, q: 'Есть ли след на новом дне', a: 'Да, маленький: пилюля «с понедельника» рядом с «План». Без него человек через неделю не поймёт, почему в субботу стоит тренировка, которой в программе не было.' },
+        { n: 4, q: 'Если на целевом дне лимит выбран', a: 'Такой день не предлагается — в списке он с пометкой «занят» и не нажимается. Решать «что убрать» посреди переноса человек не должен.' },
+        { n: 5, q: 'Отличается ли перенос от «назначить ещё одну»', a: 'По сути нет — это то же назначение. Отдельный механизм не нужен: хватает пометки происхождения на новой тренировке и отметки на исходном дне. Это дёшево и снимает вопрос из обоих протоколов сразу.' }
+      ]
+    };
+  }
+
+  renderVals() {
+    const S = this.state;
+    const badge = (kind) => {
+      const map = {
+        add: ['rgba(34,197,94,.14)', '#15803d', '+'],
+        del: ['rgba(239,68,68,.10)', '#b91c1c', '−'],
+        edit: ['rgba(37,99,235,.12)', '#1d4ed8', '~'],
+        keep: ['rgba(34,197,94,.14)', '#15803d', '🔒']
+      };
+      const m = map[kind];
+      return {
+        sign: m[2],
+        style: 'flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:7px;font-size:12px;font-weight:800;background:' + m[0] + ';color:' + m[1]
+      };
+    };
+    const line = (kind, n, d) => {
+      const b = badge(kind);
+      return {
+        n, d, sign: b.sign, mark: b.style,
+        row: 'display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;margin-bottom:7px'
+      };
+    };
+
+    const mark = (kind) => badge(kind).style;
+    const numbered = (items) => items.map((t, i) => ({
+      t, sign: String(i + 1),
+      mark: 'flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:7px;font-size:12px;font-weight:800;background:#f1f5f9;color:#475569'
+    }));
+
+    return Object.assign(this.renderVals16(), {
+      setsE: [
+        { n: '1', was: '40 кг × 12', now: '', tag: 'сделан', locked: 1 },
+        { n: '2', was: '40 кг', now: '35 кг × 12', tag: '', locked: 0 },
+        { n: '3', was: '40 кг', now: '35 кг × 12', tag: '', locked: 0 }
+      ].map((s) => ({
+        n: s.locked ? '🔒' : s.n, was: s.was, now: s.now, tag: s.tag,
+        row: 'display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:11px;margin-bottom:6px;background:' + (s.locked ? 'rgba(34,197,94,.10)' : '#f8fafc') + ';border:1px solid ' + (s.locked ? 'rgba(34,197,94,.4)' : '#e2e8f0'),
+        num: 'flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;font-size:12px;font-weight:800;background:' + (s.locked ? 'rgba(255,255,255,.8)' : '#f1f5f9') + ';color:' + (s.locked ? '#15803d' : '#475569'),
+        wasStyle: s.locked
+          ? 'font-size:13px;font-weight:800;color:#0f172a'
+          : 'font-size:12px;font-weight:600;color:#475569;text-decoration:line-through;text-decoration-thickness:1.5px',
+        arrow: s.locked ? 'display:none' : 'font-size:13px;color:#475569',
+        nowStyle: s.locked ? 'display:none' : 'font-size:13px;font-weight:800;color:#1d4ed8',
+        tagStyle: s.tag ? 'flex:0 0 auto;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:#15803d' : 'display:none'
+      })),
+      rulesE: numbered([
+        'Отмеченный подход не меняется ничем и никогда — ни весом, ни повторами, ни удалением.',
+        'Незакрытые подходы начатого упражнения править можно: работа при этом не переписывается, меняется только то, что впереди.',
+        'Начатое упражнение нельзя убрать из плана. Оно остаётся в тренировке как факт, даже если куратор его вычеркнул.'
+      ]),
+
+      swapH: [
+        { k: 'del', t: 'Жим гантелей над головой убран' },
+        { k: 'del', t: 'Жим под углом убран' },
+        { k: 'add', t: 'Вместо них — тяга и гиперэкстензия' }
+      ].map((s) => ({ t: s.t, sign: badge(s.k).sign, mark: mark(s.k) })),
+      skipRules: numbered([
+        'Пропущенный день безопасен для правки: отмеченных подходов нет, терять нечего.',
+        'Прошедший день не воскрешают — замена приходит отдельной тренировкой на свободный день, а пропуск остаётся пропуском.',
+        'Отказ не требует объяснения и не возвращается вторым напоминанием. Причину пропуска клиент уже назвал один раз.'
+      ]),
+
+      landedF: [
+        { k: 'add', n: 'Тяга к груди добавлена', d: 'Ты её сделал · 4 подхода' },
+        { k: 'edit', n: 'Присед сбавлен до 70 кг', d: 'Легло — ты к нему не приступал' },
+        { k: 'del', n: 'Разведение осталось в плане', d: 'Артём его убирал, но ты уже начал' }
+      ].map((l) => ({ n: l.n, d: l.d, sign: badge(l.k).sign, mark: mark(l.k) })),
+
+      roundsG: [
+        { t: 'Р1', cells: ['10 повт.', '55 × 12'], done: 1 },
+        { t: 'Р2', cells: ['8 повт.', '55 × 12'], done: 0 },
+        { t: 'Р3', cells: ['8 повт.', '55 × 10'], done: 0 }
+      ].map((r) => ({
+        t: r.t,
+        lab: 'flex:0 0 28px;font-size:11px;font-weight:800;text-transform:uppercase;color:' + (r.done ? '#15803d' : '#64748b'),
+        cells: r.cells.map((v) => ({
+          v,
+          box: 'flex:1;min-width:0;display:flex;align-items:center;justify-content:center;min-height:38px;border-radius:10px;font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;background:' + (r.done ? 'rgba(34,197,94,.12)' : '#f8fafc') + ';border:1px solid ' + (r.done ? 'rgba(34,197,94,.45)' : '#e2e8f0') + ';color:' + (r.done ? '#0f172a' : '#64748b')
+        }))
+      })),
+
+      briefA: [
+        { k: 'del', t: 'Жим гантелей под углом убран' },
+        { k: 'add', t: 'Вместо него — тяга к груди' },
+        { k: 'edit', t: 'В приседе вес ниже на 10 кг' }
+      ].map((x) => {
+        const b = badge(x.k);
+        return { t: x.t, sign: b.sign, mark: b.style };
+      }),
+      diffA: [
+        line('del', 'Жим гантелей под углом', 'Убран из плана — плечо ещё не готово'),
+        line('add', 'Тяга к груди на блоке', '4 подхода × 12 · 45 кг'),
+        line('edit', 'Присед со штангой', 'Было 4 × 8 · 80 кг → станет 4 × 10 · 70 кг'),
+        line('keep', 'Остальные 3 упражнения', 'Артём их не трогал')
+      ],
+
+      listB: [
+        { i: '1', n: 'Жим лёжа', d: '4 подхода · сделано', s: 'done' },
+        { i: '2', n: 'Тяга штанги', d: '3 подхода · сделано', s: 'done' },
+        { i: '3', n: 'Разведение гантелей', d: '1 из 3 · идёт сейчас', s: 'cur' },
+        { i: '4', n: 'Жим гантелей под углом', d: 'Артём предлагает убрать', s: 'del' },
+        { i: '5', n: 'Присед со штангой', d: 'Артём предлагает 70 кг вместо 80', s: 'edit' },
+        { i: '6', n: 'Планка', d: '3 подхода · впереди', s: 'wait' }
+      ].map((e) => {
+        const tone = {
+          done: ['rgba(34,197,94,.12)', 'rgba(34,197,94,.45)', '#15803d', 'сделано'],
+          cur: ['rgba(249,115,22,.10)', 'rgba(249,115,22,.5)', '#9a3412', 'сейчас'],
+          del: ['#fff', 'rgba(239,68,68,.4)', '#b91c1c', 'убрать'],
+          edit: ['#fff', 'rgba(37,99,235,.4)', '#1d4ed8', 'править'],
+          wait: ['#fff', '#e2e8f0', '#64748b', '']
+        }[e.s];
+        const locked = e.s === 'done' || e.s === 'cur';
+        return {
+          i: locked ? '🔒' : e.i, n: e.n, d: e.d, t: tone[3],
+          meta: locked ? '#475569' : '#64748b',
+          card: 'border-radius:13px;padding:11px 12px;margin-bottom:7px;background:' + tone[0] + ';border:1px solid ' + tone[1],
+          num: 'flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:9px;font-size:12px;font-weight:800;background:' + (locked ? 'rgba(255,255,255,.75)' : '#f1f5f9') + ';color:' + tone[2],
+          tag: tone[3] ? 'flex:0 0 auto;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:' + tone[2] : 'display:none'
+        };
+      }),
+      diffB: [
+        line('del', 'Жим гантелей под углом', 'Убрать — ты к нему ещё не приступал'),
+        line('edit', 'Присед со штангой', 'Было 4 × 8 · 80 кг → станет 4 × 10 · 70 кг')
+      ],
+
+      keptC: [
+        { n: 'Жим лёжа', v: '4 × 8 · 75 кг' },
+        { n: 'Тяга штанги', v: '3 × 10 · 60 кг' },
+        { n: 'Разведение гантелей', v: '1 из 3' }
+      ],
+      aheadC: [
+        { k: 'del', n: 'Жим гантелей под углом', was: '', now: '', note: 'Уберётся из плана. Если решишь сделать — добавишь сам, это не запрет.', c: '#ef4444' },
+        { k: 'add', n: 'Тяга к груди на блоке', was: '', now: '', note: 'Добавится вместо жима под углом · 4 × 12 · 45 кг', c: '#22c55e' },
+        { k: 'edit', n: 'Присед со штангой', was: '4 × 8 · 80 кг', now: '4 × 10 · 70 кг', note: '', c: '#3b82f6' },
+        { k: 'keep', n: 'Планка', was: '', now: '', note: 'Без изменений · 3 × 60 с', c: '#94a3b8' }
+      ].map((a) => {
+        const b = badge(a.k);
+        const hasDiff = !!a.was;
+        return {
+          n: a.n, sign: b.sign, mark: b.style, c: a.c, was: a.was, now: a.now, note: a.note,
+          gap: hasDiff || a.note ? '8px' : '0',
+          wasStyle: hasDiff ? 'display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0' : 'display:none',
+          noteStyle: a.note ? 'font-size:11.5px;line-height:1.5;color:#64748b' : 'display:none'
+        };
+      }),
+
+      afterD: [
+        { k: 'keep', t: 'Жим лёжа, тяга, разведение — как сделал' },
+        { k: 'add', t: 'Тяга к груди · 4 × 12 · 45 кг' },
+        { k: 'edit', t: 'Присед · 4 × 10 · 70 кг' }
+      ].map((x) => {
+        const b = badge(x.k);
+        return { t: x.t, sign: b.sign, mark: b.style };
+      }),
+
+      feedE: [
+        { t: 'Правка отправлена', d: 'Марина её ещё не открывала', time: '09:14', c: '#f59e0b' },
+        { t: 'Тренировка начата', d: 'До вашей правки', time: '08:52', c: '#22c55e' },
+        { t: 'План назначен', d: 'Программа «Верх-низ», неделя 3', time: 'вчера', c: '#94a3b8' }
+      ].map((f) => ({
+        t: f.t, d: f.d, time: f.time,
+        dot: 'flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:' + f.c
+      })),
+
+      sheetA: 'position:absolute;inset:0;z-index:50;' + (S.sheet ? '' : 'display:none'),
+      openSheet: () => this.setState({ sheet: true }),
+      closeSheet: () => this.setState({ sheet: false })
+    });
+  }
+}
+</script>
+</body>
+</html>

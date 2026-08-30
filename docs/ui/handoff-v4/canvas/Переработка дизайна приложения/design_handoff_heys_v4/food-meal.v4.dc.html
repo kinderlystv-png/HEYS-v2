@@ -18,7 +18,7 @@
   *{box-sizing:border-box}
   a{color:var(--ac);text-decoration:none}
   a:hover{color:var(--acs)}
-  .ph{width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)}
+  .ph{width:375px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)}
   .sc{flex:1;min-height:0;overflow:hidden;padding:6px 18px 18px}
   .n{font-variant-numeric:tabular-nums}
   .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(var(--ink),.42)}
@@ -1121,7 +1121,933 @@
     <div class="spec"><b>тач-цели</b><span data-v="пресеты граммовки ~29, пять иконок 26 × 26 подряд в строке продукта, крестик удаления ~37 — под норму 44 pt не попадают. Точки прогресса на шагах «Время и тип» и «Самочувствие» — индикатор 6 × 6 px, их не нажимают"></span><i>числа перенесены из заметки: до этого они жили только в прозе</i></div>
     <div class="spec"><b>где точки есть, а где нет</b><span data-v="две точки стоят на шагах «Время и тип» и «Самочувствие» — у создания приёма всегда ровно два шага. Дальше по флоу точек нет: после оценок путь ветвится, продуктов может быть один или восемь, и индикатор показывал бы неправду"></span><i>добавлены 27 августа. Не для равновесия со шевроном в шапке — его уравновешивает пустая распорка той же ширины, — а потому что шагов ровно два и это знание человеку полезно</i></div>
     <div class="spec" style="border-bottom:none"><b>что закрыто и что нет</b><span data-v="перечень описанных зон печатается в баннере шапки и порождается из разделов контракта — руками он отставал дважды за один день. У наборов свой поиск в сборке — поля 0/16, к строке поиска продуктового пути он не относится"></span><i>счёт зон расходился с разделами дважды: 26 августа отстал от поиска и модалки, 27-го — от порции и собранного приёма. Сверка такого не ловит: она не сверяет перечень внутри строки со списком разделов — следить руками при каждом новом разделе</i></div>
-  </div>
+              <div class="ctrH">Разбор кадров · элемент за элементом</div>
+    <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
+    <div class="spec"><b>Добавление · гард даты · 01</b><span data-v="область прокрутки: обрез hidden, направление column, распределение center, поля 18px"></span></div>
+    <div class="spec"><b>Добавление · гард даты · 02</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px"></span></div>
+    <div class="spec"><b>Добавление · гард даты · 03</b><span data-v="«Внимание» — ключ: цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · гард даты · 04</b><span data-v="«Приём запишется на 7 августа, а не на сегодня» — шрифт 700 17px/1.35 Figtree, цвет var(--tx), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · гард даты · 05</b><span data-v="«В календаре выбран другой день. Еда уйдёт туда и в» — шрифт 500 12.5px/1.5 Figtree, цвет rgba(var(--ink),.55), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Добавление · гард даты · 06</b><span data-v="«Перейти на сегодня» — главная кнопка: отступ сверху 20px"></span></div>
+    <div class="spec"><b>Добавление · гард даты · 07</b><span data-v="«Всё-таки записать на 7 августа» — выключка center, шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.45), отступ сверху 16px"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 02</b><span data-v="«Новый приём» — имя экрана"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 03</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 04</b><span data-v="фон var(--c2), радиус 26px, поля 10px 14px 8px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 05</b><span data-v="позиция relative, высота 192px, обрез hidden"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 06</b><span data-v="позиция absolute, высота 64px, радиус 18px, фон var(--bg), рамка 0 1px 3px rgba(var(--shadow),.14)"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 07</b><span data-v="позиция relative, выравнивание stretch, распределение center, зазор 12px"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 08</b><span data-v="направление column, флекс 0 0 86px"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 09</b><span data-v="«10» — моноцифры: высота 64px, выравнивание center, распределение flex-end, шрифт 600 24px/1 Figtree, цвет rgba(var(--ink),.3), трекинг -.02em"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 10</b><span data-v="«11» — моноцифры: высота 64px, выравнивание center, распределение flex-end, шрифт 600 40px/1 Figtree, цвет var(--ac), трекинг -.03em"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 11</b><span data-v="«:» — моноцифры: флекс none, высота 192px, выравнивание center, шрифт 600 40px/1 Figtree, цвет rgba(var(--ink),.25)"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 12</b><span data-v="«45» — моноцифры: высота 64px, выравнивание center, шрифт 600 24px/1 Figtree, цвет rgba(var(--ink),.3), трекинг -.02em"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 13</b><span data-v="«50» — моноцифры: высота 64px, выравнивание center, позиция relative, шрифт 600 40px/1 Figtree, цвет var(--ac), трекинг -.03em"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 14</b><span data-v="«сейчас» — позиция absolute, сдвиг translateY(-50%), высота от 20px, выравнивание center, поля 0 8px, радиус 999px, фон var(--c2), шрифт 700 9px/1 Figtree, трекинг .06em, регистр uppercase, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 15</b><span data-v="зазор 8px, отступ сверху 4px"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 16</b><span data-v="«−15 мин» — флекс 1, высота от 38px, выравнивание center, распределение center, радиус 999px, фон var(--bg), шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 17</b><span data-v="«Тип приёма» — ярус"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 18</b><span data-v="колонки 1fr 1fr, зазор 12px"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 19</b><span data-v="карточка .grp: фон var(--c2), отступ сверху 16px"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 20</b><span data-v="«Прошлый приём ещё усваивается — окно закроется в 1» — шрифт 600 12px/1.45 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 21</b><span data-v="«Всё равно продолжить» — главная кнопка: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · время и тип · 22</b><span data-v="«Подождать» — высота от 44px, выравнивание center, распределение center, отступ сверху 4px, шрифт 700 12.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 02</b><span data-v="«Как вы сейчас» — имя экрана"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 03</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 04</b><span data-v="выравнивание center, зазор 7px, отступы 8px 0 -8px"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 05</b><span data-v="флекс none, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 06</b><span data-v="«Как в прошлый раз, 11:20 — поправьте, если изменил» — шрифт 600 11px/1.35 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 07</b><span data-v="карточка .grp: отступ сверху 8px"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 08</b><span data-v="распределение space-between, выравнивание baseline"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 09</b><span data-v="«Настроение» — ключ"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 10</b><span data-v="«8 · хорошо» — моноцифры: шрифт 700 13px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 11</b><span data-v="высота 34px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 12px, позиция relative"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 12</b><span data-v="ширина 80%, высота 34px, радиус 999px, фон var(--gr2)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 13</b><span data-v="позиция absolute, сдвиг translate(-50%,-50%), ширина 24px, высота 24px, радиус 999px, фон var(--bg), рамка 0 1px 4px rgba(var(--shadow),.25)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 14</b><span data-v="распределение space-between, отступ сверху 9px, шрифт 600 10px/1 Figtree, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 15</b><span data-v="«3 · слабость» — моноцифры: шрифт 700 13px/1 Figtree, цвет var(--val-bad)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 16</b><span data-v="ширина 30%, высота 34px, радиус 999px, фон var(--val-bad)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 17</b><span data-v="ширина 10%, высота 34px, радиус 999px, фон var(--gr2)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 18</b><span data-v="«Что повлияло» — ярус: отступы 10px 0 6px"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 19</b><span data-v="перенос строк wrap, зазор 14px"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 20</b><span data-v="«Радость» — высота от 44px, выравнивание center, поля 0 15px"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 21</b><span data-v="высота от 44px, выравнивание center, зазор 6px, поля 0 15px, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 22</b><span data-v="«Дальше» — главная кнопка: отступ сверху 20px"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · 23</b><span data-v="«Сохранить приём без оценок» — высота от 44px, выравнивание center, распределение center, отступ сверху 6px, шрифт 700 12.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 01</b><span data-v="область прокрутки: позиция relative"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 02</b><span data-v="высота 44px, радиус 16px, фон var(--c1), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 03</b><span data-v="высота 64px, радиус 20px, фон var(--c1), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 04</b><span data-v="позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px), направление column, распределение center, поля 12px"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 05</b><span data-v="фон var(--md), радиус 26px, поля 18px 16px 14px, рамка 0 18px 50px rgba(var(--shadow),.34)"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 06</b><span data-v="«Ночной приём · 22:00» — выключка center, шрифт 700 13.5px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 07</b><span data-v="выравнивание center, зазор 11px, фон var(--c1), радиус 20px, поля 14px 15px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 08</b><span data-v="флекс 1, ширина от 0"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 09</b><span data-v="«Повторить из недавних» — шрифт 700 12.5px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 10</b><span data-v="«Домашний кофе (растворимый 200 мл + молоко 2,5 100» — шрифт 500 11px/1.45 Figtree, цвет rgba(var(--ink),.55), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 11</b><span data-v="«из приёма за последние 2 дня» — моноцифры: шрифт 500 10px/1 Figtree, цвет rgba(var(--ink),.4), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 12</b><span data-v="выравнивание center, зазор 11px, фон var(--c1), радиус 20px, поля 13px 13px 13px 15px, отступ сверху 8px, высота от 64px"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 13</b><span data-v="«Выбрать и сразу закрыть» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.5), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 14</b><span data-v="флекс none, ширина 44px, высота 44px, радиус 14px, фон var(--c2), выравнивание center, распределение center, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 15</b><span data-v="выравнивание center, зазор 11px, фон var(--c2), радиус 20px, поля 13px 13px 13px 15px, отступ сверху 8px, высота от 64px"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · 16</b><span data-v="«Отмена» — высота от 44px, выравнивание center, распределение center, отступ сверху 4px, шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 02</b><span data-v="«Перекус · 11:50» — имя экрана"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 03</b><span data-v="ширина 17px"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 05</b><span data-v="зазор 8px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 06</b><span data-v="флекс 1, высота от 44px, выравнивание center, распределение center, зазор 7px, радиус 999px, фон var(--c2), шрифт 700 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 07</b><span data-v="зазор 16px, отступ сверху 14px, шрифт 600 11.5px/1 Figtree"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 08</b><span data-v="«Частые» — цвет var(--ac), разделитель 2px solid var(--acs)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 09</b><span data-v="«Недавние · 3 дня» — цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 10</b><span data-v="выравнивание center, зазор 10px, фон var(--c1), радиус 16px, поля 14px 16px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 11</b><span data-v="«Поиск продукта» — флекс 1, шрифт 500 13px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 12</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 13</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 14</b><span data-v="«За 21 день · чаще всего» — шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 15</b><span data-v="флекс none, высота от 26px, выравнивание center, зазор 5px, поля 0 10px, радиус 999px, фон var(--c2), шрифт 700 10px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 16</b><span data-v="список .cd: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 17</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 18</b><span data-v="выравнивание center, зазор 11px"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 19</b><span data-v="ширина 4px, высота 30px, радиус 999px, фон var(--gr2), флекс none"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 20</b><span data-v="«Кофе растворимый с молоком» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 21</b><span data-v="«51 ккал · Б1 Ж0 У1 · 22 раза» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 22</b><span data-v="выравнивание center, флекс none"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 23</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет var(--acs)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 24</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · 25</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Добавление · поиск · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Добавление · поиск · 02</b><span data-v="«Перекус · 11:50» — имя экрана"></span></div>
+    <div class="spec"><b>Добавление · поиск · 03</b><span data-v="ширина 44px, высота 44px, отступы -14px -8px -14px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Добавление · поиск · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Добавление · поиск · 05</b><span data-v="выравнивание center, зазор 10px, фон var(--c1), радиус 16px, поля 14px 16px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Добавление · поиск · 06</b><span data-v="«сыр» — флекс 1, шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Добавление · поиск · 07</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Добавление · поиск · 08</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · поиск · 09</b><span data-v="«Найдено 5» — шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Добавление · поиск · 10</b><span data-v="флекс none, высота от 26px, выравнивание center, зазор 5px, поля 0 10px, радиус 999px, фон var(--c2), шрифт 700 10px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · поиск · 11</b><span data-v="список .cd: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · поиск · 12</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Добавление · поиск · 13</b><span data-v="выравнивание center, зазор 11px"></span></div>
+    <div class="spec"><b>Добавление · поиск · 14</b><span data-v="ширина 4px, высота 30px, радиус 999px, фон var(--gr2), флекс none"></span></div>
+    <div class="spec"><b>Добавление · поиск · 15</b><span data-v="цвет var(--tx)"></span></div>
+    <div class="spec"><b>Добавление · поиск · 16</b><span data-v="«307 ккал · Б25 Ж25 У1 · 18 раз» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Добавление · поиск · 17</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет var(--acs)"></span></div>
+    <div class="spec"><b>Добавление · поиск · 18</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Добавление · поиск · 19</b><span data-v="ширина 4px, высота 30px, радиус 999px, фон var(--ovl), флекс none"></span></div>
+    <div class="spec"><b>Добавление · поиск · 20</b><span data-v="выравнивание center, зазор 4px, цвет var(--wat)"></span></div>
+    <div class="spec"><b>Добавление · поиск · 21</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Добавление · поиск · 22</b><span data-v="ширина 4px, высота 30px, радиус 999px, фон var(--acs), флекс none"></span></div>
+    <div class="spec"><b>Поиск · только свои · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Поиск · только свои · 02</b><span data-v="«Перекус · 11:50» — имя экрана"></span></div>
+    <div class="spec"><b>Поиск · только свои · 03</b><span data-v="ширина 44px, высота 44px, отступы -14px -8px -14px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Поиск · только свои · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Поиск · только свои · 05</b><span data-v="выравнивание center, зазор 10px, фон var(--c1), радиус 16px, поля 14px 16px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Поиск · только свои · 06</b><span data-v="«сыр» — флекс 1, шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Поиск · только свои · 07</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Поиск · только свои · 08</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Поиск · только свои · 09</b><span data-v="«Найдено 3» — шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Поиск · только свои · 10</b><span data-v="флекс none, высота от 26px, выравнивание center, зазор 5px, поля 0 10px, радиус 999px, рамка inset 0 0 0 1.5px rgba(var(--ink),.16), шрифт 700 10px/1 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Поиск · только свои · 11</b><span data-v="список .cd: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Поиск · только свои · 12</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Поиск · только свои · 13</b><span data-v="выравнивание center, зазор 11px"></span></div>
+    <div class="spec"><b>Поиск · только свои · 14</b><span data-v="ширина 4px, высота 30px, радиус 999px, фон var(--gr2), флекс none"></span></div>
+    <div class="spec"><b>Поиск · только свои · 15</b><span data-v="цвет var(--tx)"></span></div>
+    <div class="spec"><b>Поиск · только свои · 16</b><span data-v="«307 ккал · Б25 Ж25 У1 · 18 раз» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Поиск · только свои · 17</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет var(--acs)"></span></div>
+    <div class="spec"><b>Поиск · только свои · 18</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Поиск · только свои · 19</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Поиск · только свои · 20</b><span data-v="ширина 4px, высота 30px, радиус 999px, фон var(--ovl), флекс none"></span></div>
+    <div class="spec"><b>Добавление · порция · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Добавление · порция · 02</b><span data-v="«Кофе растворимый с молоком» — имя экрана"></span></div>
+    <div class="spec"><b>Добавление · порция · 03</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -14px -8px -14px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Добавление · порция · 04</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -14px -6px -14px -10px, выравнивание center, распределение center, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · порция · 05</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Добавление · порция · 06</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px, выключка center"></span></div>
+    <div class="spec"><b>Добавление · порция · 07</b><span data-v="«Сколько грамм» — ключ"></span></div>
+    <div class="spec"><b>Добавление · порция · 08</b><span data-v="выравнивание center, распределение center, зазор 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Добавление · порция · 09</b><span data-v="ширина 44px, высота 44px, радиус 999px, фон var(--bg), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Добавление · порция · 10</b><span data-v="«100» — моноцифры: шрифт 600 54px/1 Figtree, цвет var(--tx), трекинг -.04em"></span></div>
+    <div class="spec"><b>Добавление · порция · 11</b><span data-v="распределение center, зазор 12px, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Добавление · порция · 12</b><span data-v="«50» — фон var(--bg), поля 10px 11px"></span></div>
+    <div class="spec"><b>Добавление · порция · 13</b><span data-v="«100» — фон var(--acs), цвет var(--on-acs), поля 10px 11px"></span></div>
+    <div class="spec"><b>Добавление · порция · 14</b><span data-v="распределение center, зазор 12px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · порция · 15</b><span data-v="«½ стакана · 125 г» — фон var(--gr-bg), цвет var(--gr), поля 10px 12px"></span></div>
+    <div class="spec"><b>Добавление · порция · 16</b><span data-v="распределение center, зазор 8px, отступ сверху 16px"></span></div>
+    <div class="spec"><b>Добавление · порция · 17</b><span data-v="«Граммы» — фон var(--bg), цвет var(--ac), высота от 36px, выравнивание center, поля 0 16px"></span></div>
+    <div class="spec"><b>Добавление · порция · 18</b><span data-v="«Ккал» — высота от 36px, выравнивание center, поля 0 16px, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Добавление · порция · 19</b><span data-v="«В прошлый раз было 100 г» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.45), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · порция · 20</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · порция · 21</b><span data-v="распределение space-between, выравнивание baseline"></span></div>
+    <div class="spec"><b>Добавление · порция · 22</b><span data-v="«51 ккал» — моноцифры: шрифт 600 22px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · порция · 23</b><span data-v="моноцифры: зазор 16px, шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.45), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · порция · 24</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 14px, позиция relative"></span></div>
+    <div class="spec"><b>Добавление · порция · 25</b><span data-v="ширина 79%, высота 6px, радиус 999px, фон rgba(var(--ink),.22)"></span></div>
+    <div class="spec"><b>Добавление · порция · 26</b><span data-v="позиция absolute, ширина 3%, высота 6px, радиус 0 999px 999px 0, фон var(--acs)"></span></div>
+    <div class="spec"><b>Добавление · порция · 27</b><span data-v="«Станет 1 573 из 1 928 за день · 82 %» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Добавление · порция · 28</b><span data-v="«Добавить» — главная кнопка: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 02</b><span data-v="«Кофе растворимый с молоком» — имя экрана"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 03</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -14px -8px -14px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 04</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -14px -6px -14px -10px, выравнивание center, распределение center, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 05</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 06</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px, выключка center"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 07</b><span data-v="«Сколько ккал» — ключ"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 08</b><span data-v="выравнивание center, распределение center, зазор 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 09</b><span data-v="ширина 44px, высота 44px, радиус 999px, фон var(--bg), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 10</b><span data-v="«455» — моноцифры: шрифт 600 54px/1 Figtree, цвет var(--tx), трекинг -.04em"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 11</b><span data-v="распределение center, зазор 12px, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 12</b><span data-v="«50» — фон var(--bg), поля 10px 11px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 13</b><span data-v="распределение center, зазор 12px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 14</b><span data-v="«½ стакана · 125 г» — фон var(--gr-bg), цвет var(--gr), поля 10px 12px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 15</b><span data-v="распределение center, зазор 8px, отступ сверху 16px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 16</b><span data-v="«Граммы» — высота от 36px, выравнивание center, поля 0 16px, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 17</b><span data-v="«Ккал» — фон var(--bg), цвет var(--ac), высота от 36px, выравнивание center, поля 0 16px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 18</b><span data-v="«= 771 г» — моноцифры: шрифт 600 15px/1 Figtree, цвет var(--ac), отступ сверху 14px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 19</b><span data-v="«Вес посчитан из калорийности 59 ккал на 100 г» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.45), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 20</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 21</b><span data-v="распределение space-between, выравнивание baseline"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 22</b><span data-v="«455 ккал» — моноцифры: шрифт 600 22px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 23</b><span data-v="моноцифры: зазор 16px, шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.45), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 24</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 14px, позиция relative"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 25</b><span data-v="ширина 58%, высота 6px, радиус 999px, фон rgba(var(--ink),.22)"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 26</b><span data-v="позиция absolute, высота 6px, радиус 0 999px 999px 0, фон var(--val-bad)"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 27</b><span data-v="«Станет 1 969 из 1 928 за день · 102 %» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · 28</b><span data-v="«Добавить» — главная кнопка: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 02</b><span data-v="«Кофе растворимый с молоком» — имя экрана"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 03</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -14px -8px -14px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 04</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -14px -6px -14px -10px, выравнивание center, распределение center, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 05</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 06</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px, выключка center"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 07</b><span data-v="«Сколько грамм» — ключ"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 08</b><span data-v="выравнивание center, распределение center, зазор 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 09</b><span data-v="ширина 44px, высота 44px, радиус 999px, фон var(--bg), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 10</b><span data-v="«100» — моноцифры: шрифт 600 54px/1 Figtree, цвет var(--tx), трекинг -.04em"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 11</b><span data-v="распределение center, зазор 12px, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 12</b><span data-v="«50» — фон var(--bg), поля 10px 11px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 13</b><span data-v="«100» — фон var(--acs), цвет var(--on-acs), поля 10px 11px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 14</b><span data-v="распределение center, зазор 12px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 15</b><span data-v="«½ стакана · 125 г» — фон var(--gr-bg), цвет var(--gr), поля 10px 12px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 16</b><span data-v="распределение center, зазор 8px, отступ сверху 16px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 17</b><span data-v="«Граммы» — фон var(--bg), цвет var(--ac), высота от 36px, выравнивание center, поля 0 16px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 18</b><span data-v="«Ккал» — высота от 36px, выравнивание center, поля 0 16px, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 19</b><span data-v="«В прошлый раз было 100 г» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.45), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 20</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 21</b><span data-v="распределение space-between, выравнивание baseline"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 22</b><span data-v="«51 ккал» — моноцифры: шрифт 600 22px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 23</b><span data-v="моноцифры: зазор 16px, шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.45), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 24</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 14px, позиция relative"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 25</b><span data-v="ширина 79%, высота 6px, радиус 999px, фон rgba(var(--ink),.22)"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 26</b><span data-v="позиция absolute, ширина 3%, высота 6px, радиус 0 999px 999px 0, фон var(--acs)"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 27</b><span data-v="«Станет 1 573 из 1 928 за день · 82 %» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 28</b><span data-v="карточка .grp: фон var(--c2), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 29</b><span data-v="«Этот продукт уже есть в приёме — 100 г. Добавите е» — шрифт 600 12.5px/1.45 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · 30</b><span data-v="«Добавить» — главная кнопка: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 02</b><span data-v="«Кофе растворимый с молоком» — имя экрана"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 03</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -14px -8px -14px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 04</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -14px -6px -14px -10px, выравнивание center, распределение center, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 05</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 06</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px, выключка center"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 07</b><span data-v="«Сколько грамм» — ключ"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 08</b><span data-v="выравнивание center, распределение center, зазор 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 09</b><span data-v="ширина 44px, высота 44px, радиус 999px, фон var(--bg), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 10</b><span data-v="«100» — моноцифры: шрифт 600 54px/1 Figtree, цвет var(--tx), трекинг -.04em"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 11</b><span data-v="распределение center, зазор 12px, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 12</b><span data-v="«50» — фон var(--bg), поля 10px 11px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 13</b><span data-v="«100» — фон var(--acs), цвет var(--on-acs), поля 10px 11px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 14</b><span data-v="распределение center, зазор 12px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 15</b><span data-v="«½ стакана · 125 г» — фон var(--gr-bg), цвет var(--gr), поля 10px 12px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 16</b><span data-v="распределение center, зазор 8px, отступ сверху 16px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 17</b><span data-v="«Граммы» — фон var(--bg), цвет var(--ac), высота от 36px, выравнивание center, поля 0 16px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 18</b><span data-v="«Ккал» — высота от 36px, выравнивание center, поля 0 16px, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 19</b><span data-v="«В прошлый раз было 100 г» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.45), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 20</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 21</b><span data-v="распределение space-between, выравнивание baseline"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 22</b><span data-v="«51 ккал» — моноцифры: шрифт 600 22px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 23</b><span data-v="моноцифры: зазор 16px, шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.45), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 24</b><span data-v="высота 6px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 14px, позиция relative"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 25</b><span data-v="ширина 58%, высота 6px, радиус 999px, фон rgba(var(--ink),.22)"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 26</b><span data-v="позиция absolute, высота 6px, радиус 0 999px 999px 0, фон var(--val-bad)"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 27</b><span data-v="«Станет 1 969 из 1 928 за день · 102 %» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 28</b><span data-v="карточка .grp: фон var(--c2), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 29</b><span data-v="«Норма дня будет превышена на 41 ккал.» — шрифт 600 12.5px/1.45 Figtree, цвет var(--val-bad)"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · 30</b><span data-v="«Добавить» — главная кнопка: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 02</b><span data-v="«Перекус · 11:50» — имя экрана"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 03</b><span data-v="ширина 17px"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 05</b><span data-v="фон var(--c2), радиус 26px, поля 22px 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 06</b><span data-v="«В приёме» — ключ"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 07</b><span data-v="выравнивание baseline, зазор 9px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 08</b><span data-v="«292» — моноцифры: шрифт 600 44px/.9 Figtree, цвет var(--ac), трекинг -.035em"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 09</b><span data-v="«ккал · 4 продукта» — шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.4)"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 10</b><span data-v="«Всего за день 1 537 · до нормы остаётся 391» — моноцифры: шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.45), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 11</b><span data-v="список .cd: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 12</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 13</b><span data-v="«Кофе растворимый» — цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 14</b><span data-v="«100 г» — моноцифры: цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 15</b><span data-v="выравнивание center, зазор 2px, флекс none"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 16</b><span data-v="«51» — моноцифры: цвет var(--tx)"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 17</b><span data-v="ширина 44px, высота 44px, отступы -13px -8px -13px 2px, выравнивание center, распределение center, цвет rgba(var(--ink),.3)"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 18</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 19</b><span data-v="зазор 8px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 20</b><span data-v="«Добавить ещё» — главная кнопка: флекс 1"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 21</b><span data-v="вторичная кнопка: флекс none, ширина 48px, поля 0, выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 22</b><span data-v="«Завершить приём» — вторичная кнопка: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Добавление · приём собран · 23</b><span data-v="«Сохранить как набор» — высота от 44px, выравнивание center, распределение center, отступ сверху 2px, шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 02</b><span data-v="«Вчера, 26 августа» — имя экрана"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 03</b><span data-v="«Сегодня» — моноцифры: флекс none, высота от 26px, выравнивание center, поля 0 10px, радиус 999px, фон var(--c2), шрифт 700 10.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 05</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px, фон var(--c1), радиус 16px, поля 12px 14px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 06</b><span data-v="«Окно приёмов» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 07</b><span data-v="«волны наложились» — моноцифры: шрифт 600 11px/1.4 Figtree, цвет var(--val-bad), выключка right"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 08</b><span data-v="фон var(--c1), радиус 20px, поля 13px 14px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 09</b><span data-v="выравнивание center, зазор 9px"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 10</b><span data-v="«1» — моноцифры: флекс none, ширина 22px, высота 22px, радиус 999px, фон var(--c2), выравнивание center, распределение center, шрифт 700 10px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 11</b><span data-v="«12:00 · Завтрак» — флекс 1, шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 12</b><span data-v="«319» — моноцифры: шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 13</b><span data-v="выравнивание flex-end, зазор 10px, отступ сверху 9px"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 14</b><span data-v="«Хлеб тостовый «Премиум суперсемечковый» · Куриное» — флекс 1, шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 15</b><span data-v="«+ ещё» — флекс none, высота от 44px, выравнивание center, поля 0 12px, радиус 999px, фон var(--c2), шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 16</b><span data-v="фон var(--c1), радиус 20px, поля 13px 14px, отступ сверху 8px"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 17</b><span data-v="«4» — моноцифры: флекс none, ширина 22px, высота 22px, радиус 999px, фон var(--c2), выравнивание center, распределение center, шрифт 700 10px/1 Figtree, цвет rgba(var(--ink),.4)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 18</b><span data-v="«22:00 · Перекус» — флекс 1, шрифт 700 12.5px/1 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 19</b><span data-v="ширина 44px, высота 44px, отступы -11px -10px -11px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.3)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 20</b><span data-v="«без продуктов · итог дня посчитан без него» — флекс 1, шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 21</b><span data-v="«Три полноценных приёма подряд» — фон var(--gr-bg), радиус 16px, поля 12px 14px, отступ сверху 10px, шрифт 600 11.5px/1.4 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · 22</b><span data-v="«Добавить приём пищи» — главная кнопка: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Приём · правка · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Приём · правка · 02</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Приём · правка · 03</b><span data-v="«Завтрак · 12:00» — флекс none, высота от 44px, выравнивание center, зазор 6px, отступы -14px -8px -14px 0, поля 0 6px, шрифт 700 13.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Приём · правка · 04</b><span data-v="«изм.» — шрифт 700 10.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Приём · правка · 05</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Приём · правка · 06</b><span data-v="фон var(--c2), радиус 22px, поля 14px 18px 13px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Приём · правка · 07</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Приём · правка · 08</b><span data-v="выравнивание baseline, зазор 6px"></span></div>
+    <div class="spec"><b>Приём · правка · 09</b><span data-v="«319» — моноцифры: шрифт 600 32px/.9 Figtree, цвет var(--ac), трекинг -.035em"></span></div>
+    <div class="spec"><b>Приём · правка · 10</b><span data-v="«ккал» — шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.42), перенос nowrap"></span></div>
+    <div class="spec"><b>Приём · правка · 11</b><span data-v="моноцифры: зазор 10px, шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.45), перенос nowrap"></span></div>
+    <div class="spec"><b>Приём · правка · 12</b><span data-v="список .cd: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Приём · правка · 13</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Приём · правка · 14</b><span data-v="«Хлеб тостовый «Премиум суперсемечковый»» — цвет rgba(var(--ink),.6)"></span></div>
+    <div class="spec"><b>Приём · правка · 15</b><span data-v="выравнивание center, зазор 2px, флекс none"></span></div>
+    <div class="spec"><b>Приём · правка · 16</b><span data-v="«50 г» — моноцифры: цвет var(--tx)"></span></div>
+    <div class="spec"><b>Приём · правка · 17</b><span data-v="ширина 44px, высота 44px, отступы -13px -8px -13px 2px, выравнивание center, распределение center, цвет rgba(var(--ink),.3)"></span></div>
+    <div class="spec"><b>Приём · правка · 18</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Приём · правка · 19</b><span data-v="«Добавить продукт» — вторичная кнопка: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Приём · правка · 20</b><span data-v="«Действия с приёмом» — ярус: отступы 16px 0 8px"></span></div>
+    <div class="spec"><b>Приём · правка · 21</b><span data-v="выравнивание center, распределение space-between, зазор 10px, высота от 44px, разделитель 1px solid rgba(var(--ink),.07)"></span></div>
+    <div class="spec"><b>Приём · правка · 22</b><span data-v="выравнивание center, зазор 10px, шрифт 600 12.5px/1.35 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Приём · правка · 23</b><span data-v="выравнивание center, распределение space-between, зазор 10px, высота от 44px"></span></div>
+    <div class="spec"><b>Приём · правка · 24</b><span data-v="фон var(--c1), радиус 16px, поля 12px 14px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Приём · правка · 25</b><span data-v="выравнивание center, зазор 9px"></span></div>
+    <div class="spec"><b>Приём · правка · 26</b><span data-v="«Смешанный профиль» — флекс 1, шрифт 600 11.5px/1.35 Figtree, цвет rgba(var(--ink),.6)"></span></div>
+    <div class="spec"><b>Приём · правка · 27</b><span data-v="«· волна 4,5 ч» — цвет rgba(var(--ink),.4)"></span></div>
+    <div class="spec"><b>Приём · правка · 28</b><span data-v="перенос строк wrap, зазор 6px, отступ сверху 9px"></span></div>
+    <div class="spec"><b>Приём · правка · 29</b><span data-v="«Активный быт» — флекс none, высота от 22px, выравнивание center, поля 0 8px, радиус 999px, рамка inset 0 0 0 1px rgba(var(--ink),.12), шрифт 600 9.5px/1 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Приём · правка · 30</b><span data-v="высота от 44px, выравнивание center, распределение center, зазор 8px, отступ сверху 8px, шрифт 700 12.5px/1 Figtree, цвет var(--val-bad)"></span></div>
+    <div class="spec"><b>Приём · время и тип · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Приём · время и тип · 02</b><span data-v="«Время и тип» — имя экрана"></span></div>
+    <div class="spec"><b>Приём · время и тип · 03</b><span data-v="ширина 17px"></span></div>
+    <div class="spec"><b>Приём · время и тип · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Приём · время и тип · 05</b><span data-v="фон var(--c2), радиус 26px, поля 14px 18px 16px, отступ сверху 12px, ширина max-content"></span></div>
+    <div class="spec"><b>Приём · время и тип · 06</b><span data-v="позиция relative, высота 120px, обрез hidden"></span></div>
+    <div class="spec"><b>Приём · время и тип · 07</b><span data-v="позиция absolute, высота 40px, радиус 14px, фон var(--bg), рамка 0 1px 3px rgba(var(--shadow),.14)"></span></div>
+    <div class="spec"><b>Приём · время и тип · 08</b><span data-v="позиция relative, выравнивание stretch, распределение center, зазор 12px"></span></div>
+    <div class="spec"><b>Приём · время и тип · 09</b><span data-v="направление column, флекс 0 0 74px"></span></div>
+    <div class="spec"><b>Приём · время и тип · 10</b><span data-v="«11» — моноцифры: высота 40px, выравнивание center, распределение flex-end, шрифт 600 17px/1 Figtree, цвет rgba(var(--ink),.3)"></span></div>
+    <div class="spec"><b>Приём · время и тип · 11</b><span data-v="«12» — моноцифры: высота 40px, выравнивание center, распределение flex-end, шрифт 600 27px/1 Figtree, цвет var(--ac), трекинг -.03em"></span></div>
+    <div class="spec"><b>Приём · время и тип · 12</b><span data-v="«:» — моноцифры: флекс none, высота 120px, выравнивание center, шрифт 600 27px/1 Figtree, цвет rgba(var(--ink),.3)"></span></div>
+    <div class="spec"><b>Приём · время и тип · 13</b><span data-v="«55» — моноцифры: высота 40px, выравнивание center, шрифт 600 17px/1 Figtree, цвет rgba(var(--ink),.3)"></span></div>
+    <div class="spec"><b>Приём · время и тип · 14</b><span data-v="«00» — моноцифры: высота 40px, выравнивание center, шрифт 600 27px/1 Figtree, цвет var(--ac), трекинг -.03em"></span></div>
+    <div class="spec"><b>Приём · время и тип · 15</b><span data-v="перенос строк wrap, зазор 8px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Приём · время и тип · 16</b><span data-v="«Завтрак» — фон var(--acs), цвет var(--on-acs), высота от 38px, выравнивание center, поля 0 14px"></span></div>
+    <div class="spec"><b>Приём · время и тип · 17</b><span data-v="«Обед» — высота от 38px, выравнивание center, поля 0 14px"></span></div>
+    <div class="spec"><b>Приём · время и тип · 18</b><span data-v="«Тип предложен по времени — можно оставить как есть» — шрифт 500 11px/1.45 Figtree, цвет rgba(var(--ink),.45), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Приём · время и тип · 19</b><span data-v="«Сохранить» — главная кнопка: отступ сверху 14px"></span></div>
+    <div class="spec"><b>Действие · копировать · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Действие · копировать · 02</b><span data-v="«копировать» — имя экрана"></span></div>
+    <div class="spec"><b>Действие · копировать · 03</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -14px -8px -14px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Действие · копировать · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Действие · копировать · 05</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Действие · копировать · 06</b><span data-v="«Продукты 8/8» — ярус: отступы 0"></span></div>
+    <div class="spec"><b>Действие · копировать · 07</b><span data-v="«Снять всё» — шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Действие · копировать · 08</b><span data-v="фон var(--c1), радиус 16px, поля 12px 14px, отступ сверху 8px"></span></div>
+    <div class="spec"><b>Действие · копировать · 09</b><span data-v="выравнивание center, зазор 10px"></span></div>
+    <div class="spec"><b>Действие · копировать · 10</b><span data-v="флекс none, ширина 20px, высота 20px, радиус 6px, фон var(--acs), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Действие · копировать · 11</b><span data-v="«Лапша соба варёная» — флекс 1, ширина от 0, шрифт 600 12px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Действие · копировать · 12</b><span data-v="«137 г · 157 ккал» — моноцифры: флекс none, шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Действие · копировать · 13</b><span data-v="выравнивание center, зазор 10px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Действие · копировать · 14</b><span data-v="флекс none, ширина 28px, высота 28px, радиус 999px, фон var(--c2), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Действие · копировать · 15</b><span data-v="«137 г» — моноцифры: флекс none, ширина от 42px, выключка center, шрифт 600 12px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Действие · копировать · 16</b><span data-v="флекс 1, высота 4px, радиус 999px, фон rgba(var(--ink),.1), позиция relative"></span></div>
+    <div class="spec"><b>Действие · копировать · 17</b><span data-v="позиция absolute, высота 4px, ширина 42%, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Действие · копировать · 18</b><span data-v="позиция absolute, ширина 14px, высота 14px, радиус 999px, фон var(--bg), рамка 0 1px 4px rgba(var(--shadow),.25)"></span></div>
+    <div class="spec"><b>Действие · копировать · 19</b><span data-v="«Куда копировать · сегодня» — ярус: отступы 16px 0 8px"></span></div>
+    <div class="spec"><b>Действие · копировать · 20</b><span data-v="выравнивание center, зазор 11px, фон var(--c1), радиус 16px, поля 14px, отступ сверху 8px, рамка inset 0 0 0 2px var(--acs)"></span></div>
+    <div class="spec"><b>Действие · копировать · 21</b><span data-v="флекс none, ширина 18px, высота 18px, радиус 999px, рамка inset 0 0 0 5px var(--acs)"></span></div>
+    <div class="spec"><b>Действие · копировать · 22</b><span data-v="«Перекус · 10:40» — флекс 1, шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Действие · копировать · 23</b><span data-v="выравнивание center, зазор 11px, фон var(--c1), радиус 16px, поля 14px, отступ сверху 8px"></span></div>
+    <div class="spec"><b>Действие · копировать · 24</b><span data-v="флекс none, ширина 18px, высота 18px, радиус 999px, рамка inset 0 0 0 2px rgba(var(--ink),.2)"></span></div>
+    <div class="spec"><b>Действие · копировать · 25</b><span data-v="«Перекус: 17 → 1 610 ккал (+1 593)» — моноцифры: выключка center, шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.45), отступ сверху 14px"></span></div>
+    <div class="spec"><b>Действие · копировать · 26</b><span data-v="зазор 8px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Действие · копировать · 27</b><span data-v="«Отмена» — вторичная кнопка: флекс none, поля 0 20px"></span></div>
+    <div class="spec"><b>Действие · копировать · 28</b><span data-v="«Копировать (8)» — главная кнопка: флекс 1"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 02</b><span data-v="«копировать без целей» — имя экрана"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 03</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -14px -8px -14px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 05</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 06</b><span data-v="«Продукты 1/1» — ярус: отступы 0"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 07</b><span data-v="«Снять всё» — шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 08</b><span data-v="фон var(--c1), радиус 16px, поля 12px 14px, отступ сверху 8px"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 09</b><span data-v="выравнивание center, зазор 10px"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 10</b><span data-v="флекс none, ширина 20px, высота 20px, радиус 6px, фон var(--acs), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 11</b><span data-v="«Домашний кофе» — флекс 1, ширина от 0, шрифт 600 12px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 12</b><span data-v="«100 г · 17 ккал» — моноцифры: флекс none, шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 13</b><span data-v="выравнивание center, зазор 10px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 14</b><span data-v="флекс none, ширина 28px, высота 28px, радиус 999px, фон var(--c2), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 15</b><span data-v="«100 г» — моноцифры: флекс none, ширина от 42px, выключка center, шрифт 600 12px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 16</b><span data-v="флекс 1, высота 4px, радиус 999px, фон rgba(var(--ink),.1), позиция relative"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 17</b><span data-v="позиция absolute, высота 4px, ширина 42%, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 18</b><span data-v="позиция absolute, ширина 14px, высота 14px, радиус 999px, фон var(--bg), рамка 0 1px 4px rgba(var(--shadow),.25)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 19</b><span data-v="«Куда копировать» — ярус: отступы 16px 0 8px"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 20</b><span data-v="«На сегодня приёмов ещё нет — создадим новый.» — шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 21</b><span data-v="выравнивание center, зазор 11px, фон var(--c1), радиус 16px, поля 14px, отступ сверху 8px, рамка inset 0 0 0 2px var(--acs)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 22</b><span data-v="флекс none, ширина 18px, высота 18px, радиус 999px, рамка inset 0 0 0 5px var(--acs)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 23</b><span data-v="«+ Создать новый приём» — флекс 1, шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 24</b><span data-v="зазор 8px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 25</b><span data-v="«Отмена» — вторичная кнопка: флекс none, поля 0 20px"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · 26</b><span data-v="«Копировать (1)» — главная кнопка: флекс 1"></span></div>
+    <div class="spec"><b>Действие · перенести · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Действие · перенести · 02</b><span data-v="«перенести» — имя экрана"></span></div>
+    <div class="spec"><b>Действие · перенести · 03</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -14px -8px -14px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Действие · перенести · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Действие · перенести · 05</b><span data-v="«Куда перенести» — ярус: отступы 14px 0 8px"></span></div>
+    <div class="spec"><b>Действие · перенести · 06</b><span data-v="выравнивание center, зазор 10px, фон var(--c1), радиус 16px, поля 13px 14px"></span></div>
+    <div class="spec"><b>Действие · перенести · 07</b><span data-v="«Вчера, 26 августа» — флекс 1, шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Действие · перенести · 08</b><span data-v="«В какой приём» — ярус: отступы 16px 0 8px"></span></div>
+    <div class="spec"><b>Действие · перенести · 09</b><span data-v="выравнивание center, зазор 11px, фон var(--c1), радиус 16px, поля 14px, отступ сверху 8px"></span></div>
+    <div class="spec"><b>Действие · перенести · 10</b><span data-v="флекс none, ширина 18px, высота 18px, радиус 999px, рамка inset 0 0 0 2px rgba(var(--ink),.2)"></span></div>
+    <div class="spec"><b>Действие · перенести · 11</b><span data-v="выравнивание center, зазор 11px, фон var(--c1), радиус 16px, поля 14px, отступ сверху 8px, рамка inset 0 0 0 2px var(--acs)"></span></div>
+    <div class="spec"><b>Действие · перенести · 12</b><span data-v="флекс none, ширина 18px, высота 18px, радиус 999px, рамка inset 0 0 0 5px var(--acs)"></span></div>
+    <div class="spec"><b>Действие · перенести · 13</b><span data-v="«Приём уйдёт из сегодняшнего дня целиком — итоги об» — фон var(--c2), радиус 18px, поля 13px 14px, отступ сверху 12px, шрифт 600 11.5px/1.45 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Действие · перенести · 14</b><span data-v="зазор 8px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Действие · перенести · 15</b><span data-v="«Отмена» — вторичная кнопка: флекс none, поля 0 20px"></span></div>
+    <div class="spec"><b>Действие · перенести · 16</b><span data-v="«Перенести» — главная кнопка: флекс 1"></span></div>
+    <div class="spec"><b>Добавление · наборы · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Добавление · наборы · 02</b><span data-v="«Наборы» — имя экрана"></span></div>
+    <div class="spec"><b>Добавление · наборы · 03</b><span data-v="«Править» — шрифт 600 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · наборы · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Добавление · наборы · 05</b><span data-v="«Замечено в истории» — ярус: отступ сверху 14px"></span></div>
+    <div class="spec"><b>Добавление · наборы · 06</b><span data-v="карточка .grp: фон var(--gr-bg)"></span></div>
+    <div class="spec"><b>Добавление · наборы · 07</b><span data-v="распределение space-between, выравнивание baseline, зазор 12px"></span></div>
+    <div class="spec"><b>Добавление · наборы · 08</b><span data-v="«Кофе, сыр, хлеб» — шрифт 700 12.5px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Добавление · наборы · 09</b><span data-v="«повторялось 7×» — моноцифры: флекс none, шрифт 700 11px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Добавление · наборы · 10</b><span data-v="зазор 8px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Добавление · наборы · 11</b><span data-v="«Сохранить как набор» — флекс 1, выключка center, поля 0 12px, высота от 44px, выравнивание center, распределение center, радиус 999px, фон var(--bg), шрифт 700 11.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Добавление · наборы · 12</b><span data-v="«Скрыть» — поля 0 16px, высота от 44px, выравнивание center, распределение center, радиус 999px, фон var(--bg), шрифт 700 11.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Добавление · наборы · 13</b><span data-v="«Мои наборы» — ярус"></span></div>
+    <div class="spec"><b>Добавление · наборы · 14</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Добавление · наборы · 15</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Добавление · наборы · 16</b><span data-v="«Бутер с маслом и кофе» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Добавление · наборы · 17</b><span data-v="«4 продукта · 318 ккал» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Добавление · наборы · 18</b><span data-v="«Добавить» — поля 0 16px, высота от 44px, выравнивание center, распределение center, радиус 999px, фон var(--c2), шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · наборы · 19</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Добавление · наборы · 20</b><span data-v="«Собрать новый набор» — вторичная кнопка: отступ сверху 14px"></span></div>
+    <div class="spec"><b>Добавление · наборы · 21</b><span data-v="«Правка и удаление — по тапу на строку, чтобы три и» — шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.42), отступ сверху 14px"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 02</b><span data-v="«Бутер с кофе без ветчины» — имя экрана"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 03</b><span data-v="ширина 17px"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 05</b><span data-v="выравнивание center, распределение space-between, фон var(--c2), радиус 20px, поля 15px 18px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 06</b><span data-v="«Весь набор» — шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 07</b><span data-v="«умножить все позиции» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 08</b><span data-v="«×2» — поля 0 16px, высота от 44px, выравнивание center, распределение center, радиус 999px, фон var(--bg), шрифт 700 12.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 09</b><span data-v="список .cd: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 10</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 11</b><span data-v="«Кофе растворимый» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 12</b><span data-v="«51 ккал» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 13</b><span data-v="выравнивание center, зазор 9px"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 14</b><span data-v="ширина 30px, высота 30px, радиус 999px, фон var(--c2), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 15</b><span data-v="«100 г» — моноцифры: шрифт 600 13px/1 Figtree, цвет var(--tx), ширина от 38px, выключка center"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 16</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 17</b><span data-v="моноцифры: выравнивание baseline, распределение space-between, зазор 10px, фон var(--c1), радиус 16px, поля 12px 14px, отступ сверху 12px, шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Добавление · правка набора · 18</b><span data-v="«Добавить 4 продукта в приём» — главная кнопка: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Наборы · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Наборы · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Наборы · 03</b><span data-v="«Наборы» — имя экрана"></span></div>
+    <div class="spec"><b>Наборы · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Наборы · 05</b><span data-v="«Замечено в истории» — ярус: отступ сверху 14px"></span></div>
+    <div class="spec"><b>Наборы · 06</b><span data-v="карточка .grp: фон var(--gr-bg)"></span></div>
+    <div class="spec"><b>Наборы · 07</b><span data-v="распределение space-between, выравнивание baseline, зазор 12px"></span></div>
+    <div class="spec"><b>Наборы · 08</b><span data-v="«Кофе, сыр, хлеб» — шрифт 700 12.5px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Наборы · 09</b><span data-v="«повторялось 7×» — моноцифры: флекс none, шрифт 700 11px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Наборы · 10</b><span data-v="«Всего 432 ккал» — шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.45), отступ сверху 7px"></span></div>
+    <div class="spec"><b>Наборы · 11</b><span data-v="зазор 8px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Наборы · 12</b><span data-v="«Сохранить как набор» — флекс 1, выключка center, поля 0 12px, высота от 44px, выравнивание center, распределение center, радиус 999px, фон var(--bg), шрифт 700 11.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Наборы · 13</b><span data-v="«Скрыть» — поля 0 16px, высота от 44px, выравнивание center, распределение center, радиус 999px, фон var(--bg), шрифт 700 11.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Наборы · 14</b><span data-v="«Мои наборы» — ярус"></span></div>
+    <div class="spec"><b>Наборы · 15</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Наборы · 16</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Наборы · 17</b><span data-v="«Бутер с маслом и кофе» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Наборы · 18</b><span data-v="«3 продукта · 384 ккал» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Наборы · 19</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Наборы · 20</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Наборы · 21</b><span data-v="«Плюс — главное действие: набор добавляется в приём» — шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.42), отступ сверху 14px"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 03</b><span data-v="«Наборы» — имя экрана"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 04</b><span data-v="«4» — флекс none, высота от 26px, выравнивание center, поля 0 10px, радиус 999px, фон var(--c2), шрифт 700 10.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 05</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 06</b><span data-v="«Замечено в истории» — ярус: отступы 12px 0 8px"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 07</b><span data-v="фон var(--gr-bg), радиус 16px, поля 12px 14px"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 08</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 09</b><span data-v="«Кофе, сыр, хлеб» — шрифт 700 12px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 10</b><span data-v="«повторялось 7×» — моноцифры: флекс none, шрифт 600 10.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 11</b><span data-v="зазор 8px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 12</b><span data-v="«Сохранить как набор» — главная кнопка: флекс 1, высота от 38px"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 13</b><span data-v="«Скрыть» — вторичная кнопка: флекс none, поля 0 16px, высота от 38px"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 14</b><span data-v="«Мои наборы» — ярус: отступы 16px 0 8px"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 15</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 16</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 17</b><span data-v="«Бутер с маслом и кофе» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 18</b><span data-v="«4 продукта · 318 ккал» — моноцифры: шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 19</b><span data-v="«Добавить» — вторичная кнопка: флекс none, высота от 36px, поля 0 14px"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 20</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · 21</b><span data-v="«Собрать новый набор» — вторичная кнопка: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Набор · сборка · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Набор · сборка · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Набор · сборка · 03</b><span data-v="«Новый набор» — имя экрана"></span></div>
+    <div class="spec"><b>Набор · сборка · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Набор · сборка · 05</b><span data-v="выравнивание center, зазор 10px, фон var(--c1), радиус 16px, высота от 44px, поля 0 16px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Набор · сборка · 06</b><span data-v="«Найти продукт» — флекс 1, шрифт 500 13px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Набор · сборка · 07</b><span data-v="«В наборе · 3» — ярус"></span></div>
+    <div class="spec"><b>Набор · сборка · 08</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Набор · сборка · 09</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Набор · сборка · 10</b><span data-v="«Кофе растворимый» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Набор · сборка · 11</b><span data-v="«200 г · 102 ккал» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Набор · сборка · 12</b><span data-v="выравнивание center, зазор 10px"></span></div>
+    <div class="spec"><b>Набор · сборка · 13</b><span data-v="«править» — моноцифры: шрифт 600 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Набор · сборка · 14</b><span data-v="ширина 44px, высота 44px, отступы -11px -8px -11px 0, выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Набор · сборка · 15</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Набор · сборка · 16</b><span data-v="выравнивание center, распределение space-between, зазор 12px, фон var(--c2), радиус 18px, поля 15px 17px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Набор · сборка · 17</b><span data-v="«Итого» — ключ"></span></div>
+    <div class="spec"><b>Набор · сборка · 18</b><span data-v="«358 ккал» — моноцифры: шрифт 700 14px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Набор · сборка · 19</b><span data-v="отступ сверху 12px"></span></div>
+    <div class="spec"><b>Набор · сборка · 20</b><span data-v="«Завтрак буднего дня» — радиус 16px, фон var(--bg), рамка inset 0 0 0 2px var(--acs), поля 0 16px, высота от 44px, выравнивание center, отступ сверху 8px, шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Набор · сборка · 21</b><span data-v="«Сохранить набор» — главная кнопка: отступ сверху 14px"></span></div>
+    <div class="spec"><b>Набор · сборка · 22</b><span data-v="«Один жест на весь файл: тап по строке — правка, кр» — шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.42), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 03</b><span data-v="«Новый набор» — имя экрана"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 05</b><span data-v="выравнивание center, зазор 10px, фон var(--c1), радиус 16px, высота от 44px, поля 0 16px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 06</b><span data-v="«Найти продукт» — флекс 1, шрифт 500 13px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 07</b><span data-v="«В наборе · 0» — ярус"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 08</b><span data-v="«Добавьте продукты через поиск» — высота от 110px, выравнивание center, распределение center, выключка center, шрифт 500 12px/1.5 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 09</b><span data-v="отступ сверху 12px"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 10</b><span data-v="«Название набора» — ключ"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 11</b><span data-v="«Например, завтрак буднего дня» — радиус 16px, фон var(--bg), рамка inset 0 0 0 2px var(--acs), поля 0 16px, высота от 44px, выравнивание center, отступ сверху 8px, шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 12</b><span data-v="«Сохранить набор» — главная кнопка: прозрачность .45, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · 13</b><span data-v="«Один жест на весь файл: тап по строке — правка, кр» — шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.42), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Набор · сохранение · 01</b><span data-v="позиция absolute, вписан 0, фон rgba(32,30,29,.34)"></span></div>
+    <div class="spec"><b>Набор · сохранение · 02</b><span data-v="область прокрутки: высота 633px, обрез hidden, прозрачность 0"></span></div>
+    <div class="spec"><b>Набор · сохранение · 03</b><span data-v="позиция absolute, сдвиг translateY(-50%), фон var(--bg), радиус 26px, поля 24px 20px 20px, рамка 0 4px 12px rgba(var(--shadow),.16),0 24px 56px rgba(var(--shadow),.22)"></span></div>
+    <div class="spec"><b>Набор · сохранение · 04</b><span data-v="«Сохранить как набор» — шрифт 700 16px/1.35 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Набор · сохранение · 05</b><span data-v="«Три продукта с граммовкой. В следующий раз добавит» — шрифт 500 12px/1.5 Figtree, цвет rgba(var(--ink),.55), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Набор · сохранение · 06</b><span data-v="отступ сверху 16px"></span></div>
+    <div class="spec"><b>Набор · сохранение · 07</b><span data-v="«Название» — ключ"></span></div>
+    <div class="spec"><b>Набор · сохранение · 08</b><span data-v="«Кофе, сыр, хлеб» — радиус 16px, фон var(--bg), рамка inset 0 0 0 2px var(--acs), поля 0 16px, высота от 44px, выравнивание center, отступ сверху 8px, шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Набор · сохранение · 09</b><span data-v="список .cd: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Набор · сохранение · 10</b><span data-v="строка списка: поля 11px 0"></span></div>
+    <div class="spec"><b>Набор · сохранение · 11</b><span data-v="«Кофе растворимый» — цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Набор · сохранение · 12</b><span data-v="«200 г» — моноцифры: шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Набор · сохранение · 13</b><span data-v="строка списка: поля 11px 0, разделитель none"></span></div>
+    <div class="spec"><b>Набор · сохранение · 14</b><span data-v="зазор 8px, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Набор · сохранение · 15</b><span data-v="«Отмена» — вторичная кнопка: флекс 1"></span></div>
+    <div class="spec"><b>Набор · сохранение · 16</b><span data-v="«Сохранить» — главная кнопка: флекс 1"></span></div>
+    <div class="spec"><b>Набор · удаление · 01</b><span data-v="позиция absolute, вписан 0, фон rgba(32,30,29,.34)"></span></div>
+    <div class="spec"><b>Набор · удаление · 02</b><span data-v="область прокрутки: высота 633px, обрез hidden, прозрачность 0"></span></div>
+    <div class="spec"><b>Набор · удаление · 03</b><span data-v="позиция absolute, сдвиг translateY(-50%), фон var(--bg), радиус 26px, поля 24px 20px 20px, рамка 0 4px 12px rgba(var(--shadow),.16),0 24px 56px rgba(var(--shadow),.22)"></span></div>
+    <div class="spec"><b>Набор · удаление · 04</b><span data-v="«Удалить набор» — ключ: цвет var(--ac)"></span></div>
+    <div class="spec"><b>Набор · удаление · 05</b><span data-v="««Бутер с маслом и кофе»» — шрифт 700 16px/1.35 Figtree, цвет var(--tx), отступ сверху 11px"></span></div>
+    <div class="spec"><b>Набор · удаление · 06</b><span data-v="«Набор исчезнет из списка. Уже добавленные приёмы о» — шрифт 500 12px/1.5 Figtree, цвет rgba(var(--ink),.55), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Набор · удаление · 07</b><span data-v="зазор 8px, отступ сверху 20px"></span></div>
+    <div class="spec"><b>Набор · удаление · 08</b><span data-v="«Отмена» — вторичная кнопка: флекс 1"></span></div>
+    <div class="spec"><b>Набор · удаление · 09</b><span data-v="«Удалить» — флекс 1, выравнивание center, распределение center, радиус 999px, фон var(--c2), поля 0 12px, высота от 44px, шрифт 700 12.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Набор · удаление · 10</b><span data-v="«Удаление — не главная кнопка. Терракотовая заливка» — шрифт 500 10.5px/1.5 Figtree, цвет rgba(var(--ink),.38), отступ сверху 14px"></span></div>
+    <div class="spec"><b>Приём собран · фото · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Приём собран · фото · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Приём собран · фото · 03</b><span data-v="«Перекус · 11:50» — имя экрана"></span></div>
+    <div class="spec"><b>Приём собран · фото · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Приём собран · фото · 05</b><span data-v="фон var(--c2), радиус 26px, поля 22px 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Приём собран · фото · 06</b><span data-v="«Итого за приём» — ключ"></span></div>
+    <div class="spec"><b>Приём собран · фото · 07</b><span data-v="выравнивание baseline, зазор 8px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Приём собран · фото · 08</b><span data-v="«432» — моноцифры: шрифт 600 44px/.9 Figtree, цвет var(--ac), трекинг -.04em"></span></div>
+    <div class="spec"><b>Приём собран · фото · 09</b><span data-v="«ккал» — шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Приём собран · фото · 10</b><span data-v="«Фото приёма» — ярус"></span></div>
+    <div class="spec"><b>Приём собран · фото · 11</b><span data-v="зазор 10px"></span></div>
+    <div class="spec"><b>Приём собран · фото · 12</b><span data-v="флекс 1, радиус 18px, рамка 2px dashed rgba(167,92,43,.35), поля 20px 12px, направление column, выравнивание center, зазор 9px"></span></div>
+    <div class="spec"><b>Приём собран · фото · 13</b><span data-v="«Снять» — шрифт 700 11.5px/1.3 Figtree, цвет var(--ac), выключка center"></span></div>
+    <div class="spec"><b>Приём собран · фото · 14</b><span data-v="флекс 1, позиция relative, радиус 18px, обрез hidden, фон #e6cfa8, высота от 104px"></span></div>
+    <div class="spec"><b>Приём собран · фото · 15</b><span data-v="позиция absolute, вписан 0, фон linear-gradient(135deg,#e6cfa8,#d9b98a 45%,#c9a273)"></span></div>
+    <div class="spec"><b>Приём собран · фото · 16</b><span data-v="позиция absolute, ширина 44px, высота 44px, выравнивание flex-start, распределение flex-end, поля 8px"></span></div>
+    <div class="spec"><b>Приём собран · фото · 17</b><span data-v="ширина 24px, высота 24px, радиус 999px, фон rgba(32,30,29,.5), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Приём собран · фото · 18</b><span data-v="«11:52» — позиция absolute, поля 9px 11px, фон linear-gradient(transparent,rgba(32,30,29,.55)), шрифт 600 10.5px/1 Figtree, цвет var(--bg)"></span></div>
+    <div class="spec"><b>Приём собран · фото · 19</b><span data-v="«Фото принадлежит приёму, не продукту. Снимков може» — шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.42), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Приём собран · фото · 20</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Приём собран · фото · 21</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Приём собран · фото · 22</b><span data-v="«Йогурт греческий 2%» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Приём собран · фото · 23</b><span data-v="«150 г · 99 ккал» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Приём собран · фото · 24</b><span data-v="«150 г» — моноцифры: шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Приём собран · фото · 25</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Приём собран · фото · 26</b><span data-v="«Готово» — главная кнопка: отступ сверху 16px"></span></div>
+    <div class="spec"><b>Фото · просмотр · 01</b><span data-v="фон #141210"></span></div>
+    <div class="spec"><b>Фото · просмотр · 02</b><span data-v="шапка: поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Фото · просмотр · 03</b><span data-v="ширина 30px, высота 30px, радиус 999px, фон rgba(242,237,230,.14), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Фото · просмотр · 04</b><span data-v="«Перекус · 11:52» — шрифт 600 12px/1 Figtree, цвет rgba(242,237,230,.6)"></span></div>
+    <div class="spec"><b>Фото · просмотр · 05</b><span data-v="область прокрутки: высота 600px, обрез hidden, направление column"></span></div>
+    <div class="spec"><b>Фото · просмотр · 06</b><span data-v="флекс 1, выравнивание center, отступ сверху 16px"></span></div>
+    <div class="spec"><b>Фото · просмотр · 07</b><span data-v="ширина 100%, радиус 20px, фон linear-gradient(135deg,#e6cfa8,#d9b98a 45%,#c9a273)"></span></div>
+    <div class="spec"><b>Фото · просмотр · 08</b><span data-v="зазор 8px, отступ сверху auto"></span></div>
+    <div class="spec"><b>Фото · просмотр · 09</b><span data-v="«Ещё снимок» — флекс 1, выключка center, поля 0 12px, высота от 44px, выравнивание center, распределение center, радиус 999px, фон rgba(242,237,230,.12), шрифт 700 12.5px/1 Figtree, цвет #f2ede6"></span></div>
+    <div class="spec"><b>Фото · просмотр · 10</b><span data-v="«Удалить» — поля 0 20px, высота от 44px, выравнивание center, распределение center, радиус 999px, фон rgba(242,237,230,.12), шрифт 700 12.5px/1 Figtree, цвет #e2a468"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 03</b><span data-v="«Перекус · 11:50» — имя экрана"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 05</b><span data-v="выравнивание center, зазор 10px, фон var(--c1), радиус 16px, поля 14px 16px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 06</b><span data-v="«Поиск продукта» — флекс 1, шрифт 500 13px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 07</b><span data-v="ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 08</b><span data-v="зазор 16px, отступ сверху 16px, шрифт 600 11.5px/1 Figtree"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 09</b><span data-v="«Частые» — цвет var(--ac), разделитель 2px solid var(--acs)"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 10</b><span data-v="«Недавние · 3 дня» — цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 11</b><span data-v="фон var(--c2), радиус 22px, поля 22px 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 12</b><span data-v="«Здесь появятся продукты, которые вы едите чаще все» — шрифт 700 15px/1.35 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 13</b><span data-v="«Пока список пуст — найдите первый в общей базе, та» — шрифт 500 12px/1.5 Figtree, цвет rgba(var(--ink),.55), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 14</b><span data-v="«Искать в общей базе» — главная кнопка: отступ сверху 16px"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 15</b><span data-v="«Или сразу» — ярус"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 16</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 17</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 18</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Поиск · база пуста · 19</b><span data-v="«Это не «ничего не найдено»: запроса ещё не было. Э» — шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.42), отступ сверху 14px"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 03</b><span data-v="«Перекус · 11:50» — имя экрана"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 05</b><span data-v="выравнивание center, зазор 10px, фон var(--c1), радиус 16px, поля 14px 16px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 06</b><span data-v="«Поиск продукта» — флекс 1, шрифт 500 13px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 07</b><span data-v="ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 08</b><span data-v="фон var(--c2), радиус 22px, поля 20px, отступ сверху 16px"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 09</b><span data-v="«Общая база недоступна» — ключ: цвет var(--ac)"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 10</b><span data-v="«Не удалось загрузить справочник продуктов. Ваши ли» — шрифт 600 13.5px/1.45 Figtree, цвет var(--tx), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 11</b><span data-v="зазор 8px, отступ сверху 16px"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 12</b><span data-v="«Повторить» — флекс 1, выключка center, поля 0 12px, высота от 44px, выравнивание center, распределение center, радиус 999px, фон var(--acs), шрифт 700 12px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 13</b><span data-v="«Создать продукт» — флекс 1, выключка center, поля 0 12px, высота от 44px, выравнивание center, распределение center, радиус 999px, фон var(--bg), шрифт 700 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 14</b><span data-v="«Доступно сейчас» — ярус"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 15</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 16</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 17</b><span data-v="«Кофе растворимый» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 18</b><span data-v="«51 ккал · личный» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 19</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · 20</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 03</b><span data-v="«Перекус · 11:50» — имя экрана"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 05</b><span data-v="выравнивание center, зазор 10px, фон var(--bg), рамка inset 0 0 0 2px var(--acs), радиус 16px, поля 14px 16px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 06</b><span data-v="«творог зернёный 7%» — флекс 1, шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 07</b><span data-v="фон var(--c2), радиус 22px, поля 20px, отступ сверху 16px"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 08</b><span data-v="«По этому запросу ничего нет» — шрифт 700 14px/1.4 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 09</b><span data-v="«Поиск работает, база на месте — просто нет совпаде» — шрифт 500 12px/1.5 Figtree, цвет rgba(var(--ink),.55), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 10</b><span data-v="«Создать «творог зернёный 7%»» — главная кнопка: отступ сверху 16px"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 11</b><span data-v="«Близкое по названию» — ярус"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 12</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 13</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 14</b><span data-v="«Творог 5%» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 15</b><span data-v="«121 ккал» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 16</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · 17</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 02</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 03</b><span data-v="«Перекус · 11:50» — имя экрана"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 05</b><span data-v="выравнивание center, зазор 10px, фон var(--c1), радиус 16px, поля 14px 16px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 06</b><span data-v="«Поиск продукта» — флекс 1, шрифт 500 13px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 07</b><span data-v="ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 08</b><span data-v="выравнивание flex-start, зазор 12px, фон var(--c2), радиус 22px, поля 18px, отступ сверху 16px"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 09</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 10</b><span data-v="«Нет сети» — шрифт 700 13.5px/1.4 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 11</b><span data-v="«Личные продукты и наборы доступны, приём сохранитс» — шрифт 500 12px/1.5 Figtree, цвет rgba(var(--ink),.55), отступ сверху 7px"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 12</b><span data-v="«Доступно офлайн» — ярус"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 13</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 14</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 15</b><span data-v="«Кофе растворимый» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 16</b><span data-v="«51 ккал · 22 раза» — моноцифры: шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 17</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -13px -6px -13px 0, выравнивание center, распределение center, цвет rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 18</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 19</b><span data-v="«Общая база» — цвет rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 20</b><span data-v="«недоступна» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.3)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · 21</b><span data-v="«Одно сообщение на весь экран. Тост поверх этого ба» — шрифт 500 11px/1.5 Figtree, цвет rgba(var(--ink),.42), отступ сверху 14px"></span></div>
+    <div class="spec"><b>Выход · есть что терять · 01</b><span data-v="позиция absolute, вписан 0, фон rgba(32,30,29,.34)"></span></div>
+    <div class="spec"><b>Выход · есть что терять · 02</b><span data-v="область прокрутки: высота 633px, обрез hidden, прозрачность 0"></span></div>
+    <div class="spec"><b>Выход · есть что терять · 03</b><span data-v="позиция absolute, сдвиг translateY(-50%), фон var(--bg), радиус 26px, поля 24px 20px 20px, рамка 0 4px 12px rgba(var(--shadow),.16),0 24px 56px rgba(var(--shadow),.22)"></span></div>
+    <div class="spec"><b>Выход · есть что терять · 04</b><span data-v="«Выйти и потерять выбор?» — шрифт 700 16px/1.35 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Выход · есть что терять · 05</b><span data-v="«Творог зернёный 7%, 150 г — ещё не добавлен в приё» — шрифт 500 12px/1.5 Figtree, цвет rgba(var(--ink),.55), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Выход · есть что терять · 06</b><span data-v="«Остаться» — главная кнопка: отступ сверху 20px"></span></div>
+    <div class="spec"><b>Выход · есть что терять · 07</b><span data-v="«Выйти без сохранения» — выключка center, шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.55), высота от 44px, выравнивание center, распределение center, отступ сверху 6px"></span></div>
+    <div class="spec"><b>Выход · есть что терять · 08</b><span data-v="«Тот же диалог перекрывает аппаратную «назад» и тап» — шрифт 500 10.5px/1.5 Figtree, цвет rgba(var(--ink),.42), отступ сверху 8px"></span></div>
+    <div class="ctrH">Разбор графики · SVG в кадрах</div>
+    <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
+    <div class="spec"><b>Добавление · время и тип · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · время и тип · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · рисунок 03</b><span data-v="поле рисунка 13×13 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · рисунок 04</b><span data-v="кривая, точки M12 7v5l4 2"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · рисунок 05</b><span data-v="точка r 9 в (12,12)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · рисунок 06</b><span data-v="кривая, точки M12 5v14M5 12h14"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · рисунок 07</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · рисунок 08</b><span data-v="кривая, точки M9 6l6 6-6 6"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · рисунок 01</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · рисунок 02</b><span data-v="кривая, точки M9 6l6 6-6 6"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · рисунок 03</b><span data-v="поле рисунка 22×22 (viewBox 0 0 32 32)"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · рисунок 04</b><span data-v="кривая, точки M10.2 5.8H7.4a1.9 1.9 0 0 0-1.9 1.9v3M21.8 5.8h2.8a1.9 1.9 0 0 1 1.9 1.9v3M5.5 2…, толщина 1.8"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · рисунок 05</b><span data-v="кривая, точки M10.25 11.1v9.8M13.1 11.8v8.4M16 10.5v11M18.9 11.8v8.4M21.75 11.1v9.8, толщина 2.15"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 03</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 04</b><span data-v="прямоугольник 18×14, радиус 4"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 05</b><span data-v="точка r 3.4 в (12,13)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 06</b><span data-v="кривая, точки M9 6l1.2-2h3.6L15 6"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 07</b><span data-v="кривая, точки M12 5v14M5 12h14"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 08</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 09</b><span data-v="точка r 7 в (11,11)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 10</b><span data-v="кривая, точки M20 20l-4-4"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 11</b><span data-v="поле рисунка 22×22 (viewBox 0 0 32 32)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 12</b><span data-v="кривая, точки M10.2 5.8H7.4a1.9 1.9 0 0 0-1.9 1.9v3M21.8 5.8h2.8a1.9 1.9 0 0 1 1.9 1.9v3M5.5 2…, толщина 1.8"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 13</b><span data-v="кривая, точки M10.25 11.1v9.8M13.1 11.8v8.4M16 10.5v11M18.9 11.8v8.4M21.75 11.1v9.8, толщина 2.15"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 14</b><span data-v="поле рисунка 11×11 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 15</b><span data-v="точка r 9 в (12,12)"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 16</b><span data-v="кривая, точки M3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · рисунок 17</b><span data-v="кривая, точки M12 3.2l2.7 5.5 6 .9-4.35 4.24 1.03 6-5.38-2.83L6.6 19.84l1.03-6L3.28 9.6l6-.9z"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 03</b><span data-v="поле рисунка 22×22 (viewBox 0 0 32 32)"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 04</b><span data-v="кривая, точки M10.2 5.8H7.4a1.9 1.9 0 0 0-1.9 1.9v3M21.8 5.8h2.8a1.9 1.9 0 0 1 1.9 1.9v3M5.5 2…, толщина 1.8"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 05</b><span data-v="кривая, точки M10.25 11.1v9.8M13.1 11.8v8.4M16 10.5v11M18.9 11.8v8.4M21.75 11.1v9.8, толщина 2.15"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 06</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 07</b><span data-v="точка r 7 в (11,11)"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 08</b><span data-v="кривая, точки M20 20l-4-4"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 09</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 10</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 11</b><span data-v="поле рисунка 11×11 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 12</b><span data-v="точка r 9 в (12,12)"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 13</b><span data-v="кривая, точки M3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18"></span></div>
+    <div class="spec"><b>Добавление · поиск · рисунок 14</b><span data-v="кривая, точки M12 3.2l2.7 5.5 6 .9-4.35 4.24 1.03 6-5.38-2.83L6.6 19.84l1.03-6L3.28 9.6l6-.9z"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 03</b><span data-v="поле рисунка 22×22 (viewBox 0 0 32 32)"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 04</b><span data-v="кривая, точки M10.2 5.8H7.4a1.9 1.9 0 0 0-1.9 1.9v3M21.8 5.8h2.8a1.9 1.9 0 0 1 1.9 1.9v3M5.5 2…, толщина 1.8"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 05</b><span data-v="кривая, точки M10.25 11.1v9.8M13.1 11.8v8.4M16 10.5v11M18.9 11.8v8.4M21.75 11.1v9.8, толщина 2.15"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 06</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 07</b><span data-v="точка r 7 в (11,11)"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 08</b><span data-v="кривая, точки M20 20l-4-4"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 09</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 10</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 11</b><span data-v="поле рисунка 11×11 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 12</b><span data-v="точка r 9 в (12,12)"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 13</b><span data-v="кривая, точки M3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18"></span></div>
+    <div class="spec"><b>Поиск · только свои · рисунок 14</b><span data-v="кривая, точки M12 3.2l2.7 5.5 6 .9-4.35 4.24 1.03 6-5.38-2.83L6.6 19.84l1.03-6L3.28 9.6l6-.9z"></span></div>
+    <div class="spec"><b>Добавление · порция · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · порция · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Добавление · порция · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · порция · рисунок 04</b><span data-v="кривая, точки M12 3l2.5 6.2L21 10l-4.8 4.3L17.5 21 12 17.6 6.5 21l1.3-6.7L3 10l6.5-.8z"></span></div>
+    <div class="spec"><b>Добавление · порция · рисунок 05</b><span data-v="кривая, точки M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"></span></div>
+    <div class="spec"><b>Добавление · порция · рисунок 06</b><span data-v="кривая, точки M14.5 6.5l3 3"></span></div>
+    <div class="spec"><b>Добавление · порция · рисунок 07</b><span data-v="кривая, точки M6 12h12"></span></div>
+    <div class="spec"><b>Добавление · порция · рисунок 08</b><span data-v="кривая, точки M12 6v12M6 12h12"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · рисунок 04</b><span data-v="кривая, точки M12 3l2.5 6.2L21 10l-4.8 4.3L17.5 21 12 17.6 6.5 21l1.3-6.7L3 10l6.5-.8z"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · рисунок 05</b><span data-v="кривая, точки M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · рисунок 06</b><span data-v="кривая, точки M14.5 6.5l3 3"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · рисунок 07</b><span data-v="кривая, точки M6 12h12"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · рисунок 08</b><span data-v="кривая, точки M12 6v12M6 12h12"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · рисунок 04</b><span data-v="кривая, точки M12 3l2.5 6.2L21 10l-4.8 4.3L17.5 21 12 17.6 6.5 21l1.3-6.7L3 10l6.5-.8z"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · рисунок 05</b><span data-v="кривая, точки M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · рисунок 06</b><span data-v="кривая, точки M14.5 6.5l3 3"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · рисунок 07</b><span data-v="кривая, точки M6 12h12"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · рисунок 08</b><span data-v="кривая, точки M12 6v12M6 12h12"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · рисунок 04</b><span data-v="кривая, точки M12 3l2.5 6.2L21 10l-4.8 4.3L17.5 21 12 17.6 6.5 21l1.3-6.7L3 10l6.5-.8z"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · рисунок 05</b><span data-v="кривая, точки M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · рисунок 06</b><span data-v="кривая, точки M14.5 6.5l3 3"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · рисунок 07</b><span data-v="кривая, точки M6 12h12"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · рисунок 08</b><span data-v="кривая, точки M12 6v12M6 12h12"></span></div>
+    <div class="spec"><b>Добавление · приём собран · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · приём собран · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Добавление · приём собран · рисунок 03</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · приём собран · рисунок 04</b><span data-v="кривая, точки M4 8h3l2-2h6l2 2h3v11H4z"></span></div>
+    <div class="spec"><b>Добавление · приём собран · рисунок 05</b><span data-v="точка r 3.5 в (12,13)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Приёмы дня · список · рисунок 03</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Приёмы дня · список · рисунок 04</b><span data-v="кривая, точки M6 12h12"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 03</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 04</b><span data-v="кривая, точки M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 05</b><span data-v="кривая, точки M14.5 6.5l3 3"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 06</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 07</b><span data-v="прямоугольник 11×11, радиус 2.5"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 08</b><span data-v="кривая, точки M5 15V5.5A1.5 1.5 0 0 1 6.5 4H15"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 09</b><span data-v="кривая, точки M9 6l6 6-6 6"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 10</b><span data-v="прямоугольник 18×16, радиус 3"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 11</b><span data-v="кривая, точки M8 3v4M16 3v4M14 13l3 3-3 3"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 12</b><span data-v="кривая, точки M5 5.5A1.5 1.5 0 0 1 6.5 4h8L19 8.5v10A1.5 1.5 0 0 1 17.5 20h-11A1.5 1.5 0 0 1 5…"></span></div>
+    <div class="spec"><b>Приём · правка · рисунок 13</b><span data-v="кривая, точки M9 4v5h6"></span></div>
+    <div class="spec"><b>Приём · время и тип · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Приём · время и тип · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Действие · копировать · рисунок 01</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Действие · копировать · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Действие · копировать · рисунок 03</b><span data-v="поле рисунка 12×12 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Действие · копировать · рисунок 04</b><span data-v="кривая, точки M5 13l4 4 10-10"></span></div>
+    <div class="spec"><b>Действие · копировать · рисунок 05</b><span data-v="кривая, точки M6 12h12"></span></div>
+    <div class="spec"><b>Действие · копировать · рисунок 06</b><span data-v="кривая, точки M12 6v12M6 12h12"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · рисунок 01</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · рисунок 03</b><span data-v="поле рисунка 12×12 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · рисунок 04</b><span data-v="кривая, точки M5 13l4 4 10-10"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · рисунок 05</b><span data-v="кривая, точки M6 12h12"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · рисунок 06</b><span data-v="кривая, точки M12 6v12M6 12h12"></span></div>
+    <div class="spec"><b>Действие · перенести · рисунок 01</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Действие · перенести · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Действие · перенести · рисунок 03</b><span data-v="прямоугольник 18×16, радиус 4"></span></div>
+    <div class="spec"><b>Действие · перенести · рисунок 04</b><span data-v="кривая, точки M8 3v4M16 3v4M3 11h18"></span></div>
+    <div class="spec"><b>Действие · перенести · рисунок 05</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Действие · перенести · рисунок 06</b><span data-v="кривая, точки M9 6l6 6-6 6"></span></div>
+    <div class="spec"><b>Добавление · наборы · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · наборы · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Добавление · правка набора · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · правка набора · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Добавление · правка набора · рисунок 03</b><span data-v="поле рисунка 13×13 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Добавление · правка набора · рисунок 04</b><span data-v="кривая, точки M6 12h12"></span></div>
+    <div class="spec"><b>Добавление · правка набора · рисунок 05</b><span data-v="кривая, точки M12 6v12M6 12h12"></span></div>
+    <div class="spec"><b>Наборы · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Наборы · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Наборы · рисунок 03</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Наборы · рисунок 04</b><span data-v="кривая, точки M12 3.2l2.7 5.5 6 .9-4.35 4.24 1.03 6-5.38-2.83L6.6 19.84l1.03-6L3.28 9.6l6-.9z"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Набор · сборка · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Набор · сборка · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Набор · сборка · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Набор · сборка · рисунок 04</b><span data-v="точка r 7 в (11,11)"></span></div>
+    <div class="spec"><b>Набор · сборка · рисунок 05</b><span data-v="кривая, точки M20 20l-4-4"></span></div>
+    <div class="spec"><b>Набор · сборка · рисунок 06</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Набор · сборка · рисунок 07</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · рисунок 04</b><span data-v="точка r 7 в (11,11)"></span></div>
+    <div class="spec"><b>Набор · сборка пустая · рисунок 05</b><span data-v="кривая, точки M20 20l-4-4"></span></div>
+    <div class="spec"><b>Приём собран · фото · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Приём собран · фото · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Приём собран · фото · рисунок 03</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Приём собран · фото · рисунок 04</b><span data-v="кривая, точки M4 8h3l2-2h6l2 2h3v11H4z"></span></div>
+    <div class="spec"><b>Приём собран · фото · рисунок 05</b><span data-v="точка r 3.5 в (12,13)"></span></div>
+    <div class="spec"><b>Приём собран · фото · рисунок 06</b><span data-v="поле рисунка 11×11 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Приём собран · фото · рисунок 07</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Фото · просмотр · рисунок 01</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Фото · просмотр · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Поиск · база пуста · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · база пуста · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Поиск · база пуста · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · база пуста · рисунок 04</b><span data-v="точка r 7 в (11,11)"></span></div>
+    <div class="spec"><b>Поиск · база пуста · рисунок 05</b><span data-v="кривая, точки M20 20l-4-4"></span></div>
+    <div class="spec"><b>Поиск · база пуста · рисунок 06</b><span data-v="поле рисунка 22×22 (viewBox 0 0 32 32)"></span></div>
+    <div class="spec"><b>Поиск · база пуста · рисунок 07</b><span data-v="кривая, точки M10.2 5.8H7.4a1.9 1.9 0 0 0-1.9 1.9v3M21.8 5.8h2.8a1.9 1.9 0 0 1 1.9 1.9v3M5.5 2…, толщина 1.8"></span></div>
+    <div class="spec"><b>Поиск · база пуста · рисунок 08</b><span data-v="кривая, точки M10.25 11.1v9.8M13.1 11.8v8.4M16 10.5v11M18.9 11.8v8.4M21.75 11.1v9.8, толщина 2.15"></span></div>
+    <div class="spec"><b>Поиск · база пуста · рисунок 09</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · база пуста · рисунок 10</b><span data-v="кривая, точки M9 6l6 6-6 6"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · рисунок 04</b><span data-v="точка r 7 в (11,11)"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · рисунок 05</b><span data-v="кривая, точки M20 20l-4-4"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · рисунок 06</b><span data-v="поле рисунка 22×22 (viewBox 0 0 32 32)"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · рисунок 07</b><span data-v="кривая, точки M10.2 5.8H7.4a1.9 1.9 0 0 0-1.9 1.9v3M21.8 5.8h2.8a1.9 1.9 0 0 1 1.9 1.9v3M5.5 2…, толщина 1.8"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · рисунок 08</b><span data-v="кривая, точки M10.25 11.1v9.8M13.1 11.8v8.4M16 10.5v11M18.9 11.8v8.4M21.75 11.1v9.8, толщина 2.15"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · рисунок 09</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · рисунок 10</b><span data-v="кривая, точки M12 3.2l2.7 5.5 6 .9-4.35 4.24 1.03 6-5.38-2.83L6.6 19.84l1.03-6L3.28 9.6l6-.9z"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · рисунок 04</b><span data-v="точка r 7 в (11,11)"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · рисунок 05</b><span data-v="кривая, точки M20 20l-4-4"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · рисунок 06</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · рисунок 07</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · рисунок 08</b><span data-v="кривая, точки M12 3.2l2.7 5.5 6 .9-4.35 4.24 1.03 6-5.38-2.83L6.6 19.84l1.03-6L3.28 9.6l6-.9z"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 04</b><span data-v="точка r 7 в (11,11)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 05</b><span data-v="кривая, точки M20 20l-4-4"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 06</b><span data-v="поле рисунка 22×22 (viewBox 0 0 32 32)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 07</b><span data-v="кривая, точки M10.2 5.8H7.4a1.9 1.9 0 0 0-1.9 1.9v3M21.8 5.8h2.8a1.9 1.9 0 0 1 1.9 1.9v3M5.5 2…, толщина 1.8"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 08</b><span data-v="кривая, точки M10.25 11.1v9.8M13.1 11.8v8.4M16 10.5v11M18.9 11.8v8.4M21.75 11.1v9.8, толщина 2.15"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 09</b><span data-v="поле рисунка 18×18 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 10</b><span data-v="кривая, точки M3 3l18 18"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 11</b><span data-v="кривая, точки M5.5 10.5a11 11 0 015-2.4M2 8.5a16 16 0 014.5-2.9M12 20h.01M8.5 16.5a5 5 0 016 0…"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 12</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Поиск · офлайн · рисунок 13</b><span data-v="кривая, точки M12 3.2l2.7 5.5 6 .9-4.35 4.24 1.03 6-5.38-2.83L6.6 19.84l1.03-6L3.28 9.6l6-.9z"></span></div>
+    <div class="ctrH">Текст кадров дословно</div>
+    <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
+    <div class="spec"><b>Добавление · гард даты · текст</b><span data-v="Внимание › Приём запишется на 7 августа, а не на сегодня › В календаре выбран другой день. Еда уйдёт туда и в сегодняшнюю норму не попадёт. › Перейти на сегодня › Всё-таки записать на 7 августа"></span></div>
+    <div class="spec"><b>Добавление · время и тип · текст</b><span data-v="Новый приём › 10 › 11 › 12 › 45 › 50 › сейчас › 55 › −15 мин › −30 мин › −1 ч › Тип приёма › Завтрак › Обед › Перекус › Ужин › Кофе-брейк › Ночной приём › Прошлый приём ещё усваивается — окно закроется в 13:00. › Всё равно продолжить › Подождать"></span></div>
+    <div class="spec"><b>Добавление · самочувствие · текст</b><span data-v="Как вы сейчас › Как в прошлый раз, 11:20 — поправьте, если изменилось › Настроение › 8 · хорошо › подавленно › подъём › Самочувствие › 3 · слабость › разбитость › бодрость › Стресс › 1 · спокоен › спокойствие › на пределе › Что повлияло › Радость › Успех › Встреча › Природа › Недосып › Своё › Дальше › Сохранить приём без оценок"></span></div>
+    <div class="spec"><b>Добавление · как добавлять · текст</b><span data-v="Ночной приём · 22:00 › Повторить из недавних › Домашний кофе (растворимый 200 мл + молоко 2,5 100 мл) · 50 ккал › из приёма за последние 2 дня › Один продукт › Выбрать и сразу закрыть › Несколько продуктов › Остаться в добавлении › Отмена"></span></div>
+    <div class="spec"><b>Добавление · выбор способа · текст</b><span data-v="Перекус · 11:50 › Фото › Новый продукт › Частые › Недавние · 3 дня › Наборы · 4 › Поиск продукта › За 21 день · чаще всего › Общие › Кофе растворимый с молоком › 51 ккал · Б1 Ж0 У1 · 22 раза › Сыр твёрдый классический › 307 ккал · Б25 Ж25 У1 · 18 раз › Хлеб тостовый премиум › 274 ккал · Б9 Ж3 У48 · 12 раз"></span></div>
+    <div class="spec"><b>Добавление · поиск · текст</b><span data-v="Перекус · 11:50 › сыр › Найдено 5 › Общие › Сыр › твёрдый классический › 307 ккал · Б25 Ж25 У1 · 18 раз › Творожный › сыр › 60 › 282 ккал · Б6 Ж28 У3 · 7 раз › Плавленый › сыр › в ванночке › 257 ккал · Б10 Ж23 У4 · 2 раза › Сыр › адыгейский › 240 ккал · Б19 Ж19 У1 · › общая база › Сыр › ок глазированный › 407 ккал · Б8 Ж23 У40 · › общая база"></span></div>
+    <div class="spec"><b>Поиск · только свои · текст</b><span data-v="Перекус · 11:50 › сыр › Найдено 3 › Общие › Сыр › твёрдый классический › 307 ккал · Б25 Ж25 У1 · 18 раз › Творожный › сыр › 60 › 282 ккал · Б6 Ж28 У3 · 7 раз › Плавленый › сыр › в ванночке › 257 ккал · Б10 Ж23 У4 · 2 раза"></span></div>
+    <div class="spec"><b>Добавление · порция · текст</b><span data-v="Кофе растворимый с молоком › Сколько грамм › 100 › 50 › 100 › 150 › 200 › 300 › ½ стакана · 125 г › 1 стакан · 250 г › Граммы › Ккал › В прошлый раз было 100 г › Добавится › 51 ккал › Б 3 › Ж 3 › У 5 › Станет 1 573 из 1 928 за день · 82 % › Добавить"></span></div>
+    <div class="spec"><b>Порция · ввод в калориях · текст</b><span data-v="Кофе растворимый с молоком › Сколько ккал › 455 › 50 › 100 › 150 › 200 › 300 › ½ стакана · 125 г › 1 стакан · 250 г › Граммы › Ккал › = 771 г › Вес посчитан из калорийности 59 ккал на 100 г › Добавится › 455 ккал › Б 19 › Ж 12 › У 73 › Станет 1 969 из 1 928 за день · 102 % › Добавить"></span></div>
+    <div class="spec"><b>Порция · продукт уже в приёме · текст</b><span data-v="Кофе растворимый с молоком › Сколько грамм › 100 › 50 › 100 › 150 › 200 › 300 › ½ стакана · 125 г › 1 стакан · 250 г › Граммы › Ккал › В прошлый раз было 100 г › Добавится › 51 ккал › Б 3 › Ж 3 › У 5 › Станет 1 573 из 1 928 за день · 82 % › Этот продукт уже есть в приёме — 100 г. Добавите ещё, и еда посчитается дважды. › Добавить"></span></div>
+    <div class="spec"><b>Порция · перебор нормы · текст</b><span data-v="Кофе растворимый с молоком › Сколько грамм › 100 › 50 › 100 › 150 › 200 › 300 › ½ стакана · 125 г › 1 стакан · 250 г › Граммы › Ккал › В прошлый раз было 100 г › Добавится › 51 ккал › Б 3 › Ж 3 › У 5 › Станет 1 969 из 1 928 за день · 102 % › Норма дня будет превышена на 41 ккал. › Добавить"></span></div>
+    <div class="spec"><b>Добавление · приём собран · текст</b><span data-v="Перекус · 11:50 › В приёме › 292 › ккал · 4 продукта › Всего за день 1 537 · до нормы остаётся 391 › Кофе растворимый › 100 г › 51 › Сыр твёрдый › 30 г › 92 › Творожный сыр › 20 г › 38 › Хлеб тостовый › 40 г › 111 › Добавить ещё › Завершить приём › Сохранить как набор"></span></div>
+    <div class="spec"><b>Приёмы дня · список · текст</b><span data-v="Вчера, 26 августа › Сегодня › Окно приёмов › волны наложились › нахлёст 3:30 › 12:00 · Завтрак › 319 › Хлеб тостовый «Премиум суперсемечковый» · Куриное филе запечённое · Домашний кофе › + ещё › 14:00 · Обед › 852 › Молоко ультрапастеризованное 3.5 · Кофе американо · Сироп для кофе · ещё 4 › + ещё › 19:30 · Ужин › 1 594 › Лапша соба варёная · Соус Хеллманн'с Бургер Гриль · Домашний кофе · ещё 5 › + ещё › 22:00 · Перекус › без продуктов · итог дня посчитан без него › + продукт › Три полноценных приёма подряд › Добавить приём пищи"></span></div>
+    <div class="spec"><b>Приём · правка · текст</b><span data-v="Завтрак · 12:00 › изм. › 319 › ккал › Б 32 › Ж 10 › У 33 › Кл 4 › Хлеб тостовый «Премиум суперсемечковый» › 50 г › Куриное филе запечённое › 70 г › Добавить продукт › Действия с приёмом › Копировать приём › Переместить на другой день › Сохранить набором › Смешанный профиль › · волна 4,5 ч › Активный быт › после тренировки › Удалить приём"></span></div>
+    <div class="spec"><b>Приём · время и тип · текст</b><span data-v="Время и тип › 11 › 12 › 13 › 55 › 00 › 05 › Завтрак › Обед › Ужин › Перекус › Ночной › Тренировка › Тип предложен по времени — можно оставить как есть. › Сохранить"></span></div>
+    <div class="spec"><b>Действие · копировать · текст</b><span data-v="копировать › Продукты 8/8 › Снять всё › Лапша соба варёная › 137 г · 157 ккал › 137 г › Соус Хеллманн'с Бургер Гриль › 30 г · 81 ккал › 30 г › Домашний кофе › 300 г · 50 ккал › 300 г › Куда копировать · сегодня › Перекус · 10:40 › + Создать новый приём › Перекус: 17 → 1 610 ккал (+1 593) › Отмена › Копировать (8)"></span></div>
+    <div class="spec"><b>Действие · копировать без целей · текст</b><span data-v="копировать без целей › Продукты 1/1 › Снять всё › Домашний кофе › 100 г · 17 ккал › 100 г › Куда копировать › На сегодня приёмов ещё нет — создадим новый. › + Создать новый приём › Отмена › Копировать (1)"></span></div>
+    <div class="spec"><b>Действие · перенести · текст</b><span data-v="перенести › Куда перенести › Вчера, 26 августа › В какой приём › Завтрак · 12:00 › Обед · 14:00 › + Создать новый приём › Приём уйдёт из сегодняшнего дня целиком — итоги обоих дней пересчитаются. › Отмена › Перенести"></span></div>
+    <div class="spec"><b>Добавление · наборы · текст</b><span data-v="Наборы › Править › Замечено в истории › Кофе, сыр, хлеб › повторялось 7× › Сохранить как набор › Скрыть › Мои наборы › Бутер с маслом и кофе › 4 продукта · 318 ккал › Добавить › Овсяная каша с кофе › 3 продукта · 402 ккал › Добавить › Бутер с кофе без ветчины › 4 продукта · 292 ккал › Добавить › Кофе Киндерли › 3 продукта · 187 ккал › Добавить › Собрать новый набор › Правка и удаление — по тапу на строку, чтобы три иконки не висели у каждой. Долгое нажатие во флоу не используется нигде."></span></div>
+    <div class="spec"><b>Добавление · правка набора · текст</b><span data-v="Бутер с кофе без ветчины › Весь набор › умножить все позиции › ×2 › Кофе растворимый › 51 ккал › 100 г › Сыр твёрдый › 92 ккал › 30 г › Творожный сыр › 38 ккал › 20 г › Хлеб тостовый › 111 ккал › 40 г › Итого › 292 ккал · 4 продукта › Добавить 4 продукта в приём"></span></div>
+    <div class="spec"><b>Наборы · текст</b><span data-v="Наборы › Замечено в истории › Кофе, сыр, хлеб › повторялось 7× › Всего 432 ккал › Сохранить как набор › Скрыть › Мои наборы › Бутер с маслом и кофе › 3 продукта · 384 ккал › Овсянка с бананом › 2 продукта · 356 ккал › Ужин по-быстрому › 4 продукта · 612 ккал › Плюс — главное действие: набор добавляется в приём. Правка и удаление — по тапу на строку."></span></div>
+    <div class="spec"><b>Наборы · вкладка поиска · текст</b><span data-v="Наборы › Замечено в истории › Кофе, сыр, хлеб › повторялось 7× › Сохранить как набор › Скрыть › Мои наборы › Бутер с маслом и кофе › 4 продукта · 318 ккал › Добавить › Овсяная каша с кофе › 3 продукта · 402 ккал › Добавить › Кофе бондюэль › 2 продукта · 167 ккал › Добавить › Собрать новый набор"></span></div>
+    <div class="spec"><b>Набор · сборка · текст</b><span data-v="Новый набор › Найти продукт › В наборе · 3 › Кофе растворимый › 200 г · 102 ккал › править › Сыр твёрдый › 30 г · 92 ккал › править › Хлеб тостовый › 60 г · 164 ккал › править › Итого › 358 ккал › Название набора › Завтрак буднего дня › Сохранить набор › Один жест на весь файл: тап по строке — правка, крестик — убрать из набора. Долгое нажатие не используется нигде."></span></div>
+    <div class="spec"><b>Набор · сборка пустая · текст</b><span data-v="Новый набор › Найти продукт › В наборе · 0 › Добавьте продукты через поиск › Название набора › Например, завтрак буднего дня › Сохранить набор › Один жест на весь файл: тап по строке — правка, крестик — убрать из набора. Долгое нажатие не используется нигде."></span></div>
+    <div class="spec"><b>Набор · сохранение · текст</b><span data-v="Сохранить как набор › Три продукта с граммовкой. В следующий раз добавится одним тапом. › Название › Кофе, сыр, хлеб › Кофе растворимый › 200 г › Сыр твёрдый › 30 г › Хлеб тостовый › 60 г › Отмена › Сохранить"></span></div>
+    <div class="spec"><b>Набор · удаление · текст</b><span data-v="Удалить набор › «Бутер с маслом и кофе» › Набор исчезнет из списка. Уже добавленные приёмы останутся как есть — удаляется только заготовка. › Отмена › Удалить › Удаление — не главная кнопка. Терракотовая заливка осталась у «Отмены» по смыслу безопасности, у удаления только фон внимания."></span></div>
+    <div class="spec"><b>Приём собран · фото · текст</b><span data-v="Перекус · 11:50 › Итого за приём › 432 › ккал › Фото приёма › Снять › 11:52 › Фото принадлежит приёму, не продукту. Снимков может быть несколько, тап открывает на весь экран. › Продукты › Йогурт греческий 2% › 150 г · 99 ккал › 150 г › Хлеб тостовый › 120 г · 333 ккал › 120 г › Готово"></span></div>
+    <div class="spec"><b>Фото · просмотр · текст</b><span data-v="Перекус · 11:52 › Ещё снимок › Удалить"></span></div>
+    <div class="spec"><b>Поиск · база пуста · текст</b><span data-v="Перекус · 11:50 › Поиск продукта › Частые › Недавние · 3 дня › Наборы · 4 › Здесь появятся продукты, которые вы едите чаще всего › Пока список пуст — найдите первый в общей базе, там общая база. › Искать в общей базе › Или сразу › Сканировать штрихкод › Создать свой продукт › Это не «ничего не найдено»: запроса ещё не было. Экран отвечает на «с чего начать», а не «почему пусто»."></span></div>
+    <div class="spec"><b>Поиск · база не загрузилась · текст</b><span data-v="Перекус · 11:50 › Поиск продукта › Общая база недоступна › Не удалось загрузить справочник продуктов. Ваши личные продукты и наборы работают. › Повторить › Создать продукт › Доступно сейчас › Кофе растворимый › 51 ккал · личный › Бутер с маслом и кофе › набор · 3 продукта"></span></div>
+    <div class="spec"><b>Поиск · ничего не найдено · текст</b><span data-v="Перекус · 11:50 › творог зернёный 7% › По этому запросу ничего нет › Поиск работает, база на месте — просто нет совпадений. Попробуйте короче: «творог». › Создать «творог зернёный 7%» › Близкое по названию › Творог 5% › 121 ккал › Творог зернёный › 98 ккал"></span></div>
+    <div class="spec"><b>Поиск · офлайн · текст</b><span data-v="Перекус · 11:50 › Поиск продукта › Нет сети › Личные продукты и наборы доступны, приём сохранится и уйдёт в облако, когда сеть вернётся. › Доступно офлайн › Кофе растворимый › 51 ккал · 22 раза › Сыр твёрдый › 307 ккал · 18 раз › Общая база › недоступна › Одно сообщение на весь экран. Тост поверх этого баннера не показывается — иначе человек прочитает про офлайн дважды."></span></div>
+    <div class="spec"><b>Выход · есть что терять · текст</b><span data-v="Выйти и потерять выбор? › Творог зернёный 7%, 150 г — ещё не добавлен в приём. Черновик не сохраняется. › Остаться › Выйти без сохранения › Тот же диалог перекрывает аппаратную «назад» и тап по фону. Если выбирать нечего — закрывается молча."></span></div>
+</div>
 
   <p style="margin:30px 0 0;font:500 12.5px/1.6 Figtree,sans-serif;color:rgba(var(--ink),.5);">Дальше: «черновик при выходе» · «тёмная и синяя палитры»</p>
 </div>

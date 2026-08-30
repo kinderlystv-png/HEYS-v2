@@ -17,7 +17,7 @@
   body{margin:0;background:var(--page);font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   *{box-sizing:border-box}
   a{color:var(--ac);text-decoration:none}
-  .ph{width:330px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12)}
+  .ph{width:375px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12)}
   .sc{min-height:600px;padding:6px 18px 16px}
   .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.42)}
   .n{font-variant-numeric:tabular-nums}
@@ -166,7 +166,7 @@
   <div class="spec"><b>что уезжает</b><span data-v="уровень, серия, лампочка, настройки, название вкладки — всё, что читают один раз за сессию"></span></div>
   <div class="spec"><b>что остаётся</b><span data-v="капсула со стрелками, приклеенная к верху, на бумажной подложке с тенью"></span><i>тень нужна, чтобы читалась как отдельный слой: под ней экран продолжается</i></div>
   <div class="spec"><b>порядок липких слоёв</b><span data-v="липкий слой один — капсула даты; бар текущего приёма под ней снят 23 августа и не реализуется"></span><i>бар придуман для легаси-дневника, где один приём занимал экран; в v4 дневник — короткие строки, и бар повторяет то, что и так видно, стоя вторых 44 px первого экрана. Код: MealStickyBar не подключать</i></div>
-  <div class="spec"><b>вид липкого слоя</b><span data-v="ряд стоит абсолютно, 12 px от верха и от боков кадра, z-index 3: кружок стрелки 34 px на подложке --bg 88 %, сама капсула высотой 38 px и радиусом 999 с двойной тенью (0 1 2 и 0 8 22); под слоем экран продолжается и уезжает. Тона и роли по палитрам — строка «вид липкой капсулы» этого же контракта"></span><i>раздел описывает поведение, но вид слоя обязан стоять и здесь: иначе он выглядит описанным только потому, что его видно</i></div>
+  <div class="spec"><b>вид липкого слоя</b><span data-v="модель одна — полноширинная подложка, описанная строкой «вид липкой капсулы»: ряд капсулы на --bg во всю ширину, поля 16/18/10, одна тень 0 6 18 тона тени 10 %, z-index 3. Капсула геометрию при прилипании не меняет. Плавающего ряда в 12 px от краёв с двойной тенью на самой капсуле — нет: под непрозрачной подложкой контент уезжает чисто, а у плавающего он виден вокруг и рябит"></span><i>сведено 30 августа: две строки одной зоны описывали разные модели слоя — полноширинную бумагу и плавающий ряд. Оставлена первая, её и реализует код</i></div>
   <div class="spec" style="border-bottom:none"><b>сколько липких</b><span data-v="ровно один слой на всех вкладках"></span></div>
 
   <div class="ctrH">Календарь · шторка</div>
@@ -201,6 +201,482 @@
   <div class="spec"><b>вид поверхностей</b><span data-v="ни одна из четырёх поверхностей советов на этом канвасе не нарисована в продовом виде — геометрия, тона и типографика берутся из tips.v4.dc.html; здесь только поведение и правила"></span><i>кадры раздела — схемы поведения, по ним нельзя сверять пиксели</i></div>
   <div class="spec" style="border-bottom:none"><b>звук</b><span data-v="тумблера «Звук советов» нет: звук приложения один и живёт в настройках одним переключателем «Звук». Отдельного звука у советов в коде не существует, поэтому частный тумблер обещал бы точечность, которой нет"></span><i>решено 23 августа: чинить тумблер до «только советы» — значит заводить второй звуковой канал ради одной поверхности; строка «открыто» снята</i></div>
 
+                <div class="ctrH">Разбор кадров · элемент за элементом</div>
+    <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
+    <div class="spec"><b>Дата · сегодня · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12), направление column"></span></div>
+    <div class="spec"><b>Дата · сегодня · 02</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Дата · сегодня · 03</b><span data-v="выравнивание center, зазор 9px"></span></div>
+    <div class="spec"><b>Дата · сегодня · 04</b><span data-v="«18» — шрифт 800 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 05</b><span data-v="флекс 1, высота 3px, радиус 999px, фон rgba(0,0,0,.14)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 06</b><span data-v="ширина 34%, высота 3px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 07</b><span data-v="«Эксперт» — шрифт 600 10px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 08</b><span data-v="выравнивание center, зазор 0"></span></div>
+    <div class="spec"><b>Дата · сегодня · 09</b><span data-v="выравнивание center, распределение center, ширина 34px, высота 44px, отступы -14px 0, флекс none"></span></div>
+    <div class="spec"><b>Дата · сегодня · 10</b><span data-v="позиция relative"></span></div>
+    <div class="spec"><b>Дата · сегодня · 11</b><span data-v="«5» — позиция absolute, шрифт 800 9px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 12</b><span data-v="выравнивание center, распределение center, ширина 34px, высота 44px, отступы -14px -8px -14px 0, флекс none"></span></div>
+    <div class="spec"><b>Дата · сегодня · 13</b><span data-v="выравнивание center, распределение space-between, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Дата · сегодня · 14</b><span data-v="выравнивание baseline, зазор 9px"></span></div>
+    <div class="spec"><b>Дата · сегодня · 15</b><span data-v="«Питание» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 16</b><span data-v="выравнивание center, зазор 8px, отступ сверху 16px, поля 0 18px"></span></div>
+    <div class="spec"><b>Дата · сегодня · 17</b><span data-v="ширина 44px, высота 44px, отступы -6px 0, радиус 999px, фон var(--c1), выравнивание center, распределение center, флекс none"></span></div>
+    <div class="spec"><b>Дата · сегодня · 18</b><span data-v="флекс 1, высота от 44px, отступы -6px 0, радиус 16px, фон var(--c1), направление column, выравнивание center, распределение center, зазор 3px"></span></div>
+    <div class="spec"><b>Дата · сегодня · 19</b><span data-v="выравнивание center, зазор 6px, шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 20</b><span data-v="флекс 1, поля 0 18px, обрез hidden"></span></div>
+    <div class="spec"><b>Дата · сегодня · 21</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Дата · сегодня · 22</b><span data-v="«Осталось на сегодня» — шрифт 600 10.5px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 23</b><span data-v="выравнивание baseline, зазор 9px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Дата · сегодня · 24</b><span data-v="«642» — шрифт 600 56px/.9 Figtree, цвет var(--ac), трекинг -.045em"></span></div>
+    <div class="spec"><b>Дата · сегодня · 25</b><span data-v="«ккал» — шрифт 600 12px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 26</b><span data-v="«Окно приёмов закроется в 21:09» — шрифт 600 12px/1.5 Figtree, цвет var(--gr), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Дата · сегодня · 27</b><span data-v="«Сегодня» — шрифт 700 10px/1 Figtree, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 8px"></span></div>
+    <div class="spec"><b>Дата · сегодня · 28</b><span data-v="фон var(--c1), радиус 20px, поля 2px 16px"></span></div>
+    <div class="spec"><b>Дата · сегодня · 29</b><span data-v="выравнивание center, распределение space-between, зазор 12px, поля 13px 0, разделитель 1px solid rgba(0,0,0,.07), шрифт 600 12.5px/1 Figtree"></span></div>
+    <div class="spec"><b>Дата · сегодня · 30</b><span data-v="«Приёмы пищи» — цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 31</b><span data-v="«3 · 1 289 ккал» — флекс none, шрифт 600 11.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 32</b><span data-v="выравнивание center, распределение space-between, зазор 12px, поля 13px 0, шрифт 600 12.5px/1 Figtree"></span></div>
+    <div class="spec"><b>Дата · сегодня · 33</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 34</b><span data-v="флекс 1, выключка center"></span></div>
+    <div class="spec"><b>Дата · сегодня · 35</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
+    <div class="spec"><b>Дата · сегодня · 36</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 37</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px, радиус 999px, фон var(--c2)"></span></div>
+    <div class="spec"><b>Дата · сегодня · 38</b><span data-v="«Питание» — шрифт 700 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12), направление column"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 02</b><span data-v="флекс 1, обрез hidden, позиция relative"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 03</b><span data-v="отступы 0 16px, высота 106px, обрез hidden, радиус 0 0 20px 20px, фон var(--c2), позиция relative"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 04</b><span data-v="позиция absolute"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 05</b><span data-v="выравнивание baseline, зазор 5px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 06</b><span data-v="«843» — моноцифры: шрифт 600 40px/.9 Figtree, цвет var(--ac), трекинг -.035em"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 07</b><span data-v="высота 6px, радиус 999px, фон rgba(0,0,0,.1), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 08</b><span data-v="ширина 16%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 09</b><span data-v="моноцифры: распределение space-between, шрифт 600 9.5px/1 Figtree, цвет rgba(0,0,0,.42), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 10</b><span data-v="поля 0 16px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 11</b><span data-v="«Сейчас» — ярус"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 12</b><span data-v="список .cd: поля 13px 16px, распределение space-between, выравнивание center, зазор 10px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 13</b><span data-v="«Окно приёмов» — шрифт 600 12px/1 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 14</b><span data-v="«закроется в 15:39 · через 1:26» — шрифт 700 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 15</b><span data-v="список .cd: поля 14px 16px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 16</b><span data-v="распределение space-between, выравнивание baseline, зазор 10px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 17</b><span data-v="«13:32 · Завтрак» — шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 18</b><span data-v="«185» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 19</b><span data-v="распределение space-between, выравнивание flex-end, зазор 10px, отступ сверху 7px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 20</b><span data-v="«Пудинг Hyper High Protein Caramel (Ehrmann) · Филе» — шрифт 500 11px/1.45 Figtree, цвет rgba(0,0,0,.45)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 21</b><span data-v="«+ ещё» — флекс none, поля 6px 10px, радиус 999px, фон var(--bg), шрифт 700 10px/1 Figtree, цвет rgba(0,0,0,.5)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 22</b><span data-v="выравнивание center, распределение space-between, радиус 999px, фон var(--acs), поля 16px 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 23</b><span data-v="«Добавить приём пищи» — шрифт 700 13px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 24</b><span data-v="карточка .grp"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 25</b><span data-v="«Суточные итоги» — ключ: отступ снизу 13px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 26</b><span data-v="колонки auto repeat(4,1fr), зазор 9px 8px, выравнивание baseline"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 27</b><span data-v="«ккал» — ключ: выключка right"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 28</b><span data-v="«Факт» — шрифт 700 11.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 29</b><span data-v="«185» — моноцифры: выключка right, шрифт 700 11.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 30</b><span data-v="«Норма» — шрифт 600 11.5px/1 Figtree, цвет rgba(0,0,0,.45)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 31</b><span data-v="«1 028» — моноцифры: выключка right, шрифт 600 11.5px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 32</b><span data-v="«−58 %» — моноцифры: выключка right, шрифт 600 11.5px/1 Figtree, цвет var(--val-bad)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 33</b><span data-v="колонки 1fr 1fr, зазор 10px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 34</b><span data-v="«Клетчатка» — ключ"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 35</b><span data-v="выравнивание baseline, зазор 4px, отступ сверху 9px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 36</b><span data-v="«0» — моноцифры: шрифт 600 21px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 37</b><span data-v="карточка .grp: фон var(--gr-bg)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 38</b><span data-v="выравнивание baseline, зазор 5px, отступ сверху 9px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 39</b><span data-v="«0,0» — моноцифры: шрифт 600 21px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 40</b><span data-v="«порог 10» — шрифт 500 9.5px/1 Figtree, цвет rgba(0,0,0,.42), отступ сверху 7px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 41</b><span data-v="карточка .grp: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 42</b><span data-v="выравнивание center, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 43</b><span data-v="выравнивание center, зазор 8px, шрифт 700 12px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 44</b><span data-v="«без критичных» — поля 5px 10px, радиус 999px, фон var(--gr-bg), шрифт 700 9.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 45</b><span data-v="позиция absolute, выравнивание center, зазор 8px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 46</b><span data-v="ширина 34px, высота 34px, флекс none, радиус 999px, фон rgba(255,250,241,.88), рамка 0 1px 2px rgba(80,50,20,.1),0 6px 16px rgba(80,50,20,.14), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 47</b><span data-v="флекс 1, высота 38px, радиус 999px, фон var(--bg), рамка 0 1px 2px rgba(80,50,20,.1),0 8px 22px rgba(80,50,20,.16), выравнивание center, распределение center, зазор 7px, цвет rgba(0,0,0,.45)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 48</b><span data-v="«Сегодня, 18 августа» — шрифт 700 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 49</b><span data-v="ширина 34px, высота 34px, флекс none, радиус 999px, фон rgba(255,250,241,.6), рамка 0 1px 2px rgba(80,50,20,.1),0 6px 16px rgba(80,50,20,.14), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 50</b><span data-v="ширина 50px, высота 50px, радиус 999px, фон var(--acs), рамка 0 2px 4px rgba(80,50,20,.14),0 10px 22px rgba(120,60,20,.28), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 51</b><span data-v="поля 4px 8px 16px, фон var(--bg), рамка 0 -1px 0 rgba(0,0,0,.06)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 52</b><span data-v="флекс 1, выключка center"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 53</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 54</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 55</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px, фон var(--c1), радиус 14px"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · 56</b><span data-v="«Питание» — шрифт 700 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12), направление column"></span></div>
+    <div class="spec"><b>Дата · чужой день · 02</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Дата · чужой день · 03</b><span data-v="выравнивание center, зазор 9px"></span></div>
+    <div class="spec"><b>Дата · чужой день · 04</b><span data-v="«18» — шрифт 800 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 05</b><span data-v="флекс 1, высота 3px, радиус 999px, фон rgba(0,0,0,.14)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 06</b><span data-v="ширина 34%, высота 3px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 07</b><span data-v="«Эксперт» — шрифт 600 10px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 08</b><span data-v="выравнивание center, зазор 0"></span></div>
+    <div class="spec"><b>Дата · чужой день · 09</b><span data-v="выравнивание center, распределение center, ширина 34px, высота 44px, отступы -14px 0, флекс none"></span></div>
+    <div class="spec"><b>Дата · чужой день · 10</b><span data-v="позиция relative"></span></div>
+    <div class="spec"><b>Дата · чужой день · 11</b><span data-v="«5» — позиция absolute, шрифт 800 9px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 12</b><span data-v="выравнивание center, распределение center, ширина 34px, высота 44px, отступы -14px -8px -14px 0, флекс none"></span></div>
+    <div class="spec"><b>Дата · чужой день · 13</b><span data-v="выравнивание center, распределение space-between, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Дата · чужой день · 14</b><span data-v="выравнивание baseline, зазор 9px"></span></div>
+    <div class="spec"><b>Дата · чужой день · 15</b><span data-v="«Питание» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 16</b><span data-v="выравнивание center, зазор 8px, отступ сверху 16px, поля 0 18px"></span></div>
+    <div class="spec"><b>Дата · чужой день · 17</b><span data-v="ширина 34px, высота 34px, радиус 999px, фон var(--c1), выравнивание center, распределение center, флекс none"></span></div>
+    <div class="spec"><b>Дата · чужой день · 18</b><span data-v="флекс 1, высота 38px, радиус 999px, фон var(--tint), выравнивание center, зазор 5px, поля 0 4px 0 11px"></span></div>
+    <div class="spec"><b>Дата · чужой день · 19</b><span data-v="флекс 1, выравнивание center, распределение center, зазор 6px, перенос nowrap, шрифт 700 12.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 20</b><span data-v="«Сегодня» — флекс none, высота 28px, поля 0 11px, радиус 999px, фон var(--acs), выравнивание center, перенос nowrap, шрифт 700 10.5px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 21</b><span data-v="флекс 1, поля 0 18px, обрез hidden"></span></div>
+    <div class="spec"><b>Дата · чужой день · 22</b><span data-v="фон var(--c2), радиус 26px, поля 24px 20px 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Дата · чужой день · 23</b><span data-v="«Итог дня» — шрифт 600 10.5px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 24</b><span data-v="выравнивание baseline, зазор 9px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Дата · чужой день · 25</b><span data-v="«1 786» — шрифт 600 56px/.9 Figtree, цвет var(--ac), трекинг -.045em"></span></div>
+    <div class="spec"><b>Дата · чужой день · 26</b><span data-v="«ккал» — шрифт 600 12px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 27</b><span data-v="«Цель была 1 931 — недобор 145» — шрифт 600 12px/1.5 Figtree, цвет var(--gr), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Дата · чужой день · 28</b><span data-v="«Что было» — шрифт 700 10px/1 Figtree, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 8px"></span></div>
+    <div class="spec"><b>Дата · чужой день · 29</b><span data-v="фон var(--c1), радиус 20px, поля 2px 16px"></span></div>
+    <div class="spec"><b>Дата · чужой день · 30</b><span data-v="выравнивание center, распределение space-between, зазор 12px, поля 13px 0, разделитель 1px solid rgba(0,0,0,.07), шрифт 600 12.5px/1 Figtree"></span></div>
+    <div class="spec"><b>Дата · чужой день · 31</b><span data-v="«Приёмы пищи» — цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 32</b><span data-v="«4 · 1 786 ккал» — флекс none, шрифт 600 11.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 33</b><span data-v="выравнивание center, распределение space-between, зазор 12px, поля 13px 0, шрифт 600 12.5px/1 Figtree"></span></div>
+    <div class="spec"><b>Дата · чужой день · 34</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 35</b><span data-v="флекс 1, выключка center"></span></div>
+    <div class="spec"><b>Дата · чужой день · 36</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
+    <div class="spec"><b>Дата · чужой день · 37</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 38</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px, радиус 999px, фон var(--c2)"></span></div>
+    <div class="spec"><b>Дата · чужой день · 39</b><span data-v="«Питание» — шрифт 700 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12), направление column"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 02</b><span data-v="флекс 1, обрез hidden, позиция relative"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 03</b><span data-v="поля 0 16px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 04</b><span data-v="высота 44px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 05</b><span data-v="список .cd: поля 12px 16px, распределение space-between, выравнивание baseline, зазор 10px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 06</b><span data-v="«Яблоко» — шрифт 600 12px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 07</b><span data-v="«+ ещё» — флекс none, поля 6px 10px, радиус 999px, фон var(--bg), шрифт 700 10px/1 Figtree, цвет rgba(0,0,0,.5)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 08</b><span data-v="список .cd: поля 14px 16px, отступ сверху 42px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 09</b><span data-v="распределение space-between, выравнивание baseline, зазор 10px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 10</b><span data-v="«20:54 · Завтрак» — шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 11</b><span data-v="«80» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 12</b><span data-v="распределение space-between, выравнивание flex-end, зазор 10px, отступ сверху 7px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 13</b><span data-v="«Протеин Whey Supreme (Snickers)» — шрифт 500 11px/1.45 Figtree, цвет rgba(0,0,0,.45)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 14</b><span data-v="выравнивание center, распределение space-between, радиус 999px, фон var(--acs), поля 16px 20px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 15</b><span data-v="«Добавить приём пищи» — шрифт 700 13px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 16</b><span data-v="«Разбор дня» — ярус"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 17</b><span data-v="карточка .grp"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 18</b><span data-v="«Суточные итоги» — ключ: отступ снизу 13px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 19</b><span data-v="колонки auto repeat(4,1fr), зазор 9px 8px, выравнивание baseline"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 20</b><span data-v="«ккал» — ключ: выключка right"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 21</b><span data-v="«Факт» — шрифт 700 11.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 22</b><span data-v="«1 244» — моноцифры: выключка right, шрифт 700 11.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 23</b><span data-v="«Норма» — шрифт 600 11.5px/1 Figtree, цвет rgba(0,0,0,.45)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 24</b><span data-v="«1 301» — моноцифры: выключка right, шрифт 600 11.5px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 25</b><span data-v="«+22 %» — моноцифры: выключка right, шрифт 600 11.5px/1 Figtree, цвет var(--val-bad)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 26</b><span data-v="колонки 1fr 1fr, зазор 10px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 27</b><span data-v="«Клетчатка» — ключ"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 28</b><span data-v="выравнивание baseline, зазор 4px, отступ сверху 9px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 29</b><span data-v="«15» — моноцифры: шрифт 600 21px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 30</b><span data-v="карточка .grp: фон var(--gr-bg)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 31</b><span data-v="выравнивание baseline, зазор 5px, отступ сверху 9px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 32</b><span data-v="«0,0» — моноцифры: шрифт 600 21px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 33</b><span data-v="«порог 10» — шрифт 500 9.5px/1 Figtree, цвет rgba(0,0,0,.42), отступ сверху 7px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 34</b><span data-v="карточка .grp: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 35</b><span data-v="выравнивание center, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 36</b><span data-v="выравнивание center, зазор 8px, шрифт 700 12px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 37</b><span data-v="«без критичных» — поля 5px 10px, радиус 999px, фон var(--gr-bg), шрифт 700 9.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 38</b><span data-v="моноцифры: распределение space-between, шрифт 600 9px/1 Figtree, цвет rgba(0,0,0,.38), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 39</b><span data-v="позиция absolute, выравнивание center, зазор 8px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 40</b><span data-v="ширина 34px, высота 34px, флекс none, радиус 999px, фон rgba(255,250,241,.88), рамка 0 1px 2px rgba(80,50,20,.1),0 6px 16px rgba(80,50,20,.14), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 41</b><span data-v="флекс 1, высота от 38px, радиус 999px, фон var(--c2), рамка 0 1px 2px rgba(80,50,20,.1),0 8px 22px rgba(80,50,20,.16), выравнивание center, зазор 6px, поля 5px 5px 5px 12px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 42</b><span data-v="флекс 1, выравнивание center, распределение center, зазор 7px, цвет #a8672f"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 43</b><span data-v="«Вчера, 17 августа» — шрифт 700 13px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 44</b><span data-v="«Сегодня» — флекс none, высота от 28px, поля 0 12px, радиус 999px, фон var(--acs), выравнивание center, шрифт 700 10.5px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 45</b><span data-v="позиция absolute"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 46</b><span data-v="ширина 50px, высота 50px, радиус 999px, фон var(--acs), рамка 0 2px 4px rgba(80,50,20,.14),0 10px 22px rgba(120,60,20,.28), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 47</b><span data-v="поля 4px 8px 16px, фон var(--bg), рамка 0 -1px 0 rgba(0,0,0,.06)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 48</b><span data-v="флекс 1, выключка center"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 49</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 50</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 51</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px, фон var(--c1), радиус 14px"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · 52</b><span data-v="«Питание» — шрифт 700 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12), направление column"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 02</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 03</b><span data-v="выравнивание center, зазор 9px"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 04</b><span data-v="«18» — шрифт 800 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 05</b><span data-v="флекс 1, высота 3px, радиус 999px, фон rgba(0,0,0,.14)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 06</b><span data-v="ширина 34%, высота 3px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 07</b><span data-v="«Эксперт» — шрифт 600 10px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 08</b><span data-v="выравнивание center, зазор 0"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 09</b><span data-v="выравнивание center, распределение center, ширина 34px, высота 44px, отступы -14px 0, флекс none"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 10</b><span data-v="позиция relative"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 11</b><span data-v="«5» — позиция absolute, шрифт 800 9px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 12</b><span data-v="выравнивание center, распределение center, ширина 34px, высота 44px, отступы -14px -8px -14px 0, флекс none"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 13</b><span data-v="выравнивание center, распределение space-between, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 14</b><span data-v="выравнивание baseline, зазор 9px"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 15</b><span data-v="«Питание» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 16</b><span data-v="«вс, 9 августа» — шрифт 500 11px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 17</b><span data-v="флекс 1, поля 16px 16px 0, прозрачность .4"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 18</b><span data-v="высота 150px, радиус 26px, фон var(--c2)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 19</b><span data-v="высота 86px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 20</b><span data-v="высота 120px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 21</b><span data-v="позиция absolute, фон var(--c1), радиус 22px, поля 16px, рамка 0 2px 6px rgba(0,0,0,.14),0 16px 36px rgba(0,0,0,.2)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 22</b><span data-v="выравнивание center, зазор 10px"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 23</b><span data-v="«Прочитано» — флекс 1, шрифт 700 12.5px/1.35 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 24</b><span data-v="«Ответ влияет на то, какие советы вы увидите дальше» — шрифт 500 11.5px/1.5 Figtree, цвет rgba(0,0,0,.55), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 25</b><span data-v="зазор 8px, отступ сверху 14px"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 26</b><span data-v="флекс 1, высота от 44px, радиус 14px, фон var(--gr-bg), выравнивание center, распределение center, зазор 8px, шрифт 700 12px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 27</b><span data-v="флекс 1, высота от 44px, радиус 14px, фон var(--c2), выравнивание center, распределение center, зазор 8px, шрифт 700 12px/1 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 28</b><span data-v="«Пропустить» — выключка center, отступ сверху 14px, шрифт 700 11.5px/1 Figtree, цвет rgba(0,0,0,.42), высота от 44px, выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 29</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 30</b><span data-v="флекс 1, выключка center"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 31</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 32</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 33</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px, радиус 999px, фон var(--c2)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 34</b><span data-v="«Питание» — шрифт 700 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12), направление column"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 02</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 03</b><span data-v="выравнивание center, зазор 9px"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 04</b><span data-v="«18» — шрифт 800 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 05</b><span data-v="флекс 1, высота 3px, радиус 999px, фон rgba(0,0,0,.14)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 06</b><span data-v="ширина 34%, высота 3px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 07</b><span data-v="«Эксперт» — шрифт 600 10px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 08</b><span data-v="выравнивание center, зазор 0"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 09</b><span data-v="выравнивание center, распределение center, ширина 34px, высота 44px, отступы -14px 0, флекс none"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 10</b><span data-v="позиция relative"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 11</b><span data-v="«5» — позиция absolute, шрифт 800 9px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 12</b><span data-v="выравнивание center, распределение center, ширина 34px, высота 44px, отступы -14px -8px -14px 0, флекс none"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 13</b><span data-v="выравнивание center, распределение space-between, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 14</b><span data-v="выравнивание baseline, зазор 9px"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 15</b><span data-v="«Питание» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 16</b><span data-v="«вс, 9 августа» — шрифт 500 11px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 17</b><span data-v="флекс 1, поля 16px 16px 0, прозрачность .4"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 18</b><span data-v="высота 150px, радиус 26px, фон var(--c2)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 19</b><span data-v="высота 86px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 20</b><span data-v="высота 120px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 21</b><span data-v="позиция absolute, фон var(--c1), радиус 22px, поля 14px 16px, рамка 0 2px 6px rgba(0,0,0,.14),0 16px 36px rgba(0,0,0,.2)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 22</b><span data-v="выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 23</b><span data-v="позиция relative, ширина 30px, высота 30px, флекс none, выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 24</b><span data-v="«2» — позиция absolute, шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 25</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 26</b><span data-v="«Совет скрыт до завтра» — шрифт 600 12.5px/1.35 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 27</b><span data-v="«После тренировки нужен белок» — шрифт 500 11px/1.4 Figtree, цвет rgba(0,0,0,.42), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 28</b><span data-v="«Вернуть» — флекс none, поля 11px 15px, радиус 999px, фон var(--c2), шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 29</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 30</b><span data-v="флекс 1, выключка center"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 31</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 32</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 33</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px, радиус 999px, фон var(--c2)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 34</b><span data-v="«Питание» — шрифт 700 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12), направление column"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 02</b><span data-v="поля 16px 18px 0"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 03</b><span data-v="выравнивание center, зазор 9px"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 04</b><span data-v="«18» — шрифт 800 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 05</b><span data-v="флекс 1, высота 3px, радиус 999px, фон rgba(0,0,0,.14)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 06</b><span data-v="ширина 34%, высота 3px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 07</b><span data-v="«Эксперт» — шрифт 600 10px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 08</b><span data-v="выравнивание center, зазор 0"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 09</b><span data-v="выравнивание center, распределение center, ширина 34px, высота 44px, отступы -14px 0, флекс none"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 10</b><span data-v="позиция relative"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 11</b><span data-v="«5» — позиция absolute, шрифт 800 9px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 12</b><span data-v="выравнивание center, распределение center, ширина 34px, высота 44px, отступы -14px -8px -14px 0, флекс none"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 13</b><span data-v="выравнивание center, распределение space-between, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 14</b><span data-v="выравнивание baseline, зазор 9px"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 15</b><span data-v="«Питание» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 16</b><span data-v="«вс, 9 августа» — шрифт 500 11px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 17</b><span data-v="флекс 1, поля 16px 16px 0, прозрачность .4"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 18</b><span data-v="высота 150px, радиус 26px, фон var(--c2)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 19</b><span data-v="высота 86px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 20</b><span data-v="высота 120px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 21</b><span data-v="позиция absolute, фон var(--tint), радиус 22px, поля 16px, рамка 0 2px 6px rgba(0,0,0,.12),0 14px 32px rgba(0,0,0,.18)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 22</b><span data-v="выравнивание flex-start, зазор 11px"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 23</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 24</b><span data-v="«Отметки не сохранились» — шрифт 700 12.5px/1.35 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 25</b><span data-v="«Два совета отмечены прочитанными только на этом ус» — шрифт 500 11.5px/1.5 Figtree, цвет rgba(0,0,0,.55), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 26</b><span data-v="«Попробовать сейчас» — выключка center, отступ сверху 12px, шрифт 700 11.5px/1 Figtree, цвет var(--ac), высота от 44px, выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 27</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 28</b><span data-v="флекс 1, выключка center"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 29</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 30</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 31</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px, радиус 999px, фон var(--c2)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 32</b><span data-v="«Питание» — шрифт 700 8.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12), направление column"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 02</b><span data-v="поля 18px 18px 0, выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 03</b><span data-v="«Служебное» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 04</b><span data-v="флекс 1, поля 0 18px"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 05</b><span data-v="«Раздел виден только по входу куратора. Клиент сюда» — фон var(--tint), радиус 18px, поля 14px 15px, отступ сверху 18px, шрифт 500 11.5px/1.5 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 06</b><span data-v="«Советы» — шрифт 700 10px/1 Figtree, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 20px 0 8px"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 07</b><span data-v="фон var(--c1), радиус 20px, поля 2px 16px"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 08</b><span data-v="выравнивание center, зазор 12px, поля 14px 0, разделитель 1px solid rgba(0,0,0,.07)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 09</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 10</b><span data-v="«Техлог» — шрифт 600 12.5px/1 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 11</b><span data-v="«Что и почему сработало за день» — шрифт 500 10.5px/1.4 Figtree, цвет rgba(0,0,0,.42), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 12</b><span data-v="выравнивание center, зазор 12px, поля 14px 0"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 13</b><span data-v="«Раньше эти три кнопки стояли в шапке шторки совето» — шрифт 500 11px/1.5 Figtree, цвет rgba(0,0,0,.42), отступ сверху 14px"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 14</b><span data-v="«служебный раздел» — поля 16px 18px 20px, шрифт 600 9.5px/1 Figtree, трекинг .18em, регистр uppercase, цвет rgba(0,0,0,.16), выключка center"></span></div>
+    <div class="spec"><b>Календарь · легенда · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 02</b><span data-v="позиция absolute, вписан 0, фон rgba(32,30,29,.34)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 03</b><span data-v="позиция absolute, фон var(--bg), радиус 26px 26px 28px 28px, поля 18px 16px"></span></div>
+    <div class="spec"><b>Календарь · легенда · 04</b><span data-v="ширина 38px, высота 4px, радиус 999px, фон rgba(0,0,0,.14), отступы 0 auto 16px"></span></div>
+    <div class="spec"><b>Календарь · легенда · 05</b><span data-v="выравнивание center, распределение space-between, зазор 12px"></span></div>
+    <div class="spec"><b>Календарь · легенда · 06</b><span data-v="ширина 44px, высота 44px, отступы -8px 0, радиус 999px, фон var(--c1), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Календарь · легенда · 07</b><span data-v="«Август 2026» — шрифт 700 14px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 08</b><span data-v="ширина 44px, высота 44px, отступы -8px 0, радиус 999px, выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Календарь · легенда · 09</b><span data-v="колонки repeat(7,1fr), зазор 4px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Календарь · легенда · 10</b><span data-v="«пн» — выключка center, шрифт 600 9.5px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 11</b><span data-v="«1» — позиция relative, высота от 44px, радиус 12px, фон var(--c1), направление column, выравнивание center, распределение center, зазор 4px, шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 12</b><span data-v="ширина 5px, высота 5px, радиус 999px, фон var(--gr2)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 13</b><span data-v="позиция absolute, ширина 3px, радиус 999px, фон rgba(0,0,0,.45)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 14</b><span data-v="«6» — позиция relative, высота от 44px, радиус 12px, фон transparent, направление column, выравнивание center, распределение center, зазор 4px, шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 15</b><span data-v="ширина 5px, высота 5px"></span></div>
+    <div class="spec"><b>Календарь · легенда · 16</b><span data-v="«7» — позиция relative, высота от 44px, радиус 12px, фон var(--c2), рамка inset 0 0 0 2px var(--acs), направление column, выравнивание center, распределение center, зазор 4px, шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 17</b><span data-v="позиция absolute, высота 3px, радиус 999px, фон rgba(0,0,0,.45)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 18</b><span data-v="«10» — позиция relative, высота от 44px, радиус 12px, фон var(--acs), направление column, выравнивание center, распределение center, зазор 4px, шрифт 700 13px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 19</b><span data-v="ширина 5px, высота 5px, радиус 999px, фон var(--on-acs)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 20</b><span data-v="«11» — позиция relative, высота от 44px, радиус 12px, фон transparent, направление column, выравнивание center, распределение center, зазор 4px, шрифт 600 13px/1 Figtree, цвет rgba(0,0,0,.22)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 21</b><span data-v="перенос строк wrap, зазор 10px 14px, отступ сверху 16px, шрифт 600 10.5px/1 Figtree, цвет rgba(0,0,0,.42)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 22</b><span data-v="выравнивание center, зазор 6px"></span></div>
+    <div class="spec"><b>Календарь · легенда · 23</b><span data-v="ширина 3px, высота 12px, радиус 999px, фон rgba(0,0,0,.45)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 24</b><span data-v="ширина 12px, высота 3px, радиус 999px, фон rgba(0,0,0,.45)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 25</b><span data-v="ширина 11px, высота 11px, радиус 4px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 26</b><span data-v="ширина 11px, высота 11px, радиус 4px, фон var(--c2), рамка inset 0 0 0 1.5px var(--acs)"></span></div>
+    <div class="spec"><b>Календарь · легенда · 27</b><span data-v="«Вернуться к сегодня» — радиус 999px, фон var(--acs), поля 15px, выключка center, шрифт 700 13px/1 Figtree, цвет var(--on-acs), отступ сверху 16px"></span></div>
+    <div class="ctrH">Разбор графики · SVG в кадрах</div>
+    <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 02</b><span data-v="кривая, точки M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 03</b><span data-v="кривая, точки M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 04</b><span data-v="точка r 2 в (11,7)"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 05</b><span data-v="точка r 2 в (17,12)"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 06</b><span data-v="точка r 2 в (9,17)"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 07</b><span data-v="поле рисунка 12×12 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 08</b><span data-v="кривая, точки M6 9l6 6 6-6"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 09</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 10</b><span data-v="кривая, точки M15 6l-6 6 6 6"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 11</b><span data-v="прямоугольник 18×16, радиус 4"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 12</b><span data-v="кривая, точки M8 3v4M16 3v4M3 11h18"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 13</b><span data-v="кривая, точки M9 6l6 6-6 6"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 14</b><span data-v="кривая, точки M3 10l9-7 9 7v10H3z"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 15</b><span data-v="кривая, точки M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 16</b><span data-v="кривая, точки M3 16l5-7 4 3 4-7 5 5"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 17</b><span data-v="кривая, точки M4 20V10M10 20V4M16 20v-7"></span></div>
+    <div class="spec"><b>Дата · сегодня · рисунок 18</b><span data-v="кривая, точки M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 01</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 02</b><span data-v="кривая, точки M12 5v14M5 12h14"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 03</b><span data-v="поле рисунка 12×12 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 04</b><span data-v="кривая, точки M4 13l5 5L20 6"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 05</b><span data-v="поле рисунка 16×10 (viewBox 0 0 24 12)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 06</b><span data-v="кривая, точки M1 9c3 0 4-6 7-6s4 6 7 6 3-4 6-4"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 07</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 08</b><span data-v="кривая, точки M15 5l-7 7 7 7"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 09</b><span data-v="прямоугольник 18×16, радиус 4"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 10</b><span data-v="кривая, точки M8 3v4M16 3v4M3 11h18"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 11</b><span data-v="кривая, точки M9 5l7 7-7 7"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 12</b><span data-v="поле рисунка 20×20 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 13</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 14</b><span data-v="кривая, точки M3 10l9-7 9 7v10H3z"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 15</b><span data-v="кривая, точки M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 16</b><span data-v="кривая, точки M3 16l5-7 4 3 4-7 5 5"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 17</b><span data-v="кривая, точки M4 20V10M10 20V4M16 20v-7"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · рисунок 18</b><span data-v="кривая, точки M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 02</b><span data-v="кривая, точки M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 03</b><span data-v="кривая, точки M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 04</b><span data-v="точка r 2 в (11,7)"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 05</b><span data-v="точка r 2 в (17,12)"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 06</b><span data-v="точка r 2 в (9,17)"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 07</b><span data-v="поле рисунка 12×12 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 08</b><span data-v="кривая, точки M6 9l6 6 6-6"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 09</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 10</b><span data-v="кривая, точки M15 6l-6 6 6 6"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 11</b><span data-v="прямоугольник 18×16, радиус 4"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 12</b><span data-v="кривая, точки M8 3v4M16 3v4M3 11h18"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 13</b><span data-v="кривая, точки M9 6l6 6-6 6"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 14</b><span data-v="кривая, точки M3 10l9-7 9 7v10H3z"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 15</b><span data-v="кривая, точки M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 16</b><span data-v="кривая, точки M3 16l5-7 4 3 4-7 5 5"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 17</b><span data-v="кривая, точки M4 20V10M10 20V4M16 20v-7"></span></div>
+    <div class="spec"><b>Дата · чужой день · рисунок 18</b><span data-v="кривая, точки M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 01</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 02</b><span data-v="кривая, точки M12 5v14M5 12h14"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 03</b><span data-v="поле рисунка 12×12 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 04</b><span data-v="кривая, точки M4 13l5 5L20 6"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 05</b><span data-v="поле рисунка 16×10 (viewBox 0 0 24 12)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 06</b><span data-v="кривая, точки M1 9c3 0 4-6 7-6s4 6 7 6 3-4 6-4"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 07</b><span data-v="поле рисунка 100%×56 (viewBox 0 0 260 56)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 08</b><span data-v="кривая, точки M4,48 C26,48 32,16 52,16 C72,16 78,48 100,48 C120,48 128,20 148,20 C168,20 172,4…, заливка #e6cfa8, прозрачность .8"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 09</b><span data-v="прямоугольник 26×34, радиус 8, заливка #cfe0d3, прозрачность .75"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 10</b><span data-v="линия (0,48)→(260,48), тон rgba(0,0,0,.1), толщина 1.5"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 11</b><span data-v="точка r 3.5 в (30,48), заливка var(--acs)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 12</b><span data-v="точка r 3.5 в (126,48), заливка var(--acs)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 13</b><span data-v="точка r 3.5 в (216,48), заливка var(--acs)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 14</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 15</b><span data-v="кривая, точки M15 5l-7 7 7 7"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 16</b><span data-v="прямоугольник 18×16, радиус 4"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 17</b><span data-v="кривая, точки M8 3v4M16 3v4M3 11h18"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 18</b><span data-v="кривая, точки M9 5l7 7-7 7"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 19</b><span data-v="поле рисунка 20×20 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 20</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 21</b><span data-v="кривая, точки M3 10l9-7 9 7v10H3z"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 22</b><span data-v="кривая, точки M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 23</b><span data-v="кривая, точки M3 16l5-7 4 3 4-7 5 5"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 24</b><span data-v="кривая, точки M4 20V10M10 20V4M16 20v-7"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · рисунок 25</b><span data-v="кривая, точки M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 02</b><span data-v="кривая, точки M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 03</b><span data-v="кривая, точки M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 04</b><span data-v="точка r 2 в (11,7)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 05</b><span data-v="точка r 2 в (17,12)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 06</b><span data-v="точка r 2 в (9,17)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 07</b><span data-v="поле рисунка 12×12 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 08</b><span data-v="кривая, точки M6 9l6 6 6-6"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 09</b><span data-v="кривая, точки M5 13l4 4L19 7"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 10</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 11</b><span data-v="кривая, точки M7 11v9H4v-9zM7 11l4.5-8A2 2 0 0115 5v4h4a2 2 0 012 2.4l-1.4 7A2 2 0 0117.6 20H7"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 12</b><span data-v="кривая, точки M17 13V4h3v9zM17 13l-4.5 8A2 2 0 019 19v-4H5a2 2 0 01-2-2.4l1.4-7A2 2 0 016.4 4H…"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 13</b><span data-v="кривая, точки M3 10l9-7 9 7v10H3z"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 14</b><span data-v="кривая, точки M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 15</b><span data-v="кривая, точки M3 16l5-7 4 3 4-7 5 5"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 16</b><span data-v="кривая, точки M4 20V10M10 20V4M16 20v-7"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · рисунок 17</b><span data-v="кривая, точки M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 02</b><span data-v="кривая, точки M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 03</b><span data-v="кривая, точки M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 04</b><span data-v="точка r 2 в (11,7)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 05</b><span data-v="точка r 2 в (17,12)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 06</b><span data-v="точка r 2 в (9,17)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 07</b><span data-v="поле рисунка 12×12 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 08</b><span data-v="кривая, точки M6 9l6 6 6-6"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 09</b><span data-v="поле рисунка 30×30 (viewBox 0 0 36 36)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 10</b><span data-v="точка r 15 в (18,18), заливка none, обводка rgba(0,0,0,.1)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 11</b><span data-v="точка r 15 в (18,18), заливка none, обводка var(--acs)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 12</b><span data-v="кривая, точки M3 10l9-7 9 7v10H3z"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 13</b><span data-v="кривая, точки M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 14</b><span data-v="кривая, точки M3 16l5-7 4 3 4-7 5 5"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 15</b><span data-v="кривая, точки M4 20V10M10 20V4M16 20v-7"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · рисунок 16</b><span data-v="кривая, точки M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 02</b><span data-v="кривая, точки M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 03</b><span data-v="кривая, точки M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 04</b><span data-v="точка r 2 в (11,7)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 05</b><span data-v="точка r 2 в (17,12)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 06</b><span data-v="точка r 2 в (9,17)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 07</b><span data-v="поле рисунка 12×12 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 08</b><span data-v="кривая, точки M6 9l6 6 6-6"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 09</b><span data-v="поле рисунка 18×18 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 10</b><span data-v="кривая, точки M18 16.5A3.5 3.5 0 0016.5 10a5.5 5.5 0 00-10.6 1.4A3 3 0 006.5 17"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 11</b><span data-v="кривая, точки M12 20v-7M9 16l3 3 3-3"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 12</b><span data-v="кривая, точки M3 10l9-7 9 7v10H3z"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 13</b><span data-v="кривая, точки M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 14</b><span data-v="кривая, точки M3 16l5-7 4 3 4-7 5 5"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 15</b><span data-v="кривая, точки M4 20V10M10 20V4M16 20v-7"></span></div>
+    <div class="spec"><b>Советы · не сохранено · рисунок 16</b><span data-v="кривая, точки M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · рисунок 03</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · рисунок 04</b><span data-v="кривая, точки M9 6l6 6-6 6"></span></div>
+    <div class="spec"><b>Календарь · легенда · рисунок 01</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Календарь · легенда · рисунок 02</b><span data-v="кривая, точки M15 6l-6 6 6 6"></span></div>
+    <div class="spec"><b>Календарь · легенда · рисунок 03</b><span data-v="кривая, точки M9 6l6 6-6 6"></span></div>
+    <div class="ctrH">Текст кадров дословно</div>
+    <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
+    <div class="spec"><b>Дата · сегодня · текст</b><span data-v="18 › Эксперт › Питание › Сегодня, 10 августа › Осталось на сегодня › 642 › ккал › Окно приёмов закроется в 21:09 › Сегодня › Приёмы пищи › 3 · 1 289 ккал › Шаги › 1 980 / 9 100 › Вода › 1 700 / 2 733 мл › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Дата · сегодня, прокручено · текст</b><span data-v="843 › ккал › съедено 185 › бюджет 1 129 › Сейчас › Окно приёмов › закроется в 15:39 · через 1:26 › Дневник › 13:32 · Завтрак › 185 › Пудинг Hyper High Protein Caramel (Ehrmann) · Филе индейки запечённое › + ещё › Добавить приём пищи › Разбор дня › Суточные итоги › ккал › Факт › 185 › 35 › 13 › Норма › 1 028 › 84 › 62 › 55 › Откл. › −82 % › −58 % › −95 % › −76 % › Клетчатка › / 14 г › Вредность › 0,0 › порог 10 › Волны за день › без критичных › Сегодня, 18 августа › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Дата · чужой день · текст</b><span data-v="18 › Эксперт › Питание › пт, 7 августа › Сегодня › Итог дня › 1 786 › ккал › Цель была 1 931 — недобор 145 › Что было › Приёмы пищи › 4 · 1 786 ккал › Шаги › 11 240 / 9 100 › Вода › 2 400 / 2 733 мл › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Дата · прошлый день, прокручено · текст</b><span data-v="Яблоко › + ещё › 20:54 · Завтрак › 80 › Протеин Whey Supreme (Snickers) › + ещё › Добавить приём пищи › Разбор дня › Суточные итоги › ккал › Факт › 1 244 › 126 › 47 › 112 › Норма › 1 301 › 85 › 75 › 92 › Откл. › −4 % › +48 % › −37 % › +22 % › Клетчатка › 15 › / 18 г › Вредность › 0,0 › порог 10 › Волны за день › без критичных › 11:51 › 17:33 › 20:48 › Вчера, 17 августа › Сегодня › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · текст</b><span data-v="18 › Эксперт › Питание › вс, 9 августа › Прочитано › Ответ влияет на то, какие советы вы увидите дальше — с двух оценок совет начинает подниматься или уходить вниз. › Полезно › Мимо › Пропустить › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · текст</b><span data-v="18 › Эксперт › Питание › вс, 9 августа › Совет скрыт до завтра › После тренировки нужен белок › Вернуть › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Советы · не сохранено · текст</b><span data-v="18 › Эксперт › Питание › вс, 9 августа › Отметки не сохранились › Два совета отмечены прочитанными только на этом устройстве. Отправим, как появится связь — ничего делать не нужно. › Попробовать сейчас › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · текст</b><span data-v="Служебное › Раздел виден только по входу куратора. Клиент сюда не попадает ни из шапки, ни из настроек. › Советы › Техлог › Что и почему сработало за день › Диагностика › Почему совет не показался › Пул правил › Какие правила активны сейчас › Раньше эти три кнопки стояли в шапке шторки советов рядом с «Прочитать все» — на одном уровне с клиентским действием. › служебный раздел"></span></div>
+    <div class="spec"><b>Календарь · легенда · текст</b><span data-v="Август 2026 › пн › вт › ср › чт › пт › сб › вс › 10 › 11 › 12 › 13 › 14 › 15 › 16 › 17 › 18 › 19 › 20 › 21 › 22 › 23 › 24 › 25 › 26 › 27 › 28 › 29 › 30 › 31 › есть записи › цикл › загрузка › сегодня › выбран › Вернуться к сегодня"></span></div>
 </div>
 
 <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:0 0 14px;">Капсула · ночь до 03:00</div>

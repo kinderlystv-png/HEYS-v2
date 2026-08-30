@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#e9e7e2;font-family:-apple-system,system-ui,"Segoe UI",sans-serif}
+a{color:#1d4ed8}a:hover{color:#1e40af}
+.row{padding:36px 44px 30px;border-bottom:1px solid rgba(0,0,0,.08)}
+.rhd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+.rid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px}
+.rnm{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.note{margin:0 0 22px;max-width:900px;font:400 12.5px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.strip{display:flex;flex-wrap:nowrap;gap:26px;align-items:flex-start}
+.scr{flex:none;display:flex;flex-direction:column;gap:9px;width:390px}
+.lab{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.4 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.num{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px}
+.sx::-webkit-scrollbar{display:none}.sx{scrollbar-width:none}
+</style>
+</helmet>
+
+<section class="row" style="background:#f5f4f1">
+<div class="rhd"><span class="rid" style="background:#9a3412">ВЕРСИЯ 5.1</span><span class="rnm">Механика связок, дроп-сетов, своего веса и групп — сведена в один артефакт</span></div>
+<p class="note">Пять кругов ревью. Программа куратора — экраны 16–19. Механика, которая жила в файле турнов, перенесена сюда: связки всех размеров, дроп-сеты, создание упражнения по единице измерения — экраны 22–25. Читать нужно только этот файл; турны остались историей поиска. Ниже — что поменялось, что уходит в разработку и чего в макете по-прежнему нет.</p>
+<div style="display:flex;flex-wrap:nowrap;gap:20px;align-items:stretch;max-width:1260px">
+
+<div style="flex:1 1 0;min-width:0;background:#fff;border:1px solid rgba(0,0,0,.1);border-left:4px solid #16a34a;border-radius:14px;padding:16px 18px">
+<div style="font:800 10.5px/1 system-ui;text-transform:uppercase;letter-spacing:.06em;color:#15803d;margin-bottom:12px">Исправлено по ревью</div>
+<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">1</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Экран 08 без общей шкалы.</b> Силовая и кардио — раздельные ряды, коэффициента «кг = минуты» не существует. Абсолютные 58/71/−13 заменены динамикой до калибровки.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">2</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>RPE вернулся</b> на упражнение, экран 04. Отдых 2:00 подписан как выход из RPE 7, ручной режим сохранён. Шкала в коде: <b>RPE ≥ 9 → 180 с, ≥ 7 → 120 с, ниже → 60 с</b>, дефолт 90 при незаполненном. Промежуточных ступеней макет не выдумывает.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">3</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Экран 14 — метка авторства</b> вместо диалога двух версий: куратор не правит идущую сессию, правка приходит после с подписью. Диалог отложен до переписывания слияния.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">4</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Кнопка затемнена</b> до <code>#c2410c → #9a3412</code> — 5,2 против 2,8 раньше. Приглушение разминки теперь цветом текста, а не прозрачностью строки.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">5</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Зелёная галочка затемнена</b> до <code>#15803d → #166534</code> — 5,0 против 2,3 раньше. Это основной контрол конструктора на семи экранах. Янтарные звезда и маркер связки переведены на <code>var(--warnTx)</code>, приглушение прозрачностью снято с цифр.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">6</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Новые экраны сведены между собой.</b> Цикл 17: выполнено 4 / 12 — столько же в сетке дней и в процентах недель, тоннаж 26 из 82. История 21: тоннажи пересчитаны по показанным подходам, рекорд 75 × 8 сходится с максимумом 95 по Эпли.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">7</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Механика перенесена из турнов</b> — экраны 22–25: связка любого размера с раундами и разминкой, дроп-сет как продолжение подхода, создание упражнения через единицу измерения. Группы стали множественными с основной и синергистами, «Всё тело» убрано. В итогах появилась строка для времени, метров и упражнений без коэффициента. Название сессии сведено к одному — «Силовая · грудь, спина, плечи». Фильтры каталога и «плюсы» у строк подняты до 44 px.</span></div>
+<div style="margin-top:12px;padding:9px 11px;border-radius:9px;background:rgba(34,197,94,.10);font:700 12px/1.5 system-ui;color:#15803d">Правило мишеней переписано: не меньше 44 для действий, 36 для служебных кнопок шапки</div>
+</div>
+
+<div style="flex:1 1 0;min-width:0;background:#fff;border:1px solid rgba(0,0,0,.1);border-left:4px solid #f59e0b;border-radius:14px;padding:16px 18px">
+<div style="font:800 10.5px/1 system-ui;text-transform:uppercase;letter-spacing:.06em;color:#b45309;margin-bottom:12px">Уходит в разработку как изменение данных</div>
+<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">1</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Тип подхода</b> — новое поле в схеме, пусто = рабочий. Без него экраны 07 и 12 не имеют смысла, а тоннаж считает разминку.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">2</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Автор и время на подходе</b> — без них метка на экране 14 негде хранить.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">3</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Программа, фазы недель и снимок плана.</b> Под экраны 16–19: у цикла есть название, период, автор и фаза каждой недели — в схеме этого нет вовсе. Отчёт «назначено против сделано» требует хранить назначенное отдельно от сделанного.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">4</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Пропущенная не должна считаться фактом.</b> Сейчас признак плана ловит только статус «назначено» — пропущенная запись всё ещё идёт в тоннаж. Экран 18 говорит об этом честно, а не делает вид, что работает.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">5</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Карточка упражнения несёт три вещи</b> — единицу измерения, список групп с пометкой основной и коэффициент своего веса. Коэффициенты живут в справочнике как данные, а не в коде: пополнять их можно без выката.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">6</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Довес на подходе</b> — свойство подхода, а не упражнения: сегодня свой вес, завтра с блином на поясе. <b>Индекс раунда не заводим:</b> раунд k — это k-й рабочий подход у каждого участника, выводится из позиции; равенство числа подходов проверяется сравнением длин.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">7</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Четыре поля под обещания экранов</b> — группа мышц у упражнения, единица измерения подхода, вес тела в тоннаж, дискомфорт на подходе.</span></div>
+<div style="display:flex;gap:10px;padding:9px 0"><span style="flex:0 0 auto;font:800 12px/1.5 ui-monospace,Menlo,monospace;color:#94a3b8">8</span><span style="flex:1;font:400 13px/1.55 system-ui;color:#1e293b"><b>Владелец минут по зонам.</b> Поле уже кормит калории и его же пишет инструмент куратора. MET-наборов <b>два</b> — профиль пишет 2 / 3 / 5 / 8, запасной в коде 2.5 / 6 / 8 / 10. От того, какой у человека, зависит даже знак сдвига калорий.</span></div>
+<div style="margin-top:12px;padding:9px 11px;border-radius:9px;background:rgba(245,158,11,.10);font:700 12px/1.5 system-ui;color:#b45309">Восемь задач на схему — до кода интерфейса</div>
+</div>
+
+<div style="flex:1 1 0;min-width:0;background:#fff;border:1px solid rgba(0,0,0,.1);border-left:4px solid #64748b;border-radius:14px;padding:16px 18px">
+<div style="font:800 10.5px/1 system-ui;text-transform:uppercase;letter-spacing:.06em;color:#475569;margin-bottom:12px">По-прежнему нет</div>
+<div style="font:400 13px/1.6 system-ui;color:#1e293b;margin-bottom:10px"><b>Перенос назначенной тренировки</b> — кнопка нарисована, операции нет ни в схеме, ни в коде: запись живёт в блобе конкретного дня, а в дне-приёмнике может не быть свободного слота. До решения по схеме экран 18 нельзя считать финальным.</div>
+<div style="font:400 13px/1.6 system-ui;color:#1e293b;margin-bottom:10px"><b>Расчётный максимум по Эпли</b> — формулы в коде нет ни одной: рекорд там это вес × повторы. Экраны 10 и 21 просят новую функциональность, а не фиксируют существующую.</div>
+<div style="font:400 13px/1.6 system-ui;color:#1e293b;margin-bottom:12px"><b>Переходы и анимации</b> описаны только для перенумерации. Это не дизайн-система: токены зафиксированы, листа компонентов с состояниями нет.</div>
+<div style="padding:11px 12px;border-radius:9px;background:#f8fafc;border:1px solid #e2e8f0;font:400 12.5px/1.6 system-ui;color:#475569"><b>Вердикт.</b> Макет сведён сам с собой и с кодом. Отдавать можно, но экраны 17, 18 и 21 не финальны, пока не приняты решения по программе, статусу «пропущено» и расчётному максимуму.</div>
+</div>
+
+</div>
+</section>
+
+<sc-for list="{{ modes }}" as="m" hint-placeholder-count="2">
+<section class="row" style="{{ m.vars }}">
+<div class="rhd"><span class="rid">{{ m.id }}</span><span class="rnm">{{ m.title }}</span></div>
+<p class="note">{{ m.note }}</p>
+<div class="strip">
+
+<div class="scr">
+<div class="lab"><span class="num">01</span>Карточка дня · тренировка идёт</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div class="sx" style="width:390px;height:844px;box-sizing:border-box;overflow:auto;background:var(--bg);padding:60px 12px 40px">
+<div style="background:var(--accbg);border:1px solid var(--accBr);border-radius:16px;padding:10px 14px;margin-bottom:16px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+<span style="font-size:16px">💪</span>
+<div style="display:flex;min-width:0;flex:1;flex-direction:column;gap:1px"><span style="font-size:13px;font-weight:700;color:var(--tx)">Силовая</span><span style="font-size:11px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">грудь, спина, плечи · начата в 18:40</span></div>
+<span style="display:inline-flex;align-items:center;gap:5px;background:var(--accbg);border:1px solid var(--accBr);color:var(--accTx);font-size:11px;padding:3px 8px;border-radius:999px;font-weight:800"><span style="width:6px;height:6px;border-radius:50%;background:#ef4444;display:inline-block"></span>идёт</span>
+<button type="button" style="background:rgba(239,68,68,.15);border:none;color:#ef4444;font-size:18px;width:44px;height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;border-radius:10px;cursor:pointer" title="Удалить тренировку">×</button>
+</div>
+<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px">
+<span style="font-size:40px;font-weight:800;line-height:1;letter-spacing:-.03em;color:var(--tx);font-variant-numeric:tabular-nums">47:12</span>
+<span style="flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--accTx);font-variant-numeric:tabular-nums">10 / 23 подходов</span>
+</div>
+<div style="height:8px;border-radius:999px;background:var(--soft);overflow:hidden;margin-bottom:12px"><div style="height:100%;width:43%;border-radius:999px;background:linear-gradient(90deg,#f97316 0%,#ea580c 100%)"></div></div>
+<button type="button" style="width:100%;min-height:52px;border-radius:12px;border:none;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(234,88,12,.3);display:flex;align-items:center;justify-content:space-between;padding:0 14px;text-align:left">
+<span style="display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:800">Продолжить тренировку</span><span style="font-size:11px;font-weight:600;opacity:.9">Упражнение 3 из 7 · Жим гантелей сидя</span></span><span style="font-size:20px">›</span>
+</button>
+</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:11px 13px;margin-bottom:14px">
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">🚶</span><div style="display:flex;min-width:0;flex:1;flex-direction:column;gap:1px"><span style="font-size:13px;font-weight:700;color:var(--tx)">Прогулка с собакой</span><span style="font-size:11px;color:var(--mut)">21:10 · 40 мин</span></div><span style="background:linear-gradient(135deg,#15803d 0%,#166534 100%);color:#fff;font-size:11px;padding:3px 8px;border-radius:6px;font-weight:700">88 ккал</span></div>
+</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:11px 13px">
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">🍽</span><div style="display:flex;min-width:0;flex:1;flex-direction:column;gap:1px"><span style="font-size:13px;font-weight:700;color:var(--tx)">Ужин</span><span style="font-size:11px;color:var(--mut)">19:40 · курица, рис, салат</span></div><span style="font-size:12px;font-weight:800;color:var(--mut)">640 ккал</span></div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">02</span>Пустая тренировка · если плана нет, главной становится «Собрать свою»</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 10px;background:var(--hd);border-bottom:1px solid var(--br)">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Силовая</span><span style="font-size:11px;color:var(--mut)">Пусто · 0 подходов</span></div>
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer">⋯</button>
+</div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:14px">
+<div style="padding:34px 6px 0;text-align:center">
+<div style="font-size:46px;line-height:1;margin-bottom:14px">🏋️</div>
+<div style="font-size:19px;font-weight:800;color:var(--tx);letter-spacing:-.01em;margin-bottom:7px">Пустая тренировка</div>
+<div style="font-size:13px;line-height:1.5;color:var(--mut);margin-bottom:24px">Добавляйте упражнения по ходу — план не обязан быть готов заранее.</div>
+</div>
+<button type="button" style="width:100%;min-height:58px;margin-bottom:9px;border-radius:14px;border:none;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(234,88,12,.3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px"><span style="font-size:15px;font-weight:800;white-space:nowrap">Начать по плану · День&nbsp;B</span><span style="font-size:11.5px;font-weight:600;opacity:.9;white-space:nowrap">7 упражнений · назначил Артём</span></button>
+<button type="button" style="width:100%;min-height:52px;margin-bottom:9px;border-radius:14px;border:1px solid var(--br);background:var(--card);color:var(--tx);font-size:13.5px;font-weight:800;cursor:pointer">+ Собрать свою</button>
+
+
+<div style="display:flex;align-items:center;justify-content:center;gap:14px;padding:4px 0"><span style="font-size:12.5px;font-weight:700;color:var(--blueTx)">↻ Повторить 5 августа</span><span style="font-size:12.5px;color:var(--br)">·</span><span style="font-size:12.5px;font-weight:700;color:var(--blueTx)">📚 Шаблон</span></div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">03</span>Каталог · фильтр по мышцам</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 0;background:var(--hd);border-bottom:1px solid var(--br)">
+<div style="display:flex;align-items:center;gap:10px;padding-bottom:10px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">‹</button>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Каталог упражнений</span><span style="font-size:11px;color:var(--mut)">Спина · 4 упражнения</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;padding-bottom:10px"><span style="font-size:15px;color:var(--mut)">🔍</span><input type="text" placeholder="Поиск по названию" style="flex:1;min-width:0;box-sizing:border-box;height:42px;padding:0 12px;border-radius:12px;border:1px solid var(--br);background:var(--soft);color:var(--tx);font-size:14px"></div>
+<div class="sx" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px">
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;min-height:44px;padding:0 15px;border-radius:999px;border:1px solid var(--br);background:var(--card);color:var(--mut);font-size:12.5px;font-weight:800">Все</span>
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;min-height:44px;padding:0 15px;border-radius:999px;border:1px solid var(--br);background:var(--card);color:var(--mut);font-size:12.5px;font-weight:800">★</span>
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;min-height:44px;padding:0 15px;border-radius:999px;border:1px solid var(--br);background:var(--card);color:var(--mut);font-size:12.5px;font-weight:800">Грудь</span>
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;min-height:44px;padding:0 15px;border-radius:999px;border:1px solid var(--selBr);background:var(--sel);color:var(--selTx);font-size:12.5px;font-weight:800">Спина</span>
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;min-height:44px;padding:0 15px;border-radius:999px;border:1px solid var(--br);background:var(--card);color:var(--mut);font-size:12.5px;font-weight:800">Ноги</span>
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;min-height:44px;padding:0 15px;border-radius:999px;border:1px solid var(--br);background:var(--card);color:var(--mut);font-size:12.5px;font-weight:800">Плечи</span>
+</div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:10px 14px 30px">
+<sc-for list="{{ cat }}" as="c" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;padding:12px;margin-bottom:7px;border-radius:12px;border:1px solid var(--br);background:var(--card)">
+<span style="{{ c.star }}">★</span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14.5px;font-weight:800;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.n }}</span><span style="font-size:11.5px;color:var(--mut)">Спина · прошлый раз {{ c.l }}</span></span>
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:11px;background:var(--bluebg);border:1px solid var(--blueBr);color:var(--blueTx);font-size:18px;font-weight:700">+</span>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;gap:10px;padding:12px;margin-top:3px;border-radius:12px;border:1px dashed var(--blueBr);background:var(--bluebg)">
+<span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:11px;background:var(--card);border:1px solid var(--blueBr);color:var(--blueTx);font-size:18px;font-weight:700">+</span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:13.5px;font-weight:800;color:var(--blueTx)">Создать «Тяга Т-грифа»</span><span style="font-size:11.5px;color:var(--mut)">Каталог подсказывает, но не запрещает</span></span>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">04</span>Тренировка в работе · «+» в панели появляется, когда кнопка в конце списка ушла за экран</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 10px;background:var(--hd);border-bottom:1px solid var(--br)">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Силовая · грудь, спина, плечи</span><span style="font-size:11px;color:var(--mut)">Пн, 8 августа · начата в 18:40</span></div>
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer">⋯</button>
+</div>
+<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+<span style="display:inline-flex;align-items:center;height:26px;padding:0 9px;border-radius:999px;border:1px solid var(--indBr);background:var(--indbg);color:var(--indTx);font-size:12px;font-weight:800;font-variant-numeric:tabular-nums">⏱ 47:12</span>
+<span style="display:inline-flex;align-items:center;height:26px;padding:0 9px;border-radius:999px;border:1px solid var(--okBr);background:var(--okbg);color:var(--ok);font-size:12px;font-weight:800;font-variant-numeric:tabular-nums">10 / 23 ✓</span>
+</div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:12px 14px 16px">
+<div style="margin-bottom:8px;border-radius:14px;background:var(--card);border:1px solid var(--okBr)">
+<div style="display:flex;align-items:center;gap:9px;padding:11px 12px;background:var(--okbg);border-radius:13px 13px 0 0">
+<span style="color:var(--mut);font-size:15px">⠿</span>
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;border-radius:9px;background:var(--card);color:var(--ok);font-size:12px;font-weight:800">1</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14.5px;font-weight:800;color:var(--tx)">Жим лёжа</span><span style="font-size:11.5px;color:var(--mut)">4 × 8–12 · 75 кг · 🏆 рекорд</span></div>
+<span style="font-size:12px;font-weight:800;color:var(--ok)">✓</span><span style="color:var(--mut);font-size:15px">›</span>
+</div>
+</div>
+<div style="margin-bottom:8px;border-radius:14px;background:var(--card);border:1px solid var(--okBr)">
+<div style="display:flex;align-items:center;gap:9px;padding:11px 12px;background:var(--okbg);border-radius:13px 13px 0 0">
+<span style="color:var(--mut);font-size:15px">⠿</span>
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;border-radius:9px;background:var(--card);color:var(--ok);font-size:12px;font-weight:800">2</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14.5px;font-weight:800;color:var(--tx)">Тяга штанги в наклоне</span><span style="font-size:11.5px;color:var(--mut)">4 × 8–12 · 60 кг</span></div>
+<span style="font-size:12px;font-weight:800;color:var(--ok)">✓</span><span style="color:var(--mut);font-size:15px">›</span>
+</div>
+</div>
+<div style="margin-bottom:8px;border-radius:14px;background:var(--card);border:1px solid #f97316;box-shadow:0 4px 16px rgba(234,88,12,.16)">
+<div style="display:flex;align-items:center;gap:9px;padding:11px 12px;background:var(--accbg);border-radius:13px 13px 0 0">
+<span style="color:var(--mut);font-size:15px">⠿</span>
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;border-radius:9px;background:var(--card);color:var(--accTx);font-size:12px;font-weight:800">3</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Жим гантелей сидя</span><span style="font-size:11.5px;color:var(--mut)">Плечи · трицепс</span></div>
+<span style="font-size:12px;font-weight:800;color:var(--accTx)">2/3</span>
+<button type="button" style="flex:0 0 44px;width:44px;height:44px;border-radius:11px;border:1px solid var(--br);background:var(--card);color:var(--mut);font-size:15px;line-height:1;cursor:pointer" title="Убрать упражнение">✕</button>
+<span style="color:var(--mut);font-size:15px">▾</span>
+</div>
+<div style="padding:0 12px 12px">
+<div style="display:flex;gap:7px;margin-bottom:10px">
+<span style="flex:1;padding:7px 9px;border-radius:10px;background:var(--soft);border:1px solid var(--br);font-size:11.5px;font-weight:700;color:var(--mut)">Прошлый раз · 22 × 12</span>
+<span style="flex:1;padding:7px 9px;border-radius:10px;background:var(--warnbg);border:1px solid var(--warnBr);font-size:11.5px;font-weight:700;color:var(--warnTx)">Рекорд · 26 × 8</span>
+</div>
+<div style="display:grid;grid-template-columns:46px 1fr 1fr 44px;gap:8px;align-items:end;padding-bottom:6px;border-bottom:1px solid var(--br);margin-bottom:8px">
+<span></span><span style="font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--mut);text-align:center">Вес, кг</span><span style="font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--mut);text-align:center">Повторы</span><span style="font-size:13px;color:var(--ok);text-align:center">✓</span>
+</div>
+<sc-for list="{{ sets }}" as="s" hint-placeholder-count="3">
+<div style="{{ s.row }}">
+<span style="{{ s.num }}">{{ s.n }}</span>
+<div><span style="{{ s.txt }}">{{ s.w }}</span><input type="text" value="{{ s.w }}" style="{{ s.inp }}"></div>
+<div><span style="{{ s.txt }}">{{ s.r }}</span><input type="text" value="{{ s.r }}" style="{{ s.inp }}"></div>
+<button type="button" style="{{ s.btn }}">{{ s.mk }}</button>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;gap:6px;margin:10px 0 4px;flex-wrap:wrap">
+<span style="flex:0 0 auto;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)">RPE</span>
+<sc-for list="{{ rpe }}" as="p" hint-placeholder-count="5"><button type="button" style="{{ p.s }}">{{ p.n }}</button></sc-for>
+</div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:9px 11px;border-radius:11px;background:var(--soft);border:1px solid var(--br)">
+<span style="font-size:14px">⏱</span>
+<span style="flex:1;min-width:0;font-size:11.5px;font-weight:700;color:var(--mut);line-height:1.35">Отдых 2:00 — выведен из RPE 7</span>
+<button type="button" style="flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--br);background:var(--card);color:var(--tx);font-size:11.5px;font-weight:800;cursor:pointer">Вручную</button>
+</div>
+<div style="display:flex;gap:7px;margin-top:4px">
+<button type="button" style="flex:1;min-height:44px;border-radius:10px;border:1px dashed var(--blueBr);background:var(--bluebg);color:var(--blueTx);font-size:12.5px;font-weight:700;cursor:pointer">+ Подход</button>
+<button type="button" style="flex:0 0 96px;min-height:44px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:12.5px;font-weight:700;cursor:pointer">🔗 Связать</button>
+<button type="button" style="flex:0 0 84px;min-height:44px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:12px;font-weight:700;cursor:pointer">⏱ 2:00</button>
+</div>
+</div>
+</div>
+<div style="margin-bottom:8px;border-radius:14px;overflow:hidden;background:var(--card);border:1px solid var(--br);border-left:4px solid #f59e0b">
+<div style="padding:11px 12px;background:rgba(245,158,11,.12)">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+<span style="color:var(--mut);font-size:15px">⠿</span>
+<span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--card);color:var(--warnTx);font-size:12px;font-weight:800">4</span>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Связка A</div><div style="font-size:11.5px;color:var(--mut)">Раунд 1 из 3 · отдых после пары</div></div>
+<span style="flex:0 0 auto;font-size:12px;font-weight:800;color:var(--mut);font-variant-numeric:tabular-nums">0 / 6</span>
+</div>
+<div style="display:flex;gap:7px">
+<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:9px;background:var(--card);border:1px solid rgba(245,158,11,.4)"><span style="font-size:10.5px;font-weight:800;color:var(--warnTx)">A1</span><span style="flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Подтягивания</span></div>
+<div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:9px;background:var(--card);border:1px solid rgba(245,158,11,.4)"><span style="font-size:10.5px;font-weight:800;color:var(--warnTx)">A2</span><span style="flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Тяга блока</span></div>
+</div>
+</div>
+<div style="padding:11px 12px">
+<sc-for list="{{ rounds }}" as="r" hint-placeholder-count="3">
+<div>
+<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+<span style="{{ r.rStyle }}">{{ r.r }}</span>
+<div style="{{ r.cell }}"><span style="flex:1;min-width:0;font-size:13px;font-weight:800;color:var(--tx);font-variant-numeric:tabular-nums">{{ r.a }}</span><span style="{{ r.btn }}">{{ r.mk }}</span></div>
+<div style="{{ r.cell }}"><span style="flex:1;min-width:0;font-size:13px;font-weight:800;color:var(--tx);font-variant-numeric:tabular-nums">{{ r.b }}</span><span style="{{ r.btn }}">{{ r.mk }}</span></div>
+</div>
+<div style="{{ r.rest }}"><span>⏱</span><span>Раунд закрыт · отдых 2:00</span></div>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;gap:7px;margin:1px 0 8px;padding:6px 10px;border-radius:9px;background:var(--indbg);border:1px dashed var(--indBr);font-size:10.5px;font-weight:700;color:var(--indTx)"><span>⏱</span><span>Отдых 2:00 пойдёт, когда закрыты обе клетки раунда</span></div>
+<button type="button" style="width:100%;min-height:44px;border-radius:10px;border:1px dashed var(--blueBr);background:var(--bluebg);color:var(--blueTx);font-size:12.5px;font-weight:800;cursor:pointer">+ Раунд</button>
+</div>
+</div>
+<div style="margin-bottom:8px;border-radius:14px;background:var(--card);border:1px solid var(--br)">
+<div style="display:flex;align-items:center;gap:9px;padding:11px 12px">
+<span style="color:var(--mut);font-size:15px">⠿</span>
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;border-radius:9px;background:var(--soft);color:var(--mut);font-size:12px;font-weight:800">5</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14.5px;font-weight:800;color:var(--tx)">Разведение гантелей</span><span style="font-size:11.5px;color:var(--mut)">3 × 15 · 10 кг</span></div>
+<span style="font-size:12px;font-weight:800;color:var(--mut)">0/3</span><span style="color:var(--mut);font-size:15px">›</span>
+</div>
+</div>
+<div style="margin-bottom:8px;border-radius:14px;background:var(--card);border:1px solid var(--br)">
+<div style="display:flex;align-items:center;gap:9px;padding:11px 12px">
+<span style="color:var(--mut);font-size:15px">⠿</span>
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;border-radius:9px;background:var(--soft);color:var(--mut);font-size:12px;font-weight:800">6</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14.5px;font-weight:800;color:var(--tx)">Планка</span><span style="font-size:11.5px;color:var(--mut)">3 × 60 с · время</span></div>
+<span style="font-size:12px;font-weight:800;color:var(--mut)">0/3</span><span style="color:var(--mut);font-size:15px">›</span>
+</div>
+</div>
+<button type="button" style="width:100%;min-height:50px;border-radius:12px;border:1px dashed var(--blueBr);background:var(--bluebg);color:var(--blueTx);font-size:13.5px;font-weight:800;cursor:pointer">+ Упражнение</button>
+</div>
+<div style="flex:0 0 auto;padding:10px 14px 34px;background:var(--hd);border-top:1px solid var(--br);display:flex;gap:8px">
+<button type="button" style="flex:0 0 52px;height:48px;border-radius:12px;border:1px dashed var(--blueBr);background:var(--bluebg);color:var(--blueTx);font-size:21px;font-weight:800;cursor:pointer" title="Появляется, когда кнопка в конце списка ушла за экран">+</button>
+<button type="button" style="flex:1;height:48px;border-radius:12px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:13.5px;font-weight:800;cursor:pointer">Завершить · 13 не закрыто</button>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">05</span>Отдых · кольцо на фоне, управление над «Завершить»</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;position:relative;overflow:hidden;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 10px;background:var(--hd);border-bottom:1px solid var(--br)">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Силовая · грудь, спина, плечи</span><span style="font-size:11px;color:var(--mut)">Отдых между подходами</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:6px">
+<span style="display:inline-flex;align-items:center;height:26px;padding:0 9px;border-radius:999px;border:1px solid var(--indBr);background:var(--indbg);color:var(--indTx);font-size:12px;font-weight:800;font-variant-numeric:tabular-nums">⏱ 48:06</span>
+<span style="display:inline-flex;align-items:center;height:26px;padding:0 9px;border-radius:999px;border:1px solid var(--okBr);background:var(--okbg);color:var(--ok);font-size:12px;font-weight:800;font-variant-numeric:tabular-nums">11 / 23 ✓</span>
+</div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:12px 14px 16px">
+<div style="margin-bottom:8px;border-radius:14px;background:var(--card);border:1px solid #f97316">
+<div style="display:flex;align-items:center;gap:9px;padding:11px 12px;background:var(--accbg);border-radius:13px 13px 0 0">
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;border-radius:9px;background:var(--card);color:var(--accTx);font-size:12px;font-weight:800">3</span>
+<div style="flex:1;min-width:0"><span style="font-size:17px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Жим гантелей сидя</span></div>
+<span style="font-size:12px;font-weight:800;color:var(--accTx)">3/3</span>
+</div>
+<div style="padding:12px">
+<div style="display:grid;grid-template-columns:46px 1fr 1fr 44px;gap:8px;align-items:center;margin-bottom:7px;padding:3px 0;border-radius:10px;background:var(--okbg)">
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(34,197,94,.20);color:var(--ok);font-size:12px;font-weight:800">3</span>
+<span style="text-align:center;font-size:16px;font-weight:800;color:var(--tx)">24</span>
+<span style="text-align:center;font-size:16px;font-weight:800;color:var(--tx)">10</span>
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#15803d 0%,#166534 100%);color:#fff;font-size:18px;font-weight:800">✓</span>
+</div>
+<div style="padding:9px 11px;border-radius:11px;background:var(--okbg);border:1px solid var(--okBr);font-size:12px;font-weight:700;color:var(--ok)">Упражнение закрыто · дальше связка A</div>
+</div>
+</div>
+<div style="margin-bottom:8px;border-radius:14px;background:var(--card);border:1px solid var(--br);border-left:4px solid #f59e0b;padding:11px 12px">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+<span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:rgba(245,158,11,.18);color:var(--warnTx);font-size:12px;font-weight:800">A</span>
+<div style="flex:1;min-width:0"><div style="font-size:14.5px;font-weight:800;color:var(--tx)">Связка A</div><div style="font-size:11.5px;color:var(--mut)">Раунд 1 из 3 · подтягивания ⇄ тяга блока</div></div>
+<span style="font-size:12px;font-weight:800;color:var(--mut);font-variant-numeric:tabular-nums">0 / 6</span>
+</div>
+<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:10px;background:var(--indbg);border:1px dashed var(--indBr)"><span style="font-size:12px">⏱</span><span style="flex:1;font-size:11px;font-weight:700;color:var(--indTx);line-height:1.35">Отдых пойдёт после пары, а не после каждого подхода</span></div>
+</div>
+</div>
+<div style="flex:0 0 auto;padding:4px 14px 0;display:flex;flex-direction:column;align-items:center">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--ok);margin-bottom:2px">Отдых · связка A · RPE 8 → 2:00</div>
+<div style="font-size:10px;font-weight:600;color:var(--mut);margin-bottom:4px">Шкала грубая: 180 / 120 / 60 с, дефолт 90 при незаполненном RPE</div>
+<div style="position:relative;width:184px;height:184px">
+<svg viewBox="0 0 184 184" width="184" height="184" style="display:block"><circle cx="92" cy="92" r="84" fill="none" stroke="var(--br)" stroke-width="9"></circle><circle cx="92" cy="92" r="84" fill="none" stroke="#22c55e" stroke-width="9" stroke-linecap="round" stroke-dasharray="527.79" stroke-dashoffset="0" transform="rotate(-90 92 92)"></circle></svg>
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+<div style="font-size:46px;font-weight:800;line-height:1;letter-spacing:-.03em;color:var(--tx);font-variant-numeric:tabular-nums">1:34</div>
+<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--ok);margin-top:6px">готов!</div>
+</div>
+</div>
+<div style="font-size:12px;font-weight:600;color:var(--mut);margin-top:4px">Следующий раунд · A1 подтягивания</div>
+</div>
+<div style="flex:0 0 auto;padding:12px 14px 34px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;gap:8px">
+<button type="button" style="flex:1;height:46px;border-radius:12px;border:1px solid var(--br);background:var(--card);color:var(--tx);font-size:13.5px;font-weight:800;cursor:pointer">+10 секунд</button>
+<button type="button" style="flex:1;height:46px;border-radius:12px;border:1px solid var(--br);background:var(--card);color:var(--mut);font-size:13.5px;font-weight:800;cursor:pointer">Пропустить</button>
+<button type="button" style="flex:0 0 56px;height:46px;border-radius:12px;border:1px solid var(--br);background:var(--card);color:var(--mut);font-size:17px;font-weight:800;cursor:pointer" title="Свернуть кольцо">▾</button>
+</div>
+<button type="button" style="width:100%;height:48px;border-radius:12px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:13.5px;font-weight:800;cursor:pointer">Завершить · 12 не закрыто</button>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">06</span>Порядок · перетаскивание и стрелки</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 10px;background:var(--hd);border-bottom:1px solid var(--br);display:flex;align-items:center;gap:10px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Тот же список · режим порядка</span><span style="font-size:11px;color:var(--mut)">Стрелки для пальца, ⠿ — мышью</span></div>
+<span style="display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:11px;border:1px solid var(--selBr);background:var(--sel);color:var(--selTx);font-size:12px;font-weight:800;cursor:pointer">Готово</span>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:12px 14px 16px">
+<sc-for list="{{ ord }}" as="o" hint-placeholder-count="5">
+<div>
+<div style="{{ o.line }}"></div>
+<div style="{{ o.row }}">
+<span style="color:var(--mut);font-size:16px;cursor:grab">⠿</span>
+<span style="{{ o.num }}">{{ o.i }}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14.5px;font-weight:800;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.n }}</span><span style="font-size:11.5px;color:var(--mut)">{{ o.d }}</span></div>
+<div style="display:flex;flex-direction:column;gap:3px">
+<span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:13px;cursor:pointer">▲</span>
+<span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:13px;cursor:pointer">▼</span>
+</div>
+</div>
+</div>
+</sc-for>
+<div style="margin-top:12px;padding:12px 13px;border-radius:14px;background:var(--card);border:1px solid var(--br)">
+<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin-bottom:8px">Ещё в этом экране</div>
+<div style="font-size:12.5px;line-height:1.6;color:var(--tx)">Связка перетаскивается целиком, как один блок — порядок внутри неё меняется отдельно, уже в самой связке. Плюс замена упражнения с переносом подходов, отмена случайной галочки тостом и автосворачивание закрытого упражнения.</div>
+</div>
+</div>
+<div style="flex:0 0 auto;padding:10px 14px 34px;background:var(--hd);border-top:1px solid var(--br)">
+<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--okbg);border:1px solid var(--okBr);color:var(--ok)">
+<span style="font-size:17px">✓</span><span style="flex:1;font-size:13px;font-weight:700">Подход засчитан · 75 кг × 8</span>
+<span style="display:inline-flex;align-items:center;min-height:44px;padding:0 15px;border-radius:11px;border:1px solid currentColor;background:var(--card);font-size:13px;font-weight:800;cursor:pointer">Отменить</span>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">07</span>Типы подходов · честный тоннаж</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 12px;background:var(--hd);border-bottom:1px solid var(--br)">
+<div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Жим лёжа · 4 × 8–12 · 75 кг</div>
+<div style="font-size:11px;color:var(--mut);margin-top:2px">Рабочий получает номер, разминка — ярлык. Дроп вложен в строку</div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:14px">
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+<div style="display:grid;grid-template-columns:56px 1fr 1fr 44px;gap:7px;align-items:end;padding-bottom:6px;border-bottom:1px solid var(--br);margin-bottom:8px">
+<span style="font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--mut)">№ / тип</span><span style="font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--mut);text-align:center">Вес, кг</span><span style="font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--mut);text-align:center">Повторы</span><span style="font-size:13px;color:var(--ok);text-align:center">✓</span>
+</div>
+<sc-for list="{{ types }}" as="t" hint-placeholder-count="6">
+<div style="{{ t.row }}">
+<span style="{{ t.tag }}">{{ t.l }}</span>
+<span style="{{ t.val }}">{{ t.w }}</span>
+<span style="{{ t.val }}">{{ t.r }}</span>
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--br);background:var(--soft);color:var(--mut);font-size:18px">○</span>
+</div>
+</sc-for>
+<div style="display:grid;grid-template-columns:56px 1fr 1fr 44px;gap:7px;align-items:center;margin:-3px 0 8px;padding:3px 2px 3px 14px;border-left:2px solid var(--dropBr)">
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:44px;padding:0 8px;border-radius:11px;font-size:10.5px;font-weight:800;background:var(--dropbg);color:var(--dropTx);border:1px solid var(--dropBr)">дроп</span>
+<span style="text-align:center;font-size:15px;font-weight:800;color:var(--tx)">60</span>
+<span style="text-align:center;font-size:15px;font-weight:800;color:var(--tx)">6</span>
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--br);background:var(--soft);color:var(--mut);font-size:16px">○</span>
+</div>
+<button type="button" style="width:100%;min-height:44px;margin-bottom:8px;border-radius:11px;border:1px dashed var(--blueBr);background:var(--bluebg);color:var(--blueTx);font-size:12.5px;font-weight:800;cursor:pointer">Применить 75 кг ко всем оставшимся</button>
+<div style="display:flex;align-items:center;gap:8px;padding:10px 11px;border-radius:11px;background:var(--accbg);border:1px solid var(--accBr)"><span style="flex:1;font-size:12px;font-weight:800;color:var(--accTx)">Рабочий тоннаж · 2 980 кг</span><span style="font-size:11.5px;font-weight:700;color:var(--mut)">дроп внутри · разминка нет</span></div>
+</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin-bottom:9px">Не всё меряется килограммами</div>
+<div style="display:flex;gap:5px">
+<span style="flex:1;display:inline-flex;align-items:center;justify-content:center;min-height:44px;border-radius:11px;border:1px solid var(--selBr);background:var(--sel);color:var(--selTx);cursor:pointer;font-size:12px;font-weight:800">кг × повт</span>
+<span style="flex:1;display:inline-flex;align-items:center;justify-content:center;min-height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);cursor:pointer;font-size:12px;font-weight:800">свой вес</span>
+<span style="flex:1;display:inline-flex;align-items:center;justify-content:center;min-height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);cursor:pointer;font-size:12px;font-weight:800">время</span>
+<span style="flex:1;display:inline-flex;align-items:center;justify-content:center;min-height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);cursor:pointer;font-size:12px;font-weight:800">метры</span>
+</div>
+</div>
+<div style="padding:12px 13px;border-radius:14px;background:var(--card);border:1px solid var(--br)">
+<div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:12px;background:var(--bluebg);border:1px solid var(--blueBr);color:var(--blueTx)">
+<span style="font-size:17px">🏋️</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:12.5px;font-weight:800">75 кг · гриф 20</span><span style="font-size:11.5px">На сторону: 25 + 2.5</span></span>
+</div>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">08</span>Нагрузка · слой 1 и слой 2 · силовая и кардио — раздельные ряды</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div class="sx" style="width:390px;height:844px;box-sizing:border-box;overflow:auto;background:var(--bg);padding:60px 12px 40px">
+<div style="background:var(--card);border:1px solid var(--warnBr);border-radius:16px;padding:14px;margin-bottom:14px">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+<span style="font-size:22px">🟡</span>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Спина третий день подряд</div><div style="font-size:11.5px;color:var(--mut);margin-top:1px">Восстановление ещё не закрыто с воскресенья</div></div>
+</div>
+<div style="font-size:13px;line-height:1.5;color:var(--tx);margin-bottom:11px">Сегодня лучше жать, чем тянуть. Если тяга принципиальна — оставьте два рабочих подхода вместо четырёх.</div>
+<div style="display:flex;gap:7px;margin-bottom:10px">
+<button type="button" style="flex:1;min-height:44px;border-radius:11px;border:none;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;font-size:12.5px;font-weight:800;cursor:pointer">Взять день жимов</button>
+<button type="button" style="flex:1;min-height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:12.5px;font-weight:800;cursor:pointer">Всё равно тянуть</button>
+</div>
+<div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;background:var(--soft);border:1px dashed var(--br)"><span style="font-size:14px;color:var(--mut)">◐</span><span style="flex:1;font-size:11.5px;font-weight:700;color:var(--mut)">Уверенность низкая — 9 дней истории из 14</span></div>
+</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:13px;margin-bottom:14px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:8px">Слой 2 · trace</div>
+<sc-for list="{{ trace }}" as="t" hint-placeholder-count="5">
+<div style="padding:9px 0;border-bottom:1px solid var(--line)">
+<div style="display:flex;align-items:baseline;gap:8px"><span style="flex:1;font-size:12.5px;font-weight:800;color:var(--tx)">{{ t.k }}</span><span style="font-size:13px;font-weight:800;color:var(--tx);font-variant-numeric:tabular-nums">{{ t.v }}</span></div>
+<div style="font-size:11px;line-height:1.4;color:var(--mut);margin-top:2px">{{ t.d }}</div>
+</div>
+</sc-for>
+<div style="margin-top:9px;font-size:11px;line-height:1.5;color:var(--mut)">Модель Банистера · числа не хранятся, а считаются на чтении. Абсолютные значения не показываем, пока шкала не откалибрована на живой истории — только динамику.</div>
+</div>
+<div style="background:var(--card);border:1px solid var(--okBr);border-radius:16px;padding:14px">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px"><span style="font-size:22px">🟢</span><div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx)">Сессия зачтена как тяжёлая</div><div style="font-size:11.5px;color:var(--mut);margin-top:1px">Следующая тяжёлая — не раньше четверга</div></div></div>
+<div style="display:flex;gap:7px">
+<div style="flex:1;padding:10px;border-radius:11px;background:var(--soft);border:1px solid var(--br)"><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut);margin-bottom:3px">Восстановление</div><div style="height:8px;border-radius:999px;background:var(--br);overflow:hidden;margin-bottom:5px"><div style="height:100%;width:38%;border-radius:999px;background:#f59e0b"></div></div><div style="font-size:12px;font-weight:800;color:var(--warnTx)">38% · ~14 ч</div></div>
+<div style="flex:1;padding:10px;border-radius:11px;background:var(--soft);border:1px solid var(--br)"><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut);margin-bottom:3px">Готовность</div><div style="height:8px;border-radius:999px;background:var(--br);overflow:hidden;margin-bottom:5px"><div style="height:100%;width:44%;border-radius:999px;background:#3b82f6"></div></div><div style="font-size:12px;font-weight:800;color:var(--blueTx)">ниже нормы</div></div>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">09</span>Куратор и зал</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div class="sx" style="width:390px;height:844px;box-sizing:border-box;overflow:auto;background:var(--bg);padding:60px 12px 40px">
+<div style="background:var(--card);border:1px solid var(--indBr);border-radius:16px;padding:13px;margin-bottom:14px">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px"><span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:var(--indbg);color:var(--indTx);font-size:15px;font-weight:800">B</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:var(--tx)">Сегодня по плану · День B</div><div style="font-size:11.5px;color:var(--mut)">Верх тела · назначил Артём, 3 августа</div></div></div>
+<div style="display:flex;gap:7px"><button type="button" style="flex:1;min-height:44px;border-radius:11px;border:none;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;font-size:12.5px;font-weight:800;cursor:pointer">Начать по плану</button><button type="button" style="flex:0 0 116px;min-height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:12.5px;font-weight:800;cursor:pointer">Своя</button></div>
+</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:13px;margin-bottom:14px">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 8px;border-radius:9px;background:var(--accbg);color:var(--accTx);font-size:12px;font-weight:800">2</span><div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx)">Тяга штанги в наклоне</div><div style="font-size:11.5px;color:var(--mut)">4 × 8–12 · 60 кг</div></div></div>
+<div style="display:flex;gap:9px;padding:11px;border-radius:12px;background:var(--indbg);border-left:3px solid #6366f1"><span style="font-size:17px">💬</span><div style="flex:1;min-width:0"><div style="font-size:12.5px;line-height:1.5;color:var(--tx)">Спину держи ровнее, вес пока не поднимай. Сними видео последнего подхода.</div><div style="font-size:11px;color:var(--mut);margin-top:5px">Артём · куратор · вчера</div></div></div>
+<div style="display:flex;gap:7px;margin-top:9px"><button type="button" style="flex:1;min-height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:12.5px;font-weight:800;cursor:pointer">Ответить</button><button type="button" style="flex:1;min-height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:12.5px;font-weight:800;cursor:pointer">🎥 Снять подход</button></div>
+<div style="display:flex;align-items:center;gap:8px;margin-top:9px;padding:9px 11px;border-radius:11px;background:var(--soft);border:1px dashed var(--br)"><span style="font-size:13px">👤</span><span style="flex:1;font-size:11.5px;font-weight:700;color:var(--mut);line-height:1.4">Пока тренировка идёт, куратор её не правит. Правка приходит после — с подписью автора и времени.</span></div>
+</div>
+<div style="background:var(--card);border:1px solid rgba(239,68,68,.5);border-radius:16px;padding:13px;margin-bottom:14px">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px"><span style="font-size:19px">⚠️</span><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:var(--tx)">Дискомфорт в плече</div><div style="font-size:11.5px;color:var(--mut)">Отмечен на втором подходе</div></div></div>
+<div style="font-size:12.5px;line-height:1.5;color:var(--tx);margin-bottom:11px">Боль — не «стало тяжело». Уберите вес или пропустите упражнение: отметка уже сохранена и уйдёт куратору.</div>
+<div style="display:flex;gap:7px">
+<button type="button" style="flex:1;min-height:44px;border-radius:11px;border:none;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;font-size:12.5px;font-weight:800;cursor:pointer">Снизить вес на 20%</button>
+<button type="button" style="flex:1;min-height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:12.5px;font-weight:800;cursor:pointer">Пропустить</button>
+</div>
+</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:13px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:9px">Очередь отправки</div>
+<sc-for list="{{ queue }}" as="q" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid var(--line)">
+<span style="font-size:15px">{{ q.i }}</span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:12.5px;font-weight:800;color:var(--tx)">{{ q.t }}</span><span style="font-size:11px;color:var(--mut)">{{ q.d }}</span></span>
+<button type="button" style="{{ q.btn }}">{{ q.a }}</button>
+</div>
+</sc-for>
+<button type="button" style="width:100%;min-height:44px;margin-top:9px;border-radius:11px;border:1px dashed var(--blueBr);background:var(--bluebg);color:var(--blueTx);font-size:12.5px;font-weight:800;cursor:pointer">+ Разминка от 75 кг</button>
+<div style="font-size:11.5px;line-height:1.45;color:var(--mut);margin-top:9px">Ничего не теряется: пока сети нет, подходы копятся на телефоне. Если отправка не удалась — это видно, и её можно повторить руками.</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab" data-fin><span class="num">10</span>Финал · итоги и возврат в день</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 12px;background:var(--hd);border-bottom:1px solid var(--br);display:flex;align-items:center;gap:10px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Тренировка завершена</span><span style="font-size:11px;color:var(--mut)">Силовая · грудь, спина, плечи · 8 августа</span></div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:14px">
+<div style="padding:14px 16px;border-radius:16px;border:1px solid var(--okBr);background:var(--okbg);margin-bottom:12px">
+<div style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:800;color:var(--ok);margin-bottom:12px"><span style="font-size:22px">🎉</span><span>Отличная работа!</span></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px">
+<div style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--card);border:1px solid var(--okBr)"><span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--mut)">Длительность</span><span style="font-size:16px;font-weight:800;color:var(--tx);font-variant-numeric:tabular-nums">52:14</span></div>
+<div style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--card);border:1px solid var(--okBr)"><span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--mut)">Тоннаж</span><span style="font-size:16px;font-weight:800;color:var(--tx);font-variant-numeric:tabular-nums">9,4 т ↑8%</span></div>
+<div style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--card);border:1px solid var(--okBr)"><span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--mut)">Макс. вес</span><span style="font-size:16px;font-weight:800;color:var(--tx);font-variant-numeric:tabular-nums">75 кг</span></div>
+<div style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--warnbg);border:1px solid var(--warnBr)"><span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--mut)">Рекорды</span><span style="font-size:16px;font-weight:800;color:var(--warnTx)">🏆 1</span></div>
+</div>
+</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin-bottom:10px">Как оно прошло</div>
+<div style="display:flex;gap:7px;margin-bottom:8px">
+<span style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:52px;border-radius:11px;border:1px solid var(--okBr);background:var(--okbg);color:var(--ok)"><span style="font-size:13px;font-weight:800">😊 7</span><span style="font-size:9.5px;font-weight:700;opacity:.9">Настроение</span></span>
+<span style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:52px;border-radius:11px;border:1px solid var(--indBr);background:var(--indbg);color:var(--indTx)"><span style="font-size:13px;font-weight:800">💪 8</span><span style="font-size:9.5px;font-weight:700;opacity:.9">Самочувствие</span></span>
+<span style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:52px;border-radius:11px;border:1px solid var(--blueBr);background:var(--bluebg);color:var(--blueTx)"><span style="font-size:13px;font-weight:800">😐 5</span><span style="font-size:9.5px;font-weight:700;opacity:.9">Стресс</span></span>
+</div>
+<input type="text" placeholder="Заметка к тренировке" style="width:100%;box-sizing:border-box;height:44px;padding:0 12px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--tx);font-size:13.5px">
+</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:9px"><span style="flex:1;font-size:13px;font-weight:800;color:var(--tx)">Расчётный максимум · жим лёжа</span><span style="font-size:17px;font-weight:800;color:var(--accTx);font-variant-numeric:tabular-nums">95 кг</span></div>
+<div style="display:flex;align-items:flex-end;gap:6px;height:78px;margin-bottom:7px">
+<sc-for list="{{ e1 }}" as="e" hint-placeholder-count="5">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%">
+<span style="{{ e.vs }}">{{ e.v }}</span>
+<div style="width:100%;flex:1;display:flex;align-items:flex-end"><div style="{{ e.bar }}"></div></div>
+<span style="font-size:9.5px;font-weight:700;color:var(--mut)">{{ e.w }}</span>
+</div>
+</sc-for>
+</div>
+<div style="font-size:11.5px;line-height:1.45;color:var(--mut)">Тоннаж растёт и от лишних подходов. Максимум из веса и повторов показывает, стал ли человек сильнее.</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:12px;background:var(--indbg);border:1px dashed var(--indBr);margin-bottom:12px"><span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--indTx)">Сегодня всего ×2 силовых</span><span style="font-size:15px;font-weight:800;color:var(--indTx);font-variant-numeric:tabular-nums">14,2 т</span></div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin-bottom:9px">Объём другими величинами</div>
+<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--line)"><span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--tx)">Планка · время</span><span style="font-size:14px;font-weight:800;color:var(--indTx);font-variant-numeric:tabular-nums">3:00 под нагрузкой</span></div>
+<div style="display:flex;align-items:center;gap:9px;padding:8px 0"><span style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--tx)">Подтягивания · свой вес</span><span style="font-size:14px;font-weight:800;color:var(--accTx);font-variant-numeric:tabular-nums">2 028 кг в тоннаже</span></div>
+<div style="margin-top:8px;font-size:11.5px;line-height:1.5;color:var(--mut)">Своя строка, а не пропуск: иначе человек решит, что работа потерялась. Время и метры в тоннаж не идут — килограммы на секунды не умножаются. Свой вес идёт через коэффициент; если коэффициента нет, здесь будет строка «не посчитали».</div>
+</div>
+<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin-bottom:8px">На карточке дня будет так</div>
+<div style="background:var(--accbg);border:1px solid var(--accBr);border-radius:16px;padding:10px 12px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-size:16px">💪</span><div style="display:flex;min-width:0;flex:1;flex-direction:column;gap:1px"><span style="font-size:13px;font-weight:700;color:var(--tx)">Силовая</span><span style="font-size:11px;color:var(--mut)">грудь, спина, плечи · 7 упражнений</span></div><span style="background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;font-size:11px;padding:3px 8px;border-radius:6px;font-weight:700">420 ккал</span></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:9px">
+<div style="display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:10px;background:var(--card);border:1px solid var(--br)"><span style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut)">Тоннаж</span><span style="font-size:15px;font-weight:800;color:var(--accTx)">9,4 т</span></div>
+<div style="display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:10px;background:var(--card);border:1px solid var(--br)"><span style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut)">Время</span><span style="font-size:15px;font-weight:800;color:var(--accTx)">52 мин</span></div>
+<div style="display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:10px;background:var(--warnbg);border:1px solid var(--warnBr)"><span style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut)">Рекорд</span><span style="font-size:15px;font-weight:800;color:var(--warnTx)">🏆 1</span></div>
+</div>
+<button type="button" style="width:100%;min-height:44px;border-radius:12px;border:1px solid var(--accBr);background:var(--card);color:var(--accTx);font-size:13px;font-weight:800;cursor:pointer">📋 Конструктор</button>
+</div>
+</div>
+<div style="flex:0 0 auto;padding:10px 14px 34px;background:var(--hd);border-top:1px solid var(--br);display:flex;gap:8px">
+<button type="button" style="flex:1;height:48px;border-radius:12px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:13px;font-weight:800;cursor:pointer">📚 В шаблоны</button>
+<button type="button" style="flex:1;height:48px;border-radius:12px;border:none;background:linear-gradient(135deg,#15803d 0%,#166534 100%);color:#fff;font-size:14px;font-weight:800;cursor:pointer">Готово</button>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">11</span>Не потерять сессию · возврат, пуш, незакрытые подходы</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div class="sx" style="width:390px;height:844px;box-sizing:border-box;overflow:auto;background:var(--bg);padding:60px 12px 40px">
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:7px">Отдых кончился, телефон в кармане</div>
+<div style="display:flex;align-items:center;gap:10px;padding:12px;margin-bottom:16px;border-radius:14px;background:var(--card);border:1px solid var(--br);box-shadow:0 4px 18px rgba(0,0,0,.10)">
+<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;font-size:17px">💪</span>
+<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800;color:var(--tx)">Отдых закончился</div><div style="font-size:11.5px;color:var(--mut)">Жим гантелей сидя · подход 3 из 3</div></div>
+<span style="font-size:11px;color:var(--mut)">сейчас</span>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:7px">Приложение перезапустилось</div>
+<div style="background:var(--card);border:1px solid var(--indBr);border-radius:16px;padding:13px;margin-bottom:16px">
+<div style="display:flex;align-items:center;gap:10px;padding:11px;border-radius:12px;background:var(--indbg);margin-bottom:10px">
+<span style="font-size:19px">⏱</span>
+<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:var(--indTx)">Тренировка продолжается · 52:14</div><div style="font-size:11.5px;color:var(--mut)">Последний подход в 19:24 · Жим гантелей 2 из 3</div></div>
+</div>
+<button type="button" style="width:100%;min-height:46px;border-radius:12px;border:none;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;font-size:13.5px;font-weight:800;cursor:pointer">Вернуться в тренировку</button>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:7px">Закрыл, не доделав</div>
+<div style="background:var(--card);border:1px solid var(--warnBr);border-radius:16px;padding:13px;margin-bottom:16px">
+<div style="font-size:13.5px;font-weight:800;color:var(--tx);margin-bottom:5px">Остались незакрытые подходы</div>
+<div style="font-size:12px;line-height:1.5;color:var(--mut);margin-bottom:11px">4 подхода без отметки. Если они не сделаны — лучше убрать: иначе тоннаж и объём по группам будут завышены.</div>
+<div style="display:flex;gap:7px">
+<button type="button" style="flex:1;min-height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:12.5px;font-weight:800;cursor:pointer">Оставить</button>
+<button type="button" style="flex:1;min-height:44px;border-radius:11px;border:none;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;font-size:12.5px;font-weight:800;cursor:pointer">Убрать пустые</button>
+</div>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:7px">Вчерашняя не закрыта</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:13px">
+<div style="display:flex;align-items:flex-start;gap:9px;margin-bottom:10px">
+<span style="font-size:18px">⏸</span>
+<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:var(--tx);margin-bottom:2px">Тренировка 7 августа</div><div style="font-size:12px;line-height:1.45;color:var(--mut)">Таймер остановлен на последней отметке в 19:24, чтобы не мотать всю ночь.</div></div>
+</div>
+<div style="display:flex;gap:7px">
+<button type="button" style="flex:1;min-height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:12.5px;font-weight:800;cursor:pointer">Удалить</button>
+<button type="button" style="flex:1;min-height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:12.5px;font-weight:800;cursor:pointer">Дописать</button>
+<button type="button" style="flex:1;min-height:44px;border-radius:11px;border:none;background:linear-gradient(135deg,#15803d 0%,#166534 100%);color:#fff;font-size:12.5px;font-weight:800;cursor:pointer">Закрыть</button>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">12</span>Перенумерация · рабочий подход стал разминкой (жим гантелей с экранов 04 и 05)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div class="sx" style="width:390px;height:844px;box-sizing:border-box;overflow:auto;background:var(--bg);padding:60px 12px 40px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:7px">Было · жим гантелей сидя, три рабочих</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+<sc-for list="{{ renumBefore }}" as="s" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:52px 1fr 1fr 44px;gap:8px;align-items:center;margin-bottom:7px;padding:3px 0;border-radius:10px;background:var(--okbg)">
+<span style="{{ s.num }}">{{ s.n }}</span>
+<span style="text-align:center;font-size:16px;font-weight:800;color:var(--tx)">{{ s.w }}</span>
+<span style="text-align:center;font-size:16px;font-weight:800;color:var(--tx)">{{ s.r }}</span>
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#15803d 0%,#166534 100%);color:#fff;font-size:17px;font-weight:800">✓</span>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;gap:8px;margin-top:6px;padding:9px 11px;border-radius:11px;background:var(--accbg);border:1px solid var(--accBr)"><span style="flex:1;font-size:12px;font-weight:800;color:var(--accTx)">Тоннаж · {{ volBefore }}</span></div>
+</div>
+
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;padding:10px 12px;border-radius:12px;background:var(--indbg);border:1px dashed var(--indBr)">
+<span style="font-size:16px">↓</span><span style="flex:1;font-size:12px;font-weight:700;color:var(--indTx);line-height:1.4">Первый подход переключили в разминку тапом по ярлыку</span>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:7px">Стало · разминка и два рабочих</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+<sc-for list="{{ renumAfter }}" as="s" hint-placeholder-count="3">
+<div style="display:grid;grid-template-columns:52px 1fr 1fr 44px;gap:8px;align-items:center;margin-bottom:7px;padding:3px 0;border-radius:10px;background:var(--okbg)">
+<span style="{{ s.num }}">{{ s.n }}</span>
+<span style="{{ s.val }}">{{ s.w }}</span>
+<span style="{{ s.val }}">{{ s.r }}</span>
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#15803d 0%,#166534 100%);color:#fff;font-size:17px;font-weight:800">✓</span>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;gap:8px;margin-top:6px;padding:9px 11px;border-radius:11px;background:var(--accbg);border:1px solid var(--accBr)"><span style="flex:1;font-size:12px;font-weight:800;color:var(--accTx)">Тоннаж · {{ volAfter }}</span><span style="font-size:11.5px;font-weight:700;color:var(--mut)">{{ volDelta }}</span></div>
+</div>
+
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:13px">
+<div style="font-size:12.5px;line-height:1.6;color:var(--tx)">Номера соседей едут вверх, тоннаж уменьшается на объём разминки. Оба изменения должны быть <b>анимированы</b> — цифра переезжает, сумма пересчитывается на глазах. Мгновенная подмена читается как потеря подхода.</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">13</span>Валидация · галочка не ставится, но никто не ругается</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div class="sx" style="width:390px;height:844px;box-sizing:border-box;overflow:auto;background:var(--bg);padding:60px 12px 40px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:7px">Пустые повторы · ✓ недоступна</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+<div style="display:grid;grid-template-columns:46px 1fr 1fr 44px;gap:8px;align-items:center;padding:7px 8px;border-radius:12px;background:var(--accbg);border:1.5px solid rgba(249,115,22,.55)">
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#9a3412;color:#fff;font-size:13px;font-weight:800">3</span>
+<input type="text" value="24" style="box-sizing:border-box;width:100%;height:48px;text-align:center;font-size:20px;font-weight:800;border-radius:11px;border:1px solid var(--br);background:var(--card);color:var(--tx)">
+<input type="text" value="" placeholder="—" style="box-sizing:border-box;width:100%;height:48px;text-align:center;font-size:20px;font-weight:800;border-radius:11px;border:1.5px solid #ef4444;background:rgba(239,68,68,.06);color:var(--tx)">
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--br);background:var(--soft);color:var(--br);font-size:19px">○</span>
+</div>
+<div style="font-size:12px;line-height:1.5;color:var(--mut);margin-top:9px">Без модалки и без надписи «ошибка». Поле обведено, галочка приглушена и не нажимается. Как только появится число — оба вернутся в норму.</div>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:7px">Пустой вес · это норма</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+<div style="display:grid;grid-template-columns:46px 1fr 1fr 44px;gap:8px;align-items:center;padding:3px 0;border-radius:10px;background:var(--okbg)">
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(34,197,94,.20);color:var(--ok);font-size:12px;font-weight:800">1</span>
+<span style="text-align:center;font-size:13px;font-weight:700;color:var(--mut)">свой вес</span>
+<span style="text-align:center;font-size:16px;font-weight:800;color:var(--tx)">10</span>
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;cursor:pointer;background:linear-gradient(135deg,#15803d 0%,#166534 100%);color:#fff;font-size:17px;font-weight:800">✓</span>
+</div>
+<div style="font-size:12px;line-height:1.5;color:var(--mut);margin-top:9px">Подтягивания без довеса — вес не пустой, а «свой». В тоннаж идёт масса тела из профиля; если её нет, упражнение в тоннаж не попадает и об этом сказано в итогах.</div>
+</div>
+
+<div style="background:var(--card);border:1px solid var(--warnBr);border-radius:14px;padding:13px">
+<div style="font-size:12.5px;line-height:1.6;color:var(--tx)">Правило одно: <b>ноль повторов означает, что подхода не было.</b> Поэтому повторы обязательны, а вес — нет. Всё остальное можно оставить пустым и вернуться позже.</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">14</span>Правка куратора · метка авторства, а не диалог выбора</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div class="sx" style="width:390px;height:844px;box-sizing:border-box;overflow:auto;background:var(--bg);padding:60px 12px 40px">
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:7px">Пока тренировка идёт</div>
+<div style="display:flex;align-items:center;gap:9px;padding:12px;margin-bottom:16px;border-radius:14px;background:var(--card);border:1px solid var(--br)">
+<span style="font-size:17px">🔒</span>
+<span style="flex:1;min-width:0;font-size:12.5px;line-height:1.5;color:var(--tx)">Куратор не правит открытую сессию. Его изменения приходят после завершения — и всегда с подписью.</span>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:7px">После завершения · тренировка 8 августа</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:13px;margin-bottom:14px">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:11px">
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 8px;border-radius:9px;background:var(--soft);color:var(--mut);font-size:12px;font-weight:800">1</span>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx)">Жим лёжа</div><div style="font-size:11.5px;color:var(--mut)">4 × 8–12 · 75 кг</div></div>
+</div>
+<sc-for list="{{ authored }}" as="a" hint-placeholder-count="4">
+<div style="{{ a.row }}">
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(34,197,94,.20);color:var(--ok);font-size:12px;font-weight:800">{{ a.n }}</span>
+<span style="text-align:center;font-size:16px;font-weight:800;color:var(--tx)">{{ a.w }}</span>
+<span style="text-align:center;font-size:16px;font-weight:800;color:var(--tx)">{{ a.r }}</span>
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#15803d 0%,#166534 100%);color:#fff;font-size:17px;font-weight:800">✓</span>
+</div>
+<div style="{{ a.mark }}"><span style="font-size:12px">👤</span><span>Изменил куратор Артём · 19:48</span></div>
+</sc-for>
+</div>
+
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:13px;margin-bottom:12px">
+<div style="font-size:13.5px;font-weight:800;color:var(--tx);margin-bottom:6px">Почему так, а не выбор из двух версий</div>
+<div style="font-size:12.5px;line-height:1.6;color:var(--mut)">Сейчас конфликт решается автоматически и целиком по всей тренировке: побеждает более полная запись, проигравшая выбрасывается без следа. Хранить обе версии по каждому подходу — это переписывать общий механизм слияния, который держит все дни, а не только силовую. В один спринт с новым интерфейсом такое не ставится.</div>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:var(--indbg);border:1px dashed var(--indBr)">
+<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--indTx);margin-bottom:7px">Отложено, не отменено</div>
+<div style="font-size:12.5px;line-height:1.55;color:var(--tx)">Экран с двумя версиями подхода и выбором остаётся в файле турнов как задел. Он вернётся, когда слияние научится хранить проигравшую версию.</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">15</span>Остальные решения · справкой, без экранов</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 12px;background:var(--hd);border-bottom:1px solid var(--br)">
+<div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Спорные состояния</div>
+<div style="font-size:11px;color:var(--mut);margin-top:2px">Девять случаев · три из них нарисованы экранами 12–14</div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:12px 14px 20px">
+<sc-for list="{{ edge }}" as="e" hint-placeholder-count="9">
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:8px">
+<div style="display:flex;align-items:flex-start;gap:9px;margin-bottom:8px">
+<span style="{{ e.nStyle }}">{{ e.n }}</span>
+<span style="flex:1;min-width:0;font-size:13.5px;font-weight:800;line-height:1.35;color:var(--tx)">{{ e.q }}</span>
+</div>
+<div style="font-size:12.5px;line-height:1.55;color:var(--mut);padding-left:35px">{{ e.a }}</div>
+</div>
+</sc-for>
+<div style="margin-top:6px;padding:12px 13px;border-radius:14px;background:var(--indbg);border:1px dashed var(--indBr)">
+<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--indTx);margin-bottom:7px">Мелочь из кода</div>
+<div style="font-size:12.5px;line-height:1.55;color:var(--tx)">Правило мишеней: <b>44 px</b> — всё, что делает подход, раунд или таймер; <b>36 px</b> — служебные кнопки шапки. Токены: поверхности, текст и границы только через <code>var()</code>; акцентная палитра (оранжевый, зелёный, красный, янтарный) общая для обеих тем и фиксирована. Числа — с неразрывным пробелом и запятой: «2 980 кг», «9,4 т». Расчётный максимум — формула Эпли.</div>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">16</span>Программа куратора · запланированный день в ленте</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div class="sx" style="width:390px;height:844px;box-sizing:border-box;overflow:auto;background:var(--bg);padding:60px 12px 40px">
+
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:12px"><span style="font-size:19px;font-weight:800;letter-spacing:-.02em;color:var(--tx)">Завтра, 12 августа</span><span style="font-size:11.5px;color:var(--mut)">среда</span></div>
+
+<div style="background:var(--card);border:1px solid var(--indBr);border-radius:16px;padding:13px;margin-bottom:12px">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+<span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:var(--indbg);color:var(--indTx);font-size:15px;font-weight:800">B</span>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Запланировано куратором</div><div style="font-size:11.5px;color:var(--mut)">День B · верх тела · Артём, 3 августа</div></div>
+<span style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--indTx)">план</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:11px">
+<sc-for list="{{ planList }}" as="p" hint-placeholder-count="4">
+<div style="display:flex;align-items:baseline;gap:10px;font-size:13px;line-height:1.45;color:var(--tx)"><span style="flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">{{ p.n }}</span><span style="flex:0 0 auto;white-space:nowrap;font-size:12px;font-weight:700;color:var(--mut);font-variant-numeric:tabular-nums">{{ p.s }}</span></div>
+</sc-for>
+<div style="font-size:12px;color:var(--mut)">и ещё 2 · всего 23 подхода</div>
+</div>
+<div style="display:flex;gap:7px">
+<button type="button" style="flex:1;min-height:46px;border-radius:11px;border:none;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;font-size:13px;font-weight:800;cursor:pointer">Начать сейчас</button>
+<button type="button" style="flex:0 0 108px;min-height:46px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:13px;font-weight:800;cursor:pointer">Перенести</button>
+</div>
+</div>
+
+<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:13px;margin-bottom:12px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:9px">Неделя 2 из 4 · мезоцикл «База»</div>
+<div style="display:flex;gap:5px;margin-bottom:10px">
+<sc-for list="{{ weekPlan }}" as="w" hint-placeholder-count="7">
+<div style="{{ w.box }}"><span style="font-size:9.5px;font-weight:700;color:var(--mut)">{{ w.d }}</span><span style="{{ w.mark }}">{{ w.i }}</span></div>
+</sc-for>
+</div>
+<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;font-weight:700;color:var(--mut)">
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:3px;background:var(--ok);display:inline-block"></span>сделано</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:3px;background:var(--indTx);display:inline-block"></span>назначено</span>
+<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:3px;background:var(--br);display:inline-block"></span>день отдыха</span>
+</div>
+</div>
+
+<div style="padding:12px 13px;border-radius:14px;background:var(--indbg);border:1px dashed var(--indBr);font-size:12px;line-height:1.55;color:var(--tx)">План — это <b>назначение</b>, а не факт. Карточка запланированного дня не попадает ни в тоннаж, ни в счётчики, ни в движок нагрузки, пока тренировка не начата.</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">17</span>Цикл на четыре недели · обещание тарифа Pro Спорт</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 12px;background:var(--hd);border-bottom:1px solid var(--br)">
+<div style="display:flex;align-items:center;gap:10px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">‹</button>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Мезоцикл «База»</div><div style="font-size:11px;color:var(--mut)">4 недели · 29 июля — 25 августа · Артём</div></div>
+</div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:14px">
+
+<div style="display:flex;gap:7px;margin-bottom:14px">
+<div style="flex:1;padding:10px;border-radius:12px;background:var(--card);border:1px solid var(--br)"><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut);margin-bottom:3px">Выполнено</div><div style="font-size:19px;font-weight:800;color:var(--ok);font-variant-numeric:tabular-nums">4 / 12</div></div>
+<div style="flex:1;padding:10px;border-radius:12px;background:var(--card);border:1px solid var(--br)"><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut);margin-bottom:3px">Тоннаж</div><div style="font-size:19px;font-weight:800;color:var(--accTx);font-variant-numeric:tabular-nums">26 / 82 т</div></div>
+<div style="flex:1;padding:10px;border-radius:12px;background:var(--warnbg);border:1px solid var(--warnBr)"><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut);margin-bottom:3px">Рекорды</div><div style="display:flex;align-items:baseline;gap:5px"><span style="font-size:15px">🏆</span><span style="font-size:19px;font-weight:800;color:var(--warnTx)">2</span></div></div>
+</div>
+
+<sc-for list="{{ cycle }}" as="c" hint-placeholder-count="4">
+<div style="{{ c.card }}">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
+<span style="{{ c.badge }}">{{ c.w }}</span>
+<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:var(--tx)">{{ c.t }}</div><div style="font-size:11px;color:var(--mut)">{{ c.d }}</div></div>
+<span style="{{ c.pct }}">{{ c.p }}</span>
+</div>
+<div style="display:flex;gap:5px">
+<sc-for list="{{ c.days }}" as="d" hint-placeholder-count="7"><span style="{{ d.s }}">{{ d.i }}</span></sc-for>
+</div>
+</div>
+</sc-for>
+
+<div style="margin-top:6px;padding:12px 13px;border-radius:14px;background:var(--card);border:1px solid var(--br);font-size:12.5px;line-height:1.6;color:var(--tx)">Объём растёт три недели и падает на четвёртой — это разгрузка, а не пропуск. Показываем её явно, иначе человек видит «недоделал» там, где всё по плану.</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">18</span>Назначенная пропущена · без обвинений, с выбором</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div class="sx" style="width:390px;height:844px;box-sizing:border-box;overflow:auto;background:var(--bg);padding:60px 12px 40px">
+
+<div style="background:var(--card);border:1px solid var(--warnBr);border-radius:16px;padding:14px;margin-bottom:14px">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+<span style="font-size:22px">🟡</span>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">День B не состоялся</div><div style="font-size:11.5px;color:var(--mut);margin-top:1px">Был назначен на понедельник · вчера</div></div>
+</div>
+<div style="font-size:13px;line-height:1.5;color:var(--tx);margin-bottom:11px">Неделя ещё не закрыта — можно перенести на четверг или отпустить. Пропуск не считается провалом: он просто не попадёт в объём.</div>
+<div style="display:flex;gap:7px;margin-bottom:9px">
+<button type="button" style="flex:1;min-height:46px;border-radius:11px;border:none;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;font-size:12.5px;font-weight:800;cursor:pointer">Перенести на четверг</button>
+<button type="button" style="flex:1;min-height:46px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:12.5px;font-weight:800;cursor:pointer">Отпустить</button>
+</div>
+<div style="font-size:11.5px;color:var(--mut);line-height:1.45">Куратор увидит и решение, и причину, если укажете.</div>
+</div>
+
+<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:13px;margin-bottom:14px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:9px">Что помешало · необязательно</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ skipReasons }}" as="r" hint-placeholder-count="5"><button type="button" style="{{ r.s }}">{{ r.t }}</button></sc-for>
+</div>
+</div>
+
+<div style="background:var(--card);border:1px solid var(--br);border-radius:16px;padding:13px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:9px">Как это влияет на модель</div>
+<div style="font-size:12.5px;line-height:1.6;color:var(--tx);margin-bottom:10px">Пропущенный день остаётся пустым: тоннажа нет, подходов нет, в отчёте недели он не считается выполненным. Никаких упрёков — просто неделя короче на одну тренировку.</div>
+<div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;background:var(--warnbg);border:1px dashed var(--warnBr)"><span style="font-size:13px">⚠️</span><span style="flex:1;font-size:11.5px;font-weight:700;color:var(--warnTx);line-height:1.4">Требует правки кода: сейчас признак «это план» ловит только статус «назначено», и пропущенная запись всё ещё считается фактом</span></div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">19</span>Назначено против сделано · отчёт, за который платят в Pro</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 12px;background:var(--hd);border-bottom:1px solid var(--br)">
+<div style="display:flex;align-items:center;gap:10px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">‹</button>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Назначено против сделано</div><div style="font-size:11px;color:var(--mut)">День B · 8 августа</div></div>
+</div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:14px">
+
+<div style="display:flex;align-items:center;gap:9px;padding:12px;border-radius:14px;background:var(--okbg);border:1px solid var(--okBr);margin-bottom:14px">
+<span style="font-size:20px">🟢</span>
+<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:var(--tx)">План выполнен на 87%</div><div style="font-size:11.5px;color:var(--mut);margin-top:1px">20 подходов из 23 · два отклонения</div></div>
+</div>
+
+<sc-for list="{{ deviations }}" as="d" hint-placeholder-count="4">
+<div style="{{ d.card }}">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
+<span style="{{ d.dot }}"></span>
+<div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:var(--tx)">{{ d.n }}</div><div style="font-size:11px;color:var(--mut)">{{ d.note }}</div></div>
+</div>
+<div style="display:flex;gap:8px">
+<div style="flex:1;padding:9px 10px;border-radius:11px;background:var(--soft);border:1px solid var(--br)"><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut);margin-bottom:2px">Назначено</div><div style="font-size:14px;font-weight:800;color:var(--mut);font-variant-numeric:tabular-nums">{{ d.plan }}</div></div>
+<div style="{{ d.factBox }}"><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut);margin-bottom:2px">Сделано</div><div style="{{ d.factVal }}">{{ d.fact }}</div></div>
+</div>
+</div>
+</sc-for>
+
+<div style="margin-top:6px;padding:12px 13px;border-radius:14px;background:var(--indbg);border:1px dashed var(--indBr);font-size:12.5px;line-height:1.6;color:var(--tx)">Отчёт читает и клиент, и куратор — одни и те же цифры. Отклонение не ошибка: если вес выше плана, это прогресс, если ниже — повод спросить почему.</div>
+</div>
+<div style="flex:0 0 auto;padding:10px 14px 34px;background:var(--hd);border-top:1px solid var(--br);display:flex;gap:8px">
+<button type="button" style="flex:1;height:48px;border-radius:12px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:13px;font-weight:800;cursor:pointer">Написать куратору</button>
+<button type="button" style="flex:1;height:48px;border-radius:12px;border:none;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;font-size:13px;font-weight:800;cursor:pointer">Отчёт за неделю</button>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">20</span>Шторка ⋯ · вход в шаблоны, каталог, историю и отчёт</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;position:relative;overflow:hidden;background:var(--bg)">
+<div style="position:absolute;inset:0;padding:56px 12px 0;background:var(--bg)">
+<div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:12px;background:var(--hd);border:1px solid var(--br);margin-bottom:8px">
+<span style="width:30px;height:30px;border-radius:9px;background:var(--soft);display:inline-block"></span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:13px;font-weight:800;color:var(--tx)">Силовая · грудь, спина, плечи</span><span style="font-size:11px;color:var(--mut)">52:14 · 10 / 23 подходов</span></span>
+<span style="font-size:16px;color:var(--mut)">⋯</span>
+</div>
+<div style="border-radius:14px;background:var(--card);border:1px solid var(--br);padding:12px;margin-bottom:8px">
+<div style="font-size:13.5px;font-weight:800;color:var(--tx);margin-bottom:4px">Жим гантелей сидя</div>
+<div style="font-size:11.5px;color:var(--mut)">3 × 10–12 · 24 кг · 2 из 3</div>
+</div>
+<div style="border-radius:14px;background:var(--card);border:1px solid var(--br);padding:12px">
+<div style="font-size:13.5px;font-weight:800;color:var(--tx);margin-bottom:4px">Связка A</div>
+<div style="font-size:11.5px;color:var(--mut)">Раунд 1 из 3 · подтягивания ⇄ тяга блока</div>
+</div>
+</div>
+<div style="position:absolute;inset:0;background:rgba(15,23,42,.45)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;background:var(--hd);border-radius:20px 20px 0 0;padding:10px 14px 34px;box-shadow:0 -8px 30px rgba(0,0,0,.25)">
+<div style="width:38px;height:4px;border-radius:999px;background:var(--br);margin:0 auto 14px"></div>
+<sc-for list="{{ sheet }}" as="s" hint-placeholder-count="7">
+<button type="button" style="display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:11px 12px;margin-bottom:6px;border-radius:12px;border:1px solid var(--br);background:var(--soft);color:var(--tx);text-align:left;cursor:pointer">
+<span style="font-size:18px;width:26px;text-align:center">{{ s.i }}</span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:800">{{ s.t }}</span><span style="font-size:11px;font-weight:500;color:var(--mut)">{{ s.d }}</span></span>
+<span style="color:var(--mut);font-size:17px">›</span>
+</button>
+</sc-for>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">21</span>История упражнения · динамика, рекорды, все подходы</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 12px;background:var(--hd);border-bottom:1px solid var(--br)">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">‹</button>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Жим лёжа</div><div style="font-size:11px;color:var(--mut)">Грудь · трицепс · 14 тренировок</div></div>
+</div>
+<div style="display:flex;gap:7px">
+<div style="flex:1;padding:9px 10px;border-radius:11px;background:var(--warnbg);border:1px solid var(--warnBr)"><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut);margin-bottom:2px">Рекорд</div><div style="font-size:15px;font-weight:800;color:var(--warnTx);font-variant-numeric:tabular-nums">75 × 8</div></div>
+<div style="flex:1;padding:9px 10px;border-radius:11px;background:var(--soft);border:1px solid var(--br)"><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut);margin-bottom:2px">Максимум</div><div style="font-size:15px;font-weight:800;color:var(--tx);font-variant-numeric:tabular-nums">95 кг</div></div>
+<div style="flex:1;padding:9px 10px;border-radius:11px;background:var(--soft);border:1px solid var(--br)"><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut);margin-bottom:2px">Тоннаж</div><div style="font-size:15px;font-weight:800;color:var(--accTx);font-variant-numeric:tabular-nums">34 т</div></div>
+</div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:14px">
+
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:13px;margin-bottom:12px">
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px"><span style="flex:1;font-size:12.5px;font-weight:800;color:var(--tx)">Расчётный максимум · Эпли</span><span style="font-size:11px;font-weight:700;color:var(--ok)">+7 кг за 6 недель</span></div>
+<div style="display:flex;align-items:flex-end;gap:6px;height:84px;margin-bottom:7px">
+<sc-for list="{{ histBars }}" as="b" hint-placeholder-count="6">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%">
+<span style="{{ b.vs }}">{{ b.v }}</span>
+<div style="width:100%;flex:1;display:flex;align-items:flex-end"><div style="{{ b.bar }}"></div></div>
+<span style="font-size:9.5px;font-weight:700;color:var(--mut)">{{ b.w }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:8px">Последние тренировки</div>
+<sc-for list="{{ histRows }}" as="h" hint-placeholder-count="4">
+<div style="{{ h.card }}">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px">
+<span style="flex:1;min-width:0;font-size:13px;font-weight:800;color:var(--tx)">{{ h.date }}</span>
+<span style="{{ h.badge }}">{{ h.tag }}</span>
+<span style="flex:0 0 auto;white-space:nowrap;font-size:12px;font-weight:700;color:var(--mut);font-variant-numeric:tabular-nums">{{ h.vol }}</span>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:5px">
+<sc-for list="{{ h.sets }}" as="s" hint-placeholder-count="4"><span style="{{ s.s }}">{{ s.t }}</span></sc-for>
+</div>
+</div>
+</sc-for>
+
+<button type="button" style="width:100%;min-height:46px;margin-top:4px;border-radius:12px;border:1px solid var(--br);background:var(--card);color:var(--mut);font-size:13px;font-weight:800;cursor:pointer">Ещё 10 тренировок</button>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">22</span>Связка · создание: супер-, три- и круговая одним экраном</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 12px;background:var(--hd);border-bottom:1px solid var(--br);display:flex;align-items:center;gap:10px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Новая связка</div><div style="font-size:11px;color:var(--mut)">Упражнения подряд, отдых — после круга</div></div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:14px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:8px">Сколько упражнений</div>
+<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px">
+<sc-for list="{{ ssT }}" as="t" hint-placeholder-count="3">
+<div style="{{ t.card }}"><span style="{{ t.badge }}">{{ t.n }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:800;color:var(--tx)">{{ t.t }}</span><span style="font-size:11.5px;color:var(--mut)">{{ t.d }}</span></span><span style="{{ t.mark }}">✓</span></div>
+</sc-for>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:14px">
+<div style="flex:1;background:var(--card);border:1px solid var(--br);border-radius:12px;padding:10px">
+<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut);margin-bottom:5px">Раундов</div>
+<div style="display:flex;align-items:center;gap:7px">
+<span style="flex:0 0 44px;height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:19px;display:flex;align-items:center;justify-content:center">−</span>
+<span style="flex:1;text-align:center;font-size:19px;font-weight:800;color:var(--tx)">3</span>
+<span style="flex:0 0 44px;height:44px;border-radius:11px;border:1px solid var(--accBr);background:var(--accbg);color:var(--accTx);font-size:19px;display:flex;align-items:center;justify-content:center">+</span>
+</div>
+</div>
+<div style="flex:1;background:var(--card);border:1px solid var(--br);border-radius:12px;padding:10px">
+<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut);margin-bottom:5px">Отдых после круга</div>
+<div style="width:100%;height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--tx);font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums">2:00</div>
+<div style="font-size:10px;line-height:1.35;color:var(--mut);margin-top:5px">Максимум из значений участников</div>
+</div>
+</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:13px;margin-bottom:12px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:9px">Что получится</div>
+<div style="font-size:13px;line-height:1.6;color:var(--tx)">3 упражнения подряд без паузы, затем отдых 2:00. Так 3 раза.</div>
+<div style="display:flex;gap:6px;margin-top:10px">
+<span style="flex:1;text-align:center;padding:8px 4px;border-radius:10px;background:var(--soft);border:1px solid var(--br)"><span style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut)">Подходов</span><span style="display:block;font-size:16px;font-weight:800;color:var(--tx)">9</span></span>
+<span style="flex:1;text-align:center;padding:8px 4px;border-radius:10px;background:var(--soft);border:1px solid var(--br)"><span style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut)">Пауз</span><span style="display:block;font-size:16px;font-weight:800;color:var(--tx)">3</span></span>
+<span style="flex:1;text-align:center;padding:8px 4px;border-radius:10px;background:var(--soft);border:1px solid var(--br)"><span style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--mut)">Время</span><span style="display:block;font-size:16px;font-weight:800;color:var(--tx)">13 мин</span></span>
+</div>
+</div>
+<div style="padding:12px 13px;border-radius:14px;background:var(--bluebg);border:1px solid var(--blueBr)">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--blueTx);margin-bottom:8px">Правила для разработки</div>
+<div style="font-size:12px;line-height:1.65;color:var(--tx)"><b>Раунд</b> — индекс, общий для всех упражнений связки. Подходов поровну и равно числу раундов: «+ Раунд» добавляет строку целиком.<br><b>Отдых</b> стартует один раз — когда закрыты все клетки раунда.<br><b>Тоннаж</b> по подходам: трисет × 3 раунда = 9 подходов.<br><b>Дроп внутри связки запрещён</b> — ломает симметрию раунда.</div>
+</div>
+</div>
+<div style="flex:0 0 auto;padding:10px 14px 34px;background:var(--hd);border-top:1px solid var(--br)">
+<button type="button" style="width:100%;height:48px;border-radius:12px;border:none;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;font-size:14px;font-weight:800;cursor:pointer">Собрать связку · 9 подходов</button>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">23</span>Трисет в работе · разминка общей строкой, перестановка участников</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div class="sx" style="width:390px;height:844px;box-sizing:border-box;overflow:auto;background:var(--bg);padding:56px 12px 40px">
+<div style="border-radius:14px;overflow:hidden;background:var(--card);border:1px solid var(--br);border-left:4px solid #f59e0b;margin-bottom:12px">
+<div style="padding:11px 12px;background:rgba(245,158,11,.12)">
+<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
+<span style="color:var(--mut);font-size:15px">⠿</span>
+<span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--card);color:var(--warnTx);font-size:12px;font-weight:800">4</span>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Трисет B · плечи</div><div style="font-size:11.5px;color:var(--mut)">Раунд 2 из 3 · 9 подходов</div></div>
+<button type="button" style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 12px;border-radius:11px;border:1px solid rgba(245,158,11,.5);background:var(--card);color:var(--warnTx);font-size:12px;font-weight:800;cursor:pointer">⇅ Местами</button>
+<button type="button" style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 12px;border-radius:11px;border:1px solid var(--br);background:var(--card);color:var(--mut);font-size:12px;font-weight:800;cursor:pointer">Разъединить</button>
+</div>
+<div style="display:flex;gap:5px">
+<sc-for list="{{ triH }}" as="h" hint-placeholder-count="3">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding:6px 7px;border-radius:9px;background:var(--card);border:1px solid rgba(245,158,11,.4)"><span style="font-size:10px;font-weight:800;color:var(--warnTx)">{{ h.k }}</span><span style="font-size:11px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ h.n }}</span></div>
+</sc-for>
+</div>
+</div>
+<div style="padding:11px 12px">
+<div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;padding:9px 10px;border-radius:11px;background:var(--soft);border:1px dashed var(--br)">
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:26px;padding:0 8px;border-radius:8px;background:var(--card);color:var(--mut);font-size:10px;font-weight:800;text-transform:uppercase">разм.</span>
+<span style="flex:1;min-width:0;font-size:12.5px;font-weight:700;color:var(--mut)">Общая для связки · 2 подхода</span>
+<span style="flex:0 0 44px;width:44px;height:44px;border-radius:11px;border:1px solid var(--br);background:var(--card);color:var(--blueTx);font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center">✓</span>
+</div>
+<sc-for list="{{ triR }}" as="r" hint-placeholder-count="3">
+<div>
+<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+<span style="{{ r.lab }}">{{ r.t }}</span>
+<sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="3">
+<span style="{{ c.box }}"><span style="font-size:12.5px;font-weight:800;color:var(--tx);font-variant-numeric:tabular-nums">{{ c.v }}</span><span style="{{ c.mk }}">{{ c.m }}</span></span>
+</sc-for>
+</div>
+<div style="{{ r.rest }}"><span>⏱</span><span>Круг закрыт · отдых 2:00</span></div>
+</div>
+</sc-for>
+<button type="button" style="width:100%;min-height:44px;margin-top:3px;border-radius:10px;border:1px dashed var(--blueBr);background:var(--bluebg);color:var(--blueTx);font-size:12.5px;font-weight:800;cursor:pointer">+ Раунд · добавит 3 подхода</button>
+<div style="margin-top:8px;font-size:11.5px;line-height:1.5;color:var(--mut)">Раунды считаются по рабочим подходам — разминка в них не входит и в тоннаж тоже.</div>
+</div>
+</div>
+<div style="padding:12px 13px;border-radius:14px;background:var(--bluebg);border:1px solid var(--blueBr);font-size:12px;line-height:1.65;color:var(--tx)"><b>Почему строка, а не три карточки.</b> В зале человек делает A1 → A2 → A3 подряд и только потом садится. Три карточки заставляют трижды листать экран за круг. <b>«Местами»</b> меняет участников внутри связки, данные подходов едут за упражнением. Связка перетаскивается по списку целиком — разорвать её перетаскиванием нельзя, для этого <b>«Разъединить»</b>: упражнения станут обычными, подходы сохранятся, раунды исчезнут.</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">24</span>Дроп-сет · продолжение подхода · та же тренировка, что 07 и 21</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div class="sx" style="width:390px;height:844px;box-sizing:border-box;overflow:auto;background:var(--bg);padding:56px 12px 40px">
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:12px;margin-bottom:12px">
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px"><span style="flex:1;font-size:14.5px;font-weight:800;color:var(--tx)">Жим лёжа · подход 4</span><span style="font-size:11.5px;font-weight:700;color:var(--mut)">до отказа</span></div>
+<div style="display:grid;grid-template-columns:46px 1fr 1fr 44px;gap:8px;align-items:center;margin-bottom:4px;padding:7px 8px;border-radius:12px;background:var(--accbg);border:1.5px solid rgba(249,115,22,.55)">
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#9a3412;color:#fff;font-size:13px;font-weight:800">4</span>
+<span style="text-align:center;font-size:18px;font-weight:800;color:var(--tx)">75</span>
+<span style="text-align:center;font-size:18px;font-weight:800;color:var(--tx)">8</span>
+<span style="justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#15803d 0%,#166534 100%);color:#fff;font-size:19px;font-weight:800">✓</span>
+</div>
+<sc-for list="{{ dropRows }}" as="d" hint-placeholder-count="2">
+<div style="display:grid;grid-template-columns:46px 1fr 1fr 44px;gap:8px;align-items:center;margin-bottom:4px;padding:5px 8px 5px 22px;border-left:2px solid var(--dropBr);margin-left:10px">
+<span style="justify-self:center;font-size:10px;font-weight:800;color:{{ d.c }};text-transform:uppercase">дроп</span>
+<span style="text-align:center;font-size:16px;font-weight:800;color:var(--tx)">{{ d.w }}</span>
+<span style="text-align:center;font-size:16px;font-weight:800;color:var(--tx)">{{ d.r }}</span>
+<span style="{{ d.btn }}">{{ d.m }}</span>
+</div>
+</sc-for>
+<button type="button" style="box-sizing:border-box;width:100%;min-height:44px;margin-top:5px;border-radius:11px;border:1px dashed var(--dropBr);background:var(--dropbg);color:var(--dropTx);font-size:12.5px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center">+ Ещё сброс · вес автоматически ниже</button>
+<div style="display:flex;align-items:center;gap:8px;margin-top:9px;padding:9px 11px;border-radius:11px;background:var(--accbg);border:1px solid var(--accBr)"><span style="flex:1;font-size:12px;font-weight:800;color:var(--accTx)">Подход 4 со сбросом · 960 кг</span><span style="font-size:11.5px;font-weight:700;color:var(--mut)">один подход в счётчике</span></div>
+</div>
+<div style="background:var(--card);border:1px solid var(--br);border-radius:14px;padding:13px;margin-bottom:12px">
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:10px">Правила дроп-сета</div>
+<sc-for list="{{ dropR }}" as="r" hint-placeholder-count="7">
+<div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line)">
+<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--dropbg);border:1px solid var(--dropBr);color:var(--dropTx);font-size:11px;font-weight:800">{{ r.n }}</span>
+<span style="flex:1;min-width:0;font-size:12.5px;line-height:1.55;color:var(--tx)">{{ r.t }}</span>
+</div>
+</sc-for>
+</div>
+<div style="padding:12px 13px;border-radius:14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.28);font-size:12px;line-height:1.6;color:var(--tx)"><b>Почему не отдельный подход.</b> Если считать дроп подходом, счётчик дня и объём по группам вырастут на треть у любого, кто делает дропы, и его нагрузка станет несравнимой с чужой.</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">25</span>Новое упражнение · единица решает всё остальное</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div style="width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg)">
+<div style="flex:0 0 auto;padding:56px 14px 12px;background:var(--hd);border-bottom:1px solid var(--br);display:flex;align-items:center;gap:10px">
+<button type="button" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--tx);letter-spacing:-.01em">Новое упражнение</div><div style="font-size:11px;color:var(--mut)">Три поля, третье — только иногда</div></div>
+</div>
+<div class="sx" style="flex:1;min-height:0;overflow:auto;padding:14px">
+<div style="width:100%;box-sizing:border-box;height:48px;padding:0 13px;border-radius:12px;border:1px solid var(--br);background:var(--card);font-size:15px;font-weight:700;color:var(--tx);display:flex;align-items:center;margin-bottom:14px">Подтягивания широким хватом</div>
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px"><span style="flex:1;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)">1 · Что меряем</span><span style="font-size:10.5px;font-weight:800;color:#b91c1c">обязательно</span></div>
+<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+<sc-for list="{{ unitRows }}" as="u" hint-placeholder-count="4">
+<div style="{{ u.s }}"><span style="{{ u.dot }}"></span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:13.5px;font-weight:800;color:var(--tx)">{{ u.t }}</span><span style="font-size:11px;color:var(--mut)">{{ u.d }}</span></span></div>
+</sc-for>
+</div>
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:5px"><span style="flex:1;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)">2 · Группы мышц</span><span style="font-size:10.5px;font-weight:800;color:#b91c1c">обязательно</span></div>
+<div style="font-size:11.5px;line-height:1.45;color:var(--mut);margin-bottom:9px">Основная «Спина» берёт полный вес упражнения, синергист «Бицепс» — половину</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+<sc-for list="{{ musRows }}" as="m" hint-placeholder-count="11">
+<span style="{{ m.s }}">{{ m.t }}</span>
+</sc-for>
+</div>
+<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px"><span style="flex:1;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)">3 · На что похоже движение</span><span style="font-size:10.5px;font-weight:800;color:var(--mut)">можно пропустить</span></div>
+<div style="font-size:12px;line-height:1.5;color:var(--mut);margin-bottom:9px">Про долю массы тела не спрашиваем — на это никто не ответит верно, а неверное число молча испортит статистику.</div>
+<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+<sc-for list="{{ likeRows }}" as="l" hint-placeholder-count="4">
+<div style="{{ l.s }}"><span style="{{ l.dot }}"></span><span style="flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--tx)">{{ l.t }}</span><span style="font-size:11.5px;font-weight:700;color:var(--mut)">{{ l.h }}</span></div>
+</sc-for>
+</div>
+<div style="display:flex;align-items:flex-start;gap:9px;padding:12px 13px;border-radius:14px;background:var(--okbg);border:1px solid var(--okBr)">
+<span style="font-size:15px">✓</span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:12.5px;font-weight:800;color:var(--tx)">Объём считается как «Тоннаж»</span><span style="font-size:12px;line-height:1.5;color:var(--mut)">(78 × 1,0 + довес) × повторы. Без ответа на третий вопрос упражнение в тоннаж не идёт — и об этом будет строка в итогах, а не тишина.</span></span>
+</div>
+</div>
+<div style="flex:0 0 auto;padding:10px 14px 34px;background:var(--hd);border-top:1px solid var(--br)">
+<button type="button" style="box-sizing:border-box;width:100%;min-height:48px;border-radius:12px;border:none;background:linear-gradient(135deg,#c2410c 0%,#9a3412 100%);color:#fff;font-size:13.5px;font-weight:800;cursor:pointer">Создать упражнение</button>
+<div style="display:flex;align-items:center;gap:9px;margin-top:9px">
+<span style="flex:0 0 auto;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--mut)">если пропустить</span>
+<button type="button" style="box-sizing:border-box;flex:1;min-height:44px;border-radius:11px;border:1px solid var(--br);background:var(--soft);color:var(--mut);font-size:12.5px;font-weight:800;cursor:pointer">Создать · без тоннажа</button>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="scr">
+<div class="lab"><span class="num">26</span>Два состояния связки, которых не бывает в новых</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="390" height="844" dark="{{ m.dark }}" hint-size="390px,844px">
+<div class="sx" style="width:390px;height:844px;box-sizing:border-box;overflow:auto;background:var(--bg);padding:56px 12px 40px">
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:7px">Старая связка · подходов неравно</div>
+<div style="border-radius:14px;overflow:hidden;background:var(--card);border:1px solid var(--br);border-left:4px solid var(--mut);margin-bottom:14px">
+<div style="padding:11px 12px;background:var(--soft);display:flex;align-items:center;gap:9px">
+<span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--card);color:var(--mut);font-size:12px;font-weight:800">2</span>
+<div style="flex:1;min-width:0"><div style="font-size:14.5px;font-weight:800;color:var(--tx)">Связка · 12 июля</div><div style="font-size:11.5px;color:var(--mut)">4 и 3 подхода — раундов не строим</div></div>
+</div>
+<div style="padding:11px 12px">
+<sc-for list="{{ legacyRows }}" as="l" hint-placeholder-count="2">
+<div style="margin-bottom:10px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:10.5px;font-weight:800;color:var(--mut)">{{ l.k }}</span><span style="flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ l.n }}</span><span style="font-size:11.5px;font-weight:700;color:var(--mut)">{{ l.c }}</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:5px">
+<sc-for list="{{ l.sets }}" as="s" hint-placeholder-count="4"><span style="font-size:11.5px;font-weight:700;padding:5px 9px;border-radius:8px;background:var(--soft);border:1px solid var(--br);color:var(--tx);font-variant-numeric:tabular-nums">{{ s.t }}</span></sc-for>
+</div>
+</div>
+</sc-for>
+<div style="padding:9px 10px;border-radius:10px;background:var(--soft);border:1px dashed var(--br);font-size:11.5px;line-height:1.5;color:var(--mut)">Историю не переписываем: плоские списки, тоннаж и счётчик считаются как обычно. Раунды появятся, если выровнять число подходов.</div>
+</div>
+</div>
+
+<div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:7px">Третий участник добавлен по ходу</div>
+<div style="border-radius:14px;overflow:hidden;background:var(--card);border:1px solid var(--br);border-left:4px solid #f59e0b">
+<div style="padding:11px 12px;background:rgba(245,158,11,.12);display:flex;gap:6px">
+<sc-for list="{{ lateH }}" as="h" hint-placeholder-count="3">
+<div style="{{ h.box }}"><span style="font-size:10.5px;font-weight:800;color:var(--warnTx)">{{ h.k }}</span><span style="font-size:11px;font-weight:700;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ h.n }}</span></div>
+</sc-for>
+</div>
+<div style="padding:11px 12px">
+<sc-for list="{{ lateR }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px">
+<span style="flex:0 0 30px;font-size:11px;font-weight:800;text-transform:uppercase;color:var(--mut)">{{ r.t }}</span>
+<sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="3"><span style="{{ c.box }}">{{ c.v }}</span></sc-for>
+</div>
+</sc-for>
+<div style="margin-top:4px;padding:9px 10px;border-radius:10px;background:var(--soft);border:1px dashed var(--br);font-size:11.5px;line-height:1.5;color:var(--mut)">Прочерк — это <b>реальный пустой подход</b>, а не отсутствие подхода: у добавленного участника их столько же, сколько раундов, просто в прошедших они не заполнены. Поэтому позиция считается верно и новых полей не нужно. Закрыть клетку нельзя по уже действующему правилу «повторы обязательны для галочки». Различать «не участвовал» и «ещё не сделал» не требуется — контекст даёт разницу: у остальных раунд закрыт.</div>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+</section>
+</sc-for>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:4400,&quot;height&quot;:1050}}">
+class Component extends DCLogic {
+  RENUM = [{ w: 22, r: 12 }, { w: 24, r: 10 }, { w: 24, r: 10 }];
+  kg(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009') + ' кг'; }
+  renderVals() {
+    const light = [
+      '--bg:#f1f5f9', '--hd:#ffffff', '--card:#ffffff', '--br:#e2e8f0', '--line:#f1f5f9',
+      '--tx:#0f172a', '--mut:#64748b', '--soft:#f8fafc',
+      '--accbg:rgba(249,115,22,.10)', '--accBr:rgba(249,115,22,.35)', '--accTx:#9a3412',
+      '--okbg:rgba(34,197,94,.12)', '--okBr:rgba(34,197,94,.45)', '--ok:#15803d',
+      '--warnbg:#fffbeb', '--warnBr:rgba(245,158,11,.5)', '--warnTx:#b45309',
+      '--indbg:rgba(99,102,241,.10)', '--indBr:rgba(99,102,241,.45)', '--indTx:#3730a3',
+      '--bluebg:rgba(239,246,255,.8)', '--blueBr:rgba(37,99,235,.45)', '--blueTx:#1d4ed8',
+      '--dropbg:rgba(168,85,247,.08)', '--dropBr:rgba(168,85,247,.5)', '--dropTx:#7e22ce',
+      '--sel:#eef2ff', '--selBr:#818cf8', '--selTx:#4338ca',
+      '--float:rgba(255,255,255,.97)'
+    ].join(';');
+    const dark = [
+      '--bg:#0f172a', '--hd:#1e293b', '--card:#1e293b', '--br:#475569', '--line:#334155',
+      '--tx:#f1f5f9', '--mut:#a8b4c4', '--soft:#334155',
+      '--accbg:rgba(249,115,22,.15)', '--accBr:rgba(249,115,22,.3)', '--accTx:#fdba74',
+      '--okbg:rgba(34,197,94,.22)', '--okBr:#22c55e', '--ok:#86efac',
+      '--warnbg:rgba(245,158,11,.22)', '--warnBr:rgba(245,158,11,.65)', '--warnTx:#fde68a',
+      '--indbg:rgba(99,102,241,.20)', '--indBr:rgba(129,140,248,.55)', '--indTx:#c7d2fe',
+      '--bluebg:rgba(96,165,250,.16)', '--blueBr:#3b82f6', '--blueTx:#60a5fa',
+      '--dropbg:rgba(192,132,252,.20)', '--dropBr:rgba(192,132,252,.65)', '--dropTx:#e9d5ff',
+      '--sel:rgba(99,102,241,.20)', '--selBr:rgba(129,140,248,.55)', '--selTx:#c7d2fe',
+      '--float:rgba(30,41,59,.95)'
+    ].join(';');
+
+    const mk = (id, title, note, vars, isDark) => ({ id, title, note, vars, dark: isDark });
+
+    return {
+      modes: [
+        mk('A', 'Светлая тема — двадцать шесть экранов потока · версия после инженерного ревью', 'Карточка дня → пустая тренировка → каталог → работа → отдых → порядок → типы подходов → нагрузка → куратор → финал → возврат в сессию. Учтены правки ревизии: связка — один блок с раундами, каталог позволяет создать своё упражнение, дроп-сет вложен в подход, в финале расчётный максимум и вторая силовая за день.', light, false),
+        mk('B', 'Тёмная тема — те же двадцать шесть экранов', 'Все поверхности взяты из вашего кода, не подобраны на глаз: фон страницы #0f172a и карточка #1e293b — heys-bg-page / heys-bg-card из 001-design-tokens.css, поля #334155 — bg-elevated, границы #475569, оранжевая карточка тренировки rgba(249,115,22,.15) — правило [data-theme="dark"] .compact-train. Акцентный текст светлеет до #fdba74 и #86efac, как в тёмных правилах ct-wb-*.', dark, true)
+      ],
+      cat: [
+        { n: 'Тяга штанги в наклоне', l: '60 × 8', star: 'flex:0 0 auto;font-size:17px;color:var(--warnTx)' },
+        { n: 'Подтягивания', l: 'ещё не делали', star: 'flex:0 0 auto;font-size:17px;color:var(--br)' },
+        { n: 'Тяга верхнего блока', l: '55 × 10', star: 'flex:0 0 auto;font-size:17px;color:var(--br)' },
+        { n: 'Становая тяга', l: '105 × 5', star: 'flex:0 0 auto;font-size:17px;color:var(--warnTx)' }
+      ],
+      sets: [
+        { n: '1', w: 22, r: 12, st: 'done' },
+        { n: '2', w: 24, r: 10, st: 'done' },
+        { n: '3', w: 24, r: 10, st: 'cur' }
+      ].map((s) => {
+        const cur = s.st === 'cur', done = s.st === 'done';
+        return {
+          n: s.n, w: s.w, r: s.r, mk: done ? '✓' : '○',
+          row: 'display:grid;grid-template-columns:46px 1fr 1fr 44px;gap:8px;align-items:center;margin-bottom:7px;' + (cur
+            ? 'padding:7px 8px;border-radius:12px;background:var(--accbg);border:1.5px solid rgba(249,115,22,.55);'
+            : 'padding:3px 0;border-radius:10px;background:var(--okbg);'),
+          num: 'justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:' + (cur ? '28px' : '26px') + ';height:' + (cur ? '28px' : '26px') + ';border-radius:50%;font-size:' + (cur ? '13px' : '12px') + ';font-weight:800;background:' + (cur ? '#9a3412' : 'rgba(34,197,94,.20)') + ';color:' + (cur ? '#fff' : 'var(--ok)'),
+          txt: cur ? 'display:none' : 'display:block;text-align:center;font-size:16px;font-weight:800;color:var(--tx)',
+          inp: cur ? 'box-sizing:border-box;width:100%;height:48px;text-align:center;font-size:20px;font-weight:800;border-radius:11px;border:1px solid var(--br);background:var(--card);color:var(--tx)' : 'display:none',
+          btn: 'justify-self:center;width:44px;height:44px;border-radius:50%;font-size:' + (cur ? '19px' : '17px') + ';font-weight:800;cursor:pointer;border:' + (cur ? '2px solid #ea580c' : done ? '1.5px solid #15803d' : '1.5px solid var(--br)') + ';background:' + (done ? 'linear-gradient(135deg,#15803d 0%,#166534 100%)' : 'var(--card)') + ';color:' + (done ? '#fff' : cur ? '#ea580c' : 'var(--mut)')
+        };
+      }),
+      ord: [
+        { i: 1, n: 'Жим лёжа', d: '4 × 8–12 · 75 кг', line: 0 },
+        { i: 2, n: 'Тяга штанги в наклоне', d: '4 × 8–12 · 60 кг', line: 0 },
+        { i: 3, n: 'Жим гантелей сидя', d: '3 × 10 · 24 кг', line: 1, drag: 1 },
+        { i: 4, n: 'Связка A', d: 'Подтягивания ⇄ Тяга блока · 6 подходов', line: 0, grp: 1 },
+        { i: 5, n: 'Разведение гантелей', d: '3 × 15 · 10 кг', line: 0 },
+        { i: 6, n: 'Планка', d: '3 × 60 с · время', line: 0 }
+      ].map((o) => ({
+        i: o.i, n: o.n, d: o.d,
+        line: o.line ? 'height:4px;margin:3px 0;border-radius:4px;background:linear-gradient(90deg,#2563eb 0%,#60a5fa 50%,#2563eb 100%)' : 'display:none',
+        num: 'flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 6px;border-radius:9px;font-size:12px;font-weight:800;background:' + (o.grp ? 'rgba(245,158,11,.18)' : 'var(--soft)') + ';color:' + (o.grp ? '#f59e0b' : 'var(--mut)'),
+        row: 'display:flex;align-items:center;gap:9px;padding:11px 12px;margin-bottom:7px;border-radius:12px;background:var(--card);border:1px solid ' + (o.drag ? '#2563eb' : 'var(--br)') + (o.grp ? ';border-left:4px solid #f59e0b' : '') + (o.drag ? '' : '')
+      })),
+      types: [
+        { l: 'Разм.', w: 40, r: 12, t: 'w' },
+        { l: 'Разм.', w: 55, r: 10, t: 'w' },
+        { l: '1', w: 60, r: 12, t: '' },
+        { l: '2', w: 70, r: 10, t: '' },
+        { l: '3', w: 75, r: 8, t: '' },
+        { l: '4', w: 75, r: 8, t: '' }
+      ].map((x) => {
+        const c = x.t === 'w' ? 'var(--mut)' : x.t === 'f' ? '#ef4444' : 'var(--accTx)';
+        const bg = x.t === 'w' ? 'var(--soft)' : x.t === 'f' ? 'rgba(239,68,68,.12)' : 'var(--accbg)';
+        return {
+          l: x.l, w: x.w, r: x.r,
+          val: 'text-align:center;font-size:15px;font-weight:800;color:' + (x.t === 'w' ? 'var(--mut)' : 'var(--tx)'),
+          row: 'display:grid;grid-template-columns:56px 1fr 1fr 44px;gap:7px;align-items:center;margin-bottom:7px;padding:3px 2px;border-radius:10px;',
+          tag: 'justify-self:center;display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:44px;padding:0 8px;border-radius:11px;font-size:11px;font-weight:800;cursor:pointer;background:' + bg + ';color:' + c + ';border:1px solid ' + (x.t === 'w' ? 'var(--br)' : x.t === 'f' ? 'rgba(239,68,68,.4)' : 'var(--accBr)')
+        };
+      }),
+      volBefore: this.kg(this.RENUM.reduce((s, x) => s + x.w * x.r, 0)),
+      volAfter: this.kg(this.RENUM.slice(1).reduce((s, x) => s + x.w * x.r, 0)),
+      volDelta: '−' + this.kg(this.RENUM[0].w * this.RENUM[0].r),
+      renumBefore: this.RENUM.map((x, i) => ({
+        n: String(i + 1), w: x.w, r: x.r,
+        num: 'justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(34,197,94,.20);color:var(--ok);font-size:12px;font-weight:800'
+      })),
+      renumAfter: this.RENUM.map((x, i) => ({
+        n: i === 0 ? 'разм.' : String(i), w: x.w, r: x.r,
+        val: 'text-align:center;font-size:16px;font-weight:800;color:' + (i === 0 ? 'var(--mut)' : 'var(--tx)'),
+        num: i === 0
+          ? 'justify-self:center;display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:44px;padding:0 6px;border-radius:11px;background:var(--soft);color:var(--mut);font-size:10.5px;font-weight:800'
+          : 'justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(34,197,94,.20);color:var(--ok);font-size:12px;font-weight:800',
+        rowOp: ''
+      })),
+      legacyRows: [
+        { k: 'A1', n: 'Жим лёжа', c: '4 подхода', sets: ['60×12', '70×10', '75×8', '75×8'] },
+        { k: 'A2', n: 'Тяга гантели', c: '3 подхода', sets: ['28×12', '30×10', '30×10'] }
+      ].map((l) => ({ k: l.k, n: l.n, c: l.c, sets: l.sets.map((t) => ({ t })) })),
+      lateH: [
+        { k: 'A1', n: 'Жим гантелей', late: 0 }, { k: 'A2', n: 'Разведение', late: 0 }, { k: 'A3', n: 'Тяга к подбор.', late: 1 }
+      ].map((h) => ({
+        k: h.k, n: h.n,
+        box: 'flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding:6px 7px;border-radius:9px;background:var(--card);border:1px ' + (h.late ? 'dashed rgba(245,158,11,.65)' : 'solid rgba(245,158,11,.4)')
+      })),
+      lateR: [['22×10', '10×15', '—'], ['22×10', '10×12', '—'], ['20×10', '10×12', '25×10']].map((cells, ri) => ({
+        t: 'Р' + (ri + 1),
+        cells: cells.map((v) => ({
+          v,
+          box: 'flex:1;min-width:0;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:10px;font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;' + (v === '—'
+            ? 'border:1.5px dashed var(--mut);background:var(--soft);color:var(--tx)'
+            : 'border:1px solid var(--okBr);background:var(--okbg);color:var(--tx)')
+        }))
+      })),
+      ssT: [
+        { n: '2', t: 'Суперсет', d: 'Два упражнения подряд без паузы', on: 0 },
+        { n: '3', t: 'Трисет', d: 'Три подряд — плотнее и тяжелее', on: 1 },
+        { n: '4+', t: 'Круговая', d: 'Четыре и больше, круг за кругом', on: 0 }
+      ].map((x) => ({
+        n: x.n, t: x.t, d: x.d,
+        card: 'box-sizing:border-box;display:flex;align-items:center;gap:11px;width:100%;min-height:64px;padding:11px 12px;border-radius:13px;border:1.5px solid ' + (x.on ? '#c2410c' : 'var(--br)') + ';background:' + (x.on ? 'var(--accbg)' : 'var(--card)'),
+        badge: 'flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;font-size:13px;font-weight:800;background:' + (x.on ? '#9a3412' : 'var(--soft)') + ';color:' + (x.on ? '#fff' : 'var(--mut)'),
+        mark: 'flex:0 0 auto;font-size:16px;font-weight:800;color:' + (x.on ? 'var(--accTx)' : 'transparent')
+      })),
+      triH: [{ k: 'A1', n: 'Жим гантелей' }, { k: 'A2', n: 'Разведение' }, { k: 'A3', n: 'Тяга к подбор.' }],
+      triR: [
+        { t: 'Р1', v: ['22×10', '10×15', '25×12'], done: [1, 1, 1] },
+        { t: 'Р2', v: ['22×10', '10×12', '25×10'], done: [1, 0, 0] },
+        { t: 'Р3', v: ['20×10', '10×12', '25×10'], done: [0, 0, 0] }
+      ].map((r) => ({
+        t: r.t,
+        lab: 'flex:0 0 30px;font-size:11px;font-weight:800;text-transform:uppercase;color:' + (r.done.every(Boolean) ? 'var(--ok)' : 'var(--mut)'),
+        rest: r.done.every(Boolean) ? 'display:flex;align-items:center;gap:6px;margin:1px 0 7px 30px;padding:5px 9px;border-radius:8px;background:var(--indbg);border:1px dashed var(--indBr);font-size:10.5px;font-weight:700;color:var(--indTx)' : 'display:none',
+        cells: r.v.map((v, i) => {
+          const on = !!r.done[i];
+          return {
+            v, m: on ? '✓' : '○',
+            box: 'flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;min-height:44px;padding:0 6px;border-radius:10px;border:1px solid ' + (on ? 'var(--okBr)' : 'var(--br)') + ';background:' + (on ? 'var(--okbg)' : 'var(--card)'),
+            mk: 'flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:800;background:' + (on ? '#15803d' : 'var(--soft)') + ';color:' + (on ? '#fff' : 'var(--mut)')
+          };
+        })
+      })),
+      dropRows: [{ w: 60, r: 6, on: 1 }].map((d) => ({
+        w: d.w, r: d.r, m: d.on ? '✓' : '○', c: 'var(--dropTx)',
+        btn: 'justify-self:center;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;font-size:18px;font-weight:800;cursor:pointer;border:1.5px solid ' + (d.on ? '#15803d' : 'var(--br)') + ';background:' + (d.on ? 'linear-gradient(135deg,#15803d 0%,#166534 100%)' : 'var(--soft)') + ';color:' + (d.on ? '#fff' : 'var(--mut)')
+      })),
+      dropR: [
+        { n: 1, t: 'Дроп принадлежит подходу и не имеет своего номера. В счётчике дня подход с двумя дропами — это один подход.' },
+        { n: 2, t: 'Килограммы дропа идут в тоннаж полностью: это выполненная работа.' },
+        { n: 3, t: 'Галочка есть у каждой ступени — видно, докуда человек дошёл. Подход закрыт, когда закрыты все ступени.' },
+        { n: 4, t: 'Вес каждой следующей ступени только ниже предыдущей: подставляем −20% и даём поправить. 75 → 60 кг здесь ровно это и есть.' },
+        { n: 5, t: 'Таймер между ступенями не запускается — в этом весь смысл дропа. Он стартует после последней.' },
+        { n: 6, t: 'Не больше трёх ступеней: дальше это уже не дроп, а отдельное упражнение.' },
+        { n: 7, t: 'Внутри связки дроп недоступен — он ломает симметрию раунда.' }
+      ],
+      unitRows: [
+        { t: 'Килограммы × повторы', d: 'Штанга, гантели, тренажёр', on: 0 },
+        { t: 'Свой вес', d: 'Подтягивания, отжимания, брусья', on: 1 },
+        { t: 'Время', d: 'Планка, вис, статика', on: 0 },
+        { t: 'Метры', d: 'Прогулка фермера, санки', on: 0 }
+      ].map((x) => ({
+        t: x.t, d: x.d,
+        s: 'box-sizing:border-box;display:flex;align-items:center;gap:11px;width:100%;min-height:56px;padding:9px 12px;border-radius:12px;border:1.5px solid ' + (x.on ? '#c2410c' : 'var(--br)') + ';background:' + (x.on ? 'var(--accbg)' : 'var(--card)'),
+        dot: 'flex:0 0 auto;display:inline-flex;width:20px;height:20px;border-radius:50%;border:2px solid ' + (x.on ? '#9a3412' : 'var(--br)') + ';background:' + (x.on ? '#9a3412' : 'transparent') + ';box-shadow:' + (x.on ? 'inset 0 0 0 3px var(--card)' : 'none')
+      })),
+      musRows: ['Грудь', 'Спина', 'Плечи', 'Бицепс', 'Трицепс', 'Ноги', 'Ягодицы', 'Кор', 'Икры', 'Предплечья', 'Шея'].map((t) => {
+        const main = t === 'Спина', syn = t === 'Бицепс', on = main || syn;
+        return {
+          t: main ? t + ' · основная' : t,
+          s: 'display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:11px;font-size:12.5px;font-weight:' + (main ? '800' : '700') + ';border:' + (main ? '1.5px solid #9a3412' : '1px solid ' + (on ? 'rgba(249,115,22,.45)' : 'var(--br)')) + ';background:' + (main ? 'rgba(249,115,22,.14)' : on ? 'var(--accbg)' : 'var(--card)') + ';color:' + (on ? 'var(--accTx)' : 'var(--mut)')
+        };
+      }),
+      likeRows: [
+        { t: 'Как подтягивания', h: 'весь вес на руках', on: 1 },
+        { t: 'Как брусья', h: 'почти весь вес', on: 0 },
+        { t: 'Как отжимания от пола', h: 'часть на ногах', on: 0 },
+        { t: 'Как приседания без веса', h: 'вес на ногах', on: 0 }
+      ].map((x) => ({
+        t: x.t, h: x.h,
+        s: 'box-sizing:border-box;display:flex;align-items:center;gap:11px;width:100%;min-height:56px;padding:9px 12px;border-radius:12px;border:1.5px solid ' + (x.on ? 'var(--indBr)' : 'var(--br)') + ';background:' + (x.on ? 'var(--indbg)' : 'var(--card)'),
+        dot: 'flex:0 0 auto;display:inline-flex;width:20px;height:20px;border-radius:50%;border:2px solid ' + (x.on ? 'var(--indTx)' : 'var(--br)') + ';background:' + (x.on ? 'var(--indTx)' : 'transparent') + ';box-shadow:' + (x.on ? 'inset 0 0 0 3px var(--card)' : 'none')
+      })),
+      edge: [
+        { n: 1, q: 'Тап по закрытому упражнению, пока идёт отдых', a: 'Таймер продолжается. Он привязан к подходу, который его запустил, а не к тому, что открыто на экране. Кольцо схлопывается в полоску, чтобы не мешать правке.' },
+        { n: 2, q: 'Подход добавлен к уже закрытому упражнению', a: 'Упражнение снова становится незакрытым, счётчик дня растёт 23 → 24, «Завершить» возвращается в тихое состояние. Время завершения тренировки сбрасывается — она снова идёт.' },
+        { n: 3, q: 'Рабочий подход переключили в разминку', a: 'Показано на экране 12: номера едут вверх, тоннаж уменьшается, оба изменения анимированы. Требует нового поля типа в схеме подхода.' },
+        { n: 4, q: 'Вес правят после отметки ✓', a: 'Тоннаж и расчётный максимум пересчитываются. Бейдж рекорда снимается, если новое значение ниже прежнего максимума — рекорд не «залипает» на однажды выданный.' },
+        { n: 5, q: 'Дроп или разминка внутри связки', a: 'Разминка — да, отдельной строкой над раундами, общей для связки. Дроп — нет: он ломает симметрию раунда и смысл чередования. В связке дроп недоступен.' },
+        { n: 6, q: 'Отметка ✓ при пустых полях', a: 'Показано на экране 13: повторы обязательны, вес — нет.' },
+        { n: 7, q: 'Запись куратора пришла поверх вашей', a: 'Показано на экране 14: пока сессия идёт, куратор её не правит; после — правка приходит с меткой автора и времени. Диалог выбора из двух версий отложен до переписывания слияния.' },
+        { n: 8, q: 'В связке у упражнений разное число подходов', a: 'Запрещено: в связке подходов поровну, «+ Подход» внутри неё добавляет раунд целиком. Симметрия и есть смысл связки — по той же причине там запрещён дроп.' },
+        { n: 9, q: 'RPE не заполнен', a: 'Отдых берёт значение по умолчанию — 90 секунд. Шкала в коде грубая: RPE ≥ 9 даёт 180 с, RPE ≥ 7 даёт 120 с, ниже — 60 с. Промежуточных ступеней нет, и макет их не выдумывает.' }
+      ].map((x) => ({
+        n: x.n, q: x.q, a: x.a,
+        nStyle: 'flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--accbg);color:var(--accTx);font-size:12px;font-weight:800'
+      })),
+      rounds: [
+        { r: 'Раунд 1', a: '10 повт.', b: '55×12', done: 0 },
+        { r: 'Раунд 2', a: '8 повт.', b: '55×12', done: 0 },
+        { r: 'Раунд 3', a: '8 повт.', b: '55×10', done: 0 }
+      ].map((x) => ({
+        r: x.r, a: x.a, b: x.b, mk: x.done ? '✓' : '○', sets: x.done ? '2 ✓' : '—',
+        rStyle: 'flex:0 0 58px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:' + (x.done ? 'var(--ok)' : 'var(--mut)'),
+        cell: 'flex:1;min-width:0;display:flex;align-items:center;gap:6px;padding:5px 6px 5px 9px;border-radius:10px;border:1px solid ' + (x.done ? 'var(--okBr)' : 'var(--br)') + ';background:' + (x.done ? 'var(--okbg)' : 'var(--card)'),
+        btn: 'flex:0 0 auto;width:44px;height:44px;border-radius:50%;font-size:17px;font-weight:800;cursor:pointer;border:1.5px solid ' + (x.done ? '#15803d' : 'var(--br)') + ';background:' + (x.done ? 'linear-gradient(135deg,#15803d 0%,#166534 100%)' : 'var(--soft)') + ';color:' + (x.done ? '#fff' : 'var(--mut)'),
+        rest: x.done ? 'display:flex;align-items:center;gap:6px;margin:1px 0 7px 58px;padding:5px 9px;border-radius:8px;background:var(--indbg);border:1px dashed var(--indBr);font-size:10.5px;font-weight:700;color:var(--indTx)' : 'display:none'
+      })),
+      e1: [
+        { w: 'н1', h: 58, v: 88 }, { w: 'н2', h: 66, v: 90 }, { w: 'н3', h: 62, v: 89 },
+        { w: 'н4', h: 78, v: 93 }, { w: 'н5', h: 74, v: 92 }, { w: 'н6', h: 90, v: 95 }
+      ].map((x, i) => ({
+        w: x.w, v: x.v,
+        bar: 'width:100%;border-radius:5px 5px 0 0;height:' + x.h + '%;background:' + (i === 5 ? 'linear-gradient(180deg,#c2410c 0%,#9a3412 100%)' : 'var(--br)'),
+        vs: 'font-size:10px;font-weight:800;font-variant-numeric:tabular-nums;color:' + (i === 5 ? 'var(--accTx)' : 'var(--mut)')
+      })),
+      planList: [
+        { n: 'Жим лёжа', s: '4 × 8–12 · 75 кг' },
+        { n: 'Тяга штанги в наклоне', s: '4 × 8–12 · 60 кг' },
+        { n: 'Жим гантелей сидя', s: '3 × 10–12 · 24 кг' },
+        { n: 'Связка A · подтягивания ⇄ тяга блока', s: '3 раунда' }
+      ],
+      weekPlan: [
+        { d: 'Пн', st: 'done' }, { d: 'Вт', st: 'rest' }, { d: 'Ср', st: 'plan' },
+        { d: 'Чт', st: 'rest' }, { d: 'Пт', st: 'plan' }, { d: 'Сб', st: 'rest' }, { d: 'Вс', st: 'rest' }
+      ].map((w) => {
+        const map = {
+          done: { bg: 'var(--okbg)', br: 'var(--okBr)', c: 'var(--ok)', i: '✓' },
+          plan: { bg: 'var(--indbg)', br: 'var(--indBr)', c: 'var(--indTx)', i: '●' },
+          rest: { bg: 'var(--soft)', br: 'var(--br)', c: 'var(--mut)', i: '—' }
+        }[w.st];
+        return {
+          d: w.d, i: map.i,
+          box: 'flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;border-radius:10px;background:' + map.bg + ';border:1px solid ' + map.br,
+          mark: 'font-size:14px;font-weight:800;color:' + map.c
+        };
+      }),
+      cycle: [
+        { w: '1', t: 'Втягивание', d: '3 из 3 · 18 т', p: '100%', st: 'done', days: 'dd-d---' },
+        { w: '2', t: 'Набор объёма', d: '1 из 3 · 8 из 24 т', p: '33%', st: 'now', days: 'd-p-p--' },
+        { w: '3', t: 'Пик', d: '4 тренировки · 28 т', p: 'план', st: 'next', days: 'pp-p-p-' },
+        { w: '4', t: 'Разгрузка', d: '2 тренировки · 12 т', p: 'план', st: 'next', days: 'p--p---' }
+      ].map((c) => {
+        const now = c.st === 'now', done = c.st === 'done';
+        return {
+          w: c.w, t: c.t, d: c.d, p: c.p,
+          card: 'border-radius:14px;padding:12px;margin-bottom:8px;background:var(--card);border:1px solid ' + (now ? '#c2410c' : 'var(--br)'),
+          badge: 'display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;font-size:13px;font-weight:800;background:' + (now ? 'var(--accbg)' : done ? 'var(--okbg)' : 'var(--soft)') + ';color:' + (now ? 'var(--accTx)' : done ? 'var(--ok)' : 'var(--mut)'),
+          pct: 'font-size:12px;font-weight:800;color:' + (done ? 'var(--ok)' : now ? 'var(--accTx)' : 'var(--mut)'),
+          days: c.days.split('').map((ch) => ({
+            i: ch === 'd' ? '✓' : ch === 'p' ? '●' : '',
+            s: 'flex:1;min-width:0;height:22px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:11px;font-weight:800;background:' + (ch === 'd' ? 'var(--okbg)' : ch === 'p' ? 'var(--indbg)' : 'var(--soft)') + ';color:' + (ch === 'd' ? 'var(--ok)' : ch === 'p' ? 'var(--indTx)' : 'var(--mut)')
+          }))
+        };
+      }),
+      skipReasons: ['Не было времени', 'Мало сил', 'Плохое самочувствие', 'Другие приоритеты', 'Своя причина'].map((t, i) => ({
+        t,
+        s: 'min-height:44px;padding:0 13px;border-radius:11px;font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid ' + (i === 1 ? 'var(--indBr)' : 'var(--br)') + ';background:' + (i === 1 ? 'var(--indbg)' : 'var(--soft)') + ';color:' + (i === 1 ? 'var(--indTx)' : 'var(--mut)')
+      })),
+      deviations: [
+        { n: 'Жим лёжа', note: 'Вес выше плана — это прогресс', plan: '4 подхода · до 70 кг', fact: '4 подхода · до 75 кг', up: 1 },
+        { n: 'Тяга штанги в наклоне', note: 'Как назначено', plan: '4 подхода · 60 кг', fact: '4 подхода · 60 кг', up: 0 },
+        { n: 'Разведение гантелей', note: 'Три подхода не сделаны', plan: '3 × 15 · 10 кг', fact: 'пропущено', up: -1 },
+        { n: 'Планка', note: 'Как назначено', plan: '3 × 60 с', fact: '3 × 60 с', up: 0 }
+      ].map((d) => ({
+        n: d.n, note: d.note, plan: d.plan, fact: d.fact,
+        card: 'border-radius:14px;padding:12px;margin-bottom:8px;background:var(--card);border:1px solid var(--br);border-left:4px solid ' + (d.up > 0 ? '#22c55e' : d.up < 0 ? '#ef4444' : 'var(--br)'),
+        dot: 'flex:0 0 auto;width:10px;height:10px;border-radius:50%;background:' + (d.up > 0 ? '#22c55e' : d.up < 0 ? '#ef4444' : 'var(--br)'),
+        factBox: 'flex:1;padding:9px 10px;border-radius:11px;border:1px solid ' + (d.up > 0 ? 'var(--okBr)' : d.up < 0 ? 'rgba(239,68,68,.45)' : 'var(--br)') + ';background:' + (d.up > 0 ? 'var(--okbg)' : d.up < 0 ? 'rgba(239,68,68,.10)' : 'var(--soft)'),
+        factVal: 'font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:' + (d.up > 0 ? 'var(--ok)' : d.up < 0 ? '#ef4444' : 'var(--tx)')
+      })),
+      sheet: [
+        { i: '📚', t: 'Шаблоны тренировок', d: 'Сохранить эту · применить готовую' },
+        { i: '↻', t: 'Повторить прошлую', d: '5 августа · 7 упражнений' },
+        { i: '🔍', t: 'Каталог упражнений', d: 'Фильтр по мышцам и инвентарю' },
+        { i: '📈', t: 'История и рекорды', d: 'Динамика веса и тоннажа' },
+        { i: '⚡', t: 'Круговой режим', d: 'Собрать связку в раунды' },
+        { i: '📋', t: 'Назначено против сделано', d: 'Отклонения от плана куратора' },
+        { i: '📝', t: 'Заметка к тренировке', d: 'Самочувствие, зал, партнёр' }
+      ],
+      histBars: [
+        { w: 'н1', v: 88, h: 58 }, { w: 'н2', v: 90, h: 66 }, { w: 'н3', v: 89, h: 62 },
+        { w: 'н4', v: 93, h: 78 }, { w: 'н5', v: 92, h: 74 }, { w: 'н6', v: 95, h: 90 }
+      ].map((b, i) => ({
+        w: b.w, v: b.v,
+        bar: 'width:100%;border-radius:5px 5px 0 0;height:' + b.h + '%;background:' + (i === 5 ? 'linear-gradient(180deg,#c2410c 0%,#9a3412 100%)' : 'var(--br)'),
+        vs: 'font-size:10px;font-weight:800;font-variant-numeric:tabular-nums;color:' + (i === 5 ? 'var(--accTx)' : 'var(--mut)')
+      })),
+      histRows: [
+        { date: '8 августа', tag: '🏆 рекорд', vol: '2 980 кг', pr: 1, sets: ['60×12', '70×10', '75×8', '75×8', '60×6 дроп'] },
+        { date: '5 августа', tag: 'по плану', vol: '2 680 кг', pr: 0, sets: ['60×12', '70×10', '70×10', '70×8'] },
+        { date: '1 августа', tag: 'дискомфорт', vol: '1 830 кг', pr: -1, sets: ['55×12', '65×10', '65×8'] },
+        { date: '29 июля', tag: 'по плану', vol: '2 370 кг', pr: 0, sets: ['60×10', '65×10', '70×8', '70×8'] }
+      ].map((h) => ({
+        date: h.date, tag: h.tag, vol: h.vol,
+        card: 'border-radius:13px;padding:11px 12px;margin-bottom:7px;background:var(--card);border:1px solid ' + (h.pr > 0 ? 'var(--warnBr)' : 'var(--br)'),
+        badge: 'font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:' + (h.pr > 0 ? 'var(--warnbg)' : h.pr < 0 ? 'rgba(239,68,68,.10)' : 'var(--soft)') + ';color:' + (h.pr > 0 ? 'var(--warnTx)' : h.pr < 0 ? '#ef4444' : 'var(--mut)'),
+        sets: h.sets.map((t) => ({ t, s: 'font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:8px;background:var(--soft);border:1px solid var(--br);color:var(--tx);font-variant-numeric:tabular-nums' }))
+      })),
+      rpe: [6, 7, 8, 9, 10].map((n) => ({
+        n,
+        s: 'flex:1;min-width:0;height:44px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:1px solid ' + (n === 7 ? 'var(--indBr)' : 'var(--br)') + ';background:' + (n === 7 ? 'var(--indbg)' : 'var(--card)') + ';color:' + (n === 7 ? 'var(--indTx)' : 'var(--mut)')
+      })),
+      authored: [
+        { n: '1', w: 60, r: 12, by: 0 }, { n: '2', w: 72.5, r: 10, by: 1 },
+        { n: '3', w: 75, r: 8, by: 0 }, { n: '4', w: 75, r: 8, by: 0 }
+      ].map((a) => ({
+        n: a.n, w: String(a.w).replace('.', ','), r: a.r,
+        row: 'display:grid;grid-template-columns:52px 1fr 1fr 44px;gap:8px;align-items:center;padding:3px 0;border-radius:10px;background:var(--okbg);' + (a.by ? 'margin-bottom:3px' : 'margin-bottom:7px'),
+        mark: a.by
+          ? 'display:flex;align-items:center;gap:6px;margin:0 0 7px 52px;padding:5px 9px;border-radius:8px;background:var(--indbg);border:1px solid var(--indBr);font-size:10.5px;font-weight:700;color:var(--indTx)'
+          : 'display:none'
+      })),
+      queue: [
+        { i: '✅', t: 'Подходы 1–8', d: 'Отправлено в 19:12', a: null, ok: 1 },
+        { i: '📴', t: 'Подходы 9–14', d: 'Ждут сеть · сохранено на телефоне', a: null, ok: 1 },
+        { i: '⚠️', t: 'Заметка к упражнению', d: 'Не удалось отправить · попытка 2', a: 'Повторить', ok: 0 }
+      ].map((q) => ({
+        i: q.i, t: q.t, d: q.d, a: q.a,
+        btn: q.a ? 'flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:10px;border:1px solid rgba(239,68,68,.5);background:rgba(239,68,68,.10);color:#ef4444;font-size:12px;font-weight:800;cursor:pointer' : 'display:none'
+      })),
+      trace: [
+        { k: 'Силовая нагрузка · накопленная', v: 'растёт', d: 'третью неделю подряд, окно 6 недель' },
+        { k: 'Силовая усталость · короткое окно', v: 'растёт быстрее', d: 'окно 7 дней — обгоняет накопленную' },
+        { k: 'Кардио — отдельным рядом', v: 'без изменений', d: 'силовая и кардио не сводятся в одно число: коэффициента «кг = минуты» не существует' },
+        { k: 'Вклад этой сессии', v: '9,4 т', d: 'в силовом ряду, своей единицей — тоннажем' },
+        { k: 'История', v: '9 из 14 дней', d: 'меньше 14 — уверенность понижена, не ноль' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

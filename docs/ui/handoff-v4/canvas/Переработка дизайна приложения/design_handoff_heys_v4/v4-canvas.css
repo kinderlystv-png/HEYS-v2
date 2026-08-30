@@ -57,7 +57,9 @@ a:hover{color:#c67139}
 .nt>b,.ntl>b{font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;display:block}
 .nt>span,.ntl>span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);display:block;margin-top:4px}
 
-.ph{width:330px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12);display:flex;flex-direction:column}
+/* 375 — ширина сверки экрана (правило проекта). На 330 кадр врал о переносах:
+   строка, влезающая на кадре, на устройстве уходила на вторую */
+.ph{width:375px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12);display:flex;flex-direction:column}
 .top{padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between}
 .ttl{font:700 15px/1 Figtree,sans-serif;color:var(--tx)}
 .sc{flex:1;overflow:hidden;padding:16px 18px 0}
