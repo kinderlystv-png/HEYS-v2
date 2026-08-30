@@ -26,7 +26,11 @@ const DASHBOARD_CSS = fs.readFileSync(
 );
 
 /** Тело правила по точному селектору на нулевом уровне вложенности. */
-function ruleBody(css, selector) {
+function ruleBody(rawCss, selector) {
+  // Переводы строк нормализуем: на Windows файл лежит в дереве с CRLF,
+  // и многострочный селектор не находился — тест краснел на ровном
+  // месте, хотя правило на месте.
+  const css = rawCss.replace(/\r\n/g, '\n');
   const marker = `\n${selector} {`;
   const at = css.indexOf(marker);
   if (at === -1) return null;

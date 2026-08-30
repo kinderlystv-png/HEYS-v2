@@ -2278,9 +2278,9 @@
     if (!_curatorEditsPopStateBound) {
       _curatorEditsPopStateBound = true;
       // Эвикция «эхо»-слушателя от предыдущего инстанса модуля (agent test
-      // harness перезагружает файл через eval() на общий window между
-      // тестами) — гарантирует, что на window висит не больше одного нашего
-      // слушателя. В проде инстанс всего один, эвикция — no-op.
+      // harness между тестами повторно выполняет файл на общий window) —
+      // гарантирует, что на window висит не больше одного нашего слушателя.
+      // В проде инстанс всего один, эвикция — no-op.
       try {
         if (window.__heysCuratorEditsPopStateHandler) {
           window.removeEventListener('popstate', window.__heysCuratorEditsPopStateHandler);

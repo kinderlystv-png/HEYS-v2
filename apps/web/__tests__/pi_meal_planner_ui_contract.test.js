@@ -14,9 +14,16 @@ describe('Meal planner UI contract', () => {
     });
 
     it('keeps sleep context and factors in the details layer', () => {
-        expect(source).toContain("plannerDecision.sleepContext.displayTime");
-        expect(source).toContain("plannerDecision.topFactors");
-        expect(source).toContain("'Подробнее'");
+        // Источник переехал с plannerDecision на mealsPlan.summary, а слой
+        // подробностей теперь свой блок .meal-rec-card__logic-summary вместо
+        // кнопки «Подробнее». Контракт прежний: контекст сна и учтённые
+        // факторы живут во втором слое, а не на первом экране карточки.
+        expect(source).toContain('meal-rec-card__logic-summary');
+        expect(source).toContain('mealsPlan?.summary?.sleepContext');
+        expect(source).toContain('mealsPlan.summary.sleepContext.displayTime');
+        expect(source).toContain('mealsPlan?.summary?.topFactors');
+        expect(source).toContain("'Сон:'");
+        expect(source).toContain("'Учтено:'");
     });
 
     it('explains when a daily protein deficit is capped for one meal', () => {

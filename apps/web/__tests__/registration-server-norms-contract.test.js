@@ -44,7 +44,12 @@ describe('registration server norms contract', () => {
   });
 
   it('registers the migration in the canonical ledger', () => {
-    expect(MIGRATION_MANIFEST.migrations.at(-1)).toMatchObject({
+    // По id, а не по .at(-1): последней записью манифест становится любая
+    // следующая миграция, и проверка своей записи ломалась бы на чужой.
+    const entry = MIGRATION_MANIFEST.migrations.find(
+      (item) => item.id === '2026-08-28_registration_server_norms',
+    );
+    expect(entry).toMatchObject({
       id: '2026-08-28_registration_server_norms',
       order: 32,
       path: 'scripts/db/migrations/2026-08-28_registration_server_norms.sql',

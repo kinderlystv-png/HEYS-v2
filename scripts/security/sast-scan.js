@@ -10,7 +10,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,6 +54,10 @@ const SCAN_CONFIG = {
     'scripts/security/sast-scan.js',
     // pentest-инструмент содержит intentional test-payloads (hardcoded-secrets маркеры).
     'packages/shared/src/security/pentest.ts',
+    // 2026-08-31: вложения пакета дизайна (docs/ui/handoff-v4/**) — это кадры и
+    // их вспомогательные скрипты от дизайнера, а не наш исполняемый продукт. Сканер ловил
+    // в них XSS на шаблонах рендера канваса; в прод этот код не попадает.
+    'docs/**',
   ],
 
   // Правила безопасности
@@ -291,6 +295,8 @@ class SASTScanner {
       '.claude', // SEC-014: агентские worktrees — копии исходников, не production-код
       'archive', // SEC-014: исторический хлам
       'security-reports',
+      'docs', // вложения пакета дизайна — кадры, а не исполняемый продукт
+      'TOOLS', // локально распакованный pgAdmin: не в git, 86 ложных находок
     ]);
 
     const walk = (entryPath) => {
@@ -765,8 +771,12 @@ class SASTScanner {
   }
 }
 
-// Запуск сканирования, если скрипт выполняется напрямую
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Запуск сканирования, если скрипт выполняется напрямую.
+// Через pathToFileURL, а не шаблон `file://${process.argv[1]}`: на Windows
+// argv[1] — это C:\path\file.js, и строковое сравнение с
+// file:///C:/path/file.js никогда не совпадёт, отчего сканер молча
+// выходил с кодом 0, ничего не проверив.
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
   const updateBaseline = args.includes('--update-baseline');
   const scanner = new SASTScanner({ updateBaseline });

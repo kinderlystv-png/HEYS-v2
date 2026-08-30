@@ -91,31 +91,41 @@ describe('обучение · правило продукта — подсказ
     expect(r).not.toContain('inset: 0');
   });
 
-  it('фиксирует текущий тёмный вид продукта до решения конфликта контракта', () => {
+  it('вид собран со строкой «вид подсказки жеста»: тёплая поверхность', () => {
     const r = rule('.widgets-longpress-hint');
     expect(r).toContain('left: 14px');
     expect(r).toContain('right: 14px');
     expect(r).toContain('bottom: calc(78px + env(safe-area-inset-bottom, 0px))');
     expect(r).toContain('border-radius: 18px');
-    expect(r).toContain('background: #201e1d');
+    expect(r).toContain('background: var(--v4-tint');
     expect(r).toContain('padding: 13px 15px');
     expect(r).toContain('gap: 11px');
-    expect(r).toContain('box-shadow: 0 10px 26px -10px rgba(32, 30, 29, 0.55)');
+    expect(r).toContain('0 1px 2px rgba(80, 50, 20, 0.1)');
+    expect(r).toContain('0 12px 30px -12px rgba(80, 50, 20, 0.3)');
 
-    expect(rule('.widgets-longpress-hint__title')).toContain('font: 700 12px/1.35');
+    const title = rule('.widgets-longpress-hint__title');
+    expect(title).toContain('font: 700 12px/1.35');
+    expect(title).toContain('var(--v4-ink');
     const sub = rule('.widgets-longpress-hint__sub');
-    expect(sub).toContain('font: 500 11px/1.35');
-    expect(sub).toContain('rgba(242, 237, 230, 0.62)');
+    expect(sub).toContain('font: 500 11px/1.45');
+    // Тон подписи берётся у строки-владельца вида — «чернилами 60 %».
+    // Соседняя строка «обучение · правило продукта» называет 62 %, но вид
+    // описывает не она и сама на это указывает.
+    expect(sub).toContain('rgba(0, 0, 0, 0.6)');
+    expect(rule('.widgets-longpress-hint__icon')).toContain('var(--v4-act-text');
+    expect(UI).toContain('width: 22, height: 22');
     expect(UI).toContain("strokeWidth: 2.4");
   });
 
-  it('явно обнаруживает конфликт тёплой строки вида со старым общим правилом', () => {
+  it('конфликт двух строк контракта снят: обе говорят про тёплую поверхность', () => {
     const warm = /<b>вид подсказки жеста<\/b><span data-v="([^"]*)"/.exec(CANVAS)?.[1];
-    const dark = /<b>обучение · правило продукта<\/b><span data-v="([^"]*)"/.exec(CANVAS)?.[1];
+    const rule26 = /<b>обучение · правило продукта<\/b><span data-v="([^"]*)"/.exec(CANVAS)?.[1];
     expect(warm).toContain('заливка --tint');
     expect(warm).toContain('Значок 22 px');
-    expect(dark).toContain('фон #201e1d');
-    expect(dark).toContain('иконка руки 17 px');
+    // 26 августа дизайнер снял тёмную плашку — она была единственной тёмной
+    // поверхностью песочной темы. Общее правило больше не спорит с видом.
+    expect(rule26).toContain('тёплая поверхность --tint');
+    expect(rule26).not.toContain('фон #201e1d');
   });
 
   it('текст текущей продуктовой подсказки остаётся стабильным', () => {

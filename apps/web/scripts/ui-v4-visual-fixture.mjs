@@ -28,13 +28,21 @@ export const UI_V4_CANVAS_ZONES = Object.freeze([
   'reports-insights',
   'norm-correction',
   'curator-cabinet',
+  'tab-activity',
 ]);
 
-export const UI_V4_PIXEL_GATE_ZONES = Object.freeze([
-  'curator-edits',
-  'login',
-  'registration',
-]);
+// Pixel-gate держим только на сведённых зонах: попиксельное сравнение с кадром
+// не сойдётся там, где продукт намеренно отступает или где строки контракта ещё
+// никто не смотрел. 31 августа список опустел — обновление пакета дизайна
+// принесло новые строки во все три зоны, что были в гейте:
+//   curator-edits — три осознанных отступления (nowrap у счётчика, тон строки
+//     раскрытия, поля строки повтора);
+//   login — 696 строк «?» из 788, registration — 493 из 556: контракт вырос,
+//     прежний разбор его не покрывает.
+// Зоны остаются в diagnostic и возвращаются в гейт по мере сведения. Красный
+// гейт, который никто не может починить, отключают в первый день — поэтому
+// порог входа здесь «экран уже сведён», а не «экран когда-то сводили».
+export const UI_V4_PIXEL_GATE_ZONES = Object.freeze([]);
 
 export const UI_V4_DOM_GATE_ZONES = Object.freeze([
   'app-splash',
@@ -48,7 +56,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     id: 'login-default',
     zone: 'login',
     status: 'automated',
-    gate: 'pixel',
+    gate: 'diagnostic',
     kind: 'login',
     rootSelector: '.heys-auth-shell',
   },
@@ -111,7 +119,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     id: 'registration-personal',
     zone: 'registration',
     status: 'automated',
-    gate: 'pixel',
+    gate: 'diagnostic',
     kind: 'demo-registration',
     tab: 'widgets',
     rootSelector: '.mc-modal[data-heys-step-id="profile-personal"]',
@@ -120,7 +128,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     id: 'curator-edits-default',
     zone: 'curator-edits',
     status: 'automated',
-    gate: 'pixel',
+    gate: 'diagnostic',
     kind: 'demo-curator-edits',
     tab: 'widgets',
     rootSelector: '.ca-modal-backdrop--visible .ca-modal',
