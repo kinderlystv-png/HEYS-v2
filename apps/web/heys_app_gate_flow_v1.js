@@ -189,6 +189,8 @@
     function ClientSubscriptionButton({ client, curatorId, onUpdate, renderTrigger }) {
         const [open, setOpen] = React.useState(false);
         const [view, setView] = React.useState('main'); // main | trial | extend
+        // Остальные действия свёрнуты: лист открывают ради продления.
+        const [restOpen, setRestOpen] = React.useState(false);
         const [loading, setLoading] = React.useState(false);
         const [trialDate, setTrialDate] = React.useState(() => new Date().toISOString().split('T')[0]);
         const [months, setMonths] = React.useState(1);
@@ -491,231 +493,221 @@
             setLoading(false);
         };
 
-        const btnBase = {
-            border: '1px solid var(--border, #e5e7eb)',
-            borderRadius: 10,
-            padding: '10px 14px',
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: 'pointer',
-            width: '100%',
-            textAlign: 'left',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            background: 'var(--card, #fff)'
-        };
-
-        const pill = (label, value) => h('div', {
-            style: {
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-                padding: '8px 10px',
-                borderRadius: 10,
-                background: 'var(--bg-secondary, #f9fafb)',
-                border: '1px solid var(--border, #e5e7eb)'
-            }
-        },
-            h('span', { style: { fontSize: 12, color: '#6b7280' } }, label),
-            h('span', { style: { fontSize: 12, fontWeight: 600, color: 'var(--text, #111827)' } }, value)
+        // Строка «ключ — значение» того же вида, что в карточке анкеты: пилюли
+        // с рамкой и три плитки со статусом рассказывали одно и то же тремя
+        // приёмами, а лист про подписку отвечает всего на четыре вопроса.
+        const kv = (key, value, tone) => h('div', { key, className: 'cur-kv' },
+            h('span', { className: 'cur-kv__key' }, key),
+            h('span', { className: 'cur-kv__val' + (tone ? ' is-' + tone : '') }, value)
         );
 
-        const statCard = (label, value, tone) => h('div', {
-            style: {
-                padding: '10px 12px',
-                borderRadius: 12,
-                border: '1px solid var(--border, #e5e7eb)',
-                background: tone?.bg || 'var(--card, #fff)'
-            }
+        // Строка списка действий: имя слева, что произойдёт — справа. Прежде
+        // семь кнопок стояли в столбик равного веса, и «Сбросить подписку»
+        // выглядела так же, как «Продлить».
+        const actionRow = (label, hint, onClick, tone) => h('button', {
+            key: label,
+            type: 'button',
+            className: 'cur-cab__menu-row' + (tone ? ' is-' + tone : ''),
+            onClick,
+            disabled: loading
         },
-            h('div', { style: { fontSize: 11, color: '#6b7280', marginBottom: 4 } }, label),
-            h('div', { style: { fontSize: 13, fontWeight: 700, color: tone?.color || 'var(--text, #111827)' } }, value)
+            h('span', { className: 'cur-cab__menu-label' }, label),
+            h('span', { className: 'cur-cab__menu-hint' }, hint)
         );
 
-        const trialView = () => h('div', { style: { display: 'grid', gap: 16 } },
-            h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-                h('div', { style: { width: 34, height: 34, borderRadius: 10, background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, '🎫'),
-                h('div', null,
-                    h('div', { style: { fontSize: 16, fontWeight: 700, color: 'var(--text, #111827)' } }, 'Активация триала'),
-                    h('div', { style: { fontSize: 12, color: '#6b7280' } }, 'Назначьте дату старта')
-                )
-            ),
+        // Внутренние виды листа — та же форма, что у главного: заголовок,
+        // выбор, ряд действий. Прежде здесь стояли зелёный и синий градиенты
+        // с галочками и песочными часами: три градиента на весь кабинет жили
+        // ровно в этих двух экранах.
+        const trialView = () => h('div', { className: 'cur-cab__sheet-body' },
             h('div', null,
-                h('label', { style: { display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 6 } }, 'Дата начала'),
+                h('div', { className: 'cur-cab__tab-title' }, 'Активация триала'),
+                h('div', { className: 'cur-cab__tab-note' }, 'Доступ на 7 дней с выбранной даты')
+            ),
+            h('label', { className: 'cur-field' },
+                h('span', { className: 'cur-field__label' }, 'Дата начала'),
                 h('input', {
-                    type: 'date', value: trialDate,
-                    onChange: (e) => {
-                        console.info('[HEYS.subs] 📅 Изменение даты триала', { clientId: client.id, oldDate: trialDate, newDate: e.target.value });
-                        setTrialDate(e.target.value);
-                    },
-                    min: new Date().toISOString().split('T')[0],
-                    style: { width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 14, boxSizing: 'border-box' }
+                    className: 'cur-field__input',
+                    type: 'date',
+                    value: trialDate,
+                    onChange: (e) => setTrialDate(e.target.value)
                 })
             ),
-            h('div', { style: { fontSize: 12, color: '#6b7280' } },
+            h('div', { className: 'cur-cab__tab-note' },
                 trialDate === new Date().toISOString().split('T')[0]
-                    ? '⚡ Триал начнётся сразу (7 дней)'
-                    : `📅 Триал начнётся ${trialDate}, доступ на 7 дней`
-            ),
-            h('div', { style: { display: 'flex', gap: 8 } },
+                    ? 'Триал начнётся сегодня, доступ на 7 дней'
+                    : 'Триал начнётся ' + formatDate(trialDate) + ', доступ на 7 дней'),
+            h('div', { className: 'cur-cab__actions' },
                 h('button', {
-                    onClick: () => {
-                        console.info('[HEYS.subs] ← Возврат из trial view');
-                        setView('main');
-                    },
-                    style: { ...btnBase, justifyContent: 'center', background: 'var(--border, #eef2f7)' }
-                }, '← Назад'),
+                    type: 'button',
+                    className: 'cur-cab__open is-soft',
+                    onClick: () => setView('main')
+                }, 'Назад'),
                 h('button', {
-                    onClick: handleActivateTrial, disabled: loading,
-                    style: { ...btnBase, justifyContent: 'center', background: loading ? '#9ca3af' : 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', border: 'none' }
-                }, loading ? '⏳...' : '✅ Активировать')
+                    type: 'button',
+                    className: 'cur-cab__open',
+                    onClick: handleActivateTrial,
+                    disabled: loading
+                }, loading ? 'Активируем…' : 'Активировать')
             )
         );
 
-        const extendView = () => h('div', { style: { display: 'grid', gap: 16 } },
-            h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-                h('div', { style: { width: 34, height: 34, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, '➕'),
-                h('div', null,
-                    h('div', { style: { fontSize: 16, fontWeight: 700, color: 'var(--text, #111827)' } }, 'Продление подписки'),
-                    h('div', { style: { fontSize: 12, color: '#6b7280' } }, 'Выберите длительность')
-                )
+        const extendView = () => h('div', { className: 'cur-cab__sheet-body' },
+            h('div', null,
+                h('div', { className: 'cur-cab__tab-title' }, 'Продление подписки'),
+                h('div', { className: 'cur-cab__tab-note' }, 'От текущей даты окончания')
             ),
-            h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 } },
-                [1, 2, 3, 6].map(m => h('button', {
+            // Выбор длительности — чипы набора, а не плитки с синей рамкой:
+            // это тот же выбор одного из нескольких, что и фильтр панели.
+            h('div', { className: 'cur-panel__chips' },
+                [1, 2, 3, 6].map((m) => h('button', {
                     key: m,
-                    onClick: () => {
-                        console.info('[HEYS.subs] 📆 Выбор периода продления', { clientId: client.id, months: m });
-                        setMonths(m);
-                    },
-                    style: {
-                        padding: '10px 0', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                        border: months === m ? '2px solid #2563eb' : '2px solid #e5e7eb',
-                        background: months === m ? '#eff6ff' : 'var(--card, #fff)',
-                        color: months === m ? '#1d4ed8' : 'var(--text, #374151)'
-                    }
-                }, `${m} мес`))
+                    type: 'button',
+                    className: 'cur-chip' + (months === m ? ' is-on' : ''),
+                    onClick: () => setMonths(m)
+                }, m + ' мес'))
             ),
-            h('div', { style: { fontSize: 12, color: '#6b7280' } },
-                `Подписка будет продлена на ${months} мес. от текущей даты окончания`
-            ),
-            h('div', { style: { display: 'flex', gap: 8 } },
+            h('div', { className: 'cur-cab__tab-note' },
+                'Подписка будет продлена на ' + months + ' мес. от текущей даты окончания'),
+            h('div', { className: 'cur-cab__actions' },
                 h('button', {
-                    onClick: () => {
-                        console.info('[HEYS.subs] ← Возврат из extend view');
-                        setView('main');
-                    },
-                    style: { ...btnBase, justifyContent: 'center', background: 'var(--border, #eef2f7)' }
-                }, '← Назад'),
+                    type: 'button',
+                    className: 'cur-cab__open is-soft',
+                    onClick: () => setView('main')
+                }, 'Назад'),
                 h('button', {
-                    onClick: handleExtend, disabled: loading,
-                    style: { ...btnBase, justifyContent: 'center', background: loading ? '#9ca3af' : 'linear-gradient(135deg, #4285f4, #2563eb)', color: '#fff', border: 'none' }
-                }, loading ? '⏳...' : `✅ +${months} мес`)
+                    type: 'button',
+                    className: 'cur-cab__open',
+                    onClick: handleExtend,
+                    disabled: loading
+                }, loading ? 'Продлеваем…' : 'Продлить на ' + months + ' мес')
             )
         );
 
-        const mainView = () => h('div', { style: { display: 'grid', gap: 16 } },
-            h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
-                h('div', { style: { width: 44, height: 44, borderRadius: 14, background: badge.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 } }, badge.emoji),
-                h('div', null,
-                    h('div', { style: { fontSize: 16, fontWeight: 700, color: 'var(--text, #111827)' } }, client.name),
-                    h('div', { style: { fontSize: 12, color: badge.color, fontWeight: 700 } }, badge.text)
-                )
-            ),
-            h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 } },
-                statCard('Статус', status, { color: badge.color, bg: badge.bg }),
-                statCard('Триал до', formatDate(client.trial_ends_at)),
-                statCard('Подписка до', formatDate(client.active_until))
-            ),
-            h('div', { style: { display: 'grid', gap: 8 } },
-                pill('ID клиента', (client.id || '').slice(0, 8) + '…'),
-                pill('Тариф', status === 'active' ? 'Активен' : status === 'trial' ? 'Триал' : status === 'trial_pending' ? 'Ожидание' : status === 'read_only' ? 'Ограничен' : 'Нет'),
-                pill('Telegram', client.has_telegram_binding === true ? 'Привязан' : client.has_telegram_binding === false ? 'Не привязан' : 'Неизвестно')
-            ),
-            accessResult && h('div', { style: { display: 'grid', gap: 8, padding: 12, borderRadius: 10, background: accessResult.unavailable ? '#fff7ed' : '#f8fafc', border: `1px solid ${accessResult.unavailable ? '#fed7aa' : '#e2e8f0'}` } },
-                h('div', { style: { fontSize: 12, fontWeight: 700, color: accessResult.unavailable ? '#c2410c' : '#475569' } }, accessResult.title || 'Ссылка для клиента'),
-                accessResult.message && h('div', { style: { fontSize: 12, color: '#64748b', lineHeight: 1.4 } }, accessResult.message),
-                accessResult.welcomeMessage && h('div', { style: { display: 'grid', gap: 8 } },
-                    h('div', { style: { fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0 } }, 'Сообщение клиенту'),
-                    h('div', {
-                        style: {
-                            fontSize: 12,
-                            color: '#334155',
-                            whiteSpace: 'pre-wrap',
-                            lineHeight: 1.45,
-                            maxHeight: 180,
-                            overflowY: 'auto',
-                            padding: 10,
-                            borderRadius: 8,
-                            background: '#fff',
-                            border: '1px solid #cbd5e1'
-                        }
-                    }, accessResult.welcomeMessage),
-                    h('button', {
-                        onClick: () => copyText(accessResult.welcomeMessage, 'Сообщение клиенту скопировано'),
-                        style: { ...btnBase, justifyContent: 'center', background: '#0f172a', color: '#fff', border: 'none' }
-                    }, 'Скопировать сообщение клиенту')
-                ),
-                accessResult.pin && h('div', { style: { fontSize: 24, fontWeight: 800, letterSpacing: 8, fontFamily: 'monospace', color: '#111827' } }, accessResult.pin),
-                accessResult.deepLink && h('div', { style: { fontSize: 11, color: '#475569', wordBreak: 'break-all', fontFamily: 'monospace' } }, accessResult.deepLink),
-                accessResult.deepLink && !accessResult.pin && !accessResult.unavailable && h('div', { style: { fontSize: 12, color: '#64748b', lineHeight: 1.4 } },
-                    'Для полного сообщения с PIN перевыпустите PIN и ссылку.'
-                ),
-                h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 } },
-                    accessResult.pin && h('button', {
-                        onClick: () => copyText(accessResult.pin, 'PIN скопирован'),
-                        style: { ...btnBase, justifyContent: 'center', background: '#fff', color: '#334155', border: '1px solid #cbd5e1' }
-                    }, 'Копировать PIN'),
-                    h('button', {
-                        onClick: () => copyText(accessResult.deepLink, 'Ссылка скопирована'),
-                        disabled: !accessResult.deepLink,
-                        style: { ...btnBase, justifyContent: 'center', background: '#fff', color: '#334155', border: '1px solid #cbd5e1' }
-                    }, 'Копировать ссылку')
-                )
-            ),
-            h('div', { style: { display: 'grid', gap: 8 } },
-                (status === 'none' || status === 'read_only') && h('button', {
-                    onClick: () => {
-                        console.info('[HEYS.subs] 🎫 Открытие trial view', { clientId: client.id, status });
-                        setTrialDate(new Date().toISOString().split('T')[0]);
-                        setView('trial');
-                    },
-                    style: { ...btnBase, background: '#ecfdf5', color: '#059669', border: '1px solid #bbf7d0' }
-                }, '🎫 Активировать триал'),
+        // Карточка выданного доступа: PIN, ссылка и сообщение клиенту. Вынесена
+        // из тела листа отдельной функцией — она появляется только после
+        // действия и не должна мешать читать состав подписки.
+        // Карточка выданного доступа: PIN, ссылка и сообщение клиенту.
+        // Вынесена из тела листа отдельной функцией — она появляется только
+        // после действия и не должна мешать читать состав подписки.
+        const accessCard = () => h('div', {
+            className: 'cur-cab__access' + (accessResult.unavailable ? ' is-warn' : '')
+        },
+            h('div', { className: 'cur-cab__access-title' },
+                accessResult.title || 'Ссылка для клиента'),
+            accessResult.message
+                ? h('div', { className: 'cur-cab__tab-note' }, accessResult.message)
+                : null,
+            // PIN крупно и моноширинно: его диктуют вслух или переписывают.
+            accessResult.pin
+                ? h('div', { className: 'cur-cab__access-pin' }, accessResult.pin)
+                : null,
+            accessResult.deepLink
+                ? h('div', { className: 'cur-cab__access-link' }, accessResult.deepLink)
+                : null,
+            accessResult.welcomeMessage
+                ? h('div', { className: 'cur-cab__access-msg' }, accessResult.welcomeMessage)
+                : null,
+            accessResult.deepLink && !accessResult.pin && !accessResult.unavailable
+                ? h('div', { className: 'cur-cab__tab-note' },
+                    'Для полного сообщения с PIN перевыпустите PIN и ссылку.')
+                : null,
+            h('div', { className: 'cur-cab__actions' },
+                accessResult.welcomeMessage ? h('button', {
+                    type: 'button',
+                    className: 'cur-cab__open',
+                    onClick: () => copyText(accessResult.welcomeMessage, 'Сообщение клиенту скопировано')
+                }, 'Скопировать сообщение') : null,
+                accessResult.pin ? h('button', {
+                    type: 'button',
+                    className: 'cur-cab__open is-soft',
+                    onClick: () => copyText(accessResult.pin, 'PIN скопирован')
+                }, 'Копировать PIN') : null,
                 h('button', {
-                    onClick: () => {
-                        console.info('[HEYS.subs] ➕ Открытие extend view', { clientId: client.id, status });
-                        setMonths(1);
-                        setView('extend');
-                    },
-                    style: { ...btnBase, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }
-                }, '➕ Продлить подписку'),
-                status === 'active' && h('button', {
-                    onClick: handleRefund, disabled: loading,
-                    style: { ...btnBase, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }
-                }, loading ? '⏳ Возврат...' : '💰 Вернуть деньги (последний платёж)'),
-                client.has_telegram_binding !== true && h('button', {
-                    onClick: handleGetClientAccessLink,
-                    disabled: loading || !HEYS.TrialQueue?.admin?.getClientAccessLink,
-                    style: { ...btnBase, background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }
-                }, loading ? '⏳ Получение...' : '🔗 Скопировать ссылку'),
-                h('button', {
-                    onClick: handleClearTelegramBinding,
-                    disabled: loading || !HEYS.TrialQueue?.admin?.clearTelegramBinding,
-                    style: { ...btnBase, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa' }
-                }, loading ? '⏳ Сброс...' : '📱 Сбросить Telegram-привязку'),
-                h('button', {
-                    onClick: handleRegeneratePin,
-                    disabled: loading || !HEYS.TrialQueue?.admin?.regeneratePin,
-                    style: { ...btnBase, background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe' }
-                }, loading ? '⏳ Выпуск...' : '🔐 Перевыпустить PIN и приглашение'),
-                status !== 'none' && h('button', {
-                    onClick: handleCancel, disabled: loading,
-                    style: { ...btnBase, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }
-                }, loading ? '⏳ Сброс...' : '🚫 Сбросить подписку')
+                    type: 'button',
+                    className: 'cur-cab__open is-soft',
+                    onClick: () => copyText(accessResult.deepLink, 'Ссылка скопирована'),
+                    disabled: !accessResult.deepLink
+                }, 'Копировать ссылку')
             )
         );
+
+        // «Ещё пять действий» — счёт словом склоняется вместе с числом.
+        const pluralActions = (n) => {
+            const abs = Math.abs(n) % 100;
+            const last = abs % 10;
+            if (abs > 10 && abs < 20) return 'действий';
+            if (last === 1) return 'действие';
+            if (last > 1 && last < 5) return 'действия';
+            return 'действий';
+        };
+
+        const mainView = () => {
+            // Кадр «Подписка клиента»: шапка с именем и сроком, список из
+            // четырёх строк, одно главное действие и остальные под кнопкой.
+            const rest = [
+                (status === 'none' || status === 'read_only') && ['Активировать триал', 'открыть', () => {
+                    setTrialDate(new Date().toISOString().split('T')[0]);
+                    setView('trial');
+                }, null],
+                status === 'active' && ['Вернуть деньги за последний платёж', 'вернуть', handleRefund, 'bad'],
+                client.has_telegram_binding !== true && HEYS.TrialQueue?.admin?.getClientAccessLink
+                    && ['Скопировать ссылку для входа', 'скопировать', handleGetClientAccessLink, null],
+                HEYS.TrialQueue?.admin?.regeneratePin
+                    && ['Перевыпустить PIN и приглашение', 'выпустить', handleRegeneratePin, null],
+                HEYS.TrialQueue?.admin?.clearTelegramBinding
+                    && ['Сбросить Telegram-привязку', 'сбросить', handleClearTelegramBinding, null],
+                status !== 'none' && ['Сбросить подписку', 'сбросить', handleCancel, 'bad'],
+            ].filter(Boolean);
+            // Разрушающие — последними: в прежнем столбике «Сбросить подписку»
+            // стояла между «Скопировать ссылку» и «Перевыпустить PIN».
+            rest.sort((x, y) => (x[3] === 'bad' ? 1 : 0) - (y[3] === 'bad' ? 1 : 0));
+
+            return h('div', { className: 'cur-cab__sheet-body' },
+                h('div', { className: 'cur-cab__client-head' },
+                    h('span', { className: 'cur-row__avatar' }, getClientInitials(client.name)),
+                    h('span', { className: 'cur-cab__client-copy' },
+                        h('span', { className: 'cur-row__name' }, client.name),
+                        h('span', {
+                            className: 'cur-cab__sheet-term' + (badge.urgent ? ' is-warn' : '')
+                        }, badge.text)
+                    )
+                ),
+
+                h('div', { className: 'cur-group__card cur-cab__kvs' },
+                    kv('Тариф', status === 'active' ? 'Pro · активен'
+                        : status === 'trial' ? 'Триал'
+                            : status === 'trial_pending' ? 'Триал ещё не начался'
+                                : status === 'read_only' ? 'Доступ ограничен' : 'Нет подписки',
+                        status === 'active' ? 'ok' : null),
+                    kv('Триал', client.trial_ends_at ? 'до ' + formatDate(client.trial_ends_at) : 'не было'),
+                    kv('Telegram', client.has_telegram_binding === true ? 'привязан'
+                        : client.has_telegram_binding === false ? 'не привязан' : 'неизвестно'),
+                    kv('ID клиента', (client.id || '').slice(0, 8) + '…')
+                ),
+
+                accessResult ? accessCard() : null,
+
+                h('button', {
+                    type: 'button',
+                    className: 'cur-cab__open',
+                    onClick: () => { setMonths(1); setView('extend'); },
+                    disabled: loading
+                }, 'Продлить подписку'),
+
+                rest.length ? h('div', { className: 'cur-cab__rest' },
+                    h('button', {
+                        type: 'button',
+                        className: 'cur-cab__create',
+                        onClick: () => setRestOpen((v) => !v)
+                    }, restOpen ? 'Скрыть остальные действия'
+                        : 'Ещё ' + rest.length + ' ' + pluralActions(rest.length)),
+                    restOpen ? h('div', { className: 'cur-group__card' },
+                        rest.map(([label, hint, onClick, tone]) => actionRow(label, hint, onClick, tone))
+                    ) : null
+                ) : null
+            );
+        };
 
         // Контракт «вид · служебные листы»: модалка с тёмной шапкой заменена
         // листом снизу. Геометрия, скрим и закрытие — общие с листом поправки
@@ -732,15 +724,7 @@
                     'aria-label': 'Закрыть'
                 }, '✕')
             ),
-            h('div', {
-                style: {
-                    padding: 18,
-                    overflow: 'auto',
-                    background: 'var(--surface, #f8fafc)'
-                }
-            },
-                view === 'main' ? mainView() : view === 'trial' ? trialView() : extendView()
-            )
+            view === 'main' ? mainView() : view === 'trial' ? trialView() : extendView()
         );
 
         // Скрим набора: те же размытие и затемнение, что у листа поправки и
@@ -1200,23 +1184,29 @@
                     'aria-label': 'Закрыть'
                 }, '✕')
             ),
-            // Body
-            React.createElement('div', { style: { padding: 20, display: 'grid', gap: 16, overflowY: 'auto' } },
-                // Name
-                React.createElement('div', null,
-                    React.createElement('label', { style: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 } }, 'Имя клиента'),
+            // Кадр «Новый клиент»: подпись над полем 10,5 px, поле 44 радиусом
+            // 14 на грунте набора. Обязательные поля не помечаются звёздочкой —
+            // необязательных в форме нет.
+            React.createElement('div', { className: 'cur-cab__sheet-body' },
+                React.createElement('label', { className: 'cur-field' },
+                    React.createElement('span', { className: 'cur-field__label' }, 'Имя'),
                     React.createElement('input', {
+                        className: 'cur-field__input',
                         placeholder: 'Иван Иванов',
                         value: newName,
-                        onChange: (e) => setNewName(e.target.value),
-                        style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none' }
+                        onChange: (e) => setNewName(e.target.value)
                     })
                 ),
-                // Phone
-                React.createElement('div', null,
-                    React.createElement('label', { style: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 } }, 'Номер телефона'),
+                React.createElement('label', { className: 'cur-field' },
+                    React.createElement('span', { className: 'cur-field__label' }, 'Телефон'),
                     React.createElement('input', {
+                        className: 'cur-field__input',
                         placeholder: '+7 (999) 000-00-00',
+                        // Форма записи та же, что во «Входе»: куратор диктует
+                        // клиенту номер в том же виде, в каком клиент его потом
+                        // вводит сам.
+                        type: 'tel',
+                        inputMode: 'tel',
                         value: (() => {
                             const d = (newPhone || '').replace(/\D/g, '').slice(0, 11);
                             if (!d) return '';
@@ -1231,13 +1221,11 @@
                             if (body.length > 8) result += body.slice(8, 10);
                             return result;
                         })(),
-                        onChange: (e) => setNewPhone((e.target.value || '').replace(/\D/g, '').slice(0, 11)),
-                        style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none' }
+                        onChange: (e) => setNewPhone((e.target.value || '').replace(/\D/g, '').slice(0, 11))
                     })
                 ),
-                // PIN
-                React.createElement('div', null,
-                    React.createElement('label', { style: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 } }, 'PIN код (4 цифры)'),
+                React.createElement('div', { className: 'cur-field' },
+                    React.createElement('span', { className: 'cur-field__label' }, 'PIN — 4 цифры'),
                     pinKeypadKit
                         ? pinKeypadKit.renderPinKeypadSection({
                             pin: createPinField,
@@ -1245,19 +1233,20 @@
                             keypadRef: createPinKeypadRef,
                         })
                         : React.createElement('input', {
+                            className: 'cur-field__input is-pin',
                             placeholder: '1234',
                             value: createPinField.pinValue,
                             maxLength: 4,
                             onChange: (e) => createPinField.applyPinDigits((e.target.value || '').replace(/\D/g, '').slice(0, 4).split('').concat(['', '', '', '']).slice(0, 4)),
                             onKeyDown: (e) => { if (e.key === 'Enter') handleCreate(); },
-                            type: 'tel',
-                            style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none', letterSpacing: 4, textAlign: 'center', fontWeight: 700 }
+                            type: 'tel'
                         })
                 ),
-                // Info
-                React.createElement('div', { style: { padding: '12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#64748b', lineHeight: 1.4 } },
-                    '🔒 Клиент будет входить по этому телефону и PIN-коду. Обязательно сохраните эти данные.'
-                ),
+                // Подпись формы, а не предупреждение: замок 🔒 на холодной
+                // плашке читался тревогой там, где просто объясняют вход.
+                React.createElement('div', { className: 'cur-cab__tab-note' },
+                    'Клиент будет входить по этому телефону и PIN-коду. '
+                    + 'Сохраните их — второй раз PIN не показывается.'),
                 accessResult && React.createElement('div', {
                     style: { display: 'grid', gap: 8, padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' }
                 },
@@ -1298,23 +1287,14 @@
                         }, 'Копировать ссылку')
                     )
                 ),
-                // Button
+                // Кнопка листа — пилюля набора: синий градиент с тенью был
+                // единственным градиентом кабинета, а недоступное состояние
+                // держал серым #e2e8f0 из прежней системы.
                 React.createElement('button', {
+                    type: 'button',
+                    className: 'cur-cab__open',
                     onClick: accessResult ? closeModal : handleCreate,
-                    disabled: loading || (!accessResult && !(newName.trim() && newPhone.trim() && createPinField.isComplete)),
-                    style: {
-                        marginTop: 8,
-                        width: '100%',
-                        padding: '14px',
-                        borderRadius: 12,
-                        background: (!loading && (accessResult || (newName.trim() && newPhone.trim() && createPinField.isComplete))) ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#e2e8f0',
-                        color: (!loading && (accessResult || (newName.trim() && newPhone.trim() && createPinField.isComplete))) ? '#fff' : '#94a3b8',
-                        border: 'none',
-                        fontWeight: 700,
-                        fontSize: 16,
-                        cursor: (!loading && (accessResult || (newName.trim() && newPhone.trim() && createPinField.isComplete))) ? 'pointer' : 'not-allowed',
-                        boxShadow: (!loading && (accessResult || (newName.trim() && newPhone.trim() && createPinField.isComplete))) ? '0 4px 6px -1px rgba(37,99,235,0.2)' : 'none'
-                    }
+                    disabled: loading || (!accessResult && !(newName.trim() && newPhone.trim() && createPinField.isComplete))
                 }, accessResult ? 'Готово' : loading ? 'Создание...' : 'Создать клиента')
             )
         );

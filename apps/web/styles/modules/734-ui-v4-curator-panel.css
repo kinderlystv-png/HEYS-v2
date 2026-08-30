@@ -318,9 +318,11 @@
 }
 
 .cur-sheet__meta {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  /* Окно — числа, и их сравнивают с окном соседнего клиента. */
+  font-variant-numeric: tabular-nums;
 }
 
 .cur-sheet__facts {
@@ -368,11 +370,173 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Только куратору: строка про то, где сидит расхождение, клиенту не
-   показывается никогда — она про выбор лечения, а не про него. */
-.cur-sheet__where {
+/* Тон разводит расчёт и измерение: два числа подряд одним цветом читаются как
+   одна величина, померенная дважды. */
+.cur-sheet__fact-value.is-fact {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+/* Гейт данных: набрано — зелёным, не набрано — предупреждением. */
+.cur-sheet__fact-value.is-ok {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.cur-sheet__fact-value.is-warn {
+  color: var(--v4-warn-text, #a1471c);
+}
+
+/* Ярус раздела листа. Тот же приём, что у «как получилось»: слово акцентом,
+   прописными, разрядкой — оно называет раздел, а не спорит с числами в нём. */
+.cur-sheet__tier {
+  margin-top: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+/* Расхождение — отдельной плашкой на подложке набора: это то число, ради
+   которого лист открыли, и строкой среди прочих оно теряется. */
+.cur-sheet__mismatch {
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-hero, #efe3cf);
+}
+
+.cur-sheet__mismatch-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cur-sheet__mismatch-value {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+.cur-sheet__mismatch-note {
+  margin-top: 8px;
   font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.5;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* Только куратору: строка про то, где сидит расхождение, клиенту не
+   показывается никогда — она про выбор лечения, а не про него. Заголовок и
+   сноска обязательны контрактом: без них проза читается как вывод о клиенте. */
+.cur-sheet__where {
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.cur-sheet__where-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cur-sheet__where-body {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
+}
+
+.cur-sheet__where-note {
+  margin-top: 12px;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
+/* Предложение нормы — главным числом экрана. В первом слое остаётся вывод и
+   действие; как оно получилось, разбирает столбец ниже. */
+.cur-sheet__rec {
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.cur-sheet__rec-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.cur-sheet__rec-value {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Снижение тоном только на числе разницы, а не на всей карточке: снижение не
+   катастрофа. Рост — зелёным: празднуем вслух, снижаем тихо. */
+.cur-sheet__rec-delta {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-bad-text, #b4442a);
+  font-variant-numeric: tabular-nums;
+}
+
+.cur-sheet__rec-delta.is-up {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.cur-sheet__rec-caption {
+  margin-top: 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  font-variant-numeric: tabular-nums;
+}
+
+.cur-sheet__rec-split {
+  height: 1px;
+  margin: 13px 0;
+  background: var(--v4-line, rgba(0, 0, 0, 0.09));
+}
+
+.cur-sheet__rec-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cur-sheet__rec-row + .cur-sheet__rec-row {
+  margin-top: 9px;
+}
+
+.cur-sheet__rec-num {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Цель слабее применяемого: она ещё не решение, а направление. */
+.cur-sheet__rec-num.is-target {
+  font-weight: 600;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.cur-sheet__rec-note {
+  margin-top: 12px;
+  font-size: 11px;
+  line-height: 1.5;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
@@ -480,17 +644,20 @@
   box-shadow: 0 -8px 16px -8px var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
 }
 
+/* Строка контракта «кнопки»: пилюля 48 радиусом 999. Прямоугольник радиусом 14
+   и рамка вместо заливки делали вторичные кнопки похожими на поля ввода — и
+   спорили с пилюлями во всей остальной системе. */
 .cur-sheet__cta,
 .cur-sheet__btn {
   min-height: 48px;
-  border-radius: 14px;
+  border-radius: 999px;
+  border: none;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .cur-sheet__cta {
-  border: none;
   background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #fff5ef);
 }
@@ -500,11 +667,18 @@
   gap: 8px;
 }
 
+/* Вторичное — та же геометрия на подложке набора: тон отличает его от главного
+   действия, а не форма. */
 .cur-sheet__btn {
   flex: 1;
-  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
-  background: var(--v4-bg, #fffaf1);
-  color: var(--v4-ink, #201e1d);
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.58));
+}
+
+/* Два вторичных в ряд делят ширину пополам, и кегль у них меньше: два слова в
+   половине строки на тринадцати пикселях переносились. */
+.cur-sheet__row .cur-sheet__btn {
+  font-size: 12.5px;
 }
 
 .cur-sheet__btn--wide {
@@ -979,6 +1153,12 @@
   margin-top: 12px;
 }
 
+.cur-cab__open:disabled {
+  background: var(--v4-hero, #efe3cf);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 38%, transparent);
+  cursor: default;
+}
+
 .cur-cab__open {
   flex: 1 1 auto;
   min-height: 44px;
@@ -1148,6 +1328,141 @@
 .cur-cab__queue-limits-val {
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
   font-variant-numeric: tabular-nums;
+}
+
+/* Карточка выданного доступа: PIN, ссылка, сообщение. Появляется только
+   после действия куратора, поэтому стоит подложкой, а не грунтом — чтобы
+   отличаться от состава подписки над ней. */
+.cur-cab__access {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+/* Ссылку выдать не удалось — предупреждает заголовок тоном «внимание», а не
+   своя заливка: красить всю карточку значило бы сказать, что сломан весь
+   доступ, тогда как выпустить его можно ещё раз. */
+.cur-cab__access.is-warn .cur-cab__access-title {
+  color: var(--v4-warn-text, #a1471c);
+}
+
+.cur-cab__access-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+}
+
+/* PIN диктуют вслух и переписывают — потому крупно и моноширинно. */
+.cur-cab__access-pin {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.4em;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cur-cab__access-link {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  word-break: break-all;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.5));
+}
+
+.cur-cab__access-msg {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--v4-bg, #fffaf1);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
+}
+
+/* В карточке доступа кнопок три, и на 375 px они переносятся: здесь перенос
+   уместен — это не ряд равных действий вкладки, а список копирований. */
+.cur-cab__access .cur-cab__actions {
+  flex-wrap: wrap;
+}
+
+.cur-cab__access .cur-cab__open {
+  flex: 1 1 140px;
+}
+
+/* Тело служебного листа: поля 20/18/16 из контракта «вид · служебные листы»
+   и вертикальный ритм вместо россыпи собственных отступов у каждого блока. */
+.cur-cab__sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 18px 20px;
+  overflow-y: auto;
+}
+
+/* Срок подписки в шапке листа — тоном «норма закрыта», пока он не поджимает.
+   Прежде здесь стоял цвет из объекта бейджа, минуя набор. */
+.cur-cab__sheet-term {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.cur-cab__sheet-term.is-warn {
+  color: var(--v4-warn-text, #a1471c);
+}
+
+/* Остальные действия листа: свёрнуты, потому что лист открывают ради
+   продления. Шесть кнопок в столбик были равны по весу, и «Сбросить
+   подписку» выглядела так же, как «Продлить». */
+.cur-cab__rest {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Поле формы: подпись над полем, поле 44 радиусом 14 на грунте набора.
+   Прежде подпись была 13 px тоном #374151, а поле — белым с рамкой #d1d5db:
+   всё мимо набора. */
+.cur-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cur-field__label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+}
+
+.cur-field__input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  border-radius: 14px;
+  background: var(--v4-surface, #fbf6ee);
+  color: var(--v4-ink, #201e1d);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.cur-field__input:focus-visible {
+  border-color: var(--v4-act, #c67139);
+}
+
+.cur-field__input.is-pin {
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.4em;
 }
 
 /* Создание клиента — вторичная кнопка набора: действие редкое и не должно

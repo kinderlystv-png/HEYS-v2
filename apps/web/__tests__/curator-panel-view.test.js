@@ -225,8 +225,11 @@ describe('панель куратора · место в кабинете', () =
     // Кнопка создания клиента — вторичная набора, а не голубая плашка с ➕.
     expect(card).not.toContain('#eff6ff');
     // Кнопка создания — вторичная набора, а не голубая плашка с эмодзи.
-    const at = src.indexOf("className: 'cur-cab__create'");
-    const create = src.slice(at - 400, src.indexOf('const modalContent', at));
+    // Якорь — по самой кнопке, а не по классу: класс вторичной кнопки набора
+    // переиспользован листом подписки («Ещё N действий»), и поиск по нему
+    // приводил в чужой блок.
+    const at = src.indexOf("}, 'Создать клиента');");
+    const create = src.slice(at - 400, at + 30);
     expect(create).not.toContain('#eff6ff');
     expect(create).not.toContain('Создать нового клиента');
     expect(create).toContain("'Создать клиента'");
@@ -375,18 +378,26 @@ describe('панель куратора · строка клиента', () => {
     expect(CP.agePill(row({ state: 'in_corridor', ageDays: null }))).toBe(null);
   });
 
-  it('три числа шапки названы каждое своей природой', () => {
-    // Формула и факт — расход, норма — уже с вычтенным дефицитом. Три числа
-    // подряд без подписи читаются как три расхода, и вопрос «это же с
-    // дефицитом?» задают вслух.
-    expect(SRC).toContain("'расход по формуле'");
-    expect(SRC).toContain("'расход по весу и записям'");
-    expect(SRC).toContain("'с дефицитом '");
+  it('числа названы каждое своей природой, и слова эти — движка', () => {
+    // Формула и факт — расход, норма — уже с вычтенным дефицитом. Два числа
+    // подряд без подписи читаются как один расход, померенный дважды.
+    // Подписи берутся у карточки: «BMR + шаги + тренировки» и «съедено минус
+    // движение веса» — слова контракта, и второй их экземпляр в разметке
+    // разошёлся бы с первым.
+    expect(SRC).toContain('card.formula.source');
+    expect(SRC).toContain('card.fact.source');
+    expect(SRC).toContain("' · с дефицитом '");
+    // Тон разводит расчёт и измерение — контракт называет это прямо.
+    expect(SRC).toContain("card.fact.source, 'fact'");
+    expect(CSS).toMatch(/\.cur-sheet__fact-value\.is-fact[\s\S]{0,80}--v4-act-text/);
   });
 
-  it('«станет» говорится только когда норма действительно двинется', () => {
-    // При неизменной норме слово обещает изменение, которого не будет.
-    expect(SRC).toContain("rec.norm === rec.currentNorm ? 'Норма дня остаётся' : 'Норма дня станет'");
+  it('«станет» не говорится вовсе: обещание живёт в самом числе', () => {
+    // При неизменной норме слово обещало бы изменение, которого не будет.
+    // Подпись под главным числом называет состояние, а не событие.
+    expect(SRC).toContain("rec.norm === rec.currentNorm");
+    expect(SRC).toContain("'норма дня остаётся'");
+    expect(SRC).not.toContain('Норма дня станет');
   });
 
   it('расхождение в строке и в листе — одно число, а не два округления', () => {
@@ -473,10 +484,13 @@ describe('панель куратора · решение и границы', ()
     // откуда итог взялся, — прятать это значит прятать предмет решения.
     expect(SRC).toContain("h('div', { className: 'cur-sheet__how-body' }");
     expect(SRC).not.toContain('howOpen');
-    for (const title of ['Из чего расход', 'Как получился факт',
-      'Как получилась поправка', 'Как получилась норма', 'На чём считали']) {
+    for (const title of ['Из чего расход', 'Как получился факт']) {
       expect(SRC, title).toContain("'" + title + "'");
     }
+    // Поправку и норму разбирает сама карточка предложения: держать те же
+    // числа ещё и в столбце значило бы показать их дважды и разойтись.
+    expect(SRC).not.toContain("'Как получилась поправка'");
+    expect(SRC).not.toContain("'Как получилась норма'");
     // Лист прокручивается — высота ему не предел.
     expect(CSS).toMatch(/\.cur-sheet[\s\S]{0,200}overflow-y: auto/);
   });
@@ -487,7 +501,7 @@ describe('панель куратора · решение и границы', ()
     expect(body).not.toMatch(/[*/]\s*(?:100|7700|0\.85)/);
     expect(body).toContain('card.expenditureParts');
     expect(body).toContain('card.path');
-    expect(body).toContain('rec.correctedExpenditure');
+    expect(SRC).toContain('rec.correctedExpenditure');
   });
 
   it('действия прилипают к низу листа', () => {
@@ -502,11 +516,13 @@ describe('панель куратора · решение и границы', ()
   it('цель поправки показывается только когда шаг её не догнал', () => {
     // Совпадая с применяемым, строка была дублем и заставляла искать разницу
     // там, где её нет: «цель ×1,008» рядом с «применяем ×1,01».
-    const block = SRC.slice(SRC.indexOf('Как получилась поправка'), SRC.indexOf('Как получилась норма'));
-    expect(block).toContain("factRow(React, 'Цель поправки'");
-    expect(block).toContain('card.stepCapped');
-    expect(SRC).toContain("card.stepCapped ? 'Применяем' : 'Поправка'");
+    const block = SRC.slice(SRC.indexOf("className: 'cur-sheet__rec'"),
+      SRC.indexOf("cur-sheet__rec-note"));
+    expect(block).toContain("card.stepCapped ? h('div', { className: 'cur-sheet__rec-row' }");
+    expect(block).toContain("'Цель поправки'");
     expect(SRC).toContain('rec.targetFactorShown');
+    // Цель слабее применяемого: она направление, а не решение.
+    expect(CSS).toMatch(/\.cur-sheet__rec-num\.is-target[\s\S]{0,90}--v4-act-text/);
   });
 
   it('качество данных названо словом, а не дробью', () => {
@@ -715,5 +731,58 @@ describe('панель куратора · окно', () => {
     for (const dead of ['🗑️', '❌', '🔥 КУПИЛ', '#0088cc', '#25d366', '#fef2f2']) {
       expect(src, dead).not.toContain(dead);
     }
+  });
+
+  it('кадр «Подписка клиента»: одно главное действие, опасные — под кнопкой', () => {
+    const src = GATE.split(String.fromCharCode(10))
+      .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+      .join(String.fromCharCode(10));
+    const sheet = src.slice(src.indexOf('const mainView'), src.indexOf('const modalContent'));
+    // Семь кнопок в столбик были равны по весу, и «Сбросить подписку»
+    // выглядела так же, как «Продлить».
+    expect(sheet).toContain("'Продлить подписку'");
+    expect(sheet).toContain('restOpen');
+    expect(sheet).toContain('pluralActions');
+    // Разрушающие уходят в конец списка независимо от порядка объявления.
+    expect(sheet).toContain("rest.sort");
+    expect(sheet).toContain("'bad'");
+    // Состав листа — четыре строки кадра.
+    for (const key of ["kv('Тариф'", "kv('Триал'", "kv('Telegram'", "kv('ID клиента'"]) {
+      expect(sheet, key).toContain(key);
+    }
+    // Ни эмодзи в кнопках, ни градиентов, ни плиток со статусом.
+    for (const dead of ['🚫', '💰', '🔐', '📱', '🎫', 'linear-gradient', 'statCard']) {
+      expect(sheet, dead).not.toContain(dead);
+    }
+  });
+
+  it('кадр «Новый клиент»: подпись над полем, поле на грунте набора', () => {
+    const src = GATE.split(String.fromCharCode(10))
+      .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+      .join(String.fromCharCode(10));
+    const at = src.indexOf('function CreateClientModal');
+    const form = src.slice(at, src.indexOf('React.createElement(React.Fragment, null, triggerBtn', at));
+    for (const label of ["'Имя'", "'Телефон'", "'PIN — 4 цифры'"]) {
+      expect(form, label).toContain(label);
+    }
+    expect(form).toContain("className: 'cur-field__input'");
+    // Прежняя форма: подпись 13 px тоном #374151, поле белое с рамкой #d1d5db,
+    // кнопка синим градиентом с тенью, подсказка с замком на холодной плашке.
+    for (const dead of ['#374151', '#d1d5db', 'linear-gradient(135deg, #2563eb', '🔒']) {
+      expect(form, dead).not.toContain(dead);
+    }
+    expect(CSS).toMatch(/\.cur-field__input \{[\s\S]{0,200}min-height: 44px/);
+    expect(CSS).toMatch(/\.cur-field__input \{[\s\S]{0,260}border-radius: 14px/);
+  });
+
+  it('служебные листы: одна форма окна и одно тело на кабинет', () => {
+    const src = GATE.split(String.fromCharCode(10))
+      .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+      .join(String.fromCharCode(10));
+    // Лист подписки, лист анкеты и лист нового клиента делят класс окна.
+    expect(src.split("className: 'cur-cab__sheet'").length - 1).toBeGreaterThanOrEqual(3);
+    // И общее тело с полями контракта, а не свои padding у каждого.
+    expect(src).toContain("className: 'cur-cab__sheet-body'");
+    expect(src).not.toContain("background: 'var(--surface, #f8fafc)'");
   });
 });
