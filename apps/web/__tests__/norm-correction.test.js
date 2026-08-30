@@ -491,6 +491,67 @@ describe('поправка на факт · довод перестройки', 
     expect(card.actions).toEqual(['enable_measurements', 'later']);
   });
 
+  it('рядом с просьбой о замере стоит состояние нормы и остаток срока', () => {
+    // «Заморожена» без срока звучит бессрочно, а заморозка кончается на
+    // четырнадцатый день — и тогда поправка применяется по весу.
+    const card = NC.buildWeeklySyncCard({
+      result: { status: 'ready', direction: 'down', currentFactor: 1, nextFactor: 0.97 },
+      tariff: 'self',
+      recomposition: {
+        indirect: true, weeks: 4, deltaPct: 6.2, daysLeft: 6,
+        source: 'по росту рабочих весов за 4 недели'
+      }
+    });
+    const facts = Object.fromEntries(card.facts.map((f) => [f.label, f.value]));
+    expect(facts['Норма']).toBe('заморожена');
+    expect(facts['Ждём замер']).toBe('ещё 6 дней');
+    expect(card.copy.footnote).toContain('поправка применится по весу');
+  });
+
+  it('остаток срока склоняется', () => {
+    const daysLeftOf = (daysLeft) => {
+      const c = NC.buildWeeklySyncCard({
+        result: { status: 'ready', direction: 'down', currentFactor: 1, nextFactor: 0.97 },
+        tariff: 'self',
+        recomposition: { indirect: true, weeks: 4, daysLeft, source: 'по весам' }
+      });
+      return c.facts.find((f) => f.label === 'Ждём замер').value;
+    };
+    expect(daysLeftOf(1)).toBe('ещё 1 день');
+    expect(daysLeftOf(3)).toBe('ещё 3 дня');
+    expect(daysLeftOf(14)).toBe('ещё 14 дней');
+  });
+
+  it('косвенный довод даёт остаток срока, а не бессрочную заморозку', () => {
+    // Отсчёт идёт от первой просьбы о замере, а не от начала застоя.
+    const days = Array.from({ length: 28 }, (_, i) => ({
+      date: '2026-08-' + String(i + 1).padStart(2, '0'),
+      measurements: null, meals: [],
+      trainings: [{ type: 'strength', workoutLog: { exercises: [
+        { name: 'жим', approaches: [{ weightKg: String(60 + (i > 13 ? 6 : 0)) }] },
+        { name: 'тяга', approaches: [{ weightKg: String(90 + (i > 13 ? 8 : 0)) }] }
+      ] } }]
+    }));
+    const wsrc = fs.readFileSync(
+      path.resolve(__dirname, '../heys_working_weights_v1.js'), 'utf8'
+    );
+    // eslint-disable-next-line no-eval
+    (0, eval)(wsrc);
+
+    const now = new Date('2026-08-28T00:00:00');
+    // Ещё не просили — впереди весь срок.
+    expect(NC.detectRecomposition(days, {}, { askedAt: null, now }).daysLeft)
+      .toBe(NC.FREEZE_LIMIT_DAYS);
+    // Просили восемь дней назад — осталось шесть.
+    const asked = new Date('2026-08-20T00:00:00').getTime();
+    expect(NC.detectRecomposition(days, {}, { askedAt: asked, now }).daysLeft).toBe(6);
+    // Срок вышел — это уже другой кадр, и остатка у него нет.
+    const old = new Date('2026-08-10T00:00:00').getTime();
+    const expired = NC.detectRecomposition(days, {}, { askedAt: old, now });
+    expect(expired.checkExpired).toBe(true);
+    expect(expired.daysLeft).toBeUndefined();
+  });
+
   it('вторая ступень срабатывает, когда модуль весов загружен', () => {
     const days = Array.from({ length: 28 }, (_, i) => ({
       date: '2026-08-' + String(i + 1).padStart(2, '0'),
