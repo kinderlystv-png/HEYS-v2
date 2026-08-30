@@ -915,8 +915,12 @@
    * Окно кончается вчерашним днём: сегодняшний ещё пишется, и его неполнота
    * тянула бы средний съеденный вниз каждую неделю одинаково.
    */
-  function gather({ lsGet, lsSet, profile, pIndex, now, tariff, weekLabel }) {
+  function gather({ lsGet, lsSet, profile, pIndex, now, tariff, weekLabel, readOnly }) {
     if (!lsGet) return null;
+    // Чтение без последствий: разбор нормы у клиента открывается тапом по
+    // числу, и собирать сверку оттуда обычным способом значило бы применять
+    // поправку и ставить метку просьбы о замере по факту любопытства.
+    const canWrite = !readOnly && typeof lsSet === 'function';
 
     const prof = profile || lsGet('heys_profile', {});
     const base = now instanceof Date ? new Date(now) : new Date();
@@ -1002,7 +1006,7 @@
       askedAt: readMeasurementAsk(lsGet),
       now: base
     });
-    if (recomposition && recomposition.indirect) {
+    if (canWrite && recomposition && recomposition.indirect) {
       recordMeasurementAsk({ lsGet, lsSet, now: base.getTime() });
     }
 
@@ -1013,7 +1017,7 @@
     const activeTariff = tariff || resolveTariff(prof);
     let justRaised = detectAppliedRaise(weeks, base);
     if (!justRaised && activeTariff === 'self'
-        && result.status === 'ready' && result.direction === 'up' && lsSet) {
+        && result.status === 'ready' && result.direction === 'up' && canWrite) {
       const previousFactor = result.currentFactor;
       lsSet('heys_profile', Object.assign({}, prof, {
         normCorrectionFactor: result.nextFactor,

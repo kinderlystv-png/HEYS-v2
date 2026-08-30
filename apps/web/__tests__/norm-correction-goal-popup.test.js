@@ -69,3 +69,39 @@ describe('поправка на факт · строка в разборе но�
     expect(SRC).toContain("nc.factor.toFixed(2).replace('.', ',')");
   });
 });
+
+describe('разбор цели · откуда взялась поправка', () => {
+  const SRC = fs.readFileSync(
+    path.resolve(__dirname, '../heys_day_stats_v1.js'), 'utf8');
+
+  it('путь «съедено → вес → запас → факт» стоит перед самой поправкой', () => {
+    // Человек видел поправку числом и не знал, из чего она взялась.
+    for (const label of ['Съедено в среднем', 'Вес за три недели',
+      'Запас отдал', 'Расход по факту']) {
+      expect(SRC, label).toContain("'" + label + "'");
+    }
+    expect(SRC.indexOf("'Расход по факту'"))
+      .toBeLessThan(SRC.indexOf("'Поправка на факт',"));
+  });
+
+  it('тап по норме не применяет поправку и не просит замер', () => {
+    // gather применяет рост на self и ставит метку просьбы о замере. Собирать
+    // сверку из попапа обычным способом значило бы делать это по факту
+    // любопытства.
+    const block = SRC.slice(SRC.indexOf('correctionPath:'), SRC.indexOf('correctionHistoryDays:'));
+    expect(block).toContain('readOnly: true');
+    expect(block).not.toContain('lsSet');
+
+    const ENGINE = fs.readFileSync(
+      path.resolve(__dirname, '../heys_norm_correction_v1.js'), 'utf8');
+    expect(ENGINE).toContain('const canWrite = !readOnly && typeof lsSet === 'function'');
+    expect(ENGINE).toContain('if (canWrite && recomposition && recomposition.indirect)');
+  });
+
+  it('числа берутся из движка, а не считаются в разборе', () => {
+    const block = SRC.slice(SRC.indexOf('correctionPath:'), SRC.indexOf('correctionHistoryDays:'));
+    expect(block).toContain('res.path.eatenPerDay');
+    expect(block).toContain('res.factPerDay');
+    expect(block).not.toContain('7700');
+  });
+});

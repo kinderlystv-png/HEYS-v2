@@ -1446,6 +1446,28 @@
                   normCorrection: (prof && Number(prof.normCorrectionFactor) > 0 && Number(prof.normCorrectionFactor) !== 1)
                     ? { factor: Number(prof.normCorrectionFactor), appliedAt: prof.normCorrectionAppliedAt || '' }
                     : null,
+                  // Путь «съедено → вес → запас → факт»: без него человек
+                  // видит поправку числом и не знает, из чего она взялась.
+                  // Читаем без последствий — тап по норме не должен применять
+                  // поправку и ставить метку просьбы о замере.
+                  correctionPath: (() => {
+                    try {
+                      const g = HEYS.NormCorrection?.gather?.({
+                        lsGet: HEYS.utils?.lsGet,
+                        profile: prof || {},
+                        pIndex: HEYS.products?.buildIndex?.(),
+                        readOnly: true
+                      });
+                      const res = g && g.result;
+                      if (!res || !res.path || !Number.isFinite(res.factPerDay)) return null;
+                      return {
+                        eatenPerDay: res.path.eatenPerDay,
+                        deltaKg: res.path.deltaKg,
+                        storedPerDay: res.path.storedPerDay,
+                        factPerDay: res.factPerDay
+                      };
+                    } catch (_) { return null; }
+                  })(),
                   correctionHistoryDays: HEYS.DisciplineMatrix?.countHistoryDays
                     ? HEYS.DisciplineMatrix.countHistoryDays(
                         HEYS.utils?.lsGet, HEYS.NormCorrection?.COLD_START_DAYS || 14
@@ -3251,6 +3273,37 @@
                 React.createElement('span', { style: goalStyles.rowLabel }, 'из них вчерашняя тренировка'),
                 React.createElement('span', { style: goalStyles.rowValue }, Math.round(d.ndteBoost) + ' ккал')
               ),
+              // Из чего взялась поправка: путь от съеденного к факту. Стоит
+              // перед самой поправкой — она из него и получается. Числа те же,
+              // что видит куратор: одна модель, одно окно, одно округление.
+              d.correctionPath && Number.isFinite(d.correctionPath.deltaKg)
+                ? React.createElement(React.Fragment, null,
+                  React.createElement('div', { style: goalStyles.row },
+                    React.createElement('span', { style: goalStyles.rowLabel }, 'Съедено в среднем'),
+                    React.createElement('span', { style: goalStyles.rowValue },
+                      Math.round(d.correctionPath.eatenPerDay) + ' ккал')
+                  ),
+                  React.createElement('div', { style: goalStyles.row },
+                    React.createElement('span', { style: goalStyles.rowLabel }, 'Вес за три недели'),
+                    React.createElement('span', { style: goalStyles.rowValue },
+                      (d.correctionPath.deltaKg > 0 ? '+' : '−')
+                      + Math.abs(d.correctionPath.deltaKg).toFixed(1).replace('.', ',') + ' кг')
+                  ),
+                  d.correctionPath.storedPerDay
+                    ? React.createElement('div', { style: goalStyles.row },
+                      React.createElement('span', { style: goalStyles.rowLabel },
+                        d.correctionPath.storedPerDay < 0 ? 'Запас отдал' : 'Запас принял'),
+                      React.createElement('span', { style: goalStyles.rowValue },
+                        Math.abs(d.correctionPath.storedPerDay) + ' ккал в день')
+                    )
+                    : null,
+                  React.createElement('div', { style: goalStyles.row },
+                    React.createElement('span', { style: goalStyles.rowLabel }, 'Расход по факту'),
+                    React.createElement('span', { style: goalStyles.rowValue },
+                      Math.round(d.correctionPath.factPerDay) + ' ккал')
+                  )
+                )
+                : null,
               // Поправка на факт: расход после неё и есть база дефицита.
               (() => {
                 const nc = d.normCorrection;
