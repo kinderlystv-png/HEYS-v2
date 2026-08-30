@@ -2859,30 +2859,20 @@
           }
         }, toggleLoading ? '⏳' : isAccepting ? 'Закрыть' : 'Открыть')
       ),
-      React.createElement('div', {
-        style: {
-          display: 'flex',
-          gap: 6,
-          padding: '10px 16px',
-          background: '#fff',
-          borderBottom: '1px solid #e5e7eb'
-        }
-      },
+      // Контракт «вид · подвкладки очереди»: чипы со счётом через точку, а не
+      // сегмент с числом в скобках. Те же чипы, что у фильтра панели — один
+      // приём на кабинет. Пустая подвкладка притушена, но не скрыта: её
+      // исчезновение перестраивало бы ряд под руками куратора.
+      React.createElement('div', { className: 'cur-cab__subtabs' },
         tabs.map((tab) => React.createElement('button', {
           key: tab.id,
+          type: 'button',
+          className: 'cur-chip'
+            + (activeTab === tab.id ? ' is-on' : '')
+            + (tab.count ? '' : ' is-muted'),
           onClick: () => setActiveTab(tab.id),
-          title: tab.hint,
-          style: {
-            padding: '8px 12px',
-            borderRadius: 8,
-            border: 'none',
-          background: activeTab === tab.id ? '#434587' : 'transparent',
-            color: activeTab === tab.id ? '#fff' : '#6b7280',
-            cursor: 'pointer',
-            fontSize: 12,
-            fontWeight: 700
-          }
-        }, `${tab.label} (${tab.count})`))
+          title: tab.hint
+        }, tab.label.toLowerCase() + ' · ' + tab.count))
       ),
       React.createElement('div', {
         style: {

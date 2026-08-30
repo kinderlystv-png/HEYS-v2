@@ -739,3 +739,15 @@
 .cur-cab__preview.is-unread {
   color: var(--v4-act-text, #8a4a20);
 }
+
+/* Подвкладки очереди — те же чипы, что у фильтра панели: один приём на весь
+   кабинет. Ряд переносится; пустая подвкладка притушена, но не скрыта — её
+   исчезновение перестраивало бы ряд под руками куратора. */
+.cur-cab__subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--v4-bg, #fffaf1);
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+}

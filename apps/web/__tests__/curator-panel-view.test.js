@@ -59,6 +59,29 @@ describe('панель куратора · место в кабинете', () =
       .toEqual(window.HEYS.NormCorrection.PANEL_STATES);
   });
 
+  it('подвкладки очереди — те же чипы, что у фильтра панели', () => {
+    // Один приём на весь кабинет: сегмент с числом в скобках и фиолетовая
+    // заливка ушли вместе с тёмной шапкой.
+    const QUEUE = fs.readFileSync(
+      path.resolve(__dirname, '../heys_trial_queue_v1.js'), 'utf8');
+    expect(QUEUE).toContain("className: 'cur-chip'");
+    expect(QUEUE).toContain("tab.label.toLowerCase() + ' · ' + tab.count");
+    expect(QUEUE).not.toContain('${tab.label} (${tab.count})');
+    expect(QUEUE).not.toContain("'#434587' : 'transparent'");
+    // Пустая подвкладка притушена, но не скрыта.
+    expect(QUEUE).toContain("(tab.count ? '' : ' is-muted')");
+  });
+
+  it('длинная кнопка сокращена, но глагол остался', () => {
+    // «Кнопка называет действие сама»: строки-подписи над кнопками не нужны,
+    // если кнопка несёт глагол.
+    const DIAG = fs.readFileSync(
+      path.resolve(__dirname, '../heys_client_diagnostics_v1.js'), 'utf8');
+    expect(DIAG).toContain("'Скопировать сбои за день'");
+    expect(DIAG).not.toContain('Скопировать мегалог проблем за сегодня');
+    expect(DIAG).not.toContain('Собираю все проблемные входы за сегодня…');
+  });
+
   it('метки дня — один набор и один порядок', () => {
     // «Так карточки сравниваются глазом по столбцу»: порядок держит сравнение,
     // а не украшает карточку.

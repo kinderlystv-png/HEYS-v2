@@ -447,7 +447,7 @@
         metric('Активных клиентов', summary.active_clients), metric('Посещений', summary.visits || summary.launches), metric('Штатно · ' + Number(summary.success_rate || 0) + '%', summary.ready, 'ready'), metric('Сбои', summary.failed, 'failed', 'bad'), metric('Отклонения', Number(summary.degraded || 0) + Number(summary.abandoned || 0), 'problems', 'warn')
       ),
       h('div', { className: 'cdo-megalog' },
-        h('button', { type: 'button', className: 'cdo-mega-btn', onClick: copyDailyMegaLog, disabled: megaLoading }, megaLoading ? 'Собираю все проблемные входы за сегодня…' : 'Скопировать мегалог проблем за сегодня')
+        h('button', { type: 'button', className: 'cdo-mega-btn', onClick: copyDailyMegaLog, disabled: megaLoading }, megaLoading ? 'Собираю…' : 'Скопировать сбои за день')
       ),
       h('div', { className: 'cdo-filters' },
         h('input', { className: 'cdo-control cdo-search', type: 'search', placeholder: 'Поиск клиента…', value: searchQuery, onChange: function (e) { setSearchQuery(e.target.value); }, 'aria-label': 'Поиск клиента' }),
