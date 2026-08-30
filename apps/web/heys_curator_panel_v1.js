@@ -15,9 +15,12 @@
 
   const HEYS = global.HEYS = global.HEYS || {};
 
-  // Окно поправки — три недели; берём их же, чтобы панель и клиент считали по
-  // одному отрезку.
-  const WINDOW_DAYS = 21;
+  // Окно и пороги панель не назначает: они принадлежат движку поправки, и
+  // своя копия числа 21 разошлась бы с ним молча. Читаем в момент вызова —
+  // порядок загрузки модулей в бандле панели не принадлежит.
+  const engine = () => HEYS.NormCorrection || {};
+  const windowDays = () => engine().WINDOW_WORKING_DAYS;
+  const gateWeighIns = () => engine().GATE_WEIGH_INS;
 
   // Порядок групп — старшинство состояний из контракта. Молчание выше
   // расхождения: молчащий рискует уйти совсем, а расхождение ждёт до
@@ -33,6 +36,33 @@
 
   function fmtDate(d) {
     return d.toISOString().split('T')[0];
+  }
+
+  /**
+   * Отрезок окна одной функцией — и для запроса, и для подписи в листе.
+   *
+   * Границы включительные: 21 день окна — это сегодня и двадцать предыдущих.
+   * Вычесть двадцать один значило бы спросить у сервера двадцать два дня, и
+   * пилюля расхождения (она меряет длину окна расчёта) спорила бы с подписью
+   * «окно 21 день» в шапке того же листа.
+   */
+  function windowRange(now) {
+    const to = new Date(now);
+    const from = new Date(now);
+    from.setDate(from.getDate() - (windowDays() - 1));
+    return { from, to };
+  }
+
+  const MONTHS_RU = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн',
+    'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+  /** «10–30 авг» внутри месяца, «25 июл – 14 авг» на стыке. */
+  function shortRange(from, to) {
+    if (!from || !to) return '';
+    return from.getMonth() === to.getMonth()
+      ? from.getDate() + '–' + to.getDate() + ' ' + MONTHS_RU[to.getMonth()]
+      : from.getDate() + ' ' + MONTHS_RU[from.getMonth()]
+        + ' – ' + to.getDate() + ' ' + MONTHS_RU[to.getMonth()];
   }
 
   function initials(name) {
@@ -75,11 +105,20 @@
         return 'факт ниже формулы на ' + row.mismatchPct + ' % · данных хватает'
           + (row.alsoNote ? ' · ' + row.alsoNote : '');
       case 'collecting': {
-        const miss = (row.result && row.result.missing) || {};
+        // Знаменатель дней — длина окна, как в контракте («14 дней из 21 ·
+        // взвешиваний 4 из 6»). Раньше здесь стоял гейт: «дни 11 из 10» —
+        // счёт, который может обогнать собственный знаменатель. Порог остаётся
+        // видимым у взвешиваний и в пилюле, а дни показывают наполнение окна.
         const logged = row.result ? row.result.loggedDays : 0;
         const weighIns = row.result ? row.result.weighIns : 0;
-        return 'дни ' + logged + ' из 10 · взвешивания ' + weighIns + ' из 6';
+        return 'дни ' + logged + ' из ' + windowDays()
+          + ' · взвешивания ' + weighIns + ' из ' + gateWeighIns();
       }
+      case 'fine':
+        // Развёрнутая группа без этой строки давала имя и пустую точку рядом:
+        // строка есть, сказать ей нечего. «Всё ровно» — это результат расчёта
+        // (шаг вышел нулевым), и он называется тем же числом нормы.
+        return rec ? 'норма ' + nbsp(rec.norm) + ' · расчёт сошёлся' : 'расчёт сошёлся';
       default:
         return '';
     }
@@ -89,7 +128,16 @@
   function agePill(row) {
     if (row.state === 'decided_today') return 'вы';
     if (row.state === 'collecting') {
-      const miss = (row.result && row.result.missing) || {};
+      // Копят данные по двум разным причинам, и слова у них разные. Холодный
+      // старт — «ещё рано», и у него есть срок. Непройденный гейт — «мало
+      // данных», и у него есть недостача. Раньше пилюля читала missing у
+      // обоих, а у холодного старта этого поля нет: клиент оставался вовсе
+      // без пилюли и без объяснения, чего ждать.
+      const res = row.result || {};
+      if (res.status === 'cold_start') {
+        return res.daysLeft ? 'ещё ' + res.daysLeft + ' ' + pluralDays(res.daysLeft) : null;
+      }
+      const miss = res.missing || {};
       const need = miss.weighIns || miss.loggedDays;
       return need ? 'нужно ' + need : null;
     }
@@ -109,6 +157,10 @@
     const [filter, setFilter] = React.useState(null);
     const [fineOpen, setFineOpen] = React.useState(false);
     const [tick, setTick] = React.useState(0);
+    // Отрезок запоминается тот самый, по которому сервер отдал окно: лист
+    // подписывает его датами, и пересчитать «примерно те же» значило бы
+    // подписать одно окно датами другого.
+    const [range, setRange] = React.useState(null);
 
     React.useEffect(() => {
       let cancelled = false;
@@ -119,10 +171,10 @@
         return undefined;
       }
       const now = new Date();
-      const from = new Date(now);
-      from.setDate(from.getDate() - WINDOW_DAYS);
+      const { from, to } = windowRange(now);
+      setRange({ from, to });
       Promise.all([
-        api.getClientsWindow(fmtDate(from), fmtDate(now)),
+        api.getClientsWindow(fmtDate(from), fmtDate(to)),
         api.getClientsNormContext()
       ]).then(([win, ctx]) => {
         if (cancelled) return;
@@ -271,7 +323,7 @@
         fineOpen ? h('div', { className: 'cur-fine__list' }, fine.map(renderRow)) : null
       ) : null,
 
-      sheet ? CuratorPanelSheet({ React, row: sheet, name: nameOf(sheet.clientId),
+      sheet ? CuratorPanelSheet({ React, row: sheet, name: nameOf(sheet.clientId), range,
         onClose: () => setSheet(null), onDecide: decide, onOpenClient }) : null
     );
   }
@@ -282,7 +334,7 @@
    *
    * Лист показывает числа кураторской карточки и ничего не пересчитывает.
    */
-  function CuratorPanelSheet({ React, row, name, onClose, onDecide, onOpenClient }) {
+  function CuratorPanelSheet({ React, row, name, range, onClose, onDecide, onOpenClient }) {
     const h = React.createElement;
     const card = row.card || {};
     const rec = card.recommendation;
@@ -298,8 +350,14 @@
           h('span', { className: 'cur-row__avatar' }, initials(name)),
           h('span', { className: 'cur-sheet__copy' },
             h('span', { className: 'cur-row__name' }, name),
+            // Тариф в шапке всегда Pro и не вычисляется: панель — вкладка
+            // куратора, а признак Pro и есть наличие куратора. Тернарка,
+            // возвращавшая «Pro» в обеих ветках, только делала вид, что
+            // считает.
             h('span', { className: 'cur-sheet__meta' },
-              'окно ' + WINDOW_DAYS + ' дней · ' + (card.formula ? 'Pro' : 'Pro'))
+              'окно ' + windowDays() + ' ' + pluralDays(windowDays())
+              + (range ? ' · ' + shortRange(range.from, range.to) : '')
+              + ' · Pro')
           )
         ),
 
@@ -350,7 +408,9 @@
   }
 
   HEYS.CuratorPanel = {
-    WINDOW_DAYS,
+    windowDays,
+    windowRange,
+    shortRange,
     GROUPS,
     Component: CuratorPanel,
     stateLine,

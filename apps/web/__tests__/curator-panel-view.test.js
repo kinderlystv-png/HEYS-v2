@@ -21,9 +21,16 @@ const BUNDLE = fs.readFileSync(
   'utf8'
 );
 
+const ENGINE = fs.readFileSync(path.resolve(__dirname, '../heys_norm_correction_v1.js'), 'utf8');
+
 let CP;
 beforeEach(() => {
   window.HEYS = {};
+  // Движок грузится вместе с панелью: окно и пороги принадлежат ему, панель
+  // их только читает. Подставить сюда свои 21 и 6 значило бы проверять
+  // выдуманные числа вместо настоящих.
+  // eslint-disable-next-line no-eval
+  (0, eval)(ENGINE);
   // eslint-disable-next-line no-eval
   (0, eval)(SRC);
   CP = window.HEYS.CuratorPanel;
@@ -43,9 +50,7 @@ describe('панель куратора · место в кабинете', () =
     // весь кабинет.
     const start = GATE.indexOf('HEYS.CuratorPanel.Component');
     const body = GATE.slice(start, GATE.indexOf("curatorTab === 'moderation'", start))
-      .split('
-').filter((l) => !l.trim().startsWith('//')).join('
-');
+      .split(/\r?\n/).filter((l) => !l.trim().startsWith('//')).join(' ');
     expect(body).not.toContain('switchClient');
     expect(body).toContain("setCuratorTab('clients')");
   });
@@ -75,11 +80,29 @@ describe('панель куратора · строка клиента', () => {
       .toBe('не пишет 4 дня · и расчёт разошёлся');
   });
 
-  it('копят данные — счёт по обоим гейтам, а не по длине окна', () => {
-    // Знаменатель 21 в строку не идёт: это длина окна, а не условие.
+  it('копят данные — знаменатель дней это длина окна, а не гейт', () => {
+    // Гейт в знаменателе давал «дни 11 из 10» — счёт, обогнавший собственный
+    // знаменатель. Контракт («14 дней из 21 · взвешиваний 4 из 6») тут прав.
     const line = CP.stateLine(row({ state: 'collecting' }));
-    expect(line).toBe('дни 14 из 10 · взвешивания 4 из 6');
-    expect(line).not.toContain('21');
+    expect(line).toBe('дни 14 из 21 · взвешивания 4 из 6');
+    expect(CP.stateLine(row({
+      state: 'collecting',
+      result: { loggedDays: 21, weighIns: 2, missing: { weighIns: 4 } }
+    }))).toBe('дни 21 из 21 · взвешивания 2 из 6');
+  });
+
+  it('оба числа строки принадлежат движку, а не панели', () => {
+    // Своя копия 21 и 6 разошлась бы с движком молча.
+    const NC = window.HEYS.NormCorrection;
+    expect(CP.windowDays()).toBe(NC.WINDOW_WORKING_DAYS);
+    expect(CP.stateLine(row({ state: 'collecting' })))
+      .toContain('из ' + NC.GATE_WEIGH_INS);
+  });
+
+  it('«всё ровно» говорит числом, а не пустой строкой с точкой', () => {
+    // Тысячи разделены неразрывным пробелом — как во всех числах панели.
+    expect(CP.stateLine(row({ state: 'fine' }))).toBe('норма 2 049 · расчёт сошёлся');
+    expect(CP.stateLine(row({ state: 'fine', card: {} }))).toBe('расчёт сошёлся');
   });
 
   it('пилюля меряет длительность, а у решённого сегодня стоит «вы»', () => {
@@ -90,6 +113,19 @@ describe('панель куратора · строка клиента', () => {
   it('у копящих данные пилюля говорит, чего не хватает', () => {
     const r = row({ state: 'collecting', result: { loggedDays: 14, weighIns: 4, missing: { weighIns: 2 } } });
     expect(CP.agePill(r)).toBe('нужно 2');
+  });
+
+  it('у холодного старта своя причина и свой срок, а не чужое поле', () => {
+    // missing у cold_start не существует: пилюля читала его и оставалась
+    // пустой — клиент висел без объяснения, чего ждать.
+    expect(CP.agePill(row({
+      state: 'collecting',
+      result: { status: 'cold_start', loggedDays: 9, weighIns: 3, daysLeft: 5 }
+    }))).toBe('ещё 5 дней');
+    expect(CP.agePill(row({
+      state: 'collecting',
+      result: { status: 'cold_start', loggedDays: 13, weighIns: 3, daysLeft: 1 }
+    }))).toBe('ещё 1 день');
   });
 
   it('инициалы берутся из имени и не падают на пустом', () => {
@@ -150,5 +186,40 @@ describe('панель куратора · решение и границы', ()
 
   it('акцент только там, где нужно решение', () => {
     expect(CSS).toMatch(/\.cur-row__state\.is-act[\s\S]{0,120}--v4-act-text/);
+  });
+});
+
+describe('панель куратора · окно', () => {
+  it('границы включительные — 21 день, а не 22', () => {
+    // Вычесть 21 значило бы спросить у сервера 22 дня: пилюля расхождения
+    // меряет длину окна расчёта и показывала «22 дн» под подписью «окно 21».
+    const now = new Date('2026-08-30T12:00:00');
+    const { from, to } = CP.windowRange(now);
+    expect(to.toISOString().slice(0, 10)).toBe('2026-08-30');
+    expect(from.toISOString().slice(0, 10)).toBe('2026-08-10');
+    const span = Math.round((to - from) / 86400000) + 1;
+    expect(span).toBe(CP.windowDays());
+  });
+
+  it('подпись окна — тот же отрезок и склонение', () => {
+    const { from, to } = CP.windowRange(new Date('2026-08-30T12:00:00'));
+    expect(CP.shortRange(from, to)).toBe('10–30 авг');
+    // Стык месяцев называет оба.
+    const a = CP.windowRange(new Date('2026-08-14T12:00:00'));
+    expect(CP.shortRange(a.from, a.to)).toBe('25 июл – 14 авг');
+  });
+
+  it('запрос и подпись берут отрезок из одной функции', () => {
+    // Раньше запрос считал границы сам, а шапка листа печатала «окно 21 дней»
+    // из константы — два источника одного отрезка.
+    expect(SRC).toContain('const { from, to } = windowRange(now)');
+    expect(SRC).toContain('api.getClientsWindow(fmtDate(from), fmtDate(to))');
+    expect(SRC).toContain('shortRange(range.from, range.to)');
+    expect(SRC).not.toContain("' дней · '");
+  });
+
+  it('тариф в шапке не притворяется вычисленным', () => {
+    // Панель — вкладка куратора, признак Pro и есть наличие куратора.
+    expect(SRC).not.toContain("? 'Pro' : 'Pro'");
   });
 });
