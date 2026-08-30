@@ -94,7 +94,7 @@ describe('разбор цели · откуда взялась поправка'
 
     const ENGINE = fs.readFileSync(
       path.resolve(__dirname, '../heys_norm_correction_v1.js'), 'utf8');
-    expect(ENGINE).toContain('const canWrite = !readOnly && typeof lsSet === 'function'');
+    expect(ENGINE).toContain('const canWrite = !readOnly && typeof lsSet ===');
     expect(ENGINE).toContain('if (canWrite && recomposition && recomposition.indirect)');
   });
 
