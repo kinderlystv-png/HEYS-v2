@@ -8508,15 +8508,20 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   pointer-events: none;
 }
 
+/* Кадр «Календарь · легенда», элемент 21: строка легенды 10,5 px/600 тоном
+   чернил 42 %. Именованной строки о типографике легенды в зоне нет, поэтому
+   верен кадр. Тон берётся тем же приёмом, что ряд сокращений дней выше:
+   в наборе тонов чернил три (55 / 45 / 38), сорока двух среди них нет. */
 .date-picker-sheet .date-picker-legend {
   flex-wrap: wrap;
   justify-content: flex-start;
   gap: 10px 14px;
   padding: 12px 2px 4px;
   margin: 0;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font-size: 10.5px;
+  font-weight: 600;
+  /* v4-intentional */
+  color: color-mix(in srgb, var(--v4-ink) 42%, transparent);
 }
 
 .date-picker-sheet .legend-item,
@@ -8526,14 +8531,19 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
 .date-picker-sheet .legend-item.warn,
 .date-picker-sheet .legend-item.bad {
   gap: 6px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: inherit;
   font-size: inherit;
 }
 
+/* Кадр «Календарь · легенда», элемент 27: кнопка полями 15 px и кеглем 13.
+   База пикера даёт 8/12 и 12 — дореформенные числа, из-за них кнопка выходила
+   заметно мельче кадра. */
 .date-picker-sheet .date-picker-btn.today-btn {
   background: #c67139;
   color: var(--v4-act-ink, #2b1608);
   border-radius: 999px;
+  padding: 15px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -8564,14 +8574,15 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
 
 .date-picker-sheet .legend-swatch--cycle {
   width: 3px;
-  height: 11px;
+  /* Кадр «Календарь · легенда», элементы 23 и 24: образцы меток 3×12. */
+  height: 12px;
   border-radius: 999px;
   /* v4-intentional */
   background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent);
 }
 
 .date-picker-sheet .legend-swatch--refeed {
-  width: 11px;
+  width: 12px;
   height: 3px;
   border-radius: 999px;
   /* v4-intentional */
@@ -8925,10 +8936,15 @@ svg.date-picker-icon {
 }
 
 /* Sheet month nav — те же круглые sand-стрелки, что в строке даты v4 */
+/* Кадр «Календарь · легенда», элементы 06 и 08: кружки месяца 44×44 с
+   отрицательным полем -8, чтобы ряд шапки не подрос. Прежние 36 не давали и
+   цели касания 44 pt, а припуска у них не было — в отличие от стрелок
+   капсулы, где 34 добираются прозрачным ::after (строка «стрелки»). */
 .date-picker-sheet .date-picker-sheet-month-nav {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
+  margin: -8px 0;
   padding: 0;
   border: none;
   border-radius: 999px;

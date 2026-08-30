@@ -93,7 +93,8 @@ const PICK = {
     const short = /отступы\s+(\S+)\s+(\S+)\s+(\S+)/.exec(v);
     return short ? short[3].replace('px', '') : null;
   },
-  gap: (v) => num(v, /зазор ([\d.]+)px/),
+  // «зазор 10px 14px» — две оси; вторая теряется, если брать только первое число.
+  gap: (v) => num(v, /зазор ([\d.]+px(?:\s+[\d.]+px)?)/),
   height: (v) => num(v, /высота ([\d.]+)px/),
   minHeight: (v) => num(v, /высота от ([\d.]+)px/),
   width: (v) => num(v, /ширина ([\d.]+)px/),
@@ -159,11 +160,28 @@ function norm(value) {
     /var\(\s*(--[a-z0-9-]+)\s*,\s*([^()]*(?:\([^()]*\)[^()]*)*)\)/g,
     (_, role, fallback) => (roleValues().get(role) || fallback),
   );
+  // Голая `var(--роль)` без запасного значения — тоже роль набора: её пишут
+  // там, где запасное осознанно не нужно (маркер `v4-intentional`). Без этой
+  // подстановки сверка сравнивала бы имя роли с цветом кадра и звала бы
+  // расхождением каждое такое место.
+  s = s.replace(/var\(\s*(--v4-[a-z0-9-]+)\s*\)/g, (whole, role) => roleValues().get(role) || whole);
   s = s.replace(/rgba\(var\(--ink\)\s*,\s*\.?(\d+)\)/g, (_, d) => `rgba(0,0,0,.${d})`);
   // Чернила канваса — 32,30,29, и сам он печатает их в разборе то через
   // `var(--ink)`, то литералом `rgba(0,0,0,…)`. Продукт пишет тот же цвет
   // третьей формой — `rgba(32,30,29,…)`. Все три это один цвет, поэтому
   // сводим их к одному написанию, а не заводим отступление на каждый тон.
+  // `color-mix(in srgb, <цвет> N%, transparent)` — тот же полупрозрачный тон,
+  // что `rgba(<цвет>, .N)`. В продукте так набирают тона чернил, которых нет
+  // отдельной ролью; без сведения к одной форме сверка звала бы их расхождением.
+  s = s.replace(
+    /color-mix\(in srgb,\s*#([0-9a-f]{6})\s*([\d.]+)%\s*,\s*transparent\)/g,
+    (_, hex, pct) => {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return `rgba(${r},${g},${b},${String(Number(pct) / 100).replace(/^0/, '')})`;
+    },
+  );
   s = s.replace(/rgba\(\s*32\s*,\s*30\s*,\s*29\s*,/g, 'rgba(0,0,0,');
   s = s.replace(/([\d.]+)rem/g, (_, n) => `${parseFloat(n) * 16}px`);
   s = s.replace(/\s+/g, ' ').replace(/,\s*/g, ',');
