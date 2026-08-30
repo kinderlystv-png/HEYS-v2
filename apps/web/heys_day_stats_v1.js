@@ -3337,10 +3337,15 @@
                 // имя 12,5 px/600 тоном --tx, пилюля даты 9 px моношириной на
                 // --c2 тоном --ac, значение 12,5 px/700 тоном --ac.
                 const ncName = { fontSize: 12.5, fontWeight: 600, color: 'var(--v4-ink, #201e1d)' };
+                // Строка контракта «пилюля зрелости и опоры»: поля 4/7, радиус
+                // 999, прописными трекингом .06em. Прямоугольник радиусом 4
+                // спорил с пилюлями остальной зоны.
                 const ncPill = {
-                  marginLeft: 6, fontSize: 9, fontFamily: 'ui-monospace, monospace',
+                  marginLeft: 6, fontSize: 9, fontWeight: 700, lineHeight: 1,
+                  fontFamily: 'ui-monospace, Menlo, monospace',
+                  letterSpacing: '0.06em', textTransform: 'uppercase',
                   background: 'var(--v4-hero, #efe3cf)', color: 'var(--v4-act-text, #8a4a20)',
-                  padding: '1px 5px', borderRadius: 4
+                  padding: '4px 7px', borderRadius: 999
                 };
                 const ncValue = { fontSize: 12.5, fontWeight: 700, color: 'var(--v4-act-text, #8a4a20)' };
 
@@ -3403,7 +3408,9 @@
                   React.createElement('div', {
                     style: {
                       height: 6, borderRadius: 999, marginTop: 4,
-                      background: 'color-mix(in srgb, var(--v4-ink, #201e1d) 10%, transparent)',
+                      // Дорожка — своей ролью набора, а не подмешанным
+                      // процентом: тот же серый, что у всех полос продукта.
+                      background: 'var(--v4-track, rgba(0, 0, 0, 0.12))',
                       overflow: 'hidden'
                     }
                   },
@@ -3412,8 +3419,24 @@
                     })
                   ),
                   React.createElement('div', {
-                    style: { fontSize: 11, fontWeight: 700, color: 'var(--v4-act-text, #8a4a20)', marginTop: 3 }
-                  }, done + ' дней из ' + coldDays)
+                    style: {
+                      fontSize: 11, fontWeight: 700, marginTop: 3,
+                      color: 'var(--v4-act-text, #8a4a20)',
+                      // Счёт сравнивают с самим собой на следующий день —
+                      // моноцифры держат разряды на месте.
+                      fontVariantNumeric: 'tabular-nums'
+                    }
+                  }, done + ' дней из ' + coldDays),
+                  // Кадр «Цель · холодный старт»: строка не просто показывает
+                  // счёт, а называет, что будет дальше. Без неё полоса растёт в
+                  // никуда — человек видит прогресс и не знает, к чему он.
+                  React.createElement('div', {
+                    style: {
+                      fontSize: 11, lineHeight: 1.45, marginTop: 6,
+                      color: 'var(--v4-ink-3, rgba(0, 0, 0, 0.45))'
+                    }
+                  }, 'Пока считаем по формуле. Через неделю проверим расчёт на'
+                    + ' вашем результате и, если он разойдётся с фактом, подстроим.')
                 );
               })(),
 
@@ -3451,6 +3474,66 @@
                 )
               )
             ),
+
+            // Порядок слоёв назван вслух: строки списка выглядят как
+            // равноправные слагаемые, а они считаются одна из другой, и
+            // поправка правит не итог дня, а расход, от которого он считается.
+            (() => {
+              const nc = d.normCorrection;
+              const applied = nc && Number.isFinite(nc.factor) && nc.factor !== 1;
+              if (!applied) return null;
+              return React.createElement(React.Fragment, null,
+                React.createElement('div', {
+                  style: {
+                    fontSize: 11, lineHeight: 1.45, marginTop: 10,
+                    color: 'var(--v4-ink-3, rgba(0, 0, 0, 0.45))'
+                  }
+                }, 'Порядок слоёв не произволен: поправка правит расход раз в'
+                  + ' неделю, дефицит остаётся договорённостью, долг правит итог'
+                  + ' дня. Норма без долга — ' + baseOptimumCalc + '.'),
+                // Второй слой: что такое поправка. В первом остаётся число и
+                // дата, с которой оно действует, — остальное по запросу.
+                React.createElement('details', {
+                  style: {
+                    marginTop: 12, padding: 16, borderRadius: 20,
+                    background: 'var(--v4-surface, #f7efe2)'
+                  }
+                },
+                  React.createElement('summary', {
+                    style: {
+                      display: 'flex', alignItems: 'center',
+                      justifyContent: 'space-between', gap: 10,
+                      fontSize: 12.5, fontWeight: 700, lineHeight: 1.3,
+                      color: 'var(--v4-ink, #201e1d)',
+                      cursor: 'pointer', listStyle: 'none'
+                    }
+                  },
+                    'Что такое поправка на факт',
+                    React.createElement('span', {
+                      style: {
+                        fontSize: 13, fontWeight: 700,
+                        color: 'var(--v4-act-text, #8a4a20)'
+                      }
+                    }, 'развернуть')
+                  ),
+                  React.createElement('div', {
+                    style: {
+                      fontSize: 12, lineHeight: 1.55, marginTop: 8,
+                      color: 'var(--v4-ink-2, rgba(0, 0, 0, 0.6))'
+                    }
+                  }, 'Раз в неделю мы сверяем расчёт с тем, что показали ваши'
+                    + ' записи и весы, и подстраиваем расход под ваш результат.'
+                    + ' Дефицит при этом не меняется — он остаётся тем, о чём'
+                    + ' договорились.'),
+                  React.createElement('div', {
+                    style: {
+                      fontSize: 11, lineHeight: 1.55, marginTop: 12,
+                      color: 'var(--v4-ink-3, rgba(0, 0, 0, 0.42))'
+                    }
+                  }, 'Ниже базового обмена норма не опускается ни при какой поправке.')
+                )
+              );
+            })(),
 
             // Пояснение про TEF
             React.createElement('div', {
