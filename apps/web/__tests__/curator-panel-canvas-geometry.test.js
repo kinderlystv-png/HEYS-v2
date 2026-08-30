@@ -251,6 +251,20 @@ describe('геометрия панели куратора против кадр
     expect(normalize(sheetBody.padding)).toContain('20px');
   });
 
+  it('полотно вкладки одно на кабинет и держит поля кадра', () => {
+    // Поля вкладки живут на её полотне, а не на прокручиваемой области: иначе
+    // они складываются, и вкладки встают на разном расстоянии от края —
+    // «Панель» на 34, «Очередь» на 32, «Клиенты» на 16. Оба класса полотна
+    // держат числа кадрового `.sc`, а у .cur-cab__content полей нет вовсе.
+    const sc = declarations(canvas.get('.sc'));
+    const pane = declarations(product.get('.cur-cab__pane'));
+    const panel = declarations(product.get('.cur-panel'));
+    const content = declarations(product.get('.cur-cab__content'));
+    expect(normalize(pane.padding)).toBe(normalize(sc.padding));
+    expect(normalize(panel.padding)).toBe(normalize(sc.padding));
+    expect(content.padding).toBeUndefined();
+  });
+
   it('гейт закрывает весь кабинет, а не одну панель', () => {
     // Пока была сведена только панель, кадры остальных вкладок в пары не
     // входили. Теперь входят все — проверка держит это утверждение, чтобы

@@ -2769,14 +2769,12 @@
       );
     };
 
-    return React.createElement('div', {
-      style: {
-        height: '75vh',
-        display: 'flex',
-        flexDirection: 'column',
-        background: '#f8fafc'
-      }
-    },
+    // Корень вкладки — её полотно: поля даёт .cur-cab__pane, прокрутку —
+    // общая область кабинета. Прежде корень красился в
+    // #f8fafc прежней системы и держал height 75vh со своей прокруткой внутри
+    // уже прокручиваемого содержимого — холодная плашка поверх песка, мёртвое
+    // поле под списком и вторая полоса прокрутки.
+    return React.createElement('div', { className: 'cur-cab__pane cur-cab__queue' },
       // Состояние очереди и занятые слоты — одной строкой словами. Кружки 🟢
       // и 🔴 повторяли то, что и так написано рядом, а красный в наборе
       // значит разрушающее действие, а не «закрыто».
@@ -2819,26 +2817,19 @@
       React.createElement('div', {
         className: 'cur-cab__subtabs-hint'
       }, tabs.find(t => t.id === activeTab)?.hint || ''),
-      React.createElement('div', {
-        style: {
-          flex: 1,
-          overflowY: 'auto',
-          padding: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10
-        }
-      },
-        loading && React.createElement('div', {
-          style: { textAlign: 'center', padding: '40px', color: '#9ca3af' }
-        }, '⏳ Загрузка...'),
-        !loading && error && React.createElement('div', {
-          style: { padding: '12px 16px', background: '#fee2e2', color: '#b91c1c', borderRadius: 10, fontSize: 13 }
-        },
-          React.createElement('div', null, error),
+      React.createElement('div', { className: 'cur-cab__queue-list' },
+        // Ожидание и отказ — теми же приёмами, что у панели: строка «Считаем…»
+        // и карточка с причиной и одной кнопкой повтора. Прежде здесь стояли
+        // серое «⏳ Загрузка...» и красная плашка #fee2e2 с рамкой — второй
+        // словарь ожидания и отказа в том же кабинете.
+        loading && React.createElement('div', { className: 'cur-panel__stub' }, 'Считаем…'),
+        !loading && error && React.createElement('div', { className: 'cur-panel__empty' },
+          React.createElement('div', { className: 'cur-panel__empty-title' }, 'Очередь не загрузилась'),
+          React.createElement('div', { className: 'cur-panel__empty-note' }, error),
           React.createElement('button', {
-            type: 'button', onClick: () => loadData(false),
-            style: { marginTop: 10, minHeight: 40, padding: '8px 12px', borderRadius: 8, border: '1px solid #efb4b4', background: '#fff', color: '#8f1d1d', cursor: 'pointer', fontWeight: 700 },
+            type: 'button',
+            className: 'cur-panel__retry',
+            onClick: () => loadData(false)
           }, 'Повторить загрузку')
         ),
         !loading && !error && activeTab === 'new' && (actionableLeads.length ? actionableLeads.map(item => React.createElement(LeadRow, { key: item.id, item })) : React.createElement(QueueEmpty, {

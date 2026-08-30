@@ -1545,9 +1545,11 @@
         };
 
         if (loading) {
-            return React.createElement('div', {
-                style: { padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: 14 }
-            }, '⏳ Загрузка заявок...');
+            // Ожидание — той же строкой, что у панели и очереди. Прежде здесь
+            // стояло «⏳ Загрузка заявок...» белым по 60 % — текст прежней
+            // тёмной системы, на песочном грунте не видный вовсе.
+            return React.createElement('div', { className: 'cur-cab__pane' },
+                React.createElement('div', { className: 'cur-panel__stub' }, 'Считаем…'));
         }
 
         if (pending.length === 0) {
@@ -1593,7 +1595,10 @@
 
         const bulkEligibleCount = pending.filter(item => !getPendingRequest(item)).length;
 
-        return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+        return React.createElement('div', {
+            className: 'cur-cab__pane',
+            style: { display: 'flex', flexDirection: 'column', gap: 10 }
+        },
             // Bulk-approve панель: счётчик заявок + кнопка «Одобрить все».
             React.createElement('div', {
                 style: {
@@ -2317,12 +2322,13 @@
                                 React.createElement(
                                     'div',
                                     {
-                                        // Поля экрана 16 по бокам и грунт набора: 20 и
-                                        // холодный #f8fafc остались от прежней системы.
+                                        // Только прокрутка и грунт набора: поля держит
+                                        // полотно вкладки (.cur-cab__pane и равный ему
+                                        // .cur-panel), одно правило на все пять.
                                         className: 'cur-cab__content'
                                     },
                                     // === TAB: CLIENTS ===
-                                    curatorTab === 'clients' && React.createElement(React.Fragment, null,
+                                    curatorTab === 'clients' && React.createElement('div', { className: 'cur-cab__pane' },
                                         // Поиск клиентов (если > 3)
                                         curatorPanelClients.length > 3 && React.createElement('div', {
                                             style: { position: 'relative', marginBottom: 16 }
@@ -2668,7 +2674,8 @@
 
                                     // === TAB: DIAGNOSTICS (client launches and sync) ===
                                     curatorTab === 'diagnostics' && HEYS.ClientDiagnostics?.Overview
-                                        && React.createElement(HEYS.ClientDiagnostics.Overview, { clients })
+                                        && React.createElement('div', { className: 'cur-cab__pane' },
+                                            React.createElement(HEYS.ClientDiagnostics.Overview, { clients }))
                                 ),
 
                                 // FOOTER: Кнопка создания (прибита к низу)

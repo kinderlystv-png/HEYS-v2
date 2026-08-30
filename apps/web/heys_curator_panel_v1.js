@@ -303,7 +303,8 @@
     );
 
     if (error === 'modules') {
-      return h('div', { className: 'cur-panel__stub' }, 'Панель не загрузилась');
+      return h('div', { className: 'cur-panel' },
+        h('div', { className: 'cur-panel__stub' }, 'Панель не загрузилась'));
     }
     // Сервер отказал — это надо сказать и дать повторить. Раньше ветки не было
     // вовсе: setError('load') отрабатывал, rows оставались пустыми, и экран
@@ -327,7 +328,8 @@
     // Пока едет движок, у панели нет ни строк, ни ошибки — это то же «считаем»,
     // что и во время запроса.
     if (!allRows) {
-      return h('div', { className: 'cur-panel__stub' }, 'Считаем…');
+      return h('div', { className: 'cur-panel' },
+        h('div', { className: 'cur-panel__stub' }, 'Считаем…'));
     }
     if (!(clients || []).length) {
       return h('div', { className: 'cur-panel' },
