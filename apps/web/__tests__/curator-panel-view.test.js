@@ -785,4 +785,43 @@ describe('панель куратора · окно', () => {
     expect(src).toContain("className: 'cur-cab__sheet-body'");
     expect(src).not.toContain("background: 'var(--surface, #f8fafc)'");
   });
+
+  it('градиентов в кабинете нет ни одного', () => {
+    // Строка контракта «градиентов в кабинете нет». Правило не про три места,
+    // а про набор: градиента в нём нет вовсе, и он не должен вернуться
+    // следующей правкой — потому проверка ищет приём, а не конкретные цвета.
+    //
+    // Клиентский виджет статуса заявки живёт в том же файле очереди, кадрами
+    // кабинета не описан и в проверку не входит: его сведут со своим канвасом.
+    const admin = QUEUE.slice(QUEUE.indexOf('const LeadRow'),
+      QUEUE.indexOf('ДИАЛОГ: Конвертация лида'));
+    const files = [['кабинет', GATE], ['панель', SRC], ['диагностика', DIAG],
+      ['очередь', admin], ['стили', CSS]];
+    for (const [name, text] of files) {
+      const body = text.split(String.fromCharCode(10))
+        .filter((l) => {
+          const x = l.trim();
+          return !x.startsWith('//') && !x.startsWith('*') && !x.startsWith('/*');
+        })
+        .join(String.fromCharCode(10));
+      expect(body, name).not.toContain('linear-gradient');
+      expect(body, name).not.toContain('radial-gradient');
+    }
+  });
+
+  it('поле формы отличается заливкой, а не рамкой', () => {
+    // В кадре .fld — заливка на грунте без контура: рамка вокруг заливки
+    // обводит то, что и так видно.
+    const field = CSS.slice(CSS.indexOf('.cur-field__input {'),
+      CSS.indexOf('.cur-field__input.is-pin'));
+    expect(field).toContain('border: none');
+    expect(field).toContain('min-height: 44px');
+    expect(field).toContain('border-radius: 14px');
+    // Фокус — кольцом внутрь: рамка сдвигала бы текст на пиксель.
+    expect(field).toContain('inset 0 0 0 2px');
+    const label = CSS.slice(CSS.indexOf('.cur-field__label {'),
+      CSS.indexOf('.cur-field__input {'));
+    expect(label).toContain('text-transform: uppercase');
+    expect(label).toContain('0.08em');
+  });
 });
