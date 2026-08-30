@@ -45,13 +45,17 @@ const PALETTE_OF = { sand: 'sand', 'sand-dark': 'sand', blue: 'blue', 'blue-dark
 // Роли канваса по наборам — v4-canvas.css пакета дизайна.
 // Лист прогресса — «painted module»: решением владельца от 2026-08-12 он
 // держит песочный вид на всех наборах, поэтому поверхность, чернила названия и
-// акцент награды берутся из закреплённых ролей --v4-sand-* и по наборам не
-// меняются (кроме песочно-тёмного). Меняются только зелёные роли медальона —
-// канвасные --gr-bg и --gr.
-const SAND_TX = { sand: '#201e1d', 'sand-dark': '#f2ede6', blue: '#201e1d', 'blue-dark': '#201e1d' };
-const SAND_AC = { sand: '#8a4a20', 'sand-dark': '#e2a468', blue: '#8a4a20', 'blue-dark': '#8a4a20' };
-const SAND_C1 = { sand: '#f7efe2', 'sand-dark': '#23201b', blue: '#f7efe2', 'blue-dark': '#f7efe2' };
-const SAND_C2 = { sand: '#efe3cf', 'sand-dark': '#2f2820', blue: '#efe3cf', 'blue-dark': '#efe3cf' };
+// акцент награды берутся из закреплённых ролей --v4-sand-* и за палитрой не
+// следуют. «Тёплый вид» в тёмном наборе — это тёмный тёплый: в обоих тёмных
+// наборах семейство --v4-sand-* держит одни и те же тёмные значения. В
+// сине-тёмной оно было копией светлого до 31.08 (cbf713f1f): светлая плашка со
+// светлыми чернилами на тёмном экране, контраст 1,0. Здесь колонка blue-dark
+// повторяет sand-dark именно поэтому, а не по совпадению.
+// Меняются по наборам только зелёные роли медальона — канвасные --gr-bg и --gr.
+const SAND_TX = { sand: '#201e1d', 'sand-dark': '#f2ede6', blue: '#201e1d', 'blue-dark': '#f2ede6' };
+const SAND_AC = { sand: '#8a4a20', 'sand-dark': '#e2a468', blue: '#8a4a20', 'blue-dark': '#e2a468' };
+const SAND_C1 = { sand: '#f7efe2', 'sand-dark': '#23201b', blue: '#f7efe2', 'blue-dark': '#23201b' };
+const SAND_C2 = { sand: '#efe3cf', 'sand-dark': '#2f2820', blue: '#efe3cf', 'blue-dark': '#2f2820' };
 const GR_BG = { sand: '#eaefe0', 'sand-dark': '#242c20', blue: '#e4efe7', 'blue-dark': '#17302a' };
 const GR = { sand: '#5c6a45', 'sand-dark': '#9fb981', blue: '#1f6e4d', 'blue-dark': '#7fd1a0' };
 
@@ -273,7 +277,8 @@ describe('gamification · «вид строки достижения»', () => {
     expect(norm(doneMedal.color)).toBe(GR[id]);
 
     // Пары ролей не смешиваются: под песочным квадратом замка стоят песочные
-    // чернила, иначе в сине-тёмной вышло бы светлое на светлом.
+    // чернила — семейство --v4-sand-* светлеет и темнеет целиком, а роль из
+    // набора под ним за ним не следует.
     const todoMedal = window.getComputedStyle(todo.querySelector('.game-v4-sheet__ach-medal'));
     expect(norm(todoMedal.backgroundColor)).toBe(SAND_C2[id]);
     expect(norm(todoMedal.color)).toBe(SAND_TX[id]);
