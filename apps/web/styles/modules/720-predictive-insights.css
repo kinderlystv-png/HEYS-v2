@@ -2403,46 +2403,27 @@ body:has(.insights-tab) .hdr::after {
   gap: 10px;
 }
 
+/* Ярус группы — тот же ярус, что в остальной зоне: акцентный тон, разрядка,
+   прописные. Прежде у каждой из трёх ступеней был свой цвет — красный,
+   оранжевый, синий, и ещё по одному на тёмную тему: шесть значений мимо
+   набора на три заголовка. Ступень называет слово, а не цвет; красный в
+   наборе значит разрушающее действие, а не «важно». */
 .early-warning-modal__section-title {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.16em;
   margin: 0;
   padding: 0;
-}
-
-.early-warning-modal__section-title--high {
-  color: var(--v4-warn-2, #dc2626);
-}
-
-.early-warning-modal__section-title--medium {
-  color: #ea580c;
-}
-
-.early-warning-modal__section-title--low {
-  color: var(--v4-act, #2563eb);
-}
-
-[data-theme$="dark"] .early-warning-modal__section-title--high {
-  color: #fca5a5;
-}
-
-[data-theme$="dark"] .early-warning-modal__section-title--medium {
-  color: #fdba74;
-}
-
-[data-theme$="dark"] .early-warning-modal__section-title--low {
-  color: #93c5fd;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* === WARNING CARDS === */
 .early-warning-modal-card {
   background: var(--v4-bg, #ffffff);
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 14px 16px;
-  border-left: 3px solid currentColor;
+  border-radius: 20px;
+  padding: 16px;
 }
 
 [data-theme$="dark"] .early-warning-modal-card {
@@ -2450,17 +2431,11 @@ body:has(.insights-tab) .hdr::after {
   border-color: rgba(148, 163, 184, 0.15);
 }
 
-.early-warning-modal-card--high {
-  border-left-color: var(--v4-warn-1, #ef4444);
-}
-
-.early-warning-modal-card--medium {
-  border-left-color: #f97316;
-}
-
-.early-warning-modal-card--low {
-  border-left-color: var(--v4-water, #3b82f6);
-}
+/* Ступень называет слово, а не полоска: прежде у карточки была левая линия
+   3 px в цвет ступени — красная, оранжевая, синяя, — и она читалась раньше
+   заголовка. Красный в наборе значит разрушающее действие, а не «важно».
+   Порядок групп и так расставляет важность: он же решает, кто попал на первый
+   экран. */
 
 /* Card header */
 .early-warning-modal-card__header {
@@ -2516,59 +2491,14 @@ body:has(.insights-tab) .hdr::after {
   line-height: 1.4;
 }
 
-.early-warning-modal-card--high .early-warning-modal-card__severity-label {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--v4-warn-2, #dc2626);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-}
-
-.early-warning-modal-card--medium .early-warning-modal-card__severity-label {
-  background: rgba(249, 115, 22, 0.1);
-  color: #ea580c;
-  border: 1px solid rgba(249, 115, 22, 0.2);
-}
-
-.early-warning-modal-card--low .early-warning-modal-card__severity-label {
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--v4-act, #2563eb);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-}
-
-[data-theme$="dark"] .early-warning-modal-card--high .early-warning-modal-card__severity-label {
-  background: rgba(248, 113, 113, 0.12);
-  color: #fca5a5;
-  border-color: rgba(248, 113, 113, 0.25);
-}
-
-[data-theme$="dark"] .early-warning-modal-card--medium .early-warning-modal-card__severity-label {
-  background: rgba(251, 146, 60, 0.12);
-  color: #fdba74;
-  border-color: rgba(251, 146, 60, 0.25);
-}
-
-[data-theme$="dark"] .early-warning-modal-card--low .early-warning-modal-card__severity-label {
-  background: rgba(96, 165, 250, 0.12);
-  color: #93c5fd;
-  border-color: rgba(96, 165, 250, 0.25);
-}
-
-/* Dismiss button */
-.early-warning-modal-card__dismiss {
-  background: rgba(100, 116, 139, 0.08);
-  border: 1px solid #e2e8f0;
-  color: var(--v4-ink-2, #64748b);
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
+/* Пилюля ступени — метка данных набора: подложка и тон акцента, одинаковые у
+   всех трёх ступеней. Прежде каждая несла свой фон, тон и рамку, да ещё по
+   второму комплекту на тёмную тему — двенадцать значений мимо набора на три
+   слова, которые и так различаются текстом. */
+.early-warning-modal-card__severity-label {
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+  border: none;
 }
 
 @media (hover: hover) {

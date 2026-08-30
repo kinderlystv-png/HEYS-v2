@@ -28,42 +28,23 @@
     const h = React.createElement;
 
     /**
-     * Severity config (emoji, color, priority)
+     * Ступени сигнала.
+     *
+     * Контракт «панель „Ещё N“»: три группы человеческими заголовками —
+     * «Сначала важное», «Стоит знать», «Заметки на будущее» вместо high,
+     * medium, low. Прежде здесь стояли «Критично», «Внимание» и
+     * «Рекомендация» с эмодзи 🚨 ⚠️ ℹ️ и собственной палитрой красного,
+     * оранжевого и синего — своя система тревоги поверх набора.
+     *
+     * Цвета сняты целиком: тон карточки в наборе задаётся ролью, а не
+     * ступенью сигнала, и красный в нём значит разрушающее действие, а не
+     * «важно». Порядок групп остался прежним — он же решает, кто попадает на
+     * первый экран.
      */
     const SEVERITY_CONFIG = {
-        high: {
-            emoji: '🚨',
-            label: 'Критично',
-            color: '#dc2626',
-            colorDark: '#fca5a5',
-            bgColor: 'rgba(239, 68, 68, 0.1)',
-            bgColorDark: 'rgba(239, 68, 68, 0.2)',
-            borderColor: 'rgba(239, 68, 68, 0.3)',
-            borderColorDark: 'rgba(239, 68, 68, 0.4)',
-            priority: 1
-        },
-        medium: {
-            emoji: '⚠️',
-            label: 'Внимание',
-            color: '#ea580c',
-            colorDark: '#fdba74',
-            bgColor: 'rgba(249, 115, 22, 0.1)',
-            bgColorDark: 'rgba(249, 115, 22, 0.2)',
-            borderColor: 'rgba(249, 115, 22, 0.3)',
-            borderColorDark: 'rgba(249, 115, 22, 0.4)',
-            priority: 2
-        },
-        low: {
-            emoji: 'ℹ️',
-            label: 'Рекомендация',
-            color: '#2563eb',
-            colorDark: '#93c5fd',
-            bgColor: 'rgba(59, 130, 246, 0.1)',
-            bgColorDark: 'rgba(59, 130, 246, 0.2)',
-            borderColor: 'rgba(59, 130, 246, 0.3)',
-            borderColorDark: 'rgba(59, 130, 246, 0.4)',
-            priority: 3
-        }
+        high: { label: 'Сначала важное', priority: 1 },
+        medium: { label: 'Стоит знать', priority: 2 },
+        low: { label: 'Заметки на будущее', priority: 3 }
     };
 
     /**
@@ -83,22 +64,16 @@
         return h('div', {
             className: `early-warning-modal-card early-warning-modal-card--${severity}`
         },
-            // Header (severity badge + pattern name)
+            // Шапка: имя паттерна и ступень словом. Эмодзи ступени снято —
+            // в наборе эмодзи нет нигде, а 🚨 рядом с фразой о питании читается
+            // тревогой там, где сигнал говорит «стоит знать».
             h('div', { className: 'early-warning-modal-card__header' },
-                h('div', { className: 'early-warning-modal-card__header-left' },
-                    h('span', {
-                        className: 'early-warning-modal-card__emoji',
-                        'aria-label': config.label
-                    }, config.emoji),
-                    h('div', { className: 'early-warning-modal-card__header-text' },
-                        warning.patternName && h('span', {
-                            className: 'early-warning-modal-card__pattern-name'
-                        }, warning.patternName),
-                        h('span', {
-                            className: 'early-warning-modal-card__severity-label'
-                        }, config.label)
-                    )
-                )
+                warning.patternName && h('span', {
+                    className: 'early-warning-modal-card__pattern-name'
+                }, warning.patternName),
+                h('span', {
+                    className: 'early-warning-modal-card__severity-label'
+                }, config.label)
             ),
 
             // Main message (дружелюбное описание)
@@ -121,7 +96,7 @@
                 h('button', {
                     className: 'early-warning-modal-card__action-btn',
                     onClick: toggleScience
-                }, showScience ? '📖 Скрыть обоснование' : '🔬 Научное обоснование')
+                }, showScience ? 'Скрыть обоснование' : 'На чём основано')
             ),
 
             // Science explanation (collapsible)
@@ -208,9 +183,7 @@
                 // Header
                 h('div', { className: 'pattern-debug-modal__header early-warning-modal__header' },
                     h('div', { className: 'pattern-debug-modal__title early-warning-modal__title' },
-                        h('span', { className: 'pattern-debug-modal__emoji early-warning-modal__emoji' },
-                            mode === 'acute' ? '⚡' : '📊'
-                        ),
+
                         h('span', null,
                             mode === 'acute' ? 'Оперативные предупреждения' : 'Аудит за 30 дней'
                         )
@@ -223,32 +196,32 @@
                 ),
 
                 // Stats summary (как в Pattern Debugger)
+                // Ряд счётчиков называет группы теми же словами, что ярусы
+                // ниже: прежде здесь стояли «Критичных», «Внимание» и
+                // «Рекомендаций» с иконками 📊 🚨 ⚠️ — второй словарь для тех
+                // же трёх ступеней, и человек сверял два набора слов.
                 h('div', { className: 'pattern-debug-modal__stats early-warning-modal__stats' },
                     h('div', { className: 'pattern-debug-modal__stat pattern-debug-modal__stat--total' },
-                        h('span', { className: 'pattern-debug-modal__stat-icon' }, '📊'),
                         h('div', { className: 'pattern-debug-modal__stat-content' },
                             h('span', { className: 'pattern-debug-modal__stat-label' }, 'Всего'),
                             h('span', { className: 'pattern-debug-modal__stat-value' }, activeWarnings.length)
                         )
                     ),
                     h('div', { className: 'pattern-debug-modal__stat pattern-debug-modal__stat--high' },
-                        h('span', { className: 'pattern-debug-modal__stat-icon' }, '🚨'),
                         h('div', { className: 'pattern-debug-modal__stat-content' },
-                            h('span', { className: 'pattern-debug-modal__stat-label' }, 'Критичных'),
+                            h('span', { className: 'pattern-debug-modal__stat-label' }, SEVERITY_CONFIG.high.label),
                             h('span', { className: 'pattern-debug-modal__stat-value' }, groupedWarnings.high.length)
                         )
                     ),
                     h('div', { className: 'pattern-debug-modal__stat pattern-debug-modal__stat--medium' },
-                        h('span', { className: 'pattern-debug-modal__stat-icon' }, '⚠️'),
                         h('div', { className: 'pattern-debug-modal__stat-content' },
-                            h('span', { className: 'pattern-debug-modal__stat-label' }, 'Внимание'),
+                            h('span', { className: 'pattern-debug-modal__stat-label' }, SEVERITY_CONFIG.medium.label),
                             h('span', { className: 'pattern-debug-modal__stat-value' }, groupedWarnings.medium.length)
                         )
                     ),
                     h('div', { className: 'pattern-debug-modal__stat pattern-debug-modal__stat--low' },
-                        h('span', { className: 'pattern-debug-modal__stat-icon' }, 'ℹ️'),
                         h('div', { className: 'pattern-debug-modal__stat-content' },
-                            h('span', { className: 'pattern-debug-modal__stat-label' }, 'Рекомендаций'),
+                            h('span', { className: 'pattern-debug-modal__stat-label' }, SEVERITY_CONFIG.low.label),
                             h('span', { className: 'pattern-debug-modal__stat-value' }, groupedWarnings.low.length)
                         )
                     )
@@ -257,16 +230,20 @@
                 // Content (scrollable)
                 h('div', { className: 'early-warning-modal__body' },
                     activeWarnings.length === 0
+                        // Пустота называет состояние, а не хвалит: зелёная
+                        // галочка и «Всё отлично!» сообщали настроение, тогда
+                        // как сказать надо, что сигналов нет и откуда они
+                        // появятся.
                         ? h('div', { className: 'early-warning-modal__empty' },
-                            h('span', { className: 'early-warning-modal__empty-icon' }, '✅'),
-                            h('p', { className: 'early-warning-modal__empty-title' }, 'Всё отлично!'),
-                            h('p', { className: 'early-warning-modal__empty-subtitle' }, 'Нет активных предупреждений')
+                            h('p', { className: 'early-warning-modal__empty-title' }, 'Сигналов нет'),
+                            h('p', { className: 'early-warning-modal__empty-subtitle' },
+                                'Появятся, когда в записях наберётся то, о чём стоит сказать.')
                         )
                         : h('div', { className: 'early-warning-modal__warnings' },
                             // High severity warnings
                             groupedWarnings.high.length > 0 && h('div', { className: 'early-warning-modal__section' },
                                 h('h3', { className: 'early-warning-modal__section-title early-warning-modal__section-title--high' },
-                                    '🚨 Критично'
+                                    SEVERITY_CONFIG.high.label
                                 ),
                                 groupedWarnings.high.map((warning, idx) =>
                                     h(WarningCard, {
@@ -280,7 +257,7 @@
                             // Medium severity warnings
                             groupedWarnings.medium.length > 0 && h('div', { className: 'early-warning-modal__section' },
                                 h('h3', { className: 'early-warning-modal__section-title early-warning-modal__section-title--medium' },
-                                    '⚠️ Внимание'
+                                    SEVERITY_CONFIG.medium.label
                                 ),
                                 groupedWarnings.medium.map((warning, idx) =>
                                     h(WarningCard, {
@@ -294,7 +271,7 @@
                             // Low severity warnings
                             groupedWarnings.low.length > 0 && h('div', { className: 'early-warning-modal__section' },
                                 h('h3', { className: 'early-warning-modal__section-title early-warning-modal__section-title--low' },
-                                    'ℹ️ Рекомендации'
+                                    SEVERITY_CONFIG.low.label
                                 ),
                                 groupedWarnings.low.map((warning, idx) =>
                                     h(WarningCard, {
