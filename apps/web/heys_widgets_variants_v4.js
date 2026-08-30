@@ -2963,13 +2963,22 @@
     if (chart.kind === 'grid7x5') {
       const cells = chart.cells || [];
       const gapFlags = chart.gapFlags || [];
+      // Кадр «Разбор · Карта активности» строит карту строками недель, а не
+      // CSS-сеткой: клетка высотой 15, зазор 4 и внутри строки, и между ними.
+      const weeks = [];
+      for (let w = 0; w * 7 < cells.length; w += 1) weeks.push(w);
       return React.createElement('div', { className: 'widget-bd-sheet__grid7x5' },
-        cells.map((c, i) => React.createElement('span', {
-          key: i,
-          className: 'widget-bd-sheet__heat-cell'
-            + (c.ratio >= 1 ? ' is-ok' : c.ratio >= 0.5 ? ' is-mid' : '')
-            + (gapFlags[i] ? ' is-gap' : '')
-        }))
+        weeks.map((w) => React.createElement('div', {
+          key: w,
+          className: 'widget-bd-sheet__grid7x5-row'
+        },
+          cells.slice(w * 7, w * 7 + 7).map((c, i) => React.createElement('span', {
+            key: i,
+            className: 'widget-bd-sheet__heat-cell'
+              + (c.ratio >= 1 ? ' is-ok' : c.ratio >= 0.5 ? ' is-mid' : '')
+              + (gapFlags[w * 7 + i] ? ' is-gap' : '')
+          }))
+        ))
       );
     }
     if (chart.kind === 'sleepStrip') {

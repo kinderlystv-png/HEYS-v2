@@ -95,7 +95,8 @@ const PICK = {
   height: (v) => num(v, /высота ([\d.]+)px/),
   minHeight: (v) => num(v, /высота от ([\d.]+)px/),
   width: (v) => num(v, /ширина ([\d.]+)px/),
-  radius: (v) => num(v, /радиус ([\d.]+)px/),
+  // Кадр пишет радиус и одним числом, и четырьмя — «2px 2px 0 0».
+  radius: (v) => num(v, /радиус ([\d.]+px(?: [\d.]+(?:px)?)*)/),
   padding: (v) => num(v, /поля ([^,]+?)(?:,|$)/),
   fontWeight: (v) => num(v, /шрифт (\d+) [\d.]+px/),
   fontSize: (v) => num(v, /шрифт \d+ ([\d.]+)px/),
@@ -212,6 +213,31 @@ const SHELL = [
 
 // Новые виды графика шести листов пакета 22 августа: кадр → правило продукта.
 const CHARTS = [
+  // Графики двенадцати листов первого пакета.
+  ['Разбор · Сон', 84, '.widget-bd-sheet__sleep-strip', ['marginTop', 'direction', 'gap']],
+  ['Разбор · Сон', 85, '.widget-bd-sheet__sleep-timeline-avg', ['width', 'background']],
+  ['Разбор · Сон', 86, '.widget-bd-sheet__sleep-timeline-row', ['align', 'gap']],
+  ['Разбор · Сон', 87, '.widget-bd-sheet__sleep-timeline-label', ['width', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · Сон', 88, '.widget-bd-sheet__sleep-timeline-track', ['height', 'radius', 'background']],
+  ['Разбор · Сон', 89, '.widget-bd-sheet__sleep-timeline-bar', ['height', 'radius', 'background']],
+  ['Разбор · Сон', 103, '.widget-bd-sheet__sleep-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · Вода', 84, '.widget-bd-sheet__water-profile', ['marginTop', 'height', 'align', 'gap']],
+  ['Разбор · Вода', 85, '.widget-bd-sheet__water-profile-gap', ['background', 'radius']],
+  ['Разбор · Вода', 86, '.widget-bd-sheet__water-profile-bar > i', ['radius', 'background']],
+  ['Разбор · Вода', 98, '.widget-bd-sheet__water-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · БЖУ', 81, '.widget-bd-sheet__hero-tracks', ['marginTop', 'direction', 'gap']],
+  ['Разбор · БЖУ', 84, '.widget-bd-sheet__hero-track-bar', ['height', 'radius', 'background', 'marginTop']],
+  ['Разбор · БЖУ', 88, '.widget-bd-sheet__grid3x7', ['marginTop', 'direction', 'gap']],
+  ['Разбор · БЖУ', 89, '.widget-bd-sheet__grid-row', ['align', 'gap']],
+  ['Разбор · БЖУ', 91, ['.widget-bd-sheet__grid-cell', '.widget-bd-sheet__grid-cell.is-ok'], ['height', 'radius', 'background']],
+  ['Разбор · Оценка дня', 93, '.widget-bd-sheet__factors', ['marginTop', 'direction', 'gap']],
+  ['Разбор · Риск-радар', 100, '.widget-bd-sheet__drivers', ['marginTop', 'direction', 'gap']],
+  ['Разбор · Риск-радар', 101, ['.widget-bd-sheet__driver-mark', '.widget-bd-sheet__driver-row.is-bad .widget-bd-sheet__driver-mark'], ['width', 'height', 'radius', 'background']],
+  ['Разбор · Тренд здоровья', 87, '.widget-bd-sheet__contrib', ['marginTop', 'direction', 'gap']],
+  ['Разбор · Тренд здоровья', 88, '.widget-bd-sheet__contrib-row', ['align', 'gap']],
+  ['Разбор · Тренд здоровья', 89, '.widget-bd-sheet__contrib-label', ['width', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · Карта активности', 84, '.widget-bd-sheet__grid7x5', ['marginTop', 'direction', 'gap']],
+  // Шесть листов пакета 22 августа.
   ['Разбор · Клетчатка', 84, '.widget-bd-sheet__sources', ['marginTop', 'gap']],
   ['Разбор · Клетчатка', 87, '.widget-bd-sheet__source-bar', ['height', 'marginTop']],
   ['Разбор · Белок', 84, '.widget-bd-sheet__meal-bars', ['marginTop', 'gap', 'height']],
@@ -314,6 +340,38 @@ const MAIN = [
   ['«Виджетов нет»', 2, '.widget-v4-empty__btn', ['align', 'gap', 'marginTop', 'padding', 'radius', 'background', 'fontWeight', 'fontSize', 'color']],
   ['«Вернуть стандартный экран»', 0, '.widget-v4-empty__reset', ['align', 'justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']]
 ];
+
+// Хвост листа разбора — разбор числами, норма и действие — одинаков во всех
+// восемнадцати листах, но номера элементов у каждого свои. Таблица собирается
+// из разбора по форме строки: каждая форма внутри кадра встречается один раз
+// («повторы одного вида внутри кадра свёрнуты»), поэтому якорь однозначен.
+const SHEET_TAIL = [
+  ['отступ сверху 16px, направление column, зазор 11px', '.widget-bd-sheet__stats', ['marginTop', 'direction', 'gap']],
+  ['выравнивание baseline, распределение space-between, зазор 12px', '.widget-bd-sheet__stat-row', ['align', 'justify', 'gap']],
+  ['шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.5)', '.widget-bd-sheet__stat-label', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.55), отступ сверху 14px', '.widget-bd-sheet__norm', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  ['моноцифры: флекс none, шрифт 700 12px/1 Figtree, цвет var(--tx)', '.widget-bd-sheet__stat-value', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['высота от 48px, радиус 999px, фон var(--acs), цвет var(--on-acs)', ['.widget-bd-sheet__chip', '.widget-bd-sheet__action'], ['minHeight', 'radius', 'background', 'color', 'align', 'justify', 'fontWeight', 'fontSize', 'lineHeight']]
+];
+
+function sheetTailPairs(razbor) {
+  const frames = [...new Set([...razbor.keys()]
+    .map((k) => k.split('|')[0])
+    .filter((f) => /^Разбор · /.test(f)))];
+  const pairs = [];
+  for (const frame of frames) {
+    for (const [anchor, sel, props] of SHEET_TAIL) {
+      const hits = [...razbor.keys()].filter((k) => {
+        const at = k.lastIndexOf('|');
+        return k.slice(0, at) === frame && (razbor.get(k) || '').includes(anchor);
+      });
+      // Форма, которой в этом листе нет (у части листов нет разбора числами
+      // или нормы), пропускается: гейт сверяет то, что кадр рисует.
+      if (hits.length === 1) pairs.push([frame, anchor, 0, sel, props]);
+    }
+  }
+  return pairs;
+}
 
 // Три кадра смены вида, не считая листа: удержание, принятый выбор и новый
 // вид. Здесь живут пилюли подсказки и подтверждения и состояния самой плитки.
@@ -497,6 +555,16 @@ describe('каркас листа разбора против разбора к�
       }
     }
     expect(same).toBeGreaterThanOrEqual(1000);
+  });
+
+  it('хвост листа разбора одинаков во всех восемнадцати листах', () => {
+    const pairs = sheetTailPairs(razbor);
+    expect(new Set(pairs.map((p) => p[0])).size).toBe(18);
+    const drift = [];
+    for (const [frame, anchor, offset, sel, props] of pairs) {
+      drift.push(...compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] }));
+    }
+    expect(drift).toEqual([]);
   });
 
   it('состояния смены вида совпадают со своими кадрами', () => {

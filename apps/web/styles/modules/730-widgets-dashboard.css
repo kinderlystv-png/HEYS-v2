@@ -10903,7 +10903,9 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 .widget-v4-stepbars__bar {
   flex: 1;
   min-height: 2px;
-  border-radius: 2px;
+  /* Кадр «Шаги · Неделя»: скругление только сверху — столбик стоит на общей
+     базовой линии, и скруглённый низ отрывал бы его от неё. */
+  border-radius: 2px 2px 0 0;
   background: #b7c29b;
 }
 
@@ -13976,14 +13978,14 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__grid3x7 {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   margin-top: 16px;
 }
 
 .widget-bd-sheet__grid-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .widget-bd-sheet__grid-label {
@@ -13996,25 +13998,31 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__grid-cell {
   flex: 1;
   height: 14px;
-  border-radius: 3px;
+  border-radius: 4px;
   background: rgba(0, 0, 0, 0.1);
 }
 
 .widget-bd-sheet__grid-cell.is-ok {
-  background: color-mix(in srgb, var(--v4-good, #7a8a5e) 35%, transparent);
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-bd-sheet__grid7x5 {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   margin-top: 16px;
 }
 
+.widget-bd-sheet__grid7x5-row {
+  display: flex;
+  gap: 4px;
+}
+
 .widget-bd-sheet__heat-cell {
-  aspect-ratio: 1;
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.08);
+  flex: 1;
+  height: 15px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.07);
 }
 
 .widget-bd-sheet__heat-cell.is-mid {
@@ -14203,6 +14211,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 .widget-bd-sheet__hero-track-bar {
   height: 5px;
+  margin-top: 5px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -14286,7 +14295,9 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   min-height: 48px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-act, #cf8144);
+  /* Запасное значение — песочное, как у остальных обращений к роли: #cf8144
+     это тёмный набор, и в запасе он врал бы о наборе по умолчанию. */
+  background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
   font: 700 13px/1 inherit;
   cursor: pointer;
