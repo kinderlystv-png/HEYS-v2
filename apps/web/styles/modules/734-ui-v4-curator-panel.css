@@ -540,6 +540,12 @@
    занимали место и спорили за внимание, а вместе читаются как одна сводка. */
 .cur-cab__subtitle {
   display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
   margin-top: 4px;
   font-size: 11px;
   font-weight: 600;
@@ -889,4 +895,45 @@
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
+}
+
+/* Состояние системы — словом в подписи, тоном по тревожности. Отдельная
+   кнопка статуса в 118 px съедала ширину шапки, и заголовок ломался. */
+.cur-cab__health.is-ok {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.cur-cab__health.is-warning {
+  color: var(--v4-warn-text, #8a5a2a);
+}
+
+.cur-cab__health.is-critical {
+  color: var(--v4-bad-text, #b4442a);
+}
+
+/* Шапка карточки клиента одной строкой: аватар, имя с телефоном, пилюля
+   подписки. Прежде имя и телефон стояли отдельным рядом, бейдж со
+   статистикой — вторым, и карточка читалась тремя заходами вместо одного
+   взгляда. */
+.cur-cab__client-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cur-cab__client-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cur-cab__client-phone {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  font-variant-numeric: tabular-nums;
 }

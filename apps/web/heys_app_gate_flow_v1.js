@@ -1516,11 +1516,15 @@
         }
 
         if (pending.length === 0) {
-            return React.createElement('div', {
-                style: { padding: '48px 24px', textAlign: 'center' }
-            },
-                React.createElement('div', { style: { fontSize: 48, marginBottom: 12 } }, '✅'),
-                React.createElement('div', { style: { fontSize: 15, color: 'rgba(15,23,42,0.6)' } }, 'Нет заявок на модерацию')
+            // Контракт «вид · пустые состояния кабинета»: иллюстраций во весь
+            // экран — зелёной галочки — нет. Она сообщала «молодец», хотя
+            // сообщать надо состояние: очередь пуста, делать нечего.
+            return React.createElement('div', { className: 'cur-panel' },
+                React.createElement('div', { className: 'cur-panel__empty' },
+                    React.createElement('div', { className: 'cur-panel__empty-title' }, 'Заявок на модерацию нет'),
+                    React.createElement('div', { className: 'cur-panel__empty-note' },
+                        'Клиенты присылают продукты, которых нет в общей базе. Как только пришлют — они появятся здесь.')
+                )
             );
         }
 
@@ -1633,7 +1637,7 @@
         );
     }
 
-    function OpsDashboardButton() {
+    function OpsDashboardButton({ renderTrigger } = {}) {
         const [open, setOpen] = React.useState(false);
         const [loading, setLoading] = React.useState(false);
         const [error, setError] = React.useState('');
@@ -1751,8 +1755,12 @@
             );
         };
 
+	        // renderTrigger — контракт «вид · шапка кабинета»: счёт клиентов и
+	        // состояние системы идут одной подписью, а не кнопкой в 118 px рядом
+	        // с заголовком: она съедала ширину, и «Кабинет куратора» ломался на
+	        // две строки. Оверлей дашборда остаётся общим.
 	        return h(React.Fragment, null,
-	            h('button', {
+	            renderTrigger ? renderTrigger({ open: openDashboard, health: systemHealth }) : h('button', {
 	                type: 'button',
 	                title: `Статус системы: ${systemHealth.label}`,
 	                'aria-label': `Статус системы: ${systemHealth.label}. Открыть Ops dashboard`,
@@ -2147,19 +2155,31 @@
                                         { className: 'cur-cab__head-row' },
                                         React.createElement('span', { className: 'cur-cab__title-box' },
                                             React.createElement('span', { className: 'cur-cab__title' }, 'Кабинет куратора'),
-                                            React.createElement('span', { className: 'cur-cab__subtitle' },
-                                                clientsSource === 'loading' ? 'Загружаем клиентов'
-                                                    : clientsSource === 'error' ? 'Клиенты не загрузились'
-                                                        : curatorPanelClients.length
-                                                            ? curatorPanelClients.length + ' '
-                                                              + pluralClientsRu(curatorPanelClients.length)
-                                                              + (clientsSource === 'cache'
-                                                                ? ' · показываем сохранённое'
-                                                                : ' · система в норме')
-                                                            : 'Клиентов пока нет'
-                                            )
+                                            // Счёт клиентов и состояние системы одной подписью, и она
+                                            // же ведёт в Ops dashboard: отдельная кнопка статуса в
+                                            // 118 px съедала ширину, и заголовок ломался на две строки.
+                                            React.createElement(OpsDashboardButton, {
+                                                renderTrigger: ({ open: openOps, health }) => React.createElement('button', {
+                                                    type: 'button',
+                                                    className: 'cur-cab__subtitle',
+                                                    onClick: openOps,
+                                                    title: 'Открыть Ops dashboard'
+                                                },
+                                                    (clientsSource === 'loading' ? 'Загружаем клиентов'
+                                                        : clientsSource === 'error' ? 'Клиенты не загрузились'
+                                                            : curatorPanelClients.length
+                                                                ? curatorPanelClients.length + ' '
+                                                                  + pluralClientsRu(curatorPanelClients.length)
+                                                                : 'Клиентов пока нет'),
+                                                    ' · ',
+                                                    React.createElement('span', {
+                                                        className: 'cur-cab__health is-' + (health && health.tone || 'unknown')
+                                                    }, clientsSource === 'cache' ? 'показываем сохранённое'
+                                                        : health && health.tone === 'ok' ? 'система в норме'
+                                                            : (health && health.label || 'система'))
+                                                )
+                                            })
                                         ),
-                                        React.createElement(OpsDashboardButton),
                                         React.createElement(
                                             'button',
                                             {
@@ -2426,25 +2446,12 @@
                                                             React.createElement(
                                                                 'div',
                                                                 { style: { position: 'relative', flexShrink: 0 } },
-                                                                React.createElement(
-                                                                    'div',
-                                                                    {
-                                                                        style: {
-                                                                            width: 48,
-                                                                            height: 48,
-                                                                            borderRadius: '50%',
-                                                                            background: getAvatarColor(c.name),
-                                                                            display: 'flex',
-                                                                            alignItems: 'center',
-                                                                            justifyContent: 'center',
-                                                                            color: '#fff',
-                                                                            fontWeight: 700,
-                                                                            fontSize: 18,
-                                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                                                                        }
-                                                                    },
-                                                                    getClientInitials(c.name)
-                                                                ),
+                                                                // Аватар 34 того же вида, что в панели: цветной круг с тенью
+                                                                // выделял случайную букву имени сильнее, чем состояние дня —
+                                                                // а решает куратор по состоянию.
+                                                                React.createElement('span', {
+                                                                    className: 'cur-row__avatar'
+                                                                }, getClientInitials(c.name)),
                                                                 unreadCount > 0 && React.createElement('div', {
                                                                     className: 'curator-card-unread-badge',
                                                                     style: {
@@ -2472,35 +2479,27 @@
                                                                 'div',
                                                                 { style: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 } },
 
-                                                                // 1. Верхний ряд: Имя + Телефон
-                                                                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 } },
-                                                                    React.createElement('div', { style: { fontWeight: 700, fontSize: 16, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, c.name),
-                                                                    c.phone_normalized && React.createElement('div', { style: { fontSize: 13, color: 'var(--muted)', whiteSpace: 'nowrap', marginTop: 1, fontFamily: 'monospace' } }, c.phone_normalized)
-                                                                ),
-
-                                                                // 2. Средний ряд: Бейдж + Статистика
-                                                                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minHeight: 24 } },
+                                                                // Контракт «вид · карточка клиента»: шапка одной строкой —
+                                                                // аватар, имя с телефоном, пилюля подписки. Прежде имя и
+                                                                // телефон стояли отдельным рядом, бейдж со статистикой —
+                                                                // вторым, и карточка читалась сверху вниз тремя заходами
+                                                                // вместо одного взгляда.
+                                                                React.createElement('div', { className: 'cur-cab__client-head' },
+                                                                    React.createElement('span', { className: 'cur-cab__client-copy' },
+                                                                        React.createElement('span', { className: 'cur-row__name' }, c.name),
+                                                                        c.phone_normalized && React.createElement('span', {
+                                                                            className: 'cur-cab__client-phone'
+                                                                        }, c.phone_normalized)
+                                                                    ),
                                                                     (() => {
                                                                         const badge = getSubscriptionBadge(c);
-                                                                        return React.createElement('div', {
-                                                                            style: {
-                                                                                display: 'inline-flex', alignItems: 'center', gap: 4,
-                                                                                padding: '4px 8px', borderRadius: 6,
-                                                                                background: badge.bg, color: badge.color,
-                                                                                fontSize: 12, fontWeight: 600,
-                                                                                border: `1px solid ${badge.bg === '#fef2f2' ? '#fecaca' : badge.bg === '#eff6ff' ? '#bfdbfe' : '#bbf7d0'}`,
-                                                                                animation: badge.urgent ? 'pulse 2s infinite' : 'none'
-                                                                            }
-                                                                        }, badge.emoji + ' ' + badge.text);
-                                                                    })(),
-                                                                    // Серия переехала в нижний ярус карточки — контракт
-                                                                    // «карточка клиента · нижний ярус».
-                                                                    // Last Active
-                                                                    stats.lastActiveDate && React.createElement('span', { style: { fontSize: 12, color: 'var(--muted)' } },
-                                                                        '📅 ' + formatLastActive(stats.lastActiveDate)
-                                                                    ),
-                                                                    // Метка "Последний"
-                                                                    isLast && React.createElement('span', { style: { color: '#4285f4', fontWeight: 500, fontSize: 12 } }, '✓')
+                                                                        // Пилюля подписки — метка данных того же набора, что
+                                                                        // метки дня: своя рамка и эмодзи ей не нужны.
+                                                                        return React.createElement('span', {
+                                                                            className: 'cur-cab__mch'
+                                                                                + (badge.urgent ? ' is-warn' : ' is-ok')
+                                                                        }, badge.text);
+                                                                    })()
                                                                 ),
 
                                                                 // Контракт «вид · карточка клиента»: метки дня одним набором и
