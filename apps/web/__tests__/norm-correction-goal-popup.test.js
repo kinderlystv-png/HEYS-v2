@@ -116,7 +116,10 @@ describe('разбор цели · источник поправки', () => {
     // Пятнадцать экранов с копиями ссылок расходятся при первой правке;
     // ссылка у механики переживает переезд экрана.
     expect(ENGINE).toContain('const EVIDENCE = {');
-    expect(ENGINE).toContain("adaptation: '20107198'");
+    // Указывает на id записи реестра, а не на номер работы: номер в двух
+    // местах — это две ссылки, которые разойдутся. Сам номер живёт в реестре
+    // дневной части, и проверяет его day-bibliography.
+    expect(ENGINE).toContain("adaptation: 'rosenbaum2010'");
     expect(SRC).toContain('HEYS.NormCorrection?.EVIDENCE?.adaptation');
     // Своего номера у экрана нет.
     const block = SRC.slice(SRC.indexOf("'Поправка на факт',"), SRC.indexOf("'Расход после поправки'"));

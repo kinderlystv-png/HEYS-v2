@@ -1671,10 +1671,12 @@
               { label: 'Почему ' + recoveryDays + ' дня?', value: debt < 300 ? 'Маленький долг (<300 ккал) — можно закрыть за 1 день без стресса.' : debt < 700 ? 'Средний долг (300-700 ккал) — оптимально 2 дня для плавного восстановления.' : 'Большой долг (>700 ккал) — 3 дня чтобы не перегружать ЖКТ и метаболизм.' },
               { label: 'Формула', value: effectiveDebt + ' ккал (75% от ' + debt + ') ÷ ' + recoveryDays + ' дн = +' + dailyBoost + ' ккал/день' }
             ],
-            links: [
-              { text: 'Leibel 1995', url: 'https://pubmed.ncbi.nlm.nih.gov/7632212/' },
-              { text: 'Hall 2011', url: 'https://pubmed.ncbi.nlm.nih.gov/21872751/' }
-            ]
+            // Источники берутся из реестра, а не переписываются в экран:
+            // ссылка в разметке живёт своей жизнью и расходится с той же
+            // ссылкой в соседнем экране при первой правке. Реестр ещё и
+            // показывает пропуск — registry.missing() ловит id без записи.
+            links: (HEYS.DayBibliography?.resolve?.(['leibel1995', 'hall2011']) || [])
+              .map((src) => ({ text: src.author + ' ' + src.year, url: src.url }))
           });
         };
 
@@ -3331,16 +3333,22 @@
                         // продукт — там, где у механики есть проверенная
                         // работа, она видна; сама ссылка живёт у константы в
                         // движке, а не в разметке.
-                        HEYS.NormCorrection?.EVIDENCE?.adaptation
-                          && React.createElement('a', {
-                            href: 'https://pubmed.ncbi.nlm.nih.gov/'
-                              + HEYS.NormCorrection.EVIDENCE.adaptation + '/',
+                        (() => {
+                          // Тот же реестр, что у разбора долга: один источник
+                          // правды на продукт. Раньше у поправки был свой
+                          // EVIDENCE, а у долга — свой список в разметке.
+                          const src = HEYS.DayBibliography?.get?.(
+                            HEYS.NormCorrection?.EVIDENCE?.adaptation
+                          );
+                          return src && React.createElement('a', {
+                            href: src.url,
                             target: '_blank',
                             rel: 'noopener',
-                            title: 'Почему расчёт расходится с фактом',
+                            title: src.keyFinding || 'Почему расчёт расходится с фактом',
                             onClick: (e) => e.stopPropagation(),
                             style: { marginLeft: 6, textDecoration: 'none', fontSize: 11 }
-                          }, '📚')
+                          }, '📚');
+                        })()
                       ),
                       React.createElement('span', { style: ncValue },
                         '×' + nc.factor.toFixed(2).replace('.', ','))
