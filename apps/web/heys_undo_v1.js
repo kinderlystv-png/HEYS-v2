@@ -8,7 +8,9 @@
 //
 // Что задаёт контракт: кольцо-таймер с цифрой вместо полосы (полоса вдоль
 // нижней кромки читается как прогресс загрузки), 5 с на все места вызова,
-// единственное слово действия — «Отменить», подряд идущие удаления одного
+// единственное слово действия — «Вернуть» (строка «слова на экране» прямо
+// запрещает «отменить», «undo» и «вы уверены?»: бар и есть подтверждение,
+// вопросов он не задаёт), подряд идущие удаления одного
 // вида собираются в один бар, подтверждающего тоста после отмены нет.
 (function (global) {
   'use strict';
@@ -112,7 +114,7 @@
 
     barEl = document.createElement('div');
     barEl.className = 'heys-undo-bar';
-    // Строка «доступность»: озвучивается текст и «Отменить, осталось N секунд»;
+    // Строка «доступность»: озвучивается текст и «Вернуть, осталось N секунд»;
     // кольцо декоративно.
     barEl.setAttribute('role', 'status');
     barEl.setAttribute('aria-live', 'polite');
@@ -122,13 +124,13 @@
       '<div class="heys-undo-bar__content">',
       '  <span class="heys-undo-bar__ring" aria-hidden="true">',
       '    <svg width="30" height="30" viewBox="0 0 30 30">',
-      '      <circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--v4-act, #2563eb)" stroke-opacity=".22" stroke-width="2.5"/>',
-      '      <circle class="heys-undo-bar__arc" cx="15" cy="15" r="12.5" fill="none" stroke="var(--v4-act, #2563eb)" stroke-width="2.5" stroke-linecap="round" transform="rotate(-90 15 15)"/>',
+      '      <circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--v4-act, #c67139)" stroke-opacity=".22" stroke-width="2.5"/>',
+      '      <circle class="heys-undo-bar__arc" cx="15" cy="15" r="12.5" fill="none" stroke="var(--v4-act, #c67139)" stroke-width="2.5" stroke-linecap="round" transform="rotate(-90 15 15)"/>',
       '    </svg>',
       '    <span class="heys-undo-bar__count"></span>',
       '  </span>',
       '  <span class="heys-undo-bar__label"></span>',
-      '  <button class="heys-undo-bar__btn" type="button">Отменить</button>',
+      '  <button class="heys-undo-bar__btn" type="button">Вернуть</button>',
       '</div>',
     ].join('');
 
@@ -179,7 +181,7 @@
       countEl.textContent = String(seconds);
     }
     if (btnEl) {
-      btnEl.setAttribute('aria-label', 'Отменить, осталось ' + seconds + ' секунд');
+      btnEl.setAttribute('aria-label', 'Вернуть, осталось ' + seconds + ' секунд');
     }
     // Отступ пересчитывается по ходу жизни бара: он переживает переключение
     // вкладки, а высота нижней навигации между вкладками может отличаться.
@@ -288,7 +290,7 @@
     currentUndo = null;
 
     clearCurrentTimer();
-    // Строка «после „Отменить“»: бар исчезает, запись возвращается на своё
+    // Строка «после „Вернуть“»: бар исчезает, запись возвращается на своё
     // место, подтверждающего тоста нет — исчезнувший бар и есть ответ.
     destroyBar();
 
@@ -343,7 +345,7 @@
       const batchKey = opts.batch?.key || null;
 
       // Строка «подряд идущие удаления»: удаления одного вида внутри живого
-      // окна собираются в один бар, таймер перезапускается, «Отменить»
+      // окна собираются в один бар, таймер перезапускается, «Вернуть»
       // возвращает все. Прежнее правило «второе удаление делает первое
       // необратимым» верно для редкого случая, но чистка приёма от нескольких
       // продуктов и разбор списка задач — рядовой сценарий.

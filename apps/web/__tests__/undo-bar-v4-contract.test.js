@@ -2,7 +2,7 @@
 // главного источника правды по отмене во всём продукте.
 //
 // Живые условия человек собрать не может: попасть в 4999-ю миллисекунду,
-// удалить три продукта подряд внутри одного окна и проверить, что «Отменить»
+// удалить три продукта подряд внутри одного окна и проверить, что «Вернуть»
 // вернуло все три в обратном порядке, — это работа фейковых таймеров.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -129,7 +129,7 @@ describe('бар отмены · контракт undo-bar.v4.dc.html', () => {
 
   // ── Форма ──
 
-  it('порядок слева направо: кольцо, текст, пилюля «Отменить»', () => {
+  it('порядок слева направо: кольцо, текст, пилюля «Вернуть»', () => {
     Undo.push({ label: 'Перекус удалён', onUndo: () => {} });
 
     const content = document.querySelector('.heys-undo-bar__content');
@@ -141,12 +141,12 @@ describe('бар отмены · контракт undo-bar.v4.dc.html', () => {
     ]);
   });
 
-  it('единственное действие называется «Отменить»', () => {
+  it('единственное действие называется «Вернуть»', () => {
     Undo.push({ label: 'Перекус удалён', onUndo: () => {} });
 
     const buttons = bar().querySelectorAll('button');
     expect(buttons).toHaveLength(1);
-    expect(buttons[0].textContent.trim()).toBe('Отменить');
+    expect(buttons[0].textContent.trim()).toBe('Вернуть');
   });
 
   it('индикатор — кольцо, полосы внизу плашки нет', () => {
@@ -228,7 +228,7 @@ describe('бар отмены · контракт undo-bar.v4.dc.html', () => {
     expect(labelText()).toBe('Удалено 3 продукта');
   });
 
-  it('«Отменить» на пачке возвращает все, в обратном порядке', () => {
+  it('«Вернуть» на пачке возвращает все, в обратном порядке', () => {
     const batch = { key: 'meal-product', forms: ['продукт', 'продукта', 'продуктов'] };
     const order = [];
 
@@ -316,9 +316,9 @@ describe('бар отмены · контракт undo-bar.v4.dc.html', () => {
     expect(first).not.toHaveBeenCalled();
   });
 
-  // ── После «Отменить» ──
+  // ── После «Вернуть» ──
 
-  it('после «Отменить» бар исчезает и подтверждающего тоста нет', () => {
+  it('после «Вернуть» бар исчезает и подтверждающего тоста нет', () => {
     const success = vi.fn();
     window.HEYS.Toast = { success, error: vi.fn(), info: vi.fn() };
 
@@ -416,15 +416,15 @@ describe('бар отмены · контракт undo-bar.v4.dc.html', () => {
 
   // ── Доступность ──
 
-  it('озвучивается текст и «Отменить, осталось N секунд»', () => {
+  it('озвучивается текст и «Вернуть, осталось N секунд»', () => {
     Undo.push({ label: 'Перекус удалён', onUndo: () => {} });
 
     expect(bar().getAttribute('role')).toBe('status');
-    expect(undoBtn().getAttribute('aria-label')).toBe('Отменить, осталось 5 секунд');
+    expect(undoBtn().getAttribute('aria-label')).toBe('Вернуть, осталось 5 секунд');
     expect(document.querySelector('.heys-undo-bar__ring').getAttribute('aria-hidden')).toBe('true');
 
     advance(2000);
-    expect(undoBtn().getAttribute('aria-label')).toBe('Отменить, осталось 3 секунд');
+    expect(undoBtn().getAttribute('aria-label')).toBe('Вернуть, осталось 3 секунд');
   });
 
   // ── Правило продукта: выделение текста ──
@@ -468,7 +468,7 @@ describe('бар отмены · контракт undo-bar.v4.dc.html', () => {
 
   // ── Правило продукта: повторный тап ──
 
-  it('второй клик по «Отменить» уже не находит бар — защита конструктивная, не таймером', () => {
+  it('второй клик по «Вернуть» уже не находит бар — защита конструктивная, не таймером', () => {
     const onUndo = vi.fn();
     Undo.push({ label: 'Перекус удалён', onUndo });
 
