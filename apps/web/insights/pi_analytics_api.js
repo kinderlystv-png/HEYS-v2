@@ -1560,7 +1560,8 @@
       }
 
       // === 5. Activity Deficit (гиподинамия) — 15% ===
-      const stepsGoal = profile.stepsGoal || 8000;
+      // То же запасное значение, что в модели профиля и в остальных экранах.
+      const stepsGoal = profile.stepsGoal || 10000;
       const stepsValues = days.map(d => d.steps || 0).filter(s => s > 0);
       if (stepsValues.length >= 3) {
         const avgSteps = average(stepsValues);

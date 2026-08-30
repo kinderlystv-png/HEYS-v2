@@ -1184,7 +1184,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       (day && day.steps) || 0,
       (normAbs && normAbs.kcal) || 0,
       (prof && prof.water_norm) || 2000,
-      (prof && (prof.stepsGoal || prof.steps_goal)) || 8000,
+      // Запасное значение одно на дерево — 10 000, как в модели профиля
+      // (heys_user_v12.js). Своё 8 000 здесь означало, что у человека без
+      // заполненного поля каскад считал цель иначе, чем соседний экран.
+      (prof && (prof.stepsGoal || prof.steps_goal)) || 10000,
       // v2.0.0: новые факторы
       (day && day.householdMin) || 0,
       (day && day.sleepStart) || '',
@@ -4113,11 +4116,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     PEAK: 'peak'
   };
 
+  // Слово состояния над полосой — то же, что засечка под ним: человек читает
+  // «Держу ритм» и видит, что маркер стоит именно на этой засечке. Прежние
+  // фразы говорили о каскаде («Каскад набирает базу»), а засечки — о человеке,
+  // и на одной шкале стояли два разных языка.
   var HEYS_SCORE_STATE_PHRASES = {
-    BASE: 'Каскад набирает базу',
-    ACCELERATING: 'Ритм разгоняется',
-    GROWING: 'Ритм устойчивый',
-    PEAK: 'Держите набранный темп'
+    BASE: 'Начало',
+    ACCELERATING: 'Набираю',
+    GROWING: 'Держу ритм',
+    PEAK: 'Максимум'
   };
 
   function formatHeysScoreNumber(raw) {
@@ -4156,7 +4163,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   /**
-   * Полоса с зонами (База/Разгон/Рост/Пик) — используется и на плитке
+   * Полоса с зонами (Начало/Набираю/Держу ритм/Максимум) — используется и на плитке
    * Отчётов, и в карточке Инсайтов. «Максимум» на полосе — это персональный
    * потолок (ceiling) минус ~10%, а не сам потолок и не 100 из 100:
    * засечка ровно на потолке была бы недостижима (можно только коснуться,
@@ -4199,10 +4206,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           title: 'Ваш нынешний потолок роста'
         })
       ),
+      // Строка контракта «каскад»: шкала «Начало → Набираю → Держу ритм →
+      // Максимум». Прежние «База · Разгон · Рост» описывали состояние системы,
+      // а человек читает шкалу про себя: он набирает и держит, а не «разгоняет
+      // каскад». Пороги и их места не менялись — сменились только слова.
       React.createElement('div', { className: 'heys-score-zonebar__legend' },
-        React.createElement('span', null, 'База'),
-        React.createElement('span', null, 'Разгон'),
-        React.createElement('span', null, 'Рост'),
+        React.createElement('span', null, 'Начало'),
+        React.createElement('span', null, 'Набираю'),
+        React.createElement('span', null, 'Держу ритм'),
         React.createElement('span', { className: 'heys-score-zonebar__legend-max' }, 'Максимум')
       )
     );
