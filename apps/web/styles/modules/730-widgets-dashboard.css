@@ -10718,7 +10718,9 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 .widget-v4-delta.widget-v4-val--neutral,
 .widget-v4-delta.widget-v4-val--warn,
 .widget-v4-delta.widget-v4-val--act {
-  font-size: 10px;
+  /* Кадры «Вес · Как сейчас» и подложка листов: дельта недели 9 px, как и на
+     плитке 2×1 — одна строка, один кегль в обоих видах. */
+  font-size: 9px;
   font-weight: 600;
   line-height: 1;
 }

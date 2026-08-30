@@ -242,6 +242,15 @@ const CHARTS = [
   ['Разбор · Риск-радар', 84, '.widget-bd-sheet__water-profile-gap', ['background', 'radius']],
   ['Разбор · Риск-радар', 85, '.widget-bd-sheet__water-profile-bar > i', ['radius', 'background']],
   ['Разбор · Риск-радар', 99, '.widget-bd-sheet__water-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  // Лента «Окно до сна» — та же лента, что у сна, со своими номерами.
+  ['Разбор · Окно до сна', 84, '.widget-bd-sheet__sleep-strip', ['marginTop', 'direction', 'gap']],
+  ['Разбор · Окно до сна', 85, '.widget-bd-sheet__sleep-timeline-row', ['align', 'gap']],
+  ['Разбор · Окно до сна', 86, '.widget-bd-sheet__sleep-timeline-label', ['width', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · Окно до сна', 87, '.widget-bd-sheet__sleep-timeline-track', ['height', 'radius', 'background']],
+  ['Разбор · Окно до сна', 88, '.widget-bd-sheet__sleep-timeline-bar', ['height', 'radius', 'background']],
+  ['Разбор · Окно до сна', 102, '.widget-bd-sheet__sleep-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  // Дельта недели у веса 2×2 — тот же кегль, что на плитке 2×1.
+  ['Разбор · Калории', 65, ['.widget-v4-delta', '.widget-v4-delta.widget-v4-val--act'], ['fontWeight', 'fontSize', 'lineHeight']],
   // Разбор таблицей: строки «разбор · Шаги» и «разбор · Динамика веса».
   ['Разбор · Шаги', 95, ['.widget-bd-sheet__stats', '.widget-bd-sheet__stats--table'], ['marginTop', 'direction']],
   ['Разбор · Шаги', 96, ['.widget-bd-sheet__stat-row', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-row'], ['align', 'justify', 'padding']],
