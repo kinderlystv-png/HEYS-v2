@@ -5,45 +5,24 @@
   if (HEYS.ClientDiagnostics) return;
 
   var activeRoot = null;
-  var STYLE_ID = 'heys-client-diagnostics-style';
-
-  function ensureStyles() {
-    if (document.getElementById(STYLE_ID)) return;
-    var style = document.createElement('style');
-    style.id = STYLE_ID;
-    style.textContent = [
-      '.cd-backdrop{position:fixed;inset:0;z-index:10040;background:rgba(25,27,46,.46);display:flex;align-items:center;justify-content:center;padding:20px}',
-      '.cd-modal{width:min(920px,100%);max-height:min(820px,calc(100vh - 40px));background:#f8f8fc;border:1px solid rgba(67,69,135,.14);border-radius:20px;box-shadow:0 24px 70px rgba(28,31,64,.24);display:flex;flex-direction:column;overflow:hidden;color:#25263d}',
-      '.cd-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px 16px;background:#fff;border-bottom:1px solid #e8e8f0}',
-      '.cd-title{font-size:20px;font-weight:750;line-height:1.25}.cd-subtitle{font-size:13px;color:#74758c;margin-top:4px}',
-      '.cd-icon-btn,.cd-control,.cd-copy,.cd-full-log{min-height:44px;border-radius:11px;border:1px solid #dadae8;background:#fff;color:#343553;font:inherit;cursor:pointer}',
-      '.cd-icon-btn{width:44px;font-size:20px}.cd-toolbar{display:flex;gap:10px;flex-wrap:wrap;padding:14px 24px;background:#fff;border-bottom:1px solid #e8e8f0}',
-      '.cd-toolbar .cd-control{width:auto;flex:0 0 150px;padding:0 12px;min-width:120px}.cd-copy{padding:0 14px;margin-left:auto;color:var(--v4-act, #c67139);font-weight:650}',
-      '.cd-body{padding:18px 24px 26px;overflow:auto}.cd-summary{font-size:14px;color:#62637a;margin-bottom:12px}',
-      '.cd-session{background:#fff;border:1px solid #e4e4ee;border-radius:14px;margin-bottom:10px;overflow:hidden}.cd-session--failed{border-color:#e6b5b5}.cd-session--degraded,.cd-session--abandoned{border-color:#ead6a1}',
-      '.cd-session-btn{width:100%;border:0;background:transparent;text-align:left;padding:15px 16px;cursor:pointer;color:inherit}',
-      '.cd-session-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.cd-status{display:inline-flex;align-items:center;min-height:25px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:750}',
-      '/* .cd-status--* — в styles/modules/734: метку состояния рисует и лист «Диагностики», там роли набора и гейт перекраски */',
-      '.cd-time{font-weight:700;font-size:14px}.cd-device{font-size:13px;color:#696a80;margin-left:auto}.cd-meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;color:#7b7c91;font-size:12px}',
-      '.cd-timeline{border-top:1px solid #ececf3;padding:8px 16px 14px}.cd-full-log{width:100%;padding:0 14px;margin:4px 0 8px;border-color:var(--v4-act, #c67139);background:var(--v4-act, #c67139);color:var(--v4-btn-on-act, #fff5ef);font-weight:700}.cd-event{position:relative;padding:8px 0 8px 22px;font-size:13px}.cd-event:before{content:"";position:absolute;left:4px;top:14px;width:8px;height:8px;border-radius:50%;background:#7779ad}.cd-event--failed:before{background:#b94a4a}.cd-event-time{color:#88899c;margin-right:8px}.cd-event-context{display:block;color:#77788d;font-size:12px;margin-top:2px;word-break:break-word}',
-      '.cd-section-title{font-size:15px;font-weight:750;margin:22px 0 10px}.cd-login{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;background:#fff;border:1px solid #e7e7ef;border-radius:11px;margin-bottom:7px;font-size:13px}.cd-login-time{white-space:nowrap;color:#6f7085}.cd-login-ua{color:#7b7c90;word-break:break-word}',
-      '.cd-empty,.cd-loading,.cd-error{padding:36px 18px;text-align:center;color:#74758c;background:#fff;border:1px solid #e6e6ef;border-radius:14px}.cd-error{color:#963d3d;border-color:#efcccc}',
-      '/* .cdo, .cdo-head, .cdo-title, .cdo-note, .cdo-actions, .cdo-list — в styles/modules/734: там роли набора и гейт перекраски */',
-      '/* .cdo-metrics и .cdo-metric переехали в styles/modules/734: там они на ролях набора и под гейтом перекраски */',
-      '/* .cdo-megalog и .cdo-mega-btn — там же */',
-      '/* .cdo-filters и .cdo-control — там же */.cdo-search{grid-column:span 2}',
-      '/* .cdo-sessions, .cdo-session, .cdo-row, .cdo-client, .cdo-small, .cdo-problem, .cdo-ok, .cdo-chevron, .cdo-detail, .cdo-timeline, .cdo-event и .cdo-more — там же: лист вкладки собран набором */',
-      '@media(max-width:640px){.cd-backdrop{padding:0;align-items:flex-end}.cd-modal{max-height:94vh;border-radius:20px 20px 0 0}.cd-head{padding:18px 16px 14px}.cd-toolbar{padding:12px 16px}.cd-body{padding:14px 16px 24px}.cd-toolbar .cd-control{flex:1 1 120px;min-width:0;width:auto}.cd-copy{width:100%;margin-left:0}.cd-device{width:100%;margin-left:0}.cd-session-btn{padding:14px}}'
-      ,'/* адаптив вкладки — в styles/modules/734 вместе с самими правилами */'
-    ].join('');
-    document.head.appendChild(style);
-  }
+  // Своей строки стилей у модуля больше нет: и вкладка, и лист одного
+  // клиента собраны классами кабинета, а они живут в styles/modules/734 — под
+  // ролями набора и гейтом перекраски, который строку внутри JS не видит.
 
   function el(tag, className, text) {
     var node = document.createElement(tag);
     if (className) node.className = className;
     if (text != null) node.textContent = text;
     return node;
+  }
+
+  // Пустота и отказ — карточкой набора, той же, что у панели и очереди: своих
+  // плашек .cd-empty/.cd-error в кабинете больше нет.
+  function emptyCard(note, title) {
+    var card = el('div', 'cur-panel__empty');
+    if (title) card.appendChild(el('div', 'cur-panel__empty-title', title));
+    card.appendChild(el('div', title ? 'cur-panel__empty-note' : 'cur-panel__empty-title', note));
+    return card;
   }
 
   function formatDate(value) {
@@ -370,7 +349,6 @@
   function Overview(props) {
     var React = global.React;
     if (!React) return null;
-    ensureStyles();
     var h = React.createElement;
     var clients = props && props.clients || [];
     var initialFilters = { range: '24h', clientId: '', search: '', status: 'all', device: '', mode: '', build: '', stage: '', sort: 'problems', includeNonProduction: false };
@@ -562,15 +540,18 @@
 
   function renderSession(session, clientName, clientId) {
     var status = STATUS[session.outcome] || STATUS.starting;
-    var card = el('article', 'cd-session cd-session--' + status[1]);
+    var card = el('article', 'cd-session');
     var button = el('button', 'cd-session-btn');
     button.type = 'button';
     button.setAttribute('aria-expanded', 'false');
     var top = el('div', 'cd-session-top');
-    top.appendChild(el('span', 'cd-status cd-status--' + status[1], status[0]));
     top.appendChild(el('span', 'cd-time', formatDate(session.started_at)));
-    top.appendChild(el('span', 'cd-device', [session.device_class, session.os_name, session.browser_name, session.display_mode].filter(Boolean).join(' · ') || 'Устройство не определено'));
+    // Состояние — меткой набора, как в листе вкладки. Прежде состояние несла и
+    // метка, и рамка карточки цветом: рамкой в кабинете помечено «вы здесь
+    // были», и второй смысл у той же формы читался бы как первый.
+    top.appendChild(el('span', 'cd-status cd-status--' + status[1], status[0]));
     button.appendChild(top);
+    button.appendChild(el('div', 'cd-device', [session.device_class, session.os_name, session.browser_name, session.display_mode].filter(Boolean).join(' · ') || 'Устройство не определено'));
     var meta = el('div', 'cd-meta');
     meta.appendChild(el('span', '', visitKindLabel(session.visit_kind, false).replace(/^./, function (char) { return char.toUpperCase(); })));
     meta.appendChild(el('span', '', 'Версия: ' + (session.build_id || 'unknown')));
@@ -583,7 +564,9 @@
     var timeline = el('div', 'cd-timeline');
     timeline.hidden = true;
     if (isProblemOutcome(session.outcome)) {
-      var fullLog = el('button', 'cd-full-log', 'Скопировать полный лог');
+      // Копирование лога — вторичной кнопкой набора, а не своей плашкой на
+      // акценте: главного действия у карточки посещения нет.
+      var fullLog = el('button', 'cur-cab__open is-soft', 'Скопировать полный лог');
       fullLog.type = 'button';
       fullLog.addEventListener('click', async function () {
         try {
@@ -603,7 +586,7 @@
       }
       timeline.appendChild(row);
     });
-    if (!(session.events || []).length) timeline.appendChild(el('div', 'cd-event', 'Структурированных событий нет'));
+    if (!(session.events || []).length) timeline.appendChild(el('div', 'cd-event-empty', 'Структурированных событий нет'));
     card.appendChild(timeline);
     button.addEventListener('click', function () {
       timeline.hidden = !timeline.hidden;
@@ -616,40 +599,53 @@
     options = options || {};
     if (!options.clientId) return;
     close();
-    ensureStyles();
     document.body.style.overflow = 'hidden';
 
     var state = { range: '24h', status: 'all', includeNonProduction: false, data: null };
-    var root = el('div', 'cd-backdrop');
+    // Четвёртый служебный лист кабинета — теми же классами, что подписка,
+    // анкета и новый клиент. Прежде это была своя модалка: тёмный скрим
+    // rgba(25,27,46,.46), окно #f8f8fc с холодной рамкой и тенью, белая шапка
+    // с закрытием квадратом 44 и своя панель фильтров. Форма окна в кабинете
+    // одна: разойдись они, каждая правка требовала бы четырёх.
+    var root = el('div', 'cur-cab__sheet-scrim cd-sheet-scrim');
     activeRoot = root;
-    var modal = el('section', 'cd-modal');
+    var modal = el('section', 'cur-cab__sheet');
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
     modal.setAttribute('aria-label', 'Диагностика посещений клиента');
     root.appendChild(modal);
 
-    var head = el('header', 'cd-head');
+    var head = el('header', 'cur-cab__sheet-head');
     var heading = el('div');
-    heading.appendChild(el('div', 'cd-title', 'Диагностика посещений'));
-    heading.appendChild(el('div', 'cd-subtitle', options.clientName || 'Клиент'));
+    heading.appendChild(el('div', 'cur-cab__sheet-title', 'Диагностика посещений'));
+    heading.appendChild(el('div', 'cur-cab__tab-note', options.clientName || 'Клиент'));
     head.appendChild(heading);
-    var closeButton = el('button', 'cd-icon-btn', '×');
+    var closeButton = el('button', 'cur-cab__sheet-close', '✕');
     closeButton.type = 'button'; closeButton.title = 'Закрыть'; closeButton.addEventListener('click', close);
     head.appendChild(closeButton); modal.appendChild(head);
 
-    var toolbar = el('div', 'cd-toolbar');
-    var range = el('select', 'cd-control');
+    var body = el('div', 'cur-cab__sheet-body'); modal.appendChild(body);
+
+    // Фильтры — той же сеткой и теми же полями, что во вкладке «Диагностика».
+    var toolbar = el('div', 'cdo-filters');
+    var range = el('select', 'cdo-control');
+    range.setAttribute('aria-label', 'Период');
     [['24h', '24 часа'], ['7d', '7 дней'], ['30d', '30 дней']].forEach(function (item) { var o = el('option', '', item[1]); o.value = item[0]; range.appendChild(o); });
-    var status = el('select', 'cd-control');
+    var status = el('select', 'cdo-control');
+    status.setAttribute('aria-label', 'Статус');
     [['all', 'Все посещения'], ['problems', 'Только проблемы'], ['ready', 'Только штатные']].forEach(function (item) { var o = el('option', '', item[1]); o.value = item[0]; status.appendChild(o); });
-    var environment = el('select', 'cd-control');
+    var environment = el('select', 'cdo-control');
+    environment.setAttribute('aria-label', 'Окружение');
     [['production', 'Только рабочие входы'], ['all', 'Включая локальные тесты']].forEach(function (item) { var o = el('option', '', item[1]); o.value = item[0]; environment.appendChild(o); });
-    var copy = el('button', 'cd-copy', 'Скопировать отчёт'); copy.type = 'button'; copy.disabled = true;
-    toolbar.appendChild(range); toolbar.appendChild(status); toolbar.appendChild(environment); toolbar.appendChild(copy); modal.appendChild(toolbar);
-    var body = el('div', 'cd-body'); modal.appendChild(body);
+    toolbar.appendChild(range); toolbar.appendChild(status); toolbar.appendChild(environment);
+    body.appendChild(toolbar);
+    var copy = el('button', 'cur-cab__open is-soft', 'Скопировать отчёт');
+    copy.type = 'button'; copy.disabled = true;
+    body.appendChild(copy);
+    var list = el('div', 'cd-list'); body.appendChild(list);
 
     function draw() {
-      body.replaceChildren();
+      list.replaceChildren();
       var sessions = (state.data && state.data.sessions || []).slice().filter(function (session) {
         if (state.status === 'ready') return session.outcome === 'ready';
         if (state.status === 'problems') return ['failed', 'degraded', 'abandoned'].includes(session.outcome);
@@ -659,23 +655,30 @@
         var rightProblem = ['failed', 'degraded', 'abandoned'].includes(right.outcome) ? 1 : 0;
         return rightProblem - leftProblem || Date.parse(right.started_at || 0) - Date.parse(left.started_at || 0);
       });
-      body.appendChild(el('div', 'cd-summary', sessions.length + ' посещений · ошибки и незавершённые загрузки показаны первыми'));
-      if (!sessions.length) body.appendChild(el('div', 'cd-empty', 'За выбранный период событий нет'));
-      sessions.forEach(function (session) { body.appendChild(renderSession(session, options.clientName, options.clientId)); });
+      list.appendChild(el('div', 'cd-summary', sessions.length + ' посещений · ошибки и незавершённые загрузки показаны первыми'));
+      // Пустота — карточкой набора, как во всём кабинете: прежде это была белая
+      // плашка .cd-empty с холодной рамкой и своим серым.
+      if (!sessions.length) list.appendChild(emptyCard('За выбранный период событий нет'));
+      sessions.forEach(function (session) { list.appendChild(renderSession(session, options.clientName, options.clientId)); });
       var logins = state.data && state.data.logins || [];
-      body.appendChild(el('div', 'cd-section-title', 'История входов'));
-      if (!logins.length) body.appendChild(el('div', 'cd-empty', 'Входов за период нет'));
-      logins.forEach(function (login) {
-        var row = el('div', 'cd-login');
-        row.appendChild(el('span', 'cd-login-time', formatDate(login.at)));
-        row.appendChild(el('strong', '', login.type === 'pin_success' ? 'Вход выполнен' : login.type));
-        row.appendChild(el('span', 'cd-login-ua', login.user_agent || 'Устройство не определено'));
-        body.appendChild(row);
-      });
+      // «История входов» — ярус набора, тот же, что заголовки групп панели.
+      list.appendChild(el('div', 'cur-group__title', 'История входов'));
+      if (!logins.length) list.appendChild(emptyCard('Входов за период нет'));
+      if (logins.length) {
+        var loginCard = el('div', 'cur-group__card');
+        logins.forEach(function (login) {
+          var row = el('div', 'cd-login');
+          row.appendChild(el('strong', '', login.type === 'pin_success' ? 'Вход выполнен' : login.type));
+          row.appendChild(el('span', 'cd-login-time', formatDate(login.at)));
+          row.appendChild(el('span', 'cd-login-ua', login.user_agent || 'Устройство не определено'));
+          loginCard.appendChild(row);
+        });
+        list.appendChild(loginCard);
+      }
     }
 
     async function load() {
-      body.replaceChildren(el('div', 'cd-loading', 'Загружаю события…'));
+      list.replaceChildren(el('div', 'cur-panel__stub', 'Считаем…'));
       copy.disabled = true;
       var hours = state.range === '30d' ? 24 * 30 : (state.range === '7d' ? 24 * 7 : 24);
       var since = new Date(Date.now() - hours * 3600000).toISOString();
@@ -688,7 +691,12 @@
         copy.disabled = false;
         draw();
       } catch (error) {
-        body.replaceChildren(el('div', 'cd-error', 'Не удалось загрузить диагностику. Повторите позже.'));
+        var failure = emptyCard('Сервер не ответил на запрос посещений.', 'Диагностика не загрузилась');
+        var retry = el('button', 'cur-panel__retry', 'Повторить');
+        retry.type = 'button';
+        retry.addEventListener('click', function () { load(); });
+        failure.appendChild(retry);
+        list.replaceChildren(failure);
         HEYS.analytics?.trackError?.(error, { context: 'client_observability', clientId: options.clientId });
       }
     }

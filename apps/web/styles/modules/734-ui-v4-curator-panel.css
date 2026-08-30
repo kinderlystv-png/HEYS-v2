@@ -1361,6 +1361,162 @@
   display: block;
 }
 
+/* ── Лист посещений одного клиента ────────────────────────────────────────
+ * Открывается из «Диагностики» кнопкой «Открыть клиента». Форма окна — общий
+ * служебный лист кабинета (.cur-cab__sheet*), содержимое — карточки набора.
+ * Прежде это была своя модалка со своей строкой стилей внутри модуля: окно
+ * #f8f8fc в холодной рамке, белая шапка, панель фильтров на белом, карточки
+ * посещений с рамкой цвета состояния и сиреневыми точками лога.
+ */
+/* Единственное отличие от трёх остальных листов: этот живёт вне дерева
+   кабинета — модуль диагностики строит его прямо в body, — поэтому ступень
+   лестницы ему нужна своя. Внутри дерева соседи поднимаются порядком в DOM,
+   а снаружи `z-index: auto` проигрывает самому кабинету со ступенью 1200. */
+.cd-sheet-scrim {
+  z-index: var(--v4-z-curator-sheet, 10001);
+}
+
+.cd-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cd-summary {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.cd-session {
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.cd-session-btn {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 14px 16px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.cd-session-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cd-time {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cd-device {
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 6px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.cd-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.cd-timeline {
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  padding: 8px 16px 14px;
+}
+
+.cd-timeline .cur-cab__open {
+  margin: 8px 0;
+}
+
+.cd-event {
+  position: relative;
+  padding: 8px 0 8px 20px;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.cd-event::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 13px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--v4-act-text, #8a4a20);
+}
+
+.cd-event--failed::before {
+  background: var(--v4-bad-text, #b4442a);
+}
+
+.cd-event-time {
+  margin-right: 8px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.cd-event-context {
+  display: block;
+  margin-top: 2px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  word-break: break-word;
+}
+
+.cd-event-empty {
+  padding: 8px 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* Строка входа — ряд списочной карточки набора: время и устройство подписью
+   под названием события. Прежде каждый вход был отдельной белой плиткой. */
+.cd-login {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cd-login:last-child {
+  border-bottom: none;
+}
+
+.cd-login-time {
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.cd-login-ua {
+  flex: 1 1 100%;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  word-break: break-word;
+}
+
 /* Метка состояния посещения — метка данных набора, как метки дня в карточке
    клиента: та же высота, радиус и кегль. Тона три — «идёт хорошо», тёплое
    предупреждение и разрушающее; «загружается» остаётся нейтральным. */
@@ -1997,6 +2153,11 @@
   padding: 0 11px;
   font: inherit;
   min-width: 0;
+  /* Кегль поля меньше основного: половина подписей фильтра — «Только рабочие
+     входы», «Включая локальные тесты» — в половину ширины на 375 px не
+     помещается, и стрелка выбора наезжала на текст. */
+  font-size: 12px;
+  text-overflow: ellipsis;
 }
 
 
