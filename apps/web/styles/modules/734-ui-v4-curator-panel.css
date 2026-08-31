@@ -297,8 +297,14 @@
   width: 100%;
   max-height: 88vh;
   overflow-y: auto;
-  padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
-  border-radius: 24px 24px 0 0;
+  /* Кадр листа: поля 20/18/16 и радиус 28. Прежде 18/16/18 и 24 — лист
+     разбора клиента в парах гейта не стоял вовсе, и числа разъехались
+     молча. Нижнее поле остаётся с безопасной зоной телефона: кадр её не
+     знает, но отступ 16 из кадра сохранён шорткатом, чтобы гейт читал
+     число, а не выражение. */
+  padding: 20px 18px 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 28px 28px 0 0;
   background: var(--v4-bg, #fffaf1);
   display: flex;
   flex-direction: column;
@@ -365,7 +371,9 @@
 
 .cur-sheet__fact-value {
   font-size: 12.5px;
-  font-weight: 700;
+  /* Разбор «Панель · лист поверх · 27» даёт числу 600, а не 700: рядом стоит
+     подпись того же кегля, и на 700 число спорило с ней, а не дополняло. */
+  font-weight: 600;
   color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
@@ -748,15 +756,19 @@
 /* Действия прилипают к низу листа: разбор расчёта сделал лист длинным, и
    главное действие уезжало за прокрутку. Подложка непрозрачная — под липким
    рядом проезжают числа, и просвечивать им нельзя. */
+/* Ряд решений отбит от разбора на 14: разбор «Панель · лист поверх · 31»
+   просит отступ сверху 14, а стояло 2 — ряд прилипал к последнему блоку.
+   Боковые и нижний вылеты считаются от полей самого листа: они стали
+   20/18/16, значит тянуть надо на 18 вбок и на 16 вниз, а не на 16 и 18. */
 .cur-sheet__actions {
   position: sticky;
-  bottom: calc(-18px - env(safe-area-inset-bottom, 0px));
+  bottom: calc(-16px - env(safe-area-inset-bottom, 0px));
   z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 2px -16px calc(-18px - env(safe-area-inset-bottom, 0px));
-  padding: 10px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  margin: 14px -18px calc(-16px - env(safe-area-inset-bottom, 0px));
+  padding: 10px 18px calc(16px + env(safe-area-inset-bottom, 0px));
   background: var(--v4-bg, #fffaf1);
   box-shadow: 0 -8px 16px -8px var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
 }
@@ -2103,10 +2115,12 @@
    подписки. Прежде имя и телефон стояли отдельным рядом, бейдж со
    статистикой — вторым, и карточка читалась тремя заходами вместо одного
    взгляда. */
+/* Зазор кадра — 11: шапка карточки клиента стоит на семи строках разбора,
+   и все семь называют 11. */
 .cur-cab__client-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 11px;
   min-width: 0;
 }
 
@@ -2158,15 +2172,21 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+/* Разбор кадров «Диагностика · 13» и «· 14» даёт кнопкам высоту от 44,
+   пилюлю и 12,5 px/700. Прежде 48, радиус 14 и `font: inherit` — кегль
+   приходил от родителя, то есть не был задан вовсе. Классовое правило самого
+   канваса (`.btn`) при этом говорит 48 и 13: канвас спорит сам с собой, и
+   здесь верен разбор — он описывает эти две кнопки, а не кнопку вообще. */
 .cdo-primary,
 .cdo-secondary,
 .cdo-more {
-  min-height: 48px;
+  min-height: 44px;
   border: none;
-  border-radius: 14px;
+  border-radius: 999px;
   padding: 0 15px;
-  font: inherit;
+  font-size: 12.5px;
   font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 }
 
