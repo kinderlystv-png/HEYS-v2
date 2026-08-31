@@ -7,7 +7,7 @@
 случится с цветом, если заменить роль с именем набора на общую» — и показывает
 ответ по каждому набору отдельно, чтобы решать не вслепую.
 
-Мест с ролью набора: **540** вне комментариев.
+Мест с ролью набора: **535** вне комментариев.
 
 Число мест дрейфует: модули правятся параллельно, и за один рабочий день оно
 менялось трижды. Сверяйтесь с прогоном, а не с числом в тексте: SHA прогона в
@@ -28,10 +28,10 @@
 
 Зато замер делит места на три разных разговора вместо одного:
 
-- 🎨 **443 мест** — пара по имени есть, замена меняет цвет. Здесь и нужен
+- 🎨 **439 мест** — пара по имени есть, замена меняет цвет. Здесь и нужен
   вердикт «герой или нет»: в таблице ролей видно, каким именно станет цвет в
   каждом наборе.
-- ❓ **73 мест** — общей роли с таким именем нет вовсе (`--v4-act-deep`,
+- ❓ **72 мест** — общей роли с таким именем нет вовсе (`--v4-act-deep`,
   `--v4-surface-soft` и подобные). Тут владельцу нужно сперва назвать пару, и
   только потом решать про героя. Имя не подсказывает её сам: честная пара к
   `--v4-sand-act-deep` — `--v4-act-text`, а не `--v4-act-deep`.
@@ -264,7 +264,6 @@
 | `610-aps-meal-flow.css`         | `.mpr-search-clear`                         | 2    | 🎨 меняет цвет             | `--v4-sand-ink`                                                                                                                                                      |
 | `610-aps-meal-flow.css`         | `.aps-v4-search-offline`                    | 2    | 🎨 меняет цвет             | `--v4-sand-accent-bg`, `--v4-sand-act-deep`                                                                                                                          |
 | `610-aps-meal-flow.css`         | `.aps-v4-grams-hero__step`                  | 2    | ❓ нет пары                | `--v4-sand-act-deep`, `--v4-sand-surface-soft`                                                                                                                       |
-| `610-aps-meal-flow.css`         | `.aps-v4-meal-summary__photo-add`           | 2    | 🎨 меняет цвет             | `--v4-sand-act`, `--v4-sand-ink`                                                                                                                                     |
 | `610-aps-meal-flow.css`         | `.aps-v4-search-field`                      | 2    | 🎨 меняет цвет             | `--v4-sand-act`, `--v4-sand-surface-soft`                                                                                                                            |
 | `610-aps-meal-flow.css`         | `.meal-type-hint`                           | 1    | 🎨 меняет цвет             | `--v4-sand-ink`                                                                                                                                                      |
 | `610-aps-meal-flow.css`         | `.meal-time-cta`                            | 1    | 🎨 меняет цвет             | `--v4-sand-act`                                                                                                                                                      |
@@ -322,9 +321,6 @@
 | `610-aps-meal-flow.css`         | `.aps-v4-meal-summary__row-grams`           | 1    | 🎨 меняет цвет             | `--v4-sand-ink`                                                                                                                                                      |
 | `610-aps-meal-flow.css`         | `.aps-v4-meal-summary__row-recipe`          | 1    | 🎨 меняет цвет             | `--v4-sand-ink`                                                                                                                                                      |
 | `610-aps-meal-flow.css`         | `.aps-v4-meal-summary__row-kcal`            | 1    | 🎨 меняет цвет             | `--v4-sand-ink`                                                                                                                                                      |
-| `610-aps-meal-flow.css`         | `.aps-v4-meal-summary__photo-tier`          | 1    | ❓ нет пары                | `--v4-sand-act-deep`                                                                                                                                                 |
-| `610-aps-meal-flow.css`         | `.aps-v4-meal-summary__photo-thumb`         | 1    | 🎨 меняет цвет             | `--v4-sand-surface`                                                                                                                                                  |
-| `610-aps-meal-flow.css`         | `.aps-v4-meal-summary__photo-add-icon`      | 1    | 🎨 меняет цвет             | `--v4-sand-act`                                                                                                                                                      |
 | `610-aps-meal-flow.css`         | `.aps-v4-search-state__tier`                | 1    | 🎨 меняет цвет             | `--v4-sand-ink`                                                                                                                                                      |
 | `610-aps-meal-flow.css`         | `.aps-v4-search-state__similar-title`       | 1    | 🎨 меняет цвет             | `--v4-sand-ink`                                                                                                                                                      |
 | `611-aps-product-card.css`      | `.aps-v4-create-field`                      | 4    | 🎨 меняет цвет             | `--v4-sand-act`, `--v4-sand-ink`, `--v4-sand-surface-soft`                                                                                                           |

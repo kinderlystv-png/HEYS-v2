@@ -30,6 +30,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { chromium } from '@playwright/test';
+import prettier from 'prettier';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MODULES = path.join(ROOT, 'apps/web/styles/modules');
@@ -313,7 +314,11 @@ if (args.has('--json')) {
   const md = render(perFile, verdicts);
   if (args.has('--stdout')) console.log(md);
   else {
-    fs.writeFileSync(OUT, md);
+    // Форматируем тем же prettier, что и pre-commit hook. Иначе генератор и
+    // хук спорят: сгенерированный файл сразу после коммита снова грязный, и
+    // каждый прогон выглядит как правка.
+    const config = await prettier.resolveConfig(OUT);
+    fs.writeFileSync(OUT, await prettier.format(md, { ...config, filepath: OUT, parser: 'markdown' }));
     console.log(`Записано: ${path.relative(ROOT, OUT)}`);
   }
 }
