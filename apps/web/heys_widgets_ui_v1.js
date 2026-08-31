@@ -5738,7 +5738,12 @@
               React.createElement('span', { className: 'widget-v4-mealbars__time' }, item.time || '—'),
               React.createElement('span', { className: 'widget-v4-mealbars__track' },
                 React.createElement('span', {
-                  className: 'widget-v4-mealbars__fill',
+                  // Заливка полосы идёт currentColor, поэтому без класса
+                  // состояния она брала цвет родителя — чернила. Это было не
+                  // решение, а его отсутствие: у соседнего вызова того же класса
+                  // (ритм приёмов, «Интервалы») состояние стоит. Кадр «Белок ·
+                  // По приёмам» рисует эти полосы зелёными на 68 % и 84 %.
+                  className: 'widget-v4-mealbars__fill widget-v4-val--good',
                   style: { width: Math.max(2, Math.min(100, target > 0 ? (item.grams / target) * 100 : 0)) + '%' }
                 })
               ),
