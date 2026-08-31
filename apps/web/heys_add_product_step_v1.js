@@ -72,6 +72,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
   }
 
+  // Крест закрытия сканера — рисунок кадра, а не типографский знак: у «×»
+  // толщина и наклон идут от шрифта, а кадр задаёт линии 2,75 в поле 24.
+  function CloseIcon({ size = 14 }) {
+    return React.createElement('svg', {
+      width: size,
+      height: size,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      'aria-hidden': 'true',
+      focusable: 'false'
+    },
+      React.createElement('path', {
+        d: 'M6 6l12 12M18 6L6 18',
+        stroke: 'currentColor',
+        strokeWidth: 2.75,
+        strokeLinecap: 'round'
+      })
+    );
+  }
+
   function BarcodeScanIcon() {
     return React.createElement('svg', {
       className: 'aps-search-barcode-icon',
@@ -3834,7 +3854,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             className: 'aps-barcode-close',
             onClick: onClose,
             'aria-label': 'Закрыть'
-          }, '×')
+          }, React.createElement(CloseIcon))
         ),
         React.createElement('div', { className: 'aps-barcode-camera' },
           // Кадр «Штрихкод · наведение»: четыре уголка, линия чтения по центру и
@@ -3933,7 +3953,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             className: 'aps-barcode-close',
             onClick: onClose,
             'aria-label': 'Закрыть'
-          }, '×')
+          }, React.createElement(CloseIcon))
         ),
         React.createElement('div', { className: 'aps-barcode-manager-list' },
           barcodes.length > 0
@@ -6369,12 +6389,12 @@ NOVA: 1
     }, []);
 
     const PREVIEW_FIELDS = useMemo(() => ([
-      { key: 'kcal100', label: 'Ккал (100г)', unit: 'ккал' },
-      { key: 'carbs100', label: 'Углеводы (100г)', unit: 'г' },
+      { key: 'kcal100', label: 'Ккал (100 г)', unit: 'ккал' },
+      { key: 'carbs100', label: 'Углеводы (100 г)', unit: 'г' },
       { key: 'simple100', label: 'Простые (100г)', unit: 'г' },
       { key: 'complex100', label: 'Сложные (100г)', unit: 'г' },
-      { key: 'protein100', label: 'Белок (100г)', unit: 'г' },
-      { key: 'fat100', label: 'Жиры (100г)', unit: 'г' },
+      { key: 'protein100', label: 'Белок (100 г)', unit: 'г' },
+      { key: 'fat100', label: 'Жиры (100 г)', unit: 'г' },
       { key: 'badFat100', label: 'Вредные жиры (100г)', unit: 'г' },
       { key: 'goodFat100', label: 'Полезные жиры (100г)', unit: 'г' },
       { key: 'trans100', label: 'Транс-жиры (100г)', unit: 'г' },
@@ -6386,7 +6406,7 @@ NOVA: 1
       { key: 'omega3_100', label: 'Омега-3 (100г)', unit: 'г' },
       { key: 'omega6_100', label: 'Омега-6 (100г)', unit: 'г' },
       { key: 'nova_group', label: 'NOVA группа' },
-      { key: 'additives', label: 'Добавки' },
+      { key: 'additives', label: 'Е-добавки' },
       { key: 'nutrient_density', label: 'Нутр. плотность', unit: '%' },
       { key: 'is_organic', label: 'Органик', type: 'bool' },
       { key: 'is_whole_grain', label: 'Цельнозерн.', type: 'bool' },
@@ -7039,11 +7059,12 @@ NOVA: 1
               className: 'aps-create-barcode-scan',
               onClick: openCreateBarcodeScanner
             },
-              React.createElement('span', { className: 'aps-create-barcode-scan-icon', 'aria-hidden': 'true' }, '▦'),
+              React.createElement('span', { className: 'aps-create-barcode-scan-icon', 'aria-hidden': 'true' },
+                React.createElement(BarcodeScanIcon)),
               React.createElement('span', null, effectiveBarcode ? 'Сканировать заново' : 'Сканировать')
             ),
             React.createElement('div', { className: 'aps-create-barcode-note' },
-              effectiveBarcode ? 'Этот код сохранится у продукта в личной базе.' : 'Можно ввести вручную или считать камерой.'
+              effectiveBarcode ? 'Код сохранится у продукта в личной базе.' : 'Можно ввести вручную или считать камерой.'
             )
           )
         ),
@@ -7163,13 +7184,12 @@ NOVA: 1
         onClick: handleCreate,
         disabled: !parsedPreview
       },
-        parsedPreview
-          ? '✓ Добавить «' + parsedPreview.name.slice(0, 20) + (parsedPreview.name.length > 20 ? '...' : '') + '»'
-          : 'Вставьте данные продукта'
-      ),
-
-      React.createElement('div', { className: 'aps-create-tip' },
-        '💡 Скопируйте строку из таблицы Google Sheets или Excel. Поддерживаются запятые и точки.'
+        // Кнопка называет следующий шаг, как соседние кадры. Кадр просит
+        // «Далее к дополнительным», но следующий здесь — «Порции»
+        // (continueWithProduct ведёт на шаг 2): «дополнительно» в проде не шаг,
+        // а раскрытие внутри этого же экрана — решение «варианта A». Обещать
+        // экран, которого за кнопкой нет, хуже расхождения со словом кадра.
+        parsedPreview ? 'Далее к порциям' : 'Вставьте данные продукта'
       )
       )
     );
@@ -7695,7 +7715,7 @@ NOVA: 1
 
       React.createElement('div', { className: 'pe-grid' },
         React.createElement('div', { className: 'pe-field' },
-          React.createElement('label', { className: 'pe-label' }, 'Ккал (100г)'),
+          React.createElement('label', { className: 'pe-label' }, 'Ккал (100 г)'),
           React.createElement('input', {
             className: 'pe-input' + (isInvalidNumber(form.kcal100) ? ' pe-input--error' : ''),
             type: 'text',
@@ -7706,7 +7726,7 @@ NOVA: 1
           })
         ),
         React.createElement('div', { className: 'pe-field' },
-          React.createElement('label', { className: 'pe-label' }, 'Белок (100г)'),
+          React.createElement('label', { className: 'pe-label' }, 'Белок (100 г)'),
           React.createElement('input', {
             className: 'pe-input' + (isInvalidNumber(form.protein100) ? ' pe-input--error' : ''),
             type: 'text',
@@ -7717,7 +7737,7 @@ NOVA: 1
           })
         ),
         React.createElement('div', { className: 'pe-field' },
-          React.createElement('label', { className: 'pe-label' }, 'Жиры (100г)'),
+          React.createElement('label', { className: 'pe-label' }, 'Жиры (100 г)'),
           React.createElement('input', {
             className: 'pe-input' + (isInvalidNumber(form.fat100) ? ' pe-input--error' : ''),
             type: 'text',
@@ -7728,7 +7748,7 @@ NOVA: 1
           })
         ),
         React.createElement('div', { className: 'pe-field' },
-          React.createElement('label', { className: 'pe-label' }, 'Углеводы (100г)'),
+          React.createElement('label', { className: 'pe-label' }, 'Углеводы (100 г)'),
           React.createElement('input', {
             className: 'pe-input' + (isInvalidNumber(form.carbs100) ? ' pe-input--error' : ''),
             type: 'text',
@@ -7859,7 +7879,7 @@ NOVA: 1
         ),
         React.createElement('div', { className: 'pe-portions-list' },
           portionRows.length === 0 && React.createElement('div', { className: 'pe-portions-empty' },
-            'Порций пока нет'
+            'Нет порций — добавьте свои или пропустите'
           ),
           portionRows.map((portion, index) =>
             React.createElement('div', { className: 'pe-portions-row', key: index },
@@ -8647,12 +8667,13 @@ NOVA: 1
       }),
       React.createElement('div', { className: 'aps-v4-create-shell' },
         renderApsCreateDots(1),
-        React.createElement('div', { className: 'aps-v4-create-shell__title' }, 'Порции')
+        React.createElement('div', { className: 'aps-v4-create-shell__title' }, 'Настройте порции')
       ),
+      React.createElement('div', { className: 'aps-v4-portions-product' },
+        'Удобные порции для «' + product.name + '»'),
       React.createElement('div', { className: 'aps-v4-portions-subtitle' },
         'Чтобы не считать граммы каждый раз. Можно пропустить — тогда останется ввод в граммах.'
       ),
-      React.createElement('div', { className: 'aps-v4-portions-product' }, product.name),
 
       autoPortions?.length > 0 && portions.length === 0 && React.createElement('div', { className: 'aps-v4-portions-suggest' },
         React.createElement('div', { className: 'aps-v4-portions-suggest__title' }, 'Рекомендованные'),
@@ -8660,7 +8681,7 @@ NOVA: 1
           autoPortions.map((p, i) =>
             React.createElement('div', { key: i, className: 'aps-v4-portions-row aps-v4-portions-row--readonly' },
               React.createElement('span', { className: 'aps-v4-portions-row__name' }, p.name),
-              React.createElement('span', { className: 'aps-v4-portions-row__grams' }, `${p.grams} г`)
+              React.createElement('span', { className: 'aps-v4-portions-row__grams' }, `· ${p.grams} г`)
             )
           )
         ),
@@ -9863,7 +9884,11 @@ NOVA: 1
           e('div', {
             className: 'aps-v4-harm-wheel__label',
             style: { color: selectedCategory.color }
-          }, selectedCategory.name)
+          }, selectedCategory.name),
+          // Кадр подписывает шкалу под выбранным значением: без этого «1.3»
+          // ничего не говорит тому, кто впервые ставит оценку руками.
+          e('div', { className: 'aps-v4-harm-wheel__scale' },
+            '0 = суперполезный · 10 = супервредный')
         )
       ),
 
@@ -9879,7 +9904,7 @@ NOVA: 1
           `Формула v${calculatedBreakdown.version || '3.0'}`
         ),
         calculatedBreakdown.penalties.length > 0 && e('div', { className: 'aps-v4-harm-breakdown__section' },
-          e('div', { className: 'aps-v4-harm-breakdown__section-title' }, 'Штрафы'),
+          e('div', { className: 'aps-v4-harm-breakdown__section-title aps-v4-harm-breakdown__section-title--bad' }, 'Штрафы'),
           calculatedBreakdown.penalties.map((p, i) =>
             e('div', { key: i, className: 'aps-v4-harm-breakdown__row' },
               e('span', null, `${p.icon} ${p.label}`),
@@ -9888,7 +9913,7 @@ NOVA: 1
           )
         ),
         calculatedBreakdown.bonuses.length > 0 && e('div', { className: 'aps-v4-harm-breakdown__section' },
-          e('div', { className: 'aps-v4-harm-breakdown__section-title' }, 'Бонусы'),
+          e('div', { className: 'aps-v4-harm-breakdown__section-title aps-v4-harm-breakdown__section-title--good' }, 'Бонусы'),
           calculatedBreakdown.bonuses.map((b, i) =>
             e('div', { key: i, className: 'aps-v4-harm-breakdown__row' },
               e('span', null, `${b.icon} ${b.label}`),
