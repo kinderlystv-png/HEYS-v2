@@ -1033,8 +1033,12 @@
 
 .cur-cab__menu {
   width: 100%;
-  padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
-  border-radius: 24px 24px 0 0;
+  /* Кадр листа: поля 20/18/16 и радиус 28 — те же, что у листа разбора.
+     Прежде 18/16/18 и 24: лист меню и лист разбора отличались друг от друга,
+     хотя кадр рисует их одним листом. */
+  padding: 20px 18px 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 28px 28px 0 0;
   background: var(--v4-bg, #fffaf1);
   display: flex;
   flex-direction: column;
@@ -2058,11 +2062,14 @@
 
 /* Срок подписки в шапке листа — тоном «норма закрыта», пока он не поджимает.
    Прежде здесь стоял цвет из объекта бейджа, минуя набор. */
+/* Срок подписки в шапке листа — обычное состояние строки чернилами 45 %.
+   Тоном «идёт хорошо» он говорил, что активная подписка это достижение, тогда
+   как это просто факт; тревожный срок по-прежнему красится своим модификатором. */
 .cur-cab__sheet-term {
   display: block;
   font-size: 11px;
   font-weight: 600;
-  color: var(--v4-ok-text, #5c6a45);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
 }
 
 .cur-cab__sheet-term.is-warn {
