@@ -13,13 +13,19 @@ import {
 } from '../scripts/ui-v4-visual-fixture.mjs';
 
 const ROOT = path.resolve(__dirname, '../../..');
+const VERDICTS_DIR = path.join(ROOT, 'docs/ui/verdicts');
+
+/** Вердикты лежат по файлу на зону — см. scripts/lib/ui-v4-verdicts.mjs. */
+const listZones = () => fs.readdirSync(VERDICTS_DIR)
+  .filter((f) => f.endsWith('.json'))
+  .map((f) => f.slice(0, -'.json'.length));
+const readZone = (zone) => JSON.parse(
+  fs.readFileSync(path.join(VERDICTS_DIR, `${zone}.json`), 'utf8'),
+);
 
 describe('UI v4 visual harness', () => {
   it('явно учитывает все зоны текущего Canvas-реестра', () => {
-    const verdicts = JSON.parse(
-      fs.readFileSync(path.join(ROOT, 'docs/ui/ui-v4-contract-verdicts.json'), 'utf8'),
-    );
-    expect([...UI_V4_CANVAS_ZONES].sort()).toEqual(Object.keys(verdicts.zones).sort());
+    expect([...UI_V4_CANVAS_ZONES].sort()).toEqual(listZones().sort());
     expect(new Set(UI_V4_VISUAL_CASES.map((item) => item.zone))).toEqual(
       new Set(UI_V4_CANVAS_ZONES),
     );
@@ -51,11 +57,8 @@ describe('UI v4 visual harness', () => {
   });
 
   it('разрешает pixel-gate только зонам без вопросов и несовпадений', () => {
-    const verdicts = JSON.parse(
-      fs.readFileSync(path.join(ROOT, 'docs/ui/ui-v4-contract-verdicts.json'), 'utf8'),
-    );
     for (const zone of UI_V4_PIXEL_GATE_ZONES) {
-      const unresolved = Object.entries(verdicts.zones[zone].rows)
+      const unresolved = Object.entries(readZone(zone).rows)
         .filter(([, row]) => !['=', '—'].includes(row.v))
         .map(([key, row]) => `${key}: ${row.v}`);
       expect(unresolved, zone).toEqual([]);

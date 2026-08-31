@@ -1,9 +1,8 @@
 # Handoff: закрыть остаток расхождений UI v4
 
 > **Архивный снимок от 26.08.** Перечень и числа ниже больше не являются текущей
-> очередью. Актуальный статус берётся только из
-> `docs/ui/ui-v4-contract-verdicts.json` командой
-> `node scripts/ui-v4-check-contract-drift.mjs --list`.
+> очередью. Актуальный статус берётся только из `docs/ui/verdicts/<зона>.json`
+> командой `node scripts/ui-v4-check-contract-drift.mjs --list`.
 
 Документ фиксирует состояние **после влива** волны
 `cursor/ui-v4-completion-3ce2` в `main`. Предыдущая волна —
@@ -75,8 +74,8 @@ haptics, breakdown) — это **много полос**, не одна сесс
 | **Локально (`main` / merge)** | Финальный **полный** `vitest` (CRLF на Windows); интеграция полос; merge в `main`; push/deploy по команде                         |
 | **Гибрид (рекомендуется)**    | Облако — полосы B/C/D и зонные остатки параллельно; локально — блок A (сквозные правила) + merge + полный прогон                  |
 
-**Не параллелить** двух агентов в одном файле — особенно
-`ui-v4-contract-verdicts.json` (общий снимок, merge только построчно).
+**Не параллелить** двух агентов в одном файле — особенно `verdicts/<зона>.json`
+(общий снимок, merge только построчно).
 
 Облако ≠ device FS: факты git и прогонов на устройстве; push/deploy — только по
 прямой команде (`CLAUDE.md` § Cowork).
@@ -177,7 +176,7 @@ Facts повторяются в `water-add`, `nutrition-tab`, `checkin-morning` 
 **Владение по файлам, не по темам.** Два агента в одном файле — коммит, который
 нельзя сделать ни с одним.
 
-**Снимок `ui-v4-contract-verdicts.json` — общий.** Пиши только свои строки:
+**Снимок `verdicts/<зона>.json` — общий.** Пиши только свои строки:
 
 ```bash
 node scratchpad/verdicts/apply-verdict.mjs --zone <zone> --key "<key>" --verdict = --fact "file:line"
@@ -250,10 +249,10 @@ Handoff: docs/ui/UI_V4_REMAINING_PROMPT.md — блок <A|B|C|D>, зона <ZON
 
 ## 8. Связанные документы
 
-| Документ                                                       | Роль                                 |
-| -------------------------------------------------------------- | ------------------------------------ |
-| [`UI_V4_COMPLETION_PROMPT.md`](UI_V4_COMPLETION_PROMPT.md)     | wave 1+2 (merged); lanes и hot files |
-| [`ui-v4-contract-verdicts.json`](ui-v4-contract-verdicts.json) | вердикты + отпечатки                 |
-| [`UI_V4_FINDINGS.md`](UI_V4_FINDINGS.md)                       | споры для дизайнера                  |
-| `.cursor/rules/canvas-to-code.mdc`                             | контракт → кадры → гейт              |
-| `apps/landing/COPY_VOICE.md`                                   | user-facing текст                    |
+| Документ                                                   | Роль                                 |
+| ---------------------------------------------------------- | ------------------------------------ |
+| [`UI_V4_COMPLETION_PROMPT.md`](UI_V4_COMPLETION_PROMPT.md) | wave 1+2 (merged); lanes и hot files |
+| [`verdicts/<зона>.json`](verdicts/<зона>.json)             | вердикты + отпечатки                 |
+| [`UI_V4_FINDINGS.md`](UI_V4_FINDINGS.md)                   | споры для дизайнера                  |
+| `.cursor/rules/canvas-to-code.mdc`                         | контракт → кадры → гейт              |
+| `apps/landing/COPY_VOICE.md`                               | user-facing текст                    |

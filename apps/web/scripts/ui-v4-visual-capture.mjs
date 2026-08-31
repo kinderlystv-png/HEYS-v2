@@ -21,7 +21,7 @@ const APP_ORIGIN = process.env.HEYS_UI_V4_URL || 'http://localhost:3001';
 const BASELINE_DIR = path.join(ROOT, 'apps', 'web', '__screenshots__', 'ui-v4');
 const RUN_ID = new Date().toISOString().replace(/[:.]/g, '-');
 const OUT_DIR = path.join(ROOT, 'tmp', 'ui-v4-visual', RUN_ID);
-const VERDICT_PATH = path.join(ROOT, 'docs', 'ui', 'ui-v4-contract-verdicts.json');
+const VERDICTS_DIR = path.join(ROOT, 'docs', 'ui', 'verdicts');
 const DRIFT_SCRIPT = path.join(ROOT, 'scripts', 'ui-v4-check-contract-drift.mjs');
 const cliArgs = process.argv.slice(2);
 const args = new Set(cliArgs);
@@ -38,8 +38,11 @@ const mode = args.has('--check')
       : 'capture';
 
 function validateManifest() {
-  const verdicts = JSON.parse(fs.readFileSync(VERDICT_PATH, 'utf8'));
-  const registryZones = Object.keys(verdicts.zones || {}).sort();
+  // Вердикты лежат по файлу на зону — см. scripts/lib/ui-v4-verdicts.mjs.
+  const registryZones = fs.readdirSync(VERDICTS_DIR)
+    .filter((file) => file.endsWith('.json'))
+    .map((file) => file.slice(0, -'.json'.length))
+    .sort();
   const manifestZones = [...UI_V4_CANVAS_ZONES].sort();
   const problems = [];
 

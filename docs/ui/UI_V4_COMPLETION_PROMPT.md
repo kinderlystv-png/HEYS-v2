@@ -834,7 +834,7 @@ DO NOT EDIT: product UI lanes (nutrition, widgets, cycle, checkin, water, tips, 
 
 1. Этот файл — `docs/ui/UI_V4_COMPLETION_PROMPT.md`
 2. `.cursor/rules/canvas-to-code.mdc` — контракт → кадры → гейт
-3. `docs/ui/ui-v4-contract-verdicts.json` — свои строки зоны
+3. `docs/ui/verdicts/<зона>.json` — свои строки зоны
 4. Канвас зоны:
    `docs/ui/handoff-v4/canvas/…/design_handoff_heys_v4/<zone>.v4.dc.html`
 5. User-facing текст: `apps/landing/COPY_VOICE.md`
@@ -913,8 +913,7 @@ npx vitest run --root .   # из apps/web
       перепроверить на устройстве перед push)
 - [ ] Zone test clusters зелёные; финально `npx vitest run --root .` из
       `apps/web` (26.08 ~03:38: 454 files, 5711 tests — зелёный)
-- [ ] `docs/ui/ui-v4-contract-verdicts.json` — rehash для затронутых зон (cycle
-      pending)
+- [ ] `docs/ui/verdicts/<зона>.json` — rehash для затронутых зон (cycle pending)
 - [ ] Preview bundles собраны integration-проходом или CI (`build:ci`)
 - [ ] Сверить на устройстве: `git status --short --branch` — session commits на
       `origin/main`, scope согласован (ahead count не хардкодить)

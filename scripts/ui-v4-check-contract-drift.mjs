@@ -11,7 +11,7 @@
 // значения на момент, когда вердикт ставили. Значение изменилось — падение со
 // списком строк, которые надо пересмотреть.
 //
-// Данные: docs/ui/ui-v4-contract-verdicts.json
+// Данные: docs/ui/verdicts/<зона>.json — по файлу на зону, см. README рядом.
 //
 // Использование:
 //   node scripts/ui-v4-check-contract-drift.mjs                # проверить
@@ -24,13 +24,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { readAllZones, writeZone } from './lib/ui-v4-verdicts.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ALLOWED_VERDICTS = new Set(['=', '≠', '?', '—']);
 const PACK = path.join(
   ROOT,
   'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4',
 );
-const VERDICTS = path.join(ROOT, 'docs/ui/ui-v4-contract-verdicts.json');
+// Вердикты лежат по файлу на зону: docs/ui/verdicts/<зона>.json. Путь знает
+// только scripts/lib/ui-v4-verdicts.mjs — см. причину там.
 
 const hash = (value) => crypto.createHash('sha1').update(value).digest('hex').slice(0, 12);
 
@@ -91,7 +94,7 @@ function canvasHygiene(canvasFiles = null) {
 }
 
 function readVerdicts() {
-  return JSON.parse(fs.readFileSync(VERDICTS, 'utf8'));
+  return readAllZones();
 }
 
 export function findInvalidVerdicts(data, zoneIds = null) {
@@ -163,7 +166,8 @@ function runCli() {
       zone.rows[key].h = hash(value);
     }
     for (const key of state.gone) delete zone.rows[key];
-    fs.writeFileSync(VERDICTS, `${JSON.stringify(data, null, 2)}\n`);
+    // Пишем только свою зону: чужая работа в чужой коммит больше не попадает.
+    writeZone(zoneId, zone);
     console.log(`${zoneId}: отпечатки пересняты, строк ${state.current.size}.`);
     return;
   }
@@ -208,7 +212,7 @@ function runCli() {
   if (orphans.length) {
     console.error('\n❌ Канвас с контрактом не заведён зоной в снимке — его строки гейт не видит:');
     for (const item of orphans) console.error(`  ${item.file} — строк ${item.count}`);
-    console.error('  Завести зону в docs/ui/ui-v4-contract-verdicts.json и снять отпечатки --rehash.');
+    console.error('  Завести зону файлом docs/ui/verdicts/<зона>.json и снять отпечатки --rehash.');
   }
   for (const problem of hygiene.problems) console.error(`\n❌ ${problem}`);
   if (invalidVerdicts.length) {
@@ -247,7 +251,7 @@ function runCli() {
 
   if (failed) {
     console.error('\nЧто делать: перечитать изменённые строки, поправить код или вердикт');
-    console.error('в docs/ui/ui-v4-contract-verdicts.json, спорное — в docs/ui/UI_V4_FINDINGS.md,');
+    console.error('в docs/ui/verdicts/<зона>.json, спорное — в docs/ui/UI_V4_FINDINGS.md,');
     console.error('затем: node scripts/ui-v4-check-contract-drift.mjs --rehash <зона>');
     process.exit(1);
   }

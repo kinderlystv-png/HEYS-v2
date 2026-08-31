@@ -26,7 +26,9 @@ const PACK = path.join(
   ROOT,
   'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4',
 );
-const VERDICTS = path.join(ROOT, 'docs/ui/ui-v4-contract-verdicts.json');
+// Исторический путь: снимок был одним файлом до 31 августа. Скрипт разовый и
+// с тех пор не запускался; актуальная раскладка — docs/ui/verdicts/<зона>.json.
+const VERDICTS = path.join(ROOT, 'docs/ui/verdicts');
 const VALID = new Set(['=', '≠', '—', '?']);
 
 const hash = (value) => crypto.createHash('sha1').update(value).digest('hex').slice(0, 12);

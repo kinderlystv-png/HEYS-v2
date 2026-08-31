@@ -6,9 +6,8 @@
 // Меняет только `v` и `f`. Отпечаток `h` не трогает — он принадлежит тексту
 // строки в канвасе, а не нашему мнению о ней. Если дизайнер текст правил,
 // ui-v4-check-contract-drift.mjs скажет об этом, и тогда нужен пересчёт.
-import fs from 'node:fs';
+import { readZone, writeZone, listZoneIds } from './lib/ui-v4-verdicts.mjs';
 
-const P = 'docs/ui/ui-v4-contract-verdicts.json';
 const VALID = new Set(['=', '≠', '?', '—']);
 const [zone, key, verdict, ...fact] = process.argv.slice(2);
 
@@ -22,13 +21,9 @@ if (!VALID.has(verdict)) {
   process.exit(1);
 }
 
-const raw = fs.readFileSync(P, 'utf8');
-const nl = raw.includes('\r\n') ? '\r\n' : '\n';
-const data = JSON.parse(raw);
-
-const zoneData = data.zones[zone];
+const zoneData = readZone(zone);
 if (!zoneData) {
-  console.error(`Зоны «${zone}» нет. Есть: ${Object.keys(data.zones).join(', ')}`);
+  console.error(`Зоны «${zone}» нет. Есть: ${listZoneIds().join(', ')}`);
   process.exit(1);
 }
 const row = zoneData.rows[key];
@@ -41,8 +36,6 @@ const was = row.v;
 row.v = verdict;
 if (fact.length) row.f = fact.join(' ');
 
-let out = JSON.stringify(data, null, 2);
-if (nl === '\r\n') out = out.replace(/\n/g, '\r\n');
-fs.writeFileSync(P, out + nl);
+writeZone(zone, zoneData);
 
 console.log(`${zone} :: ${key}   ${was} → ${verdict}`);

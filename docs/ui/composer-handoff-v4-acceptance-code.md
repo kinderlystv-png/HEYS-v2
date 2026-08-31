@@ -66,7 +66,7 @@ reduced-motion сразу). Строки WATER 28–30, 36–38.
   карточки, утро, вариация)
 
 После каждого блока — правка вердикта (`≠` → `=` + факт) в
-[`ui-v4-contract-verdicts.json`](./ui-v4-contract-verdicts.json) и
+[`verdicts/<зона>.json`](./verdicts/<зона>.json) и
 `node scripts/ui-v4-check-contract-drift.mjs --rehash <зона>`. Прежний генератор
 `build-acceptance-filled.mjs` снят: он хранил вердикты внутри себя и при запуске
 переписывал рукописную часть листа устаревшими числами.

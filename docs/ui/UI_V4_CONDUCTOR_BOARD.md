@@ -3,7 +3,7 @@
 **Что здесь есть и чего здесь нет.** Здесь только одно, чего нет больше нигде:
 **кто сейчас сидит на зоне**. Цифры — вердикты, строки, отпечатки — живут в
 снимке (`docs/ui/verdicts/<зона>.json`, до 31.08 — один общий
-`docs/ui/ui-v4-contract-verdicts.json`) и читаются командой
+`docs/ui/verdicts/<зона>.json`) и читаются командой
 
 ```bash
 node scripts/ui-v4-check-contract-drift.mjs --list

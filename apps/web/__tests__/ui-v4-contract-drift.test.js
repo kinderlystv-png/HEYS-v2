@@ -6,7 +6,7 @@
 // 24 строки — совпало случайно.
 //
 // Снимок «строка контракта → отпечаток значения» лежит в
-// docs/ui/ui-v4-contract-verdicts.json рядом с вердиктами.
+// docs/ui/verdicts/<зона>.json рядом с вердиктами.
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
