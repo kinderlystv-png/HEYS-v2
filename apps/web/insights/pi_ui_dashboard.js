@@ -2747,6 +2747,36 @@
       { day: 30, text: 'метаболический фенотип' }
     ];
 
+    /**
+     * Лестница порогов — одна на два места.
+     *
+     * Контракт «карточка · „Что откроется дальше“» ставит её и в заглушке
+     * новичка, и в «Подробно». Прежде она жила только в заглушке: человек,
+     * перешагнувший семь дней, терял ответ на «что будет дальше» ровно тогда,
+     * когда впереди оставались ещё два порога.
+     *
+     * Состояние справа обязательно — без него пройденный порог отличается от
+     * будущего только тоном числа, а тон читается хуже слова. Повторного
+     * счётчика дней в блоке нет: он один и живёт в шапке.
+     */
+    function InsightsV4Ladder(props) {
+      const days = (props && props.historyDays) || 0;
+      return h('ul', { className: 'insights-v4-stub__ladder' },
+        INSIGHTS_V4_LADDER.map(function (step) {
+          const passed = days >= step.day;
+          return h('li', { key: step.day, className: 'insights-v4-stub__ladder-row' },
+            h('span', {
+              className: 'insights-v4-stub__ladder-day' + (passed ? ' is-passed' : '')
+            }, step.day),
+            h('span', { className: 'insights-v4-stub__ladder-text' }, step.text),
+            h('span', {
+              className: 'insights-v4-stub__ladder-state'
+            }, passed ? 'открыто' : 'через ' + (step.day - days) + ' ' + pluralDaysWord(step.day - days))
+          );
+        })
+      );
+    }
+
     function InsightsV4NewUserStub(props) {
       const { historyDays, todayDay, warnings } = props || {};
       const have = historyDays || 0;
@@ -2810,16 +2840,7 @@
           )
         ),
         h('div', { className: 'insights-v4-tier' }, 'Что откроется дальше'),
-        h('ul', { className: 'insights-v4-stub__ladder' },
-          INSIGHTS_V4_LADDER.map(function (step) {
-            return h('li', { key: step.day, className: 'insights-v4-stub__ladder-row' },
-              h('span', {
-                className: 'insights-v4-stub__ladder-day' + (have >= step.day ? ' is-passed' : '')
-              }, step.day),
-              h('span', { className: 'insights-v4-stub__ladder-text' }, step.text)
-            );
-          })
-        )
+        h(InsightsV4Ladder, { historyDays: have })
       );
     }
 
@@ -3434,7 +3455,22 @@
                 profile: effectiveData.profile,
                 pIndex: effectiveData.pIndex,
                 historyDays: historyDaysWithData
-              })
+              }),
+
+              // Контракт «карточка · „Что откроется дальше“» ставит лестницу
+              // порогов и здесь, не только в заглушке новичка: человек,
+              // перешагнувший семь дней, терял ответ на «что дальше» ровно
+              // тогда, когда впереди оставались ещё два порога — 14 и 30.
+              h('div', { className: 'insights-v4-tier' }, 'Что откроется дальше'),
+              h(InsightsV4Ladder, { historyDays: historyDaysWithData }),
+
+              // Контракт «карточка · „Где они работают“»: замыкающая карточка
+              // экрана — проза без строк и чисел. Без неё пороги читаются
+              // настройкой, которую человек должен подкрутить.
+              h('div', { className: 'insights-v4-where' },
+                'Пороги — не настройка: по ним считаются оценка дня, паттерны и '
+                + 'предупреждения. Меняются они сами, раз в неделю, по вашим же '
+                + 'данным — трогать их не нужно.')
             )
           ),
           showWhatIfScenarios && HEYS.InsightsPI?.WhatIfScenariosPanel && h(HEYS.InsightsPI.WhatIfScenariosPanel, {
