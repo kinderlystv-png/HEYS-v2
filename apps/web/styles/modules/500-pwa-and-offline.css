@@ -1932,12 +1932,16 @@
   color: rgba(0, 0, 0, 0.45);
 }
 
+/* Кадр «Профиль · низ»: дорожка 40×24 радиусом 999 тоном --v4-track, ручка
+   18 фоном --bg с тенью 0 1px 2px чернил 25 %. Было 44×26 с ручкой 20, дорожка
+   литералом мимо роли, ручка на soft вместо фона. Цель касания держит строка
+   вокруг тумблера — она 44 по строке «цель касания», сам тумблер меньше. */
 .profile-v4-toggle {
-  width: 44px;
-  height: 26px;
+  width: 40px;
+  height: 24px;
   border: none;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.14);
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
   position: relative;
   flex: none;
   cursor: pointer;
@@ -1945,23 +1949,23 @@
 }
 
 .profile-v4-toggle.is-on {
-  background: var(--v4-sand-act, #c67139);
+  background: var(--v4-act, #c67139);
 }
 
 .profile-v4-toggle__thumb {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  background: var(--v4-bg, #fffaf1);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   transition: left 160ms ease;
 }
 
 .profile-v4-toggle.is-on .profile-v4-toggle__thumb {
-  left: 21px;
+  left: 19px;
 }
 
 .cycle-card-v4 {
