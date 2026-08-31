@@ -70,8 +70,17 @@
   inset: -8px 0;
 }
 
+/* Заливка — --v4-act, роль, которая следует за набором (#c67139 в песочном,
+   #2e7cc0 в синем). Стояла --v4-sand-act: она держит коричневый и в синем, то
+   есть выбранный чип был коричневым на синей вкладке. Это второй раз, когда
+   роль с именем набора попала в новую строку, — первый был у текста чипа.
+
+   Текст на заливке — --v4-btn-on-act. В синем наборе роль намеренно не
+   объявлена: «белый на #2e7cc0 даёт 4.41:1 < 4.5, ждёт дизайнера»
+   (002-ui-v4-palette-roles.css). Своего тона тут не выдумываем — чип встаёт в
+   ту же очередь, что и остальные кнопки акцента, вопрос уже заведён. */
 .reports-v4-period-pill.is-active {
-  background: var(--v4-sand-act, #c67139);
+  background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
 }
 
@@ -656,35 +665,23 @@
 
 /* v4-intentional: palette surfaces for reports tiers */
 [data-palette="sand"] .reports-v4-tier,
-[data-palette="sand-dark"] .reports-v4-tier,
-[data-palette="blue"] .reports-v4-tier,
-[data-palette="blue-dark"] .reports-v4-tier {
+[data-palette="blue"] .reports-v4-tier {
   color: var(--v4-act-text); /* v4-intentional */
 }
 
 [data-palette="sand"] .reports-v4-hero,
-[data-palette="sand-dark"] .reports-v4-hero,
 [data-palette="blue"] .reports-v4-hero,
-[data-palette="blue-dark"] .reports-v4-hero,
 [data-palette="sand"] .reports-v4-dynamics-card,
-[data-palette="sand-dark"] .reports-v4-dynamics-card,
 [data-palette="blue"] .reports-v4-dynamics-card,
-[data-palette="blue-dark"] .reports-v4-dynamics-card,
 [data-palette="sand"] .reports-v4-wellbeing,
-[data-palette="sand-dark"] .reports-v4-wellbeing,
 [data-palette="blue"] .reports-v4-wellbeing,
-[data-palette="blue-dark"] .reports-v4-wellbeing,
 [data-palette="sand"] .reports-v4-days,
-[data-palette="sand-dark"] .reports-v4-days,
-[data-palette="blue"] .reports-v4-days,
-[data-palette="blue-dark"] .reports-v4-days {
+[data-palette="blue"] .reports-v4-days {
   background: var(--v4-surface); /* v4-intentional */
 }
 
 [data-palette="sand"] .reports-v4-score-slot .heys-score-tile,
-[data-palette="sand-dark"] .reports-v4-score-slot .heys-score-tile,
-[data-palette="blue"] .reports-v4-score-slot .heys-score-tile,
-[data-palette="blue-dark"] .reports-v4-score-slot .heys-score-tile {
+[data-palette="blue"] .reports-v4-score-slot .heys-score-tile {
   background: var(--v4-hero); /* v4-intentional */
   border-color: transparent;
 }
@@ -711,13 +708,13 @@
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 60%, transparent);
 }
 
-[data-palette="sand"] .reports-v4-period-pill.is-active,
-[data-palette="sand-dark"] .reports-v4-period-pill.is-active,
-[data-palette="blue"] .reports-v4-period-pill.is-active,
-[data-palette="blue-dark"] .reports-v4-period-pill.is-active {
-  color: var(--v4-act-text); /* v4-intentional */
-  box-shadow: inset 0 -2px 0 0 var(--v4-act); /* v4-intentional */
-}
+/* Переопределение выбранного чипа снято целиком. Оно осталось от прежнего вида
+   выбора окна — слова с подчёркиванием — и рисовало `inset 0 -2px` поверх новой
+   заливки, а текст красило тоном акцента вместо тона НА акценте. Правило
+   срабатывало во всех палитрах, то есть подчёркивание висело под залитым чипом
+   везде; ветка "blue-dark" при этом была мёртвой (data-palette держит только
+   семейство, см. комментарий выше). Вид чипа задан один раз в
+   .reports-v4-period-pill.is-active и от набора не зависит. */
 
 /* === reports-insights.v4 contract (2026-08-29): матрица «Дисциплина» и
    заглушка «мало данных» === */
