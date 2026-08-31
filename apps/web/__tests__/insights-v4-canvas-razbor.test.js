@@ -67,6 +67,18 @@ const NEW_USER = [
   [27, '.insights-v4-stub__ladder-text', ['fontWeight', 'fontSize', 'lineHeight']],
 ];
 
+const NUTRITION = [
+  [9, '.insights-v4-nutrition__rhythm-track', ['align', 'gap']],
+  [10, '.insights-v4-nutrition__rhythm-time', ['fontWeight', 'fontSize', 'lineHeight']],
+  [25, '.insights-v4-nutrition__legend-item', ['align', 'gap']],
+];
+
+const PRAISE = [
+  [6, '.insights-v4-hero', ['background', 'radius', 'marginTop']],
+  [8, '.insights-v4-hero__praise', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [12, '.insights-v4-attention__basis', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
 const RISK = [
   [8, '.insights-v4-attention__risk-head', ['gap']],
   [10, '.insights-v4-attention__risk-window', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
@@ -150,6 +162,14 @@ describe('Инсайты · разбор кадров канваса', () => {
     expect(compare({
       razbor, rules, frame: 'Раскрывашка · Как считается долг', pairs: SHEET,
     })).toEqual([]);
+  });
+
+  it('кадр «ярус Питание» совпадает с продуктом', () => {
+    expect(compare({ razbor, rules, frame: 'Инсайты · ярус Питание', pairs: NUTRITION })).toEqual([]);
+  });
+
+  it('кадр «день без заданий» совпадает с продуктом', () => {
+    expect(compare({ razbor, rules, frame: 'Инсайты · день без заданий', pairs: PRAISE })).toEqual([]);
   });
 
   it('гейт называет свой охват', () => {
@@ -339,6 +359,19 @@ describe('Инсайты · разбор кадров канваса', () => {
     // фона. Код следует первому. Строки контракта о кнопке нет, спорят сами
     // кадры — второй такой случай в зоне после дорожки ритма приёмов.
     'Инсайты · риск срыва · 17',
+    // Строка ритма: «Инсайты · ярус Питание» даёт ей 600 13/1,45 чернилами,
+    // «Ярус Питание · после последнего приёма» — 500 11/1,5 тоном 45 %. Код
+    // следует второму. Третий спор кадров в зоне.
+    'Инсайты · ярус Питание · 08',
+    // Рекомендация приёма и объяснение под ней рисуются .meal-rec-card__* из
+    // 720-predictive-insights.css — пре-v4 файла соседней зоны, где своих
+    // кеглей нет вовсе. Прежние вердикты ссылались на .__head и .__head-note,
+    // но это шапка карточки и модификатор внутри неё, а не рекомендация.
+    'Инсайты · ярус Питание · 03',
+    'Инсайты · ярус Питание · 06',
+    // Поля карточки героя: «день без заданий» просит 24/20, «Инсайты» —
+    // 24/20/20. Четвёртый спор кадров; код следует основному.
+    'Инсайты · день без заданий · 06',
   ];
 
   it('отступления инсайтовых кадров названы поимённо', () => {
