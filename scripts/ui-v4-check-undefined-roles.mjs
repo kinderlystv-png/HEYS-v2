@@ -92,10 +92,12 @@ const BASELINE = {
     'styles/modules/734-ui-v4-insights.css',
   ],
   'v4-tier': ['styles/modules/733-ui-v4-reports.css'],
-  'v4-warn': [
-    'styles/modules/730-widgets-dashboard.css',
-    'styles/modules/734-ui-v4-insights.css',
-  ],
+  // 734 снят 31 августа: три места роли брали три разных цвета (#c67139,
+  // #b3402a, #c9a03c) — акцент, «разрушающее» и жёлтый под одним именем.
+  // Каждое переведено на роль по смыслу: точка приоритета — акцент, бейдж
+  // риска — «разрушающее», жиры в полосе и легенде — «внимание» первой
+  // ступени. В виджетах роль ещё живёт.
+  'v4-warn': ['styles/modules/730-widgets-dashboard.css'],
   'v4-warn-bg': ['styles/modules/733-ui-v4-reports.css'],
   'v4-warn-fill': ['styles/modules/733-ui-v4-reports.css'],
   'v4-warn-surface': ['styles/modules/733-ui-v4-reports.css'],

@@ -161,7 +161,8 @@
   height: 8px;
   margin-top: 5px;
   border-radius: 50%;
-  background: var(--v4-warn, #c67139);
+  /* Точка приоритета — акцент набора: запасное #c67139 и есть --v4-act. */
+  background: var(--v4-act, #c67139);
   flex: none;
 }
 
@@ -379,7 +380,9 @@
   font: 700 9px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  background: var(--v4-warn, #b3402a);
+  /* Бейдж риска срыва: запасное #b3402a — тон «разрушающего действия», и по
+     смыслу это он. Роль --v4-warn его не давала ни в одном наборе. */
+  background: var(--v4-bad-text, #b4442a);
   color: var(--v4-btn-on-act, #fff5ef);
 }
 
@@ -628,9 +631,18 @@
   gap: 9px;
 }
 
+/* Строка приёма и полоса под ней: контракт разводит их по вертикали, чтобы
+   полоса у всех приёмов была одной ширины и доли читались сравнением. */
 .insights-v4-nutrition__bzhu-row {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.insights-v4-nutrition__bzhu-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 10px;
 }
 
@@ -644,10 +656,11 @@
   white-space: nowrap;
 }
 
+/* Полоса доли: высота 4 по контракту, во всю ширину строки — она больше не
+   делит место с именем приёма. */
 .insights-v4-nutrition__bzhu-bar {
-  flex: 1;
   display: flex;
-  height: 8px;
+  height: 4px;
   border-radius: 999px;
   overflow: hidden;
   background: var(--v4-chip, rgba(0, 0, 0, 0.07));
@@ -658,11 +671,16 @@
 }
 
 .insights-v4-nutrition__bzhu-seg--fat {
-  background: var(--v4-warn, #c9a03c);
+  /* Жиры — «внимание» первой ступени (канвасный --ovl). Прежде стояла роль
+     --v4-warn, которой в наборе нет: цвет брался из запасного и в тёмных
+     наборах не менялся. */
+  background: var(--v4-warn-1, #d99a63);
 }
 
+/* Углеводы — акцент набора (--acs контракта): песочная глубокая предназначена
+   тексту на подложке, а не заливке сегмента. */
 .insights-v4-nutrition__bzhu-seg--carbs {
-  background: var(--v4-sand-act-deep, #b06a34);
+  background: var(--v4-act, #c67139);
 }
 
 .insights-v4-nutrition__bzhu-kcal {
@@ -700,12 +718,15 @@
   background: var(--v4-good, #4c8f4c);
 }
 
+/* Легенда берёт роль своего сегмента: разойдись они — полоса и подпись под
+   ней говорили бы о разном. */
 .insights-v4-nutrition__legend-item--fat::before {
-  background: var(--v4-warn, #c9a03c);
+  background: var(--v4-warn-1, #d99a63);
 }
 
 .insights-v4-nutrition__legend-item--carbs::before {
-  background: var(--v4-sand-act-deep, #b06a34);
+  /* Та же роль, что у сегмента полосы. */
+  background: var(--v4-act, #c67139);
 }
 
 .insights-v4-stub {
