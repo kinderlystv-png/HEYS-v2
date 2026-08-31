@@ -10634,14 +10634,16 @@ NOVA: 1
         )
       ),
 
-      dayIsOver && React.createElement('div', { className: 'aps-v4-grams-over' },
-        `Норма дня будет превышена на ${dayOverKcal} ккал.`
-      ),
-
+      // Строка «ситуативные плашки»: обе предупреждают и не блокируют добавление;
+      // если совпали — идут одна под другой, сначала дубль.
       mealDuplicate && React.createElement('div', { className: 'aps-v4-grams-duplicate' },
         mealDuplicate.kind === 'same'
           ? `Этот продукт уже есть в приёме — ${duplicateGrams} г. Добавите ещё, и еда посчитается дважды.`
           : `В приёме уже есть «${mealDuplicate.item.name}». Проверьте, не тот ли это продукт.`
+      ),
+
+      dayIsOver && React.createElement('div', { className: 'aps-v4-grams-over' },
+        `Норма дня будет превышена на ${dayOverKcal} ккал.`
       ),
 
       React.createElement('button', {

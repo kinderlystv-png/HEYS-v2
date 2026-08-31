@@ -66,3 +66,17 @@ describe('meal summary v4 canvas structure', () => {
     expect(cssSource).toContain('.aps-v4-meal-summary__done');
   });
 });
+
+describe('собранный приём · число дня', () => {
+  it('строка под калорийностью называет две величины, а перебор — своим тоном', () => {
+    // Строка «число дня в блоке „В приёме"»: «Всего за день N · до нормы
+    // остаётся M»; в переборе вторая половина меняется на «перебор M» тоном
+    // --val-bad, первая остаётся как есть. Раньше стояла одна величина.
+    expect(dayAddSource).toContain('Всего за день ${dayKcal} · ');
+    expect(dayAddSource).toContain('до нормы остаётся ${Math.max(0, remainingKcal)}');
+    expect(dayAddSource).toContain('перебор ${Math.abs(Math.min(0, remainingKcal))}');
+    expect(dayAddSource).toContain('aps-v4-meal-summary__hero-over');
+    // Знак остатка больше не зажимается в ноль — иначе перебор показывал «0».
+    expect(dayAddSource).not.toContain('remainingKcal: Math.max(0, remainingKcal)');
+  });
+});

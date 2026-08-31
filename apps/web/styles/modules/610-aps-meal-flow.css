@@ -3674,8 +3674,8 @@ button.meal-quality-badge:active {
    не подсказка, а предупреждение о числе. Отступ 12 и заливка --c2 по кадру. */
 .aps-v4-grams-over {
   margin-top: 12px;
-  border-radius: 18px;
-  padding: 14px 16px;
+  border-radius: 20px;
+  padding: 16px;
   background: var(--v4-hero, #efe3cf);
   font-size: 12.5px;
   font-weight: 600;
@@ -3697,8 +3697,8 @@ button.meal-quality-badge:active {
    бумага, которой в кадре нет. */
 .aps-v4-grams-duplicate {
   margin-top: 12px;
-  border-radius: 18px;
-  padding: 14px 16px;
+  border-radius: 20px;
+  padding: 16px;
   background: var(--v4-hero, #efe3cf);
   font-size: 12.5px;
   font-weight: 600;
@@ -3753,7 +3753,13 @@ button.meal-quality-badge:active {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.4;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 45%, transparent);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+}
+
+/* «В переборе вторая половина меняется на „перебор M" тоном --val-bad,
+   первая остаётся как есть». */
+.aps-v4-meal-summary__hero-over {
+  color: var(--v4-bad-text, #b4442a);
 }
 
 .aps-v4-meal-summary__list {

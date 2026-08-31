@@ -207,7 +207,8 @@
       mealIndex,
       mealId,
       mealPhotos: initialMealPhotos,
-      summaryTitle
+      summaryTitle,
+      dayKcal
     } = context || {};
 
     const [mealPhotos, setMealPhotos] = React.useState(() => Array.isArray(initialMealPhotos) ? initialMealPhotos : []);
@@ -285,10 +286,15 @@
           React.createElement('span', { className: 'aps-v4-meal-summary__hero-meta' },
             `ккал · ${mealItemCount} ${productWord}`)
         ),
+        // Строка «число дня в блоке „В приёме"»: под калорийностью приёма идут
+        // две величины — сколько всего за день и сколько осталось до нормы. В
+        // переборе меняется только вторая половина, первая остаётся как есть.
         React.createElement('div', { className: 'aps-v4-meal-summary__hero-foot' },
+          Number.isFinite(dayKcal) ? `Всего за день ${dayKcal} · ` : '',
           isGoalReached
-            ? 'Норма дня выполнена'
-            : `До нормы дня остаётся ${Math.max(0, remainingKcal)}`)
+            ? React.createElement('span', { className: 'aps-v4-meal-summary__hero-over' },
+              `перебор ${Math.abs(Math.min(0, remainingKcal))}`)
+            : `до нормы остаётся ${Math.max(0, remainingKcal)}`)
       ),
       React.createElement('div', { className: 'aps-v4-meal-summary__list' },
         (mealItems || []).map((item, index) =>
@@ -488,8 +494,11 @@
           dateKey: currentDay?.date || null,
           mealItems,
           mealKcal,
+          dayKcal: eatenKcal,
           mealItemCount: mealItems.length,
-          remainingKcal: Math.max(0, remainingKcal),
+          // Не зажимаем в ноль: в переборе строка показывает, на сколько именно
+          // норма пройдена, а Math.max терял знак и показывал «перебор 0».
+          remainingKcal,
           isGoalReached,
           mealPhotos: currentMeal.photos || [],
           summaryTitle,
