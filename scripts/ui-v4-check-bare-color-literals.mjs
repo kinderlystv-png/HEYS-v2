@@ -78,6 +78,7 @@ const BASELINE = {
   '730-widgets-dashboard.css': 178,
   '733-ui-v4-login-theme.css': 104,
   '740-cascade-card.css': 23,
+  '750-strength-builder.css': 6,
   'critical.css': 34,
   'heys-boot-mark.css': 1,
   'heys-components.css': 446,
