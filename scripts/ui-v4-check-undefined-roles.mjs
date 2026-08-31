@@ -72,29 +72,21 @@ const BASELINE = {
     'styles/modules/730-widgets-dashboard.css',
   ],
   'v4-ok-ink': ['styles/modules/733-ui-v4-reports.css'],
-  'v4-sage-ink': ['styles/modules/600-steps-and-aps.css'],
-  'v4-sage-surface': ['styles/modules/600-steps-and-aps.css'],
+  'v4-sage-ink': ['styles/modules/610-aps-meal-flow.css'],
+  'v4-sage-surface': ['styles/modules/610-aps-meal-flow.css'],
   'v4-sand-green-ink': [
-    'styles/modules/600-steps-and-aps.css',
+    'styles/modules/610-aps-meal-flow.css',
     'styles/modules/715-yesterday-verify.css',
   ],
-  'v4-sand-ok-bg': ['styles/modules/600-steps-and-aps.css'],
+  'v4-sand-ok-bg': ['styles/modules/611-aps-product-card.css'],
   'v4-sand-tint-green': [
-    'styles/modules/600-steps-and-aps.css',
+    'styles/modules/610-aps-meal-flow.css',
     'styles/modules/715-yesterday-verify.css',
   ],
   'v4-sand-water': ['styles/modules/730-widgets-dashboard.css'],
   'v4-sand-wave': ['styles/modules/730-widgets-dashboard.css'],
-  'v4-surface-2': [
-    'styles/modules/000-base-and-gamification.css',
-    'styles/modules/734-ui-v4-insights.css',
-  ],
+  'v4-surface-2': ['styles/modules/000-base-and-gamification.css'],
   'v4-tier': ['styles/modules/733-ui-v4-reports.css'],
-  // 734 снят 31 августа: три места роли брали три разных цвета (#c67139,
-  // #b3402a, #c9a03c) — акцент, «разрушающее» и жёлтый под одним именем.
-  // Каждое переведено на роль по смыслу: точка приоритета — акцент, бейдж
-  // риска — «разрушающее», жиры в полосе и легенде — «внимание» первой
-  // ступени. В виджетах роль ещё живёт.
   'v4-warn': ['styles/modules/730-widgets-dashboard.css'],
   'v4-warn-fill': ['styles/modules/733-ui-v4-reports.css'],
 };
