@@ -1146,7 +1146,7 @@
 
 .aps-create-hint {
   font-size: 13px;
-  color: var(--muted);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   line-height: 1.4;
 }
 
@@ -1429,9 +1429,10 @@
 }
 
 .aps-create-example-btn {
-  border: 1px solid var(--border, #e5e7eb);
-  background: var(--card, #fff);
-  color: var(--text, #111827);
+  /* Кнопка «Вставить из буфера» — вторичная набора, парная кнопке промпта. */
+  border: none;
+  background: var(--v4-surface, #f7efe2);
+  color: var(--v4-act-text, #8a4a20);
   border-radius: 10px;
   padding: 6px 10px;
   font-size: 12px;
@@ -1447,7 +1448,7 @@
   .aps-create-example-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-    border-color: var(--acc, #3b82f6);
+    background: var(--v4-hero, #efe3cf);
   }
 }
 
@@ -1747,7 +1748,7 @@
 .aps-portions-title {
   font-size: 11px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   margin-bottom: 4px;
   text-align: center;
 }
