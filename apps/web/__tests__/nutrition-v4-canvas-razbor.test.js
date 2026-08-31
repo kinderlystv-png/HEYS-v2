@@ -41,9 +41,22 @@ const WAVE = [
   [7, '.nutrition-v4-wave-now span', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
+// Кадр «Питание · блок · Оценка и риск»: слово дня, риск словом и полоса из
+// четырёх шагов. Сведён 31 августа.
+const SCORE = [
+  [5, '.nutrition-v4-verdict', ['align', 'gap']],
+  [6, '.nutrition-v4-verdict b', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [7, '.nutrition-v4-verdict span', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [8, '.nutrition-v4-steps', ['gap', 'marginTop']],
+  [9, '.nutrition-v4-steps span.is-on.is-ok', ['background']],
+  // Тон незаполненного шага вынесен: кадр просит чернила 10 %, у набора
+  // есть 8 и 12. Взята --v4-track — роль дорожки полосы, а не линии.
+  [10, '.nutrition-v4-steps span', ['height', 'radius']],
+];
+
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 8;
+const COVERAGE_FLOOR = 14;
 
 describe('«Питание» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
@@ -51,6 +64,10 @@ describe('«Питание» · разбор кадров канваса', () =>
 
   it('кадр «Питание · лист правки приёма» совпадает с действиями свайпа', () => {
     expect(compare({ razbor, rules, frame: 'Питание · лист правки приёма', pairs: SWIPE })).toEqual([]);
+  });
+
+  it('кадр «Питание · блок · Оценка и риск» совпадает со словом дня и полосой шагов', () => {
+    expect(compare({ razbor, rules, frame: 'Питание · блок · Оценка и риск', pairs: SCORE })).toEqual([]);
   });
 
   it('кадр «Питание · блок · Волна сейчас» совпадает с блоком волны', () => {
