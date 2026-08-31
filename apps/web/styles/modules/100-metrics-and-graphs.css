@@ -286,9 +286,12 @@
   line-height: 1.35;
 }
 
+/* Кадры «Мало калорий · подтверждение · 11» и «· рекомендуем очистить · 07»:
+   проза отбита от заголовка на 6 и набрана весом 500. */
 .kcal-realdata-card__text {
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 12px;
+  font-weight: 500;
   line-height: 1.5;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 62%, transparent);
 }
@@ -316,11 +319,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: none;
   height: 24px;
-  padding: 0 10px;
+  padding: 0 8px;
   border-radius: 8px;
-  font-size: 11px;
-  font-weight: 700;
+  /* Строка контракта «карточка · подтверждение чисел дня» и оба кадра сходятся
+     на 11 px/600; стоял вес 700 — метка звучала громче заголовка над ней. */
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-warn-text, #a1471c);
   background: var(--v4-bg, #fffaf1);
   border: none;

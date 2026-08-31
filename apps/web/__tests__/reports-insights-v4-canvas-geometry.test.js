@@ -135,6 +135,19 @@ const DAYS = [
     ['width', 'height', 'radius', 'background']],
 ];
 
+// Карточка подтверждения чисел дня живёт в 100-metrics-and-graphs.css.
+const REALDATA_CSS = fs.readFileSync(
+  path.resolve(__dirname, '../styles/modules/100-metrics-and-graphs.css'), 'utf8');
+
+const REALDATA = [
+  [6, '.kcal-realdata-card__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [7, '.kcal-realdata-card__text', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  [8, '.kcal-realdata-card__actions', ['align', 'gap']],
+  [9, '.kcal-realdata-card__badge',
+    ['flex', 'align', 'height', 'padding', 'radius', 'background',
+      'fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
 // Кадр «Разбор Score». Сведено только то, о чём строка контракта «вид · экран
 // разбора Score» молчит: кегли числа, дельты и фразы она задаёт сама и спорит
 // с кадром (30/800 против 56/600), а раскладка строки каскада — открытый
@@ -196,6 +209,15 @@ describe('Отчёты · разбор кадров канваса', () => {
   it('шапка и герой кадра «Визуал v4 · Отчёты» совпадают с продуктом', () => {
     expect(compare({
       razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: HEADER,
+    })).toEqual([]);
+  });
+
+  it('карточка подтверждения чисел дня совпадает с кадром', () => {
+    expect(compare({
+      razbor,
+      rules: readRules(REALDATA_CSS),
+      frame: 'Мало калорий · рекомендуем очистить',
+      pairs: REALDATA,
     })).toEqual([]);
   });
 
