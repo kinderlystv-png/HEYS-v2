@@ -148,8 +148,8 @@ const SCIENCE = [
   [10, '.advice-v4-science__source', ['padding']],
   [11, '.advice-v4-science__source-title', ['fontWeight', 'fontSize', 'color']],
   [12, '.advice-v4-science__source-meta', ['fontWeight', 'fontSize', 'color']],
-  [14, '.advice-v4-science__footnote', ['background', 'radius', 'padding', 'marginTop']],
-  [15, '.advice-v4-science__footnote', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [14, '.advice-v4-science__footnote', ['align', 'gap', 'background', 'radius', 'padding', 'marginTop']],
+  [15, '.advice-v4-science__footnote-text', ['fontWeight', 'fontSize', 'lineHeight']],
   [17, '.advice-v4-science__primary',
     ['radius', 'background', 'padding', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];

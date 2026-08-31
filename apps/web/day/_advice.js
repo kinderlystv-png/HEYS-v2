@@ -1220,8 +1220,23 @@
                             })
                         )
                     ),
-                    React.createElement('p', { className: 'advice-v4-science__footnote' },
-                        'Общие выводы исследований. Ваш случай может отличаться — при заболеваниях решения принимает врач.'
+                    // Кадр «Научное описание», элементы 14–15 и рисунок 07:
+                    // оговорка — ряд из значка и текста, а не один абзац.
+                    // Значок обозначает её как примечание: без него карточка
+                    // читается как ещё один блок выводов.
+                    React.createElement('div', { className: 'advice-v4-science__footnote' },
+                        React.createElement('svg', {
+                            className: 'advice-v4-science__footnote-icon',
+                            width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none',
+                            stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round',
+                            'aria-hidden': 'true',
+                        },
+                            React.createElement('circle', { cx: 12, cy: 12, r: 9 }),
+                            React.createElement('path', { d: 'M12 11v5M12 7.6v.01' })
+                        ),
+                        React.createElement('span', { className: 'advice-v4-science__footnote-text' },
+                            'Общие выводы исследований. Ваш случай может отличаться — при заболеваниях решения принимает врач.'
+                        )
                     )
                 ),
                 React.createElement('div', { className: 'advice-v4-science__footer' },

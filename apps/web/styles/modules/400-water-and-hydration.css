@@ -3369,12 +3369,24 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
    висит подписью в воздухе. Она говорит «ваш случай может отличаться» — это
    не сноска к списку, а отдельное предупреждение, и кадр даёт ему форму. */
 .advice-v4-science__footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   margin: 16px 0 0;
   padding: 14px 15px;
   border-radius: 18px;
   background: var(--v4-hero, #efe3cf);
-  font: 500 11.5px/1.5 Figtree, sans-serif;
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
+}
+
+.advice-v4-science__footnote-icon {
+  flex: none;
+  margin-top: 1px;
+}
+
+.advice-v4-science__footnote-text {
+  flex: 1;
+  font: 500 11.5px/1.5 Figtree, sans-serif;
   text-wrap: pretty;
 }
 
