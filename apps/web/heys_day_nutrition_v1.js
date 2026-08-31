@@ -1435,7 +1435,7 @@
       onClick: () => { if (!disabled) handler?.(); }
     },
       React.createElement('span', { className: 'nutrition-v4-sheet__action-icon', 'aria-hidden': 'true' },
-        svgIcon(React, { width: 17, height: 17, strokeWidth: 2.4 }, icon)),
+        svgIcon(React, { width: 16, height: 16, strokeWidth: 2.4 }, icon)),
       React.createElement('b', null, label),
       React.createElement('span', { className: 'nutrition-v4-sheet__chevron', 'aria-hidden': 'true' }, chevron(React, 15))
     );

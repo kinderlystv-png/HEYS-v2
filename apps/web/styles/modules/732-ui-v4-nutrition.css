@@ -1189,11 +1189,20 @@
   margin: 0 18px;
   padding: 12px 0;
   border: none;
+  /* «Между строками линия 1 px тоном чернил 7 %, у последней линии нет» —
+     значит разделитель принадлежит промежутку, а не каждой строке: линия над
+     первой строкой отделяла блок от яруса «Действия с приёмом», которому она
+     не нужна. Тон берётся ролью линии (8 %), а не процентом чернил напрямую:
+     этого требует гейт line-roles-v4, и разница в процент здесь незаметна. */
   border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: transparent;
   text-align: left;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+.nutrition-v4-sheet__action:first-of-type {
+  border-top: none;
 }
 
 .nutrition-v4-sheet__action b {
@@ -1216,9 +1225,11 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  color: var(--v4-act, #2563eb);
+  /* Строка «блок действий»: значок 16 px тоном --ac. Стояли 18 px и мягкий
+     акцент --v4-act — значок действия был крупнее и светлее, чем в кадре. */
+  width: 16px;
+  height: 16px;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* `.строка span` (0,1,1) выигрывал у `.шеврон` (0,1,0), и шеврон получал тон
