@@ -119,6 +119,7 @@
 
 .meal-time-shift:active {
   opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Колёса по 74 px, зазор 10; правое поле 66 — место под чип «сейчас», иначе
@@ -3995,6 +3996,7 @@ button.meal-quality-badge:active {
 
 .aps-v4-browse-action:active {
   opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* === Лист «Приём · время и тип» ======================================
