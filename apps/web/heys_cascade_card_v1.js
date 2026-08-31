@@ -4435,7 +4435,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     return React.createElement('div', { className: 'heys-score-insights-card' },
       React.createElement('div', { className: 'heys-score-insights-card__header' },
-        React.createElement('span', { className: 'heys-score-insights-card__title' }, '📈 Каскад решений'),
+        // Эмодзи в заголовке снят: в v4 их нет ни на одной карточке зоны —
+        // так же сегодня разобраны предупреждения и «Что если». Значок здесь
+        // не нёс ничего сверх слова, а рядом со словом состояния читался как
+        // ещё один статус.
+        React.createElement('span', { className: 'heys-score-insights-card__title' }, 'Каскад решений'),
         React.createElement('span', { className: 'heys-score-insights-card__state', style: { color: color } }, phrase)
       ),
       React.createElement(HeysScoreZoneBar, {

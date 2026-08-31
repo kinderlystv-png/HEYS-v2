@@ -96,7 +96,10 @@
 .insights-v4-hero {
   padding: 18px 18px 14px;
   border-radius: 22px;
-  background: var(--v4-sand-hero, #efe3cf);
+  /* --v4-hero, а не песочно-залоченная --v4-sand-hero: так и было на деле —
+     заливку перебивало правило по палитре ниже. Держать два правила на один
+     класс с разными ролями значит спорить с самим собой. */
+  background: var(--v4-hero, #efe3cf);
 }
 
 .insights-v4-hero__phrase {
@@ -314,28 +317,20 @@
   background: var(--v4-surface, #ffffff);
 }
 
-[data-palette="sand"] .insights-v4-hero,
-[data-palette="blue"] .insights-v4-hero {
-  background: var(--v4-hero, #f8fafc);
-}
+/* Четыре блока по палитрам свёрнуты в два правила.
 
-[data-palette="sand-dark"] .insights-v4-hero,
-[data-palette="blue-dark"] .insights-v4-hero {
-  background: var(--v4-hero, #1e293b);
-}
+   Половина их селекторов не совпадала никогда: data-palette держит только
+   семейство — «sand» и для sand-dark, «blue» и для blue-dark, — поэтому
+   [data-palette="sand-dark"] не выбирал ничего. Работали только светлые
+   правила, и работали во всех четырёх наборах.
 
-[data-palette="sand"] .insights-v4-attention,
-[data-palette="blue"] .insights-v4-attention,
-[data-palette="sand"] .insights-v4-patterns,
-[data-palette="blue"] .insights-v4-patterns {
-  background: var(--v4-surface, #ffffff);
-}
-
-[data-palette="sand-dark"] .insights-v4-attention,
-[data-palette="blue-dark"] .insights-v4-attention,
-[data-palette="sand-dark"] .insights-v4-patterns,
-[data-palette="blue-dark"] .insights-v4-patterns {
-  background: var(--v4-surface, #1e293b);
+   Это не было дефектом лишь потому, что --v4-hero и --v4-surface определены
+   в каждом наборе и переворачиваются сами. Ролям привязка к палитре не нужна
+   вовсе — она только создавала впечатление, что тёмным наборам нужны свои
+   значения. */
+.insights-v4-attention,
+.insights-v4-patterns {
+  background: var(--v4-surface, #f7efe2);
 }
 
 /* === reports-insights.v4 contract (2026-08-29): окно в блоке, зрелость,
