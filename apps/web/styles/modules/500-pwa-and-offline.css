@@ -1751,7 +1751,7 @@
   padding: 0 16px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  background: var(--v4-chip, #efe3cf);
   font: 700 12px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   cursor: pointer;
@@ -1769,7 +1769,11 @@
   margin-top: 0;
   padding: 16px 17px;
   border-radius: 20px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  /* Кадр «Чек-ин · остальное на неделе периода», элемент 05: верхняя карточка
+     шага — вторая поверхность. Стояла на фоне страницы без обводки, то есть на
+     экране её не было видно вовсе. Владелец строки (cycle.v4.dc.html) заливку
+     этой карточки не называет — расхождения между файлами нет. */
+  background: var(--v4-chip, #efe3cf);
 }
 
 .mc-rest-cycle-week-head {
@@ -1830,7 +1834,9 @@
   min-height: 44px;
   border: none;
   border-radius: 14px;
-  background: var(--v4-sand-surface, #f7efe2);
+  /* Тот же кадр, элемент 11: клетки дня — фон страницы на второй поверхности
+     карточки. Обе поверхности были взяты на ступень ниже. */
+  background: var(--v4-bg, #fffaf1);
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: rgba(0, 0, 0, 0.5);
@@ -2407,7 +2413,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.5);
   -webkit-appearance: none;
   appearance: none;
@@ -2448,10 +2454,14 @@
   margin-bottom: 8px;
 }
 
-.mc-rest-wave,
-.mc-rest-chevron {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.4));
+.mc-rest-wave {
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
   font: 600 11px/1 Figtree, system-ui, sans-serif;
+}
+
+.mc-rest-chevron {
+  color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
+  font: 700 15px/1 Figtree, system-ui, sans-serif;
 }
 
 .mc-rest-card--supplements {
@@ -2531,7 +2541,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  margin-top: 11px;
+  margin-top: 12px;
   min-height: 44px;
   border: none;
   background: transparent;
@@ -2702,6 +2712,10 @@
 
 .mc-supp-flow-note--left {
   text-align: left;
+  margin-top: 18px;
+}
+
+.mc-supp-flow--course .mc-supp-flow-note {
   margin-top: 16px;
 }
 
@@ -2775,7 +2789,7 @@
   width: 26px;
   height: 26px;
   border-radius: 999px;
-  background: #f6f1ea;
+  background: var(--v4-bg, #fffaf1);
   display: inline-flex;
   align-items: center;
   justify-content: center;

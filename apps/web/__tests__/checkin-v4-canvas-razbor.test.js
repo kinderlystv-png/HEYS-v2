@@ -1,8 +1,8 @@
 // Кадры утреннего чек-ина против раздела канваса «Разбор кадров · элемент за
-// элементом» (пакет 30 августа). Сведены: все пять шагов мастера в их
-// состояниях, все восемь экранов развилки разбора вчера и три вида шага
-// веса. Остальные кадры зоны — добавки, замеры, «Записано», холод, особые
-// дни и согласие — ждут своего захода.
+// элементом» (пакет 30 августа). Зона сведена целиком: тридцать пять кадров
+// — пять шагов мастера во всех состояниях, восемь экранов развилки разбора
+// вчера, слои холода, замеров, добавок и особых дней, плашка согласия и два
+// экрана «Записано».
 //
 // Зона живёт в двух файлах: шаги мастера — 500-pwa-and-offline.css, развилка
 // разбора вчера — 715-yesterday-verify.css.
@@ -79,6 +79,21 @@ const EXCEPTIONS = new Map([
   // Строки среднего веса — один ряд с одним отступом; кадр даёт первому 11,
   // второму 9. Двух видов строки ради двух пикселей не заводим.
   ['Чек-ин · расчётный вес · 13|marginTop', 'ряд строк среднего: один отступ 11'],
+  // Тона, которых у набора нет: 40 % у волны и 50 % у текста плашки.
+  ['Чек-ин · холод тип · 16|color', 'у набора нет тона 40 %, ближайший --v4-ink-4'],
+  ['Чек-ин · согласие не подписано · 20|color', 'у набора нет тона 50 %, ближайший --v4-ink-2'],
+  // Заливка просроченной строки: у продукта своя роль подложки, и её
+  // значение в песочном наборе на три ступени темнее канвасного --tint
+  // (#f3e0d2 против #f6e6dd). Вопрос по паре ролей уже заведён дизайнеру.
+  ['Чек-ин · замеры просрочены · 32|background', 'роль подложки продукта против --tint канваса'],
+  // Метка просрочки: контракт «вид просроченной строки» ставит её справа
+  // числом 10 px/700, кадр рисует кикером слева 9,5 px с точкой. Решение
+  // записано у самого правила.
+  ['Чек-ин · замеры просрочены · 34|*', 'контракт: метка справа, точки и кикера нет'],
+  ['Чек-ин · замеры просрочены · 35|fontSize', 'контракт «вид просроченной строки»: 10 px'],
+  // Отбивка яруса в списке добавок: у первого яруса кадр даёт 14, у второго
+  // 13. Один отступ на ряд ярусов.
+  ['Добавки · добавление · 8|marginTop', 'один отступ на ряд ярусов: 13'],
 ]);
 
 // Те же два тона повторяются в каждом состоянии шага шагов: подпись под
@@ -351,6 +366,242 @@ const WEIGHT_FIRST = [
     ['fontWeight', 'fontSize', 'lineHeight']],
 ];
 
+// Слои и состояния пятого шага, экраны добавок и «Записано». Разбор у них
+// плоский: карточка, её строки, ряд действий — поэтому пары перечислены
+// таблицей, без общей выкройки.
+const REST_FRAMES = [
+  ['Чек-ин · записано', [
+    [4, '.mc-recorded',
+    ['direction', 'align', 'justify']],
+    [5, '.mc-recorded-check',
+    ['width', 'height', 'radius', 'background', 'align', 'justify']],
+    [6, '.mc-recorded-title',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+    [7, ['.mc-recorded-sub', '.mc-recorded .mc-recorded-sub'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+    [8, '.mc-recorded-card',
+    ['background', 'radius', 'padding', 'marginTop']],
+    [9, '.mc-recorded-row',
+    ['justify', 'fontWeight', 'fontSize', 'lineHeight']],
+    [10, '.mc-recorded-row > span:first-child',
+    ['color']],
+    [11, '.mc-recorded-row__kcal',
+    ['color']],
+    [12, ['.mc-recorded-row', '.mc-recorded-row'],
+    ['marginTop']],
+    [13, '.mc-recorded-row__value',
+    ['color']],
+    [14, ['.mc-recorded-hint', '.mc-recorded .mc-recorded-hint'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop', 'textAlign']],
+  ]],
+  ['Чек-ин · записано с расчётным весом', [
+    [9, '.mc-recorded-row',
+    ['justify', 'align', 'fontWeight', 'fontSize', 'lineHeight']],
+    [11, '.mc-recorded-row__value',
+    ['color']],
+    [12, '.mc-recorded-row__mark',
+    ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'color']],
+    [14, '.mc-recorded-row__kcal',
+    ['color']],
+    [15, ['.mc-recorded-hint', '.mc-recorded .mc-recorded-hint'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop', 'textAlign']],
+  ]],
+  ['Чек-ин · холод тип', [
+    [5, '.mc-rest-cold',
+    ['radius', 'background', 'padding']],
+    [6, '.mc-rest-cold-head',
+    ['align', 'justify', 'gap']],
+    [7, '.mc-rest-cold-title',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [8, '.mc-rest-cold-streak',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [9, '.mc-rest-cold-hint',
+    ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+    [10, '.mc-rest-cold-types',
+    ['direction', 'gap', 'marginTop']],
+    [11, ['.mc-rest-type', '.mc-rest-type.is-on'],
+    ['background', 'radius', 'padding', 'align', 'justify', 'gap', 'minHeight']],
+    [12, ['.mc-rest-type', '.mc-rest-type.is-on'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [13, ['.mc-rest-wave', '.mc-rest-type.is-on .mc-rest-wave'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [14, '.mc-rest-type',
+    ['background', 'radius', 'padding', 'align', 'justify', 'gap', 'minHeight']],
+    [15, '.mc-rest-type',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [16, '.mc-rest-wave',
+    ['fontWeight', 'fontSize', 'lineHeight']],
+    [17, '.mc-rest-cold-time',
+    ['background', 'radius', 'padding', 'width']],
+    [18, '.mc-rest-cold-when-label',
+    ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'color', 'textAlign']],
+    [24, '.mc-rest-clear-mark',
+    ['align', 'justify', 'gap', 'marginTop', 'minHeight']],
+    [25, '.mc-rest-clear-mark',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [26, ['.mc-recorded-hint', '.mc-rest-clear-mark-hint'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  ]],
+  ['Чек-ин · замеры', [
+    [5, '.mc-rest-layer-title',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [6, '.mc-rest-layer-hint',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+    [7, '.mc-rest-measure-list',
+    ['direction', 'gap', 'marginTop']],
+    [8, '.mc-rest-measure-row',
+    ['background', 'radius', 'padding', 'align', 'justify', 'gap', 'minHeight']],
+    [9, '.mc-rest-measure-label',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [10, '.mc-rest-measure-input',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [11, '.mc-rest-measure-unit',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [12, '.mc-rest-measure-side',
+    ['align', 'justify', 'gap', 'marginTop']],
+    [13, '.mc-rest-measure-side-label',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [14, '.mc-rest-measure-side-pills',
+    ['gap']],
+    [15, ['.mc-rest-measure-side-pill', '.mc-rest-measure-side-pill.is-on'],
+    ['minHeight', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [16, '.mc-rest-measure-side-pill',
+    ['minHeight', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [17, '.mc-rest-clear-mark',
+    ['align', 'justify', 'gap', 'marginTop', 'minHeight']],
+    [18, '.mc-rest-clear-mark',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [19, ['.mc-recorded-hint', '.mc-rest-clear-mark-hint', '.mc-rest-measure-foot-hint'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  ]],
+  ['Чек-ин · курс добавок пуст', [
+    [6, '.mc-supp-flow-empty-card',
+    ['radius', 'background', 'padding', 'textAlign']],
+    [7, '.mc-supp-flow-empty-icon',
+    ['width', 'height', 'radius', 'background', 'align', 'justify']],
+    [8, '.mc-supp-flow-empty-title',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+    [9, '.mc-supp-flow-empty-body',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+    [10, '.mc-supp-flow-note',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop', 'textAlign']],
+    [13, '.mc-supp-flow-later',
+    ['minHeight', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ]],
+  ['Добавки · курс', [
+    [6, '.mc-supp-flow-lead',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [7, '.mc-supp-flow-course-list',
+    ['direction', 'gap', 'marginTop']],
+    [8, '.mc-supp-flow-course-row',
+    ['background', 'radius', 'padding', 'align', 'gap', 'minHeight']],
+    [9, '.mc-supp-flow-add-row',
+    ['align', 'gap', 'marginTop', 'minHeight', 'radius', 'background', 'padding']],
+    [10, '.mc-supp-flow-add-icon',
+    ['width', 'height', 'radius', 'background', 'align', 'justify', 'flex']],
+    [11, '.mc-supp-flow-add-row',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [12, ['.mc-supp-flow-note', '.mc-supp-flow--course .mc-supp-flow-note'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  ]],
+  ['Добавки · добавление', [
+    [6, '.mc-supp-flow-search',
+    ['align', 'gap', 'background', 'radius', 'padding', 'minHeight']],
+    [7, '.mc-supp-flow-search-input',
+    ['fontWeight', 'fontSize', 'lineHeight']],
+    [9, '.mc-supp-flow-chips',
+    ['gap']],
+    [10, ['.mc-supp-flow-chip', '.mc-supp-flow-chip.is-on'],
+    ['minHeight', 'align', 'gap', 'padding', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [11, '.mc-supp-flow-chip',
+    ['minHeight', 'align', 'padding', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [13, '.mc-supp-flow-foot',
+    ['align', 'gap']],
+    [14, '.mc-supp-flow-selected-count',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'flex']],
+  ]],
+  ['Добавки · доза и время', [
+    [6, '.mc-supp-flow-dose-kicker',
+    ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'color']],
+    [7, '.mc-supp-flow-dose-stepper',
+    ['align', 'gap', 'marginTop']],
+    [8, '.mc-supp-flow-dose-btn',
+    ['width', 'height', 'radius', 'background', 'align', 'justify']],
+    [9, '.mc-supp-flow-dose-value',
+    ['align', 'gap']],
+    [10, '.mc-supp-flow-dose-num',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'tracking']],
+    [11, '.mc-supp-flow-dose-unit',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [12, '.mc-supp-flow-dose-hint',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop', 'textAlign']],
+    [13, '.mc-supp-flow-timing-label',
+    ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'color']],
+    [15, ['.mc-supp-flow-note', '.mc-supp-flow-note--left'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  ]],
+  ['Чек-ин · замеры просрочены', [
+    [23, '.mc-rest-supp-list',
+    ['direction', 'gap', 'marginTop']],
+    [24, '.mc-rest-supp-name',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [25, '.mc-rest-supp-time',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [26, '.mc-rest-supp-add',
+    ['align', 'gap', 'marginTop', 'minHeight']],
+    [27, '.mc-rest-supp-add-icon',
+    ['width', 'height', 'radius', 'background', 'align', 'justify', 'flex']],
+    [28, '.mc-rest-supp-add',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [32, ['.mc-rest-row', '.mc-rest-row.mc-rest-row--overdue'],
+    ['radius', 'padding', 'minHeight', 'align', 'justify', 'gap']],
+    [35, '.mc-rest-overdue-badge',
+    ['fontWeight', 'color']],
+    [38, ['.mc-rest-chevron', '.mc-rest-chevron--accent'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ]],
+  ['Чек-ин · согласие не подписано', [
+    [18, '.mc-rest-consent-card',
+    ['radius', 'background', 'padding', 'marginTop']],
+    [19, '.mc-rest-consent-card-title',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [20, '.mc-rest-consent-card-body',
+    ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+    [21, '.mc-rest-consent-primary',
+    ['flex', 'minHeight', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [22, '.mc-rest-consent-secondary',
+    ['flex', 'minHeight', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ]],
+  ['Чек-ин · остальное минимум', [
+    [18, '.mc-rest-empty-note',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  ]],
+  ['Чек-ин · остальное со строкой периода', [
+    [19, '.mc-rest-cycle-mark-chip',
+    ['flex', 'align', 'minHeight', 'padding', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [21, '.mc-rest-chevron',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ]],
+  ['Чек-ин · остальное на неделе периода', [
+    [5, '.mc-rest-cycle-week-card',
+    ['radius', 'background', 'padding']],
+    [6, '.mc-rest-cycle-week-head',
+    ['align', 'justify', 'gap']],
+    [7, '.mc-rest-cycle-week-title',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [8, '.mc-rest-cycle-week-badge',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [9, '.mc-rest-cycle-week-hint',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+    [10, '.mc-rest-cycle-days',
+    ['gap', 'marginTop']],
+    [11, '.mc-rest-cycle-day-btn',
+    ['flex', 'minHeight', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [13, '.mc-rest-cycle-week-actions',
+    ['gap', 'marginTop']],
+  ]],
+];
+
 const YV_FRAMES = [
   ['Чек-ин · вчера по ощущениям', {
     title: 6, sub: 7, list: 8, force: 9, forceTitle: 10, forceKcal: 11,
@@ -395,6 +646,12 @@ describe('«Утренний чек-ин» · разбор кадров канв
       expect(compare({
         razbor, rules, frame, pairs: stepsPairs(n, withHint).concat(extra),
       })).toEqual([]);
+    }
+  });
+
+  it('тринадцать кадров слоёв, добавок и итога совпадают с продуктом', () => {
+    for (const [frame, pairs] of REST_FRAMES) {
+      expect(compare({ razbor, rules, frame, pairs })).toEqual([]);
     }
   });
 
@@ -493,7 +750,22 @@ describe('«Утренний чек-ин» · разбор кадров канв
     expect(row['border-top']).toBeUndefined();
   });
 
+  // Верхняя карточка недели периода стояла на фоне страницы без обводки —
+  // то есть на экране её не было видно вовсе; клетки дня внутри стояли на
+  // первой поверхности. Обе поверхности были взяты ступенью ниже кадра.
+  it('карточка недели периода видна, клетки дня внутри неё — тоже', () => {
+    expect(rules.get('.mc-rest-cycle-week-card').background).toBe('var(--v4-chip, #efe3cf)');
+    expect(rules.get('.mc-rest-cycle-day-btn').background).toBe('var(--v4-bg, #fffaf1)');
+    expect(rules.get('.mc-rest-cycle-mark-chip').background).toBe('var(--v4-chip, #efe3cf)');
+  });
+
+  // Волна и шеврон стояли одним правилом; кадры описывают их порознь.
+  it('шеврон строки и волна набраны порознь', () => {
+    expect(rules.get('.mc-rest-chevron')['font-size']).toBe('15px');
+    expect(rules.get('.mc-rest-wave')['font-size']).toBe('11px');
+  });
+
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(44);
+    expect(EXCEPTIONS.size).toBe(50);
   });
 });
