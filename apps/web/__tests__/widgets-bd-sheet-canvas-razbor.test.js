@@ -95,8 +95,9 @@ const PICK = {
   height: (v) => num(v, /высота ([\d.]+)px/),
   minHeight: (v) => num(v, /высота от ([\d.]+)px/),
   width: (v) => num(v, /ширина ([\d.]+)px/),
-  // Кадр пишет радиус и одним числом, и четырьмя — «2px 2px 0 0».
-  radius: (v) => num(v, /радиус ([\d.]+px(?: [\d.]+(?:px)?)*)/),
+  // Кадр пишет радиус и одним числом, и четырьмя — «2px 2px 0 0», причём
+  // четвёрка может начинаться с голого нуля: «радиус 0 999px 999px 0».
+  radius: (v) => num(v, /радиус ((?:[\d.]+px|0)(?:\s+(?:[\d.]+px|0))*)/),
   padding: (v) => num(v, /поля ([^,]+?)(?:,|$)/),
   fontWeight: (v) => num(v, /шрифт (\d+) [\d.]+px/),
   fontSize: (v) => num(v, /шрифт \d+ ([\d.]+)px/),
@@ -487,6 +488,48 @@ const MACROS = [
     '.widget-v4-goalbar', ['height', 'radius', 'background']]
 ];
 
+// Кадры шторок «Инсулиновая волна» и «Сон» — виды этих двух плиток. Оба
+// кадра рисуют превью в натуральную величину формата (2×1 — 143×64, 2×2 —
+// 143×136), поэтому числа превью здесь не превью-масштаб, а сама плитка.
+const WAVE_SLEEP = [
+  ['Шторка · Инсулиновая волна', 'отступ сверху 9px, распределение space-between, выравнивание baseline', 0,
+    '.widget-v4-stack__footer', ['justify', 'align']],
+  ['Шторка · Инсулиновая волна', '«второй приём попал в волну»', 0,
+    '.widget-v4-insulin-wave__overlap-note', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Шторка · Инсулиновая волна', 'зазор 2px, высота 9px, отступ сверху auto', 0,
+    '.widget-v4-insulin-daybar', ['gap', 'height', 'marginTop']],
+  ['Шторка · Инсулиновая волна', 'флекс 9, радиус 999px 0 0 999px', 0,
+    ['.widget-v4-insulin-daybar__seg', '.widget-v4-insulin-daybar__seg:first-child'],
+    ['radius', 'background']],
+  ['Шторка · Инсулиновая волна', 'флекс 13, фон #e6cfa8', 0,
+    '.widget-v4-insulin-daybar__seg--up', ['background']],
+  ['Шторка · Инсулиновая волна', 'флекс 2, фон var(--tx)', 0,
+    '.widget-v4-insulin-daybar__seg--now', ['background']],
+  ['Шторка · Инсулиновая волна', 'радиус 0 999px 999px 0', 0,
+    '.widget-v4-insulin-daybar__seg:last-child', ['radius']],
+  ['Шторка · Инсулиновая волна', 'распределение space-between, шрифт 600 8.5px/1', 0,
+    '.widget-v4-insulin-daybar__labels', ['justify', 'fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+
+  ['Шторка · Сон', 'выравнивание flex-end, распределение space-between, зазор 9px, отступ сверху auto', 0,
+    '.widget-v4-sleep-debt', ['align', 'justify', 'gap', 'marginTop']],
+  ['Шторка · Сон', 'выравнивание baseline, зазор 3px', 0,
+    '.widget-v4-sleep-debt__num', ['align', 'gap']],
+  ['Шторка · Сон', 'выравнивание flex-end, зазор 3px, высота 22px, флекс none, ширина 62px', 0,
+    '.widget-v4-sleep-debt__bars', ['align', 'gap', 'height', 'width']],
+  ['Шторка · Сон', 'флекс 1, высота 8px, радиус 2px, фон var(--val-bad)', 0,
+    ['.widget-v4-sleep-debt__bar', '.widget-v4-sleep-debt__bar--short'], ['radius', 'background']],
+  ['Шторка · Сон', 'флекс 1, высота 14px, радиус 2px, фон var(--gr2)', 0,
+    ['.widget-v4-sleep-debt__bar', '.widget-v4-sleep-debt__bar--ok'], ['radius', 'background']],
+  ['Шторка · Сон', 'позиция relative, высота 7px, радиус 999px', 0,
+    '.widget-v4-sleep-window', ['height', 'radius', 'background']],
+  ['Шторка · Сон', 'позиция absolute, ширина 68%, радиус 999px', 0,
+    '.widget-v4-sleep-window__target', ['radius', 'background']],
+  ['Шторка · Сон', 'позиция absolute, ширина 57%, радиус 999px', 0,
+    '.widget-v4-sleep-window__actual', ['radius', 'background']],
+  ['Шторка · Сон', 'распределение space-between, шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.4), отступ сверху 7px', 0,
+    '.widget-v4-sleep-window__labels', ['justify', 'fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']]
+];
+
 // Кадры «Быстрые действия · …» — карточка плавающей кнопки, одиннадцать штук.
 // Общее у всех — подложка, сама карточка, строка пункта и две кнопки; своё —
 // состояние: раскрыто, один пункт, правка, скрытые чипами.
@@ -604,7 +647,8 @@ const EXCEPTIONS = new Map([
 describe('каркас листа разбора против разбора кадров канваса', () => {
   const source = fs.readFileSync(CANVAS, 'utf8');
   const razbor = readRazbor(source);
-  const rules = readRules(fs.readFileSync(CSS, 'utf8'));
+  const css = fs.readFileSync(CSS, 'utf8');
+  const rules = readRules(css);
 
   // Кадры, годные для сверки геометрии: только data-demo="stop".
   const stopFrames = new Set();
@@ -707,6 +751,14 @@ describe('каркас листа разбора против разбора к�
     expect(drift).toEqual([]);
   });
 
+  it('виды волны и сна совпадают со своими кадрами', () => {
+    const drift = [];
+    for (const [frame, anchor, offset, sel, props] of WAVE_SLEEP) {
+      drift.push(...compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] }));
+    }
+    expect(drift).toEqual([]);
+  });
+
   it('карточка быстрых действий совпадает со своими кадрами', () => {
     const drift = [];
     for (const [frame, anchor, offset, sel, props] of QUICK) {
@@ -751,12 +803,32 @@ describe('каркас листа разбора против разбора к�
       ...CHARTS.map((p) => p[0]),
       ...QUICK.map((p) => p[0]),
       ...MACROS.map((p) => p[0]),
+      ...WAVE_SLEEP.map((p) => p[0]),
       ...shutterPairs(razbor).map((p) => p[0]),
       'Разбор · Калории',
       'Главная · дефолтная раскладка'
     ]);
     const rejected = [...used].filter((frame) => kind.get(frame) !== 'stop');
     expect(rejected).toEqual([]);
+  });
+
+  // Дефект, который нашёл стенд 31 августа: тон нахлёста у волны не доезжал до
+  // числа. Одноклассовые .widget-v4-val--* объявлены выше по файлу, чем цвет
+  // самих чисел, и при равном весе проигрывают ему — тон молча исчезает.
+  // Правило: у героя и мини-числа парное правило есть на каждый тон набора.
+  it('тон значения не теряется на весе селектора', () => {
+    const tones = [...new Set(
+      [...css.matchAll(/^\.widget-v4-val--([a-z]+)\s*\{/gm)].map((m) => m[1])
+    )];
+    expect(tones.length).toBeGreaterThan(4);
+    const missing = [];
+    for (const base of ['widget-v4-hero-num__val', 'widget-v4-mini__value']) {
+      for (const tone of tones) {
+        if (rules.has(`.${base}.widget-v4-val--${tone}`)) continue;
+        missing.push(`.${base}.widget-v4-val--${tone}`);
+      }
+    }
+    expect(missing).toEqual([]);
   });
 
   it('осознанные отступления не разрослись', () => {

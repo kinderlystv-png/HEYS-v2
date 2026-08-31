@@ -10981,6 +10981,15 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   color: #8a4a20;
 }
 
+/* Тёплая метка нахлёста (строка контракта «волна · пересечение») терялась на
+   героях и мини-числах: одноклассовая .widget-v4-val--overlap объявлена выше
+   по файлу, чем правила цвета самих чисел, и проигрывала им при равном весе.
+   Виды «Текущая волна» и «Пересечения» рисовали нахлёст чернилами. */
+.widget-v4-hero-num__val.widget-v4-val--overlap,
+.widget-v4-mini__value.widget-v4-val--overlap {
+  color: var(--v4-wave-overlap, #d99a63);
+}
+
 .widget-v4-row__value.widget-v4-val--good {
   color: var(--v4-sand-ok-fill, #7a8a5e);
 }
