@@ -614,8 +614,11 @@
   gap: 8px;
 }
 
+/* Оговорка к ярусу: контракт «ярус вместо заголовка блока» задаёт 10,5 px/600
+   чернил 38 %. Стояло 9,5/500 — на два шага мельче шкалы зоны, и рядом с
+   ярусом 10 px оговорка читалась как случайный мелкий текст. */
 .reports-v4-tier__note {
-  font: 500 9.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0;
   text-transform: none;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
