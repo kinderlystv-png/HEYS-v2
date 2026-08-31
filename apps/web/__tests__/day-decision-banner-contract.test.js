@@ -45,6 +45,16 @@ describe('баннер решения о дне', () => {
     expect(BANNER).toContain("}, 'Изменить')");
   });
 
+  // Строка контракта «три пути решения»: «это сказано строкой под
+  // кнопками». Строки не было вовсе, а два вердикта снимка стояли «=»
+  // со ссылкой на этот гейт — он её не проверял.
+  it('под кнопками сказано, что будет без ответа', () => {
+    expect(BANNER).toContain('Пока ответа нет, день не идёт ни в средние, ни в долг калорий.');
+    // Сноска стоит ПОСЛЕ кнопок, а не над ними.
+    expect(BANNER.indexOf("'Не учитывать день'"))
+      .toBeLessThan(BANNER.indexOf('Пока ответа нет'));
+  });
+
   it('пустой день говорит про записи, а не про данные', () => {
     expect(BANNER).toContain('За этот день нет записей');
   });
@@ -104,12 +114,44 @@ describe('карточка подтверждения дня', () => {
 
   // Кнопка «Изменить» держалась на дореформенных литералах: белый фон на
   // песочной подложке и слейтовый текст не менялись ни в одном наборе.
+  //
+  // Проверка сторожит ПРАВИЛО, а не конкретные роли. Прежняя редакция
+  // ждала именно --v4-bg и --v4-ink — и упала на переводе кнопки в
+  // пилюлю контракта (--v4-chip / --v4-act-text), то есть на починке.
   it('кнопка «Изменить» красится ролями, а не литералами', () => {
     const at = BANNER.indexOf('CHANGE_BTN_STYLE');
     const head = BANNER.slice(at, BANNER.indexOf('};', at));
-    expect(head).not.toContain("'#fff'");
-    expect(head).not.toContain('#1f2937');
-    expect(head).toContain('var(--v4-bg');
-    expect(head).toContain('var(--v4-ink');
+    // Запасные значения внутри var() — часть роли, а не литерал.
+    const stripped = head.replace(/var\([^)]*\)/g, 'ROLE');
+    expect(stripped).not.toMatch(/#[0-9a-fA-F]{3,8}/);
+    expect(stripped).not.toMatch(/rgba?\(/);
+    const colours = head.match(/(background|color|border)\s*:\s*'[^']*'/g) || [];
+    expect(colours.length).toBeGreaterThan(0);
+    for (const decl of colours) {
+      expect(/var\(--v4-|'none'/.test(decl), decl).toBe(true);
+    }
+  });
+
+  // Строка контракта «карточка · свёрнутое решение о дне» и элемент 14
+  // кадра говорят одно: пилюля 32 высотой, а не кнопка формы.
+  it('«Изменить» — пилюля 32 высотой, а не кнопка формы', () => {
+    const at = BANNER.indexOf('CHANGE_BTN_STYLE');
+    const head = BANNER.slice(at, BANNER.indexOf('};', at));
+    expect(head).toContain('minHeight: 32');
+    expect(head).toContain('borderRadius: 999');
+    expect(head).toContain("padding: '0 12px'");
+    expect(head).toContain("border: 'none'");
+    expect(head).toMatch(/font:\s*'700 11px\/1/);
+  });
+
+  // Свёрнутая строка стоит на тоне карточки, а не баннера вопроса:
+  // --tint продолжал просить внимания после того, как ответ уже дан.
+  it('свёрнутая строка не носит тон баннера вопроса', () => {
+    const at = BANNER.indexOf('COMPACT_BANNER_STYLE');
+    const head = BANNER.slice(at, BANNER.indexOf('};', at));
+    expect(head).not.toContain('--v4-tint');
+    expect(head).toContain('var(--v4-card');
+    expect(head).toContain('borderRadius: 16');
+    expect(head).toContain("padding: '12px 14px'");
   });
 });

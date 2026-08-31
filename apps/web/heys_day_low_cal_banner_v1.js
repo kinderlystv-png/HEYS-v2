@@ -146,15 +146,19 @@
 
   // Контракт «после ответа — одна строка»: решение видно всегда, а не
   // исчезает вместе с баннером.
+  // Строка контракта «карточка · свёрнутое решение о дне» и кадры «День
+  // пустой · выбор» (элементы 12 и 15) говорят одно: строка на --c1
+  // радиусом 16 полями 12/14, зазор 10. Стояла на --tint радиусом 20, а
+  // --tint — тон баннера ВОПРОСА: свёрнутый ответ на нём продолжал
+  // просить внимания, хотя решение уже принято.
   const COMPACT_BANNER_STYLE = {
-    background: 'var(--v4-tint, #f6e6dd)',
-    borderRadius: 20,
-    padding: '10px 16px',
+    background: 'var(--v4-card, #f7efe2)',
+    borderRadius: 16,
+    padding: '12px 14px',
     margin: '8px 0',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    gap: 10,
     fontSize: 12
   };
 
@@ -180,15 +184,23 @@
 
   // Литералы #fff и #1f2937 остались от дореформенного вида: белая кнопка на
   // песочной подложке и слейтовый текст не менялись ни в одном наборе.
+  // «Изменить» — пилюля 32 высотой на --c2 тоном --ac 11/700: та же строка
+  // контракта и элемент 14 кадра. Стояла обведённая кнопка радиусом 8 на
+  // фоне страницы чернилами — второстепенное действие выглядело как
+  // обычная кнопка формы и спорило с текстом решения рядом.
   const CHANGE_BTN_STYLE = {
-    padding: '4px 10px',
-    border: '1px solid var(--v4-line, rgba(0,0,0,0.08))',
-    borderRadius: 8,
-    background: 'var(--v4-bg, #fffaf1)',
+    flex: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 32,
+    padding: '0 12px',
+    border: 'none',
+    borderRadius: 999,
+    background: 'var(--v4-chip, #efe3cf)',
     cursor: 'pointer',
-    fontSize: 12,
-    fontWeight: 600,
-    color: 'var(--v4-ink, #201e1d)'
+    font: '700 11px/1 Figtree, system-ui, sans-serif',
+    color: 'var(--v4-act-text, #8a4a20)'
   };
 
   // Общий рендер баннера выбора (State A) — переиспользуется и для дня с едой
@@ -224,7 +236,21 @@
           style: ACTION_BTN_STYLE,
           title: 'Явно исключить день из статистики'
         }, 'Не учитывать день')
-      )
+      ),
+      // Замыкающая сноска — строки контракта «карточка · баннер решения
+      // о дне» и «три пути решения»: «Пока ответа нет, день не идёт ни в
+      // средние, ни в долг калорий, и это сказано строкой под кнопками».
+      // Строки не было вовсе: человек видел три кнопки и не знал, что
+      // происходит, пока он не ответил.
+      React.createElement('div', {
+        style: {
+          marginTop: 10,
+          fontSize: 11,
+          fontWeight: 500,
+          lineHeight: 1.5,
+          color: 'var(--v4-ink-3, rgba(0,0,0,0.45))'
+        }
+      }, 'Пока ответа нет, день не идёт ни в средние, ни в долг калорий.')
     );
   }
 
@@ -232,7 +258,13 @@
     return React.createElement('div', { className: 'low-cal-banner low-cal-banner-compact', style: COMPACT_BANNER_STYLE },
       // Голодание — решение о дне, пропуск — его отсутствие: второе приглушено.
       React.createElement('span', {
-        style: { color: muted ? 'var(--v4-ink-3, rgba(0,0,0,0.45))' : 'var(--v4-ink, #201e1d)' }
+        // Контракт и кадр дают пропуску 55 %, стояло 45 %.
+        style: {
+          flex: 1,
+          fontWeight: 600,
+          lineHeight: 1.35,
+          color: muted ? 'var(--v4-ink-2, rgba(0,0,0,0.55))' : 'var(--v4-ink, #201e1d)'
+        }
       }, label),
       React.createElement('button', {
         type: 'button',
