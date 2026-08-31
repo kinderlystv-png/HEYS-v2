@@ -1648,9 +1648,9 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   transition: stroke-width 0.15s ease;
 }
 
-[data-theme$='dark'] .meals-day-sparkline {
-  background: var(--surface-secondary, #1f2937);
-}
+/* Тёмная половина того же моста: --surface-secondary держит холодный #1f2937.
+   Роль --v4-surface сама меняется по теме, поэтому отдельное тёмное правило
+   больше не нужно — оставлено пустым местом, чтобы не плодить переопределение. */
 
 @keyframes progressSlide {
   0% {
