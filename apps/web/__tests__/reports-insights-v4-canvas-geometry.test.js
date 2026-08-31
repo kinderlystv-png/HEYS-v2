@@ -125,6 +125,29 @@ const DYNAMICS = [
   [102, '.reports-v4-measure', ['marginTop']],
 ];
 
+// Лента дней: строка и три состояния точки зоны.
+const DAYS = [
+  [95, '.reports-v4-days__left', ['align', 'gap', 'color']],
+  [96, ['.reports-v4-days__dot', '.reports-v4-days__dot--over'],
+    ['width', 'height', 'radius', 'background']],
+  [98, ['.reports-v4-days__dot', '.reports-v4-days__dot--good'],
+    ['width', 'height', 'radius', 'background']],
+  [99, ['.reports-v4-days__dot', '.reports-v4-days__dot--warn'],
+    ['width', 'height', 'radius', 'background']],
+];
+
+// Кадр «Отчёты · мало данных»: заглушка до порога в семь дней.
+const STUB = [
+  [6, '.reports-v4-stub', ['background', 'radius', 'padding', 'marginTop']],
+  [8, '.reports-v4-stub__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [9, '.reports-v4-stub__note', ['fontWeight', 'fontSize', 'lineHeight']],
+  [10, '.reports-v4-stub__track', ['align', 'gap', 'marginTop']],
+  [11, ['.reports-v4-stub__progress', '.reports-v4-stub__track .reports-v4-stub__progress'],
+    ['flex', 'height', 'radius']],
+  [12, '.reports-v4-stub__progress-fill', ['radius', 'background']],
+  [13, '.reports-v4-stub__count', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
 const HEADER = [
   [12, '.reports-v4-meta', ['marginTop']],
   [14, '.reports-v4-meta__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
@@ -143,6 +166,18 @@ describe('Отчёты · разбор кадров канваса', () => {
   it('шапка и герой кадра «Визуал v4 · Отчёты» совпадают с продуктом', () => {
     expect(compare({
       razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: HEADER,
+    })).toEqual([]);
+  });
+
+  it('заглушка «мало данных» совпадает с продуктом', () => {
+    expect(compare({
+      razbor, rules, frame: 'Отчёты · мало данных', pairs: STUB,
+    })).toEqual([]);
+  });
+
+  it('лента дней и три состояния точки совпадают с продуктом', () => {
+    expect(compare({
+      razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: DAYS,
     })).toEqual([]);
   });
 
