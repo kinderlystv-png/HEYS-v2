@@ -141,6 +141,18 @@ const STEP5 = [
     ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
   [20, ['.mc-rest-card', '.mc-rest-card--supplements'], ['background']],
   [21, '.mc-rest-supp-head', ['align', 'justify', 'gap']],
+  // Ширину чипу задаёт контекстное правило ряда, а не сам класс кнопки.
+  [17, ['.mc-pill', '.mc-pill--choice', '.mc-rest-coffee-actions .mc-pill'],
+  ['flex', 'minWidth', 'minHeight', 'radius', 'background', 'fontSize', 'lineHeight', 'ring']],
+  [23, '.mc-rest-supp-list', ['direction', 'gap', 'marginTop']],
+  [24, '.mc-rest-supp-name', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [25, '.mc-rest-supp-time', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [26, '.mc-rest-supp-add', ['align', 'gap', 'marginTop', 'minHeight']],
+  [27, '.mc-rest-supp-add-icon',
+  ['width', 'height', 'radius', 'background', 'align', 'justify', 'flex']],
+  [28, '.mc-rest-supp-add', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [32, '.mc-rest-row', ['radius', 'background', 'padding', 'minHeight', 'align', 'justify', 'gap']],
+  [34, '.mc-rest-chevron', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // Шаг веса: приветствие, серия, крупное число и капсула колёс.
@@ -669,7 +681,7 @@ const YV_FRAMES = [
 // Сколько строк разбора гейт реально берёт в пары. Заморожено: падение
 // значит, что строка выпала из сверки и вердикт на неё больше ничем не
 // подкреплён; рост — что охват расширили и число пора поднять.
-const COVERAGE_FLOOR = 341;
+const COVERAGE_FLOOR = 350;
 
 describe('«Утренний чек-ин» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
