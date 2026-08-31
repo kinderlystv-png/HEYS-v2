@@ -2253,6 +2253,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     console.log('[openProductPortionsEditor] calling HEYS.StepModal.show');
     HEYS.StepModal.show({
+      chevronBack: true,
       steps: [
         {
           id: 'portions',
@@ -3313,7 +3314,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             onClose?.();
           },
           'aria-label': view === 'list' ? 'Назад' : 'К списку наборов'
-        }, '←'),
+        },
+          // Кадры зоны рисуют возврат шевроном 17×17, а не типографской стрелкой.
+          React.createElement('svg', {
+            width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+            strokeLinejoin: 'round', 'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M15 18l-6-6 6-6' }))),
         React.createElement('div', { className: 'mpr-title' }, viewTitle),
         view === 'list'
           ? React.createElement('button', {
@@ -10668,6 +10675,7 @@ NOVA: 1
     }
 
     HEYS.StepModal.show({
+      chevronBack: true,
       steps: [
         {
           id: 'edit_basic',
@@ -11259,6 +11267,7 @@ NOVA: 1
       : 'Добавление';
 
     HEYS.StepModal.show({
+      chevronBack: true,
       steps: [
         {
           id: 'search',
@@ -11514,6 +11523,7 @@ NOVA: 1
     }
 
     HEYS.StepModal.show({
+      chevronBack: true,
       steps: [
         {
           id: 'grams',

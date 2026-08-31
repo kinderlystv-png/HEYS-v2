@@ -511,7 +511,11 @@
     onStepSaved = null,
     onStepShown = null,
     allowProgressForwardNav = true,
-    layout = 'default'
+    layout = 'default',
+    // Кадры v4 рисуют возврат шевроном 17×17, а не словами «← Назад». Флаг
+    // включается потоками, у которых кадр это прямо задаёт, чтобы не менять
+    // шапку тем, чей канвас ещё не сведён.
+    chevronBack = false
   }) {
     const [currentStepIndex, setCurrentStepIndex] = useState(initialStep);
     const [animating, setAnimating] = useState(false);
@@ -1429,7 +1433,7 @@
                   onClick: handleDailyHeaderBack,
                   'aria-label': 'Назад'
                 },
-                  isDailyLayout
+                  (isDailyLayout || chevronBack)
                     ? React.createElement('svg', {
                       className: 'mc-header-back-icon',
                       width: 17,

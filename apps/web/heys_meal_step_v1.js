@@ -1212,6 +1212,7 @@
     const initialTime = parseInitialMealTime(options.time || options.initialTime);
 
     HEYS.StepModal.show({
+      chevronBack: true,
       steps: ['mealTime', 'mealMood'],
       title: 'Новый приём',
       initialSlideInDirection: options.initialSlideInDirection || null,
@@ -1321,6 +1322,7 @@
     const hourIndex = hourToWheelIndex(hours);
 
     HEYS.StepModal.show({
+      chevronBack: true,
       steps: ['mealTime'],  // Только 1 шаг — время и тип
       title: '',  // Без заголовка
       icon: '',   // Без иконки
@@ -1392,6 +1394,7 @@
     }
 
     HEYS.StepModal.show({
+      chevronBack: true,
       steps: ['mealMood'],  // Только 1 шаг — оценки
       title: '',  // Без заголовка
       icon: '',   // Без иконки

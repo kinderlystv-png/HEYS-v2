@@ -30,7 +30,9 @@ describe('add product presets v4 canvas structure', () => {
     expect(addProductSource).toContain('Собрать новый набор');
     expect(addProductSource).toContain('Правка и удаление — по тапу на строку');
     expect(addProductSource).toContain('`Добавить ${active.length} ${pluralProduct(active.length)} · ${totalKcal} ккал`');
-    expect(addProductSource).toContain("'←'");
+    // Возврат стал шевроном 17×17 по кадрам зоны: типографская стрелка
+    // зависела от шрифта и не совпадала с толщиной остальных значков.
+    expect(addProductSource).toContain("d: 'M15 18l-6-6 6-6'");
     expect(addProductSource).not.toContain('Создать новый набор');
   });
 
