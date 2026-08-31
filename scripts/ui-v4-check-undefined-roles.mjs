@@ -72,7 +72,6 @@ const BASELINE = {
     'styles/modules/730-widgets-dashboard.css',
   ],
   'v4-ok-ink': ['styles/modules/733-ui-v4-reports.css'],
-  'v4-ok-surface': ['styles/modules/733-ui-v4-reports.css'],
   'v4-sage-ink': ['styles/modules/600-steps-and-aps.css'],
   'v4-sage-surface': ['styles/modules/600-steps-and-aps.css'],
   'v4-sand-green-ink': [
@@ -97,9 +96,7 @@ const BASELINE = {
   // риска — «разрушающее», жиры в полосе и легенде — «внимание» первой
   // ступени. В виджетах роль ещё живёт.
   'v4-warn': ['styles/modules/730-widgets-dashboard.css'],
-  'v4-warn-bg': ['styles/modules/733-ui-v4-reports.css'],
   'v4-warn-fill': ['styles/modules/733-ui-v4-reports.css'],
-  'v4-warn-surface': ['styles/modules/733-ui-v4-reports.css'],
 };
 
 function collect(dir = WEB, acc = [], base = '') {

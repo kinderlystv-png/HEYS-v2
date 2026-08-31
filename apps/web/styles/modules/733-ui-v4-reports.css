@@ -174,12 +174,30 @@
   border-radius: 20px;
 }
 
+/* Фон плиток — определёнными ролями набора.
+
+   Стояли --v4-ok-surface и --v4-warn-surface, которых в наборе нет вовсе:
+   правило всегда брало запасной литерал, а спасали его четыре
+   [data-palette]-переопределения ниже, ставившие --v4-ok-bg и --v4-warn-bg.
+   Две записи из четырёх в каждом были мёртвыми: data-palette держит только
+   семейство («sand» и для sand-dark, «blue» и для blue-dark), поэтому
+   селекторы [data-palette="sand-dark"] и [data-palette="blue-dark"] не
+   совпадали никогда.
+
+   Результат тот же, но роль теперь стоит там, где её читают, и две
+   несуществующие роли ушли из долга гейта. */
 .reports-v4-summary-card--norm {
-  background: var(--v4-ok-surface, #dfe6d1);
+  background: var(--v4-ok-bg, #eaefe0);
 }
 
 .reports-v4-summary-card--score {
-  background: var(--v4-warn-surface, #f0d8c4);
+  /* --v4-warn-bg тоже нет в наборе: правило брало литерал и не менялось в
+     тёмных палитрах, а подпись плитки менялась — светлый текст на светло-
+     розовой карточке не читался вовсе. Взята --v4-tint, ближайший тёплый
+     тон, который есть во всех четырёх наборах. Кадр в этом месте сам ставит
+     литерал #f0d8c4 — роли под него нет, и это тот же пробел набора, что у
+     точки недобора в ленте дней. */
+  background: var(--v4-tint, #f6e6dd);
 }
 
 .reports-v4-summary-card__label {
@@ -207,10 +225,22 @@
   color: var(--v4-sand-act-deep, #8a4a20);
 }
 
+/* Тон числа плитки несёт смысл, и кадр разводит их: «Дней в норме» зелёным
+   («в норме» — это и есть хороший исход), «Средняя оценка» акцентом. Обе
+   стояли на чернилах, и плитки читались как два одинаковых числа. */
+.reports-v4-summary-card--norm .reports-v4-summary-card__value {
+  color: var(--v4-ok-text, #5c7a3f);
+}
+
+.reports-v4-summary-card--score .reports-v4-summary-card__value {
+  color: var(--v4-act-text, #8a4a20);
+}
+
 .reports-v4-summary-card__suffix {
   font-size: 11px;
   font-weight: 500;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  /* Запасное значение равно роли: --v4-ink-4 это 38 %. */
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .reports-v4-dynamics-card {
@@ -611,20 +641,6 @@
   border-color: transparent;
 }
 
-[data-palette="sand"] .reports-v4-summary-card--norm,
-[data-palette="sand-dark"] .reports-v4-summary-card--norm,
-[data-palette="blue"] .reports-v4-summary-card--norm,
-[data-palette="blue-dark"] .reports-v4-summary-card--norm {
-  background: var(--v4-ok-bg); /* v4-intentional */
-}
-
-[data-palette="sand"] .reports-v4-summary-card--score,
-[data-palette="sand-dark"] .reports-v4-summary-card--score,
-[data-palette="blue"] .reports-v4-summary-card--score,
-[data-palette="blue-dark"] .reports-v4-summary-card--score {
-  background: var(--v4-warn-bg); /* v4-intentional */
-}
-
 .sparkline-popup.sparkline-popup--retention {
   padding: 9px 11px;
   border-radius: 12px;
@@ -685,7 +701,8 @@
   align-items: center;
   gap: 10px;
   padding: 11px 0;
-  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  /* Запасное значение равно роли: --v4-line это 8 %, а не 7 %. */
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .reports-v4-discipline__row:last-of-type {
@@ -703,7 +720,13 @@
   flex: 1;
   height: 8px;
   border-radius: 999px;
-  background: var(--v4-chip, rgba(0, 0, 0, 0.07));
+  /* Дорожка полосы — --v4-track, роль ровно под это («пустой сегмент
+     мини-карточек и дорожка полосы»). Стояла --v4-chip: это поверхность
+     чипа, того же тона, что и герой карточки, — незаполненный кусок
+     сливался с фоном, и полоса читалась короче, чем она есть. Запасное
+     значение при этом обещало чернила 7 %, то есть описывало не то, что
+     рисовала роль. */
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
   overflow: hidden;
 }
 
@@ -714,13 +737,16 @@
   background: var(--v4-ok-fill, #6aa06a);
 }
 
+/* Счёт «18 из 26»: кадр и строка контракта сходятся — ширина 52 и тон --tx.
+   Стоял приглушённый --v4-ink-2, и счёт читался тише полосы, хотя он и есть
+   то самое число, ради которого строка существует. */
 .reports-v4-discipline__score {
   flex: none;
-  min-width: 56px;
+  min-width: 52px;
   text-align: right;
   font: 600 11px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink, #201e1d);
 }
 
 .reports-v4-discipline__count {
@@ -731,7 +757,7 @@
 
 .reports-v4-discipline__delta {
   flex: none;
-  min-width: 28px;
+  min-width: 30px;
   text-align: right;
   font: 700 10px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
