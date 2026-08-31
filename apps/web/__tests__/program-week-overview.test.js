@@ -94,7 +94,9 @@ describe('ProgramNextLine — первый слой', () => {
 
     expect(screen.getByText(/Следующая тренировка/)).toBeTruthy();
     expect(screen.getByText('завтра')).toBeTruthy();
-    expect(screen.getByText(/Программа/)).toBeTruthy();
+    // Ссылка названа словом кадра «Актив · день отдыха» — строчная
+    // «программа ›» (сведение 31 августа).
+    expect(screen.getByText(/программа/)).toBeTruthy();
   });
 
   it('в день с планом строки нет вовсе — карточка плана уже всё сказала', async () => {
