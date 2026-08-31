@@ -20,6 +20,29 @@ const PALETTE_FILE = 'apps/web/styles/modules/002-ui-v4-palette-roles.css';
 // Файлы палитры описывают цвет по определению — они не «места».
 const PALETTE = new Set(['002-ui-v4-palette-roles.css', '001-design-tokens.css']);
 
+// Мёртвый цвет: значение лежит в таблице данных, ключ которой никто не читает,
+// — до экрана оно не доходит вовсе. Размечать такое нельзя: решение про героя
+// принимается для места, которого нет. Источник списка и разбор каждого случая
+// — docs/ui/UI_V4_DEAD_COLORS.md. Пересечение с этой описью маленькое и
+// перечислено поимённо, чтобы при росте того списка расхождение было видно.
+// Ключ — файл, семейство и значение. Одна только пара «файл + значение»
+// вычла бы лишнее: те же #fef3c7 и #92400e стоят в этом файле ещё в шести
+// живых местах, под другими семействами.
+const DEAD = [
+  // friendlySummaries внутри CONSENT_TEXTS — к ветке ноль обращений
+  { file: 'heys_consents_v1.js', family: 'CONSENT_TEXTS', value: '#fef3c7' },
+  { file: 'heys_consents_v1.js', family: 'CONSENT_TEXTS', value: '#f59e0b' },
+  { file: 'heys_consents_v1.js', family: 'CONSENT_TEXTS', value: '#92400e' },
+  // RARITY_COLORS.legendary — таблица экспортируется, но её не читает никто:
+  // ни по имени ключа, ни индексом по .rarity
+  { file: 'heys_gamification_v1.js', family: 'RARITY_COLORS', value: '#eab308' },
+];
+let deadHits = 0;
+const isDead = (file, family, value) =>
+  DEAD.some(
+    (d) => d.file === file && d.family === family && d.value.toLowerCase() === value.toLowerCase(),
+  );
+
 // ── что считается литералом ────────────────────────────────────────────────
 const COMMENT = /\/\*[\s\S]*?\*\//g;
 const COLOR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\([^()]*\)/g;
@@ -244,10 +267,11 @@ for (const d of ['apps/web/styles/modules', 'apps/web/styles']) {
   }
 }
 
-const files = [];
+// Обоснования называют один и тот же файл двумя формами — «day/_meals.js» и
+// «_meals.js», «consents.js» и «heys_consents_v1.js». Схлопываем по пути, иначе
+// файл попадёт в опись дважды и его места удвоятся в итоге.
+const byPath = new Map();
 const unresolved = [];
-let scannedCss = 0;
-let scannedJs = 0;
 for (const [name, zones] of [...zoneFiles].sort()) {
   if (PALETTE.has(name.split('/').pop())) continue;
   const p = resolve(name);
@@ -255,13 +279,29 @@ for (const [name, zones] of [...zoneFiles].sort()) {
     unresolved.push(name);
     continue;
   }
-  const isCss = name.endsWith('.css');
+  if (!byPath.has(p)) byPath.set(p, new Set());
+  for (const z of zones) byPath.get(p).add(z);
+}
+
+const files = [];
+let scannedCss = 0;
+let scannedJs = 0;
+for (const [p, zones] of byPath) {
+  const isCss = p.endsWith('.css');
   if (isCss) scannedCss++;
   else scannedJs++;
   const raw = isCss ? scanCss(p) : scanJs(p);
+  const base = path.basename(p);
   const fam = new Map();
   for (const [k, arr] of raw) {
-    const keep = arr.filter(isWarm);
+    const keep = arr.filter((c) => {
+      if (!isWarm(c)) return false;
+      if (isDead(base, k, c)) {
+        deadHits++;
+        return false;
+      }
+      return true;
+    });
     if (keep.length) fam.set(k, keep);
   }
   files.push({
@@ -283,9 +323,20 @@ const counts = {
   'все, включая полупрозрачные': all.length,
 };
 
+// Вычет, который перестал совпадать, — это молчаливый ноль: место вернулось в
+// опись, а никто не заметил. Поэтому расхождение говорится вслух.
+if (deadHits !== DEAD.length) {
+  console.warn(
+    `Внимание: мёртвых мест вычтено ${deadHits} из ${DEAD.length} — ` +
+      'значение или семейство изменилось, сверьтесь с docs/ui/UI_V4_DEAD_COLORS.md.',
+  );
+}
+
 if (process.argv.includes('--counts')) {
   console.log(`Просмотрено: ${scannedCss} модулей стилей, ${scannedJs} файлов кода.`);
-  console.log(`Голых литералов ${totalLiterals}, из них тёплых ${all.length}.`);
+  console.log(
+    `Голых литералов ${totalLiterals}, из них тёплых ${all.length} (вычтено мёртвых: ${deadHits}).`,
+  );
   for (const [k, v] of Object.entries(counts)) console.log(`  ${k.replace(/`/g, '')}: ${v}`);
   if (unresolved.length) console.log(`Не найдено на диске: ${unresolved.join(', ')}`);
   process.exit(0);
@@ -347,7 +398,16 @@ W('   селектор) считается наравне с остальным�
 W('6. Считаются **места**, а не разные значения: один `#efe3cf` в пяти объявлениях —');
 W('   пять мест.');
 W('7. Тёплый цвет: оттенок 12–55°, насыщенность от 10 %, не серый. **Альфа не');
-W('   влияет** — тёплая тень под 8 % на синей поверхности всё равно тёплая.', '');
+W('   влияет** — тёплая тень под 8 % на синей поверхности всё равно тёплая.');
+W('8. Мёртвый цвет вычитается: значение в таблице данных, ключ которой никто не');
+W(`   читает, до экрана не доходит вовсе. Вычтено ${deadHits} — разбор в`);
+W('   [`UI_V4_DEAD_COLORS.md`](UI_V4_DEAD_COLORS.md), список в скрипте поимённо.', '');
+W('**Насыщенность считается как chroma, а не как saturation из HLS** — это');
+W('ловушка, стоившая одной перепроверке целого захода. У почти белых тёплых тонов');
+W('HLS-насыщенность раздута по построению: `#f7f5f0` даёт по HLS 0,30 при chroma');
+W('0,03, а кремовый `#fff8ea` — ровно 1,00. Со счётом по HLS в тёплые попадают');
+W('нейтральные тёплые серые: рамки и подложки вроде `#edebe5` и `#f1efe9`, которых');
+W('в мессенджере целая палитра. Разница на одном файле — 57 против 33.', '');
 W('Седьмой пункт спорный, поэтому вот то же множество под четырьмя правилами:', '');
 W('| правило | мест |', '| --- | ---: |');
 for (const [k, v] of Object.entries(counts)) W(`| ${k} | ${v} |`);
