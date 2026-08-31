@@ -121,6 +121,19 @@ const EXCEPTIONS = new Set([
   '.widget-wd-sheet__scrim|background',
 ]);
 
+// Сколько клеток «пара × свойство» гейт реально сверяет. Свойство читается,
+// только если стоит в правиле класса канваса: если разбор кадра написан
+// инлайном, `if (!(prop in want)) continue` молча пропускает его. Число
+// заморожено — падение значит потерю пары или правила, рост просит поднять.
+const COVERAGE_FLOOR = 31;
+
+// Свойства, которых нет ни в одном правиле класса канваса: гейт не читает их
+// ни разу. Раскладка и высоты виджетов размечены инлайном в кадрах, поэтому
+// на этот гейт нельзя ссылаться по строю ряда и по высоте плитки — он их не
+// видит. Список именно проверяется: если появится пара с этими свойствами,
+// тест попросит его сократить.
+const BLIND_PROPS = ['align-items', 'gap', 'height', 'justify-content', 'min-height'];
+
 describe('геометрия виджетов Главной против кадров канваса', () => {
   const canvasSource = fs.readFileSync(CANVAS, 'utf8');
   const helmet = canvasSource.slice(
@@ -201,5 +214,39 @@ describe('геометрия виджетов Главной против кад
 
   it('осознанные отступления не разрослись', () => {
     expect(EXCEPTIONS.size).toBe(3);
+  });
+
+  it('гейт называет свой охват', () => {
+    let compared = 0;
+    let skipped = 0;
+    const blind = new Map();
+    for (const [canvasSel, productSel] of PAIRS) {
+      const want = declarations(canvas.get(canvasSel));
+      for (const prop of CHECKED) {
+        if (EXCEPTIONS.has(`${productSel}|${prop}`)) continue;
+        if (prop in want) compared += 1;
+        else {
+          skipped += 1;
+          blind.set(prop, (blind.get(prop) || 0) + 1);
+        }
+      }
+    }
+    const never = [...blind.entries()]
+      .filter(([, n]) => n === PAIRS.length)
+      .map(([prop]) => prop)
+      .sort();
+    console.info(
+      `[виджеты] сверено ${compared} из ${compared + skipped} клеток `
+      + `(${((compared / (compared + skipped)) * 100).toFixed(1)} %), пар ${PAIRS.length}; `
+      + `не читается ни в одной паре: ${never.length ? never.join(', ') : 'нет'}`,
+    );
+    expect(never).toEqual(BLIND_PROPS);
+    expect(compared).toBeGreaterThanOrEqual(COVERAGE_FLOOR);
+    if (compared > COVERAGE_FLOOR) {
+      throw new Error(
+        `Охват вырос: сверяется ${compared} клеток вместо ${COVERAGE_FLOOR}. `
+        + 'Поднимите COVERAGE_FLOOR, иначе следующее падение пройдёт незаметно.',
+      );
+    }
   });
 });
