@@ -67,6 +67,31 @@ const NEW_USER = [
   [27, '.insights-v4-stub__ladder-text', ['fontWeight', 'fontSize', 'lineHeight']],
 ];
 
+const RISK = [
+  [8, '.insights-v4-attention__risk-head', ['gap']],
+  [10, '.insights-v4-attention__risk-window', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [14, '.insights-v4-attention__basis', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
+const PHENO = [
+  [7, '.insights-v4-pheno__row', ['align', 'gap', 'padding']],
+  [8, '.insights-v4-pheno__name', ['fontWeight', 'fontSize', 'lineHeight', 'width']],
+  [10, '.insights-v4-pheno__dot', ['width', 'height', 'radius', 'background']],
+];
+
+const FAIL = [
+  [6, '.insights-v4-fail__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [14, '.insights-v4-fail__row-state', ['fontWeight', 'fontSize', 'lineHeight']],
+  [17, '.insights-v4-fail__note', ['fontWeight', 'fontSize', 'lineHeight']],
+];
+
+const SHEET = [
+  [3, '.insights-v4-sheet', ['background', 'radius', 'padding']],
+  [4, '.insights-v4-sheet__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [5, '.insights-v4-sheet__text', ['fontWeight', 'fontSize', 'lineHeight']],
+  [10, '.insights-v4-sources__strength', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
 const THRESHOLDS = [
   [7, '.insights-v4-thresh__count', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [14, '.insights-v4-thresh__name', ['fontWeight', 'fontSize', 'lineHeight', 'flex']],
@@ -109,6 +134,24 @@ describe('Инсайты · разбор кадров канваса', () => {
   // Знаменатель — строки своего кадра, а не всего канваса: отчётные кадры того
   // же файла сверяет reports-insights-v4-canvas-geometry.test.js, и класть их
   // сюда значило бы называть чужую работу своим непокрытием.
+  it('кадр «риск срыва» совпадает с продуктом', () => {
+    expect(compare({ razbor, rules, frame: 'Инсайты · риск срыва', pairs: RISK })).toEqual([]);
+  });
+
+  it('кадр «метаболизм» совпадает с продуктом', () => {
+    expect(compare({ razbor, rules, frame: 'Инсайты · метаболизм', pairs: PHENO })).toEqual([]);
+  });
+
+  it('кадр «не посчиталось» совпадает с продуктом', () => {
+    expect(compare({ razbor, rules, frame: 'Инсайты · не посчиталось', pairs: FAIL })).toEqual([]);
+  });
+
+  it('лист «Как считается долг» совпадает с продуктом', () => {
+    expect(compare({
+      razbor, rules, frame: 'Раскрывашка · Как считается долг', pairs: SHEET,
+    })).toEqual([]);
+  });
+
   it('гейт называет свой охват', () => {
     const { perFrame } = coverage({ razbor });
     const mine = perFrame.filter((f) => f.frame === 'Инсайты');
@@ -291,6 +334,11 @@ describe('Инсайты · разбор кадров канваса', () => {
     'Инсайты · что если · рисунок 02',
     'Инсайты · что если · текст',
     'Инсайты · день без заданий · 11',
+    // Кнопка «Ещё N» описана двумя кадрами по-разному: в «голосе куратора» она
+    // высотой от 48, 700 13/1 на --c2, в «риске срыва» — от 44 и 600 12 без
+    // фона. Код следует первому. Строки контракта о кнопке нет, спорят сами
+    // кадры — второй такой случай в зоне после дорожки ритма приёмов.
+    'Инсайты · риск срыва · 17',
   ];
 
   it('отступления инсайтовых кадров названы поимённо', () => {
