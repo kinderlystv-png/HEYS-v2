@@ -71,7 +71,7 @@ const BASELINE = {
   '733-ui-v4-reports.css': 21,
   '734-ui-v4-curator-panel.css': 6,
   '734-ui-v4-insights.css': 35,
-  '740-cascade-card.css': 16,
+  '740-cascade-card.css': 14,
   '750-strength-builder.css': 17,
   '800-meal-optimizer.css': 40,
   '900-planning.css': 144,
@@ -86,7 +86,7 @@ const BASELINE = {
   'critical.css': 32,
   'drums-finger-trainer.css': 120,
   'fingers.css': 103,
-  'heys-components.css': 541,
+  'heys-components.css': 540,
 };
 
 function readPalette() {
