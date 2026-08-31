@@ -253,6 +253,9 @@ const SCORE = [
   [3, '.heys-score-screen__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [5, '.heys-score-screen__hero', ['background', 'radius', 'padding', 'marginTop']],
   [7, '.heys-score-screen__number-row', ['align', 'gap', 'marginTop']],
+  [9, '.heys-score-screen__delta', ['fontWeight', 'fontSize', 'lineHeight']],
+  [9, '.heys-score-screen__delta.is-up', ['color']],
+  [11, '.heys-score-screen__cascade-head', ['align', 'justify', 'gap']],
   [13, '.heys-score-screen__note', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [15, '.heys-score-screen__row', ['padding']],
   [16, '.heys-score-screen__row-line',
@@ -836,6 +839,13 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
       'Отчёты · нулевая строка матрицы · текст',
       // Кадр отстал от контракта по границам окна: 500 11px против 600 10,5.
       'Отчёты · мало данных · 04',
+      // Герой экрана разбора: кегль числа и тон слова состояния — строка
+      // контракта против кадра, записано дизайнеру. Возврат: у кадра голый
+      // шеврон без площади нажатия, в продукте кнопка 40×40.
+      'Разбор Score · 08',
+      'Разбор Score · 10',
+      'Разбор Score · рисунок 01',
+      'Разбор Score · рисунок 02',
       // Имя строки списка «Уже считается»: строка контракта даёт 12 px,
       // шаблон строки .row зоны — 12,5. Взят контракт.
       'Отчёты · мало данных · 16',

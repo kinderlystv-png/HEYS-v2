@@ -4280,10 +4280,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         React.createElement('span', { className: 'heys-score-screen__title' }, 'HEYS Score')
       ),
       React.createElement('div', { className: 'heys-score-screen__hero' },
-        React.createElement('div', { className: 'heys-score-screen__tier' }, 'За месяц'),
+        React.createElement('div', { className: 'heys-score-screen__kicker' }, 'За месяц'),
         React.createElement('div', { className: 'heys-score-screen__number-row' },
           React.createElement('span', { className: 'heys-score-screen__number', style: { color: color } }, displayNumber),
-          deltaText && React.createElement('span', { className: 'heys-score-screen__delta' }, deltaText)
+          deltaText && React.createElement('span', {
+            className: 'heys-score-screen__delta'
+              + (trend.delta14 > 0 ? ' is-up' : '')
+          }, deltaText)
         ),
         React.createElement('div', { className: 'heys-score-screen__phrase' }, phrase)
       ),

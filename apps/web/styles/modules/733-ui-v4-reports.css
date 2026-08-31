@@ -1323,11 +1323,26 @@
   margin-bottom: 16px;
 }
 
+/* Ключ карточки — шаблон .k канваса, тот же, что у заглушки «мало данных»:
+   10,5/600 трекингом .04em чернил 42 %. «За месяц» (элемент 06) в кадре
+   стоит ключом, а рисовался ярусом: капс акцентом над числом спорил с самим
+   числом за первое внимание. */
+.heys-score-screen__kicker {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
 .heys-score-screen__tier {
   font: 700 10px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--v4-sand-act-mid, #a75c2b);
+  /* Роль с именем набора набору не следует: --v4-sand-act-mid объявлена во
+     всех четырёх, но в синем повторяет песочное #a75c2b, то есть ярус
+     оставался коричневым. Канвасный --ac это --v4-act-text. */
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .heys-score-screen__number-row {
@@ -1343,9 +1358,18 @@
   letter-spacing: -0.03em;
 }
 
+/* Дельта: кадр даёт 12/600 тоном --gr. Тон применяется только к росту —
+   по той же зонной строке «роли цвета», по которой минус каскада остаётся на
+   чернилах: зелёный значит «идёт хорошо», и падение им красить нельзя, а
+   красный занят под необратимое действие. Кадр показывает только рост, и по
+   одному примеру правило для обоих знаков не выводится. */
 .heys-score-screen__delta {
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.heys-score-screen__delta.is-up {
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .heys-score-screen__phrase {
