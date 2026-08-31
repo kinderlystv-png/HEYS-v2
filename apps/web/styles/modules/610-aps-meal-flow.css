@@ -3528,12 +3528,6 @@ button.meal-quality-badge:active {
   outline: none;
 }
 
-.aps-v4-grams-hero__unit {
-  font-size: 15px;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 38%, transparent);
-}
-
 .aps-v4-grams-chips {
   display: flex;
   flex-wrap: wrap;
@@ -3546,15 +3540,24 @@ button.meal-quality-badge:active {
   margin-top: 12px;
 }
 
+/* Строка «тач-цели» сама называет пресеты граммовки отступлением кадра: «~29 —
+   под норму 44 pt не попадают». В продукте цель поднята до 44 отрицательными
+   полями: ряд по высоте не растёт, а промахиваться по граммовке приходится
+   чаще, чем по любому другому чипу этого экрана. */
 .aps-v4-grams-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin: -7px 0;
   border: 0;
   border-radius: 999px;
-  padding: 10px 11px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  padding: 0 14px;
+  background: var(--v4-bg, #fffaf1);
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-sand-ink, #201e1d);
+  color: var(--v4-ink, #201e1d);
   cursor: pointer;
 }
 

@@ -10551,8 +10551,9 @@ NOVA: 1
               max: 2000,
               'aria-label': unitMode === 'kcal' ? 'Калории' : 'Граммы'
             }),
-            React.createElement('span', { className: 'aps-v4-grams-hero__unit' },
-              unitMode === 'kcal' ? ' ккал' : ' г')
+            // Строка «единица — в подписи, не у числа»: единицу называет ярус
+            // над числом («Сколько грамм» / «Сколько ккал»), само число идёт
+            // только цифрами. Единица стояла и там, и тут.
           ),
           React.createElement('button', {
             type: 'button',
