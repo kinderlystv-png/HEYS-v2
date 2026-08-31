@@ -1,11 +1,13 @@
-// Два видимых переключателя звука советов — тумблер листа «Советы» и галочка
-// профиля — пишут в одну запись под двумя именами. Читатель предпочитает
+// Три видимых переключателя звука советов — тумблер листа «Советы», строка
+// «Звук совета» в настройках и галочка профиля — пишут в одну запись под двумя
+// именами. Читатель предпочитает
 // `adviceSoundEnabled`, поэтому контрол, пишущий только `soundEnabled`, после
 // первого же нажатия соседа переставал влиять на звук и продолжал показывать
 // своё состояние: человек видел «выключено», а совет звучал.
 //
-// Смоук держит инвариант с обеих сторон, потому что сломать его можно в любом
-// из двух файлов.
+// Смоук держит инвариант со всех трёх сторон: сломать его можно в любом из
+// трёх файлов, и одиночная проверка каждого контрола прошла бы зелёной — дефект
+// был именно в последовательности нажатий.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -29,6 +31,16 @@ function writeFromSheet(value) {
   localStorage.setItem('heys_advice_settings', JSON.stringify(raw));
 }
 
+// Что пишет строка «Звук совета» в настройках (heys_app_shell_v1.js,
+// toggleAdviceSound).
+function writeFromSettings(value) {
+  const raw = JSON.parse(localStorage.getItem('heys_advice_settings') || '{}');
+  const next = { ...raw };
+  next.adviceSoundEnabled = value;
+  next.soundEnabled = value;
+  localStorage.setItem('heys_advice_settings', JSON.stringify(next));
+}
+
 // Что пишет галочка профиля (heys_user_tab_impl_v1.js, updateSetting).
 // Вторая строка — та самая, которой не было до 31 августа.
 function writeFromProfile(value) {
@@ -38,7 +50,7 @@ function writeFromProfile(value) {
   localStorage.setItem('heys_advice_settings', JSON.stringify(next));
 }
 
-describe('звук советов · два переключателя', () => {
+describe('звук советов · три переключателя', () => {
   beforeEach(() => {
     localStorage.clear();
   });
@@ -46,6 +58,14 @@ describe('звук советов · два переключателя', () => {
   // Порядок чтения — причина, по которой два имени вообще опасны. Держим его
   // по самому движку: перепишут порядок — тест скажет, и инвариант ниже станет
   // не нужен либо станет нужен наоборот.
+  it('каноническое имя названо у читателя', () => {
+    const src = fs.readFileSync(AUDIO, 'utf8');
+    expect(
+      src.includes('Каноническое имя — `adviceSoundEnabled`'),
+      'из движка пропало правило «писать оба имени» — следующий вход сделают с одним',
+    ).toBe(true);
+  });
+
   it('движок читает adviceSoundEnabled раньше soundEnabled', () => {
     loadAudio();
     const src = fs.readFileSync(AUDIO, 'utf8');
@@ -73,21 +93,23 @@ describe('звук советов · два переключателя', () => {
     expect(raw.adviceSoundEnabled).toBe(false);
   });
 
-  it('оба контрола показывают одно и то же после любой последовательности', () => {
+  it('все контролы показывают одно и то же после любой последовательности', () => {
     const steps = [
       () => writeFromSheet(false),
       () => writeFromProfile(true),
+      () => writeFromSettings(false),
       () => writeFromSheet(true),
       () => writeFromProfile(false),
+      () => writeFromSettings(true),
       () => writeFromProfile(true),
     ];
     for (const step of steps) {
       step();
       const raw = JSON.parse(localStorage.getItem('heys_advice_settings'));
-      // Галочка профиля рисуется по soundEnabled, тумблер листа — по
-      // adviceSoundEnabled. Разойдись они, на двух экранах стояли бы разные
-      // положения одного переключателя.
-      expect(raw.soundEnabled, 'состояния двух контролов разошлись').toBe(raw.adviceSoundEnabled);
+      // Галочка профиля рисуется по soundEnabled, тумблер листа и строка
+      // настроек — по adviceSoundEnabled. Разойдись они, на трёх экранах стояли
+      // бы разные положения одного переключателя.
+      expect(raw.soundEnabled, 'состояния контролов разошлись').toBe(raw.adviceSoundEnabled);
     }
   });
 
@@ -97,6 +119,16 @@ describe('звук советов · два переключателя', () => {
       src.includes("if (key === 'soundEnabled') newSettings.adviceSoundEnabled = value;"),
       'updateSetting снова пишет только soundEnabled — галочка профиля перестанет влиять на звук',
     ).toBe(true);
+  });
+
+  it('строка «Звук совета» в настройках в коде пишет оба имени', () => {
+    const src = fs.readFileSync(path.resolve(__dirname, '../heys_app_shell_v1.js'), 'utf8');
+    const body = src.slice(src.indexOf('const toggleAdviceSound ='));
+    // Внутри тела есть свой try/catch, поэтому границей берём следующий за
+    // функцией useEffect, а не первую закрывающую скобку.
+    const scope = body.slice(0, body.indexOf('React.useEffect'));
+    expect(scope).toContain('nextStored.adviceSoundEnabled = next;');
+    expect(scope).toContain('nextStored.soundEnabled = next;');
   });
 
   it('тумблер листа в коде пишет оба имени', () => {
