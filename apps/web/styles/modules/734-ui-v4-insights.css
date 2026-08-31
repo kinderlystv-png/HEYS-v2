@@ -218,14 +218,26 @@
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
+/* Кадр «Стоит внимания · голос куратора», элемент 11: «Ещё N →» — кнопка во всю
+   ширину: высота от 48, радиус 999, фон --c2, 700 13/1. Стояла плоской ссылкой
+   тоном акцента — вход в панель со всеми сигналами читался как подпись под
+   карточками.
+
+   Тон кадра 58 % ступенью набора не является (лестница 55/45/38/30) — стоит
+   ближайшая 55 %. */
 .insights-v4-attention__more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
   margin-top: 12px;
-  padding: 0;
+  padding: 0 16px;
   border: none;
-  background: none;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--v4-act-text, #8a4a20);
+  border-radius: 999px;
+  background: var(--v4-chip, #efe3cf);
+  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
 }
 
