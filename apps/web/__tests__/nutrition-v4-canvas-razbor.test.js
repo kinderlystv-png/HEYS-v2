@@ -54,9 +54,25 @@ const SCORE = [
   [10, '.nutrition-v4-steps span', ['height', 'radius']],
 ];
 
+// Кадры зон: «зона нейтральная», «зона предупреждения», «зона красная» — один
+// и тот же герой в трёх состояниях. Сведены 31 августа: тон числа и заливка
+// перебора меняются по data-zone, дорожка и высота полосы общие.
+// Тон нейтрального числа вынесен из пар: демо-кадр зоны даёт --tx, а все
+// основные кадры экрана — --ac, и парная сверка классов держит акцент. Спорят
+// два кадра одного канваса; отступление названо в вердикте строки.
+const ZONE_NEUTRAL = [];
+const ZONE_WARN = [
+  [4, `.nutrition-v4-hero[data-zone='warn'] .nutrition-v4-hero__value`, ['color']],
+  [6, `.nutrition-v4-hero[data-zone='warn'] .nutrition-v4-hero__fill.is-over`, ['background']],
+];
+const ZONE_RED = [
+  [4, `.nutrition-v4-hero[data-zone='red'] .nutrition-v4-hero__value`, ['color']],
+  [6, `.nutrition-v4-hero[data-zone='red'] .nutrition-v4-hero__fill.is-over`, ['background']],
+];
+
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 14;
+const COVERAGE_FLOOR = 18;
 
 describe('«Питание» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
@@ -64,6 +80,11 @@ describe('«Питание» · разбор кадров канваса', () =>
 
   it('кадр «Питание · лист правки приёма» совпадает с действиями свайпа', () => {
     expect(compare({ razbor, rules, frame: 'Питание · лист правки приёма', pairs: SWIPE })).toEqual([]);
+  });
+
+  it('кадры зон совпадают с тоном числа и заливкой перебора', () => {
+    expect(compare({ razbor, rules, frame: 'Питание · зона предупреждения', pairs: ZONE_WARN })).toEqual([]);
+    expect(compare({ razbor, rules, frame: 'Питание · зона красная', pairs: ZONE_RED })).toEqual([]);
   });
 
   it('кадр «Питание · блок · Оценка и риск» совпадает со словом дня и полосой шагов', () => {
