@@ -593,8 +593,16 @@
             row.isPartial && React.createElement('span', { className: 'reports-v4-weeks__partial' },
               row.filledDays + ' из 7')
           ),
-          React.createElement('span', { className: 'reports-v4-weeks__kcal' }, fmtPlan(row.planAvg)),
-          React.createElement('span', { className: 'reports-v4-weeks__weight' }, fmtWeight(row.weightDelta)),
+          // Контракт «мало закрытых недель»: прочерки тоном чернил 32 % во
+          // ВСЕХ трёх колонках. Метка стояла только у Score, а «к плану» и
+          // «вес» рисовали прочерк тоном числа — на строке с двумя такими
+          // прочерк читался как значение, а не как его отсутствие.
+          React.createElement('span', {
+            className: 'reports-v4-weeks__kcal' + (row.planAvg == null ? ' is-empty' : '')
+          }, fmtPlan(row.planAvg)),
+          React.createElement('span', {
+            className: 'reports-v4-weeks__weight' + (row.weightDelta == null ? ' is-empty' : '')
+          }, fmtWeight(row.weightDelta)),
           // Контракт «прочерк вместо Score»: прочерк тоном чернил 32 %,
           // а не выдуманное число.
           React.createElement('span', {
