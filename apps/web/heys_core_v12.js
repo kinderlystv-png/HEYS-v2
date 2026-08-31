@@ -3029,9 +3029,6 @@
 
         // 11. Обновить UI
         setProducts(mergedProducts);
-        if (typeof buildSearchIndex === 'function') {
-          buildSearchIndex(mergedProducts);
-        }
 
         // 12. Отчёт
         const addedCount = newProducts.length;
@@ -5740,6 +5737,72 @@
   // The wrapper is installed only ONCE; re-evaluation of HEYS.products.getAll
   // beyond this point inherits the wrapper.
   // ─────────────────────────────────────────────────────────────────────
+  // Оба помощника живут снаружи installOverlayWrapper: их зовёт ещё и
+  // shrink-guard в setAll, а обёртка вдобавок умеет выйти на первой строке.
+  // Внутри неё они были не видны guard'у — tombstone-проверка молча
+  // отключалась, а запись в audit роняла удаление продукта.
+  // 🪦 Tombstone helper: проверяет, есть ли продукт (по id/name) в heys_deleted_ids.
+  // Используется в getById чтобы согласовать поведение с toMergedView/getAll —
+  // если product юзером удалён (tombstone), getById тоже должен возвращать null,
+  // тогда вызывающий код (meal-item resolver, orphan-recovery) увидит его как
+  // отсутствующий и сможет показать banner с выбором действия.
+  function _isProductTombstoned(productOrRaw) {
+    if (!productOrRaw) return false;
+    try {
+      const tombstones = HEYS.store && HEYS.store.get
+        ? HEYS.store.get('heys_deleted_ids') : null;
+      if (!Array.isArray(tombstones) || tombstones.length === 0) return false;
+      const pid = productOrRaw.id != null ? String(productOrRaw.id) : null;
+      const pname = productOrRaw.name ? String(productOrRaw.name).trim().toLowerCase() : null;
+      for (const t of tombstones) {
+        if (!t) continue;
+        if (pid && t.id != null && String(t.id) === pid) return true;
+        if (pname && t.name && String(t.name).trim().toLowerCase() === pname) return true;
+      }
+    } catch (_) { /* noop */ }
+    return false;
+  }
+
+  // 📊 F19: rolling audit log для setAll-shrink (последние 50 entry).
+  // Ключ `__heys_setall_audit__v1` НЕ начинается с `heys_` → interceptor
+  // (isOurKey) его пропускает → audit живёт только локально, не зеркалится
+  // в облако. Используется для расследования инцидентов «исчезают продукты».
+  // Reader: `HEYS.diagnostics.setAllAudit()` (см. ниже).
+  function _writeSetAllAudit(entry) {
+    try {
+      const key = '__heys_setall_audit__v1';
+      let arr = [];
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) arr = parsed;
+        }
+      } catch (_) { arr = []; }
+      arr.unshift({ ts: Date.now(), ...entry });
+      if (arr.length > 50) arr = arr.slice(0, 50);
+      localStorage.setItem(key, JSON.stringify(arr));
+    } catch (_) { /* noop — диагностика не должна крашить запись */ }
+
+    // 📝 Event log (plan Wave 5.3, F-EL Batch D): setall-shrink — критичный, всегда логируется
+    try {
+      if (typeof window !== 'undefined' && window.HEYS?.eventLog?.write) {
+        window.HEYS.eventLog.write(
+          'setall-shrink',
+          `${entry.source} ${entry.prevLen}→${entry.newLen}, removed=${(entry.removedIdsSample || []).join(',')} blocked=${entry.blocked}`,
+          {
+            source: entry.source,
+            before: entry.prevLen,
+            after: entry.newLen,
+            removedCount: (entry.prevLen || 0) - (entry.newLen || 0),
+            tombstoneCovered: entry.tombstoneCovered,
+          },
+          entry.source
+        );
+      }
+    } catch (_) { /* noop */ }
+  }
+
   (function installOverlayWrapper() {
     if (!HEYS.products || HEYS.products.__overlayWrapped) return;
 
@@ -5763,67 +5826,6 @@
       }
     };
 
-    // 🪦 Tombstone helper: проверяет, есть ли продукт (по id/name) в heys_deleted_ids.
-    // Используется в getById чтобы согласовать поведение с toMergedView/getAll —
-    // если product юзером удалён (tombstone), getById тоже должен возвращать null,
-    // тогда вызывающий код (meal-item resolver, orphan-recovery) увидит его как
-    // отсутствующий и сможет показать banner с выбором действия.
-    function _isProductTombstoned(productOrRaw) {
-      if (!productOrRaw) return false;
-      try {
-        const tombstones = HEYS.store && HEYS.store.get
-          ? HEYS.store.get('heys_deleted_ids') : null;
-        if (!Array.isArray(tombstones) || tombstones.length === 0) return false;
-        const pid = productOrRaw.id != null ? String(productOrRaw.id) : null;
-        const pname = productOrRaw.name ? String(productOrRaw.name).trim().toLowerCase() : null;
-        for (const t of tombstones) {
-          if (!t) continue;
-          if (pid && t.id != null && String(t.id) === pid) return true;
-          if (pname && t.name && String(t.name).trim().toLowerCase() === pname) return true;
-        }
-      } catch (_) { /* noop */ }
-      return false;
-    }
-
-    // 📊 F19: rolling audit log для setAll-shrink (последние 50 entry).
-    // Ключ `__heys_setall_audit__v1` НЕ начинается с `heys_` → interceptor
-    // (isOurKey) его пропускает → audit живёт только локально, не зеркалится
-    // в облако. Используется для расследования инцидентов «исчезают продукты».
-    // Reader: `HEYS.diagnostics.setAllAudit()` (см. ниже).
-    function _writeSetAllAudit(entry) {
-      try {
-        const key = '__heys_setall_audit__v1';
-        let arr = [];
-        try {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) arr = parsed;
-          }
-        } catch (_) { arr = []; }
-        arr.unshift({ ts: Date.now(), ...entry });
-        if (arr.length > 50) arr = arr.slice(0, 50);
-        localStorage.setItem(key, JSON.stringify(arr));
-      } catch (_) { /* noop — диагностика не должна крашить запись */ }
-
-      // 📝 Event log (plan Wave 5.3, F-EL Batch D): setall-shrink — критичный, всегда логируется
-      try {
-        if (typeof window !== 'undefined' && window.HEYS?.eventLog?.write) {
-          window.HEYS.eventLog.write(
-            'setall-shrink',
-            `${entry.source} ${entry.prevLen}→${entry.newLen}, removed=${(entry.removedIdsSample || []).join(',')} blocked=${entry.blocked}`,
-            {
-              source: entry.source,
-              before: entry.prevLen,
-              after: entry.newLen,
-              removedCount: (entry.prevLen || 0) - (entry.newLen || 0),
-              tombstoneCovered: entry.tombstoneCovered,
-            },
-            entry.source
-          );
-        }
-      } catch (_) { /* noop */ }
-    }
 
     HEYS.diagnostics = HEYS.diagnostics || {};
     HEYS.diagnostics.setAllAudit = function () {

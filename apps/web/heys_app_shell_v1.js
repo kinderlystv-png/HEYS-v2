@@ -59,6 +59,16 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
     HEYS.debug = HEYS.debug || {};
     HEYS.perf = HEYS.perf || {};
+    // Post-release вкладки («Задачи», «Доска») — только у своих клиентов и только
+    // без облачного входа. Признак нужен и шапке, и содержимому вкладок: в
+    // AppTabContent он раньше читался как свободная переменная и ронял вкладку.
+    const TASKS_BOARD_CLIENT_ID = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    const canUsePostReleaseLabsFor = (clientId, cloudUser) => !cloudUser && (
+        HEYS.AppTabState?.isPostReleaseLabsClient?.(clientId)
+        || HEYS.Board?.isBoardClient?.(clientId)
+        || String(clientId || '').toLowerCase() === TASKS_BOARD_CLIENT_ID
+    );
+
     const HEYS_PROFILER_RING = [];
     const HEYS_PROFILER_RING_MAX = 80;
     const HEYS_SLOW_COMMIT_SOURCE_STATS = {};
@@ -4268,12 +4278,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             };
         }, [isCuratorBadge]);
 
-        const TASKS_BOARD_CLIENT_ID = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
-        const canUsePostReleaseLabs = !cloudUser && (
-            HEYS.AppTabState?.isPostReleaseLabsClient?.(clientId)
-            || HEYS.Board?.isBoardClient?.(clientId)
-            || String(clientId || '').toLowerCase() === TASKS_BOARD_CLIENT_ID
-        );
+        const canUsePostReleaseLabs = canUsePostReleaseLabsFor(clientId, cloudUser);
         const canUseTasksAsHome = canUsePostReleaseLabs;
         const canUseBoardAsHome = canUsePostReleaseLabs;
         const HOME_TAB_OPTIONS = React.useMemo(() => {
@@ -6112,6 +6117,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             RationTabWithCloudSync,
             UserTabWithCloudSync,
         } = props;
+
+        const canUsePostReleaseLabs = canUsePostReleaseLabsFor(clientId, cloudUser);
         const tabContentRef = React.useRef(null);
         const tabViewportRef = React.useRef(null);
         const isDayTab = tab === 'stats' || tab === 'diary' || tab === 'activity';
