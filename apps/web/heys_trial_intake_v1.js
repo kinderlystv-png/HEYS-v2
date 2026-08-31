@@ -558,7 +558,8 @@
     },
     {
       id: 'goals', title: 'Цели и ожидания',
-      subtitle: 'Опишите желаемый результат своими словами — здесь нет правильных ответов.',
+      // Копия по кадру «Анкета · шаг 2»: «расходится копия в коде — верна строка».
+      subtitle: 'Опишите желаемый результат своими словами — правильных ответов здесь нет.',
       required: ['primary_goal', 'success_definition'],
       render: (value, set) => [
         React.createElement(Field, { key: 'primary_goal', fieldId: 'intake-primary_goal', label: 'Главная цель', required: true, textarea: true,
@@ -597,7 +598,9 @@
     },
     {
       id: 'lifestyle', title: 'Ритм жизни',
-      subtitle: 'Нам нужен реальный контекст, а не идеальная неделя.',
+      // Кадр «Анкета · шаг 4» и строка «слова на экране» сходятся: обращения от лица
+      // команды на экране нет. Стояло «Нам нужен реальный контекст».
+      subtitle: 'Нужен реальный контекст, а не идеальная неделя.',
       required: ['schedule', 'sleep'],
       render: (value, set) => [
         React.createElement(Field, { key: 'schedule', fieldId: 'intake-schedule', label: 'Как обычно устроен ваш день?', required: true, textarea: true,
