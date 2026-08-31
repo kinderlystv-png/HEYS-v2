@@ -4409,8 +4409,10 @@ body.tour-active .ios-pwa-banner {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 4px 4px 16px 0;
+  gap: 8px;
+  /* Поля вокруг задаёт сама область прокрутки шага (6/18/18); здесь стояли
+     свои 4/4/16/0 поверх них — правый край отступал от левого на 4 px. */
+  padding: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -4459,7 +4461,10 @@ body.tour-active .ios-pwa-banner {
    плашка в холодной рамке 1 px и запасное #fff под ролью грунта. */
 .pe-input,
 .pe-textarea {
-  min-height: 40px;
+  /* Ширина 100 % и поля 12 без border-box давали поле шире своей колонки:
+     граммы порции вылезали из строки и выдавливали кнопку удаления за край. */
+  box-sizing: border-box;
+  min-height: 44px;
   padding: 0 12px;
   border: none;
   border-radius: 12px;
@@ -4500,6 +4505,7 @@ body.tour-active .ios-pwa-banner {
 
 .pe-barcode-row {
   display: flex;
+  align-items: flex-end;
   gap: 8px;
 }
 
@@ -4508,14 +4514,30 @@ body.tour-active .ios-pwa-banner {
   min-width: 0;
 }
 
+/* Очистка кода — знак в цели 44 рядом с полем, а не кнопка: кадр «основные»
+   даёт 44 × 44 без заливки тоном чернил 30 %. Прежде плашка 38 в холодной
+   рамке с запасными значениями чужого набора (#f8fafc, #64748b). */
 .pe-barcode-clear {
-  width: 38px;
-  border: 1px solid var(--v4-line, #e5e7eb);
-  border-radius: 8px;
-  background: var(--v4-hero, #f8fafc);
-  color: var(--v4-ink-2, #64748b);
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 30%, transparent);
   font-size: 18px;
   cursor: pointer;
+}
+
+/* Высота поля отличается не парностью, а шагом: кадр «основные» держит 44 и
+   для одиночных полей, и для пар Ккал/Белок, кадр «дополнительно» — 40.
+   Правило на .pe-grid уронило бы КБЖУ основного шага, поэтому шаг узнаётся по
+   единственному, что есть только в нём, — флагам. */
+.pe-step:has(.pe-toggles) .pe-input {
+  min-height: 40px;
 }
 
 .pe-grid {
@@ -4637,34 +4659,62 @@ body.tour-active .ios-pwa-banner {
   padding: 0 10px 10px;
 }
 
+/* Порции — единственная карточка на шагах правки: кадр «основные» ставит их
+   на вторую поверхность радиусом 18 полями 12/14 через 10 от полей выше.
+   Поля внутри карточки уходят на грунт, чтобы отличаться от её подложки. */
 .pe-portions-block {
   gap: 10px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--v4-hero, #efe3cf);
+}
+
+.pe-portions-block .pe-section-title {
+  margin: 0;
+  letter-spacing: 0.1em;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+}
+
+.pe-portions-name,
+.pe-portions-grams-input {
+  min-height: 40px;
+  font-size: 12px;
+  background: var(--v4-bg, #fffaf1);
 }
 
 .pe-portions-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
 
 .pe-portions-subtitle {
-  margin-top: 2px;
-  font-size: 11px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 40%, transparent);
 }
 
-/* Кнопка «Шаблон» на грунте по кадру. Прежде голубая плашка прежней
-   системы: рамка #bfdbfe на фоне #eff6ff. */
+/* Кнопка «Шаблон» на грунте по кадру: высота от 32, пилюля, 11 px/700 тоном
+   акцента. Прежде голубая плашка прежней системы — рамка #bfdbfe на фоне
+   #eff6ff. */
 .pe-portions-template-btn {
-  min-height: 34px;
-  padding: 6px 10px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
   border: none;
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
-  color: #1d70b7;
-  font-size: 12px;
+  /* Здесь оставался #1d70b7 — синий прежней системы. */
+  color: var(--v4-act-text, #8a4a20);
+  font-size: 11px;
   font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -4672,6 +4722,7 @@ body.tour-active .ios-pwa-banner {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: 10px;
 }
 
 .pe-portions-empty {
@@ -4683,10 +4734,12 @@ body.tour-active .ios-pwa-banner {
   text-align: center;
 }
 
+/* Строка порции по кадру: имя тянется, граммы фиксированной колонкой 74,
+   удаление целью 40, зазор 8. Прежде граммы 86, удаление 34 и зазор 6. */
 .pe-portions-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 86px 34px;
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) 74px 40px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -4696,28 +4749,35 @@ body.tour-active .ios-pwa-banner {
 
 .pe-portions-grams-input {
   width: 100%;
-  padding-right: 24px;
+  padding: 0 22px 0 10px;
 }
 
+/* «г» рядом со значением: 10 px/500 чернилами 35 %. Прежде роль третьих
+   чернил с запасным #94a3b8 — сланец снятой системы. */
 .pe-portions-grams-unit {
   position: absolute;
-  right: 8px;
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--v4-ink-3, #94a3b8);
-  font-size: 11px;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 35%, transparent);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
   pointer-events: none;
 }
 
 /* Кадр даёт удаление порции на --tint. Прежде розовая плашка прежней
    системы: рамка #fecaca на #fff1f2. */
+/* Удаление порции по кадру: цель 40 радиусом 12 на тинте тоном разрушающего.
+   Прежде 34 радиусом 8, и цвет брался ролью предупреждения с запасным #ef4444
+   прежней системы — не та роль и не тот цвет. */
 .pe-portions-remove-btn {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--v4-tint, #f6e6dd);
-  color: var(--v4-warn-1, #ef4444);
+  color: var(--v4-bad-text, #b4442a);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
@@ -4725,15 +4785,20 @@ body.tour-active .ios-pwa-banner {
 
 /* Добавление порции: пунктир ролью линии на подложке набора. Прежде
    голубой пунктир #93c5fd на #eff6ff. */
+/* «+ Добавить порцию» — вторичная кнопка набора: пилюля высотой от 44 на
+   грунте, 12,5 px/700 тоном акцента. Пунктирная рамка была приёмом прежней
+   системы: в наборе вторичное отличается заливкой, а не контуром. */
 .pe-portions-add-btn {
   width: 100%;
-  min-height: 40px;
-  border: 1px dashed var(--v4-line, rgba(0, 0, 0, 0.08));
-  border-radius: 10px;
-  background: var(--v4-surface, #f7efe2);
-  color: #1d70b7;
-  font-size: 13px;
+  min-height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-bg, #fffaf1);
+  color: var(--v4-act-text, #8a4a20);
+  font-size: 12.5px;
   font-weight: 700;
+  line-height: 1;
+  margin-top: 8px;
   cursor: pointer;
 }
 
