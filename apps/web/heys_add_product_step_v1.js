@@ -5897,21 +5897,30 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement('span', { className: 'aps-barcode-notice__icon', 'aria-hidden': 'true' }, '✓'),
           React.createElement('span', null, barcodeNotice.text)
         ),
-        barcodeNotFoundCode && React.createElement('div', { className: 'aps-barcode-not-found-screen', role: 'status' },
-          React.createElement('div', { className: 'aps-v4-search-state__title', style: { color: 'var(--v4-sand-act-deep, #8a4a20)' } },
-            `Код ${barcodeNotFoundCode}`),
-          React.createElement('div', { style: { fontWeight: 700, fontSize: '14px', marginTop: '10px' } }, 'Такого продукта нет в базе'),
-          React.createElement('div', { className: 'aps-v4-search-state__body' },
-            'Код прочитан, но совпадений нет. Создайте продукт — код подставится автоматически.'),
-          React.createElement('div', { className: 'aps-v4-search-state__actions' },
+        // Кадр «Штрихкод · не найден». Главное действие живёт внутри карточки,
+        // два равных выхода — рядом под ней: прежде все три стояли одной
+        // стопкой в общем ряду, и «Создать продукт» ничем не отличался от
+        // «Искать по названию», кроме заливки. Классы свои, а не общие
+        // состояния поиска: те же классы делит соседняя зона приёма еды.
+        barcodeNotFoundCode && React.createElement(React.Fragment, null,
+          React.createElement('div', { className: 'aps-barcode-not-found-screen', role: 'status' },
+            React.createElement('div', { className: 'aps-barcode-nf__code' },
+              `Код ${barcodeNotFoundCode}`),
+            React.createElement('div', { className: 'aps-barcode-nf__title' },
+              'Такого продукта нет в базе'),
+            React.createElement('div', { className: 'aps-barcode-nf__body' },
+              'Код прочитан, но совпадений нет. Создайте продукт — код к нему '
+              + 'привяжется, и в следующий раз он найдётся сразу.'),
             React.createElement('button', {
               type: 'button',
-              className: 'aps-v4-btn-primary',
+              className: 'aps-barcode-nf__primary',
               onClick: () => handleNewProduct(barcodeNotFoundCode)
-            }, `Создать продукт с кодом ${barcodeNotFoundCode}`),
+            }, 'Создать продукт с этим кодом')
+          ),
+          React.createElement('div', { className: 'aps-barcode-nf__row' },
             React.createElement('button', {
               type: 'button',
-              className: 'aps-v4-btn-ghost aps-v4-btn-paper',
+              className: 'aps-barcode-nf__secondary',
               onClick: () => {
                 setBarcodeNotFoundCode(null);
                 setBarcodeModal({ autoStart: true, cameraStart: createBarcodeCameraStart?.() || null });
@@ -5919,13 +5928,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }, 'Сканировать ещё'),
             React.createElement('button', {
               type: 'button',
-              className: 'aps-v4-btn-ghost aps-v4-btn-paper',
+              className: 'aps-barcode-nf__secondary',
               onClick: () => {
                 setBarcodeNotFoundCode(null);
                 setBarcodeResults([]);
                 requestAnimationFrame(() => inputRef.current?.focus());
               }
-            }, 'Искать по названию'))
+            }, 'Искать по названию')
+          )
         ),
         barcodeNotice && barcodeNotice.type === 'error' && React.createElement('div', {
           className: 'aps-barcode-notice is-error',
