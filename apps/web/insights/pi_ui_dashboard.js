@@ -769,46 +769,6 @@
     }
 
     /**
-     * R-INS-5E: SkeletonCard — placeholder во время загрузки insights.
-     *
-     * Используется для async-операций (например, при первом расчёте EWS
-     * который занимает > 200ms). По умолчанию — серый блок с shimmer-анимацией.
-     *
-     * @param {string} variant - 'card' (default) | 'ring' | 'list' | 'badge'
-     * @param {number} lines - количество текстовых строк (для variant=card)
-     * @param {string} height - кастомная высота
-     */
-    function SkeletonCard({ variant = 'card', lines = 3, height }) {
-      const baseClass = `insights-skeleton insights-skeleton--${variant}`;
-      const style = height ? { minHeight: height } : null;
-
-      if (variant === 'ring') {
-        return h('div', { className: baseClass, style },
-          h('div', { className: 'insights-skeleton__ring' }),
-          h('div', { className: 'insights-skeleton__ring-label' })
-        );
-      }
-      if (variant === 'badge') {
-        return h('div', { className: baseClass, style });
-      }
-      // 'card' or 'list' — N text lines
-      const linesArr = Array.from({ length: Math.max(1, lines) }, (_, i) => i);
-      return h('div', { className: baseClass, style },
-        h('div', { className: 'insights-skeleton__header' },
-          h('div', { className: 'insights-skeleton__title' }),
-          h('div', { className: 'insights-skeleton__icon' })
-        ),
-        linesArr.map(idx =>
-          h('div', {
-            key: idx,
-            className: 'insights-skeleton__line',
-            style: { width: `${100 - (idx * 15) % 30}%` }
-          })
-        )
-      );
-    }
-
-    /**
      * R-INS-2A: PriorityActions — top-3 actionable советы с triple-line context.
      * Каждое действие: Action + Why + Forecast.
      * Использует pi_conflict_resolver для устранения противоречий (R-INS-2C).
@@ -6657,7 +6617,6 @@
       WeeklyWrap,
       MonthlyWrap,
       PriorityActions,
-      SkeletonCard,
       StreakCounter,     // R-INS-LEVEL-UP-1
       ScoreDeltaBadge,   // R-INS-LEVEL-UP-2
       ScoreSparkline,    // R-INS-LEVEL-UP-3

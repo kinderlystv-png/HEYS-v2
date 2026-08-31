@@ -761,15 +761,15 @@
 
       periodMeta.lastMeasureDaysAgo !== 0 && React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'reports-v4-tier' }, 'Что с этим делать'),
+        // Контракт «карточка · призыв о замерах»: факт одной строкой и кнопка
+        // во всю ширину карточки. Заголовок «Замеры тела» снят — он называл
+        // то, что и так сказано кнопкой, и делал из напоминания раздел.
         React.createElement('div', { className: 'reports-v4-measure' },
-          React.createElement('div', { className: 'reports-v4-measure__copy' },
-            React.createElement('div', { className: 'reports-v4-measure__title' }, 'Замеры тела'),
-            React.createElement('div', { className: 'reports-v4-measure__note' },
-              periodMeta.lastMeasureDaysAgo == null
-                ? 'замеров ещё не было'
-                : 'последний замер ' + periodMeta.lastMeasureDaysAgo + ' ' +
-                  pluralDaysReports(periodMeta.lastMeasureDaysAgo) + ' назад')
-          ),
+          React.createElement('div', { className: 'reports-v4-measure__fact' },
+            periodMeta.lastMeasureDaysAgo == null
+              ? 'Замеров ещё не было'
+              : 'Последний замер ' + periodMeta.lastMeasureDaysAgo + ' ' +
+                pluralDaysReports(periodMeta.lastMeasureDaysAgo) + ' назад'),
           React.createElement('button', {
             type: 'button',
             className: 'reports-v4-measure__cta',
@@ -4025,8 +4025,12 @@
       // «в норме» выше. UI_V4_SPEC_2026-08-09.md, «Каскад как трендовая
       // оценка (HEYS Score)»; разбор на 4 группы — по тапу на плитке.
       !useReportsV4 && HEYS.CascadeCard?.HeysScoreTile && React.createElement(HEYS.CascadeCard.HeysScoreTile, {}),
-      // Спарклайн веса — показываем если есть хотя бы 1 точка (вес из профиля)
-      weightSparklineData.length >= 1 && React.createElement('div', {
+      // Спарклайн веса — показываем если есть хотя бы 1 точка (вес из профиля).
+      // В v4 карточка стоит и без замеров: контракт «карточка · рамка
+      // отсутствующего графика» просит на месте кривой рамку с объяснением и
+      // входом. Исчезающий блок оставлял человека без ответа, почему кривой
+      // нет и что для неё нужно.
+      (useReportsV4 || weightSparklineData.length >= 1) && React.createElement('div', {
         className: 'weight-sparkline-container' +
           (useReportsV4 ? ' reports-v4-dynamics-card' : '') +
           (weightTrend?.direction === 'down' ? ' trend-down' :
@@ -4062,7 +4066,34 @@
             }, '🌸 чистый')
           ) // закрываем badges div
         ), // закрываем условие weightSparklineData.length >= 2
-        renderWeightSparkline(weightSparklineData),
+        (function () {
+          // Кривая живёт от трёх настоящих замеров — то же правило, что у
+          // строки «Тренд веса» в списке «Уже считается». Прогнозные точки
+          // (isFuture) в счёт не идут: обещание не замер.
+          const measured = weightSparklineData.filter(function (d) { return !d.isFuture; }).length;
+          if (!useReportsV4 || measured >= 3) return renderWeightSparkline(weightSparklineData);
+          return React.createElement(React.Fragment, null,
+            React.createElement('div', { className: 'reports-v4-noplot' },
+              'кривая появится с трёх замеров'),
+            React.createElement('button', {
+              type: 'button',
+              className: 'reports-v4-noplot__cta',
+              onClick: function () {
+                // Тот же шаг, что в утреннем чек-ине: вторая форма ввода веса
+                // разошлась бы с первой на первой же правке.
+                const show = HEYS.StepModal && HEYS.StepModal.show;
+                if (typeof show === 'function') {
+                  show({
+                    steps: ['weight'],
+                    title: 'Взвешивание',
+                    showProgress: false,
+                    context: { dateKey: date || new Date().toISOString().slice(0, 10) }
+                  });
+                }
+              }
+            }, 'Записать вес')
+          );
+        })(),
         // Контракт «динамика»: сноска про особый период — всегда, когда такие
         // дни есть в окне (раньше пряталась за chartPeriod >= 61 и на 7/14/30
         // не показывалась никогда). Подсказка «~кг/мес» снята — прогнозов в

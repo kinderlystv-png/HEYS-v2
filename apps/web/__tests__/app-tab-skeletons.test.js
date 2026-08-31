@@ -45,7 +45,11 @@ describe('HEYS loading surfaces do not use tab skeletons', () => {
         expect(leaderboard).not.toContain('skeleton-chip');
         expect(sparklines).not.toContain('sparkline-skeleton');
         expect(tabs).not.toContain('skeleton-block');
-        expect(insights).not.toContain("h(SkeletonCard");
+        // Прежде проверялся только вызов: компонент разрешалось объявить, лишь
+        // бы не рисовать. Так он и прожил — объявленным, экспортированным и
+        // мёртвым, вместе со своими стилями. Теперь запрещено само имя.
+        expect(insights).not.toContain('SkeletonCard');
+        expect(insights).not.toContain('insights-skeleton');
         expect(mealRec).not.toContain('meal-rec-card--skeleton');
 
         expect(shell).toContain('fallback: null');
