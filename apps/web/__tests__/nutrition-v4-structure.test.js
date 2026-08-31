@@ -210,9 +210,13 @@ describe('Nutrition tab v4 structure', () => {
     // каноничная палитра и её тёмная убраны из 002-ui-v4-palette-roles.css
     // 24.08 (канон живёт только на зеркале stable.heyslab.ru, а миграция в
     // heys_theme_v1.js переписывает сохранённое `classic` на `sand`).
-    ['--v4-warn-text', '--v4-tint', '--v4-past'].forEach((token) => {
+    ['--v4-warn-text', '--v4-tint'].forEach((token) => {
       expect((paletteSource.match(new RegExp(token + ':', 'g')) || []).length, token).toBe(4);
     });
+    // --v4-past снята 31 августа ответом дизайнера №13: прошлый день — та же
+    // капсула тоном --v4-tint, а не своё состояние со своим цветом. Роли не
+    // должно остаться ни в одном наборе, иначе она вернётся молча.
+    expect(paletteSource).not.toContain('--v4-past');
   });
 
   it('вторичный тон сплошной, чип выключен обводкой 2 px', () => {

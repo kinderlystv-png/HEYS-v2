@@ -197,4 +197,41 @@ describe('контракт кодов отказа на входе клиент�
         expect(invalidBranch).not.toContain('Не удалось войти');
         expect(invalidBranch).not.toContain("'PIN не подошёл'");
     });
+
+    /**
+     * Строка контракта login «слова на экране», решение 31 августа: «Блокировка
+     * входа — состояние экрана… Разный вес разным отказам: в блокировке человек
+     * не может ничего, и единственный выход к живому куратору не может быть
+     * набран тем же кеглем, что „код не подошёл“».
+     *
+     * До 1 сентября оба отказа приходили одной строкой в общий слот ошибки.
+     * Здесь сторожится развилка: отсчёт локального ограничителя остаётся
+     * строкой (выход из него — подождать), серверная блокировка без отсчёта
+     * разворачивается карточкой (выход из неё — куратор).
+     */
+    it('блокировка входа — состояние экрана, а не строка ошибки', () => {
+        const handler = sliceBetween(
+            screenSource,
+            'async function handleClientLogin',
+            'async function handleCuratorLogin',
+        );
+
+        const branch = sliceBetween(handler, "if (code === 'rate_limited')", "} else if (code ===");
+        // Отсчёт — строка ошибки: карточка тут не поднимается.
+        expect(branch).toContain('Подождите ${sec}с');
+        expect(branch).toMatch(/if \(sec > 0\) \{[\s\S]*setErr\(`Слишком много попыток\. Подождите/);
+        // Без отсчёта — карточка, и слот ошибки при ней пуст: две подачи одного
+        // отказа рядом читались бы как два разных отказа.
+        expect(branch).toContain('setRateBlocked(true)');
+        expect(branch.slice(branch.indexOf('setRateBlocked(true)'))).toContain("setErr('')");
+
+        // Карточка несёт заголовок и причину отдельными строками — иначе вес
+        // отказа снова сравнялся бы со строкой ошибки.
+        expect(screenSource).toContain("'heys-auth-lockout__title' }, 'Слишком много попыток входа'");
+        expect(screenSource).toContain("'heys-auth-lockout__body' }, 'Напишите куратору — он снимет блокировку.'");
+        // Новая попытка снимает блокировку: иначе карточка переживёт и смену
+        // номера, и успешный вход.
+        expect(handler.slice(0, handler.indexOf("if (code === 'rate_limited')")))
+            .toContain('setRateBlocked(false)');
+    });
 });

@@ -798,10 +798,51 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 /* Maintenance gate (canvas lk2) */
 .heys-auth-shell--maintenance .heys-auth-card--maintenance .heys-auth-keypad,
 .heys-auth-shell--maintenance .heys-auth-card--maintenance .heys-auth-pin-section,
-.heys-auth-shell--maintenance .heys-auth-card--maintenance .space-y-6 > .space-y-3:first-child {
+.heys-auth-shell--maintenance .heys-auth-card--maintenance .space-y-6 > .space-y-3:first-child,
+.heys-auth-shell--lockout .heys-auth-card--lockout .heys-auth-keypad,
+.heys-auth-shell--lockout .heys-auth-card--lockout .heys-auth-pin-section {
   pointer-events: none;
   /* Строка «блокировка»: клавиатура и боксы гаснут до 22 %. */
   opacity: 0.22;
+}
+
+/* Строка «слова на экране», решение 31 августа: «Блокировка входа — состояние
+   экрана: карточка на заливке с заголовком „Слишком много попыток входа“ и
+   строкой „Напишите куратору — он снимет блокировку“». Числа — кадр «Вход ·
+   блокировка», элементы 14–16. Строка ошибки набрана 11,5/600 на прозрачном
+   фоне; здесь 12,5/700 на тонированной подложке — отказ кода и отказ входа
+   больше не выглядят одинаково, чего строка и требует. Подложка --v4-tint:
+   роль так и описана — «плашка куратора и родственные ей», а выход отсюда
+   один и есть куратор. */
+.heys-auth-lockout {
+  width: 100%;
+  margin-top: 14px;
+  padding: 15px 16px;
+  border-radius: 16px;
+  background: var(--v4-tint, #f6e6dd);
+  text-align: center;
+}
+
+.heys-auth-lockout__title {
+  color: var(--v4-warn-text, #a1471c);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.heys-auth-lockout__body {
+  margin-top: 7px;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+/* Пустой слот ошибки под карточкой держал бы 38 px пустоты: пока стоит
+   карточка, строке ошибки нечего сказать. */
+.heys-auth-card--lockout .heys-auth-error-slot:empty {
+  display: none;
 }
 
 .heys-auth-maintenance-block {

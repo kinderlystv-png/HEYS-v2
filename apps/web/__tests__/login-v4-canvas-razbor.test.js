@@ -65,6 +65,20 @@ const CLIENT = [
   [21, '.heys-auth-support-line', ['fontWeight', 'fontSize', 'lineHeight', 'textAlign']],
 ];
 
+// Кадр блокировки: карточка появилась 1 сентября по решению 31 августа
+// («Блокировка входа — состояние экрана»). До неё продукт показывал отказ одной
+// строкой в общем слоте ошибки, и три элемента кадра стояли в вердикте «≠».
+const LOCKOUT = [
+  [14, '.heys-auth-lockout', ['marginTop', 'radius', 'background', 'padding']],
+  // Выключка у заголовка и строки не проверяется: одна center на карточке
+  // правит обоими, а кадр печатает её каждому элементу отдельно — это разница
+  // между вычисленным стилем и объявленным, а не расхождение.
+  [15, '.heys-auth-lockout__title',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [16, '.heys-auth-lockout__body',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+];
+
 const CURATOR = [
   [2, '.heys-auth-card', ['background', 'radius', 'padding', 'direction', 'align']],
   [5, '.heys-auth-subtitle', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'textAlign', 'marginTop']],
@@ -77,7 +91,7 @@ const CURATOR = [
 
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 21;
+const COVERAGE_FLOOR = 24;
 
 describe('«Вход» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
@@ -85,6 +99,10 @@ describe('«Вход» · разбор кадров канваса', () => {
 
   it('кадр «Вход · Вход клиента» совпадает с экраном входа', () => {
     expect(compare({ razbor, rules, frame: 'Вход · Вход клиента', pairs: CLIENT })).toEqual([]);
+  });
+
+  it('кадр «Вход · блокировка» совпадает с карточкой блокировки', () => {
+    expect(compare({ razbor, rules, frame: 'Вход · блокировка', pairs: LOCKOUT })).toEqual([]);
   });
 
   it('кадр «Вход · Вход куратора» совпадает со служебным входом', () => {

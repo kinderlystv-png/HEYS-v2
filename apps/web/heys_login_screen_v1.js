@@ -237,6 +237,11 @@
 	    const [clientEntryMode, setClientEntryMode] = useState('default');
 	    const [supportOpen, setSupportOpen] = useState(false);
 	    const [loginMaintenance, setLoginMaintenance] = useState(() => readLoginMaintenanceFlag());
+	    // Строка «слова на экране», решение 31 августа: блокировка входа — не строка
+	    // ошибки, а состояние экрана. Отказ кода человек видит часто и правит за
+	    // секунду; в блокировке он не может ничего, и единственный выход к живому
+	    // куратору нельзя набрать тем же кеглем, что «код не подошёл».
+	    const [rateBlocked, setRateBlocked] = useState(false);
 	    const curatorAutoLoginTriedRef = useRef(false);
     const pinErrorTimers = useRef({ reset: null, clear: null });
 
@@ -457,6 +462,7 @@
         return;
       }
       setErr('');
+      setRateBlocked(false);
       setPinErrorVisible(false);
       setPinErrorActive(false);
       setBusy(true);
@@ -483,11 +489,15 @@
 
           if (code === 'rate_limited') {
             const sec = Math.ceil((res.retryAfterMs || 0) / 1000);
-            // Локальный ограничитель знает, сколько ждать; серверная блокировка
-            // по номеру точного отсчёта не даёт, но присылает свой текст.
-            setErr(sec > 0
-              ? `Слишком много попыток. Подождите ${sec}с и попробуйте снова.`
-              : (serverMessage || 'Слишком много попыток. Попробуйте позже или напишите куратору.'));
+            // Локальный ограничитель знает, сколько ждать, и выход из него —
+            // подождать: это строка ошибки. Серверная блокировка отсчёта не даёт,
+            // выход из неё один — куратор, и она разворачивается карточкой.
+            if (sec > 0) {
+              setErr(`Слишком много попыток. Подождите ${sec}с и попробуйте снова.`);
+            } else {
+              setRateBlocked(true);
+              setErr('');
+            }
           } else if (code === 'pin_login_disabled') {
             // контракт login «слово»: в пользовательских текстах только «код», без «PIN»
             setErr(serverMessage || 'Вход по коду временно отключён. Куратор откроет доступ после обновления входа.');
@@ -622,7 +632,8 @@
           className: 'heys-auth-card'
             + (isIntakeLogin ? ' heys-auth-card--intake' : '')
             + (isNewDeviceLogin ? ' heys-auth-card--new-device' : '')
-            + (loginBlocked ? ' heys-auth-card--maintenance' : ''),
+            + (loginBlocked ? ' heys-auth-card--maintenance' : '')
+            + (rateBlocked ? ' heys-auth-card--lockout' : ''),
         },
         ...children,
       );
@@ -1179,6 +1190,16 @@
             ),
           ),
 
+          // Карточка блокировки стоит на месте строки ошибки — над клавиатурой,
+          // внутри того же экрана: отдельный экран человек не сможет покинуть, а
+          // куратор снимет блокировку, пока он смотрит на этот же кадр.
+          rateBlocked && React.createElement(
+            'div',
+            { className: 'heys-auth-lockout', role: 'alert' },
+            React.createElement('div', { className: 'heys-auth-lockout__title' }, 'Слишком много попыток входа'),
+            React.createElement('div', { className: 'heys-auth-lockout__body' }, 'Напишите куратору — он снимет блокировку.'),
+          ),
+
           loginBlocked && React.createElement(
             'div',
             { className: 'heys-auth-maintenance-block', role: 'status' },
@@ -1411,6 +1432,7 @@
           + (isIntakeLogin ? ' heys-auth-shell--intake' : '')
           + (isNewDeviceLogin ? ' heys-auth-shell--new-device' : '')
           + (loginBlocked ? ' heys-auth-shell--maintenance' : '')
+          + (rateBlocked ? ' heys-auth-shell--lockout' : '')
           // Строка «полка»: экран создания кода отдаёт низ закреплённой полке.
           + (accessSetup && AccessCodeSetup ? ' heys-auth-shell--pep' : ''),
       },
