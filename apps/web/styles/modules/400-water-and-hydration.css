@@ -981,7 +981,7 @@ body.planning-tab-active .widgets-quick-fab-wrap {
 }
 
 .ios-toggle-on .ios-toggle-thumb {
-  transform: translateX(18px);
+  transform: translateX(16px);
 }
 
 /* Active state */
@@ -2214,7 +2214,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-hide-copy__title {
   display: block;
   font: 600 12.5px/1.35 Figtree, sans-serif;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .advice-v4-hide-copy__subtitle {
@@ -3066,7 +3066,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   align-items: center;
   gap: 12px;
   padding: max(18px, env(safe-area-inset-top, 0px)) 18px 14px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .advice-v4-settings__back {
@@ -3081,6 +3081,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-settings__title {
   flex: 1;
   font: 700 14px/1 Figtree, sans-serif;
+  color: var(--v4-ink, #201e1d);
 }
 
 .advice-v4-settings__body {
@@ -3092,30 +3093,42 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-settings__intro {
   margin: 16px 0 0;
   font: 500 11.5px/1.55 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.45);
+  color: var(--v4-ink-3, rgba(32, 30, 29, 0.45));
   text-wrap: pretty;
 }
 
+/* Элемент 06: ярус разводит блоки отступами 16 сверху и 4 снизу и красится
+   ролью акцента. Стояло 22/10 литералом — вдвое больше воздуха снизу, чем
+   даёт кадр, и цвет мимо набора. */
 .advice-v4-settings__section-label {
-  margin: 22px 0 10px;
+  margin: 16px 0 4px;
   font: 700 10px/1 Figtree, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .advice-v4-settings__group {
+  margin-top: 6px;
   padding: 2px 16px;
   border-radius: 20px;
   background: var(--v4-surface, #f7efe2);
 }
 
+/* Элемент 08: строки списка разведены разделителем, у последней его нет —
+   тот же список, что у источников науки и у ленты дней. Без него два
+   тумблера читались как один блок с двумя переключателями. */
 .advice-v4-settings__row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
   padding: 13px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+}
+
+.advice-v4-settings__row:last-child {
+  border-bottom: none;
 }
 
 .advice-v4-settings__row-copy {
@@ -3131,37 +3144,48 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 
 .advice-v4-settings__row-hint {
   display: block;
-  margin-top: 4px;
+  margin-top: 5px;
   font: 500 11px/1.45 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.42);
+  color: var(--v4-ink-3, rgba(32, 30, 29, 0.45));
   text-wrap: pretty;
 }
 
 .advice-v4-settings__toggle {
   position: relative;
-  width: 44px;
-  height: 26px;
+  /* Элементы 09 и 15: тумблер 40×24 с ходом 3 по краям и кругляшом 18.
+     Стоял 44×26 с кругляшом 20 — крупнее кадра, и в строке он перевешивал
+     собственную подпись. Область нажатия добрана невидимым слоем ниже. */
+  width: 40px;
+  height: 24px;
   flex: none;
   border: none;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--v4-track, rgba(0, 0, 0, 0.14));
   padding: 0;
   cursor: pointer;
   transition: background 0.18s ease;
 }
 
+/* Область нажатия 44 при видимых 40×24 — тем же приёмом, что у крестиков
+   зоны: невидимый слой поверх, сам тумблер остаётся кадрового размера. */
+.advice-v4-settings__toggle::after {
+  content: '';
+  position: absolute;
+  inset: -10px -2px;
+}
+
 .advice-v4-settings__toggle.is-on {
-  background: #c67139;
+  background: var(--v4-act, #c67139);
 }
 
 .advice-v4-settings__toggle-thumb {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--v4-bg, #fffaf1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
   transition: transform 0.18s ease;
 }
@@ -3171,9 +3195,9 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .advice-v4-settings__footnote {
-  margin: 18px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.42);
+  margin: 12px 0 0;
+  font: 500 11px/1.5 Figtree, sans-serif;
+  color: var(--v4-ink-3, rgba(32, 30, 29, 0.45));
   text-wrap: pretty;
 }
 

@@ -41,6 +41,15 @@ const EXCEPTIONS = new Map([
   // безопасной зоне телефона — иначе на аппаратах с жестовой панелью кнопка
   // упирается в неё. Число кадра сохранено внутри max().
   ['Научное описание · 16|padding', 'нижнее поле уступает env(safe-area-inset-bottom)'],
+  // Кадр настроек просит чернила 42 %, у набора три тона — 55 / 45 / 38.
+  // Взят ближайший --v4-ink-3 (45 %) во всех трёх местах разом: разные тона у
+  // вводной строки, подписи тумблера и сноски развели бы один вес на три.
+  ['Настройки советов · 05|color', 'у набора нет тона 42 %, ближайший 45 %'],
+  ['Настройки советов · 13|color', 'тот же тон 42 % против 45 % набора'],
+  ['Настройки советов · 17|color', 'тот же тон 42 % против 45 % набора'],
+  // Дорожка тумблера в кадре — чернила 14 %; у набора три роли линии
+  // (8 / 12 / 18), четвёртую под один тон не заводим. Взята --v4-track.
+  ['Настройки советов · 09|background', 'у набора нет тона 14 %, ближайший 12 %'],
 ]);
 // Кадр «Советы · шторка» — каркас листа и карточка совета.
 const SHEET = [
@@ -145,9 +154,29 @@ const SCIENCE = [
     ['radius', 'background', 'padding', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
+// Кадр «Настройки советов» — единственное место, где советы настраиваются.
+// Сведён 31 августа.
+const SETTINGS = [
+  [2, '.advice-v4-settings__header', ['align', 'gap']],
+  [3, '.advice-v4-settings__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [5, '.advice-v4-settings__intro', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  [6, '.advice-v4-settings__section-label',
+    ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'color']],
+  [7, '.advice-v4-settings__group', ['background', 'radius', 'padding', 'marginTop']],
+  [8, '.advice-v4-settings__row', ['align', 'gap', 'padding']],
+  [9, '.advice-v4-settings__toggle', ['width', 'height', 'radius']],
+  [10, '.advice-v4-settings__toggle-thumb', ['width', 'height', 'radius', 'background']],
+  [12, '.advice-v4-settings__row-title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [13, '.advice-v4-settings__row-hint',
+    ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  [15, '.advice-v4-settings__toggle.is-on', ['background']],
+  [17, '.advice-v4-settings__footnote',
+    ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+];
+
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 60;
+const COVERAGE_FLOOR = 72;
 
 describe('«Советы» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
@@ -155,6 +184,10 @@ describe('«Советы» · разбор кадров канваса', () => {
 
   it('кадр «Советы · шторка» совпадает с листом советов', () => {
     expect(compare({ razbor, rules, frame: 'Советы · шторка', pairs: SHEET })).toEqual([]);
+  });
+
+  it('кадр «Настройки советов» совпадает с экраном настроек', () => {
+    expect(compare({ razbor, rules, frame: 'Настройки советов', pairs: SETTINGS })).toEqual([]);
   });
 
   it('кадр «Научное описание» совпадает с экраном науки', () => {
@@ -200,7 +233,7 @@ describe('«Советы» · разбор кадров канваса', () => {
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(4);
+    expect(EXCEPTIONS.size).toBe(8);
   });
 
   it('гейт называет свой охват', () => {

@@ -209,7 +209,13 @@ describe('advice v4 panels from canvas', () => {
 
     const row = cssSource.match(/\.advice-v4-settings__row \{([^}]*)\}/)[1];
     expect(row).toMatch(/padding:\s*13px 0/);
-    expect(row).not.toMatch(/border-bottom/);
+    // Разделитель между строками разрешён и обязателен: раздел «Разбор кадров»
+    // пакета 30 августа даёт первой строке «разделитель 1px solid
+    // rgba(0,0,0,.07)», а второй — нет, то есть обычный список с чистой
+    // последней строкой. Прежний запрет писался до этого раздела, когда о
+    // разделителе знать было неоткуда, и без него два тумблера читались одним
+    // блоком. Геометрию строки теперь держит tips-v4-canvas-razbor.
+    expect(cssSource).toMatch(/\.advice-v4-settings__row:last-child \{[^}]*border-bottom:\s*none/);
     expect(cssSource).toMatch(/\.advice-v4-settings__row-hint \{[\s\S]*?font:\s*500 11px\/1\.45/);
   });
 });
