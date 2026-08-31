@@ -9920,13 +9920,13 @@ NOVA: 1
       showBreakdown && calculatedBreakdown && e('div', { className: 'aps-v4-harm-breakdown' },
         e('div', { className: 'aps-v4-harm-breakdown__formula' }, calculatedBreakdown.formula),
         e('div', { className: 'aps-v4-harm-breakdown__version' },
-          `Формула v${calculatedBreakdown.version || '3.0'}`
+          `формула v${calculatedBreakdown.version || '3.0'}`
         ),
         calculatedBreakdown.penalties.length > 0 && e('div', { className: 'aps-v4-harm-breakdown__section' },
           e('div', { className: 'aps-v4-harm-breakdown__section-title aps-v4-harm-breakdown__section-title--bad' }, 'Штрафы'),
           calculatedBreakdown.penalties.map((p, i) =>
             e('div', { key: i, className: 'aps-v4-harm-breakdown__row' },
-              e('span', null, `${p.icon} ${p.label}`),
+              e('span', null, p.label),
               e('span', null, `+${p.contribution.toFixed(2)}`)
             )
           )
@@ -9935,7 +9935,7 @@ NOVA: 1
           e('div', { className: 'aps-v4-harm-breakdown__section-title aps-v4-harm-breakdown__section-title--good' }, 'Бонусы'),
           calculatedBreakdown.bonuses.map((b, i) =>
             e('div', { key: i, className: 'aps-v4-harm-breakdown__row' },
-              e('span', null, `${b.icon} ${b.label}`),
+              e('span', null, b.label),
               e('span', null, `−${b.contribution.toFixed(2)}`)
             )
           )
