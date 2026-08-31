@@ -243,15 +243,19 @@
   border-radius: 7px;
 }
 
+/* Иконка штрихкода в строке: по контракту «вид · строка поиска» она тоном
+   чернил 55 %, про нажатое состояние там не сказано — берём акцент набора, как
+   везде в потоке. Прежде тут стоял #434587, цвет снятой системы: в наборе его
+   нет, поэтому вариант «оставить как было» не был решением дизайнера. */
 @media (hover: hover) {
   .aps-barcode-btn:hover {
-    background: rgba(67, 69, 135, 0.09);
-    color: #434587;
+    background: color-mix(in srgb, var(--v4-sand-act, #c67139) 12%, transparent);
+    color: var(--v4-sand-act, #c67139);
   }
 }
 
 .aps-barcode-btn.active {
-  color: #434587;
+  color: var(--v4-sand-act, #c67139);
 }
 
 .aps-product-barcode-icon {
@@ -393,8 +397,8 @@
   height: 40px;
   border: none;
   border-radius: 10px;
-  background: #434587;
-  color: var(--v4-bg, #fff);
+  background: var(--v4-sand-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
   font-weight: 700;
   cursor: pointer;
 }
@@ -493,8 +497,8 @@
 .aps-barcode-manager-add {
   flex: 1 1 auto;
   padding: 0 14px;
-  color: var(--v4-bg, #fff);
-  background: #434587;
+  color: var(--v4-btn-on-act, #2b1608);
+  background: var(--v4-sand-act, #c67139);
 }
 
 .aps-barcode-manager-remove,
@@ -1240,21 +1244,30 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.aps-create-barcode-clear,
+/* Кадр «Продукт · вставка строки»: крест очистки — не кнопка с рамкой, а знак
+   в цели 38 внутри самого поля; «Сканировать заново» — вторичная кнопка
+   набора под полем. Прежде обе стояли на легаси-переменных прежней системы
+   (--border #e5e7eb, --card #fff, --text #111827) и рисовались белыми
+   плашками в холодной рамке. */
 .aps-create-barcode-scan {
-  height: 42px;
-  border: 1px solid var(--border, #e5e7eb);
-  background: var(--card, #fff);
-  color: var(--text, #111827);
-  border-radius: 10px;
+  height: 44px;
+  border: none;
+  background: var(--v4-surface, #f7efe2);
+  color: var(--v4-act-text, #8a4a20);
+  border-radius: 999px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .aps-create-barcode-clear {
-  flex: 0 0 42px;
+  flex: 0 0 38px;
+  height: 38px;
+  border: none;
+  background: none;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 35%, transparent);
   font-size: 20px;
   line-height: 1;
+  cursor: pointer;
 }
 
 .aps-create-barcode-scan {
