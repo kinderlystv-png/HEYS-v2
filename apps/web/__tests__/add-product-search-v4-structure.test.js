@@ -35,6 +35,32 @@ describe('add product search v4 canvas structure', () => {
     expect(addProductSource).toContain('aps-v4-product-row__pick');
   });
 
+  it('«Общие» — фильтр выдачи, а не четвёртая вкладка', () => {
+    // Строка «вид · чип «Общие»»: «не вкладка и не элемент строки поиска, а
+    // фильтр выдачи: стоит справа в строке над списком, которая эту выдачу и
+    // описывает». Оба кадра списка рисуют три вкладки.
+    expect(addProductSource).toContain('aps-v4-shared-filter');
+    expect(addProductSource).toContain('sharedFilterOn');
+    expect(addProductSource).not.toContain("handleBrowseTab('shared')");
+    expect(addProductSource).not.toContain("quickList === 'shared'");
+    // Выключен — строк общей базы в выдаче нет и «Найдено» считает остаток.
+    expect(addProductSource).toContain('const visibleResults');
+    expect(addProductSource).toContain('`Найдено ${visibleResults.length}`');
+    // Включён — заливка --c2 тоном --ac; выключен — обводка 1,5 px.
+    expect(cssSource).toMatch(/\.aps-v4-shared-filter \{[^}]*inset 0 0 0 1\.5px/s);
+    expect(cssSource).toMatch(/\.aps-v4-shared-filter\.is-on \{[^}]*var\(--v4-hero/s);
+    // Цель — его собственные 70 × 26.
+    expect(cssSource).toMatch(/\.aps-v4-shared-filter \{[^}]*min-width: 70px;[^}]*min-height: 26px;/s);
+  });
+
+  it('общий продукт помечен в строке метаданных, а не частотой', () => {
+    // Строка «продукт из общей базы»: «вместо частоты идёт «общая база» тоном
+    // --wat со значком глобуса 11 px того же тона».
+    expect(addProductSource).toContain('aps-v4-product-row__shared');
+    expect(addProductSource).toContain('meta.isShared');
+    expect(cssSource).toMatch(/\.aps-v4-product-row__shared \{[^}]*var\(--v4-water/s);
+  });
+
   it('над вкладками стоит вход в создание продукта', () => {
     // Строка «вид · две кнопки над вкладками». Вторую кнопку («Фото») ставить
     // нельзя: строка «единственный вход» того же контракта запрещает второй

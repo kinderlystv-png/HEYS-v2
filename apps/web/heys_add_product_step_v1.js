@@ -4416,8 +4416,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // 🌐 Результаты из общей базы (асинхронный поиск)
     const [sharedResults, setSharedResults] = useState([]);
     const [sharedLoading, setSharedLoading] = useState(false);
-    const [sharedCatalogPreview, setSharedCatalogPreview] = useState([]);
-    const [sharedCatalogLoading, setSharedCatalogLoading] = useState(false);
 
     useEffect(() => {
       const handleSharedUpdated = (event) => {
@@ -4446,59 +4444,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return () => window.removeEventListener('heys:shared-product-updated', handleSharedUpdated);
     }, []);
 
-    useEffect(() => {
-      if (quickList !== 'shared') {
-        setSharedCatalogPreview([]);
-        setSharedCatalogLoading(false);
-        return undefined;
-      }
-
-      let cancelled = false;
-      const readCachedPreview = () => {
-        const cached = HEYS.cloud?.getCachedSharedProducts?.();
-        return Array.isArray(cached)
-          ? cached.map(normalizeSharedProductForAddStep).filter(Boolean).slice(0, 24)
-          : [];
-      };
-      const applyCachedPreview = () => {
-        const preview = readCachedPreview();
-        if (preview.length && !cancelled) setSharedCatalogPreview(preview);
-        return preview.length > 0;
-      };
-
-      const loadPreview = async () => {
-        const hasCached = applyCachedPreview();
-        if (hasCached) return;
-        if (!HEYS.cloud?.getAllSharedProducts) return;
-
-        setSharedCatalogLoading(true);
-        try {
-          const result = await HEYS.cloud.getAllSharedProducts({ limit: 60 });
-          const list = Array.isArray(result) ? result : (result?.data || result?.products || []);
-          if (!cancelled) {
-            setSharedCatalogPreview(
-              (Array.isArray(list) ? list : [])
-                .map(normalizeSharedProductForAddStep)
-                .filter(Boolean)
-                .slice(0, 24)
-            );
-          }
-        } catch (err) {
-          console.error('[AddProductStep] Shared catalog preview error:', err);
-        } finally {
-          if (!cancelled) setSharedCatalogLoading(false);
-        }
-      };
-
-      const handleSharedProductsUpdated = () => applyCachedPreview();
-      window.addEventListener('heys:shared-products-updated', handleSharedProductsUpdated);
-      loadPreview();
-
-      return () => {
-        cancelled = true;
-        window.removeEventListener('heys:shared-products-updated', handleSharedProductsUpdated);
-      };
-    }, [quickList]);
 
     useApsCloseGuard(context?.apsCloseGuardRef, requestCloseModal);
     useEscapeToClose(requestCloseModal, true);
@@ -4548,7 +4493,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       || ((text) => String(text || '').toLowerCase().replace(/ё/g, 'е'));
     const lc = normalizeSearch(search.trim());
     const showSearch = lc.length > 0;
-    const effectiveSharedEnabled = quickList === 'shared' || showSearch;
+    const effectiveSharedEnabled = showSearch;
 
     // 🌐 Асинхронный поиск по общей базе (debounced)
     useEffect(() => {
@@ -4972,14 +4917,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return combined.slice(0, 25);
     }, [barcodeResults, searchResults, sharedResults, lc, normalizeSearch, selectedCategory, effectiveSharedEnabled]);
 
-    const visibleSharedCatalogPreview = useMemo(() => {
-      if (quickList !== 'shared' || showSearch) return [];
-      const list = Array.isArray(sharedCatalogPreview) ? sharedCatalogPreview : [];
-      const filtered = selectedCategory !== 'all'
-        ? list.filter(p => matchCategory(p, selectedCategory))
-        : list;
-      return filtered.slice(0, 24);
-    }, [sharedCatalogPreview, selectedCategory, showSearch, quickList]);
+    // Чип «Общие» — фильтр выдачи: выключен, и строк общей базы в списке нет
+    // (кадр «Поиск · только свои»: «Найдено 3» вместо «Найдено 5»).
+    const visibleResults = useMemo(() => (
+      sharedFilterOn
+        ? combinedResults
+        : combinedResults.filter((p) => !(p._source === 'shared' || p._fromShared))
+    ), [combinedResults, sharedFilterOn]);
 
     // Toggle избранного
     const toggleFavorite = useCallback((e, productId) => {
@@ -5658,6 +5602,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setQuickList(tabId);
     };
 
+    // Чип «Общие» стоял четвёртой вкладкой. Строка «вид · чип «Общие»» говорит
+    // прямо: «не вкладка и не элемент строки поиска, а фильтр выдачи», и оба
+    // кадра списка рисуют три вкладки, а «Общие» — справа в строке над списком.
+
     const browseLead = (() => {
       if (showSearch) {
         if (barcodeResults.length > 0) {
@@ -5666,15 +5614,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             : `Найдено по штрихкоду: ${barcodeResults.length}`;
         }
         if (sharedLoading && combinedResults.length === 0) return 'Поиск…';
-        if (combinedResults.length > 0) return `Найдено ${combinedResults.length}`;
+        if (visibleResults.length > 0) return `Найдено ${visibleResults.length}`;
         return null;
       }
       if (quickList === 'frequent') return `За ${usageWindowDays} день · чаще всего`;
       if (quickList === 'recent') return 'За последние 3 дня';
-      if (quickList === 'shared') {
-        if (sharedCatalogLoading && visibleSharedCatalogPreview.length === 0) return 'Общие продукты: загрузка…';
-        return 'Общая база';
-      }
       return null;
     })();
 
@@ -5806,12 +5750,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const hasSmart = Array.isArray(smartProducts) && smartProducts.length > 0;
       const hasFallback = Array.isArray(modalFallbackProducts) && modalFallbackProducts.length > 0;
       if (personalCount === 0 && !hasSmart && !hasFallback) {
-        if (sharedCatalogLoading) return null;
-        if (quickList !== 'shared' && visibleSharedCatalogPreview.length === 0) {
-          return initialProductsSyncState.syncSettled && !initialProductsSyncState.syncInFlight
-            ? 'empty_base'
-            : 'load_failed';
-        }
+        return initialProductsSyncState.syncSettled && !initialProductsSyncState.syncInFlight
+          ? 'empty_base'
+          : 'load_failed';
       }
       return null;
     }, [
@@ -5821,9 +5762,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       latestProducts,
       smartProducts,
       modalFallbackProducts,
-      sharedCatalogLoading,
-      quickList,
-      visibleSharedCatalogPreview.length,
       initialProductsSyncState.syncSettled,
       initialProductsSyncState.syncInFlight
     ]);
@@ -6044,7 +5982,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // === Скроллируемый список продуктов ===
       React.createElement('div', { className: 'aps-products-scroll' },
-        browseLead && React.createElement('div', { className: 'aps-v4-search-lead' }, browseLead),
+        browseLead && React.createElement('div', { className: 'aps-v4-search-lead' },
+          React.createElement('span', null, browseLead),
+          // «В кадрах состояний — пустота, офлайн, ожидание отправки — чипа нет».
+          shouldRenderSettledProducts && !searchBrowseState && React.createElement('button', {
+            type: 'button',
+            className: 'aps-v4-shared-filter' + (sharedFilterOn ? ' is-on' : ''),
+            'aria-pressed': sharedFilterOn ? 'true' : 'false',
+            onClick: () => setSharedFilterOn(!sharedFilterOn)
+          },
+            React.createElement('svg', {
+              width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 2, 'aria-hidden': 'true'
+            },
+              React.createElement('circle', { cx: 12, cy: 12, r: 9 }),
+              React.createElement('path', { d: 'M3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18' })
+            ),
+            'Общие')
+        ),
 
         shouldRenderSettledProducts && showSearch && barcodeResults.length > 1 && React.createElement('div', { className: 'aps-v4-barcode-multi' },
           React.createElement('div', { className: 'aps-v4-search-state__title' }, 'Несколько совпадений'),
@@ -6053,17 +6008,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         ),
 
         shouldRenderSettledProducts && showSearch && React.createElement('div', { className: 'aps-section' },
-          combinedResults?.length > 0 && React.createElement('div', { className: 'aps-v4-browse-list' },
-            combinedResults.map(p => renderV4ProductRow(p, { showUsage: true, showMacros: true }))
+          visibleResults.length > 0 && React.createElement('div', { className: 'aps-v4-browse-list' },
+            visibleResults.map(p => renderV4ProductRow(p, { showUsage: true, showMacros: true }))
           ),
-          combinedResults.length === 0 && !sharedLoading && renderApsSearchEmptyState('no_results', {
+          visibleResults.length === 0 && !sharedLoading && renderApsSearchEmptyState('no_results', {
             onCreate: handleNewProduct,
             createLabel: search ? `Создать «${search}»` : 'Создать продукт',
             query: search,
             similarProducts,
             onPickSimilar: selectProduct
           }),
-          combinedResults.length === 0 && sharedLoading && React.createElement('div', { className: 'aps-v4-search-lead' }, 'Поиск…')
+          visibleResults.length === 0 && sharedLoading && React.createElement('div', { className: 'aps-v4-search-lead' }, 'Поиск…')
         ),
 
         shouldRenderSettledProducts && !showSearch && searchBrowseState && React.createElement('div', { className: 'aps-section' },
@@ -6098,17 +6053,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             : React.createElement('div', { className: 'aps-empty' },
               React.createElement('span', null, 'За последние 3 дня продуктов нет')
             )
-        ),
-
-        shouldRenderSettledProducts && !showSearch && quickList === 'shared' && React.createElement('div', { className: 'aps-section' },
-          visibleSharedCatalogPreview.length > 0 && React.createElement('div', { className: 'aps-v4-browse-list' },
-            visibleSharedCatalogPreview.map(p => renderV4ProductRow(p, { showUsage: false }))
-          ),
-          visibleSharedCatalogPreview.length === 0 && !sharedCatalogLoading && React.createElement('div', { className: 'aps-empty' },
-            React.createElement('span', null, selectedCategory === 'all'
-              ? 'Общая база пока не загрузилась'
-              : 'В этой категории общих продуктов нет')
-          )
         ),
 
         shouldRenderSettledProducts && !showSearch && quickList === 'frequent' && (!smartProducts || smartProducts.length === 0) && modalFallbackProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },

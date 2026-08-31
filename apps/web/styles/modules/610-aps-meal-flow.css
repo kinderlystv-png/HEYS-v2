@@ -3323,8 +3323,55 @@ button.meal-quality-badge:active {
   font-weight: 600;
 }
 
+/* Строка «вид · чип «Общие»»: фильтр выдачи стоит справа в строке над списком,
+   которая эту выдачу и описывает. Включён — заливка --c2 с текстом --ac;
+   выключен — обводка 1,5 px тоном чернил 16 % и текст тоном 50 %. Цель — его
+   собственные 70 × 26. */
+.aps-v4-shared-filter {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  min-width: 70px;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--v4-ink, #201e1d) 16%, transparent);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.aps-v4-shared-filter.is-on {
+  background: var(--v4-hero, #efe3cf);
+  box-shadow: none;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.aps-v4-shared-filter:active {
+  opacity: 0.7;
+  transition: opacity 120ms ease;
+}
+
+/* Метка «общая база» вместо частоты — своим тоном воды со значком глобуса. */
+.aps-v4-product-row__shared {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--v4-water, #7d98a6);
+}
+
 .aps-v4-search-lead {
-  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1;
