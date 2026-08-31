@@ -1159,7 +1159,7 @@
 .nutrition-v4-sheet__action {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 10px;
   width: calc(100% - 36px);
   min-height: 44px;
   margin: 0 18px;
@@ -1175,9 +1175,10 @@
 .nutrition-v4-sheet__action b {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  /* Кадр «Приём · правка»: строка действия 600 12,5 px/1,35 чернилами. */
+  font-size: 12.5px;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.35;
   color: var(--v4-ink, #111827);
 }
 
@@ -1296,18 +1297,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 8px;
   width: calc(100% - 36px);
   min-height: 44px;
-  margin: 14px 18px 0;
+  margin: 8px 18px 0;
   padding-top: 12px;
   border: none;
   border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: transparent;
-  font-size: 12px;
-  font-weight: 600;
+  /* Кадр: «Удалить приём» 700 12,5 px/1 тревожным тоном, зазор 8. */
+  font-size: 12.5px;
+  font-weight: 700;
   line-height: 1;
-  color: var(--v4-bad-text, #a8382b);
+  color: var(--v4-bad-text, #b4442a);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1527,4 +1529,49 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* === Разбор приёма в листе правки ===================================
+   Строка «вид · разбор приёма»: карточка «Смешанный профиль · волна 4,5 ч»
+   с шевроном ниже блока действий, прямо перед «Удалить приём» — она объясняет
+   приём, а не правит его. */
+.nutrition-v4-sheet__why {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.nutrition-v4-sheet__why-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nutrition-v4-sheet__why-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 60%, transparent);
+}
+
+.nutrition-v4-sheet__why-wave {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 40%, transparent);
+}
+
+.nutrition-v4-sheet__why-head.is-open svg {
+  transform: rotate(90deg);
 }

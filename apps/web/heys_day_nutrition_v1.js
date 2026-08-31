@@ -166,6 +166,13 @@
     return { text, syncLabel: null };
   }
 
+  // Кадр пишет длительность волны часами с запятой — «волна 4,5 ч», а не «4:30»:
+  // здесь это оценка, а не точное время.
+  function formatWaveHours(totalMinutes) {
+    const hours = Math.max(0, Number(totalMinutes) || 0) / 60;
+    return String(Math.round(hours * 10) / 10).replace('.', ',') + ' ч';
+  }
+
   function formatDurationShort(totalMinutes) {
     const mins = Math.max(0, Math.round(Number(totalMinutes) || 0));
     const h = Math.floor(mins / 60);
@@ -1330,10 +1337,23 @@
   }
 
   function MealEditSheet(props) {
-    const { React, meal, mealIndex, pIndex, date, actions, onClose } = props;
+    const { React, meal, mealIndex, pIndex, date, actions, onClose, insulinWaveData } = props;
     const sheetRef = React.useRef(null);
     const [dragY, setDragY] = React.useState(0);
+    const [whyOpen, setWhyOpen] = React.useState(false);
     const startY = React.useRef(null);
+
+    // Строка «вид · разбор приёма»: карточка «Смешанный профиль · волна 4,5 ч»
+    // стоит ниже блока действий, прямо перед «Удалить приём» — она объясняет
+    // приём, а не правит его. Волну для этого приёма модель уже посчитала:
+    // до сих пор её видел только виджет дня, а в листе правки человек не мог
+    // узнать, почему у приёма именно такая длительность.
+    const mealWave = React.useMemo(() => {
+      const list = Array.isArray(insulinWaveData?.waveHistory) ? insulinWaveData.waveHistory : [];
+      if (!list.length) return null;
+      return list.find((wave) => (meal?.id ? wave.id === meal.id : wave.time === meal?.time)) || null;
+    }, [insulinWaveData, meal?.id, meal?.time]);
+    const waveTrace = mealWave ? buildWaveTrace(mealWave) : null;
 
     const items = Array.isArray(meal?.items) ? meal.items : [];
     const isEmpty = items.length === 0;
@@ -1501,6 +1521,22 @@
           () => { onClose?.(); actions.openMoveMealModal?.(mealIndex); }, isEmpty),
         actionRow('preset', 'Сохранить набором', 'M5 4h14v16l-7-4-7 4z',
           () => { onClose?.(); actions.saveAsPreset?.(mealIndex); }, isEmpty),
+
+        mealWave ? React.createElement('div', { className: 'nutrition-v4-sheet__why' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'nutrition-v4-sheet__why-head' + (whyOpen ? ' is-open' : ''),
+            'aria-expanded': whyOpen ? 'true' : 'false',
+            onClick: () => setWhyOpen(!whyOpen)
+          },
+            React.createElement('span', { className: 'nutrition-v4-sheet__why-title' },
+              mealWave.responseShape?.label || 'Профиль приёма'),
+            React.createElement('span', { className: 'nutrition-v4-sheet__why-wave' },
+              '· волна ' + formatWaveHours(mealWave.duration)),
+            chevron(React, 15)
+          ),
+          whyOpen ? renderWaveTrace(React, waveTrace, true, null) : null
+        ) : null,
 
         React.createElement('button', {
           type: 'button',
@@ -1899,6 +1935,7 @@
         pIndex,
         date,
         actions: actions || {},
+        insulinWaveData,
         onClose: closeMealSheet
       }) : null,
 

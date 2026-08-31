@@ -88,6 +88,70 @@ const WAVE = {
   }
 };
 
+describe('лист правки: разбор приёма', () => {
+  let renderFn;
+
+  beforeEach(() => {
+    seedHEYS();
+    renderFn = loadModule().render;
+  });
+
+  // Строка «вид · разбор приёма»: карточка «<профиль> · волна N ч» с шевроном
+  // стоит перед «Удалить приём» и объясняет приём, а не правит его. Волну модель
+  // считала и раньше, но в листе её никто не показывал.
+  const MEAL_WAVE = {
+    waveHistory: [{
+      id: 'm1',
+      time: '08:20',
+      startMin: 500,
+      duration: 270,
+      responseShape: { type: 'mixed', label: 'Смешанный профиль' },
+      estimatedWindow: {
+        calculation: {
+          uncertaintyPercent: 20,
+          lowerMinutes: 210,
+          upperMinutes: 320,
+          contributions: [
+            { code: 'BASE', label: 'База модели', minutes: 75 },
+            { code: 'GL', label: 'Гликемическая нагрузка', minutes: 42 }
+          ]
+        }
+      }
+    }]
+  };
+
+  function openSheet(container) {
+    const row = container.querySelector('.nutrition-v4-meal-row');
+    expect(row).toBeTruthy();
+    fireEvent.click(row);
+  }
+
+  it('карточка называет профиль и длительность волны часами', () => {
+    const { container } = renderTab(renderFn, { ctx: { insulinWaveData: MEAL_WAVE } });
+    openSheet(container);
+    const why = document.querySelector('.nutrition-v4-sheet__why');
+    expect(why).toBeTruthy();
+    expect(why.textContent).toContain('Смешанный профиль');
+    // 270 минут — «4,5 ч», а не «4:30»: это оценка, а не точное время.
+    expect(why.textContent).toContain('· волна 4,5 ч');
+  });
+
+  it('расчёт раскрывается по шеврону и до тапа скрыт', () => {
+    const { container } = renderTab(renderFn, { ctx: { insulinWaveData: MEAL_WAVE } });
+    openSheet(container);
+    expect(document.body.textContent).not.toContain('База модели');
+    fireEvent.click(document.querySelector('.nutrition-v4-sheet__why-head'));
+    expect(document.body.textContent).toContain('База модели');
+  });
+
+  it('без волны для этого приёма карточки нет вовсе', () => {
+    const { container } = renderTab(renderFn, { ctx: { insulinWaveData: null } });
+    openSheet(container);
+    expect(document.querySelector('.nutrition-v4-sheet')).toBeTruthy();
+    expect(document.querySelector('.nutrition-v4-sheet__why')).toBeNull();
+  });
+});
+
 describe('nutrition-tab · правки зоны', () => {
   let api;
   let renderFn;
