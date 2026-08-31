@@ -1572,6 +1572,10 @@
   margin: 8px 0 14px 0;
 }
 
+/* Выбор «сохранить в базу» или «разово в приём». Кадра у этой пары нет —
+   контракт зоны её не рисует, — поэтому форма оставлена прежней, а цвета
+   переведены на роли: было семейство --color-slate-* снятой системы, а у
+   выбранной кнопки синева прежнего набора (см. ниже .active). */
 .aps-create-mode-btn {
   flex: 1;
   display: flex;
@@ -1579,11 +1583,11 @@
   align-items: center;
   gap: 2px;
   padding: 10px 8px;
-  background: var(--color-slate-100);
-  border: 2px solid transparent;
-  border-radius: 10px;
+  background: var(--v4-surface, #f7efe2);
+  border: none;
+  border-radius: 14px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   text-align: center;
 }
 
@@ -1600,24 +1604,12 @@
 .aps-create-mode-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-slate-700);
+  color: var(--v4-ink, #201e1d);
 }
 
 .aps-create-mode-hint {
   font-size: 10px;
-  color: var(--color-slate-500);
-}
-
-[data-theme$='dark'] .aps-create-mode-btn {
-  background: var(--color-slate-700);
-}
-
-[data-theme$='dark'] .aps-create-mode-label {
-  color: var(--color-slate-200);
-}
-
-[data-theme$='dark'] .aps-create-mode-hint {
-  color: var(--color-slate-400);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
 }
 
 @media (max-width: 480px) {
@@ -1711,18 +1703,18 @@
   background: linear-gradient(135deg, #059669 0%, #047857 100%);
 }
 
+/* Выбранная кнопка залита акцентом, как выбранный чип набора. Прежде она
+   держала синеву прежней системы, причём в запасных значениях: --v4-accent-bg
+   с запасным #dbeafe и --v4-act с запасным #2563eb. Роли верные, запасные
+   синие — без загруженной палитры выбор красился голубым, а тёмная тема
+   держала #1e3a8a литералом. */
 .aps-create-mode-btn.active {
-  background: var(--v4-accent-bg, #dbeafe);
-  border-color: var(--color-blue-500);
+  background: var(--v4-act, #c67139);
 }
 
-.aps-create-mode-btn.active .aps-create-mode-label {
-  color: var(--v4-act, #2563eb);
-}
-
-[data-theme$='dark'] .aps-create-mode-btn.active {
-  background: #1e3a8a;
-  border-color: var(--color-blue-500);
+.aps-create-mode-btn.active .aps-create-mode-label,
+.aps-create-mode-btn.active .aps-create-mode-hint {
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 /* Порции продукта: переехали из оболочки 31 августа, второй случай той же
