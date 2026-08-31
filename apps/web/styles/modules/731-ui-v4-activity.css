@@ -182,6 +182,11 @@ body:has(.activity-v4) .hdr::after {
   color: var(--v4-ok-text, #5c6a45);
 }
 
+/* Поправка уровня — 700 по кадру «разбор цели»: причина, а не слагаемое. */
+.activity-v4-breakdown__value--strong {
+  font-weight: 700;
+}
+
 .activity-v4-breakdown__value--aside {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
@@ -998,7 +1003,10 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4 .sb-card-title span {
-  /* Кадр просит 45 % — это ступень набора. */
+  /* Кадр просит 45 % — это ступень набора. Блочность обязательна: у инлайнового
+     span отступ сверху не применяется вовсе, и состав прилипал к имени. */
+  display: block;
+  margin-top: 5px;
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
@@ -1028,7 +1036,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-history-empty__title {
-  font: 700 13px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 13px/1.35 Figtree, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 

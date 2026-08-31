@@ -598,6 +598,7 @@
         React.createElement('span', {
           className: 'activity-v4-breakdown__value'
             + (o.tone ? ' activity-v4-breakdown__value--' + o.tone : '')
+            + (o.strong ? ' activity-v4-breakdown__value--strong' : '')
             + (o.total ? ' activity-v4-breakdown__value--total' : '')
         }, value)
       );
@@ -632,7 +633,10 @@
     }
     const levelReason = buildLevelReasonRow({ day, caloricDebt, optimum, displayOptimum, r0: safeR0 });
     if (levelReason) {
-      breakdownRows.push(breakdownRow(levelReason.label, levelReason.value, { tone: levelReason.tone }));
+      // Кадр «разбор цели» набирает поправку уровня весом 700, в отличие от
+      // обычных слагаемых: это не ещё одно слагаемое, а причина, по которой
+      // цель отличается от базовой.
+      breakdownRows.push(breakdownRow(levelReason.label, levelReason.value, { tone: levelReason.tone, strong: true }));
     }
     breakdownRows.push(breakdownRow('Цель дня', String(displayOptimum), { total: true }));
 

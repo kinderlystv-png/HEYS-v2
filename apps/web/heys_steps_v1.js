@@ -1798,7 +1798,7 @@
         React.createElement('div', { className: 'mc-step-kicker' }, 'Вес на утро'),
         React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 14 } },
           React.createElement('span', { style: { fontSize: 58, fontWeight: 600, lineHeight: 0.9, color: 'rgba(0,0,0,.45)', letterSpacing: '-0.045em' } }, weightLabel),
-          React.createElement('span', { style: { fontSize: 13, fontWeight: 600, color: 'rgba(0,0,0,.38)' } }, 'кг')
+          React.createElement('span', { style: { fontSize: 13, fontWeight: 600, lineHeight: 1, color: 'rgba(0,0,0,.38)' } }, 'кг')
         ),
         React.createElement('div', {
           style: {
@@ -1817,7 +1817,7 @@
               }, 'Среднее за три последних взвешивания'),
               ...estimateSamples.map((sample) => React.createElement('div', {
                 key: sample.date,
-                style: { display: 'flex', justifyContent: 'space-between', marginTop: 11, fontSize: 12, fontWeight: 600, color: 'rgba(0,0,0,.5)' }
+                style: { display: 'flex', justifyContent: 'space-between', marginTop: 11, fontSize: 12, fontWeight: 600, lineHeight: 1, color: 'rgba(0,0,0,.5)' }
               },
                 React.createElement('span', null, formatEstimateSampleDate(sample.date)),
                 React.createElement('span', null, `${Number(sample.weight).toFixed(1).replace('.', ',')} кг`)
@@ -1828,7 +1828,7 @@
             }, 'Взвешиваний пока меньше трёх — среднее считать не из чего, берём вес из анкеты.')
         ),
         React.createElement('p', {
-          style: { fontSize: 11, lineHeight: 1.5, color: 'rgba(0,0,0,.45)', marginTop: 14, textAlign: 'center' }
+          style: { fontSize: 11, fontWeight: 500, lineHeight: 1.5, color: 'rgba(0,0,0,.45)', marginTop: 14, textAlign: 'center' }
         }, estimatedHint),
         !context?.dailyCheckin && React.createElement('button', {
           type: 'button',

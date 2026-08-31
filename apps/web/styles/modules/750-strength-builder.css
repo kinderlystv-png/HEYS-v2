@@ -816,10 +816,14 @@
   background: var(--sb-card);
 }
 
+/* Кадр «Тренировки · журнал подходов», элемент 15: имя и время по общей
+   базовой линии, разнесены по краям. Прежние flex-start и 9 px оставались от
+   редакции до контракта. */
 .sb-card-head {
   display: flex;
-  align-items: flex-start;
-  gap: 9px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
   margin-bottom: 9px;
 }
 
