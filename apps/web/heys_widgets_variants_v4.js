@@ -2977,7 +2977,7 @@
           cells.slice(w * 7, w * 7 + 7).map((c, i) => React.createElement('span', {
             key: i,
             className: 'widget-bd-sheet__heat-cell'
-              + (c.ratio >= 1 ? ' is-ok' : c.ratio >= 0.5 ? ' is-mid' : '')
+              + (c.ratio >= 1 ? ' is-ok' : c.ratio >= 0.5 ? ' is-mid' : c.ratio > 0 ? ' is-low' : '')
               + (gapFlags[w * 7 + i] ? ' is-gap' : '')
           }))
         ))

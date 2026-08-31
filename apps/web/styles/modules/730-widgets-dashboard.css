@@ -14134,10 +14134,10 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__grid-label {
-  flex: 0 0 14px;
+  flex: 0 0 12px;
   font-size: 9px;
   font-weight: 700;
-  color: rgba(0, 0, 0, 0.45);
+  color: rgba(0, 0, 0, 0.4);
 }
 
 .widget-bd-sheet__grid-cell {
@@ -14170,12 +14170,20 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   background: rgba(0, 0, 0, 0.07);
 }
 
+/* Строка контракта «тепловая карта»: у клетки своя шкала плотности в одном
+   тоне, ролями состояния она не красится. Прежние ступени шли двумя цветами —
+   серым и зелёным, — то есть читались как «плохо / хорошо». Кадр «Разбор ·
+   Карта активности» даёт один тон --acs на четырёх прозрачностях. */
+.widget-bd-sheet__heat-cell.is-low {
+  background: color-mix(in srgb, var(--v4-sand-act, #c67139) 25%, transparent);
+}
+
 .widget-bd-sheet__heat-cell.is-mid {
-  background: rgba(0, 0, 0, 0.16);
+  background: color-mix(in srgb, var(--v4-sand-act, #c67139) 45%, transparent);
 }
 
 .widget-bd-sheet__heat-cell.is-ok {
-  background: color-mix(in srgb, var(--v4-good, #7a8a5e) 40%, transparent);
+  background: var(--v4-sand-act, #c67139);
 }
 
 .widget-bd-sheet__heat-cell.is-gap {
@@ -14264,13 +14272,15 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   gap: 6px;
 }
 
+/* Кадр «Разбор · Инсулиновая волна»: подпись дня в ленте недели мельче и
+   легче, чем буква нутриента в сетке БЖУ, и шире — под «пн»/«вс». */
 .widget-bd-sheet__wave-week-label {
-  width: 12px;
+  width: 16px;
   flex: none;
-  font-size: 9px;
-  font-weight: 700;
+  font-size: 8.5px;
+  font-weight: 600;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.4);
+  color: rgba(0, 0, 0, 0.35);
 }
 
 .widget-bd-sheet__wave-week-row.is-today .widget-bd-sheet__wave-week-label {
@@ -14278,10 +14288,11 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__wave-week-track {
+  position: relative;
   flex: 1;
   display: flex;
   height: 8px;
-  border-radius: 4px;
+  border-radius: 999px;
   background: rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
