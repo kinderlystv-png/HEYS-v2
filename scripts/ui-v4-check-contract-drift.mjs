@@ -127,6 +127,20 @@ function inspect(zoneId, zone) {
   return { drifted, missing, gone, tally, total: current.size, current };
 }
 
+// Канвас с контрактом, которого нет в снимке, — это строки, которых гейт не
+// видит вовсе: «зелено» означает лишь «зарегистрированное не поехало». Так
+// 31.08 вне снимка оказались food-meal (1010 строк) и product-card (372).
+function unregisteredCanvases(data) {
+  const registered = new Set(Object.values(data.zones).map((zone) => zone.canvas));
+  const orphans = [];
+  for (const file of fs.readdirSync(PACK).filter((f) => f.endsWith('.dc.html'))) {
+    if (registered.has(file)) continue;
+    const { rows } = contractRows(fs.readFileSync(path.join(PACK, file), 'utf8'), false);
+    if (rows && rows.length) orphans.push({ file, count: rows.length });
+  }
+  return orphans;
+}
+
 function runCli() {
   const args = process.argv.slice(2);
   const data = readVerdicts();
@@ -188,7 +202,14 @@ function runCli() {
   for (const warning of hygiene.warnings) console.log(`⚠  ${warning}`);
 
   const invalidVerdicts = findInvalidVerdicts(data, selectedZoneIds);
-  let failed = hygiene.problems.length > 0 || invalidVerdicts.length > 0;
+  const orphans = requestedZones.length ? [] : unregisteredCanvases(data);
+  let failed =
+    hygiene.problems.length > 0 || invalidVerdicts.length > 0 || orphans.length > 0;
+  if (orphans.length) {
+    console.error('\n❌ Канвас с контрактом не заведён зоной в снимке — его строки гейт не видит:');
+    for (const item of orphans) console.error(`  ${item.file} — строк ${item.count}`);
+    console.error('  Завести зону в docs/ui/ui-v4-contract-verdicts.json и снять отпечатки --rehash.');
+  }
   for (const problem of hygiene.problems) console.error(`\n❌ ${problem}`);
   if (invalidVerdicts.length) {
     console.error('\n❌ Неизвестный символ вердикта; допустимы только = ≠ ? —:');

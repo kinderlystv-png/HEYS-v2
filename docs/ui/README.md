@@ -6,10 +6,11 @@
 
 ## 📊 DASHBOARDS
 
-| File                                                                                 | Priority   | Purpose                                             |
-| ------------------------------------------------------------------------------------ | ---------- | --------------------------------------------------- |
-| **[actualization-dashboard.html](actualization-dashboard.html)**                     | ⭐⭐⭐⭐⭐ | Documentation status dashboard                      |
-| **[ui-v4-canvas-brief.md](ui-v4-canvas-brief.md)** · [html](ui-v4-canvas-brief.html) | ⭐⭐⭐⭐   | Трекер контрактов v4; html: `pnpm docs:ui-v4-brief` |
+| File                                                                                 | Priority   | Purpose                                                            |
+| ------------------------------------------------------------------------------------ | ---------- | ------------------------------------------------------------------ |
+| **[actualization-dashboard.html](actualization-dashboard.html)**                     | ⭐⭐⭐⭐⭐ | Documentation status dashboard                                     |
+| **[ui-v4-canvas-brief.md](ui-v4-canvas-brief.md)** · [html](ui-v4-canvas-brief.html) | ⭐⭐⭐⭐   | Архивный бриф контрактов v4 (24.08); html: `pnpm docs:ui-v4-brief` |
+| **[UI_V4_CONDUCTOR_BOARD.md](UI_V4_CONDUCTOR_BOARD.md)**                             | ⭐⭐⭐⭐   | Кто ведёт какую зону сведения; числа — из `--list`                 |
 
 ## 🎛️ Dashboard Features
 
