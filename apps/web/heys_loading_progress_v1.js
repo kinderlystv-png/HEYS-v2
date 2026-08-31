@@ -298,6 +298,10 @@
         again: {
             title: 'Всё ещё не получается',
             text: 'Данные на месте. Если связь есть, а приложение не открывается — напишите куратору, он посмотрит.',
+            // Кадр «Спиннер · вторая неудача», элемент 07: повтор здесь уже не
+            // главное действие и называется полно — «Повторить» второй раз
+            // подряд звучит как то же самое действие (ответ дизайнера №15).
+            retry: 'Повторить ещё раз',
         },
     };
 
@@ -396,6 +400,8 @@
             if (text) text.textContent = copy.text;
             const sr = el.querySelector('.heys-boot-mark__sr');
             if (sr) sr.textContent = copy.title;
+            const retry = el.querySelector('.heys-boot-mark__fail .heys-boot-mark__retry');
+            if (retry && copy.retry) retry.textContent = copy.retry;
         });
         enableOverlayClicks();
         if (slowTimer) { clearTimeout(slowTimer); slowTimer = null; }

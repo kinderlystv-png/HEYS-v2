@@ -343,6 +343,44 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     display: none;
 }
 .heys-boot-mark.is-fail-again .heys-boot-mark__curator { display: block; }
+/* Вторая неудача меняет иерархию действий (ответ дизайнера №15 от 31 августа,
+   кадр «Спиннер · вторая неудача», элементы 05–07). Приложение не запустилось
+   дважды подряд, значит «Повторить» уже не сработал, и единственный живой
+   выход не может быть тише него: «Написать куратору» берёт вид кнопки ступени
+   и встаёт первым, «Повторить ещё раз» уходит вторичной строкой 44 px.
+   На первой ступени всё остаётся по контракту — там куратора нет вовсе.
+   Строка «вид ступеней холодного старта» пока просит обратное; дизайнер
+   правит её отдельным заходом, вердикт зоны до тех пор не трогаем.
+   Порядок задан order, а не перестановкой разметки: тот же .heys-boot-mark__fail
+   собирается в двух местах (статикой и showRecoveryUI), и одна точка правки
+   надёжнее двух. */
+.heys-boot-mark.is-fail-again .heys-boot-mark__title { order: 1; }
+.heys-boot-mark.is-fail-again .heys-boot-mark__text { order: 2; }
+.heys-boot-mark.is-fail-again .heys-boot-mark__curator {
+    order: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 48px;
+    margin-top: 22px;
+    border-radius: 999px;
+    background: var(--boot-disc);
+    color: var(--boot-ink-58);
+    font: 700 13px/1 Figtree, system-ui, sans-serif;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+.heys-boot-mark.is-fail-again .heys-boot-mark__retry {
+    order: 4;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 8px;
+    background: none;
+    color: var(--boot-ink-50);
+    font: 700 12px/1 Figtree, system-ui, sans-serif;
+}
+.heys-boot-mark.is-fail-again .heys-boot-mark__status { order: 5; }
 .heys-boot-mark__status {
     margin-top: 12px;
     font: 500 12px/1.4 Figtree, system-ui, sans-serif;

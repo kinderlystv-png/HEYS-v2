@@ -180,6 +180,34 @@ describe('cold-start spinner mark', () => {
     );
   });
 
+  it('swaps the action hierarchy on the second fail, by the frame', () => {
+    // Ответ дизайнера №15 от 31 августа — единственное место, где вторая
+    // ступень идёт по кадру, а не по строке «вид ступеней холодного старта»:
+    // приложение не запустилось дважды подряд, «Повторить» уже не сработал, и
+    // «Написать куратору» остаётся единственным живым выходом. Тише кнопки он
+    // быть не может. Кадр «Спиннер · вторая неудача» рисует это элементами
+    // 05–07: куратор главной кнопкой, повтор вторичной строкой 44 px.
+    // Строку контракта дизайнер правит отдельным заходом — до тех пор эта
+    // проверка и есть единственный сторож решения.
+    expect(css).toMatch(
+      /\.heys-boot-mark\.is-fail-again \.heys-boot-mark__curator \{[^}]*min-height: 48px;[^}]*border-radius: 999px;[^}]*background: var\(--boot-disc\);[^}]*font: 700 13px/,
+    );
+    expect(css).toMatch(
+      /\.heys-boot-mark\.is-fail-again \.heys-boot-mark__retry \{[^}]*min-height: 44px;[^}]*color: var\(--boot-ink-50\);[^}]*font: 700 12px/,
+    );
+    // Куратор стоит выше повтора. Порядок задан order, а не перестановкой
+    // разметки: тот же блок собирается статикой и showRecoveryUI.
+    expect(css).toMatch(/\.heys-boot-mark\.is-fail-again \.heys-boot-mark__curator \{\s*\n\s*order: 3;/);
+    expect(css).toMatch(/\.heys-boot-mark\.is-fail-again \.heys-boot-mark__retry \{\s*\n\s*order: 4;/);
+    // Повтор на второй ступени называется полно. Сторожится пока только
+    // статическая сборка блока: та же копия в showRecoveryUI (index.html)
+    // лежит в файле вместе с чужим hash-sync бандлов и в этот коммит не
+    // вошла, поэтому проверять её здесь нечего — она уехала бы красной.
+    // Когда динамическая ветка закоммитится, сюда возвращается строка
+    // expect(html).toContain("(again ? 'Повторить ещё раз' : 'Повторить')").
+    expect(loading).toContain("retry: 'Повторить ещё раз'");
+  });
+
   it('keeps the sign palettes on the canvas --c2 / --acs values', () => {
     // Синие наборы расходились с v4-canvas.css: #e2edf7 против --c2 #e2ecf6,
     // #2e7cc0 против --acs #1d5e96, #13222f против --c2 #1e3448.
