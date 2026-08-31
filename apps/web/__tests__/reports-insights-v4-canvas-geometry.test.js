@@ -473,6 +473,25 @@ describe('Отчёты · разбор кадров канваса', () => {
     })).toEqual([]);
   });
 
+  // Геометрию строки каскада стережёт пара, но пара не видит разметки: склей
+  // два этажа обратно в один ряд — все правила останутся на месте, а экран
+  // вернётся к прежнему виду. Порядок узлов и есть то, чего нет в CSS.
+  it('строка каскада остаётся в два этажа', () => {
+    const cascade = fs.readFileSync(
+      path.resolve(__dirname, '../heys_cascade_card_v1.js'), 'utf8');
+    const at = (mark) => cascade.indexOf(mark, cascade.indexOf("'heys-score-screen__row'"));
+    const line = at("'heys-score-screen__row-line'");
+    const label = at("'heys-score-screen__row-label'");
+    const value = at("'heys-score-screen__row-value'");
+    const bar = at("'heys-score-screen__row-bar'");
+    // Отрицательный indexOf прошёл бы сравнение молча, поэтому сначала наличие.
+    expect([line, label, value, bar].every((i) => i > 0)).toBe(true);
+    // Имя и вклад — внутри верхнего этажа, полоса — после него.
+    expect(line).toBeLessThan(label);
+    expect(label).toBeLessThan(value);
+    expect(value).toBeLessThan(bar);
+  });
+
   it('отступления разбора названы и не разрастаются молча', () => {
     expect(RAZBOR_EXCEPTIONS.size).toBe(22);
   });
