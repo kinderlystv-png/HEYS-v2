@@ -2504,8 +2504,10 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   color: var(--v4-sand-ink, #201e1d);
 }
 
+/* Шапки потока на soft: строка поиска сюда не входит — по контракту «вид ·
+   строка поиска» она карточка --c1, и собственное правило ниже это и задаёт.
+   В группе она стояла мёртвой строкой: правка soft на неё не действовала. */
 .aps-v4-flow .aps-fixed-header,
-.aps-v4-flow .aps-search-field,
 .aps-v4-flow .aps-create-header,
 .aps-v4-flow .aps-portions-header,
 .aps-v4-flow .aps-product-header {
