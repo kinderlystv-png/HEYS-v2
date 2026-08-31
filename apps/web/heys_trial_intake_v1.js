@@ -1338,7 +1338,11 @@
                 width: 22, height: 22, flex: 'none', borderRadius: 999,
                 display: 'grid', placeItems: 'center',
                 fontSize: 10.5, fontWeight: 700, lineHeight: 1,
-                background: done ? OK_BG : currentRow ? ACCENT_FILL : SURFACE_2,
+                // Кадр «Анкета · возврат» даёт непройденной метке фон --c1 —
+                // тот же, что у карточки списка: кружок сливается, остаётся
+                // одна цифра. Так три состояния читаются как «сделано ·
+                // здесь · ещё нет», а не как три разных кружка. Стояло --c2.
+                background: done ? OK_BG : currentRow ? ACCENT_FILL : SURFACE_1,
                 color: done ? OK_TEXT : currentRow ? ON_ACCENT : INK_55,
               },
             }, done ? '✓' : String(index + 1)),
