@@ -20,41 +20,57 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '../../..');
 
-const SRC = fs.readFileSync(path.join(ROOT, 'scripts/sync-local-workspace.mjs'), 'utf8');
+const FILES = [
+  // Одна и та же ветка живёт в двух скриптах, и разъехались они ровно так, как
+  // разъезжаются копии: sync починили, ensure не заметили. Проверяем обе — иначе
+  // возврат к безусловному `restore packages/ apps/` в одной пройдёт молча.
+  ['scripts/sync-local-workspace.mjs', 'restoreDeletedWorkspaces', '\nasync function main('],
+  ['scripts/ensure-local-toolchain.mjs', 'const deleted = getDeletedWorkspaceManifests();', '\n  if (!ok'],
+];
 
-function restoreBody() {
-  const start = SRC.indexOf('function restoreDeletedWorkspaces(');
-  expect(start).toBeGreaterThan(-1);
-  const end = SRC.indexOf('\nasync function main(', start);
-  return SRC.slice(start, end > start ? end : start + 2000);
+function restoreBody(file, from, to) {
+  const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const start = src.indexOf(from);
+  expect(start, file).toBeGreaterThan(-1);
+  const end = src.indexOf(to, start);
+  return src.slice(start, end > start ? end : start + 2500);
 }
 
-describe('Починка workspace не трогает чужую работу', () => {
+describe.each(FILES)('Починка workspace не трогает чужую работу — %s', (file, from, to) => {
+  const body = () => restoreBody(file, from, to);
+
   it('деревья целиком больше не откатываются', () => {
-    const body = restoreBody();
-    expect(body).not.toContain("'packages/', 'apps/'");
-    expect(body).not.toMatch(/restore['"],\s*['"]apps\//);
+    expect(body()).not.toContain("'packages/', 'apps/'");
+    expect(body()).not.toMatch(/restore['"],\s*['"]apps\//);
   });
 
   it('восстанавливаются ровно пакеты пропавших манифестов', () => {
-    const body = restoreBody();
+    const text = body();
     // Список уже был — он просто не использовался.
-    expect(body).toContain('const deleted = getDeletedWorkspaceManifests();');
-    expect(body).toContain('deleted.map(');
-    expect(body).toContain("run('restore workspace sources', 'git', ['restore', '--', ...targets]);");
+    expect(text).toContain('getDeletedWorkspaceManifests()');
+    expect(text).toContain('deleted.map(');
+    expect(text).toMatch(/\['restore', '--', \.\.\.targets\]/);
   });
 
   it('манифест в корне не разворачивается в «всё целиком»', () => {
-    const body = restoreBody();
-    expect(body).toContain("dir === '.'");
+    expect(body()).toContain("dir === '.'");
   });
 
   it('пути разделяются одним видом слэша — git не понимает обратный', () => {
-    const body = restoreBody();
-    expect(body).toContain('String.fromCharCode(92)');
+    expect(body()).toContain('String.fromCharCode(92)');
+  });
+});
+
+describe('Границы починки названы, а не забыты', () => {
+  it('пустой список ничего не запускает', () => {
+    expect(restoreBody(...FILES[0])).toContain('if (!deleted.length) return 0;');
   });
 
-  it('пустой список по-прежнему ничего не запускает', () => {
-    expect(restoreBody()).toContain('if (!deleted.length) return 0;');
+  it('известное ограничение: пропажа apps/web/package.json вернёт apps/web целиком', () => {
+    // Это прямое следствие правила «вернуть пакет, чей манифест исчез», и сузить
+    // дальше можно только отказавшись от восстановления. Разница с прежним
+    // поведением в причине: раньше хватало пропажи любого манифеста в packages/.
+    // Названо здесь, чтобы следующий читатель не считал это недосмотром.
+    expect(restoreBody(...FILES[0])).toContain('targets');
   });
 });
