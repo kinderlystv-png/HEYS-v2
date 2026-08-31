@@ -2663,6 +2663,10 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   position: relative;
   display: flex;
   align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--v4-sand-surface, #f7efe2);
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -2676,17 +2680,21 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   z-index: 1;
 }
 
+/* Кадр «Добавление · поиск»: поверхность держит сам ряд поля — --c1 радиусом
+   16 с полями 14/16, — а ввод внутри прозрачный. Прежде ряд был без заливки, а
+   ввод стоял на легаси-ролях --card и --border с радиусом 10: рамка, которой в
+   кадре нет вовсе. */
 .aps-search-input {
   width: 100%;
-  min-height: 46px;
-  padding: 12px 106px 12px 12px;
-  padding-left: 38px !important;
-  font-size: 15px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--card);
-  color: var(--text);
-  transition: border-color 0.2s;
+  min-height: 20px;
+  padding: 0 66px 0 26px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--v4-sand-ink, #201e1d);
   box-sizing: border-box;
 }
 
@@ -3322,13 +3330,20 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   transition: opacity 120ms ease;
 }
 
+/* Кадр даёт звезде цель 44×44 и роли: --acs у избранного, чернила 28 % у
+   остальных. Стояли 26×26 и #d1d5db — серый вне набора. */
 .aps-fav-btn {
-  width: 26px;
-  height: 26px;
+  width: 44px;
+  height: 44px;
+  margin: -13px -6px -13px 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
   border: none;
   background: transparent;
-  color: #d1d5db;
-  font-size: 17px;
+  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 28%, transparent);
+  font-size: 15px;
   cursor: pointer;
   transition: all 0.15s;
   border-radius: 7px;
@@ -3341,8 +3356,9 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 }
 
+/* Избранное — акцент набора, а не янтарь: кадр даёт --acs. */
 .aps-fav-btn.active {
-  color: #f59e0b;
+  color: var(--v4-sand-act, #c67139);
 }
 
 .aps-barcode-btn {
@@ -9168,11 +9184,84 @@ button.meal-quality-badge:active {
   color: rgba(242, 237, 230, 0.5);
 }
 
+/* Кадр «Штрихкод · не найден»: карточка на второй поверхности, внутри — код,
+   что случилось, объяснение и главное действие. Прежде карточка стояла на
+   --v4-sand-accent-bg (#f0dcc6): такой роли кадр не называет, он даёт --c2. */
 .aps-barcode-not-found-screen {
   margin-top: 16px;
   border-radius: 22px;
   padding: 20px;
-  background: var(--v4-sand-accent-bg, #f0dcc6);
+  background: var(--v4-hero, #efe3cf);
+}
+
+/* Код — ключ набора: моноширинных цифр кадр не просит, только тон акцента. */
+.aps-barcode-nf__code {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.aps-barcode-nf__title {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-wrap: pretty;
+  color: var(--v4-ink, #201e1d);
+}
+
+.aps-barcode-nf__body {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-wrap: pretty;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.aps-barcode-nf__primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 16px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Два равных выхода под карточкой, а не в одной стопке с главным действием. */
+.aps-barcode-nf__row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.aps-barcode-nf__secondary {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-surface, #f7efe2);
+  color: var(--v4-act-text, #8a4a20);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .aps-v4-create-shell {
