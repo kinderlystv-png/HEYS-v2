@@ -21,6 +21,29 @@ const cssSource = [
   .join('\n');
 
 describe('add product search v4 canvas structure', () => {
+  it('строка списка даёт звезду избранного, а не мёртвый плюс', () => {
+    // Кадр «Добавление · выбор способа»: справа в строке звезда — залитая
+    // тоном --acs, пустая чернилами 28 %. Раньше здесь стоял плюс с
+    // `pointer-events: none`, а единственная живая звезда лежала в
+    // `renderProductCard` — функции, которую в v4 никто не вызывает.
+    expect(addProductSource).toContain('aps-v4-product-row__fav');
+    expect(addProductSource).toContain('toggleFavorite(e, pid)');
+    expect(addProductSource).not.toContain('aps-v4-product-row__add');
+    expect(cssSource).toMatch(/\.aps-v4-product-row__fav \{[^}]*width: 44px;[^}]*height: 44px;/s);
+    expect(cssSource).toMatch(/\.aps-v4-product-row__fav\.is-active \{[^}]*var\(--v4-act,/s);
+    // Кнопка в кнопку не вкладывается: строка стала контейнером.
+    expect(addProductSource).toContain('aps-v4-product-row__pick');
+  });
+
+  it('над вкладками стоит вход в создание продукта', () => {
+    // Строка «вид · две кнопки над вкладками». Вторую кнопку («Фото») ставить
+    // нельзя: строка «единственный вход» того же контракта запрещает второй
+    // вход для снимка. Спор записан в UI_V4_FINDINGS.md.
+    expect(addProductSource).toContain('aps-v4-browse-actions');
+    expect(addProductSource).toContain("            'Новый продукт')");
+    expect(cssSource).toMatch(/\.aps-v4-browse-action \{[^}]*min-height: 44px;/s);
+  });
+
   it('uses v4 tabs and rows instead of legacy quick filters', () => {
     expect(addProductSource).toContain("useState('frequent')");
     expect(addProductSource).toContain('aps-v4-search-tabs');

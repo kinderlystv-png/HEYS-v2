@@ -3817,3 +3817,35 @@ button.meal-quality-badge:active {
   line-height: 1.45;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
+
+/* Строка «вид · две кнопки над вкладками»: ряд поровну самым верхом
+   содержимого — высота 44, радиус 999, заливка --c2, 12 px/700 тоном --ac,
+   значок 15, зазор 8, отступ сверху 12. Пока кнопка одна: вторую («Фото»)
+   запрещает строка «единственный вход» того же контракта. */
+.aps-v4-browse-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.aps-v4-browse-action {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-act-text, #8a4a20);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.aps-v4-browse-action:active {
+  opacity: 0.7;
+}

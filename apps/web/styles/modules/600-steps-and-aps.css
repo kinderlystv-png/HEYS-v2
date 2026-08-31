@@ -2588,15 +2588,28 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 .aps-v4-product-row {
   display: flex;
   align-items: center;
-  gap: 11px;
   width: 100%;
   padding: 13px 0;
   border: 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.07);
   background: transparent;
   text-align: left;
-  cursor: pointer;
   box-sizing: border-box;
+}
+
+/* Тап по строке выбирает продукт, звезда справа — отдельная цель: кнопка в
+   кнопку не вкладывается, поэтому строка стала контейнером. */
+.aps-v4-product-row__pick {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 
 .aps-v4-product-row:last-child {
@@ -2637,13 +2650,26 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 42%, transparent);
 }
 
-.aps-v4-product-row__add {
-  flex: none;
+/* Кадр: 44×44 с отрицательными полями -13/-6/-13/0 — цель касания не раздвигает
+   строку. Залитая звезда тоном --acs, пустая — чернилами 28 %. */
+.aps-v4-product-row__fav {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
-  color: var(--v4-sand-act-deep, #8a4a20);
-  pointer-events: none;
+  width: 44px;
+  height: 44px;
+  margin: -13px -6px -13px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 28%, transparent);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.aps-v4-product-row__fav.is-active {
+  color: var(--v4-act, #c67139);
 }
 
 .mc-modal:has(.aps-v4-flow) .mc-header-title {

@@ -5581,33 +5581,53 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         : product.name;
       const meta = buildV4ProductMeta(product, options);
 
-      return React.createElement('button', {
+      const isFav = favorites.has(pid);
+
+      // Кадр «Добавление · выбор способа»: справа в строке стоит звезда
+      // избранного — залитая тоном --acs, пустая чернилами 28 %. Плюс, который
+      // стоял здесь раньше, ничего не делал (`pointer-events: none`) и повторял
+      // то, что и так делает тап по строке, а единственная живая звезда лежала
+      // в `renderProductCard` — функции, которую с переходом на v4 никто не
+      // вызывает. То есть добавить продукт в избранное было нельзя вовсе.
+      return React.createElement('div', {
         key: pid,
-        type: 'button',
-        className: 'aps-v4-product-row' + (isNutrientsPending ? ' aps-v4-product-row--disabled' : ''),
-        onClick: isNutrientsPending ? undefined : () => selectProduct(product),
-        disabled: isNutrientsPending,
-        'aria-disabled': isNutrientsPending ? 'true' : undefined
+        className: 'aps-v4-product-row' + (isNutrientsPending ? ' aps-v4-product-row--disabled' : '')
       },
-        React.createElement('span', {
-          className: 'aps-v4-product-row__stripe',
-          style: { background: getHarmStripeColor(harmVal) },
-          'aria-hidden': 'true'
-        }),
-        React.createElement('span', { className: 'aps-v4-product-row__main' },
-          React.createElement('span', { className: 'aps-v4-product-row__name' }, highlightedName),
-          meta && React.createElement('span', { className: 'aps-v4-product-row__meta' }, meta)
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-v4-product-row__pick',
+          onClick: isNutrientsPending ? undefined : () => selectProduct(product),
+          disabled: isNutrientsPending,
+          'aria-disabled': isNutrientsPending ? 'true' : undefined
+        },
+          React.createElement('span', {
+            className: 'aps-v4-product-row__stripe',
+            style: { background: getHarmStripeColor(harmVal) },
+            'aria-hidden': 'true'
+          }),
+          React.createElement('span', { className: 'aps-v4-product-row__main' },
+            React.createElement('span', { className: 'aps-v4-product-row__name' }, highlightedName),
+            meta && React.createElement('span', { className: 'aps-v4-product-row__meta' }, meta)
+          )
         ),
-        React.createElement('span', { className: 'aps-v4-product-row__add', 'aria-hidden': 'true' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-v4-product-row__fav' + (isFav ? ' is-active' : ''),
+          onClick: (e) => toggleFavorite(e, pid),
+          'aria-pressed': isFav ? 'true' : 'false',
+          'aria-label': isFav ? 'Убрать из избранного' : 'В избранное'
+        },
           React.createElement('svg', {
             width: 15,
             height: 15,
             viewBox: '0 0 24 24',
-            fill: 'none',
+            fill: isFav ? 'currentColor' : 'none',
             stroke: 'currentColor',
-            strokeWidth: 2.75,
-            strokeLinecap: 'round'
-          }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
+            strokeWidth: 2,
+            strokeLinejoin: 'round'
+          }, React.createElement('path', {
+            d: 'M12 3.2l2.7 5.5 6 .9-4.35 4.24 1.03 6-5.38-2.83L6.6 19.84l1.03-6L3.28 9.6l6-.9z'
+          }))
         )
       );
     };
@@ -5856,6 +5876,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // === Фиксированная шапка: поиск + табы (канвас v4 #3) ===
       React.createElement('div', { className: 'aps-fixed-header' },
+        // Строка «вид · две кнопки над вкладками» ставит наверх содержимого
+        // «Фото» и «Новый продукт». Второй кнопки здесь не было вовсе: создать
+        // продукт можно было только из пустого поиска или ненайденного
+        // штрихкода — то есть человек, у которого поиск что-то нашёл, создать
+        // своё уже не мог. «Фото» не ставим: строка «единственный вход» того же
+        // контракта говорит «снимок делается только с экрана собранного приёма,
+        // второго входа во всём приложении нет». Спор двух строк записан в
+        // UI_V4_FINDINGS.md.
+        !showSearch && React.createElement('div', { className: 'aps-v4-browse-actions' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-v4-browse-action',
+            onClick: () => handleNewProduct()
+          },
+            React.createElement('svg', {
+              width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+              'aria-hidden': 'true'
+            }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
+            'Новый продукт')
+        ),
         React.createElement('div', { className: 'aps-search-container' },
           React.createElement('div', { className: 'aps-search-field' + (searchFieldFocused ? ' is-focused' : '') },
             React.createElement('span', { className: 'aps-search-icon', 'aria-hidden': 'true' }),
