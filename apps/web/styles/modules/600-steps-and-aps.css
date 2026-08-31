@@ -1405,12 +1405,15 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   color: var(--v4-ink, #201e1d);
 }
 
+/* Бренд в разборе — той же семьёй, что имя и макросы: 11,5 px/500 чернилами
+   50 % через 5. Мост var(--muted) разрешается в #6b7280 — холодный серый
+   прежней системы, а не чернила набора. */
 .aps-preview-brand {
-  margin-top: -2px;
-  margin-bottom: 4px;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--muted);
+  margin-top: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
 }
 
 /* Строка макросов: зазор 12, 600 11,5/1 чернилами 50 % через 7. Прежде зазор
@@ -2779,9 +2782,13 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   margin-top: 8px;
 }
 
+/* Плашка вторичной кнопки. Тени у неё нет: ни один кадр обеих зон, где живёт
+   этот класс, не рисует тень у вторичной кнопки — тень в этом потоке канвас
+   даёт только подложке выбранного ряда колеса и модалкам. Прежняя 0 1px 0 на
+   кнопке без радиуса читалась линией под текстом. Снято по согласованию с
+   владельцем food-meal: класс общий на две зоны. */
 .aps-v4-btn-paper {
-  background: var(--v4-sand-surface-soft, #fffaf1);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--v4-sand-ink, #201e1d) 8%, transparent);
+  background: var(--v4-bg, #fffaf1);
 }
 
 .aps-v4-preset-confirm {
