@@ -215,6 +215,13 @@ body:has(.activity-v4) .hdr::after {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+/* Ноль шагов — вся запись приглушена до 38 %, как в кадре «новый человек»:
+   ни числу, ни цели нечего выделять. Оценка приглушается иначе (55 %), потому
+   что число там настоящее, просто подставленное. */
+.activity-v4-steps__value--zero {
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
 .activity-v4-steps__value--estimated {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
@@ -240,6 +247,10 @@ body:has(.activity-v4) .hdr::after {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.activity-v4-steps__kcal--zero {
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .activity-v4-steps__note {
@@ -582,13 +593,19 @@ body:has(.activity-v4) .hdr::after {
   display: none;
 }
 
+/* Семь колонок кадра, а не четырнадцать: 28 дней ложатся четырьмя строками по
+   неделе, и вертикаль сама становится осью недель. В две строки по 14 неделя
+   не читалась вовсе. Точка фиксированные 9 px и центрируется в колонке —
+   ячейки некликабельны, площадь нажатия им не нужна. */
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot {
-  grid-template-columns: repeat(14, minmax(0, 1fr));
-  gap: 5px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 9px;
+  justify-items: center;
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell {
-  aspect-ratio: 1;
+  width: 9px;
+  height: 9px;
   min-height: 0;
   border: none;
   border-radius: 999px;
@@ -788,7 +805,8 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-sheet__sub {
-  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  /* Подпись пункта листа — 600 11/1 кадра; тон 45 % вместо 42 %. */
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 

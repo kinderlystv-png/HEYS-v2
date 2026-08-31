@@ -683,7 +683,12 @@
               className: 'activity-v4-steps__pill'
             }, 'оценка'),
             React.createElement('span', {
-              className: 'activity-v4-steps__value' + (stepsEstimated ? ' activity-v4-steps__value--estimated' : ''),
+              // Ноль шагов кадр «новый человек» приглушает целиком: числу нечего
+              // выделять, а тон говорит «здесь пока пусто» раньше, чем читается
+              // само число.
+              className: 'activity-v4-steps__value'
+                + (stepsEstimated ? ' activity-v4-steps__value--estimated' : '')
+                + (!stepsEstimated && !(Number(stepsValue) > 0) ? ' activity-v4-steps__value--zero' : ''),
               onClick: (e) => {
                 e.stopPropagation();
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -752,7 +757,10 @@
           )
         ),
         React.createElement('div', { className: 'activity-v4-steps__foot' },
-          React.createElement('span', { className: 'activity-v4-steps__kcal' }, stepsK + ' ккал'),
+          React.createElement('span', {
+            className: 'activity-v4-steps__kcal'
+              + (!(Number(stepsK) > 0) ? ' activity-v4-steps__kcal--zero' : '')
+          }, stepsK + ' ккал'),
           React.createElement('span', { className: 'activity-v4-steps__hint' },
             // При оценке подпись зовёт поставить факт: править ползунком
             // подставленное число бессмысленно, пока его не заменили своим.
