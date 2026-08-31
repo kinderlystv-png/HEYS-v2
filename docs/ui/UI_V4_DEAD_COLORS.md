@@ -87,3 +87,36 @@
 Чистка не на критическом пути: четыре места из 2235 внимания владельца почти не
 съедают. Полезнее другое — знать, что колонка «где в коде» называет ближайшее
 объявление, а не владельца значения.
+
+## Список со строками (для сверки счётчиками)
+
+Каждое значение проверено **двумя способами**: чтением ключа по имени внутри
+файла и поиском по всем исходникам без `public/` — включая внешних читателей
+экспорта. Второй способ дважды менял вывод, поэтому он здесь не формальность.
+
+```
+heys_consents_v1.js:257,258,259   friendlySummaries  #dbeafe #3b82f6 #1e40af
+heys_consents_v1.js:271,272,273   friendlySummaries  #dcfce7 #22c55e #166534
+heys_consents_v1.js:285,286,287   friendlySummaries  #fce7f3 #ec4899 #9d174d
+heys_consents_v1.js:299,300,301   friendlySummaries  #fef3c7 #f59e0b #92400e
+heys_consents_v1.js:313,314,315   friendlySummaries  #ecfdf5 #10b981 #065f46
+heys_consents_v1.js:327,328,329   friendlySummaries  #eef2ff #6366f1 #312e81
+heys_gamification_v1.js:206-210   RARITY_COLORS      #94a3b8 #3b82f6 #a855f7 #eab308 #ef4444
+heys_expandable_card_v1.js:13,14,15,19,20  COLORS    #22c55e #eab308 #ef4444 #f8fafc #1e293b
+heys_iw_v41.js:82-86              METABOLIC_FLEXIBILITY_CONFIG.levels[].color
+heys_iw_v41.js:235-239            SATIETY_MODEL_CONFIG.levels[].color
+heys_sparkline_utils_v1.js:49,58,61  SPARKLINE_CONFIG.colors  #9ca3af #ec4899 #f59e0b
+heys_refeed_v1.js:26,27,28,29     REFEED_ZONES[].textColor  #fff #fff #000 #fff
+```
+
+**Что проверка чуть не испортила.** `.textColor` читают снаружи —
+`heys_day_hero_metrics.js:39,56` и `heys_scales_v1.js:379`. Но читают они **зоны
+отношения**, а не зоны рефида: у первых идентификаторы `crash`, `low`, `good`,
+`binge`, у вторых — `refeed_ok`, `refeed_over`, `refeed_under`, `refeed_binge`,
+и внешний потребитель рефида (`heys_day_goal_progress_v1.js:160`) берёт из зоны
+`color`, `icon`, `name`, но не `textColor`. Совпади имя ключа — и владелец вычел
+бы из описи живые места.
+
+Отсюда правило для любого такого списка: **совпадение имени ключа не значит
+совпадения таблицы.** Проверять нужно, из какой таблицы пришёл объект у
+читателя, а не то, что ключ где-то читается.
