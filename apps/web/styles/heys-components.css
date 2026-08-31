@@ -4525,9 +4525,13 @@ body.tour-active .ios-pwa-banner {
   align-items: end;
 }
 
+/* Витамины и минералы — плашки кадра: четыре колонки зазором 6, высота от 31,
+   радиус 9, подпись и значение в одну строку. Прежде две колонки, где каждая
+   клетка была полем в полный рост с подписью над ним: одиннадцать витаминов
+   занимали пол-экрана. */
 .pe-grid--vitamins,
 .pe-grid--minerals {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -4536,22 +4540,36 @@ body.tour-active .ios-pwa-banner {
   gap: 8px;
 }
 
+/* Клетка витамина — плашка кадра: подпись и значение в одну строку, высота от
+   31, радиус 9. Прежде подпись фиксированной шириной 48 и поле в полный рост
+   рядом, отчего одиннадцать витаминов занимали пол-экрана. */
 .pe-field--inline {
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 4px;
+  min-height: 31px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--v4-surface, #f7efe2);
 }
 
 .pe-field--inline .pe-label {
   flex-shrink: 0;
-  width: 48px;
-  font-size: 11px;
+  margin-bottom: 0;
+  font-size: 10.5px;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
 }
 
 .pe-field--inline .pe-input {
   flex: 1;
-  padding: 6px 8px;
-  font-size: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 10.5px;
+  text-align: center;
 }
 
 /* Группа полей — не карточка: ни один кадр шагов правки не рисует под полями
@@ -4772,30 +4790,63 @@ body.tour-active .ios-pwa-banner {
   color: var(--v4-act-text, #8a4a20);
 }
 
+/* Флаги кадра: плашки по 46 % ширины высотой от 44 со словом внутри. Прежде
+   сетка из четырёх голых значков и строка-легенда под ней, расшифровывавшая,
+   что значит 🌿 и что 🥬. */
 .pe-toggles {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-}
-
-.pe-toggles--4col {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  justify-items: center;
-}
-
-.pe-toggles-legend {
-  font-size: 10px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
-  text-align: center;
-  margin-top: 2px;
 }
 
 .pe-toggle {
-  display: flex;
+  flex: 1 1 46%;
+  /* Доля 46 % считается от содержимого, а не от плашки: без border-box поля
+     12 + 12 добавлялись сверху, пара переставала влезать в строку и каждый
+     флаг занимал свою. */
+  box-sizing: border-box;
+  min-height: 44px;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: var(--v4-ink, #111827);
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--v4-surface, #f7efe2);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
+  cursor: pointer;
+}
+
+/* Своя отметка вместо системной: 18 × 18 радиусом 5 обводкой чернил 18 %,
+   отмеченная — заливка акцентом с галочкой поверх. */
+.pe-toggle input[type='checkbox'] {
+  flex: none;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--v4-ink, #201e1d) 18%, transparent);
+  cursor: pointer;
+}
+
+.pe-toggle input[type='checkbox']:checked {
+  background: var(--v4-act, #c67139);
+  box-shadow: none;
+}
+
+.pe-toggle input[type='checkbox']:checked::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--v4-btn-on-act, #2b1608);
+  clip-path: polygon(19% 48%, 40% 68%, 81% 27%, 88% 35%, 40% 83%, 12% 56%);
 }
 
 .pe-preview {
@@ -4861,18 +4912,9 @@ body.tour-active .ios-pwa-banner {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .pe-grid--vitamins,
-  .pe-grid--minerals {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .pe-toggles {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .pe-field--inline .pe-label {
-    width: 44px;
-  }
+  /* Здесь узкий экран возвращал витамины в две колонки, флагам задавал сетку,
+     а подписи в плашке — ширину 44. Кадр разобран как раз на 375: четыре
+     колонки, флаги флексом, подпись по содержимому. */
 }
 
 [data-theme$="dark"] .pe-section {

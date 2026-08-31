@@ -4058,6 +4058,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [search, setSearch] = useState(data?.searchQuery || '');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [quickList, setQuickList] = useState('frequent');
+    // Строка «вид · чип «Общие»»: это «не вкладка и не элемент строки поиска, а
+    // фильтр выдачи» — он стоит справа в строке над списком, которая эту выдачу
+    // и описывает. По умолчанию включён.
+    const [sharedFilterOn, setSharedFilterOn] = useState(true);
 
     // Контракт pwa-update, «обновление во время записи»: шаг добавления еды
     // держит набранное прямо на экране, без открытой модалки, — счётчик
@@ -5560,15 +5564,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const fat = Math.round((product.badFat100 || 0) + (product.goodFat100 || 0) + (product.trans100 || 0));
         parts.push(`Б${prot} Ж${fat} У${carbs}`);
       }
-      if (showUsage) {
+      // Строка «продукт из общей базы»: у общего продукта вместо частоты идёт
+      // метка «общая база» тоном --wat со значком глобуса. У своих продуктов
+      // метки нет — там стоит частота «N раз».
+      const isShared = product._source === 'shared' || product._fromShared;
+      if (showUsage && !isShared) {
         const pid = String(product.id ?? product.product_id ?? product.name);
         const usageCount = getUsageCount(pid, product.name);
         if (usageCount > 0) parts.push(formatUsageTimes(usageCount));
-        else if (product._source === 'shared' || product._fromShared) parts.push('общая база');
       }
       const recipeLine = HEYS.models?.formatRecipeSummary?.(product.recipe);
       if (recipeLine) parts.push(recipeLine);
-      return parts.join(' · ');
+      return { text: parts.join(' · '), isShared: showUsage && isShared };
     };
 
     const renderV4ProductRow = (product, options = {}) => {
@@ -5607,7 +5614,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }),
           React.createElement('span', { className: 'aps-v4-product-row__main' },
             React.createElement('span', { className: 'aps-v4-product-row__name' }, highlightedName),
-            meta && React.createElement('span', { className: 'aps-v4-product-row__meta' }, meta)
+            (meta.text || meta.isShared) && React.createElement('span', { className: 'aps-v4-product-row__meta' },
+              meta.text,
+              meta.isShared && React.createElement('span', { className: 'aps-v4-product-row__shared' },
+                React.createElement('svg', {
+                  width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none',
+                  stroke: 'currentColor', strokeWidth: 2, 'aria-hidden': 'true'
+                },
+                  React.createElement('circle', { cx: 12, cy: 12, r: 9 }),
+                  React.createElement('path', { d: 'M3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18' })
+                ),
+                'общая база')
+            )
           )
         ),
         React.createElement('button', {
@@ -6021,13 +6039,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }, 'Наборы', savedPresetsCount > 0
             ? React.createElement('span', { className: 'aps-v4-search-tab__badge' }, ` · ${savedPresetsCount}`)
             : null),
-          React.createElement('button', {
-            type: 'button',
-            role: 'tab',
-            className: 'aps-v4-search-tab' + (quickList === 'shared' ? ' is-active' : ''),
-            onClick: () => handleBrowseTab('shared'),
-            'aria-selected': quickList === 'shared'
-          }, 'Общие')
         )
       ),
 
