@@ -158,31 +158,37 @@
     fontSize: 12
   };
 
+  // Строка контракта «карточка · баннер решения о дне»: кнопки-варианты по 44
+  // высотой, текст 12 px/600 по левому краю, ширина 50 % минус зазор с
+  // переносом. Стояли 40 высотой и 12,5 кеглем; радиус и минимальная ширина —
+  // по кадру «День под порогом · выбор», элемент 09.
   const ACTION_BTN_STYLE = {
     flex: '1 1 calc(50% - 4px)',
-    minWidth: 140,
-    minHeight: 40,
+    minWidth: 132,
+    minHeight: 44,
     padding: '8px 12px',
     border: '1px solid var(--v4-line, rgba(0,0,0,0.08))',
-    borderRadius: 12,
+    borderRadius: 14,
     background: 'var(--v4-bg, #fffaf1)',
     cursor: 'pointer',
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: 600,
     color: 'var(--v4-ink, #201e1d)',
     textAlign: 'left',
     transition: 'all 0.15s'
   };
 
+  // Литералы #fff и #1f2937 остались от дореформенного вида: белая кнопка на
+  // песочной подложке и слейтовый текст не менялись ни в одном наборе.
   const CHANGE_BTN_STYLE = {
     padding: '4px 10px',
     border: '1px solid var(--v4-line, rgba(0,0,0,0.08))',
     borderRadius: 8,
-    background: '#fff',
+    background: 'var(--v4-bg, #fffaf1)',
     cursor: 'pointer',
     fontSize: 12,
     fontWeight: 600,
-    color: '#1f2937'
+    color: 'var(--v4-ink, #201e1d)'
   };
 
   // Общий рендер баннера выбора (State A) — переиспользуется и для дня с едой

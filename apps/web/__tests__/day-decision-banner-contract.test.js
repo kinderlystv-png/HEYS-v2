@@ -88,4 +88,28 @@ describe('карточка подтверждения дня', () => {
   it('значка тревоги в карточке нет — вопрос задают словами', () => {
     expect(STATS).not.toContain("kcal-realdata-card__icon' }, '⚠️'");
   });
+
+  // Строка контракта «карточка · баннер решения о дне»: кнопки-варианты по 44
+  // высотой и текст 12 px/600. Стояли 40 и 12,5 — ниже порога нажатия и на
+  // полступени крупнее шкалы зоны. Проверяем по блоку стиля, а не по всему
+  // файлу: те же числа встречаются и в соседних стилях.
+  it('кнопки-варианты держат 44 и кегль 12', () => {
+    const at = BANNER.indexOf('ACTION_BTN_STYLE');
+    const head = BANNER.slice(at, BANNER.indexOf('};', at));
+    expect(head).toContain('minWidth: 132');
+    expect(head).toContain('minHeight: 44');
+    expect(head).toContain('borderRadius: 14');
+    expect(head).toContain('fontSize: 12,');
+  });
+
+  // Кнопка «Изменить» держалась на дореформенных литералах: белый фон на
+  // песочной подложке и слейтовый текст не менялись ни в одном наборе.
+  it('кнопка «Изменить» красится ролями, а не литералами', () => {
+    const at = BANNER.indexOf('CHANGE_BTN_STYLE');
+    const head = BANNER.slice(at, BANNER.indexOf('};', at));
+    expect(head).not.toContain("'#fff'");
+    expect(head).not.toContain('#1f2937');
+    expect(head).toContain('var(--v4-bg');
+    expect(head).toContain('var(--v4-ink');
+  });
 });
