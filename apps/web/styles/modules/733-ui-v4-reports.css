@@ -259,14 +259,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.reports-v4-summary-card--norm .reports-v4-summary-card__value {
-  color: var(--v4-ok-ink, #5c6a45);
-}
-
-.reports-v4-summary-card--score .reports-v4-summary-card__value {
-  color: var(--v4-sand-act-deep, #8a4a20);
-}
-
 /* Тон числа плитки несёт смысл, и кадр разводит их: «Дней в норме» зелёным
    («в норме» — это и есть хороший исход), «Средняя оценка» акцентом. Обе
    стояли на чернилах, и плитки читались как два одинаковых числа. */

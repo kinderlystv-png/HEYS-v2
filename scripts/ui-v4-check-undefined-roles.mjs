@@ -71,7 +71,6 @@ const BASELINE = {
     'heys_widgets_ui_v1.js',
     'styles/modules/730-widgets-dashboard.css',
   ],
-  'v4-ok-ink': ['styles/modules/733-ui-v4-reports.css'],
   'v4-sand-green-ink': [
     'styles/modules/610-aps-meal-flow.css',
     'styles/modules/715-yesterday-verify.css',
