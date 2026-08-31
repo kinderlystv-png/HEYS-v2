@@ -1502,17 +1502,26 @@
   border-radius: 16px;
 }
 
+/* Главная кнопка шага — пилюля набора: кадр даёт `.btn` минимум 48 радиусом
+   999 на акценте с чернилами поверх. Недоступное состояние — подложка набора,
+   а не серый --color-gray-400 снятой системы. */
 .aps-create-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
   width: 100%;
-  padding: 14px 20px;
-  font-size: 15px;
-  font-weight: 600;
+  min-height: 48px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
   border: none;
-  border-radius: 12px;
+  border-radius: 999px;
   cursor: pointer;
-  transition: all 0.2s;
-  background: var(--v4-line, #e5e7eb);
-  color: var(--color-gray-400);
+  transition: background 0.2s ease, color 0.2s ease;
+  background: var(--v4-hero, #efe3cf);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 38%, transparent);
 }
 
 .aps-create-btn:disabled {
@@ -1681,10 +1690,12 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+/* Готовая к нажатию — заливка акцентом. Прежде зелёный градиент из двух
+   литералов снятой системы с зелёной тенью: единственный градиент на весь
+   шаг создания, и цвет не из набора. */
 .aps-create-btn.active {
-  background: linear-gradient(135deg, #22c55e 0%, var(--color-emerald-500) 100%);
-  color: var(--color-white);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 @media (hover: hover) {
@@ -1746,12 +1757,16 @@
 }
 
 .aps-portion-btn {
-  padding: 4px 6px;
-  font-size: 11px;
-  border: 1px solid #d1fae5;
-  background: var(--v4-ok-bg, #ecfdf5);
-  color: #059669;
-  border-radius: 5px;
+  /* Кадр «Штрихкод · найден»: невыбранный пресет стоит на грунте полями 10/11,
+     выбранный — заливкой акцента. Прежде оба были зелёными: рамка #d1fae5,
+     текст #059669 и запасное #ecfdf5 под ролью «идёт хорошо» — цвет снятой
+     системы там, где кадр никакого зелёного не рисует. */
+  padding: 10px 11px;
+  font-size: 11.5px;
+  border: none;
+  background: var(--v4-bg, #fffaf1);
+  color: var(--v4-ink, #201e1d);
+  border-radius: 999px;
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
@@ -1763,26 +1778,20 @@
 
 @media (hover: hover) {
   .aps-portion-btn:hover {
-    border-color: var(--color-emerald-500);
+    border-color: var(--v4-act, #c67139);
   }
 }
 
+/* Пресет граммовки: кадр «Штрихкод · найден» даёт выбранному заливку акцентом
+   с чернилами поверх, обычному — грунт. Прежде выбранный был изумрудным
+   литералом снятой системы. */
 .aps-portion-btn.active {
-  background: var(--color-emerald-500);
-  color: var(--color-white);
-  border-color: var(--color-emerald-500);
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
+  border-color: var(--v4-act, #c67139);
 }
 
-[data-theme$='dark'] .aps-portion-btn {
-  background: var(--v4-ok-bg, #064e3b);
-  border-color: #065f46;
-  color: #34d399;
-}
 
-[data-theme$='dark'] .aps-portion-btn.active {
-  background: var(--color-emerald-500);
-  color: var(--color-white);
-}
 
 .aps-v4-portions-step {
   display: flex;
