@@ -1065,6 +1065,26 @@
   margin-top: 36px;
 }
 
+/* Кадр «Чек-ин · первый вес», элемент 06: в первое утро серии ещё нет, плашка
+   под приветствием не рисуется, и блок веса поднимается — 30 вместо 34. Тем же
+   приёмом, что у капсулы ниже: состояние читается по содержимому. */
+.mc-daily-greeting:not(:has(.mc-daily-streak-banner)) + .mc-weight-hero {
+  margin-top: 30px;
+}
+
+/* Тот же кадр, элементы 11 и 19: обе строки — не пояснение карточки шага, а
+   подписи самого шага, и кадр набирает их по-своему. Тона 42 % у набора нет,
+   ближайший --v4-ink-3. */
+.mc-weight-hero > .mc-recorded-hint {
+  font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
+.mc-weight-step > .mc-recorded-hint {
+  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
 .mc-kilo-label,
 .mc-sleep-label {
   font: 600 10px/1 Figtree, system-ui, sans-serif;

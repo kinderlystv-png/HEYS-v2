@@ -1,7 +1,8 @@
 // Кадры утреннего чек-ина против раздела канваса «Разбор кадров · элемент за
 // элементом» (пакет 30 августа). Сведены: все пять шагов мастера в их
-// состояниях и три экрана развилки разбора вчера. Остальные кадры зоны —
-// добавки, замеры, «Записано», холод и особые дни — ждут своего захода.
+// состояниях, все восемь экранов развилки разбора вчера и три вида шага
+// веса. Остальные кадры зоны — добавки, замеры, «Записано», холод, особые
+// дни и согласие — ждут своего захода.
 //
 // Зона живёт в двух файлах: шаги мастера — 500-pwa-and-offline.css, развилка
 // разбора вчера — 715-yesterday-verify.css.
@@ -15,6 +16,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { compare, readRazbor, readRules } from './canvas-razbor-helpers.js';
+
+const STEPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_steps_v1.js'), 'utf8');
 
 const CANVAS = path.resolve(
   __dirname,
@@ -65,6 +68,17 @@ const EXCEPTIONS = new Map([
   // под ней карточка или загрузочный день. Кадр «шаги своё число» просит 20 —
   // это третье состояние, и живёт оно в JS, а не в наборе правил.
   ['Чек-ин · шаги своё число · 19|marginTop', 'сноска шага: два состояния, 26 и 14'],
+  // Развилка: строка под карточкой сводки и под списком дней просит 42 %.
+  ['Чек-ин · вчерашний день · 13|color', 'у набора нет тона 42 %, ближайший --v4-ink-3'],
+  ['Чек-ин · пачка незакрытых дней · 9|color', 'то же'],
+  ['Чек-ин · пачка после очистки · 9|color', 'то же'],
+  ['Чек-ин · день из пачки · 14|color', 'то же'],
+  ['Чек-ин · пустой день из пачки · 14|color', 'то же'],
+  ['Чек-ин · первый вес · 11|color', 'то же'],
+  ['Чек-ин · первый вес · 19|color', 'то же'],
+  // Строки среднего веса — один ряд с одним отступом; кадр даёт первому 11,
+  // второму 9. Двух видов строки ради двух пикселей не заводим.
+  ['Чек-ин · расчётный вес · 13|marginTop', 'ряд строк среднего: один отступ 11'],
 ]);
 
 // Те же два тона повторяются в каждом состоянии шага шагов: подпись под
@@ -260,6 +274,83 @@ const STEPS_FRAMES = [
     { k: 5, h: 6, v: 7, u: 8, s: 9, m: 13, t: 18, f: null, custom: true }, false, []],
 ];
 
+// Развилка разбора вчера, вход и список дней. Карточка сводки и строки под ней
+// описаны строкой контракта «вид карточки сводки», выходы — строкой «вид
+// строк-ответов»; кадры их повторяют.
+const forkSummary = (n) => [
+  [n.title, '.yv-hero-title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [n.sub, '.yv-hero-sub', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [n.card, '.yv-food-card', ['background', 'radius', 'padding', 'marginTop']],
+  [n.row, '.yv-food-row', ['justify', 'align', 'fontWeight', 'fontSize', 'lineHeight']],
+  [n.row2, ['.yv-food-row', '.yv-food-row + .yv-food-row'], ['marginTop']],
+  [n.note, '.yv-pack-note', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  [n.foot, '.yv-canvas-foot', ['direction', 'gap']],
+  [n.row3, '.yv-pack-row', ['gap']],
+  [n.a, '.yv-pack-secondary',
+    ['flex', 'minHeight', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [n.b, ['.yv-pack-secondary', n.wide],
+    ['flex', 'minHeight', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [n.later, '.yv-text-later', ['minHeight', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
+const forkList = (n) => [
+  [n.title, '.yv-hero-title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [n.sub, '.yv-hero-sub', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [n.days, '.yv-days', ['direction', 'gap', 'marginTop']],
+  [n.day, '.yv-pack-day', ['background', 'radius', 'padding', 'align', 'gap', 'minHeight']],
+  [n.note, '.yv-pack-note', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  [n.foot, '.yv-canvas-foot', ['direction', 'gap']],
+];
+
+const FORK_FRAMES = [
+  ['Чек-ин · вчерашний день', forkSummary({
+    title: 5, sub: 6, card: 7, row: 8, row2: 11, note: 13, foot: 14, row3: 16,
+    a: 17, b: 18, wide: '.yv-pack-row .yv-pack-secondary--feelings', later: 19,
+  })],
+  ['Чек-ин · день из пачки', forkSummary({
+    title: 6, sub: 7, card: 8, row: 9, row2: 12, note: 14, foot: 15, row3: 17,
+    a: 18, b: 19, wide: '.yv-pack-row .yv-pack-secondary--feelings', later: 20,
+  })],
+  // Пустой день меняет ширины местами: подтверждение «ничего не ел» длиннее.
+  ['Чек-ин · пустой день из пачки', forkSummary({
+    title: 6, sub: 7, card: 8, row: 9, row2: 12, note: 14, foot: 15, row3: 17,
+    a: 19, b: 18, wide: '.yv-pack-row .yv-pack-secondary--confirm-empty', later: 20,
+  })],
+  ['Чек-ин · пачка незакрытых дней', forkList({
+    title: 5, sub: 6, days: 7, day: 8, note: 9, foot: 10,
+  }).concat([[13, '.yv-pack-secondary',
+    ['flex', 'minHeight', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']]])],
+  ['Чек-ин · пачка после очистки', forkList({
+    title: 5, sub: 6, days: 7, day: 8, note: 9, foot: 10,
+  }).concat([[12, '.yv-text-later',
+    ['minHeight', 'fontWeight', 'fontSize', 'lineHeight', 'color']]])],
+];
+
+// Первое утро: серии ещё нет, плашка под приветствием не рисуется, и блок веса
+// поднимается на 30. Капсула колёс тем же приёмом уже поднята на 36.
+const WEIGHT_FIRST = [
+  [4, '.mc-modal--daily .mc-daily-greeting-title',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'textAlign']],
+  [5, '.mc-modal--daily .mc-daily-greeting-date',
+    ['fontWeight', 'fontSize', 'lineHeight', 'marginTop', 'textAlign']],
+  [6, ['.mc-weight-hero',
+    '.mc-daily-greeting:not(:has(.mc-daily-streak-banner)) + .mc-weight-hero'],
+  ['direction', 'align', 'marginTop']],
+  [7, '.mc-step-kicker', ['fontWeight', 'fontSize', 'lineHeight', 'tracking']],
+  [8, '.mc-weight-hero-row', ['align', 'gap', 'marginTop']],
+  [9, '.mc-weight-hero-value', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'tracking']],
+  [10, '.mc-weight-hero-unit', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [11, ['.mc-recorded-hint', '.mc-weight-hero > .mc-recorded-hint'],
+    ['fontWeight', 'fontSize', 'lineHeight']],
+  [12, ['.mc-weight-kilo-card',
+    '.mc-weight-hero:not(:has(.mc-weight-week-delta)) + .mc-weight-kilo-card'],
+  ['width', 'background', 'radius', 'padding', 'marginTop']],
+  [13, '.mc-kilo-label',
+    ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'color', 'textAlign']],
+  [19, ['.mc-recorded-hint', '.mc-weight-step > .mc-recorded-hint'],
+    ['fontWeight', 'fontSize', 'lineHeight']],
+];
+
 const YV_FRAMES = [
   ['Чек-ин · вчера по ощущениям', {
     title: 6, sub: 7, list: 8, force: 9, forceTitle: 10, forceKcal: 11,
@@ -307,6 +398,31 @@ describe('«Утренний чек-ин» · разбор кадров канв
     }
   });
 
+  it('кадр «Чек-ин · первый вес» совпадает с первым утром', () => {
+    expect(compare({ razbor, rules, frame: 'Чек-ин · первый вес', pairs: WEIGHT_FIRST })).toEqual([]);
+  });
+
+  it('пять кадров входа в развилку совпадают со сводкой и списком дней', () => {
+    for (const [frame, pairs] of FORK_FRAMES) {
+      expect(compare({ razbor, rules: yv, frame, pairs })).toEqual([]);
+    }
+  });
+
+  // Расчётный вес размечен инлайном в исходнике шага: пар «класс кадра →
+  // правило продукта» тут нет, поэтому числа читаются из самого исходника.
+  it('расчётный вес набран числами своих кадров', () => {
+    const block = STEPS_SRC.slice(STEPS_SRC.indexOf('if (estimated) {'));
+    // Крупное число тоном чернил 45 %, а не акцентом: цифра не введена.
+    expect(block).toMatch(/fontSize: 58, fontWeight: 600, lineHeight: 0\.9, color: 'rgba\(0,0,0,\.45\)'/);
+    // Плашка «Расчётный» / «Из профиля» — вторая поверхность, тон акцента.
+    expect(block).toMatch(/padding: '5px 12px', borderRadius: 999, background: '#efe3cf'/);
+    expect(block).toMatch(/fontSize: 10\.5, fontWeight: 700, letterSpacing: '0\.08em'/);
+    // Карточка объяснения: первая поверхность, радиус 20, поля 15/17.
+    expect(block).toMatch(/background: '#f7efe2', borderRadius: 20, padding: '15px 17px', marginTop: 22/);
+    // Ряд строк среднего — один отступ на все строки.
+    expect(block).toMatch(/justifyContent: 'space-between', marginTop: 11, fontSize: 12, fontWeight: 600/);
+  });
+
   it('три кадра развилки совпадают с экраном оценки по ощущениям', () => {
     for (const [frame, n, on] of YV_FRAMES) {
       const pairs = yvPairs(n).concat(on ? yvOn(on[0], on[1]) : []);
@@ -352,10 +468,14 @@ describe('«Утренний чек-ин» · разбор кадров канв
   // Зазор шага складывался с отступами блоков: между силами и дорожкой выходило
   // 36 вместо 16. Экраны с плоским содержимым живут разметкой кадра, экраны со
   // своей обёрткой (.yv-hero) зазор сохраняют.
-  it('шаги развилки с плоским содержимым не удваивают отступы', () => {
-    expect(yv.get('.yv-step').gap).toBe('20px');
-    expect(yv.get('.yv-step--feelings').gap).toBe('0');
-    expect(yv.get('.yv-step--bulk-force').gap).toBe('0');
+  // Зазор шага складывался с отступами блоков кадра во всех четырёх видах
+  // шага развилки: между карточкой сводки и строкой под ней выходило 36
+  // вместо 12. Подвал прижат снизу своим margin-top: auto.
+  it('шаги развилки размечены отступами блоков, а не общим зазором', () => {
+    expect(yv.get('.yv-step').gap).toBe('0');
+    expect(yv.get('.yv-food-card')['margin-top']).toBe('16px');
+    expect(yv.get('.yv-pack-note')['margin-top']).toBe('12px');
+    expect(yv.get('.yv-canvas-foot')['margin-top']).toBe('auto');
   });
 
   // Подвал развилки один на все её экраны — пять кадров из шести дают 8.
@@ -374,6 +494,6 @@ describe('«Утренний чек-ин» · разбор кадров канв
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(36);
+    expect(EXCEPTIONS.size).toBe(44);
   });
 });
