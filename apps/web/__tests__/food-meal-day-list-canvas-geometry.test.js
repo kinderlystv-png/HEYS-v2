@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { readRazbor, readRules, compare } from './canvas-razbor-helpers.js';
+import { readRazbor, readRules, compare, coverage } from './canvas-razbor-helpers.js';
 
 // Список приёмов дня рисуют два канваса, и это назначено, а не случайность:
 // «nutrition-tab.v4.dc.html» строкой «список приёмов дня — не здесь» отдаёт его
@@ -81,6 +81,29 @@ describe('строка приёма дня против кадра food-meal', (
       ],
     });
     expect(drift).toEqual([]);
+  });
+
+  // Охват называется вслух: без этого «сверено гейтом» в обосновании вердикта
+  // проверить нельзя иначе как чтением этого файла, и ссылка живёт годами, не
+  // будучи ничем подтверждённой. Счётчик полезен ровно тем, что его можно
+  // сравнить с числом вердиктов, которые на гейт ссылаются.
+  //
+  // Знаменатель — строки двух СВОИХ кадров, а не всего канваса: остальные кадры
+  // food-meal сверяют другие гейты и вердикты по элементам, и класть их сюда
+  // значило бы называть чужую работу своим непокрытием.
+  it('гейт называет свой охват', () => {
+    const MINE = ['Приёмы дня · список', 'Приём · правка'];
+    const { perFrame } = coverage({ razbor });
+    const mine = perFrame.filter((f) => MINE.includes(f.frame));
+    expect(mine.map((f) => f.frame).sort()).toEqual([...MINE].sort());
+    const rows = mine.reduce((n, f) => n + f.rows, 0);
+    const covered = mine.reduce((n, f) => n + f.covered, 0);
+    console.info(
+      `[список приёмов дня] сверено ${covered} из ${rows} строк разбора своих кадров `
+      + `(${((covered / rows) * 100).toFixed(1)} %), кадров ${mine.length}: `
+      + mine.map((f) => `${f.frame} — ${f.covered}/${f.rows}`).join(' · '),
+    );
+    expect(covered).toBeGreaterThan(0);
   });
 
   it('отступления названы поимённо и не разрослись', () => {

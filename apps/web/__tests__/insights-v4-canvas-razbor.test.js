@@ -19,7 +19,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { compare, readRazbor, readRules } from './canvas-razbor-helpers.js';
+import { compare, coverage, readRazbor, readRules } from './canvas-razbor-helpers.js';
 
 const canvas = fs.readFileSync(
   path.resolve(
@@ -59,6 +59,28 @@ describe('Инсайты · разбор кадров канваса', () => {
     expect(compare({
       razbor, rules, frame: 'Инсайты', pairs: HEAD_AND_HERO,
     })).toEqual([]);
+  });
+
+  // Охват называется вслух: без этого «сверено гейтом» в обосновании вердикта
+  // нельзя проверить иначе как чтением этого файла. Счётчик полезен ровно тем,
+  // что его можно сравнить с числом вердиктов, которые на гейт ссылаются, —
+  // расхождение между «сколько сверено» и «сколько на это ссылается» иначе
+  // видно только владельцу зоны и только вручную.
+  //
+  // Знаменатель — строки своего кадра, а не всего канваса: отчётные кадры того
+  // же файла сверяет reports-insights-v4-canvas-geometry.test.js, и класть их
+  // сюда значило бы называть чужую работу своим непокрытием.
+  it('гейт называет свой охват', () => {
+    const { perFrame } = coverage({ razbor });
+    const mine = perFrame.filter((f) => f.frame === 'Инсайты');
+    expect(mine).toHaveLength(1);
+    const [f] = mine;
+    console.info(
+      `[инсайты] сверено ${f.covered} из ${f.rows} строк разбора кадра «${f.frame}» `
+      + `(${((f.covered / f.rows) * 100).toFixed(1)} %); отчётные кадры канваса `
+      + 'сверяет reports-insights-v4-canvas-geometry',
+    );
+    expect(f.covered).toBeGreaterThan(0);
   });
 
   it('отступления инсайтовой половины названы и не разрастаются молча', () => {
