@@ -70,9 +70,23 @@ function restoreDeletedWorkspaces(stage) {
   if (!deleted.length) return 0;
   console.warn(
     `[sync:local] ⚠ ${stage}: пропало ${deleted.length} манифест(ов) workspace ` +
-      `(например ${deleted[0]}) — возвращаю из git.`,
+      `(например ${deleted[0]}) — возвращаю из git только их пакеты.`,
   );
-  run('restore workspace sources', 'git', ['restore', 'packages/', 'apps/']);
+  // Восстанавливаем ровно те пакеты, чьи манифесты пропали, а не `packages/`
+  // и `apps/` целиком. Прежний безусловный `git restore packages/ apps/` при
+  // любой сорванной установке откатывал всё несохранённое в обоих деревьях —
+  // у всех параллельных сессий разом, без спроса. Зовётся это со старта dev,
+  // после pull, merge и каждого push, так что срабатывало постоянно:
+  // 31 августа так дважды снесло правки карточки шагов в apps/web.
+  const targets = [...new Set(
+    deleted.map((file) => {
+      const dir = dirname(file).split(String.fromCharCode(92)).join('/');
+      // Манифест в корне репозитория каталогом не восстанавливаем — это и был
+      // бы прежний «всё целиком».
+      return dir === '.' || dir === '' ? file : `${dir}/`;
+    }),
+  )];
+  run('restore workspace sources', 'git', ['restore', '--', ...targets]);
   return deleted.length;
 }
 
