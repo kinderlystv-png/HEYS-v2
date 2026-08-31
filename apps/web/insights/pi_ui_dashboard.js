@@ -2417,8 +2417,15 @@
             (function () {
               try {
                 const plan = HEYS.MealRecCard && HEYS.MealRecCard._lastPlan;
-                const until = plan && (plan.timeEnd || plan.lastMealDeadline);
-                if (!until || (day && plan.date && plan.date !== day.date)) return null;
+                if (!plan) return null;
+                if (day && plan.date && plan.date !== day.date) return null;
+                const until = plan.timeEnd || plan.lastMealDeadline;
+                // Контракт «ярус „Питание“ после последнего приёма»: когда
+                // времени больше нет, «Ритм» говорит это словами. Прежде
+                // фраза просто исчезала, и строка выглядела так же, как в
+                // день, когда планер ещё не считал, — молчание означало и
+                // «день закрыт», и «пока неизвестно».
+                if (!until) return ' Следующего времени сегодня нет.';
                 return ' Следующий приём лучше до ' + String(until).slice(0, 5) + '.';
               } catch (_) { return null; }
             })()
