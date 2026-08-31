@@ -26,7 +26,7 @@
   font-size: 15px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
 }
 
 .insights-v4-meta__days {
@@ -50,7 +50,7 @@
   border: none;
   background: none;
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   cursor: pointer;
 }
 
@@ -202,7 +202,7 @@
   font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
 }
 
 .insights-v4-attention__sub,
@@ -331,7 +331,7 @@
   margin: 0;
   font-size: 15px;
   font-weight: 700;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
 }
 
 .insights-v4-detail__disclaimer {
@@ -339,12 +339,12 @@
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .insights-v4 .heys-score-insights-card {
   border-radius: 20px;
-  background: var(--v4-surface, #ffffff);
+  background: var(--v4-surface, #f7efe2);
 }
 
 /* Четыре блока по палитрам свёрнуты в два правила.
@@ -384,7 +384,7 @@
   font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
 }
 
 /* Подпись под похвалой: она называет основание, а не факт, и потому тише. */
@@ -406,19 +406,19 @@
      недели, хотя это одна и та же форма. */
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: var(--v4-chip, rgba(0, 0, 0, 0.06));
+  background: var(--v4-chip, #efe3cf);
   color: var(--v4-act-text, #8a4a20);
 }
 
 .insights-v4-maturity--rule {
-  background: var(--v4-ok-bg, #e6f2e6);
+  background: var(--v4-ok-bg, #eaefe0);
   /* Запасное равно роли: --v4-ok-text это #5c6a45. Стояло #2e7d32 — зелёный
      прежней системы, которого нет ни в одном наборе. */
   color: var(--v4-ok-text, #5c6a45);
 }
 
 .insights-v4-maturity--forecast {
-  background: var(--v4-chip, rgba(0, 0, 0, 0.06));
+  background: var(--v4-chip, #efe3cf);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
@@ -432,7 +432,7 @@
 .insights-v4-attention__item--risk {
   border-radius: 14px;
   padding: 12px;
-  background: var(--v4-accent-bg, #fdeee4);
+  background: var(--v4-accent-bg, #f0dcc6);
 }
 
 .insights-v4-attention__risk-head {
@@ -480,7 +480,7 @@
   border-radius: 999px;
   background: none;
   font: 600 11.5px/1.1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.32));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   cursor: pointer;
   display: inline-flex;
   flex-direction: column;
@@ -490,7 +490,7 @@
 }
 
 .insights-v4-window__chip.is-active {
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -520,7 +520,7 @@
   align-items: center;
   gap: 10px;
   padding: 13px 0;
-  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .insights-v4-patterns__row:last-child {
@@ -531,7 +531,7 @@
   flex: 1;
   min-width: 0;
   font: 700 12.5px/1.35 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
 }
 
 .insights-v4-patterns__support {
@@ -547,7 +547,7 @@
 }
 
 .insights-v4-nutrition__card {
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   border-radius: 20px;
   padding: 16px;
 }
@@ -573,7 +573,7 @@
    --c1 радиусом 20 полями 16, шапка .mvH 10,5 px/600, вилки .pchip высотой 26
    обводкой 1,5 px, кнопка .mvCta высотой 44 радиусом 14 на --acs. */
 .meal-rec-card--v4 {
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   border-radius: 20px;
   padding: 16px;
 }
@@ -596,7 +596,7 @@
 .meal-rec-v4__title {
   /* Окно времени 13,5/700 по контракту: 14 выбивалось из шкалы зоны. */
   font: 700 13.5px/1.35 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
   margin-bottom: 12px;
 }
 
@@ -620,7 +620,7 @@
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--v4-ink, #201e1d) 14%, transparent);
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
 }
 
 .meal-rec-v4__why {
@@ -661,14 +661,14 @@
 }
 
 .meal-rec-v4__how-body {
-  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   padding-top: 11px;
 }
 
 .meal-rec-v4__how-line {
   margin: 0 0 8px;
   font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .meal-rec-v4__how-line:last-child {
@@ -730,7 +730,7 @@
   flex: none;
   width: 96px;
   font: 600 11.5px/1.2 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -749,7 +749,7 @@
 }
 
 .insights-v4-nutrition__bzhu-seg--prot {
-  background: var(--v4-good, #4c8f4c);
+  background: var(--v4-good, #7a8a5e);
 }
 
 .insights-v4-nutrition__bzhu-seg--fat {
@@ -793,11 +793,11 @@
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: var(--v4-ink-4, rgba(0, 0, 0, 0.3));
+  background: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .insights-v4-nutrition__legend-item--prot::before {
-  background: var(--v4-good, #4c8f4c);
+  background: var(--v4-good, #7a8a5e);
 }
 
 /* Легенда берёт роль своего сегмента: разойдись они — полоса и подпись под
@@ -828,7 +828,7 @@
 .insights-v4-stub__title {
   /* Кадр «новый пользователь», элемент 08: 700 16/1,35. */
   font: 700 16px/1.35 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
   margin: 8px 0 14px;
 }
 
@@ -861,7 +861,7 @@
   list-style: none;
   margin: 0;
   padding: 2px 16px;
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   border-radius: 20px;
 }
 
@@ -871,9 +871,9 @@
   align-items: center;
   gap: 12px;
   padding: 13px 0;
-  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   font: 600 12.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
 }
 
 .insights-v4-stub__fill-row:last-child {
@@ -886,14 +886,14 @@
 }
 
 .insights-v4-stub__fill-state.is-done {
-  color: var(--v4-ok-text, #2e7d32);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 /* Контракт «вид · оси фенотипа»: имя 11 px/600 шириной 86, полоса 8 px
    радиусом 999 на подложке чернил 8 %, маркер — круг 14 px тоном --acs со
    сдвигом −7 px, слово справа 10,5 px чернил 55 % шириной 74. */
 .insights-v4-pheno__axes {
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   border-radius: 20px;
   padding: 2px 16px;
 }
@@ -903,7 +903,7 @@
   align-items: center;
   gap: 10px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .insights-v4-pheno__row:last-child {
@@ -914,7 +914,7 @@
   flex: none;
   width: 86px;
   font: 600 11px/1.2 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
 }
 
 .insights-v4-pheno__track {
@@ -948,22 +948,22 @@
 .insights-v4-pheno__locked {
   margin: 8px 0 0;
   font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .insights-v4-pheno__uses {
   list-style: none;
   margin: 0;
   padding: 2px 16px;
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   border-radius: 20px;
 }
 
 .insights-v4-pheno__use {
   padding: 12px 0;
-  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   font: 500 12px/1.45 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .insights-v4-pheno__use:last-child {
@@ -1009,7 +1009,7 @@
   gap: 10px;
   /* Кадр «Инсайты · персональные пороги», элементы 09 и 13: поля 11/0. */
   padding: 11px 0;
-  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 /* Кадр «персональные пороги», элемент 14: 600 11,5/1,3. */
@@ -1017,12 +1017,12 @@
   flex: 1;
   min-width: 0;
   font: 600 11.5px/1.3 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
 }
 
 .insights-v4-thresh__head .insights-v4-thresh__name {
   font: inherit;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .insights-v4-thresh__mine {
@@ -1040,7 +1040,7 @@
   text-align: right;
   font: 600 11px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 /* Контракт «вид · ярусы порогов». Средняя колонка называется по источнику
@@ -1051,11 +1051,11 @@
 }
 
 .insights-v4-thresh__mine--calc {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .insights-v4-thresh__head .insights-v4-thresh__mine--calc {
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.5));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .insights-v4-thresh__tier-row {
@@ -1082,14 +1082,14 @@
 .insights-v4-thresh__why {
   flex: none;
   font: 600 10.5px/1.3 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .insights-v4-thresh__note {
   margin-top: 10px;
   margin-bottom: 18px;
   font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   text-wrap: pretty;
 }
 
@@ -1099,14 +1099,14 @@
 .insights-v4-thresh__where {
   margin-top: 2px;
   font: 500 12px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   text-wrap: pretty;
 }
 
 .insights-v4-stub__all-done {
   margin: 0;
   font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ok-text, #2e7d32);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .insights-v4-nutrition__rhythm-more {
@@ -1135,7 +1135,7 @@
   list-style: none;
   margin: 0;
   padding: 2px 16px;
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   border-radius: 20px;
 }
 
@@ -1168,7 +1168,7 @@
 }
 
 .insights-v4-stub__ladder-day.is-passed {
-  color: var(--v4-ok-text, #2e7d32);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .insights-v4-stub__ladder-text {
@@ -1176,7 +1176,7 @@
   min-width: 0;
   /* Элемент 27: 500 12/1,45. */
   font: 500 12px/1.45 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .insights-v4-outcomes,
@@ -1195,11 +1195,11 @@
   gap: 12px;
   width: 100%;
   border: none;
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   border-radius: 16px;
   padding: 14px 16px;
   font: 600 12.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
   text-align: left;
 }
 
@@ -1265,14 +1265,14 @@
 /* Кадры раскрывашек, элемент 04: 700 16/1,3. */
 .insights-v4-sheet__title {
   font: 700 16px/1.3 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
   margin-bottom: 12px;
 }
 
 .insights-v4-sheet__text {
   margin: 0 0 10px;
   font: 500 12px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   /* Абзацы листа состоят из чисел («больше 1500 ккал не копим», «от 80, от
      100, от 150», «возвращаем 75 %»), и человек сравнивает их между собой
      по ходу чтения. Пропорциональные цифры в таком тексте пляшут. */
@@ -1443,7 +1443,7 @@
 .insights-v4-fail__ask {
   margin-top: 9px;
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.58));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .insights-v4-fail__tier {
@@ -1468,7 +1468,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 13px 0;
-  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1;
@@ -1537,7 +1537,7 @@
   font: 700 9px/1 ui-monospace, Menlo, monospace;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .meal-rec-done__hint {
