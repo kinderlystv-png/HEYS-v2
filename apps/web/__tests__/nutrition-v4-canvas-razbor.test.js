@@ -70,9 +70,14 @@ const ZONE_RED = [
   [6, `.nutrition-v4-hero[data-zone='red'] .nutrition-v4-hero__fill.is-over`, ['background']],
 ];
 
+// Кадр «Питание · вопрос о дате»: варианты выбора и разрушающее действие.
+const DATE_ASK = [
+  [6, '.nutrition-v4-chip.is-off', ['ring']],
+];
+
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 18;
+const COVERAGE_FLOOR = 19;
 
 describe('«Питание» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
@@ -80,6 +85,22 @@ describe('«Питание» · разбор кадров канваса', () =>
 
   it('кадр «Питание · лист правки приёма» совпадает с действиями свайпа', () => {
     expect(compare({ razbor, rules, frame: 'Питание · лист правки приёма', pairs: SWIPE })).toEqual([]);
+  });
+
+  it('кадр «Питание · вопрос о дате» совпадает с невыбранным вариантом', () => {
+    expect(compare({ razbor, rules, frame: 'Питание · вопрос о дате', pairs: DATE_ASK })).toEqual([]);
+  });
+
+  // Сдвиг свайпа живёт числом в разметке, а не в CSS: пара его не достанет,
+  // поэтому строка разбора сверяется с самой константой. Разойдись они —
+  // действия из-под строки выглянут наполовину или спрячутся за край.
+  it('сдвиг свайпа в листе равен ширине ряда действий из кадра', () => {
+    const row = razbor.get('Питание · лист правки приёма|11');
+    expect(row, 'строка 11 кадра «лист правки приёма» пропала из разбора').toBeTruthy();
+    const shift = /translateX\(-(\d+)px\)/.exec(String(row));
+    expect(shift, 'в строке разбора нет сдвига translateX').toBeTruthy();
+    const js = fs.readFileSync(path.resolve(__dirname, '../heys_day_nutrition_v1.js'), 'utf8');
+    expect(js).toContain('SWIPE_ACTIONS_WIDTH = ' + shift[1]);
   });
 
   it('кадры зон совпадают с тоном числа и заливкой перебора', () => {

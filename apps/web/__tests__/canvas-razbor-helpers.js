@@ -130,7 +130,12 @@ const PICK = {
   minWidth: (v) => num(v, /ширина от ([\d.]+)px/),
   flex: (v) => num(v, /флекс (\S+?)(?:,|$)/),
   background: (v) => grabColor(v, 'фон'),
-  color: (v) => grabColor(v, 'цвет')
+  color: (v) => grabColor(v, 'цвет'),
+  // «рамка inset 0 0 0 2px var(--acs)» — обводка внутрь, которой канвас
+  // отличает выбранный вариант от невыбранного. В продукте это box-shadow, и
+  // до сих пор такие строки нельзя было спарить ни в одной зоне: словарь знал
+  // фон и цвет, но не обводку. Читается целиком, вместе с толщиной и тоном.
+  ring: (v) => num(v, /рамка (inset [^,]+?)(?:,|$)/)
 };
 const CSSPROP = {
   marginTop: 'margin-top', marginBottom: 'margin-bottom', gap: 'gap', height: 'height',
@@ -140,7 +145,11 @@ const CSSPROP = {
   align: 'align-items', justify: 'justify-content', direction: 'flex-direction',
   textAlign: 'text-align', transform: 'text-transform', flex: 'flex',
   minWidth: 'min-width',
-  background: 'background', color: 'color'
+  background: 'background', color: 'color',
+  // Обводка внутрь: в канвасе она пишется словом «рамка», в продукте живёт
+  // box-shadow. Пары под неё не было ни в одной зоне, поэтому строки вида
+  // «рамка inset 0 0 0 2px var(--acs)» оставались вне сверки.
+  ring: 'box-shadow'
 };
 
 // Роли канваса → песочные значения набора; продуктовая роль → её запасное.
