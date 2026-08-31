@@ -3796,11 +3796,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }, '×')
         ),
         React.createElement('div', { className: 'aps-barcode-camera' },
+          // Кадр «Штрихкод · наведение»: четыре уголка, линия чтения по центру и
+          // полосы штрихкода внутри рамки. Прежде в рамке были только уголки —
+          // пустой прямоугольник не показывал, что от человека хотят, и
+          // расстояние до упаковки приходилось угадывать. Ширины полос взяты
+          // из разметки кадра, порядок тот же.
           fullscreen && React.createElement('div', { className: 'aps-barcode-finder-frame', 'aria-hidden': 'true' },
             React.createElement('span', { className: 'aps-barcode-finder-corner aps-barcode-finder-corner--tl' }),
             React.createElement('span', { className: 'aps-barcode-finder-corner aps-barcode-finder-corner--tr' }),
             React.createElement('span', { className: 'aps-barcode-finder-corner aps-barcode-finder-corner--bl' }),
-            React.createElement('span', { className: 'aps-barcode-finder-corner aps-barcode-finder-corner--br' })
+            React.createElement('span', { className: 'aps-barcode-finder-corner aps-barcode-finder-corner--br' }),
+            React.createElement('span', { className: 'aps-barcode-finder-line' }),
+            React.createElement('span', { className: 'aps-barcode-finder-bars' },
+              [6, 2, 4, 2, 8, 2, 4, 6, 2, 2, 6, 4, 2, 8, 2, 4].map((width, index) =>
+                React.createElement('span', {
+                  key: index,
+                  className: 'aps-barcode-finder-bar',
+                  style: { width: width + 'px' }
+                })
+              )
+            )
           ),
           React.createElement('video', {
             ref: videoRef,
@@ -3824,6 +3839,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }, cameraState === 'manual' ? 'Повторить доступ' : 'Включить камеру')
           )
         ),
+        // Кадр даёт под рамкой две строки: что сделать и что мешает. Прежде
+        // под рамкой не было ничего, а единственная подсказка жила поверх
+        // видео и пропадала, как только камера отдавала картинку.
+        fullscreen && React.createElement('div', { className: 'aps-barcode-finder-title' },
+          'Наведите на штрихкод упаковки'),
+        fullscreen && React.createElement('div', { className: 'aps-barcode-finder-hint' },
+          'Держите ровно, свет сзади мешает'),
         React.createElement('div', { className: 'aps-barcode-manual' },
           React.createElement('input', {
             className: 'aps-barcode-input',

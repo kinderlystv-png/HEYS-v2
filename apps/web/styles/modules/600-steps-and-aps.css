@@ -9050,11 +9050,21 @@ button.meal-quality-badge:active {
   flex-direction: column;
 }
 
+/* Шапка кадра наведения по разбору кадра: имя 15 px/700, закрытие кругом 30.
+   Базовые .aps-barcode-title/-close общие с обычной модалкой сканера — там
+   16 px и квадрат 32 радиусом 8, и трогать их нельзя: разбор описывает
+   полноэкранный кадр. */
 .aps-barcode-overlay--v4-fullscreen .aps-barcode-title {
+  font-size: 15px;
+  line-height: 1;
   color: #f2ede6;
 }
 
 .aps-barcode-overlay--v4-fullscreen .aps-barcode-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  font-size: 14px;
   background: rgba(242, 237, 230, 0.14);
   color: #f2ede6;
 }
@@ -9100,6 +9110,54 @@ button.meal-quality-badge:active {
   bottom: 0;
   border-width: 0 3px 3px 0;
   border-radius: 0 0 12px 0;
+}
+
+/* Линия чтения и полосы штрихкода внутри рамки наведения — по разметке кадра.
+   Цвета системного слоя камеры: ролей палитры у них нет, так сказано строкой
+   «цвета не из палитры». */
+.aps-barcode-finder-line {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 50%;
+  height: 2px;
+  background: #cf8144;
+}
+
+.aps-barcode-finder-bars {
+  position: absolute;
+  left: 34px;
+  right: 34px;
+  top: 34px;
+  bottom: 34px;
+  display: flex;
+  gap: 3px;
+  align-items: stretch;
+  opacity: 0.5;
+}
+
+.aps-barcode-finder-bar {
+  background: #f2ede6;
+}
+
+/* Две строки под рамкой: что сделать и что мешает. */
+.aps-barcode-overlay--v4-fullscreen .aps-barcode-finder-title {
+  margin-top: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: pretty;
+  color: #f2ede6;
+}
+
+.aps-barcode-overlay--v4-fullscreen .aps-barcode-finder-hint {
+  margin-top: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+  color: rgba(242, 237, 230, 0.5);
 }
 
 .aps-barcode-not-found-screen {
