@@ -34,6 +34,26 @@ describe('изоляция vitest', () => {
     }
   });
 
+  it('каждый файл объявляет хотя бы один тест', () => {
+    // passWithNoTests пропускает файл, в котором раннер не нашёл своих тестов,
+    // — и такой файл выглядит покрытием, не будучи им. Проверка ловит общий
+    // случай; чужой раннер ловится отдельно ниже, потому что node:test пишет
+    // те же test(), и по ним файл выглядит непустым.
+    const dir = path.join(ROOT, 'apps/web/__tests__');
+    const empty = fs
+      .readdirSync(dir)
+      .filter((name) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(name))
+      .filter((name) => {
+        const src = fs
+          .readFileSync(path.join(dir, name), 'utf8')
+          .split(/\r?\n/)
+          .filter((line) => !line.trim().startsWith('//'))
+          .join('\n');
+        return !/\b(it|test)(\.\w+)?\s*\(/.test(src);
+      });
+    expect(empty).toEqual([]);
+  });
+
   it('в папке vitest-тестов нет файлов на node:test', () => {
     // node:test-файл среди vitest-тестов не выполняется: под конфигом apps/web
     // он проходит как «no tests» (passWithNoTests), под корневым падает «No
