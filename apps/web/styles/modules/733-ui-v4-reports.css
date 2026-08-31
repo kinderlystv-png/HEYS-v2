@@ -28,10 +28,9 @@
   gap: 7px;
   flex: 1;
   min-width: 120px;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  font-variant-numeric: tabular-nums;
 }
 
 .reports-v4-meta__range-icon {
@@ -40,25 +39,36 @@
 
 .reports-v4-period-pills {
   display: flex;
-  gap: 16px;
-  margin-left: auto;
+  flex-basis: 100%;
+  gap: 6px;
+  margin-top: 12px;
 }
 
 .reports-v4-period-pill {
-  min-width: 44px;
-  min-height: 44px;
-  margin: -16px -6px;
-  padding: 0 6px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 11px;
   border: none;
-  background: none;
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  border-radius: 999px;
+  background: var(--v4-chip, #efe3cf);
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-sand-act-deep, #8a4a20);
   cursor: pointer;
+  white-space: nowrap;
+}
+
+.reports-v4-period-pill::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
 }
 
 .reports-v4-period-pill.is-active {
-  color: var(--v4-sand-act-deep, #8a4a20);
-  box-shadow: inset 0 -2px 0 0 var(--v4-act-line, #c67139);
+  background: var(--v4-sand-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 .reports-v4-hero {
@@ -73,7 +83,7 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 .reports-v4-hero__value-row {
@@ -97,7 +107,7 @@
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 .reports-v4-hero__phrase {
@@ -219,7 +229,7 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 .reports-v4-summary-card__value {
@@ -277,7 +287,7 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 /* Текущий вес и Δ за период — правая половина шапки карточки.
@@ -316,7 +326,7 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.35));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
 }
 
 .reports-v4-dynamics-card__legend {
@@ -333,7 +343,7 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .reports-v4-dynamics-card__legend-swatch {
@@ -417,7 +427,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 .reports-v4-wellbeing {
@@ -433,7 +443,7 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 /* Две кривые за период на одной сетке: часы сна и оценка самочувствия. Шкалы
@@ -497,7 +507,7 @@
   padding-left: 12px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 .reports-v4-wellbeing__key::before {
@@ -545,7 +555,7 @@
   font-size: 10.5px;
   font-weight: 600;
   line-height: 1.2;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 .reports-v4-days {
@@ -859,7 +869,7 @@
 }
 
 .reports-v4-discipline__score.is-zero {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 /* Средняя доля вместо Δ у нулевой строки: контракт «карточка · нулевая строка
@@ -1090,7 +1100,7 @@
   padding-top: 11px;
   border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
   font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 /* Полоса и счёт в одном ряду: контракт ставит «3 из 7» справа от дорожки, а
@@ -1405,5 +1415,5 @@
 .heys-score-screen__footnote {
   margin: 14px 0 0;
   font: 500 11px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }

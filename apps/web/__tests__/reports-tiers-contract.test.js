@@ -90,8 +90,22 @@ describe('Отчёты · ярус «Сон и самочувствие»', () =
     }
   });
 
+  // Проверка держит смысл, а не буквы: две кривые одного графика обязаны
+  // краситься РАЗНЫМИ ролями. Прежняя редакция называла роли поимённо
+  // (--v4-water у сна, --v4-sand-act у настроения) и упала вместе с верной
+  // правкой: 31 августа сон перевели на --v4-act, чтобы три графика блока
+  // «Динамика» не говорили на трёх языках цвета. Сторож, прибитый к литералу,
+  // закрепляет ровно ту ошибку, от которой должен защищать.
   it('кривые различаются ролями, а не только формой', () => {
-    expect(CSS).toMatch(/__line--sleep[\s\S]{0,200}--v4-water/);
-    expect(CSS).toMatch(/__line--mood[\s\S]{0,200}--v4-sand-act/);
+    const roleOf = (mod) => {
+      const at = CSS.indexOf('__line--' + mod);
+      const rule = CSS.slice(at, CSS.indexOf('}', at));
+      return (/stroke:\s*var\((--[a-z0-9-]+)/.exec(rule) || [])[1];
+    };
+    const sleep = roleOf('sleep');
+    const mood = roleOf('mood');
+    expect(sleep, 'у кривой сна нет роли обводки').toBeTruthy();
+    expect(mood, 'у кривой настроения нет роли обводки').toBeTruthy();
+    expect(sleep).not.toBe(mood);
   });
 });
