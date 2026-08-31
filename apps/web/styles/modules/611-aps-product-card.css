@@ -1683,3 +1683,174 @@
   background: #1e3a8a;
   border-color: var(--color-blue-500);
 }
+
+/* Порции продукта: переехали из оболочки 31 августа, второй случай той же
+   ошибки — приставка aps-v4- читается как «оболочка шага», а за ней стоит
+   конкретный экран. Кадры «Продукт · порции» и «Правка продукта · порции»,
+   пользуется heys_add_product_step_v1.js. Семейство перенесено целиком:
+   держать половину здесь значило бы отдать исход каскаду порядка файлов. */
+
+/* Порции продукта */
+.aps-portions {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.aps-portions-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.aps-portions-list {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.aps-portion-btn {
+  padding: 4px 6px;
+  font-size: 11px;
+  border: 1px solid #d1fae5;
+  background: var(--v4-ok-bg, #ecfdf5);
+  color: #059669;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (hover: hover) {
+  .aps-portion-btn:hover {
+    border-color: var(--color-emerald-500);
+  }
+}
+
+.aps-portion-btn.active {
+  background: var(--color-emerald-500);
+  color: var(--color-white);
+  border-color: var(--color-emerald-500);
+}
+
+[data-theme$='dark'] .aps-portion-btn {
+  background: var(--v4-ok-bg, #064e3b);
+  border-color: #065f46;
+  color: #34d399;
+}
+
+[data-theme$='dark'] .aps-portion-btn.active {
+  background: var(--color-emerald-500);
+  color: var(--color-white);
+}
+
+.aps-v4-portions-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aps-v4-portions-subtitle {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.aps-v4-portions-product {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--v4-sand-ink, #201e1d);
+}
+
+.aps-v4-portions-list {
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--v4-sand-surface-soft, #fffaf1);
+  box-shadow: inset 0 0 0 1px rgba(198, 113, 57, 0.12);
+}
+
+.aps-v4-portions-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(198, 113, 57, 0.08);
+}
+
+.aps-v4-portions-row:last-child {
+  border-bottom: none;
+}
+
+.aps-v4-portions-row--readonly {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.aps-v4-portions-row__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--v4-sand-ink, #201e1d);
+}
+
+.aps-v4-portions-row__grams {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--v4-sand-act-deep, #8a4a20);
+}
+
+.aps-v4-portions-row__input {
+  width: 100%;
+  min-height: 40px;
+  border: none;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--v4-sand-ink, #201e1d);
+  box-shadow: inset 0 0 0 2px rgba(198, 113, 57, 0.18);
+}
+
+.aps-v4-portions-row__input--grams {
+  width: 72px;
+}
+
+.aps-v4-portions-row__grams-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.aps-v4-portions-row__remove {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--v4-sand-act-deep, #8a4a20);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.aps-v4-portions-empty,
+.aps-v4-portions-suggest__title {
+  padding: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.aps-v4-portions-add {
+  margin-top: 4px;
+}

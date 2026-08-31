@@ -125,6 +125,8 @@ describe('Классы потока добавления лежат по зон�
   const SINGLE_OWNER = [
     ['aps-create', '611-aps-product-card.css'],
     ['aps-v4-outcome', '611-aps-product-card.css'],
+    ['aps-v4-portions', '611-aps-product-card.css'],
+    ['aps-portions', '611-aps-product-card.css'],
   ];
 
   it.each(SINGLE_OWNER)('семейство %s лежит в файле своего единственного экрана', (prefix, file) => {
