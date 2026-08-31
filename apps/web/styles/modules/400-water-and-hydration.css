@@ -2166,10 +2166,13 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   gap: 12px;
 }
 
+/* Кадр «Совет · отмена с таймером» выводит кольцо в 30 — поле рисунка 30×30
+   при системе координат 36. Радиус 15 в центре 18 остаётся: меняется вывод, а
+   не разметка круга, поэтому обводка 3 в координатах даёт на экране 2,5. */
 .advice-v4-hide-ring {
   position: relative;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   flex: none;
   display: flex;
   align-items: center;
@@ -2177,8 +2180,8 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .advice-v4-hide-ring__svg {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   transform: rotate(-90deg);
 }
 
@@ -2227,13 +2230,14 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-hide-return {
   flex: none;
   margin-top: 0;
-  min-height: 32px;
   border-radius: 999px;
   background: #efe3cf;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 14px;
+  /* Поля 11/15 по кадру дают высоту 33 — прежняя min-height 32 её только
+     занижала, цель нажатия от этого не пострадала. */
+  padding: 11px 15px;
   font: 700 11.5px/1 Figtree, sans-serif;
   color: #8a4a20;
   border: none;
@@ -2285,7 +2289,10 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   margin-top: 18px;
   padding: 14px 15px;
   border-radius: 18px;
-  background: #f3e0d2;
+  /* Кадр «Служебное · за входом куратора» ставит примечание на --tint —
+     тонированную подложку-подсказку, ту же, что у плашки куратора. Здесь стоял
+     #f3e0d2: это --v4-past, тон капсулы прошлого дня, похожий и другой. */
+  background: var(--v4-tint, #f6e6dd);
   font: 500 11.5px/1.5 Figtree, sans-serif;
   color: rgba(32, 30, 29, 0.55);
   text-wrap: pretty;

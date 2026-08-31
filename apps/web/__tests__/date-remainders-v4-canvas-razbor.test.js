@@ -93,9 +93,58 @@ const SHEET = [
     ['radius', 'background', 'padding', 'fontWeight', 'fontSize', 'color']],
 ];
 
+// Три кадра-сироты: канвас зоны рисует служебный раздел за входом куратора и
+// две всплывающие плашки советов. Экраны продуктовые, но чужие — их CSS живёт в
+// `400-water-and-hydration.css` вместе с остальными советами, а строки этого
+// канваса до 31 августа стояли `?`: «никто не смотрел». Разбор кадра — их
+// единственный источник, именованной строки контракта о них в зоне нет.
+//
+// В парах только предмет каждого кадра. Шапка экрана советов, заглушки
+// содержимого и нижняя навигация нарисованы для контекста и принадлежат своим
+// экранам — в вердиктах они стоят `—` с этой причиной.
+const SERVICE = [
+  [2, '.advice-service-header', ['align', 'gap', 'padding']],
+  [3, '.advice-service-title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [5, '.advice-service-note', ['radius', 'padding', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [6, '.advice-service-section-label', ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'color']],
+  [7, '.advice-service-list', ['background', 'radius', 'padding']],
+  [8, '.advice-service-row', ['align', 'gap', 'padding']],
+  [10, '.advice-service-row__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [11, '.advice-service-row__hint', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [13, '.advice-service-footer-note', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [14, '.advice-service-footer-tag', ['padding', 'fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'color', 'textAlign']],
+];
+
+// Кадр «Совет · отмена с таймером»: плашка со счётчиком и кнопкой «Вернуть».
+const UNDO = [
+  [22, '.advice-v4-hide-row', ['align', 'gap']],
+  [23, '.advice-v4-hide-ring', ['width', 'height', 'align', 'justify', 'flex']],
+  [24, '.advice-v4-hide-ring__num', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [25, '.advice-v4-hide-copy', ['flex']],
+  [26, '.advice-v4-hide-copy__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [27, '.advice-v4-hide-copy__subtitle', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [28, '.advice-v4-hide-return', ['flex', 'radius', 'background', 'padding', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
+// Кадр «Совет · оценка после свайпа»: «Полезно» и «Мимо» после прочтения.
+const RATE = [
+  [22, '.advice-v4-panel__head', ['align', 'gap']],
+  [23, '.advice-v4-panel__title', ['flex', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [24, '.advice-v4-panel__hint', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [25, '.advice-v4-panel__actions', ['gap', 'marginTop']],
+  [26, ['.advice-v4-panel__btn', '.advice-v4-panel__btn--useful'],
+    ['flex', 'minHeight', 'radius', 'background', 'align', 'justify', 'gap', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [27, ['.advice-v4-panel__btn', '.advice-v4-panel__btn--miss'],
+    ['flex', 'minHeight', 'radius', 'background', 'align', 'justify', 'gap', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  // «Выключка center» кадра здесь достигается флексом: кнопка сама
+  // `display: flex` с `justify-content: center`, и `text-align` ей не нужен.
+  // Проверяется распределением, а не выключкой — результат тот же.
+  [28, '.advice-v4-panel__skip', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color', 'minHeight', 'align', 'justify']],
+];
+
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 20;
+const COVERAGE_FLOOR = 44;
 
 describe('«Дата и остатки» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
@@ -107,6 +156,29 @@ describe('«Дата и остатки» · разбор кадров канва
 
   it('кадр «Календарь · легенда» совпадает с нижним листом календаря', () => {
     expect(compare({ razbor, rules, frame: 'Календарь · легенда', pairs: SHEET })).toEqual([]);
+  });
+
+  // Три кадра-сироты сверяются с CSS советов: их экраны живут там.
+  const advice = readRules(fs.readFileSync(
+    path.resolve(__dirname, '../styles/modules/400-water-and-hydration.css'), 'utf8',
+  ));
+
+  it('кадр «Служебное · за входом куратора» совпадает со служебным разделом', () => {
+    expect(compare({
+      razbor, rules: advice, frame: 'Служебное · за входом куратора', pairs: SERVICE,
+    })).toEqual([]);
+  });
+
+  it('кадр «Совет · отмена с таймером» совпадает с плашкой отмены', () => {
+    expect(compare({
+      razbor, rules: advice, frame: 'Совет · отмена с таймером', pairs: UNDO,
+    })).toEqual([]);
+  });
+
+  it('кадр «Совет · оценка после свайпа» совпадает с панелью оценки', () => {
+    expect(compare({
+      razbor, rules: advice, frame: 'Совет · оценка после свайпа', pairs: RATE,
+    })).toEqual([]);
   });
 
   // Числа, которые называет именованная строка зоны, а кадр рисует иначе:
