@@ -539,38 +539,6 @@
 .reports-v4-wellbeing__key--sleep::before { background: var(--v4-act, #c67139); }
 .reports-v4-wellbeing__key--mood::before { background: var(--v4-ok-fill, #7a8a5e); }
 
-.reports-v4-wellbeing__grid {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.reports-v4-wellbeing__item {
-  text-align: left;
-}
-
-.reports-v4-wellbeing__value {
-  display: block;
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--v4-ok-ink, #5c6a45);
-  font-variant-numeric: tabular-nums;
-}
-
-.reports-v4-wellbeing__item:last-child .reports-v4-wellbeing__value {
-  color: var(--v4-sand-act-deep, #8a4a20);
-}
-
-.reports-v4-wellbeing__label {
-  display: block;
-  margin-top: 7px;
-  font-size: 10.5px;
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
-}
-
 .reports-v4-days {
   padding: 2px 16px;
   border-radius: 20px;
@@ -868,14 +836,19 @@
 
 /* Контракт «вид · нулевая строка»: полоса той же геометрии, но в рамке
    inset 1 px чернил 16 % и с косой штриховкой шагом 4 px — сплошная заливка
-   остаётся только у живых строк. Тон канваса --ovl соответствует роли
-   --v4-act (акцент), своей роли не заводим. */
+   остаётся только у живых строк.
+
+   Тон канваса --ovl это --v4-warn-1 (#d99a63), а не --v4-act (#c67139): роль
+   акцента здесь стояла с запасным значением #d99a63, то есть обещала один тон,
+   а давала другой. Прежний комментарий утверждал, что --ovl «соответствует
+   --v4-act» — это неверно и спорило с правилом точки перебора в этом же файле,
+   где тот же --ovl уже сведён на --v4-warn-1. */
 .reports-v4-discipline__bar.is-zero {
   box-shadow: inset 0 0 0 1px var(--v4-line, rgba(0, 0, 0, 0.16));
   background: repeating-linear-gradient(
     -45deg,
-    var(--v4-act, #d99a63) 0,
-    var(--v4-act, #d99a63) 1px,
+    var(--v4-warn-1, #d99a63) 0,
+    var(--v4-warn-1, #d99a63) 1px,
     transparent 1px,
     transparent 4px
   );
@@ -897,42 +870,6 @@
   text-align: right;
   font: 600 10px/1.3 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
-}
-
-/* Контракт «месяц нулей — вопрос к норме»: единственный выход — к куратору. */
-.reports-v4-zero-actions {
-  background: var(--v4-card, #f7efe2);
-  border-radius: 20px;
-  padding: 2px 16px;
-}
-
-.reports-v4-zero-actions__row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 13px 0;
-  border: none;
-  background: none;
-  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
-  font: 600 12.5px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #0f172a);
-  text-align: left;
-}
-
-.reports-v4-zero-actions__row:last-child {
-  border-bottom: none;
-}
-
-.reports-v4-zero-actions__row--link {
-  cursor: pointer;
-  color: var(--v4-sand-act-deep, #8a4a20);
-}
-
-.reports-v4-zero-actions__chevron {
-  flex: none;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
 }
 
 .reports-v4-discipline__footnote {
