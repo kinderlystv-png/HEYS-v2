@@ -12,7 +12,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { compare, readRazbor, readRules } from './canvas-razbor-helpers.js';
+import { compare, coverage, readRazbor, readRules } from './canvas-razbor-helpers.js';
 
 const CANVAS = path.resolve(
   __dirname,
@@ -93,6 +93,10 @@ const SHEET = [
     ['radius', 'background', 'padding', 'fontWeight', 'fontSize', 'color']],
 ];
 
+// Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
+// что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
+const COVERAGE_FLOOR = 20;
+
 describe('«Дата и остатки» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
   const rules = readRules(fs.readFileSync(CSS, 'utf8'));
@@ -123,5 +127,27 @@ describe('«Дата и остатки» · разбор кадров канва
 
   it('осознанные отступления не разрослись', () => {
     expect(EXCEPTIONS.size).toBe(16);
+  });
+
+  it('гейт называет свой охват', () => {
+    const { total, covered, missed, perFrame, untouched } = coverage({ razbor: razbor });
+    const worst = perFrame
+      .filter((item) => item.missed.length)
+      .sort((a, b) => b.missed.length - a.missed.length)
+      .slice(0, 3)
+      .map((item) => `${item.frame} — ${item.missed.length}`);
+    console.info(
+      `[дата и остатки] сверено ${covered} из ${total} строк разбора `
+      + `(${((covered / total) * 100).toFixed(1)} %), кадров ${perFrame.length}, `
+      + `не тронуто целиком ${untouched}, вне пар ${missed}; `
+      + `больше всего пропущено: ${worst.join(' · ') || 'нет'}`,
+    );
+    expect(covered).toBeGreaterThanOrEqual(COVERAGE_FLOOR);
+    if (covered > COVERAGE_FLOOR) {
+      throw new Error(
+        `Охват вырос: сверяется ${covered} строк вместо ${COVERAGE_FLOOR}. `
+        + 'Поднимите COVERAGE_FLOOR, иначе следующее падение пройдёт незаметно.',
+      );
+    }
   });
 });

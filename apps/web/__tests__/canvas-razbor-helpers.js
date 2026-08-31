@@ -245,6 +245,16 @@ function resolveIndex(razbor, frame, anchor) {
   return { index: hits[0] };
 }
 
+// Какие строки разбора гейт вообще брал в руки за прогон. Заполняется самим
+// compare: перечислять вызовы руками в каждом гейте — это второй список,
+// который разъедется с первым.
+const TOUCHED = new Map();
+
+function markTouched(frame, index) {
+  if (!TOUCHED.has(frame)) TOUCHED.set(frame, new Set());
+  TOUCHED.get(frame).add(String(Number(index)));
+}
+
 function compare({ razbor, rules, frame, pairs }) {
   const drift = [];
   for (const pair of pairs) {
@@ -254,6 +264,7 @@ function compare({ razbor, rules, frame, pairs }) {
     const index = found.index + (anchored ? pair[1] : 0);
     const sel = anchored ? pair[2] : pair[1];
     const props = anchored ? pair[3] : pair[2];
+    markTouched(frame, index);
     const value = razbor.get(`${frame}|${String(Number(index))}`);
     if (!value) { drift.push(`${frame} · ${index}: строки разбора нет`); continue; }
     const chain = Array.isArray(sel) ? sel : [sel];
@@ -295,31 +306,43 @@ function compare({ razbor, rules, frame, pairs }) {
  * парах вовсе. Возвращает по кадру: сколько строк в разборе, сколько взято
  * парами и какие индексы остались нетронутыми.
  */
-function coverage({ razbor, calls }) {
+function coverage({ razbor, calls } = {}) {
   const seen = new Map();
-  for (const { frame, pairs } of calls) {
-    if (!seen.has(frame)) seen.set(frame, new Set());
-    const taken = seen.get(frame);
-    for (const pair of pairs) {
-      const anchored = pair.length === 4;
-      const found = resolveIndex(razbor, frame, pair[0]);
-      if (found.error) continue;
-      taken.add(String(Number(found.index + (anchored ? pair[1] : 0))));
+  if (calls) {
+    for (const { frame, pairs } of calls) {
+      if (!seen.has(frame)) seen.set(frame, new Set());
+      const taken = seen.get(frame);
+      for (const pair of pairs) {
+        const anchored = pair.length === 4;
+        const found = resolveIndex(razbor, frame, pair[0]);
+        if (found.error) continue;
+        taken.add(String(Number(found.index + (anchored ? pair[1] : 0))));
+      }
     }
+  } else {
+    for (const [frame, taken] of TOUCHED) seen.set(frame, taken);
   }
+
+  const frames = new Set([...razbor.keys()].map((key) => key.slice(0, key.lastIndexOf('|'))));
   const perFrame = [];
   let total = 0;
   let covered = 0;
-  for (const [frame, taken] of seen) {
+  for (const frame of frames) {
     const rows = [...razbor.keys()]
       .filter((key) => key.startsWith(`${frame}|`))
       .map((key) => key.slice(frame.length + 1));
+    const taken = seen.get(frame) || new Set();
     const missed = rows.filter((index) => !taken.has(index));
     total += rows.length;
     covered += rows.length - missed.length;
     perFrame.push({ frame, rows: rows.length, covered: rows.length - missed.length, missed });
   }
-  return { total, covered, missed: total - covered, perFrame };
+  return { total, covered, missed: total - covered, perFrame, untouched: perFrame.filter((f) => !f.covered).length };
+}
+
+/** Сбросить реестр — нужно, когда в одном файле сверяются два разных канваса. */
+function resetCoverage() {
+  TOUCHED.clear();
 }
 
 export {
@@ -330,6 +353,7 @@ export {
   resolveIndex,
   compare,
   coverage,
+  resetCoverage,
   PICK,
   CSSPROP,
   ROLE,
