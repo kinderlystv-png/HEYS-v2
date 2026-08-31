@@ -273,10 +273,13 @@
 
 .nutrition-v4-meal-row__title {
   display: inline-flex;
+  flex: 1;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  font-size: 0.8125rem;
+  /* Кадр «Приёмы дня · список»: 12,5 px, не 13 — тот же кегль, что у времени
+     с типом в контракте food-meal, который этот список и держит. */
+  font-size: 12.5px;
   font-weight: 700;
   line-height: 1;
   color: var(--v4-ink, #111827);
@@ -350,7 +353,9 @@
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-act, #2563eb);
+  /* Кадр даёт «+ ещё» глубокий акцент --ac, а не мягкий --acs: роль без имени
+     набора для него уже есть — --v4-act-text. */
+  color: var(--v4-act-text, #8a4a20);
   white-space: nowrap;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -372,7 +377,7 @@
 }
 
 .nutrition-v4-streak {
-  margin-top: 8px;
+  margin-top: 10px;
   padding: 12px 14px;
   border-radius: 16px;
   /* Роли те же, что стояли: менялись только запасные значения — они были из

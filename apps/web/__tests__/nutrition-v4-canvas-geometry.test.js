@@ -200,11 +200,36 @@ const EXCEPTIONS = new Set([
   '.nutrition-v4-chip|min-height',
 ]);
 
+// Строка приёма дня сверяется не здесь. Контракт этого канваса сам отдаёт её
+// строкой «список приёмов дня — не здесь»: перечень приёмов «рисует
+// food-meal.v4.dc.html, кадр «Приёмы дня · список»… На этой вкладке он
+// дублируется; при расхождении верен food-meal». Кадры двух канвасов дают
+// строке разные числа (номер 26 против 22, ккал 700 против 600, «+ ещё»
+// обводкой при высоте 30 против заливки при 44), поэтому держать её обоими
+// гейтами нельзя — один из них обязан быть красным. Пары остаются в списке:
+// первый тест по-прежнему следит, что блок и правило не исчезли, а числа
+// сверяет `food-meal-day-list-canvas-geometry.test.js`.
+const DELEGATED = new Set([
+  '.nutrition-v4-meal-row',
+  '.nutrition-v4-meal-row__head',
+  '.nutrition-v4-meal-row__title',
+  '.nutrition-v4-meal-row__kcal',
+  '.nutrition-v4-meal-row__num',
+  '.nutrition-v4-meal-row__body',
+  '.nutrition-v4-meal-row__items',
+  '.nutrition-v4-meal-row__chevron',
+  '.nutrition-v4-meal-row__add',
+  '.nutrition-v4-meal-row--empty .nutrition-v4-meal-row__add',
+  '.nutrition-v4-streak',
+]);
+
 // Сколько клеток «пара × свойство» гейт реально сверяет. Свойство читается,
 // только если стоит в правиле класса канваса: если разбор кадра написан
 // инлайном, `if (!(prop in want)) continue` молча пропускает его. Число
 // заморожено — падение значит потерю пары или правила, рост просит поднять.
-const COVERAGE_FLOOR = 340;
+// 31 августа опустилось с 340: 65 клеток строки приёма уехали в гейт food-meal
+// вместе с самой строкой (см. DELEGATED выше), а не перестали сверяться.
+const COVERAGE_FLOOR = 275;
 
 describe('геометрия вкладки «Питание» против кадров канваса', () => {
   const canvasSource = fs.readFileSync(CANVAS, 'utf8');
@@ -223,6 +248,7 @@ describe('геометрия вкладки «Питание» против ка
   it('числа совпадают с кадрами', () => {
     const drift = [];
     for (const [canvasSel, productSel] of PAIRS) {
+      if (DELEGATED.has(productSel)) continue;
       const want = declarations(canvas.get(canvasSel));
       // Значение может стоять на самом узле, на его базовом классе (если это
       // модификатор) или наследоваться от родителя блока — собираем цепочку
@@ -258,6 +284,7 @@ describe('геометрия вкладки «Питание» против ка
     let skipped = 0;
     const blind = new Map();
     for (const [canvasSel, productSel] of PAIRS) {
+      if (DELEGATED.has(productSel)) continue;
       const want = declarations(canvas.get(canvasSel));
       for (const prop of CHECKED) {
         if (EXCEPTIONS.has(`${productSel}|${prop}`)) continue;
@@ -269,7 +296,7 @@ describe('геометрия вкладки «Питание» против ка
       }
     }
     const never = [...blind.entries()]
-      .filter(([, n]) => n === PAIRS.length)
+      .filter(([, n]) => n === PAIRS.length - DELEGATED.size)
       .map(([prop]) => prop)
       .sort();
     console.info(
