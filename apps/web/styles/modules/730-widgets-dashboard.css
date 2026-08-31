@@ -12074,7 +12074,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
   padding: 14px 18px 20px;
   background: var(--v4-bg, #fffaf1);
   border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
