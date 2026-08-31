@@ -156,7 +156,9 @@ describe('login v4 frame groups', () => {
     expect(picker).toContain("done: 'Готово'");
     expect(picker).toContain('heys-login-theme--login-only');
     expect(css).toContain('.heys-login-theme--login-only.is-expanded .heys-login-theme__panel');
-    expect(css).toMatch(/background:\s*#f7efe2/);
+    // Поверхность панели идёт ролью набора, а не песочным литералом:
+    // иначе выбор оформления на синем наборе остаётся песочным.
+    expect(css).toMatch(/background:\s*var\(--v4-surface/);
     expect(picker).toContain('heys-login-theme__done');
   });
 

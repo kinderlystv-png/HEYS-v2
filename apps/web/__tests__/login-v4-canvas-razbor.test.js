@@ -96,7 +96,12 @@ describe('«Вход» · разбор кадров канваса', () => {
     // «вид своей клавиатуры»: зазоры 7, радиус 16, ⌫ тем же боксом --c1.
     expect(rules.get('.heys-auth-keypad').gap).toBe('7px');
     expect(rules.get('.heys-auth-key')['border-radius']).toBe('16px');
-    expect(rules.get('html .heys-auth-key.heys-auth-key--delete').background).toBe('#f7efe2');
+    // Роль, а не литерал: строка «палитры» просит полные ряды — песочный и
+    // синий по шесть экранов один в один, и поверхность клавиши обязана
+    // идти набором. До 31 августа здесь стоял голый #f7efe2, и тест его
+    // же и сторожил — то есть закреплял песочную клавишу на синем наборе.
+    expect(rules.get('html .heys-auth-key.heys-auth-key--delete').background)
+      .toBe('var(--v4-surface, #f7efe2)');
     // «вид слота ошибки»: одна строка 11,5 px/600, без заливки и обводки.
     expect(rules.get('.heys-auth-error')['font-size']).toBe('11.5px');
     expect(rules.get('.heys-auth-error')['font-weight']).toBe('600');
