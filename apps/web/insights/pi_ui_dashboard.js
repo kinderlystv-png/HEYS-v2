@@ -2453,22 +2453,21 @@
           ),
           h('ul', { className: 'insights-v4-nutrition__bzhu' },
             bzhuRows.map(function (row) {
-              // Контракт «карточка · БЖУ по приёмам»: имя слева, ккал справа,
-              // полоса доли ПОД строкой. Прежде она стояла между ними и
-              // растягивалась по остатку ширины: у приёма с длинным именем
-              // полоса сжималась вдвое, и доли двух приёмов нельзя было
-              // сравнить глазом — а ради сравнения строка и читается.
+              // Кадр «Инсайты · ярус Питание» рисует полосу В СТРОКЕ между
+              // именем и числом: .mrow — флекс по центру, .mbar высотой 8. Проза
+              // строки «карточка · БЖУ по приёмам» говорит «под строкой, высота
+              // 4» и расходится с собственным кадром — как в кабинете, где
+              // разбор называл кнопку «на --c2», а разметка давала --acs.
+              // Верна разметка; расхождение записано дизайнеру.
               return h('li', { key: row.key, className: 'insights-v4-nutrition__bzhu-row' },
-                h('span', { className: 'insights-v4-nutrition__bzhu-head' },
-                  h('span', { className: 'insights-v4-nutrition__bzhu-name' },
-                    row.name + (row.time ? ' · ' + row.time : '')),
-                  h('span', { className: 'insights-v4-nutrition__bzhu-kcal' }, row.kcal)
-                ),
+                h('span', { className: 'insights-v4-nutrition__bzhu-name' },
+                  row.name + (row.time ? ' · ' + row.time : '')),
                 h('span', { className: 'insights-v4-nutrition__bzhu-bar' },
                   h('span', { className: 'insights-v4-nutrition__bzhu-seg insights-v4-nutrition__bzhu-seg--prot', style: { width: row.protPct + '%' } }),
                   h('span', { className: 'insights-v4-nutrition__bzhu-seg insights-v4-nutrition__bzhu-seg--fat', style: { width: row.fatPct + '%' } }),
                   h('span', { className: 'insights-v4-nutrition__bzhu-seg insights-v4-nutrition__bzhu-seg--carbs', style: { width: row.carbsPct + '%' } })
-                )
+                ),
+                h('span', { className: 'insights-v4-nutrition__bzhu-kcal' }, row.kcal)
               );
             })
           ),

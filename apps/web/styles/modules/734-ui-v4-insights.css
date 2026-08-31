@@ -631,18 +631,9 @@
   gap: 9px;
 }
 
-/* Строка приёма и полоса под ней: контракт разводит их по вертикали, чтобы
-   полоса у всех приёмов была одной ширины и доли читались сравнением. */
 .insights-v4-nutrition__bzhu-row {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.insights-v4-nutrition__bzhu-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: 10px;
 }
 
@@ -656,11 +647,10 @@
   white-space: nowrap;
 }
 
-/* Полоса доли: высота 4 по контракту, во всю ширину строки — она больше не
-   делит место с именем приёма. */
 .insights-v4-nutrition__bzhu-bar {
+  flex: 1;
   display: flex;
-  height: 4px;
+  height: 8px;
   border-radius: 999px;
   overflow: hidden;
   background: var(--v4-chip, rgba(0, 0, 0, 0.07));
