@@ -190,7 +190,7 @@ const MOOD = [
   [5, '.mc-step-kicker', ['fontWeight', 'fontSize', 'lineHeight', 'tracking']],
   [6, ['.mc-recorded-sub', '.mc-mood-step > .mc-recorded-sub'],
     ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
-  [7, ['.mc-scale-card', '.mc-mood-step > .mc-scale-card:first-of-type'],
+  [7, ['.mc-scale-card', '.mc-mood-step > .mc-recorded-sub + .mc-scale-card'],
     ['background', 'radius', 'padding', 'marginTop']],
   [8, '.mc-scale-head', ['align', 'justify']],
   [9, '.mc-scale-head', ['fontWeight', 'fontSize', 'lineHeight', 'color']],

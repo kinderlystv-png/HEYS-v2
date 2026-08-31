@@ -1643,7 +1643,11 @@
   margin-top: 10px;
 }
 
-.mc-mood-step > .mc-scale-card:first-of-type {
+/* Именно «карточка сразу после подписи», а не :first-of-type: первый div шага —
+   надзаголовок, и по типу элемента первой карточка не является. Правило с
+   :first-of-type было мёртвым, а парная сверка этого не видит — она читает
+   правило, не каскад. */
+.mc-mood-step > .mc-recorded-sub + .mc-scale-card {
   margin-top: 22px;
 }
 
