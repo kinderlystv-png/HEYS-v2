@@ -173,7 +173,6 @@ const BASELINE = [
   'progress',
   'safe-bottom',
   'success-color',
-  'surface-secondary',
   'text-color',
   'text-dark',
   'text-dark-primary',
