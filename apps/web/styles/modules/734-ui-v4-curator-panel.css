@@ -257,6 +257,9 @@
 
 /* Самая частая группа — одна строка со счётом: тревожное и спокойное не
    должны занимать одинаковое место. */
+/* Свёрнутые решения — обычная строка в карточке, а не зелёная плашка: кадр
+   рисует их тем же card-рядом, что и остальных клиентов. Тинт «идёт хорошо»
+   говорил бы, что здесь что-то хорошо, тогда как это просто уже разобранное. */
 .cur-fine__toggle {
   display: flex;
   align-items: center;
@@ -265,16 +268,22 @@
   padding: 12px 14px;
   border: none;
   border-radius: 20px;
-  background: var(--v4-ok-bg, #eaefe0);
+  background: var(--v4-surface, #f7efe2);
   color: var(--v4-ok-text, #5c6a45);
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
 }
 
 .cur-fine__more {
-  font-size: 11px;
+  flex: none;
+  font-size: 11.5px;
   font-weight: 700;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .cur-fine__list {
