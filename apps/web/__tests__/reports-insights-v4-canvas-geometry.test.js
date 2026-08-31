@@ -8,6 +8,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { compare, readRazbor, readRules } from './canvas-razbor-helpers.js';
+
 const canvasPath = path.resolve(
   __dirname,
   '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html'
@@ -38,6 +40,74 @@ function prop(block, name) {
 
 // Нормализация форм записи: «.16em» ↔ «0.16em» (и после «:», и после пробела).
 const norm = (v) => (v == null ? null : String(v).replace(/(^|[\s:(])\.(\d)/g, '$10.$2').trim());
+
+// Покадровый разбор: пары «элемент кадра → правило продукта». Ключи раздела
+// «Разбор кадров» — «<метка кадра> · NN», то есть привязка идёт по
+// data-screen-label, а не по классам: канвас этой зоны почти весь инлайновый, и
+// сверка по классам его элементы не находит.
+//
+// Отступления здесь не молчат: то, что кадр и продукт держат по-разному, в пары
+// не идёт и названо ниже в списке RAZBOR_EXCEPTIONS.
+const RAZBOR_EXCEPTIONS = new Map([
+  // У набора нет тона 42 %; ближайший --v4-ink-3 даёт 45 %.
+  ['Визуал v4 · Отчёты · 61|color', 'у набора нет тона 42 %, ближайший --v4-ink-3'],
+  // Ноль дельты: кадр просит 35 %, ближайшая роль --v4-ink-4 даёт 38 %.
+  ['Визуал v4 · Отчёты · 59|color', 'у набора нет тона 35 %, ближайший --v4-ink-4'],
+  // Дорожка полосы: кадр просит чернила 7 %, роль дорожки --v4-track даёт 12 %.
+  // Роль выбрана по смыслу («дорожка полосы»), значение — вопрос набора.
+  ['Визуал v4 · Отчёты · 50|background', 'роль дорожки --v4-track даёт 12 %, кадр просит 7 %'],
+  // Падение показателя: кадр просит --val-bad (#a8382b), у продукта ближайшая
+  // роль --v4-bad-text (#b4442a). См. спор «роли цвета» в списке выше.
+  ['Визуал v4 · Отчёты · 56|color', 'у продукта нет роли --val-bad, ближайшая --v4-bad-text'],
+]);
+
+const MATRIX = [
+  [46, '.reports-v4-tier__note', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [48, '.reports-v4-discipline__row', ['align', 'gap', 'marginTop']],
+  [49, '.reports-v4-discipline__name',
+    ['flex', 'width', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [50, '.reports-v4-discipline__bar', ['flex', 'height', 'radius']],
+  [51, '.reports-v4-discipline__bar-fill', ['background']],
+  [52, '.reports-v4-discipline__score',
+    ['flex', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [53, ['.reports-v4-discipline__delta', '.reports-v4-discipline__delta.is-up'],
+    ['flex', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [59, '.reports-v4-discipline__delta',
+    ['flex', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight']],
+  [61, '.reports-v4-discipline__footnote', ['fontWeight', 'fontSize', 'lineHeight']],
+];
+
+const HEADER = [
+  [12, '.reports-v4-meta', ['marginTop']],
+  [14, '.reports-v4-meta__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [15, '.reports-v4-meta__range', ['align', 'gap']],
+  [20, '.reports-v4-hero', ['background', 'radius', 'padding', 'marginTop']],
+  [22, '.reports-v4-hero__value-row', ['align', 'gap', 'marginTop']],
+  [25, '.reports-v4-hero__phrase',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [26, '.reports-v4-hero__footer', ['justify', 'align', 'marginTop']],
+];
+
+describe('Отчёты · разбор кадров канваса', () => {
+  const razbor = readRazbor(canvas);
+  const rules = readRules(reportsCss);
+
+  it('шапка и герой кадра «Визуал v4 · Отчёты» совпадают с продуктом', () => {
+    expect(compare({
+      razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: HEADER,
+    })).toEqual([]);
+  });
+
+  it('матрица Дисциплины совпадает с продуктом построчно', () => {
+    expect(compare({
+      razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: MATRIX,
+    })).toEqual([]);
+  });
+
+  it('отступления разбора названы и не разрастаются молча', () => {
+    expect(RAZBOR_EXCEPTIONS.size).toBe(4);
+  });
+});
 
 describe('Отчёты и Инсайты v4 — сверка с канвасом', () => {
   it('канвас на месте и держит контракт зоны', () => {
