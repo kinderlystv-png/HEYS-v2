@@ -647,6 +647,47 @@ describe('Отчёты · разбор кадров канваса', () => {
     expect(state).toContain('...(options || {}),');
   });
 
+  // Тон линий карточки держится не на весе селектора, а на порядке модулей:
+  // `[data-theme$="dark"] .sparkline-line` и `[data-theme$="dark"]
+  // .sparkline-goal` весят те же 0-2-0, что и правила карточки, и спор решает
+  // только то, что 733 подключается после 200.
+  //
+  // Само по себе это не дефект: нумерация модулей в main.css и есть объявленный
+  // механизм каскада — набор v4 в диапазоне 73x грузится последним именно
+  // затем, чтобы перебивать legacy 1xx/2xx. Поднимать вес селектора ради
+  // ничьей значило бы бороться с собственной системой.
+  //
+  // Но допущение это молчаливое, и ломается оно тихо: правило на те же классы,
+  // добавленное в модуль, который грузится ПОСЛЕ 733, выиграет без единого
+  // красного теста. Поэтому проверяется не вес, а само допущение — и проверка
+  // называет охват, иначе её ноль будет означать «не смотрели».
+  it('после карточки Отчётов никто не трогает классы её графика', () => {
+    const styles = path.resolve(__dirname, '../styles');
+    const imports = (file) => [...fs.readFileSync(path.join(styles, file), 'utf8')
+      .matchAll(/@import url\('?"?\.\/(modules\/[\w.-]+\.css|[\w.-]+\.css)'?"?\)/g)]
+      .map((m) => m[1]);
+
+    const main = imports('main.css');
+    const at = main.indexOf('modules/733-ui-v4-reports.css');
+    expect(at, 'карточка Отчётов не подключена в main.css').toBeGreaterThan(-1);
+
+    // main-deferred.css грузится цепочкой после main.css целиком, поэтому
+    // ВСЕ его модули стоят позже 733 — включая 734-ui-v4-insights.
+    const after = [...main.slice(at + 1), ...imports('main-deferred.css')];
+    expect(after.length, 'после 733 не нашлось ни одного модуля — разбор сломан')
+      .toBeGreaterThan(5);
+
+    const OWNED = /^[^{}]*\.sparkline-(line|goal|svg|dot--reports-v4)\b/m;
+    const trespass = after.filter((rel) => {
+      const abs = path.join(styles, rel);
+      if (!fs.existsSync(abs)) return false;
+      return OWNED.test(fs.readFileSync(abs, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''));
+    });
+    expect(trespass, `модуль грузится после 733 и красит классы графика — `
+      + `ничью весов он выиграет молча (проверено ${after.length} модулей)`)
+      .toEqual([]);
+  });
+
   it('заглушка «мало данных» совпадает с продуктом', () => {
     expect(compare({
       razbor, rules, frame: 'Отчёты · мало данных', pairs: STUB,
