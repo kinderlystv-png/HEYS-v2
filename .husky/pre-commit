@@ -5,6 +5,9 @@ node scripts/check-workspace-runtime.mjs || exit 1
 pnpm exec lint-staged
 AGENT_STAGING_MODE=$(node scripts/check-agent-staging.mjs --print-mode) || exit 1
 node scripts/check-staged-hygiene.mjs || exit 1
+# Предупреждение, а не запрет: называет чужие правки в общих файлах,
+# которые `git commit -- <путь>` заберёт вместе со своими.
+node scripts/check-shared-file-authorship.mjs
 node scripts/check-agent-staging.mjs --mode="$AGENT_STAGING_MODE" || exit 1
 if [ "$AGENT_STAGING_MODE" = "agent" ]; then
   node scripts/auto-sync-legacy-bundles.mjs --mode=agent-check
