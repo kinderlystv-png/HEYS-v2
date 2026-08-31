@@ -2434,15 +2434,24 @@
           className: 'yv-pack-primary',
           onClick: () => openDiaryForDate(single.date, context)
         }, 'Дописать точно'),
+        // Кадры дают ряду две раскладки, и зеркальные: «вчерашний день» —
+        // 1 и 1,25, «пустой день из пачки» — 1,35 и 1. Больше места получает
+        // та кнопка, чья подпись длиннее, а длинную подпись включает тот же
+        // признак: confirmAsWrittenLabel зовёт «ничего не ел» ровно по
+        // isEmptyFoodDay. Ветка пачки это делает (renderPackDayDetail), у
+        // одиночного дня классы стояли намертво — и «Так и было · ничего не
+        // ел» ломалось на две строки в узкой кнопке.
         React.createElement('div', { className: 'yv-pack-row' },
           React.createElement('button', {
             type: 'button',
-            className: 'yv-pack-secondary',
+            className: 'yv-pack-secondary'
+              + (isEmptyFoodDay(single) ? ' yv-pack-secondary--confirm-empty' : ''),
             onClick: () => commitAction({ incompleteAction: 'confirm_real_data' })
           }, confirmAsWrittenLabel(single)),
           React.createElement('button', {
             type: 'button',
-            className: 'yv-pack-secondary yv-pack-secondary--feelings',
+            className: 'yv-pack-secondary'
+              + (isEmptyFoodDay(single) ? '' : ' yv-pack-secondary--feelings'),
             onClick: () => openFeelings(single.date)
           }, 'По ощущениям')
         ),
