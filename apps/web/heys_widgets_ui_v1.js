@@ -3250,6 +3250,12 @@
               strokeWidth: 2,
               strokeLinecap: 'round',
               strokeLinejoin: 'round'
+            }),
+            // Точка на последнем дне: кадр ставит её у всех спарклайнов —
+            // и у веса, и у динамики. Здесь линия обрывалась без неё, и
+            // «сегодня» на ней не читалось.
+            React.createElement('circle', {
+              cx: 56, cy: 5, r: 2.4, fill: 'currentColor'
             })
           )
         )
@@ -4911,12 +4917,17 @@
     // MINI (1×1) — метка + число (компактный шрифт для safe-area)
     if (size === '1x1') {
       if (variantId === 'delta') {
-        const wc = formatWeekChange();
+        // Вид называется «Только число» и стоит рядом с динамикой: кадр
+        // «Шторка · Вес» показывает здесь сам вес с единицей, а не недельную
+        // дельту — её человек и так читает на соседней плитке.
         // Строка «вес»: направление из окна спарклайна, не из trend × 7.
         const trendCls = v4ValueStateClass(v4WeightWindowState(data));
         return React.createElement('div', { className: 'widget-weight widget-weight--1x1 widget-v4-mini' },
           v4Kicker('Вес'),
-          React.createElement('div', { className: 'widget-v4-mini__value ' + trendCls }, wc || '—')
+          React.createElement('div', { className: 'widget-v4-mini__value ' + trendCls },
+            hasCurrent ? formatRuDecimal(current, 1) : '—',
+            hasCurrent ? React.createElement('span', { className: 'widget-v4-unit' }, ' кг') : null
+          )
         );
       }
       return React.createElement('div', { className: 'widget-weight widget-weight--1x1' },
