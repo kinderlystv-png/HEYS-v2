@@ -8600,6 +8600,55 @@ button.meal-quality-badge:active {
   color: var(--v4-sand-green-ink, #5c6a45);
 }
 
+/* Строка контракта «граммы или ккал»: под пресетами два чипа единицы ввода —
+   высота 36, поля 0/16, зазор 8; выбранный заливкой --bg с текстом --ac,
+   второй тоном чернил 50 %. */
+.aps-v4-grams-units {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.aps-v4-grams-unit {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 50%, transparent);
+  cursor: pointer;
+}
+
+.aps-v4-grams-unit.is-active {
+  background: var(--v4-sand-surface-soft, #fffaf1);
+  color: var(--v4-sand-act-deep, #8a4a20);
+}
+
+/* Пересчитанный вес и объяснение, откуда он взялся: без второй строки число
+   «= 771 г» выглядит вводом, а не результатом. */
+.aps-v4-grams-converted {
+  margin-top: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-sand-act-deep, #8a4a20);
+  font-variant-numeric: tabular-nums;
+}
+
+.aps-v4-grams-converted-note {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 45%, transparent);
+}
+
 .aps-v4-grams-last {
   margin-top: 12px;
   font-size: 11px;

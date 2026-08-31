@@ -9898,6 +9898,12 @@ NOVA: 1
     const grams = data.grams || context?.editGrams || stepData?.create?.grams || stepData?.search?.grams || 100;
 
     const gramsInputRef = useRef(null);
+    // Строка контракта «граммы или ккал»: под пресетами два чипа единицы
+    // ввода, и в режиме «Ккал» то же крупное число вводится в калориях, а вес
+    // считается обратно из калорийности на 100 г. Граммы остаются
+    // единственным носителем состояния — калории только форма ввода, иначе у
+    // порции стало бы два источника правды.
+    const [unitMode, setUnitMode] = useState('g');
 
     // === ВСЕ ХУКИ ДОЛЖНЫ БЫТЬ ДО ЛЮБОГО RETURN ===
     const toNum = (v) => {
@@ -9916,6 +9922,10 @@ NOVA: 1
 
     // Расчёт на текущую порцию (safe with fallbacks)
     const currentKcal = Math.round(derivedKcal100 * grams / 100);
+    // Обратный счёт для режима «Ккал»: вес из калорийности на 100 г.
+    const gramsFromKcal = (kcal) => (derivedKcal100 > 0
+      ? Math.round((Number(kcal) || 0) / derivedKcal100 * 100)
+      : grams);
     const currentProt = Math.round(protein100 * grams / 100);
     const currentCarbs = Math.round(carbs100 * grams / 100);
     const currentFat = Math.round(fat100 * grams / 100);
@@ -10372,16 +10382,20 @@ NOVA: 1
           React.createElement('button', {
             type: 'button',
             className: 'aps-v4-grams-hero__step',
-            onClick: () => setGrams(grams - 10),
-            'aria-label': 'Меньше на 10 г'
+            onClick: () => setGrams(unitMode === 'kcal'
+              ? gramsFromKcal(currentKcal - 10)
+              : grams - 10),
+            'aria-label': unitMode === 'kcal' ? 'Меньше на 10 ккал' : 'Меньше на 10 г'
           }, '−'),
           React.createElement('div', { className: 'aps-v4-grams-hero__value' },
             React.createElement('input', {
               ref: gramsInputRef,
               type: 'number',
               className: 'aps-v4-grams-hero__input',
-              value: grams,
-              onChange: (e) => setGrams(e.target.value),
+              value: unitMode === 'kcal' ? currentKcal : grams,
+              onChange: (e) => setGrams(unitMode === 'kcal'
+                ? gramsFromKcal(e.target.value)
+                : e.target.value),
               onKeyDown: (e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
@@ -10393,15 +10407,18 @@ NOVA: 1
               inputMode: 'numeric',
               min: 1,
               max: 2000,
-              'aria-label': 'Граммы'
+              'aria-label': unitMode === 'kcal' ? 'Калории' : 'Граммы'
             }),
-            React.createElement('span', { className: 'aps-v4-grams-hero__unit' }, ' г')
+            React.createElement('span', { className: 'aps-v4-grams-hero__unit' },
+              unitMode === 'kcal' ? ' ккал' : ' г')
           ),
           React.createElement('button', {
             type: 'button',
             className: 'aps-v4-grams-hero__step',
-            onClick: () => setGrams(grams + 10),
-            'aria-label': 'Больше на 10 г'
+            onClick: () => setGrams(unitMode === 'kcal'
+              ? gramsFromKcal(currentKcal + 10)
+              : grams + 10),
+            'aria-label': unitMode === 'kcal' ? 'Больше на 10 ккал' : 'Больше на 10 г'
           }, '+')
         ),
         React.createElement('div', { className: 'aps-v4-grams-chips' },
@@ -10424,6 +10441,25 @@ NOVA: 1
             }, `${portion.name} · ${portion.grams} г`)
           )
         ),
+        // Чипы единицы ввода стоят под пресетами; без калорийности на 100 г
+        // считать обратно не из чего, и переключателя тогда нет вовсе.
+        derivedKcal100 > 0 && React.createElement('div', { className: 'aps-v4-grams-units' },
+          [['g', 'Граммы'], ['kcal', 'Ккал']].map(([mode, label]) =>
+            React.createElement('button', {
+              key: mode,
+              type: 'button',
+              className: 'aps-v4-grams-unit' + (unitMode === mode ? ' is-active' : ''),
+              onClick: () => setUnitMode(mode)
+            }, label)
+          )
+        ),
+
+        unitMode === 'kcal' && React.createElement(React.Fragment, null,
+          React.createElement('div', { className: 'aps-v4-grams-converted' }, `= ${grams} г`),
+          React.createElement('div', { className: 'aps-v4-grams-converted-note' },
+            `Вес посчитан из калорийности ${Math.round(derivedKcal100)} ккал на 100 г`)
+        ),
+
         lastGrams && React.createElement('div', { className: 'aps-v4-grams-last' },
           `В прошлый раз было ${lastGrams} г`
         )
