@@ -2696,6 +2696,11 @@
             console.debug('[CONSENTS GATE] ConsentScreen компонент ещё не загружен');
         }
 
+        // Экран ожидания и отказа проверки согласий. Перекрашен на роли набора:
+        // прежде он держал свою систему — грунт #f7f8f6, белая карточка в рамке
+        // #e5e7eb с тенью, зелёный кружок #eef7f0/#256f3f и зелёная кнопка
+        // #256f3f. Слова, действия и блокирующее поведение не тронуты: это
+        // юридический экран, и менять на нём можно только цвет.
         const renderGateMessage = ({ key = null, title, text, tone = 'loading', icon = null, actions = [], visibleFrame = null }) => {
             const isError = tone === 'error';
             return React.createElement('div', {
@@ -2707,7 +2712,7 @@
                     alignItems: 'center',
                     justifyContent: 'center',
                     padding: '28px',
-                    background: '#f7f8f6',
+                    background: 'var(--v4-bg, #fffaf1)',
                     boxSizing: 'border-box',
                 },
                 role: isError ? 'alert' : 'status',
@@ -2718,10 +2723,9 @@
                 style: {
                     width: '100%',
                     maxWidth: '420px',
-                    background: '#ffffff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '18px',
-                    boxShadow: '0 18px 45px rgba(31, 41, 55, 0.08)',
+                    // Плоская карточка набора: заливка вместо рамки и тени.
+                    background: 'var(--v4-surface, #f7efe2)',
+                    borderRadius: '20px',
                     padding: '24px',
                     boxSizing: 'border-box',
                 },
@@ -2731,8 +2735,14 @@
                         width: '42px',
                         height: '42px',
                         borderRadius: '50%',
-                        background: isError ? '#fff4e5' : '#eef7f0',
-                        color: isError ? '#9a5b00' : '#256f3f',
+                        // Отказ — тёплое предупреждение, а не красное: проверка
+                        // не прошла, но ничего не разрушено.
+                        background: isError
+                            ? 'color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent)'
+                            : 'var(--v4-ok-bg, #eaefe0)',
+                        color: isError
+                            ? 'var(--v4-warn-text, #a1471c)'
+                            : 'var(--v4-ok-text, #5c6a45)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -2743,7 +2753,7 @@
                 React.createElement('h1', {
                     style: {
                         margin: '0 0 10px',
-                        color: '#1f2937',
+                        color: 'var(--v4-ink, #201e1d)',
                         fontSize: '24px',
                         lineHeight: 1.22,
                         fontWeight: 700,
@@ -2752,7 +2762,7 @@
                 React.createElement('p', {
                     style: {
                         margin: '0',
-                        color: '#4b5563',
+                        color: 'var(--v4-ink-2, rgba(0, 0, 0, 0.55))',
                         fontSize: '16px',
                         lineHeight: 1.5,
                     },
@@ -2769,12 +2779,19 @@
                     onClick: action.onClick,
                     style: {
                         minHeight: '46px',
-                        borderRadius: '12px',
-                        border: idx === 0 ? '0' : '1px solid #d1d5db',
-                        background: idx === 0 ? '#256f3f' : '#ffffff',
-                        color: idx === 0 ? '#ffffff' : '#374151',
+                        borderRadius: '999px',
+                        border: '0',
+                        // Первое действие залито акцентом, остальные — подложкой:
+                        // вес назначает заливка, а не рамка.
+                        background: idx === 0
+                            ? 'var(--v4-act, #c67139)'
+                            : 'var(--v4-hero, #efe3cf)',
+                        color: idx === 0
+                            ? 'var(--v4-btn-on-act, #2b1608)'
+                            : 'var(--v4-ink-2, rgba(0, 0, 0, 0.55))',
                         fontSize: '16px',
                         fontWeight: 600,
+                        cursor: 'pointer',
                     },
                 }, action.label))) : null
             ));
