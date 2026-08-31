@@ -1242,9 +1242,13 @@
       }, 'По этим двум числам считается окно приёмов'),
       React.createElement('div', { className: 'flex flex-col gap-2', style: { marginTop: 16 } },
         React.createElement('div', { className: 'flex items-center gap-2 relative' },
+          // Ярус по кадру: 600 10/1, трекинг .16em, прописные, тон --ac.
+          // Стоял 12 px трекингом .1em — как ярусы соседнего шага до сведения.
           React.createElement('div', {
-            className: 'text-xs font-semibold tracking-widest uppercase',
-            style: { color: '#8a4a20' }
+            style: {
+              fontSize: 10, fontWeight: 600, lineHeight: 1,
+              letterSpacing: '0.16em', textTransform: 'uppercase', color: '#8a4a20',
+            }
           }, 'Сколько обычно спите'),
           React.createElement('button', {
             type: 'button',
@@ -1286,8 +1290,10 @@
       React.createElement('div', { className: 'flex flex-col gap-2' },
         React.createElement('div', { className: 'flex items-center gap-2 relative' },
           React.createElement('div', {
-            className: 'text-xs font-semibold tracking-widest uppercase',
-            style: { color: '#8a4a20' }
+            style: {
+              fontSize: 10, fontWeight: 600, lineHeight: 1,
+              letterSpacing: '0.16em', textTransform: 'uppercase', color: '#8a4a20',
+            }
           }, 'Инсулиновая волна'),
           React.createElement('button', {
             type: 'button',
@@ -1303,32 +1309,40 @@
           )
         ),
 
-        React.createElement('div', { className: 'flex flex-col gap-2 mt-1' },
+        React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 9, marginTop: 10 } },
           INSULIN_PRESETS.map((preset) => {
             const isSelected = Math.abs(insulinWaveHours - preset.value) < 0.1;
             return React.createElement('button', {
               key: preset.value,
               type: 'button',
               onClick: () => onChange({ ...data, insulinWaveHours: preset.value }),
-              className: 'w-full px-4 py-3 rounded-xl text-left flex items-center justify-between',
+              // Кадр: радиус 14, поля 12/14. Было rounded-xl (12) и px-4 py-3 (16/12).
+              className: 'w-full text-left flex items-center justify-between',
               style: isSelected
-                ? { background: '#efe3cf', boxShadow: 'inset 0 0 0 2px #c67139' }
-                : { background: '#f7efe2' }
+                ? { background: '#efe3cf', boxShadow: 'inset 0 0 0 2px #c67139', borderRadius: 14, padding: '12px 14px', border: 'none', cursor: 'pointer' }
+                : { background: '#f7efe2', borderRadius: 14, padding: '12px 14px', border: 'none', cursor: 'pointer' }
             },
+              // Кадр: выбранная подпись 700 12/1,3 чернилами, остальные 600 12/1,3
+              // тоном 55 %; правая пометка 500 11/1 тоном 40 % у невыбранных и
+              // 45 % у выбранной.
               React.createElement('span', {
-                className: 'text-sm font-semibold',
-                style: { color: isSelected ? '#201e1d' : 'rgba(0,0,0,.55)' }
+                style: {
+                  fontSize: 12, lineHeight: 1.3,
+                  fontWeight: isSelected ? 700 : 600,
+                  color: isSelected ? '#201e1d' : 'rgba(0,0,0,.55)',
+                }
               }, preset.label),
               React.createElement('span', {
-                className: 'text-xs',
-                style: { color: 'rgba(0,0,0,.4)' }
+                style: {
+                  fontSize: 11, fontWeight: 500, lineHeight: 1,
+                  color: isSelected ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.4)',
+                }
               }, preset.desc)
             );
           })
         ),
         React.createElement('p', {
-          className: 'text-xs mt-2',
-          style: { color: 'rgba(0,0,0,.42)', lineHeight: 1.45 }
+          style: { fontSize: 10.5, fontWeight: 500, lineHeight: 1.45, color: 'rgba(0,0,0,.42)', margin: '10px 0 0' }
         }, 'Волна задаёт, сколько после приёма пищи держится подъём инсулина: от неё зависят подсказки о перекусах. Меняется в настройках.')
       )
     );
