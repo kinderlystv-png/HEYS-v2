@@ -29,8 +29,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { execFileSync } from 'node:child_process';
-
 import { chromium } from '@playwright/test';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -189,14 +187,6 @@ function verdictForRole(role, values) {
   };
 }
 
-function headSha() {
-  try {
-    return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim();
-  } catch {
-    return 'HEAD неизвестен';
-  }
-}
-
 // ── 4. Отчёт ────────────────────────────────────────────────────────────────
 function render(perFile, verdicts) {
   const V = new Map(verdicts.map((v) => [v.role, v]));
@@ -238,9 +228,10 @@ function render(perFile, verdicts) {
     out.push('но в таблицу мест они не попадают.');
   }
   out.push('');
-  out.push(`Снимок на \`${headSha()}\`. Число мест дрейфует: модули правятся параллельно,`);
-  out.push('и за один рабочий день оно у меня менялось трижды. Сверяйтесь с прогоном, а не');
-  out.push('с числом в тексте.');
+  out.push('Число мест дрейфует: модули правятся параллельно, и за один рабочий день оно');
+  out.push('менялось трижды. Сверяйтесь с прогоном, а не с числом в тексте: SHA прогона в');
+  out.push('отчёт намеренно не пишется — иначе файл пачкается при каждом запуске и мешает');
+  out.push('параллельным сессиям.');
   out.push('');
   out.push(mech
     ? `Замена не меняет цвет у **${mech}** мест — их можно закрыть без владельца.`
