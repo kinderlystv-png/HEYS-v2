@@ -91,6 +91,26 @@ describe('meal time step v4 structure', () => {
       /\.meal-mood-scale__value--warn \{[^}]*var\(--v4-bad-text/s);
   });
 
+  it('сведённые блоки шага не заперты на песочных ролях', () => {
+    // Правило «пара читает правило, а не итог каскада»: роль с именем набора
+    // держит одно значение во всех наборах, и гейт этого не видит — видно
+    // только замером. Замер 31 августа: карточки шкал и чипы типа приёма
+    // рисовались песочными и в синем наборе.
+    for (const sel of ['.meal-mood-chip', '.meal-mood-scale', '.meal-type-chip']) {
+      const at = cssSource.indexOf(sel + ' {');
+      expect(at, sel + ' — правила нет').toBeGreaterThan(-1);
+      const block = cssSource.slice(at, cssSource.indexOf('}', at));
+      expect(block.includes('var(--v4-sand-'), sel + ' держит роль с именем набора').toBe(false);
+    }
+    // Заливка главной кнопки намеренно осталась на --v4-sand-act: роль текста
+    // на заливке (--v4-btn-on-act) в синем наборе не объявлена, и перевод
+    // одной заливки дал бы коричневую надпись на синем. Запись в findings.
+    // .meal-time-cta объявлен и в 600 (только цвет внутри модалки), поэтому
+    // ищем именно объявление заливки в 610 — первый indexOf берёт чужое.
+    const cta = cssSource.lastIndexOf('.meal-time-cta {');
+    expect(cssSource.slice(cta, cssSource.indexOf('}', cta))).toContain('var(--v4-sand-act,');
+  });
+
   it('centers meal-create header like the canvas top bar', () => {
     expect(mealCreateCss).toContain('grid-template-columns: 44px 1fr 44px');
     expect(mealCreateCss).toContain('padding: 16px 18px 0');
