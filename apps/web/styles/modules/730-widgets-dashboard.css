@@ -4263,6 +4263,9 @@ body:has(.page-reports) .hdr::after {
   width: 100%;
 }
 
+/* Кадр «Главная · дефолтная раскладка»: слева спарклайн недели, справа число
+   с единицей. Фоновые перерисовки Главной в листах разбора рисуют эту плитку
+   двояко (82 кадра со спарклайном, 67 без) — верен полноразмерный кадр. */
 .widget-weight--number-week .widget-weight__number-week-row {
   display: flex;
   align-items: flex-end;
@@ -4283,17 +4286,35 @@ body:has(.page-reports) .hdr::after {
 /* Спарклайн недели слева от числа — кадр «Главная · дефолтная раскладка»,
    элемент 69: своей ширины не занимает больше нужного, стоит на нижнем крае.
    Цвет несёт тон-класс: строка «значение» — «роль красит число и линию». */
+/* Спарклайн: цвет наследуется от тона недели, поэтому тон стоит на нём. */
 .widget-weight__number-week-spark {
   display: flex;
   flex: none;
   margin-bottom: 3px;
 }
 
+/* Число с единицей — своя группа: кадр держит их по базовой линии с зазором 4,
+   а сам ряд разводит спарклайн и число по краям. */
+.widget-weight__number-week-num {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+/* Кадр красит само число тоном --gr, темнее дельты рядом (--gr2). */
+.widget-weight__number-week-val.widget-v4-val--good {
+  color: var(--v4-sand-ok-text, #5c6a45);
+}
+
+.widget-weight__number-week-val.widget-v4-val--bad {
+  color: var(--v4-bad-text, #b4442a);
+}
+
 .widget-weight__number-week-val {
-  margin-left: auto;
   font-size: 21px;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1;
+  letter-spacing: -0.02em;
   color: #201e1d;
   /* «формат чисел»: число меняется на месте — цифры табличные. */
   font-variant-numeric: tabular-nums;
@@ -14347,8 +14368,11 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   background: var(--v4-good, #7a8a5e);
 }
 
+/* Роли --v4-bad в наборе нет: писалось запасное #c45c4a, и «плохо» в листе
+   рисовалось третьим красным — светлее и столбика, и подписи рядом. Красный
+   набора один, --v4-bad-text (#b4442a = --red канваса). */
 .widget-bd-sheet__hero-track-fill.is-bad {
-  background: var(--v4-bad, #c45c4a);
+  background: var(--v4-bad-text, #b4442a);
 }
 
 .widget-bd-sheet__hero-track-label {
@@ -14415,7 +14439,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__stat-row.is-bad .widget-bd-sheet__stat-value {
-  color: var(--v4-bad, #c45c4a);
+  color: var(--v4-bad-text, #b4442a);
 }
 
 .widget-bd-sheet__stat-row.is-good .widget-bd-sheet__stat-value {

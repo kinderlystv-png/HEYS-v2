@@ -2051,37 +2051,6 @@
   // точка на последнем дне. Строка «состав дефолта»: «слева от числа спарклайн
   // 58 × 22 тоном --gr2 с точкой на последнем дне». Тон фиксированный: линия
   // говорит «как шло», а состояние несёт число.
-  function WidgetV4WeekSpark({ points, toneClass = '' }) {
-    const clean = (points || [])
-      .filter((p) => Number.isFinite(p?.weight) && !p.excluded && !p.estimated)
-      .slice(-7);
-    if (clean.length < 2) return null;
-    const weights = clean.map((p) => p.weight);
-    const min = Math.min(...weights);
-    const span = Math.max(0.1, Math.max(...weights) - min);
-    const coords = clean.map((p, i) => {
-      const x = 2 + (i / (clean.length - 1)) * 54;
-      const y = 17 - ((p.weight - min) / span) * 12;
-      return [Number(x.toFixed(1)), Number(y.toFixed(1))];
-    });
-    const last = coords[coords.length - 1];
-    return React.createElement('span', {
-      className: ('widget-weight__number-week-spark ' + toneClass).trim()
-    },
-      React.createElement('svg', {
-        width: 58, height: 22, viewBox: '0 0 58 22', fill: 'none', 'aria-hidden': 'true'
-      },
-        React.createElement('polyline', {
-          points: coords.map((c) => c.join(',')).join(' '),
-          stroke: 'currentColor',
-          strokeWidth: 2,
-          strokeLinecap: 'round',
-          strokeLinejoin: 'round'
-        }),
-        React.createElement('circle', { cx: last[0], cy: last[1], r: 2.4, fill: 'currentColor' })
-      )
-    );
-  }
 
   function formatRuDecimal(value, digits = 1) {
     const n = Number(value);
@@ -2185,6 +2154,41 @@
       expectedPct: Math.round(share * 100),
       checkLabel: `к ${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
     };
+  }
+
+  // Спарклайн недели у плитки «Вес»: кадр «Главная · дефолтная раскладка»
+  // рисует его слева от числа, 58×22, с точкой на последнем дне. Фоновые
+  // перерисовки Главной в листах разбора эту плитку рисуют по-разному (82
+  // кадра со спарклайном против 67 без) — верен полноразмерный кадр Главной.
+  function WidgetV4WeekSpark({ points, toneClass = '' }) {
+    const pts = (points || []).slice(-7).filter((p) => Number.isFinite(p.weight));
+    if (pts.length < 2) return null;
+    const values = pts.map((p) => p.weight);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+    const step = pts.length > 1 ? 54 / (pts.length - 1) : 0;
+    const coords = pts.map((p, i) => ({
+      x: +(2 + i * step).toFixed(1),
+      y: +(5 + (1 - (p.weight - min) / span) * 12).toFixed(1)
+    }));
+    const last = coords[coords.length - 1];
+    return React.createElement('span', {
+      className: ('widget-weight__number-week-spark ' + toneClass).trim()
+    },
+      React.createElement('svg', {
+        width: 58, height: 22, viewBox: '0 0 58 22', fill: 'none', 'aria-hidden': 'true'
+      },
+        React.createElement('polyline', {
+          points: coords.map((c) => `${c.x},${c.y}`).join(' '),
+          stroke: 'currentColor',
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        }),
+        React.createElement('circle', { cx: last.x, cy: last.y, r: 2.4, fill: 'currentColor' })
+      )
+    );
   }
 
   function v4MacroBarRow(shortLabel, value, target, toneClass) {
@@ -4950,8 +4954,13 @@
               points: sparklinePoints,
               toneClass: v4ValueStateClass(weekState)
             }),
-            React.createElement('span', { className: 'widget-weight__number-week-val' },
-              hasCurrent ? formatRuDecimal(current, 1) : '—'
+            React.createElement('span', { className: 'widget-weight__number-week-num' },
+              React.createElement('span', {
+                className: 'widget-weight__number-week-val ' + v4ValueStateClass(weekState)
+              },
+                hasCurrent ? formatRuDecimal(current, 1) : '—'
+              ),
+              React.createElement('span', { className: 'widget-v4-unit' }, 'кг')
             )
           )
         );

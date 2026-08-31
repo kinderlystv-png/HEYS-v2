@@ -323,7 +323,11 @@ describe('плитка: что видно в каждом состоянии', (
   it('вид 1×1 «Спокойное окно» в ночной оценке называет источник', () => {
     const data = boot({ days: DAYS_OVERNIGHT });
     const { container } = renderTile(data, { size: '1x1', variantId: 'calm_window' });
-    expect(container.querySelector('.widget-v4-muted').textContent).toBe('от вчерашнего');
+    // Подпись под числом переехала с подвала (.widget-v4-muted, 10px/700) на
+    // единицу 31 августа: кадр «Шторка · Инсулиновая волна» кладёт её прямо
+    // под числом, а не прижимает к низу плитки вторым marginTop:auto. Тот же
+    // класс уже носит «приёмов не было» у пустого дня.
+    expect(container.querySelector('.widget-v4-unit').textContent).toBe('от вчерашнего');
   });
 });
 
