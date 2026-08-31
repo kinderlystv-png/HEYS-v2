@@ -562,15 +562,48 @@
 }
 
 .meal-mood-scale__value--warn {
-  color: var(--v4-sand-act-deep, #8a4a20);
+  /* Кадр даёт тревожной половине --val-bad, а не акцент: акцентом на этом шаге
+     покрашены действия, и число «3 · слабость» читалось кнопкой. */
+  color: var(--v4-bad-text, #b4442a);
+}
+
+/* Строка «Как в прошлый раз, 11:20» — числа шкал подставлены от прошлого приёма
+   или утреннего чек-ина, и до сих пор об этом никто не говорил: человек видел
+   чужие оценки как свои. */
+.meal-mood-prefill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 8px 0 -8px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+}
+
+.meal-mood-prefill__icon {
+  flex: none;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 35%, transparent);
+}
+
+.meal-mood-scale__ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 9px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 35%, transparent);
 }
 
 .meal-mood-scale__slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 8px;
-  margin-top: 14px;
+  /* Кадр: дорожка 34 px радиусом 999 фоном чернил 8 %, отступ 12. Стояла
+     полоска 8 px — по ней трудно попасть и непонятно, что её тянут. */
+  height: 34px;
+  margin-top: 12px;
   border: none;
   border-radius: 999px;
   background: linear-gradient(
@@ -582,33 +615,54 @@
 
 .meal-mood-scale__slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  background: var(--v4-bg, #fffaf1);
   box-shadow: 0 1px 4px rgba(80, 50, 20, 0.25);
   cursor: pointer;
 }
 
 .meal-mood-scale__slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  background: var(--v4-bg, #fffaf1);
   box-shadow: 0 1px 4px rgba(80, 50, 20, 0.25);
   cursor: pointer;
 }
 
+/* «Что повлияло» — обычный ярус экрана, отступы 10/0/6 по кадру. */
 .meal-mood-tier {
-  margin: 20px 0 10px;
-  font-size: 10px;
+  margin: 10px 0 6px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+}
+
+.meal-mood-chip--own {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.meal-mood-own-input {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 0 15px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-bg, #fffaf1);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--v4-ink, #201e1d);
 }
 
 .meal-mood-chips {
@@ -617,10 +671,16 @@
   gap: 14px;
 }
 
+/* Кадр: цель 44, поля 0/15. Чип высотой 30 — ниже минимальной цели касания,
+   а промахиваться по «что повлияло» приходится столько же раз, сколько по
+   любой другой кнопке. */
 .meal-mood-chip {
-  padding: 9px 13px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 15px;
   border: none;
-  border-radius: 14px;
+  border-radius: 999px;
   background: var(--v4-sand-surface, #f7efe2);
   font-size: 12px;
   font-weight: 600;
@@ -637,6 +697,12 @@
 
 .meal-mood-cta {
   margin-top: 20px;
+}
+
+/* Тот же «Сохранить без оценок», но кадр самочувствия даёт ему отступ 6, а
+   кадр времени — 4. */
+.meal-mood-step .meal-time-wait {
+  margin-top: 6px;
 }
 
 .meal-mood-cta::after {

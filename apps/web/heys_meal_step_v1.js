@@ -867,10 +867,21 @@
     return value <= 4 ? 'warn' : 'ok';
   }
 
+  // Подписи краёв шкалы: кадр называет их у каждой шкалы своими словами. Без
+  // них «3» и «8» — просто числа, и человек не знает, куда тянуть ползунок.
+  const MOOD_SCALE_ENDS = {
+    mood: ['подавленно', 'подъём'],
+    wellbeing: ['разбитость', 'бодрость'],
+    stress: ['спокойствие', 'на пределе']
+  };
+
   function MoodScaleRow({ field, title, value, getText, onChange }) {
     const tone = scaleTone(field, value);
     const pct = ((Number(value) - 1) / 9) * 100;
-    const fill = tone === 'ok' ? '#7a8a5e' : '#d99a63';
+    // Заливка ролями набора вместо литералов. Тревожная половина шкалы красилась
+    // #d99a63 — это тон нахлёста волны, а кадр называет здесь --val-bad.
+    const fill = tone === 'ok' ? 'var(--v4-ok-fill, #7a8a5e)' : 'var(--v4-bad-text, #b4442a)';
+    const ends = MOOD_SCALE_ENDS[field] || ['', ''];
     return React.createElement('div', { className: 'meal-mood-scale' },
       React.createElement('div', { className: 'meal-mood-scale__top' },
         React.createElement('span', { className: 'meal-mood-scale__label' }, title),
@@ -890,7 +901,11 @@
         onTouchStart: (e) => e.stopPropagation(),
         onTouchEnd: (e) => e.stopPropagation(),
         onTouchMove: (e) => e.stopPropagation()
-      })
+      }),
+      React.createElement('div', { className: 'meal-mood-scale__ends' },
+        React.createElement('span', null, ends[0]),
+        React.createElement('span', null, ends[1])
+      )
     );
   }
 
@@ -900,7 +915,22 @@
     const stress = data.stress ?? 5;
     const comment = data.comment ?? '';
     const isEditMood = context?.mealIndex !== undefined;
-    const selectedChips = comment.split(',').map((part) => part.trim()).filter(Boolean);
+    const commentParts = comment.split(',').map((part) => part.trim()).filter(Boolean);
+    const selectedChips = commentParts.filter((part) => INFLUENCE_CHIPS.includes(part));
+    const ownText = commentParts.filter((part) => !INFLUENCE_CHIPS.includes(part)).join(', ');
+    const [ownOpen, setOwnOpen] = useState(() => !!ownText);
+
+    const prefill = data.prefillFrom;
+    const prefillHint = !isEditMood && prefill
+      ? (prefill.kind === 'meal'
+        ? `Как в прошлый раз${prefill.time ? ', ' + prefill.time : ''} — поправьте, если изменилось`
+        : 'Как на утреннем чек-ине — поправьте, если изменилось')
+      : null;
+
+    const setOwnText = (text) => {
+      const next = selectedChips.concat(String(text || '').trim() ? [text.trim()] : []);
+      onChange({ ...data, comment: next.join(', ') });
+    };
 
     const handleSliderChange = (field, value) => {
       haptic(value >= 8 || value <= 2 ? 15 : 10);
@@ -912,7 +942,7 @@
       const next = selectedChips.includes(chip)
         ? selectedChips.filter((item) => item !== chip)
         : selectedChips.concat(chip);
-      onChange({ ...data, comment: next.join(', ') });
+      onChange({ ...data, comment: next.concat(ownText ? [ownText] : []).join(', ') });
     };
 
     const handleNext = () => {
@@ -933,6 +963,18 @@
     };
 
     return React.createElement('div', { className: 'meal-mood-step meal-mood-step--v4' },
+      prefillHint && React.createElement('div', { className: 'meal-mood-prefill' },
+        React.createElement('svg', {
+          className: 'meal-mood-prefill__icon',
+          width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none',
+          stroke: 'currentColor', strokeWidth: 2.2, strokeLinecap: 'round',
+          strokeLinejoin: 'round', 'aria-hidden': 'true'
+        },
+          React.createElement('circle', { cx: 12, cy: 12, r: 9 }),
+          React.createElement('path', { d: 'M12 8v5l3 2' })
+        ),
+        React.createElement('span', null, prefillHint)
+      ),
       React.createElement(MoodScaleRow, {
         field: 'mood',
         title: 'Настроение',
@@ -963,8 +1005,32 @@
             className: 'meal-mood-chip' + (selectedChips.includes(chip) ? ' is-on' : ''),
             onClick: () => toggleChip(chip)
           }, chip)
-        )
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'meal-mood-chip meal-mood-chip--own' + (ownOpen ? ' is-on' : ''),
+          onClick: () => {
+            haptic(5);
+            if (ownOpen && ownText) setOwnText('');
+            setOwnOpen(!ownOpen);
+          }
+        },
+          React.createElement('svg', {
+            width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
+          'Своё')
       ),
+      ownOpen && React.createElement('input', {
+        type: 'text',
+        className: 'meal-mood-own-input',
+        value: ownText,
+        maxLength: 60,
+        placeholder: 'Что повлияло',
+        'aria-label': 'Своё — что повлияло',
+        onChange: (e) => setOwnText(e.target.value)
+      }),
       React.createElement('button', {
         type: 'button',
         className: 'meal-time-cta meal-mood-cta',
@@ -1044,7 +1110,9 @@
             mood: lastMeal.mood || 5,
             wellbeing: lastMeal.wellbeing || 5,
             stress: lastMeal.stress || 5,
-            comment: ''
+            comment: '',
+            // Откуда взяты числа — шаг говорит это вслух строкой над шкалами.
+            prefillFrom: { kind: 'meal', time: lastMeal.time || '' }
           };
         }
 

@@ -70,6 +70,27 @@ describe('meal time step v4 structure', () => {
       /\.meal-time-hero \.mc-wheel-picker--compact \.mc-wheel-values \{[^}]*height: 192px;/s);
   });
 
+  it('шаг самочувствия называет источник чисел и края шкал', () => {
+    // Кадр «Добавление · самочувствие»: строка «Как в прошлый раз, 11:20 —
+    // поправьте, если изменилось» и подписи краёв у каждой шкалы. Числа
+    // подставлялись от прошлого приёма молча, а «3» и «8» без краёв — просто
+    // числа: непонятно, куда тянуть ползунок.
+    expect(mealStepSource).toContain('prefillFrom');
+    expect(mealStepSource).toContain('Как в прошлый раз');
+    expect(mealStepSource).toContain('поправьте, если изменилось');
+    expect(mealStepSource).toContain("mood: ['подавленно', 'подъём']");
+    expect(mealStepSource).toContain("stress: ['спокойствие', 'на пределе']");
+    expect(mealStepSource).toContain("'Своё'");
+    // Дорожка 34, бегунок 24, цель чипа 44 — кадр и правило области нажатия.
+    expect(cssSource).toMatch(/\.meal-mood-scale__slider \{[^}]*height: 34px;/s);
+    expect(cssSource).toMatch(
+      /\.meal-mood-scale__slider::-webkit-slider-thumb \{[^}]*width: 24px;/s);
+    expect(cssSource).toMatch(/\.meal-mood-chip \{[^}]*min-height: 44px;/s);
+    // Тревожная половина — --val-bad, а не акцент действий.
+    expect(cssSource).toMatch(
+      /\.meal-mood-scale__value--warn \{[^}]*var\(--v4-bad-text/s);
+  });
+
   it('centers meal-create header like the canvas top bar', () => {
     expect(mealCreateCss).toContain('grid-template-columns: 44px 1fr 44px');
     expect(mealCreateCss).toContain('padding: 16px 18px 0');
