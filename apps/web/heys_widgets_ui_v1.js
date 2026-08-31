@@ -11130,7 +11130,12 @@
           } catch (e) {
             // silent: внешние вызовы не должны ломать UI
           }
+          return;
         }
+        // Молчать здесь нельзя: пять действий листов год звали несуществующие
+        // имена, вкладка переключалась, и по виду это было неотличимо от
+        // работающего действия.
+        console.warn(`[HEYS.widgets] действие листа не доехало: HEYS.Day.${fnName} не опубликован`);
       }, 600);
     }, [setTab]);
 
@@ -11317,18 +11322,25 @@
         return;
       }
       dismissBreakdownSheet();
+      // Имена здесь — ключи публичного HEYS.Day, а не внутренние имена дня.
+      // До 31 августа стояли пять выдуманных: openAddMeal, openActivityPicker,
+      // openWeightEditor, openSleepEditor, openMorningCheckin — ни одного из
+      // них день не публикует, и goToDayAndRun молча ничего не делал, только
+      // переключал вкладку. Два действия починены переименованием на живой
+      // API; три остальных ждут экспорта из дня — см. WIDGET_SHEET_DAY_ACTIONS
+      // в widgets-sheet-actions.test.js, список может только уменьшаться.
       switch (action.kind) {
         case 'addMeal':
-          goToDayAndRun('day', 'openAddMeal');
+          goToDayAndRun('day', 'addMeal');
           break;
         case 'addActivity':
-          goToDayAndRun('day', 'openActivityPicker');
+          goToDayAndRun('day', 'addActivity');
           break;
         case 'recordWeight':
-          goToDayAndRun('day', 'openWeightEditor');
+          goToDayAndRun('day', 'openWeightPicker');
           break;
         case 'fixSleep':
-          goToDayAndRun('day', 'openSleepEditor');
+          goToDayAndRun('day', 'openSleepQualityPicker');
           break;
         case 'checkin':
           goToDayAndRun('day', 'openMorningCheckin');
