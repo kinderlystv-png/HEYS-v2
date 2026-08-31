@@ -22,7 +22,13 @@
    являются.
 3. Запасное значение внутри `var(--роль, …)` местом **не** считается — роль там
    есть, и это отдельный вопрос со своим гейтом.
-4. Объявление самой роли (`--v4-…: #…`) не считается: это и есть палитра.
+4. Файлы палитры (`002-ui-v4-palette-roles.css`, `001-design-tokens.css`) не
+   смотрятся вовсе: объявить там цвет — это и значит быть палитрой. Но модуль,
+   объявляющий **свою** переменную с зашитым цветом
+   (`--profile-tone-wash: #d97e3b`), палитре не следует так же, как литерал, и
+   первая опись его тоже не видит — имени набора в нём нет. Такие места
+   считаются, и стоят под именем самой переменной: в таблице их видно по `--`
+   вместо точки.
 5. Правило без класса в селекторе (шаг `@keyframes`, `:root`, элементный
    селектор) считается наравне с остальными.
 6. Считаются **места**, а не разные значения: один `#efe3cf` в пяти объявлениях
@@ -44,19 +50,19 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 
 | правило                       | мест |
 | ----------------------------- | ---: |
-| только hex                    | 1483 |
-| hex + непрозрачный `rgb()`    | 1490 |
-| hex + `rgba()` с альфой ≥ 0,5 | 1642 |
-| все, включая полупрозрачные   | 2321 |
+| только hex                    | 1557 |
+| hex + непрозрачный `rgb()`    | 1564 |
+| hex + `rgba()` с альфой ≥ 0,5 | 1721 |
+| все, включая полупрозрачные   | 2445 |
 
-В описи — последняя строка, **2321**.
+В описи — последняя строка, **2445**.
 
 ## Охват
 
 Просмотрены все модули стилей (46) и файлы кода, названные обоснованиями
 вердиктов закрытых зон (92). Закрытых зон 21; незакрытой считается та, где ещё
 стоят «?» — сейчас это `reports-insights`, `water-add`. Всего голых литералов в
-этих файлах 15163; тёплых 2321. Остальные палитре тоже не следуют, но песочными
+этих файлах 16001; тёплых 2445. Остальные палитре тоже не следуют, но песочными
 экран не делают, и это отдельный разговор.
 
 Файл, которого здесь нет, **просмотрен и чист**: его отсутствие означает ноль, а
@@ -65,15 +71,15 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 значения при ролях, либо упоминания в комментариях.
 
 **Звёздочка** у литерала означает, что это в точности значение песочной роли и
-ни одной синей — такое место переводится на роль без разговора. Их 33.
+ни одной синей — такое место переводится на роль без разговора. Их 38.
 
-Всего мест: **2321** в 60 файлах.
+Всего мест: **2445** в 60 файлах.
 
 ---
 
 ## Файлы, названные обоснованиями закрытых зон
 
-### `000-base-and-gamification.css` — 274
+### `000-base-and-gamification.css` — 286
 
 Зоны: `cycle`, `home-widgets`, `nutrition-tab`, `registration`, `tips`
 
@@ -101,6 +107,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.hdr-settings-sheet__chips`           |    4 | `#c67139`, `#2b1608`                                                                                                                       |
 | `.mpc-grams-btn`                       |    4 | `#fef3c7`, `#fde68a`, `#f59e0b`, `#92400e`                                                                                                 |
 | `.profile-section`                     |    4 | `rgba(138, 74, 32, 0.06)`, `rgba(198, 113, 57, 0.12)`, `#e2a468`, `rgba(226, 164, 104, 0.14)`                                              |
+| `--profile-tone-line`                  |    3 | `rgba(198, 113, 57, 0.18)`, `rgba(226, 164, 104, 0.22)`                                                                                    |
 | `.cloud-sync-indicator`                |    3 | `#f59e0b`, `rgba(245, 158, 11, 0.15)`                                                                                                      |
 | `.ct-wb-ex-name-suggest-fav`           |    3 | `#f59e0b`, `rgba(245, 158, 11, 0.12)`, `#fbbf24`                                                                                           |
 | `.ct-wb-ex-row`                        |    3 | `#f59e0b`, `rgba(245, 158, 11, 0.08)`, `rgba(245, 158, 11, 0.12)`                                                                          |
@@ -112,6 +119,9 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.meal-time-badge-inside`              |    3 | `#fef3c7`, `#92400e`, `#fde68a`                                                                                                            |
 | `.profile-message`                     |    3 | `rgba(138, 74, 32, 0.1)`, `#a1471c`\*, `rgba(161, 71, 28, 0.18)`                                                                           |
 | `.tabs`                                |    3 | `#141210`, `#e2a468`, `#2f2820`                                                                                                            |
+| `--profile-tone-ink`                   |    2 | `#cf8144`                                                                                                                                  |
+| `--profile-tone-swatch`                |    2 | `rgba(207, 129, 68, 0.22)`                                                                                                                 |
+| `--profile-tone-wash`                  |    2 | `rgba(207, 129, 68, 0.12)`                                                                                                                 |
 | `.compact-badge`                       |    2 | `#f97316`, `#ea580c`                                                                                                                       |
 | `.ct-wb-ex-ss-connector`               |    2 | `rgba(245, 158, 11, 0.65)`, `rgba(245, 158, 11, 0.08)`                                                                                     |
 | `.game-daily-bonus`                    |    2 | `#f59e0b`, `#d97706`                                                                                                                       |
@@ -136,6 +146,9 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `0%, 100%`                             |    2 | `rgba(234, 179, 8, 0.3)`                                                                                                                   |
 | `100%`                                 |    2 | `rgba(253, 224, 71, 0.7)`, `rgba(245, 158, 11, 0.0)`                                                                                       |
 | `50%`                                  |    2 | `rgba(234, 179, 8, 0.6)`                                                                                                                   |
+| `--activity-border`                    |    1 | `#f5e6a3`                                                                                                                                  |
+| `--fat`                                |    1 | `#f59e0b`                                                                                                                                  |
+| `--warning`                            |    1 | `#f59e0b`                                                                                                                                  |
 | `.achievement-badge`                   |    1 | `rgba(234, 179, 8, 0.5)`                                                                                                                   |
 | `.compact-zone-kcal`                   |    1 | `#f97316`                                                                                                                                  |
 | `.ct-wb-ex-ap-pr`                      |    1 | `rgba(245, 158, 11, 0.55)`                                                                                                                 |
@@ -195,7 +208,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `40%`                                  |    1 | `rgba(253, 224, 71, 1)`                                                                                                                    |
 | `70%`                                  |    1 | `rgba(245, 158, 11, 0.7)`                                                                                                                  |
 
-### `heys-components.css` — 198
+### `heys-components.css` — 205
 
 Зоны: `checkin-morning`, `home-widgets`, `pwa-update`, `spinners`, `undo-bar`
 
@@ -222,6 +235,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.pe-warning`                                      |    4 | `#92400e`, `#2a1f0a`, `#713f12`, `#facc15`                                                                                                                  |
 | `.product-name-cell__badge`                        |    4 | `#fef3c7`, `#b45309`, `rgba(251, 191, 36, 0.2)`, `#fcd34d`                                                                                                  |
 | `.reports-legacy-banner`                           |    4 | `#fde68a`, `#92400e`, `rgba(251, 191, 36, 0.12)`, `rgba(251, 191, 36, 0.3)`                                                                                 |
+| `--fiber-fill`                                     |    3 | `#fde68a`, `#fbbf24`, `#d97706`                                                                                                                             |
 | `.action-card__priority`                           |    3 | `#f97316`, `#ea580c`, `#ca8a04`                                                                                                                             |
 | `.advice-diagnostics-stat-card`                    |    3 | `rgba(254, 243, 199, 0.92)`, `rgba(245, 158, 11, 0.22)`, `rgba(120, 53, 15, 0.92)`                                                                          |
 | `.info-modal__debug`                               |    3 | `rgba(120, 53, 15, 0.18)`, `rgba(251, 191, 36, 0.18)`, `#fde68a`                                                                                            |
@@ -229,6 +243,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.weekly-wrap-breakdown__badge`                    |    3 | `#ffedd5`, `#c2410c`, `#fdba74`                                                                                                                             |
 | `.widget`                                          |    3 | `rgba(120, 53, 15, 0.36)`, `#fde68a`, `rgba(251, 191, 36, 0.22)`                                                                                            |
 | `50%`                                              |    3 | `rgba(250, 204, 21, 0.5)`, `rgba(250, 204, 21, 0.7)`, `rgba(250, 204, 21, 0.3)`                                                                             |
+| `--pi-warning`                                     |    2 | `#f59e0b`                                                                                                                                                   |
 | `.advice-diagnostics-grade`                        |    2 | `#fef3c7`, `#b45309`                                                                                                                                        |
 | `.confidence-badge`                                |    2 | `#facc15`                                                                                                                                                   |
 | `.diary-fiber-panel__hide`                         |    2 | `rgba(217, 119, 6, 0.24)`, `#92400e`                                                                                                                        |
@@ -244,6 +259,8 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.score-explainer-modal__signal-chip`              |    2 | `#7c2d12`, `#fed7aa`                                                                                                                                        |
 | `.tab-advice-badge`                                |    2 | `#f59e0b`, `rgba(245, 158, 11, 0.8)`                                                                                                                        |
 | `0%`                                               |    2 | `rgba(250, 204, 21, 0.9)`, `rgba(250, 204, 21, 0.5)`                                                                                                        |
+| `--fiber-accent`                                   |    1 | `#d97706`                                                                                                                                                   |
+| `--fiber-border`                                   |    1 | `rgba(245, 158, 11, 0.28)`                                                                                                                                  |
 | `.achievement-story-label`                         |    1 | `#f59e0b`                                                                                                                                                   |
 | `.dual-risk-panel__status-warn`                    |    1 | `#fcd34d`                                                                                                                                                   |
 | `.game-mission-card__xp`                           |    1 | `#fbbf24`                                                                                                                                                   |
@@ -266,7 +283,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `0%, 100%`                                         |    1 | `rgba(250, 204, 21, 0.2)`                                                                                                                                   |
 | `100%`                                             |    1 | `rgba(250, 204, 21, 0.9)`                                                                                                                                   |
 
-### `730-widgets-dashboard.css` — 178
+### `730-widgets-dashboard.css` — 186
 
 Зоны: `home-widgets`, `nutrition-tab`
 
@@ -293,6 +310,8 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.widget-relapse-risk__action-icon`   |    3 | `#f59e0b`, `#fbbf24`, `rgba(245, 158, 11, 0.2)`                                                                                                                               |
 | `.widget-v4-catalog__remove-btn`      |    3 | `#c67139`, `#cf8144`, `#e2a468`                                                                                                                                               |
 | `.widgets-quick-sheet`                |    3 | `rgba(80, 50, 20, 0.14)`, `rgba(80, 50, 20, 0.26)`, `#23201b`                                                                                                                 |
+| `--widget-accent-strong`              |    2 | `rgba(255, 159, 10, 0.28)`, `rgba(249, 115, 22, 0.28)`                                                                                                                        |
+| `--widget-gradient-orange`            |    2 | `#FF9500`, `#FF6B00`                                                                                                                                                          |
 | `.empty-meal-alert__action`           |    2 | `rgba(154, 52, 18, 0.24)`, `rgba(194, 65, 12, 0.28)`                                                                                                                          |
 | `.empty-meal-alert__copy`             |    2 | `#7c2d12`                                                                                                                                                                     |
 | `.empty-meal-alert__icon`             |    2 | `#ea580c`, `rgba(194, 65, 12, 0.2)`                                                                                                                                           |
@@ -314,6 +333,10 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.widgets-quick-sheet__row-icon`      |    2 | `#8a4a20`, `#e2a468`                                                                                                                                                          |
 | `0%, 100%`                            |    2 | `rgba(249, 115, 22, 0.4)`, `rgba(255, 214, 10, 0.4)`                                                                                                                          |
 | `50%`                                 |    2 | `rgba(249, 115, 22, 0.6)`, `rgba(255, 214, 10, 0)`                                                                                                                            |
+| `--chip-bg`                           |    1 | `rgba(245, 158, 11, 0.12)`                                                                                                                                                    |
+| `--chip-border`                       |    1 | `rgba(245, 158, 11, 0.24)`                                                                                                                                                    |
+| `--water-dim-text`                    |    1 | `#6b5f4f`                                                                                                                                                                     |
+| `--widget-accent`                     |    1 | `rgba(255, 159, 10, 0.14)`                                                                                                                                                    |
 | `.heys-android`                       |    1 | `#141210`                                                                                                                                                                     |
 | `.page-day`                           |    1 | `#141210`                                                                                                                                                                     |
 | `.pct-badge`                          |    1 | `rgba(234, 179, 8, 0.12)`                                                                                                                                                     |
@@ -382,6 +405,47 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.mc-streak-text`                     |    1 | `#d97706`                                                                   |
 | `.pwa-banner-content`                 |    1 | `rgba(80, 50, 20, 0.1)`                                                     |
 
+### `400-water-and-hydration.css` — 69
+
+Зоны: `nutrition-tab`, `tips`
+
+| семейство                             | мест | литералы                                                                                               |
+| ------------------------------------- | ---: | ------------------------------------------------------------------------------------------------------ |
+| `.advice-list-container`              |   12 | `#efe3cf`, `#8a4a20`, `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.12)`, `#c67139`, `#141210`, … (+3) |
+| `.advice-fab`                         |    6 | `#fbbf24`, `#f59e0b`, `rgba(251, 191, 36, 0.4)`, `#d97706`, `rgba(245, 158, 11, 0.3)`                  |
+| `--advice-gradient`                   |    4 | `#fde047`, `#f59e0b`, `#fdba74`, `#f97316`                                                             |
+| `.advice-v4-detail__primary`          |    4 | `#c67139`, `#2b1608`, `#cf8144`, `#1a0f04`                                                             |
+| `.advice-v4-disclaimer-card`          |    3 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.16)`, `#141210`                                          |
+| `.advice-v4-panel__btn`               |    3 | `#efe3cf`, `rgba(198, 113, 57, 0.22)`, `#e8b48a`                                                       |
+| `--advice-bg`                         |    2 | `rgba(245, 158, 11, 0.1)`, `rgba(249, 115, 22, 0.1)`                                                   |
+| `--wr-alarm`                          |    2 | `#e0704f`\*, `#f08a6a`                                                                                 |
+| `.advice-list-item-bg-right`          |    2 | `#f59e0b`, `#d97706`                                                                                   |
+| `.advice-service-section-label`       |    2 | `#8a4a20`, `#e8b48a`                                                                                   |
+| `.advice-v4-detail__eyebrow`          |    2 | `#8a4a20`, `#e2a468`                                                                                   |
+| `.advice-v4-disclaimer-card__primary` |    2 | `#cf8144`, `#1a0f04`                                                                                   |
+| `.advice-v4-hide-return`              |    2 | `#efe3cf`, `#8a4a20`                                                                                   |
+| `.advice-v4-toast-card`               |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.14)`                                                     |
+| `.advice-v4-toast-card__primary`      |    2 | `#c67139`, `#2b1608`                                                                                   |
+| `--wr-dim`                            |    1 | `#6b5f4f`                                                                                              |
+| `.advice-list-header-link`            |    1 | `#8a4a20`                                                                                              |
+| `.advice-service-list`                |    1 | `#23201b`                                                                                              |
+| `.advice-service-note`                |    1 | `#3a2f28`                                                                                              |
+| `.advice-service-overlay`             |    1 | `#1a1817`                                                                                              |
+| `.advice-v4-detail__close`            |    1 | `#23201b`                                                                                              |
+| `.advice-v4-detail__science-box`      |    1 | `#23201b`                                                                                              |
+| `.advice-v4-detail__section-title`    |    1 | `#8a4a20`                                                                                              |
+| `.advice-v4-detail__tech-link`        |    1 | `#8a4a20`                                                                                              |
+| `.advice-v4-detail-overlay`           |    1 | `#141210`                                                                                              |
+| `.advice-v4-hide-ring__num`           |    1 | `#8a4a20`                                                                                              |
+| `.advice-v4-hide-ring__progress`      |    1 | `#c67139`                                                                                              |
+| `.advice-v4-panel`                    |    1 | `#23201b`                                                                                              |
+| `.advice-v4-science`                  |    1 | `rgba(80, 50, 20, 0.12)`                                                                               |
+| `.advice-v4-science__close`           |    1 | `#23201b`                                                                                              |
+| `.advice-v4-science__source`          |    1 | `#23201b`                                                                                              |
+| `.fab-group`                          |    1 | `#8a4a20`                                                                                              |
+| `0%, 100%`                            |    1 | `rgba(251, 191, 36, 0.4)`                                                                              |
+| `50%`                                 |    1 | `rgba(251, 191, 36, 0.6)`                                                                              |
+
 ### `733-ui-v4-login-theme.css` — 68
 
 Зоны: `login`
@@ -423,44 +487,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.heys-login-theme__chip`                |    1 | `#c67139`                                                |
 | `.heys-login-theme__soft-card`           |    1 | `#c67139`                                                |
 
-### `400-water-and-hydration.css` — 60
-
-Зоны: `nutrition-tab`, `tips`
-
-| семейство                             | мест | литералы                                                                                               |
-| ------------------------------------- | ---: | ------------------------------------------------------------------------------------------------------ |
-| `.advice-list-container`              |   12 | `#efe3cf`, `#8a4a20`, `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.12)`, `#c67139`, `#141210`, … (+3) |
-| `.advice-fab`                         |    6 | `#fbbf24`, `#f59e0b`, `rgba(251, 191, 36, 0.4)`, `#d97706`, `rgba(245, 158, 11, 0.3)`                  |
-| `.advice-v4-detail__primary`          |    4 | `#c67139`, `#2b1608`, `#cf8144`, `#1a0f04`                                                             |
-| `.advice-v4-disclaimer-card`          |    3 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.16)`, `#141210`                                          |
-| `.advice-v4-panel__btn`               |    3 | `#efe3cf`, `rgba(198, 113, 57, 0.22)`, `#e8b48a`                                                       |
-| `.advice-list-item-bg-right`          |    2 | `#f59e0b`, `#d97706`                                                                                   |
-| `.advice-service-section-label`       |    2 | `#8a4a20`, `#e8b48a`                                                                                   |
-| `.advice-v4-detail__eyebrow`          |    2 | `#8a4a20`, `#e2a468`                                                                                   |
-| `.advice-v4-disclaimer-card__primary` |    2 | `#cf8144`, `#1a0f04`                                                                                   |
-| `.advice-v4-hide-return`              |    2 | `#efe3cf`, `#8a4a20`                                                                                   |
-| `.advice-v4-toast-card`               |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.14)`                                                     |
-| `.advice-v4-toast-card__primary`      |    2 | `#c67139`, `#2b1608`                                                                                   |
-| `.advice-list-header-link`            |    1 | `#8a4a20`                                                                                              |
-| `.advice-service-list`                |    1 | `#23201b`                                                                                              |
-| `.advice-service-note`                |    1 | `#3a2f28`                                                                                              |
-| `.advice-service-overlay`             |    1 | `#1a1817`                                                                                              |
-| `.advice-v4-detail__close`            |    1 | `#23201b`                                                                                              |
-| `.advice-v4-detail__science-box`      |    1 | `#23201b`                                                                                              |
-| `.advice-v4-detail__section-title`    |    1 | `#8a4a20`                                                                                              |
-| `.advice-v4-detail__tech-link`        |    1 | `#8a4a20`                                                                                              |
-| `.advice-v4-detail-overlay`           |    1 | `#141210`                                                                                              |
-| `.advice-v4-hide-ring__num`           |    1 | `#8a4a20`                                                                                              |
-| `.advice-v4-hide-ring__progress`      |    1 | `#c67139`                                                                                              |
-| `.advice-v4-panel`                    |    1 | `#23201b`                                                                                              |
-| `.advice-v4-science`                  |    1 | `rgba(80, 50, 20, 0.12)`                                                                               |
-| `.advice-v4-science__close`           |    1 | `#23201b`                                                                                              |
-| `.advice-v4-science__source`          |    1 | `#23201b`                                                                                              |
-| `.fab-group`                          |    1 | `#8a4a20`                                                                                              |
-| `0%, 100%`                            |    1 | `rgba(251, 191, 36, 0.4)`                                                                              |
-| `50%`                                 |    1 | `rgba(251, 191, 36, 0.6)`                                                                              |
-
-### `300-modals-and-day.css` — 52
+### `300-modals-and-day.css` — 56
 
 Зоны: `registration`
 
@@ -474,6 +501,8 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.mood-slider-negative`                 |    4 | `#f59e0b`, `#f97316`                                                                                                                                         |
 | `.mood-slider-positive`                 |    4 | `#f97316`, `#f59e0b`                                                                                                                                         |
 | `.sleep-quality-preset-ok`              |    3 | `rgba(234, 179, 8, 0.1)`, `#ca8a04`, `rgba(251, 191, 36, 0.2)`                                                                                               |
+| `--iw-bg-mid`                           |    2 | `rgba(255, 237, 213, 0.72)`, `rgba(254, 249, 195, 0.72)`                                                                                                     |
+| `--iw-bg-to`                            |    2 | `rgba(254, 215, 170, 0.72)`, `rgba(253, 230, 138, 0.72)`                                                                                                     |
 | `.grams-preview-kcal`                   |    2 | `#ff9500`, `#ffd60a`                                                                                                                                         |
 | `.insulin-almost`                       |    2 | `rgba(249, 115, 22, 0.1)`, `#c2410c`                                                                                                                         |
 | `.day-wave-overview__interaction-label` |    1 | `#92400e`                                                                                                                                                    |
@@ -583,6 +612,23 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.yv-info-target`    |    2 | `#78350f`, `#fed7aa`                                                     |
 | `.yv-info-percent`   |    1 | `#b45309`                                                                |
 | `.yv-option`         |    1 | `rgba(249, 115, 22, 0.15)`                                               |
+
+### `heys-boot-mark.css` — 19
+
+Зоны: `app-splash`, `registration`, `spinners`
+
+| семейство                                  | мест | литералы                          |
+| ------------------------------------------ | ---: | --------------------------------- |
+| `--boot-fail-disc`                         |    3 | `#f6e6dd`_, `#3a241a`_, `#35211c` |
+| `--boot-fail-stroke`                       |    3 | `#a1471c`_, `#d07d4e`_, `#d97b62` |
+| `--boot-btn`                               |    2 | `#c67139`, `#cf8144`              |
+| `--boot-btn-ink`                           |    2 | `#2b1608`, `#201509`              |
+| `--boot-disc`                              |    2 | `#efe3cf`, `#2f2820`              |
+| `--boot-letter`                            |    2 | `#8a4a20`, `#e2a468`              |
+| `--boot-stroke`                            |    2 | `#c67139`, `#cf8144`              |
+| `.heys-boot-visual-guard`                  |    1 | `#141210`                         |
+| `.heys-wait-mark-overlay`                  |    1 | `#141210`                         |
+| `html[data-theme="sand-dark"], html[data-` |    1 | `#141210`                         |
 
 ### `heys_steps_v1.js` — 17
 
@@ -750,6 +796,16 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | ---------- | ---: | ------------------------------- |
 | `meta`     |    4 | `#fef3c7`, `#fde68a`, `#f59e0b` |
 
+### `732-ui-v4-nutrition.css` — 3
+
+Зоны: `home-widgets`, `nutrition-tab`
+
+| семейство             | мест | литералы                 |
+| --------------------- | ---: | ------------------------ |
+| `--nut-dim`           |    1 | `#6b5f4f`                |
+| `--nut-dim-icon`      |    1 | `#7a6b58`                |
+| `.nutrition-v4-sheet` |    1 | `rgba(33, 30, 25, 0.34)` |
+
 ### `heys_login_theme_picker_v1.js` — 3
 
 Зоны: `login`
@@ -767,16 +823,6 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | --------------------- | ---: | --------- |
 | `DEFAULT_RATIO_ZONES` |    2 | `#eab308` |
 | `zone`                |    1 | `#f59e0b` |
-
-### `heys-boot-mark.css` — 3
-
-Зоны: `app-splash`, `registration`, `spinners`
-
-| семейство                                  | мест | литералы  |
-| ------------------------------------------ | ---: | --------- |
-| `.heys-boot-visual-guard`                  |    1 | `#141210` |
-| `.heys-wait-mark-overlay`                  |    1 | `#141210` |
-| `html[data-theme="sand-dark"], html[data-` |    1 | `#141210` |
 
 ### `widget_data.js` — 3
 
@@ -812,14 +858,6 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `cardStyle`     |    1 | `rgba(40, 24, 8, 0.08)` |
 | `storageNotice` |    1 | `rgba(40, 24, 8, 0.16)` |
 
-### `732-ui-v4-nutrition.css` — 1
-
-Зоны: `home-widgets`, `nutrition-tab`
-
-| семейство             | мест | литералы                 |
-| --------------------- | ---: | ------------------------ |
-| `.nutrition-v4-sheet` |    1 | `rgba(33, 30, 25, 0.34)` |
-
 ### `heys_add_product_step_v1.js` — 1
 
 Зоны: `nutrition-tab`, `product-card`
@@ -853,7 +891,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 свой файл. Такие места разметки требуют наравне с первым разделом, и найти их
 можно было только просмотром по имени файла, а не по обоснованиям.
 
-### `100-metrics-and-graphs.css` — 212
+### `100-metrics-and-graphs.css` — 222
 
 | семейство                         | мест | литералы                                                                                                                                                            |
 | --------------------------------- | ---: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -867,6 +905,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.sparkline-popup-tag`            |    6 | `#fef3c7`, `#d97706`, `#fde68a`, `#92400e`, `#f59e0b`                                                                                                               |
 | `.week-heatmap-deficit-badge`     |    6 | `#f97316`, `rgba(249, 115, 22, 0.12)`, `rgba(249, 115, 22, 0.3)`, `rgba(124, 45, 18, 0.34)`, `rgba(251, 146, 60, 0.34)`, `#fdba74`                                  |
 | `.week-heatmap-deficit`           |    5 | `rgba(234, 179, 8, 0.08)`, `rgba(245, 158, 11, 0.05)`, `rgba(234, 179, 8, 0.15)`, `rgba(180, 83, 9, 0.24)`, `rgba(251, 146, 60, 0.3)`                               |
+| `--toast-gradient`                |    4 | `#fde047`, `#f59e0b`, `#fdba74`, `#f97316`                                                                                                                          |
 | `.correlation-block`              |    4 | `#ffedd5`, `#fed7aa`, `#fef9c3`, `#fde047`                                                                                                                          |
 | `.macro-badge-popup-streak`       |    4 | `#d97706`, `#fef3c7`, `#fde68a`, `#fcd34d`                                                                                                                          |
 | `.macro-toast`                    |    4 | `#fef3c7`, `#fde68a`, `#fbbf24`, `#f59e0b`                                                                                                                          |
@@ -885,6 +924,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.training-type-btn`              |    3 | `#f97316`, `#ffedd5`, `#ea580c`                                                                                                                                     |
 | `.week-heatmap-day`               |    3 | `rgba(251, 191, 36, 0.15)`, `rgba(251, 191, 36, 0.25)`, `#fbbf24`                                                                                                   |
 | `.weight-card-modern`             |    3 | `rgba(251, 146, 60, 0.08)`, `rgba(249, 115, 22, 0.12)`, `rgba(251, 146, 60, 0.3)`                                                                                   |
+| `--toast-bg`                      |    2 | `rgba(245, 158, 11, 0.15)`, `rgba(249, 115, 22, 0.15)`                                                                                                              |
 | `.activity-charge-card`           |    2 | `rgba(245, 158, 11, 0.2)`, `rgba(245, 158, 11, 0.22)`                                                                                                               |
 | `.caloric-balance-card`           |    2 | `rgba(234, 179, 8, 0.08)`, `rgba(234, 179, 8, 0.2)`                                                                                                                 |
 | `.context-badge-circadian`        |    2 | `#fef3c7`, `#92400e`                                                                                                                                                |
@@ -899,6 +939,10 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.week-heatmap-streak`            |    2 | `#f59e0b`, `#fef3c7`                                                                                                                                                |
 | `.weight-goal-hint`               |    2 | `rgba(234, 179, 8, 0.1)`, `rgba(234, 179, 8, 0.3)`                                                                                                                  |
 | `.weight-goal-hint-link`          |    2 | `#d97706`, `#b45309`                                                                                                                                                |
+| `--goal-badge-bg`                 |    1 | `rgba(234, 179, 8, 0.15)`                                                                                                                                           |
+| `--goal-badge-color`              |    1 | `#ca8a04`                                                                                                                                                           |
+| `--macro-ring-color`              |    1 | `#f59e0b`                                                                                                                                                           |
+| `--macro-ring-over`               |    1 | `#b45309`                                                                                                                                                           |
 | `.caloric-debt-day`               |    1 | `rgba(245, 158, 11, 0.3)`                                                                                                                                           |
 | `.deficit-actual-value`           |    1 | `#f59e0b`                                                                                                                                                           |
 | `.deficit-card-trend`             |    1 | `#f59e0b`                                                                                                                                                           |
@@ -921,7 +965,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.zone-picker-kcal-hint`          |    1 | `#f97316`                                                                                                                                                           |
 | `0%`                              |    1 | `rgba(245, 158, 11, 0)`                                                                                                                                             |
 
-### `fingers.css` — 193
+### `fingers.css` — 208
 
 | семейство                                 | мест | литералы                                                                                                                                                                     |
 | ----------------------------------------- | ---: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -955,12 +999,24 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.fingers-fs-program-card__rec-badge`     |    3 | `#f59e0b`, `#ea580c`, `rgba(245, 158, 11, 0.42)`                                                                                                                             |
 | `.fingers-fs-progress-stat`               |    3 | `rgba(245,158,11,0.18)`, `#f59e0b`, `#ea580c`                                                                                                                                |
 | `.fingers-mh-test__result-icon`           |    3 | `#f59e0b`, `#ea580c`, `rgba(245, 158, 11, 0.40)`                                                                                                                             |
+| `--fingers-muted`                         |    2 | `rgba(120, 100, 90, 0.18)`, `rgba(150, 140, 130, 0.25)`                                                                                                                      |
+| `--phase-gradient`                        |    2 | `#facc15`, `#a16207`                                                                                                                                                         |
+| `--summary-gradient`                      |    2 | `#f59e0b`, `#ea580c`                                                                                                                                                         |
 | `.fingers-fs-mixcard__goal-label`         |    2 | `rgba(146, 64, 14, 0.78)`, `rgba(252, 211, 77, 0.78)`                                                                                                                        |
 | `.fingers-fs-mixcard__goalhint`           |    2 | `rgba(146, 64, 14, 0.72)`, `rgba(252, 211, 77, 0.72)`                                                                                                                        |
 | `.fingers-fs-mixcard__intensity-toggle`   |    2 | `rgba(245, 158, 11, 0.30)`                                                                                                                                                   |
 | `.fingers-fs-preflight-note`              |    2 | `#b45309`, `#fcd34d`                                                                                                                                                         |
 | `.fingers-mh-test__result-warn`           |    2 | `rgba(245, 158, 11, 0.10)`, `#92400e`                                                                                                                                        |
 | `.fingers-settings__profile-value`        |    2 | `#ea580c`, `#fcd34d`                                                                                                                                                         |
+| `--fingers-accent-2`                      |    1 | `#7c2d12`                                                                                                                                                                    |
+| `--fingers-bg`                            |    1 | `#1c1a18`                                                                                                                                                                    |
+| `--fingers-card-border`                   |    1 | `rgba(28, 27, 25, 0.08)`                                                                                                                                                     |
+| `--fingers-muted-text`                    |    1 | `rgba(28, 27, 25, 0.6)`                                                                                                                                                      |
+| `--fingers-text`                          |    1 | `#1c1b19`                                                                                                                                                                    |
+| `--phase-color`                           |    1 | `#ca8a04`                                                                                                                                                                    |
+| `--phase-color-soft`                      |    1 | `rgba(202, 138, 4, 0.16)`                                                                                                                                                    |
+| `--summary-color`                         |    1 | `#ea580c`                                                                                                                                                                    |
+| `--summary-color-soft`                    |    1 | `rgba(245, 158, 11, 0.12)`                                                                                                                                                   |
 | `.fingers-fs__title-icon`                 |    1 | `rgba(245, 158, 11, 0.28)`                                                                                                                                                   |
 | `.fingers-fs-cycle-plan__week`            |    1 | `rgba(60, 50, 42, 0.10)`                                                                                                                                                     |
 | `.fingers-fs-mixcard__source-more`        |    1 | `rgba(60, 50, 42, 0.07)`                                                                                                                                                     |
@@ -970,7 +1026,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.fingers-tb__chart-delta`                |    1 | `#c0561f`                                                                                                                                                                    |
 | `.fingers-tb__due`                        |    1 | `#c0561f`                                                                                                                                                                    |
 
-### `720-predictive-insights.css` — 146
+### `720-predictive-insights.css` — 147
 
 | семейство                                  | мест | литералы                                                                                                                                                                   |
 | ------------------------------------------ | ---: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1003,6 +1059,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.meal-timing-card`                        |    2 | `rgba(245, 158, 11, 0.08)`, `rgba(245, 158, 11, 0.2)`                                                                                                                      |
 | `.risk-traffic-light`                      |    2 | `rgba(245, 158, 11, 0.05)`, `rgba(245, 158, 11, 0.1)`                                                                                                                      |
 | `.whatif-scenarios-panel__warning`         |    2 | `rgba(245, 158, 11, 0.1)`, `#f59e0b`                                                                                                                                       |
+| `--insights-activity`                      |    1 | `#f59e0b`                                                                                                                                                                  |
 | `.insights-pattern__icon`                  |    1 | `rgba(245, 158, 11, 0.15)`                                                                                                                                                 |
 | `.insights-priority-action`                |    1 | `#f59e0b`                                                                                                                                                                  |
 | `.insights-ring-card`                      |    1 | `#f59e0b`                                                                                                                                                                  |
@@ -1012,7 +1069,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.phenotype-panel__warning`                |    1 | `#f59e0b`                                                                                                                                                                  |
 | `.weekly-wrap-card__achievement-label`     |    1 | `#92400e`                                                                                                                                                                  |
 
-### `200-dark-and-effects.css` — 107
+### `200-dark-and-effects.css` — 115
 
 | семейство                         | мест | литералы                                                                                                    |
 | --------------------------------- | ---: | ----------------------------------------------------------------------------------------------------------- |
@@ -1035,6 +1092,9 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.metric-popup-reminder`          |    3 | `#451a03`, `#92400e`, `#fb923c`                                                                             |
 | `.metric-popup-streak`            |    3 | `#451a03`, `#78350f`, `#92400e`                                                                             |
 | `.offline-nodata-overlay`         |    3 | `#422006`, `#451a03`, `#92400e`                                                                             |
+| `--iw-bg-from`                    |    2 | `rgba(154, 52, 18, 0.2)`, `rgba(133, 77, 14, 0.2)`                                                          |
+| `--iw-bg-mid`                     |    2 | `rgba(194, 65, 12, 0.17)`, `rgba(161, 98, 7, 0.17)`                                                         |
+| `--iw-bg-to`                      |    2 | `rgba(251, 146, 60, 0.12)`, `rgba(250, 204, 21, 0.12)`                                                      |
 | `.day-score-preset-ok`            |    2 | `rgba(234, 179, 8, 0.1)`, `#ca8a04`                                                                         |
 | `.macro-toast-fat`                |    2 | `#3d3520`, `#4a4028`                                                                                        |
 | `.macro-toast-warning`            |    2 | `#3d3520`, `#4a4028`                                                                                        |
@@ -1044,6 +1104,8 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.sparkline-slider-tooltip-ratio` |    2 | `#713f12`, `#fcd34d`                                                                                        |
 | `.tone-amber`                     |    2 | `#2e2a1a`, `#4a4020`                                                                                        |
 | `.weight-goal-hint`               |    2 | `rgba(251, 191, 36, 0.15)`, `rgba(251, 191, 36, 0.3)`                                                       |
+| `--activity-bg`                   |    1 | `#3d3520`                                                                                                   |
+| `--activity-border`               |    1 | `#d4a76a`                                                                                                   |
 | `.measurements-card`              |    1 | `rgba(251, 146, 60, 0.3)`                                                                                   |
 | `.measurements-card__row`         |    1 | `rgba(251, 191, 36, 0.08)`                                                                                  |
 | `.measurements-card__warn`        |    1 | `#f59e0b`                                                                                                   |
@@ -1125,7 +1187,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `0%, 100%`                                   |    1 | `rgba(249, 115, 22, 0.05)`                                                                                                                                               |
 | `50%`                                        |    1 | `rgba(249, 115, 22, 0.08)`                                                                                                                                               |
 
-### `900-planning.css` — 56
+### `900-planning.css` — 66
 
 | семейство                           | мест | литералы                                                                                                                                                                     |
 | ----------------------------------- | ---: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1138,8 +1200,15 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.planning-task-row__meta-chip`     |    6 | `#b45309`, `rgba(245, 158, 11, 0.18)`, `#92400e`, `#fde68a`, `rgba(245, 158, 11, 0.2)`                                                                                       |
 | `.planning-calendar-day-pressure`   |    4 | `#b45309`, `rgba(245, 158, 11, 0.14)`, `#fcd34d`, `rgba(245, 158, 11, 0.18)`                                                                                                 |
 | `.planning-goals-workspace__course` |    3 | `#d97706`, `rgba(245, 158, 11, 0.08)`, `rgba(245, 158, 11, 0.12)`                                                                                                            |
+| `--planning-checklist-group-bg`     |    2 | `rgba(245, 158, 11, 0.08)`, `rgba(249, 115, 22, 0.07)`                                                                                                                       |
+| `--planning-checklist-group-border` |    2 | `rgba(245, 158, 11, 0.42)`, `rgba(249, 115, 22, 0.38)`                                                                                                                       |
+| `--planning-checklist-group-text`   |    2 | `#b45309`, `#c2410c`                                                                                                                                                         |
 | `.planning-calendar-drag-conflict`  |    2 | `#b45309`, `#fcd34d`                                                                                                                                                         |
 | `.planning-goals-card__course`      |    2 | `rgba(245, 158, 11, 0.11)`, `#a16207`                                                                                                                                        |
+| `--matrix-tone`                     |    1 | `#f97316`                                                                                                                                                                    |
+| `--planning-action-accent`          |    1 | `#d97706`                                                                                                                                                                    |
+| `--planning-action-accent-strong`   |    1 | `#92400e`                                                                                                                                                                    |
+| `--planning-action-border`          |    1 | `rgba(245, 158, 11, 0.24)`                                                                                                                                                   |
 | `.planning-calendar-state-marker`   |    1 | `#c1842f`                                                                                                                                                                    |
 
 ### `600-steps-and-aps.css` — 48
@@ -1185,6 +1254,38 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.messenger-subtitle__dot`        |    1 | `#c9ae7a`                                             |
 | `.msg-row`                        |    1 | `rgba(255, 240, 201, 0.9)`                            |
 
+### `740-cascade-card.css` — 28
+
+| семейство                     | мест | литералы                                                                                                                                                                       |
+| ----------------------------- | ---: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--cascade-tone-overlay`      |    8 | `rgba(245, 158, 11, 0.24)`, `rgba(245, 158, 11, 0.11)`, `rgba(245, 158, 11, 0.05)`, `rgba(245, 158, 11, 0.02)`, `rgba(245, 158, 11, 0.30)`, `rgba(245, 158, 11, 0.15)`, … (+1) |
+| `.cascade-dot`                |    8 | `#f97316`, `#facc15`, `#f59e0b`, `#d97706`, `#b45309`                                                                                                                          |
+| `.cascade-card__hint`         |    3 | `rgba(245, 158, 11, 0.08)`, `#b45309`                                                                                                                                          |
+| `.cascade-timeline-row`       |    3 | `rgba(245, 158, 11, 0.12)`, `#b45309`, `rgba(245, 158, 11, 0.18)`                                                                                                              |
+| `.cascade-card__breaks-info`  |    2 | `rgba(245, 158, 11, 0.07)`, `rgba(245, 158, 11, 0.1)`                                                                                                                          |
+| `.cascade-dot-connector`      |    2 | `#fbbf24`, `#b45309`                                                                                                                                                           |
+| `.cascade-card__breaks-label` |    1 | `#b45309`                                                                                                                                                                      |
+| `.cascade-timeline-weight`    |    1 | `#b45309`                                                                                                                                                                      |
+
+### `750-strength-builder.css` — 23
+
+| семейство         | мест | литералы                                               |
+| ----------------- | ---: | ------------------------------------------------------ |
+| `--sb-accbg`      |    3 | `rgba(249, 115, 22, 0.12)`, `rgba(249, 115, 22, 0.18)` |
+| `--sb-accTx`      |    3 | `#9a3412`, `#fdba74`                                   |
+| `.sb-card-badge`  |    2 | `rgba(249, 115, 22, 0.14)`, `#9a3412`                  |
+| `.sb-card-bar`    |    2 | `#f97316`, `#c2410c`                                   |
+| `.sb-card-cta`    |    2 | `#c2410c`, `#9a3412`                                   |
+| `.sb-chip`        |    2 | `rgba(249, 115, 22, 0.45)`, `rgba(249, 115, 22, 0.14)` |
+| `.sb-finish`      |    2 | `#c2410c`, `#9a3412`                                   |
+| `--sb-acc`        |    1 | `#c2410c`                                              |
+| `--sb-acc-strong` |    1 | `#9a3412`                                              |
+| `.sb-card`        |    1 | `rgba(249, 115, 22, 0.35)`                             |
+| `.sb-cat-add`     |    1 | `rgba(249, 115, 22, 0.45)`                             |
+| `.sb-ex`          |    1 | `rgba(249, 115, 22, 0.45)`                             |
+| `.sb-ss`          |    1 | `rgba(249, 115, 22, 0.4)`                              |
+| `.sb-star`        |    1 | `#f97316`                                              |
+
 ### `drums-finger-trainer.css` — 23
 
 | семейство                     | мест | литералы                                                                             |
@@ -1213,33 +1314,6 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.aps-grams-slider`           |    1 | `#eab308`                                                                |
 | `.meal-time-value`            |    1 | `#8a4a20`                                                                |
 
-### `740-cascade-card.css` — 20
-
-| семейство                     | мест | литералы                                                          |
-| ----------------------------- | ---: | ----------------------------------------------------------------- |
-| `.cascade-dot`                |    8 | `#f97316`, `#facc15`, `#f59e0b`, `#d97706`, `#b45309`             |
-| `.cascade-card__hint`         |    3 | `rgba(245, 158, 11, 0.08)`, `#b45309`                             |
-| `.cascade-timeline-row`       |    3 | `rgba(245, 158, 11, 0.12)`, `#b45309`, `rgba(245, 158, 11, 0.18)` |
-| `.cascade-card__breaks-info`  |    2 | `rgba(245, 158, 11, 0.07)`, `rgba(245, 158, 11, 0.1)`             |
-| `.cascade-dot-connector`      |    2 | `#fbbf24`, `#b45309`                                              |
-| `.cascade-card__breaks-label` |    1 | `#b45309`                                                         |
-| `.cascade-timeline-weight`    |    1 | `#b45309`                                                         |
-
-### `750-strength-builder.css` — 15
-
-| семейство        | мест | литералы                                               |
-| ---------------- | ---: | ------------------------------------------------------ |
-| `.sb-card-badge` |    2 | `rgba(249, 115, 22, 0.14)`, `#9a3412`                  |
-| `.sb-card-bar`   |    2 | `#f97316`, `#c2410c`                                   |
-| `.sb-card-cta`   |    2 | `#c2410c`, `#9a3412`                                   |
-| `.sb-chip`       |    2 | `rgba(249, 115, 22, 0.45)`, `rgba(249, 115, 22, 0.14)` |
-| `.sb-finish`     |    2 | `#c2410c`, `#9a3412`                                   |
-| `.sb-card`       |    1 | `rgba(249, 115, 22, 0.35)`                             |
-| `.sb-cat-add`    |    1 | `rgba(249, 115, 22, 0.45)`                             |
-| `.sb-ex`         |    1 | `rgba(249, 115, 22, 0.45)`                             |
-| `.sb-ss`         |    1 | `rgba(249, 115, 22, 0.4)`                              |
-| `.sb-star`       |    1 | `#f97316`                                              |
-
 ### `611-aps-product-card.css` — 9
 
 | семейство                    | мест | литералы                   |
@@ -1253,13 +1327,21 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.aps-v4-create-auto-field`  |    1 | `rgba(198, 113, 57, 0.12)` |
 | `.aps-v4-harm-radio`         |    1 | `rgba(198, 113, 57, 0.12)` |
 
-### `905-planning-chrono.css` — 8
+### `905-planning-chrono.css` — 9
 
 | семейство                  | мест | литералы                                                                                   |
 | -------------------------- | ---: | ------------------------------------------------------------------------------------------ |
 | `.chrono-overview__streak` |    4 | `rgba(234, 88, 12, 0.10)`, `#9a3412`, `rgba(234, 88, 12, 0.18)`, `rgba(234, 88, 12, 0.35)` |
 | `.chrono-duration__target` |    2 | `hsl(28, 85%, 52%)`                                                                        |
 | `.theme-dark`              |    2 | `rgba(234, 88, 12, 0.22)`, `#fdba74`                                                       |
+| `--chrono-category-color`  |    1 | `#d97706`                                                                                  |
+
+### `906-planning-goal-map.css` — 8
+
+| семейство            | мест | литералы                                   |
+| -------------------- | ---: | ------------------------------------------ |
+| `.goal-map-node`     |    6 | `#b88465`, `#452e26`, `#b29c61`, `#3b3523` |
+| `--goal-map-warning` |    2 | `#8a4b08`, `#ffd19a`                       |
 
 ### `800-meal-optimizer.css` — 7
 
@@ -1277,11 +1359,14 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.activity-v4-program` |    1 | `#2b1608`            |
 | `.page-day`            |    1 | `#23201b`            |
 
-### `906-planning-goal-map.css` — 6
+### `907-planning-reading.css` — 5
 
-| семейство        | мест | литералы                                   |
-| ---------------- | ---: | ------------------------------------------ |
-| `.goal-map-node` |    6 | `#b88465`, `#452e26`, `#b29c61`, `#3b3523` |
+| семейство                         | мест | литералы             |
+| --------------------------------- | ---: | -------------------- |
+| `--reader-marker-bg`              |    2 | `#f6d977`, `#e2c260` |
+| `--reader-caution`                |    1 | `#3a3023`            |
+| `.reading-cover__editorial-role`  |    1 | `#51472f`            |
+| `.reading-reader__palette-option` |    1 | `#f6d977`            |
 
 ### `612-training-step.css` — 2
 
@@ -1289,13 +1374,6 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | --------------------- | ---: | --------- |
 | `.ts-slider`          |    1 | `#eab308` |
 | `.ts-slider-negative` |    1 | `#eab308` |
-
-### `907-planning-reading.css` — 2
-
-| семейство                         | мест | литералы  |
-| --------------------------------- | ---: | --------- |
-| `.reading-cover__editorial-role`  |    1 | `#51472f` |
-| `.reading-reader__palette-option` |    1 | `#f6d977` |
 
 ### `912-planning-game-assemble-day.css` — 2
 
