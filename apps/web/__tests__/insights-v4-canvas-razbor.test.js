@@ -40,6 +40,10 @@ const RAZBOR_EXCEPTIONS = new Map([
   // 10,5/600 тоном --ac, кадр и строка «счётчик в шапке» дают «18 дней данных
   // из 30» чернилами. Два источника из трёх сходятся на кадре.
   ['Инсайты · 15|*', 'счётчик зрелости: два источника из трёх дают чернила'],
+  // Лестница чернил заморожена ступенями 55/45/38/30 — кадр просит 35 % у
+  // общего порога и 60 % у прозы «Где они работают», таких ступеней нет.
+  ['Инсайты · персональные пороги · 16|color', 'нет ступени 35 %, стоит ближайшая 38 %'],
+  ['Инсайты · персональные пороги · 24|color', 'нет ступени 60 %, стоит ближайшая 55 %'],
 ]);
 
 const HEAD_AND_HERO = [
@@ -51,6 +55,29 @@ const HEAD_AND_HERO = [
     ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
 ];
 
+// Пары растут вместе с разбором: кадр, закрытый вердиктами, закрепляется здесь,
+// иначе «сведено» держится только на том, что кто-то однажды посмотрел глазами.
+// Счётчик охвата показал, что гейт брал один кадр из двадцати, — эти два первые,
+// добавленные по следам разбора.
+const NEW_USER = [
+  [6, '.insights-v4-stub__hero', ['background', 'radius', 'padding']],
+  [8, '.insights-v4-stub__title', ['fontWeight', 'fontSize', 'lineHeight']],
+  [10, '.insights-v4-stub__progress', ['height', 'radius']],
+  [12, '.insights-v4-stub__count', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [27, '.insights-v4-stub__ladder-text', ['fontWeight', 'fontSize', 'lineHeight']],
+];
+
+const THRESHOLDS = [
+  [7, '.insights-v4-thresh__count', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [14, '.insights-v4-thresh__name', ['fontWeight', 'fontSize', 'lineHeight', 'flex']],
+  [15, '.insights-v4-thresh__mine', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'width']],
+  // Тон общего порога и прозы «Где они работают» в пары не идёт: кадр просит
+  // чернила 35 % и 60 %, а лестница набора заморожена ступенями 55/45/38/30.
+  // Код берёт ближайшие — 38 % и 55 %, и это названо в списке отступлений.
+  [16, '.insights-v4-thresh__common', ['fontWeight', 'fontSize', 'lineHeight', 'width']],
+  [24, '.insights-v4-thresh__where', ['fontWeight', 'fontSize', 'lineHeight']],
+];
+
 describe('Инсайты · разбор кадров канваса', () => {
   const razbor = readRazbor(canvas);
   const rules = readRules(insightsCss);
@@ -58,6 +85,18 @@ describe('Инсайты · разбор кадров канваса', () => {
   it('шапка и герой кадра «Инсайты» совпадают с продуктом', () => {
     expect(compare({
       razbor, rules, frame: 'Инсайты', pairs: HEAD_AND_HERO,
+    })).toEqual([]);
+  });
+
+  it('кадр «новый пользователь» совпадает с продуктом', () => {
+    expect(compare({
+      razbor, rules, frame: 'Инсайты · новый пользователь', pairs: NEW_USER,
+    })).toEqual([]);
+  });
+
+  it('кадр «персональные пороги» совпадает с продуктом', () => {
+    expect(compare({
+      razbor, rules, frame: 'Инсайты · персональные пороги', pairs: THRESHOLDS,
     })).toEqual([]);
   });
 
@@ -97,7 +136,7 @@ describe('Инсайты · разбор кадров канваса', () => {
   });
 
   it('отступления инсайтовой половины названы и не разрастаются молча', () => {
-    expect(RAZBOR_EXCEPTIONS.size).toBe(1);
+    expect(RAZBOR_EXCEPTIONS.size).toBe(3);
   });
 
   // Реестр отступлений разделён так же, как гейт: ключи кадров «Инсайты · NN»
