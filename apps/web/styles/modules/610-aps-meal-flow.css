@@ -1700,8 +1700,8 @@
   padding: 0 16px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
-  color: var(--v4-sand-act-deep, #8a4a20);
+  background: var(--v4-bg, #fffaf1);
+  color: var(--v4-act-text, #8a4a20);
   font-size: 12.5px;
   font-weight: 800;
   cursor: pointer;
@@ -3064,28 +3064,49 @@ button.meal-quality-badge:active {
 }
 
 .aps-v4-search-state {
-  border-radius: 18px;
-  padding: 16px 18px;
+  margin-top: 16px;
+  border-radius: 22px;
+  padding: 20px;
   background: var(--v4-sand-hero, #efe3cf);
 }
 
-.aps-v4-search-state--warn {
-  background: var(--v4-sand-accent-bg, #f0dcc6);
+/* Кадр «База не загрузилась»: карточка остаётся на той же бумаге, ключом идёт
+   только заголовок. Заливка всей карточки акцентом делала из пояснения тревогу. */
+.aps-v4-search-state--warn .aps-v4-search-state__title {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.aps-v4-search-state--start {
+  margin-top: 14px;
+  padding: 22px 20px;
 }
 
 .aps-v4-search-state__title {
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   line-height: 1.4;
   color: var(--v4-sand-ink, #201e1d);
 }
 
+.aps-v4-search-state--start .aps-v4-search-state__title {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
 .aps-v4-search-state__body {
-  margin-top: 7px;
-  font-size: 11.5px;
+  margin-top: 8px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.aps-v4-search-state--start .aps-v4-search-state__body {
+  margin-top: 9px;
+}
+
+.aps-v4-search-state__cta {
+  margin-top: 16px;
 }
 
 .aps-v4-search-offline {
@@ -3648,11 +3669,65 @@ button.meal-quality-badge:active {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+/* Кадр ставит «Повторить» и «Создать продукт» в строку по половине ширины:
+   это равные выходы из тупика, а не главное действие с запасным под ним. */
 .aps-v4-search-state__actions {
   display: flex;
-  flex-direction: column;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 16px;
+}
+
+.aps-v4-search-state__actions > * {
+  flex: 1;
+  min-height: 44px;
+}
+
+.aps-v4-search-state__quick {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  background: var(--v4-bg, #fffaf1);
+  overflow: hidden;
+}
+
+.aps-v4-search-state__quick-row {
+  border: 0;
+  background: transparent;
+  padding: 0 16px;
+  min-height: 48px;
+  text-align: left;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+  cursor: pointer;
+}
+
+.aps-v4-search-state__quick-row + .aps-v4-search-state__quick-row {
+  border-top: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 8%, transparent);
+}
+
+.aps-v4-search-state__off-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.aps-v4-search-state__off-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 35%, transparent);
+}
+
+.aps-v4-search-state__off-state {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 30%, transparent);
 }
 
 .aps-v4-search-state__similar {
@@ -3674,26 +3749,29 @@ button.meal-quality-badge:active {
   gap: 6px;
 }
 
+/* Карточка офлайна стояла на зелёной бумаге чужого набора. Кадр держит её на
+   той же второй бумаге, что и остальные состояния поиска: зелёный тут читался
+   как «всё хорошо» ровно там, где связи нет. */
 .aps-v4-search-offline-card {
-  margin-top: 12px;
-  border-radius: 18px;
-  padding: 16px 18px;
-  background: var(--v4-sage-surface, #eaefe0);
+  margin-top: 16px;
+  border-radius: 22px;
+  padding: 18px;
+  background: var(--v4-hero, #efe3cf);
 }
 
 .aps-v4-search-offline-card__title {
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 700;
   line-height: 1.4;
-  color: var(--v4-sage-ink, #5c6a45);
+  color: var(--v4-ink, #201e1d);
 }
 
 .aps-v4-search-offline-card__body {
-  margin-top: 8px;
-  font-size: 11.5px;
+  margin-top: 7px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
-  color: color-mix(in srgb, var(--v4-sage-ink, #5c6a45) 75%, transparent);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .aps-v4-search-field.is-focused {

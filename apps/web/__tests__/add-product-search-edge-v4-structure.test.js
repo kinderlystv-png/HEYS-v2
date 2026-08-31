@@ -46,6 +46,36 @@ describe('add product search edge v4 canvas structure', () => {
     expect(addProductSource).toContain("className: 'aps-search-field' + (searchFieldFocused ? ' is-focused' : '')");
   });
 
+  it('states speak the canvas copy and say the offline part once', () => {
+    // Кадры дают каждому состоянию свой заголовок. Раньше три из четырёх были
+    // написаны своими словами, а офлайн говорил «Общая база недоступна» и в
+    // теле, и в списке галочек — то самое «прочитает про офлайн дважды»,
+    // от которого предостерегает кадр.
+    expect(addProductSource).toContain("'Нет сети'");
+    expect(addProductSource).toContain(
+      "'Личные продукты и наборы доступны, приём сохранится и уйдёт в облако, когда сеть вернётся.'");
+    expect(addProductSource).toContain("'Общая база недоступна'");
+    expect(addProductSource).toContain("'По этому запросу ничего нет'");
+    expect(addProductSource).toContain(
+      "'Здесь появятся продукты, которые вы едите чаще всего'");
+    expect(addProductSource).toContain("'Доступно офлайн'");
+    expect(addProductSource).toContain("'Доступно сейчас'");
+    expect(addProductSource).toContain("'Или сразу'");
+    expect(addProductSource).not.toContain("'✗ Поиск по общей базе'");
+    expect(addProductSource).not.toContain("'✓ Личные продукты из кэша'");
+    // Под ярусом стоят реальные доступные продукты, а не список галочек.
+    expect(addProductSource).toContain('tierRows');
+  });
+
+  it('keeps search state cards on the sand paper of the screen', () => {
+    // Карточка офлайна стояла на зелёной бумаге чужого набора.
+    expect(cssSource).not.toMatch(/\.aps-v4-search-offline-card[^}]*v4-sage-/s);
+    expect(cssSource).toMatch(
+      /\.aps-v4-search-offline-card \{[^}]*background: var\(--v4-hero/s);
+    expect(cssSource).toMatch(
+      /\.aps-v4-search-state--warn \.aps-v4-search-state__title \{[^}]*v4-act-text/s);
+  });
+
   it('uses fullscreen barcode layer and dedicated not-found screen', () => {
     expect(addProductSource).toContain('aps-barcode-overlay--v4-fullscreen');
     expect(addProductSource).toContain('aps-barcode-not-found-screen');
