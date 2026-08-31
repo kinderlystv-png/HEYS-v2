@@ -753,6 +753,21 @@ describe('каркас листа разбора против разбора к�
       + `не тронуто целиком ${untouched}, вне пар ${missed}; `
       + `больше всего пропущено: ${worst.join(' · ') || 'нет'}`,
     );
+    // Разбор долга «вердикт ссылается на гейт, который его строк не читает»:
+    // по HEYS_RAZBOR_DUMP гейт выкладывает поимённо, какие строки он трогает.
+    // Без него это знает только он сам, и сверить вердикты не с чем.
+    if (process.env.HEYS_RAZBOR_DUMP) {
+      const touched = [];
+      for (const item of perFrame) {
+        const all = [...razbor.keys()]
+          .filter((key) => key.startsWith(`${item.frame}|`))
+          .map((key) => key.slice(item.frame.length + 1));
+        for (const index of all) {
+          if (!item.missed.includes(index)) touched.push(`${item.frame} · ${index}`);
+        }
+      }
+      fs.writeFileSync(process.env.HEYS_RAZBOR_DUMP, touched.join(String.fromCharCode(10)), 'utf8');
+    }
     expect(covered).toBeGreaterThanOrEqual(COVERAGE_FLOOR);
     if (covered > COVERAGE_FLOOR) {
       throw new Error(
