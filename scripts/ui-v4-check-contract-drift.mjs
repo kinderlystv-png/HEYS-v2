@@ -161,14 +161,48 @@ function runCli() {
       console.error(state.fatal);
       process.exit(1);
     }
+    // Что именно втягивает перехеширование. Раньше оно молчало, и новая
+    // строка становилась долгом, а изменившаяся сохраняла прежний вердикт:
+    // гейт отвечал «в известном мне не поехало», а читали «всё сведено».
+    // 31 августа пакет дизайна принёс в Отчёты полсотни строк «карточка · …»
+    // с другой геометрией, и зона осталась зелёной.
+    const added = [];
+    const changed = [];
     for (const [key, value] of state.current) {
-      if (!zone.rows[key]) zone.rows[key] = { v: '?', f: 'Строка добавлена дизайнером, вердикта нет' };
-      zone.rows[key].h = hash(value);
+      const next = hash(value);
+      const row = zone.rows[key];
+      if (!row) {
+        added.push(key);
+        zone.rows[key] = { v: '?', f: 'Строка добавлена дизайнером, вердикта нет' };
+      } else if (row.h && row.h !== next && row.v !== '?') {
+        changed.push(key);
+      }
+      zone.rows[key].h = next;
     }
-    for (const key of state.gone) delete zone.rows[key];
+    const gone = [...state.gone];
+    for (const key of gone) delete zone.rows[key];
     // Пишем только свою зону: чужая работа в чужой коммит больше не попадает.
     writeZone(zoneId, zone);
-    console.log(`${zoneId}: отпечатки пересняты, строк ${state.current.size}.`);
+
+    const parts = [`строк ${state.current.size}`];
+    if (added.length) parts.push(`новых ${added.length}`);
+    if (gone.length) parts.push(`исчезло ${gone.length}`);
+    if (changed.length) parts.push(`изменилось под вердиктом ${changed.length}`);
+    console.log(`${zoneId}: отпечатки пересняты, ${parts.join(', ')}.`);
+
+    const show = (list) => list.slice(0, 5).map((key) => `«${key}»`).join(', ')
+      + (list.length > 5 ? ` и ещё ${list.length - 5}` : '');
+    if (added.length) {
+      console.log(`  новые строки ждут вердикта: ${show(added)}`);
+    }
+    if (gone.length) {
+      console.log(`  строки исчезли из контракта: ${show(gone)}`);
+    }
+    if (changed.length) {
+      // Самое опасное: строка переписана, а вердикт с фактом остался прежним.
+      // Он больше ничем не подтверждён — его нужно перечитать, а не переснять.
+      console.log(`  вердикт больше не подтверждён, перечитайте: ${show(changed)}`);
+    }
     return;
   }
 
