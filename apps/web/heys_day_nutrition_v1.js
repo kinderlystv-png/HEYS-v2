@@ -622,7 +622,13 @@
 
   // === Мелкая разметка ===============================================
 
-  function svgIcon(React, props, path) {
+  // Иконке бывает мало одной кривой: календарю нужна ещё рамка. Третий аргумент
+  // принимает либо кривую строкой, как раньше, либо список частей, где часть —
+  // строка (кривая) или объект-рамка {x, y, width, height, rx}. Больше видов
+  // частей не заводим: произвольная SVG-разметка здесь не нужна, а два соседних
+  // svgIcon в fingers живут со своей сигнатурой и сводить их сейчас не просили.
+  function svgIcon(React, props, parts) {
+    const list = Array.isArray(parts) ? parts : [parts];
     return React.createElement('svg', Object.assign({
       viewBox: '0 0 24 24',
       fill: 'none',
@@ -631,7 +637,9 @@
       strokeLinecap: 'round',
       strokeLinejoin: 'round',
       'aria-hidden': 'true'
-    }, props), React.createElement('path', { d: path }));
+    }, props), list.map((part, i) => (typeof part === 'string'
+      ? React.createElement('path', { key: i, d: part })
+      : React.createElement('rect', Object.assign({ key: i }, part)))));
   }
 
   function chevron(React, size) {
@@ -1515,11 +1523,25 @@
         // Контракт nutrition-tab «действия приёма»: четыре строки; у пустого приёма все погашены.
         actionRow('repeat', 'Повторить сегодня', 'M3 12a9 9 0 0 1 9-9c3.6 0 6.7 2.1 8.1 5.2M21 4v5h-5M21 12a9 9 0 0 1-9 9c-3.6 0-6.7-2.1-8.1-5.2M3 20v-5h5',
           () => { onClose?.(); actions.repeatTodayMeal?.(mealIndex); }, isEmpty),
-        actionRow('copy', 'Копировать приём', 'M9 9h11v11H9zM5 15V5.5A1.5 1.5 0 0 1 6.5 4H15',
+        // Тот же ответ №34, третий случай: кадр рисует верхний лист рамкой со
+        // скруглением 2,5, а код — кривой с острыми углами.
+        actionRow('copy', 'Копировать приём',
+          [{ x: 9, y: 9, width: 11, height: 11, rx: 2.5 }, 'M5 15V5.5A1.5 1.5 0 0 1 6.5 4H15'],
           () => { onClose?.(); actions.openCopyMealModal?.(mealIndex); }, isEmpty),
-        actionRow('move', 'Переместить на другой день', 'M4 7h11l-3-3M20 17H9l3 3',
+        // Ответ дизайнера №34: обмен стрелками означает «поменять местами», а
+        // не «перенести на день». Кадр «Приём · правка · рисунок 10–11» даёт
+        // календарь со стрелкой; иконка здесь единственное, что различает
+        // четыре одинаковых по длине строки при беглом взгляде.
+        actionRow('move', 'Переместить на другой день',
+          [{ x: 3, y: 5, width: 18, height: 16, rx: 3 }, 'M8 3v4M16 3v4M14 13l3 3-3 3'],
           () => { onClose?.(); actions.openMoveMealModal?.(mealIndex); }, isEmpty),
-        actionRow('preset', 'Сохранить набором', 'M5 4h14v16l-7-4-7 4z',
+        // Закладка означала «сохранить в избранное». Кадр даёт документ с
+        // загнутым углом. Форма взята из самого кадра, а не из разбора: разбор
+        // режет data-v на 95 знаках (долг дизайнера №45) и обрывает рисунок 12
+        // многоточием, тогда как разметка кадра полна — обе кривые целы.
+        actionRow('preset', 'Сохранить набором',
+          ['M5 5.5A1.5 1.5 0 0 1 6.5 4h8L19 8.5v10A1.5 1.5 0 0 1 17.5 20h-11A1.5 1.5 0 0 1 5 18.5z',
+            'M9 4v5h6'],
           () => { onClose?.(); actions.saveAsPreset?.(mealIndex); }, isEmpty),
 
         mealWave ? React.createElement('div', { className: 'nutrition-v4-sheet__why' },
