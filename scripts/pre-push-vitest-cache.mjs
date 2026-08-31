@@ -356,8 +356,49 @@ function attachWorkspaceRuntime(
   }
 }
 
+/**
+ * Снять junction-ссылки на настоящий node_modules до того, как временное
+ * дерево пойдёт под нож.
+ *
+ * Инцидент 31 августа 2026: удаление временного дерева проваливалось сквозь
+ * эти ссылки и вычищало реальный node_modules корня, а через вложенные
+ * ссылки apps/web/node_modules/@heys — и исходники пакетов. Дальше каждый
+ * push видел «missing runtime», звал pnpm install, тот падал на битом дереве,
+ * и круг повторялся. Ссылку снимаем сами: unlink убирает саму ссылку и не
+ * трогает то, на что она указывает.
+ */
+function detachWorkspaceRuntime(checkoutDir) {
+  for (const relative of [['node_modules'], ['apps', 'web', 'node_modules']]) {
+    const link = path.join(checkoutDir, ...relative);
+    let stat;
+    try {
+      stat = fs.lstatSync(link);
+    } catch {
+      continue; // ссылки нет — снимать нечего
+    }
+    if (!stat.isSymbolicLink()) continue; // настоящий каталог не трогаем
+    try {
+      fs.unlinkSync(link);
+    } catch {
+      try {
+        fs.rmdirSync(link); // Windows отдаёт junction только через rmdir
+      } catch {
+        // Не сняли — дальше чистить опасно, пусть каталог останется в temp.
+        throw new Error(`cannot detach workspace runtime link: ${link}`);
+      }
+    }
+  }
+}
+
 function removeCleanRefWorktree(worktree) {
   if (!worktree?.checkoutDir) return;
+  try {
+    detachWorkspaceRuntime(worktree.checkoutDir);
+  } catch (error) {
+    process.stderr.write(`[pre-push] ${error.message} — временное дерево оставлено, чтобы не задеть настоящий node_modules
+`);
+    return;
+  }
   spawnSync('git', ['worktree', 'remove', '--force', worktree.checkoutDir], {
     cwd: ROOT_DIR,
     stdio: 'ignore',
