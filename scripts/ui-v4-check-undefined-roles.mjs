@@ -77,7 +77,6 @@ const BASELINE = {
   'v4-sand-water': ['styles/modules/730-widgets-dashboard.css'],
   'v4-sand-wave': ['styles/modules/730-widgets-dashboard.css'],
   'v4-surface-2': ['styles/modules/000-base-and-gamification.css'],
-  'v4-tier': ['styles/modules/733-ui-v4-reports.css'],
   'v4-warn': ['styles/modules/730-widgets-dashboard.css'],
   'v4-warn-fill': ['styles/modules/733-ui-v4-reports.css'],
 };
