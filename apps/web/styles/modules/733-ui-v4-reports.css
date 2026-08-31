@@ -992,11 +992,14 @@
   padding: 2px 16px 12px;
 }
 
+/* Кадр «Визуал v4 · Отчёты», элементы 78 и 83: шапка листа и строки недели
+   стоят по центру с зазором 8; поля шапки 11/0/9, строки 12/0. Стояли зазор 10
+   и поля 11/0/7 — своих чисел у листа контракт не даёт, значит верен кадр. */
 .reports-v4-weeks__head {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 11px 0 7px;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 0 9px;
   font: 700 9px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1011,8 +1014,8 @@
 .reports-v4-weeks__row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 11px 0;
+  gap: 8px;
+  padding: 12px 0;
   /* Запасное значение равно роли: --v4-line это 8 %, а не 7 %. */
   border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }

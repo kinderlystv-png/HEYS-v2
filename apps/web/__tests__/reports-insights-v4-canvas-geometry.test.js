@@ -59,6 +59,13 @@ const RAZBOR_EXCEPTIONS = new Map([
   // Падение показателя: кадр просит --val-bad (#a8382b), у продукта ближайшая
   // роль --v4-bad-text (#b4442a). См. спор «роли цвета» в списке выше.
   ['Визуал v4 · Отчёты · 56|color', 'у продукта нет роли --val-bad, ближайшая --v4-bad-text'],
+  // Подписи колонок листа недель и пилюля частичной недели: тонов 35 % и 50 %
+  // у набора нет, стоят ближайшие --v4-ink-4 (38 %) и --v4-ink-2 (55 %).
+  ['Визуал v4 · Отчёты · 79|color', 'у набора нет тона 35 %, ближайший --v4-ink-4'],
+  ['Визуал v4 · Отчёты · 80|color', 'то же'],
+  ['Визуал v4 · Отчёты · 81|color', 'то же'],
+  ['Визуал v4 · Отчёты · 82|color', 'то же'],
+  ['Визуал v4 · Отчёты · 89|color', 'у набора нет тона 50 %, ближайший --v4-ink-2'],
 ]);
 
 const MATRIX = [
@@ -75,6 +82,28 @@ const MATRIX = [
   [59, '.reports-v4-discipline__delta',
     ['flex', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight']],
   [61, '.reports-v4-discipline__footnote', ['fontWeight', 'fontSize', 'lineHeight']],
+];
+
+// Лист «Неделя к неделе»: шапка колонок и строки недель.
+const WEEKS = [
+  [78, '.reports-v4-weeks__head', ['align', 'gap', 'padding']],
+  [79, ['.reports-v4-weeks__head', '.reports-v4-weeks__head-date'],
+    ['flex', 'fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform']],
+  [80, ['.reports-v4-weeks__head', '.reports-v4-weeks__head-kcal'],
+    ['flex', 'width', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'transform']],
+  [81, ['.reports-v4-weeks__head', '.reports-v4-weeks__head-weight'],
+    ['flex', 'width', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'transform']],
+  [82, ['.reports-v4-weeks__head', '.reports-v4-weeks__head-score'],
+    ['flex', 'width', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'transform']],
+  [83, '.reports-v4-weeks__row', ['align', 'gap', 'padding']],
+  [84, '.reports-v4-weeks__date', ['flex', 'align', 'gap']],
+  [86, '.reports-v4-weeks__kcal',
+    ['flex', 'width', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [87, '.reports-v4-weeks__weight', ['flex', 'width', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight']],
+  [88, '.reports-v4-weeks__score',
+    ['flex', 'width', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [89, '.reports-v4-weeks__partial',
+    ['flex', 'fontWeight', 'fontSize', 'lineHeight', 'padding', 'radius', 'background']],
 ];
 
 const HEADER = [
@@ -98,6 +127,12 @@ describe('Отчёты · разбор кадров канваса', () => {
     })).toEqual([]);
   });
 
+  it('лист «Неделя к неделе» совпадает с продуктом', () => {
+    expect(compare({
+      razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: WEEKS,
+    })).toEqual([]);
+  });
+
   it('матрица Дисциплины совпадает с продуктом построчно', () => {
     expect(compare({
       razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: MATRIX,
@@ -105,7 +140,7 @@ describe('Отчёты · разбор кадров канваса', () => {
   });
 
   it('отступления разбора названы и не разрастаются молча', () => {
-    expect(RAZBOR_EXCEPTIONS.size).toBe(4);
+    expect(RAZBOR_EXCEPTIONS.size).toBe(9);
   });
 });
 
