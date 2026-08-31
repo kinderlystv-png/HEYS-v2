@@ -210,8 +210,9 @@
    ей не нужен — ряд задаёт зазор 8. Кегль и тон приведены к контракту
    (11/1,5 чернил 45 %); стояло 11,5/1,35 ролью --v4-ink-4, которая даёт 38 %,
    при запасном значении, обещавшем 45 — код читался вернее, чем рисовал. */
+/* Элемент 55: основание наблюдения — 11,5/1,5 тоном чернил 45 %. */
 .insights-v4-attention__basis {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
@@ -270,19 +271,24 @@
   gap: 12px;
   width: 100%;
   min-height: 48px;
-  margin-top: 4px;
-  padding: 2px 16px;
+  /* Кадр «Инсайты», элемент 71: строка входа отбита от блока над ней на 12 и
+     держит поля 16/18. Стояло 4 и 2/16 — высоту давала одна min-height, и
+     строка липла к предыдущему блоку. */
+  margin-top: 12px;
+  padding: 16px 18px;
   border: none;
   border-radius: 20px;
   background: var(--v4-surface, #f7efe2);
   cursor: pointer;
 }
 
+/* Элемент 72: «Подробно» — 700 тоном --ac, как шеврон рядом. Стояло 600
+   чернилами: единственное действие карточки выглядело её подписью. */
 .insights-v4-detail-link__text {
   font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--v4-ink, #201e1d);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .insights-v4-detail-link__chevron {
