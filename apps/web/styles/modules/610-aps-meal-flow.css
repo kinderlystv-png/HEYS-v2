@@ -1916,11 +1916,14 @@
   gap: 8px;
 }
 
+/* Строки набора стояли на прежней системе токенов: чернила
+   --color-text-primary и --color-text-secondary — оба холодные и одинаковые
+   во всех наборах. */
 .mpr-preview-item-name {
   flex: 1;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text-primary, #0f172a);
+  color: var(--v4-ink, #201e1d);
   word-break: break-word;
   line-height: 1.3;
 }
@@ -1928,7 +1931,7 @@
 .mpr-preview-item-kcal {
   flex: 1;
   font-size: 11px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .mpr-preview-item-grams {
@@ -1999,29 +2002,45 @@
   color: var(--color-text-secondary, #64748b);
 }
 
+/* Кадр «Добавление · правка набора»: кружок 30 радиусом 999 фоном --c2. Стоял
+   квадрат 28 с холодной рамкой прежней системы, а наведение красило его в
+   красный #fee2e2/#dc2626 — цвета, которых нет ни в одном наборе. */
 .mpr-preview-item-toggle {
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 6px;
+  box-sizing: border-box;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  margin: -7px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
   background: transparent;
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--v4-act-text, #8a4a20);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.15s;
 }
 
-@media (hover: hover) {
-  .mpr-preview-item-toggle:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: var(--v4-warn-2, #dc2626);
-  }
+.mpr-preview-item-toggle::before {
+  content: '';
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+}
+
+.mpr-preview-item-toggle > * {
+  position: relative;
+}
+
+.mpr-preview-item-toggle:active {
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 /* Строка «итог в правке набора»: карточка --c1 радиусом 16 полями 12/14, слева
