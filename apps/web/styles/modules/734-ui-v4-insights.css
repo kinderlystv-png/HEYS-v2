@@ -685,7 +685,10 @@
   height: 8px;
   border-radius: 999px;
   overflow: hidden;
-  background: var(--v4-chip, rgba(0, 0, 0, 0.07));
+  /* Дорожка полосы, а не поверхность чипа: под сегментами БЖУ она видна
+     только там, где приём не набрал сумму, и на тоне карточки этот кусок
+     пропадал. */
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
 }
 
 .insights-v4-nutrition__bzhu-seg--prot {
@@ -861,7 +864,9 @@
   flex: 1;
   height: 8px;
   border-radius: 999px;
-  background: var(--v4-chip, rgba(0, 0, 0, 0.08));
+  /* Дорожка полосы, а не поверхность чипа. Пятое место в зоне с этой
+     подменой; теперь её ловит гейт канона. */
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
 }
 
 .insights-v4-pheno__dot {
