@@ -960,11 +960,20 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+/* Оба кадра — «метаболизм · 13» и «подробно · 17» — просят этим строкам
+   отступ сверху 10; стояло 8. Кегль у них разный: сноска осей 10,5, а
+   закрытое состояние 11, и одно правило обоим его не даёт — поэтому кегль
+   закрытого вынесен ниже. Строки контракта под эти числа нет, значит верен
+   кадр. */
 .insights-v4-pheno__note,
 .insights-v4-pheno__locked {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.insights-v4-pheno__locked {
+  font-size: 11px;
 }
 
 .insights-v4-pheno__uses {
