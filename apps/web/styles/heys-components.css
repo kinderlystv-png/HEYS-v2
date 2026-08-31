@@ -12133,14 +12133,16 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   padding: 0 13px;
   border: 0;
   border-radius: 999px;
-  background: var(--v4-line, #e5e7eb);
+  /* Разбор кадра даёт кнопке чернила 7 %, а не роль линии: линия рисует
+     границы, и заливать ею плашку значит занимать роль не по делу. */
+  background: color-mix(in srgb, var(--v4-ink, #201e1d) 7%, transparent);
   font-weight: 700;
   /* Кадр «Отмена · одно удаление», элемент 09: 11 px. Стояло 12 — кнопка была
      одного кегля с текстом слева и спорила с ним за внимание, хотя текст
      называет событие, а кнопка лишь предлагает его отменить. */
   font-size: 11px;
   line-height: 1;
-  color: var(--v4-act-text, #1d4ed8);
+  color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   position: relative;
 }
