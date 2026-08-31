@@ -241,9 +241,13 @@
   };
 
   // Текст для значений оценок
-  const getMoodText = (v) => v <= 2 ? 'Плохо' : v <= 4 ? 'Так себе' : v <= 6 ? 'Норм' : v <= 8 ? 'Хорошо' : 'Отлично';
-  const getWellbeingText = (v) => v <= 2 ? 'Плохо' : v <= 4 ? 'Слабость' : v <= 6 ? 'Норм' : v <= 8 ? 'Хорошо' : 'Отлично';
-  const getStressText = (v) => v <= 2 ? 'Спокоен' : v <= 4 ? 'Немного' : v <= 6 ? 'Средне' : v <= 8 ? 'Много' : 'Очень';
+  // Строка «тон заполнения и слова»: пороги на все три шкалы одни — 1–3, 4–6,
+  // 7–10, — но читаются по своей стороне. Пять ступеней через два дробили одну
+  // и ту же тройку на «Плохо / Так себе / Норм / Хорошо / Отлично», и слово
+  // переставало совпадать с тоном заполнения.
+  const getMoodText = (v) => v <= 3 ? 'слабость' : v <= 6 ? 'так себе' : 'хорошо';
+  const getWellbeingText = (v) => v <= 3 ? 'слабость' : v <= 6 ? 'так себе' : 'бодрость';
+  const getStressText = (v) => v <= 3 ? 'спокоен' : v <= 6 ? 'напряжён' : 'на пределе';
 
   // Общий индикатор состояния
   const getOverallStatus = (mood, wellbeing, stress) => {
@@ -862,9 +866,13 @@
 
   const INFLUENCE_CHIPS = ['Радость', 'Успех', 'Встреча', 'Природа', 'Недосып'];
 
+  // Три полосы, а не две: шалфей --gr2, средний тон --ovl, тревожный --val-bad.
+  // Стресс читается наоборот — у него тревожен верх шкалы.
   function scaleTone(field, value) {
-    if (field === 'stress') return value >= 6 ? 'warn' : 'ok';
-    return value <= 4 ? 'warn' : 'ok';
+    const band = value <= 3 ? 'low' : value <= 6 ? 'mid' : 'high';
+    if (band === 'mid') return 'mid';
+    if (field === 'stress') return band === 'high' ? 'bad' : 'ok';
+    return band === 'low' ? 'bad' : 'ok';
   }
 
   // Подписи краёв шкалы: кадр называет их у каждой шкалы своими словами. Без
@@ -880,7 +888,9 @@
     const pct = ((Number(value) - 1) / 9) * 100;
     // Заливка ролями набора вместо литералов. Тревожная половина шкалы красилась
     // #d99a63 — это тон нахлёста волны, а кадр называет здесь --val-bad.
-    const fill = tone === 'ok' ? 'var(--v4-ok-fill, #7a8a5e)' : 'var(--v4-bad-text, #b4442a)';
+    const fill = tone === 'ok' ? 'var(--v4-ok-fill, #7a8a5e)'
+      : tone === 'mid' ? 'var(--v4-wave-overlap, #d99a63)'
+        : 'var(--v4-bad-text, #b4442a)';
     const ends = MOOD_SCALE_ENDS[field] || ['', ''];
     return React.createElement('div', { className: 'meal-mood-scale' },
       React.createElement('div', { className: 'meal-mood-scale__top' },

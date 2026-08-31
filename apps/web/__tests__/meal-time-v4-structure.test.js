@@ -86,9 +86,14 @@ describe('meal time step v4 structure', () => {
     expect(cssSource).toMatch(
       /\.meal-mood-scale__slider::-webkit-slider-thumb \{[^}]*width: 24px;/s);
     expect(cssSource).toMatch(/\.meal-mood-chip \{[^}]*min-height: 44px;/s);
-    // Тревожная половина — --val-bad, а не акцент действий.
+    // Три полосы, а не две: строка «тон заполнения и слова» даёт 1–3, 4–6, 7–10.
     expect(cssSource).toMatch(
-      /\.meal-mood-scale__value--warn \{[^}]*var\(--v4-bad-text/s);
+      /\.meal-mood-scale__value--bad \{[^}]*var\(--v4-bad-text/s);
+    expect(cssSource).toContain('.meal-mood-scale__value--mid');
+    expect(mealStepSource).toContain("value <= 3 ? 'low' : value <= 6 ? 'mid' : 'high'");
+    // Слова совпадают со строкой контракта по своей стороне шкалы.
+    expect(mealStepSource).toContain("v <= 6 ? 'так себе' : 'хорошо'");
+    expect(mealStepSource).toContain("v <= 6 ? 'напряжён' : 'на пределе'");
   });
 
   it('сведённые блоки шага не заперты на песочных ролях', () => {

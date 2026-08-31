@@ -544,11 +544,14 @@
 }
 
 .meal-mood-scale__label {
-  font-size: 13px;
-  font-weight: 700;
+  /* Строка «вид · ползунки оценок»: название группы 10,5 px/600 тоном чернил
+     42 %, значение справа — 13 px/700. Стояли оба 13 px/700, и название спорило
+     по весу с собственным числом. */
+  font-size: 10.5px;
+  font-weight: 600;
   line-height: 1;
   letter-spacing: 0;
-  color: var(--v4-ink, #201e1d);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
 }
 
 .meal-mood-scale__value {
@@ -562,8 +565,12 @@
   color: var(--v4-sand-ok-text, #5c6a45);
 }
 
-.meal-mood-scale__value--warn {
-  /* Кадр даёт тревожной половине --val-bad, а не акцент: акцентом на этом шаге
+.meal-mood-scale__value--mid {
+  color: var(--v4-wave-overlap, #d99a63);
+}
+
+.meal-mood-scale__value--bad {
+  /* Кадр даёт тревожной полосе --val-bad, а не акцент: акцентом на этом шаге
      покрашены действия, и число «3 · слабость» читалось кнопкой. */
   color: var(--v4-bad-text, #b4442a);
 }
@@ -674,14 +681,15 @@
 
 /* Кадр: цель 44, поля 0/15. Чип высотой 30 — ниже минимальной цели касания,
    а промахиваться по «что повлияло» приходится столько же раз, сколько по
-   любой другой кнопке. */
+   любой другой кнопке. Радиус 14, а не 999: пилюля спорила с формой из строки
+   «вид · чипы «Что повлияло»». */
 .meal-mood-chip {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
   padding: 0 15px;
   border: none;
-  border-radius: 999px;
+  border-radius: 14px;
   background: var(--v4-surface, #f7efe2);
   font-size: 12px;
   font-weight: 600;
@@ -691,8 +699,8 @@
 }
 
 .meal-mood-chip.is-on {
-  background: var(--v4-sand-hero, #efe3cf);
-  color: var(--v4-sand-act-deep, #8a4a20);
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
   font-weight: 700;
 }
 
