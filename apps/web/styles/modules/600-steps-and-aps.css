@@ -1376,10 +1376,13 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   color: var(--color-blue-300, #93c5fd);
 }
 
+/* Ярус «Распознано» тоном «идёт хорошо» набора. Прежде #059669 — изумруд
+   прежней системы: подложка блока уже была сведена, а текст на ней остался
+   старым, и половина блока жила в другом наборе. */
 .aps-preview-title {
   font-size: 12px;
   font-weight: 600;
-  color: #059669;
+  color: var(--v4-ok-text, #5c6a45);
   margin-bottom: 6px;
 }
 
@@ -1410,9 +1413,11 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   margin-bottom: 4px;
 }
 
+/* Калорийность в строке разбора — тоном акцента: кадр «Продукт · вставка
+   строки» строкой 20 даёт ей --ac, а не зелёный. */
 .aps-preview-kcal {
   font-weight: 700;
-  color: #059669;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$='dark'] .aps-preview-kcal {
