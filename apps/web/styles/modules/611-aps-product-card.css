@@ -1210,26 +1210,25 @@
   flex-wrap: wrap;
 }
 
+/* Кнопка промпта — вторичная набора: заливка вместо рамки. Прежде белая
+   плашка на легаси-переменных снятой системы (--border/--card/--text), а при
+   наведении подъём с тенью и синяя рамка --acc с запасным #3b82f6. */
 .aps-create-prompt-btn {
-  border: 1px solid var(--border, #e5e7eb);
-  background: var(--card, #fff);
-  color: var(--text, #111827);
-  border-radius: 10px;
-  padding: 8px 12px;
+  border: none;
+  background: var(--v4-surface, #f7efe2);
+  color: var(--v4-act-text, #8a4a20);
+  border-radius: 999px;
+  min-height: 38px;
+  padding: 0 14px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    border-color 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 @media (hover: hover) {
   .aps-create-prompt-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-    border-color: var(--acc, #3b82f6);
+    background: var(--v4-hero, #efe3cf);
   }
 }
 
@@ -1274,10 +1273,13 @@
   min-width: 0;
   height: 42px;
   padding: 0 11px;
-  border: 2px solid var(--border, #e5e7eb);
-  border-radius: 10px;
-  background: var(--card, #fff);
-  color: var(--text, #111827);
+  /* Поля кода и бренда — заливка набора без рамки: в кадре поля отличаются от
+     листа заливкой, а контур вокруг заливки обводит то, что и так видно.
+     Прежде рамка 2 px --border и белая --card из снятой системы. */
+  border: none;
+  border-radius: 14px;
+  background: var(--v4-surface, #f7efe2);
+  color: var(--v4-ink, #201e1d);
   font: inherit;
   font-size: 14px;
   box-sizing: border-box;
@@ -1286,7 +1288,7 @@
 .aps-create-barcode-input:focus,
 .aps-create-brand-input:focus {
   outline: none;
-  border-color: var(--acc, #2563eb);
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
@@ -1397,19 +1399,21 @@
   padding: 12px;
   font-size: 14px;
   font-family: inherit;
-  border: 2px solid var(--border);
-  border-radius: 10px;
-  background: var(--card);
-  color: var(--text);
+  /* Поле вставки строки — той же заливкой, что поля выше. Прежде голые
+     легаси-переменные снятой системы без запасных значений вовсе: на наборе
+     без них поле оставалось прозрачным с чёрной рамкой браузера. */
+  border: none;
+  border-radius: 14px;
+  background: var(--v4-surface, #f7efe2);
+  color: var(--v4-ink, #201e1d);
   resize: vertical;
-  transition: border-color 0.2s;
+  transition: box-shadow 0.2s ease;
   box-sizing: border-box;
 }
 
 .aps-create-textarea:focus {
   outline: none;
-  border-color: var(--acc);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
 }
 
 .aps-create-textarea::placeholder {
