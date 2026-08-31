@@ -345,4 +345,48 @@ describe('чек-ин v4: геометрия по контракту канва�
       expect(cs.paddingBottom).toBe('16px');
     }
   });
+
+  it('карточка шага: заголовок 16/700 и пояснение через 5 — по контракту, не по кадрам', () => {
+    // Форма карточки закреплена выше, а набор внутри неё держался только
+    // комментарием в CSS. Отступление то же самое и по той же причине, но
+    // названо оно было в двух местах из трёх: контракт «вид карточки шага»
+    // говорит «заголовок 16 px/700 чернилами, под заголовком через 5 пояснение
+    // 11,5 px/500 тоном чернил 50 %», а шесть кадров набирают мельче —
+    // заголовок 600 13/1, пояснение 500 11/1,4 с отступом 3.
+    //
+    // Кадры, от которых здесь отступаем поимённо: «Чек-ин · остальное · 33»,
+    // «замеры просрочены · 36» и «· 37», «остальное со строкой периода · 18»,
+    // «остальное на неделе периода · 23» и «· 24».
+    //
+    // Правило групповое (`.mc-rest-cold-title, .mc-rest-card-title` и
+    // `.mc-rest-cold-hint, .mc-rest-card-hint, .mc-recorded-hint,
+    // .mc-recorded-sub`), поэтому проверяются обе карточки: правка ради одной
+    // задела бы вторую молча.
+    document.body.innerHTML = `
+      <div class="mc-modal mc-modal--daily">
+        <div class="mc-rest-step">
+          <div class="mc-rest-cold">
+            <div class="mc-rest-cold-title">Холодный душ</div>
+            <div class="mc-rest-cold-hint">Серия не прервётся</div>
+          </div>
+          <div class="mc-rest-card mc-rest-card--routine">
+            <div class="mc-rest-card-title">Рутина</div>
+            <div class="mc-rest-card-hint">Без обхвата виден только вес</div>
+          </div>
+        </div>
+      </div>`;
+
+    for (const sel of ['.mc-rest-cold-title', '.mc-rest-card-title']) {
+      const cs = getComputedStyle(document.querySelector(sel));
+      expect(cs.fontSize, sel).toBe('16px');
+      expect(cs.fontWeight, sel).toBe('700');
+    }
+
+    for (const sel of ['.mc-rest-cold-hint', '.mc-rest-card-hint']) {
+      const cs = getComputedStyle(document.querySelector(sel));
+      expect(cs.fontSize, sel).toBe('11.5px');
+      expect(cs.fontWeight, sel).toBe('500');
+      expect(cs.marginTop, sel).toBe('5px');
+    }
+  });
 });
