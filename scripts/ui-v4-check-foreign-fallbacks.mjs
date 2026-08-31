@@ -56,7 +56,7 @@ const BASELINE = {
   '400-water-and-hydration.css': 18,
   '500-pwa-and-offline.css': 80,
   '600-steps-and-aps.css': 40,
-  '610-aps-meal-flow.css': 40,
+  '610-aps-meal-flow.css': 39,
   '611-aps-product-card.css': 23,
   '612-training-step.css': 12,
   '613-cycle-ui.css': 8,
@@ -66,7 +66,7 @@ const BASELINE = {
   '725-metabolic-intelligence.css': 189,
   '730-widgets-dashboard.css': 213,
   '731-ui-v4-activity.css': 7,
-  '732-ui-v4-nutrition.css': 81,
+  '732-ui-v4-nutrition.css': 79,
   '733-ui-v4-login-theme.css': 4,
   '733-ui-v4-reports.css': 21,
   '734-ui-v4-curator-panel.css': 6,
@@ -86,7 +86,7 @@ const BASELINE = {
   'critical.css': 32,
   'drums-finger-trainer.css': 120,
   'fingers.css': 103,
-  'heys-components.css': 535,
+  'heys-components.css': 533,
 };
 
 function readPalette() {
