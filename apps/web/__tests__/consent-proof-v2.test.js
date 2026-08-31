@@ -2,7 +2,13 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import test from 'node:test';
+// Раннер — vitest, а не node:test. Файл лежит среди vitest-тестов и
+// собирается ими: под конфигом apps/web он молча проходил как «no tests»,
+// под корневым падал «No test suite found». То есть восемь проверок
+// согласий и юридических версий не выполнялись нигде — `pnpm test:node`
+// берёт только scripts/**/*.test.mjs. Assert оставлен node'овский: тела
+// проверок от этого не меняются.
+import { test } from 'vitest';
 
 const root = path.resolve(import.meta.dirname, '../../..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
@@ -14,7 +20,18 @@ const legalHashCorrectionMigration = read(
 );
 const legalActivationMigrationV110 = read('database/2026-08-08_activate_user_agreement_v1_10.sql');
 const legalActivationMigrationV111 = read('database/2026-08-14_activate_legal_v1_11.sql');
-const registryMigrations = `${migration}\n${legalActivationMigration}\n${legalActivationMigrationV19}\n${legalHashCorrectionMigration}\n${legalActivationMigrationV110}\n${legalActivationMigrationV111}`;
+// Реестр собирается из всех миграций, которые его трогают, а не из списка
+// имён. Список ушёл в прошлое дважды: активацию push 1.2 (15 августа) и
+// кураторского push 1.1 (16 августа) в него не дописали, и проверка «у каждого
+// типа согласия текущая версия манифеста зарегистрирована активной» смотрела
+// мимо них. Заметить это было нечем: файл не запускался ни одним раннером.
+const registryMigrations = fs
+  .readdirSync(path.join(root, 'database'))
+  .filter((name) => name.endsWith('.sql'))
+  .sort()
+  .map((name) => read(`database/${name}`))
+  .filter((sql) => sql.includes('legal_consent_registry'))
+  .join('\n');
 const manifest = JSON.parse(read('docs/legal/legal-document-manifest.json'));
 const migrationManifest = JSON.parse(read('scripts/db/migrations/manifest.json'));
 

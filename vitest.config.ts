@@ -119,16 +119,23 @@ export default defineConfig({
         },
       },
     },
-    // Pool configuration for stability.
-    // NOTE: In large suites we occasionally see vitest RPC timeouts:
-    //   "Error: [vitest-worker]: Timeout calling \"onTaskUpdate\""
-    // Reducing worker/process fan-out and heavy reporting makes runs deterministic.
+    // Каждый файл — свой процесс. Так же настроен apps/web/vitest.config.ts, и
+    // это важно: корневой проект собирает те же 529 файлов apps/web (у него
+    // include по умолчанию), то есть одни и те же тесты умеют запускаться под
+    // двумя конфигами.
+    //
+    // Здесь стоял singleFork: true — «reducing worker fan-out makes runs
+    // deterministic» против RPC-таймаутов. Ровно от этой настройки apps/web
+    // отказался 2026-05-22: в общем процессе файлы делят global.HEYS, window и
+    // подменённый localStorage, и падает не тот, кто испортил, а следующий.
+    // Замер 31 августа на apps/web/__tests__: singleFork — 143 файла и 896
+    // тестов красных; без него — 518 из 520 зелёных, 6427 тестов, ноль
+    // упавших, и ни одного RPC-таймаута. Оставшийся файл — не vitest вовсе
+    // (см. consent-proof-v2).
+    //
+    // По отдельности те же файлы всегда были зелёными, поэтому расхождение
+    // годами читалось как «флак», а не как разделяемое состояние.
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
 
     // Reporter configuration for better output.
     // - verbose: opt-in (can generate a lot of task updates)
