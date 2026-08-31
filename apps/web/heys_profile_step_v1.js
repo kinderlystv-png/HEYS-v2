@@ -598,13 +598,14 @@
               : null),
           }
         }),
+        // Кадр «имя не подходит»: причина 600 11/1,4 тоном --ac2 через 6,
+        // объяснение 500 11/1,5 чернилами 42 % через 5. Стояло 12 px без
+        // интерлиньяжа и без отступов — обе строки липли к полю.
         nameError && firstName && React.createElement('div', {
-          className: 'text-xs font-semibold',
-          style: { color: '#a1471c' }
+          style: { fontSize: 11, fontWeight: 600, lineHeight: 1.4, marginTop: 6, color: '#a1471c' }
         }, nameError),
         nameError && firstName && React.createElement('div', {
-          className: 'text-xs',
-          style: { color: 'rgba(0,0,0,.42)' }
+          style: { fontSize: 11, fontWeight: 500, lineHeight: 1.5, marginTop: 5, color: 'rgba(0,0,0,.42)' }
         }, 'Куратор обращается к вам по имени, поэтому оно должно читаться.')
       ),
       React.createElement('div', { className: 'flex flex-col gap-2' },
@@ -742,15 +743,29 @@
             onChange({ ...data, birthYear: y, birthMonth: m, birthDay: d });
           },
           max: `${minAdultBirthYear()}-12-31`,
-          className: 'w-full px-4 py-3 border border-gray-300 rounded-xl'
+          // Запасной путь, когда колесо недоступно; кадр его не рисует.
+          // Вид взят у соседнего поля имени, а не оставлен на border-gray-300 —
+          // серой рамке снятой системы, единственной на этом шаге.
+          className: 'w-full',
+          style: {
+            minHeight: 44,
+            borderRadius: 18,
+            border: 'none',
+            padding: '12px 15px',
+            background: '#f7efe2',
+            font: '600 13px/1.5 Figtree, system-ui, sans-serif',
+            color: '#201e1d',
+          }
         }),
+        // Кадр «возраст меньше 18»: плашка --tint радиусом 16 с полями 12/14
+        // через 12, заголовок 700 12/1,4 тоном --ac2, объяснение 500 11,5/1,55
+        // чернилами 55 % через 5. Та же форма, что у плашки «ниже нормы».
         under18 && React.createElement('div', {
-          className: 'rounded-2xl p-3 mt-3',
-          style: { background: '#f6e6dd' }
+          style: { background: '#f6e6dd', borderRadius: 16, padding: '12px 14px', marginTop: 12 }
         },
-          React.createElement('div', { className: 'text-xs font-bold', style: { color: '#a1471c' } },
+          React.createElement('div', { style: { fontSize: 12, fontWeight: 700, lineHeight: 1.4, color: '#a1471c' } },
             'Приложением можно пользоваться с 18 лет'),
-          React.createElement('div', { className: 'text-xs mt-1', style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.55 } },
+          React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, marginTop: 5, color: 'rgba(0,0,0,.55)', lineHeight: 1.55 } },
             'Программа рассчитана на взрослых, и документы подписывает совершеннолетний. Колесо дальше не идёт.')
         )
       ),
