@@ -916,11 +916,6 @@
   box-shadow: var(--heys-diary-glass-card-shadow, 0 2px 12px rgba(0, 0, 0, 0.3));
 }
 
-[data-theme$="dark"] .cascade-card__subtitle,
-[data-theme$="dark"] .cascade-card__chevron {
-  color: var(--text-secondary, #94a3b8);
-}
-
 [data-theme$="dark"] .cascade-card__body {
   border-top-color: var(--heys-diary-outline-divider-dark, rgba(244, 63, 94, 0.48));
 }
@@ -977,7 +972,6 @@
 
 [data-theme$="dark"] .cascade-next-step {
   background: rgba(59, 130, 246, 0.1);
-  color: var(--text-secondary, #94a3b8);
 }
 
 [data-theme$="dark"] .cascade-card__stats-panel {
@@ -1023,11 +1017,6 @@
 
 [data-theme$="dark"] .cascade-card__stats-kicker {
   color: #67e8f9;
-}
-
-[data-theme$="dark"] .cascade-card__stats-caption,
-[data-theme$="dark"] .cascade-card__stat-label {
-  color: var(--text-secondary, #94a3b8);
 }
 
 [data-theme$="dark"] .cascade-card__stat-value {
