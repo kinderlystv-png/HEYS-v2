@@ -20,6 +20,19 @@
  *   `absent`    — имени нет в названном файле. Ищем, в каком файле оно есть; при
  *                 единственном кандидате переписываем и файл, и строку.
  *
+ * Два запрета, оба из ложных предложений 31.08 — их поймало чтение плана
+ * глазами, а не сама чинилка:
+ *
+ *   1. **Несколько адресов в записи — не чиним.** Правило «имя нашлось ровно в
+ *      одном файле» ничего не говорит о том, **какой** из адресов чинить.
+ *      Семь предложений подряд привязывали найденное имя к соседнему адресу:
+ *      `showForecast` относится к спарклайнам, а переписать предлагалось адрес
+ *      точки на завтра, который верен.
+ *   2. **Имя файла без проверки строки — не чиним.** Восстановить имя и
+ *      оставить прежний номер значит перевести дефект из жёсткого в мягкий:
+ *      адрес станет разрешимым и **перестанет падать**, оставаясь ложным.
+ *      Пятнадцать предложений так уехали бы на 40–712 строк мимо.
+ *
  * Сначала показывает план. Правит только с `--apply`.
  *
  * Использование:
@@ -110,7 +123,24 @@ function filesByShorthand(shorthand) {
 const plan = [];
 const unresolved = [];
 
+/** Сколько адресов в доказательстве этой строки. Больше одного — не чиним. */
+const ADDRESS_RE = /[A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:js|mjs|ts|tsx|css|html|sql):\d+/g;
+const evidenceCache = new Map();
+function addressCount(zone, key) {
+  const id = `${zone}::${key}`;
+  if (!evidenceCache.has(id)) {
+    const data = JSON.parse(fs.readFileSync(path.join(VERDICTS, `${zone}.json`), 'utf8'));
+    const f = data.rows?.[key]?.f || '';
+    evidenceCache.set(id, (f.match(ADDRESS_RE) || []).length);
+  }
+  return evidenceCache.get(id);
+}
+
 function push(kind, item, oldAddr, newAddr, why) {
+  if (addressCount(item.zone, item.key) > 1) {
+    unresolved.push({ ...item, kind, candidates: [], note: 'в записи несколько адресов' });
+    return;
+  }
   plan.push({ kind, zone: item.zone, key: item.key, oldAddr, newAddr, why });
 }
 
@@ -123,15 +153,31 @@ for (const kind of ['missing', 'truncated']) {
       continue;
     }
     const target = candidates[0];
+    // Имя без строки — половина адреса. Проверяем, что по этому номеру в новом
+    // файле действительно стоит что-то из названного доказательством; если нет
+    // — ищем имя и ставим его строку; если и это не вышло, отдаём человеку.
     const lines = linesOf(target);
-    const line = lines && item.line <= lines.length ? item.line : 0;
-    push(
-      kind,
-      item,
-      `${item.rel}:${item.line}`,
-      line ? `${target}:${line}` : `${target}`,
-      line ? 'имя файла восстановлено' : 'имя восстановлено, строка снята как недостоверная',
-    );
+    const names = item.names || [];
+    let line = 0;
+    let why = '';
+    if (lines && item.line <= lines.length && names.some((n) => lines[item.line - 1]?.includes(n))) {
+      line = item.line;
+      why = 'имя файла восстановлено, строка сошлась';
+    } else {
+      for (const n of names) {
+        const l = lineOfName(target, n);
+        if (l) {
+          line = l;
+          why = `имя файла восстановлено, строка найдена по «${n}»`;
+          break;
+        }
+      }
+    }
+    if (!line) {
+      unresolved.push({ ...item, kind, candidates: [target], note: 'строка не подтверждается' });
+      continue;
+    }
+    push(kind, item, `${item.rel}:${item.line}`, `${target}:${line}`, why);
   }
 }
 
