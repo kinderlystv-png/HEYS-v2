@@ -133,3 +133,19 @@ describe('ClientAccessCodeSetup keypad', () => {
     expect(document.querySelector('.heys-auth-change-code')).toBeTruthy();
   });
 });
+
+describe('код доступа · оба факта в момент создания', () => {
+  it('плашка стоит на шаге создания, а не только после сброса', () => {
+    // Ответ дизайнера №1: «заменяет подпись» жило на экране подписания,
+    // «никому не сообщайте» — только после сброса; большинство не видело ни
+    // того, ни другого в момент, когда код придумывают.
+    const src = readFileSync(
+      resolve(__dirname, '../heys_client_access_code_setup_v1.js'), 'utf8');
+    expect(src).toContain('Код доступа заменяет собственноручную подпись.');
+    expect(src).toContain('Не сообщайте его никому, включая куратора.');
+    // Условие показа — сам шаг, а не признак сброса.
+    expect(src).not.toContain("skipPepAgreement && phase === 'code'");
+    // Строка про прежний код остаётся, но только после сброса.
+    expect(src).toContain('Прежний код перестал работать');
+  });
+});

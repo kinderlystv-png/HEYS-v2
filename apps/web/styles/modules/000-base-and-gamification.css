@@ -8083,7 +8083,8 @@ body:has(.offline-banner) .wrap {
 /* Ночь до 03:00 — нейтральный тон, тот же грунт, что у «сегодня»
    (контракт date-remainders, «ночь до 03:00»: «капсула нейтральная — не
    терракотовая, как на чужом дне»; кадр «Капсула · ночь» рисует --c1).
-   Прежний --v4-past красил ночь ровно тем же тоном, что чужой день.
+   Прежний --v4-past красил ночь ровно тем же тоном, что чужой день; сама роль
+   снята 31 августа ответом дизайнера №13.
    Кнопки «Сегодня» в ночной капсуле нет, поэтому и раскладка обычная —
    текст по центру. */
 .date-picker--v4 .date-picker-trigger--night {
@@ -8123,7 +8124,7 @@ body:has(.offline-banner) .wrap {
 
 .date-picker--v4 .date-picker-trigger--not-today {
   /* v4-intentional */
-  background: var(--v4-past);
+  background: var(--v4-tint);
   border: none;
   gap: 0;
   padding: 0 4px 0 0;
@@ -8213,15 +8214,21 @@ body:has(.offline-banner) .wrap {
 
 .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
   /* v4-intentional */
-  background: var(--v4-past);
+  background: var(--v4-tint);
 }
 
-/* Контракт «вид чужого дня»: заливка капсулы И ОБОИХ КРУЖКОВ меняется на тинт.
+/* Ответ дизайнера №13 (31 августа): роль --v4-past снята, чужой день красится
+   тем же --v4-tint, что и подсказки. Прошлый день — приглушённая версия той же
+   капсулы, а не отдельное состояние со своим цветом; сиреневый #e4e0f2 в синем
+   наборе никто не назначал, он получился. В песочных разница почти нулевая
+   (#f3e0d2 против #f6e6dd) — поэтому расхождение и прожило так долго.
+
+   Контракт «вид чужого дня»: заливка капсулы И ОБОИХ КРУЖКОВ меняется на тинт.
    Кружки — соседи капсулы, поэтому тон ставится модификатором корня
    (.date-picker--past из heys_day_pickers.js), а не селектором на капсуле. */
 .date-picker--v4.date-picker--past .date-picker-day-nav {
   /* v4-intentional */
-  background: var(--v4-past);
+  background: var(--v4-tint);
 }
 
 @media (hover: hover) {
