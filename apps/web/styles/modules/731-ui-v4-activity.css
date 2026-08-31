@@ -634,9 +634,14 @@ body:has(.activity-v4) .hdr::after {
   color: transparent;
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 /* «Сегодня» кадр красит чернилами 16 %; ближайшая ступень набора — 30 %. */
+/* «Сегодня» — обводка, а не заливка (ответ дизайнера №23 от 31 августа). Кадр
+   называл пять тонов, а ступеней чернил в наборе четыре: «сегодня» 16 % и «не
+   вели» 10 % сводились к одной ступени 30 % и давали в сетке две одинаковые
+   серые точки. Форма разводит их, не занимая ступень набора. Обводка идёт
+   тенью внутрь: у точки фиксированные 9 px, и border сдвинул бы геометрию. */
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-neutral {
-  background: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--v4-ink-30, rgba(0, 0, 0, 0.3));
 }
 
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-done {
@@ -694,7 +699,6 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-cell.is-none,
 .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-none {
   background: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
-  opacity: 0.34;
 }
 
 /* Строка листания месяцев: стрелки по краям названия (контракт строка 20). */

@@ -75,6 +75,31 @@ describe('Календарь зарядки читается неделями', 
     expect(cell).toContain('height: 9px');
   });
 
+  it('«сегодня» отделено формой, а не тоном', () => {
+    // Ответ дизайнера №23 от 31 августа: кадр называл пять тонов, а ступеней
+    // чернил в наборе четыре — «сегодня» 16 % и «не вели» 10 % сводились к
+    // одной ступени 30 % и давали в сетке две одинаковые серые точки. Обводка
+    // разводит их формой, не занимая ступень набора.
+    const today = rule(
+      '.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-neutral',
+    );
+    expect(today).toContain('background: transparent');
+    expect(today).toContain('box-shadow: inset 0 0 0 1.5px');
+    // «Не вели» вернулось к чистой ступени: приглушение 0.34 разводило те же
+    // две точки тоном и после обводки не нужно.
+    const none = rule('.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-none');
+    expect(none).toContain('var(--v4-ink-30');
+    expect(none).not.toContain('opacity');
+  });
+
+  it('правило «сегодня» живое, а не съедено комментарием внутри селектора', () => {
+    // Оно уже один раз умерло молча: комментарий стоял между двумя половинами
+    // селектора, парсер его выбросил и склеил `.activity-v4 … .activity-v4 …`,
+    // чего в разметке нет. Гейт цвета такое не ловит — правило просто не
+    // рендерится, и точка красилась базовым тоном.
+    expect(CSS).not.toMatch(/\.ma-habit-cal--activity-v4\s*\/\*/);
+  });
+
   it('точка не растягивается на колонку, а стоит по центру', () => {
     expect(grid()).toContain('justify-items: center');
     const cell = rule('.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell');
