@@ -54,9 +54,9 @@ const BASELINE = {
   '300-modals-and-day.css': 87,
   '310-client-switch-overlay.css': 5,
   '400-water-and-hydration.css': 18,
-  '500-pwa-and-offline.css': 80,
+  '500-pwa-and-offline.css': 79,
   '600-steps-and-aps.css': 40,
-  '610-aps-meal-flow.css': 39,
+  '610-aps-meal-flow.css': 37,
   '611-aps-product-card.css': 23,
   '612-training-step.css': 12,
   '613-cycle-ui.css': 8,
@@ -66,11 +66,10 @@ const BASELINE = {
   '725-metabolic-intelligence.css': 189,
   '730-widgets-dashboard.css': 213,
   '731-ui-v4-activity.css': 7,
-  '732-ui-v4-nutrition.css': 79,
+  '732-ui-v4-nutrition.css': 78,
   '733-ui-v4-login-theme.css': 4,
-  '733-ui-v4-reports.css': 21,
+  '733-ui-v4-reports.css': 20,
   '734-ui-v4-curator-panel.css': 6,
-  '734-ui-v4-insights.css': 35,
   '740-cascade-card.css': 14,
   '750-strength-builder.css': 17,
   '800-meal-optimizer.css': 40,
@@ -86,7 +85,7 @@ const BASELINE = {
   'critical.css': 32,
   'drums-finger-trainer.css': 120,
   'fingers.css': 103,
-  'heys-components.css': 533,
+  'heys-components.css': 531,
 };
 
 function readPalette() {
@@ -277,5 +276,21 @@ if (paletteTotal > PALETTE_ROLE_BASELINE) {
 const worst = [...perFile].sort((a, b) => b[1] - a[1]).slice(0, 5)
   .map(([f, n]) => `${f.replace(/\.css$/, '')} ${n}`).join(' · ');
 console.log(`Запасных значений мимо набора: ${total} в ${perFile.size} файлах — ${worst} …`);
+// Число в шапке описи стареет за часы: роли переводят несколько сессий сразу, а
+// владелец размечает по документу. Не роняем — падать на том, что кто-то сделал
+// работу, неправильно, — но расхождение показываем в каждом прогоне, иначе его
+// замечают только пересчётом.
+const INVENTORY = 'docs/ui/UI_V4_SAND_ROLES_INVENTORY.md';
+let inventoryNote = '';
+try {
+  const head = fs.readFileSync(path.join(ROOT, INVENTORY), 'utf8').slice(0, 4000);
+  const stated = /Всего мест: \*\*(\d+)\*\*/.exec(head);
+  if (stated && Number(stated[1]) !== paletteTotal) {
+    inventoryNote = ` — в описи стоит ${stated[1]}, разошлось на ${Math.abs(Number(stated[1]) - paletteTotal)};`
+      + ' обновите шапку, иначе владелец разметит места, которых уже нет';
+  }
+} catch {
+  inventoryNote = ' — описи не нашлось';
+}
 console.log(`Ролей с именем набора в модулях: ${paletteTotal} — ждут разметки владельца`
-  + ' (docs/ui/UI_V4_SAND_ROLES_INVENTORY.md).');
+  + ` (${INVENTORY})${inventoryNote}.`);
