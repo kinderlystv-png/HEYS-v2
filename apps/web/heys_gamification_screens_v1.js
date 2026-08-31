@@ -1004,7 +1004,7 @@
                     )
                 ),
                 React.createElement('div', { className: 'game-v4-sheet__tier' }, 'Откуда XP'),
-                React.createElement('div', { className: 'game-v4-sheet__list-card game-v4-sheet__xp-card' },
+                React.createElement('div', { className: 'game-v4-sheet__list-card' },
                     xpRows.map((key) => {
                         const action = xpActions[key];
                         const used = countMap[key] || 0;
@@ -1086,7 +1086,22 @@
                         className: 'game-v4-sheet__back',
                         onClick: onClose,
                         'aria-label': 'Закрыть'
-                    }, '←'),
+                    },
+                        // Все восемь кадров зоны рисуют здесь шеврон 17 px
+                        // обводкой 2,75, а не знак «←»: у знака своя форма в
+                        // каждой системе, и она не совпадает ни с одним кадром.
+                        React.createElement('svg', {
+                            width: 17,
+                            height: 17,
+                            viewBox: '0 0 24 24',
+                            fill: 'none',
+                            stroke: 'currentColor',
+                            strokeWidth: 2.75,
+                            strokeLinecap: 'round',
+                            strokeLinejoin: 'round',
+                            'aria-hidden': 'true'
+                        }, React.createElement('path', { d: 'M15 18l-6-6 6-6' }))
+                    ),
                     React.createElement('div', { className: 'game-v4-sheet__header-title' },
                         (tabs.find((t) => t.id === tab) || tabs[0]).label
                     )

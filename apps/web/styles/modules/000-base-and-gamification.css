@@ -17924,7 +17924,11 @@ html.heys-bg-paused *::after {
   height: 32px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 18px;
+  /* Внутри шеврон 17 px обводкой currentColor — центрируем его, кегль больше
+     ни на что не влияет. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
   padding: 0;
 }
@@ -18028,20 +18032,24 @@ html.heys-bg-paused *::after {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
+/* Кадр «Геймификация · первый день», элемент 07: заголовок миссии через 12. */
 .game-v4-sheet__hero-mission-title {
-  margin-top: 10px;
+  margin-top: 12px;
   font-size: 17px;
   font-weight: 700;
   line-height: 1.35;
   color: var(--v4-sand-ink, #201e1d);
 }
 
-/* Кадр «Достижения», элемент 18: ряд сегментов через 14 от подписи. */
+/* Строка «вид ряда дней» и кадр «Геймификация · обзор», элемент 12: ряд
+   сегментов через 18 от подписи. Число 14 приехало из кадра «Достижения»,
+   элемент 18, но там ряд лежит внутри карточки «Ближе всего» — у неё своё
+   правило (.game-v4-sheet__near-card .game-v4-sheet__streak-bar-row). */
 .game-v4-sheet__streak-bars {
-  margin-top: 14px;
+  margin-top: 18px;
 }
 
 /* Строка «области нажатия»: сегменты ряда дней не нажимаются вовсе. */
@@ -18075,18 +18083,24 @@ html.heys-bg-paused *::after {
   background: rgba(0, 0, 0, 0.1);
 }
 
+/* Кадр «Геймификация · обзор», элемент 16: тон чернил 40 %. У набора три тона —
+   55 / 45 / 38, взят ближайший --v4-ink-4. */
 .game-v4-sheet__streak-bar-caption {
   display: flex;
   justify-content: space-between;
   margin-top: 10px;
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.4));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
+/* Радиус 20 — строки «вид карточки „Ближе всего“» и «вид · строки XP и таблица
+   наград», и тот же радиус у кадрового класса .grp. Поля 14/16 берутся у первой
+   из них; кадр даёт 16, но строка старше кадра, а карточка в продукте одна на
+   миссии, «Ближе всего» и множитель. */
 .game-v4-sheet__card {
   background: var(--v4-sand-surface, #f7efe2);
-  border-radius: 18px;
+  border-radius: 20px;
   padding: 14px 16px;
 }
 
@@ -18141,9 +18155,10 @@ html.heys-bg-paused *::after {
   pointer-events: none;
 }
 
+/* Кадр «Геймификация · первый день», элемент 09: полоса героя-миссии через 18. */
 .game-v4-sheet__bar--hero {
   height: 8px;
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .game-v4-sheet__bar--thin {
@@ -18181,11 +18196,23 @@ html.heys-bg-paused *::after {
 .game-v4-sheet__level-floor,
 .game-v4-sheet__level-line {
   background: var(--v4-sand-surface, #f7efe2);
-  border-radius: 18px;
-  padding: 14px 16px;
+  border-radius: 20px;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+/* Кадр «Геймификация · обзор», элемент 29: блок уровня под ярусом. */
+.game-v4-sheet__level-floor {
+  padding: 16px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Кадр «Геймификация · первый день», элементы 35 и 36: строка уровня без
+   лестницы — поля 16/18. */
+.game-v4-sheet__level-line {
+  padding: 16px 18px;
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .game-v4-sheet__level-floor-head,
@@ -18196,27 +18223,45 @@ html.heys-bg-paused *::after {
   gap: 12px;
 }
 
-.game-v4-sheet__level-floor-hint,
+/* Кадр «Геймификация · обзор», элемент 30: 700 тоном чернил 42 %; у набора три
+   тона — 55 / 45 / 38, ближайший --v4-ink-3. */
+.game-v4-sheet__level-floor-hint {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* Кадр «Геймификация · первый день», элемент 37: 600 тоном чернил 38 %. */
 .game-v4-sheet__level-line-hint {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
+/* Тон 40 % у обоих кадров, ближайшая роль набора --v4-ink-4. Вес разный:
+   «обзор» набирает строку 500 (элемент 33), лист уровней — 600 (кадр
+   «Уровни», элемент 12). */
 .game-v4-sheet__level-floor-xp,
 .game-v4-sheet__level-hero-meta {
   display: flex;
   justify-content: space-between;
   margin-top: 10px;
   font-size: 10.5px;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.game-v4-sheet__level-floor-xp {
+  font-weight: 500;
+}
+
+.game-v4-sheet__level-hero-meta {
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.4));
 }
 
 .game-v4-sheet__list-card {
   background: var(--v4-sand-surface, #f7efe2);
-  border-radius: 18px;
-  padding: 2px 14px;
+  border-radius: 20px;
+  padding: 2px 16px;
 }
 
 /* Строка «вид строки достижения»: достижения списком внутри карточки --c1
@@ -18311,7 +18356,7 @@ html.heys-bg-paused *::after {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 /* Строка «состав группы»: заголовок группы раскрывает дальние закрытые. */
@@ -18389,7 +18434,7 @@ html.heys-bg-paused *::after {
 
 .game-v4-sheet__ladder-row.is-past .game-v4-sheet__ladder-num,
 .game-v4-sheet__ladder-row.is-past .game-v4-sheet__ladder-title {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .game-v4-sheet__ladder-xp {
@@ -18397,16 +18442,11 @@ html.heys-bg-paused *::after {
   font-size: 11.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .game-v4-sheet__mult-card {
   background: var(--v4-ok-bg, #eaefe0);
-}
-
-.game-v4-sheet__xp-card {
-  padding-top: 4px;
-  padding-bottom: 4px;
 }
 
 .game-v4-sheet__xp-row {
@@ -18414,9 +18454,11 @@ html.heys-bg-paused *::after {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 11px 0;
+  padding: 13px 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.07);
   font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .game-v4-sheet__xp-row:last-child {
@@ -18431,7 +18473,7 @@ html.heys-bg-paused *::after {
   flex: none;
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   text-align: right;
 }
 
@@ -18439,8 +18481,8 @@ html.heys-bg-paused *::after {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
-  margin-top: 4px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  margin-top: 12px;
 }
 
 /* === Новый уровень · «тихая минута» ===
