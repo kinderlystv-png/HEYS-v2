@@ -683,12 +683,15 @@
         const formatDateDisplay = HEYS.dayUtils?.formatDateDisplay;
         const todayStr = new Date().toISOString().split('T')[0];
 
+        // Профиль нужен и подбору недель, и цветам колец ниже — держим один на
+        // компонент: в buildMacroRing он читался как свободная переменная.
+        const profile = useMemo(() => getLsGet()('heys_profile', {}), []);
+
         const availableWeeks = useMemo(() => {
             const getter = getLsGet();
-            const profile = getter('heys_profile', {});
             const pIndex = HEYS.products?.buildIndex?.();
             return getAvailableWeeklyWraps({ lsGet: getter, profile, pIndex });
-        }, []);
+        }, [profile]);
 
         const [weekIndex, setWeekIndex] = useState(0);
         const [correctionTick, setCorrectionTick] = React.useState(0);

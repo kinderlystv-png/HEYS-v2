@@ -1468,7 +1468,7 @@
       // Post PR-C cookie-only через buildSessionRpcParams.
       if (!key) {
         // TODO: Создать get_all_client_kv_by_session если нужно
-        warn('getKV without key not supported in session mode');
+        console.warn('[HEYS.api] ⚠️ getKV without key not supported in session mode');
         return { data: [], error: null };
       }
       const sessionRpc = buildSessionRpcParams({ p_key: key });
@@ -1579,7 +1579,7 @@
       // вызвать getChangeMarkersByCurator явно. Возвращаем early-error чтобы
       // обнаружить misuse в логах и заставить callers переключиться.
       if (shouldUseCuratorAuthPath()) {
-        warn('getChangeMarkers called in curator context — use getChangeMarkersByCurator(clientId, since) instead');
+        console.warn('[HEYS.api] ⚠️ getChangeMarkers called in curator context — use getChangeMarkersByCurator(clientId, since) instead');
         return { data: null, error: 'curator_should_use_getChangeMarkersByCurator' };
       }
 

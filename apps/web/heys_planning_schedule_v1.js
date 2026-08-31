@@ -2873,7 +2873,7 @@
             className: 'planning-calendar-unscheduled-pill'
                 + (slot?.id ? ' planning-calendar-unscheduled-pill--overdue' : '')
                 + (isTouchDragSource ? ' planning-calendar-unscheduled-pill--touch-dragging' : ''),
-            draggable: (allowNativeDrag !== false) && !isTouchDevicePreferred(),
+            draggable: (allowNativeDrag !== false) && !hasTouchLikeInput(),
             style: {
                 '--planning-unscheduled-project-color': projectColor,
                 touchAction: 'none',
@@ -3029,7 +3029,7 @@
                 h('button', {
                     type: 'button',
                     className: 'planning-calendar-task-picker__task-main',
-                    draggable: (allowNativeDrag !== false) && !isTouchDevicePreferred(),
+                    draggable: (allowNativeDrag !== false) && !hasTouchLikeInput(),
                     onPointerDown: (event) => startDrag(event, 'pointer'),
                     onTouchStart: (event) => {
                         if (typeof window.PointerEvent === 'function') return;

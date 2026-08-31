@@ -30,6 +30,10 @@
   const NEAT_BONUS = I?.NEAT_BONUS;
   const STEPS_BONUS = I?.STEPS_BONUS;
   const CIRCADIAN_CONFIG = I?.CIRCADIAN_CONFIG;
+  // Обе брались из __internals как остальные, но в список импорта не попали:
+  // жидкая пища и форма пищи роняли расчёт волны на ReferenceError.
+  const LIQUID_FOOD = I?.LIQUID_FOOD;
+  const FOOD_FORM_BONUS = I?.FOOD_FORM_BONUS;
 
   // Функции из __internals
   const isSpicyFood = I?.isSpicyFood;
@@ -424,11 +428,11 @@
     const insBonus = 0;
 
     // 🥤 Жидкая пища — усваивается быстрее (волна короче, но пик выше)
-    const liquidMult = hasLiquid ? LIQUID_FOOD.waveMultiplier : 1.0;
+    const liquidMult = hasLiquid ? (LIQUID_FOOD?.waveMultiplier ?? 1.0) : 1.0;
 
     // 🍎 Форма пищи (v3.2.0) — жидкое/обработанное/цельное
     // Научное обоснование: Flood-Obbagy & Rolls 2009
-    const foodFormMult = foodForm && FOOD_FORM_BONUS[foodForm]
+    const foodFormMult = foodForm && FOOD_FORM_BONUS?.[foodForm]
       ? FOOD_FORM_BONUS[foodForm].multiplier
       : 1.0;
 

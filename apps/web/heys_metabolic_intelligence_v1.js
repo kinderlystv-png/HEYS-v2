@@ -2011,7 +2011,7 @@
    */
   function submitFeedback(predictionId, correct, details = {}) {
     const lsGet = getScopedLsGet();
-    const lsSet = U.lsSet || ((k, v) => {
+    const lsSet = HEYS.utils?.lsSet || ((k, v) => {
       try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { }
     });
 
@@ -2190,7 +2190,7 @@
    */
   function getCalibratedWeights() {
     const lsGet = getScopedLsGet();
-    const lsSet = U.lsSet || ((k, v) => {
+    const lsSet = HEYS.utils?.lsSet || ((k, v) => {
       try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { }
     });
 
@@ -2332,7 +2332,7 @@
     };
 
     // Кэшируем
-    const lsSet = U.lsSet || ((k, v) => {
+    const lsSet = HEYS.utils?.lsSet || ((k, v) => {
       try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { }
     });
     lsSet(thresholdsKey, thresholds);
@@ -2396,7 +2396,7 @@
   function markWeeklyWrapShown() {
     if (HEYS.weeklyReports?.markWeeklyWrapShown) {
       HEYS.weeklyReports.markWeeklyWrapShown({
-        lsSet: U.lsSet
+        lsSet: HEYS.utils?.lsSet
       });
     }
   }

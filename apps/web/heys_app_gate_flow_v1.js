@@ -2859,7 +2859,8 @@
                     removeGlobalValue('heys_client_current');
                     removeGlobalValue('heys_client_phone');
                     window.HEYS?.cloud?._setPinAuthMode?.(false, null);
-                    setClientId(null);
+                    // Сброс состояния делает перезагрузка: setClientId сюда не
+                    // приходит пропом, и вызов ронял отказ до самой перезагрузки.
                     window.location.reload();
                 }
             });

@@ -1952,7 +1952,7 @@
           }, '← Назад к согласиям')
         ) : step === 'access_code_sign' ? (
           React.createElement('button', {
-            onClick: () => { setStep('consents'); setError(null); setAccessSignCode(''); },
+            onClick: () => { setStep('consents'); setError(null); accessSignPinApi.resetDigits(); },
             disabled: loading,
             className: 'w-full py-3 rounded-xl font-medium transition-all',
             style: { color: '#71717a' }

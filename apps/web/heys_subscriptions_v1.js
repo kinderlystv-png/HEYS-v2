@@ -1745,7 +1745,9 @@
         if (showPayment) {
           return h(PaymentScreen, {
             plan: selectedPlan,
-            onSuccess: onComplete,
+            // Шаговая модалка отдаёт в контекст onNext/onClose; onComplete здесь
+            // никогда не существовал — оплата падала бы на ReferenceError.
+            onSuccess: context?.onNext,
             onCancel: () => setShowPayment(false)
           });
         }

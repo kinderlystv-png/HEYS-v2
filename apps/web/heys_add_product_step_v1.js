@@ -902,6 +902,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return null;
   };
 
+  // Тот же формат id, что у продуктов в heys_core_v12.js. Здесь стояло голое
+  // `uuid()` — функции в этом модуле нет, и копия общего продукта падала.
+  const uuid = () => Math.random().toString(36).slice(2, 10);
+
   const makeLocalVariantCandidate = (product, originalProduct) => {
     const next = { ...product };
     if (isSharedProduct(originalProduct)) {
@@ -11262,7 +11266,6 @@ NOVA: 1
             });
             setTimeout(() => {
               dispatchMealFlowFinishedFromContext('add-product-step-complete', {
-                ...context,
                 mealIndex,
                 mealId,
               });
