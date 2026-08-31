@@ -66,24 +66,31 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(waterRootRule).toContain('position: relative');
     expect(waterRootRule).toContain('height: 100%');
     expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__fill \{[^}]*position: absolute/);
-    // nrmB: норма сверху, подпись и факт снизу — абсолют от карточки, 8 px от края.
-    expect(uiSrc).toContain("className: 'widget-water__norm'");
+    // Строка контракта «раскладка плитки», решение 31 августа: подпись слева
+    // сверху, число справа сверху, обоим отступ 8. Нормы на 1×1 нет — она
+    // живёт на 2×1: общая базовая линия внизу оставляла числу меньше половины
+    // ширины, и «10,5 / 12,0» не влезало. Прежняя раскладка снята целиком,
+    // вместе с элементом нормы и её порогом сливочного тона.
+    expect(uiSrc).not.toContain("className: 'widget-water__norm'");
+    expect(uiSrc).not.toContain('formatWaterNormTopLabel');
+    expect(uiSrc).not.toContain('WATER_TILE_NORM_CREAM_PCT');
+    expect(uiSrc).not.toContain('widget-water--norm-on-water');
+    expect(widgetsCss).not.toContain('.widget-water__norm');
     expect(uiSrc).toContain("className: 'widget-water__label'");
-    expect(uiSrc).toContain('formatWaterNormTopLabel');
     expect(uiSrc).toContain('WATER_TILE_LINES_CREAM_PCT = 31');
-    expect(uiSrc).toContain('WATER_TILE_NORM_CREAM_PCT = 89');
     expect(uiSrc).toContain('widget-water--lines-on-water');
-    expect(uiSrc).toContain('widget-water--norm-on-water');
-    expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__norm \{[^}]*right: 8px/);
-    expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__label \{[^}]*bottom: 8px/);
+    expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__label \{[^}]*left: 8px/);
+    expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__label \{[^}]*top: 8px/);
     expect(widgetsCss).toMatch(/\.widget-water--v4 \{[^}]*position: relative/);
     expect(widgetsCss).toMatch(/\.widget-water--v4 \{[^}]*height: 100%/);
     const numRule = widgetsCss.match(/\.widget-water--v4 \.widget-water__numV \{[^}]*\}/)[0];
     expect(numRule).toContain('position: absolute');
-    expect(numRule).toContain('bottom: 8px');
+    expect(numRule).toContain('top: 8px');
     expect(numRule).toContain('right: 8px');
+    // «число не переносится и не сокращается» — nowrap держит соседнее правило
+    // .widget-v4-row__value, здесь сторожим сам запрет переноса у числа.
+    expect(numRule).toContain('font-size: 12px');
     expect(widgetsCss).toMatch(/\.widget-water--v4\.widget-water--lines-on-water \.widget-water__numV[\s\S]*?var\(--water-cream-text\)/);
-    expect(widgetsCss).toMatch(/\.widget-water--v4\.widget-water--norm-on-water \.widget-water__norm[\s\S]*?var\(--water-cream-text\)/);
 
     // Кромка заливки: два слоя пунктира, шагом 16 px и 11 px. Строка
     // контракта «блики» просит сдвиг ровно на шаг у обоих слоёв. Прежде
