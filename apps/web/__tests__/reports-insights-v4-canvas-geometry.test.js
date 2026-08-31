@@ -66,6 +66,15 @@ const RAZBOR_EXCEPTIONS = new Map([
   ['Визуал v4 · Отчёты · 81|color', 'то же'],
   ['Визуал v4 · Отчёты · 82|color', 'то же'],
   ['Визуал v4 · Отчёты · 89|color', 'у набора нет тона 50 %, ближайший --v4-ink-2'],
+  // Прочерки в незакрытых колонках и средняя доля нулевой строки просят 32 %;
+  // ближайшая ступень набора --v4-ink-30 даёт 30 %.
+  ['Неделя к неделе · одна закрытая · 18|color', 'у набора нет тона 32 %, ближайший --v4-ink-30'],
+  ['Неделя к неделе · одна закрытая · 23|color', 'то же'],
+  ['Неделя к неделе · одна закрытая · 24|color', 'то же'],
+  // Штриховка нулевой строки: контракт «вид · нулевая строка» задаёт шаг 4 px,
+  // кадр рисует 4 через 4 (период 8). Взят контракт.
+  ['Отчёты · нулевая строка матрицы · 16|background', 'контракт «вид · нулевая строка»: шаг 4 px'],
+  ['Отчёты · нулевая строка матрицы · 21|background', 'та же строка'],
   // Три места, где верна строка контракта, а не кадр:
   // · 68 — «формат · вес и его подпись» держит значение 21 px/800, кадр даёт 12,5/700;
   // · 104 — «карточка · призыв о замерах» держит факт 12 px/1,55, кадр даёт 11/1,4;
@@ -133,6 +142,41 @@ const DAYS = [
     ['width', 'height', 'radius', 'background']],
   [99, ['.reports-v4-days__dot', '.reports-v4-days__dot--warn'],
     ['width', 'height', 'radius', 'background']],
+];
+
+// Нулевая строка матрицы: полоса в рамке со штриховкой вместо заливки и
+// средняя доля на месте дельты.
+const ZERO_ROW = [
+  [13, '.reports-v4-discipline__score',
+    ['flex', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [14, ['.reports-v4-discipline__delta', '.reports-v4-discipline__delta.is-up'],
+    ['flex', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [15, ['.reports-v4-discipline__bar', '.reports-v4-discipline__bar.is-zero'],
+    ['flex', 'height', 'radius']],
+  [17, ['.reports-v4-discipline__score', '.reports-v4-discipline__score.is-zero'],
+    ['flex', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [19, '.reports-v4-discipline__avg', ['fontWeight', 'fontSize', 'lineHeight']],
+  [26, '.reports-v4-discipline__delta',
+    ['flex', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight']],
+  [28, '.reports-v4-discipline__footnote', ['fontWeight', 'fontSize', 'lineHeight']],
+];
+
+// Одна закрытая неделя: прочерки вместо чисел в незакрытых колонках.
+const WEEK_ONE = [
+  [9, '.reports-v4-weeks__head', ['align', 'gap', 'padding']],
+  [14, '.reports-v4-weeks__row', ['align', 'gap', 'padding']],
+  [15, '.reports-v4-weeks__date', ['flex', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [16, '.reports-v4-weeks__kcal',
+    ['flex', 'width', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [18, ['.reports-v4-weeks__score', '.reports-v4-weeks__score.is-empty'],
+    ['flex', 'width', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight']],
+  [20, '.reports-v4-weeks__date', ['flex', 'align', 'gap']],
+  [22, '.reports-v4-weeks__partial',
+    ['flex', 'fontWeight', 'fontSize', 'lineHeight', 'padding', 'radius', 'background']],
+  [23, ['.reports-v4-weeks__kcal', '.reports-v4-weeks__kcal.is-empty'],
+    ['flex', 'width', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight']],
+  [24, ['.reports-v4-weeks__weight', '.reports-v4-weeks__weight.is-empty'],
+    ['flex', 'width', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight']],
 ];
 
 // Карточка подтверждения чисел дня живёт в 100-metrics-and-graphs.css.
@@ -209,6 +253,18 @@ describe('Отчёты · разбор кадров канваса', () => {
   it('шапка и герой кадра «Визуал v4 · Отчёты» совпадают с продуктом', () => {
     expect(compare({
       razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: HEADER,
+    })).toEqual([]);
+  });
+
+  it('нулевая строка матрицы совпадает с продуктом', () => {
+    expect(compare({
+      razbor, rules, frame: 'Отчёты · нулевая строка матрицы', pairs: ZERO_ROW,
+    })).toEqual([]);
+  });
+
+  it('лист недель с одной закрытой совпадает с продуктом', () => {
+    expect(compare({
+      razbor, rules, frame: 'Неделя к неделе · одна закрытая', pairs: WEEK_ONE,
     })).toEqual([]);
   });
 
@@ -291,7 +347,7 @@ describe('Отчёты · разбор кадров канваса', () => {
   });
 
   it('отступления разбора названы и не разрастаются молча', () => {
-    expect(RAZBOR_EXCEPTIONS.size).toBe(12);
+    expect(RAZBOR_EXCEPTIONS.size).toBe(17);
   });
 });
 
@@ -573,6 +629,14 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
       'Визуал v4 · Отчёты · 68',
       'Визуал v4 · Отчёты · 104',
       'Визуал v4 · Отчёты · 105',
+      // Прочерки незакрытых колонок просят тон 32 %, ближайший --v4-ink-30
+      // даёт 30 %. Штриховка нулевой строки: контракт задаёт шаг 4 px, кадр
+      // рисует 4 через 4.
+      'Неделя к неделе · одна закрытая · 18',
+      'Неделя к неделе · одна закрытая · 23',
+      'Неделя к неделе · одна закрытая · 24',
+      'Отчёты · нулевая строка матрицы · 16',
+      'Отчёты · нулевая строка матрицы · 21',
       // Третья строка зоны, где просят скелетон. Ответ тот же: знак ожидания
       // в продукте один — спиннер, полос на #f4f4f3 у него не бывает.
       'карточка · скелетон расчёта',
