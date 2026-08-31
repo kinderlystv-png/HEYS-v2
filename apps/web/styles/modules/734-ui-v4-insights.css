@@ -400,7 +400,9 @@
 
 .insights-v4-maturity--rule {
   background: var(--v4-ok-bg, #e6f2e6);
-  color: var(--v4-ok-text, #2e7d32);
+  /* Запасное равно роли: --v4-ok-text это #5c6a45. Стояло #2e7d32 — зелёный
+     прежней системы, которого нет ни в одном наборе. */
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .insights-v4-maturity--forecast {
@@ -812,7 +814,8 @@
 }
 
 .insights-v4-stub__title {
-  font: 700 16px/1.3 Figtree, system-ui, sans-serif;
+  /* Кадр «новый пользователь», элемент 08: 700 16/1,35. */
+  font: 700 16px/1.35 Figtree, system-ui, sans-serif;
   color: var(--v4-ink, #0f172a);
   margin: 8px 0 14px;
 }
@@ -839,7 +842,7 @@
   margin-top: 8px;
   text-align: right;
   font: 700 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .insights-v4-stub__fill {
@@ -1107,7 +1110,9 @@
 }
 
 .insights-v4-stub__warning {
-  background: var(--v4-card, #ffffff);
+  /* Запасное равно роли: --v4-card это #f7efe2. Стояло #ffffff — белый лист
+     вместо карточки, если палитра не загрузилась. */
+  background: var(--v4-card, #f7efe2);
   border-radius: 20px;
   padding: 14px 16px;
 }
@@ -1145,7 +1150,7 @@
   min-width: 22px;
   font: 800 13px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .insights-v4-stub__ladder-day.is-passed {
@@ -1155,7 +1160,8 @@
 .insights-v4-stub__ladder-text {
   flex: 1;
   min-width: 0;
-  font: 500 12px/1.4 Figtree, system-ui, sans-serif;
+  /* Элемент 27: 500 12/1,45. */
+  font: 500 12px/1.45 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
 }
 
