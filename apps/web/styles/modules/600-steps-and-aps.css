@@ -2308,19 +2308,28 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   cursor: default;
 }
 
+/* Вторичная кнопка набора — пилюля с заливкой: кадры дают ей высоту от 44,
+   радиус 999 и первую поверхность. Прежде она была прозрачной и без радиуса,
+   а подложку добавлял только модификатор --paper, чья тень 0 1px 0 читалась
+   на прозрачном как случайная линия под текстом. */
 .aps-v4-btn-ghost {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 44px;
   width: 100%;
   margin-top: 4px;
+  padding: 0 14px;
   border: none;
-  background: transparent;
+  border-radius: 999px;
+  background: var(--v4-surface, #f7efe2);
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  /* Общая роль, а не роль набора: с песочным именем подпись оставалась
+     коричневой на синей заливке, которую я дал этой же кнопке. */
+  color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
 }
 
@@ -2695,7 +2704,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 50%, transparent);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
 }
 
 /* Подпись шага под именем экрана — тем же тоном, что подписи набора. Прежде
@@ -2704,7 +2713,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 45%, transparent);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
 }
 
 .mc-modal:has(.aps-v4-flow) .mc-header-btn--fav {
@@ -2789,10 +2798,24 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   cursor: pointer;
 }
 
+/* Подвал кадра: «Пропустить» по содержимому полями 0/22, «Готово» занимает
+   остаток. Прежде две равные колонки — отказ весил столько же, сколько
+   действие, ради которого открыт шаг. */
 .aps-v4-footer--split {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.aps-v4-footer--split .aps-v4-btn-ghost {
+  flex: none;
+  width: auto;
+  padding: 0 22px;
+}
+
+.aps-v4-footer--split .aps-v4-btn-primary {
+  flex: 1;
+  width: auto;
 }
 
 .aps-v4-footer--split .aps-v4-btn-ghost,

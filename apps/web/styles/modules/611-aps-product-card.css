@@ -866,7 +866,7 @@
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 40%, transparent);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 40%, transparent);
 }
 
 .aps-v4-create-shell {
@@ -1839,10 +1839,10 @@
 }
 
 .aps-v4-portions-subtitle {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
 }
 
 .aps-v4-portions-product {
@@ -1854,19 +1854,18 @@
 .aps-v4-portions-list {
   display: flex;
   flex-direction: column;
-  border-radius: 18px;
-  overflow: hidden;
-  background: var(--v4-sand-surface-soft, #fffaf1);
-  box-shadow: inset 0 0 0 1px rgba(198, 113, 57, 0.12);
+  gap: 8px;
 }
 
+/* Строка порции по кадру: имя тянется, граммы колонкой 78, удаление целью 44,
+   зазор 8. Прежде строки жили карточкой с полями 10/12 и разделителем снизу
+   литералом rgba(198,113,57,.08) — приём прежней системы: в наборе строки
+   разделяет воздух, а не линия. */
 .aps-v4-portions-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) 78px 44px;
   gap: 8px;
   align-items: center;
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(198, 113, 57, 0.08);
 }
 
 .aps-v4-portions-row:last-child {
@@ -1889,21 +1888,42 @@
   color: var(--v4-sand-act-deep, #8a4a20);
 }
 
+/* Поля порции — заливка первой поверхности без обводки: белое #fff и кольцо
+   литералом accent 18 % были приёмом прежней системы. */
 .aps-v4-portions-row__input {
+  box-sizing: border-box;
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   border: none;
   border-radius: 12px;
   padding: 0 12px;
-  background: #fff;
-  font-size: 13px;
+  background: var(--v4-surface, #f7efe2);
+  font-size: 12px;
   font-weight: 600;
+  line-height: 1;
   color: var(--v4-sand-ink, #201e1d);
-  box-shadow: inset 0 0 0 2px rgba(198, 113, 57, 0.18);
 }
 
 .aps-v4-portions-row__input--grams {
-  width: 72px;
+  width: 100%;
+  padding: 0 22px 0 10px;
+}
+
+.aps-v4-portions-row__grams-wrap {
+  position: relative;
+}
+
+/* «г» стоит внутри поля граммов у правого края, а не отдельным словом рядом. */
+.aps-v4-portions-row__grams-wrap .aps-v4-portions-row__grams {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 35%, transparent);
+  pointer-events: none;
 }
 
 .aps-v4-portions-row__grams-wrap {
@@ -1912,26 +1932,71 @@
   gap: 4px;
 }
 
+/* Удаление порции по кадру: цель 44 радиусом 12 на тинте тоном разрушающего.
+   Прежде прозрачный круг тоном акцента — удаление читалось как действие того
+   же ряда, что и «Добавить». */
 .aps-v4-portions-row__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 44px;
   height: 44px;
   border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--v4-sand-act-deep, #8a4a20);
-  font-size: 22px;
+  border-radius: 12px;
+  background: var(--v4-tint, #f6e6dd);
+  color: var(--v4-bad-text, #b4442a);
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
 }
 
 .aps-v4-portions-empty,
+/* Карточка рекомендованных порций по кадру: первая поверхность радиусом 16
+   полями 12/14, ярус внутри — 10 px/700 в разрядку прописными чернилами 45 %,
+   сами порции — пилюли переносом строк, а не список строк в рамке. */
+.aps-v4-portions-suggest {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--v4-surface, #f7efe2);
+}
+
 .aps-v4-portions-suggest__title {
-  padding: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+}
+
+.aps-v4-portions-suggest .aps-v4-portions-list {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.aps-v4-portions-suggest .aps-v4-portions-row--readonly {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.aps-v4-portions-suggest .aps-v4-portions-row__name,
+.aps-v4-portions-suggest .aps-v4-portions-row__grams {
+  font: inherit;
+  color: inherit;
 }
 
 .aps-v4-portions-add {
-  margin-top: 4px;
+  margin-top: 8px;
 }
