@@ -35,6 +35,16 @@ const PACK = path.join(
 // Вердикты лежат по файлу на зону: docs/ui/verdicts/<зона>.json. Путь знает
 // только scripts/lib/ui-v4-verdicts.mjs — см. причину там.
 
+/**
+ * Обрезает середину, оставляя начало и конец. Нужно потому, что строки
+ * контракта **дописываются**: решение приезжает хвостом, а начало остаётся от
+ * прежней редакции. Обрезка с конца показывала бы устаревшую половину.
+ */
+function headTail(value, head, tail) {
+  if (value.length <= head + tail + 3) return value;
+  return `${value.slice(0, head)} … ${value.slice(-tail)}`;
+}
+
 const hash = (value) => crypto.createHash('sha1').update(value).digest('hex').slice(0, 12);
 
 function contractRows(html, contractOnly) {
@@ -268,7 +278,12 @@ function runCli() {
       console.error(`\n❌ ${zoneId}: дизайнер изменил строки контракта, вердикт не пересмотрен:`);
       for (const item of state.drifted) {
         console.error(`  «${item.key}» — стоял вердикт «${item.verdict}»`);
-        console.error(`     стало: ${item.value.slice(0, 120)}${item.value.length > 120 ? '…' : ''}`);
+        // Показываем и начало, и хвост. Дизайнер решения **дописывает в конец**,
+        // а не переписывает строку целиком: у плитки воды начало говорит «обе
+        // строки внизу», а решение в конце — «оба верхних на 8». Обрезка с
+        // хвоста показывала бы ровно ту половину, которая ведёт к обратному
+        // выводу, и подсказка гейта работала бы против читателя.
+        console.error(`     стало: ${headTail(item.value, 110, 90)}`);
       }
     }
     if (state.missing.length) {
