@@ -1870,8 +1870,24 @@
   white-space: nowrap;
   flex-shrink: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Обрезка с многоточием снята: подписи здесь — граммы («50», «150», «300»),
+     переносить и обрезать в них нечего, а overflow:hidden обрезал невидимую
+     цель нажатия по краю самой плашки и делал её бесполезной. */
+  /* Строка «тач-цели» сама называет пресеты граммовки нарушением нормы 44:
+     нарисованы они ~23, у нас 34. Канвас решает это не увеличением плашки, а
+     невидимой целью поверх неё (.chip::after) — тот же приём здесь. */
+  position: relative;
+}
+
+.aps-portion-btn::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 44px;
+  height: 44px;
 }
 
 @media (hover: hover) {
