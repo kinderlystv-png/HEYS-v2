@@ -8601,7 +8601,7 @@ button.meal-quality-badge:active {
 }
 
 .aps-v4-grams-last {
-  margin-top: 14px;
+  margin-top: 12px;
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
@@ -8645,6 +8645,7 @@ button.meal-quality-badge:active {
 }
 
 .aps-v4-grams-impact__bar {
+  position: relative;
   height: 6px;
   margin-top: 14px;
   border-radius: 999px;
@@ -8652,9 +8653,20 @@ button.meal-quality-badge:active {
   overflow: hidden;
 }
 
-.aps-v4-grams-impact__bar-fill {
+/* Съеденное за день — чернилами: это фон, к которому порция добавляется. */
+.aps-v4-grams-impact__bar-eaten {
   height: 100%;
   border-radius: inherit;
+  background: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 22%, transparent);
+}
+
+/* Вклад самой порции — акцентом, встык к съеденному и скруглён только справа:
+   слева он продолжает чернильную часть, а не начинается заново. */
+.aps-v4-grams-impact__bar-add {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 0 999px 999px 0;
   background: var(--v4-sand-act, #c67139);
 }
 
@@ -8662,7 +8674,7 @@ button.meal-quality-badge:active {
   margin-top: 9px;
   font-size: 11px;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1;
   color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 42%, transparent);
 }
 

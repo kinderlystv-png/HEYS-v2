@@ -10342,6 +10342,14 @@ NOVA: 1
     });
     const dayAfterAddKcal = dayTotalKcal + currentKcal;
     const dayPct = dailyGoal > 0 ? Math.round(dayAfterAddKcal / dailyGoal * 100) : 0;
+    // Кадр «Добавление · порция» делит полосу надвое: сколько уже съедено за
+    // день (чернилами) и сколько добавит эта порция (акцентом, со скруглением
+    // только справа). Одна сплошная заливка показывала итог и прятала ровно
+    // то, ради чего полоса стоит на экране порции, — вклад самой порции.
+    const dayEatenPct = dailyGoal > 0
+      ? Math.min(100, Math.max(0, Math.round(dayTotalKcal / dailyGoal * 100)))
+      : 0;
+    const dayAddPct = Math.min(100 - dayEatenPct, Math.max(0, dayPct - dayEatenPct));
     const duplicateGrams = mealDuplicate
       ? HEYS.models.normalizeItemGrams(mealDuplicate.item.grams, 100)
       : 0;
@@ -10433,12 +10441,18 @@ NOVA: 1
         ),
         React.createElement('div', { className: 'aps-v4-grams-impact__bar' },
           React.createElement('div', {
-            className: 'aps-v4-grams-impact__bar-fill',
-            style: { width: `${Math.min(100, Math.max(0, dayPct))}%` }
-          })
+            className: 'aps-v4-grams-impact__bar-eaten',
+            style: { width: `${dayEatenPct}%` }
+          }),
+          dayAddPct > 0
+            ? React.createElement('div', {
+              className: 'aps-v4-grams-impact__bar-add',
+              style: { left: `${dayEatenPct}%`, width: `${dayAddPct}%` }
+            })
+            : null
         ),
         React.createElement('div', { className: 'aps-v4-grams-impact__foot' },
-          `${dayAfterAddKcal} из ${dailyGoal} за день · ${dayPct} %`
+          `Станет ${dayAfterAddKcal} из ${dailyGoal} за день · ${dayPct} %`
         )
       ),
 

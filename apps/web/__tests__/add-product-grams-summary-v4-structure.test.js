@@ -29,7 +29,12 @@ describe('add product grams v4 canvas structure', () => {
 
   it('paints grams shell with v4 sand roles', () => {
     expect(cssSource).toContain('.aps-v4-grams-hero');
-    expect(cssSource).toContain('.aps-v4-grams-impact__bar-fill');
+    // Полоса влияния разделена надвое 31 августа по кадру «Добавление ·
+    // порция»: съеденное за день чернилами и вклад порции акцентом. Прежняя
+    // одна заливка (__bar-fill) показывала итог и прятала сам вклад.
+    expect(cssSource).toContain('.aps-v4-grams-impact__bar-eaten');
+    expect(cssSource).toContain('.aps-v4-grams-impact__bar-add');
+    expect(cssSource).not.toContain('.aps-v4-grams-impact__bar-fill');
     expect(cssSource).toContain('.aps-v4-grams-duplicate');
   });
 });
