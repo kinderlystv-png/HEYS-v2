@@ -924,13 +924,16 @@
       ),
       wheelCard('Желаемый вес, кг', weightValues, weightGoal, 'weightGoal'),
       goalTooLow
+        // Кадр «ниже нормы имт»: плашка --tint радиусом 16 с полями 12/14,
+        // заголовок 700 12/1,4 тоном --ac2, объяснение 500 11,5/1,55 чернилами
+        // 55 % через 5. Стояло p-3 (12 со всех сторон), кегль объяснения 12 и
+        // отступ 4.
         ? React.createElement('div', {
-          className: 'rounded-2xl p-3',
-          style: { background: '#f6e6dd' }
+          style: { background: '#f6e6dd', borderRadius: 16, padding: '12px 14px' }
         },
-          React.createElement('div', { className: 'text-xs font-bold', style: { color: '#a1471c' } },
+          React.createElement('div', { style: { fontSize: 12, fontWeight: 700, lineHeight: 1.4, color: '#a1471c' } },
             `ИМТ цели ${goalBmi.toFixed(1).replace('.', ',')} — ниже нормы`),
-          React.createElement('div', { className: 'text-xs mt-1', style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.55 } },
+          React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, marginTop: 5, color: 'rgba(0,0,0,.55)', lineHeight: 1.55 } },
             `При росте ${height} см нижняя граница нормы — ${minKg} кг. Цель можно оставить, но прогноз по срокам для неё мы не строим — обсудите её с куратором.`)
         )
         : React.createElement('div', { style: { display: 'flex', gap: 8 } },
@@ -939,7 +942,19 @@
             React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 6 } },
               React.createElement('span', { style: { fontSize: 18, fontWeight: 700, color: '#201e1d' } },
                 bmi > 0 ? bmi.toFixed(1).replace('.', ',') : '—'),
-              React.createElement('span', { className: 'text-xs font-semibold', style: { color: bmi < 18.5 ? '#a1471c' : 'rgba(0,0,0,.45)' } }, bmiWord)
+              // Кадр «рост и вес» набирает слово оценки («избыток») тоном
+              // --ac2 — тем же, что «Важно» и «ниже нормы»: это предупреждение,
+              // а не акцент действия. Прежде так красился только недостаток, и
+              // избыток уходил в приглушённые чернила. Норма остаётся
+              // приглушённой: предупреждать не о чем.
+              React.createElement('span', {
+                style: {
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  lineHeight: 1,
+                  color: bmiWord === 'норма' ? 'rgba(0,0,0,.45)' : '#a1471c',
+                }
+              }, bmiWord)
             )
           ),
           React.createElement('div', { style: { flex: 1, background: '#efe3cf', borderRadius: 16, padding: '12px 14px' } },
