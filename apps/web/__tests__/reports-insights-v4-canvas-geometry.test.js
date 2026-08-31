@@ -281,8 +281,15 @@ const STATES = [
 // Кадр «Отчёты · мало данных»: заглушка до порога в семь дней.
 const STUB = [
   [6, '.reports-v4-stub', ['background', 'radius', 'padding', 'marginTop']],
-  [8, '.reports-v4-stub__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [9, '.reports-v4-stub__note', ['fontWeight', 'fontSize', 'lineHeight']],
+  [8, '.reports-v4-stub__title',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [9, '.reports-v4-stub__note',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  // Список «Уже считается» под заглушкой: имя строки и два состояния.
+  [17, '.reports-v4-ready__name', ['color']],
+  [18, ['.reports-v4-ready__state', '.reports-v4-ready__state.is-on'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [19, '.reports-v4-ready__state', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [10, '.reports-v4-stub__track', ['align', 'gap', 'marginTop']],
   [11, ['.reports-v4-stub__progress', '.reports-v4-stub__track .reports-v4-stub__progress'],
     ['flex', 'height', 'radius']],
@@ -767,6 +774,9 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
       'Отчёты · нулевая строка матрицы · текст',
       // Кадр отстал от контракта по границам окна: 500 11px против 600 10,5.
       'Отчёты · мало данных · 04',
+      // Имя строки списка «Уже считается»: строка контракта даёт 12 px,
+      // шаблон строки .row зоны — 12,5. Взят контракт.
+      'Отчёты · мало данных · 16',
       // Тон вторичной кнопки карточки подтверждения: кадр и строка «кнопки и
       // области нажатия» просят чернила 58 %, ближайшая ступень набора 55 %.
       'Мало калорий · подтверждение · 16',

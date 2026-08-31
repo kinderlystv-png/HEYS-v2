@@ -844,7 +844,7 @@
           React.createElement('span', { className: 'reports-v4-meta__range' }, periodMeta.dateRange || '')
         ),
         React.createElement('div', { className: 'reports-v4-stub' },
-          React.createElement('div', { className: 'reports-v4-tier' }, 'Пока копим данные'),
+          React.createElement('div', { className: 'reports-v4-stub__kicker' }, 'Пока копим данные'),
           React.createElement('div', { className: 'reports-v4-stub__title' }, 'Итоги появятся с 7 дней'),
           // Причина порога словами: без неё «7 дней» выглядит нашей прихотью.
           React.createElement('div', { className: 'reports-v4-stub__note' },
@@ -868,8 +868,13 @@
         // ли баланс и матрица и когда они появятся.
         React.createElement('div', { className: 'reports-v4-tier' }, 'Уже считается'),
         React.createElement('div', { className: 'reports-v4-ready' },
-          [['Дни', have > 0], ['Тренд веса', (periodMeta.measuredWeightDays || 0) >= 3],
-            ['Баланс', false], ['Матрица дисциплины', false]].map(function (pair) {
+          // Названия строк — по кадру «Отчёты · мало данных». Голые «Дни» и
+          // «Тренд веса» теряли главное — с какого момента это работает, а именно этот
+          // список и отвечает на вопрос «что уже считается».
+          [['Дни — лента с первого дня', have > 0],
+            ['Тренд веса — с трёх замеров', (periodMeta.measuredWeightDays || 0) >= 3],
+            ['Баланс и итог периода', false],
+            ['Матрица дисциплины', false]].map(function (pair) {
             return React.createElement('div', {
               key: pair[0], className: 'reports-v4-ready__row'
             },
