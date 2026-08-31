@@ -3093,7 +3093,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   React.createElement('button', {
                     className: 'mpr-grams-btn',
                     onClick: () => updateItemGrams(idx, -10)
-                  }, '−'),
+                  }, React.createElement('svg', {
+            width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M6 12h12' }))),
                   React.createElement('input', {
                     className: 'mpr-grams-input',
                     type: 'number',
@@ -3107,7 +3111,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   React.createElement('button', {
                     className: 'mpr-grams-btn',
                     onClick: () => updateItemGrams(idx, 10)
-                  }, '+'),
+                  }, React.createElement('svg', {
+            width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M12 6v12M6 12h12' }))),
                   React.createElement('button', {
                     className: 'mpr-grams-btn mpr-grams-btn--double',
                     onClick: () => multiplyItemGrams(idx, 2),
@@ -3225,7 +3233,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     React.createElement('button', {
                       className: 'mpr-grams-btn',
                       onClick: () => updateCreateItemGrams(idx, Math.max(5, (Number(item.grams) || 100) - 10))
-                    }, '−'),
+                    }, React.createElement('svg', {
+            width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M6 12h12' }))),
                     React.createElement('input', {
                       className: 'mpr-grams-input',
                       type: 'number',
@@ -3239,7 +3251,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     React.createElement('button', {
                       className: 'mpr-grams-btn',
                       onClick: () => updateCreateItemGrams(idx, (Number(item.grams) || 100) + 10)
-                    }, '+')
+                    }, React.createElement('svg', {
+            width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M12 6v12M6 12h12' })))
                   )
                 )
               )
@@ -5911,6 +5927,38 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
             'Новый продукт')
         ),
+        // Строка «порядок сверху вниз»: две кнопки — вкладки — поиск — список.
+        // Поле поиска стояло над вкладками: кадр «Поиск · база пуста» рисует так,
+        // кадр «Добавление · выбор способа» — наоборот, и спор решает эта строка.
+        !showSearch && React.createElement('div', {
+          className: 'aps-v4-search-tabs',
+          role: 'tablist',
+          'aria-label': 'Подборка продуктов'
+        },
+          React.createElement('button', {
+            type: 'button',
+            role: 'tab',
+            className: 'aps-v4-search-tab' + (quickList === 'frequent' ? ' is-active' : ''),
+            onClick: () => handleBrowseTab('frequent'),
+            'aria-selected': quickList === 'frequent'
+          }, 'Частые'),
+          React.createElement('button', {
+            type: 'button',
+            role: 'tab',
+            className: 'aps-v4-search-tab' + (quickList === 'recent' ? ' is-active' : ''),
+            onClick: () => handleBrowseTab('recent'),
+            'aria-selected': quickList === 'recent'
+          }, 'Недавние · 3 дня'),
+          React.createElement('button', {
+            type: 'button',
+            role: 'tab',
+            className: 'aps-v4-search-tab' + (presetsOpen ? ' is-active' : ''),
+            onClick: () => handleBrowseTab('presets'),
+            'aria-selected': presetsOpen
+          }, 'Наборы', savedPresetsCount > 0
+            ? React.createElement('span', { className: 'aps-v4-search-tab__badge' }, ` · ${savedPresetsCount}`)
+            : null),
+        ),
         React.createElement('div', { className: 'aps-search-container' },
           React.createElement('div', { className: 'aps-search-field' + (searchFieldFocused ? ' is-focused' : '') },
             React.createElement('span', { className: 'aps-search-icon', 'aria-hidden': 'true' }),
@@ -6007,35 +6055,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement('span', { className: 'aps-barcode-notice__icon', 'aria-hidden': 'true' }, 'i'),
           React.createElement('span', null, barcodeNotice.text)
         ),
-        !showSearch && React.createElement('div', {
-          className: 'aps-v4-search-tabs',
-          role: 'tablist',
-          'aria-label': 'Подборка продуктов'
-        },
-          React.createElement('button', {
-            type: 'button',
-            role: 'tab',
-            className: 'aps-v4-search-tab' + (quickList === 'frequent' ? ' is-active' : ''),
-            onClick: () => handleBrowseTab('frequent'),
-            'aria-selected': quickList === 'frequent'
-          }, 'Частые'),
-          React.createElement('button', {
-            type: 'button',
-            role: 'tab',
-            className: 'aps-v4-search-tab' + (quickList === 'recent' ? ' is-active' : ''),
-            onClick: () => handleBrowseTab('recent'),
-            'aria-selected': quickList === 'recent'
-          }, 'Недавние · 3 дня'),
-          React.createElement('button', {
-            type: 'button',
-            role: 'tab',
-            className: 'aps-v4-search-tab' + (presetsOpen ? ' is-active' : ''),
-            onClick: () => handleBrowseTab('presets'),
-            'aria-selected': presetsOpen
-          }, 'Наборы', savedPresetsCount > 0
-            ? React.createElement('span', { className: 'aps-v4-search-tab__badge' }, ` · ${savedPresetsCount}`)
-            : null),
-        )
       ),
 
       // === Скроллируемый список продуктов ===
@@ -10489,7 +10508,11 @@ NOVA: 1
               ? gramsFromKcal(currentKcal - 10)
               : grams - 10),
             'aria-label': unitMode === 'kcal' ? 'Меньше на 10 ккал' : 'Меньше на 10 г'
-          }, '−'),
+          }, React.createElement('svg', {
+            width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M6 12h12' }))),
           React.createElement('div', { className: 'aps-v4-grams-hero__value' },
             React.createElement('input', {
               ref: gramsInputRef,
@@ -10522,7 +10545,11 @@ NOVA: 1
               ? gramsFromKcal(currentKcal + 10)
               : grams + 10),
             'aria-label': unitMode === 'kcal' ? 'Больше на 10 ккал' : 'Больше на 10 г'
-          }, '+')
+          }, React.createElement('svg', {
+            width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M12 6v12M6 12h12' })))
         ),
         React.createElement('div', { className: 'aps-v4-grams-chips' },
           quickPortions.map((g) =>

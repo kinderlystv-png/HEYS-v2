@@ -1916,45 +1916,50 @@
   flex-shrink: 0;
 }
 
+/* Шаговые кнопки граммов стояли на прежней системе токенов целиком (холодная
+   рамка --color-border, подложка --color-bg-primary, чернила --color-text-
+   secondary) и были 26×26 — меньше минимальной цели касания. Цель 44 дана
+   отрицательными полями, чтобы строка набора не выросла в высоту. */
 .mpr-grams-btn {
-  width: 26px;
-  height: 26px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 6px;
-  background: var(--color-bg-primary, #fff);
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  margin: -9px 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v4-bg, #fffaf1);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--v4-act-text, #8a4a20);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s;
 }
 
-@media (hover: hover) {
-  .mpr-grams-btn:hover {
-    background: var(--color-bg-secondary, #f1f5f9);
-  }
+.mpr-grams-btn:active {
+  opacity: 0.7;
+  transition: opacity 120ms ease;
 }
 
 .mpr-grams-btn--double {
-  min-width: 34px;
-  padding: 0 6px;
+  width: auto;
+  min-width: 44px;
+  padding: 0 12px;
   font-size: 11px;
+  font-weight: 700;
   letter-spacing: 0.01em;
 }
 
 .mpr-grams-input {
-  width: 46px;
-  height: 26px;
+  box-sizing: border-box;
+  width: 52px;
+  min-height: 32px;
   text-align: center;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 6px;
-  font-size: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--v4-bg, #fffaf1);
+  font-size: 12.5px;
   font-weight: 600;
-  color: var(--color-text-primary, #0f172a);
-  background: var(--color-bg-primary, #fff);
+  color: var(--v4-ink, #201e1d);
   padding: 0 2px;
 }
 
