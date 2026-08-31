@@ -109,8 +109,19 @@ async function main() {
       console.warn('[sync:local]   Порядок: остановить dev:local → pnpm install → pnpm dev:local');
     } else {
       console.warn('[sync:local] ⚠ Missing runtime package(s), running pnpm install…');
-      run('restore dependencies', 'pnpm', ['install']);
-      restoreDeletedWorkspaces('после установки');
+      try {
+        run('restore dependencies', 'pnpm', ['install']);
+      } catch (error) {
+        // Упавшая установка — самый опасный случай: чистка обрывается на
+        // середине, и именно тогда сквозь junction уносит исходники пакетов.
+        // Восстановление ниже обязано отработать при любом исходе, поэтому
+        // finally, а не строка после вызова. Сам sync не роняем: сборка
+        // бандлов работает и на неполном node_modules.
+        console.warn(`[sync:local] ⚠ pnpm install упал: ${error.message.split('\n')[0]}`);
+        console.warn('[sync:local]   Дальше — своими руками: pnpm install --force при остановленном dev:local.');
+      } finally {
+        restoreDeletedWorkspaces('после установки');
+      }
     }
   }
 
