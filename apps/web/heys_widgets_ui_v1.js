@@ -2470,13 +2470,17 @@
     const d = getWidgetDims(widget);
     const resolvedVariant = variantId === 'row' ? 'mini' : variantId;
     const scoreOnTen = formatRuDecimal(score / 10, 1);
-    const terracottaStyle = { color: 'var(--v4-sand-act, #c67139)' };
+    // Кадр «Шторка · Оценка дня» даёт числу оценки 600 и текстовый акцент
+    // --ac. Заливочный --acs (#c67139) на бумаге плитки давал 2,9:1 — ниже
+    // порога; строка контракта «кто красится» называет терракоту, но не
+    // говорит, что она заливочная.
+    const terracottaStyle = { color: 'var(--v4-sand-act-text, #8a4a20)' };
 
     const scoreSlashTen = (className, fontSizePx) => React.createElement('span', {
       className: className || 'widget-v4-row__value widget-day-score__score',
       style: {
         fontSize: fontSizePx ? `${fontSizePx}px` : undefined,
-        fontWeight: 700,
+        fontWeight: 600,
         ...terracottaStyle
       }
     },
@@ -2516,9 +2520,9 @@
             React.createElement('span', {
               className: 'widget-v4-hero-num__val widget-v4-val--neutral',
               style: { fontSize: '21px', fontWeight: 700 }
-            }, '—'),
-            weekBarCols(padded, { empty: true })
-          )
+            }, '—')
+          ),
+          weekBarCols(padded, { empty: true })
         );
       }
       return v4EmptyTile('Оценка');
@@ -2529,7 +2533,7 @@
         v4Kicker('Оценка'),
         React.createElement('div', {
           className: 'widget-v4-mini__value widget-day-score__score',
-          style: { fontSize: '21px', fontWeight: 700, ...terracottaStyle }
+          style: { fontSize: '21px', ...terracottaStyle }
         },
           scoreOnTen,
           React.createElement('span', { className: 'widget-v4-unit' }, ' / 10')
@@ -2565,11 +2569,18 @@
       return React.createElement('div', {
         className: 'widget-day-score widget-day-score--short widget-v4-stack widget-day-score--week'
       },
+        // Кадр «Шторка · Оценка дня», вид «Семь дней»: столбики стоят своей
+        // строкой под шапкой, а не внутри неё. В одной строке с ключом и
+        // числом им оставалось 24 px на семь столбиков с зазорами — то есть
+        // ноль. Число здесь без «/ 10»: шкалу задают сами столбики.
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
           v4Kicker('Оценка · 7 дней'),
-          scoreSlashTen('widget-day-score__week-score', 21),
-          weekBarCols(weekScores)
-        )
+          React.createElement('span', {
+            className: 'widget-day-score__week-score',
+            style: { fontSize: '16px', fontWeight: 600, ...terracottaStyle }
+          }, scoreOnTen)
+        ),
+        weekBarCols(weekScores)
       );
     }
 
@@ -2577,7 +2588,7 @@
       v4Kicker('Оценка'),
       React.createElement('div', {
         className: 'widget-v4-mini__value widget-day-score__score',
-        style: { fontSize: '21px', fontWeight: 700, ...terracottaStyle }
+        style: { fontSize: '21px', ...terracottaStyle }
       },
         scoreOnTen,
         React.createElement('span', { className: 'widget-v4-unit' }, ' / 10')

@@ -10501,10 +10501,13 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   flex-shrink: 0;
 }
 
+/* Строка контракта «длинное значение в узком формате»: число с единицей не
+   переносится. У вида «Хватит на ужин» единица длинная — «ккал осталось». */
 .widget-calories__hero-value {
   display: flex;
   align-items: baseline;
   gap: 5px;
+  white-space: nowrap;
   margin-top: 0;
   flex-shrink: 0;
 }
@@ -13262,8 +13265,9 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   background: var(--v4-sand-act, #c67139);
 }
 
+/* Столбики недели в 2×1 стоят своей строкой под шапкой: в строке с ключом и
+   числом им оставалось 24 px на семь столбиков с зазорами. */
 .widget-v4-week-bars--inline {
-  flex: 1;
   height: 22px;
   margin-top: auto;
 }
@@ -13279,7 +13283,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 }
 
 .widget-day-score--week .widget-v4-row {
-  align-items: flex-end;
+  align-items: baseline;
   gap: 8px;
 }
 
