@@ -1978,10 +1978,13 @@
       style: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 8px', textAlign: 'center' }
     },
       React.createElement('div', {
-        style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 8, lineHeight: 1.3 }
+        // Кадр «возврат к незавершённой»: 700 19/1,3 через 18. Кегль здесь на
+        // единицу меньше, чем у заголовков шагов, — экран не шаг, а развилка
+        // перед ними. Стояло 20 через 8.
+        style: { fontSize: 19, fontWeight: 700, color: '#201e1d', marginTop: 18, lineHeight: 1.3 }
       }, firstName ? `Продолжим, ${firstName}` : 'Продолжим'),
       React.createElement('p', {
-        style: { fontSize: 13, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55, maxWidth: 320 }
+        style: { fontSize: 12.5, fontWeight: 500, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55, maxWidth: 320 }
       }, bodyStale && capturedLabel
         ? `Профиль заполнен наполовину. Заполнено ${capturedLabel} — вес спросим заново, за неделю он мог измениться.`
         : 'Профиль заполнен наполовину. Продолжим с того места, где остановились.'),
