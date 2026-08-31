@@ -3881,7 +3881,11 @@
             React.createElement('span', { className: 'widget-calories__line-unit' }, 'ккал')
           ),
           animActivity > 0
-            ? React.createElement('span', { className: 'widget-calories__line-meta widget-v4-val--good' },
+            ? React.createElement('span', {
+              // Кадр даёт прибавке свой кегль и вес — 9px/700 шалфеем, а не
+              // 8.5px/500 подписи «осталось» рядом.
+              className: 'widget-calories__line-meta widget-calories__line-meta--gain widget-v4-val--good'
+            },
               `+${formatKcal(animActivity)} актив`
             )
             : null

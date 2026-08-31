@@ -831,6 +831,34 @@ describe('каркас листа разбора против разбора к�
     expect(missing).toEqual([]);
   });
 
+  // Тот же дефект, вид сбоку: когда пара «свой класс + тон» написана в разметке
+  // строкой, её видно статически. Если у базового класса есть свой color, а
+  // парного правила на этот тон нет, тон исчезает молча — так пропал шалфей у
+  // «+210 актив». Проверяются только пары, написанные в коде дословно.
+  it('дословные пары «класс + тон» имеют парное правило', () => {
+    const ui = fs.readFileSync(path.resolve(__dirname, '../heys_widgets_ui_v1.js'), 'utf8');
+    const pairs = new Set();
+    for (const m of ui.matchAll(/'([^']*widget-v4-val--[a-z]+[^']*)'/g)) {
+      const classes = m[1].trim().split(/\s+/);
+      const tone = classes.find((c) => c.startsWith('widget-v4-val--'));
+      if (!tone) continue;
+      for (const base of classes) {
+        if (base === tone || !base.startsWith('widget-')) continue;
+        pairs.add(`${base}|${tone}`);
+      }
+    }
+    expect(pairs.size).toBeGreaterThan(0);
+    const missing = [];
+    for (const pair of pairs) {
+      const [base, tone] = pair.split('|');
+      const own = rules.get(`.${base}`);
+      if (!own || !own.color) continue;
+      if (rules.has(`.${base}.${tone}`)) continue;
+      missing.push(`.${base}.${tone}`);
+    }
+    expect(missing).toEqual([]);
+  });
+
   it('осознанные отступления не разрослись', () => {
     expect(EXCEPTIONS.size).toBe(5);
   });

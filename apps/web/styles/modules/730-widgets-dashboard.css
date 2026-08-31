@@ -13253,21 +13253,25 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   margin-top: 6px;
 }
 
+/* Кадр «Шторка · Оценка дня», вид «Семь дней»: столбик со скруглением 2px по
+   всем углам и прошлые дни бледнее — чернила 13 %, а не 25 %. */
 .widget-v4-week-bars__col {
   flex: 1;
   min-height: 4px;
-  border-radius: 3px 3px 0 0;
+  border-radius: 2px;
   background: var(--v4-sand-act, #c67139);
 }
 
 .widget-v4-week-bars--inline {
   flex: 1;
-  height: 36px;
-  margin-top: 0;
+  height: 22px;
+  margin-top: auto;
 }
 
+/* Прошлые дни бледнее: кадр даёт чернила 13 %, продукт берёт ближайшую роль
+   дорожки — 12 %. Сырой процент здесь запрещён гейтом ролей линии. */
 .widget-v4-week-bars__col--past {
-  background: var(--v4-ink-4, rgba(0, 0, 0, 0.25));
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
 }
 
 .widget-v4-week-bars__col--today {
@@ -13405,8 +13409,9 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 .widget-calories__activity-foot {
   font-size: 8.5px;
   font-weight: 600;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
-  margin-top: 4px;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  margin-top: auto;
   /* «формат чисел»: число меняется на месте — цифры табличные. */
   font-variant-numeric: tabular-nums;
 }
@@ -13558,6 +13563,18 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
    плитки, иначе терракота героя перекрыла бы красный. */
 .widget-calories__hero-value .widget-calories__value--lg.widget-v4-val--bad,
 .widget-calories__line-value.widget-v4-val--bad,
+/* Прибавка от активности: кадр «Шторка · Калории», вид «С активностью».
+   Шалфей у неё терялся — одноклассовая .widget-v4-val--good объявлена выше по
+   файлу, чем цвет самой меты, и при равном весе проигрывала ей. */
+.widget-calories__line-meta--gain {
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.widget-calories__line-meta.widget-v4-val--good {
+  color: var(--v4-sand-ok-fill, #7a8a5e);
+}
+
 .widget-calories__line-meta.widget-v4-val--bad {
   color: var(--v4-bad-text, #a8382b);
 }
@@ -13704,6 +13721,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   margin-top: 5px;
   font-size: 8px;
   font-weight: 600;
+  line-height: 1;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
 }
 
