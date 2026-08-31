@@ -515,6 +515,11 @@
     // Кадры v4 рисуют возврат шевроном 17×17, а не словами «← Назад». Флаг
     // включается потоками, у которых кадр это прямо задаёт, чтобы не менять
     // шапку тем, чей канвас ещё не сведён.
+    //
+    // `true` — один шеврон: так рисуют кадры приёма еды и правки времени.
+    // `'labeled'` — шеврон и слово «Назад» рядом: так рисуют четыре шага
+    // карточки продукта (вставка строки, дополнительно, вредность, правка ·
+    // порции). Кадры двух зон здесь расходятся, поэтому вид выбирает поток.
     chevronBack = false
   }) {
     const [currentStepIndex, setCurrentStepIndex] = useState(initialStep);
@@ -1434,22 +1439,28 @@
                   'aria-label': 'Назад'
                 },
                   (isDailyLayout || chevronBack)
-                    ? React.createElement('svg', {
-                      className: 'mc-header-back-icon',
-                      width: 17,
-                      height: 17,
-                      viewBox: '0 0 24 24',
-                      fill: 'none',
-                      'aria-hidden': 'true'
-                    },
-                      React.createElement('path', {
-                        d: 'M15 18l-6-6 6-6',
-                        stroke: 'currentColor',
-                        strokeWidth: 2.75,
-                        strokeLinecap: 'round',
-                        strokeLinejoin: 'round'
-                      })
-                    )
+                    ? [
+                      React.createElement('svg', {
+                        key: 'icon',
+                        className: 'mc-header-back-icon',
+                        width: 17,
+                        height: 17,
+                        viewBox: '0 0 24 24',
+                        fill: 'none',
+                        'aria-hidden': 'true'
+                      },
+                        React.createElement('path', {
+                          d: 'M15 18l-6-6 6-6',
+                          stroke: 'currentColor',
+                          strokeWidth: 2.75,
+                          strokeLinecap: 'round',
+                          strokeLinejoin: 'round'
+                        })
+                      ),
+                      chevronBack === 'labeled'
+                        ? React.createElement('span', { key: 'label' }, 'Назад')
+                        : null
+                    ]
                     : '← Назад')
                 : (isDailyLayout
                   ? React.createElement('span', { className: 'mc-header-spacer', 'aria-hidden': 'true' })
