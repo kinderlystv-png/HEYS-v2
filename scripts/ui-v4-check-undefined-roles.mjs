@@ -72,8 +72,6 @@ const BASELINE = {
     'styles/modules/730-widgets-dashboard.css',
   ],
   'v4-ok-ink': ['styles/modules/733-ui-v4-reports.css'],
-  'v4-sage-ink': ['styles/modules/610-aps-meal-flow.css'],
-  'v4-sage-surface': ['styles/modules/610-aps-meal-flow.css'],
   'v4-sand-green-ink': [
     'styles/modules/610-aps-meal-flow.css',
     'styles/modules/715-yesterday-verify.css',
