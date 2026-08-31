@@ -299,7 +299,11 @@
       onClick
     },
       h('span', { className: 'cur-row__line' }, text),
-      value != null ? h('span', { className: 'cur-row__count' }, value) : null
+      // Счёт бывает числом и бывает словом «нет»: слово красится приглушённо,
+      // потому что акцент в списке значит «есть на что нажать».
+      value != null ? h('span', {
+        className: 'cur-row__count' + (typeof value === 'number' && value > 0 ? '' : ' cur-row__count--muted')
+      }, value) : null
     );
 
     if (error === 'modules') {
