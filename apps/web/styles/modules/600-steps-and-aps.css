@@ -2887,7 +2887,9 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   flex-direction: column;
   align-items: stretch;
   gap: 0;
-  background: var(--v4-sand-accent-bg, #f0dcc6);
+  /* Кадр «Продукт · исходы заявки» даёт карточке отказа --c2, вторую
+     поверхность набора. #f0dcc6 — роль, которой кадр не называет. */
+  background: var(--v4-hero, #efe3cf);
   color: var(--v4-sand-act-deep, #8a4a20);
   padding: 15px;
 }
