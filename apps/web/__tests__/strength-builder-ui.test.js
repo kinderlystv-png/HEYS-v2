@@ -496,7 +496,11 @@ describe('пропуск назначенного дня (экран 18, мин�
     };
   }
 
-  it('«Отпустить» открывает причины, «Отпустить» в шторке пишет причину и передаёт наружу', () => {
+  // Кнопка карточки теперь называется «Пропустить»: кадр «Актив · план назначен»
+  // разносит перенос и пропуск по двум кнопкам, а прежняя одна («Не смогу
+  // сегодня» / «Отпустить») не говорила, какое из двух действий за ней.
+  // Шторка причин своё слово сохранила.
+  it('«Пропустить» открывает причины, «Отпустить» в шторке пишет причину и передаёт наружу', () => {
     loadModules();
     const Parts = globalThis.HEYS.StrengthBuilderParts;
     const seen = [];
@@ -507,7 +511,7 @@ describe('пропуск назначенного дня (экран 18, мин�
       onStart: () => {},
       onSkip: (reason) => seen.push(reason),
     }));
-    fireEvent.click(screen.getByText('Отпустить'));
+    fireEvent.click(screen.getByText('Пропустить'));
     fireEvent.click(screen.getByText('Мало сил'));
     fireEvent.click(screen.getAllByText('Отпустить').find((el) => el.closest('.sb-sheet')));
     expect(seen).toEqual(['Мало сил']);
@@ -524,7 +528,7 @@ describe('пропуск назначенного дня (экран 18, мин�
       onStart: () => {},
       onSkip: (reason) => seen.push(reason),
     }));
-    fireEvent.click(screen.getByText('Отпустить'));
+    fireEvent.click(screen.getByText('Пропустить'));
     fireEvent.click(screen.getByText('Передумал'));
     expect(seen.length).toBe(0);
     expect(screen.queryByText('Что помешало · необязательно')).toBeNull();

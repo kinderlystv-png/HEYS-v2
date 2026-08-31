@@ -796,19 +796,38 @@
       );
     }
 
+    // Кадр «Актив · план назначен»: заголовок «Сегодня по программе», пилюля
+    // «от куратора» справа, состав прозой, «Начать» и под ней ряд из двух.
+    // Прежде состав жил в мелкой мете, а перенос и пропуск прятались за одной
+    // кнопкой «Не смогу сегодня» — какое из двух действий за ней, было не
+    // видно. Разнесены: «Перенести» уходит в выбор даты, «Пропустить» — в
+    // причину. Переносить некуда — кнопки нет, а не погашена (то же правило,
+    // что у листа действия, контракт строка 29).
+    const canMove = !!(moveOptions && moveOptions.length);
+    const planProse = label
+      + (exercises.length ? ' · ' + exercises.length + ' упр.' : '')
+      + (weekPlace ? ' · ' + weekPlace : '')
+      + '. В расход не идёт, пока не начнёте.';
     return h('div', { className: 'sb-plan-card' },
-      plan.movedFrom && h('div', { className: 'sb-plan-badge' }, 'План с ' + humanDate(plan.movedFrom)),
-      h('b', null, 'Сегодня по плану · ' + label),
-      h('span', { className: 'sb-plan-meta' }, meta),
+      h('div', { className: 'sb-plan-head' },
+        h('b', null, 'Сегодня по программе'),
+        h('span', { className: 'sb-plan-badge' },
+          plan.movedFrom ? 'план с ' + humanDate(plan.movedFrom) : 'от куратора')
+      ),
+      h('span', { className: 'sb-plan-meta' }, planProse),
+      h('button', {
+        type: 'button', className: 'sb-btn is-accent sb-plan-cta',
+        onClick: onStart
+      }, 'Начать'),
       h('div', { className: 'sb-plan-actions' },
-        h('button', {
-          type: 'button', className: 'sb-btn is-accent sb-plan-cta',
-          onClick: onStart
-        }, 'Начать по плану'),
+        canMove && h('button', {
+          type: 'button', className: 'sb-btn sb-plan-skip',
+          onClick: function () { setMoveOpen(true); }
+        }, 'Перенести'),
         h('button', {
           type: 'button', className: 'sb-btn sb-plan-skip',
-          onClick: function () { if (moveOptions && moveOptions.length) setMoveOpen(true); else setSkipOpen(true); }
-        }, moveOptions && moveOptions.length ? 'Не смогу сегодня' : 'Отпустить')
+          onClick: function () { setSkipOpen(true); }
+        }, 'Пропустить')
       ),
       moveOpen && h(MoveSheet, {
         options: moveOptions,
