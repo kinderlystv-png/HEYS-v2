@@ -36,7 +36,12 @@
     const d = new Date(dateStr + 'T12:00:00');
     if (Number.isNaN(d.getTime())) return dateStr;
     const wd = d.toLocaleDateString('ru-RU', { weekday: 'short' });
-    const dm = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    // ru-RU отдаёт короткий месяц с точкой сокращения — «8 авг.». Контракт
+    // «формат · дата и оценка в ленте дней» пишет метку без неё, и то же
+    // делает соседний экран питания: в строке с разделителем «·» точка на
+    // конце читается как конец предложения, а не как сокращение.
+    const dm = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+      .replace(/\.$/, '');
     return wd + ' · ' + dm;
   }
 
@@ -4041,8 +4046,34 @@
             className: useReportsV4 ? 'reports-v4-dynamics-card__label' : 'weight-sparkline-title'
           // Контракт «динамика»: кривая веса на фиксированных 30 днях.
           }, useReportsV4 ? 'Вес · 30 дней' : '⚖️ Вес'),
+          // Контракт «формат · вес и его подпись»: в карточке три вещи —
+          // подпись окна, текущее значение и Δ за период. Значения не было:
+          // человек видел кривую и стрелку, а сколько он весит сейчас —
+          // только наведя глаз на последнюю точку.
+          //
+          // Δ собирается здесь из diff, а не из weightTrend.text: тот
+          // склеен для прежнего вида и несёт в себе стрелку эмодзи, точку
+          // как разделитель и второе «кг». Рядом с v4-стрелкой получалось
+          // «↓ ⬇️ -0.9 кг» — стрелка дважды и единица дважды.
+          useReportsV4 && (function () {
+            const measured = weightSparklineData.filter(function (d) { return !d.isFuture; });
+            if (!measured.length) return null;
+            const now = measured[measured.length - 1].weight;
+            const fmt = function (v) { return (Math.round(v * 10) / 10).toFixed(1).replace('.', ','); };
+            const diff = weightTrend && typeof weightTrend.diff === 'number' ? weightTrend.diff : null;
+            const rounded = diff == null ? null : Math.round(diff * 10) / 10;
+            return React.createElement('span', { className: 'reports-v4-dynamics-card__now' },
+              React.createElement('span', { className: 'reports-v4-dynamics-card__value' },
+                fmt(now), ' кг'),
+              rounded != null && rounded !== 0 && React.createElement('span', {
+                className: 'reports-v4-dynamics-card__delta'
+              // Единица в Δ не повторяется, разделитель — запятая, минус —
+              // типографский, тот же, что в строке дня.
+              }, (rounded > 0 ? '+' : '−') + fmt(Math.abs(rounded)))
+            );
+          })(),
           // Badges показываем только когда есть тренд (2+ точки)
-          weightSparklineData.length >= 2 && weightTrend && React.createElement('div', { className: 'weight-sparkline-badges' },
+          !useReportsV4 && weightSparklineData.length >= 2 && weightTrend && React.createElement('div', { className: 'weight-sparkline-badges' },
             React.createElement('span', {
               className: 'weight-trend-badge' +
                 (weightTrend.direction === 'down' ? ' down' :

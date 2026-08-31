@@ -222,6 +222,30 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
 }
 
+/* Текущий вес и Δ за период — правая половина шапки карточки.
+
+   Контракт «формат · вес и его подпись» держит их вместе и в одном ряду с
+   подписью окна: значение крупнее подписи, Δ рядом и мельче. Единица в Δ не
+   повторяется — «91,1 кг · −0,9», а не «−0,9 кг» вторым разом. */
+.reports-v4-dynamics-card__now {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.reports-v4-dynamics-card__value {
+  font: 800 21px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+.reports-v4-dynamics-card__delta {
+  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ok-text, #5c7a3f);
+  font-variant-numeric: tabular-nums;
+}
+
 .reports-v4-dynamics-card__badge {
   font-size: 11.5px;
   font-weight: 700;
