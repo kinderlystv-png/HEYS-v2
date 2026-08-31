@@ -8719,6 +8719,24 @@ button.meal-quality-badge:active {
   background: var(--v4-sand-act, #c67139);
 }
 
+/* Кадр «Порция · перебор нормы»: за нормой дня вклад порции краснеет. */
+.aps-v4-grams-impact__bar-add.is-over {
+  background: var(--v4-bad-text, #b4442a);
+}
+
+/* Та же карточка, что у дубля продукта, но своим тоном: перебор нормы —
+   не подсказка, а предупреждение о числе. Отступ 12 и заливка --c2 по кадру. */
+.aps-v4-grams-over {
+  margin-top: 12px;
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: var(--v4-sand-hero, #efe3cf);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--v4-bad-text, #b4442a);
+}
+
 .aps-v4-grams-impact__foot {
   margin-top: 9px;
   font-size: 11px;
@@ -8727,10 +8745,14 @@ button.meal-quality-badge:active {
   color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 42%, transparent);
 }
 
+/* Кадр «Порция · продукт уже в приёме» даёт карточке ту же вторую бумагу
+   --c2, что и карточке перебора: обе — предупреждения о числе, и отличаются
+   тоном текста, а не заливкой. Прежняя --v4-sand-accent-bg (#f0dcc6) — третья
+   бумага, которой в кадре нет. */
 .aps-v4-grams-duplicate {
   border-radius: 18px;
   padding: 14px 16px;
-  background: var(--v4-sand-accent-bg, #f0dcc6);
+  background: var(--v4-sand-hero, #efe3cf);
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.45;

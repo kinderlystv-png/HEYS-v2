@@ -10360,6 +10360,11 @@ NOVA: 1
       ? Math.min(100, Math.max(0, Math.round(dayTotalKcal / dailyGoal * 100)))
       : 0;
     const dayAddPct = Math.min(100 - dayEatenPct, Math.max(0, dayPct - dayEatenPct));
+    // Кадр «Порция · перебор нормы»: за нормой дня вклад порции краснеет, а
+    // под карточкой встаёт строка с самим перебором в калориях. Без неё
+    // перебор виден только процентом в подвале и читается как «почти норма».
+    const dayOverKcal = Math.max(0, dayAfterAddKcal - dailyGoal);
+    const dayIsOver = dailyGoal > 0 && dayOverKcal > 0;
     const duplicateGrams = mealDuplicate
       ? HEYS.models.normalizeItemGrams(mealDuplicate.item.grams, 100)
       : 0;
@@ -10482,7 +10487,7 @@ NOVA: 1
           }),
           dayAddPct > 0
             ? React.createElement('div', {
-              className: 'aps-v4-grams-impact__bar-add',
+              className: 'aps-v4-grams-impact__bar-add' + (dayIsOver ? ' is-over' : ''),
               style: { left: `${dayEatenPct}%`, width: `${dayAddPct}%` }
             })
             : null
@@ -10490,6 +10495,10 @@ NOVA: 1
         React.createElement('div', { className: 'aps-v4-grams-impact__foot' },
           `Станет ${dayAfterAddKcal} из ${dailyGoal} за день · ${dayPct} %`
         )
+      ),
+
+      dayIsOver && React.createElement('div', { className: 'aps-v4-grams-over' },
+        `Норма дня будет превышена на ${dayOverKcal} ккал.`
       ),
 
       mealDuplicate && React.createElement('div', { className: 'aps-v4-grams-duplicate' },
