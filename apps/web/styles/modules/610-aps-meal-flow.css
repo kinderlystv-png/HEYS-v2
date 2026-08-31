@@ -3819,15 +3819,19 @@ button.meal-quality-badge:active {
   min-width: 0;
   font-size: 13px;
   line-height: 1.35;
-  /* Оба кадра собранного приёма дают имени продукта полные чернила --tx;
-     стояли 55 %, и имя было бледнее собственных граммов справа. */
-  color: var(--v4-ink, #201e1d);
+  /* Кадры собранного приёма спорят: «Приём собран · фото» даёт имени полные
+     чернила --tx, «Добавление · приём собран» — 55 %. Верен второй: у него та
+     же структура строки, что в коде (имя с граммами рядом, калорийность
+     справа), а первый строит строку иначе — имя, под ним «150 г · 99 ккал»,
+     справа граммы. 31 августа я поставила полные чернила, сославшись на «оба
+     кадра», — это было неверно, кадр там один. */
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
 }
 
 .aps-v4-meal-summary__row-grams {
   font-size: 11px;
   font-weight: 500;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 35%, transparent);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 35%, transparent);
 }
 
 .aps-v4-meal-summary__row-recipe,
@@ -3846,7 +3850,7 @@ button.meal-quality-badge:active {
   flex: none;
   font-size: 13px;
   font-weight: 600;
-  color: var(--v4-sand-ink, #201e1d);
+  color: var(--v4-ink, #201e1d);
 }
 
 .aps-v4-meal-summary__actions {
