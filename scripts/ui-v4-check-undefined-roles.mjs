@@ -73,7 +73,6 @@ const BASELINE = {
   ],
   'v4-ok-ink': ['styles/modules/733-ui-v4-reports.css'],
   'v4-ok-surface': ['styles/modules/733-ui-v4-reports.css'],
-  'v4-over-fill': ['styles/modules/733-ui-v4-reports.css'],
   'v4-sage-ink': ['styles/modules/600-steps-and-aps.css'],
   'v4-sage-surface': ['styles/modules/600-steps-and-aps.css'],
   'v4-sand-green-ink': [
