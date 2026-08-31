@@ -13114,7 +13114,9 @@ html[data-theme-id="blue-dark"] .widget-wd-sheet__opt.is-active {
 
 .widget-wd-sheet__check {
   flex: none;
-  color: #8a4a20;
+  /* Стоял литерал #8a4a20: галка выбранного вида не следовала набору.
+     Кадр называет здесь --ac. */
+  color: var(--v4-act-text, #8a4a20);
   display: flex;
 }
 
