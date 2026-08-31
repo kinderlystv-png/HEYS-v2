@@ -4530,11 +4530,14 @@ body.tour-active .ios-pwa-banner {
   font-size: 12px;
 }
 
+/* Ярус шага правки: кадр даёт вторую поверхность радиусом 18 полями 12/14 и без
+   рамки. Прежде радиус 10, поля 8 и контур — плюс запасные значения из чужого
+   набора под верными ролями (#f8fafc и #e5e7eb вместо тёплых). */
 .pe-section {
-  padding: 8px;
-  border-radius: 10px;
-  background: var(--v4-hero, #f8fafc);
-  border: 1px solid var(--v4-line, #e5e7eb);
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--v4-hero, #efe3cf);
+  border: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
