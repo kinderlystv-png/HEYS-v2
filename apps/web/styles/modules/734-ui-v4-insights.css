@@ -565,7 +565,8 @@
 }
 
 .meal-rec-v4__title {
-  font: 700 14px/1.35 Figtree, system-ui, sans-serif;
+  /* Окно времени 13,5/700 по контракту: 14 выбивалось из шкалы зоны. */
+  font: 700 13.5px/1.35 Figtree, system-ui, sans-serif;
   color: var(--v4-ink, #0f172a);
   margin-bottom: 12px;
 }
@@ -615,6 +616,9 @@
   cursor: pointer;
 }
 
+/* Вход в обоснование — ссылкой, а не приглушённой подписью: контракт задаёт
+   11,5/700 тоном --ac. Стояло 600 на чернилах 55 %, и строка, ради которой
+   рекомендация перестаёт быть приказом, была тише всего в карточке. */
 .meal-rec-v4__how {
   display: block;
   width: 100%;
@@ -622,8 +626,8 @@
   margin-top: 4px;
   border: none;
   background: none;
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
 }
 
