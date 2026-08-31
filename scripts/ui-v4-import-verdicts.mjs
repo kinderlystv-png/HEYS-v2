@@ -2,7 +2,7 @@
 // ui-v4-import-verdicts.mjs — разовый сборщик снимка вердиктов из построчных
 // файлов ревизии.
 //
-// Снимок `docs/ui/ui-v4-contract-verdicts.json` до этого держал 6 зон из 17:
+// Снимок до этого держал 6 зон из 17:
 // остальные одиннадцать гейт `ui-v4-check-contract-drift.mjs` не сторожил, и
 // правка контракта в них проходила молча. Ревизия 24.08 дала вердикт на каждую
 // из 1042 строк; здесь эти вердикты переносятся в снимок вместе с отпечатками.
@@ -21,14 +21,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { readAllZones, writeZone } from './lib/ui-v4-verdicts.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACK = path.join(
   ROOT,
   'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4',
 );
-// Исторический путь: снимок был одним файлом до 31 августа. Скрипт разовый и
-// с тех пор не запускался; актуальная раскладка — docs/ui/verdicts/<зона>.json.
-const VERDICTS = path.join(ROOT, 'docs/ui/verdicts');
+// Вердикты лежат по файлу на зону; путь знает scripts/lib/ui-v4-verdicts.mjs.
+// До 31 августа это был один общий файл, и скрипт писал в него целиком.
 const VALID = new Set(['=', '≠', '—', '?']);
 
 const hash = (value) => crypto.createHash('sha1').update(value).digest('hex').slice(0, 12);
@@ -77,12 +78,15 @@ if (!dirArg) {
 }
 const dry = flags.includes('--dry');
 
-const data = JSON.parse(fs.readFileSync(VERDICTS, 'utf8'));
+const data = readAllZones();
 const problems = [];
 const report = [];
+/** Зоны, пришедшие из каталога: только их файлы и переписываются. */
+const touched = new Set();
 
 for (const file of fs.readdirSync(dirArg).filter((f) => f.endsWith('.txt')).sort()) {
   const zoneId = file.replace(/\.txt$/, '');
+  touched.add(zoneId);
   const canvas = canvasFor(zoneId);
   if (!canvas) {
     problems.push(`${zoneId}: канвас с data-contract="${zoneId}" не найден`);
@@ -144,9 +148,10 @@ if (problems.length) {
 }
 console.log(report.join('\n'));
 if (!dry) {
-  fs.writeFileSync(VERDICTS, `${JSON.stringify(data, null, 2)}\n`);
-  console.log(`\nСнимок записан: ${Object.keys(data.zones).length} зон.`);
+  // Пишем только зоны, которые пришли из каталога: остальные файлы не трогаем.
+  for (const zoneId of touched) writeZone(zoneId, data.zones[zoneId]);
+  console.log(`\nЗаписано зон: ${touched.size}.`);
 } else {
-  console.log('\n--dry: файл не тронут.');
+  console.log('\n--dry: файлы не тронуты.');
 }
 if (problems.length) process.exit(1);
