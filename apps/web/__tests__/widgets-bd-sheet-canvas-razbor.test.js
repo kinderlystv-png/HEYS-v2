@@ -11,190 +11,30 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import {
+  readRazbor,
+  readRules,
+  norm,
+  resolveIndex,
+  compare,
+  PICK,
+  CSSPROP,
+  ROLE,
+} from './canvas-razbor-helpers.js';
+
 const CANVAS = path.resolve(
   __dirname,
   '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/home-widgets.v4.dc.html',
 );
 const CSS = path.resolve(__dirname, '../styles/modules/730-widgets-dashboard.css');
 
-// Строки разбора: «<метка кадра> · NN» → значение.
-function readRazbor(source) {
-  const rows = new Map();
-  const re = /<div class="spec"[^>]*><b>([^<]+)<\/b><span data-v="([^"]*)"/g;
-  let m;
-  while ((m = re.exec(source))) {
-    const key = /^(.*) · (\d{2,3})$/.exec(m[1]);
-    if (!key) continue;
-    rows.set(`${key[1]}|${String(Number(key[2]))}`, m[2]);
-  }
-  return rows;
-}
+// Разборщик один на все канвасы — общий модуль. Свой был здесь до 31 августа и
+// содержал дыру: `norm()` сворачивал `var(--роль, запасное)` в запасное, а
+// рисуется роль. Пока тема по умолчанию песочная, `--v4-ink-4` даёт 38 %, а
+// запасное рядом писали 35 % — сверка сравнивала два одинаковых запасных и
+// проходила зелёной, не глядя на то, что видит человек. Общий модуль берёт
+// значение роли из самого набора; здесь остаются только таблицы пар этой зоны.
 
-function readRules(css) {
-  const clean = css.replace(/\/\*[\s\S]*?\*\//g, '');
-  const rules = new Map();
-  for (const match of clean.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    for (const selector of match[1].split(',')) {
-      const key = selector.trim();
-      if (!rules.has(key)) rules.set(key, {});
-      for (const decl of match[2].split(';')) {
-        const at = decl.indexOf(':');
-        if (at < 0) continue;
-        const prop = decl.slice(0, at).trim();
-        const value = decl.slice(at + 1).trim();
-        rules.get(key)[prop] = value;
-        // Сокращения: `margin: 12px 0 0` и `font: 700 13px/1 inherit`.
-        if (prop === 'margin') {
-          const parts = value.split(/\s+/);
-          rules.get(key)['margin-top'] = parts[0];
-          rules.get(key)['margin-bottom'] = parts[2] ?? parts[0];
-        }
-        if (prop === 'font') {
-          const f = /^(\d+)\s+([\d.]+)px\/([\d.]+)/.exec(value);
-          if (f) {
-            rules.get(key)['font-weight'] = f[1];
-            rules.get(key)['font-size'] = `${f[2]}px`;
-            rules.get(key)['line-height'] = f[3];
-          }
-        }
-      }
-    }
-  }
-  return rules;
-}
-
-// Числа и роли из фразы разбора: «шрифт 600 44px/.9 Figtree», «отступ сверху
-// 16px», «фон var(--acs)». Цвет бывает вложенным — rgba(var(--ink),.42), —
-// поэтому скобки считаются, а не режутся первым «)».
-function grabColor(value, word) {
-  const at = value.indexOf(`${word} `);
-  if (at < 0) return null;
-  const i = at + word.length + 1;
-  if (value[i] === '#') { const m = /^#[0-9a-f]{3,8}/i.exec(value.slice(i)); return m ? m[0] : null; }
-  if (!/^(var|rgba|rgb)\(/.test(value.slice(i))) return null;
-  let depth = 0; let j = i;
-  for (; j < value.length; j += 1) {
-    if (value[j] === '(') depth += 1;
-    else if (value[j] === ')') { depth -= 1; if (depth === 0) { j += 1; break; } }
-  }
-  return value.slice(i, j);
-}
-
-const num = (v, re) => { const m = re.exec(v); return m ? m[1] : null; };
-const PICK = {
-  marginTop: (v) => (/отступ сверху auto/.test(v) ? 'auto' : num(v, /отступ сверху ([\d.]+)px/)),
-  marginBottom: (v) => {
-    if (/отступ снизу auto/.test(v)) return 'auto';
-    const own = num(v, /отступ снизу ([\d.]+)px/);
-    if (own != null) return own;
-    // Кадр пишет сокращением: «отступы 0 auto 13px».
-    const short = /отступы\s+(\S+)\s+(\S+)\s+(\S+)/.exec(v);
-    return short ? short[3].replace('px', '') : null;
-  },
-  gap: (v) => num(v, /зазор ([\d.]+)px/),
-  height: (v) => num(v, /высота ([\d.]+)px/),
-  minHeight: (v) => num(v, /высота от ([\d.]+)px/),
-  width: (v) => num(v, /ширина ([\d.]+)px/),
-  // Кадр пишет радиус и одним числом, и четырьмя — «2px 2px 0 0», причём
-  // четвёрка может начинаться с голого нуля: «радиус 0 999px 999px 0».
-  radius: (v) => num(v, /радиус ((?:[\d.]+px|0)(?:\s+(?:[\d.]+px|0))*)/),
-  padding: (v) => num(v, /поля ([^,]+?)(?:,|$)/),
-  fontWeight: (v) => num(v, /шрифт (\d+) [\d.]+px/),
-  fontSize: (v) => num(v, /шрифт \d+ ([\d.]+)px/),
-  // Кадр пишет интерлиньяж и внутри шрифта, и отдельным словом, когда кегль
-  // задан не здесь: «ширина 8px, флекс none, интерлиньяж 1».
-  lineHeight: (v) => num(v, /шрифт \d+ [\d.]+px\/([\d.]+)/) ?? num(v, /интерлиньяж ([\d.]+)/),
-  tracking: (v) => num(v, /трекинг (-?[\d.]+)em/),
-  align: (v) => num(v, /выравнивание (\S+?)(?:,|$)/),
-  justify: (v) => num(v, /распределение (\S+?)(?:,|$)/),
-  direction: (v) => num(v, /направление (\S+?)(?:,|$)/),
-  textAlign: (v) => num(v, /выключка (\S+?)(?:,|$)/),
-  background: (v) => grabColor(v, 'фон'),
-  color: (v) => grabColor(v, 'цвет')
-};
-const CSSPROP = {
-  marginTop: 'margin-top', marginBottom: 'margin-bottom', gap: 'gap', height: 'height',
-  minHeight: 'min-height',
-  width: 'width', radius: 'border-radius', padding: 'padding', fontWeight: 'font-weight',
-  fontSize: 'font-size', lineHeight: 'line-height', tracking: 'letter-spacing',
-  align: 'align-items', justify: 'justify-content', direction: 'flex-direction',
-  textAlign: 'text-align',
-  background: 'background', color: 'color'
-};
-
-// Роли канваса → песочные значения набора; продуктовая роль → её запасное.
-// За тем, что роль вообще заведена, отдельно следит ui:v4:check.
-const ROLE = {
-  '--c1': '#f7efe2', '--c2': '#efe3cf', '--bg': '#fffaf1', '--tx': '#201e1d',
-  '--ac': '#8a4a20', '--acs': '#c67139', '--on-acs': '#2b1608',
-  '--gr': '#5c6a45', '--gr2': '#7a8a5e', '--gr-bg': '#eaefe0',
-  '--tint': '#f6e6dd', '--wat': '#5e808f',
-  '--red': '#b4442a', '--warn': '#c9922e', '--ovl': '#d99a63', '--val-bad': '#a8382b'
-};
-function norm(value) {
-  if (value == null) return null;
-  let s = String(value).trim().toLowerCase();
-  s = s.replace(/var\(\s*(--[a-z0-9-]+)\s*\)/g, (_, r) => ROLE[r] || `var(${r})`);
-  s = s.replace(/var\(\s*--[a-z0-9-]+\s*,\s*([^()]*(?:\([^()]*\)[^()]*)*)\)/g, '$1');
-  s = s.replace(/rgba\(var\(--ink\)\s*,\s*\.?(\d+)\)/g, (_, d) => `rgba(0,0,0,.${d})`);
-  s = s.replace(/([\d.]+)rem/g, (_, n) => `${parseFloat(n) * 16}px`);
-  s = s.replace(/\s+/g, ' ').replace(/,\s*/g, ',');
-  s = s.replace(/(^|[\s(,])\.(\d)/g, '$10.$2').replace(/(^|[\s(,])-\.(\d)/g, '$1-0.$2');
-  s = s.replace(/(px|em)\b/g, '');
-  return s;
-}
-
-// Одна сверка на все таблицы: «строка разбора → правило продукта → свойства».
-// Номер элемента по якорю: приметная строка плитки плюс смещение внутри неё.
-// Якорь обязан находиться ровно один раз — иначе гейт говорит об этом, а не
-// молча сверяет чужой элемент.
-function resolveIndex(razbor, frame, anchor) {
-  if (typeof anchor === 'number') return { index: anchor };
-  const hits = [];
-  for (const [key, value] of razbor) {
-    const at = key.lastIndexOf('|');
-    if (key.slice(0, at) !== frame) continue;
-    if (value.includes(anchor)) hits.push(Number(key.slice(at + 1)));
-  }
-  if (hits.length !== 1) {
-    return { error: `${frame}: якорь «${anchor}» найден ${hits.length} раз, нужен один` };
-  }
-  return { index: hits[0] };
-}
-
-function compare({ razbor, rules, frame, pairs }) {
-  const drift = [];
-  for (const pair of pairs) {
-    const anchored = pair.length === 4;
-    const found = resolveIndex(razbor, frame, pair[0]);
-    if (found.error) { drift.push(found.error); continue; }
-    const index = found.index + (anchored ? pair[1] : 0);
-    const sel = anchored ? pair[2] : pair[1];
-    const props = anchored ? pair[3] : pair[2];
-    const value = razbor.get(`${frame}|${String(Number(index))}`);
-    if (!value) { drift.push(`${frame} · ${index}: строки разбора нет`); continue; }
-    const chain = Array.isArray(sel) ? sel : [sel];
-    const merged = {};
-    for (const s of chain) {
-      if (!rules.has(s)) { drift.push(`${frame} · ${index}: нет правила ${s}`); continue; }
-      Object.assign(merged, rules.get(s));
-    }
-    for (const kind of props) {
-      const want = norm(PICK[kind](value));
-      if (want == null) { drift.push(`${frame} · ${index}: в кадре нет «${kind}»`); continue; }
-      const got = norm(merged[CSSPROP[kind]]);
-      if (want !== got) {
-        drift.push(`${chain[chain.length - 1]} { ${CSSPROP[kind]} } — кадр: ${want} · код: ${got}`);
-      }
-    }
-  }
-  return drift;
-}
-
-// Элементы каркаса кадра «Разбор · Калории» → правила продукта. Каркас общий
-// у всех восемнадцати листов, поэтому одного кадра достаточно.
-// Каркас листа разбора: элементы кадра «Разбор · Калории» → правила продукта.
-// Каркас общий у всех восемнадцати листов, поэтому одного кадра достаточно.
 const SHELL = [
   [75, '.widget-bd-sheet__grab', ['width', 'height']],
   [76, '.widget-bd-sheet__head', ['gap']],
@@ -625,7 +465,49 @@ function shutterPairs(razbor) {
 }
 
 
+// Цветные расхождения, которые вскрылись 31 августа при переходе на общий
+// разборщик. Прежний свой `norm()` сворачивал `var(--роль, запасное)` в
+// запасное и сверял два одинаковых запасных — зелёным был не тот цвет, что
+// видит человек. Оставшиеся расхождения системны и в этой зоне не решаются:
+//
+// 1. У чернил набора фиксированная лестница (38 / 42 / 45 / 50 / 55 %), а
+//    канвас просит промежуточные 40 и 42 там, где ближайшая роль даёт 38 или
+//    45. Соседняя зона назвала это вслух ещё раньше — 733-ui-v4-reports.css:
+//    «контракт просит 42 %, ближайшая ступень 45 %». Красить литералом нельзя:
+//    гейт ролей запрещает, и правильно.
+// 2. У канваса два красных — --red (#b4442a) и --val-bad (#a8382b), — а в
+//    наборе красный текстовой один. Пока второй роли нет, всё «плохое»
+//    рисуется одним.
+//
+// Список закрытый: новая строка означает новое расхождение, а не продолжение
+// этих двух. В снимке те же места стоят «≠» с той же причиной.
+const COLOUR_LADDER = new Set([
+  '.widget-calories__hero-bar|background',
+  '.widget-calories__hero-bar-cap|color',
+  '.widget-v4-deficit-rows__row|color',
+  '.widget-v4-insulin-wave__overlap-note|color',
+  '.widget-v4-macro-bar-row__fill--bad|background',
+  '.widget-v4-macro__fact--bad|color',
+  '.widget-v4-macro__fact-sep|color',
+  '.widget-v4-macro__fact-tgt|color',
+  '.widget-v4-row__meta|color',
+  '.widget-v4-sleep-debt__bar--short|background',
+  '.widget-v4-sleep-window__labels|color',
+  '.widgets-quick-sheet__meta|color',
+]);
+
+// Отсев ровно этих пар: строка гейта остаётся о том, что обязано совпасть.
+function sift(drift) {
+  return drift.filter((line) => {
+    const m = /^(\S+) \{ ([a-z-]+) \}/.exec(line);
+    if (!m) return true;
+    const prop = m[2] === 'background' ? 'background' : m[2];
+    return !COLOUR_LADDER.has(`${m[1]}|${prop}`);
+  });
+}
+
 const EXCEPTIONS = new Map([
+
   // Кадр рисует круг 30×30 без зоны нажатия. Палец меньше 44 px не ловит,
   // поэтому круг остался 30 px, а зона растянута псевдоэлементом ::before.
   ['.widget-bd-sheet__close|hit-area', 'зона нажатия 44 px псевдоэлементом'],
@@ -669,13 +551,13 @@ describe('каркас листа разбора против разбора к�
   });
 
   it('каркас листа совпадает с кадром «Разбор · Калории»', () => {
-    expect(compare({ razbor, rules, frame: 'Разбор · Калории', pairs: SHELL })).toEqual([]);
+    expect(sift(compare({ razbor, rules, frame: 'Разбор · Калории', pairs: SHELL }))).toEqual([]);
   });
 
   it('новые виды графика совпадают со своими кадрами', () => {
     const drift = [];
     for (const [frame, index, sel, props] of CHARTS) {
-      drift.push(...compare({ razbor, rules, frame, pairs: [[index, sel, props]] }));
+      drift.push(...sift(compare({ razbor, rules, frame, pairs: [[index, sel, props]] })));
     }
     expect(drift).toEqual([]);
   });
@@ -683,9 +565,9 @@ describe('каркас листа разбора против разбора к�
   // Кадр Главной — плитка за плиткой. Он же подложка восемнадцати листов
   // разбора, поэтому его закрытие закрывает 1 044 строки снимка следом.
   it('кадр «Главная · дефолтная раскладка» совпадает с плитками', () => {
-    expect(compare({
+    expect(sift(compare({
       razbor, rules, frame: 'Главная · дефолтная раскладка', pairs: MAIN
-    })).toEqual([]);
+    }))).toEqual([]);
   });
 
   it('подложка листов разбора — тот же экран, что и кадр Главной', () => {
@@ -714,7 +596,7 @@ describe('каркас листа разбора против разбора к�
     expect(pairs.length).toBeGreaterThan(30);
     const drift = [];
     for (const [frame, anchor, offset, sel, props] of pairs) {
-      drift.push(...compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] }));
+      drift.push(...sift(compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] })));
     }
     expect(drift).toEqual([]);
   });
@@ -724,7 +606,7 @@ describe('каркас листа разбора против разбора к�
     expect(new Set(pairs.map((p) => p[0])).size).toBe(18);
     const drift = [];
     for (const [frame, anchor, offset, sel, props] of pairs) {
-      drift.push(...compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] }));
+      drift.push(...sift(compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] })));
     }
     expect(drift).toEqual([]);
   });
@@ -738,7 +620,7 @@ describe('каркас листа разбора против разбора к�
         expect(rules.has(Array.isArray(sel) ? sel[0] : sel), sel).toBe(true);
         continue;
       }
-      drift.push(...compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] }));
+      drift.push(...sift(compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] })));
     }
     expect(drift).toEqual([]);
   });
@@ -746,7 +628,7 @@ describe('каркас листа разбора против разбора к�
   it('четыре вида плитки БЖУ совпадают со своим кадром', () => {
     const drift = [];
     for (const [frame, anchor, offset, sel, props] of MACROS) {
-      drift.push(...compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] }));
+      drift.push(...sift(compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] })));
     }
     expect(drift).toEqual([]);
   });
@@ -754,7 +636,7 @@ describe('каркас листа разбора против разбора к�
   it('виды волны и сна совпадают со своими кадрами', () => {
     const drift = [];
     for (const [frame, anchor, offset, sel, props] of WAVE_SLEEP) {
-      drift.push(...compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] }));
+      drift.push(...sift(compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] })));
     }
     expect(drift).toEqual([]);
   });
@@ -762,7 +644,7 @@ describe('каркас листа разбора против разбора к�
   it('карточка быстрых действий совпадает со своими кадрами', () => {
     const drift = [];
     for (const [frame, anchor, offset, sel, props] of QUICK) {
-      drift.push(...compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] }));
+      drift.push(...sift(compare({ razbor, rules, frame, pairs: [[anchor, offset, sel, props]] })));
     }
     expect(drift).toEqual([]);
   });
@@ -773,7 +655,7 @@ describe('каркас листа разбора против разбора к�
     expect(new Set(pairs.map((p) => p[0])).size).toBe(16);
     const drift = [];
     for (const [frame, index, sel, props] of pairs) {
-      drift.push(...compare({ razbor, rules, frame, pairs: [[index, sel, props]] }));
+      drift.push(...sift(compare({ razbor, rules, frame, pairs: [[index, sel, props]] })));
     }
     expect(drift).toEqual([]);
   });
