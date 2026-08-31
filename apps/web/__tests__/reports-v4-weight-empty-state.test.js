@@ -34,15 +34,19 @@ describe('рамка на месте кривой веса', () => {
     expect(STATS).toContain("'кривая появится с трёх замеров'");
   });
 
-  it('вид рамки — из контракта: 52, радиус 14, чернила 4 % и 8 %', () => {
+  it('вид рамки — из контракта: 52, радиус 14, тона ролями', () => {
     const r = rule('.reports-v4-noplot');
     expect(r).toContain('height: 52px');
     expect(r).toContain('border-radius: 14px');
-    expect(r).toContain('var(--v4-ink, #0f172a) 4%');
-    expect(r).toContain('inset 0 0 0 1px');
-    expect(r).toContain('var(--v4-ink, #0f172a) 8%');
     expect(r).toContain('font: 500 11px/1.4');
-    expect(r).toContain('var(--v4-ink, #0f172a) 42%');
+    // Тона — именами ролей. Первый заход брал процент от чернил прямо в
+    // правиле: числа сходились с контрактом, но такой цвет не
+    // переопределяется набором и в тёмных палитрах остаётся тем же. Гейт
+    // line-roles-v4 поймал это на следующем прогоне.
+    expect(r).toContain('var(--v4-track');   // заливка — дорожка будущей кривой
+    expect(r).toContain('inset 0 0 0 1px var(--v4-line'); // обводка — ровно 8 %
+    expect(r).toContain('var(--v4-ink-3');   // подпись; 42 % своей ступени не имеет
+    expect(r).not.toMatch(/color-mix/);
   });
 
   it('вход «Записать вес» — 44 на --c2 тоном --ac, не на акценте', () => {
