@@ -7010,7 +7010,7 @@ NOVA: 1
             )
           )
         ),
-        error && React.createElement('div', { className: 'aps-create-error' }, '⚠️ ' + error),
+        error && React.createElement('div', { className: 'aps-create-error' }, error),
         React.createElement('div', { className: 'aps-v4-footer' },
           React.createElement('button', {
             type: 'button',
@@ -7047,7 +7047,7 @@ NOVA: 1
           type: 'button',
           className: 'aps-create-prompt-btn',
           onClick: handleCopyPrompt
-        }, '📋 Скопировать промпт для ИИ'),
+        }, 'Промпт для ИИ'),
         React.createElement('span', { className: 'aps-create-prompt-note' }, 'Под формат новой схемы')
       ),
 
@@ -7075,16 +7075,16 @@ NOVA: 1
             } catch (_) {}
           },
           disabled: false
-        }, '📋 Вставить из буфера'),
+        }, 'Вставить из буфера'),
         React.createElement('span', { className: 'aps-create-example-note' }, 'Формат для поля вставки')
       ),
 
       // Ошибка
-      error && React.createElement('div', { className: 'aps-create-error' }, '⚠️ ' + error),
+      error && React.createElement('div', { className: 'aps-create-error' }, error),
 
       // Превью распознанного продукта
       parsedPreview && React.createElement('div', { className: 'aps-create-preview' },
-        React.createElement('div', { className: 'aps-preview-title' }, '✅ Распознано:'),
+        React.createElement('div', { className: 'aps-preview-title' }, 'Распознано'),
         React.createElement('div', { className: 'aps-preview-name' }, parsedPreview.name),
         shouldDisplayProductBrand(parsedPreview) && React.createElement('div', { className: 'aps-preview-brand' }, getProductBrand(parsedPreview)),
         React.createElement('div', { className: 'aps-preview-macros' },
