@@ -7054,7 +7054,7 @@
             coldStreakLabel && React.createElement('div', { className: 'mc-rest-cold-streak' }, coldStreakLabel)
           ),
           React.createElement('div', { className: 'mc-rest-cold-hint' },
-            'Выберите, что именно — от этого зависит инсулиновая волна дня.'
+            'Тридцать секунд в конце обычного душа — достаточно.'
           ),
           React.createElement('div', { className: 'mc-rest-cold-types' },
             [
