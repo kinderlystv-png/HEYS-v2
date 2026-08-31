@@ -49,11 +49,11 @@ const WINDOW = 60; // строк в обе стороны — файлы пра�
  * уменьшение просим переписать.
  */
 const BASELINE = {
-  truncated: 7,
-  missing: 8,
-  beyond: 5,
-  absent: 39,
-  moved: 207,
+  truncated: 0,
+  missing: 0,
+  beyond: 0,
+  absent: 18,
+  moved: 134,
 };
 
 const args = process.argv.slice(2);
@@ -69,7 +69,26 @@ const ADDRESS = /([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:js|mjs|ts|tsx|css|html|sql)):
  * Имена из доказательства: латинские токены, похожие на идентификаторы.
  * Русская проза даёт кириллицу, поэтому латиница — почти всегда имя из кода.
  */
-const NAME = /[A-Za-z_$][A-Za-z0-9_$-]{3,}/g;
+/**
+ * Имя ловим вместе с приставкой: `.класс`, `--роль`. Приставка и есть признак
+ * того, что перед нами имя из кода, а не слово из прозы вердикта.
+ */
+const NAME = /(--|\.)?[A-Za-z_$][A-Za-z0-9_$-]{3,}/g;
+
+/**
+ * Что считать именем. Проза вердикта написана по-русски, но латиницы в ней
+ * хватает: `r999` — радиус, `ink14` — чернила 14 %, `gap4` — зазор, `variants`,
+ * `screens`, `legal` — просто слова. 31.08 они дали 39 «пропавших имён» при
+ * примерно десятке настоящих, и настоящие в этом шуме тонули. Поэтому имя
+ * обязано **выглядеть** идентификатором: snake_case, camelCase либо приставка
+ * класса/роли.
+ */
+function looksLikeIdentifier(token) {
+  if (token.startsWith('.') || token.startsWith('--')) return true;
+  if (token.includes('_')) return true;
+  if (/[a-z][A-Z]/.test(token)) return true;
+  return false;
+}
 const NOT_A_NAME = new Set([
   'px', 'css', 'js', 'mjs', 'html', 'json', 'rgba', 'true', 'false', 'null',
   'flex', 'grid', 'auto', 'none', 'span', 'div', 'left', 'right', 'top',
@@ -168,6 +187,8 @@ function linesOf(file) {
 }
 
 const problems = { truncated: [], missing: [], beyond: [], absent: [], moved: [] };
+// Записи с несколькими адресами: имя из прозы не привязать к нужному адресу.
+let multiAddressSkipped = 0;
 let zones = 0;
 let rowsSeen = 0;
 let withEvidence = 0;
@@ -202,6 +223,11 @@ for (const file of fs.readdirSync(VERDICTS).filter((f) => f.endsWith('.json'))) 
       (m) => m[0],
     );
 
+    // Имя из доказательства можно привязать к адресу только когда адрес один.
+    // Иначе «класс не найден» означает лишь то, что он относится к соседнему
+    // адресу: 31.08 так вышло семь ложных у чинилки и десятки у самой проверки.
+    const singleAddress = mentionedFiles.length === 1;
+
     for (const m of evidence.matchAll(ADDRESS)) {
       const [, rel, lineRaw] = m;
       const line = Number(lineRaw);
@@ -222,13 +248,22 @@ for (const file of fs.readdirSync(VERDICTS).filter((f) => f.endsWith('.json'))) 
         problems.beyond.push({ zone, key, rel: resolved, line, total: lines.length });
         continue;
       }
+      if (!singleAddress) {
+        multiAddressSkipped += 1;
+        continue;
+      }
       // Имена из доказательства — ищем хотя бы одно рядом с адресом.
       const names = [...new Set((evidence.match(NAME) || []).map((n) => n.replace(/-$/, '')))]
-        .filter((n) => !NOT_A_NAME.has(n.toLowerCase()))
+        .filter(looksLikeIdentifier)
+        .filter((n) => !NOT_A_NAME.has(n.replace(/^(--|\.)/, '').toLowerCase()))
         .filter((n) => !/^(js|css|html|sql|mjs|ts|tsx)$/i.test(n))
         // Имена файлов — не якоря: доказательство часто называет соседний
         // файл, и искать его имя внутри другого файла бессмысленно.
-        .filter((n) => !mentionedFiles.some((f) => f.includes(n)));
+        .filter((n) => !mentionedFiles.some((f) => f.includes(n)))
+        // Приставка нужна была, чтобы отличить имя от прозы. Искать по ней
+        // нельзя: в JS класс живёт строкой `'wr-ok'` без точки, а роль в CSS —
+        // и с двумя дефисами, и без них в `var()`. Ищем голое имя.
+        .map((n) => n.replace(/^(--|\.)/, ''));
       if (!names.length) continue;
 
       const whole = lines.join('\n');
@@ -297,6 +332,12 @@ console.log(
   `\nОхват: ${zones} зон, ${rowsSeen} строк, ${withEvidence} с доказательством, ` +
     `${addressesChecked} разрешимых адресов проверено.`,
 );
+if (multiAddressSkipped) {
+  console.log(
+    `Адресов в записях с несколькими ссылками: ${multiAddressSkipped} — у них ` +
+      'проверены существование файла и длина, но не имя: привязать имя к нужному адресу нельзя.',
+  );
+}
 if (shorthandSkipped) {
   console.log(
     `Сокращений без имени файла (вида «ui:2513») пропущено: ${shorthandSkipped} — ` +
