@@ -96,9 +96,9 @@ apps/web/heys_demo_mode_v1.js:202
 apps/web/heys_core_v12.js:255
 apps/web/heys_core_v12.js:873
 apps/web/heys_core_v12.js:1998
-apps/web/heys_core_v12.js:4462
-apps/web/heys_core_v12.js:5806
-apps/web/heys_core_v12.js:5917
+apps/web/heys_core_v12.js:4459
+apps/web/heys_core_v12.js:5784
+apps/web/heys_core_v12.js:5919
 apps/web/heys_cycle_v1.js:44
 # Generated bundles excluded from scanner (2026-08-12); day_core line entries dropped.
 apps/web/heys_day_orphan_alert.js:142

@@ -11,7 +11,7 @@ import path from 'path';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { fileURLToPath } from 'url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1375,5 +1375,75 @@ describe('Лист действия и пустая «История»', () => {
     renderTab();
     const names = [...document.querySelectorAll('.activity-v4-today__name')].map((n) => n.textContent);
     expect(names).toEqual(['Тренировки', 'Бытовая активность', 'Зарядка']);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Правка факта шагов — по всей полосе, а не по невидимой точке.
+ *
+ * Подпись под полосой обещает «поставьте факт ползунком», но захват висел на
+ * `.steps-slider-thumb`: он прозрачен, а при нуле шагов стоит в самом левом
+ * краю. Тянуть было нечего — ровно то, что видно на живом экране в день без
+ * шагов. В кадре отдельной ручки нет вовсе: полоса и есть ползунок.
+ */
+describe('Полоса шагов ловит нажатие целиком', () => {
+  function renderSteps(ctxExtra, actions) {
+    const HEYS = loadFiles(['heys_day_activity_v1.js']);
+    HEYS.TDEE = { calculate: () => ({ kcalMin: [0, 7, 8, 9] }) };
+    render(HEYS.dayActivity.render({
+      React,
+      ctx: {
+        day: { date: '2026-08-30', trainings: [] }, prof: {}, trainingTypes: [],
+        stepsValue: 0, stepsGoal: 6500, stepsPercent: 0, stepsColor: '#000', stepsK: 0,
+        stepsEstimated: true, stepsMissing: true,
+        bmr: 1520, householdK: 0, totalHouseholdMin: 0,
+        train1k: 0, train2k: 0, train3k: 0, r0: (v) => Math.round(v || 0),
+        visibleTrainings: 0, regularTrainingsBlock: null, programTrainingsBlock: null,
+        ndteData: { active: false }, ndteBoostKcal: 0, tefData: {}, tefKcal: 0,
+        dayTargetDef: -15, displayOptimum: 1940, optimum: 1940, cycleKcalMultiplier: 1,
+        tdee: 2280, caloricDebt: null,
+        monthTrainingsRows: [], morningActivationCalendarBlock: null,
+        workingWeights: null, chargeTrackedDays: 0,
+        ...ctxExtra,
+      },
+      actions: actions || {},
+    }));
+  }
+
+  it('захват стоит на самой полосе', () => {
+    const drag = vi.fn();
+    renderSteps({}, { handleStepsDrag: drag });
+    fireEvent.mouseDown(document.querySelector('.steps-slider'));
+    expect(drag).toHaveBeenCalledTimes(1);
+  });
+
+  it('касание полосы работает так же, как мышь', () => {
+    const drag = vi.fn();
+    renderSteps({}, { handleStepsDrag: drag });
+    fireEvent.touchStart(document.querySelector('.steps-slider'), {
+      touches: [{ clientX: 100 }],
+    });
+    expect(drag).toHaveBeenCalledTimes(1);
+  });
+
+  it('на самой точке ползунка захвата больше нет — иначе он сработает дважды', () => {
+    const drag = vi.fn();
+    renderSteps({}, { handleStepsDrag: drag });
+    const thumb = document.querySelector('.steps-slider-thumb');
+    expect(thumb).toBeTruthy();
+    // Нажатие всплывает до полосы и считается один раз, а не два.
+    fireEvent.mouseDown(thumb);
+    expect(drag).toHaveBeenCalledTimes(1);
+  });
+
+  it('полоса и захват совпадают шириной: считать процент не от чего другого', () => {
+    renderSteps({});
+    const wrap = document.querySelector('.activity-v4-steps__track-wrap');
+    expect(wrap.querySelector('.activity-v4-steps__track')).toBeTruthy();
+    // Захват — абсолютный слой поверх той же обёртки (inset: -10px 0),
+    // поэтому его ширина равна ширине видимой дорожки.
+    expect(wrap.querySelector('.activity-v4-steps__slider .steps-slider')).toBeTruthy();
   });
 });

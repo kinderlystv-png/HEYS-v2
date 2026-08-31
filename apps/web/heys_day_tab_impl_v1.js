@@ -664,6 +664,7 @@
             train2k,
             train3k,
             stepsK,
+            stepsResolved,
             stepsEstimated,
             stepsMissing,
             householdK,
@@ -2293,8 +2294,19 @@
             stepsValue,
             stepsPercent,
             stepsColor,
+            percentOf,
             handleStepsDrag
         } = stepsState;
+
+        // Когда факта за день нет, расход считается по медиане 14 дней — и
+        // карточка обязана показывать то же число, которым считали. Иначе на
+        // экране рядом стоят «оценка 0 / 6 500» и «165 ккал»: полоса берёт
+        // day.steps (ноль), а калории — подставленную медиану (контракт
+        // «оценённые шаги помечены», строка 16).
+        const shownSteps = stepsEstimated ? (Number(stepsResolved) || 0) : stepsValue;
+        const shownStepsPercent = stepsEstimated && typeof percentOf === 'function'
+            ? percentOf(shownSteps)
+            : stepsPercent;
 
         // === Activity Card (extracted wrapper) ===
         if (!HEYS.dayActivityCard?.buildActivityCard) {
@@ -2308,9 +2320,9 @@
                 React,
                 day,
                 prof,
-                stepsValue,
+                stepsValue: shownSteps,
                 stepsGoal,
-                stepsPercent,
+                stepsPercent: shownStepsPercent,
                 stepsColor,
                 stepsK,
                 stepsEstimated,
@@ -2351,7 +2363,7 @@
                 openHouseholdPicker,
                 openTrainingPicker
             });
-        }, [showActivityContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, stepsEstimated, stepsMissing, bmr, householdK, totalHouseholdMin, train1k, train2k, train3k, visibleTrainings, trainingTypes, regularTrainingsBlock, programTrainingsBlock, monthTrainingsRows, workingWeights, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, optimum, cycleKcalMultiplier, tdee, caloricDebt, day?.isRefeedDay]);
+        }, [showActivityContent, shownSteps, stepsGoal, shownStepsPercent, stepsColor, stepsK, stepsEstimated, stepsMissing, bmr, householdK, totalHouseholdMin, train1k, train2k, train3k, visibleTrainings, trainingTypes, regularTrainingsBlock, programTrainingsBlock, monthTrainingsRows, workingWeights, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, optimum, cycleKcalMultiplier, tdee, caloricDebt, day?.isRefeedDay]);
 
         if (!HEYS.dayNutritionCard?.buildNutritionCard) {
             throw new Error('[heys_day_v12] HEYS.dayNutritionCard not loaded before heys_day_v12.js');

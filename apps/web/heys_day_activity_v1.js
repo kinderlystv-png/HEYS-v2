@@ -726,7 +726,16 @@
             })
           ),
           React.createElement('div', { className: 'activity-v4-steps__slider steps-slider-container' },
-            React.createElement('div', { className: 'steps-slider' },
+            // Тянут за саму полосу, а не за ползунок: в кадре отдельной ручки
+            // нет, полоса и есть ползунок. Пока захват висел на
+            // .steps-slider-thumb, при нуле шагов он стоял точкой в левом краю
+            // и был прозрачен — подпись «поставьте факт ползунком» указывала на
+            // то, чего не ухватить.
+            React.createElement('div', {
+              className: 'steps-slider',
+              onMouseDown: handleStepsDrag,
+              onTouchStart: handleStepsDrag
+            },
               React.createElement('div', { className: 'steps-slider-track' }),
               React.createElement('div', { className: 'steps-slider-goal-mark', style: { left: '80%' } },
                 React.createElement('span', { className: 'steps-goal-label' }, String(stepsGoal))
@@ -737,9 +746,7 @@
               }),
               React.createElement('div', {
                 className: 'steps-slider-thumb',
-                style: { left: stepsPercent + '%', borderColor: stepsColor },
-                onMouseDown: handleStepsDrag,
-                onTouchStart: handleStepsDrag
+                style: { left: stepsPercent + '%', borderColor: stepsColor }
               })
             )
           )

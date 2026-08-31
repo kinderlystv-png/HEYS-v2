@@ -49,11 +49,16 @@
         const stepsValue = safeDay.steps || 0;
         const hasOverflowZone = stepsGoal < stepsMax;
 
-        const stepsPercent = Math.min(100, hasOverflowZone
-            ? (stepsValue <= stepsGoal
-                ? (stepsValue / stepsGoal) * 80
-                : 80 + ((stepsValue - stepsGoal) / (stepsMax - stepsGoal)) * 20)
-            : (stepsValue / stepsGoal) * 100);
+        // Одна формула на всех: и на первый рендер, и на перетаскивание, и на
+        // оценённое значение, которое подставляет TDEE вместо отсутствующего
+        // факта. Пока формул было две, они могли разъехаться молча.
+        const percentOf = (steps) => Math.min(100, hasOverflowZone
+            ? (steps <= stepsGoal
+                ? (steps / stepsGoal) * 80
+                : 80 + ((steps - stepsGoal) / (stepsMax - stepsGoal)) * 20)
+            : (steps / stepsGoal) * 100);
+
+        const stepsPercent = percentOf(stepsValue);
 
         const stepsColorPercent = Math.min(100, (stepsValue / stepsGoal) * 100);
 
@@ -100,12 +105,6 @@
                 return Math.min(stepsMax, Math.max(0, newSteps));
             };
 
-            const computePercent = (steps) => Math.min(100, hasOverflowZone
-                ? (steps <= stepsGoal
-                    ? (steps / stepsGoal) * 80
-                    : 80 + ((steps - stepsGoal) / (stepsMax - stepsGoal)) * 20)
-                : (steps / stepsGoal) * 100);
-
             // DOM-only flush — no React re-render
             const flushStepsDOM = () => {
                 rafIdRef.current = 0;
@@ -113,7 +112,7 @@
                 if (val == null) return;
                 pendingStepsRef.current = null;
                 latestStepsRef.current = val;
-                const pct = computePercent(val) + '%';
+                const pct = percentOf(val) + '%';
                 if (thumbEl) { thumbEl.style.left = pct; }
                 if (fillEl) { fillEl.style.width = pct; }
                 if (valueEl) { valueEl.textContent = val.toLocaleString(); }
@@ -197,6 +196,7 @@
             stepsValue,
             stepsPercent,
             stepsColor,
+            percentOf,
             handleStepsDrag
         };
     }
