@@ -39,6 +39,10 @@ describe('add product presets v4 canvas structure', () => {
     expect(cssSource).toContain('.mpr-suggested-card');
     expect(cssSource).toContain('.mpr-assemble-btn');
     expect(cssSource).toContain('.mpr-header-edit-btn');
-    expect(cssSource).toContain('background: var(--v4-sand-tint-green, #eaefe0)');
+    // Роль --v4-sand-tint-green не объявлена ни в одном наборе: рисовалось
+    // запасное значение, то есть песочный шалфей во всех четырёх. Кадр
+    // «Наборы · вкладка поиска» называет здесь --gr-bg, и такая роль есть.
+    expect(cssSource).not.toContain('var(--v4-sand-tint-green');
+    expect(cssSource).toContain('background: var(--v4-ok-bg, #eaefe0)');
   });
 });

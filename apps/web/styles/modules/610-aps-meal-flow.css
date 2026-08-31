@@ -1336,21 +1336,20 @@
   gap: 0;
 }
 
+/* «Замечено в истории» и «Мои наборы» — обычные ярусы экрана, как везде в
+   этом флоу: 11 px/700 с разрядкой .04em чернилами 45 %. Стояли 10 px,
+   разрядка .16em и акцент — эти два яруса кричали громче соседних. */
 .mpr-tier {
-  margin: 14px 0 10px;
-  font-size: 10px;
+  margin: 12px 0 8px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
 }
 
 .mpr-my-sets-block .mpr-tier {
-  margin-top: 20px;
-}
-
-.mpr-suggested-section .mpr-tier {
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 .mpr-suggested-section {
@@ -1359,10 +1358,13 @@
   gap: 8px;
 }
 
+/* Роль --v4-sand-tint-green не объявлена ни в одном наборе: рисовалось
+   запасное #eaefe0, то есть песочный шалфей во всех четырёх. Кадр называет
+   здесь --gr-bg, и такая роль в наборе есть. */
 .mpr-suggested-card {
-  background: var(--v4-sand-tint-green, #eaefe0);
-  border-radius: 20px;
-  padding: 16px;
+  background: var(--v4-ok-bg, #eaefe0);
+  border-radius: 16px;
+  padding: 12px 14px;
 }
 
 .mpr-suggested-card__head {
@@ -1373,18 +1375,18 @@
 }
 
 .mpr-suggested-card__name {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.3;
-  color: var(--v4-sand-ink, #201e1d);
+  color: var(--v4-ink, #201e1d);
 }
 
 .mpr-suggested-card__freq {
   flex: none;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 10.5px;
+  font-weight: 600;
   line-height: 1;
-  color: var(--v4-sand-ok-text, #5c6a45);
+  color: var(--v4-ok-text, #5c6a45);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1400,8 +1402,8 @@
   min-height: 44px;
   padding: 0 12px;
   border-radius: 999px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
-  color: var(--v4-sand-ok-text, #5c6a45);
+  background: var(--v4-bg, #fffaf1);
+  color: var(--v4-ok-text, #5c6a45);
   font-size: 11.5px;
   font-weight: 700;
 }
@@ -1411,8 +1413,8 @@
   min-height: 44px;
   padding: 0 16px;
   border-radius: 999px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 55%, transparent);
+  background: var(--v4-bg, #fffaf1);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
   font-size: 11.5px;
   font-weight: 700;
 }
@@ -1567,20 +1569,6 @@
   transition: all 0.15s;
 }
 
-.mpr-btn--apply {
-  background: var(--v4-sand-tint-green, #eaefe0);
-  color: var(--v4-sand-ok-text, #5c6a45);
-}
-
-@media (hover: hover) {
-  .mpr-btn--apply:hover {
-    background: color-mix(
-      in srgb,
-      var(--v4-sand-ok-text, #5c6a45) 18%,
-      var(--v4-sand-tint-green, #eaefe0)
-    );
-  }
-}
 
 .mpr-btn--add-row {
   width: auto;
@@ -1589,8 +1577,8 @@
   min-height: 44px;
   padding: 0 16px;
   border-radius: 999px;
-  background: var(--v4-sand-hero, #efe3cf);
-  color: var(--v4-sand-act-deep, #8a4a20);
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1;
@@ -2204,30 +2192,6 @@
   padding: 1px 5px;
   border-radius: 4px;
   flex-shrink: 0;
-}
-
-/* Карточка рекомендуемого набора */
-.mpr-card--suggested {
-  background: var(--v4-sand-tint-green, #eaefe0);
-  border: none;
-  align-items: flex-start;
-}
-
-.mpr-card--suggested .mpr-card-item-name {
-  color: var(--v4-sand-ink, #201e1d);
-}
-
-.mpr-card--suggested .mpr-card-item-grams {
-  background: color-mix(in srgb, var(--v4-sand-ok-text, #5c6a45) 12%, transparent);
-  color: var(--v4-sand-ok-text, #5c6a45);
-}
-
-.mpr-card--suggested .mpr-card-name {
-  color: var(--v4-sand-ink, #201e1d);
-}
-
-.mpr-card--suggested .mpr-card-meta {
-  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 /* Кнопка «Подтвердить» (зелёная) */
@@ -3492,15 +3456,18 @@ button.meal-quality-badge:active {
   color: var(--v4-btn-on-act, #2b1608);
 }
 
+/* Роли --v4-sand-tint-green и --v4-sand-green-ink не объявлены ни в одном
+   наборе: рисовались запасные, то есть песочный шалфей во всех четырёх.
+   Заведённые роли того же смысла — --v4-ok-bg и --v4-ok-text. */
 .aps-v4-grams-chip--portion {
-  background: var(--v4-sand-tint-green, #eaefe0);
-  color: var(--v4-sand-green-ink, #5c6a45);
+  background: var(--v4-ok-bg, #eaefe0);
+  color: var(--v4-ok-text, #5c6a45);
   padding: 10px 12px;
 }
 
 .aps-v4-grams-chip--portion.is-active {
-  background: color-mix(in srgb, var(--v4-sand-green-ink, #5c6a45) 18%, #eaefe0);
-  color: var(--v4-sand-green-ink, #5c6a45);
+  background: color-mix(in srgb, var(--v4-ok-text, #5c6a45) 18%, var(--v4-ok-bg, #eaefe0));
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 /* Строка контракта «граммы или ккал»: под пресетами два чипа единицы ввода —
