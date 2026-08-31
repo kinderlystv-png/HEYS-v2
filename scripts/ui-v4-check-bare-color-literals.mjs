@@ -72,7 +72,7 @@ const BASELINE = {
   '100-metrics-and-graphs.css': 207,
   '300-modals-and-day.css': 163,
   '400-water-and-hydration.css': 87,
-  '500-pwa-and-offline.css': 116,
+  '500-pwa-and-offline.css': 115,
   '715-yesterday-verify.css': 37,
   '720-predictive-insights.css': 210,
   '730-widgets-dashboard.css': 178,

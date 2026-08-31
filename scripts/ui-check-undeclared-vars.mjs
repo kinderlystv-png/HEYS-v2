@@ -101,7 +101,6 @@ const BASELINE = [
   'border-light',
   'border-soft',
   'c1',
-  'card-bg',
   'card-bg-dark',
   'card-header-bg',
   'color-bg-primary',
