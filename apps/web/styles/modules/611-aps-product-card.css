@@ -671,14 +671,18 @@
   flex-direction: column;
 }
 
-/* Шапка кадра наведения по разбору кадра: имя 15 px/700, закрытие кругом 30.
-   Базовые .aps-barcode-title/-close общие с обычной модалкой сканера — там
-   16 px и квадрат 32 радиусом 8, и трогать их нельзя: разбор описывает
-   полноэкранный кадр. */
+/* Шапка кадра наведения: закрытие кругом 30 и светлые чернила на тёмном листе
+   сканера. Кегль имени сюда больше не пишем: 15 px/700 стоит в базовом
+   .aps-barcode-title — кадр «Штрихкод · состояния» просит те же 15 и для
+   обычной модалки сканера. Прежде здесь было исключение под 16 px базы. */
 .aps-barcode-overlay--v4-fullscreen .aps-barcode-title {
-  font-size: 15px;
-  line-height: 1;
   color: #f2ede6;
+}
+
+/* Кадр наведения даёт шапке поля 16/18/0 — те же, что у шагов. В обычной
+   модалке поля задаёт сама модалка, в полноэкранной их нет. */
+.aps-barcode-overlay--v4-fullscreen .aps-barcode-head {
+  padding: 16px 18px 0;
 }
 
 .aps-barcode-overlay--v4-fullscreen .aps-barcode-close {
@@ -2023,6 +2027,19 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+}
+
+/* «Использовать шаблон» — третий вид вторичного: обводка вместо заливки.
+   Кадр даёт высоту от 38, обводку 1,5 чернил 14 % и подпись 11 px/700
+   чернилами 55 %. Плашку --paper здесь снимаем: обводка и заливка вместе
+   дают ту самую двойную рамку, от которой набор уходит. */
+.aps-v4-portions-suggest .aps-v4-btn-ghost {
+  min-height: 38px;
+  margin-top: 8px;
+  background: none;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--v4-ink, #201e1d) 14%, transparent);
+  font-size: 11px;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
 }
 
 .aps-v4-portions-suggest .aps-v4-portions-list {
