@@ -75,7 +75,7 @@
     },
     "сноска про доступ": {
       "v": "=",
-      "f": "login_screen.js:27 текст и :1272 закреплённая полка .heys-auth-intake-dock (position fixed, 733-login-theme.css:701)",
+      "f": "login_screen.js:27 текст и :1272 закреплённая полка .heys-auth-intake-dock (position fixed, apps/web/styles/modules/733-ui-v4-login-theme.css:744)",
       "h": "64aa32a0b109"
     },
     "вход клиента": {
@@ -105,7 +105,7 @@
     },
     "слот ошибки": {
       "v": "=",
-      "f": "733-login-theme.css:489-520 слот 38 px фиксирован, visibility hidden пока пусто",
+      "f": "apps/web/styles/modules/733-ui-v4-login-theme.css:540-551 слот 38 px фиксирован, visibility hidden пока пусто",
       "h": "31a4d1a014cf"
     },
     "вид слота ошибки": {
@@ -115,7 +115,7 @@
     },
     "цвет ошибки": {
       "v": "=",
-      "f": "733-login-theme.css:494 и :536 color #a1471c",
+      "f": "apps/web/styles/modules/733-ui-v4-login-theme.css:529 и :537 color #a1471c",
       "h": "9d1a9e334f04"
     },
     "отказы кода": {
@@ -135,7 +135,7 @@
     },
     "служебный вход": {
       "v": "=",
-      "f": "733-login-theme.css:880-903 44x44 в левом нижнем углу, svg 14 px, цвет rgba(0,0,0,.11)",
+      "f": "apps/web/styles/modules/733-ui-v4-login-theme.css:937-955 44x44 в левом нижнем углу, svg 14 px, цвет rgba(0,0,0,.11)",
       "h": "d99893a1c179"
     },
     "создание кода": {
@@ -190,7 +190,7 @@
     },
     "свёрнутое": {
       "v": "=",
-      "f": "theme_picker.js:105-118 точки act/ok/ring и «Оформление»; 733-login-theme.css:1043-1055 без фона, 44 px; док вне карточки",
+      "f": "theme_picker.js:105-118 точки act/ok/ring и «Оформление»; apps/web/styles/modules/733-ui-v4-login-theme.css:1049-1060 без фона, 44 px; док вне карточки",
       "h": "22eede07be7e"
     },
     "вид выбора оформления": {
@@ -210,7 +210,7 @@
     },
     "при ошибке": {
       "v": "=",
-      "f": "login_screen.js:1312 dimmed при ошибке, 733-login-theme.css:1038-1041 opacity .35, позиция точек не меняется",
+      "f": "login_screen.js:1312 dimmed при ошибке, apps/web/styles/modules/733-ui-v4-login-theme.css:843-845 opacity .35, позиция точек не меняется",
       "h": "7ee49870c2b9"
     },
     "при фокусе на телефоне": {
@@ -235,7 +235,7 @@
     },
     "искры": {
       "v": "=",
-      "f": "733-login-theme.css:144-153 искры #7a8a5e и #52a0d8 в синей; тёмный шаг #8faa6d в наборе (палитра :315)",
+      "f": "apps/web/styles/modules/733-ui-v4-login-theme.css:155-163 искры #7a8a5e и #52a0d8 в синей; тёмный шаг #8faa6d в наборе (палитра :315)",
       "h": "47f6f125ed5c"
     },
     "тёмные наборы": {
@@ -250,7 +250,7 @@
     },
     "поле на тёмном": {
       "v": "=",
-      "f": "733-login-theme.css:1306-1320 поле, боксы и клавиши на тёмном #2f2820, отдельной роли нет",
+      "f": "apps/web/styles/modules/733-ui-v4-login-theme.css:1318-1325 поле, боксы и клавиши на тёмном #2f2820, отдельной роли нет",
       "h": "2d6ef5d866ff"
     },
     "«внимание» в синей": {

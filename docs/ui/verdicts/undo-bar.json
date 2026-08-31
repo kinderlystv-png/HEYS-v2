@@ -5,7 +5,7 @@
   "rows": {
     "фича": {
       "v": "=",
-      "f": "heys_undo_v1.js:452 — один синглтон HEYS.Undo, 12 точек вызова (_meals, planning_tasks, trial_queue, app_hooks, day_stats)",
+      "f": "heys_undo_v1.js:446 — один синглтон HEYS.Undo, 12 точек вызова (_meals, planning_tasks, trial_queue, app_hooks, day_stats)",
       "h": "cef3c5bbe1fb"
     },
     "границы": {

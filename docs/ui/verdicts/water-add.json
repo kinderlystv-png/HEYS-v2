@@ -55,7 +55,7 @@
     },
     "уровень": {
       "v": "=",
-      "f": "Класс --adding: height 320ms cubic-bezier(.45,0,.35,1) с задержкой 240ms; высота — доля нормы — 730-...css:10575",
+      "f": "Класс --adding: height 320ms cubic-bezier(.45,0,.35,1) с задержкой 240ms; высота — доля нормы — apps/web/styles/modules/730-widgets-dashboard.css:11287",
       "h": "ec030e82e246"
     },
     "норма дня": {
@@ -100,7 +100,7 @@
     },
     "норма": {
       "v": "=",
-      "f": "8.5px/600 «из N», --water-dim-text #6b5f4f, #5a6474 в синей, альфа .62 на тёмных — 730-...css:10441,10458,10529",
+      "f": "8.5px/600 «из N», --water-dim-text #6b5f4f, #5a6474 в синей, альфа .62 на тёмных — apps/web/styles/modules/730-widgets-dashboard.css:11139,11165,11186",
       "h": "6fb60750536b"
     },
     "перекраска": {
@@ -120,7 +120,7 @@
     },
     "тон по объёму": {
       "v": "=",
-      "f": "color-mix in oklab по --water-tone-mix, линейно до 70%, background 320ms — widgets_ui:3667, 730-...css:10563",
+      "f": "color-mix in oklab по --water-tone-mix, линейно до 70%, background 320ms — widgets_ui:3667, apps/web/styles/modules/730-widgets-dashboard.css:11277",
       "h": "3ee53ee71d3d"
     },
     "выше 70 %": {
@@ -180,7 +180,7 @@
     },
     "карточка · утро": {
       "v": "=",
-      "f": "0 л: --empty, прочерк и подсказка, −200 гаснет до .32 и остаётся — water_v1.js:340, 400-...css:118; столбик 2px — из «Полосы»",
+      "f": "0 л: --empty, прочерк и подсказка, −200 гаснет до .32 и остаётся — water_v1.js:340, apps/web/styles/modules/400-water-and-hydration.css:281; столбик 2px — из «Полосы»",
       "h": "bd1135f8b541"
     },
     "частые тапы · звук": {
@@ -310,12 +310,12 @@
     },
     "набор": {
       "v": "=",
-      "f": "Порядок −200/+200/+500, gap 7px и margin-right 5px у минуса дают 12px — page_shell.js:218-232, 400-...css:1538,1575",
+      "f": "Порядок −200/+200/+500, gap 7px и margin-right 5px у минуса дают 12px — page_shell.js:218-232, apps/web/styles/modules/400-water-and-hydration.css:1573,1609",
       "h": "01a5f528300b"
     },
     "убавить нечего": {
       "v": "=",
-      "f": "disabled при waterMl<=0, waterFabVolInDim гасит до 0.32, из ряда не убирается — page_shell.js:217-220, 400-...css:1581",
+      "f": "disabled при waterMl<=0, waterFabVolInDim гасит до 0.32, из ряда не убирается — page_shell.js:217-220, apps/web/styles/modules/400-water-and-hydration.css:1615",
       "h": "2edc03c2f469"
     },
     "цель касания": {
@@ -325,7 +325,7 @@
     },
     "нажатие": {
       "v": "=",
-      "f": ":active scale(.96) и тот же haptic('light') из addWater/removeWater — 400-...css:1609, heys_day_day_handlers.js:483,549",
+      "f": ":active scale(.96) и тот же haptic('light') из addWater/removeWater — apps/web/styles/modules/400-water-and-hydration.css:1643, heys_day_day_handlers.js:483,549",
       "h": "8d5a5a8c070e"
     },
     "быстрые объёмы": {
