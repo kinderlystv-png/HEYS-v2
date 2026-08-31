@@ -75,9 +75,20 @@ const DATE_ASK = [
   [6, '.nutrition-v4-chip.is-off', ['ring']],
 ];
 
+// Кадр «Питание · вода без кнопки». Карточку воды на вкладке строит
+// heys_day_nutrition_v1.js:1880 -> heys_day_water_card_v1.js -> HEYS.dayWater,
+// то есть heys_day_water_v1.js. До 31 августа девять строк этого кадра стояли
+// «—» с обоснованием «это виджеты Главной, зона home-widgets»: обоснование было
+// неверным, variants_v4 кольца воды не рисует вовсе, а вкладка на него не
+// ссылается. Стили карточки живут в своём модуле, поэтому правила читаются
+// отдельно.
+const WATER = [
+  [5, '.water-review__top-meta', ['align', 'gap']],
+];
+
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 19;
+const COVERAGE_FLOOR = 20;
 
 describe('«Питание» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
@@ -125,6 +136,53 @@ describe('«Питание» · разбор кадров канваса', () =>
     expect(sand).toMatch(/--nut-dim:\s*#6b5f4f/);
     const canvas = fs.readFileSync(CANVAS, 'utf8');
     expect(canvas).toContain('--dim:#6b5f4f');
+  });
+
+  it('кадр «Питание · вода без кнопки» совпадает с шапкой карточки воды', () => {
+    const waterRules = readRules(
+      fs.readFileSync(path.resolve(__dirname, '../styles/modules/400-water-and-hydration.css'), 'utf8'),
+    );
+    expect(compare({ razbor, rules: waterRules, frame: 'Питание · вода без кнопки', pairs: WATER })).toEqual([]);
+  });
+
+  // Кольцо и кривая заданы числами в модуле, а не классами: пара их не
+  // достанет, поэтому кадр сверяется с самими константами. Разойдись они —
+  // кольцо перестанет попадать в своё поле, а кривая обрежется по краю.
+  it('поля кольца и кривой воды равны числам кадра', () => {
+    const canvas = fs.readFileSync(CANVAS, 'utf8');
+    const ask = (row) => {
+      const found = new RegExp(
+        'Питание · вода без кнопки · рисунок ' + row + '</b><span data-v="([^"]*)"',
+      ).exec(canvas);
+      expect(found, 'строка «рисунок ' + row + '» пропала из кадра воды').toBeTruthy();
+      return found[1];
+    };
+    const js = fs.readFileSync(path.resolve(__dirname, '../heys_day_water_v1.js'), 'utf8');
+
+    // Поле кольца 58×58 и точка r 24 в центре 29.
+    expect(ask('01')).toContain('58×58');
+    expect(ask('02')).toContain('r 24 в (29,29)');
+    expect(js).toContain('RING_FULL = { size: 58, radius: 24, stroke: 6, center: 29 }');
+
+    // Поле кривой 268×56.
+    const curve = /viewBox 0 0 (\d+) (\d+)/.exec(ask('04'));
+    expect(curve, 'в строке «рисунок 04» нет поля кривой').toBeTruthy();
+    expect(js).toContain('CURVE_WIDTH = ' + curve[1]);
+    expect(js).toContain('CURVE_HEIGHT = ' + curve[2]);
+
+    // Галочка отмеченного дня: 7×7 при системе координат 24.
+    expect(ask('08')).toContain('7×7 (viewBox 0 0 24 24)');
+    expect(js).toContain("width: 7, height: 7, viewBox: '0 0 24 24'");
+  });
+
+  // Обоснование девяти строк кадра воды однажды уже отправило их в чужую зону.
+  // Проверка держит сам путь: карточку строит вкладка, а не виджеты Главной.
+  it('карточку воды на вкладке строит модуль воды, а не виджеты Главной', () => {
+    const tab = fs.readFileSync(path.resolve(__dirname, '../heys_day_nutrition_v1.js'), 'utf8');
+    expect(tab).toContain('HEYS?.dayWaterCard?.buildWaterCard');
+    expect(tab).not.toContain('widgetsVariants');
+    const variants = fs.readFileSync(path.resolve(__dirname, '../heys_widgets_variants_v4.js'), 'utf8');
+    expect(variants).not.toContain('RING_FULL');
   });
 
   it('гейт называет свой охват', () => {

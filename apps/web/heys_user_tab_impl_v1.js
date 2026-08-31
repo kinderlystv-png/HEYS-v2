@@ -1942,6 +1942,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         var updateSetting = function (key, value) {
             var newSettings = { ...settings, [key]: value };
+            // Звук советов хранится под двумя именами: `adviceSoundEnabled`
+            // пишет тумблер листа «Советы», `soundEnabled` — эта галочка.
+            // Читатель (heys_audio_v1.js, adviceSoundEnabled) предпочитает
+            // первое, поэтому галочка, пишущая только второе, после первого же
+            // нажатия тумблера переставала влиять на звук и при этом
+            // продолжала показывать своё состояние. Пишем оба имени — ровно
+            // так же, как это делает тумблер листа.
+            if (key === 'soundEnabled') newSettings.adviceSoundEnabled = value;
             setSettings(newSettings);
             advice.setAdviceSettings(newSettings);
             setSaved(true);
