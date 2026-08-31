@@ -381,8 +381,19 @@
     const merged = mergeIntervals(intervals);
     const segments = [];
     let cursor = DAY_START;
+    const now = clampDayMin(nowMin);
+    // Кадр «Шторка · Инсулиновая волна», вид «Полоса дня»: внутри полосы стоит
+    // тёмная риска «сейчас» — подпись под полосой без неё говорит о моменте,
+    // которого на полосе не видно. Момент делит тот кусок, в который попал.
+    const markNow = Number.isFinite(now) && now > DAY_START && now < DAY_END;
     const push = (from, to, elevated) => {
       if (to <= from) return;
+      if (markNow && from < now && now < to) {
+        segments.push({ flex: now - from, elevated });
+        segments.push({ flex: 2, now: true });
+        segments.push({ flex: to - now, elevated });
+        return;
+      }
       segments.push({ flex: to - from, elevated });
     };
     merged.forEach(([s, e]) => {

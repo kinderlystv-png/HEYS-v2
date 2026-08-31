@@ -2980,7 +2980,9 @@
       React.createElement('div', { className: 'widget-v4-insulin-daybar' },
         segments.map((seg, index) => React.createElement('span', {
           key: `ins-bar-${index}`,
-          className: 'widget-v4-insulin-daybar__seg' + (seg.elevated ? ' widget-v4-insulin-daybar__seg--up' : ''),
+          className: 'widget-v4-insulin-daybar__seg'
+            + (seg.elevated ? ' widget-v4-insulin-daybar__seg--up' : '')
+            + (seg.now ? ' widget-v4-insulin-daybar__seg--now' : ''),
           style: { flex: seg.flex || 1 }
         }))
       ),
@@ -3058,7 +3060,11 @@
         React.createElement('span', {
           className: 'widget-v4-mini__value ' + toneClass
         }, v4.calmWindowLabel || '—'),
-        React.createElement('span', { className: 'widget-v4-muted', style: { marginTop: 'auto' } },
+        // Кадр ставит «вверх на всё свободное» самому числу, а подпись кладёт
+        // прямо под ним подписью единицы. Прежний второй marginTop:auto
+        // разводил их по разным краям плитки, а вес подвала (700) делал
+        // подпись громче числа.
+        React.createElement('span', { className: 'widget-v4-unit' },
           overnightMark || 'без волн')
       );
     }
@@ -3106,7 +3112,11 @@
           React.createElement('span', { className: 'widget-v4-unit' }, 'без перерыва')
         ),
         InsulinWaveOverlapSvg({ v4, overnight: isOvernight }),
-        React.createElement('span', { className: 'widget-v4-muted' }, 'второй приём попал в волну')
+        // Подпись под рисунком у вида «Пересечения» своя: кадр даёт ей 9 px/600
+        // и отступ 7px, тогда как .widget-v4-muted — это 10 px/700 подвалов.
+        React.createElement('span', {
+          className: 'widget-v4-insulin-wave__overlap-note'
+        }, 'второй приём попал в волну')
       );
     }
 
@@ -4446,11 +4456,38 @@
 
     if (variantId === 'week_debt') {
       const debt = Number(data.weekDebtHours) || 0;
-      return React.createElement('div', { className: 'widget-sleep widget-sleep--2x1 widget-v4-row widget-v4-row--tight' },
-        v4Kicker('Недосып за 7 дней'),
-        React.createElement('span', { className: 'widget-v4-row__value widget-v4-val--warn' },
-          formatRuDecimal(debt, 1),
-          React.createElement('span', { className: 'widget-v4-unit' }, ' ч долг')
+      // Кадр «Шторка · Сон», вид «Долг за неделю»: справа семь столбиков по
+      // ночам — ровно то, что обещает подпись вида «видно, где отсыпался».
+      // Данные (sleepWeekBars) считались и раньше, вид их не рисовал.
+      const week = Array.isArray(data.sleepWeekBars) ? data.sleepWeekBars.slice(-7) : [];
+      const maxHours = Math.max(target || 0, ...week.map((d) => Number(d.hours) || 0), 1);
+      return React.createElement('div', { className: 'widget-sleep widget-sleep--2x1 widget-v4-stack' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Недосып за 7 дней'),
+          React.createElement('span', { className: 'widget-v4-row__meta' },
+            target ? `норма ${formatRuDecimal(target, 1)}` : '')
+        ),
+        React.createElement('div', { className: 'widget-v4-sleep-debt' },
+          React.createElement('span', { className: 'widget-v4-sleep-debt__num' },
+            React.createElement('span', {
+              className: 'widget-v4-row__value ' + (debt > 0 ? 'widget-v4-val--bad' : 'widget-v4-val--neutral')
+            }, debt > 0 ? `−${formatRuDecimal(debt, 1)}` : formatRuDecimal(0, 1)),
+            React.createElement('span', { className: 'widget-v4-unit' }, 'ч')
+          ),
+          week.length
+            ? React.createElement('span', { className: 'widget-v4-sleep-debt__bars' },
+              week.map((night, index) => React.createElement('i', {
+                key: `sleep-night-${night.date || index}`,
+                className: 'widget-v4-sleep-debt__bar'
+                  + ((Number(night.hours) || 0) >= (target || 0)
+                    ? ' widget-v4-sleep-debt__bar--ok'
+                    : ' widget-v4-sleep-debt__bar--short'),
+                // Пустая ночь остаётся видимой риской, а не исчезает: пропуск
+                // записи — тоже факт недели.
+                style: { height: `${Math.max(2, Math.round((Number(night.hours) || 0) / maxHours * 22))}px` }
+              }))
+            )
+            : null
         )
       );
     }

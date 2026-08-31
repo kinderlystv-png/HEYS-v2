@@ -10946,11 +10946,13 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   text-overflow: ellipsis;
 }
 
+/* Разрядка героя: канвас даёт числам 24–26 px трекинг -.03em и только мелким
+   17 px — -.02em. Здесь стояла разрядка мелкого числа. */
 .widget-v4-hero-num__val {
   font-size: 1.625rem;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   color: #201e1d;
   font-variant-numeric: tabular-nums;
 }
@@ -11479,6 +11481,45 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
   margin-top: 4px;
 }
 
+/* Вид «Долг за неделю»: слева число долга, справа семь ночей столбиками
+   (кадр «Шторка · Сон»). Столбики стоят на общем основании и красятся по
+   норме — зелёный там, где выспался. */
+.widget-v4-sleep-debt {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 9px;
+  margin-top: auto;
+}
+
+.widget-v4-sleep-debt__num {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.widget-v4-sleep-debt__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 22px;
+  flex: none;
+  width: 62px;
+}
+
+.widget-v4-sleep-debt__bar {
+  flex: 1;
+  border-radius: 2px;
+}
+
+.widget-v4-sleep-debt__bar--ok {
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
+.widget-v4-sleep-debt__bar--short {
+  background: var(--v4-bad-text, #a8382b);
+}
+
 .widget-v4-insulin-daybar {
   display: flex;
   gap: 2px;
@@ -11499,6 +11540,13 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
   border-radius: 0 999px 999px 0;
 }
 
+/* Риска «сейчас» внутри полосы дня: чернилами, чтобы читаться и на поднятом
+   куске, и на пустом. */
+.widget-v4-insulin-daybar__seg--now {
+  background: var(--v4-sand-ink, #201e1d);
+  border-radius: 0;
+}
+
 .widget-v4-insulin-daybar__seg--up {
   background: var(--v4-sand-wave, #e6cfa8);
 }
@@ -11509,6 +11557,7 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
   margin-top: 6px;
   font-size: 8.5px;
   font-weight: 600;
+  line-height: 1;
   color: rgba(0, 0, 0, 0.35);
 }
 
@@ -11517,6 +11566,16 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
    Строка «вид · инсулиновая волна»: обе подписи под графиком — 9,5 px/700. */
 .widget-v4-insulin-wave__footer {
   margin-top: auto;
+}
+
+/* Кадр «Шторка · Инсулиновая волна», вид «Пересечения»: подпись под рисунком
+   мельче и легче подвальной — 9 px/600 чернилами 42 %, отступ 7px. */
+.widget-v4-insulin-wave__overlap-note {
+  margin-top: 7px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 .widget-v4-stack__footer.widget-v4-insulin-wave__footer > span {
@@ -13704,6 +13763,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   margin-top: 7px;
   font-size: 9px;
   font-weight: 600;
+  line-height: 1;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
 }
 
