@@ -160,7 +160,8 @@
    * @param {number} startIndex - индекс начального фото
    * @param {Function} onDelete - callback для удаления (photoId) => void
    */
-  HEYS.showPhotoViewer = function showPhotoViewer(photos, startIndex = 0, onDelete = null) {
+  HEYS.showPhotoViewer = function showPhotoViewer(photos, startIndex = 0, onDelete = null, options = {}) {
+    const { title = '', onAddMore = null } = options || {};
     // Поддержка старого API (один imageSrc)
     if (typeof photos === 'string') {
       photos = [{ data: photos, id: 'single' }];
@@ -196,39 +197,51 @@
     // Верхняя панель
     const topBar = document.createElement('div');
     topBar.className = 'photo-viewer-topbar';
+    // Поля и градиент шапки задаёт CSS: кадр даёт поля 16/18/0 и никакой
+    // тёмной полосы поверх снимка — она была нужна белому счётчику, которого
+    // больше нет.
     topBar.style.cssText = `
       position: absolute;
       top: 0; left: 0; right: 0;
-      padding: max(16px, env(safe-area-inset-top, 16px)) 16px 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
       z-index: 10001;
     `;
     
-    // Счётчик фото
+    // Кадр «Фото · просмотр»: слева кружок возврата 30 px, рядом имя приёма со
+    // временем снимка; счётчик «1 / 3» кадр не рисует — его место занимает имя.
+    const backBtn = document.createElement('button');
+    backBtn.className = 'photo-viewer-back';
+    backBtn.setAttribute('aria-label', 'Закрыть просмотр');
+    backBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"'
+      + ' stroke="currentColor" stroke-width="2.75" stroke-linecap="round"'
+      + ' stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+    backBtn.onclick = () => close();
+
     const counter = document.createElement('span');
-    counter.style.cssText = 'color: white; font-size: 16px; font-weight: 500;';
+    counter.className = 'photo-viewer-title';
     const updateCounter = () => {
-      counter.textContent = photos.length > 1 ? `${currentIndex + 1} / ${photos.length}` : '';
+      const photo = photos[currentIndex] || {};
+      const time = photo.time || photo.createdAt || '';
+      counter.textContent = [title, time].filter(Boolean).join(' · ');
     };
     updateCounter();
-    
-    // Кнопки
+
+    // Действия кадра стоят внизу, а не в шапке.
     const buttonsWrap = document.createElement('div');
-    buttonsWrap.style.cssText = 'display: flex; gap: 12px;';
-    
+    buttonsWrap.className = 'photo-viewer-actions';
+
+    if (onAddMore) {
+      const addBtn = document.createElement('button');
+      addBtn.className = 'photo-viewer-action photo-viewer-action--add';
+      addBtn.textContent = 'Ещё снимок';
+      addBtn.onclick = () => { close(); onAddMore(); };
+      buttonsWrap.appendChild(addBtn);
+    }
+
     // Кнопка удаления
     if (onDelete) {
       const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '🗑';
-      deleteBtn.style.cssText = `
-        width: 44px; height: 44px; border: none;
-        background: rgba(239, 68, 68, 0.8);
-        color: white; font-size: 20px; border-radius: 50%;
-        cursor: pointer; display: flex; align-items: center; justify-content: center;
-      `;
+      deleteBtn.className = 'photo-viewer-action photo-viewer-action--delete';
+      deleteBtn.textContent = 'Удалить';
       deleteBtn.onclick = async () => {
         const photo = photos[currentIndex];
         if (photo && onDelete) {
@@ -248,20 +261,8 @@
       buttonsWrap.appendChild(deleteBtn);
     }
     
-    // Кнопка закрытия
-    const closeBtn = document.createElement('button');
-    closeBtn.innerHTML = '✕';
-    closeBtn.style.cssText = `
-      width: 44px; height: 44px; border: none;
-      background: rgba(255, 255, 255, 0.2);
-      color: white; font-size: 24px; border-radius: 50%;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-    `;
-    closeBtn.onclick = close;
-    buttonsWrap.appendChild(closeBtn);
-    
+    topBar.appendChild(backBtn);
     topBar.appendChild(counter);
-    topBar.appendChild(buttonsWrap);
     
     // Контейнер для изображения (для zoom/pan)
     const imgContainer = document.createElement('div');
@@ -507,6 +508,7 @@
     overlay.appendChild(imgContainer);
     if (dotsContainer) overlay.appendChild(dotsContainer);
     overlay.appendChild(timestampBadge);
+    if (buttonsWrap.childElementCount) overlay.appendChild(buttonsWrap);
     document.body.appendChild(overlay);
     
     overlay.tabIndex = -1;

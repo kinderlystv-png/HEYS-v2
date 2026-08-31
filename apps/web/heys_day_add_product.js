@@ -258,7 +258,11 @@
     const openPhotoViewer = (photoIndex) => {
       if (!mealPhotos.length) return;
       if (typeof HEYS.showPhotoViewer === 'function') {
-        HEYS.showPhotoViewer([...mealPhotos], photoIndex, null);
+        // Кадр «Фото · просмотр»: в шапке имя приёма, внизу «Ещё снимок».
+        HEYS.showPhotoViewer([...mealPhotos], photoIndex, null, {
+          title: summaryTitle || '',
+          onAddMore: photosAtLimit ? null : handlePhotoPick
+        });
       } else {
         const src = mealPhotos[photoIndex]?.data || mealPhotos[photoIndex]?.url;
         if (src) window.open(src, '_blank');

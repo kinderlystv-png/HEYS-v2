@@ -76,6 +76,23 @@ describe('add product search edge v4 canvas structure', () => {
       /\.aps-v4-search-state--warn \.aps-v4-search-state__title \{[^}]*v4-act-text/s);
   });
 
+  it('просмотр фото собран по кадру, а не эмодзи-кнопками', () => {
+    const gallery = fs.readFileSync(path.resolve(__dirname, '../heys_day_gallery.js'), 'utf8');
+    // Кадр «Фото · просмотр»: слева кружок возврата 30 px, рядом имя приёма со
+    // временем; действия внизу — «Ещё снимок» на остаток ряда и «Удалить»
+    // тоном внимания. Стояли эмодзи «🗑» и «✕» в шапке и счётчик «1 / 3».
+    expect(gallery).not.toContain("'🗑'");
+    expect(gallery).not.toContain("closeBtn.innerHTML = '✕'");
+    expect(gallery).toContain('photo-viewer-back');
+    expect(gallery).toContain("addBtn.textContent = 'Ещё снимок'");
+    expect(gallery).toContain("deleteBtn.textContent = 'Удалить'");
+    // Тона здесь свои и названы строкой «цвета не из палитры»: системный слой
+    // галереи поверх любой темы, он не следует набору намеренно.
+    expect(cssSource).toMatch(/\.photo-viewer-action \{[^}]*rgba\(242, 237, 230, 0\.12\)/s);
+    expect(cssSource).toMatch(/\.photo-viewer-action--delete \{[^}]*#e2a468/s);
+    expect(cssSource).toMatch(/\.photo-viewer-back \{[^}]*width: 30px;/s);
+  });
+
   it('uses fullscreen barcode layer and dedicated not-found screen', () => {
     expect(addProductSource).toContain('aps-barcode-overlay--v4-fullscreen');
     expect(addProductSource).toContain('aps-barcode-not-found-screen');
