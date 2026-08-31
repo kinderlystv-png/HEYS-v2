@@ -285,12 +285,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 11px;
   width: 100%;
-  padding: 18px;
+  padding: 14px 15px;
   border: none;
-  border-radius: 22px;
-  background: var(--v4-sand-hero, #efe3cf);
+  border-radius: 20px;
+  background: var(--v4-sand-surface, #f7efe2);
   color: var(--v4-sand-ink, #201e1d);
   text-align: left;
   cursor: pointer;
@@ -299,10 +299,18 @@
 .flow-selection-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 16px;
+  gap: 11px;
+  min-height: 64px;
+  padding: 13px 13px 13px 15px;
+  border-radius: 20px;
   background: var(--v4-sand-surface, #f7efe2);
+}
+
+/* Строка контракта «три пути»: «Несколько продуктов» — самое частое действие,
+   поэтому его карточка взята заливкой --c2 при --c1 у остальных. Шаг тона
+   стоял на «Повторить из недавних», то есть отмечал не то действие. */
+.flow-selection-btn--multi-split {
+  background: var(--v4-sand-hero, #efe3cf);
 }
 
 .flow-selection-row .flow-selection-btn {
@@ -324,26 +332,26 @@
 }
 
 .flow-selection-btn__title {
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.25;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
   color: #201e1d;
 }
 
 .flow-selection-btn__sub {
   margin-top: 5px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.45;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .flow-selection-btn__hint {
-  margin-top: 10px;
-  font-size: 12px;
+  margin-top: 8px;
+  font-size: 10px;
   font-weight: 500;
-  line-height: 1.35;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  line-height: 1;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
 }
 
 .flow-selection-btn__chevron {
