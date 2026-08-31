@@ -23,12 +23,19 @@
 }
 
 .reports-v4-meta__range {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   flex: 1;
   min-width: 120px;
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.reports-v4-meta__range-icon {
+  flex: none;
 }
 
 .reports-v4-period-pills {
@@ -109,7 +116,14 @@
   margin-top: 20px;
   padding-top: 16px;
   border: none;
-  border-top: 1px solid rgba(0, 0, 0, 0.09);
+  /* Линия ролью. Стоял литерал чёрных чернил: поверхность под ним
+     песочно-залочена, и решение было «не отдавать её общей роли, иначе в
+     синем тёмном линия перевернётся». Но песочный замок держит семейство
+     тона, а не само значение: --v4-sand-surface и --v4-sand-hero в тёмных
+     наборах становятся #23201b и #2f2820, и чёрная линия на них не видна
+     вовсе. Прохладный оттенок --v4-line в синем тёмном — меньшая беда, чем
+     отсутствующий разделитель в двух наборах из четырёх. */
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: none;
   cursor: pointer;
   text-align: left;
@@ -463,7 +477,11 @@
   justify-content: space-between;
   gap: 12px;
   padding: 13px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  /* Разделитель ролью: у набора три роли линии, и 7 % среди них нет — файл
+     палитры говорит прямо, что прежние 7 % отдельной ролью не заводятся.
+     Литерал здесь не переопределялся набором и в тёмных палитрах оставался
+     чёрным поверх тёмного фона, то есть невидимым. */
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1;
@@ -481,7 +499,11 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.55));
+  /* Кадр ставит дату на чернилах 55 % — это --v4-ink-2. Стояла --v4-ink-3 с
+     запасным .55: роль даёт 45 %, запасное обещает 55, и код читался вернее,
+     чем рисовал. Гейт правдивости запасных значений сторожит поверхности, а
+     не ступени чернил, поэтому промолчал. */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .reports-v4-days__dot {
@@ -530,12 +552,16 @@
    Роль оставлена: --v4-sand-act-deep во всех наборах равна --v4-act-text, то
    есть это роль-двойник, и сводить их — общий вопрос по продукту, а не правка
    одной строки. */
+/* Замыкающая строка ленты. Кадр рисует её по центру на чернилах 50 % кеглем
+   12/600 и держит высоту 44; строка контракта говорит «тоном --ac». Взят кадр:
+   акцент на неподвижной строке звал бы как действие, которого у неё нет. */
 .reports-v4-days__more {
-  padding: 13px 0;
-  font-size: 11.5px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
 }
 
 .reports-v4 .kcal-sparkline-container.reports-v4-dynamics-card {

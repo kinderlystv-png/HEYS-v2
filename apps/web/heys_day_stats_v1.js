@@ -405,7 +405,20 @@
     return React.createElement(React.Fragment, null,
       React.createElement('div', { className: 'reports-v4-meta' },
         React.createElement('span', { className: 'reports-v4-meta__title' }, 'Отчёты'),
-        React.createElement('span', { className: 'reports-v4-meta__range' }, periodMeta.dateRange || ''),
+        // Кадр ставит перед границами окна значок календаря: строка «3—9
+        // августа» без него читается как ещё одна подпись, а с ним сразу
+        // видно, что это про даты. Значок декоративный — подпись рядом.
+        React.createElement('span', { className: 'reports-v4-meta__range' },
+          React.createElement('svg', {
+            className: 'reports-v4-meta__range-icon', width: 12, height: 12,
+            viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+            strokeWidth: 2.4, strokeLinecap: 'round', strokeLinejoin: 'round',
+            'aria-hidden': 'true'
+          },
+            React.createElement('rect', { x: 3, y: 5, width: 18, height: 16, rx: 4 }),
+            React.createElement('path', { d: 'M8 3v4M16 3v4M3 11h18' })
+          ),
+          periodMeta.dateRange || ''),
         React.createElement('div', { className: 'reports-v4-period-pills', role: 'tablist', 'aria-label': 'Период отчёта' },
           [7, 14, 30].map((period) =>
             React.createElement('button', {
@@ -415,7 +428,10 @@
               className: 'reports-v4-period-pill' + (chartPeriod === period ? ' is-active' : ''),
               'aria-selected': chartPeriod === period,
               onClick: () => handlePeriodChange(period)
-            }, period + ' дней')
+            // Единицу несёт только выбранное окно: кадр пишет «7 дней · 14 ·
+            // 30». Три «дней» подряд удлиняли ряд втрое и повторяли то, что
+            // уже сказано один раз.
+            }, chartPeriod === period ? period + ' дней' : String(period))
           )
         )
       ),
