@@ -131,7 +131,7 @@
     "test:web:critical": "vitest run apps/web/__tests__/yandex-api-session-guards.test.js apps/web/__tests__/heys-auth-login-client.test.js apps/web/__tests__/heys-auth-session.test.js apps/web/__tests__/heys-auth-create-reset-pin.test.js apps/web/__tests__/pending-queue-pure.test.js",
     "test:web:sync-critical": "vitest run apps/web/__tests__/yandex-api-session-guards.test.js apps/web/__tests__/heys-auth-login-client.test.js apps/web/__tests__/heys-auth-session.test.js apps/web/__tests__/pending-queue-pure.test.js apps/web/__tests__/sync-queue-runtime-pure.test.js apps/web/__tests__/pwa-update-logic.test.js apps/web/__tests__/morning-checkin-flow-resume.test.js apps/web/__tests__/sync-merge-shared.test.js",
     "type-check": "turbo run type-check",
-    "ui:v4:check": "node scripts/ui-v4-check-undefined-roles.mjs && node scripts/ui-check-undeclared-vars.mjs && node scripts/ui-v4-check-foreign-fallbacks.mjs && node scripts/ui-v4-check-css-test-guards.mjs && node scripts/ui-v4-check-contract-drift.mjs",
+    "ui:v4:check": "node scripts/ui-v4-check-undefined-roles.mjs && node scripts/ui-check-undeclared-vars.mjs && node scripts/ui-v4-check-foreign-fallbacks.mjs && node scripts/ui-v4-check-css-test-guards.mjs && node scripts/ui-v4-check-bare-color-literals.mjs && node scripts/ui-v4-check-contract-drift.mjs",
     "ui:v4:visual:capture": "node apps/web/scripts/ui-v4-visual-capture.mjs",
     "ui:v4:visual:check": "node apps/web/scripts/ui-v4-visual-capture.mjs --check",
     "ui:v4:visual:verify": "node apps/web/scripts/ui-v4-visual-capture.mjs --verify",
