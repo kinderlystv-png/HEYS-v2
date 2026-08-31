@@ -117,7 +117,6 @@ const WEEKS = [
 // Блок «Динамика», карточка самочувствия и призыв о замерах.
 const DYNAMICS = [
   [62, '.reports-v4-dynamics-card__head', ['justify', 'align']],
-  [63, '.reports-v4-dynamics-card__badge', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [66, '.reports-v4-dynamics-card__hint', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
   [67, '.reports-v4-wellbeing', ['marginTop']],
   [69, '.reports-v4-dynamics-card__delta', ['color']],
@@ -134,6 +133,24 @@ const DAYS = [
     ['width', 'height', 'radius', 'background']],
   [99, ['.reports-v4-days__dot', '.reports-v4-days__dot--warn'],
     ['width', 'height', 'radius', 'background']],
+];
+
+// Кадры состояний: нет веса и нулевая строка матрицы.
+const STATES = [
+  ['Отчёты · нет веса', [
+    [11, '.reports-v4-dynamics-card__head', ['justify', 'align', 'gap']],
+    [12, '.reports-v4-dynamics-card__period', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [13, '.reports-v4-noplot', ['height', 'radius', 'align', 'justify', 'marginTop']],
+    [14, '.reports-v4-noplot', ['fontWeight', 'fontSize', 'lineHeight']],
+  ]],
+  ['Отчёты · нулевая строка матрицы', [
+    [7, '.reports-v4-tier__note', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [9, '.reports-v4-discipline__row', ['align', 'gap', 'marginTop']],
+    [10, '.reports-v4-discipline__name',
+      ['flex', 'width', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [11, '.reports-v4-discipline__bar', ['flex', 'height', 'radius']],
+    [12, '.reports-v4-discipline__bar-fill', ['background']],
+  ]],
 ];
 
 // Кадр «Отчёты · мало данных»: заглушка до порога в семь дней.
@@ -167,6 +184,22 @@ describe('Отчёты · разбор кадров канваса', () => {
     expect(compare({
       razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: HEADER,
     })).toEqual([]);
+  });
+
+  it('кадры состояний совпадают с продуктом', () => {
+    for (const [frame, pairs] of STATES) {
+      expect(compare({ razbor, rules, frame, pairs })).toEqual([]);
+    }
+  });
+
+  // Число «+205 в день» в шапке графика продуктом не выводится: у шапки стоят
+  // только подпись и окно. Правило .reports-v4-dynamics-card__badge под него
+  // есть, но его не рендерит ни один файл — сначала элемент, потом сверка.
+  it('шапка графика пока без числа справа, и правило под него мёртвое', () => {
+    expect(reportsCss).toMatch(/\.reports-v4-dynamics-card__badge/);
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../heys_day_stats_v1.js'), 'utf8');
+    expect(src).not.toMatch(/dynamics-card__badge/);
   });
 
   it('заглушка «мало данных» совпадает с продуктом', () => {

@@ -278,11 +278,12 @@
   background: var(--v4-sand-surface, #f7efe2);
 }
 
+/* Кадр «Отчёты · нет веса», элемент 11: шапка карточки графика — зазор 10. */
 .reports-v4-dynamics-card__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 12px;
 }
 
@@ -318,6 +319,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ВНИМАНИЕ: правило мёртвое. Класс не рендерится ни одним файлом
+   (проверено поиском по apps/web/**/*.js без public/ — ни одного вхождения,
+   и по CSS — только это объявление). Кадры «Визуал v4 · Отчёты · 63» и
+   «Отчёты · нет веса · 09» рисуют на этом месте число «+205 в день» тоном
+   --tx, а строка контракта «карточка · график "съедено против плана"» его
+   требует, — но в продукте у шапки графика стоят только подпись и окно.
+   Само число не реализовано; правило чинить бессмысленно, пока элемента нет.
+   Запись дизайнеру и в протокол зоны. */
 .reports-v4-dynamics-card__badge {
   font-size: 11.5px;
   font-weight: 700;
@@ -327,7 +336,7 @@
 }
 
 .reports-v4-dynamics-card__period {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
   line-height: 1;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
