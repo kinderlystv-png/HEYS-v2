@@ -12132,7 +12132,10 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   border-radius: 999px;
   background: var(--v4-line, #e5e7eb);
   font-weight: 700;
-  font-size: 12px;
+  /* Кадр «Отмена · одно удаление», элемент 09: 11 px. Стояло 12 — кнопка была
+     одного кегля с текстом слева и спорила с ним за внимание, хотя текст
+     называет событие, а кнопка лишь предлагает его отменить. */
+  font-size: 11px;
   line-height: 1;
   color: var(--v4-act-text, #1d4ed8);
   cursor: pointer;
