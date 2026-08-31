@@ -26,13 +26,15 @@ const DAY_SOURCES = fs.readdirSync(WEB)
   .join('\n');
 
 // Имена, которых день пока не публикует. У каждого — почему и чей файл.
+//
+// 31 августа список сократился с трёх до одного: openWeightPicker и
+// openSleepQualityPicker выведены наружу (heys_day_tab_impl_v1.js, коммит
+// 3c3399f94) — и сокращения потребовал сам этот гейт: проверка ниже упала на
+// том, что закрытая дыра осталась в списке.
 const KNOWN_GAPS = new Map([
-  ['openWeightPicker',
-    'есть в heys_day_day_handlers.js, наружу не выведен — нужен экспорт рядом с addWater'],
-  ['openSleepQualityPicker',
-    'есть в heys_day_picker_modals.js, наружу не выведен'],
   ['openMorningCheckin',
-    'мастер живёт на уровне приложения (setShowMorningCheckin в heys_app_gate_flow_v1.js), у дня его нет вовсе']
+    'мастер живёт на уровне приложения (setShowMorningCheckin в heys_app_gate_flow_v1.js), '
+    + 'у дня его нет вовсе; звать ли чек-ин с виджетов — решение владельца, а не вопрос экспорта']
 ]);
 
 describe('действия листов разбора доезжают до дня', () => {
@@ -54,7 +56,7 @@ describe('действия листов разбора доезжают до д�
   });
 
   it('список дыр не разросся и не содержит уже починенного', () => {
-    expect(KNOWN_GAPS.size).toBe(3);
+    expect(KNOWN_GAPS.size).toBe(1);
     // Дыра, которую день уже закрыл, обязана уйти из списка — иначе он
     // перестанет быть долгом и станет украшением.
     const stale = [...KNOWN_GAPS.keys()].filter((name) => published.has(name));
