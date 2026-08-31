@@ -11,7 +11,9 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 10px 12px;
+  /* Кадр даёт один зазор 10 по обеим осям; стояло 10/12, и имя экрана с окном
+     разъезжались по горизонтали на два пиксела больше, чем по вертикали. */
+  gap: 10px;
   margin-top: 18px;
 }
 
@@ -176,6 +178,15 @@
   flex: none;
   font-size: 14px;
   color: var(--v4-act-text, #8a4a20);
+}
+
+/* Сноска про особый период: класс рисовался БЕЗ единого правила — ни в одном
+   модуле его не было, и строка наследовала кегль и тон от родителя. Кадр даёт
+   500 10,5/1.4 чернил 42 % с отступом 6. */
+.reports-v4-weight-cycle-footnote {
+  margin-top: 6px;
+  font: 500 10.5px/1.4 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 .reports-v4-tier {
