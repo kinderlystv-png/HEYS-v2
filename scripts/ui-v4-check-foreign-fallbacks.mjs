@@ -52,7 +52,7 @@ const BASELINE = {
   '500-pwa-and-offline.css': 80,
   '600-steps-and-aps.css': 42,
   '610-aps-meal-flow.css': 40,
-  '611-aps-product-card.css': 33,
+  '611-aps-product-card.css': 29,
   '612-training-step.css': 12,
   '613-cycle-ui.css': 8,
   '710-refeed.css': 25,
