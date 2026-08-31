@@ -8693,7 +8693,7 @@ NOVA: 1
         onClick: handleAddPortion
       }, '+ Добавить порцию'),
 
-      error && React.createElement('div', { className: 'aps-portions-error' }, '⚠️ ' + error),
+      error && React.createElement('div', { className: 'aps-portions-error' }, error),
 
       React.createElement('div', { className: 'aps-v4-footer aps-v4-footer--split' },
         React.createElement('button', {
@@ -8705,7 +8705,12 @@ NOVA: 1
           type: 'button',
           className: 'aps-v4-btn-primary',
           onClick: handleContinue
-        }, context?.isProductEditor ? 'Готово' : (context?.isEditMode ? 'Далее' : 'Далее'))
+          // Подпись по тому, что кнопка делает: есть onFinish — шаг последний
+          // и это «Готово», нет — ведёт к вредности и называет её. Прежде обе
+          // ветки правки говорили «Далее», обещая шаг, которого за ними нет,
+          // а создание не называло следующий шаг, хотя соседний «Дополнительно»
+          // называет («Далее к порциям»).
+        }, context?.onFinish ? 'Готово' : 'Далее к вредности')
       )
     );
   }
