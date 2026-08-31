@@ -1031,7 +1031,43 @@
     };
 
     // «вид шага»: поля экрана общие для слоя (.mc-step-content 18px) — свой p-4/p-3 давал 34px по бокам
-    return React.createElement('div', { className: 'flex flex-col gap-6' },
+    // Кадр «цель и активность» задаёт каждому блоку свой отступ: ярус «Цель»
+    // через 24, «Темп» и «Активность сейчас» через 32. Общий зазор 24 у
+    // колонки складывался с ними и разводил экран вдвое шире кадра.
+    // Кадр рисует внутри кружка стрелку направления: вниз у «снизить», черта у
+    // «удержать», вверх у «набрать». Поле 13 при системе координат 24, обводка
+    // по текущему цвету — на выбранном тон текста на акценте, на остальных
+    // чернила 45 %.
+    const GOAL_ICON = {
+      lose: 'M12 5v14M6 13l6 6 6-6',
+      hold: 'M6 12h12',
+      gain: 'M12 19V5M6 11l6-6 6 6',
+    };
+    const goalIcon = (id) => React.createElement('svg', {
+      width: 13,
+      height: 13,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': true,
+    }, React.createElement('path', { d: GOAL_ICON[id] || GOAL_ICON.hold }));
+
+    const tier = (text, top) => React.createElement('div', {
+      style: {
+        fontSize: 10,
+        fontWeight: 600,
+        lineHeight: 1,
+        letterSpacing: '0.16em',
+        textTransform: 'uppercase',
+        color: '#8a4a20',
+        margin: `${top}px 0 10px`,
+      }
+    }, text);
+
+    return React.createElement('div', { className: 'flex flex-col' },
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
       }, 'Цель и активность'),
@@ -1039,20 +1075,53 @@
       React.createElement('div', {
         style: { fontSize: 12, fontWeight: 500, color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 9 }
       }, 'Цель можно поменять в любой момент'),
-      React.createElement('div', { className: 'text-xs font-semibold tracking-widest uppercase', style: { color: '#8a4a20', marginTop: 16 } }, 'Цель'),
-      React.createElement('div', { className: 'flex flex-col gap-2' },
-        GOAL_DIRECTIONS.map((item) => React.createElement('button', {
-          key: item.id,
-          type: 'button',
-          onClick: () => pickDirection(item),
-          className: 'w-full text-left px-4 py-3 rounded-xl border-2',
-          style: directionId === item.id
-            ? { borderColor: '#c67139', background: '#efe3cf' }
-            : { borderColor: '#e5e7eb', background: '#fff' }
-        }, item.label))
+      tier('Цель', 24),
+      React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 9 } },
+        GOAL_DIRECTIONS.map((item) => {
+          const on = directionId === item.id;
+          // Кадр даёт выбору кружок 26 слева и обводку внутрь: рамка снаружи
+          // сдвигала бы содержимое на 2 px при выборе. Невыбранная строка —
+          // карточка --c1, а не белое с серой рамкой прежней системы.
+          return React.createElement('button', {
+            key: item.id,
+            type: 'button',
+            onClick: () => pickDirection(item),
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              width: '100%',
+              textAlign: 'left',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '10px 13px',
+              borderRadius: 14,
+              background: on ? '#efe3cf' : '#f7efe2',
+              boxShadow: on ? 'inset 0 0 0 2px #c67139' : 'none',
+            }
+          },
+            React.createElement('span', {
+              style: {
+                width: 26,
+                height: 26,
+                flex: 'none',
+                borderRadius: 999,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: on ? '#c67139' : '#fffaf1',
+                boxShadow: on ? 'none' : 'inset 0 0 0 2px rgba(0,0,0,.16)',
+                color: on ? '#2b1608' : 'rgba(0,0,0,.45)',
+              }
+            }, goalIcon(item.id)),
+            React.createElement('span', {
+              style: { fontSize: 12, fontWeight: 600, lineHeight: 1.3, color: on ? '#201e1d' : 'rgba(0,0,0,.55)' }
+            }, item.label)
+          );
+        })
       ),
       direction && direction.id !== 'hold' && React.createElement(React.Fragment, null,
-        React.createElement('div', { className: 'text-xs font-semibold tracking-widest uppercase', style: { color: '#8a4a20' } }, 'Темп'),
+        tier('Темп', 32),
         React.createElement('div', { className: 'flex flex-wrap gap-2' },
           direction.tempos.map((tempo) => React.createElement('button', {
             key: tempo.id,
@@ -1066,9 +1135,11 @@
                 : { background: '#f7efe2', color: 'rgba(0,0,0,.55)' })
           }, tempo.label))
         ),
-        selectedTempo && React.createElement('p', { className: 'text-xs text-gray-500' }, selectedTempo.hint)
+        selectedTempo && React.createElement('p', {
+          style: { fontSize: 10.5, fontWeight: 500, lineHeight: 1.45, color: 'rgba(0,0,0,.42)', margin: '8px 0 0' }
+        }, selectedTempo.hint)
       ),
-      React.createElement('div', { className: 'text-xs font-semibold tracking-widest uppercase', style: { color: '#8a4a20' } }, 'Активность сейчас'),
+      tier('Активность сейчас', 32),
       React.createElement('div', { className: 'flex flex-wrap gap-2' },
         ACTIVITY_LEVELS.map((item) => React.createElement('button', {
           key: item.id,
@@ -1082,7 +1153,9 @@
               : { background: '#f7efe2', color: 'rgba(0,0,0,.55)' })
         }, item.label))
       ),
-      React.createElement('p', { className: 'text-xs text-gray-500' },
+      React.createElement('p', {
+        style: { fontSize: 10.5, fontWeight: 500, lineHeight: 1.45, color: 'rgba(0,0,0,.42)', margin: '8px 0 0' }
+      },
         'Спрашиваем один раз — пока нет факта шагов, отсюда берётся прогноз недель до цели. Сам расход дня считается по факту: шагам, тренировкам и бытовой активности.'
       )
     );
