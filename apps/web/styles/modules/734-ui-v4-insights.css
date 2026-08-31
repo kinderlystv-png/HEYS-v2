@@ -622,9 +622,13 @@
   margin-bottom: 0;
 }
 
+/* Строка о промежутках — пояснение к ленте времён, а не второй заголовок.
+   Стояла 13/700 чернилами сразу под заголовком карточки: два жирных текста
+   подряд, и глаз не понимал, который из них главный. Контракт задаёт
+   11/1,5 чернил 45 % — вес пояснения. */
 .insights-v4-nutrition__rhythm-line {
-  font: 700 13px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #0f172a);
+  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   margin-bottom: 10px;
 }
 
@@ -640,11 +644,14 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+/* Перемычка между временами — дорожкой, а не поверхностью чипа: --v4-chip
+   даёт тон самой карточки, и связь между приёмами пропадала. Третье место в
+   зоне с этой же подменой (матрица Дисциплины и каскад разбора Score). */
 .insights-v4-nutrition__rhythm-bar {
   flex: 1;
   height: 6px;
   border-radius: 999px;
-  background: var(--v4-chip, rgba(0, 0, 0, 0.07));
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
 }
 
 .insights-v4-nutrition__bzhu {
