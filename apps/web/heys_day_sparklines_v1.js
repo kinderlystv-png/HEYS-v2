@@ -1108,6 +1108,22 @@
             strokeDashoffset: totalPathLength
           }
         }),
+        // Контракт «карточка · график „съедено против плана“»: круг r 4 на
+        // последней точке. Сетки, осей и подписей значений на графике нет, и
+        // без метки конца непонятно, где линия кончилась, а где просто ушла
+        // за край карточки. Только в v4: у прежнего вида свои точки на каждом
+        // дне, и второй круг там был бы лишним.
+        reportsV4 && points.length > 0 && (function () {
+          const last = points[points.length - 1];
+          if (!last || typeof last.x !== 'number' || typeof last.y !== 'number') return null;
+          return React.createElement('circle', {
+            key: 'reports-v4-last',
+            className: 'sparkline-dot--reports-v4',
+            cx: last.x,
+            cy: last.y,
+            r: 4
+          });
+        })(),
         // Золотые streak-линии между 🔥 днями (анимируются синхронно с основной линией)
         streakData.map((data, i) =>
           React.createElement('path', {

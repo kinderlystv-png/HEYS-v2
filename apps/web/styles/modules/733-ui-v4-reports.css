@@ -113,6 +113,7 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  min-height: 34px;
   margin-top: 20px;
   padding-top: 16px;
   border: none;
@@ -134,14 +135,19 @@
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.2;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  /* Запасное значение равно роли: --v4-ink-2 это 55 %, а не 50 %. */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   font-variant-numeric: tabular-nums;
 }
 
+/* Шеврон строки — тоном акцента, как просит контракт. Стоял без своего тона
+   под прозрачностью .55: он наследовал цвет строки (приглушённые чернила) и
+   гасился ещё раз, то есть уводился в фон ровно тот знак, который единственный
+   говорит, что строка нажимается. */
 .reports-v4-hero__footer-chevron {
   flex: none;
-  opacity: 0.55;
   font-size: 14px;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .reports-v4-tier {
@@ -353,15 +359,24 @@
   display: none;
 }
 
+/* Две линии графика стояли наоборот по смыслу: план — сплошным акцентом 2,4,
+   то есть самым заметным на карточке, а факт — тонкой серой 2. Читается сперва
+   план, хотя он опора, а факт — то, ради чего график открыт.
+
+   Контракт разводит их прямо: «план — пунктир 4/4 чернил 22 % по горизонтали,
+   факт — ломаная 2,5 тоном --acs»; кадр рисует факт именно так, 2,5 с
+   округлыми концами. */
 .reports-v4-dynamics-card .sparkline-goal--reports-v4 {
-  stroke: var(--v4-act, #c67139);
-  stroke-width: 2.4;
-  stroke-dasharray: none;
+  stroke: var(--v4-track, rgba(0, 0, 0, 0.12));
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
 }
 
 .reports-v4-dynamics-card .sparkline-line--reports-v4 {
-  stroke: color-mix(in srgb, var(--v4-ink, #0f172a) 45%, transparent);
-  stroke-width: 2;
+  stroke: var(--v4-act, #c67139);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   stroke-dasharray: none;
   stroke-dashoffset: 0;
   animation: none;
@@ -369,6 +384,12 @@
 
 .reports-v4-dynamics-card .sparkline-svg--reports-v4 {
   margin-top: 10px;
+}
+
+/* Метка конца линии — тем же тоном, что и сама линия: это её последняя точка,
+   а не отдельный знак. */
+.reports-v4-dynamics-card .sparkline-dot--reports-v4 {
+  fill: var(--v4-act, #c67139);
 }
 
 .reports-v4-dynamics-card__hint {
