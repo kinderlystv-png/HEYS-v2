@@ -910,6 +910,53 @@ body:has(.activity-v4) .hdr::after {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+/* Карточка правки куратора — .grp кадра «Актив · правка куратора» на подложке
+   предупреждения: она перехватывает день, и тон об этом говорит раньше текста. */
+.activity-v4-program .sb-proposal-card {
+  background: var(--v4-tint, #f6e6dd);
+}
+
+.activity-v4-program .sb-proposal-card b {
+  font: 700 13.5px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-warn-text, #a1471c);
+}
+
+.activity-v4-program .sb-proposal-card .sb-plan-actions {
+  margin-top: 14px;
+}
+
+/* У плана «Начать» стоит над рядом и сама несёт отступ 14. У правки та же
+   кнопка живёт внутри ряда, и её отступ разъезжал две кнопки на 14 px —
+   глазами это «одна ниже другой», а числами видно сразу. */
+.activity-v4-program .sb-proposal-card .sb-plan-actions .sb-btn.sb-plan-cta {
+  flex: 1;
+  margin-top: 0;
+}
+
+/* «Оставить прежнюю» стоит на грунте с обводкой, а не на второй поверхности:
+   рядом с «Принять» две одинаковые заливки читались бы как равные действия.
+   Кадр просит чернила 10 %, ближайшие ступени набора — 8 и 12 %; взята 12 %
+   (--v4-track): это край интерактивного элемента, а --v4-line в словаре —
+   разделитель. */
+.activity-v4-program .sb-proposal-card .sb-plan-actions .sb-plan-skip {
+  background: var(--v4-bg, #fffaf1);
+  box-shadow: inset 0 0 0 1px var(--v4-track, rgba(0, 0, 0, 0.12));
+}
+
+/* Полный разбор — второй слой, ссылкой под кнопками, а не главным действием. */
+.activity-v4-program .sb-proposal-review-link {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: center;
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
+}
+
 .activity-v4-history-empty {
   margin-top: 10px;
   padding: 16px;

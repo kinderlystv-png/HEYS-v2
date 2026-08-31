@@ -131,7 +131,7 @@
    * местах разъедется.
    */
   function ProposalCard(props) {
-    const { training, onReview, onDecline } = props;
+    const { training, onReview, onAccept, onDecline } = props;
     const ks = kernel();
     const proposal = ks && ks.pendingPlanProposal(training);
     if (!proposal) return null;
@@ -142,14 +142,24 @@
       ? (Array.isArray(wl.exercises) ? wl.exercises : []).some(function (ex) { return ks.hasDoneApproach(ex); })
       : false;
 
+    // Кадр «Актив · правка куратора»: одна фраза заголовком тоном
+    // предупреждения, суть правки прозой, две кнопки — «Принять» и «Оставить
+    // прежнюю». Прежде заголовком стояло название дня, а источник правки
+    // уходил в мелкую пилюлю; главной кнопкой был переход в разбор, то есть
+    // ответить с самой карточки было нельзя.
+    //
+    // «Сделанное не тронется» остаётся в прозе всегда, когда подходы уже
+    // закрыты: это обещание про чужую работу, и прятать его за кнопку разбора
+    // нельзя. Список изменений тоже остаётся — он и есть «что изменилось»,
+    // поэтому «Принять» здесь не вслепую.
+    const prose = [
+      started ? 'Сделанное не тронется — только то, что впереди.' : null,
+      proposal.note || null,
+    ].filter(Boolean).join(' ');
     return h('div', { className: 'sb-plan-card sb-proposal-card' },
-      h('div', { className: 'sb-plan-badge' }, who + ' поменял план'),
-      h('b', null, (training.plan && training.plan.dayLabel) || 'Сегодня по плану'),
+      h('b', null, who + ' поправил сегодняшнюю тренировку'),
       h('span', { className: 'sb-plan-meta' },
-        started
-          ? 'Сделанное не тронется — только то, что впереди'
-          : 'Ты его ещё не начинал'),
-      proposal.note && h('p', { className: 'sb-proposal-note' }, proposal.note),
+        prose || 'План на сегодня изменился — посмотрите, что стало.'),
       h('ul', { className: 'sb-proposal-list' },
         diff.ahead.slice(0, 3).map(function (row, i) {
           return h('li', { key: i, className: 'sb-proposal-row is-' + row.kind },
@@ -161,12 +171,17 @@
       ),
       h('div', { className: 'sb-plan-actions' },
         h('button', {
-          type: 'button', className: 'sb-btn is-accent sb-plan-cta', onClick: onReview
-        }, 'Посмотреть, что изменилось'),
+          type: 'button', className: 'sb-btn is-accent sb-plan-cta', onClick: onAccept || onReview
+        }, 'Принять'),
         h('button', {
           type: 'button', className: 'sb-btn sb-plan-skip', onClick: onDecline
-        }, 'Оставить прежний')
-      )
+        }, 'Оставить прежнюю')
+      ),
+      // Полный разбор кадр не рисует, но он был единственным входом в список
+      // замороженных упражнений — оставлен вторым слоем, не главной кнопкой.
+      h('button', {
+        type: 'button', className: 'sb-proposal-review-link', onClick: onReview
+      }, 'что изменилось ›')
     );
   }
 

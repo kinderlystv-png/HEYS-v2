@@ -3869,6 +3869,13 @@
                     onDecline: declineProposal
                   });
                 },
+                // Ответить можно с самой карточки: кадр «Актив · правка
+                // куратора» даёт «Принять» главной кнопкой, а разбор — вторым
+                // слоем (контракт «три элемента программы», строка 8).
+                onAccept: function (e) {
+                  if (e && e.stopPropagation) e.stopPropagation();
+                  acceptProposal();
+                },
                 onDecline: function (e) {
                   if (e && e.stopPropagation) e.stopPropagation();
                   declineProposal();

@@ -201,7 +201,7 @@ describe('правка куратора: как она названа челов
     expect(diff.frozen.map((f) => f.name)).toContain('Тяга штанги');
   });
 
-  it('карточка на дне обещает, что сделанное не тронется, и ведёт в разбор', () => {
+  it('карточка на дне обещает, что сделанное не тронется, и открывает разбор вторым слоем', () => {
     const { Parts } = loadAll();
     const training = startedTraining([ex('ex1', 'Жим', [ap('a1', 75, 8, false), ap('a2', 60, 8, false)])]);
     let reviewed = false;
@@ -212,9 +212,11 @@ describe('правка куратора: как она названа челов
       onDecline: () => {},
     }));
 
-    expect(screen.getByText(/Артём поменял план/)).toBeTruthy();
+    // Кадр «Актив · правка куратора» даёт одну фразу заголовком и ответ прямо
+    // с карточки; разбор остался вторым слоем, ссылкой под кнопками.
+    expect(screen.getByText(/Артём поправил сегодняшнюю тренировку/)).toBeTruthy();
     expect(screen.getByText(/Сделанное не тронется/)).toBeTruthy();
-    fireEvent.click(screen.getByText('Посмотреть, что изменилось'));
+    fireEvent.click(screen.getByText('что изменилось ›'));
     expect(reviewed).toBe(true);
   });
 
