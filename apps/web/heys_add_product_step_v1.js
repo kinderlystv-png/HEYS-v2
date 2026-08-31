@@ -11313,8 +11313,13 @@ NOVA: 1
         },
         headerRight: ({ stepData, currentConfig, updateStepData }) => {
           if (currentConfig?.id === 'search') return null;
-          const countLabel = `🗃️ ${currentProducts.length}`;
-          if (currentConfig?.id !== 'grams') return countLabel;
+          // Кадры шага дают справа только моноцифры счётчика базы. Ящик 🗃️
+          // рядом с числом — украшение прежней системы: он не называет, чего
+          // именно 170, а место занимает.
+          if (currentConfig?.id !== 'grams') {
+            return React.createElement('span', { className: 'aps-v4-header-count' },
+              String(currentProducts.length));
+          }
 
           const product = stepData?.grams?.selectedProduct
             || stepData?.create?.newProduct
