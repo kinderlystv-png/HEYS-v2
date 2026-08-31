@@ -60,6 +60,7 @@ const args = process.argv.slice(2);
 const zoneOnly = (args.find((a) => a.startsWith('--zone=')) || '').slice(7);
 const wantList = args.includes('--list');
 const updateBaseline = args.includes('--update-baseline');
+const asJson = args.includes('--json');
 
 /** Адрес: `<что-то>.<ext>:<число>[-<число>]`. Сокращения вида `ui:2513` пропускаем. */
 const ADDRESS = /([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:js|mjs|ts|tsx|css|html|sql)):(\d+)/g;
@@ -246,6 +247,14 @@ for (const file of fs.readdirSync(VERDICTS).filter((f) => f.endsWith('.json'))) 
       }
     }
   }
+}
+
+if (asJson) {
+  // Машинный вывод для чинилки: она берёт отсюда адрес, имена и зону.
+  process.stdout.write(
+    JSON.stringify({ zones, rowsSeen, withEvidence, addressesChecked, problems }, null, 2),
+  );
+  process.exit(0);
 }
 
 const hard =
