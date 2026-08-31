@@ -130,7 +130,14 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain('if (sharedId) {');
     expect(addProduct).toContain("const result = await updateSharedProductBarcodes(updatedProduct, sharedId, { mode: 'add', barcode })");
     expect(addProduct).toContain('Штрихкод отправлен на проверку для общей базы');
-    expect(addProduct).toContain('Не удалось проверить штрихкод. Попробуйте ещё раз или воспользуйтесь поиском по названию.');
+    // Отказ базы называет состояние словами кадра «Штрихкод · состояния» —
+    // «Код прочитан, база не ответила»: человеку важно, что сканировать заново
+    // не нужно, отказал не сканер. Вторая половина строки держит выход, ради
+    // которого проверка и стоит: прежний текст («Не удалось проверить
+    // штрихкод…») диагноза не давал, но выход называл, и потерять его при
+    // сведении с кадром было бы шагом назад.
+    expect(addProduct).toContain('Код прочитан, база не ответила');
+    expect(addProduct).toMatch(/база не ответила[^']*(попробуйте|найдите)/i);
     expect(addProduct).toContain('requestAnimationFrame(() => inputRef.current?.focus())');
     expect(addProduct).toContain('HEYS BARCODE CAMERA DEBUG');
     expect(addProduct).toContain('Диагностика камеры скопирована');

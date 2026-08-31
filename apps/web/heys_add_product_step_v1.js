@@ -3723,9 +3723,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           message: e?.message
         });
         cleanupCamera();
+        // Кадр «Штрихкод · состояния», ветка «Нет доступа к камере»: подпись
+        // называет состояние, а способ обойти его — отдельная строка. Прежде
+        // обе мысли жили одной фразой через точку.
         setError(isIOSCameraBrowser() && window.isSecureContext === false
-          ? 'Камера на iPhone работает только через защищённое соединение. Можно ввести код вручную.'
-          : 'Камера недоступна. Можно ввести код вручную.');
+          ? 'Камера на iPhone работает только через защищённое соединение'
+          : 'Камера недоступна');
         setCameraState('manual');
         await copyCameraDebugReport('camera-start-failed', { error: safeCameraError(e) });
       } finally {
@@ -5363,7 +5366,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           setSearchInput(barcode);
           setSearch(barcode);
           setBarcodeResults(matches);
-          HEYS.Toast?.info?.(`По штрихкоду найдено ${matches.length} варианта. Выберите продукт из списка.`);
+          // Тост убран: он говорил то же, что ярус над списком, и исчезал
+          // раньше, чем человек успевал выбрать. Ветка «Несколько совпадений»
+          // кадра — ярус и список, второго сообщения в ней нет.
           return;
         }
 
@@ -5375,9 +5380,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       } catch (e) {
         setSearchInput('');
         setSearch('');
+        // Ветка «Сеть не отвечает»: код прочитан, отказала база — это разные
+        // вещи, и человеку важно, что сканировать заново не нужно.
         setBarcodeNotice({
           type: 'error',
-          text: 'Не удалось проверить штрихкод. Попробуйте ещё раз или воспользуйтесь поиском по названию.'
+          text: 'Код прочитан, база не ответила. Попробуйте ещё раз или найдите по названию.'
         });
         requestAnimationFrame(() => inputRef.current?.focus());
       } finally {
@@ -5988,7 +5995,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         browseLead && React.createElement('div', { className: 'aps-v4-search-lead' }, browseLead),
 
         shouldRenderSettledProducts && showSearch && barcodeResults.length > 1 && React.createElement('div', { className: 'aps-v4-barcode-multi' },
-          React.createElement('div', { className: 'aps-v4-search-state__title' }, 'Несколько совпадений по коду'),
+          React.createElement('div', { className: 'aps-v4-search-state__title' }, 'Несколько совпадений'),
           React.createElement('div', { className: 'aps-v4-search-state__body' },
             'У одного штрихкода может быть и личный, и общий продукт. Выберите нужный из списка ниже.')
         ),
