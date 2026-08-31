@@ -34,6 +34,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MODULES = path.join(ROOT, 'apps/web/styles/modules');
 const PALETTE = path.join(MODULES, '002-ui-v4-palette-roles.css');
 
+// Роли с именем набора внутри — второй долг того же рода. Держим одним числом:
+// разметка владельца идёт по описи, а храповик следит только за тем, чтобы
+// новых не прибавлялось.
+const PALETTE_ROLE_BASELINE = 582;
+
 // Долг на 31 августа 2026. Список может только уменьшаться.
 const BASELINE = {
   '000-base-and-gamification.css': 291,
@@ -87,6 +92,24 @@ function readPalette() {
   return values;
 }
 
+// Второй долг того же рода: роль с именем набора внутри — `--v4-sand-*`,
+// `--v4-blue-*`. Она объявлена во всех наборах и потому законна для гейта
+// неопределённых ролей, но в синих держит песочное значение: модуль знает, что
+// палитра песочная, а знать не должен. Решение владельца 31 августа: синий
+// обязан быть синим целиком, тёплый цвет героя выражается ролью `--v4-hero-*`.
+// Опись 582 нынешних мест — docs/ui/UI_V4_SAND_ROLES_INVENTORY.md, они ждут
+// разметки владельца; храповик держит только то, чтобы новых не прибавлялось.
+function scanPaletteRoles() {
+  const perFile = new Map();
+  for (const name of fs.readdirSync(MODULES)) {
+    if (!name.endsWith('.css') || name.startsWith('002-')) continue;
+    const src = fs.readFileSync(path.join(MODULES, name), 'utf8');
+    const hits = [...src.matchAll(/var\(\s*--v4-(?:sand|blue)-[a-z0-9-]+/g)].length;
+    if (hits) perFile.set(name, hits);
+  }
+  return perFile;
+}
+
 function scan(values) {
   const perFile = new Map();
   for (const name of fs.readdirSync(MODULES)) {
@@ -121,6 +144,8 @@ function updateBaseline(perFile) {
 
 const perFile = scan(readPalette());
 const total = [...perFile.values()].reduce((a, b) => a + b, 0);
+const palettePerFile = scanPaletteRoles();
+const paletteTotal = [...palettePerFile.values()].reduce((a, b) => a + b, 0);
 
 if (process.argv.includes('--update-baseline')) {
   updateBaseline(perFile);
@@ -186,6 +211,19 @@ if (total < knownTotal) {
   }
 }
 
+if (paletteTotal > PALETTE_ROLE_BASELINE) {
+  console.error(`❌ Роль с именем набора в модуле: было ${PALETTE_ROLE_BASELINE}, стало ${paletteTotal}.`);
+  console.error('   Модуль не должен знать, что палитра песочная: в синих наборах такая роль');
+  console.error('   держит песочное значение, и синий перестаёт быть синим.');
+  console.error('   Тёплый цвет героя выражается ролью --v4-hero-*, а не именем набора.');
+  for (const [file, count] of [...palettePerFile].sort((a, b) => b[1] - a[1]).slice(0, 5)) {
+    console.error(`  ${file}: ${count}`);
+  }
+  process.exit(1);
+}
+
 const worst = [...perFile].sort((a, b) => b[1] - a[1]).slice(0, 5)
   .map(([f, n]) => `${f.replace(/\.css$/, '')} ${n}`).join(' · ');
 console.log(`Запасных значений мимо набора: ${total} в ${perFile.size} файлах — ${worst} …`);
+console.log(`Ролей с именем набора в модулях: ${paletteTotal} — ждут разметки владельца`
+  + ' (docs/ui/UI_V4_SAND_ROLES_INVENTORY.md).');
