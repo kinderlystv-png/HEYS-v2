@@ -7643,8 +7643,9 @@ NOVA: 1
     }
 
     return React.createElement('div', { className: 'pe-step' },
+      // Кадры шагов правки ставят над полями только ярус словами: значка
+      // рядом с ним нет ни в одном из них.
       React.createElement('div', { className: 'pe-step-header' },
-        React.createElement('span', { className: 'pe-step-icon' }, '✏️'),
         React.createElement('span', { className: 'pe-step-title' }, 'Название и КБЖУ')
       ),
 
@@ -8190,8 +8191,9 @@ NOVA: 1
     }
 
     return React.createElement('div', { className: 'pe-step' },
+      // Кадры шагов правки ставят над полями только ярус словами: значка
+      // рядом с ним нет ни в одном из них.
       React.createElement('div', { className: 'pe-step-header' },
-        React.createElement('span', { className: 'pe-step-icon' }, '🧬'),
         React.createElement('span', { className: 'pe-step-title' }, 'Доп. данные')
       ),
 
