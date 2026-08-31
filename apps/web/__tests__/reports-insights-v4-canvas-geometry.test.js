@@ -537,6 +537,24 @@ describe('Отчёты · разбор кадров канваса', () => {
     expect(line.stroke).toContain('var(--v4-act');
     expect(norm(line['stroke-width'])).toBe('2.5');
 
+    // Два наследства прежнего вида, которые правило карточки не перебивало,
+    // потому что оно их не задавало. Замер stroke их не ловит — он смотрит
+    // ровно те свойства, которые правило и назначает; нашлись они снаружи.
+    //
+    // Свечение: `[data-theme$="dark"] .sparkline-line` вешает
+    // drop-shadow rgba(74,222,128,.4) — зелёный ореол под терракотовой линией
+    // в обоих тёмных наборах. Селекторы весят одинаково (0-2-0), спор решает
+    // порядок файлов: stroke достался карточке, filter не задавал никто.
+    expect(norm(line.filter), 'зелёный ореол прежнего вида в тёмных наборах')
+      .toBe('none');
+
+    // Утолщение: `.sparkline-svg:hover .sparkline-line` весит 0-3-0 и
+    // перебивает карточку — под курсором линия становилась 4 px против 2,5.
+    const hover = rules.get(
+      '.reports-v4-dynamics-card .sparkline-svg:hover .sparkline-line--reports-v4');
+    expect(hover, 'нет правила на наведение — линия вернётся к 4 px').toBeTruthy();
+    expect(norm(hover['stroke-width'])).toBe('2.5');
+
     const spark = fs.readFileSync(
       path.resolve(__dirname, '../heys_day_sparklines_v1.js'), 'utf8');
 
