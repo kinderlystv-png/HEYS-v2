@@ -18,7 +18,12 @@ const canvas = fs.readFileSync(canvasPath, 'utf8').replace(/\r\n/g, '\n');
 const insightsCss = fs.readFileSync(
   path.resolve(__dirname, '../styles/modules/734-ui-v4-insights.css'), 'utf8');
 const reportsCss = fs.readFileSync(
-  path.resolve(__dirname, '../styles/modules/733-ui-v4-reports.css'), 'utf8');
+  path.resolve(__dirname, '../styles/modules/733-ui-v4-reports.css'), 'utf8');
+// Плитка Score живᄅт в своём модуле: файл передан зоне «Отчёты и Инсайты»
+// 31 августа — Главная не печатает ни одного его класса.
+const cascadeCss = fs.readFileSync(
+  path.resolve(__dirname, '../styles/modules/740-cascade-card.css'), 'utf8');
+
 
 // Правило класса из <style> канваса.
 function canvasRule(className) {
@@ -66,6 +71,8 @@ const RAZBOR_EXCEPTIONS = new Map([
   ['Визуал v4 · Отчёты · 81|color', 'то же'],
   ['Визуал v4 · Отчёты · 82|color', 'то же'],
   ['Визуал v4 · Отчёты · 89|color', 'у набора нет тона 50 %, ближайший --v4-ink-2'],
+  // Строка-вход плитки Score — тот же тон 50 %.
+  ['Визуал v4 · Отчёты · 37|color', 'то же'],
   // Прочерки в незакрытых колонках и средняя доля нулевой строки просят 32 %;
   // ближайшая ступень набора --v4-ink-30 даёт 30 %.
   ['Неделя к неделе · одна закрытая · 18|color', 'у набора нет тона 32 %, ближайший --v4-ink-30'],
@@ -333,6 +340,19 @@ const STUB = [
 // 21/800, — и это спор внутри одной поставки, записанный дизайнеру
 // (UI_V4_FINDINGS.md). Пары держат то, что есть сейчас, чтобы правка не
 // прошла молча ни в ту, ни в другую сторону.
+// Плитка Score в «Итоге периода»: шапка, ряд числа с кривой и строка-вход.
+// Собрана по кадру 31 августа; до этого было четыре яруса вместо двух
+// и ни одного признака, что у плитки есть второй слой.
+const SCORE_TILE = [
+  [30, '.heys-score-tile__head', ['align', 'justify', 'gap']],
+  [31, '.heys-score-tile__delta', ['flex', 'fontWeight', 'fontSize', 'lineHeight']],
+  [32, '.heys-score-tile__body', ['align', 'justify', 'gap', 'marginTop']],
+  [33, '.heys-score-tile__figure', ['direction', 'gap']],
+  [34, '.heys-score-tile__number', ['fontWeight', 'fontSize', 'lineHeight', 'tracking']],
+  [36, '.heys-score-tile__entry', ['align', 'justify', 'marginTop']],
+  [37, '.heys-score-tile__entry-label', ['fontWeight', 'fontSize', 'lineHeight']],
+];
+
 const SUMMARY = [
   [39, '.reports-v4-summary', ['gap']],
   [40, '.reports-v4-summary-card', ['flex', 'radius', 'padding']],
@@ -378,6 +398,13 @@ describe('Отчёты · разбор кадров канваса', () => {
       reportsCss.indexOf('[data-palette="sand"] .reports-v4-dynamics-card'),
       reportsCss.indexOf('background: var(--v4-surface)'));
     expect(group).not.toContain('reports-v4-hero');
+  });
+
+  it('плитка Score в «Итоге периода» собрана по кадру', () => {
+    expect(compare({
+      razbor, rules: readRules(cascadeCss), frame: 'Визуал v4 · Отчёты',
+      pairs: SCORE_TILE,
+    })).toEqual([]);
   });
 
   it('плитки «Итога периода» совпадают с кадром', () => {
@@ -511,7 +538,7 @@ describe('Отчёты · разбор кадров канваса', () => {
   });
 
   it('отступления разбора названы и не разрастаются молча', () => {
-    expect(RAZBOR_EXCEPTIONS.size).toBe(22);
+    expect(RAZBOR_EXCEPTIONS.size).toBe(23);
   });
 
   // Охват называется числом, а не подразумевается. Вердикт «сверено гейтом»
@@ -826,6 +853,8 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
       // (21/800 против 12,5/700), факт призыва о замерах (12/1,55 против
       // 11/1,4) и его кнопка — строка прямо говорит «не --acs», кадр красит
       // её заливкой акцента.
+      // Тон надписи входа плитки Score: кадр 50 %, ближайшая ступень 55 %.
+      'Визуал v4 · Отчёты · 37',
       'Визуал v4 · Отчёты · 68',
       'Визуал v4 · Отчёты · 104',
       'Визуал v4 · Отчёты · 105',

@@ -4336,27 +4336,52 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); }
       }
     },
+      // Плитка собрана по кадру «Визуал v4 · Отчёты» (элементы 30–38):
+      // шапка — ключ «HEYS Score» слева и дельта справа; ниже ряд
+      // «число с фразой слева, кривая справа»; внизу строка-вход.
+      //
+      // Стояло иначе: число и подпись в шапке, фраза отдельной
+      // строкой, кривая во всю ширину под ними, дельта в самом низу — четыре
+      // яруса там, где кадр даёт два. Главное же — у входа в разбор не было
+      // видимой строки: плитка открывала экран по тапу, и узнать об этом
+      // можно было только случайным нажатием.
       React.createElement('div', { className: 'heys-score-tile__head' },
-        React.createElement('span', { className: 'heys-score-tile__number', style: { color: color } }, displayNumber),
-        React.createElement('span', { className: 'heys-score-tile__label' }, 'HEYS Score')
+        React.createElement('span', { className: 'heys-score-tile__label' }, 'HEYS Score'),
+        deltaText && React.createElement('span', {
+          className: 'heys-score-tile__delta' + (trend.delta14 > 0 ? ' is-up' : '')
+        }, deltaText)
       ),
-      React.createElement('div', { className: 'heys-score-tile__state' }, phrase),
-      curvePoints && React.createElement('svg', {
-        className: 'heys-score-tile__curve',
-        viewBox: '0 0 100 28',
-        preserveAspectRatio: 'none'
-      },
-        React.createElement('polyline', {
-          points: curvePoints,
-          fill: 'none',
-          stroke: color,
-          strokeWidth: 2,
-          strokeLinecap: 'round',
-          strokeLinejoin: 'round',
-          vectorEffect: 'non-scaling-stroke'
-        })
+      React.createElement('div', { className: 'heys-score-tile__body' },
+        React.createElement('span', { className: 'heys-score-tile__figure' },
+          React.createElement('span', {
+            className: 'heys-score-tile__number', style: { color: color }
+          }, displayNumber),
+          React.createElement('span', { className: 'heys-score-tile__state' }, phrase)
+        ),
+        curvePoints && React.createElement('svg', {
+          className: 'heys-score-tile__curve',
+          viewBox: '0 0 100 28',
+          preserveAspectRatio: 'none'
+        },
+          React.createElement('polyline', {
+            points: curvePoints,
+            fill: 'none',
+            stroke: color,
+            strokeWidth: 2,
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+            vectorEffect: 'non-scaling-stroke'
+          })
+        )
       ),
-      deltaText && React.createElement('div', { className: 'heys-score-tile__delta' }, deltaText),
+      // Строка-вход в разбор — только в screenMode: вне его плитка
+      // раскрывается на месте блоком __detail, и второй вход спорил бы с ним.
+      screenMode && React.createElement('div', { className: 'heys-score-tile__entry' },
+        React.createElement('span', { className: 'heys-score-tile__entry-label' }, 'Из чего сложился'),
+        React.createElement('span', {
+          className: 'heys-score-tile__entry-chevron', 'aria-hidden': 'true'
+        }, '›')
+      ),
       screen || null,
       !screenMode && expanded && React.createElement('div', { className: 'heys-score-tile__detail' },
         React.createElement('div', { className: 'heys-score-tile__detail-intro' }, 'Каскад решений'),

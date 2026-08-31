@@ -1088,10 +1088,52 @@
   box-shadow: 0 12px 24px -22px rgba(15, 23, 42, 0.35);
 }
 
+/* Шапка плитки — ключ и дельта по краям (элемент 30 кадра). Зазор 12,
+   а не 8: они разведены распоркой, и зазор тут — минимальный просвет при
+   длинной дельте, а не расстояние между соседями. */
 .heys-score-tile__head {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Ряд «число с фразой слева, кривая справа» (элементы 32–33). По нижнему
+   краю: кривая и фраза состояния должны стоять на одной линии. */
+.heys-score-tile__body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.heys-score-tile__figure {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Строка-вход в разбор (элементы 36–38). До неё плитка открывала
+   экран по тапу без единого признака, что там есть второй слой. */
+.heys-score-tile__entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.09));
+}
+
+.heys-score-tile__entry-label {
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+}
+
+.heys-score-tile__entry-chevron {
+  font-size: 14px;
+  line-height: 1;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.3));
 }
 
 .heys-score-tile__number {
@@ -1108,10 +1150,11 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+/* Фраза состояния стоит под числом в одной колонке с ним, поэтому
+   отступ задаёт колонка (зазор 5), а не сама фраза. */
 .heys-score-tile__state {
   font-size: 12px;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
-  margin-top: 2px;
 }
 
 .heys-score-tile__curve {
@@ -1121,11 +1164,19 @@
   margin-top: 8px;
 }
 
+/* Дельта переехала в шапку справа — собственного отступа ей больше не
+   нужно. Тон --gr только у роста, как у дельты экрана разбора и у вклада
+   каскада: зелёный значит «идᄅт хорошо». Стояла роль --text — чернила
+   прежней системы с запасным #1e293b. */
 .heys-score-tile__delta {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text, #1e293b);
-  margin-top: 4px;
+  flex: none;
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.heys-score-tile__delta.is-up {
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .heys-score-tile__detail {
@@ -1180,21 +1231,9 @@
   box-shadow: none;
 }
 
-.reports-v4-score-slot .heys-score-tile__number {
-  font-size: 40px;
-  line-height: 0.9;
-}
-
-.reports-v4-score-slot .heys-score-tile__head {
-  justify-content: space-between;
-}
-
-.reports-v4-score-slot .heys-score-tile__delta {
-  margin-top: 0;
-  font-size: 11.5px;
-  font-weight: 700;
-}
-
+/* Три переопределения слота сняты 31 августа: кегль числа, распорка
+   шапки и вид дельты теперь стоят в самой плитке — она рисуется только
+   в отчётах, и второй адрес тех же чисел расходился бы с первым. */
 .reports-v4-score-slot .heys-score-tile__state {
   font-size: 11.5px;
   font-weight: 700;
