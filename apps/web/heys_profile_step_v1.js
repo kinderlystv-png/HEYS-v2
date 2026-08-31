@@ -560,9 +560,10 @@
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
       }, 'Расскажите о себе'),
+      // Строка «пояснение под заголовком шага»: 12 px/500 тоном чернил 55 %
+      // через 9 под заголовком, дословно эта фраза. Стояло 8 и вес по умолчанию.
       React.createElement('div', {
-        className: 'text-xs',
-        style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 8 }
+        style: { fontSize: 12, fontWeight: 500, color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 9 }
       }, 'Имя увидит только ваш куратор'),
       React.createElement('div', { className: 'flex flex-col gap-2', style: { marginTop: 16 } },
         React.createElement('label', { className: 'text-sm font-medium', style: { color: 'rgba(0,0,0,.7)' } },
@@ -908,9 +909,10 @@
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
       }, 'Рост и вес'),
+      // Строка «пояснение под заголовком шага»: 12 px/500 тоном чернил 55 %
+      // через 9. Отступа здесь не было вовсе — пояснение липло к заголовку.
       React.createElement('div', {
-        className: 'text-xs',
-        style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5 }
+        style: { fontSize: 12, fontWeight: 500, color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 9 }
       }, 'Вес будете уточнять каждое утро, здесь только точка отсчёта'),
       React.createElement('div', {
         className: 'text-xs',
@@ -1018,9 +1020,9 @@
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
       }, 'Цель и активность'),
+      // Строка «пояснение под заголовком шага»: 12 px/500, чернила 55 %, через 9.
       React.createElement('div', {
-        className: 'text-xs',
-        style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 8 }
+        style: { fontSize: 12, fontWeight: 500, color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 9 }
       }, 'Цель можно поменять в любой момент'),
       React.createElement('div', { className: 'text-xs font-semibold tracking-widest uppercase', style: { color: '#8a4a20', marginTop: 16 } }, 'Цель'),
       React.createElement('div', { className: 'flex flex-col gap-2' },
@@ -1146,9 +1148,9 @@
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
       }, 'Сон и инсулиновая волна'),
+      // Строка «пояснение под заголовком шага»: 12 px/500, чернила 55 %, через 9.
       React.createElement('div', {
-        className: 'text-xs',
-        style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 8 }
+        style: { fontSize: 12, fontWeight: 500, color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 9 }
       }, 'По этим двум числам считается окно приёмов'),
       React.createElement('div', { className: 'flex flex-col gap-2', style: { marginTop: 16 } },
         React.createElement('div', { className: 'flex items-center gap-2 relative' },

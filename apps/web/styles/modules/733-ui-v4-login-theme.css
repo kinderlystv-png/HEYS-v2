@@ -2386,8 +2386,11 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   opacity: 0.82;
 }
 
+/* Строка «цель касания»: минимум 44 pt держат строка, чип и кнопка. Кадр
+   «Документ · конец» рисует 40, но контракт старше кадра, и соседняя «Выйти без
+   регистрации» на экране согласий уже стоит на 44. */
 .consent-fulltext__decline {
-  min-height: 40px;
+  min-height: 44px;
   border: 0;
   border-radius: 999px;
   background: transparent;
