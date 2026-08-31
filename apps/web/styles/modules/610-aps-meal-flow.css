@@ -1628,13 +1628,21 @@
   }
 }
 
+/* Строка «пустая сборка»: на месте списка область 110 px с текстом 12 px/1,5
+   тоном чернил 42 %. Высота держит место списка, чтобы кнопка не прыгала
+   вверх, когда первый продукт добавлен. */
 .mpr-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 32px 16px;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 55%, transparent);
+  min-height: 110px;
+  padding: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
   text-align: center;
 }
 
@@ -2016,37 +2024,60 @@
   }
 }
 
+/* Строка «итог в правке набора»: карточка --c1 радиусом 16 полями 12/14, слева
+   ключ «Итого» 11,5 px/600 чернил 50 %, справа величины чернилами. Стояла
+   центрированная плашка прежней системы — холодная подложка
+   --color-bg-secondary и чернила --color-text-secondary. */
 .mpr-preview-total {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary, #64748b);
-  text-align: center;
-  padding: 8px;
-  background: var(--color-bg-secondary, #f8fafc);
-  border-radius: 8px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--v4-surface, #f7efe2);
+  border-radius: 16px;
 }
 
+.mpr-preview-total__label {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+}
+
+.mpr-preview-total__value {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Главная кнопка экрана. Стояла зелёным градиентом прежней системы
+   (#22c55e → #16a34a) радиусом 12 — вторая после «Сохранить набор» главная
+   кнопка флоу не песочного тона. */
 .mpr-add-all-btn {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 13px 20px;
   width: 100%;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  min-height: 48px;
+  margin-top: 10px;
+  padding: 0 22px;
   border: none;
-  border-radius: 12px;
+  border-radius: 999px;
+  background: var(--v4-sand-act, #c67139);
   cursor: pointer;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--v4-bg, #fff);
-  letter-spacing: 0.01em;
-  transition: all 0.2s;
-  margin-top: 4px;
+  line-height: 1;
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 @media (hover: hover) {
   .mpr-add-all-btn:hover {
-    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    opacity: 0.9;
   }
 }
 

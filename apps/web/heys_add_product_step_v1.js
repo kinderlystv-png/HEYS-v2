@@ -3132,8 +3132,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             )
           )
         ),
+        // Строка «итог в правке набора»: слева ключ «Итого», справа величины;
+        // число продуктов уходит в саму кнопку, а не дублируется в обеих строках.
         React.createElement('div', { className: 'mpr-preview-total' },
-          `Итого: ${totalKcal} ккал · ${active.length} ${pluralProduct(active.length)}`
+          React.createElement('span', { className: 'mpr-preview-total__label' }, 'Итого'),
+          React.createElement('span', { className: 'mpr-preview-total__value' },
+            `${totalKcal} ккал · ${active.length} ${pluralProduct(active.length)}`)
         ),
         React.createElement('button', {
           className: 'mpr-add-all-btn',
@@ -3141,8 +3145,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           disabled: active.length === 0 || isApplyingPreset
         },
           isApplyingPreset
-            ? 'Добавляем...'
-            : `Добавить ${active.length} ${pluralProduct(active.length)} · ${totalKcal} ккал`
+            ? 'Добавляем…'
+            : `Добавить ${active.length} ${pluralProduct(active.length)} в приём`
         )
       );
     };
@@ -10650,7 +10654,9 @@ NOVA: 1
         type: 'button',
         className: 'aps-add-hero-btn aps-v4-btn-primary',
         onClick: handleSubmit
-      }, context?.isEditMode ? 'Изменить' : 'Добавить')
+      // Строка «строка продукта — правка»: правка заменяет запись в приёме, и
+      // кнопка на этом экране говорит «Сохранить», а не «Изменить».
+      }, context?.isEditMode ? 'Сохранить' : 'Добавить')
     );
   }
 

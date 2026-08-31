@@ -29,7 +29,9 @@ describe('add product presets v4 canvas structure', () => {
     expect(addProductSource).toContain('Сохранить как набор');
     expect(addProductSource).toContain('Собрать новый набор');
     expect(addProductSource).toContain('Правка и удаление — по тапу на строку');
-    expect(addProductSource).toContain('`Добавить ${active.length} ${pluralProduct(active.length)} · ${totalKcal} ккал`');
+    // Строка «итог в правке набора»: кнопка говорит «Добавить N продуктов в
+    // приём». Калорийность стояла и в кнопке, и в строке итога прямо над ней.
+    expect(addProductSource).toContain('`Добавить ${active.length} ${pluralProduct(active.length)} в приём`');
     // Возврат стал шевроном 17×17 по кадрам зоны: типографская стрелка
     // зависела от шрифта и не совпадала с толщиной остальных значков.
     expect(addProductSource).toContain("d: 'M15 18l-6-6 6-6'");
