@@ -8304,42 +8304,25 @@ NOVA: 1
 
       React.createElement('div', { className: 'pe-section' },
         React.createElement('div', { className: 'pe-section-title' }, 'Флаги'),
-        React.createElement('div', { className: 'pe-toggles pe-toggles--4col' },
-          React.createElement('label', { className: 'pe-toggle' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: form.is_organic,
-              onChange: (e) => updateField('is_organic', e.target.checked)
-            }),
-            React.createElement('span', null, '🌿')
-          ),
-          React.createElement('label', { className: 'pe-toggle' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: form.is_whole_grain,
-              onChange: (e) => updateField('is_whole_grain', e.target.checked)
-            }),
-            React.createElement('span', null, '🌾')
-          ),
-          React.createElement('label', { className: 'pe-toggle' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: form.is_fermented,
-              onChange: (e) => updateField('is_fermented', e.target.checked)
-            }),
-            React.createElement('span', null, '🧬')
-          ),
-          React.createElement('label', { className: 'pe-toggle' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: form.is_raw,
-              onChange: (e) => updateField('is_raw', e.target.checked)
-            }),
-            React.createElement('span', null, '🥬')
+        // Кадр называет флаги словами внутри самой плашки: значок и легенда
+        // под ним появились здесь потому, что 🌿 и 🥬 сами по себе ничего не
+        // говорят, — а слово в строке снимает и значок, и легенду.
+        React.createElement('div', { className: 'pe-toggles' },
+          [
+            { key: 'is_organic', label: 'Органик' },
+            { key: 'is_whole_grain', label: 'Цельнозерн.' },
+            { key: 'is_fermented', label: 'Ферментир.' },
+            { key: 'is_raw', label: 'Сырой' }
+          ].map((item) =>
+            React.createElement('label', { className: 'pe-toggle', key: item.key },
+              React.createElement('input', {
+                type: 'checkbox',
+                checked: !!form[item.key],
+                onChange: (e) => updateField(item.key, e.target.checked)
+              }),
+              React.createElement('span', null, item.label)
+            )
           )
-        ),
-        React.createElement('div', { className: 'pe-toggles-legend' },
-          '🌿 Органик · 🌾 Цельнозерн. · 🧬 Ферментир. · 🥬 Сырой'
         )
       ),
 
@@ -10476,7 +10459,10 @@ NOVA: 1
       }),
 
       React.createElement('div', { className: 'aps-v4-grams-hero' },
-        React.createElement('div', { className: 'aps-v4-grams-hero__label' }, 'Сколько'),
+        // Кадры называют единицу прямо в ключе: «Сколько грамм» и «Сколько
+        // ккал». Одно «Сколько» на оба режима не говорит, что сейчас вводят.
+        React.createElement('div', { className: 'aps-v4-grams-hero__label' },
+          unitMode === 'kcal' ? 'Сколько ккал' : 'Сколько грамм'),
         React.createElement('div', { className: 'aps-v4-grams-hero__controls' },
           React.createElement('button', {
             type: 'button',

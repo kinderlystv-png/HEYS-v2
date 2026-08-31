@@ -3606,6 +3606,7 @@ button.meal-quality-badge:active {
    тоном текста, а не заливкой. Прежняя --v4-sand-accent-bg (#f0dcc6) — третья
    бумага, которой в кадре нет. */
 .aps-v4-grams-duplicate {
+  margin-top: 12px;
   border-radius: 18px;
   padding: 14px 16px;
   background: var(--v4-sand-hero, #efe3cf);
