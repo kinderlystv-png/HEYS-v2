@@ -2144,9 +2144,16 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   color: var(--v4-sand-act-text, #8a4a20);
 }
 
+/* Строка «вид прогресса чтения»: дорожка 3 px радиусом 999 фоном чернил 9 %.
+   Радиуса не было вовсе, а тон стоял 7 % — на светлом это разница на грани
+   видимости, но дорожка коротких документов из неё и состоит. */
 .consent-fulltext__progress-track {
   height: 3px;
-  background: rgba(0, 0, 0, 0.07);
+  border-radius: 999px;
+  /* Заливка внутри — прямоугольник; без обрезки её углы торчали бы из
+     скруглённой дорожки. */
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.09);
 }
 
 .consent-fulltext__progress-fill {
