@@ -401,10 +401,17 @@
     return 'snack3';
   }
 
-  function MealTypeGrid({ currentType, onSelect }) {
+  // Кадры разводят два вида одного блока. На первом шаге («Добавление · время
+  // и тип») это ярус «Тип приёма» и сетка 1fr 1fr без подсказки; в листе правки
+  // («Приём · время и тип») — ряд чипов с переносом, без яруса, с подсказкой
+  // «Тип предложен по времени — можно оставить как есть».
+  function MealTypeGrid({ currentType, onSelect, variant = 'step' }) {
     const activeChip = chipIdForType(currentType);
-    return React.createElement('div', { className: 'meal-type-section' },
-      React.createElement('div', { className: 'meal-type-label' }, 'Тип приёма'),
+    const isSheet = variant === 'sheet';
+    return React.createElement('div', {
+      className: 'meal-type-section' + (isSheet ? ' meal-type-section--sheet' : '')
+    },
+      !isSheet && React.createElement('div', { className: 'meal-type-label' }, 'Тип приёма'),
       React.createElement('div', { className: 'meal-type-chips' },
         MEAL_TYPE_CHIPS.map((chip) =>
           React.createElement('button', {
@@ -415,8 +422,8 @@
           }, chip.name)
         )
       ),
-      React.createElement('div', { className: 'meal-type-hint' },
-        'Тип предложен по времени — менять не обязательно.'
+      isSheet && React.createElement('div', { className: 'meal-type-hint' },
+        'Тип предложен по времени — можно оставить как есть.'
       )
     );
   }
@@ -779,7 +786,9 @@
       return () => document.removeEventListener('keydown', onKey);
     }, [showWavePlaque, handleWait]);
 
-    return React.createElement('div', { className: 'meal-time-step meal-time-step--v4' },
+    return React.createElement('div', {
+      className: 'meal-time-step meal-time-step--v4' + (isEditMode ? ' meal-time-step--sheet' : '')
+    },
       React.createElement('div', {
         className: 'meal-time-hero',
         role: 'group',
@@ -804,12 +813,15 @@
         // Строка «шаг и диапазон»: чип «сейчас» стоит справа от минут абсолютом,
         // вне потока, чтобы цифры не сдвигались с оси; под его ширину ряд
         // колонок получает правое поле.
-        isNowSelected && React.createElement('span', {
+        // Строка «вид · лист времени и типа»: «чипа „сейчас" здесь нет, и правого
+        // поля под него тоже». Сдвигов назад в листе правки тоже нет — время
+        // приёма там уже записано, его правят, а не вспоминают.
+        !isEditMode && isNowSelected && React.createElement('span', {
           className: 'meal-time-hero__now'
         }, 'сейчас')
       ),
 
-      React.createElement('div', { className: 'meal-time-shifts' },
+      !isEditMode && React.createElement('div', { className: 'meal-time-shifts' },
         TIME_SHIFTS.map(({ label, minutes: back }) => React.createElement('button', {
           key: label,
           type: 'button',
@@ -822,7 +834,8 @@
 
       React.createElement(MealTypeGrid, {
         currentType,
-        onSelect: selectType
+        onSelect: selectType,
+        variant: isEditMode ? 'sheet' : 'step'
       }),
 
       showWavePlaque && React.createElement('div', { className: 'meal-time-wave' },

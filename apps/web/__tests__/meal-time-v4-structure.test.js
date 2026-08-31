@@ -28,7 +28,10 @@ describe('meal time step v4 structure', () => {
   it('uses canvas title and six type chips', () => {
     expect(mealStepSource).toContain("title: 'Новый приём'");
     expect(mealStepSource).toContain('MEAL_TYPE_CHIPS');
-    expect(mealStepSource).toContain('Тип предложен по времени — менять не обязательно.');
+    // Подсказка живёт только в листе правки: кадр первого шага её не содержит,
+    // а строка «вид · лист времени и типа» цитирует её дословно.
+    expect(mealStepSource).toContain('Тип предложен по времени — можно оставить как есть.');
+    expect(mealStepSource).toContain("variant: isEditMode ? 'sheet' : 'step'");
     expect(mealStepSource).toContain('Всё равно продолжить');
     expect(mealStepSource).toContain('function typeForChip');
     expect(mealStepSource).not.toContain('Выберите время и тип');
