@@ -3736,7 +3736,9 @@ button.meal-quality-badge:active {
   min-width: 0;
   font-size: 13px;
   line-height: 1.35;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 55%, transparent);
+  /* Оба кадра собранного приёма дают имени продукта полные чернила --tx;
+     стояли 55 %, и имя было бледнее собственных граммов справа. */
+  color: var(--v4-ink, #201e1d);
 }
 
 .aps-v4-meal-summary__row-grams {
@@ -3791,13 +3793,14 @@ button.meal-quality-badge:active {
    --ac. Здесь стоял чужой набор — 11 px, .04em и чернила 45 %, то есть ярус
    фото выглядел подписью, а не ярусом, в отличие от «Мои наборы» рядом. */
 .aps-v4-meal-summary__photo-tier {
+  /* «Фото приёма» — обычный ярус экрана, как и остальные. */
   margin: 20px 0 10px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
 }
 
 .aps-v4-meal-summary__photo-grid {
@@ -3809,13 +3812,15 @@ button.meal-quality-badge:active {
 
 .aps-v4-meal-summary__photo-thumb,
 .aps-v4-meal-summary__photo-add {
-  width: calc(50% - 5px);
-  aspect-ratio: 4 / 5;
+  /* Кадр: плитки делят ряд поровну флексом, высота от 104 — по снимку, а не по
+     пропорции 4/5, иначе на узком экране ряд уезжает в две строки. */
+  flex: 1;
+  min-height: 104px;
   border-radius: 18px;
   padding: 0;
   border: 0;
   overflow: hidden;
-  background: var(--v4-sand-surface, #f7efe2);
+  background: var(--v4-surface, #f7efe2);
   cursor: pointer;
 }
 
@@ -3831,18 +3836,20 @@ button.meal-quality-badge:active {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  border: 2px dashed color-mix(in srgb, var(--v4-sand-act, #c67139) 35%, transparent);
+  gap: 9px;
+  padding: 20px 12px;
+  border: 2px dashed color-mix(in srgb, var(--v4-act, #c67139) 35%, transparent);
   background: transparent;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 55%, transparent);
-  font-size: 12px;
-  font-weight: 600;
+  color: var(--v4-act-text, #8a4a20);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
 }
 
 .aps-v4-meal-summary__photo-add-icon {
-  font-size: 22px;
-  line-height: 1;
-  color: var(--v4-sand-act, #c67139);
+  flex: none;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .aps-v4-search-state__tier {
@@ -3977,41 +3984,62 @@ button.meal-quality-badge:active {
 
 .aps-v4-meal-summary__photo-thumb-wrap {
   position: relative;
+  flex: 1;
+  min-width: 0;
 }
 
 .aps-v4-meal-summary__photo-time {
+  /* Кадр: время лежит на градиенте по низу снимка во всю ширину, а не пилюлей
+     в углу — пилюля спорила с кнопкой удаления в противоположном углу. */
   position: absolute;
-  left: 8px;
-  bottom: 8px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(20, 18, 16, 0.62);
-  color: #fff;
-  font-size: 10px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 9px 11px;
+  background: linear-gradient(transparent, rgba(32, 30, 29, 0.55));
+  color: var(--v4-bg, #fffaf1);
+  font-size: 10.5px;
   font-weight: 600;
+  line-height: 1;
 }
 
 .aps-v4-meal-summary__photo-delete {
+  /* Кадр: цель 44 с полем 8, внутри кружок 24 на подложке чернил 50 % — сам
+     крестик мелкий, чтобы не спорить со снимком, но промахнуться нельзя. */
   position: absolute;
   top: 0;
   right: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
   width: 44px;
   height: 44px;
+  padding: 8px;
   border: none;
   background: transparent;
-  color: #fff;
-  font-size: 18px;
-  line-height: 1;
+  color: var(--v4-bg, #fffaf1);
+  font-size: 14px;
   cursor: pointer;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+/* Сам крестик — кружок 24 на подложке чернил 50 %, а не тень под глифом. */
+.aps-v4-meal-summary__photo-delete::before {
+  content: '×';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(32, 30, 29, 0.5);
 }
 
 .aps-v4-meal-summary__photo-note {
-  margin-top: 8px;
+  margin-top: 12px;
   font-size: 11px;
   font-weight: 500;
-  line-height: 1.45;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
 }
 
 /* Строка «вид · две кнопки над вкладками»: ряд поровну самым верхом

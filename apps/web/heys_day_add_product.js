@@ -335,21 +335,32 @@
               className: 'aps-v4-meal-summary__photo-delete',
               onClick: handleDeletePhoto,
               'aria-label': 'Удалить фото'
-            }, '×')
+            })
           );
         }),
         !photosAtLimit && React.createElement('button', {
           type: 'button',
           className: 'aps-v4-meal-summary__photo-add',
           onClick: handlePhotoPick,
-          'aria-label': 'Добавить фото приёма'
+          'aria-label': 'Снять фото приёма'
         },
-          React.createElement('span', { className: 'aps-v4-meal-summary__photo-add-icon', 'aria-hidden': 'true' }, '+'),
-          React.createElement('span', null, 'Добавить')
+          // Кадр «Приём собран · фото»: значок камеры 19 px тоном --ac и слово
+          // «Снять». Стоял знак «+» 22 px и слово «Добавить» — по виду это была
+          // ещё одна кнопка добавления рядом с «Добавить ещё».
+          React.createElement('svg', {
+            className: 'aps-v4-meal-summary__photo-add-icon',
+            width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.5, strokeLinecap: 'round',
+            strokeLinejoin: 'round', 'aria-hidden': 'true'
+          },
+            React.createElement('path', { d: 'M4 8h3l2-2h6l2 2h3v11H4z' }),
+            React.createElement('circle', { cx: 12, cy: 13, r: 3.5 })
+          ),
+          React.createElement('span', null, 'Снять')
         )
       ),
       typeof onPhoto === 'function' && React.createElement('div', { className: 'aps-v4-meal-summary__photo-note' },
-        'Фото принадлежит приёму, а не отдельному продукту.'
+        'Фото принадлежит приёму, не продукту. Снимков может быть несколько, тап открывает на весь экран.'
       ),
       React.createElement('div', { className: 'aps-v4-meal-summary__actions aps-v4-meal-summary__actions--row' },
         React.createElement('button', {
