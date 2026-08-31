@@ -218,6 +218,20 @@ const REALDATA = [
       'fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
+// Инсайты. Раздел разбора этой половины стоял нетронутым: причиной называли то,
+// что зона инлайновая. Число верное, но оно про КАНВАС (3836 инлайн-стилей в
+// .dc.html), а не про продукт — у продукта инсайтов 1654 обращения к классам
+// против 79 инлайнов. Привязка «строка разбора → правило продукта» здесь
+// работает так же, как в «Отчётах».
+const INSIGHTS = [
+  [13, '.insights-v4-meta__row', ['align', 'gap']],
+  [14, '.insights-v4-meta__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [15, '.insights-v4-meta__days', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [17, '.insights-v4-hero', ['background', 'radius', 'padding', 'marginTop']],
+  [19, '.insights-v4-hero__phrase',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+];
+
 // Кадр «Разбор Score». Сведено только то, о чём строка контракта «вид · экран
 // разбора Score» молчит: кегли числа, дельты и фразы она задаёт сама и спорит
 // с кадром (30/800 против 56/600), а раскладка строки каскада — открытый
@@ -327,6 +341,12 @@ describe('Отчёты · разбор кадров канваса', () => {
       rules: readRules(REALDATA_CSS),
       frame: 'Мало калорий · рекомендуем очистить',
       pairs: REALDATA,
+    })).toEqual([]);
+  });
+
+  it('шапка и герой «Инсайтов» совпадают с продуктом', () => {
+    expect(compare({
+      razbor, rules: readRules(insightsCss), frame: 'Инсайты', pairs: INSIGHTS,
     })).toEqual([]);
   });
 
