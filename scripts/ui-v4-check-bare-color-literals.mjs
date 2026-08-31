@@ -75,7 +75,7 @@ const BASELINE = {
   '500-pwa-and-offline.css': 116,
   '715-yesterday-verify.css': 37,
   '720-predictive-insights.css': 210,
-  '730-widgets-dashboard.css': 179,
+  '730-widgets-dashboard.css': 178,
   '733-ui-v4-login-theme.css': 104,
   '740-cascade-card.css': 23,
   'critical.css': 34,
