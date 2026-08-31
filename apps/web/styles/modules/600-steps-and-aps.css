@@ -2422,7 +2422,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   position: fixed;
   inset: 0;
   z-index: var(--v4-z-sheet-scrim, 1200);
-  background: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 34%, transparent);
+  background: color-mix(in srgb, var(--v4-ink, #201e1d) 34%, transparent);
 }
 
 .aps-v4-exit-dialog {
@@ -2434,17 +2434,17 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   transform: translateY(-50%);
   border-radius: 26px;
   padding: 24px 20px 20px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  background: var(--v4-bg, #fffaf1);
   box-shadow:
-    0 4px 12px color-mix(in srgb, var(--v4-sand-act-deep, #8a4a20) 16%, transparent),
-    0 24px 56px color-mix(in srgb, var(--v4-sand-act-deep, #8a4a20) 22%, transparent);
+    0 4px 12px color-mix(in srgb, var(--v4-act-text, #8a4a20) 16%, transparent),
+    0 24px 56px color-mix(in srgb, var(--v4-act-text, #8a4a20) 22%, transparent);
 }
 
 .aps-v4-exit-dialog__title {
   font-size: 16px;
   font-weight: 700;
   line-height: 1.35;
-  color: var(--v4-sand-ink, #201e1d);
+  color: var(--v4-ink, #201e1d);
 }
 
 .aps-v4-exit-dialog__body {
@@ -2459,8 +2459,15 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   margin-top: 20px;
 }
 
+/* Кадр «Выход · есть что терять»: «Выйти без сохранения» — не акцентная
+   вторичная кнопка, а текст 600 12,5 px чернилами 55 % в области 44. Уход из
+   потока не должен выглядеть действием того же веса, что «Остаться». */
 .aps-v4-exit-dialog__leave {
   margin-top: 6px;
+  background: transparent;
+  box-shadow: none;
+  font-weight: 600;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 /* === APS v4 · happy path shell (prompt-food шаги 3–5) === */
