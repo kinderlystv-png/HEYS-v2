@@ -55,7 +55,7 @@
 }
 
 .insights-v4-period-pill.is-active {
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
   box-shadow: inset 0 -2px 0 0 var(--v4-act-line, #c67139);
 }
 
@@ -225,7 +225,7 @@
   background: none;
   font-size: 12px;
   font-weight: 600;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
 }
 
@@ -311,7 +311,7 @@
   padding: 8px 0;
   font-size: 13px;
   font-weight: 600;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
 }
 
@@ -395,7 +395,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   background: var(--v4-chip, rgba(0, 0, 0, 0.06));
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .insights-v4-maturity--rule {
@@ -479,7 +479,7 @@
 
 .insights-v4-window__chip.is-active {
   background: var(--v4-card, #ffffff);
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .insights-v4-window__chip.is-locked {
@@ -1035,7 +1035,7 @@
    числа и красится по нему же: наблюдённое — акцентом, расчётное — спокойным
    тоном. Один и тот же вид у двух разных вещей и был главной ложью экрана. */
 .insights-v4-thresh__mine--own {
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .insights-v4-thresh__mine--calc {
@@ -1219,7 +1219,7 @@
   border: none;
   background: none;
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   text-align: left;
 }
