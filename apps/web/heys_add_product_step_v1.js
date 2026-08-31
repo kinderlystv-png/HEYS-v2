@@ -5970,7 +5970,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             className: 'aps-v4-search-tab' + (quickList === 'recent' ? ' is-active' : ''),
             onClick: () => handleBrowseTab('recent'),
             'aria-selected': quickList === 'recent'
-          }, 'Недавние'),
+          }, 'Недавние · 3 дня'),
           React.createElement('button', {
             type: 'button',
             role: 'tab',
@@ -6006,7 +6006,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           ),
           combinedResults.length === 0 && !sharedLoading && renderApsSearchEmptyState('no_results', {
             onCreate: handleNewProduct,
-            createLabel: search ? `+ Добавить «${search}»` : 'Создать продукт',
+            createLabel: search ? `Создать «${search}»` : 'Создать продукт',
+            query: search,
             similarProducts,
             onPickSimilar: selectProduct
           }),
@@ -6024,11 +6025,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               setIsWaitingForProductsSettle(true);
               try { window.dispatchEvent(new CustomEvent('heys:products-updated')); } catch (_) { /* noop */ }
             },
-            tierItems: searchBrowseState === 'empty_base'
-              ? ['✓ Общая база', '✓ Создание продукта']
-              : searchBrowseState === 'load_failed'
-                ? ['✓ Личные продукты из кэша', '✗ Свежая общая база']
-                : null
+            onScan: () => setBarcodeModal({ autoStart: true, cameraStart: createBarcodeCameraStart?.() || null }),
+            tierRows: (smartProducts?.length ? smartProducts : modalFallbackProducts || [])
+              .slice(0, 3)
+              .map(p => renderV4ProductRow(p, { showUsage: true }))
           })
         ),
 
@@ -7101,29 +7101,24 @@ NOVA: 1
         )
       ),
 
+      // Строка публикации по кадру «Продукт · вставка строки»: карточка первой
+      // поверхности, галка 20 заливкой акцента, справа — куда уйдёт продукт.
+      // Прежде строка стояла инлайном на переменных снятой системы
+      // (--bg-secondary #f3f4f6, --text-muted #6b7280), галка красилась зелёным
+      // #22c55e мимо набора, а перед подписью стоял глобус.
       parsedPreview && createMode === 'persist' && React.createElement('label', {
-        style: {
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '10px 12px',
-          marginTop: '8px',
-          background: 'var(--bg-secondary, #f3f4f6)',
-          borderRadius: '8px',
-          cursor: 'pointer',
-          fontSize: '14px'
-        }
+        className: 'aps-create-publish'
       },
         React.createElement('input', {
           type: 'checkbox',
+          className: 'aps-create-publish__box',
           checked: publishToShared,
-          onChange: (e) => setPublishToShared(e.target.checked),
-          style: { width: '18px', height: '18px', accentColor: '#22c55e' }
+          onChange: (e) => setPublishToShared(e.target.checked)
         }),
-        React.createElement('span', null, '🌐 Опубликовать в общую базу'),
-        React.createElement('span', {
-          style: { fontSize: '11px', color: 'var(--text-muted, #6b7280)', marginLeft: 'auto' }
-        }, isCurator ? 'сразу доступен всем' : 'на модерацию')
+        React.createElement('span', { className: 'aps-create-publish__label' },
+          'Опубликовать в общую базу'),
+        React.createElement('span', { className: 'aps-create-publish__where' },
+          isCurator ? 'сразу доступен всем' : 'на модерацию')
       ),
 
       React.createElement('button', {
@@ -9199,49 +9194,58 @@ NOVA: 1
 
   function renderApsSearchEmptyState(state, handlers = {}) {
     const e = React.createElement;
-    const tierBlock = handlers.tierItems?.length
-      ? e('div', { className: 'aps-v4-search-state__tier' }, 'Доступно сейчас',
-        e('div', { className: 'aps-v4-search-state__tier-list' },
-          handlers.tierItems.map((line, index) => e('div', { key: index }, line))))
-      : null;
+    // Кадры состояний поиска показывают под ярусом не список галочек, а те самые
+    // продукты, которые сейчас доступны: человеку нужно во что-то ткнуть, а не
+    // прочитать, что «личные продукты работают».
+    const tierBlock = (title, extra) => {
+      const rows = handlers.tierRows;
+      if (!rows?.length && !extra) return null;
+      return e(React.Fragment, null,
+        e('div', { className: 'aps-v4-search-state__tier' }, title),
+        e('div', { className: 'aps-v4-search-state__tier-list' }, rows, extra));
+    };
 
     if (state === 'offline') {
       return e('div', { className: 'aps-v4-search-offline-card', role: 'status' },
         e('div', { className: 'aps-v4-search-offline-card__title' }, 'Нет сети'),
         e('div', { className: 'aps-v4-search-offline-card__body' },
-          'Общая база недоступна. Личные продукты, наборы и уже загруженные позиции работают. Приём сохранится локально и уйдёт в облако, когда связь вернётся.'),
-        e('div', { className: 'aps-v4-search-state__tier-list', style: { marginTop: '12px' } },
-          e('div', null, '✓ Личные продукты и наборы'),
-          e('div', null, '✓ Уже загруженные общие продукты'),
-          e('div', null, '✗ Поиск по общей базе'))
+          'Личные продукты и наборы доступны, приём сохранится и уйдёт в облако, когда сеть вернётся.'),
+        tierBlock('Доступно офлайн',
+          e('div', { className: 'aps-v4-search-state__off-row', key: 'off' },
+            e('span', { className: 'aps-v4-search-state__off-name' }, 'Общая база'),
+            e('span', { className: 'aps-v4-search-state__off-state' }, 'недоступна')))
       );
     }
     if (state === 'empty_base') {
-      return e('div', { className: 'aps-v4-search-state' },
-        e('div', { className: 'aps-v4-search-state__title' }, 'Личная база пока пуста'),
+      return e('div', { className: 'aps-v4-search-state aps-v4-search-state--start' },
+        e('div', { className: 'aps-v4-search-state__title' },
+          'Здесь появятся продукты, которые вы едите чаще всего'),
         e('div', { className: 'aps-v4-search-state__body' },
-          'Создайте первый продукт или найдите его в общей базе — так быстрее добавлять еду в приём.'),
-        e('div', { className: 'aps-v4-search-state__actions' },
-          handlers.onSearchShared && e('button', {
+          'Пока список пуст — найдите первый в общей базе.'),
+        handlers.onSearchShared && e('button', {
+          type: 'button',
+          className: 'aps-v4-btn-primary aps-v4-search-state__cta',
+          onClick: handlers.onSearchShared
+        }, 'Искать в общей базе'),
+        e('div', { className: 'aps-v4-search-state__tier' }, 'Или сразу'),
+        e('div', { className: 'aps-v4-search-state__quick' },
+          handlers.onScan && e('button', {
             type: 'button',
-            className: 'aps-v4-btn-primary',
-            onClick: handlers.onSearchShared
-          }, 'Искать в общей базе'),
+            className: 'aps-v4-search-state__quick-row',
+            onClick: handlers.onScan
+          }, 'Сканировать штрихкод'),
           handlers.onCreate && e('button', {
             type: 'button',
-            className: 'aps-v4-btn-ghost aps-v4-btn-paper',
+            className: 'aps-v4-search-state__quick-row',
             onClick: handlers.onCreate
-          }, 'Создать продукт')),
-        tierBlock || e('div', { className: 'aps-v4-search-state__tier-list', style: { marginTop: '14px' } },
-          e('div', null, '✓ Общая база'),
-          e('div', null, '✓ Создание продукта'))
+          }, 'Создать свой продукт'))
       );
     }
     if (state === 'load_failed') {
       return e('div', { className: 'aps-v4-search-state aps-v4-search-state--warn' },
-        e('div', { className: 'aps-v4-search-state__title' }, 'База не загрузилась'),
+        e('div', { className: 'aps-v4-search-state__title' }, 'Общая база недоступна'),
         e('div', { className: 'aps-v4-search-state__body' },
-          'Проверьте сеть и попробуйте ещё раз. Пока можно искать только среди уже загруженных продуктов.'),
+          'Не удалось загрузить справочник продуктов. Ваши личные продукты и наборы работают.'),
         e('div', { className: 'aps-v4-search-state__actions' },
           handlers.onRetry && e('button', {
             type: 'button',
@@ -9253,16 +9257,22 @@ NOVA: 1
             className: 'aps-v4-btn-ghost aps-v4-btn-paper',
             onClick: handlers.onCreate
           }, 'Создать продукт')),
-        tierBlock || e('div', { className: 'aps-v4-search-state__tier-list', style: { marginTop: '14px' } },
-          e('div', null, '✓ Личные продукты из кэша'),
-          e('div', null, '✗ Свежая общая база'))
+        tierBlock('Доступно сейчас')
       );
     }
     if (state === 'no_results') {
+      const words = String(handlers.query || '').trim().split(/\s+/).filter(Boolean);
+      const shorter = words.length > 1 ? words[0] : '';
       return e('div', { className: 'aps-v4-search-state' },
-        e('div', { className: 'aps-v4-search-state__title' }, 'Ничего не найдено'),
+        e('div', { className: 'aps-v4-search-state__title' }, 'По этому запросу ничего нет'),
         e('div', { className: 'aps-v4-search-state__body' },
-          'Попробуйте другое название или создайте продукт вручную.'),
+          'Поиск работает, база на месте — просто нет совпадений.'
+          + (shorter ? ` Попробуйте короче: «${shorter}».` : ' Попробуйте другое название.')),
+        handlers.onCreate && e('button', {
+          type: 'button',
+          className: 'aps-v4-btn-primary aps-v4-search-state__cta',
+          onClick: handlers.onCreate
+        }, handlers.createLabel || 'Создать продукт'),
         Array.isArray(handlers.similarProducts) && handlers.similarProducts.length > 0 && e('div', { className: 'aps-v4-search-state__similar' },
           e('div', { className: 'aps-v4-search-state__similar-title' }, 'Близкое по названию'),
           e('div', { className: 'aps-v4-search-state__similar-list' },
@@ -9271,13 +9281,7 @@ NOVA: 1
               type: 'button',
               className: 'aps-v4-btn-ghost aps-v4-btn-paper',
               onClick: () => handlers.onPickSimilar?.(product)
-            }, product.name)))),
-        handlers.onCreate && e('button', {
-          type: 'button',
-          className: 'aps-v4-btn-primary',
-          style: { marginTop: '12px' },
-          onClick: handlers.onCreate
-        }, handlers.createLabel || 'Создать продукт')
+            }, product.name))))
       );
     }
     return null;
