@@ -754,7 +754,7 @@
 }
 
 .reports-v4-discipline {
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   border-radius: 20px;
   padding: 6px 16px 12px;
 }
@@ -884,7 +884,7 @@
 
 /* Контракт «месяц нулей — вопрос к норме»: единственный выход — к куратору. */
 .reports-v4-zero-actions {
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   border-radius: 20px;
   padding: 2px 16px;
 }
@@ -983,7 +983,7 @@
 }
 
 .reports-v4-weeks {
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   border-radius: 20px;
   padding: 2px 16px 12px;
 }
@@ -1241,7 +1241,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   border-radius: 20px;
   padding: 14px 16px;
   margin-top: 12px;
@@ -1291,7 +1291,7 @@
   min-height: 40px;
   border: none;
   border-radius: 12px;
-  background: var(--v4-card, #ffffff);
+  background: var(--v4-card, #f7efe2);
   color: var(--v4-ink, #0f172a);
   font: 700 18px/1 Figtree, system-ui, sans-serif;
   cursor: pointer;
