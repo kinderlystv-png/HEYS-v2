@@ -67,6 +67,19 @@ const NEW_USER = [
   [27, '.insights-v4-stub__ladder-text', ['fontWeight', 'fontSize', 'lineHeight']],
 ];
 
+const VOICE = [
+  [9, '.insights-v4-attention__risk-badge', ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform']],
+  [10, '.insights-v4-attention__basis', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [11, '.insights-v4-attention__more', ['minHeight', 'radius', 'background', 'fontWeight', 'fontSize']],
+];
+
+const SHEET2 = [
+  [3, '.insights-v4-sheet', ['background', 'radius', 'padding']],
+  [4, '.insights-v4-sheet__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [5, '.insights-v4-sheet__text', ['fontWeight', 'fontSize', 'lineHeight']],
+  [10, '.insights-v4-sources__strength', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
 const NUTRITION = [
   [9, '.insights-v4-nutrition__rhythm-track', ['align', 'gap']],
   [10, '.insights-v4-nutrition__rhythm-time', ['fontWeight', 'fontSize', 'lineHeight']],
@@ -170,6 +183,18 @@ describe('Инсайты · разбор кадров канваса', () => {
 
   it('кадр «день без заданий» совпадает с продуктом', () => {
     expect(compare({ razbor, rules, frame: 'Инсайты · день без заданий', pairs: PRAISE })).toEqual([]);
+  });
+
+  it('кадр «голос куратора» совпадает с продуктом', () => {
+    expect(compare({
+      razbor, rules, frame: 'Стоит внимания · голос куратора', pairs: VOICE,
+    })).toEqual([]);
+  });
+
+  it('лист «Как посчитано» совпадает с продуктом', () => {
+    expect(compare({
+      razbor, rules, frame: 'Раскрывашка · Как посчитано', pairs: SHEET2,
+    })).toEqual([]);
   });
 
   it('гейт называет свой охват', () => {

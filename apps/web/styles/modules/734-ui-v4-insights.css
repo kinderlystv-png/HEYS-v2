@@ -447,12 +447,14 @@
   margin-bottom: 7px;
 }
 
+/* Кадры «Стоит внимания» и «риск срыва», метка каталога: трекинг .06em —
+   как у всех меток зоны. Стояло .08em, метка была шире соседних. */
 .insights-v4-attention__risk-badge {
   display: inline-block;
   padding: 4px 8px;
   border-radius: 999px;
   font: 700 9px/1 Figtree, system-ui, sans-serif;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   /* Бейдж риска срыва: запасное #b3402a — тон «разрушающего действия», и по
      смыслу это он. Роль --v4-warn его не давала ни в одном наборе. */
