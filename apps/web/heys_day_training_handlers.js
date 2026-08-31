@@ -26,6 +26,7 @@
             getSmartPopupPosition,
             setZonePickerTarget,
             zonePickerTarget,
+            pendingZoneMinutes,
             setPendingZoneMinutes,
             setShowZonePicker,
             setZoneFormulaPopup,

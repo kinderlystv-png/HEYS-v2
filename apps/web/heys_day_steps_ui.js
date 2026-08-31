@@ -164,8 +164,8 @@
                         try {
                             window.HEYS?.eventLog?.write(
                                 'day-edit',
-                                `steps=${finalSteps} (${date})`,
-                                { dateKey: date, name: 'steps', count: finalSteps },
+                                `steps=${finalSteps} (${safeDay.date})`,
+                                { dateKey: safeDay.date, name: 'steps', count: finalSteps },
                                 'steps-slider'
                             );
                         } catch (_) { /* noop */ }
