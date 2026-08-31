@@ -4302,8 +4302,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 style: { width: Math.round((Math.abs(row.displayValue) / maxShare) * 100) + '%' }
               })
             ),
-            React.createElement('span', { className: 'heys-score-screen__row-value' },
-              (row.displayValue >= 0 ? '+' : '') + row.displayValue)
+            // Контракт «карточка · каскад разбора Score» просит плюс тоном
+            // --gr, минус тоном --val-bad. Красный не ставим: строка «роли
+            // цвета» той же зоны запрещает его на числах — он занят под
+            // необратимое действие. Плюс зелёным, минус на чернилах.
+            React.createElement('span', {
+              className: 'heys-score-screen__row-value'
+                + (row.displayValue > 0 ? ' is-up' : '')
+            }, (row.displayValue >= 0 ? '+' : '') + row.displayValue)
           );
         })
         : React.createElement('div', { className: 'heys-score-tile__detail-loading' }, 'Считаем…'),
