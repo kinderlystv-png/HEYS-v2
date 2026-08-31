@@ -4155,7 +4155,9 @@
           // строки «Тренд веса» в списке «Уже считается». Прогнозные точки
           // (isFuture) в счёт не идут: обещание не замер.
           const measured = weightSparklineData.filter(function (d) { return !d.isFuture; }).length;
-          if (!useReportsV4 || measured >= 3) return renderWeightSparkline(weightSparklineData);
+          if (!useReportsV4 || measured >= 3) {
+            return renderWeightSparkline(weightSparklineData, { reportsV4: useReportsV4 });
+          }
           return React.createElement(React.Fragment, null,
             React.createElement('div', { className: 'reports-v4-noplot' },
               'кривая появится с трёх замеров'),

@@ -1851,14 +1851,32 @@
   };
 
   HEYS.daySparklines.renderWeightSparkline = function renderWeightSparkline(ctx) {
-    const { data, React, prof, openExclusivePopup, sparklinePopup, haptic } = ctx || {};
+    const {
+      data: rawData,
+      React,
+      prof,
+      openExclusivePopup,
+      sparklinePopup,
+      haptic,
+      reportsV4 = false,
+    } = ctx || {};
 
     const safeHaptic = typeof haptic === 'function' ? haptic : () => { };
     const safeOpenPopup = typeof openExclusivePopup === 'function' ? openExclusivePopup : () => { };
 
-    if (!data) {
+    if (!rawData) {
       return null;
     }
+
+    // Контракт «состав · Динамика»: «Прогнозов и экстраполяции в блоке нет»;
+    // то же говорят «два запрета» и «карточка · график веса» («Экстраполяции и
+    // фразы „такими темпами“ в блоке нет»). У калорий прогноз снят флагом
+    // showForecast, но там прогнозные точки живут отдельно от основных. Здесь
+    // точка на завтра приходит в самих данных (heys_day_weight_trends_v1.js)
+    // и делит с ними шкалу X: спрятать её рисунком мало — колонка осталась бы
+    // пустой, и линия не доходила бы до правого края. Поэтому в v4 её тут
+    // просто нет. В прежнем виде дневника прогноз остаётся.
+    const data = reportsV4 ? rawData.filter((d) => !d.isFuture) : rawData;
 
     if (data.length === 0) return null;
 
@@ -1983,12 +2001,6 @@
       ? pathD + ` L${realPoints[realPoints.length - 1].x},${paddingTop + chartHeight} L${realPoints[0].x},${paddingTop + chartHeight} Z`
       : '';
 
-    // Линия тренда — единый оранжевый акцент по всей длине
-    const weightLineGradientStops = [
-      { offset: 0, color: '#fb923c' },
-      { offset: 100, color: trendColor }
-    ];
-
     // Прогнозная линия (от последней реальной точки ко всем прогнозным) — пунктирная
     // Используем плавную кривую, продолжающую тренд основной линии
     let forecastLineD = '';
@@ -2034,17 +2046,6 @@
           React.createElement('stop', { offset: '0%', stopColor: trendAreaTopColor, stopOpacity: '0.24' }),
           React.createElement('stop', { offset: '100%', stopColor: trendColor, stopOpacity: '0.02' })
         ),
-        // Горизонтальный градиент для линии — цвета по локальному тренду
-        React.createElement('linearGradient', { id: 'weightLineGrad', x1: '0%', y1: '0%', x2: '100%', y2: '0%' },
-          weightLineGradientStops.map((stop, i) =>
-            React.createElement('stop', {
-              key: i,
-              offset: stop.offset + '%',
-              stopColor: stop.color,
-              stopOpacity: 1
-            })
-          )
-        ),
         // Градиент для зоны задержки воды (розовый, вертикальный)
         React.createElement('linearGradient', { id: 'retentionZoneGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
           React.createElement('stop', { offset: '0%', stopColor: '#ec4899', stopOpacity: '0.15' }),
@@ -2052,7 +2053,12 @@
         )
       ),
       // === Горизонтальная линия целевого веса ===
+      // Строка «графики»: «Сетки, осей и подписей значений нет: значения живут
+      // в строках рядом». Горизонталь через весь холст с меткой «Цель: N кг» —
+      // и ось, и подпись значения разом; ни один кадр Отчётов её не рисует.
+      // В прежнем виде дневника она остаётся.
       (() => {
+        if (reportsV4) return null;
         const goalWeight = +prof?.weightGoal;
         if (!goalWeight || goalWeight <= 0) return null;
 
@@ -2127,12 +2133,29 @@
         fill: 'url(#weightAreaGrad)',
         className: 'weight-sparkline-area sparkline-area-animated'
       }),
-      // Линия графика с градиентом по тренду
+      // Линия графика. Тон задаёт CSS: в прежнем виде — правила тренда
+      // (#f97316), в карточке v4 — роль --v4-ok-fill. Инлайновый градиент
+      // #fb923c→#f97316 перебивал оба и делал линию оранжевой в любом наборе.
       React.createElement('path', {
         d: pathD,
-        className: 'weight-sparkline-line weight-sparkline-line-animated',
-        style: { stroke: 'url(#weightLineGrad)' }
+        className: 'weight-sparkline-line weight-sparkline-line-animated'
       }),
+      // Метка конца линии — строка «графики»: «Последняя точка — круг r 4 того
+      // же тона». У соседнего графика калорий она стоит с 31 августа; у веса
+      // её не было вовсе: собственные точки кривой скрыты списком display:none
+      // карточки (они рисуются на каждом дне и своими литералами по локальному
+      // тренду), и линия просто обрывалась у края.
+      reportsV4 && realPoints.length > 0 && (function () {
+        const last = realPoints[realPoints.length - 1];
+        if (!last || typeof last.x !== 'number' || typeof last.y !== 'number') return null;
+        return React.createElement('circle', {
+          key: 'weight-reports-v4-last',
+          className: 'weight-sparkline-dot--reports-v4',
+          cx: last.x,
+          cy: last.y,
+          r: 4
+        });
+      })(),
       // Прогнозная линия (пунктирная) — все будущие дни
       futurePoints.length > 0 && forecastLineD && React.createElement('g', { key: 'weight-forecast-group' },
         // Маска: сплошная линия которая рисуется после основной
@@ -2186,7 +2209,12 @@
         });
       })(),
       // === TODAY LINE для веса ===
+      // Та же строка «графики»: подпись значения над точкой (дельта веса
+      // литералами #22c55e / #ef4444 / #3b82f6) и фиолетовая стрелка к ней.
+      // Число за период в карточке v4 уже стоит в шапке — «64,2 кг · −0,9», и
+      // оно считается иначе, чем эта дельта: две разные цифры об одном.
       (() => {
+        if (reportsV4) return null;
         const todayPt = realPoints.find(p => p.isToday);
         if (!todayPt) return null;
 

@@ -144,8 +144,9 @@
             brushStartRef
         });
 
-        const renderWeightSparkline = (data) => HEYS.daySparklines?.renderWeightSparkline?.({
+        const renderWeightSparkline = (data, options) => HEYS.daySparklines?.renderWeightSparkline?.({
             data,
+            ...(options || {}),
             React,
             prof,
             openExclusivePopup,
