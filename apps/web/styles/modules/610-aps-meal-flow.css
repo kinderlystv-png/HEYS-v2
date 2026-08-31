@@ -44,70 +44,140 @@
   padding: 4px 0 8px;
 }
 
+/* Строка «вид · колесо времени»: карточка --c2 радиусом 26, поля 14/18/12.
+   Подпись «Время» снята — ни строка контракта, ни кадр её не содержат, а над
+   карточкой и так стоит имя шага. */
 .meal-time-hero {
+  position: relative;
   display: block;
   width: 100%;
   margin: 0;
-  padding: 14px 16px 16px;
+  padding: 14px 18px 12px;
   border: none;
   border-radius: 26px;
-  background: var(--v4-sand-hero, #efe3cf);
+  background: var(--v4-hero, #efe3cf);
   text-align: center;
 }
 
-.meal-time-hero__label {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 55%, transparent);
+/* Выбранный ряд — одной подложкой на всю карточку, а не под каждым колесом:
+   иначе между часами и минутами видна щель. */
+.meal-time-hero::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 50%;
+  height: 64px;
+  transform: translateY(-50%);
+  border-radius: 18px;
+  background: var(--v4-bg, #fffaf1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+  pointer-events: none;
 }
 
+/* Чип «сейчас»: абсолютом справа от минут, вне потока — цифры не сдвигаются
+   с оси. Под его ширину ряд колонок получает правое поле. */
+.meal-time-hero__now {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v4-act-text, #8a4a20);
+  pointer-events: none;
+}
+
+.meal-time-shifts {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.meal-time-shift {
+  flex: 1;
+  min-height: 38px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v4-bg, #fffaf1);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-act-text, #8a4a20);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.meal-time-shift:active {
+  opacity: 0.7;
+}
+
+/* Колёса по 74 px, зазор 10; правое поле 66 — место под чип «сейчас», иначе
+   цифры центрированы геометрически, но чип вешает вес справа. */
 .meal-time-hero .meal-time-pickers,
 .meal-time-hero .mc-time-picker,
 .meal-time-hero .mc-time-pickers {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 10px;
   margin-top: 0;
+  padding-right: 66px;
 }
 
+/* Общая высота 192: три ряда по 64. Края гаснут маской 26/74 %. */
 .meal-time-hero .mc-wheel-picker--compact .mc-wheel-values {
-  height: 132px;
+  height: 192px;
+  -webkit-mask-image: linear-gradient(transparent, #000 26%, #000 74%, transparent);
+  mask-image: linear-gradient(transparent, #000 26%, #000 74%, transparent);
 }
 
 .meal-time-hero .mc-wheel-value {
-  min-width: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  height: 64px;
   font-variant-numeric: tabular-nums;
 }
 
 .meal-time-hero .mc-wheel-value--current {
-  height: auto;
-  min-height: 54px;
-  font-size: 54px;
+  min-height: 64px;
+  font-size: 40px;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: -0.04em;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  letter-spacing: -0.03em;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .meal-time-hero .mc-wheel-value--prev,
 .meal-time-hero .mc-wheel-value--next {
-  height: 22px;
-  font-size: 16px;
-  font-weight: 500;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 35%, transparent);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 30%, transparent);
   opacity: 1;
 }
 
+/* Разделитель: строка контракта даёт 27 px тоном чернил 30 %, кадр рисует 40 px
+   и 25 %. Контракт старше кадра; расхождение записано в UI_V4_FINDINGS.md. */
 .meal-time-hero .mc-time-sep {
   margin-top: 0;
-  padding-bottom: 2px;
-  font-size: 40px;
+  padding-bottom: 0;
+  font-size: 27px;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: -0.04em;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 30%, transparent);
 }
 
 .meal-time-display {
@@ -185,12 +255,15 @@
   border-radius: 0;
   background: none;
   cursor: default;
-  font-size: 10px;
+  /* «Тип приёма» — обычный ярус экрана: 11 px/700 с разрядкой .04em чернилами
+     45 %. Стояли 10 px, разрядка .16em и акцент — этот ярус кричал громче
+     соседних. */
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
   text-align: left;
 }
 
@@ -232,11 +305,13 @@
   margin-top: 16px;
   padding: 16px;
   border-radius: 20px;
-  background: var(--v4-sand-accent-bg, #f0dcc6);
+  /* Кадр ставит плашку волны на ту же вторую бумагу, что и остальные карточки
+     шага: отдельный тёплый тинт делал из пояснения тревогу. */
+  background: var(--v4-hero, #efe3cf);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.45;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .meal-time-cta {
@@ -258,16 +333,22 @@
 }
 
 .meal-time-wait {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  margin-top: 14px;
+  /* Кадр: цель 44, отступ 4, 700 12.5 px тоном --ac. Стояла ссылка 12 px
+     приглушёнными чернилами с целью в 12 px — «Подождать» это выход из
+     предупреждения, промахиваться по нему нельзя. */
+  min-height: 44px;
+  margin-top: 4px;
   padding: 0;
   border: none;
   background: none;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-act-text, #8a4a20);
   text-align: center;
   cursor: pointer;
 }

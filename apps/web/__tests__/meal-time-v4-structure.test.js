@@ -59,7 +59,12 @@ describe('meal time step v4 structure', () => {
     expect(cssSource).toMatch(/\.meal-type-chip \{[\s\S]*?var\(--v4-sand-surface/);
     expect(cssSource).toMatch(/\.meal-time-step \.meal-type-label \{[\s\S]*?background: none;/);
     expect(cssSource).toContain('.meal-time-hero .mc-wheel-value--current');
-    expect(cssSource).toContain('font-size: 54px');
+    // Строка «вид · колесо времени»: три ряда по 64 при общей высоте 192,
+    // выбранное значение 40 px, соседние 24. Стояли 132 / 54 / 16.
+    expect(cssSource).toMatch(
+      /\.meal-time-hero \.mc-wheel-value--current \{[^}]*font-size: 40px;/s);
+    expect(cssSource).toMatch(
+      /\.meal-time-hero \.mc-wheel-picker--compact \.mc-wheel-values \{[^}]*height: 192px;/s);
   });
 
   it('centers meal-create header like the canvas top bar', () => {
@@ -68,6 +73,20 @@ describe('meal time step v4 structure', () => {
     expect(mealCreateCss).toContain('width: 16px');
     expect(mealCreateCss).toContain('background: #c67139');
     expect(mealCreateCss).toContain('.mc-header-btn--close::before');
+  });
+
+  it('даёт быстрые сдвиги назад и чип «сейчас»', () => {
+    // Кадр «Добавление · время и тип»: под колесом три сдвига, справа от минут
+    // чип «сейчас». Еду вспоминают задним числом, а докручивать колесо ради
+    // каждого приёма — лишняя работа.
+    expect(mealStepSource).toContain("{ label: '−15 мин', minutes: 15 }");
+    expect(mealStepSource).toContain("{ label: '−1 ч', minutes: 60 }");
+    expect(mealStepSource).toContain('shiftTimeBack');
+    expect(mealStepSource).toContain('isNowSelected');
+    expect(cssSource).toMatch(/\.meal-time-shift \{[^}]*min-height: 38px;/s);
+    expect(cssSource).toMatch(/\.meal-time-hero__now \{[^}]*text-transform: uppercase;/s);
+    // Подписи «Время» на карточке нет — её не содержат ни строка, ни кадр.
+    expect(mealStepSource).not.toContain('meal-time-hero__label');
   });
 
   it('keeps wheels as the large time, always visible', () => {

@@ -541,6 +541,12 @@
   // Импортируем из dayUtils (единый источник правды)
   const dayU = HEYS.dayUtils || {};
   const NIGHT_HOUR_THRESHOLD = dayU.NIGHT_HOUR_THRESHOLD || 3;
+
+  const TIME_SHIFTS = [
+    { label: '−15 мин', minutes: 15 },
+    { label: '−30 мин', minutes: 30 },
+    { label: '−1 ч', minutes: 60 }
+  ];
   const HOURS_ORDER = dayU.HOURS_ORDER || (() => {
     const order = [];
     for (let h = 3; h < 24; h++) order.push(h);
@@ -605,6 +611,12 @@
     // Подсказка для ночных часов (00-02)
     const isNightHour = realHours >= 0 && realHours < NIGHT_HOUR_THRESHOLD;
 
+    // Чип «сейчас» — только когда колесо стоит на реальном времени часов.
+    const isNowSelected = useMemo(() => {
+      const now = new Date();
+      return now.getHours() === realHours && Math.floor(now.getMinutes() / 5) * 5 === minutes;
+    }, [realHours, minutes]);
+
     // Форматированная текущая дата
     const dateLabel = useMemo(() => {
       const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
@@ -626,6 +638,15 @@
     };
 
     // Единый callback для linkedScroll — решает проблему React batching
+    // Кадр «Добавление · время и тип»: три быстрых сдвига назад под колесом.
+    // Еду вспоминают задним числом («съел полчаса назад»), а докручивать колесо
+    // на это ради каждого приёма — лишняя работа.
+    const shiftTimeBack = (backMinutes) => {
+      haptic(10);
+      const total = (realHours * 60 + minutes - backMinutes + 1440) % 1440;
+      updateTime(Math.floor(total / 60), Math.floor((total % 60) / 5) * 5);
+    };
+
     const updateTime = (hourValue, newMinutes) => {
       const newIndex = HOURS_ORDER.indexOf(hourValue);
       onChange({ ...data, hourIndex: newIndex >= 0 ? newIndex : 0, minutes: newMinutes });
@@ -764,7 +785,6 @@
         role: 'group',
         'aria-label': 'Время приёма'
       },
-        React.createElement('div', { className: 'meal-time-hero__label' }, 'Время'),
         React.createElement(TimePicker, {
           hours: realHours,
           minutes: minutes,
@@ -780,7 +800,22 @@
           compact: true,
           display: null,
           className: 'meal-time-pickers'
-        })
+        }),
+        // Строка «шаг и диапазон»: чип «сейчас» стоит справа от минут абсолютом,
+        // вне потока, чтобы цифры не сдвигались с оси; под его ширину ряд
+        // колонок получает правое поле.
+        isNowSelected && React.createElement('span', {
+          className: 'meal-time-hero__now'
+        }, 'сейчас')
+      ),
+
+      React.createElement('div', { className: 'meal-time-shifts' },
+        TIME_SHIFTS.map(({ label, minutes: back }) => React.createElement('button', {
+          key: label,
+          type: 'button',
+          className: 'meal-time-shift',
+          onClick: () => shiftTimeBack(back)
+        }, label))
       ),
 
       React.createElement(NightHint, { isNightHour, dateLabel }),
