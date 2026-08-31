@@ -1891,59 +1891,6 @@
   overflow: hidden;
 }
 
-.aps-portion-btn {
-  /* Кадр «Штрихкод · найден»: невыбранный пресет стоит на грунте полями 10/11,
-     выбранный — заливкой акцента. Прежде оба были зелёными: рамка #d1fae5,
-     текст #059669 и запасное #ecfdf5 под ролью «идёт хорошо» — цвет снятой
-     системы там, где кадр никакого зелёного не рисует. */
-  padding: 10px 11px;
-  font-size: 11.5px;
-  border: none;
-  background: var(--v4-bg, #fffaf1);
-  color: var(--v4-ink, #201e1d);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-  flex-shrink: 1;
-  min-width: 0;
-  /* Обрезка с многоточием снята: подписи здесь — граммы («50», «150», «300»),
-     переносить и обрезать в них нечего, а overflow:hidden обрезал невидимую
-     цель нажатия по краю самой плашки и делал её бесполезной. */
-  /* Строка «тач-цели» сама называет пресеты граммовки нарушением нормы 44:
-     нарисованы они ~23, у нас 34. Канвас решает это не увеличением плашки, а
-     невидимой целью поверх неё (.chip::after) — тот же приём здесь. */
-  position: relative;
-}
-
-.aps-portion-btn::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  min-width: 44px;
-  height: 44px;
-}
-
-@media (hover: hover) {
-  .aps-portion-btn:hover {
-    border-color: var(--v4-act, #c67139);
-  }
-}
-
-/* Пресет граммовки: кадр «Штрихкод · найден» даёт выбранному заливку акцентом
-   с чернилами поверх, обычному — грунт. Прежде выбранный был изумрудным
-   литералом снятой системы. */
-.aps-portion-btn.active {
-  background: var(--v4-act, #c67139);
-  color: var(--v4-btn-on-act, #2b1608);
-  border-color: var(--v4-act, #c67139);
-}
-
-
-
 .aps-v4-portions-step {
   display: flex;
   flex-direction: column;
