@@ -255,6 +255,29 @@ function runCli() {
   const zones = selectedZones.length;
   const rows = selectedZones.reduce((sum, [, zone]) => sum + Object.keys(zone.rows).length, 0);
   console.log(`Контракты не двигались: ${zones} зоны, ${rows} строк с вердиктами.`);
+
+  // Зелёный гейт означает «разобранное не поехало», а не «всё сведено»: строка с
+  // вердиктом `?` — это «никто не смотрел», и молчать о ней так же вредно, как
+  // не видеть незарегистрированный канвас. Падением это не делаем — красный
+  // тест, который никто не может починить, отключают в первый день; но долг
+  // виден на каждом прогоне.
+  const unread = selectedZones
+    .map(([zoneId, zone]) => [
+      zoneId,
+      Object.values(zone.rows).filter((row) => row.v === '?').length,
+    ])
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1]);
+  if (unread.length) {
+    const total = unread.reduce((sum, [, count]) => sum + count, 0);
+    const top = unread
+      .slice(0, 5)
+      .map(([zoneId, count]) => `${zoneId} ${count}`)
+      .join(' · ');
+    console.log(
+      `Без вердикта: ${total} строк в ${unread.length} зонах — ${top}${unread.length > 5 ? ' …' : ''}`,
+    );
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
