@@ -2049,8 +2049,15 @@
         hasActions && phrase && h('p', { className: 'insights-v4-hero__phrase' }, phrase),
         hasActions
           ? h(PriorityActions, { actions: actions, variant: 'v4' })
-          : h('p', { className: 'insights-v4-hero__praise' },
-            'Сегодня без заданий — ритм держится, вчерашний план закрыт.')
+          // Контракт «карточка · строка похвалы»: фраза и под ней подпись о
+          // том, что именно держится. Стояло одной строкой через тире — факт
+          // и его основание шли одним весом, хотя читаются они по-разному:
+          // сначала «заданий нет», потом «потому что».
+          : h(React.Fragment, null,
+            h('p', { className: 'insights-v4-hero__praise' }, 'Сегодня без заданий'),
+            h('p', { className: 'insights-v4-hero__praise-note' },
+              'ритм держится, вчерашний план закрыт')
+          )
       );
     }
 

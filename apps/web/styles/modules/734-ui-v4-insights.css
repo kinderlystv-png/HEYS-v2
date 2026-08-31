@@ -125,12 +125,16 @@
   padding-top: 0;
 }
 
+/* Точка приоритета — тоном --acs: так её задают и строка контракта, и кадр,
+   и это единственное место, где они сходятся. Стояла --v4-sand-act-deep,
+   глубокий песочный: на карточке из того же семейства она читалась как тень
+   текста, а не как метка действия. */
 .insights-priority-action__dot {
   width: 8px;
   height: 8px;
   margin-top: 5px;
   border-radius: 50%;
-  background: var(--v4-sand-act-deep, #8a4a20);
+  background: var(--v4-act, #c67139);
   flex: none;
 }
 
@@ -330,10 +334,19 @@
 
 .insights-v4-hero__praise {
   margin: 0;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
   color: var(--v4-ink, #0f172a);
+}
+
+/* Подпись под похвалой: она называет основание, а не факт, и потому тише. */
+.insights-v4-hero__praise-note {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .insights-v4-maturity {
