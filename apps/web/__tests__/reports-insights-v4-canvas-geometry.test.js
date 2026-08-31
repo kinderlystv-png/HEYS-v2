@@ -492,6 +492,11 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
     expect(prop(fill, 'font')).toContain('12.5px');
     const patterns = cssBlock(insightsCss, 'insights-v4-patterns__row');
     expect(prop(patterns, 'padding')).toBe('13px 0');
+    // Строка каскада на экране разбора Score — тот же шаблон. Стояла 11/0:
+    // канон проверялся только на инсайтовых строках, и отчётная от него
+    // отставала молча.
+    const cascade = cssBlock(reportsCss, 'heys-score-screen__row');
+    expect(prop(cascade, 'padding')).toBe('13px 0');
   });
 
   it('шапка карточки .mvH: 10.5px/600, чернила 55%, без капса', () => {

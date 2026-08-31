@@ -1329,11 +1329,14 @@
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
+/* Поля строки — 13/0 по канону `.row` зоны: тот же шаблон, что у строк
+   заглушки и паттернов в «Инсайтах». Стояли 11/0 — строка каскада была
+   плотнее любой другой строки списка в зоне. */
 .heys-score-screen__row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 11px 0;
+  padding: 13px 0;
   border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
 }
 
