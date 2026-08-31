@@ -93,10 +93,10 @@ function scanUsages() {
 // ── 2. Чему роль равна в каждом наборе ──────────────────────────────────────
 async function resolve(roles) {
   const href = (p) => 'file:///' + p.replace(/\\/g, '/');
-  const html = `<!doctype html><meta charset="utf-8">
+  const html = `<!doctype html><html><head><meta charset="utf-8">
 <link rel="stylesheet" href="${href(TOKENS)}">
 <link rel="stylesheet" href="${href(PALETTE)}">
-${SETS.map((s) => `<div id="${s.id}" data-theme="${s.theme}" data-palette="${s.palette}"></div>`).join('\n')}`;
+</head><body></body></html>`;
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'v4-axis-')), 'probe.html');
   fs.writeFileSync(file, html);
 
@@ -104,23 +104,37 @@ ${SETS.map((s) => `<div id="${s.id}" data-theme="${s.theme}" data-palette="${s.p
   try {
     const page = await browser.newPage();
     await page.goto('file:///' + file.replace(/\\/g, '/'), { waitUntil: 'networkidle' });
-    const loaded = await page.evaluate(() =>
-      getComputedStyle(document.getElementById('sand')).getPropertyValue('--v4-ink').trim());
-    if (!loaded) throw new Error(`палитра не загрузилась: ${PALETTE}`);
-    return await page.evaluate(
-      ({ roles, setIds }) => {
-        const out = {};
-        for (const role of roles) {
-          out[role] = {};
-          for (const id of setIds) {
-            const v = getComputedStyle(document.getElementById(id)).getPropertyValue(role).trim();
-            out[role][id] = v || null;
-          }
-        }
-        return out;
-      },
-      { roles, setIds: SETS.map((s) => s.id) },
-    );
+    // Атрибуты набора кладём на КОРНЕВОЙ элемент, как это делает
+    // heys_theme_v1.js, и переключаем их между замерами. На вспомогательном
+    // div ответ был бы верным только для самих `--v4-*`: их объявляет тот же
+    // селектор, что несёт атрибуты. А переменная, объявленная на :root через
+    // роль (`--text: var(--v4-ink, #111827)`), на :root роли не найдёт и
+    // отдаст своё запасное — то есть замер показал бы поломку там, где её нет.
+    // Ровно так и вышло при проверке `--text` 31 августа: div дал «#111827 во
+    // всех светлых наборах», корень — верные #201e1d и #101826.
+    const out = {};
+    for (const set of SETS) {
+      await page.evaluate(
+        ({ theme, palette }) => {
+          document.documentElement.setAttribute('data-theme', theme);
+          document.documentElement.setAttribute('data-palette', palette);
+        },
+        { theme: set.theme, palette: set.palette },
+      );
+      const values = await page.evaluate(
+        (roles) => {
+          const cs = getComputedStyle(document.documentElement);
+          return Object.fromEntries(roles.map((r) => [r, cs.getPropertyValue(r).trim() || null]));
+        },
+        roles,
+      );
+      if (set.id === 'sand' && !values['--v4-ink']) throw new Error(`палитра не загрузилась: ${PALETTE}`);
+      for (const [role, v] of Object.entries(values)) {
+        if (!out[role]) out[role] = {};
+        out[role][set.id] = v;
+      }
+    }
+    return out;
   } finally {
     await browser.close();
     fs.rmSync(path.dirname(file), { recursive: true, force: true });
