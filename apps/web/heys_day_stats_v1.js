@@ -721,6 +721,18 @@
     );
   }
 
+  // Кадры «Мало калорий» ставят рядом с меткой доли вторую строку — сколько
+  // в дне приёмов. Без неё «12 % от нормы» не отличает пустой день от дня с
+  // тремя маленькими приёмами, а рекомендация карточки зависит именно от этого.
+  function pluralMealsReports(n) {
+    const abs = Math.abs(n) % 100;
+    const last = abs % 10;
+    if (abs > 10 && abs < 20) return 'приёмов';
+    if (last > 1 && last < 5) return 'приёма';
+    if (last === 1) return 'приём';
+    return 'приёмов';
+  }
+
   function pluralDaysReports(n) {
     const abs = Math.abs(n) % 100;
     const last = abs % 10;
@@ -1220,8 +1232,10 @@
       ? DayRealDataActions.getPreferredAction({ ratio: selectedDayRatio, mealCount: mealCountNow })
       : 'confirm_real_data';
     const isClearPrimary = preferredActionId === 'clear_day';
+    // Фраза по кадру: словами, а не скобками с формулой. «(0 приёмов и <30%
+    // нормы)» — запись условия из кода, а не объяснение человеку.
     const recommendationText = isClearPrimary
-      ? 'Рекомендуем очистить: день выглядит пустым (0 приёмов и <30% нормы).'
+      ? 'Рекомендуем очистить: день выглядит пустым — ни одного приёма и меньше 30 % нормы.'
       : 'Рекомендуем подтвердить: в дне есть приёмы пищи, их лучше учесть в статистике.';
     const impactHintText = typeof DayRealDataActions.getImpactHint === 'function'
       ? DayRealDataActions.getImpactHint()
@@ -1715,8 +1729,18 @@
               )
             ),
             React.createElement('div', { className: 'kcal-realdata-card__footer' },
-              React.createElement('span', { className: 'kcal-realdata-card__badge' },
-                Math.round((currentRatio || 0) * 100) + '% от нормы'
+              React.createElement('div', { className: 'kcal-realdata-card__meta' },
+                React.createElement('span', { className: 'kcal-realdata-card__badge' },
+                  Math.round((currentRatio || 0) * 100) + '% от нормы'
+                ),
+                // Оба кадра «Мало калорий» ставят счёт приёмов рядом с меткой
+                // доли: «приёмов нет» либо «в дне 3 приёма». Строки не было, и
+                // одна доля не отличала пустой день от дня с тремя маленькими
+                // приёмами, хотя рекомендация карточки зависит именно от этого.
+                React.createElement('span', { className: 'kcal-realdata-card__meals' },
+                  mealCountNow > 0
+                    ? 'в дне ' + mealCountNow + ' ' + pluralMealsReports(mealCountNow)
+                    : 'приёмов нет')
               ),
               // Контракт «порядок кнопок подтверждения»: рекомендованное
               // действие стоит ПЕРВЫМ, а не просто красится ярче. Раньше

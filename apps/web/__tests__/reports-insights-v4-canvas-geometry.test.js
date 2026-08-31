@@ -210,7 +210,11 @@ const REALDATA_CSS = fs.readFileSync(
 const REALDATA_CONFIRM = [
   [10, '.kcal-realdata-card__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [11, '.kcal-realdata-card__text', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
-  [12, '.kcal-realdata-card__actions', ['align', 'gap']],
+  // Элемент 12 — ряд МЕТКИ со счётом приёмов, а не ряд кнопок: пара
+  // стояла на __actions и сходилась по числам случайно — у обоих рядов
+  // center и зазор 8. Самого счёта приёмов в продукте не было вовсе.
+  [12, '.kcal-realdata-card__meta', ['align', 'gap']],
+  [14, '.kcal-realdata-card__meals', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [13, '.kcal-realdata-card__badge',
     ['flex', 'align', 'height', 'padding', 'radius', 'background',
       'fontWeight', 'fontSize', 'lineHeight', 'color']],
@@ -227,10 +231,21 @@ const REALDATA_CONFIRM = [
 const REALDATA = [
   [6, '.kcal-realdata-card__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [7, '.kcal-realdata-card__text', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
-  [8, '.kcal-realdata-card__actions', ['align', 'gap']],
+  [5, '.kcal-realdata-card', ['background', 'radius', 'padding', 'marginTop']],
+  // То же, что в кадре подтверждения: элемент 8 — ряд метки, не кнопок.
+  [8, '.kcal-realdata-card__meta', ['align', 'gap']],
   [9, '.kcal-realdata-card__badge',
     ['flex', 'align', 'height', 'padding', 'radius', 'background',
       'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [10, '.kcal-realdata-card__meals', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [11, '.kcal-realdata-card__button',
+    ['align', 'justify', 'minHeight', 'radius', 'background',
+      'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [12, ['.kcal-realdata-card__button', '.kcal-realdata-card__button--secondary'],
+    ['align', 'justify', 'minHeight', 'radius', 'background',
+      'fontWeight', 'fontSize', 'lineHeight']],
+  [13, '.kcal-realdata-card__recommendation',
+    ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
 ];
 
 // Пары «Инсайтов» переехали в `insights-v4-canvas-razbor.test.js`: над зоной
@@ -857,6 +872,41 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
       // Сноска пустого дня в кадре описывает поведение для разработчика, а не
       // текст экрана; под кнопками стоит сноска по строке контракта.
       'День пустой · выбор · 10',
+      // Значки и холсты графиков основного кадра — разобраны соседней сессией
+      // по договорённости о помощи; реестр отчётной половины живёт здесь,
+      // поэтому записываю их я. Две причины: шеврон в продукте —
+      // типографский глиф, а не значок с путём (то же расхождение, что у
+      // шеврона возврата в «Разборе Score»); холст графика код строит
+      // по контейнеру (296×96), а кадр даёт 292×84 и 292×72.
+      'Визуал v4 · Отчёты · рисунок 10',
+      'Визуал v4 · Отчёты · рисунок 11',
+      'Визуал v4 · Отчёты · рисунок 12',
+      'Визуал v4 · Отчёты · рисунок 13',
+      'Визуал v4 · Отчёты · рисунок 14',
+      'Визуал v4 · Отчёты · рисунок 15',
+      'Визуал v4 · Отчёты · рисунок 16',
+      'Визуал v4 · Отчёты · рисунок 17',
+      'Визуал v4 · Отчёты · рисунок 18',
+      'Визуал v4 · Отчёты · рисунок 19',
+      'Визуал v4 · Отчёты · рисунок 20',
+      'Визуал v4 · Отчёты · рисунок 21',
+      'Визуал v4 · Отчёты · рисунок 22',
+      'Визуал v4 · Отчёты · рисунок 23',
+      'Визуал v4 · Отчёты · рисунок 24',
+      'Визуал v4 · Отчёты · рисунок 25',
+      'Визуал v4 · Отчёты · рисунок 26',
+      // Спарклайн калорий не переведён на v4: линия нормы стоит литералом
+      // прежней системы rgba(148,163,184,.7). Компонент общий и большой —
+      // перевод отдельной задачей.
+      'Мало калорий · подтверждение · рисунок 01',
+      'Мало калорий · подтверждение · рисунок 02',
+      'Мало калорий · подтверждение · рисунок 03',
+      'Отчёты · нет веса · рисунок 01',
+      'Отчёты · нет веса · рисунок 02',
+      // Числа «+205 в день» шапка графика не выводит вовсе — записано
+      // дизайнеру, правило под него в реестре мёртвых.
+      'Отчёты · нет веса · 09',
+      'Отчёты · нет веса · текст',
       // Имя строки списка «Уже считается»: строка контракта даёт 12 px,
       // шаблон строки .row зоны — 12,5. Взят контракт.
       'Отчёты · мало данных · 16',
