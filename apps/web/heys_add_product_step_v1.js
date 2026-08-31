@@ -3131,24 +3131,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // --- Create/Edit view ---
     const renderCreate = () => {
       const searchResults = _searchResults;
+      const createItems = editPreset?.items || [];
       return React.createElement('div', { className: 'mpr-create' },
-        React.createElement('input', {
-          className: 'mpr-create-name-input',
-          type: 'text',
-          placeholder: 'Название набора...',
-          value: createName,
-          maxLength: 40,
-          autoFocus: !createSearch,
-          onChange: (e) => setCreateName(e.target.value)
-        }),
-        // Поиск для добавления продуктов
+        // Кадры «Набор · сборка» и «Набор · сборка пустая» ставят порядок так:
+        // поиск, ярус «В наборе · N», список, итог, название, кнопка, сноска.
+        // Имя набора стояло первым полем и требовало придумать название до
+        // того, как собран сам набор.
         React.createElement('div', { className: 'mpr-search-wrap' },
           React.createElement('div', { className: 'mpr-search-row' },
-            React.createElement('span', { className: 'mpr-search-icon' }, '🔍'),
+            // Стояла эмодзи-лупа. Канвас: «в разметке нет литералов», значки —
+            // линейные в сетке 24×24.
+            React.createElement('svg', {
+              className: 'mpr-search-icon',
+              width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 2.4, strokeLinecap: 'round',
+              'aria-hidden': 'true'
+            },
+              React.createElement('circle', { cx: 11, cy: 11, r: 7 }),
+              React.createElement('path', { d: 'M20 20l-3.6-3.6' })
+            ),
             React.createElement('input', {
               className: 'mpr-search-input',
               type: 'text',
-              placeholder: 'Добавить продукт в набор...',
+              placeholder: 'Найти продукт',
               value: createSearch,
               onChange: (e) => setCreateSearch(e.target.value),
               autoComplete: 'off'
@@ -3176,13 +3181,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             )
           )
         ),
+        React.createElement('div', { className: 'mpr-tier' }, `В наборе · ${createItems.length}`),
         // Список добавленных продуктов
         React.createElement('div', { className: 'mpr-create-items' },
-          (editPreset?.items || []).length === 0
+          createItems.length === 0
             ? React.createElement('div', { className: 'mpr-empty' },
               React.createElement('div', { className: 'mpr-empty-text' }, 'Добавьте продукты через поиск')
             )
-            : (editPreset?.items || []).map((item, idx) =>
+            : createItems.map((item, idx) =>
               React.createElement('div', { key: idx, className: 'mpr-create-item' },
                 React.createElement('div', { className: 'mpr-create-item-top' },
                   React.createElement('div', { className: 'mpr-create-item-name' }, item.name),
@@ -3219,11 +3225,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               )
             )
         ),
+        createItems.length > 0 && React.createElement('div', { className: 'mpr-create-total' },
+          React.createElement('span', { className: 'mpr-create-total__label' }, 'Итого'),
+          React.createElement('span', { className: 'mpr-create-total__value' },
+            `${createItems.reduce((sum, item) => sum + Math.round(
+              ((item.kcal100 || 0) * HEYS.models.normalizeItemGrams(item.grams, 100)) / 100
+            ), 0)} ккал`)
+        ),
+        React.createElement('div', { className: 'mpr-create-name' },
+          React.createElement('div', { className: 'mpr-create-name__label' }, 'Название набора'),
+          React.createElement('input', {
+            className: 'mpr-create-name-input',
+            type: 'text',
+            placeholder: 'Например, завтрак буднего дня',
+            value: createName,
+            maxLength: 40,
+            autoFocus: !createSearch,
+            onChange: (e) => setCreateName(e.target.value)
+          })
+        ),
         React.createElement('button', {
           className: 'mpr-save-btn',
-          disabled: !createName.trim() || (editPreset?.items || []).length === 0,
+          disabled: !createName.trim() || createItems.length === 0,
           onClick: requestSavePreset
         }, 'Сохранить набор'),
+        // Строка кадра: один жест на весь файл — тап правит, крестик убирает.
+        React.createElement('div', { className: 'mpr-footnote mpr-create-footnote' },
+          'Один жест на весь файл: тап по строке — правка, крестик — убрать из набора. Долгое нажатие не используется нигде.'),
         editPreset?.id && React.createElement('button', {
           type: 'button',
           className: 'mpr-delete-preset-btn',

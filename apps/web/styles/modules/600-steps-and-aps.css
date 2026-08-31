@@ -624,10 +624,15 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   gap: 5px;
 }
 
+/* Мосты прежней системы протаскивали холодные тона мимо набора: var(--muted)
+   разрешается в #6b7280 (холодный серый), var(--border) — в #e2e8f0 (холодный
+   сланец), и оба одинаковы во всех четырёх наборах. Замер на песочном и синем
+   подтвердил. Восемь мест экранов добавления переведены на --v4-ink-2 и
+   --v4-line. */
 .aps-section-title {
   font-size: 11px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding-left: 2px;
@@ -714,7 +719,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   gap: 8px;
   padding: 7px 10px;
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 10px;
 }
 
@@ -832,7 +837,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-meta-pending {
-  color: var(--muted);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   font-weight: 500;
 }
 
@@ -937,7 +942,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   align-items: center;
   gap: 8px;
   padding: 24px;
-  color: var(--muted);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .aps-empty span:first-child {
@@ -993,7 +998,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 .aps-kcal-unit {
   font-size: 16px;
   font-weight: 500;
-  color: var(--muted);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   margin-left: 3px;
 }
 
@@ -1014,7 +1019,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 .aps-macro-label {
   font-size: 11px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .aps-macro-value {
@@ -1036,7 +1041,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   padding: 6px 10px;
   font-size: 13px;
   font-weight: 500;
-  border: 1px solid var(--border);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: var(--card);
   color: var(--text);
   border-radius: 8px;
@@ -1061,7 +1066,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 .aps-no-product {
   text-align: center;
   padding: 40px;
-  color: var(--muted);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   font-size: 16px;
 }
 
