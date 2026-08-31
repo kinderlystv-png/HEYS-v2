@@ -1488,32 +1488,40 @@
   box-shadow: none;
 }
 
+/* Кадр «Чек-ин · цель по шагам», элементы 20–23: загрузочный день — карточка на
+   первой поверхности, а не блок, отбитый чертой. Своей геометрии строка
+   контракта «загрузочный день» не даёт, значит верен кадр; отбивка чертой была
+   единственным таким приёмом на всех пяти шагах. */
 .mc-steps-refeed-row {
+  width: 100%;
   margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(32, 30, 29, 0.08);
+  padding: 13px 14px;
+  border-radius: 16px;
+  background: var(--v4-c1, #f7efe2);
+  box-sizing: border-box;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  min-height: 44px;
+  gap: 10px;
 }
 
 .mc-steps-refeed-title {
-  font: 700 15px/1.25 Figtree, system-ui, sans-serif;
+  font: 600 13px/1 Figtree, system-ui, sans-serif;
   color: #201e1d;
 }
 
 .mc-steps-refeed-hint {
-  margin-top: 4px;
-  font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  margin-top: 3px;
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   max-width: 220px;
 }
 
 .mc-steps-refeed-row .mc-rest-yesno {
   flex: none;
   margin-top: 0;
-  min-width: 132px;
+  gap: 6px;
 }
 
 .mc-note-toggle {
@@ -1595,6 +1603,48 @@
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
   margin-top: 5px;
+}
+
+/* Общее правило выше — пояснение ВНУТРИ карточки шага: его описывает строка
+   контракта «вид карточки шага» («под заголовком через 5 пояснение 11,5 px/500
+   тоном чернил 50 %»), и пятый шаг ей следует. Строки, которые живут на самом
+   шаге — подпись под шкалами, подсказка под дорожкой шагов и сноска, — тем же
+   классом только пользуются; кадры набирают их мельче и светлее. Тона 42 % у
+   набора нет, ближайший --v4-ink-3. */
+.mc-mood-step > .mc-recorded-sub {
+  margin-top: 8px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.mc-mood-step > .mc-recorded-hint {
+  margin-top: 12px;
+  font: 500 10.5px/1.45 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.mc-steps-step > .mc-recorded-sub {
+  margin-top: 12px;
+}
+
+.mc-steps-slider-container > .mc-recorded-hint {
+  font: 600 10.5px/1.4 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
+.mc-steps-step > .mc-recorded-hint {
+  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
+/* Кадр «Чек-ин · как вы сегодня»: первая шкала отбита от подписи на 22,
+   следующие стоят через 10. Общий отступ карточки шкалы — 20, он верен на шаге
+   сна, где карточка одна. */
+.mc-mood-step > .mc-scale-card {
+  margin-top: 10px;
+}
+
+.mc-mood-step > .mc-scale-card:first-of-type {
+  margin-top: 22px;
 }
 
 .mc-rest-cold-actions,
@@ -5188,8 +5238,7 @@
   display: flex;
   justify-content: space-between;
   margin-top: 8px;
-  font-size: 9.5px;
-  font-weight: 600;
+  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
   color: rgba(32, 30, 29, 0.3);
 }
 

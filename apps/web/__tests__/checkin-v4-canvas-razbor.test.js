@@ -1,6 +1,7 @@
 // Кадры утреннего чек-ина против раздела канваса «Разбор кадров · элемент за
-// элементом» (пакет 30 августа). Сведены: пятый шаг мастера, шаги веса и сна,
-// три экрана развилки разбора вчера. Остальные кадры зоны ждут своего захода.
+// элементом» (пакет 30 августа). Сведены: все пять шагов мастера в их
+// состояниях и три экрана развилки разбора вчера. Остальные кадры зоны —
+// добавки, замеры, «Записано», холод и особые дни — ждут своего захода.
 //
 // Зона живёт в двух файлах: шаги мастера — 500-pwa-and-offline.css, развилка
 // разбора вчера — 715-yesterday-verify.css.
@@ -52,7 +53,36 @@ const EXCEPTIONS = new Map([
   ['Чек-ин · вчера по ощущениям · 23|color', 'у набора нет тона 42 %, ближайший --v4-ink-3'],
   // Подвал развилки один на все её экраны: пять кадров из шести дают зазор 8.
   ['Чек-ин · сила для пачки · 24|gap', 'подвал развилки один: пять кадров из шести дают 8'],
+  // Тона: 50 % и 42 % у набора нет, ближайшие --v4-ink-2 и --v4-ink-3.
+  ['Чек-ин · цель по шагам · 9|color', 'у набора нет тона 50 %, ближайший --v4-ink-2'],
+  ['Чек-ин · цель по шагам · 19|color', 'у набора нет тона 42 %, ближайший --v4-ink-3'],
+  ['Чек-ин · цель по шагам · 26|color', 'то же'],
+  // Строка «минимальная область нажатия»: всё нажимаемое не ниже 44, кроме
+  // чипов в переносимых рядах. Кадр рисует пилюлям «Да»/«Нет» высоту 38.
+  ['Чек-ин · цель по шагам · 24|minHeight', 'строка «минимальная область нажатия»: 44'],
+  ['Чек-ин · цель по шагам · 25|minHeight', 'та же строка'],
+  // Сноска стоит через 26, когда под дорожкой нет подсказки, и через 14, когда
+  // под ней карточка или загрузочный день. Кадр «шаги своё число» просит 20 —
+  // это третье состояние, и живёт оно в JS, а не в наборе правил.
+  ['Чек-ин · шаги своё число · 19|marginTop', 'сноска шага: два состояния, 26 и 14'],
 ]);
+
+// Те же два тона повторяются в каждом состоянии шага шагов: подпись под
+// числом просит 50 %, подсказка под дорожкой и сноска — 42 %. У набора таких
+// тонов нет, стоят ближайшие --v4-ink-2 и --v4-ink-3. Перечислено поимённо,
+// чтобы отступление не пряталось за общим правилом.
+for (const [frame, ...rows] of [
+  ['Чек-ин · шаги при коротком сне', 9, 19, 20],
+  ['Чек-ин · шаги без истории', 9, 19, 20],
+  ['Чек-ин · шаги после тренировки', 9, 19, 20],
+  ['Чек-ин · шаги на потолке', 9, 19, 20],
+  ['Чек-ин · шаги при тяжёлом утре', 9, 19],
+  ['Чек-ин · шаги своё число', 9],
+]) {
+  for (const row of rows) {
+    EXCEPTIONS.set(`${frame} · ${row}|color`, 'у набора нет тонов 50 % и 42 %');
+  }
+}
 
 const STEP5 = [
   [5, '.mc-rest-cold', ['radius', 'background', 'padding']],
@@ -155,6 +185,81 @@ const yvOn = (row, kcal) => [
     ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
+// Шаг «Как вы сегодня»: три шкалы подряд.
+const MOOD = [
+  [5, '.mc-step-kicker', ['fontWeight', 'fontSize', 'lineHeight', 'tracking']],
+  [6, ['.mc-recorded-sub', '.mc-mood-step > .mc-recorded-sub'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [7, ['.mc-scale-card', '.mc-mood-step > .mc-scale-card:first-of-type'],
+    ['background', 'radius', 'padding', 'marginTop']],
+  [8, '.mc-scale-head', ['align', 'justify']],
+  [9, '.mc-scale-head', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [10, '.mc-scale-value', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [12, '.mc-v4-scale.mc-drag-slider', ['marginTop']],
+  [15, ['.mc-scale-card', '.mc-mood-step > .mc-scale-card'],
+    ['background', 'radius', 'padding', 'marginTop']],
+  [18, ['.mc-recorded-hint', '.mc-mood-step > .mc-recorded-hint'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+];
+
+// Шаг «Цель по шагам» и шесть его состояний. Общая часть — крупное число,
+// метка совета над дорожкой, засечки, подсказка под ними и сноска.
+const stepsPairs = (n, withHint) => {
+  const heroValue = ['.mc-steps-hero-value', '.mc-modal--daily .mc-steps-hero-value']
+    .concat(n.custom ? ['.mc-modal--daily .mc-steps-hero--custom .mc-steps-hero-value'] : []);
+  const rows = [
+    [n.k, '.mc-step-kicker', ['fontWeight', 'fontSize', 'lineHeight', 'tracking']],
+    [n.h, '.mc-steps-hero', ['align', 'gap', 'marginTop']],
+    [n.v, heroValue, ['fontWeight', 'fontSize', 'lineHeight', 'color', 'tracking']],
+    [n.u, ['.mc-steps-unit', '.mc-modal--daily .mc-steps-unit'],
+      ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+    [n.s, ['.mc-recorded-sub', '.mc-steps-step > .mc-recorded-sub'],
+      ['fontSize', 'lineHeight', 'marginTop']],
+    [n.m, '.mc-steps-advice-mark',
+      ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'color']],
+    [n.t, '.mc-steps-slider-labels',
+      ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ];
+  if (withHint) {
+    rows.push([n.i, ['.mc-recorded-hint', '.mc-steps-slider-container > .mc-recorded-hint'],
+      ['fontWeight', 'fontSize', 'lineHeight']]);
+  }
+  if (n.f) {
+    rows.push([n.f, ['.mc-recorded-hint', '.mc-steps-step > .mc-recorded-hint'],
+      ['fontWeight', 'fontSize', 'lineHeight']]);
+  }
+  if (n.card) {
+    rows.push([n.card, '.mc-steps-info-card',
+      ['background', 'radius', 'padding', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight']]);
+  }
+  return rows;
+};
+
+// Загрузочный день — карточка под дорожкой, а не блок за чертой.
+const REFEED = [
+  [20, '.mc-steps-refeed-row',
+    ['radius', 'background', 'padding', 'marginTop', 'minHeight', 'align', 'justify', 'gap']],
+  [21, '.mc-steps-refeed-title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [22, '.mc-steps-refeed-hint', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [23, ['.mc-rest-yesno', '.mc-steps-refeed-row .mc-rest-yesno'], ['gap']],
+  [24, ['.mc-pill', '.mc-pill--mini'], ['radius', 'fontWeight', 'fontSize', 'lineHeight']],
+  [25, ['.mc-pill', '.mc-pill--mini', '.mc-pill--choice.is-on'],
+    ['radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
+const STD_STEPS = { k: 5, h: 6, v: 7, u: 8, s: 9, m: 13, t: 18, i: 19, f: 20 };
+
+const STEPS_FRAMES = [
+  ['Чек-ин · цель по шагам', { ...STD_STEPS, f: 26 }, true, REFEED],
+  ['Чек-ин · шаги при коротком сне', STD_STEPS, true, []],
+  ['Чек-ин · шаги без истории', STD_STEPS, true, []],
+  ['Чек-ин · шаги после тренировки', STD_STEPS, true, []],
+  ['Чек-ин · шаги на потолке', STD_STEPS, true, []],
+  ['Чек-ин · шаги при тяжёлом утре', { ...STD_STEPS, f: null, card: 20 }, true, []],
+  ['Чек-ин · шаги своё число',
+    { k: 5, h: 6, v: 7, u: 8, s: 9, m: 13, t: 18, f: null, custom: true }, false, []],
+];
+
 const YV_FRAMES = [
   ['Чек-ин · вчера по ощущениям', {
     title: 6, sub: 7, list: 8, force: 9, forceTitle: 10, forceKcal: 11,
@@ -188,6 +293,18 @@ describe('«Утренний чек-ин» · разбор кадров канв
 
   it('кадр «Чек-ин · сон» совпадает с шагом сна', () => {
     expect(compare({ razbor, rules, frame: 'Чек-ин · сон', pairs: SLEEP })).toEqual([]);
+  });
+
+  it('кадр «Чек-ин · как вы сегодня» совпадает с шагом трёх шкал', () => {
+    expect(compare({ razbor, rules, frame: 'Чек-ин · как вы сегодня', pairs: MOOD })).toEqual([]);
+  });
+
+  it('семь кадров цели по шагам совпадают с шагом шагов', () => {
+    for (const [frame, n, withHint, extra] of STEPS_FRAMES) {
+      expect(compare({
+        razbor, rules, frame, pairs: stepsPairs(n, withHint).concat(extra),
+      })).toEqual([]);
+    }
   });
 
   it('три кадра развилки совпадают с экраном оценки по ощущениям', () => {
@@ -247,7 +364,16 @@ describe('«Утренний чек-ин» · разбор кадров канв
     expect(yv.get('.yv-text-later')['min-height']).toBe('44px');
   });
 
+  // Загрузочный день был единственным блоком, отбитым чертой, на всех пяти
+  // шагах; кадр делает его карточкой.
+  it('загрузочный день — карточка, а не блок за чертой', () => {
+    const row = rules.get('.mc-steps-refeed-row');
+    expect(row['border-radius']).toBe('16px');
+    expect(row.background).toBe('var(--v4-c1, #f7efe2)');
+    expect(row['border-top']).toBeUndefined();
+  });
+
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(15);
+    expect(EXCEPTIONS.size).toBe(36);
   });
 });
