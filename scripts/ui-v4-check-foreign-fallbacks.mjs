@@ -86,7 +86,7 @@ const BASELINE = {
   'critical.css': 32,
   'drums-finger-trainer.css': 120,
   'fingers.css': 103,
-  'heys-components.css': 540,
+  'heys-components.css': 535,
 };
 
 function readPalette() {
