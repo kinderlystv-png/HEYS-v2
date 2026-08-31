@@ -794,6 +794,52 @@ body:has(.activity-v4) .hdr::after {
 
 /* Пустая «История» — заголовок и проза, без кнопок: показывать нечего
    и предлагать нечего (контракт строка 33). */
+/* Блок программы куратора стоит выше яруса «Сегодня» (контракт строка 8).
+   Строка «Следующая тренировка» приходит из общего модуля программы и на
+   других экранах живёт своей рамкой — здесь она приведена к списку .cd кадра
+   «день отдыха»: первая поверхность, радиус 20, поля 2/16, строка 13 px по
+   вертикали, без разделителя (она в списке одна). */
+.activity-v4-program {
+  margin-top: 12px;
+}
+
+.activity-v4-program .program-next-line {
+  gap: 12px;
+  padding: 13px 16px;
+  border: none;
+  border-radius: 20px;
+  background: var(--v4-c1, #f7efe2);
+}
+
+.activity-v4-program .program-next-key {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  text-align: left;
+}
+
+.activity-v4-program .program-next-text {
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+/* Дата в кадре не выделена весом: вся строка одного кегля. */
+.activity-v4-program .program-next-text b {
+  font-weight: 600;
+  color: var(--v4-ink, #201e1d);
+}
+
+.activity-v4-program .program-next-sub {
+  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.activity-v4-program .program-next-link {
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
+}
+
 .activity-v4-history-empty {
   margin-top: 10px;
   padding: 16px;

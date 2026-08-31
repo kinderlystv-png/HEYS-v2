@@ -2880,13 +2880,21 @@
       });
     }
 
+    // Кадр «день отдыха» даёт строку списка: имя, под ним — что за тренировка,
+    // справа ссылка. Без подписи строка говорила только «когда», а «что» —
+    // ровно то, ради чего её открывают (контракт «три элемента программы»).
+    const nextLabel = typeof next.dayLabel === 'string' ? next.dayLabel.trim() : '';
     return React.createElement('button', {
       type: 'button', className: 'program-next-line', onClick: openPath
     },
-      React.createElement('span', { className: 'program-next-text' },
-        'Следующая тренировка — ',
-        React.createElement('b', null, whenPhrase(next.date, today))),
-      React.createElement('span', { className: 'program-next-link' }, 'Программа ›')
+      React.createElement('span', { className: 'program-next-key' },
+        React.createElement('span', { className: 'program-next-text' },
+          'Следующая тренировка — ',
+          React.createElement('b', null, whenPhrase(next.date, today))),
+        nextLabel && React.createElement('span', { className: 'program-next-sub' },
+          nextLabel + ' · по программе')
+      ),
+      React.createElement('span', { className: 'program-next-link' }, 'программа ›')
     );
   }
 
@@ -3153,7 +3161,10 @@
           if (removedTraining && (String(removedTraining.type) === 'fingers' || removedTraining.fingersLog)) {
             try {
               HEYS.Fingers?.persistence?.clearForTraining?.({
-                dateKey: day && day.date,
+                // Дату берём тем же способом, что и prepareTrainingMutation:
+                // переменной `day` в этой области нет, и очистка пальцев молча
+                // проваливалась в catch при каждом удалении тренировки.
+                dateKey: dateKey || HEYS.Day?.getDay?.()?.date,
                 trainingIndex: ti
               });
             } catch (_) { /* noop */ }
