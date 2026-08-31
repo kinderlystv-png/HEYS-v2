@@ -13293,12 +13293,24 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 
 .widget-heatmap__month-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
-  margin-top: 6px;
+  /* minmax(0, 1fr), а не 1fr: у клетки aspect-ratio 1 и нет содержимого, и
+     автоминимум колонки считается от высоты строки — колонки раздувались, и
+     сетка вылезала за плитку на 43 px. */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  /* Плитка тепловой карты досталась от легаси с align-items: center — сетка
+     не растягивалась и жила по ширине содержимого. */
+  width: 100%;
+  align-self: stretch;
+  gap: 4px;
+  margin-top: 9px;
 }
 
+/* Базовая .widget-heatmap__cell — легаси-клетка с жёсткими 20×20; в сетке
+   месяца размер задаёт колонка, иначе клетки шире своих колонок и налезают
+   друг на друга (поймано стендом 31 августа). */
 .widget-heatmap__cell--month {
+  width: auto;
+  height: auto;
   aspect-ratio: 1;
   border-radius: 3px;
   background: rgba(0, 0, 0, 0.08);
@@ -13752,6 +13764,12 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   --water-tone: #7d98a6;
 }
 
+/* Кадр «Шторка · Вода», вид «К этому часу»: число с полосой стоят внизу
+   плитки, а не липнут к шапке — содержимое 2×1 прижато к низу. */
+.widget-water--2x1.widget-v4-stack .widget-v4-row__value {
+  margin-top: auto;
+}
+
 [data-theme$="dark"] .widget-water--2x1.widget-v4-stack {
   --water-tone: #8fb3c2;
 }
@@ -13808,12 +13826,9 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-heatmap__month-meta {
   font-size: 9.5px;
   font-weight: 600;
+  line-height: 1;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
   margin-top: auto;
-}
-
-.widget-v4-heat--month-foot {
-  margin-top: 6px;
 }
 
 /* ─── Лист разбора плитки (home-widgets · каркас разбора) ─── */

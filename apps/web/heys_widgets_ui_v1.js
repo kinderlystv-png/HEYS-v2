@@ -4325,7 +4325,11 @@
       return React.createElement('div', { className: 'widget-water widget-water--2x1 widget-v4-stack' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
           v4Kicker(`Вода · ${formatRuDecimal(drunk / 1000, 1)} / ${formatRuUnit(formatRuDecimal(target / 1000, 1), 'л')}`),
-          React.createElement('span', { className: 'widget-v4-row__meta widget-v4-val--bad' }, rhythmLabel)
+          // Кадр «Шторка · Вода», вид «Ритм дня»: строка провала идёт счётчиком
+          // — 9.5px/700, а не подписью меты 9px/600.
+          React.createElement('span', {
+            className: 'widget-v4-row__meta widget-v4-row__meta--count widget-v4-val--bad'
+          }, rhythmLabel)
         ),
         React.createElement('div', { className: 'widget-v4-water-rhythm' },
           bins.map((ml, index) => {
@@ -6628,7 +6632,6 @@
           if (status === 'red') return 'd1';
           return 'empty';
         };
-        const lastWeek = monthDays.slice(-7);
         return React.createElement('div', { className: 'widget-heatmap widget-heatmap--2x2 widget-v4-stack' },
           v4Kicker('Тепловая карта'),
           React.createElement('div', { className: 'widget-heatmap__month-grid' },
@@ -6637,12 +6640,9 @@
               className: `widget-heatmap__cell widget-heatmap__cell--month widget-heatmap__cell--${day?.status || 'empty'}`
             }))
           ),
-          React.createElement('div', { className: 'widget-v4-heat widget-v4-heat--month-foot' },
-            lastWeek.map((day, index) => React.createElement('span', {
-              key: `${day?.date || 'empty'}-wk-${index}`,
-              className: `widget-v4-heat__bar widget-v4-heat__bar--${barTone(day?.status)}`
-            }))
-          ),
+          // Полоса последней недели под сеткой снята 31 августа: кадр «Месяц
+          // целиком» её не рисует, а нижний ряд самой сетки — это те же семь
+          // дней. Две картинки об одном рядом читаются как разные данные.
           React.createElement('div', { className: 'widget-heatmap__month-meta' },
             `${filled28} из 28 дней в норме`
           )
