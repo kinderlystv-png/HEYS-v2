@@ -4294,22 +4294,28 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       rows
         ? rows.map(function (row) {
           var maxShare = rows.reduce(function (m, r) { return Math.max(m, Math.abs(r.displayValue)); }, 1);
+          // Два этажа по кадру «Разбор Score»: сверху имя и вклад
+          // распоркой, под ними полоса доли во всю ширину. В один ряд
+          // ширина полосы зависела от длины имени и числа рядом, и четыре
+          // доли одного числа переставали быть сравнимыми между собой.
           return React.createElement('div', { key: row.key, className: 'heys-score-screen__row' },
-            React.createElement('span', { className: 'heys-score-screen__row-label' }, row.label),
+            React.createElement('div', { className: 'heys-score-screen__row-line' },
+              React.createElement('span', { className: 'heys-score-screen__row-label' }, row.label),
+              // Контракт «карточка · каскад разбора Score» просит плюс тоном
+              // --gr, минус тоном --val-bad. Красный не ставим: строка «роли
+              // цвета» той же зоны запрещает его на числах — он занят под
+              // необратимое действие. Плюс зелёным, минус на чернилах.
+              React.createElement('span', {
+                className: 'heys-score-screen__row-value'
+                  + (row.displayValue > 0 ? ' is-up' : '')
+              }, (row.displayValue >= 0 ? '+' : '') + row.displayValue)
+            ),
             React.createElement('span', { className: 'heys-score-screen__row-bar' },
               React.createElement('span', {
                 className: 'heys-score-screen__row-fill',
                 style: { width: Math.round((Math.abs(row.displayValue) / maxShare) * 100) + '%' }
               })
-            ),
-            // Контракт «карточка · каскад разбора Score» просит плюс тоном
-            // --gr, минус тоном --val-bad. Красный не ставим: строка «роли
-            // цвета» той же зоны запрещает его на числах — он занят под
-            // необратимое действие. Плюс зелёным, минус на чернилах.
-            React.createElement('span', {
-              className: 'heys-score-screen__row-value'
-                + (row.displayValue > 0 ? ' is-up' : '')
-            }, (row.displayValue >= 0 ? '+' : '') + row.displayValue)
+            )
           );
         })
         : React.createElement('div', { className: 'heys-score-tile__detail-loading' }, 'Считаем…'),
