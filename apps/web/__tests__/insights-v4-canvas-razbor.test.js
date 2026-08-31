@@ -75,10 +75,23 @@ describe('Инсайты · разбор кадров канваса', () => {
     const mine = perFrame.filter((f) => f.frame === 'Инсайты');
     expect(mine).toHaveLength(1);
     const [f] = mine;
+    // Границу половины берём списком кадров, а не именем: пять инсайтовых
+    // кадров названы без слова «Инсайты» («Раскрывашка · …», «Стоит внимания ·
+    // …», «Ярус Питание · …»), и отбор по имени разъезжается — на этом сегодня
+    // дважды разошёлся реестр отступлений соседнего гейта.
+    const REPORTS = [
+      'Визуал v4 · Отчёты', 'Разбор Score', 'Отчёты · мало данных',
+      'Отчёты · нулевая строка матрицы', 'Отчёты · нет веса',
+      'Неделя к неделе · одна закрытая',
+    ];
+    const insightFrames = perFrame.filter((x) => !REPORTS.includes(x.frame));
+    const untouched = insightFrames.filter((x) => !x.covered).map((x) => x.frame);
     console.info(
       `[инсайты] сверено ${f.covered} из ${f.rows} строк разбора кадра «${f.frame}» `
-      + `(${((f.covered / f.rows) * 100).toFixed(1)} %); отчётные кадры канваса `
-      + 'сверяет reports-insights-v4-canvas-geometry',
+      + `(${((f.covered / f.rows) * 100).toFixed(1)} %). Инсайтовых кадров в канвасе `
+      + `${insightFrames.length}, парами этот гейт не берёт ${untouched.length}: `
+      + `${untouched.slice(0, 3).join(' · ')}…; отчётные кадры сверяет `
+      + 'reports-insights-v4-canvas-geometry',
     );
     expect(f.covered).toBeGreaterThan(0);
   });
