@@ -289,22 +289,22 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
-  background: var(--v4-hero, #f8fafc);
-  font-size: 11px;
+  background: var(--v4-sand-hero, #efe3cf);
+  font-size: 10px;
   font-weight: 700;
   line-height: 1;
-  color: var(--nut-dim);
+  color: var(--v4-sand-act-deep, #8a4a20);
 }
 
 .nutrition-v4-meal-row__kcal {
   flex: none;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink, #111827);
+  color: var(--v4-sand-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
 
@@ -319,10 +319,10 @@
 .nutrition-v4-meal-row__items {
   flex: 1;
   min-width: 0;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--nut-dim);
+  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 50%, transparent);
 }
 
 .nutrition-v4-meal-row__chevron {
@@ -341,12 +341,12 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  min-height: 30px;
+  min-height: 44px;
   padding: 0 12px;
   border: none;
   border-radius: 999px;
-  background: transparent;
-  box-shadow: inset 0 0 0 2px var(--v4-act, #2563eb);
+  background: var(--v4-sand-hero, #efe3cf);
+  box-shadow: none;
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
@@ -375,11 +375,13 @@
   margin-top: 8px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: var(--v4-ok-bg, #f0fdf4);
+  /* Роли те же, что стояли: менялись только запасные значения — они были из
+     чужого набора (#f0fdf4 и #16a34a), а роль набора даёт песочный шалфей. */
+  background: var(--v4-ok-bg, #eaefe0);
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 /* === Добавить приём =================================================== */
