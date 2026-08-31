@@ -45,9 +45,9 @@ const BASELINE = {
   '310-client-switch-overlay.css': 5,
   '400-water-and-hydration.css': 18,
   '500-pwa-and-offline.css': 80,
-  '600-steps-and-aps.css': 63,
-  '610-aps-meal-flow.css': 48,
-  '611-aps-product-card.css': 12,
+  '600-steps-and-aps.css': 42,
+  '610-aps-meal-flow.css': 40,
+  '611-aps-product-card.css': 33,
   '612-training-step.css': 12,
   '613-cycle-ui.css': 8,
   '710-refeed.css': 25,
@@ -60,7 +60,7 @@ const BASELINE = {
   '733-ui-v4-login-theme.css': 4,
   '733-ui-v4-reports.css': 29,
   '734-ui-v4-curator-panel.css': 14,
-  '734-ui-v4-insights.css': 43,
+  '734-ui-v4-insights.css': 39,
   '740-cascade-card.css': 16,
   '750-strength-builder.css': 17,
   '800-meal-optimizer.css': 40,
@@ -137,33 +137,53 @@ if (process.argv.includes('--list')) {
   process.exit(0);
 }
 
-const grown = [];
-const appeared = [];
-const shrunk = [];
+// Храповик считает ОБЩЕЕ число, а разбивку по файлам печатает.
+//
+// Почему не по файлам: перенос семейства классов из файла в файл общее число не
+// меняет, но по файлам выглядит как рост у нового владельца. Так и вышло
+// 31 августа — `aps-v4-portions-*` переехали в 611, и гейт предъявил новому
+// владельцу чужой давний долг. Человек в такой ситуации либо теряет час, либо
+// делает --update-baseline, и долг узаконивается задним числом. Это худший из
+// исходов, поэтому переезд между файлами гейт не считает ростом.
+//
+// Почему уменьшение не падение: гейт, который краснеет в ответ на починку,
+// снимают. Уменьшение — громкая строка отчёта с просьбой обновить список.
+// Цена в том, что список какое-то время завышен и под этим запасом может
+// спрятаться небольшой рост; она меньше, чем цена снятого гейта.
+const knownTotal = Object.values(BASELINE).reduce((a, b) => a + b, 0);
+const moved = [];
 for (const [file, count] of perFile) {
-  const known = BASELINE[file];
-  if (known === undefined) appeared.push(`${file}: ${count}`);
-  else if (count > known) grown.push(`${file}: было ${known}, стало ${count}`);
-  else if (count < known) shrunk.push(`${file}: было ${known}, стало ${count}`);
+  const known = BASELINE[file] ?? 0;
+  if (count !== known) moved.push(`${file}: было ${known}, стало ${count}`);
 }
 for (const file of Object.keys(BASELINE)) {
-  if (!perFile.has(file)) shrunk.push(`${file}: долг закрыт целиком`);
+  if (!perFile.has(file)) moved.push(`${file}: долг закрыт целиком`);
 }
 
-if (appeared.length || grown.length) {
-  console.error('❌ Запасные значения из чужого набора: долг вырос.');
+if (total > knownTotal) {
+  console.error(`❌ Запасные значения из чужого набора: долг вырос — было ${knownTotal}, стало ${total}.`);
   console.error('   Роль верна, а запасное взято из донабора — на наборе без этой роли');
   console.error('   или без загруженной палитры экран покрасится чужой системой.');
-  for (const line of appeared) console.error(`  новый файл — ${line}`);
-  for (const line of grown) console.error(`  ${line}`);
+  for (const line of moved) console.error(`  ${line}`);
   process.exit(1);
 }
 
-if (shrunk.length) {
-  console.error('❌ Долг уменьшился, но остался в списке — обновите его:');
-  for (const line of shrunk) console.error(`  ${line}`);
-  console.error('  node scripts/ui-v4-check-foreign-fallbacks.mjs --update-baseline');
-  process.exit(1);
+// Уменьшение записывается сразу, а не просится в отчёте. Иначе храповик не
+// затягивается: улучшил — гейт промолчал, заморозка осталась прежней, и завтра
+// долг возвращается до старого числа бесплатно. Молчит оба раза, в сумме ноль.
+//
+// Плата за это — прогон гейта пишет файл. Локально это нормально: правку видно
+// в git status и она уезжает тем же коммитом. В CI писать некому, поэтому там
+// изменившаяся заморозка означает, что её забыли положить в коммит, — и это
+// падение с понятной причиной, а не молчаливое расхождение.
+if (total < knownTotal) {
+  updateBaseline(perFile);
+  console.log(`Долг уменьшился: было ${knownTotal}, стало ${total} — заморозка затянута.`);
+  for (const line of moved) console.log(`  ${line}`);
+  if (process.env.CI) {
+    console.error('❌ В CI заморозка не должна меняться: добавьте обновлённый файл в коммит.');
+    process.exit(1);
+  }
 }
 
 const worst = [...perFile].sort((a, b) => b[1] - a[1]).slice(0, 5)
