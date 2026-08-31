@@ -312,10 +312,13 @@
   gap: 12px;
 }
 
+/* Имя экрана сканера — тем же кеглем, что имена экранов шагов: кадры дают
+   .ttl 700 15px/1. Было 16 px и роль с именем набора. */
 .aps-barcode-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
-  color: var(--v4-sand-ink, #201e1d);
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
 }
 
 .aps-barcode-subtitle {
