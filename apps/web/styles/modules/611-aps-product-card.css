@@ -1118,3 +1118,568 @@
   flex-direction: column;
   gap: 12px;
 }
+
+/* Создание продукта и исходы модерации: переехали из оболочки 31 августа.
+   По приставке aps-create/aps-v4-outcome они читались как общие, но пользуется
+   ими один экран — шаг создания продукта. Приставка говорит о происхождении
+   класса, а не о владении им (наблюдение heys-v2-62). */
+
+.aps-create-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+  min-height: 400px;
+}
+
+.aps-create-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  border-radius: 12px;
+}
+
+.aps-create-icon {
+  font-size: 28px;
+}
+
+.aps-create-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+[data-theme$='dark'] .aps-create-header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%);
+}
+
+[data-theme$='dark'] .aps-create-title {
+  color: #93c5fd;
+}
+
+.aps-create-hint {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.aps-create-format {
+  font-size: 11px;
+  color: var(--color-gray-500);
+  font-family: monospace;
+  background: var(--v4-hero, #f3f4f6);
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.aps-create-prompt-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.aps-create-prompt-btn {
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--card, #fff);
+  color: var(--text, #111827);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+@media (hover: hover) {
+  .aps-create-prompt-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    border-color: var(--acc, #3b82f6);
+  }
+}
+
+.aps-create-prompt-btn:active {
+  opacity: 0.7;
+  transition: opacity 120ms ease;
+}
+
+.aps-create-prompt-note {
+  font-size: 11px;
+  color: var(--color-gray-500);
+}
+
+.aps-create-barcode-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.aps-create-brand-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.aps-create-barcode-label,
+.aps-create-brand-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text, #111827);
+}
+
+.aps-create-barcode-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.aps-create-barcode-input,
+.aps-create-brand-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 42px;
+  padding: 0 11px;
+  border: 2px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  background: var(--card, #fff);
+  color: var(--text, #111827);
+  font: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.aps-create-barcode-input:focus,
+.aps-create-brand-input:focus {
+  outline: none;
+  border-color: var(--acc, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.aps-create-barcode-clear,
+.aps-create-barcode-scan {
+  height: 42px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--card, #fff);
+  color: var(--text, #111827);
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.aps-create-barcode-clear {
+  flex: 0 0 42px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.aps-create-barcode-scan {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.aps-create-barcode-scan-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.aps-create-barcode-note,
+.aps-create-brand-note {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--color-gray-500);
+}
+
+[data-theme$='dark'] .aps-create-barcode-input,
+[data-theme$='dark'] .aps-create-brand-input,
+[data-theme$='dark'] .aps-create-barcode-clear,
+[data-theme$='dark'] .aps-create-barcode-scan {
+  background: var(--v4-surface, #1f2937);
+  border-color: var(--v4-line, #374151);
+  color: var(--color-gray-200);
+}
+
+[data-theme$='dark'] .aps-create-barcode-note,
+[data-theme$='dark'] .aps-create-brand-note {
+  color: var(--color-gray-400);
+}
+
+@media (max-width: 420px) {
+  .aps-create-barcode-row {
+    flex-wrap: wrap;
+  }
+
+  .aps-create-barcode-input {
+    flex-basis: calc(100% - 48px);
+  }
+
+  .aps-create-barcode-scan {
+    flex: 1 1 100%;
+  }
+}
+
+[data-theme$='dark'] .aps-create-format {
+  background: #374151;
+  color: var(--color-gray-400);
+}
+
+[data-theme$='dark'] .aps-create-prompt-btn {
+  background: var(--v4-surface, #1f2937);
+  border-color: var(--v4-line, #374151);
+  color: var(--color-gray-200);
+}
+
+@media (hover: hover) {
+  [data-theme$='dark'] .aps-create-prompt-btn:hover {
+    border-color: var(--color-blue-400, #60a5fa);
+  }
+}
+
+[data-theme$='dark'] .aps-create-prompt-note {
+  color: var(--color-gray-400);
+}
+
+.aps-create-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  resize: vertical;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.aps-create-textarea:focus {
+  outline: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.aps-create-textarea::placeholder {
+  color: var(--color-gray-400);
+  font-size: 12px;
+}
+
+.aps-create-example-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.aps-create-example-btn {
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--card, #fff);
+  color: var(--text, #111827);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+@media (hover: hover) {
+  .aps-create-example-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    border-color: var(--acc, #3b82f6);
+  }
+}
+
+.aps-create-example-btn:active {
+  opacity: 0.7;
+  transition: opacity 120ms ease;
+}
+
+.aps-create-example-note {
+  font-size: 11px;
+  color: var(--color-gray-500);
+}
+
+.aps-create-error {
+  padding: 10px 12px;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: var(--v4-warn-2, #dc2626);
+  font-size: 13px;
+}
+
+[data-theme$='dark'] .aps-create-error {
+  background: #7f1d1d;
+  border-color: #991b1b;
+  color: #fca5a5;
+}
+
+[data-theme$='dark'] .aps-create-example-btn {
+  background: var(--v4-surface, #1f2937);
+  border-color: var(--v4-line, #374151);
+  color: var(--color-gray-200);
+}
+
+@media (hover: hover) {
+  [data-theme$='dark'] .aps-create-example-btn:hover {
+    border-color: var(--color-blue-400, #60a5fa);
+  }
+}
+
+[data-theme$='dark'] .aps-create-example-note {
+  color: var(--color-gray-400);
+}
+
+.aps-create-preview {
+  padding: 12px;
+  background: var(--v4-ok-bg, #ecfdf5);
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+}
+
+[data-theme$='dark'] .aps-create-preview {
+  background: var(--v4-ok-bg, #064e3b);
+  border-color: #065f46;
+}
+
+.aps-create-btn {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--v4-line, #e5e7eb);
+  color: var(--color-gray-400);
+}
+
+.aps-create-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+[data-theme$='dark'] .aps-create-btn {
+  background: #374151;
+  color: var(--color-gray-500);
+}
+
+.aps-create-tip {
+  font-size: 12px;
+  color: var(--color-gray-500);
+  text-align: center;
+  padding: 8px;
+  background: var(--v4-hero, #f9fafb);
+  border-radius: 8px;
+}
+
+[data-theme$='dark'] .aps-create-tip {
+  background: var(--v4-surface, #1f2937);
+  color: var(--color-gray-400);
+}
+
+/* Подсказка о поисковом запросе */
+.aps-create-search-hint {
+  padding: 8px 12px;
+  background: var(--v4-accent-bg, #dbeafe);
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1e40af;
+}
+
+.aps-create-search-hint strong {
+  color: var(--v4-act-text, #1d4ed8);
+}
+
+[data-theme$='dark'] .aps-create-search-hint {
+  background: var(--v4-accent-bg, #1e3a5f);
+  border-color: var(--color-blue-500);
+  color: #93c5fd;
+}
+
+[data-theme$='dark'] .aps-create-search-hint strong {
+  color: var(--v4-act-text, #60a5fa);
+}
+/* ===========================================================================
+   ⚡ Чузер режима добавления продукта (разово / в базу) — CreateProductStep
+   ========================================================================= */
+
+.aps-create-mode-selector {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 14px 0;
+}
+
+.aps-create-mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px;
+  background: var(--color-slate-100);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.aps-create-mode-btn:active {
+  opacity: 0.7;
+  transition: opacity 120ms ease;
+}
+
+.aps-create-mode-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.aps-create-mode-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-slate-700);
+}
+
+.aps-create-mode-hint {
+  font-size: 10px;
+  color: var(--color-slate-500);
+}
+
+[data-theme$='dark'] .aps-create-mode-btn {
+  background: var(--color-slate-700);
+}
+
+[data-theme$='dark'] .aps-create-mode-label {
+  color: var(--color-slate-200);
+}
+
+[data-theme$='dark'] .aps-create-mode-hint {
+  color: var(--color-slate-400);
+}
+
+@media (max-width: 480px) {
+  .aps-create-mode-btn {
+    padding: 8px 6px;
+  }
+  .aps-create-mode-label {
+    font-size: 11px;
+  }
+  .aps-create-mode-hint {
+    font-size: 9px;
+  }
+}
+
+.aps-v4-outcome {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  border-radius: 18px;
+  padding: 14px 15px;
+}
+
+.aps-v4-outcome--ok {
+  background: var(--v4-ok-bg, #eaefe0);
+  color: var(--v4-sand-ok-text, #5c6a45);
+}
+
+.aps-v4-outcome--neutral {
+  background: var(--v4-sand-hero, #efe3cf);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
+}
+
+.aps-v4-outcome--warn {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  /* Кадр «Продукт · исходы заявки» даёт карточке отказа --c2, вторую
+     поверхность набора. #f0dcc6 — роль, которой кадр не называет. */
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-sand-act-deep, #8a4a20);
+  padding: 15px;
+}
+
+.aps-v4-outcome__icon {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+}
+
+.aps-v4-outcome__text {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.aps-v4-outcome__warn-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.aps-v4-outcome__warn-body {
+  margin-top: 7px;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.aps-create-btn.active {
+  background: linear-gradient(135deg, #22c55e 0%, var(--color-emerald-500) 100%);
+  color: var(--color-white);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+@media (hover: hover) {
+  .aps-create-btn.active:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+  }
+}
+
+.aps-create-btn.active:active {
+  opacity: 0.7;
+  transition: opacity 120ms ease;
+}
+
+[data-theme$='dark'] .aps-create-btn.active {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.aps-create-mode-btn.active {
+  background: var(--v4-accent-bg, #dbeafe);
+  border-color: var(--color-blue-500);
+}
+
+.aps-create-mode-btn.active .aps-create-mode-label {
+  color: var(--v4-act, #2563eb);
+}
+
+[data-theme$='dark'] .aps-create-mode-btn.active {
+  background: #1e3a8a;
+  border-color: var(--color-blue-500);
+}

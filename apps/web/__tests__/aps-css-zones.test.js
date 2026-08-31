@@ -117,6 +117,29 @@ describe('Классы потока добавления лежат по зон�
     expect([...imports].sort((a, b) => a - b)).toEqual(imports);
   });
 
+  // Обратная проверка (наблюдение heys-v2-62): приставка говорит о
+  // происхождении класса, а не о владении им. `aps-create-*` и `aps-v4-outcome-*`
+  // по приставке читались как оболочка, а пользуется ими один экран — шаг
+  // создания продукта. Такие семейства ловятся не именем, а списком: где класс
+  // реально употребляется.
+  const SINGLE_OWNER = [
+    ['aps-create', '611-aps-product-card.css'],
+    ['aps-v4-outcome', '611-aps-product-card.css'],
+  ];
+
+  it.each(SINGLE_OWNER)('семейство %s лежит в файле своего единственного экрана', (prefix, file) => {
+    const shell = read('600-steps-and-aps.css');
+    const stray = [];
+    for (const classes of rules(shell)) {
+      // Смешанный селектор (`.mc-modal:has(.aps-create-step)`) — правило
+      // оболочки про своего гостя, оно остаётся здесь по праву.
+      if (classes.length && classes.every((c) => c.startsWith(prefix))) {
+        stray.push(classes[0]);
+      }
+    }
+    expect([...new Set(stray)], `${prefix} → ${file}`).toEqual([]);
+  });
+
   it('список общих приставок закрыт — он может только уменьшаться', () => {
     // Каждая запись здесь означает «класс носят несколько экранов». Новая
     // приставка в этом списке — это отказ от разреза, а не его продолжение.
