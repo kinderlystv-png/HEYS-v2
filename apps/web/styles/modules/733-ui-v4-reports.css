@@ -386,6 +386,18 @@
   margin-top: 10px;
 }
 
+/* Кривая веса в карточке v4 — тоном --gr2 и толщиной 2,5, как у соседних
+   графиков блока. Общий вид красит её литералом #f97316 тремя одинаковыми
+   правилами на trend-down / trend-up / trend-same: цвет один на все три
+   состояния, набором не переопределяется и в синих палитрах остаётся
+   оранжевым — единственная тёплая линия на холодной вкладке. Правило
+   ограничено карточкой v4: прежний вид не трогаем, он живёт по своим
+   строкам. */
+.reports-v4-dynamics-card .weight-sparkline-line {
+  stroke: var(--v4-ok-fill, #7a8a5e);
+  stroke-width: 2.5;
+}
+
 /* Метка конца линии — тем же тоном, что и сама линия: это её последняя точка,
    а не отдельный знак. */
 .reports-v4-dynamics-card .sparkline-dot--reports-v4 {
@@ -433,26 +445,36 @@
   fill: none;
 }
 
+/* Тона двух линий — из строки «карточка · график сна и самочувствия»: сон
+   --acs, самочувствие --gr2. Стояли --v4-water и --v4-sand-act, то есть
+   «водяной» и песочно-залоченный акцент: первый ни в одной строке зоны не
+   назван, второй не менялся в синих наборах, и на синей палитре кривая
+   самочувствия оставалась тёплой одна на всю вкладку.
+
+   Пара --acs/--gr2 та же, что у соседних графиков блока Динамики, — иначе три
+   графика подряд говорили бы на трёх разных языках цвета. */
 .reports-v4-wellbeing__line--sleep,
 .reports-v4-wellbeing__dot--sleep,
 .reports-v4-wellbeing__mark--sleep {
-  stroke: var(--v4-water, #7d98a6);
-  fill: var(--v4-water, #7d98a6);
+  stroke: var(--v4-act, #c67139);
+  fill: var(--v4-act, #c67139);
 }
 
 .reports-v4-wellbeing__line--mood,
 .reports-v4-wellbeing__dot--mood,
 .reports-v4-wellbeing__mark--mood {
-  stroke: var(--v4-sand-act, #c67139);
-  fill: var(--v4-sand-act, #c67139);
+  stroke: var(--v4-ok-fill, #7a8a5e);
+  fill: var(--v4-ok-fill, #7a8a5e);
 }
 
 .reports-v4-wellbeing__dot { stroke: none; }
 
+/* Подпись у последней точки: контракт задаёт 10,5/600 тоном своей линии.
+   Стояла 9,5/700 — мельче шкалы зоны и жирнее, то есть заметнее самой линии. */
 .reports-v4-wellbeing__mark {
   stroke: none;
-  font-size: 9.5px;
-  font-weight: 700;
+  font-size: 10.5px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -481,8 +503,10 @@
   transform: translateY(-50%);
 }
 
-.reports-v4-wellbeing__key--sleep::before { background: var(--v4-water, #7d98a6); }
-.reports-v4-wellbeing__key--mood::before { background: var(--v4-sand-act, #c67139); }
+/* Метки легенды — тонами своих линий: разойдись они, легенда называла бы
+   не то, что нарисовано. */
+.reports-v4-wellbeing__key--sleep::before { background: var(--v4-act, #c67139); }
+.reports-v4-wellbeing__key--mood::before { background: var(--v4-ok-fill, #7a8a5e); }
 
 .reports-v4-wellbeing__grid {
   display: flex;
