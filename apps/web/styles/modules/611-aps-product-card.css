@@ -863,7 +863,11 @@
   text-align: center;
 }
 
+/* Подпись шага идёт под точками: кадры «вставка строки», «дополнительно» и
+   «порции» ставят точки первыми на 4 px от верха области прокрутки, а имя
+   раздела — ниже. Прежде порядок был обратный, и точки уезжали на 16 px вниз. */
 .aps-v4-create-shell__title {
+  margin-top: 8px;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -879,7 +883,6 @@
   justify-content: center;
   align-items: center;
   gap: 5px;
-  margin-top: 16px;
 }
 
 .aps-v4-create-dot {
@@ -1191,16 +1194,20 @@
    10 px через 1,55. Прежде — радиус 4, кегль 11 и --color-gray-500, токен
    снятой системы; запасное значение под --v4-hero тоже было чужим (#f3f4f6),
    то есть без палитры блок красился холодным серым вместо тёплой подложки. */
+/* Образец строки по кадру: плашка во всю ширину полями 11/13 через 10 от поля
+   кода. Прежде inline-block полями 12/14 и отступом 4 — плашка обрывалась по
+   длине текста и вставала вплотную к полю выше. */
 .aps-create-format {
+  display: block;
   font-size: 10px;
+  font-weight: 500;
   line-height: 1.55;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   background: var(--v4-surface, #f7efe2);
-  padding: 12px 14px;
+  padding: 11px 13px;
   border-radius: 14px;
-  display: inline-block;
-  margin-top: 4px;
+  margin-top: 10px;
 }
 
 .aps-create-prompt-actions {
@@ -1261,10 +1268,25 @@
   color: var(--text, #111827);
 }
 
+/* Кадр даёт полю кода одну заливку на всю строку: код слева, крест очистки
+   справа внутри той же плашки. Прежде строка была прозрачной, а заливку нёс
+   сам ввод — крест оказывался снаружи поля, и на листе читались две плашки
+   вместо одной. */
 .aps-create-barcode-row {
   display: flex;
-  align-items: stretch;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 6px 0 14px;
+  border-radius: 14px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.aps-create-barcode-row .aps-create-barcode-input {
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: none;
 }
 
 .aps-create-barcode-input,
@@ -1289,7 +1311,6 @@
 .aps-create-brand-input:focus {
   outline: none;
   box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 /* Кадр «Продукт · вставка строки»: крест очистки — не кнопка с рамкой, а знак
@@ -1319,7 +1340,8 @@
 }
 
 .aps-create-barcode-scan {
-  flex: 0 0 auto;
+  width: 100%;
+  margin-top: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1517,6 +1539,7 @@
   gap: 9px;
   width: 100%;
   min-height: 48px;
+  margin-top: 10px;
   padding: 0 16px;
   font-size: 13px;
   font-weight: 700;

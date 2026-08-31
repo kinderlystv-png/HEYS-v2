@@ -6838,8 +6838,8 @@ NOVA: 1
         onClose: () => setBarcodeModal(null)
       }),
       React.createElement('div', { className: 'aps-v4-create-shell' },
-        React.createElement('div', { className: 'aps-v4-create-shell__title' }, 'Название и состав'),
-        renderApsCreateDots(0)
+        renderApsCreateDots(0),
+        React.createElement('div', { className: 'aps-v4-create-shell__title' }, 'Название и состав')
       ),
 
       searchQuery && React.createElement('div', { className: 'aps-create-search-hint' },
@@ -7036,15 +7036,18 @@ NOVA: 1
                 onClick: () => setBarcodeInput(''),
                 'aria-label': 'Очистить штрихкод',
                 title: 'Очистить штрихкод'
-              }, '×'),
-              React.createElement('button', {
-                type: 'button',
-                className: 'aps-create-barcode-scan',
-                onClick: openCreateBarcodeScanner
-              },
-                React.createElement('span', { className: 'aps-create-barcode-scan-icon', 'aria-hidden': 'true' }, '▦'),
-                React.createElement('span', null, effectiveBarcode ? 'Сканировать заново' : 'Сканировать')
-              )
+              }, '×')
+            ),
+            // Кадр «Продукт · вставка строки» ставит «Сканировать» отдельной
+            // вторичной кнопкой под полем, а не третьим элементом внутри него:
+            // в поле остаются только код и крест очистки.
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-create-barcode-scan',
+              onClick: openCreateBarcodeScanner
+            },
+              React.createElement('span', { className: 'aps-create-barcode-scan-icon', 'aria-hidden': 'true' }, '▦'),
+              React.createElement('span', null, effectiveBarcode ? 'Сканировать заново' : 'Сканировать')
             ),
             React.createElement('div', { className: 'aps-create-barcode-note' },
               effectiveBarcode ? 'Этот код сохранится у продукта в личной базе.' : 'Можно ввести вручную или считать камерой.'
@@ -8665,8 +8668,8 @@ NOVA: 1
         onLeave: confirmExitModal
       }),
       React.createElement('div', { className: 'aps-v4-create-shell' },
-        React.createElement('div', { className: 'aps-v4-create-shell__title' }, 'Порции'),
-        renderApsCreateDots(1)
+        renderApsCreateDots(1),
+        React.createElement('div', { className: 'aps-v4-create-shell__title' }, 'Порции')
       ),
       React.createElement('div', { className: 'aps-v4-portions-subtitle' },
         'Чтобы не считать граммы каждый раз. Можно пропустить — тогда останется ввод в граммах.'
@@ -9784,8 +9787,8 @@ NOVA: 1
       }),
 
       e('div', { className: 'aps-v4-create-shell' },
-        e('div', { className: 'aps-v4-create-shell__title' }, 'Вредность'),
-        renderApsCreateDots(2)
+        renderApsCreateDots(2),
+        e('div', { className: 'aps-v4-create-shell__title' }, 'Вредность')
       ),
 
       e('div', { className: 'aps-v4-harm-product' }, product.name),
