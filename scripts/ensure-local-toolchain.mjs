@@ -93,7 +93,12 @@ function pidsOnPort(port) {
   }
 }
 
-async function devServersListening() {
+/**
+ * Слушает ли кто-то dev-порты. Экспортируется: `pnpm install` при живом
+ * dev:local на Windows роняет установку на занятых файлах и уносит с собой
+ * содержимое пакетов через junction-ссылки в apps/web/node_modules/@heys.
+ */
+export async function devServersListening() {
   for (const port of DEV_PORTS) {
     if (await probePort(port)) return true;
   }

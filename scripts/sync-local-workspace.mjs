@@ -16,7 +16,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { getDeletedWorkspaceManifests } from './check-staged-hygiene.mjs';
 import { assertWorkspaceRuntime } from './check-workspace-runtime.mjs';
+import { devServersListening } from './ensure-local-toolchain.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -53,7 +55,28 @@ function writeStamp(head) {
   writeFileSync(STAMP_FILE, `${head}\n`, 'utf8');
 }
 
-function main() {
+/**
+ * Вернуть исходники workspace-пакетов, снесённые упавшей установкой.
+ *
+ * Инцидент 2026-08-31: `pnpm install` при живом dev:local на Windows падает на
+ * занятых файлах и уносит содержимое packages. Внутри apps/web/node_modules
+ * лежат junction-ссылки @heys/... на реальные каталоги пакетов, и рекурсивная
+ * чистка проваливается сквозь них. Дальше каждый push видел «missing runtime»,
+ * звал install снова и
+ * сносил ещё раз: packages/* пропали дважды за один вечер.
+ */
+function restoreDeletedWorkspaces(stage) {
+  const deleted = getDeletedWorkspaceManifests();
+  if (!deleted.length) return 0;
+  console.warn(
+    `[sync:local] ⚠ ${stage}: пропало ${deleted.length} манифест(ов) workspace ` +
+      `(например ${deleted[0]}) — возвращаю из git.`,
+  );
+  run('restore workspace sources', 'git', ['restore', 'packages/', 'apps/']);
+  return deleted.length;
+}
+
+async function main() {
   const head = getHead();
   if (!head) {
     console.error('[sync:local] ❌ Not a git repository or HEAD unavailable.');
@@ -73,10 +96,22 @@ function main() {
   // installing, same check ensure-local-toolchain.mjs uses. This never stops
   // dev:local: this script also runs at dev:local's own startup, and killing
   // it here would kill another session's server, not just ours.
+  restoreDeletedWorkspaces('перед проверкой');
+
   const runtime = assertWorkspaceRuntime({ rootDir: ROOT });
   if (!runtime.ok) {
-    console.warn('[sync:local] ⚠ Missing runtime package(s), running pnpm install…');
-    run('restore dependencies', 'pnpm', ['install']);
+    if (await devServersListening()) {
+      // Установка при живом dev — та самая, что сносит packages/*. Пропускаем:
+      // сборка бандлов ниже работает и на неполном node_modules, а человеку
+      // говорим точный порядок действий.
+      console.warn('[sync:local] ⚠ Не хватает runtime-пакетов, но dev:local занимает :3001/:4001.');
+      console.warn('[sync:local]   pnpm install при живом dev на Windows сносит packages/* — пропускаю.');
+      console.warn('[sync:local]   Порядок: остановить dev:local → pnpm install → pnpm dev:local');
+    } else {
+      console.warn('[sync:local] ⚠ Missing runtime package(s), running pnpm install…');
+      run('restore dependencies', 'pnpm', ['install']);
+      restoreDeletedWorkspaces('после установки');
+    }
   }
 
   run('version meta', 'node', ['apps/web/scripts/update-version.cjs']);
@@ -88,4 +123,4 @@ function main() {
   console.info('[sync:local]    If dev:local is already running — hard reload http://localhost:3001');
 }
 
-main();
+await main();
