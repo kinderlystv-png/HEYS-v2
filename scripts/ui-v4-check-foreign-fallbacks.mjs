@@ -32,6 +32,11 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MODULES = path.join(ROOT, 'apps/web/styles/modules');
+// Верхний уровень стилей сканируется наравне с модулями: heys-components.css и
+// соседи держат 511 записей `var(--v4-роль, #литерал)`, и до 31 августа гейт
+// не смотрел на них вовсе. Файл `heys-components.css:1575` нёс
+// `var(--v4-btn-on-act, #fff5ef)` — почти белое запасное при тёмной роли.
+const STYLES = path.join(ROOT, 'apps/web/styles');
 const PALETTE = path.join(MODULES, '002-ui-v4-palette-roles.css');
 
 // Роли с именем набора внутри — второй долг того же рода. Держим одним числом:
@@ -43,12 +48,12 @@ const PALETTE_ROLE_BASELINE = 582;
 const BASELINE = {
   '000-base-and-gamification.css': 291,
   '001-design-tokens.css': 22,
-  '100-metrics-and-graphs.css': 128,
+  '100-metrics-and-graphs.css': 127,
   '1000-messenger.css': 147,
   '200-dark-and-effects.css': 122,
   '300-modals-and-day.css': 87,
   '310-client-switch-overlay.css': 5,
-  '400-water-and-hydration.css': 19,
+  '400-water-and-hydration.css': 18,
   '500-pwa-and-offline.css': 80,
   '600-steps-and-aps.css': 40,
   '610-aps-meal-flow.css': 40,
@@ -61,11 +66,11 @@ const BASELINE = {
   '725-metabolic-intelligence.css': 189,
   '730-widgets-dashboard.css': 213,
   '731-ui-v4-activity.css': 7,
-  '732-ui-v4-nutrition.css': 82,
+  '732-ui-v4-nutrition.css': 81,
   '733-ui-v4-login-theme.css': 4,
   '733-ui-v4-reports.css': 21,
-  '734-ui-v4-curator-panel.css': 14,
-  '734-ui-v4-insights.css': 39,
+  '734-ui-v4-curator-panel.css': 6,
+  '734-ui-v4-insights.css': 35,
   '740-cascade-card.css': 16,
   '750-strength-builder.css': 17,
   '800-meal-optimizer.css': 40,
@@ -78,18 +83,24 @@ const BASELINE = {
   '910-planning-game-robot-route.css': 3,
   '911-planning-game-color-trail.css': 2,
   '912-planning-game-assemble-day.css': 13,
+  'critical.css': 32,
   'drums-finger-trainer.css': 120,
   'fingers.css': 103,
+  'heys-components.css': 541,
 };
 
 function readPalette() {
   const src = fs.readFileSync(PALETTE, 'utf8');
   const values = new Map();
+  // Сколько раз роль объявлена: во всех наборах или только в части. Разница
+  // решает, враньё перед нами или несущее запасное.
+  const sets = new Map();
   for (const m of src.matchAll(/^\s+(--v4-[a-z0-9-]+):\s*([^;]+);/gm)) {
     if (!values.has(m[1])) values.set(m[1], new Set());
     values.get(m[1]).add(m[2].trim().toLowerCase());
+    sets.set(m[1], (sets.get(m[1]) || 0) + 1);
   }
-  return values;
+  return { values, sets };
 }
 
 // Второй долг того же рода: роль с именем набора внутри — `--v4-sand-*`,
@@ -99,6 +110,21 @@ function readPalette() {
 // обязан быть синим целиком, тёплый цвет героя выражается ролью `--v4-hero-*`.
 // Опись 582 нынешних мест — docs/ui/UI_V4_SAND_ROLES_INVENTORY.md, они ждут
 // разметки владельца; храповик держит только то, чтобы новых не прибавлялось.
+
+/** Все продуктовые файлы стилей: модули и верхний уровень. Палитра не входит. */
+function cssFiles() {
+  const out = [];
+  for (const name of fs.readdirSync(MODULES)) {
+    if (!name.endsWith('.css') || name.startsWith('002-')) continue;
+    out.push({ name, full: path.join(MODULES, name) });
+  }
+  for (const name of fs.readdirSync(STYLES, { withFileTypes: true })) {
+    if (!name.isFile() || !name.name.endsWith('.css')) continue;
+    out.push({ name: name.name, full: path.join(STYLES, name.name) });
+  }
+  return out;
+}
+
 function scanPaletteRoles() {
   const perFile = new Map();
   for (const name of fs.readdirSync(MODULES)) {
@@ -110,20 +136,28 @@ function scanPaletteRoles() {
   return perFile;
 }
 
-function scan(values) {
+function scan(values, sets) {
   const perFile = new Map();
-  for (const name of fs.readdirSync(MODULES)) {
-    if (!name.endsWith('.css') || name.startsWith('002-')) continue;
-    const src = fs.readFileSync(path.join(MODULES, name), 'utf8');
+  // Запасное, которое несёт: роль объявлена не во всех наборах, и там, где её
+  // нет, экран красит именно литерал. Трогать такие места нельзя — у
+  // --v4-btn-on-act в обоих синих наборах роль закомментирована с пометкой
+  // «ждёт дизайнера: белый на #2e7cc0 даёт 4.41:1 < 4.5».
+  const load = new Map();
+  for (const { name, full } of cssFiles()) {
+    const src = fs.readFileSync(full, 'utf8');
     for (const m of src.matchAll(/var\((--v4-[a-z0-9-]+),\s*(#[0-9a-fA-F]{3,8})\s*\)/g)) {
       const known = values.get(m[1]);
       // Роль не определена вовсе — это долг соседнего гейта, не этого.
       if (!known) continue;
       if (known.has(m[2].toLowerCase())) continue;
+      if ((sets.get(m[1]) || 0) < PALETTE_SETS) {
+        load.set(m[1], (load.get(m[1]) || 0) + 1);
+        continue;
+      }
       perFile.set(name, (perFile.get(name) || 0) + 1);
     }
   }
-  return perFile;
+  return { perFile, load };
 }
 
 function formatBaseline(perFile) {
@@ -142,7 +176,11 @@ function updateBaseline(perFile) {
   console.log(`Список переписан: ${perFile.size} файлов.`);
 }
 
-const perFile = scan(readPalette());
+const palette = readPalette();
+// Во скольких наборах живёт палитра: роль, объявленная столько же раз, есть
+// везде; объявленная реже — не во всех, и там запасное несёт цвет само.
+const PALETTE_SETS = Math.max(...palette.sets.values());
+const { perFile, load } = scan(palette.values, palette.sets);
 const total = [...perFile.values()].reduce((a, b) => a + b, 0);
 const palettePerFile = scanPaletteRoles();
 const paletteTotal = [...palettePerFile.values()].reduce((a, b) => a + b, 0);
@@ -150,6 +188,20 @@ const paletteTotal = [...palettePerFile.values()].reduce((a, b) => a + b, 0);
 if (process.argv.includes('--update-baseline')) {
   updateBaseline(perFile);
   process.exit(0);
+}
+
+// Несущие запасные — отдельным списком, не долгом. Их нельзя «починить»:
+// на наборе без роли literal и есть цвет. Список нужен, чтобы никто не принял
+// их за враньё и не привёл к значению роли из соседнего набора.
+if (load.size) {
+  const shown = [...load].sort((a, b) => b[1] - a[1]).slice(0, 5)
+    .map(([role, n]) => `${role} ${n}`).join(' · ');
+  console.log(
+    `Несущих запасных: ${[...load.values()].reduce((a, b) => a + b, 0)} `
+    + `у ${load.size} ролей, объявленных не во всех ${PALETTE_SETS} наборах — ${shown}`
+    + (load.size > 5 ? ' …' : '')
+    + '. Это не долг: там, где роли нет, цвет держит именно запасное.',
+  );
 }
 
 if (process.argv.includes('--list')) {
