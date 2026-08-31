@@ -206,6 +206,9 @@
     }
 
     // === UI ===
+    // Тысячи разделяются узким пробелом, как в остальных числах флоу.
+    const fmtKcal = (n) => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
     function CopyMealView({ sourceMeal, sourceMealIndex, sourceDate, targetDate, targetMeals, onCopyToExisting, onCopyToNew }) {
         const allItems = (sourceMeal && sourceMeal.items) || [];
         const sameDay = sourceDate && targetDate && sourceDate === targetDate;
@@ -529,7 +532,12 @@
                     textAlign: 'center',
                     letterSpacing: '0.01em',
                 },
-            }, `${kbjuPreview.dstName}: ${kbjuPreview.dstKcal}к → ${kbjuPreview.totalKcal}к (+${kbjuPreview.addedKcal}к)`),
+            // Строка «итог копирования» пишет величины как на остальных экранах:
+            // «Перекус: 17 → 1 610 ккал (+1 593)». Стояло «17к → 1610к (+1593к)» —
+            // сокращение «к» больше нигде во флоу не встречается, а тысячи шли
+            // без разделителя, и четырёхзначные числа читались сплошняком.
+            }, `${kbjuPreview.dstName}: ${fmtKcal(kbjuPreview.dstKcal)} → `
+              + `${fmtKcal(kbjuPreview.totalKcal)} ккал (+${fmtKcal(kbjuPreview.addedKcal)})`),
             React.createElement('div', {
                 style: { display: 'flex', gap: '8px', padding: '12px 20px 16px' },
             },
