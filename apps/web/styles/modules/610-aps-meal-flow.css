@@ -4159,3 +4159,101 @@ button.meal-quality-badge:active {
   line-height: 1.45;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
 }
+
+/* === Модалки набора: сохранение и удаление ==========================
+   Кадры «Набор · сохранение» и «Набор · удаление». Содержимое обеих раньше
+   было написано инлайном и чужими классами состояний поиска: инлайн не видит
+   ни один гейт, а чужой класс менялся вместе с чужим экраном. */
+.aps-v4-preset-confirm__key {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.aps-v4-preset-confirm__title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--v4-ink, #201e1d);
+}
+
+.aps-v4-preset-confirm__key + .aps-v4-preset-confirm__title {
+  margin-top: 11px;
+}
+
+.aps-v4-preset-confirm__body {
+  margin-top: 9px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.aps-v4-preset-confirm__field {
+  margin-top: 16px;
+}
+
+.aps-v4-preset-confirm__list {
+  margin-top: 14px;
+}
+
+.aps-v4-preset-confirm__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.aps-v4-preset-confirm__row.is-last {
+  border-bottom: none;
+}
+
+.aps-v4-preset-confirm__grams {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.aps-v4-preset-confirm__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.aps-v4-preset-confirm__actions > * {
+  flex: 1;
+  margin-top: 0;
+}
+
+/* Строка кадра «Удаление — не главная кнопка. Терракотовая заливка осталась у
+   «Отмены» по смыслу безопасности, у удаления только фон внимания». */
+.aps-v4-preset-confirm__delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-act-text, #8a4a20);
+  cursor: pointer;
+}
+
+.aps-v4-preset-confirm__delete:active {
+  opacity: 0.7;
+  transition: opacity 120ms ease;
+}

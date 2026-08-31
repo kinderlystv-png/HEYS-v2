@@ -334,7 +334,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   gap: 10px;
   padding-bottom: 10px;
   background: var(--card, #fff);
-  border-bottom: 1px solid var(--border, #e5e7eb);
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 /* Ряд кнопок действий (Добавить фото + Новый продукт) */
@@ -1616,8 +1616,11 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 
 /* Мини-спарклайн за день (линейный) */
 .meals-day-sparkline {
-  border-bottom: 1px solid var(--border, #e5e7eb);
-  background: var(--surface-secondary, #f9fafb);
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  /* Ещё один мост прежней системы рядом с --border: --surface-secondary
+     разрешается в холодный #f9fafb во всех четырёх наборах. Замер это и
+     показал — рамку я правила, а подложка осталась чужой. */
+  background: var(--v4-surface, #f7efe2);
   border-radius: 8px;
   margin: 0 -4px;
   padding: 8px 4px 16px 4px !important;
@@ -2812,7 +2815,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   max-width: 360px;
   border-radius: 26px;
   padding: 24px 20px 20px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  background: var(--v4-bg, #fffaf1);
   box-shadow:
     0 4px 12px rgba(80, 50, 20, 0.16),
     0 24px 56px rgba(80, 50, 20, 0.22);

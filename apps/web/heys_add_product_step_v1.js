@@ -3294,50 +3294,60 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       ),
       deleteConfirmPreset && React.createElement('div', { className: 'aps-v4-preset-confirm', role: 'dialog', 'aria-modal': 'true' },
         React.createElement('div', { className: 'aps-v4-preset-confirm__card' },
-          React.createElement('div', { className: 'aps-v4-search-state__title', style: { color: 'var(--v4-sand-act-deep, #8a4a20)' } }, 'Удалить набор'),
-          React.createElement('div', { style: { fontWeight: 700, fontSize: '16px', marginTop: '11px' } }, `«${deleteConfirmPreset.name}»`),
-          React.createElement('div', { className: 'aps-v4-search-state__body' },
+          React.createElement('div', { className: 'aps-v4-preset-confirm__key' }, 'Удалить набор'),
+          React.createElement('div', { className: 'aps-v4-preset-confirm__title' }, `«${deleteConfirmPreset.name}»`),
+          React.createElement('div', { className: 'aps-v4-preset-confirm__body' },
             'Набор исчезнет из списка. Уже добавленные приёмы останутся как есть — удаляется только заготовка.'),
-          React.createElement('div', { className: 'aps-v4-search-state__actions' },
+          React.createElement('div', { className: 'aps-v4-preset-confirm__actions' },
             React.createElement('button', {
               type: 'button',
               className: 'aps-v4-btn-ghost aps-v4-btn-paper',
               onClick: () => setDeleteConfirmPreset(null)
             }, 'Отмена'),
+            // Строка кадра: «Удаление — не главная кнопка. Терракотовая заливка
+            // осталась у „Отмены" по смыслу безопасности, у удаления только фон
+            // внимания». Стояла .aps-v4-btn-attention.
             React.createElement('button', {
               type: 'button',
-              className: 'aps-v4-btn-attention',
+              className: 'aps-v4-preset-confirm__delete',
               onClick: confirmDeletePreset
             }, 'Удалить'))
         )
       ),
       saveConfirmOpen && React.createElement('div', { className: 'aps-v4-preset-confirm', role: 'dialog', 'aria-modal': 'true' },
         React.createElement('div', { className: 'aps-v4-preset-confirm__card' },
-          React.createElement('div', { style: { fontWeight: 700, fontSize: '16px' } }, 'Сохранить как набор'),
-          React.createElement('div', { className: 'aps-v4-search-state__body' },
+          React.createElement('div', { className: 'aps-v4-preset-confirm__title' }, 'Сохранить как набор'),
+          React.createElement('div', { className: 'aps-v4-preset-confirm__body' },
             `${(editPreset?.items || []).length || 0} ${((editPreset?.items || []).length === 1) ? 'продукт' : 'продукта'} с граммовкой. В следующий раз добавится одним тапом.`),
-          React.createElement('div', { className: 'aps-v4-create-field', style: { marginTop: '16px' } },
-            React.createElement('label', null, 'Название'),
+          React.createElement('div', { className: 'mpr-create-name aps-v4-preset-confirm__field' },
+            React.createElement('div', { className: 'mpr-create-name__label' }, 'Название'),
             React.createElement('input', {
               type: 'text',
+              className: 'mpr-create-name-input',
               value: createName,
               onChange: (e) => setCreateName(e.target.value)
             })),
-          React.createElement('div', { className: 'aps-v4-search-state__tier', style: { marginTop: '14px' } }, 'Состав'),
-          React.createElement('div', { className: 'aps-v4-search-state__tier-list' },
-            (editPreset?.items || []).slice(0, 6).map((item, index) =>
-              React.createElement('div', { key: index }, `${item.name} · ${item.grams} г`))),
-          React.createElement('div', { className: 'aps-v4-search-state__actions' },
-            React.createElement('button', {
-              type: 'button',
-              className: 'aps-v4-btn-primary',
-              onClick: handleSavePreset
-            }, 'Сохранить'),
+          React.createElement('div', { className: 'aps-v4-preset-confirm__list' },
+            (editPreset?.items || []).slice(0, 6).map((item, index, all) =>
+              React.createElement('div', {
+                key: index,
+                className: 'aps-v4-preset-confirm__row' + (index === all.length - 1 ? ' is-last' : '')
+              },
+                React.createElement('span', null, item.name),
+                React.createElement('span', { className: 'aps-v4-preset-confirm__grams' }, `${item.grams} г`)))),
+          // Кадр ставит «Отмену» слева, «Сохранить» справа — выход из модалки
+          // ближе к большому пальцу, чем подтверждение.
+          React.createElement('div', { className: 'aps-v4-preset-confirm__actions' },
             React.createElement('button', {
               type: 'button',
               className: 'aps-v4-btn-ghost aps-v4-btn-paper',
               onClick: () => setSaveConfirmOpen(false)
-            }, 'Отмена'))
+            }, 'Отмена'),
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-v4-btn-primary',
+              onClick: handleSavePreset
+            }, 'Сохранить'))
         )
       )
     );
