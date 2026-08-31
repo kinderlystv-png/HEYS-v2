@@ -289,6 +289,40 @@ describe('Yesterday verify real-data flow', () => {
             meals: [makeMeal({ kcal100: 1600 })]
         });
 
+        // День без еды — именно такие и убирает «не учитывать»: с 2026-08
+        // очистка идёт по явному clearedDateKeys и только для пустых по еде
+        // дней. Прежний контракт (incompleteAction + pendingDateKeys) стирал
+        // приёмы пищи за день, то есть терял настоящие записи человека.
+        setLs('heys_dayv2_2026-03-10', {
+            date: '2026-03-10',
+            meals: [],
+            isFastingDay: false,
+            isIncomplete: false,
+            savedDisplayOptimum: 2000
+        });
+
+        yesterdayStepConfig.save({
+            incompleteAction: 'clear_day',
+            pendingDateKeys: ['2026-03-10'],
+            clearedDateKeys: ['2026-03-10'],
+            quickFillByDate: {}
+        });
+
+        const storedDay = getLs('heys_dayv2_2026-03-10');
+        expect(storedDay.meals).toEqual([]);
+        expect(storedDay.yesterdayVerifyAction).toBe('clear_day');
+        expect(typeof storedDay.yesterdayVerifyAt).toBe('number');
+
+        const pendingAfter = window.HEYS.YesterdayVerify.getPendingPastDays();
+        expect(pendingAfter.totalPendingDays).toBe(0);
+    });
+
+    it('does not wipe a day that actually has food, even when marked cleared', () => {
+        setLs('heys_dayv2_2026-03-09', {
+            date: '2026-03-09',
+            meals: [makeMeal({ kcal100: 1600 })]
+        });
+
         setLs('heys_dayv2_2026-03-10', {
             date: '2026-03-10',
             meals: [makeMeal({ kcal100: 160 })],
@@ -301,16 +335,14 @@ describe('Yesterday verify real-data flow', () => {
         yesterdayStepConfig.save({
             incompleteAction: 'clear_day',
             pendingDateKeys: ['2026-03-10'],
+            clearedDateKeys: ['2026-03-10'],
             quickFillByDate: {}
         });
 
+        // Записи остаются: «не учитывать» — про пустые дни, а не про удаление
+        // еды. Иначе один тап в утреннем разборе стирал бы съеденное.
         const storedDay = getLs('heys_dayv2_2026-03-10');
-        expect(storedDay.meals).toEqual([]);
-        expect(storedDay.yesterdayVerifyAction).toBe('clear_day');
-        expect(typeof storedDay.yesterdayVerifyAt).toBe('number');
-
-        const pendingAfter = window.HEYS.YesterdayVerify.getPendingPastDays();
-        expect(pendingAfter.totalPendingDays).toBe(0);
+        expect(storedDay.meals).toHaveLength(1);
     });
 
     it('does not show yesterday verify for brand-new users without any past day history', () => {

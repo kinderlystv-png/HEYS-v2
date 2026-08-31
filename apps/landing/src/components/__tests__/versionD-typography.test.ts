@@ -53,6 +53,11 @@ const ALLOWED: ReadonlyArray<{ file: string; size: number; why: string }> = [
     size: 22,
     why: 'глиф кнопки закрытия в мобильном меню — иконка, а не текст',
   },
+  {
+    file: 'FooterD.tsx',
+    size: 32,
+    why: 'подпись «HEYS» в подвале: заливка прозрачная, виден только контур в 10 % белого, aria-hidden — фон подвала, а не строка иерархии',
+  },
 ];
 
 const isAllowed = (file: string, size: number) =>

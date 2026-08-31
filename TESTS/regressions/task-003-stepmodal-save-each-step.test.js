@@ -25,7 +25,11 @@ describe('TASK-003 hardening: StepModal saves completed steps on Next', () => {
       source.indexOf('} else {', source.indexOf('if (currentStepIndex < totalSteps - 1)'))
     );
 
-    const saveIndex = nextBranch.indexOf('saveStepConfig(currentConfig, stepData)');
+    // Имя второго аргумента не фиксируем: инвариант в том, что шаг
+    // сохранён до перехода, а не в том, как называется переменная с
+    // данными. Она уже переезжала stepData → allStepData, и сторож
+    // падал на переименовании при полностью целом поведении.
+    const saveIndex = nextBranch.search(/saveStepConfig\(currentConfig,\s*\w+\)/);
     const goIndex = nextBranch.indexOf('goToStep(currentStepIndex + 1');
 
     expect(saveIndex).toBeGreaterThanOrEqual(0);
@@ -34,7 +38,7 @@ describe('TASK-003 hardening: StepModal saves completed steps on Next', () => {
 
   it('final batch save goes through the same deduped save helper', () => {
     expect(source).toContain('const savedStepSigsRef = useRef({});');
-    expect(source).toContain('saveStepConfig(config, stepData)');
+    expect(source).toMatch(/saveStepConfig\(config,\s*\w+\)/);
     expect(source).toContain('savedStepSigsRef.current[config.id] === sig');
   });
 

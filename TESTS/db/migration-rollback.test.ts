@@ -25,6 +25,12 @@ function readMigration(filename: string): string {
     return readFileSync(path.join(MIGRATIONS_DIR, filename), 'utf8');
 }
 
+/**
+ * Каждому тесту дан свой таймаут 60 секунд: обращения к боевой базе идут
+ * через psql, и один прогон занимает около девяти секунд — в дефолтные
+ * десять общего прогона это не укладывалось, и файл краснел таймаутом,
+ * хотя изолированно проходил.
+ */
 describe('Migration rollback verify pattern', () => {
     it('2026-05-30_fix_audit_logs_created_at_tz: forward → rollback → forward (idempotent)', () => {
         // Current state should be: created_at default = now()
@@ -60,7 +66,7 @@ describe('Migration rollback verify pattern', () => {
         );
         expect(afterForward.output).toContain('now()');
         expect(afterForward.output).not.toContain("timezone('utc'");
-    });
+    }, 60_000);
 
     it('2026-05-30_unmask_health_keys_in_audit_log: rollback file matches existing', () => {
         // Verify _rollback_*.sql есть + actually does revert.
@@ -73,19 +79,27 @@ describe('Migration rollback verify pattern', () => {
         const current = runSql(`SELECT prosrc FROM pg_proc WHERE proname='trigger_audit_log'`);
         expect(current.output).not.toContain('[MASKED]');
         expect(current.output).toMatch(/actor_user_id/);  // post-user_id-capture state
-    });
+    }, 60_000);
 
-    it('2026-05-31_create_e2e_test_clients: idempotent re-apply safe', () => {
-        // ON CONFLICT DO NOTHING / DO UPDATE — re-apply не должен fail.
-        const result = runSqlBlock(readMigration('2026-05-31_create_e2e_test_clients.sql'));
-        expect(result.success, result.error).toBe(true);
-
-        // Test clients still exist
+    it('2026-05-31_create_e2e_test_clients: клиенты на месте, повторное применение закрыто политикой согласий', () => {
+        // Клиенты E2E существуют — ради этого миграция и была.
         const check = runSql(
             `SELECT COUNT(*) FROM public.clients ` +
             `WHERE id IN ('11111111-1111-1111-1111-111111111111'::uuid, ` +
             `'22222222-2222-2222-2222-222222222222'::uuid)`
         );
         expect(check.output).toContain('2');
-    });
+
+        // Повторно применить миграцию больше нельзя, и это ожидаемо: она
+        // вставляет согласие user_agreement 1.6, а в июле появился триггер
+        // enforce_consent_document_proof (database/2026-07-27_consent_proof_v2.sql),
+        // который принимает только версии из реестра документов. Миграция
+        // историческая, применяется один раз и в ledger отмечена.
+        //
+        // Проверку держим явной, а не снимаем: если версию в реестр вернут
+        // или миграцию починят, тест упадёт и заставит обновить эту запись.
+        const result = runSqlBlock(readMigration('2026-05-31_create_e2e_test_clients.sql'));
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('consent_version_not_allowed');
+    }, 60_000);
 });

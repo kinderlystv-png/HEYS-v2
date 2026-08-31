@@ -415,12 +415,26 @@ describe('Fingers.bootStub — lazy-load gate', () => {
   });
 
   it('detect-on-boot: snapshot с client-scoped key (heys_<cid>_finger_active_session)', () => {
+    globalThis.window.HEYS.currentClientId = '4545ee50';
     globalThis.localStorage.setItem(
       'heys_4545ee50_finger_active_session',
       JSON.stringify({ state: 'WORK' })
     );
     globalThis.window.dispatchEvent(new Event('heysSyncCompleted'));
     expect(globalThis.window.__appendedScripts).toContain('heys_fingers_bundle_v1.js');
+  });
+
+  it('detect-on-boot: чужой client-scoped snapshot не поднимает сессию', () => {
+    // Ключ другого клиента в том же браузере — обычное дело у куратора с
+    // несколькими подопечными. Раньше stub искал по образцу ключа и цеплял
+    // чужой снимок; теперь сверяется ровно с ключом текущего клиента.
+    globalThis.window.HEYS.currentClientId = '4545ee50';
+    globalThis.localStorage.setItem(
+      'heys_99999999_finger_active_session',
+      JSON.stringify({ state: 'WORK' })
+    );
+    globalThis.window.dispatchEvent(new Event('heysSyncCompleted'));
+    expect(globalThis.window.__appendedScripts).toEqual([]);
   });
 
   it('openFullscreen триггерит lazy-load даже без snapshot', () => {
@@ -581,18 +595,23 @@ describe('Fingers.filterProgramsByEquipment', () => {
   });
 
   // ──── Multi-tier hybrid model (per-exercise equipmentTier) ────
-  it('HYBRID: horst_mixed_day (block+door+none) показывается в любой комбинации', () => {
+  it('HYBRID: horst_mixed_day требует все свои виды снаряжения сразу', () => {
     const all = window.HEYS.Fingers.PROGRAMS;
-    // Любой отдельный таб с пересечением подходит.
-    expect(window.HEYS.Fingers.filterProgramsByEquipment(all, { blockMode: true })
-      .find((p) => p.id === 'horst_mixed_day')).toBeDefined();
-    expect(window.HEYS.Fingers.filterProgramsByEquipment(all, { edgeLimit: 25 })
-      .find((p) => p.id === 'horst_mixed_day')).toBeDefined();
-    expect(window.HEYS.Fingers.filterProgramsByEquipment(all, { noEquipment: true })
-      .find((p) => p.id === 'horst_mixed_day')).toBeDefined();
-    // Только fingerboard — НЕ показывается (нет 'full' в типах).
-    expect(window.HEYS.Fingers.filterProgramsByEquipment(all, { equipmentTypes: ['full'] })
-      .find((p) => p.id === 'horst_mixed_day')).toBeUndefined();
+    const find = (eq) => window.HEYS.Fingers.filterProgramsByEquipment(all, eq)
+      .find((p) => p.id === 'horst_mixed_day');
+
+    // Протокол собран из трёх блоков на разном снаряжении (block + door +
+    // none), и выполнить его целиком можно, только имея всё три. Раньше
+    // хватало пересечения по одному tier'у — и человеку предлагали
+    // сессию, половину которой ему не на чем сделать.
+    expect(find({ equipmentTypes: ['block', 'door', 'none'] })).toBeDefined();
+
+    // Любой неполный набор — не показываем.
+    expect(find({ blockMode: true })).toBeUndefined();
+    expect(find({ edgeLimit: 25 })).toBeUndefined();
+    expect(find({ noEquipment: true })).toBeUndefined();
+    expect(find({ equipmentTypes: ['block', 'door'] })).toBeUndefined();
+    expect(find({ equipmentTypes: ['full'] })).toBeUndefined();
   });
 
   it('HYBRID: getProgramEquipmentTypes возвращает unique tier set из exercises', () => {

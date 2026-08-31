@@ -7,7 +7,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 
-const readSource = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+// Переводы строк нормализуем: на Windows исходники лежат в дереве с CRLF,
+// и многострочные образцы ниже не находили ничего.
+const readSource = (relativePath) =>
+  fs.readFileSync(path.join(repoRoot, relativePath), 'utf8').replace(/\r\n/g, '\n');
 
 const evalScript = (relativePath) => {
   const source = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
@@ -43,7 +46,10 @@ describe('advice defects 3c', () => {
     const coreSource = readSource('apps/web/advice/_core.js');
 
     it('applies punctuation variants before bare firstName placeholder', () => {
-      const fnMatch = coreSource.match(/function personalizeText\(text, ctx\) \{[\s\S]*?return result\.trim\(\);\n    \}/);
+      // До закрывающей скобки на отступе функции, а не до первого
+      // `return result.trim()`: после него в теле появился возврат
+      // заглавной буквы, и прежняя граница перестала совпадать.
+      const fnMatch = coreSource.match(/function personalizeText\(text, ctx\) \{[\s\S]*?\n    \}/);
       expect(fnMatch).toBeTruthy();
       const fnSource = fnMatch[0];
 
@@ -60,7 +66,10 @@ describe('advice defects 3c', () => {
 
       const { personalizeText } = window.HEYS.adviceCoreHelpers;
       const result = personalizeText('${firstName}, после тренировки нужен белок', { prof: {} });
-      expect(result).toBe('после тренировки нужен белок');
+      // Шаблон рассчитан на имя первым, поэтому следующее слово идёт со
+      // строчной. У человека без имени обращение исчезает — и совет
+      // обязан начинаться с заглавной, а не с обрывка «после…».
+      expect(result).toBe('После тренировки нужен белок');
       expect(result.startsWith(',')).toBe(false);
     });
   });
@@ -86,7 +95,9 @@ describe('advice defects 3c', () => {
       expect(renderSource).toContain('badgeAdvices');
       expect(renderSource).toContain('totalAdviceCount');
       expect(renderSource).toContain('displayAdviceCount');
-      expect(adviceUiSource).toMatch(/Советы \(\$\{displayAdviceCount\}\)/);
+      // Форму счётчика не фиксируем скобками: копирайт свёлся с кадром
+      // и «Советы (N)» стали «Советы, N».
+      expect(adviceUiSource).toMatch(/Советы[^\n]*\$\{displayAdviceCount\}/);
       expect(renderSource).toContain('getSortedGroupedAdvices(drawerAdvices)');
     });
   });
@@ -95,7 +106,10 @@ describe('advice defects 3c', () => {
     const adviceUiSource = readSource('apps/web/day/_advice.js');
 
     it('moves trace/diagnostics behind curator service screen', () => {
-      expect(adviceUiSource).toMatch(/_isCurator && \(adviceTraceAvailable \|\| adviceDiagnostics\)/);
+      // Вход в служебное переехал из шапки шторки в служебную створку
+      // настроек, прежнего инлайнового условия больше нет. Сторожим то
+      // же по сути: служебный экран — отдельный слой со своим состоянием.
+      expect(adviceUiSource).toMatch(/adviceServiceOpen && renderAdviceServiceScreen\(/);
       expect(adviceUiSource).toContain('renderAdviceServiceScreen');
       expect(adviceUiSource).toContain('Служебное');
       expect(adviceUiSource).not.toMatch(/title: 'Скопировать технический лог принятия решений по советам'/);
@@ -109,10 +123,15 @@ describe('advice defects 3c', () => {
       expect(adviceUiSource).toContain('renderAdviceReadFeedbackPanel');
       expect(adviceUiSource).toContain('renderAdviceHideUndoPanel');
       expect(adviceUiSource).toContain('renderAdviceSyncBanner');
-      expect(adviceUiSource).toMatch(/👍 Полезно/);
-      expect(adviceUiSource).toMatch(/👎 Мимо/);
+      // Эмодзи заменены иконками набора: подписи те же, рисует их
+      // renderAdviceV4Icon(thumb-up / thumb-down).
+      expect(adviceUiSource).toMatch(/renderAdviceV4Icon\(React, 'thumb-up'\), 'Полезно'/);
+      expect(adviceUiSource).toMatch(/renderAdviceV4Icon\(React, 'thumb-down'\), 'Мимо'/);
       expect(adviceUiSource).toContain('Совет скрыт до завтра');
-      expect(adviceUiSource).toContain('Отметки не сохранились');
+      // Копирайт баннера свёлся с кадром: вместо «Отметки не сохранились»
+      // он объясняет причину и снимает тревогу — «Оценка не ушла — нет
+      // связи», ниже «отправится сама».
+      expect(adviceUiSource).toContain('Оценка не ушла — нет связи');
       expect(adviceUiSource).toContain('advice-v4-hide-ring');
     });
   });

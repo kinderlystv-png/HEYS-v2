@@ -240,10 +240,21 @@ describe('HEYS advice engine', () => {
     expect(result).toBe('Вес растёт — проверь калории');
   });
 
-  it('still decorates achievements on high mood', () => {
+  it('leaves achievements plain on high mood — no exclamations', () => {
+    // Восклицательные приставки («Отлично! », «Супер! ») из тона high убраны
+    // в heys_advice_rules_v1.js: продукт не поздравляет человека за обычный
+    // день. Достижение возвращается ровно тем текстом, что пришло.
     const result = window.HEYS.advice.adaptTextToMood('План выдержан', 5, 'achievement');
 
-    expect(result).toMatch(/^(Отлично! |Супер! |Так держать! )План выдержан( 🎉| 💪)?$/);
+    expect(result).toBe('План выдержан');
+  });
+
+  it('still softens advice on low mood', () => {
+    // А вот смягчение при низком настроении осталось — это не украшение,
+    // а забота: тон low единственный, у кого приставки непустые.
+    const result = window.HEYS.advice.adaptTextToMood('План не выдержан', 1, 'tip');
+
+    expect(result).toMatch(/^(Ничего страшного, |Всё нормально, |Не переживай, )План не выдержан$/);
   });
 
   it('treats downward weight trend as warning for bulk goal', () => {

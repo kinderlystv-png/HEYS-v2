@@ -68,6 +68,20 @@ export default defineConfig({
       '.github/skills/**',
       'TOOLS/templates/**',
       'TESTS/example.test.js',
+      // Проекты со своим прогоном. Корневой конфиг подхватывал их файлы
+      // второй раз и валил чужими настройками: apps/web зелёный своим
+      // `cd apps/web && vitest run` (его же гоняет deploy-гейт), пакеты —
+      // своими vitest.config.ts через workspace, а apps/mobile и
+      // apps/genda-tests вообще вне pnpm-workspace, так что их зависимости
+      // здесь не установлены. Разбор 31 августа: из 16 красных в корневом
+      // прогоне семь были только этим дублем.
+      'apps/web/**',
+      'packages/**',
+      // Вне workspace (pnpm-workspace.yaml: «Temporarily disabled other
+      // apps»). Мобильные тесты требуют expo, в CI по ним идёт только
+      // type-check; genda-tests — node:test со своим `node --test`.
+      'apps/mobile/**',
+      'apps/genda-tests/**',
       // Не сканируем git worktree'и параллельных AI-агентов — у них
       // свои незакоммиченные изменения которые могут ломать тесты
       // основного репо при vitest run.

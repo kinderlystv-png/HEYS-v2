@@ -95,9 +95,12 @@ describe('TASK-006: баннер разбора для полностью пус
     expect(labels.some((t) => t.includes('голодание'))).toBe(true);
     expect(labels.some((t) => t.includes('Дописать'))).toBe(true);
     expect(labels.some((t) => t.includes('Не учитывать'))).toBe(true);
-    // описание — про отсутствие данных, не про «съедено N ккал»
+    // Описание — про отсутствие данных, а не про «съедено N ккал». Точную
+    // фразу не фиксируем: копирайт уже переезжал с «нет данных» на «нет
+    // записей» при сведении с кадром, и сторож краснел на живом баннере.
     const full = textOf(vnode);
-    expect(full).toContain('нет данных');
+    expect(full).toMatch(/нет (данных|записей)/);
+    expect(full).not.toMatch(/съедено/i);
   });
 
   it('пустой день ВНЕ окна pending (не в missingDays) баннер НЕ показывает', () => {
