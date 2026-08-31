@@ -91,7 +91,13 @@ describe('Insights tab v4 structure', () => {
   });
 
   it('контракт «Инсайты»: похвала без кнопок, риск первым, зрелость словом', () => {
-    expect(dashboardSource).toContain('Сегодня без заданий — ритм держится, вчерашний план закрыт.');
+    // Похвала разбита надвое коммитом b499acf52: факт и его основание читаются
+    // по-разному — сначала «заданий нет», потом «потому что». Тест остался на
+    // прежней цельной фразе и с тех пор был красным. Проверяем обе части и то,
+    // что они лежат в своих узлах: иначе склейка обратно в одну строку пройдёт
+    // молча.
+    expect(dashboardSource).toContain("insights-v4-hero__praise' }, 'Сегодня без заданий'");
+    expect(dashboardSource).toContain("'ритм держится, вчерашний план закрыт'");
     expect(dashboardSource).toContain('buildRelapseRiskAttentionCard');
     expect(dashboardSource).toContain("'риск срыва · '");
     expect(dashboardSource).toContain("insights-v4-maturity--forecast' }, 'прогноз'");
