@@ -14,17 +14,27 @@
 // значило бы утопить сигнал в 2765 срабатываниях.
 //
 // ─────────────────────────────────────────────────────────────────────────
-// ПРЕДЕЛ, который эта проверка не переходит.
+// ДВА ПРЕДЕЛА, которые эта проверка не переходит. Оба печатаются в вывод:
+// комментарии читают авторы, вывод читают все.
 //
-// Она отвечает «цвет задан ролью», но НЕ «цвет верный». Взять не ту роль она
-// не помешает: `--v4-sand-surface` вместо `--v4-surface` пройдёт молча, и оба
-// синих набора останутся песочными. Замер вычисленных значений на двух
-// наборах — единственный способ это увидеть, он требует браузера и живёт в
-// apps/web/scripts/ui-v4-visual-capture.mjs.
+// 1. Она отвечает «цвет задан ролью», но НЕ «цвет верный». Взять не ту роль
+//    она не помешает: `--v4-sand-surface` вместо `--v4-surface` пройдёт
+//    молча, и оба синих набора останутся песочными. Замер вычисленных
+//    значений на двух наборах — единственный способ это увидеть, он требует
+//    браузера и живёт в apps/web/scripts/ui-v4-visual-capture.mjs.
 //
-// То есть перед вами половина правила «сверять цвет на двух наборах», а не
-// его механическая реализация. Предел напечатан в выводе, а не спрятан в
-// комментарии: комментарии читают авторы, вывод читают все.
+// 2. Она видит только файлы, названные в вердиктах, и только своим правилом
+//    счёта. Модуль сведённой зоны, на который ни один вердикт не сослался по
+//    имени, в счёт не входит вовсе — и его ноль означает «не смотрели», а не
+//    «чисто». 31 августа гейт так доложил «кабинет 0, отчёты 0», хотя голых
+//    литералов там 15 и 24: их модули не названы ни одним вердиктом. Поэтому
+//    необойдённое печатается числом рядом с обойдённым, а не молчит.
+//
+// Правило счёта узкое намеренно: строка `<свойство>: #hex;` из шести
+// перечисленных свойств, с начала строки, вне комментариев. Голый hex внутри
+// `var(--роль, #hex)` — запасное значение, а не голый литерал; им занимается
+// ui-v4-check-foreign-fallbacks. Описи расхождений считают шире — это не
+// противоречие: у описи рабочий список, у гейта храповик.
 // ─────────────────────────────────────────────────────────────────────────
 //
 // Форма — храповик, как у соседних гейтов: нынешние числа заморожены по
@@ -40,6 +50,13 @@ const STYLES = path.join(ROOT, 'apps/web/styles');
 
 // Свойства, у которых голый литерал означает именно цвет мимо набора.
 const COLOUR_PROPS = /^\s*(background|background-color|color|border-color|fill|stroke):\s*#[0-9a-fA-F]{3,8}\s*;/;
+
+// Файл канваса — источник ролей, а не код продукта: вердикты ссылаются на
+// него по имени, но проверять в нём нечего.
+const NOT_PRODUCT = new Set(['v4-canvas.css']);
+
+// Имена в вердиктах пишут руками, и короткая форма встречается наравне с полной.
+const ALIAS = { '733-login-theme.css': '733-ui-v4-login-theme.css' };
 
 // Долг на 31 августа 2026. Список может только уменьшаться.
 const BASELINE = {
@@ -61,6 +78,7 @@ const BASELINE = {
 /** Файлы, на которые ссылаются вердикты, — то есть сведённые. */
 function sweptFiles() {
   const names = new Set();
+  const unresolved = new Set();
   for (const entry of fs.readdirSync(VERDICTS)) {
     if (!entry.endsWith('.json')) continue;
     let data;
@@ -71,11 +89,18 @@ function sweptFiles() {
     }
     for (const row of Object.values(data.rows || {})) {
       for (const match of String(row && row.f).matchAll(/([0-9a-zA-Z_.-]+\.css)/g)) {
-        names.add(match[1]);
+        const raw = match[1];
+        // Проза вердикта сокращает длинные имена многоточием: `400-...css`.
+        // Это не файл; пропустить его молча нельзя — счёт решит, что смотрел.
+        if (raw.includes('..')) continue;
+        if (NOT_PRODUCT.has(raw)) continue;
+        const name = ALIAS[raw] || raw;
+        if (findFile(name)) names.add(name);
+        else unresolved.add(`${entry.replace(/\.json$/, '')} → ${raw}`);
       }
     }
   }
-  return names;
+  return { names, unresolved: [...unresolved].sort() };
 }
 
 function findFile(name) {
@@ -95,15 +120,19 @@ function countBare(full) {
   return hits;
 }
 
+const { names: swept, unresolved } = sweptFiles();
+
 const perFile = new Map();
-for (const name of [...sweptFiles()].sort()) {
-  const full = findFile(name);
-  if (!full) continue;
-  const hits = countBare(full);
+for (const name of [...swept].sort()) {
+  const hits = countBare(findFile(name));
   if (hits) perFile.set(name, hits);
 }
 
 const total = [...perFile.values()].reduce((sum, n) => sum + n, 0);
+
+// Модули, которых гейт не касался вовсе: их ноль означает «не смотрели».
+const unseen = fs.readdirSync(path.join(STYLES, 'modules'))
+  .filter((file) => file.endsWith('.css') && !swept.has(file));
 
 if (process.argv.includes('--update-baseline')) {
   const lines = [...perFile].sort((a, b) => a[0].localeCompare(b[0]))
@@ -127,6 +156,13 @@ const top = [...perFile].sort((a, b) => b[1] - a[1]).slice(0, 5)
 console.log(
   `Голых литералов цвета в сведённых файлах: ${total} в ${perFile.size} — ${top} …`,
 );
+console.log(
+  `  Охват: ${swept.size} файлов названы вердиктами; вне охвата ${unseen.length} модулей — `
+  + 'у них ноль означает «не смотрели», а не «чисто».',
+);
+if (unresolved.length) {
+  console.log(`  Имён из вердиктов нет на диске: ${unresolved.length} — ${unresolved.join(' · ')}`);
+}
 console.log(
   '  Проверка отвечает «цвет задан ролью», но не «цвет верный»: не ту роль '
   + 'она не поймает. Замер на двух наборах — ui-v4-visual-capture.mjs.',
