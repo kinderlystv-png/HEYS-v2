@@ -20,7 +20,7 @@
   a:hover{color:var(--acs)}
   .ph{width:375px;height:auto;min-height:0;display:block;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)}
   .sc{flex:none;min-height:0;overflow:visible;padding:6px 18px 18px}
-  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(var(--ink),.42)}
+  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(var(--ink),.56)}
   .n{font-variant-numeric:tabular-nums}
   .tier{font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:20px 0 10px}
   .grp{background:var(--c1);border-radius:20px;padding:16px}
@@ -55,7 +55,9 @@
   .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;font-style:normal;text-wrap:pretty}
   .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(var(--ink),.38);margin:18px 0 2px}
   .trk{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid rgba(var(--ink),.07)}
-  .bar{flex:1;height:8px;border-radius:999px;background:rgba(var(--ink),.07);overflow:hidden}
+  .pbar{position:relative;height:8px;border-radius:999px;background:rgba(var(--ink),.12)}
+  .pfill{display:block;height:100%;border-radius:999px}
+  .pknob{position:absolute;top:50%;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(80,50,20,.28),inset 0 0 0 2px var(--gr2)}
   .dot{flex:none;width:9px;height:9px;border-radius:999px}
 </style>
 </helmet>
@@ -101,9 +103,9 @@
               <span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Шаги</span>
               <span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">8 420 <span style="color:rgba(var(--ink),.38);">/ 10 000</span></span>
             </div>
-            <div class="bar" style="margin-top:10px;"><span style="display:block;width:67%;height:8px;border-radius:999px;background:var(--gr2);"></span></div>
+            <div class="pbar" style="margin-top:14px;"><span class="pfill" style="width:67%;background:var(--gr2);"></span><span class="pknob" style="left:67%;"></span></div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;">
-              <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">312 ккал</span>
+              <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">312 ккал</span>
               <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">факт — ползунком, цель — тапом</span>
             </div>
           </div>
@@ -191,18 +193,18 @@
           <div class="grp">
             <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
               <span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Шаги</span>
-              <span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">0 / 10 000</span>
+              <span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">0 / 10 000</span>
             </div>
-            <div class="bar" style="margin-top:10px;"></div>
+            <div class="pbar" style="margin-top:14px;"><span class="pknob" style="left:0;box-shadow:0 1px 3px rgba(80,50,20,.28),inset 0 0 0 2px rgba(var(--ink),.28);"></span></div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;">
-              <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">0 ккал</span>
+              <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">0 ккал</span>
               <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">факт — ползунком, цель — тапом</span>
             </div>
           </div>
           <div class="cd" style="margin-top:10px;">
-            <div class="row"><span style="color:var(--tx);">Тренировки</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">не отмечено</span></div>
-            <div class="row"><span style="color:var(--tx);">Бытовая активность</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">не отмечено</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Зарядка</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">не отмечено</span></div>
+            <div class="row"><span style="color:var(--tx);">Тренировки</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">не отмечено</span></div>
+            <div class="row"><span style="color:var(--tx);">Бытовая активность</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">не отмечено</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Зарядка</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">не отмечено</span></div>
           </div>
           <div class="tier">Действие</div>
           <div class="btn">Добавить активность</div>
@@ -226,15 +228,15 @@
               <span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Шаги</span>
               <span style="display:flex;align-items:center;gap:7px;"><span class="badge" style="color:rgba(var(--ink),.5);">оценка</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">7 900 <span style="color:rgba(var(--ink),.38);">/ 10 000</span></span></span>
             </div>
-            <div class="bar" style="margin-top:10px;"><span style="display:block;width:63%;height:8px;border-radius:999px;background:rgba(var(--ink),.16);"></span></div>
+            <div class="pbar" style="margin-top:14px;"><span class="pfill" style="width:63%;background:rgba(var(--ink),.22);"></span><span class="pknob" style="left:63%;box-shadow:0 1px 3px rgba(80,50,20,.28),inset 0 0 0 2px rgba(var(--ink),.28);"></span></div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;">
-              <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">293 ккал</span>
+              <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">293 ккал</span>
               <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">поставьте факт ползунком</span>
             </div>
             <div class="sm" style="margin-top:10px;">Числа за этот день нет — взята медиана ваших последних 14 дней. Она участвует в расходе и в цели, поэтому помечена.</div>
           </div>
           <div class="cd" style="margin-top:10px;">
-            <div class="row"><span style="color:var(--tx);">Тренировки</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">не отмечено</span></div>
+            <div class="row"><span style="color:var(--tx);">Тренировки</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">не отмечено</span></div>
             <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Бытовая активность</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">40 мин · 84 ккал</span></div>
           </div>
           <div class="sm">Пометка — тот же приём, что у расчётного веса: подставленное значение видно всегда и не притворяется фактом.</div>
@@ -272,7 +274,7 @@
           <div class="tier">Сегодня</div>
           <div class="cd">
             <div class="row"><span style="color:var(--tx);">Шаги</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">4 120 / 10 000</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Тренировки</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">не начаты</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Тренировки</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">не начаты</span></div>
           </div>
           <div class="sm">Назначенный план даёт ноль калорий до старта — поэтому в строке тренировок стоит «не начаты», а не число.</div>
         </div>
@@ -314,7 +316,7 @@
           <div class="tier">Сегодня</div>
           <div class="cd">
             <div class="row"><span style="color:var(--tx);">Шаги</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">6 780 / 10 000</span></div>
-            <div class="row"><span style="color:var(--tx);">Тренировки</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">день отдыха</span></div>
+            <div class="row"><span style="color:var(--tx);">Тренировки</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">день отдыха</span></div>
             <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Зарядка</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--gr);">08:05 · была</span></div>
           </div>
           <div class="sm">Строка «Следующая тренировка» больше не пропадает вместе с блоком: прежде в пустой день она исчезала, и программы на экране не было вовсе.</div>
@@ -408,11 +410,11 @@
           <div class="cd">
             <div class="row">
               <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Рабочие веса</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">данных 9 дней из 14</span></span>
-              <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">рано сравнивать</span>
+              <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">рано сравнивать</span>
             </div>
             <div class="row" style="border-bottom:none;">
               <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Рабочие веса</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">программа сменилась 12 августа</span></span>
-              <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">нет общих упражнений</span>
+              <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">нет общих упражнений</span>
             </div>
           </div>
           <div class="sm">Два состояния показаны рядом только на канвасе — в продукте строка одна. «Нет общих упражнений» не значит «веса не растут»: сравнивать нечего, а не результат плохой.</div>
@@ -436,6 +438,100 @@
     </div>
   </div>
 
+  <div class="sect"><span class="lt">Д</span><span class="tt">Нагрузка и вход в конструктор</span><span class="st">идущая тренировка, предупреждение по группе, слои и вердикт сессии</span></div>
+  <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
+    <div>
+      <div class="lab"><b>Актив · тренировка идёт</b><span>вход в конструктор из ленты дня</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Актив · тренировка идёт" data-vid="вид · идущая тренировка">
+        <div class="top"><span class="ttl">Актив</span><span class="k n">сб · 30 авг</span></div>
+        <div class="sc">
+          <div class="tier">Сегодня</div>
+          <div class="cd">
+            <div class="row" style="border-bottom:none;">
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Тренировки</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:var(--ac);">силовая идёт · 10 из 23 подходов</span></span>
+              <span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">165 ккал</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--ac);">›</span></span>
+            </div>
+          </div>
+          <div class="grp" style="margin-top:10px;box-shadow:inset 0 0 0 2px var(--acs);">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+              <span style="font:700 13px/1.3 Figtree,sans-serif;color:var(--tx);">Грудь, спина, плечи</span>
+              <span class="badge">идёт</span>
+            </div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:5px;">начата в 18:40 · упражнение 3 из 7</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-top:12px;">
+              <span class="n" style="font:800 26px/1 Figtree,sans-serif;color:var(--tx);letter-spacing:-.02em;">47:12</span>
+              <span class="n" style="font:600 12px/1 Figtree,sans-serif;color:var(--gr);">10 из 23 подходов</span>
+            </div>
+            <div class="pbar" style="margin-top:10px;"><span class="pfill" style="width:43%;background:var(--acs);"></span></div>
+            <div class="btn" style="margin-top:12px;">Продолжить тренировку</div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);text-align:center;margin-top:6px;">Жим гантелей сидя · подход 2 из 4</div>
+            <div class="sm">Пока тренировка идёт, объём и калории в ярусе «Сегодня» считаются по отмеченным подходам и растут на глазах. Итог придёт из конструктора, когда сессия закрыта.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Актив · нагрузка предупреждает</b><span>группа третий день подряд</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Актив · нагрузка предупреждает" data-vid="вид · предупреждение нагрузки">
+        <div class="top"><span class="ttl">Актив</span><span class="k n">сб · 30 авг</span></div>
+        <div class="sc">
+          <div class="grp" style="margin-top:12px;background:var(--tint);">
+            <div style="font:700 13px/1.32 Figtree,sans-serif;color:var(--ac2);">Спина третий день подряд</div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:4px;">восстановление ещё не закрыто с воскресенья</div>
+            <div class="p">Сегодня лучше жать, чем тянуть. Если тяга принципиальна — оставьте два рабочих подхода вместо четырёх.</div>
+            <div style="display:flex;gap:7px;margin-top:12px;">
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--acs);font:700 12px/1 Figtree,sans-serif;color:var(--on-acs);">Взять день жимов</span>
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--bg);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.58);">Всё равно тянуть</span>
+            </div>
+            <div class="sm" style="margin-top:10px;">Уверенность низкая — данных 9 дней из 14. Совет остаётся советом: оба выхода равнозначны, запрета нет.</div>
+          </div>
+          <div class="tier">Что стоит за советом</div>
+          <div class="cd">
+            <div class="row"><span style="color:var(--tx);">Спина</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ac2);">тянули пт, чт, ср</span></div>
+            <div class="row"><span style="color:var(--tx);">Грудь</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--gr);">отдыхала 4 дня</span></div>
+            <div class="row" style="border-bottom:none;"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Основная группа берёт полный вес</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">синергист — половину, как в конструкторе</span></span></div>
+          </div>
+          <div class="sm">Совет считается по группам мышц упражнений, а не по названию тренировки: «спина» набирается и тягой блока, и подтягиваниями, где спина — основная.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Актив · нагрузка · слои и вердикт</b><span>динамика вместо абсолютных чисел</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Актив · нагрузка слои" data-vid="вид · слои нагрузки">
+        <div class="top"><span class="ttl">Нагрузка</span><span class="k n">сб · 30 авг</span></div>
+        <div class="sc">
+          <div class="tier">Как меняется</div>
+          <div class="cd">
+            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Силовая нагрузка · накопленная</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">третью неделю подряд, окно 6 недель</span></span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--tx);">растёт</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Силовая усталость · короткое окно</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">окно 7 дней · обгоняет накопленную</span></span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac2);">растёт быстрее</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Кардио — отдельным рядом</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">в одно число с силовой не сводится</span></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">без изменений</span></div>
+            <div class="row" style="border-bottom:none;"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Вклад этой сессии</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">в силовом ряду, своей единицей — тоннажем</span></span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">9,4 т</span></div>
+          </div>
+          <div class="sm">Абсолютных значений нет намеренно: шкала не откалибрована на живой истории, и «72 из 100» читалось бы как измерение. Числа не хранятся — считаются на чтении.</div>
+          <div class="tier">Вердикт сессии</div>
+          <div class="grp" style="background:var(--gr-bg);">
+            <div style="font:700 13px/1.32 Figtree,sans-serif;color:var(--gr);">Сессия зачтена как тяжёлая</div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:4px;">следующая тяжёлая — не раньше четверга</div>
+            <div style="display:flex;gap:7px;margin-top:12px;">
+              <span style="flex:1;background:var(--bg);border-radius:12px;padding:10px 11px;"><span class="k">восстановление</span><span style="display:block;height:8px;border-radius:999px;background:rgba(var(--ink),.1);overflow:hidden;margin:8px 0 7px;"><span style="display:block;width:38%;height:100%;border-radius:999px;background:var(--ovl);"></span></span><span class="n" style="font:700 12px/1 Figtree,sans-serif;color:var(--tx);">38 % · ~14 ч</span></span>
+              <span style="flex:1;background:var(--bg);border-radius:12px;padding:10px 11px;"><span class="k">готовность</span><span style="display:block;height:8px;border-radius:999px;background:rgba(var(--ink),.1);overflow:hidden;margin:8px 0 7px;"><span style="display:block;width:44%;height:100%;border-radius:999px;background:var(--wat);"></span></span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--tx);">ниже нормы</span></span>
+            </div>
+          </div>
+          <div class="sm">Вердикт ставится по тоннажу и тяжести подходов закрытой сессии — их считает конструктор. Восстановление названо процентом и часами, готовность — словом: часы человек проверяет по себе, а «готовность 44 %» проверить нечем.</div>
+        </div>
+      </div>
+    </div>
+    <div class="an" data-nomirror>
+      <div class="anh">Решения этой секции</div>
+      <div class="ab" data-anchor="Продолжить тренировку"><b>Вход в конструктор — идущая сессия</b><span>Карточка не пересказывает тренировку: она отвечает «где я остановился» — время, счёт подходов, следующее упражнение — и ведёт внутрь. Всё остальное про сессию рисует конструктор, и это единственная кнопка входа.</span><i>содержимое конструктора — strength-builder.v4.dc.html (в проекте «Конструктор силовой»); здесь только вход и строка яруса «Сегодня»</i></div>
+      <div class="ab" data-anchor="10 из 23 подходов"><b>Пока сессия идёт, счёт считается по отмеченным</b><span>Объём и калории растут на глазах, а не появляются в конце: иначе ярус «Сегодня» полдня показывает ноль там, где человек работает. Плановый объём в ярус по-прежнему не идёт.</span></div>
+      <div class="ab" data-anchor="Спина третий день подряд"><b>Нагрузка советует, а не запрещает</b><span>У предупреждения два равнозначных выхода и названная уверенность: данных 9 дней из 14 — этого мало для утверждения. Совет считается по группам мышц упражнений, поэтому он совпадает с тем, как конструктор делит вес между основной и синергистом.</span></div>
+      <div class="ab" data-anchor="в одно число с силовой не сводится"><b>Кардио отдельным рядом</b><span>Коэффициента «килограмм равно минуте» не существует, поэтому силовая и кардио не сводятся в один индекс. Два ряда честнее одного придуманного числа.</span></div>
+      <div class="ab" data-anchor="Абсолютных значений нет намеренно"><b>Только динамика, пока шкала не выверена</b><span>Числа модели не хранятся, а считаются на чтении, и шкала не откалибрована на живой истории. «Растёт» и «растёт быстрее» — то, за что можно отвечать; «72 из 100» — нет.</span></div>
+      <div class="ab" data-anchor="Сессия зачтена как тяжёлая"><b>Вердикт приходит из конструктора</b><span>Тяжесть сессии считается по её тоннажу и тяжести подходов — данные закрытой сессии. Поэтому вердикт живёт здесь, а его исходные числа — в конструкторе, и своей арифметики зона не заводит.</span></div>
+    </div>
+  </div>
+
   <div class="ctr" data-contract style="background:var(--c2);border-radius:26px;padding:22px 24px;margin-top:38px;max-width:1080px;">
     <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(var(--ink),.42);">Контракт канваса</div>
 
@@ -449,7 +545,7 @@
     <div class="spec"><b>порядок сверху вниз</b><span data-v="цель дня (hero) → программа куратора, если есть → ярус «Сегодня» → ярус «Действие» → ярус «История». Порядок не настраивается"></span></div>
     <div class="spec"><b>«Кардио» как имя снято</b><span data-v="под этим словом лежали семь сущностей: программа, назначенная силовая, правка куратора, силовые с журналом, хобби, «Пальцы» и бытовая активность — кардио было одной из них. Ярус «Сегодня» раскладывается на три строки: «Тренировки», «Бытовая активность», «Зарядка»; аккордеон остаётся только внутри тренировок, для карточек с журналом подходов"></span><i>решение владельца 30 августа</i></div>
     <div class="spec"><b>ярус не исчезает пустым</b><span data-v="прежде весь блок пропадал, когда нет ни тренировок, ни быта, — и вместе с ним пропадала строка программы. Теперь строки стоят всегда, при отсутствии данных — «не отмечено» тоном чернил 38 %"></span></div>
-    <div class="spec" style="border-bottom:none"><b>три элемента программы</b><span data-v="правка куратора (перехватывает день, тон предупреждения) → карточка назначенного плана → строка «Следующая тренировка». Строка и карточка взаимоисключающие: строка прячется, когда план на сегодня есть. Все три стоят выше яруса «Сегодня»"></span></div>
+    <div class="spec" style="border-bottom:none"><b>три элемента программы</b><span data-v="правка куратора (перехватывает день, тон предупреждения) → карточка назначенного плана → строка «Следующая тренировка». Строка и карточка взаимоисключающие: строка прячется, когда план на сегодня есть. Все три стоят выше яруса «Сегодня» Решение 31 августа (ответ на срез вопросов кодера): Программа куратора на сегодня показывается КАРТОЧКОЙ .grp — заголовок «Сегодня по программе», пилюля «от куратора», проза, «Начать» и ряд из двух, — а не строкой списка .cd. Это главное действие экрана, у него своя кнопка и своя проза; строка списка этого не несёт. Строку «Программа · сегодня силовая…» из кадра «Актив · день собран» убрать, вместе с внутренним противоречием кадра: либо план не начат и ярус пуст, либо тренировка выполнена и плана уже нет."></span></div>
 
     <div class="ctrH">Цель дня и разбор</div>
     <div class="spec"><b>разбор приходит к числу</b><span data-v="последняя строка цепочки — «Цель дня» с тем же числом, что в hero. Прежняя редакция кончалась процентом дефицита, и в день с долгом человек видел 2 210 сверху и приходил к 1 940 внизу"></span></div>
@@ -479,27 +575,39 @@
     <div class="spec"><b>причина пропуска зарядки</b><span data-v="день, отмеченный «не сегодня», спрашивает причину одним рядом коротких вариантов — статус для этого начинает писаться. Вопрос задаётся в тот же день, а не назавтра: спрашивать «почему не сделал» через сутки — допрос, а не сбор данных. Отказ отвечать не блокирует ничего, день остаётся пропуском"></span><i>решение владельца 31 августа: ветка была недостижима — статус не писал никто; начинаем писать</i></div>
     <div class="spec"><b>плановый тоннаж только в карточке</b><span data-v="в ярусе «Сегодня» стоит фактический объём по отмеченным подходам; плановый («2,1 т») живёт в карточке силовой рядом с составом упражнений — там понятно, что именно не сделано. В ярус он не идёт: два тоннажа в одной строке требуют выбора, какой из них ответ"></span></div>
     <div class="spec"><b>лист действия · три пункта</b><span data-v="«Тренировка» (время, тип, минуты по зонам), «Зарядка» (сделал · сделаю · не сегодня), «Бытовая активность» (минуты). Слотов тренировки три: когда все заняты, пункт из листа исчезает, а не гаснет — погашенная кнопка обещает действие, которого нет"></span></div>
-    <div class="spec"><b>вид · календарь зарядки</b><span data-v="сетка 7 колонок с зазором 9 в .grp на --c1: точка 9 px радиусом 999 — сделана --gr, тренировкой --gr2, пропуск --val-bad, «не вели» чернила 10 %, сегодня чернила 16 %. Чипы режима 9 px моноширинной: выбранный --acs с --on-acs, второй --c2 с --ac. Легенда — ряд из четырёх пар «точка + слово» 10,5 px чернил 50 % с переносом. Строка листания — .cd со стрелками 13 px/700 тоном --ac по краям названия месяца"></span></div>
-    <div class="spec"><b>вид · карточка силовой</b><span data-v=".grp на --c1: имя 13 px/700 --tx и время 10,5 px чернил 42 % по краям, под ними состав 11 px/1,4 чернил 45 %. Чипы зон — 9 px моноширинной на --c2: активная зона тоном --ac со значением «45 мин · 315», пустые тоном чернил 50 % со прочерком. Список упражнений — вложенный .cd на --bg строками 12,5 px/600 --tx и «4 × 8 · 80 кг» 11,5 px/600 чернил 55 % моноцифрами. Кнопка «Открыть конструктор» 48 на --c2"></span></div>
+    <div class="spec"><b>вид · календарь зарядки</b><span data-v="сетка 7 колонок с зазором 9 в .grp на --c1: точка 9 px радиусом 999 — сделана --gr, тренировкой --gr2, пропуск --val-bad, «не вели» чернила 10 %, сегодня чернила 16 %. Чипы режима 9 px моноширинной: выбранный --acs с --on-acs, второй --c2 с --ac. Легенда — ряд из четырёх пар «точка + слово» 10,5 px чернил 50 % с переносом. Строка листания — .cd со стрелками 13 px/700 тоном --ac по краям названия месяца Решение 31 августа (ответ на срез вопросов кодера): «Сегодня» рисуется ОБВОДКОЙ 1,5 px --acs, а не заливкой; «не вели» — чернила 30 %. Прежние 16 % и 10 % не существуют в наборе: ступеней четыре — 55, 45, 38, 30 %, и обе сводились к 30 %, то есть рядом в сетке стояли две одинаковые серые точки. Обводка отделяет сегодня от шкалы плотности формой, а не тоном, и ступени не занимает."></span></div>
+    <div class="spec"><b>вид · карточка силовой</b><span data-v=".grp на --c1: имя 13 px/700 --tx и время 10,5 px чернил 42 % по краям, под ними состав 11 px/1,4 чернил 45 %. Чипы зон — 9 px моноширинной на --c2: активная зона тоном --ac со значением «45 мин · 315», пустые тоном чернил 50 % со прочерком. Список упражнений — вложенный .cd на --bg строками 12,5 px/600 --tx и «4 × 8 · 80 кг» 11,5 px/600 чернил 55 % моноцифрами. Кнопка «Открыть конструктор» 48 на --c2 Решение 31 августа (ответ на срез вопросов кодера): У карточки ДВА состояния и два кадра. Идёт тренировка — таймер, счёт подходов, полоса выполнения, отметка «● идёт», кнопка «Продолжить тренировку», подпись с текущим упражнением; это канон, пока не закрыт последний подход. После закрытия — журнальный вид: имя и время, состав, чипы зон, список упражнений, «Открыть конструктор». Оболочка .grp у обоих одна."></span></div>
     <div class="spec" style="border-bottom:none"><b>вид · пустоты рабочих весов</b><span data-v="строка .cd: имя 12,5 px/600 --tx, под ним причина 11 px/1,3 чернил 45 % («данных 9 дней из 14» либо «программа сменилась 12 августа»), справа состояние 11 px/600 чернил 38 % («рано сравнивать» либо «нет общих упражнений»). Тона состояний одинаковые: обе пустоты — не результат, и красить их как плохой результат нельзя"></span></div>
     <div class="spec" style="border-bottom:none"><b>тренировки за месяц</b><span data-v="счёт за 30 дней от открытой даты, а не от сегодня: при листании на прошлый день hero про этот день, а список — про последние 30 дней от сегодня. Назначенные и пропущенные планы в счёт не идут — иначе в списке стоят строки «0 ккал» за тренировки, которых не было"></span></div>
 
     <div class="ctrH">Вид</div>
     <div class="spec"><b>вид · hero цели дня</b><span data-v="карточка .grp на --c2 радиусом 20 полями 16: ярус «Цель дня» 10,5 px/600 чернил 42 %, число 30 px/800 с трекингом −.02em, единица 12,5 px/600 чернил 45 % по базовой линии; ниже строка причины 11,5 px чернил 50 % слева и «из чего ›» 11,5 px/700 тоном --ac справа"></span></div>
     <div class="spec"><b>вид · разбор цели</b><span data-v="блок .cd на --c1 радиусом 20 полями 2/16: строка 13 px по вертикали, разделитель 1 px чернил 7 %, у последней нет. Ключ 12,5 px/600 --tx слева, значение справа моноцифрами — плюсы тоном --gr, вычитаемое и справочное чернилами 55 %, итоговые строки 12,5–13 px/700–800 --tx. Подписи под ключом 10 px/1,3 чернил 42 %"></span></div>
-    <div class="spec"><b>вид · шаги</b><span data-v="карточка .grp: имя 12,5 px/600 --tx и «8 420 / 10 000» моноцифрами (цель тоном чернил 38 %), полоса высотой 8 радиусом 999 на подложке чернил 7 % с заливкой --gr2, под ней ккал 11 px/600 чернил 50 % слева и подпись про правку 11 px чернил 42 % справа"></span></div>
+    <div class="spec"><b>вид · шаги</b><span data-v="карточка .grp: имя 12,5 px/600 --tx и «8 420 / 10 000» моноцифрами (цель тоном чернил 38 %), полоса высотой 8 радиусом 999 на подложке чернил 7 % с заливкой --gr2, под ней ккал 11 px/600 чернил 50 % слева и подпись про правку 11 px чернил 42 % справа Полоса — дорожка 8 px радиусом 999 на чернилах 7 %, заливка занимает ВСЮ её толщину (height 100 %), а не свои 8 px: жёлоб и заливка одной высоты, иначе при чужом классе .bar дорожка вырастает, а заливка остаётся тонкой линией внутри. Тон заливки --gr2. Полоса — класс .pbar: дорожка 8 px радиусом 999 на чернилах 7 % с обрезкой, заливка --gr2 во всю толщину (height 100 %), ширина по доле факта. Имя класса именно .pbar, не .bar: .bar в v4-canvas.css — липкая шапка канваса, и полосы, названные так, получали её position sticky, фон и поля 14/0/13, то есть вырастали до 27 px, а заливка оставалась тонкой линией внутри. Числа под полосой — чернила 56 %, дно тона для данных: «312 ккал» на 50 % давало 3,87, «0 / 10 000» и «0 ккал» на 38 % — 2,63, то есть ниже порога 4,5 на цифрах, которые и читают. Дорожка .pbar — 8 px радиусом 999 на чернилах 12 %: на 7 % непройденная часть не видна на --c1, и полоса читается как отдельная пилюля, а не как доля. На конце заливки — бегунок .pknob: круг 20 на --bg с тенью 0 1 3 rgba(80,50,20,.28) и кольцом 2 px тоном заливки, центр на доле факта, цель нажатия 44 вокруг него. Без бегунка полоса не говорит, что за неё тянут, — а строка «факт и цель правятся по-разному» именно это и обещает. У оценённого дня бегунок и кольцо приглушены до чернил 28 %, у пустого дня стоит в нуле тем же приглушённым. У полосы хода тренировки бегунка НЕТ: она показывает, а не правится."></span></div>
     <div class="spec"><b>вид · оценённые шаги</b><span data-v="то же, но: пилюля «оценка» 9 px моноширинной на --c2 тоном чернил 50 % перед числом, число и цель тоном чернил 55 и 38 %, заливка полосы чернил 16 % вместо --gr2, сноска 11 px/1,55 чернил 42 % внутри карточки"></span></div>
     <div class="spec"><b>вид · программа куратора</b><span data-v="карточка плана — .grp на --c1: заголовок 13,5 px/700, пилюля «от куратора» 9 px моно на --c2 тоном --ac справа, проза 12 px/1,55 чернил 60 %, главная кнопка 48 на --acs, ниже ряд из двух по 48 на --c2 пополам с зазором 8. Правка куратора — та же карточка на --tint с заголовком тоном --ac2 и двумя кнопками 48 (принять на --acs, отказ на --bg с рамкой чернил 10 %). Строка «Следующая тренировка» — .cd со ссылкой «программа ›» 11,5 px/700 тоном --ac"></span></div>
     <div class="spec"><b>вид · строки яруса «Сегодня»</b><span data-v="блок .cd: имя 12,5 px/600 --tx слева, под ним состав 11 px/1,3 чернил 45 %, справа значение 12,5 px/600–700 моноцифрами (--tx у чисел, --gr у зарядки), «не отмечено» — 11 px/600 чернил 38 %"></span></div>
-    <div class="spec" style="border-bottom:none"><b>вид · пустые состояния</b><span data-v="ярус «История» у нового человека — .grp с заголовком 13 px/700 и прозой 12 px/1,55 чернил 60 %, без кнопок: показывать нечего и предлагать нечего. Строки яруса «Сегодня» остаются на месте со значением «не отмечено» — пустота не меняет вид, только текст"></span></div>
+    <div class="spec"><b>вид · пустые состояния</b><span data-v="ярус «История» у нового человека — .grp с заголовком 13 px/700 и прозой 12 px/1,55 чернил 60 %, без кнопок: показывать нечего и предлагать нечего. Строки яруса «Сегодня» остаются на месте со значением «не отмечено» — пустота не меняет вид, только текст"></span></div>
+    <div class="spec"><b>вид · идущая тренировка</b><span data-v="строка яруса «Сегодня» с составом тоном --ac («силовая идёт · 10 из 23 подходов») и карточка .grp с внутренней обводкой 2 px тоном --acs: имя тренировки 13 px/700, пилюля «идёт», подпись «начата в 18:40 · упражнение 3 из 7» 11 px/1,4 чернил 45 %, время 26 px/800 моноцифрами с трекингом −.02em и счёт подходов 12 px/600 тоном --gr по базовой линии, полоса .bar залита на 43 % тоном --acs, кнопка «Продолжить тренировку» 48 на --acs и под ней подпись-строка 11 px/1,4 чернил 42 % по центру"></span></div>
+    <div class="spec"><b>вид · предупреждение нагрузки</b><span data-v=".grp на --tint: заголовок 13 px/1,32 тоном --ac2, подпись-причина 11 px/1,4 чернил 50 %, проза 12 px/1,55 чернил 60 %, две пилюли 44 равной доли (главная на --acs тоном --on-acs, вторая на --bg чернил 58 %) и сноска про уверенность. Ниже ярус «Что стоит за советом» — .cd тремя строками, состояние группы 11 px/600 (перегруженная тоном --ac2, отдохнувшая --gr)"></span></div>
+    <div class="spec" style="border-bottom:none"><b>вид · слои нагрузки</b><span data-v="ярус «Как меняется» — .cd четырьмя строками: имя 12,5 px/600 --tx, под ним окно и оговорка 11 px/1,3 чернил 45 %, справа вердикт словом 11,5 px/700 (--tx у роста, --ac2 у усталости, чернила 42 % у кардио) либо вклад сессии 12,5 px/700 моноцифрами. Вердикт — .grp на --gr-bg с заголовком 13 px/1,32 тоном --gr и двумя плитками на --bg радиусом 12: ярус 10,5 px, полоса 8 px радиусом 999 на чернилах 10 % (восстановление 38 % тоном --ovl, готовность 44 % тоном --wat), подпись 12 px/700 --tx"></span></div>
+
+    <div class="ctrH">Нагрузка и вход в конструктор</div>
+    <div class="spec"><b>вход в конструктор — мой, его содержимое — нет</b><span data-v="карточка идущей тренировки и кнопки «Продолжить тренировку» / «Открыть конструктор» рисуются здесь — это лента дня. Всё, что открывается за ними — список упражнений, таблица ввода, кольцо отдыха, итоги, связки, дроп — главным файлом имеет strength-builder.v4.dc.html («Конструктор силовой»); при расхождении верен он, а кодер останавливается"></span><i>перенесено из исходной сборки другого проекта (кадр «Карточка дня · тренировка идёт»): там он был входом в модалку, здесь — строкой яруса «Сегодня» и карточкой над ней</i></div>
+    <div class="spec"><b>идущая сессия считается по отмеченным</b><span data-v="пока тренировка не закрыта, строка яруса несёт факт по отмеченным подходам («силовая идёт · 10 из 23 подходов», 165 ккал) и растёт по ходу — нуля до завершения не бывает. Плановый объём в ярус по-прежнему не идёт, он живёт в карточке тренировки"></span></div>
+    <div class="spec"><b>нагрузка советует, а не запрещает</b><span data-v="предупреждение называет группу и срок («Спина третий день подряд»), даёт два равнозначных выхода — «Взять день жимов» и «Всё равно тянуть» — и называет уверенность числом дней истории (данных 9 дней из 14 — тот же горизонт, что у рабочих весов). Запрета и блокировки тренировки нет ни в одном состоянии"></span></div>
+    <div class="spec"><b>совет считается по группам мышц</b><span data-v="не по названию тренировки: «спина» набирается каждым упражнением, где она основная, и половиной веса там, где синергист — тот же раздел веса, что в конструкторе (strength-builder.v4.dc.html, строка «группы мышц — основная плюс синергисты»). Своего деления веса зона не заводит"></span></div>
+    <div class="spec"><b>два окна и два ряда</b><span data-v="накопленная нагрузка — окно 6 недель, усталость — окно 7 дней; смысл пары в том, что короткое окно обгоняет длинное. Силовая и кардио идут раздельными рядами и в одно число не сводятся: коэффициента «килограмм равно минуте» не существует. Вклад сессии назван своей единицей — тоннажем 9,4 т"></span></div>
+    <div class="spec"><b>только динамика, без абсолютных значений</b><span data-v="слова «растёт», «растёт быстрее», «без изменений» вместо баллов: шкала не откалибрована на живой истории, и число вроде «72 из 100» читалось бы как измерение. Значения модели не хранятся, а считаются на чтении"></span></div>
+    <div class="spec" style="border-bottom:none"><b>вердикт сессии приходит из конструктора</b><span data-v="«Сессия зачтена как тяжёлая · следующая тяжёлая — не раньше четверга»: тяжесть считается по тоннажу и тяжести подходов закрытой сессии, а их владелец — strength-builder.v4.dc.html. Восстановление названо процентом и часами (38 % · ~14 ч), готовность — словом «ниже нормы»: часы человек проверяет по себе, а процент готовности проверить нечем. Вид этих трёх кадров — строки «вид · идущая тренировка», «вид · предупреждение нагрузки» и «вид · слои нагрузки» ниже"></span></div>
 
     <div class="ctrH">Демо</div>
     <div class="spec" style="border-bottom:none"><b>все кадры статичны</b><span data-v="data-demo='stop' на каждом кадре: петель и таймингов на канвасе нет, пиксельные сравнения можно делать по любому кадру"></span></div>
 
     <div class="ctrH">Открыто до передачи</div>
     <div class="spec"><b>предусловия кадров</b><span data-v="кадр «шаги оценены» верен только после починки механизма оценки на экране дня, строка тоннажа — после передачи массы тела в дневной расчёт. До этого оба помечаются «—», а не вердиктом: рисовать состояние, которого не бывает, нельзя"></span></div>
-    <div class="spec" style="border-bottom:none"><b>переключатель «Месяц» в календаре</b><span data-v="кнопка режима нарисована, а подписи месяца, стрелок листания и легенды в этой раскладке нет — переключение ведёт в сетку без ответа, какой это месяц. Кадр календаря в режиме месяца не рисуется до решения: возвращать листание или оставить только 28 дней"></span></div>
-          <div class="ctrH">Разбор кадров · элемент за элементом</div>
+    <div class="spec" style="border-bottom:none"><b>переключатель «Месяц» в календаре</b><span data-v="СНЯТО 31 августа как открытый вопрос: решение принято и лежит строкой «режим „Месяц“ с листанием» — сетка с подписью месяца и стрелками ‹ ›, кадр «Календарь зарядки» её рисует, листание реализовано. Прежняя редакция просила «не рисовать кадр месяца до решения: возвращать листание или оставить только 28 дней» — она стояла открытой по недосмотру и могла заставить следующий проход снять листание обратно"></span></div>
+                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Актив · день собран · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Актив · день собран · 02</b><span data-v="«Актив» — имя экрана"></span></div>
@@ -524,10 +632,10 @@
     <div class="spec"><b>Актив · день собран · 21</b><span data-v="«Шаги» — шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Актив · день собран · 22</b><span data-v="«8 420» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Актив · день собран · 23</b><span data-v="«/ 10 000» — цвет rgba(var(--ink),.38)"></span></div>
-    <div class="spec"><b>Актив · день собран · 24</b><span data-v="отступ сверху 10px"></span></div>
-    <div class="spec"><b>Актив · день собран · 25</b><span data-v="ширина 67%, высота 8px, радиус 999px, фон var(--gr2)"></span></div>
+    <div class="spec"><b>Актив · день собран · 24</b><span data-v="отступ сверху 14px"></span></div>
+    <div class="spec"><b>Актив · день собран · 25</b><span data-v="ширина 67%, фон var(--gr2)"></span></div>
     <div class="spec"><b>Актив · день собран · 26</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 10px"></span></div>
-    <div class="spec"><b>Актив · день собран · 27</b><span data-v="«312 ккал» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Актив · день собран · 27</b><span data-v="«312 ккал» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · день собран · 28</b><span data-v="«факт — ползунком, цель — тапом» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
     <div class="spec"><b>Актив · день собран · 29</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Актив · день собран · 30</b><span data-v="«385 ккал» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
@@ -578,20 +686,21 @@
     <div class="spec"><b>Актив · новый человек · 14</b><span data-v="карточка .grp"></span></div>
     <div class="spec"><b>Актив · новый человек · 15</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
     <div class="spec"><b>Актив · новый человек · 16</b><span data-v="«Шаги» — шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Актив · новый человек · 17</b><span data-v="«0 / 10 000» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
-    <div class="spec"><b>Актив · новый человек · 18</b><span data-v="отступ сверху 10px"></span></div>
-    <div class="spec"><b>Актив · новый человек · 19</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 10px"></span></div>
-    <div class="spec"><b>Актив · новый человек · 20</b><span data-v="«0 ккал» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
-    <div class="spec"><b>Актив · новый человек · 21</b><span data-v="«факт — ползунком, цель — тапом» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
-    <div class="spec"><b>Актив · новый человек · 22</b><span data-v="список .cd: отступ сверху 10px"></span></div>
-    <div class="spec"><b>Актив · новый человек · 23</b><span data-v="строка списка"></span></div>
-    <div class="spec"><b>Актив · новый человек · 24</b><span data-v="«Тренировки» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Актив · новый человек · 25</b><span data-v="«не отмечено» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
-    <div class="spec"><b>Актив · новый человек · 26</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Актив · новый человек · 27</b><span data-v="«Добавить активность» — главная кнопка"></span></div>
-    <div class="spec"><b>Актив · новый человек · 28</b><span data-v="«История начнётся с первой отметки» — шрифт 700 13px/1.35 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Актив · новый человек · 29</b><span data-v="«Календарь зарядки и рост рабочих весов появятся, к» — проза"></span></div>
-    <div class="spec"><b>Актив · новый человек · 30</b><span data-v="«Красных точек «пропущено» до первой записи нет: дн» — сноска"></span></div>
+    <div class="spec"><b>Актив · новый человек · 17</b><span data-v="«0 / 10 000» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 18</b><span data-v="отступ сверху 14px"></span></div>
+    <div class="spec"><b>Актив · новый человек · 19</b><span data-v="рамка 0 1px 3px rgba(80,50,20,.28),inset 0 0 0 2px rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 20</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · новый человек · 21</b><span data-v="«0 ккал» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 22</b><span data-v="«факт — ползунком, цель — тапом» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 23</b><span data-v="список .cd: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · новый человек · 24</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Актив · новый человек · 25</b><span data-v="«Тренировки» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 26</b><span data-v="«не отмечено» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 27</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Актив · новый человек · 28</b><span data-v="«Добавить активность» — главная кнопка"></span></div>
+    <div class="spec"><b>Актив · новый человек · 29</b><span data-v="«История начнётся с первой отметки» — шрифт 700 13px/1.35 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 30</b><span data-v="«Календарь зарядки и рост рабочих весов появятся, к» — проза"></span></div>
+    <div class="spec"><b>Актив · новый человек · 31</b><span data-v="«Красных точек «пропущено» до первой записи нет: дн» — сноска"></span></div>
     <div class="spec"><b>Актив · шаги оценены · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Актив · шаги оценены · 02</b><span data-v="«Актив» — имя экрана"></span></div>
     <div class="spec"><b>Актив · шаги оценены · 03</b><span data-v="«чт · 28 авг» — ключ + моноцифры"></span></div>
@@ -604,19 +713,20 @@
     <div class="spec"><b>Актив · шаги оценены · 10</b><span data-v="«оценка» — пилюля: цвет rgba(var(--ink),.5)"></span></div>
     <div class="spec"><b>Актив · шаги оценены · 11</b><span data-v="«7 900» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
     <div class="spec"><b>Актив · шаги оценены · 12</b><span data-v="«/ 10 000» — цвет rgba(var(--ink),.38)"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 13</b><span data-v="отступ сверху 10px"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 14</b><span data-v="ширина 63%, высота 8px, радиус 999px, фон rgba(var(--ink),.16)"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 15</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 10px"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 16</b><span data-v="«293 ккал» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.5)"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 17</b><span data-v="«поставьте факт ползунком» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 18</b><span data-v="«Числа за этот день нет — взята медиана ваших после» — сноска: отступ сверху 10px"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 19</b><span data-v="список .cd: отступ сверху 10px"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 20</b><span data-v="строка списка"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 21</b><span data-v="«Тренировки» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 22</b><span data-v="«не отмечено» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 23</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 24</b><span data-v="«40 мин · 84 ккал» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 25</b><span data-v="«Пометка — тот же приём, что у расчётного веса: под» — сноска"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 13</b><span data-v="отступ сверху 14px"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 14</b><span data-v="ширина 63%, фон rgba(var(--ink),.22)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 15</b><span data-v="рамка 0 1px 3px rgba(80,50,20,.28),inset 0 0 0 2px rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 16</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 17</b><span data-v="«293 ккал» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 18</b><span data-v="«поставьте факт ползунком» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 19</b><span data-v="«Числа за этот день нет — взята медиана ваших после» — сноска: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 20</b><span data-v="список .cd: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 21</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 22</b><span data-v="«Тренировки» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 23</b><span data-v="«не отмечено» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 24</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 25</b><span data-v="«40 мин · 84 ккал» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 26</b><span data-v="«Пометка — тот же приём, что у расчётного веса: под» — сноска"></span></div>
     <div class="spec"><b>Актив · план назначен · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Актив · план назначен · 02</b><span data-v="«Актив» — имя экрана"></span></div>
     <div class="spec"><b>Актив · план назначен · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
@@ -636,7 +746,7 @@
     <div class="spec"><b>Актив · план назначен · 17</b><span data-v="«Шаги» — цвет var(--tx)"></span></div>
     <div class="spec"><b>Актив · план назначен · 18</b><span data-v="«4 120 / 10 000» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Актив · план назначен · 19</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Актив · план назначен · 20</b><span data-v="«не начаты» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Актив · план назначен · 20</b><span data-v="«не начаты» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · правка куратора · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Актив · правка куратора · 02</b><span data-v="«Актив» — имя экрана"></span></div>
     <div class="spec"><b>Актив · правка куратора · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
@@ -667,7 +777,7 @@
     <div class="spec"><b>Актив · день отдыха · 12</b><span data-v="список .cd"></span></div>
     <div class="spec"><b>Актив · день отдыха · 13</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Актив · день отдыха · 14</b><span data-v="«6 780 / 10 000» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Актив · день отдыха · 15</b><span data-v="«день отдыха» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 15</b><span data-v="«день отдыха» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · день отдыха · 16</b><span data-v="«08:05 · была» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--gr)"></span></div>
     <div class="spec"><b>Актив · день отдыха · 17</b><span data-v="«Строка «Следующая тренировка» больше не пропадает» — сноска"></span></div>
     <div class="spec"><b>Календарь зарядки · 01</b><span data-v="шапка"></span></div>
@@ -728,10 +838,85 @@
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 08</b><span data-v="направление column, зазор 3px"></span></div>
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 09</b><span data-v="«Рабочие веса» — цвет var(--tx)"></span></div>
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 10</b><span data-v="«данных 9 дней из 14» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
-    <div class="spec"><b>Рабочие веса · нечего сравнивать · 11</b><span data-v="«рано сравнивать» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 11</b><span data-v="«рано сравнивать» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 12</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 13</b><span data-v="«Два состояния показаны рядом только на канвасе — в» — сноска"></span></div>
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 14</b><span data-v="«время, тип, минуты по зонам» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 02</b><span data-v="«Актив» — имя экрана"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 05</b><span data-v="«Сегодня» — ярус"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 06</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 07</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 08</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 09</b><span data-v="«Тренировки» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 10</b><span data-v="«силовая идёт · 10 из 23 подходов» — шрифт 500 11px/1.3 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 11</b><span data-v="выравнивание center, зазор 8px"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 12</b><span data-v="«165 ккал» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 13</b><span data-v="«›» — шрифт 700 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 14</b><span data-v="карточка .grp: отступ сверху 10px, рамка inset 0 0 0 2px var(--acs)"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 15</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 16</b><span data-v="«Грудь, спина, плечи» — шрифт 700 13px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 17</b><span data-v="«идёт» — пилюля"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 18</b><span data-v="«начата в 18:40 · упражнение 3 из 7» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.45), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 19</b><span data-v="выравнивание baseline, зазор 8px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 20</b><span data-v="«47:12» — моноцифры: шрифт 800 26px/1 Figtree, цвет var(--tx), трекинг -.02em"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 21</b><span data-v="«10 из 23 подходов» — моноцифры: шрифт 600 12px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 22</b><span data-v="отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 23</b><span data-v="ширина 43%, фон var(--acs)"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 24</b><span data-v="«Продолжить тренировку» — главная кнопка: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 25</b><span data-v="«Жим гантелей сидя · подход 2 из 4» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.42), выключка center, отступ сверху 6px"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 26</b><span data-v="«Пока тренировка идёт, объём и калории в ярусе «Сег» — сноска"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 02</b><span data-v="«Актив» — имя экрана"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 05</b><span data-v="карточка .grp: отступ сверху 12px, фон var(--tint)"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 06</b><span data-v="«Спина третий день подряд» — шрифт 700 13px/1.32 Figtree, цвет var(--ac2)"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 07</b><span data-v="«восстановление ещё не закрыто с воскресенья» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.5), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 08</b><span data-v="«Сегодня лучше жать, чем тянуть. Если тяга принципи» — проза"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 09</b><span data-v="зазор 7px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 10</b><span data-v="«Взять день жимов» — флекс 1, выравнивание center, распределение center, высота от 44px, радиус 999px, фон var(--acs), шрифт 700 12px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 11</b><span data-v="«Всё равно тянуть» — флекс 1, выравнивание center, распределение center, высота от 44px, радиус 999px, фон var(--bg), шрифт 700 12px/1 Figtree, цвет rgba(var(--ink),.58)"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 12</b><span data-v="«Уверенность низкая — данных 9 дней из 14. Совет ос» — сноска: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 13</b><span data-v="«Что стоит за советом» — ярус"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 14</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 15</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 16</b><span data-v="«Спина» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 17</b><span data-v="«тянули пт, чт, ср» — шрифт 600 11px/1 Figtree, цвет var(--ac2)"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 18</b><span data-v="«отдыхала 4 дня» — шрифт 600 11px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 19</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 20</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 21</b><span data-v="«синергист — половину, как в конструкторе» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 22</b><span data-v="«Совет считается по группам мышц упражнений, а не п» — сноска"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 02</b><span data-v="«Нагрузка» — имя экрана"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 04</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 05</b><span data-v="«Как меняется» — ярус"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 06</b><span data-v="список .cd"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 07</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 08</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 09</b><span data-v="«Силовая нагрузка · накопленная» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 10</b><span data-v="«третью неделю подряд, окно 6 недель» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 11</b><span data-v="«растёт» — шрифт 700 11.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 12</b><span data-v="«растёт быстрее» — шрифт 700 11.5px/1 Figtree, цвет var(--ac2)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 13</b><span data-v="«без изменений» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 14</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 15</b><span data-v="«9,4 т» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 16</b><span data-v="«Абсолютных значений нет намеренно: шкала не откали» — сноска"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 17</b><span data-v="карточка .grp: фон var(--gr-bg)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 18</b><span data-v="«Сессия зачтена как тяжёлая» — шрифт 700 13px/1.32 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 19</b><span data-v="«следующая тяжёлая — не раньше четверга» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.5), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 20</b><span data-v="зазор 7px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 21</b><span data-v="флекс 1, фон var(--bg), радиус 12px, поля 10px 11px"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 22</b><span data-v="«восстановление» — ключ"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 23</b><span data-v="высота 8px, радиус 999px, фон rgba(var(--ink),.1), обрез hidden, отступы 8px 0 7px"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 24</b><span data-v="ширина 38%, высота 100%, радиус 999px, фон var(--ovl)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 25</b><span data-v="«38 % · ~14 ч» — моноцифры: шрифт 700 12px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 26</b><span data-v="ширина 44%, высота 100%, радиус 999px, фон var(--wat)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 27</b><span data-v="«ниже нормы» — шрифт 700 12px/1 Figtree, цвет var(--tx)"></span></div>
     <div class="ctrH">Текст кадров дословно</div>
     <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
     <div class="spec"><b>Актив · день собран · текст</b><span data-v="Актив › сб · 30 авг › Цель дня › 2 210 › ккал › компенсация долга › из чего › › Программа · сегодня силовая › Ноги и спина · 5 упражнений › начать › › Сегодня › Шаги › 8 420 › / 10 000 › 312 ккал › факт — ползунком, цель — тапом › Тренировки › силовая 45 мин · 1,9 т объёма › 385 ккал › Бытовая активность › 60 мин · 126 ккал › Зарядка › 07:20 · 34 ккал › Действие › Добавить активность › История › Зарядка · 18 из 24 › 28 дней › › Рабочие веса › за 4 недели · 6 общих упражнений › +4 % › Тренировки за месяц › 11 › › Слово «Кардио» с экрана снято: под ним лежали семь разных сущностей, и кардио было одной из них."></span></div>
@@ -744,6 +929,9 @@
     <div class="spec"><b>Календарь зарядки · текст</b><span data-v="Зарядка › 18 из 24 › 28 дней › Месяц › сделана › тренировкой › пропуск › не вели › Август 2026 › режим «Месяц» › Четыре дня в начале окна — серые: до них зарядку не вели. Пропуском считается только день после первой отметки."></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · текст</b><span data-v="Актив › сб · 30 авг › Сегодня › Тренировки › силовая 45 мин · 1,9 т объёма › 385 ккал › Ноги и спина › 18:40 › Конструктор · 5 упражнений · 1,9 т фактического объёма › Z1 · — › Z2 · 45 мин · 315 › Z3 · — › Z4 · — › Приседания › 4 × 8 · 80 кг › Тяга штанги › 4 × 10 · 60 кг › Подтягивания › 3 × 8 · свой вес › Открыть конструктор › Плановый объём — 2,1 т: он живёт здесь, где виден состав, и в ярус «Сегодня» не идёт."></span></div>
     <div class="spec"><b>Рабочие веса · нечего сравнивать · текст</b><span data-v="Актив › сб · 30 авг › История › Рабочие веса › данных 9 дней из 14 › рано сравнивать › Рабочие веса › программа сменилась 12 августа › нет общих упражнений › Два состояния показаны рядом только на канвасе — в продукте строка одна. «Нет общих упражнений» не значит «веса не растут»: сравнивать нечего, а не результат плохой. › Лист действия › Тренировка › время, тип, минуты по зонам › Зарядка › сделал · сделаю · не сегодня › Бытовая активность › минуты › Третий слот тренировки занят — пункт «Тренировка» в листе не показывается, а не гаснет."></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · текст</b><span data-v="Актив › сб · 30 авг › Сегодня › Тренировки › силовая идёт · 10 из 23 подходов › 165 ккал › Грудь, спина, плечи › идёт › начата в 18:40 · упражнение 3 из 7 › 47:12 › 10 из 23 подходов › Продолжить тренировку › Жим гантелей сидя · подход 2 из 4 › Пока тренировка идёт, объём и калории в ярусе «Сегодня» считаются по отмеченным подходам и растут на глазах. Итог придёт из конструктора, когда сессия закрыта."></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · текст</b><span data-v="Актив › сб · 30 авг › Спина третий день подряд › восстановление ещё не закрыто с воскресенья › Сегодня лучше жать, чем тянуть. Если тяга принципиальна — оставьте два рабочих подхода вместо четырёх. › Взять день жимов › Всё равно тянуть › Уверенность низкая — данных 9 дней из 14. Совет остаётся советом: оба выхода равнозначны, запрета нет. › Что стоит за советом › Спина › тянули пт, чт, ср › Грудь › отдыхала 4 дня › Основная группа берёт полный вес › синергист — половину, как в конструкторе › Совет считается по группам мышц упражнений, а не по названию тренировки: «спина» набирается и тягой блока, и подтягиваниями, где спина — основная."></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · текст</b><span data-v="Нагрузка › сб · 30 авг › Как меняется › Силовая нагрузка · накопленная › третью неделю подряд, окно 6 недель › растёт › Силовая усталость · короткое окно › окно 7 дней · обгоняет накопленную › растёт быстрее › Кардио — отдельным рядом › в одно число с силовой не сводится › без изменений › Вклад этой сессии › в силовом ряду, своей единицей — тоннажем › 9,4 т › Абсолютных значений нет намеренно: шкала не откалибрована на живой истории, и «72 из 100» читалось бы как измерение. Числа не хранятся — считаются на чтении. › Вердикт сессии › Сессия зачтена как тяжёлая › следующая тяжёлая — не раньше четверга › восстановление › 38 % · ~14 ч › готовность › ниже нормы › Вердикт ставится по тоннажу и тяжести подходов закрытой сессии — их считает конструктор. Восстановление названо процентом и часами, готовность — словом: часы человек проверяет по себе, а «готовность 44 %» проверить нечем."></span></div>
 </div>
 </div>
 </x-dc>

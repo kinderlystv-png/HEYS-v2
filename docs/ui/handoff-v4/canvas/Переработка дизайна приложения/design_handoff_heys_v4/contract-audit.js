@@ -225,6 +225,87 @@
     });
     if (rogue.length) out.push('кнопка мимо общего ряда: ' + uniq(rogue).slice(0, 6).join(' · '));
 
+    // 14. мишень меньше порога. Восьмая проверка смотрит только пилюли и высокие ряды,
+    // а круглые контролы с глифом (✓ закрыть подход, ✕ свернуть, + добавить) в её сито
+    // не попадают — ровно на них исходная сборка уже ловилась: 24 у крестика, 30 у клеток.
+    var GLYPH = ['✓', '✕', '×', '+', '−', '–', '‹', '›', '▲', '▼', '⌃', '⌄'];
+    var small = [];
+    frames.forEach(function (fr) {
+      [].forEach.call(fr.querySelectorAll('div, span, button'), function (el) {
+        if (el.children.length) return;                                       // только лист с самим глифом
+        var t = (el.textContent || '').trim();
+        if (GLYPH.indexOf(t) < 0) return;
+        var st = getComputedStyle(el);
+        var drawn = (st.backgroundColor && st.backgroundColor !== 'rgba(0, 0, 0, 0)' && st.backgroundColor !== 'transparent') || (st.boxShadow && st.boxShadow !== 'none');
+        if (!drawn) return;                                                   // голый значок — не мишень
+        var r = el.getBoundingClientRect();
+        var side = Math.min(r.width, r.height);
+        if (!side) return;
+        var head = !!el.closest('.top') || el.hasAttribute('data-svc');       // служебные кнопки шапки и помеченные
+        var need = head ? 36 : 44;
+        if (side >= need - 0.5) return;
+        small.push(t + ' ' + Math.round(side) + ' при ' + need + ' в «' + fr.getAttribute('data-screen-label') + '»');
+      });
+    });
+    if (small.length) out.push('мишень меньше порога: ' + uniq(small).slice(0, 6).join(' · '));
+
+    // 16. контраст текста в кадрах. Контракт называет числа 4,6 и 5,2 как вылеченные,
+    // но сам контраст не мерила ни одна проверка — и приглушённые числа сидели на 2,6.
+    var lum = function (c) {
+      var f = c.map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+      return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2];
+    };
+    var parse = function (v) {
+      var m = (v || '').match(/rgba?\(([^)]+)\)/); if (!m) return null;
+      var p = m[1].split(',').map(function (x) { return parseFloat(x); });
+      return { c: [p[0], p[1], p[2]], a: p.length > 3 ? p[3] : 1 };
+    };
+    var bgOf = function (el) {
+      for (var n = el; n && n.nodeType === 1; n = n.parentNode) {
+        var b = parse(getComputedStyle(n).backgroundColor);
+        if (b && b.a > 0.9) return b.c;
+      }
+      return [255, 255, 255];
+    };
+    // Порог проверяем на ДАННЫХ, и признак данных берём не из вида строки, а из разметки: класс .n
+    // (моноцифры) стоит ровно на том, «что сравнивают глазом с соседним» — это собственное
+    // правило проекта. По регекспу «есть цифра» проверка брала и подписи вроде «/ 10 000»
+    // и «7 дней», которым по решению разрешены 42 %, — и давала сотни ложных на одном канвасе.
+    var VALUE = /^[0-9][0-9.,×хx:%\s\u00a0\-–—→\/]*(кг|т|ккал|мл|м|с|повт\.?|раз|мин|%)?$/i;
+    // Что меряем: любая короткая строка с цифрой — число или подпись с числом. Признак
+    // «класс .n» был ошибкой: моноцифры стоят и на метах плиток («цель 10 000», «к 18:00»),
+    // и проверка делила не данные от подписей, а разметку от разметки. Порог один и для
+    // тех, и для других: на 9 px разница между 38 и 56 % — это читается или нет.
+    var dim = [], blind = 0;
+    frames.forEach(function (fr) {
+      [].forEach.call(fr.querySelectorAll('span, div, b, i'), function (el) {
+        if (el.children.length) return;
+        if (el.closest('[data-nocontrast]')) return;          // фон не определяется по предкам
+        var t = (el.textContent || '').trim();
+        var cls = ' ' + (el.className || '') + ' ';
+        var isDash = (t === '—' || t === '–') && /\bdash\b|\bvl\b|\bfld\b/.test(cls);
+        if (!isDash && !(t && t.length <= 28 && /\d/.test(t) && VALUE.test(t))) return;
+        var st = getComputedStyle(el);
+        var fg = parse(st.color); if (!fg) return;
+        var bg = bgOf(el);
+        if (!bg) { blind++; return; }                          // фон не найден — мерить нечего
+        var mix = fg.c.map(function (v, k) { return v * fg.a + bg[k] * (1 - fg.a); });
+        var l1 = lum(mix), l2 = lum(bg);
+        var cr = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+        // Ниже 1.2 текст был бы невидим — такое заметил бы человек за секунду.
+        // Значит это не находка, а промах замера: под текстом лежит заливка,
+        // которой нет среди предков (кольцо воды, залитая плитка, слой графика).
+        if (cr < 1.2) { blind++; return; }
+        var size = parseFloat(st.fontSize), w = parseInt(st.fontWeight, 10) || 400;
+        var big = size >= 24 || (size >= 18.66 && w >= 700);
+        var need = big ? 3 : 4.5;
+        if (cr >= need - 0.05) return;
+        dim.push(t.slice(0, 14) + ' ' + cr.toFixed(2) + ' в «' + fr.getAttribute('data-screen-label') + '»');
+      });
+    });
+    if (dim.length) out.push('контраст ниже порога (' + dim.length + '): ' + uniq(dim).slice(0, 5).join(' · '));
+    if (blind > 2) out.push('контраст не измерен у ' + blind + ' значений: фона нет среди предков — пометьте поверхность data-nocontrast или назовите её строкой');
+
     var shown = {};
     [].forEach.call(document.querySelectorAll('[data-screen-label]'), function (f) {
       (nrm(f.textContent || '').match(/\d+[,.]?\d*/g) || []).forEach(function (x) { shown[x] = true; });
@@ -288,6 +369,36 @@
     return el;
   }
 
+  // 13. роль, которой нет в загруженных стилях. Неразрешённая var(--…) не ломает страницу:
+  // свойство просто падает в наследуемое — чёрный глиф на тёмной заливке выглядит как решение.
+  // Поэтому имена из разметки сверяются с тем, что действительно вычисляется на элементе.
+  function checkVars() {
+    // Пока внешняя таблица ролей не применена, getComputedStyle возвращает пустоту на ВСЕХ
+    // кастомных свойствах, и проверка объявила бы нерешёнными сразу все роли канваса.
+    // Контрольная роль отвечает на вопрос «стили уже подъехали?» — нет, значит проверять нечего.
+    var probe = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()
+      || getComputedStyle(document.body || document.documentElement).getPropertyValue('--ink').trim();
+    if (!probe) return [];
+    var seen = Object.create(null);
+    var nodes = document.querySelectorAll('[style*="var(--"]');
+    for (var i = 0; i < nodes.length; i++) {
+      var st = nodes[i].getAttribute('style') || '';
+      var m = st.match(/var\(\s*(--[a-z0-9-]+)/gi);
+      if (!m) continue;
+      for (var j = 0; j < m.length; j++) {
+        var nm = m[j].replace(/var\(\s*/i, '');
+        if (!(nm in seen)) seen[nm] = nodes[i];
+      }
+    }
+    var bad = Object.keys(seen).filter(function (nm) {
+      return !getComputedStyle(seen[nm]).getPropertyValue(nm).trim();
+    });
+    return bad.length
+      ? ['роль без значения: разметка красит var(' + bad.slice(0, 4).join('), var(') + ')' + (bad.length > 4 ? ' и ещё ' + (bad.length - 4) : '') + ' — в загруженных стилях таких свойств нет']
+      : [];
+  }
+
+  window.__auditVersion = '16.4';
   function paint() {
     var f = findings();
     if (!f) return;
@@ -300,7 +411,8 @@
       return;
     }
     if (drift && drift.length) f = f.concat(drift);
-    var el = line();
+    f = f.concat(checkVars());
+    f = f.concat(coverageNow());    var el = line();
     if (!el) return;
     // локальная строка канваса теперя подмножество общей: если ей нечего сказать — прячем,
     // чтобы две зелёные строки не выглядели двумя разными сверками; нашла своё — показываем
@@ -319,10 +431,10 @@
     var ctr = document.querySelector('[data-contract]');
     var ctrHidden = !!ctr && (ctr.offsetParent === null || getComputedStyle(ctr).display === 'none');
     el.style.display = (!f.length && ctrHidden) ? 'none' : '';
-    el.title = f.length ? '' : 'Проверено: у каждого кадра есть строка вида, кнопки идут общим рядом, числа в прозе есть в контракте, живые замеры сходятся со своей строкой, у каждого содержательного раздела есть вид, объявленные замеры измеряются, чужие канвасы названы, ключи не спорят, незакрытое собрано, роли на месте, литералы совпадают с таблицей ролей, кадры видны';
+    el.title = f.length ? '' : 'Проверено: у каждого кадра есть строка вида, кнопки идут общим рядом, числа в прозе есть в контракте, живые замеры сходятся со своей строкой, у каждого содержательного раздела есть вид, объявленные замеры измеряются, чужие канвасы названы, ключи не спорят, незакрытое собрано, роли на месте, литералы совпадают с таблицей ролей, каждая var(--…) из разметки разрешается, круглые мишени не ниже порога, каждый атом источника назван контрактом, кадры видны';
     var txt = f.length
       ? '\u26a0 сверка: ' + f.join(' | ')
-      : '\u2713 сверка чиста · 12 проверок';
+      : '\u2713 сверка чиста · 16 проверок' + (window.__coverage ? ' · источник покрыт ' + window.__coverage : '');
     if (el.textContent === txt) return;
     el.textContent = txt;
     el.style.color = f.length ? '#a8382b' : '#5c6a45';
@@ -377,24 +489,91 @@
     });
   }
 
+  // 15. покрытие источника. Реестр атомов исходной сборки лежит рядом файлом:
+  // решения, инварианты, спорные состояния, задачи на схему, открытые вопросы, экраны.
+  // Проверка считает, сколько из них названо контрактом, — «готово» становится числом,
+  // а не словом того, кто последним читал источник.
+  var cover = null, atoms = null;  function coverageNow() {
+    if (!atoms) return [];
+    var box = document.querySelector('[data-contract][data-canon-atoms]');
+    // Реестр атомов принадлежит ОДНОМУ канвасу — тому, кто назвал себя атрибутом.
+    // Без этой границы проверка считала покрытие чужого источника на любом канвасе
+    // и давала «2 из 87» там, где никто ничего не обещал.
+    if (!box) { window.__coverage = null; return []; }
+      // только авторская часть: машинный слепок ниже повторяет текст кадров дословно
+      // и на нём совпало бы что угодно
+      var keys = [], stop = false;
+      [].forEach.call(box.children, function (n) {
+        if (stop) return;
+        if (n.className === 'ctrH' && /Разбор кадров/.test(n.textContent || '')) { stop = true; return; }
+        var b = n.querySelector && n.querySelector('b');
+        if (b) keys.push((b.textContent || '').toLowerCase());
+      });
+      var oids = {};
+      [].forEach.call(document.querySelectorAll('[data-oid]'), function (n) { oids[n.getAttribute('data-oid')] = 1; });
+      var miss = atoms.filter(function (a) {
+        if (a.g === 'экраны') {
+          var w = a.where || '';
+          if (w === 'Актив') return false;                                    // отдано другому канвасу
+          return !w.split(/[\s и–—]+/).some(function (x) { return oids[x]; });
+        }
+        if (!a.key) return true;
+        var k = a.key.toLowerCase();
+        return !keys.some(function (x) { return x.indexOf(k) >= 0; });
+      });
+      var total = atoms.length;
+      window.__coverage = (total - miss.length) + '/' + total;
+      return miss.length
+        ? ['покрытие источника ' + (total - miss.length) + ' из ' + total + ', не названо: ' + miss.slice(0, 5).map(function (a) { return a.t; }).join(' · ')]
+        : [];
+  }
+  function checkCoverage() {
+    fetch('./canon-atoms.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j || !j.atoms) return;
+      atoms = j.atoms;
+      paint();
+    }).catch(function () {});
+  }
+
+  // Один проход стоит дорого: он обходит все .spec против всех кадров и меряет геометрию.
+  // Поэтому наружу выдаётся не paint, а планировщик — сколько бы поводов ни пришло
+  // (наблюдатель, load, твик), выполняется один хвостовой проход в простое.
+  var pending = null, running = false, dirty = false;
+  var idle = window.requestIdleCallback || function (fn) { return setTimeout(function () { fn({ timeRemaining: function () { return 0; } }); }, 1); };
+  function run() {
+    running = true;
+    try { paint(); } finally {
+      running = false;
+      // хвостовой проход: просьба, пришедшая во время прохода, раньше отбрасывалась целиком,
+      // и вердикт залипал на устаревшем — в том числе мог залипнуть зелёный
+      if (dirty) { dirty = false; schedule(60); }
+    }
+  }
+  function schedule(delay) {
+    if (running) { dirty = true; return; }
+    clearTimeout(pending);
+    pending = setTimeout(function () { idle(run); }, delay == null ? 120 : delay);
+  }
+  function force() {
+    if (running) { dirty = true; return; }
+    clearTimeout(pending);
+    run();
+  }
+
   function boot() {
-    paint();
+    schedule(0);
     checkDrift();
-    var t = null;
+    checkCoverage();
     if (document.body) new MutationObserver(function (recs) {
       for (var i = 0; i < recs.length; i++) {
         var tg = recs[i].target;
         if (tg && tg.closest && tg.closest('[data-auditbar2]')) return;
       }
-      clearTimeout(t);
-      t = setTimeout(paint, 80);
+      schedule(250);
     }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['style'] });
-    setTimeout(paint, 500);
-    setTimeout(paint, 1500);
     // перемер после раскладки и после load: двенадцатая проверка без этого врёт
-    requestAnimationFrame(function () { requestAnimationFrame(paint); });
-    window.addEventListener('load', function () { paint(); setTimeout(paint, 300); });
-    window.__auditRepaint = paint;
+    window.addEventListener('load', function () { schedule(400); });
+    window.__auditRepaint = force;
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

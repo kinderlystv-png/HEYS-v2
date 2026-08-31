@@ -1,0 +1,289 @@
+{
+  "_": "Фикстура зоны strength-builder: та самая тренировка на 23 подхода, по которой сходятся все счётчики канваса. Прогоните свой расчёт на ней перед вёрсткой — совпали 23 подхода, 10 870 кг и 95 кг расчётного максимума в жиме, значит единицы учёта поняты верно.",
+  "date": "2026-08-10",
+  "label": "Верх тела B",
+  "bodyWeightKg": 78,
+  "expected": {
+    "workingSets": 23,
+    "tonnageKg": 10870,
+    "estimatedMaxBenchKg": 95,
+    "uncounted": ["Планка"],
+    "muscleVolumeKg": {
+      "бицепс": 3039,
+      "грудь": 2980,
+      "плечи": 2282,
+      "поясница": 1200,
+      "спина": 6078,
+      "трицепс": 2906
+    },
+    "note": "Планка не в тоннаже: время в килограммы не переводится. Разминка жима (40×12, 55×10) вне объёма и вне счётчика.",
+    "activeMinutes": 88,
+    "muscleGroups": "Список закрыт одиннадцатью: грудь, спина, плечи, бицепс, трицепс, пресс, поясница, ягодицы, квадрицепс, бицепс бедра, икры."
+  },
+  "exercises": [
+    {
+      "name": "Жим лёжа",
+      "unit": "weight",
+      "primary": "грудь",
+      "synergists": ["трицепс", "плечи"],
+      "sets": [
+        {
+          "type": "warmup",
+          "weightKg": 40,
+          "reps": 12,
+          "done": true,
+          "elapsedSec": 70
+        },
+        {
+          "type": "warmup",
+          "weightKg": 55,
+          "reps": 10,
+          "done": true,
+          "elapsedSec": 70
+        },
+        {
+          "type": "work",
+          "weightKg": 60,
+          "reps": 12,
+          "done": true,
+          "elapsedSec": 300,
+          "hardness": 6
+        },
+        {
+          "type": "work",
+          "weightKg": 70,
+          "reps": 10,
+          "done": true,
+          "elapsedSec": 300,
+          "hardness": 7
+        },
+        {
+          "type": "work",
+          "weightKg": 75,
+          "reps": 8,
+          "done": true,
+          "elapsedSec": 330,
+          "hardness": 8
+        },
+        {
+          "type": "work",
+          "weightKg": 75,
+          "reps": 8,
+          "done": true,
+          "elapsedSec": 330,
+          "hardness": 9,
+          "drops": [
+            {
+              "weightKg": 60,
+              "reps": 6,
+              "done": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Тяга штанги в наклоне",
+      "unit": "weight",
+      "primary": "спина",
+      "synergists": ["бицепс", "поясница"],
+      "sets": [
+        {
+          "type": "work",
+          "weightKg": 60,
+          "reps": 12,
+          "done": true,
+          "elapsedSec": 300
+        },
+        {
+          "type": "work",
+          "weightKg": 60,
+          "reps": 10,
+          "done": true,
+          "elapsedSec": 300
+        },
+        {
+          "type": "work",
+          "weightKg": 60,
+          "reps": 10,
+          "done": true,
+          "elapsedSec": 300
+        },
+        {
+          "type": "work",
+          "weightKg": 60,
+          "reps": 8,
+          "done": true,
+          "elapsedSec": 300
+        }
+      ]
+    },
+    {
+      "name": "Жим гантелей сидя",
+      "unit": "weight",
+      "primary": "плечи",
+      "synergists": ["трицепс"],
+      "sets": [
+        {
+          "type": "work",
+          "weightKg": 24,
+          "reps": 12,
+          "done": true,
+          "elapsedSec": 260
+        },
+        {
+          "type": "work",
+          "weightKg": 24,
+          "reps": 11,
+          "done": true,
+          "elapsedSec": 260
+        },
+        {
+          "type": "work",
+          "weightKg": 24,
+          "reps": 10,
+          "done": true,
+          "elapsedSec": 260
+        }
+      ]
+    },
+    {
+      "name": "Подтягивания",
+      "unit": "bodyweight",
+      "bodyweightShare": 1,
+      "primary": "спина",
+      "synergists": ["бицепс"],
+      "supersetId": "A",
+      "sets": [
+        {
+          "type": "work",
+          "addedKg": 0,
+          "reps": 9,
+          "done": true,
+          "elapsedSec": 150,
+          "round": 1
+        },
+        {
+          "type": "work",
+          "addedKg": 0,
+          "reps": 9,
+          "done": true,
+          "elapsedSec": 150,
+          "round": 2
+        },
+        {
+          "type": "work",
+          "addedKg": 0,
+          "reps": 8,
+          "done": true,
+          "elapsedSec": 150,
+          "round": 3
+        }
+      ]
+    },
+    {
+      "name": "Тяга блока",
+      "unit": "weight",
+      "primary": "спина",
+      "synergists": ["бицепс"],
+      "supersetId": "A",
+      "sets": [
+        {
+          "type": "work",
+          "weightKg": 55,
+          "reps": 10,
+          "done": true,
+          "elapsedSec": 150,
+          "round": 1
+        },
+        {
+          "type": "work",
+          "weightKg": 55,
+          "reps": 10,
+          "done": true,
+          "elapsedSec": 150,
+          "round": 2
+        },
+        {
+          "type": "work",
+          "weightKg": 55,
+          "reps": 10,
+          "done": true,
+          "elapsedSec": 150,
+          "round": 3
+        }
+      ]
+    },
+    {
+      "name": "Планка",
+      "unit": "time",
+      "primary": "пресс",
+      "synergists": [],
+      "sets": [
+        {
+          "type": "work",
+          "seconds": 60,
+          "done": true,
+          "elapsedSec": 120
+        },
+        {
+          "type": "work",
+          "seconds": 60,
+          "done": true,
+          "elapsedSec": 120
+        },
+        {
+          "type": "work",
+          "seconds": 60,
+          "done": true,
+          "elapsedSec": 120
+        }
+      ]
+    },
+    {
+      "name": "Французский жим",
+      "unit": "weight",
+      "primary": "трицепс",
+      "synergists": [],
+      "sets": [
+        {
+          "type": "work",
+          "weightKg": 30,
+          "reps": 12,
+          "done": true,
+          "elapsedSec": 220
+        },
+        {
+          "type": "work",
+          "weightKg": 30,
+          "reps": 12,
+          "done": true,
+          "elapsedSec": 220
+        },
+        {
+          "type": "work",
+          "weightKg": 30,
+          "reps": 10,
+          "done": true,
+          "elapsedSec": 220
+        }
+      ]
+    }
+  ],
+  "supersets": [
+    {
+      "id": "A",
+      "members": ["Подтягивания", "Тяга блока"],
+      "rounds": 3,
+      "restSec": 120,
+      "note": "Отдых равен максимуму из значений участников: 120 и 90 → 120. Раунд в схеме не хранится, поле round здесь — подсказка для чтения."
+    }
+  ],
+  "interrupted": {
+    "note": "Сценарий прерывания: закрыты разминка и первые 10 рабочих подходов, приложение закрыто в 19:05, возврат в 20:17. Пауза 1:12 в activeMinutes не входит — оно суммирует elapsedSec только отмеченных подходов.",
+    "closedWorkingSets": 10,
+    "remainingSets": 13,
+    "activeMinutesAtBreak": 52,
+    "pauseMinutes": 72
+  }
+}
