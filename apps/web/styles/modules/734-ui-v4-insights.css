@@ -1161,10 +1161,15 @@
   cursor: pointer;
 }
 
+/* Число итога — то, ради чего строка существует, и контракт даёт ему вес
+   числа: 12,5/700 тоном чернил, моноцифрами. Стояло 11,5 приглушённым — имя
+   периода слева читалось громче собственного результата. */
 .insights-v4-outcomes__value,
 .insights-v4-thresholds__value {
-  font-size: 11.5px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
 }
 
 .insights-v4-whatif__note,
