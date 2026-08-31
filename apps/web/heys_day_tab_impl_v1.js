@@ -1747,6 +1747,34 @@
 
         // adviceState is provided by dayAdviceIntegration
 
+        // Действия листов разбора зовут день по имени через goToDayAndRun
+        // (heys_widgets_ui_v1.js). До 31 августа день не публиковал ни одного
+        // из пяти нужных имён: кнопка внизу листа только переключала вкладку, а
+        // промах глотался тихим catch. addMeal, addWater, addActivity и
+        // focusWater уже выведены наружу тем же приёмом — здесь к ним
+        // добавлены два пикера, которые были в скоупе, но наружу не шли.
+        React.useEffect(() => {
+            if (typeof openWeightPicker !== 'function') return undefined;
+            HEYS.Day = HEYS.Day || {};
+            HEYS.Day.openWeightPicker = openWeightPicker;
+            return () => {
+                if (HEYS.Day && HEYS.Day.openWeightPicker === openWeightPicker) {
+                    delete HEYS.Day.openWeightPicker;
+                }
+            };
+        }, [openWeightPicker]);
+
+        React.useEffect(() => {
+            if (typeof openSleepQualityPicker !== 'function') return undefined;
+            HEYS.Day = HEYS.Day || {};
+            HEYS.Day.openSleepQualityPicker = openSleepQualityPicker;
+            return () => {
+                if (HEYS.Day && HEYS.Day.openSleepQualityPicker === openSleepQualityPicker) {
+                    delete HEYS.Day.openSleepQualityPicker;
+                }
+            };
+        }, [openSleepQualityPicker]);
+
         // === Export HEYS.Day mission helper methods ===
         React.useEffect(() => {
             HEYS.Day = HEYS.Day || {};
