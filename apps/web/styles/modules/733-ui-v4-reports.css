@@ -1202,7 +1202,8 @@
   border-radius: 999px;
   background: var(--v4-hero, #efe3cf);
   color: var(--v4-act-text, #8a4a20);
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  /* Кадр «Отчёты · нет веса», элемент 15: 12,5 px. */
+  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
   cursor: pointer;
 }
 
