@@ -124,14 +124,14 @@
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.045em;
-  color: var(--v4-act-text, #1d4ed8);
+  color: var(--v4-act-text, #8a4a20);
   font-variant-numeric: tabular-nums;
 }
 
 /* «Перебор» возвращает числу нейтральные чернила: цвет зоны в этом состоянии
    несёт полоса, а не число. */
 .nutrition-v4-hero[data-zone='over'] .nutrition-v4-hero__value {
-  color: var(--v4-ink, #111827);
+  color: var(--v4-ink, #201e1d);
 }
 
 .nutrition-v4-hero[data-zone='warn'] .nutrition-v4-hero__value {
