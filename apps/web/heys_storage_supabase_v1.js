@@ -1151,6 +1151,9 @@
 
   // 🔄 Флаг для предотвращения race condition между автовосстановлением и явным signIn
   let _signInInProgress = false;
+  // Защитный период после signIn: handleAuthFailure сверяется с ним ещё до
+  // первого входа, а объявления не было — чтение падало ReferenceError.
+  let _ignoreSignedOutUntil = 0;
   // v62: replaces dead _rpcSyncInProgress — set SYNCHRONOUSLY before fire-and-forget cloud.syncClient()
   // in PIN auth restore so controllerchange can detect this window and defer PWA reload.
   let _authSyncPending = false;
