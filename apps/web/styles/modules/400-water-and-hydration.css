@@ -3198,7 +3198,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   max-height: min(88vh, 760px);
   border-radius: 26px 26px 0 0;
   background: var(--v4-bg, #fffaf1);
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   box-shadow: 0 -8px 40px rgba(80, 50, 20, 0.12);
 }
 
@@ -3207,14 +3207,20 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 18px 0;
+  /* Кадр «Научное описание», элемент 02: поля 18/18/14 и разделитель под
+     шапкой. Разделителя не было вовсе, и шапка сливалась с текстом совета
+     под ней. */
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
+/* Элемент 03: это заголовок экрана, а не ярус. Стоял 10 px прописными
+   акцентом — так набирают ярусы внутри экрана, и заголовок читался тише
+   собственных подзаголовков. */
 .advice-v4-science__title {
-  font: 700 10px/1 Figtree, sans-serif;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #8a4a20;
+  flex: 1;
+  font: 700 14px/1 Figtree, sans-serif;
+  color: var(--v4-ink, #201e1d);
 }
 
 /* Круглые кнопки 30 px на канвасе стоят на первой поверхности --c1 (кадр
@@ -3235,12 +3241,17 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-science__body {
   flex: 1;
   overflow: auto;
-  padding: 0 18px 12px;
+  /* Элемент 04: поля 0 18. Нижние 12 были лишними — подвал ниже держит свой
+     отступ, и вместе они давали двойной зазор перед кнопкой. */
+  padding: 0 18px;
 }
 
 .advice-v4-science__advice-title {
   margin: 16px 0 0;
   font: 700 16px/1.35 Figtree, sans-serif;
+  /* Тон назван явно: наследовался литерал #201e1d с самой карточки, то есть
+     чёрные чернила мимо набора. */
+  color: var(--v4-ink, #201e1d);
   text-wrap: pretty;
 }
 
@@ -3248,11 +3259,13 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   margin-top: 18px;
 }
 
+/* Элементы 06 и 08: ярус набирается как все ярусы зоны — трекинг .16em
+   тоном акцента. Стоял .14em чернилами 42 %, то есть тише всего на экране. */
 .advice-v4-science__section-label {
   font: 700 10px/1 Figtree, sans-serif;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(32, 30, 29, 0.42);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .advice-v4-science__text {
@@ -3262,19 +3275,26 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   text-wrap: pretty;
 }
 
+/* Элемент 09: источники — одна списочная карточка, а не набор отдельных.
+   Кадр даёт фон --c1, радиус 20 и поля 2/16 у контейнера, а строки внутри
+   разводит разделителем. Было наоборот: контейнер без фона, у каждого
+   источника своя карточка с зазором 10 — три работы читались как три
+   отдельных блока, хотя это один список. */
 .advice-v4-science__sources {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
+  margin-top: 6px;
+  padding: 2px 16px;
+  border-radius: 20px;
+  background: var(--v4-c1, #f7efe2);
 }
 
-/* Кадр «Научное описание», блок «Исследования»: первая поверхность --c1
-   (тёмная ниже — #23201b). --v4-hero — вторая. */
+/* Элемент 10: строка списка с разделителем; у последней его нет. */
 .advice-v4-science__source {
-  background: var(--v4-c1, #f7efe2);
-  border-radius: 16px;
-  padding: 12px 14px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+}
+
+.advice-v4-science__source:last-child {
+  border-bottom: none;
 }
 
 .advice-v4-science__source-title {
@@ -3288,25 +3308,38 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: rgba(32, 30, 29, 0.42);
 }
 
+/* Элементы 14 и 15: оговорка стоит карточкой на второй поверхности, а не
+   висит подписью в воздухе. Она говорит «ваш случай может отличаться» — это
+   не сноска к списку, а отдельное предупреждение, и кадр даёт ему форму. */
 .advice-v4-science__footnote {
   margin: 16px 0 0;
-  font: 500 10.5px/1.55 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.42);
+  padding: 14px 15px;
+  border-radius: 18px;
+  background: var(--v4-hero, #efe3cf);
+  font: 500 11.5px/1.5 Figtree, sans-serif;
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
   text-wrap: pretty;
 }
 
+/* Элемент 16: поля 14/18/20. Нижнее берётся не меньше кадрового, но уступает
+   безопасной зоне телефона — на аппаратах с жестовой панелью кнопка иначе
+   упирается в неё. */
 .advice-v4-science__footer {
-  padding: 12px 18px max(20px, env(safe-area-inset-bottom, 0px));
+  padding: 14px 18px max(20px, env(safe-area-inset-bottom, 0px));
 }
 
+/* Элемент 17: кнопка на акценте с текстом --on-acs. Оба тона стояли голыми
+   литералами, и текстовый был тёмно-коричневым #2b1608 — тёмное на оранжевом
+   вместо светлого, которое даёт роль. Набором это не переопределялось: в
+   тёмных палитрах кнопка оставалась той же. */
 .advice-v4-science__primary {
   width: 100%;
   border: none;
   border-radius: 999px;
-  background: #c67139;
-  padding: 14px;
+  background: var(--v4-act, #c67139);
+  padding: 15px;
   font: 700 13px/1 Figtree, sans-serif;
-  color: #2b1608;
+  color: var(--v4-btn-on-act, #fff5ef);
   cursor: pointer;
 }
 

@@ -37,6 +37,10 @@ const EXCEPTIONS = new Map([
   // Кадр рисует крестик плашки глифом 12 px, крестик детали — 14 px. Глиф
   // общий (renderAdviceV4Icon 'close'), второго размера не заводим.
   ['Совет · всплывающий · 27|glyph', 'общий глиф крестика 14 px вместо 12'],
+  // Кадр даёт нижнее поле 20; в продукте оно не меньше кадрового, но уступает
+  // безопасной зоне телефона — иначе на аппаратах с жестовой панелью кнопка
+  // упирается в неё. Число кадра сохранено внутри max().
+  ['Научное описание · 16|padding', 'нижнее поле уступает env(safe-area-inset-bottom)'],
 ]);
 // Кадр «Советы · шторка» — каркас листа и карточка совета.
 const SHEET = [
@@ -121,9 +125,29 @@ const TOAST = [
     ['radius', 'padding', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
+// Кадр «Научное описание» — экран под советом: что за этим стоит, список
+// исследований, оговорка и кнопка. Сведён 31 августа.
+const SCIENCE = [
+  [2, '.advice-v4-science__header', ['align', 'gap', 'padding']],
+  [3, '.advice-v4-science__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [4, '.advice-v4-science__body', ['padding']],
+  [5, '.advice-v4-science__advice-title', ['fontWeight', 'lineHeight', 'color']],
+  [6, '.advice-v4-science__section-label',
+    ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'color']],
+  [7, '.advice-v4-science__text', ['fontWeight', 'lineHeight', 'color']],
+  [9, '.advice-v4-science__sources', ['background', 'radius', 'padding', 'marginTop']],
+  [10, '.advice-v4-science__source', ['padding']],
+  [11, '.advice-v4-science__source-title', ['fontWeight', 'fontSize', 'color']],
+  [12, '.advice-v4-science__source-meta', ['fontWeight', 'fontSize', 'color']],
+  [14, '.advice-v4-science__footnote', ['background', 'radius', 'padding', 'marginTop']],
+  [15, '.advice-v4-science__footnote', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [17, '.advice-v4-science__primary',
+    ['radius', 'background', 'padding', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 47;
+const COVERAGE_FLOOR = 60;
 
 describe('«Советы» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
@@ -131,6 +155,10 @@ describe('«Советы» · разбор кадров канваса', () => {
 
   it('кадр «Советы · шторка» совпадает с листом советов', () => {
     expect(compare({ razbor, rules, frame: 'Советы · шторка', pairs: SHEET })).toEqual([]);
+  });
+
+  it('кадр «Научное описание» совпадает с экраном науки', () => {
+    expect(compare({ razbor, rules, frame: 'Научное описание', pairs: SCIENCE })).toEqual([]);
   });
 
   it('кадр «Совет · панель оценки» совпадает с панелью и рядом кнопок', () => {
@@ -172,7 +200,7 @@ describe('«Советы» · разбор кадров канваса', () => {
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(3);
+    expect(EXCEPTIONS.size).toBe(4);
   });
 
   it('гейт называет свой охват', () => {
