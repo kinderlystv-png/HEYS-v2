@@ -337,11 +337,13 @@
   flex: 1;
   min-width: 44px;
   min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  border-radius: 12px;
+  border-radius: 999px;
   padding: 10px 14px;
-  font-size: 12.5px;
-  font-weight: 700;
+  font: 700 13px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-btn-on-act, #fff5ef);
   background: var(--v4-act, #c67139);
   box-shadow: none;
@@ -350,7 +352,7 @@
 }
 
 .kcal-realdata-card__button--secondary {
-  color: var(--v4-warn-text, #a1471c);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.58));
   background: var(--v4-bg, #fffaf1);
   border: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 10%, transparent);
   box-shadow: none;
@@ -359,9 +361,10 @@
 /* Рекомендация и строка влияния — одинаково тихие: обе объясняют, а не зовут. */
 .kcal-realdata-card__recommendation,
 .kcal-realdata-card__impact {
+  margin-top: 10px;
   font-size: 11px;
-  line-height: 1.35;
-  font-weight: 600;
+  line-height: 1.5;
+  font-weight: 500;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
 }
 

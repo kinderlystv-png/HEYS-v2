@@ -79,6 +79,7 @@ const RAZBOR_EXCEPTIONS = new Map([
   // 500 11px тоном 38 %, а строка «вид · шапка и период» просит 600 10,5
   // тоном 42 %. Контракт старше кадра.
   ['Отчёты · мало данных · 04|*', 'кадр отстал: контракт «вид · шапка и период» просит 600 10,5'],
+  ['Мало калорий · подтверждение · 16|color', 'у набора нет ступени 58 %, ближайшая --v4-ink-2'],
   // Три места, где верна строка контракта, а не кадр:
   // · 68 — «формат · вес и его подпись» держит значение 21 px/800, кадр даёт 12,5/700;
   // · 104 — «карточка · призыв о замерах» держит факт 12 px/1,55, кадр даёт 11/1,4;
@@ -187,6 +188,23 @@ const WEEK_ONE = [
 const REALDATA_CSS = fs.readFileSync(
   path.resolve(__dirname, '../styles/modules/100-metrics-and-graphs.css'), 'utf8');
 
+const REALDATA_CONFIRM = [
+  [10, '.kcal-realdata-card__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [11, '.kcal-realdata-card__text', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  [12, '.kcal-realdata-card__actions', ['align', 'gap']],
+  [13, '.kcal-realdata-card__badge',
+    ['flex', 'align', 'height', 'padding', 'radius', 'background',
+      'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [15, '.kcal-realdata-card__button',
+    ['align', 'justify', 'minHeight', 'radius', 'background',
+      'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [16, ['.kcal-realdata-card__button', '.kcal-realdata-card__button--secondary'],
+    ['align', 'justify', 'minHeight', 'radius', 'background',
+      'fontWeight', 'fontSize', 'lineHeight']],
+  [17, '.kcal-realdata-card__recommendation',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+];
+
 const REALDATA = [
   [6, '.kcal-realdata-card__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [7, '.kcal-realdata-card__text', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
@@ -286,6 +304,15 @@ describe('Отчёты · разбор кадров канваса', () => {
     })).toEqual([]);
   });
 
+  it('кнопки карточки подтверждения — пилюли 48 по строке зоны', () => {
+    expect(compare({
+      razbor,
+      rules: readRules(REALDATA_CSS),
+      frame: 'Мало калорий · подтверждение',
+      pairs: REALDATA_CONFIRM,
+    })).toEqual([]);
+  });
+
   it('карточка подтверждения чисел дня совпадает с кадром', () => {
     expect(compare({
       razbor,
@@ -365,7 +392,7 @@ describe('Отчёты · разбор кадров канваса', () => {
   });
 
   it('отступления разбора названы и не разрастаются молча', () => {
-    expect(RAZBOR_EXCEPTIONS.size).toBe(18);
+    expect(RAZBOR_EXCEPTIONS.size).toBe(19);
   });
 });
 
@@ -657,6 +684,9 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
       'Отчёты · нулевая строка матрицы · 21',
       // Кадр отстал от контракта по границам окна: 500 11px против 600 10,5.
       'Отчёты · мало данных · 04',
+      // Тон вторичной кнопки карточки подтверждения: кадр и строка «кнопки и
+      // области нажатия» просят чернила 58 %, ближайшая ступень набора 55 %.
+      'Мало калорий · подтверждение · 16',
       // Третья строка зоны, где просят скелетон. Ответ тот же: знак ожидания
       // в продукте один — спиннер, полос на #f4f4f3 у него не бывает.
       'карточка · скелетон расчёта',
