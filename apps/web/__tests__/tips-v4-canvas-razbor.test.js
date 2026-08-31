@@ -174,9 +174,28 @@ const SETTINGS = [
     ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
 ];
 
+// Кадр «Оговорка» — лист первого совета. Зоне принадлежат элементы 20–30;
+// выше — экран дня за листом. Сведён 31 августа.
+const DISCLAIMER = [
+  [20, '.advice-v4-disclaimer-overlay', ['background']],
+  [21, '.advice-v4-disclaimer-card', ['background', 'radius', 'padding']],
+  [22, '.advice-v4-disclaimer-card__handle', ['width', 'height', 'radius']],
+  [23, '.advice-v4-disclaimer-card__title',
+    ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'color']],
+  [24, '.advice-v4-disclaimer-card__lead',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [25, '.advice-v4-disclaimer-card__note', ['background', 'radius', 'padding', 'marginTop']],
+  [26, '.advice-v4-disclaimer-card__text', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [27, '.advice-v4-disclaimer-card__check', ['align', 'gap', 'marginTop']],
+  [28, '.advice-v4-disclaimer-card__check input', ['width', 'height']],
+  [29, '.advice-v4-disclaimer-card__check', ['fontWeight', 'fontSize', 'lineHeight']],
+  [30, '.advice-v4-disclaimer-card__primary',
+    ['radius', 'background', 'padding', 'fontWeight', 'fontSize', 'lineHeight']],
+];
+
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 72;
+const COVERAGE_FLOOR = 83;
 
 describe('«Советы» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
@@ -184,6 +203,10 @@ describe('«Советы» · разбор кадров канваса', () => {
 
   it('кадр «Советы · шторка» совпадает с листом советов', () => {
     expect(compare({ razbor, rules, frame: 'Советы · шторка', pairs: SHEET })).toEqual([]);
+  });
+
+  it('кадр «Оговорка» совпадает с листом первого совета', () => {
+    expect(compare({ razbor, rules, frame: 'Оговорка', pairs: DISCLAIMER })).toEqual([]);
   });
 
   it('кадр «Настройки советов» совпадает с экраном настроек', () => {

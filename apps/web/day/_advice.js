@@ -639,12 +639,21 @@
             onClick: (e) => e.stopPropagation(),
         },
             React.createElement('div', { className: 'advice-v4-disclaimer-card' },
+                // Кадр «Оговорка», элемент 22: лист поднимается снизу и несёт
+                // ручку, как остальные листы советов. Без неё карточка стояла
+                // по центру экрана и читалась как окно, а не как лист.
+                React.createElement('div', { className: 'advice-v4-disclaimer-card__handle' }),
                 React.createElement('div', { className: 'advice-v4-disclaimer-card__title' }, 'Первый совет'),
                 React.createElement('p', { className: 'advice-v4-disclaimer-card__lead' },
                     'Дальше приложение будет замечать закономерности в ваших данных'
                 ),
-                React.createElement('p', { className: 'advice-v4-disclaimer-card__text' },
-                    'Это наблюдения по вашим записям, а не назначение врача. При заболеваниях, беременности и приёме лекарств решения принимает врач — приложение их не заменяет.'
+                // Элемент 25: оговорка врача живёт в своей карточке на первой
+                // поверхности — она отдельное предупреждение, а не продолжение
+                // фразы над ней.
+                React.createElement('div', { className: 'advice-v4-disclaimer-card__note' },
+                    React.createElement('p', { className: 'advice-v4-disclaimer-card__text' },
+                        'Это наблюдения по вашим записям, а не назначение врача. При заболеваниях, беременности и приёме лекарств решения принимает врач — приложение их не заменяет.'
+                    )
                 ),
                 React.createElement('label', { className: 'advice-v4-disclaimer-card__check' },
                     React.createElement('input', {

@@ -2975,10 +2975,11 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   inset: 0;
   z-index: 10050;
   display: flex;
-  align-items: center;
+  /* Элемент 21: лист прижат к низу экрана, а не висит по центру. */
+  align-items: flex-end;
   justify-content: center;
-  padding: 24px 18px;
-  background: rgba(32, 30, 29, 0.42);
+  padding: 0;
+  background: rgba(32, 30, 29, 0.4);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
 }
@@ -2989,47 +2990,76 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
    поверхности у него в коде нет, это уже недорисованный кадр, а не роль. */
 .advice-v4-disclaimer-card {
   width: min(100%, 360px);
-  border-radius: 24px;
+  border-radius: 26px 26px 28px 28px;
   background: var(--v4-bg, #fffaf1);
-  padding: 22px 18px 18px;
+  padding: 20px 18px 20px;
   box-shadow:
     0 1px 2px rgba(80, 50, 20, 0.09),
     0 18px 44px rgba(80, 50, 20, 0.16);
 }
 
-.advice-v4-disclaimer-card__title {
-  font: 700 15px/1.2 Figtree, sans-serif;
-  color: #201e1d;
+/* Элемент 22. */
+.advice-v4-disclaimer-card__handle {
+  width: 38px;
+  height: 4px;
+  margin: 0 auto 18px;
+  border-radius: 999px;
+  background: var(--v4-track, rgba(0, 0, 0, 0.14));
 }
 
+/* Элемент 23: «Первый совет» — ярус, а не заголовок. Стоял 15/700 чернилами,
+   то есть крупнее фразы под ним, и глаз читал служебное слово раньше самой
+   мысли. */
+.advice-v4-disclaimer-card__title {
+  font: 700 10px/1 Figtree, sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+/* Элемент 24: главная фраза листа — 17/700. Стояла 13/600, мельче оговорки
+   под ней. */
 .advice-v4-disclaimer-card__lead {
-  margin: 12px 0 0;
-  font: 600 13px/1.45 Figtree, sans-serif;
-  color: #201e1d;
+  margin: 10px 0 0;
+  font: 700 17px/1.32 Figtree, sans-serif;
+  color: var(--v4-ink, #201e1d);
   text-wrap: pretty;
 }
 
+/* Элемент 25. */
+.advice-v4-disclaimer-card__note {
+  margin-top: 18px;
+  padding: 16px 17px;
+  border-radius: 20px;
+  background: var(--v4-c1, #f7efe2);
+}
+
+/* Элемент 26. */
 .advice-v4-disclaimer-card__text {
-  margin: 10px 0 0;
-  font: 500 12px/1.55 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.55);
+  margin: 0;
+  font: 500 12.5px/1.6 Figtree, sans-serif;
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
   text-wrap: pretty;
 }
 
 .advice-v4-disclaimer-card__check {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   margin-top: 16px;
-  font: 500 12px/1.4 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.62);
+  /* Элемент 29: подпись 600 12/1,4 чернилами 55 %. */
+  font: 600 12px/1.4 Figtree, sans-serif;
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
   cursor: pointer;
 }
 
+/* Элемент 28: квадрат 20 с радиусом 6 в акценте — форма кадра, а не круглый
+   системный чекбокс 16. */
 .advice-v4-disclaimer-card__check input {
-  width: 16px;
-  height: 16px;
-  accent-color: #c67139;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  accent-color: var(--v4-act, #c67139);
 }
 
 .advice-v4-disclaimer-card__primary {
@@ -3037,10 +3067,13 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   margin-top: 16px;
   border: none;
   border-radius: 999px;
-  background: #c67139;
-  padding: 14px;
+  background: var(--v4-act, #c67139);
+  padding: 15px;
   font: 700 13px/1 Figtree, sans-serif;
-  color: #2b1608;
+  /* Тон текста здесь тот же случай, что у кнопки экрана науки: роль
+     --v4-btn-on-act объявлена только в песочных наборах, в синих рисуется
+     запасное. См. запись в UI_V4_FINDINGS. */
+  color: var(--v4-btn-on-act, #fff5ef);
   cursor: pointer;
 }
 
