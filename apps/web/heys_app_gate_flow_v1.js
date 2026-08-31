@@ -1779,227 +1779,172 @@
         const staleCount = Number(status?.counts?.stale_heartbeats ?? staleHeartbeats.length ?? 0);
         const backupBad = Boolean(status && (!backup || backup.status !== 'ok' || Number(backup.hours_ago || 999) > 30));
         const issueScore = openCount + staleCount + (backupBad ? 1 : 0);
+        // Состояние системы — тон и слова. Заливку, рамку и точку читала только
+        // запасная кнопка, которой в кабинете нет: подпись шапки берёт `tone`
+        // и `label`, а тон ей даёт .cur-cab__health своей ролью.
         const systemHealth = (() => {
-            if (loading && !status) return { tone: 'checking', label: 'Проверяем', hint: 'Идёт автопроверка', dot: '#60a5fa', bg: 'rgba(239,246,255,0.16)', border: 'rgba(147,197,253,0.42)', color: '#dbeafe' };
-            if (error && !status) return { tone: 'critical', label: 'Ошибка', hint: error, dot: '#f87171', bg: 'rgba(254,242,242,0.16)', border: 'rgba(248,113,113,0.42)', color: '#fee2e2' };
-            if (!status) return { tone: 'unknown', label: 'Система', hint: 'Статус ещё не загружен', dot: '#cbd5e1', bg: 'rgba(255,255,255,0.12)', border: 'rgba(255,255,255,0.28)', color: '#fff' };
-            if (ok) return { tone: 'ok', label: 'OK', hint: 'Все проверки зелёные', dot: '#4ade80', bg: 'rgba(240,253,244,0.16)', border: 'rgba(134,239,172,0.48)', color: '#dcfce7' };
-            if (issueScore >= 3 || (backupBad && staleCount > 0)) return { tone: 'critical', label: 'Критично', hint: `${openCount} open`, dot: '#f87171', bg: 'rgba(254,242,242,0.16)', border: 'rgba(248,113,113,0.46)', color: '#fee2e2' };
-            return { tone: 'warning', label: 'Внимание', hint: `${openCount || criticalCount || issueScore} open`, dot: '#facc15', bg: 'rgba(254,249,195,0.16)', border: 'rgba(250,204,21,0.48)', color: '#fef9c3' };
+            if (loading && !status) return { tone: 'checking', label: 'Проверяем', hint: 'Идёт автопроверка' };
+            if (error && !status) return { tone: 'critical', label: 'Ошибка', hint: error };
+            if (!status) return { tone: 'unknown', label: 'Система', hint: 'Статус ещё не загружен' };
+            if (ok) return { tone: 'ok', label: 'OK', hint: 'Все проверки зелёные' };
+            if (issueScore >= 3 || (backupBad && staleCount > 0)) return { tone: 'critical', label: 'Критично', hint: openCount + ' open' };
+            return { tone: 'warning', label: 'Внимание', hint: (openCount || criticalCount || issueScore) + ' open' };
         })();
-        const card = (good) => ({
-            padding: 12,
-            borderRadius: 10,
-            border: good ? '1px solid #bbf7d0' : '1px solid #fecdd3',
-            background: good ? '#f0fdf4' : '#fff1f2',
-            color: good ? '#14532d' : '#991b1b'
-        });
+        // Разбор инцидента: что делать и какой командой. Прежде команда стояла
+        // на холодной плашке #f1f5f9 тоном #0f172a.
         const renderRunbook = (item) => {
-            const details = item?.details || {};
+            const details = item && item.details || {};
             if (!details.runbook_title && !details.runbook_command) return null;
-            return h('div', { style: { marginTop: 8, display: 'grid', gap: 4, color: '#64748b', fontSize: 12 } },
+            return h('div', { className: 'ops-runbook' },
                 details.runbook_title && h('span', null, details.runbook_title),
-                details.runbook_command && h('code', {
-                    style: {
-                        padding: '4px 6px',
-                        borderRadius: 6,
-                        background: '#f1f5f9',
-                        color: '#0f172a',
-                        overflowWrap: 'anywhere'
-                    }
-                }, details.runbook_command)
+                details.runbook_command && h('code', { className: 'ops-cmd' }, details.runbook_command)
             );
         };
-
-	        // renderTrigger — контракт «вид · шапка кабинета»: счёт клиентов и
-	        // состояние системы идут одной подписью, а не кнопкой в 118 px рядом
-	        // с заголовком: она съедала ширину, и «Кабинет куратора» ломался на
-	        // две строки. Оверлей дашборда остаётся общим.
-	        return h(React.Fragment, null,
-	            renderTrigger ? renderTrigger({ open: openDashboard, health: systemHealth }) : h('button', {
-	                type: 'button',
-	                title: `Статус системы: ${systemHealth.label}`,
-	                'aria-label': `Статус системы: ${systemHealth.label}. Открыть Ops dashboard`,
-	                onClick: openDashboard,
-	                style: {
-	                    minHeight: 34,
-	                    minWidth: 118,
-	                    padding: '5px 9px',
-	                    borderRadius: 8,
-	                    border: `1px solid ${systemHealth.border}`,
-	                    background: systemHealth.bg,
-	                    color: systemHealth.color,
-	                    cursor: 'pointer',
-	                    fontSize: 11,
-	                    fontWeight: 700,
-	                    display: 'inline-flex',
-	                    alignItems: 'center',
-	                    justifyContent: 'center',
-                        gap: 7,
-                        lineHeight: 1.1
-	                }
-	            },
-                    h('span', {
-                        'aria-hidden': 'true',
-                        style: {
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            background: systemHealth.dot,
-                            boxShadow: `0 0 0 3px ${systemHealth.dot}24`,
-                            flex: '0 0 auto'
-                        }
-                    }),
-                    h('span', { style: { display: 'grid', gap: 1, textAlign: 'left' } },
-                        h('span', { style: { opacity: 0.82, fontSize: 10 } }, 'Система'),
-                        h('span', null, systemHealth.label)
-                    )
-                ),
+        // renderTrigger — контракт «вид · шапка кабинета»: счёт клиентов и
+        // состояние системы идут одной подписью, а не кнопкой в 118 px рядом с
+        // заголовком: она съедала ширину, и «Кабинет куратора» ломался на две
+        // строки. Запасная кнопка — метка набора: своей заливки, рамки и точки
+        // прежней системы у неё больше нет.
+        return h(React.Fragment, null,
+            renderTrigger
+                ? renderTrigger({ open: openDashboard, health: systemHealth })
+                : h('button', {
+                    type: 'button',
+                    className: 'cur-cab__mch',
+                    title: 'Статус системы: ' + systemHealth.label,
+                    'aria-label': 'Статус системы: ' + systemHealth.label + '. Открыть Ops dashboard',
+                    onClick: openDashboard
+                }, 'система · ' + systemHealth.label.toLowerCase()),
+            // Дашборд — служебный лист кабинета, как подписка и диагностика.
+            // Прежде это была своя модалка: тёмный скрим rgba(15,23,42,.48),
+            // белое окно в рамке #e2e8f0 с тенью, зелёная кнопка проверки
+            // #f0fdf4/#86efac и закрытие квадратом 34.
             open && h('div', {
+                className: 'cur-cab__sheet-scrim',
                 role: 'presentation',
-                onClick: () => setOpen(false),
-                style: {
-                    position: 'fixed',
-                    inset: 0,
-                    zIndex: 13000,
-                    background: 'rgba(15, 23, 42, 0.48)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 14
-                }
+                onClick: () => setOpen(false)
             },
-                h('div', {
+                h('section', {
+                    className: 'cur-cab__sheet',
                     role: 'dialog',
                     'aria-modal': 'true',
                     'aria-label': 'Ops dashboard',
-                    onClick: (e) => e.stopPropagation(),
-                    style: {
-                        width: 'min(560px, calc(100vw - 28px))',
-                        maxHeight: 'min(760px, calc(100vh - 28px))',
-                        overflow: 'auto',
-                        borderRadius: 16,
-                        background: '#fff',
-                        color: '#0f172a',
-                        border: '1px solid #e2e8f0',
-                        boxShadow: '0 24px 80px rgba(15,23,42,0.34)'
-                    }
+                    onClick: (e) => e.stopPropagation()
                 },
-                    h('div', {
-                        style: {
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: 10,
-                            padding: '16px 18px',
-                            borderBottom: '1px solid #e2e8f0'
-                        }
-                    },
+                    h('header', { className: 'cur-cab__sheet-head' },
                         h('div', null,
-                            h('div', { style: { fontWeight: 800, fontSize: 17 } }, 'Ops dashboard'),
-                            h('div', { style: { color: '#64748b', fontSize: 12, marginTop: 2 } },
-                                ok ? 'Серверные проверки без активных инцидентов' : 'Есть пункты, требующие внимания'
+                            h('div', { className: 'cur-cab__sheet-title' }, 'Ops dashboard'),
+                            h('div', { className: 'cur-cab__tab-note' },
+                                ok ? 'Серверные проверки без активных инцидентов'
+                                    : 'Есть пункты, требующие внимания')
+                        ),
+                        h('button', {
+                            type: 'button',
+                            className: 'cur-cab__sheet-close',
+                            'aria-label': 'Закрыть Ops dashboard',
+                            onClick: () => setOpen(false)
+                        }, '✕')
+                    ),
+                    h('div', { className: 'cur-cab__sheet-body' },
+                        error && h('div', { className: 'cur-panel__empty' },
+                            h('div', { className: 'cur-panel__empty-title' }, 'Статус не пришёл'),
+                            h('div', { className: 'cur-panel__empty-note' }, error)
+                        ),
+                        // Ход проверки — строками листа, а не плашкой: он
+                        // сообщает, что происходит, и предупреждением не является.
+                        (loading || checkMessage || lastCheckTime) && h('div', {
+                            className: 'cur-group__card',
+                            role: 'status',
+                            'aria-live': 'polite'
+                        },
+                            h('div', { className: 'cur-kv' },
+                                h('span', { className: 'cur-kv__key' },
+                                    loading ? 'Проверка идёт'
+                                        : lastCheck && lastCheck.error ? 'Последняя проверка с ошибкой'
+                                            : 'Последняя проверка'),
+                                h('span', { className: 'cur-kv__val' },
+                                    checkMessage || (lastCheckTime ? 'в ' + lastCheckTime : '—'))
+                            ),
+                            lastCheck && h('div', { className: 'cur-kv' },
+                                h('span', { className: 'cur-kv__key' }, lastCheck.fn || 'ops'),
+                                h('span', { className: 'cur-kv__val' },
+                                    (lastCheckTime || '—') + ' · ' + (lastCheck.tookMs || 0) + ' ms')
                             )
                         ),
-                        h('div', { style: { display: 'flex', gap: 8 } },
-                            h('button', {
-                                type: 'button',
-                                onClick: () => load(true),
-                                disabled: loading,
-                                style: {
-                                    minHeight: 34,
-                                    padding: '7px 10px',
-                                    borderRadius: 8,
-	                                    border: '1px solid #86efac',
-	                                    background: '#f0fdf4',
-	                                    color: '#14532d',
-	                                    cursor: loading ? 'default' : 'pointer',
-                                        opacity: loading ? 0.72 : 1,
-	                                    fontWeight: 700
-	                                }
-	                            }, loading ? 'Проверяем...' : 'Проверить сейчас'),
-                            h('button', {
-                                type: 'button',
-                                'aria-label': 'Закрыть Ops dashboard',
-                                onClick: () => setOpen(false),
-                                style: {
-                                    width: 34,
-                                    height: 34,
-                                    borderRadius: 8,
-                                    border: '1px solid #e2e8f0',
-                                    background: '#fff',
-                                    color: '#0f172a',
-                                    cursor: 'pointer',
-                                    fontSize: 18
-                                }
-                            }, '×')
-                        )
-	                    ),
-	                    h('div', { style: { padding: 18, display: 'grid', gap: 12 } },
-	                        error && h('div', { style: { ...card(false), fontSize: 13 } }, error),
-                            (loading || checkMessage || lastCheckTime) && h('div', {
-                                role: 'status',
-                                'aria-live': 'polite',
-                                style: {
-                                    padding: '9px 10px',
-                                    borderRadius: 10,
-                                    border: '1px solid #e2e8f0',
-                                    background: loading ? '#f8fafc' : '#f1f5f9',
-                                    color: '#334155',
-                                    fontSize: 12,
-                                    display: 'grid',
-                                    gap: 2
-                                }
-	                            },
-	                                h('div', { style: { fontWeight: 700 } }, loading ? 'Проверка выполняется' : (lastCheck?.error ? 'Последняя проверка завершилась ошибкой' : 'Последняя проверка завершена')),
-	                                h('div', null, checkMessage || (lastCheckTime ? `Обновлено в ${lastCheckTime}` : '')),
-                                    lastCheck && h('div', { style: { color: '#64748b', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', overflowWrap: 'anywhere' } },
-                                        `${lastCheck.fn || 'ops'} · ${lastCheckTime || '—'} · ${lastCheck.tookMs || 0} ms`
-                                    )
-	                            ),
-	                        h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: 8 } },
-                            h('div', { style: card(ok) },
-                                h('div', { style: { fontSize: 12, opacity: 0.8 } }, 'Status'),
-                                h('div', { style: { fontSize: 18, fontWeight: 800 } }, ok ? 'OK' : `${openIncidents.length} open`)
+                        // Четыре числа сеткой — те же плитки, что в «Диагностике».
+                        // Прежде каждая плитка красилась целиком, зелёной или
+                        // розовой, и три подряд читались как три тревоги.
+                        h('div', { className: 'cdo-metrics' },
+                            h('div', { className: 'cdo-metric' + (ok ? '' : ' cdo-metric--bad') },
+                                h('strong', null, ok ? 'OK' : String(openIncidents.length)),
+                                h('span', null, ok ? 'инцидентов нет' : 'открытых инцидентов')
                             ),
-                            h('div', { style: card(backup && backup.status === 'ok' && Number(backup.hours_ago || 999) <= 30) },
-                                h('div', { style: { fontSize: 12, opacity: 0.8 } }, 'Backup'),
-                                h('div', { style: { fontSize: 18, fontWeight: 800 } }, backup ? `${backup.status} · ${backup.hours_ago}h` : 'нет данных')
+                            h('div', {
+                                className: 'cdo-metric'
+                                    + (backup && backup.status === 'ok' && Number(backup.hours_ago || 999) <= 30
+                                        ? '' : ' cdo-metric--warn')
+                            },
+                                h('strong', null, backup ? String(backup.hours_ago) + ' ч' : '—'),
+                                h('span', null, backup ? 'с последней копии · ' + backup.status : 'о копиях нет данных')
                             ),
-                            h('div', { style: card(staleHeartbeats.length === 0) },
-                                h('div', { style: { fontSize: 12, opacity: 0.8 } }, 'Heartbeats'),
-                                h('div', { style: { fontSize: 18, fontWeight: 800 } }, staleHeartbeats.length ? `${staleHeartbeats.length} stale` : 'fresh')
+                            h('div', {
+                                className: 'cdo-metric' + (staleHeartbeats.length ? ' cdo-metric--warn' : '')
+                            },
+                                h('strong', null, String(staleHeartbeats.length)),
+                                h('span', null, staleHeartbeats.length ? 'молчащих проверок' : 'молчащих нет')
+                            ),
+                            h('div', { className: 'cdo-metric' },
+                                h('strong', null, String(deploys.length)),
+                                h('span', null, 'записей о deploy')
                             )
                         ),
-                        h('div', { style: { display: 'grid', gap: 8 } },
-                            h('div', { style: { fontWeight: 800 } }, 'Активные инциденты'),
+                        h('button', {
+                            type: 'button',
+                            className: 'cur-cab__open',
+                            onClick: () => load(true),
+                            disabled: loading
+                        }, loading ? 'Проверяем…' : 'Проверить сейчас'),
+                        h('div', null,
+                            h('div', { className: 'cur-group__title' }, 'Активные инциденты'),
                             openIncidents.length === 0
-                                ? h('div', { style: { color: '#64748b', fontSize: 13 } }, loading ? 'Загружаем...' : 'Активных инцидентов нет')
-                                : openIncidents.slice(0, 6).map((item) => h('div', {
-                                    key: `${item.source}:${item.event_key}`,
-                                    style: {
-                                        padding: 10,
-                                        borderRadius: 10,
-                                        border: '1px solid #e2e8f0',
-                                        background: '#f8fafc'
-                                    }
-                                },
-                                    h('div', { style: { fontWeight: 700, marginBottom: 3 } }, item.title),
-                                    h('div', { style: { color: '#64748b', fontSize: 12 } }, `${item.source} · ${item.severity} · ${item.occurrence_count || 1} раз`),
-                                    renderRunbook(item)
-                                ))
+                                ? h('div', { className: 'cur-panel__empty' },
+                                    h('div', { className: 'cur-panel__empty-title' },
+                                        loading ? 'Считаем…' : 'Активных инцидентов нет'))
+                                : h('div', { className: 'ops-list' },
+                                    openIncidents.slice(0, 6).map((item) => h('div', {
+                                        key: item.source + ':' + item.event_key,
+                                        className: 'cur-cab__card'
+                                    },
+                                        h('div', { className: 'cur-row__name' }, item.title),
+                                        h('div', { className: 'cur-cab__source' },
+                                            h('span', null, item.source),
+                                            h('span', {
+                                                className: item.severity === 'critical' ? 'is-bad' : null
+                                            }, item.severity),
+                                            h('span', null, (item.occurrence_count || 1) + ' раз')
+                                        ),
+                                        renderRunbook(item)
+                                    )))
                         ),
-                        h('div', { style: { display: 'grid', gap: 8 } },
-                            h('div', { style: { fontWeight: 800 } }, 'Deploy receipts'),
+                        h('div', null,
+                            h('div', { className: 'cur-group__title' }, 'Deploy receipts'),
                             deploys.length === 0
-                                ? h('div', { style: { color: '#64748b', fontSize: 13 } }, 'Пока нет записей о deploy')
-                                : deploys.slice(0, 4).map((item, index) => h('div', {
-                                    key: `${item.deployed_at || index}:${item.deploy_group}`,
-                                    style: { display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 13, padding: '7px 0', borderBottom: '1px solid #e2e8f0' }
-                                },
-                                    h('span', null, `${item.deploy_group || 'unknown'} · ${String(item.deploy_commit || 'unknown').slice(0, 8)}`),
-                                    h('span', { style: { color: item.status === 'ok' ? '#166534' : '#991b1b' } }, item.status || 'unknown')
-                                ))
+                                ? h('div', { className: 'cur-panel__empty' },
+                                    h('div', { className: 'cur-panel__empty-title' },
+                                        'Записей о deploy пока нет'))
+                                : h('div', { className: 'cur-group__card' },
+                                    deploys.slice(0, 4).map((item, index) => h('div', {
+                                        key: (item.deployed_at || index) + ':' + item.deploy_group,
+                                        className: 'cur-kv'
+                                    },
+                                        h('span', { className: 'cur-kv__key' },
+                                            (item.deploy_group || 'unknown') + ' · '
+                                            + String(item.deploy_commit || 'unknown').slice(0, 8)),
+                                        h('span', {
+                                            className: 'cur-kv__val'
+                                                + (item.status === 'ok' ? ' is-ok' : ' is-bad')
+                                        }, item.status || 'unknown')
+                                    )))
                         )
                     )
                 )

@@ -1846,6 +1846,51 @@
   color: var(--v4-warn-text, #a1471c);
 }
 
+/* Сорванный deploy в Ops dashboard — это уже разрушающее, а не предупреждение. */
+.cur-kv__val.is-bad {
+  color: var(--v4-bad-text, #b4442a);
+}
+
+/* ── Ops dashboard ────────────────────────────────────────────────────────
+ * Служебный лист кабинета, открывается подписью шапки. Кадра у него нет —
+ * это перевод на набор, а не сверка. Прежде: белое окно в рамке #e2e8f0 на
+ * скриме rgba(15,23,42,.48), плитки, залитые целиком зелёным #f0fdf4 или
+ * розовым #fff1f2, зелёная кнопка проверки и команда рунбука на #f1f5f9.
+ */
+.ops-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ops-runbook {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* Команду копируют глазами в терминал: моноширинная, на подложке набора и с
+   переносом в любом месте — пути и флаги длиннее ширины экрана. */
+.ops-cmd {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+/* Тяжесть инцидента — тоном разрушающего в той же строке источника. */
+.cur-cab__source .is-bad {
+  color: var(--v4-bad-text, #b4442a);
+}
+
 /* Служебный подвал очереди: обновление во всю ширину, под разделителем —
    пределы, которые здесь только показываются. */
 .cur-cab__queue-foot {
