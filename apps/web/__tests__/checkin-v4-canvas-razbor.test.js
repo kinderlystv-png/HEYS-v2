@@ -15,7 +15,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { compare, readRazbor, readRules } from './canvas-razbor-helpers.js';
+import { compare, coverage, readRazbor, readRules } from './canvas-razbor-helpers.js';
 
 const STEPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_steps_v1.js'), 'utf8');
 
@@ -620,6 +620,11 @@ const YV_FRAMES = [
   }, [12, 14]],
 ];
 
+// Сколько строк разбора гейт реально берёт в пары. Заморожено: падение
+// значит, что строка выпала из сверки и вердикт на неё больше ничем не
+// подкреплён; рост — что охват расширили и число пора поднять.
+const COVERAGE_FLOOR = 281;
+
 describe('«Утренний чек-ин» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
   const rules = readRules(fs.readFileSync(CSS, 'utf8'));
@@ -662,6 +667,43 @@ describe('«Утренний чек-ин» · разбор кадров канв
   it('пять кадров входа в развилку совпадают со сводкой и списком дней', () => {
     for (const [frame, pairs] of FORK_FRAMES) {
       expect(compare({ razbor, rules: yv, frame, pairs })).toEqual([]);
+    }
+  });
+
+  it('гейт называет свой охват', () => {
+    const calls = [
+      { frame: 'Чек-ин · остальное', pairs: STEP5 },
+      { frame: 'Чек-ин · вес', pairs: WEIGHT },
+      { frame: 'Чек-ин · сон', pairs: SLEEP },
+      { frame: 'Чек-ин · как вы сегодня', pairs: MOOD },
+      { frame: 'Чек-ин · первый вес', pairs: WEIGHT_FIRST },
+      ...STEPS_FRAMES.map(([frame, n, withHint, extra]) => ({
+        frame, pairs: stepsPairs(n, withHint).concat(extra),
+      })),
+      ...REST_FRAMES.map(([frame, pairs]) => ({ frame, pairs })),
+      ...FORK_FRAMES.map(([frame, pairs]) => ({ frame, pairs })),
+    ];
+    const { total, covered, missed, perFrame } = coverage({ razbor, calls });
+    const worst = perFrame
+      .filter((item) => item.missed.length)
+      .sort((a, b) => b.missed.length - a.missed.length)
+      .slice(0, 3)
+      .map((item) => `${item.frame} — ${item.missed.length}`);
+
+    console.info(
+      `[чек-ин] сверено ${covered} из ${total} строк разбора `
+      + `(${((covered / total) * 100).toFixed(1)} %), кадров ${perFrame.length}, `
+      + `вне пар ${missed}; больше всего пропущено: ${worst.join(' · ') || 'нет'}`,
+    );
+
+    // Храповик охвата: строка, выпавшая из пар, больше не сверяется ничем, а
+    // вердикт на неё продолжает ссылаться. Падение числа означает именно это.
+    expect(covered).toBeGreaterThanOrEqual(COVERAGE_FLOOR);
+    if (covered > COVERAGE_FLOOR) {
+      throw new Error(
+        `Охват вырос: сверяется ${covered} строк вместо ${COVERAGE_FLOOR}. `
+        + 'Поднимите COVERAGE_FLOOR, иначе следующее падение пройдёт незаметно.',
+      );
     }
   });
 

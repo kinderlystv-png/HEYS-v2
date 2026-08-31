@@ -285,6 +285,43 @@ function compare({ razbor, rules, frame, pairs }) {
   return drift;
 }
 
+
+/**
+ * Какие строки разбора кадра гейт вообще берёт в руки.
+ *
+ * `compare` сверяет только те строки, что перечислены в парах: всё
+ * остальное молча не участвует. Пока охват не назван числом, вердикт
+ * «сверено гейтом» читается как «проверено», хотя строки может не быть в
+ * парах вовсе. Возвращает по кадру: сколько строк в разборе, сколько взято
+ * парами и какие индексы остались нетронутыми.
+ */
+function coverage({ razbor, calls }) {
+  const seen = new Map();
+  for (const { frame, pairs } of calls) {
+    if (!seen.has(frame)) seen.set(frame, new Set());
+    const taken = seen.get(frame);
+    for (const pair of pairs) {
+      const anchored = pair.length === 4;
+      const found = resolveIndex(razbor, frame, pair[0]);
+      if (found.error) continue;
+      taken.add(String(Number(found.index + (anchored ? pair[1] : 0))));
+    }
+  }
+  const perFrame = [];
+  let total = 0;
+  let covered = 0;
+  for (const [frame, taken] of seen) {
+    const rows = [...razbor.keys()]
+      .filter((key) => key.startsWith(`${frame}|`))
+      .map((key) => key.slice(frame.length + 1));
+    const missed = rows.filter((index) => !taken.has(index));
+    total += rows.length;
+    covered += rows.length - missed.length;
+    perFrame.push({ frame, rows: rows.length, covered: rows.length - missed.length, missed });
+  }
+  return { total, covered, missed: total - covered, perFrame };
+}
+
 export {
   readRazbor,
   readRules,
@@ -292,6 +329,7 @@ export {
   norm,
   resolveIndex,
   compare,
+  coverage,
   PICK,
   CSSPROP,
   ROLE,

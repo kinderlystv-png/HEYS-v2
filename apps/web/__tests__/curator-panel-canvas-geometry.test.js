@@ -193,6 +193,19 @@ const EXCEPTIONS = new Set([
   '.cur-cab__sheet|padding',
 ]);
 
+// Сколько клеток «пара × свойство» гейт реально сверяет. Число заморожено:
+// падение означает, что проверка потеряла пару или правило класса, рост —
+// что охват расширили и число пора поднять.
+const COVERAGE_FLOOR = 160;
+
+// Свойства, которых нет ни в одном правиле класса канваса: гейт не читает их
+// ни разу, и ссылаться на него по ним нельзя. Сейчас список пуст — кегль,
+// начертание и интерлиньяж приходят из шортката `font:`, который declarations
+// раскрывает. Список именно проверяется, а не описывается: если у канваса
+// пропадёт класс с типографикой, свойство молча выпадет из сверки, и тест
+// скажет об этом здесь.
+const BLIND_PROPS = [];
+
 describe('геометрия панели куратора против кадров канваса', () => {
   const canvasSource = fs.readFileSync(CANVAS, 'utf8');
   const helmet = canvasSource.slice(
@@ -232,6 +245,60 @@ describe('геометрия панели куратора против кадр
       }
     }
     expect(drift).toEqual([]);
+  });
+
+  // Сколько гейт на самом деле читает. Свойство сверяется, только если оно
+  // стоит в правиле класса канваса: разбор кадров кабинета написан почти весь
+  // инлайном, и `if (!(prop in want)) continue` молча пропускает остальное.
+  // Пока охват не назван числом, «сверено гейтом» в вердикте означает не то,
+  // что читатель думает: 31 августа на этой фразе стояло 127 вердиктов, а
+  // читалась пятая часть клеток.
+  function measureCoverage() {
+    let compared = 0;
+    let skipped = 0;
+    const blind = new Map();
+    for (const [canvasSel, productSel] of PAIRS) {
+      const want = declarations(canvas.get(canvasSel));
+      for (const prop of CHECKED) {
+        if (EXCEPTIONS.has(`${productSel}|${prop}`)) continue;
+        if (prop in want) compared += 1;
+        else {
+          skipped += 1;
+          blind.set(prop, (blind.get(prop) || 0) + 1);
+        }
+      }
+    }
+    return { compared, skipped, blind };
+  }
+
+  it('гейт называет свой охват', () => {
+    const { compared, skipped, blind } = measureCoverage();
+    const total = compared + skipped;
+    const never = [...blind.entries()]
+      .filter(([, n]) => n === PAIRS.length)
+      .map(([prop]) => prop)
+      .sort();
+
+    console.info(
+      `[кабинет] сверено ${compared} из ${total} клеток `
+      + `(${((compared / total) * 100).toFixed(1)} %), пар ${PAIRS.length}; `
+      + `не читается ни в одной паре: ${never.length ? never.join(', ') : 'нет'}`,
+    );
+
+    // Храповик охвата: опускаться нельзя, подниматься нужно с новым числом.
+    // Иначе пара, у которой пропало правило класса, тихо уходит из сверки —
+    // ровно так и появляются вердикты, ссылающиеся на несуществующую защиту.
+    expect(compared).toBeGreaterThanOrEqual(COVERAGE_FLOOR);
+    if (compared > COVERAGE_FLOOR) {
+      throw new Error(
+        `Охват вырос: сверяется ${compared} клеток вместо ${COVERAGE_FLOOR}. `
+        + 'Поднимите COVERAGE_FLOOR — иначе следующее падение охвата пройдёт незаметно.',
+      );
+    }
+
+    // Свойства, которых гейт не читает ни в одной паре, обязаны быть названы:
+    // на них нельзя ссылаться как на проверенные.
+    expect(never).toEqual(BLIND_PROPS);
   });
 
   it('осознанные отступления не разрослись', () => {

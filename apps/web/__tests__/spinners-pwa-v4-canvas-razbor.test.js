@@ -9,7 +9,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { compare, readRazbor, readRules } from './canvas-razbor-helpers.js';
+import { compare, coverage, readRazbor, readRules } from './canvas-razbor-helpers.js';
 
 const PACK = path.resolve(
   __dirname,
@@ -52,6 +52,10 @@ const BOOT_FAIL = [
   [4, [B, `${B}__text`], ['fontWeight', 'textAlign']],
 ];
 
+// Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
+// что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
+const COVERAGE_FLOOR = 9;
+
 describe('«Знак ожидания» и «Обновление» · разбор кадров канваса', () => {
   const spinners = readRazbor(fs.readFileSync(path.join(PACK, 'spinners.v4.dc.html'), 'utf8'));
   const pwa = readRazbor(fs.readFileSync(path.join(PACK, 'pwa-update.v4.dc.html'), 'utf8'));
@@ -71,6 +75,39 @@ describe('«Знак ожидания» и «Обновление» · разб�
     expect(compare({
       razbor: spinners, rules: boot, frame: 'Спиннер · не удалось запустить', pairs: BOOT_FAIL,
     })).toEqual([]);
+  });
+
+  it('гейт называет свой охват', () => {
+    const spinnerCalls = [
+      { frame: 'Спиннер · с подписью', pairs: CAPTION },
+      { frame: 'Спиннер · успех', pairs: OK },
+      { frame: 'Спиннер · ошибка', pairs: FAIL },
+      { frame: 'Спиннер · не удалось запустить', pairs: BOOT_FAIL },
+    ];
+    const s = coverage({ razbor: spinners, calls: spinnerCalls });
+
+    // Сколько свойств у взятых строк реально сверяется. Пара называет их
+    // поимённо, и именно здесь 31 августа обнаружилось, что BOOT_FAIL читает
+    // у заголовка и причины только начертание с выключкой: исключения были
+    // записаны для кегля, а гейт его не смотрел вовсе.
+    const propsPerFrame = spinnerCalls.map(({ frame, pairs }) => {
+      const props = pairs.reduce((sum, pair) => sum + (pair.length === 4 ? pair[3] : pair[2]).length, 0);
+      return `${frame.replace('Спиннер · ', '')} — ${props}`;
+    });
+
+    console.info(
+      `[знак ожидания] сверено ${s.covered} из ${s.total} строк разбора `
+      + `(${((s.covered / s.total) * 100).toFixed(1)} %), кадров в парах ${s.perFrame.length}, `
+      + `вне пар ${s.missed}; свойств на кадр: ${propsPerFrame.join(' · ')}`,
+    );
+
+    expect(s.covered).toBeGreaterThanOrEqual(COVERAGE_FLOOR);
+    if (s.covered > COVERAGE_FLOOR) {
+      throw new Error(
+        `Охват вырос: сверяется ${s.covered} строк вместо ${COVERAGE_FLOOR}. `
+        + 'Поднимите COVERAGE_FLOOR, иначе следующее падение пройдёт незаметно.',
+      );
+    }
   });
 
   // Строка «вид подписи» одна на все ступени: «ступени не меняют геометрию».
