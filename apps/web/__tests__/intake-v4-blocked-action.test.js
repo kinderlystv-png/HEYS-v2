@@ -47,11 +47,18 @@ describe('анкета: недоступное действие называет
     expect(tail).toMatch(/cursor:.*blocked.*'default'/);
   });
 
-  it('кнопка держит высоту 48 и заливку акцента набора', () => {
+  it('кнопка держит высоту 48 и заливку акцента', () => {
     const at = SRC.indexOf('const submitOrContinueButton');
     const tail = SRC.slice(at, at + 700);
     expect(tail).toMatch(/minHeight:\s*48/);
-    expect(tail).toContain('var(--v4-sand-act, #c67139)');
+    // Проверялась роль с именем набора — `var(--v4-sand-act, …)`. По решению
+    // владельца 31 августа такая роль в модуле незаконна: в синих темах она
+    // держит песочную терракоту. Заливка берётся из ACCENT_FILL, а он объявлен
+    // общей ролью один раз на весь модуль — проверяем и то, и другое.
+    expect(tail).toContain('ACCENT_FILL');
+    expect(SRC).toContain("const ACCENT_FILL = 'var(--v4-act, #c67139)'");
+    // Комментарий не в счёт: там имя набора названо как то, что убрано.
+    expect(SRC.replace(/\/\/[^\n]*/g, '')).not.toContain('--v4-sand-');
     // Легаси-фиолетовый #434587 на кнопке анкеты больше не встречается.
     expect(SRC).not.toContain('#434587');
   });

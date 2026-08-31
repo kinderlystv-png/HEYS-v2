@@ -97,11 +97,19 @@
   const SURFACE_1 = 'var(--v4-card, #f7efe2)';             // --c1
   const SURFACE_2 = 'var(--v4-chip, #efe3cf)';             // --c2
   const FIELD_BG = 'var(--v4-bg, #fffaf1)';                // --bg
-  const TINT = 'var(--v4-sand-tint, #f3e0d2)';             // --tint
-  const ACCENT_TEXT = 'var(--v4-sand-act-text, #8a4a20)';  // --ac
-  const ACCENT_FILL = 'var(--v4-sand-act, #c67139)';       // --acs
+  // Роли общие, не с именем набора: по решению владельца 31 августа
+  // --v4-<набор>-* в модуле запирает цвет мимо выбора человека — в синих темах
+  // песочная роль держит терракоту.
+  //
+  // TINT переехал не только по имени: --v4-sand-tint это #f3e0d2, тон капсулы
+  // прошлого дня (он же --v4-past), а подложка-подсказка --v4-tint — #f6e6dd.
+  // Тона похожи, потому подмена и не бросалась в глаза; строки «вид плашки
+  // доступа» и «вид блока предупреждения» зовут именно --tint.
+  const TINT = 'var(--v4-tint, #f6e6dd)';                  // --tint
+  const ACCENT_TEXT = 'var(--v4-act-text, #8a4a20)';       // --ac
+  const ACCENT_FILL = 'var(--v4-act, #c67139)';            // --acs
   const ON_ACCENT = 'var(--v4-btn-on-act, #2b1608)';       // --on-acs
-  const OK_TEXT = 'var(--v4-sand-ok-text, #5c6a45)';       // --gr
+  const OK_TEXT = 'var(--v4-ok-text, #5c6a45)';            // --gr
   const OK_BG = 'var(--v4-ok-bg, #eaefe0)';                // --gr-bg
   const WARN_TEXT = 'var(--v4-warn-text, #a1471c)';        // --ac2
 
@@ -1494,7 +1502,7 @@
       type: 'button', onClick: next, disabled: saveState === 'saving' || blocked,
       'aria-describedby': blocked ? 'intake-blocked-reason' : undefined,
       style: { ...primaryPill, minHeight: 48,
-        background: blocked ? SURFACE_1 : 'var(--v4-sand-act, #c67139)',
+        background: blocked ? SURFACE_1 : ACCENT_FILL,
         color: blocked ? INK : ON_ACCENT,
         cursor: (saveState === 'saving' || blocked) ? 'default' : 'pointer',
         opacity: (saveState === 'saving' || blocked) ? 0.45 : 1 },
