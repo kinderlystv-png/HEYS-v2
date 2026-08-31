@@ -277,9 +277,69 @@
     );
   }
 
+  // ─── SourcesTier ────────────────────────────────────────────────
+  /**
+   * Ярус «На чём основано» — последний ярус листа-раскрывашки.
+   *
+   * Компонент общий, не доменный: контракт прямо запрещает заводить
+   * второй такой же рядом с уже живущим у пальцев. Домен отдаёт реестр
+   * и список id — всё остальное считается здесь.
+   *
+   * Почему ярус исчезает целиком, когда записей нет. Адрес без автора и
+   * года нечем показать: голый номер PMID человеку ничего не говорит, а
+   * восстановить по нему автора значит выдумать. Поэтому пропуск остаётся
+   * видным через registry.missing(ids) и тест, а не через строку «неизвестно»
+   * в интерфейсе: такая строка выглядит обоснованием и им не является.
+   *
+   * props: { registry, ids, className?, label? }
+   */
+  const STRENGTH_ORDER = { high: 0, moderate: 1, low: 2 };
+  const STRENGTH_WORD = { high: 'сильное', moderate: 'среднее', low: 'слабое' };
+
+  function SourcesTier(props) {
+    const p = props || {};
+    const registry = p.registry;
+    const ids = Array.isArray(p.ids) ? p.ids : [];
+    if (!registry || !registry.resolve || !ids.length) return null;
+
+    // Сильная работа стоит выше слабой: порядок строк — часть обоснования.
+    // Записи без strength уходят вниз, но не выпадают.
+    const sources = registry.resolve(ids).slice().sort(function (a, b) {
+      const sa = STRENGTH_ORDER[a && a.strength];
+      const sb = STRENGTH_ORDER[b && b.strength];
+      return (sa == null ? 9 : sa) - (sb == null ? 9 : sb);
+    });
+    if (!sources.length) return null;
+
+    const cls = p.className || 'kernel-sources';
+    return React.createElement('div', { className: cls },
+      React.createElement('div', { className: cls + '__tier' }, p.label || 'На чём основано'),
+      React.createElement('div', { className: cls + '__card' },
+        sources.map(function (src, idx) {
+          const word = STRENGTH_WORD[src.strength] || '';
+          return React.createElement('div', {
+            key: src.id || idx,
+            className: cls + '__row' + (idx === sources.length - 1 ? ' is-last' : '')
+          },
+            React.createElement('a', {
+              className: cls + '__name',
+              href: src.url || null,
+              target: '_blank',
+              rel: 'noopener noreferrer'
+            }, src.author + ', ' + src.year),
+            // Колонка силы пуста, когда strength нет: «неизвестно» сообщало бы
+            // о работе то, чего о ней не знает реестр.
+            React.createElement('span', { className: cls + '__strength' }, word)
+          );
+        })
+      )
+    );
+  }
+
   TK.bibliographyUI = {
     __registered: true,
     SourceBadge: SourceBadge,
-    BibliographyModal: BibliographyModal
+    BibliographyModal: BibliographyModal,
+    SourcesTier: SourcesTier
   };
 })(typeof window !== 'undefined' ? window : globalThis);

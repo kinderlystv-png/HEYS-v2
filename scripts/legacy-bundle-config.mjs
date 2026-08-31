@@ -281,6 +281,11 @@ export const LEGACY_BUNDLES = {
         'insights/pi_facade.js',
     ],
     'postboot-2-insights-lazy': [
+        // Ярус «На чём основано» в листах инсайтов. Компонент общий: свой
+        // заводить нельзя, а в boot-calc модуль не поставить — там ещё нет
+        // React, и регистрация молча не состоялась бы. Сами записи приезжают
+        // раньше, реестром дневной части из boot-calc.
+        '_kernel/heys_kernel_bibliography_ui_v1.js',
         'insights/pi_constants.js',
         'insights/pi_stats.js',
         'insights/pi_thresholds.js',

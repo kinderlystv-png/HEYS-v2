@@ -2127,7 +2127,7 @@
     // Контракт «тексты из движка» + «вид · лист»: лист «Как считается долг» —
     // перевод heys_day_caloric_debt_core_v1.js дословно (пороги по цели,
     // потолок 1500, возврат 75 % с растяжкой 1–3 дня, потолок +20 %, refeed
-    // +35 %). Ссылки на исследования в лист не идут.
+    // +35 %).
     const DEBT_SHEET_PARAGRAPHS = [
       'Долг — это недобор до вашей нормы за последние 3 дня, сложенный вместе. Больше 1500 ккал не копим: старый недобор организм уже пережил.',
       'Порог «это уже долг» зависит от цели: на похудении — от 80 ккал, на поддержании — от 100, на наборе — от 150.',
@@ -2136,8 +2136,35 @@
       'Перебор считается мягче: тренировки этой недели гасят половину лишнего.'
     ];
 
+    /**
+     * Ярус «На чём основано» под текстом листа.
+     *
+     * Аннотация кадра прошлого пакета говорила «ссылки в раскрывашку не
+     * тащим» — тогда реестра дневной части не существовало, и ярус пришлось
+     * бы вёрстывать руками. Реестр теперь есть, и порядок из контракта
+     * выполнен: сначала подключение, потом ярус появляется сам — id стоят у
+     * констант движка, а строки собираются из записей.
+     *
+     * Ярус не рисуется, когда ни один id не разрешился: у расчёта, чьи
+     * адреса ещё ждут метаданных, обоснования на экране нет — и это видно
+     * отсутствием яруса, а не строкой-заглушкой.
+     */
+    function InsightsV4SourcesTier(props) {
+      const tier = HEYS.TrainingKernel
+        && HEYS.TrainingKernel.bibliographyUI
+        && HEYS.TrainingKernel.bibliographyUI.SourcesTier;
+      const day = HEYS.DayBibliography;
+      if (!tier || !day) return null;
+      return h(tier, {
+        registry: day.registry,
+        ids: (props && props.ids) || [],
+        className: 'insights-v4-sources'
+      });
+    }
+
     function InsightsV4DebtSheet(props) {
       const { onClose } = props || {};
+      const debtSourceIds = (HEYS.dayCaloricDebtCore && HEYS.dayCaloricDebtCore.SOURCE_IDS) || [];
       return h('div', { className: 'insights-v4-sheet-scrim', onClick: onClose },
         h('div', {
           className: 'insights-v4-sheet',
@@ -2147,6 +2174,7 @@
           DEBT_SHEET_PARAGRAPHS.map(function (text, idx) {
             return h('p', { key: idx, className: 'insights-v4-sheet__text' }, text);
           }),
+          h(InsightsV4SourcesTier, { ids: debtSourceIds }),
           h('button', {
             type: 'button',
             className: 'insights-v4-sheet__ok',
