@@ -391,7 +391,6 @@
 .reports-v4-dynamics-card .sparkline-delta-label,
 .reports-v4-dynamics-card .sparkline-weekday-label,
 .reports-v4-dynamics-card .sparkline-point-line,
-.reports-v4-dynamics-card .sparkline-forecast-dot,
 .reports-v4-dynamics-card .sparkline-streak-line {
   display: none;
 }
@@ -402,10 +401,16 @@
 
    Контракт разводит их прямо: «план — пунктир 4/4 чернил 22 % по горизонтали,
    факт — ломаная 2,5 тоном --acs»; кадр рисует факт именно так, 2,5 с
-   округлыми концами. */
+   округлыми концами.
+
+   31 августа доведён и сам план: чернила вместо дорожки. Стояла --v4-track
+   (12 %) толщиной 1,5 — вдвое бледнее и тоньше кадра, хотя обе строки просят
+   22 %. Своей ступени под 22 % в наборе нет, ближайшая — --v4-edge (18 %);
+   отступление названо в реестре теста сверки. Толщина 2 — по кадру
+   «Мало калорий · подтверждение». */
 .reports-v4-dynamics-card .sparkline-goal--reports-v4 {
-  stroke: var(--v4-track, rgba(0, 0, 0, 0.12));
-  stroke-width: 1.5;
+  stroke: var(--v4-edge, rgba(0, 0, 0, 0.18));
+  stroke-width: 2;
   stroke-dasharray: 4 4;
 }
 

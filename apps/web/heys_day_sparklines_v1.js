@@ -587,11 +587,17 @@
     // Линия цели — ступенчатая в reports v4, иначе плавная пунктирная
     const goalPathD = reportsV4 ? steppedPath(points, 'targetY') : smoothPath(points, 'targetY');
 
+    // Контракт «состав · Динамика»: «Прогнозов и экстраполяции в блоке нет»;
+    // то же говорят «два запрета» («в Отчётах прогнозов нет») и строка графика
+    // веса. Ни один кадр Отчётов прогнозной линии не рисует. В прежнем виде
+    // прогноз остаётся: там он и появился, и там его никто не запрещал.
+    const showForecast = !reportsV4;
+
     // Прогнозная линия (если есть данные)
     let forecastPathD = '';
     let forecastColor = '#94a3b8'; // серый по умолчанию
     let forecastPathLength = 0; // длина для анимации
-    if (forecastPts.length > 0 && points.length >= 2) {
+    if (showForecast && forecastPts.length > 0 && points.length >= 2) {
       // Берём 2 последние точки для плавного продолжения Bezier
       const prev2Point = points[points.length - 2];
       const lastPoint = points[points.length - 1];
@@ -631,7 +637,7 @@
 
     // Прогнозная линия НОРМЫ (goal) — продолжение тренда за 7 дней
     let forecastGoalPathD = '';
-    if (forecastPts.length > 0 && points.length >= 2) {
+    if (showForecast && forecastPts.length > 0 && points.length >= 2) {
       // Берём 2 последние точки для плавного продолжения Bezier
       const prev2Point = points[points.length - 2];
       const lastPoint = points[points.length - 1];
@@ -1179,7 +1185,7 @@
           strokeLinecap: 'round'
         }),
         // === Confidence interval для прогноза (коридор ±σ) — заливка области ===
-        forecastPts.length > 0 && confidenceMargin > 50 && (() => {
+        showForecast && forecastPts.length > 0 && confidenceMargin > 50 && (() => {
           // Строим path для области: верхняя граница → нижняя граница (обратно)
           const marginPx = (confidenceMargin / scaleRange) * chartHeight;
 
@@ -1215,7 +1221,7 @@
         })(),
         // Точки прогноза (с цветом по тренду) — появляются после прогнозной линии
         // Для isFutureDay используем серый цвет с пунктиром
-        forecastPts.map((p, i) => {
+        showForecast && forecastPts.map((p, i) => {
           // Задержка = 3с (основная линия) + время до этой точки в прогнозе
           const forecastDelay = 3 + (i + 1) / forecastPts.length * Math.max(0.5, (forecastPathLength / totalPathLength) * 3);
           const isFutureDay = p.isFutureDay;
@@ -1238,7 +1244,7 @@
         }),
         // Метки прогнозных ккал над точками (бледные)
         // Для isFutureDay показываем "?" вместо прогнозных ккал
-        forecastPts.map((p, i) => {
+        showForecast && forecastPts.map((p, i) => {
           const isLast = i === forecastPts.length - 1;
           const isFutureDay = p.isFutureDay;
           // Цифра прогноза: синяя для сегодня, оранжевая для будущих
@@ -1286,7 +1292,7 @@
         // Метки прогнозных дней (дата внизу, "прогноз на завтра" для завтра)
         // Для isFutureDay показываем просто дату без "прогноз на завтра"
         // "прогноз на сегодня" теперь отрисовывается НАВЕРХУ над цифрой прогноза
-        forecastPts.map((p, i) => {
+        showForecast && forecastPts.map((p, i) => {
           const isLast = i === forecastPts.length - 1;
           const isFutureDay = p.isFutureDay;
           const isTomorrow = !p.isTodayForecast && !isFutureDay && i === 0;
@@ -1392,8 +1398,9 @@
           );
         }),
         // Точки на все дни с hover и цветом по статусу (анимация с задержкой)
-        // Weekly Rhythm — вертикальные сепараторы перед понедельниками (но не первым)
-        points.filter((p, i) => i > 0 && p.dayOfWeek === 1).map((p, i) =>
+        // Weekly Rhythm — вертикальные сепараторы перед понедельниками (но не первым).
+        // Строка «графики»: «Сетки, осей и подписей значений нет» — в v4 не рисуем.
+        !reportsV4 && points.filter((p, i) => i > 0 && p.dayOfWeek === 1).map((p, i) =>
           React.createElement('line', {
             key: 'week-sep-' + i,
             x1: p.x - 4,
