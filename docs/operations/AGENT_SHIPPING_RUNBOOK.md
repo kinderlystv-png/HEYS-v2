@@ -154,11 +154,12 @@ Current hook sources: [commit-msg](../../.husky/commit-msg),
   stage on shared MCP files, deleted workspace manifests); agent
   staging/source-only guard and multi-zone block; legacy sync (`agent-check` is
   report-only, `integration` rebuilds and stages generated scope); lazy-chunk,
-  pricing, CommonJS mirror and heys-mcp web-mirror guards; allowlist auto-fixes.
-  **Windows + dev-сервер:** при `localhost:3001` rebuild не останавливается —
-  неизменённые locked-бандлы пропускаются, новые хэши пишутся в новые файлы;
-  после коммита с новым lazy — hard reload. Commit body — строки ≤100 символов
-  (commitlint).
+  legacy free-variable (`lint-legacy-undef.mjs --staged`, allowlist in
+  `scripts/lint-legacy-undef-allowlist.txt`), pricing, CommonJS mirror and
+  heys-mcp web-mirror guards; allowlist auto-fixes. **Windows + dev-сервер:**
+  при `localhost:3001` rebuild не останавливается — неизменённые locked-бандлы
+  пропускаются, новые хэши пишутся в новые файлы; после коммита с новым lazy —
+  hard reload. Commit body — строки ≤100 символов (commitlint).
 - `pre-push`: delegates to `push:preflight` for the outgoing committed range.
   The current fast gates are workspace runtime, source/generated scope,
   Gitleaks, the migration test when migration contracts changed,

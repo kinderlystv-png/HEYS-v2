@@ -2404,7 +2404,7 @@
                 h('span', {
                     className: 'meal-rec-card__diag-dot',
                     style: { position: 'absolute', top: 8, right: 10 },
-                    onClick: handleDiagCopy,
+                    onClick: (e) => { e.stopPropagation(); handleCopyDiagnostics(); },
                     title: diagCopyStatus === 'ok' ? 'Диагностика скопирована' :
                            diagCopyStatus === 'err' ? 'Не удалось скопировать' :
                            'Скопировать диагностику',

@@ -1,0 +1,28 @@
+# Разобранные обращения к необъявленным именам в легаси-слое apps/web.
+# Формат: <путь от корня репозитория>:<имя>
+# Список может только уменьшаться: новая строка сюда — это решение, а не обход.
+# Проверка: node scripts/lint-legacy-undef.mjs
+
+# Намеренно: вендорный UMD-полифилл объявляет `const barcodeDetectorPolyfill`,
+# и Safari отдаёт его лексической глобалью, а не свойством window. Чтение
+# закрыто typeof + try/catch ровно для этого случая.
+apps/web/heys_platform_apis_v1.js:barcodeDetectorPolyfill
+
+# Долг, найден 2026-08-31. В файле остался вырезанный UI-слой: компоненты и
+# fallback-ссылки на pi_ui_* зовут h/useMemo, а React в этот модуль не приходит
+# вовсе. Живые версии — insights/pi_ui_cards.js и соседние; наружу файл отдаёт
+# только analyze/simulateFood/debug. Убирать мёртвый слой — отдельная задача.
+apps/web/heys_predictive_insights_v1.js:h
+apps/web/heys_predictive_insights_v1.js:useMemo
+
+# Долг, найден 2026-08-31. Ветка «для продуктов берём отфильтрованный список и
+# не сохраняем пустой» закрыта typeof-проверкой имени из соседнего блока —
+# то есть не работала ни разу. Включение меняет поведение записи каталога из
+# облака (инвариант 11) на непокрытом тестами пути: нужно решение владельца.
+apps/web/heys_storage_supabase_v1.js:remoteProducts
+
+# Долг, найден 2026-08-31. notifyGamification зовёт calculateDayScore, которого
+# в модуле нет: вызов падает в пустой catch, метаболические достижения не
+# начисляются. Правильный вызов — HEYS.DayScore.calculateDayScore({dayData,
+# profile, dayTot, normAbs...}), то есть уже интеграция, а не переименование.
+apps/web/heys_metabolic_intelligence_v1.js:calculateDayScore
