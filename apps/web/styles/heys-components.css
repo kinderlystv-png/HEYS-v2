@@ -4467,7 +4467,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .pe-input--error {
-  border-color: #f87171;
+  border-color: var(--v4-bad-text, #b4442a);
   box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.15);
 }
 
@@ -4576,7 +4576,7 @@ body.tour-active .ios-pwa-banner {
 
 .pe-accordion-hint {
   font-size: 11px;
-  color: var(--muted, #6b7280);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   text-transform: none;
 }
 
@@ -4612,15 +4612,17 @@ body.tour-active .ios-pwa-banner {
 .pe-portions-subtitle {
   margin-top: 2px;
   font-size: 11px;
-  color: var(--muted, #6b7280);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+/* Кнопка «Шаблон» на грунте по кадру. Прежде голубая плашка прежней
+   системы: рамка #bfdbfe на фоне #eff6ff. */
 .pe-portions-template-btn {
   min-height: 34px;
   padding: 6px 10px;
-  border: 1px solid #bfdbfe;
-  border-radius: 8px;
-  background: #eff6ff;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-bg, #fffaf1);
   color: #1d70b7;
   font-size: 12px;
   font-weight: 700;
@@ -4635,7 +4637,7 @@ body.tour-active .ios-pwa-banner {
 
 .pe-portions-empty {
   padding: 9px 10px;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 8px;
   color: var(--v4-ink-3, #94a3b8);
   font-size: 12px;
@@ -4668,24 +4670,28 @@ body.tour-active .ios-pwa-banner {
   pointer-events: none;
 }
 
+/* Кадр даёт удаление порции на --tint. Прежде розовая плашка прежней
+   системы: рамка #fecaca на #fff1f2. */
 .pe-portions-remove-btn {
   width: 34px;
   height: 34px;
-  border: 1px solid #fecaca;
+  border: none;
   border-radius: 8px;
-  background: #fff1f2;
+  background: var(--v4-tint, #f6e6dd);
   color: var(--v4-warn-1, #ef4444);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
 }
 
+/* Добавление порции: пунктир ролью линии на подложке набора. Прежде
+   голубой пунктир #93c5fd на #eff6ff. */
 .pe-portions-add-btn {
   width: 100%;
   min-height: 40px;
-  border: 1px dashed #93c5fd;
+  border: 1px dashed var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 10px;
-  background: #eff6ff;
+  background: var(--v4-surface, #f7efe2);
   color: #1d70b7;
   font-size: 13px;
   font-weight: 700;
@@ -4693,7 +4699,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .pe-portions-error {
-  color: #b91c1c;
+  color: var(--v4-bad-text, #b4442a);
   font-size: 12px;
   text-align: center;
 }
@@ -4723,10 +4729,12 @@ body.tour-active .ios-pwa-banner {
   cursor: pointer;
 }
 
+/* Выбранная клетка — заливка акцентом с чернилами поверх. Прежде зелёная
+   пара прежней системы, причём запасными под верными ролями. */
 .pe-segment-btn.active {
-  border-color: var(--v4-ok-fill, #22c55e);
-  background: var(--v4-ok-bg, #ecfdf5);
-  color: #047857;
+  border-color: var(--v4-act, #c67139);
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 .pe-toggles {
@@ -4742,7 +4750,7 @@ body.tour-active .ios-pwa-banner {
 
 .pe-toggles-legend {
   font-size: 10px;
-  color: var(--muted, #6b7280);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   text-align: center;
   margin-top: 2px;
 }
@@ -4760,7 +4768,7 @@ body.tour-active .ios-pwa-banner {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #4b5563;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   padding: 8px 10px;
   border-radius: 8px;
   background: var(--v4-hero, #f9fafb);
@@ -4771,14 +4779,15 @@ body.tour-active .ios-pwa-banner {
   font-weight: 600;
 }
 
+/* Тёплое предупреждение набора вместо жёлтой пары прежней системы. */
 .pe-warning {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid #facc15;
-  background: #fef9c3;
+  border: none;
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent);
   color: #92400e;
   font-size: 12px;
 }
@@ -4789,14 +4798,16 @@ body.tour-active .ios-pwa-banner {
 
 .pe-warning__text {
   font-size: 12px;
-  color: #a16207;
+  color: var(--v4-warn-text, #a1471c);
 }
 
+/* Главная кнопка — акцент набора. Прежде зелёный #22c55e запасным под
+   ролью «идёт хорошо»: и роль не та, и цвет не из набора. */
 .pe-next-btn {
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid var(--v4-ok-fill, #22c55e);
-  background: var(--v4-ok-fill, #22c55e);
+  border: none;
+  background: var(--v4-act, #c67139);
   color: var(--v4-bg, #fff);
   font-size: 14px;
   font-weight: 600;
@@ -4806,7 +4817,7 @@ body.tour-active .ios-pwa-banner {
 .pe-empty {
   text-align: center;
   font-size: 13px;
-  color: var(--muted, #6b7280);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   padding: 16px;
 }
 
