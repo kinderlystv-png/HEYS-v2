@@ -174,10 +174,28 @@ async function main() {
     ok = false;
     warn(`[ensure:local] Deleted workspace manifests: ${deleted.length} (e.g. ${deleted[0]})`);
     if (fix) {
-      log('[ensure:local] git restore packages/ apps/');
-      run('git', ['restore', 'packages/', 'apps/']);
+      // Возвращаем ТОЛЬКО каталоги пропавших манифестов. Прежний безусловный
+      // `git restore packages/ apps/` при любой сорванной установке откатывал
+      // всё несохранённое в обоих деревьях — у всех параллельных сессий разом
+      // и без спроса. Зовётся это с каждого `pnpm push:agent` (push-agent.mjs)
+      // и с `pnpm ensure:local`, то есть в самый частый момент дня.
+      // 31 августа так дважды снесло чужие незакоммиченные правки в apps/web.
+      // Тот же разбор и то же лечение — в sync-local-workspace.mjs; здесь
+      // ветка осталась незамеченной, потому что чинили соседний путь.
+      const targets = [
+        ...new Set(
+          deleted.map((file) => {
+            const dir = path.dirname(file).split(String.fromCharCode(92)).join('/');
+            // Манифест в корне каталогом не восстанавливаем — это и был бы
+            // прежний «всё целиком».
+            return dir === '.' || dir === '' ? file : `${dir}/`;
+          }),
+        ),
+      ];
+      log(`[ensure:local] git restore -- ${targets.join(' ')}`);
+      run('git', ['restore', '--', ...targets]);
     } else {
-      warn('[ensure:local] Fix: git restore packages/ apps/ && pnpm install');
+      warn('[ensure:local] Fix: git restore -- <каталоги пропавших пакетов> && pnpm install');
     }
   }
 
@@ -208,7 +226,7 @@ async function main() {
   if (!runtime.ok) {
     ok = false;
     warn('[ensure:local] Toolchain still incomplete after fix attempt.');
-    warn('[ensure:local] 1) Stop dev:local  2) pnpm install  3) git restore packages/');
+    warn('[ensure:local] 1) Stop dev:local  2) pnpm install  3) git restore -- <пропавшие пакеты>');
   }
 
   const gitleaksOk = ensureGitleaks();
