@@ -1308,7 +1308,7 @@
 .heys-score-screen__head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 14px;
 }
 
@@ -1324,16 +1324,18 @@
 }
 
 .heys-score-screen__title {
-  font: 700 16px/1 Figtree, system-ui, sans-serif;
+  font: 700 15px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink, #0f172a);
 }
 
 /* Кадр «Разбор Score»: герой на второй поверхности --c2. Роль верна,
-   запасное значение обещало первую. */
+   запасное значение обещало первую. Поля и отступ сверху — по кадру
+   (элемент 05); строка контракта «вид · экран разбора Score» их не называет. */
 .heys-score-screen__hero {
   background: var(--v4-hero, #efe3cf);
   border-radius: 26px;
-  padding: 20px;
+  padding: 24px 20px 20px;
+  margin-top: 14px;
   margin-bottom: 16px;
 }
 
@@ -1347,8 +1349,8 @@
 .heys-score-screen__number-row {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  margin: 10px 0 8px;
+  gap: 9px;
+  margin: 12px 0 8px;
 }
 
 .heys-score-screen__number {
@@ -1375,8 +1377,11 @@
   margin-bottom: 8px;
 }
 
+/* Подпись яруса «доли одного числа, сумма = 65» — по кадру 600 10,5/1:
+   строка контракта называет её словами, но кегля не даёт. Стояла 9,5/500 —
+   на две ступени мельче шкалы зоны. */
 .heys-score-screen__note {
-  font: 500 9.5px/1.2 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
@@ -1439,7 +1444,7 @@
 }
 
 .heys-score-screen__footnote {
-  margin: 14px 0 0;
-  font: 500 11px/1.55 Figtree, system-ui, sans-serif;
+  margin: 12px 0 0;
+  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }

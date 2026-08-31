@@ -135,6 +135,19 @@ const DAYS = [
     ['width', 'height', 'radius', 'background']],
 ];
 
+// Кадр «Разбор Score». Сведено только то, о чём строка контракта «вид · экран
+// разбора Score» молчит: кегли числа, дельты и фразы она задаёт сама и спорит
+// с кадром (30/800 против 56/600), а раскладка строки каскада — открытый
+// вопрос дизайнеру (см. UI_V4_FINDINGS.md).
+const SCORE = [
+  [2, '.heys-score-screen__head', ['align', 'gap']],
+  [3, '.heys-score-screen__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [5, '.heys-score-screen__hero', ['background', 'radius', 'padding', 'marginTop']],
+  [7, '.heys-score-screen__number-row', ['align', 'gap', 'marginTop']],
+  [13, '.heys-score-screen__note', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [25, '.heys-score-screen__footnote', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+];
+
 // Кадры состояний: нет веса и нулевая строка матрицы.
 const STATES = [
   ['Отчёты · нет веса', [
@@ -184,6 +197,10 @@ describe('Отчёты · разбор кадров канваса', () => {
     expect(compare({
       razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: HEADER,
     })).toEqual([]);
+  });
+
+  it('экран разбора Score совпадает там, где контракт молчит', () => {
+    expect(compare({ razbor, rules, frame: 'Разбор Score', pairs: SCORE })).toEqual([]);
   });
 
   it('кадры состояний совпадают с продуктом', () => {
