@@ -66,7 +66,11 @@ describe('personal product commit gate contract', () => {
     const storage = read('apps/web/heys_storage_supabase_v1.js');
     const overlay = read('apps/web/heys_products_overlay_v1.js');
     const dayBundle = read('apps/web/heys_day_bundle_v1.js');
-    const styles = read('apps/web/styles/modules/600-steps-and-aps.css');
+    const styles = [
+      '600-steps-and-aps.css',
+      '610-aps-meal-flow.css',
+      '611-aps-product-card.css',
+    ].map((file) => read('apps/web/styles/modules/' + file)).join('\n');
     const rest = read('yandex-cloud-functions/heys-api-rest/index.js');
     const migration = read('database/2026-07-02_add_product_brand.sql');
     const brandFingerprintMigration = read('database/2026-07-02_add_product_brand_fingerprint.sql');

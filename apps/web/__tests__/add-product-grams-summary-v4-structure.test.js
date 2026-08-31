@@ -11,10 +11,18 @@ const dayAddSource = fs.readFileSync(
   path.resolve(__dirname, '../heys_day_add_product.js'),
   'utf8',
 );
-const cssSource = fs.readFileSync(
-  path.resolve(__dirname, '../styles/modules/600-steps-and-aps.css'),
-  'utf8',
-);
+// Файл разрезан по зонам 31 августа: оболочка осталась в 600, экраны уехали
+// в 610–613. Тест смотрит на поток добавления целиком, поэтому читает всю
+// группу — иначе он проверял бы половину правил и молчал о второй.
+const cssSource = [
+  '600-steps-and-aps.css',
+  '610-aps-meal-flow.css',
+  '611-aps-product-card.css',
+  '612-training-step.css',
+  '613-cycle-ui.css',
+]
+  .map((file) => fs.readFileSync(path.resolve(__dirname, '../styles/modules/' + file), 'utf8'))
+  .join('\n');
 
 describe('add product grams v4 canvas structure', () => {
   it('uses v4 grams hero, impact block and header product title', () => {

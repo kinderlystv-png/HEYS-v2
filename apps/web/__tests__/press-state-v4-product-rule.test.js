@@ -135,11 +135,11 @@ const ОТСТУПЛЕНИЯ = new Map([
     'только курсор, ничего не рисует',
   ],
   [
-    "modules/600-steps-and-aps.css :: .aps-product-card--disabled, .aps-product-card--disabled:hover, .aps-product-card--disabled:active, [data-theme$='dark'] .aps-product-card--disabled:hover, [data-theme$='dark'] .aps-product-card--disabled:active",
+    "modules/611-aps-product-card.css :: .aps-product-card--disabled, .aps-product-card--disabled:hover, .aps-product-card--disabled:active, [data-theme$='dark'] .aps-product-card--disabled:hover, [data-theme$='dark'] .aps-product-card--disabled:active",
     'карточка в работе: правило гасит отклик целиком, включая нажатие',
   ],
   [
-    'modules/600-steps-and-aps.css :: .aps-barcode-debug-dot:active::after',
+    'modules/611-aps-product-card.css :: .aps-barcode-debug-dot:active::after',
     'отладочная точка сканера — dev-only, в продукт не видна',
   ],
   [
@@ -154,7 +154,7 @@ const ОТСТУПЛЕНИЯ = new Map([
 
 /** Правила hover, которые намеренно не под гейтом (это не подсветка). */
 const HOVER_БЕЗ_ГЕЙТА = new Set([
-  "modules/600-steps-and-aps.css :: .aps-product-card--disabled, .aps-product-card--disabled:hover, .aps-product-card--disabled:active, [data-theme$='dark'] .aps-product-card--disabled:hover, [data-theme$='dark'] .aps-product-card--disabled:active",
+  "modules/611-aps-product-card.css :: .aps-product-card--disabled, .aps-product-card--disabled:hover, .aps-product-card--disabled:active, [data-theme$='dark'] .aps-product-card--disabled:hover, [data-theme$='dark'] .aps-product-card--disabled:active",
   'modules/733-ui-v4-login-theme.css :: .heys-auth-support-link, .heys-auth-link-btn, .heys-auth-support-link:hover, .heys-auth-support-link:focus, .heys-auth-support-link:visited, .heys-auth-link-btn:hover, .heys-auth-link-btn:focus, .heys-auth-link-btn:visited',
 ]);
 

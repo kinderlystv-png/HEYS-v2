@@ -123,6 +123,7 @@ const PICK = {
   direction: (v) => num(v, /направление (\S+?)(?:,|$)/),
   textAlign: (v) => num(v, /выключка (\S+?)(?:,|$)/),
   transform: (v) => num(v, /регистр (\S+?)(?:,|$)/),
+  minWidth: (v) => num(v, /ширина от ([\d.]+)px/),
   flex: (v) => num(v, /флекс (\S+?)(?:,|$)/),
   background: (v) => grabColor(v, 'фон'),
   color: (v) => grabColor(v, 'цвет')
@@ -134,6 +135,7 @@ const CSSPROP = {
   fontSize: 'font-size', lineHeight: 'line-height', tracking: 'letter-spacing',
   align: 'align-items', justify: 'justify-content', direction: 'flex-direction',
   textAlign: 'text-align', transform: 'text-transform', flex: 'flex',
+  minWidth: 'min-width',
   background: 'background', color: 'color'
 };
 

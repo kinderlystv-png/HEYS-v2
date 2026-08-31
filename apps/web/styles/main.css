@@ -11,7 +11,11 @@
  * 04. Modals & Day UI ............ modules/300-modals-and-day.css
  * 05. Water & Hydration .......... modules/400-water-and-hydration.css
  * 06. PWA & Offline UI ........... modules/500-pwa-and-offline.css
- * 07. Steps & APS Flow ........... modules/600-steps-and-aps.css
+ * 07. Steps & APS Flow ........... modules/600-steps-and-aps.css (оболочка)
+ *     …флоу приёма .............. modules/610-aps-meal-flow.css
+ *     …карточка продукта ....... modules/611-aps-product-card.css
+ *     …шаг тренировки .......... modules/612-training-step.css
+ *     …женский цикл ............ modules/613-cycle-ui.css
  * 07a. Fingers (climbing fb) ..... modules/fingers.css
  * 07b. Drums finger trainer ...... modules/drums-finger-trainer.css
  * 08. Profile Wizard ............. modules/700-profile-wizard.css
@@ -35,6 +39,10 @@
 @import url('./modules/400-water-and-hydration.css');
 @import url('./modules/500-pwa-and-offline.css');
 @import url('./modules/600-steps-and-aps.css');
+@import url('./modules/610-aps-meal-flow.css');
+@import url('./modules/611-aps-product-card.css');
+@import url('./modules/612-training-step.css');
+@import url('./modules/613-cycle-ui.css');
 @import url('./modules/fingers.css');
 @import url('./modules/drums-finger-trainer.css');
 @import url('./modules/700-profile-wizard.css');
