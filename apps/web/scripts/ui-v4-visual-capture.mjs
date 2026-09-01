@@ -902,6 +902,8 @@ async function openCase(browser, item, snapshot) {
       );
       await page.evaluate((themeId) => {
         if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const caseNow = new Date('2022-08-08T19:27:12+03:00').getTime();
+        window.Date.now = () => caseNow;
         const approach = (weightKg, reps, done) => ({
           weightKg: String(weightKg),
           reps,
@@ -952,7 +954,6 @@ async function openCase(browser, item, snapshot) {
             workoutLog: {
               title: 'Силовая · грудь, спина, плечи',
               startedAt: new Date('2022-08-08T18:40:00+03:00').getTime(),
-              completedAt: new Date('2022-08-08T19:27:12+03:00').getTime(),
               exercises,
             },
           },
