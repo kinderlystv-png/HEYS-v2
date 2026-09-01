@@ -527,6 +527,12 @@ async function openCase(browser, item, snapshot) {
         undefined,
         { timeout: 45_000 },
       );
+      // This component lives in a legacy bundle in the app shell. Load the source
+      // under review after that bundle is ready so a late lazy chunk cannot replace
+      // it with stale generated code from another agent's QA session.
+      await page.addScriptTag({
+        path: path.join(ROOT, 'apps', 'web', 'heys_weekly_reports_v2.js'),
+      });
       await page.evaluate((themeId) => {
         if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
         const NC = window.HEYS.NormCorrection;
@@ -1428,6 +1434,66 @@ async function openCase(browser, item, snapshot) {
         throw new Error('Registration visual fixture wrote heys_registration_in_progress');
       }
     }
+    if (item.kind === 'demo-norm-correction-lowered') {
+      visualChecks = await page.evaluate(() => {
+        const root = document.querySelector('#ui-v4-norm-correction-lowered-host > .norm-correction-screen');
+        const rootBox = root?.getBoundingClientRect();
+        const inspect = (selector) => {
+          const node = root?.querySelector(selector);
+          if (!node || !rootBox) return null;
+          const box = node.getBoundingClientRect();
+          const style = getComputedStyle(node);
+          return {
+            x: Math.round((box.x - rootBox.x) * 100) / 100,
+            y: Math.round((box.y - rootBox.y) * 100) / 100,
+            width: Math.round(box.width * 100) / 100,
+            height: Math.round(box.height * 100) / 100,
+            font: style.font,
+            color: style.color,
+            background: style.backgroundColor,
+            padding: style.padding,
+            marginTop: style.marginTop,
+            textWrap: style.textWrap,
+            letterSpacing: style.letterSpacing,
+            fontStretch: style.fontStretch,
+            fontVariationSettings: style.fontVariationSettings,
+            fontFeatureSettings: style.fontFeatureSettings,
+          };
+        };
+        return {
+          header: inspect('.norm-correction-screen__header'),
+          content: inspect('.norm-correction-screen__content'),
+          card: inspect('.weekly-wrap-correction--lowered'),
+          title: inspect('.weekly-wrap-correction__title'),
+          body: inspect('.weekly-wrap-correction__body'),
+          hero: inspect('.weekly-wrap-correction__hero'),
+          facts: inspect('.weekly-wrap-correction__facts'),
+          primary: inspect('.weekly-wrap-correction__btn--primary'),
+          secondary: inspect('.weekly-wrap-correction__btn:not(.weekly-wrap-correction__btn--primary)'),
+          footnote: inspect('.weekly-wrap-correction__footnote'),
+          bodyLines: (() => {
+            const text = root?.querySelector('.weekly-wrap-correction__body')?.firstChild;
+            if (!text) return null;
+            const range = document.createRange();
+            range.selectNodeContents(text);
+            return [...range.getClientRects()].map((box) => ({
+              x: Math.round((box.x - rootBox.x) * 100) / 100,
+              y: Math.round((box.y - rootBox.y) * 100) / 100,
+              width: Math.round(box.width * 100) / 100,
+              height: Math.round(box.height * 100) / 100,
+            }));
+          })(),
+          bodyFirst20: (() => {
+            const text = root?.querySelector('.weekly-wrap-correction__body')?.firstChild;
+            if (!text) return null;
+            const range = document.createRange();
+            range.setStart(text, 0);
+            range.setEnd(text, 20);
+            return Math.round(range.getBoundingClientRect().width * 100) / 100;
+          })(),
+        };
+      });
+    }
     if (item.kind === 'demo-food-copy-empty') {
       await page.waitForTimeout(250);
       visualChecks = await page.evaluate(() => {
@@ -1893,7 +1959,66 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
                   },
                 };
               })
-            : null;
+            : item.kind === 'demo-norm-correction-lowered'
+              ? await frame.evaluate((node) => {
+                  const frameBox = node.getBoundingClientRect();
+                  const inspect = (selector) => {
+                    const target = selector === ':scope' ? node : node.querySelector(selector);
+                    if (!target) return null;
+                    const box = target.getBoundingClientRect();
+                    const style = getComputedStyle(target);
+                    return {
+                      x: Math.round((box.x - frameBox.x) * 100) / 100,
+                      y: Math.round((box.y - frameBox.y) * 100) / 100,
+                      width: Math.round(box.width * 100) / 100,
+                      height: Math.round(box.height * 100) / 100,
+                      font: style.font,
+                      color: style.color,
+                      background: style.backgroundColor,
+                      padding: style.padding,
+                      marginTop: style.marginTop,
+                      textWrap: style.textWrap,
+                      letterSpacing: style.letterSpacing,
+                      fontStretch: style.fontStretch,
+                      fontVariationSettings: style.fontVariationSettings,
+                      fontFeatureSettings: style.fontFeatureSettings,
+                    };
+                  };
+                  return {
+                    root: inspect(':scope'),
+                    header: inspect('.top'),
+                    content: inspect('.sc'),
+                    card: inspect('.grp'),
+                    title: inspect('.h1'),
+                    body: inspect('.p'),
+                    hero: inspect('.grp > div:nth-child(3)'),
+                    facts: inspect('.cd'),
+                    primary: inspect('.btn'),
+                    secondary: inspect('.btn2c'),
+                    footnote: inspect('.sm'),
+                    bodyLines: (() => {
+                      const text = node.querySelector('.p')?.firstChild;
+                      if (!text) return null;
+                      const range = document.createRange();
+                      range.selectNodeContents(text);
+                      return [...range.getClientRects()].map((box) => ({
+                        x: Math.round((box.x - frameBox.x) * 100) / 100,
+                        y: Math.round((box.y - frameBox.y) * 100) / 100,
+                        width: Math.round(box.width * 100) / 100,
+                        height: Math.round(box.height * 100) / 100,
+                      }));
+                    })(),
+                    bodyFirst20: (() => {
+                      const text = node.querySelector('.p')?.firstChild;
+                      if (!text) return null;
+                      const range = document.createRange();
+                      range.setStart(text, 0);
+                      range.setEnd(text, 20);
+                      return Math.round(range.getBoundingClientRect().width * 100) / 100;
+                    })(),
+                  };
+                })
+              : null;
     const file = path.join(OUT_DIR, `${item.id}.canvas.png`);
     if (item.canvasFrame.captureSelector) {
       const boundary = frame.locator(item.canvasFrame.captureSelector);

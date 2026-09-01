@@ -1278,7 +1278,7 @@ body.tour-active .ios-pwa-banner {
   overflow: hidden;
   border-radius: 28px;
   background: var(--v4-bg, #fffaf1);
-  font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font-family: Figtree, sans-serif;
 }
 
 .norm-correction-screen__header {

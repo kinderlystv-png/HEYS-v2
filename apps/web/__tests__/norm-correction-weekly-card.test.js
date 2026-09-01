@@ -163,6 +163,7 @@ describe('поправка на факт · карточка сверки в ш�
     expect(SRC).toContain("modalClassName: 'mc-modal--weekly-wrap-v4'");
     expect(SRC).toContain("if (action === 'ok')");
     expect(SRC).toContain('HEYS.StepModal?.hide?.()');
+    expect(CSS).toMatch(/\.norm-correction-screen \{[^}]*font-family: Figtree, sans-serif/);
     expect(CSS).toMatch(/\.norm-correction-screen__header \{[^}]*padding: 16px 18px 0/);
     expect(CSS).toMatch(/\.norm-correction-screen__content \{[^}]*padding: 6px 18px 18px/);
     expect(CSS).toMatch(/\.norm-correction-screen__content > \.weekly-wrap-correction--lowered \{[^}]*margin-top: 12px/);
