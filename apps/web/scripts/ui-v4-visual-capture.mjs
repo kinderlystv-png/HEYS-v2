@@ -518,6 +518,13 @@ async function openCase(browser, item, snapshot) {
       );
       await page.evaluate((themeId) => {
         if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const exerciseMeta = window.HEYS?.exerciseMeta;
+        const readExerciseMeta = exerciseMeta?.get?.bind(exerciseMeta);
+        if (exerciseMeta && readExerciseMeta) {
+          exerciseMeta.get = (name) => name === 'Жим лёжа'
+            ? { primaryGroup: 'chest', secondaryGroups: ['triceps', 'shoulders'] }
+            : readExerciseMeta(name);
+        }
         const done = (weightKg, reps, extra) => ({
           weightKg: String(weightKg), reps, done: true, ...(extra || {}),
         });
@@ -528,15 +535,32 @@ async function openCase(browser, item, snapshot) {
             exercises: [
               {
                 name: 'Жим лёжа',
-                approaches: [done(40, 10, { type: 'warmup' }), done(75, 8), done(70, 10)],
+                approaches: [
+                  done(40, 10, { type: 'warmup' }),
+                  done(45, 8, { type: 'warmup' }),
+                  done(50, 6, { type: 'warmup' }),
+                  done(55, 4, { type: 'warmup' }),
+                  done(75, 8),
+                  done(75, 8),
+                  done(70, 10),
+                  done(70, 10),
+                ],
+              },
+              {
+                name: 'Тяга штанги в наклоне',
+                approaches: Array.from({ length: 5 }, () => done(60, 10)),
+              },
+              {
+                name: 'Жим гантелей сидя',
+                approaches: Array.from({ length: 4 }, () => done(24, 10)),
               },
               {
                 name: 'Планка', unit: 'time',
                 approaches: [{ durationSec: 180, reps: 1, done: true }],
               },
               {
-                name: 'Подтягивания', unit: 'bodyweight', bodyweightFactor: 0.8,
-                approaches: [done('', 8)],
+                name: 'Подтягивания', unit: 'bodyweight', bodyweightFactor: 0.65,
+                approaches: [done('', 10), done('', 10), done('', 10), done('', 9)],
               },
               {
                 name: 'Отжимания на брусьях', unit: 'bodyweight',
@@ -566,12 +590,13 @@ async function openCase(browser, item, snapshot) {
           bodyWeightKg: 80,
           dayTonnageKg: 14200,
           strengthCount: 2,
-          previousComparableTonnageKg: 1618,
+          previousComparableTonnageKg: 7668,
           historyFor: (name) => name === 'Жим лёжа'
             ? { record: { maxW: 70, maxSet: 550, total: 1200 } }
             : { record: null },
           historyDetailFor: () => ({
-            usages: [75, 72, 70, 68, 66].map((weight) => ({ approaches: [done(weight, 6)] })),
+            usages: [69, 69.75, 66.75, 67.5, 66]
+              .map((weight) => ({ approaches: [done(weight, 10)] })),
           }),
           onBack: () => {},
           onDone: () => {},

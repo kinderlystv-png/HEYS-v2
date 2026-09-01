@@ -54,17 +54,30 @@ describe('Б3 · Конструктор · итоги', () => {
         name: 'Жим лёжа',
         approaches: [
           done(40, 10, { type: 'warmup' }),
+          done(45, 8, { type: 'warmup' }),
+          done(50, 6, { type: 'warmup' }),
+          done(55, 4, { type: 'warmup' }),
           done(75, 8),
+          done(75, 8),
+          done(70, 10),
           done(70, 10)
         ]
+      },
+      {
+        name: 'Тяга штанги в наклоне',
+        approaches: Array.from({ length: 5 }, () => done(60, 10))
+      },
+      {
+        name: 'Жим гантелей сидя',
+        approaches: Array.from({ length: 4 }, () => done(24, 10))
       },
       {
         name: 'Планка', unit: 'time',
         approaches: [{ durationSec: 180, reps: 1, done: true }]
       },
       {
-        name: 'Подтягивания', unit: 'bodyweight', bodyweightFactor: 0.8,
-        approaches: [done('', 8)]
+        name: 'Подтягивания', unit: 'bodyweight', bodyweightFactor: 0.65,
+        approaches: [done('', 10), done('', 10), done('', 10), done('', 9)]
       },
       {
         name: 'Отжимания на брусьях', unit: 'bodyweight',
@@ -79,12 +92,13 @@ describe('Б3 · Конструктор · итоги', () => {
       bodyWeightKg: 80,
       dayTonnageKg: 14200,
       strengthCount: 2,
-      previousComparableTonnageKg: 1618,
+      previousComparableTonnageKg: 7668,
       historyFor: (name) => name === 'Жим лёжа'
         ? { record: { maxW: 70, maxSet: 550, total: 1200 } }
         : { record: null },
       historyDetailFor: () => ({
-        usages: [75, 72, 70, 68, 66].map((weight) => ({ approaches: [done(weight, 6)] }))
+        usages: [69, 69.75, 66.75, 67.5, 66]
+          .map((weight) => ({ approaches: [done(weight, 10)] }))
       }),
       onBack: vi.fn(),
       onDone: (note, feedback) => saved.push({ note, feedback })
@@ -94,18 +108,22 @@ describe('Б3 · Конструктор · итоги', () => {
     expect(screen.getByText(/Силовая .* 8 августа/)).toBeTruthy();
     expect(screen.getByText('54:30')).toBeTruthy();
     expect(screen.getByText('Рабочих подходов')).toBeTruthy();
-    expect(screen.getByText('5')).toBeTruthy();
-    expect(screen.getByText('1 · вне объёма')).toBeTruthy();
+    expect(screen.getByText('19')).toBeTruthy();
+    expect(screen.getByText('4 · вне объёма')).toBeTruthy();
+    expect(screen.getByText('8,6 т')).toBeTruthy();
+    expect(screen.getByText('↑ 12 %')).toBeTruthy();
     expect(screen.getByText('Жим лёжа · 75 × 8')).toBeTruthy();
     expect(screen.getByText('Отжимания на брусьях — коэффициент своего веса неизвестен')).toBeTruthy();
     expect(screen.getByText('Планка · время')).toBeTruthy();
     expect(screen.getByText('3:00 под нагрузкой')).toBeTruthy();
     expect(screen.getByText('Подтягивания · свой вес')).toBeTruthy();
-    expect(screen.getByText('512 кг в тоннаже')).toBeTruthy();
+    expect(screen.getByText('2 т в тоннаже')).toBeTruthy();
     expect(screen.getByText('Сегодня всего две силовые')).toBeTruthy();
     expect(screen.getByText('14,2 т')).toBeTruthy();
     expect(document.querySelectorAll('.sb-finish-chart-column')).toHaveLength(6);
     expect(document.querySelectorAll('.sb-finish-chart-column.is-latest')).toHaveLength(1);
+    expect(Array.from(document.querySelectorAll('.sb-finish-chart-column > b'))
+      .map((element) => element.textContent)).toEqual(['88', '90', '89', '93', '92', '95']);
 
     fireEvent.change(screen.getByLabelText('настроение'), { target: { value: '7' } });
     fireEvent.change(screen.getByLabelText('самочувствие'), { target: { value: '8' } });
@@ -198,6 +216,12 @@ describe('Б3 · Конструктор · итоги', () => {
     expect(css).toContain('min-height: 52px;');
     expect(css).toContain('height: 112px;');
     expect(css).toContain('min-height: 48px;');
+    expect(css).toContain('--c1: var(--v4-c1, #f7efe2);');
+    expect(css).toContain('--c2: var(--v4-hero, #efe3cf);');
+    expect(css).toContain('--tx: var(--v4-ink, #201e1d);');
+    expect(css).toContain('--ink: var(--v4-ink-rgb, 0, 0, 0);');
+    expect(css).toContain('--acs: var(--v4-act, #c67139);');
+    expect(css).toContain('--gr-bg: var(--v4-ok-bg, #eaefe0);');
     expect(source).toContain("className: 'sb-finish-detail'");
     expect(source).toContain("className: 'sb-finish-feedback-grid'");
     expect(source).toContain("className: 'sb-finish-chart'");

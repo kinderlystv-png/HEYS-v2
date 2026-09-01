@@ -122,6 +122,17 @@ describe('UI v4 visual harness', () => {
         oid: 'З1',
         palette: 'sand',
       });
+    const finish = paired.find((item) => item.id === 'strength-finish-sand');
+    expect(finish).toMatchObject({
+      viewport: { width: 375, height: 1346 },
+      captureSelector: '.sb-finish-screen',
+      canvasFrame: {
+        file: 'strength-builder.v4.dc.html',
+        label: 'Конструктор · итоги',
+        oid: 'Б3',
+        palette: 'sand',
+      },
+    });
   });
 
   it('снимает element-boundary пары runtime↔Canvas и сохраняет diff без resize', () => {

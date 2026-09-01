@@ -1686,6 +1686,22 @@
 /* ── Финал v4 · Б3 «Конструктор · итоги» ───────────────────────────────── */
 
 .sb-finish-screen {
+  /* Canvas Б3 uses its compact role names inside the finish-only rules below.
+   * Bind them to the product palette here: without this bridge the geometry
+   * applies, but every card, graph bar and accent whose value is var(--c*)/
+   * var(--a*) becomes transparent in the live app. */
+  --c1: var(--v4-c1, #f7efe2);
+  --c2: var(--v4-hero, #efe3cf);
+  --tint: var(--v4-tint, #f6e6dd);
+  --tx: var(--v4-ink, #201e1d);
+  --ink: var(--v4-ink-rgb, 0, 0, 0);
+  --ac: var(--v4-act-text, #8a4a20);
+  --ac2: var(--v4-warn-text, #a1471c);
+  --acs: var(--v4-act, #c67139);
+  --on-acs: var(--v4-btn-on-act, #2b1608);
+  --gr: var(--v4-ok-text, #5c6a45);
+  --gr-bg: var(--v4-ok-bg, #eaefe0);
+  --val-bad: var(--v4-bad-text, #b4442a);
   background: var(--bg);
   color: var(--tx);
   font-family: Figtree, system-ui, sans-serif;
