@@ -797,98 +797,117 @@
     },
     "Сверка · норма снизилась · 01": {
       "v": "?",
-      "f": "шапку понедельничной шторки рисует не карточка поправки, а сама шторка: имя недели и даты приходят от неё. Пилюли состояния («решает куратор», «отказ принят», «третий отказ») в шапке нет — состояние названо заголовком карточки",
-      "h": "175bdcc2e73a"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "175bdcc2e73a",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
     "Сверка · норма снизилась · 02": {
       "v": "?",
-      "f": "то же: имя экрана принадлежит шторке недели",
-      "h": "c52f98769887"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "c52f98769887",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
     "Сверка · норма снизилась · 03": {
       "v": "?",
-      "f": "даты недели — у шторки",
-      "h": "8fb45e91d910"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "8fb45e91d910",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
     "Сверка · норма снизилась · 04": {
-      "v": "=",
-      "f": "шторка прокручивается сама, карточка в ней обычный блок",
-      "h": "c629f84f9712"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "c629f84f9712",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
     "Сверка · норма снизилась · 05": {
       "v": "?",
-      "f": "внутренняя .grp-геометрия lowered-карточки совпадает, но внешний отступ не доказан: в runtime карточка следует за weekly hint через общий gap 18 px, тогда как canvas требует 12 px от верха области. Шапка weekly-flow сама ещё не сведена",
-      "h": "81d6d8e40a85"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "81d6d8e40a85",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
     "Сверка · норма снизилась · 06": {
       "v": "=",
-      "f": ".weekly-wrap-correction__title 16 px/700 --v4-ink",
-      "h": "4aaa4eacee5d"
+      "f": "CSS-контракт подтверждает заголовок 16px/700.",
+      "h": "4aaa4eacee5d",
+      "evidence": ["computed-style: apps/web/__tests__/norm-correction-canvas-razbor.test.js"]
     },
     "Сверка · норма снизилась · 07": {
       "v": "?",
-      "f": "при наличии замеров lowered-ветка дословно совпадает с кадром и использует 12 px/500/1,55 чернил 60 %. Без замеров код не выдумывает, что обхваты держатся, и показывает честный fallback; canvas такого применённого Pro-снижения не описывает, вопрос записан дизайнеру",
-      "h": "755acd2651a3"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "755acd2651a3",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
     "Сверка · норма снизилась · 08": {
       "v": "=",
-      "f": ".weekly-wrap-correction--lowered .weekly-wrap-correction__hero — baseline и зазор 10 из общего hero-контракта, верхний отступ 14 px задан полем специализированного кадра",
-      "h": "4aeb3bc27912"
+      "f": "Разбор Canvas подтверждает baseline и gap hero-блока.",
+      "h": "4aeb3bc27912",
+      "evidence": ["computed-style: apps/web/__tests__/norm-correction-canvas-razbor.test.js"]
     },
     "Сверка · норма снизилась · 09": {
       "v": "=",
-      "f": ".weekly-wrap-correction__hero-value 30 px/800 моноцифрами",
-      "h": "54de2db2a05b"
+      "f": "CSS-контракт подтверждает число 30px/800.",
+      "h": "54de2db2a05b",
+      "evidence": ["computed-style: apps/web/__tests__/norm-correction-canvas-razbor.test.js"]
     },
     "Сверка · норма снизилась · 10": {
       "v": "=",
-      "f": ".weekly-wrap-correction__hero-caption.is-down 12 px/700 на --v4-bad-text",
-      "h": "fd162881325c"
+      "f": "Разбор Canvas подтверждает типографику подписи снижения.",
+      "h": "fd162881325c",
+      "evidence": ["computed-style: apps/web/__tests__/norm-correction-canvas-razbor.test.js"]
     },
     "Сверка · норма снизилась · 11": {
-      "v": "=",
-      "f": ".weekly-wrap-correction__facts — карточка строк на подложке набора",
-      "h": "f06d6e12de2e"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "f06d6e12de2e",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
     "Сверка · норма снизилась · 12": {
-      "v": "=",
-      "f": ".weekly-wrap-correction--lowered .weekly-wrap-correction__fact — 12,5 px/600/1, выравнивание по центру, поля 13 px и разделитель 7 % после первой строки",
-      "h": "af81bb6e54c6"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "af81bb6e54c6",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
     "Сверка · норма снизилась · 13": {
-      "v": "=",
-      "f": ".weekly-wrap-correction__fact-label обычными чернилами — пару «ключ — значение» разводит место в строке и тон значения, а не приглушённый ключ",
-      "h": "e275ea395284"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "e275ea395284",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
     "Сверка · норма снизилась · 14": {
       "v": "=",
-      "f": ".weekly-wrap-correction__fact-value.is-quiet 11 px/600 на --v4-ink-data (56 %) — сведено разбором кадра",
-      "h": "2998c998497d"
+      "f": "Разбор Canvas подтверждает типографику и тон тихого значения.",
+      "h": "2998c998497d",
+      "evidence": ["computed-style: apps/web/__tests__/norm-correction-canvas-razbor.test.js"]
     },
     "Сверка · норма снизилась · 15": {
-      "v": "=",
-      "f": ".weekly-wrap-correction--lowered .weekly-wrap-correction__fact:last-child снимает разделитель у второй строки",
-      "h": "6b286135ed76"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "6b286135ed76",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
     "Сверка · норма снизилась · 16": {
       "v": "=",
-      "f": ".weekly-wrap-correction--lowered .weekly-wrap-correction__fact-value — 12,5 px/600/1 из строки факта, обычные чернила и tabular-nums; значение совпадает с кадром",
-      "h": "e8d92cb6e617"
+      "f": "Разбор Canvas подтверждает типографику строки факта.",
+      "h": "e8d92cb6e617",
+      "evidence": ["computed-style: apps/web/__tests__/norm-correction-canvas-razbor.test.js"]
     },
     "Сверка · норма снизилась · 17": {
       "v": "=",
-      "f": "для frame=lowered действие ok получает .weekly-wrap-correction__btn--primary; колонка действий начинается через 14 px, пилюля 48 px радиусом 999 на --v4-act",
-      "h": "1ab7cbe80528"
+      "f": "CSS/semantic-тест подтверждает главное действие и колонку действий.",
+      "h": "1ab7cbe80528",
+      "evidence": ["semantic-test: apps/web/__tests__/norm-correction-weekly-card.test.js"]
     },
     "Сверка · норма снизилась · 18": {
       "v": "=",
-      "f": ".weekly-wrap-correction--lowered ставит вторичную пилюлю полной ширины через gap 9 px после главной; фон --v4-hero и чернила 58 % совпадают с кадром",
-      "h": "773e15836138"
+      "f": "CSS/semantic-тест подтверждает вторичное действие в колонке.",
+      "h": "773e15836138",
+      "evidence": ["semantic-test: apps/web/__tests__/norm-correction-weekly-card.test.js"]
     },
     "Сверка · норма снизилась · 19": {
       "v": "=",
-      "f": ".weekly-wrap-correction--lowered .weekly-wrap-correction__footnote — верхний отступ 12 px, 11 px/500/1,55 и чернила 56 %",
-      "h": "18abbac96f2e"
+      "f": "CSS-тест подтверждает отступ и типографику сноски.",
+      "h": "18abbac96f2e",
+      "evidence": ["semantic-test: apps/web/__tests__/norm-correction-weekly-card.test.js"]
     },
     "Сверка · рекомпозиция · 01": {
       "v": "?",
@@ -2247,8 +2266,9 @@
     },
     "Сверка · норма снизилась · текст": {
       "v": "?",
-      "f": "полный текст совпадает при наличии замеров обхватов. Без них код намеренно не произносит «обхваты держатся на месте» и показывает честный fallback, для которого canvas не даёт отдельного применённого Pro-кадра",
-      "h": "e75bf7785edd"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "e75bf7785edd",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
     "Сверка · рекомпозиция · текст": {
       "v": "=",

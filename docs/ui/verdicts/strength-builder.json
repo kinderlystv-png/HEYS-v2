@@ -1030,133 +1030,159 @@
     },
     "Конструктор · список свёрнут · 01": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "175bdcc2e73a"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "175bdcc2e73a",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 02": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "dbd19d6c8f05"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "dbd19d6c8f05",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 03": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "f143b5d4e1e4"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "f143b5d4e1e4",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 04": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "97774a22c8cb"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "97774a22c8cb",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 05": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "946ab5761d8f"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "946ab5761d8f",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 06": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c97cc5075bc8"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "c97cc5075bc8",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 07": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "a6047f6cec68"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "a6047f6cec68",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 08": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c629f84f9712"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "c629f84f9712",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 09": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c00d4648c76a"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "c00d4648c76a",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 10": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "6081a9540084"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "6081a9540084",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 11": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "de5c3c15e816"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "de5c3c15e816",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 12": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "7f9aee8f3e6d"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "7f9aee8f3e6d",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 13": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "7c91f7740c38"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "7c91f7740c38",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 14": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "7590f4699d43"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "7590f4699d43",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 15": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "a45ee30c055e"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "a45ee30c055e",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 16": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "73f2ff511749"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "73f2ff511749",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "4668dbccd211"
+      "v": "=",
+      "f": "DOM-тест подтверждает точный знак завершённого упражнения «✓».",
+      "h": "4668dbccd211",
+      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
     },
     "Конструктор · список свёрнут · 18": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "5c72c132f5a3"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "5c72c132f5a3",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 19": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "61464eb844e9"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "61464eb844e9",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 20": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "58182d9bbb24"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "58182d9bbb24",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 21": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "f71e7844aea2"
+      "v": "=",
+      "f": "DOM-тест подтверждает точную строку состояния «раскрыть ›».",
+      "h": "f71e7844aea2",
+      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
     },
     "Конструктор · список свёрнут · 22": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "bc025e8f605f"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "bc025e8f605f",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 23": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c4dc01779567"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "c4dc01779567",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 24": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "f28608232f83"
+      "v": "=",
+      "f": "DOM-тест подтверждает точное вторичное действие «Добавить упражнение».",
+      "h": "f28608232f83",
+      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
     },
     "Конструктор · список свёрнут · 25": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "3cb07e9dbf4d"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "3cb07e9dbf4d",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · список свёрнут · 26": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "ce1ad1b14ae6"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "ce1ad1b14ae6",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · разминка и дроп-сет · 01": {
       "v": "?",
@@ -1489,299 +1515,358 @@
       "h": "cbf1bd50d9f4"
     },
     "Конструктор · итоги · 01": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "175bdcc2e73a"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "175bdcc2e73a",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 02": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "dbd19d6c8f05"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "dbd19d6c8f05",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 03": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "b4a4fa9ae422"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "b4a4fa9ae422",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 04": {
       "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "5869247ca78e"
+      "f": "DOM-тест подтверждает точное имя экрана «Тренировка завершена».",
+      "h": "5869247ca78e",
+      "evidence": ["semantic-test: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"]
     },
     "Конструктор · итоги · 05": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "0a9b59c671ec"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "0a9b59c671ec",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 06": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "c629f84f9712"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "c629f84f9712",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 07": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "c5496a662a0b"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "c5496a662a0b",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 08": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "7c8059955d00"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "7c8059955d00",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 09": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "2665113ba46b"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "2665113ba46b",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 10": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "79195002bcce"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "79195002bcce",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 11": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "a4893ff4ee00"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "a4893ff4ee00",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 12": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "e15fa3cf74aa"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "e15fa3cf74aa",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 13": {
       "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "c5872848526b"
+      "f": "DOM-тест подтверждает точную длительность «54:30».",
+      "h": "c5872848526b",
+      "evidence": ["semantic-test: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"]
     },
     "Конструктор · итоги · 14": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "00f49f637858"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "00f49f637858",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 15": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "347808bc285c"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "347808bc285c",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 16": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "ffaeaf0d5ee5"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "ffaeaf0d5ee5",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 17": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "d641122bb122"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "d641122bb122",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 18": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "af81bb6e54c6"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "af81bb6e54c6",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 19": {
       "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "e7cfa2fc7aa6"
+      "f": "DOM-тест подтверждает подпись «Рабочих подходов».",
+      "h": "e7cfa2fc7aa6",
+      "evidence": ["semantic-test: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"]
     },
     "Конструктор · итоги · 20": {
       "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "81d690c90603"
+      "f": "DOM-тест подтверждает точное число рабочих подходов «19».",
+      "h": "81d690c90603",
+      "evidence": ["semantic-test: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"]
     },
     "Конструктор · итоги · 21": {
       "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "72c160ead402"
+      "f": "DOM-тест подтверждает точное значение «4 · вне объёма».",
+      "h": "72c160ead402",
+      "evidence": ["semantic-test: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"]
     },
     "Конструктор · итоги · 22": {
       "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "b3e45ad60f71"
+      "f": "DOM-тест подтверждает точную строку рекорда «Жим лёжа · 75 × 8».",
+      "h": "b3e45ad60f71",
+      "evidence": ["semantic-test: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"]
     },
     "Конструктор · итоги · 23": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "6b286135ed76"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "6b286135ed76",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 24": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "07ffbada0ee7"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "07ffbada0ee7",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 25": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "7e59f99cc3ca"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "7e59f99cc3ca",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 26": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "8bb5e99afca6"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "8bb5e99afca6",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 27": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "aea9de12e541"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "aea9de12e541",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 28": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "54643961e08d"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "54643961e08d",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 29": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "3ad04027bbc9"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "3ad04027bbc9",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 30": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "e2912dc83a59"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "e2912dc83a59",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 31": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "e287269cab62"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "e287269cab62",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 32": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "34e58040aab6"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "34e58040aab6",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 33": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "694255fee8b1"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "694255fee8b1",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 34": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "a7f3763d1429"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "a7f3763d1429",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 35": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "fd18bd090aca"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "fd18bd090aca",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 36": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "4fdb2c243d2f"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "4fdb2c243d2f",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 37": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "34b181335f8a"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "34b181335f8a",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 38": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "c46890146dce"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "c46890146dce",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 39": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "7df7dd449515"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "7df7dd449515",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 40": {
       "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "4eb89dd57364"
+      "f": "CSS-контракт подтверждает точную высоту графика 112px.",
+      "h": "4eb89dd57364",
+      "evidence": ["semantic-test: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"]
     },
     "Конструктор · итоги · 41": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "23da33de2767"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "23da33de2767",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 42": {
       "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "946b09c6ac0d"
+      "f": "DOM-тест подтверждает точное первое значение графика «88».",
+      "h": "946b09c6ac0d",
+      "evidence": ["semantic-test: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"]
     },
     "Конструктор · итоги · 43": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "30e35c4d13f9"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "30e35c4d13f9",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 44": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "3ad83eaddc2e"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "3ad83eaddc2e",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 45": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "fb3e7f3476e1"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "fb3e7f3476e1",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 46": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "e1e16f158dd2"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "e1e16f158dd2",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 47": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "e302148fd136"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "e302148fd136",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 48": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "c50e1b3ae5f3"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "c50e1b3ae5f3",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 49": {
       "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "599205dd752d"
+      "f": "DOM-тест подтверждает точное последнее значение графика «95».",
+      "h": "599205dd752d",
+      "evidence": ["semantic-test: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"]
     },
     "Конструктор · итоги · 50": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "506d4b5e2301"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "506d4b5e2301",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 51": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "48a631dc319a"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "48a631dc319a",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 52": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "aee288085aea"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "aee288085aea",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 53": {
       "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "0aa733f23349"
+      "f": "DOM-тест подтверждает точный общий тоннаж «14,2 т».",
+      "h": "0aa733f23349",
+      "evidence": ["semantic-test: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"]
     },
     "Конструктор · итоги · 54": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "d9a337aab838"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "d9a337aab838",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 55": {
       "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "5770d2c092aa"
+      "f": "DOM-тест подтверждает точное значение времени под нагрузкой «3:00 под нагрузкой».",
+      "h": "5770d2c092aa",
+      "evidence": ["semantic-test: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"]
     },
     "Конструктор · итоги · 56": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "efb9ecff5e94"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "efb9ecff5e94",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 57": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "79640b84d0fc"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "79640b84d0fc",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 58": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "08f3b8ef67d3"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "08f3b8ef67d3",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · 59": {
       "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "3abe656a79aa"
+      "f": "DOM-тест подтверждает точное главное действие «Готово».",
+      "h": "3abe656a79aa",
+      "evidence": ["semantic-test: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"]
     },
     "Связка · раунды · 01": {
       "v": "?",
@@ -4271,164 +4356,196 @@
       "h": "62fdb9627056"
     },
     "Связка · создание · 01": {
-      "v": "=",
-      "f": "The creation screen header is confirmed at apps/web/strength/heys_strength_catalog_ui_v1.js:321.",
-      "h": "175bdcc2e73a"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "175bdcc2e73a",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 02": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "07ffbada0ee7"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "07ffbada0ee7",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 03": {
-      "v": "=",
-      "f": "The exact screen title is confirmed at apps/web/strength/heys_strength_catalog_ui_v1.js:326.",
-      "h": "e4be91b17c51"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "e4be91b17c51",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 04": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "6031e987e93a"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "6031e987e93a",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 05": {
-      "v": "=",
-      "f": "The creation screen uses the shared scrollable list primitive confirmed at apps/web/strength/heys_strength_catalog_ui_v1.js:330.",
-      "h": "c629f84f9712"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "c629f84f9712",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 06": {
-      "v": "=",
-      "f": "The creation screen list structure is confirmed at apps/web/strength/heys_strength_catalog_ui_v1.js:331.",
-      "h": "ae51c9227c86"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "ae51c9227c86",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 07": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "d9a337aab838"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "d9a337aab838",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 08": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "af81bb6e54c6"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "af81bb6e54c6",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 09": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "869d1e5dd696"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "869d1e5dd696",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 10": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "5c6c1c3e858a"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "5c6c1c3e858a",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 11": {
-      "v": "=",
-      "f": "The selected-member count and selection flow are confirmed at apps/web/strength/heys_strength_catalog_ui_v1.js:344.",
-      "h": "4ae5a0621f39"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "4ae5a0621f39",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 12": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "9cb5697272b6"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "9cb5697272b6",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 13": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "792768abd9da"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "792768abd9da",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 14": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "61464eb844e9"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "61464eb844e9",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 15": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "4297ede3cf2f"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "4297ede3cf2f",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 16": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "9236c47a3332"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "9236c47a3332",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 17": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "6b286135ed76"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "6b286135ed76",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 18": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "2c2ec98a753e"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "2c2ec98a753e",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 19": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "9cb94cdf7b14"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "9cb94cdf7b14",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 20": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "14e3d8779b29"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "14e3d8779b29",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 21": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "44102f1dd940"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "44102f1dd940",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 22": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "5218d4f95680"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "5218d4f95680",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 23": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "778be85ef026"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "778be85ef026",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 24": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "a830c4b664d8"
+      "v": "=",
+      "f": "DOM-тест подтверждает точное значение отдыха «2:00».",
+      "h": "a830c4b664d8",
+      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
     },
     "Связка · создание · 25": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "02587f9d6d0e"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "02587f9d6d0e",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 26": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "54643961e08d"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "54643961e08d",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 27": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "b95286e88946"
+      "v": "=",
+      "f": "DOM-тест подтверждает точное резюме трисета и его порядок.",
+      "h": "b95286e88946",
+      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
     },
     "Связка · создание · 28": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "3ae4b3ce70b5"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "3ae4b3ce70b5",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 29": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "df492a01c1fb"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "df492a01c1fb",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Связка · создание · 30": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "1b3f15833258"
+      "v": "=",
+      "f": "DOM-тест подтверждает точный прогноз «9» подходов.",
+      "h": "1b3f15833258",
+      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
     },
     "Связка · создание · 31": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "e476d2fae726"
+      "v": "=",
+      "f": "DOM-тест подтверждает точное главное действие «Собрать связку · 9 подходов».",
+      "h": "e476d2fae726",
+      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
     },
     "Связка · создание · 32": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "6a7fa8e553f0"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "6a7fa8e553f0",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Трисет в работе · 01": {
       "v": "?",
@@ -4887,182 +5004,217 @@
     },
     "План в ленте дня · 01": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "175bdcc2e73a"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "175bdcc2e73a",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
     },
     "План в ленте дня · 02": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "07ffbada0ee7"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "07ffbada0ee7",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
     },
     "План в ленте дня · 03": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "b948a7bf7ffa"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "b948a7bf7ffa",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
     },
     "План в ленте дня · 04": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "79f2acd79e23"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "79f2acd79e23",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
     },
     "План в ленте дня · 05": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c629f84f9712"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "c629f84f9712",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
     },
     "План в ленте дня · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "81d6d8e40a85"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "81d6d8e40a85",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "869d1e5dd696"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "869d1e5dd696",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "addb1ad16c00"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "addb1ad16c00",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "b4a4fa9ae422"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "b4a4fa9ae422",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "00ceac024a98"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "00ceac024a98",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "76deaf58abb7"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "76deaf58abb7",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "410f53ff185c"
+      "v": "=",
+      "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "410f53ff185c",
+      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "94a2209f25bb"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "94a2209f25bb",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "7df83bd94c9e"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "7df83bd94c9e",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "f250c86095df"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "f250c86095df",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c0d7c8cb1544"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "c0d7c8cb1544",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "77e4b4025f38"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "77e4b4025f38",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 18": {
       "v": "≠",
-      "f": "Кнопка «Начать сейчас» намеренно не рендерится: owner-контракт не определяет дату факта для раннего старта будущего назначения.",
+      "f": "Unsafe early start is intentionally absent because the owner contract has no fact-date rule.",
       "h": "32404415abea",
+      "evidence": ["semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"],
       "reasonCode": "logic-invariant",
       "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате"
     },
     "План в ленте дня · 19": {
       "v": "≠",
-      "f": "Без безопасного early-start «Перенести» становится единственным главным действием; canvas задаёт его вторичным рядом с отсутствующим CTA.",
+      "f": "Transfer is intentionally the sole primary action after unsafe early start is removed.",
       "h": "096e30f25e4f",
+      "evidence": ["semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"],
       "reasonCode": "logic-invariant",
       "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате"
     },
     "План в ленте дня · 20": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "5cf087fff7b6"
+      "v": "=",
+      "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "5cf087fff7b6",
+      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 21": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "54643961e08d"
+      "v": "=",
+      "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "54643961e08d",
+      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 22": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "0e0d875194db"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "0e0d875194db",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 23": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "cbb5c1f8e50f"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "cbb5c1f8e50f",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 24": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "2612a29a6aa6"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "2612a29a6aa6",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 25": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "0712125d3ac4"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "0712125d3ac4",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 26": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "ea40d5b7e5ed"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "ea40d5b7e5ed",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 27": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c013a0005595"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "c013a0005595",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 28": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "895d864e529b"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "895d864e529b",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 29": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c5fea7338543"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "c5fea7338543",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 30": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "0ddbabb4c903"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "0ddbabb4c903",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 31": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "d116851f82d0"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "d116851f82d0",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 32": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "d55c4db65a48"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "d55c4db65a48",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 33": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "3c87cb21ff36"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "3c87cb21ff36",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 34": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "0b68cc8e46d1"
+      "v": "=",
+      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "0b68cc8e46d1",
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 35": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "3e002c1a437f"
+      "v": "=",
+      "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "h": "3e002c1a437f",
+      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "День не состоялся · 01": {
       "v": "?",
@@ -8082,8 +8234,9 @@
     },
     "Конструктор · список свёрнут · текст": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "98feae4e48c2"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "98feae4e48c2",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
     },
     "Конструктор · разминка и дроп-сет · текст": {
       "v": "?",
@@ -8101,14 +8254,16 @@
       "h": "953bf32c667a"
     },
     "Конструктор · итоги · текст 1/2": {
-      "v": "=",
-      "f": "Текущий HTML-кадр перенесён в FinishScreen; source/CSS, DOM/owner regression и diagnostic runtime capture 375×812 подтверждают строку.",
-      "h": "bbbbd7b2449c"
+      "v": "?",
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "bbbbd7b2449c",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Конструктор · итоги · текст 2/2": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "0da9afc2beba"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "0da9afc2beba",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"]
     },
     "Связка · раунды · текст": {
       "v": "?",
@@ -8207,8 +8362,9 @@
     },
     "Связка · создание · текст": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "57903ce9d9ab"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "57903ce9d9ab",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
     },
     "Трисет в работе · текст": {
       "v": "?",
@@ -8232,8 +8388,9 @@
     },
     "План в ленте дня · текст": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "47c4373b8180"
+      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "h": "47c4373b8180",
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
     },
     "День не состоялся · текст": {
       "v": "?",
