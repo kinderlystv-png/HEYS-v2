@@ -355,6 +355,33 @@ describe('конструктор: спокойная нижняя панель',
   });
 });
 
+describe('каталог конструктора по Canvas Б2', () => {
+  it('показывает компактные группы и прошлый результат без собственной арифметики', () => {
+    globalThis.HEYS.getExerciseSuggestions = () => [{
+      name: 'Тяга штанги в наклоне',
+      norm: 'тяга штанги в наклоне',
+      rank: 1,
+      favorite: true,
+    }];
+    const Catalog = globalThis.HEYS.StrengthCatalogUI.CatalogScreen;
+    render(React.createElement(Catalog, {
+      onPick: () => {},
+      onCreate: () => {},
+      onBack: () => {},
+      historyFor: () => ({
+        last: { approaches: [{ weightKg: '60', reps: 8, done: true }] },
+        record: null,
+      }),
+    }));
+
+    expect(document.querySelector('.sb-catalog-screen')).toBeTruthy();
+    expect(screen.getByText('Спина · прошлый раз 60 × 8')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ноги' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Квадрицепс' })).toBeTruthy();
+    expect(screen.getByText(/Строка создания появляется/)).toBeTruthy();
+  });
+});
+
 describe('создание связки по Canvas З1', () => {
   it('собирает выбор, раунды, отдых и прогноз в одну композицию', () => {
     const Cat = globalThis.HEYS.StrengthCatalogUI;

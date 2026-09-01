@@ -870,6 +870,217 @@ async function openCase(browser, item, snapshot) {
         .locator('#ui-v4-strength-builder-collapsed-host .sb-ex.is-open')
         .waitFor({ state: 'detached', timeout: 45_000 });
     }
+    if (item.kind === 'demo-strength-builder-active-calm') {
+      await page.waitForFunction(
+        () =>
+          !!window.React &&
+          !!window.ReactDOM?.createRoot &&
+          typeof window.HEYS?.StrengthBuilder?.BuilderScreen === 'function' &&
+          typeof window.HEYS?.StrengthBuilderParts?.ExerciseCard === 'function' &&
+          typeof window.HEYS?.TrainingKernel?.strength?.trainingTonnage === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const approach = (weightKg, reps, done) => ({
+          weightKg: String(weightKg),
+          reps,
+          done: !!done,
+        });
+        const exercise = (name, approaches, restSec) => ({ name, approaches, restSec });
+        const exercises = [
+          exercise('Жим лёжа', [
+            approach(75, 8, true), approach(75, 10, true),
+            approach(75, 10, true), approach(75, 12, true),
+          ], 120),
+          exercise('Тяга штанги в наклоне', [
+            approach(60, 8, true), approach(60, 10, true),
+            approach(60, 10, true), approach(60, 12, true),
+          ], 120),
+          exercise('Жим гантелей сидя', [
+            approach(22.5, 12, true), approach(24, 10, true),
+            approach(24, 10, false), approach(24, 10, false),
+          ], 120),
+          exercise('Разведение в тренажёре', [
+            approach(20, 12, false), approach(20, 12, false), approach(20, 12, false),
+          ], 60),
+        ];
+        let host = document.getElementById('ui-v4-strength-builder-active-calm-host');
+        if (!host) {
+          host = document.createElement('main');
+          host.id = 'ui-v4-strength-builder-active-calm-host';
+          Object.assign(host.style, {
+            position: 'fixed', top: '0', left: '0', zIndex: '20000',
+            width: '375px', height: '100vh', overflow: 'hidden',
+            background: 'var(--v4-bg, #fffaf3)',
+          });
+          document.body.appendChild(host);
+        }
+        const component = window.React.createElement(window.HEYS.StrengthBuilder.BuilderScreen, {
+          training: {
+            type: 'strength',
+            strengthEntryMode: 'workout_builder',
+            time: '18:40',
+            workoutLog: {
+              title: 'Силовая · грудь, спина, плечи',
+              startedAt: new Date('2026-08-28T08:42:48+03:00').getTime(),
+              exercises,
+            },
+          },
+          dateKey: '2026-08-28',
+          profile: { weight: 80 },
+          historyFor: (name) => name === 'Жим гантелей сидя'
+            ? { record: { maxW: 25, maxSet: 250, total: 900 } }
+            : name === 'Жим лёжа'
+              ? { record: { maxW: 75, maxSet: 900, total: 3000 } }
+              : null,
+          historyDetailFor: (name) => name === 'Жим гантелей сидя'
+            ? { usages: [{ approaches: [approach(22.5, 12, true)] }], record: { maxW: 25 } }
+            : { usages: [], record: null },
+          onPatch: () => {},
+          onPatchSession: () => {},
+          onClose: () => {},
+        });
+        window.__uiV4StrengthBuilderActiveCalmRoot =
+          window.__uiV4StrengthBuilderActiveCalmRoot || window.ReactDOM.createRoot(host);
+        window.__uiV4StrengthBuilderActiveCalmRoot.render(component);
+      }, item.themeId || null);
+      const thirdExercise = page
+        .locator('#ui-v4-strength-builder-active-calm-host .sb-ex-head')
+        .nth(2);
+      await thirdExercise.waitFor({ state: 'visible', timeout: 45_000 });
+      await thirdExercise.click();
+      await page
+        .locator('#ui-v4-strength-builder-active-calm-host .sb-ex.is-open')
+        .filter({ hasText: 'Жим гантелей сидя' })
+        .waitFor({ state: 'visible', timeout: 45_000 });
+    }
+    if (item.kind === 'demo-strength-builder-empty') {
+      await page.waitForFunction(
+        () =>
+          !!window.React &&
+          !!window.ReactDOM?.createRoot &&
+          typeof window.HEYS?.StrengthBuilder?.BuilderScreen === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const emptyTraining = {
+          type: 'strength',
+          strengthEntryMode: 'workout_builder',
+          workoutLog: { exercises: [] },
+          plan: {
+            id: 'visual-plan-b', status: 'assigned', dayLabel: 'День B', assignedBy: 'Артём',
+            assignedAt: new Date('2026-08-28T08:00:00+03:00').getTime(),
+          },
+          planSnapshot: {
+            exercises: Array.from({ length: 7 }, (_, index) => ({
+              name: 'План · упражнение ' + (index + 1),
+              approaches: [{ weightKg: '20', reps: 10, done: false }],
+            })),
+          },
+        };
+        const lastExercises = Array.from({ length: 7 }, (_, index) => ({
+          name: 'Прошлое · упражнение ' + (index + 1), approaches: [],
+        }));
+        let host = document.getElementById('ui-v4-strength-builder-empty-host');
+        if (!host) {
+          host = document.createElement('main');
+          host.id = 'ui-v4-strength-builder-empty-host';
+          Object.assign(host.style, {
+            position: 'fixed', top: '0', left: '0', zIndex: '20000',
+            width: '375px', height: '100vh', overflow: 'hidden',
+            background: 'var(--v4-bg, #fffaf3)',
+          });
+          document.body.appendChild(host);
+        }
+        const component = window.React.createElement(window.HEYS.StrengthBuilder.BuilderScreen, {
+          training: emptyTraining,
+          dateKey: '2026-08-28',
+          profile: { weight: 80 },
+          lastSessionFor: () => ({ dateKey: '2026-08-05', exercises: lastExercises }),
+          onStartPlan: async () => [],
+          onStartCustom: async () => false,
+          onRepeatLast: async () => [],
+          onPatch: () => {},
+          onPatchSession: () => {},
+          onClose: () => {},
+        });
+        window.__uiV4StrengthBuilderEmptyRoot =
+          window.__uiV4StrengthBuilderEmptyRoot || window.ReactDOM.createRoot(host);
+        window.__uiV4StrengthBuilderEmptyRoot.render(component);
+      }, item.themeId || null);
+      await page
+        .locator('#ui-v4-strength-builder-empty-host .sb-empty-card')
+        .waitFor({ state: 'visible', timeout: 45_000 });
+    }
+    if (item.kind === 'demo-strength-builder-catalog') {
+      await page.waitForFunction(
+        () =>
+          !!window.React &&
+          !!window.ReactDOM?.createRoot &&
+          typeof window.HEYS?.StrengthCatalogUI?.CatalogScreen === 'function' &&
+          !!window.HEYS?.exerciseMeta,
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const catalogRows = [
+          { name: 'Тяга штанги в наклоне', norm: 'тяга штанги в наклоне', rank: 1, favorite: true },
+          { name: 'Подтягивания', norm: 'подтягивания', rank: 2, favorite: false },
+          { name: 'Тяга верхнего блока', norm: 'тяга верхнего блока', rank: 3, favorite: false },
+          { name: 'Становая тяга', norm: 'становая тяга', rank: 4, favorite: true },
+        ];
+        window.HEYS.getExerciseSuggestions = () => catalogRows;
+        const previous = {
+          'Тяга штанги в наклоне': { weightKg: '60', reps: 8 },
+          'Тяга верхнего блока': { weightKg: '55', reps: 10 },
+          'Становая тяга': { weightKg: '105', reps: 5 },
+        };
+        let host = document.getElementById('ui-v4-strength-builder-catalog-host');
+        if (!host) {
+          host = document.createElement('main');
+          host.id = 'ui-v4-strength-builder-catalog-host';
+          Object.assign(host.style, {
+            position: 'fixed', top: '0', left: '0', zIndex: '20000',
+            width: '375px', height: '100vh', overflow: 'hidden',
+            background: 'var(--v4-bg, #fffaf3)',
+          });
+          document.body.appendChild(host);
+        }
+        const component = window.React.createElement(window.HEYS.StrengthCatalogUI.CatalogScreen, {
+          onPick: () => {}, onCreate: () => {}, onBack: () => {},
+          historyFor: (name) => ({
+            last: previous[name]
+              ? { approaches: [{ ...previous[name], done: true }] }
+              : null,
+            record: null,
+          }),
+        });
+        window.__uiV4StrengthBuilderCatalogRoot =
+          window.__uiV4StrengthBuilderCatalogRoot || window.ReactDOM.createRoot(host);
+        window.__uiV4StrengthBuilderCatalogRoot.render(component);
+      }, item.themeId || null);
+      const backGroup = page
+        .locator('#ui-v4-strength-builder-catalog-host .sb-chip')
+        .filter({ hasText: 'Спина' });
+      await backGroup.waitFor({ state: 'visible', timeout: 45_000 });
+      await backGroup.click();
+      await page
+        .locator('#ui-v4-strength-builder-catalog-host .sb-chip.is-on')
+        .filter({ hasText: 'Спина' })
+        .waitFor({ state: 'visible', timeout: 45_000 });
+      await page
+        .locator('#ui-v4-strength-builder-catalog-host input[aria-label="Поиск по названию"]')
+        .fill('Тяга Т-грифа');
+      await page
+        .locator('#ui-v4-strength-builder-catalog-host .sb-cat-create')
+        .filter({ hasText: 'Создать «Тяга Т-грифа»' })
+        .waitFor({ state: 'visible', timeout: 45_000 });
+    }
     if (item.kind === 'demo-strength-superset-create') {
       await page.waitForFunction(
         () =>

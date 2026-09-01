@@ -24,13 +24,34 @@
     return HEYS.exerciseMeta || null;
   }
 
+  function exerciseCountLabel(count) {
+    const n = Math.max(0, Math.round(+count || 0));
+    const mod100 = n % 100;
+    const mod10 = n % 10;
+    const word = mod100 >= 11 && mod100 <= 14 ? 'упражнений'
+      : mod10 === 1 ? 'упражнение'
+        : mod10 >= 2 && mod10 <= 4 ? 'упражнения' : 'упражнений';
+    return n + ' ' + word;
+  }
+
   /** Каталог с фильтром по группе и поиском (экран 03). */
   function CatalogScreen(props) {
-    const { onPick, onCreate, onBack } = props;
+    const { onPick, onCreate, onBack, historyFor } = props;
     const [query, setQuery] = React.useState('');
     const [group, setGroup] = React.useState('all');
     const api = metaApi();
     const groups = api ? api.groups : [];
+    const lowerBodyGroups = ['quads', 'hamstrings', 'glutes', 'adductors', 'calves'];
+    const commonGroupIds = ['chest', 'back', 'shoulders'];
+    const groupChips = commonGroupIds.map(function (id) {
+      return groups.find(function (candidate) { return candidate.id === id; });
+    }).filter(Boolean);
+    groupChips.splice(2, 0, { id: 'legs', label: 'Ноги' });
+    groups.forEach(function (candidate) {
+      if (commonGroupIds.indexOf(candidate.id) < 0) {
+        groupChips.push(candidate);
+      }
+    });
 
     const rows = React.useMemo(function () {
       const fn = HEYS.getExerciseSuggestions;
@@ -41,26 +62,44 @@
         if (group === 'fav') return !!r.favorite;
         const m = api.get(r.name);
         if (!m) return false;
+        if (group === 'legs') {
+          return lowerBodyGroups.indexOf(m.primaryGroup) >= 0 || (m.secondaryGroups || [])
+            .some(function (id) { return lowerBodyGroups.indexOf(id) >= 0; });
+        }
         return m.primaryGroup === group || (m.secondaryGroups || []).indexOf(group) >= 0;
       });
     }, [query, group, api]);
 
     const groupLabel = group === 'all' ? 'Все группы'
       : group === 'fav' ? 'Избранное'
+        : group === 'legs' ? 'Ноги'
         : (api ? api.groupLabel(group) : '');
 
-    return h('div', { className: 'sb-root sb-screen' },
+    function previousResult(name) {
+      if (typeof historyFor !== 'function') return '';
+      const history = historyFor(name);
+      const approaches = history && history.last && Array.isArray(history.last.approaches)
+        ? history.last.approaches
+        : [];
+      const last = approaches.find(function (approach) {
+        return approach && +approach.weightKg > 0 && +approach.reps > 0;
+      });
+      if (!last) return 'прошлый раз ещё не делали';
+      return 'прошлый раз ' + String(last.weightKg).replace('.', ',') + ' × ' + last.reps;
+    }
+
+    return h('div', { className: 'sb-root sb-screen sb-catalog-screen' },
       h('div', { className: 'sb-head' },
         h('button', {
           type: 'button', className: 'sb-icon-btn', onClick: onBack, 'aria-label': 'Назад'
         }, '‹'),
         h('div', { className: 'sb-head-title' },
           h('b', null, 'Каталог упражнений'),
-          h('div', { className: 'sb-head-sub' }, groupLabel + ' · ' + rows.length + ' упр.')
+          h('div', { className: 'sb-head-sub' }, groupLabel + ' · ' + exerciseCountLabel(rows.length))
         )
       ),
       h('div', { className: 'sb-search' },
-        h('span', null, '🔍'),
+        h('span', { 'aria-hidden': 'true' }, '⌕'),
         h('input', {
           type: 'search',
           value: query,
@@ -81,7 +120,7 @@
           onClick: function () { setGroup('fav'); },
           'aria-label': 'Избранное'
         }, '★'),
-        groups.map(function (g) {
+        groupChips.map(function (g) {
           return h('button', {
             key: g.id,
             type: 'button',
@@ -93,9 +132,9 @@
       h('div', { className: 'sb-list' },
         rows.map(function (r) {
           const m = api ? api.get(r.name) : null;
-          const sub = m && api
-            ? api.groupLabel(m.primaryGroup)
-            : 'своё упражнение';
+          const groupName = m && api ? api.groupLabel(m.primaryGroup) : 'своё упражнение';
+          const prior = previousResult(r.name);
+          const sub = groupName + (prior ? ' · ' + prior : '');
           return h('div', { className: 'sb-cat-row', key: r.norm },
             h('button', {
               type: 'button',
@@ -132,7 +171,9 @@
             h('b', null, query.trim() ? 'Создать «' + query.trim() + '»' : 'Создать своё упражнение'),
             h('span', null, 'Каталог подсказывает, но не запрещает')
           )
-        )
+        ),
+        h('p', { className: 'sb-catalog-note' },
+          'Строка создания появляется, когда в поиске набрано то, чего в каталоге нет. Прошлый результат стоит у каждого упражнения — по нему выбирают, а не по названию; у кого его нет, так и написано. Звезда слева — избранное: она же отдельным фильтром в ряду, чтобы свой короткий список открывался одним тапом.')
       )
     );
   }

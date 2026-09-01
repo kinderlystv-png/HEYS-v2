@@ -610,7 +610,8 @@
       return h(CatUI.CatalogScreen, {
         onPick: addExercise,
         onCreate: function (name) { setDraftName(name || ''); setView('new'); },
-        onBack: function () { setView('list'); }
+        onBack: function () { setView('list'); },
+        historyFor: historyFor
       });
     }
     if (view === 'finish' && FinUIRef().FinishScreen) {

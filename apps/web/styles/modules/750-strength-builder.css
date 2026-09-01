@@ -3318,3 +3318,207 @@
   text-align: center;
   color: var(--sb-mut, #64748b);
 }
+
+/* ── Canvas v4 · Б2 «Конструктор · каталог» ───────────────────────────── */
+
+.sb-catalog-screen {
+  --sb-card: var(--v4-c1, #f7efe2);
+  --sb-bg: var(--v4-bg, #fffaf3);
+  --sb-tx: var(--v4-ink, #201e1d);
+  --sb-mut: var(--v4-ink-data, rgba(32, 30, 29, 0.56));
+  --sb-br: var(--v4-line, rgba(32, 30, 29, 0.1));
+  --sb-soft: var(--v4-hero, #efe3cf);
+  --sb-acc: var(--v4-act-text, #8a4a20);
+  --sb-acc-strong: var(--v4-act, #c67139);
+  --sb-accbg: var(--v4-accent-bg, #f6e6dd);
+  --sb-accTx: var(--v4-act-text, #8a4a20);
+  background: var(--sb-bg);
+  color: var(--sb-tx);
+  font-family: Figtree, sans-serif;
+}
+
+.sb-catalog-screen .sb-head {
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 18px 0;
+  border-bottom: 0;
+  background: transparent;
+}
+
+.sb-catalog-screen .sb-icon-btn {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sb-card);
+  color: var(--sb-mut);
+  font: 600 14px/1 Figtree, sans-serif;
+}
+
+.sb-catalog-screen .sb-head-title {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 10px;
+}
+
+.sb-catalog-screen .sb-head-title b {
+  color: var(--sb-tx);
+  font: 700 15px/1 Figtree, sans-serif;
+}
+
+.sb-catalog-screen .sb-head-sub {
+  color: var(--sb-mut);
+  font: 500 10.5px/1.3 Figtree, sans-serif;
+}
+
+.sb-catalog-screen .sb-search {
+  flex: 0 0 auto;
+  min-height: 44px;
+  gap: 9px;
+  margin: 18px 18px 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--sb-card);
+  color: rgba(var(--v4-ink-rgb, 32, 30, 29), 0.38);
+}
+
+.sb-catalog-screen .sb-search > span {
+  flex: 0 0 auto;
+  font: 500 13px/1 Figtree, sans-serif;
+}
+
+.sb-catalog-screen .sb-search input {
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--sb-tx);
+  font: 500 13px/1 Figtree, sans-serif;
+}
+
+.sb-catalog-screen .sb-search input::placeholder {
+  color: rgba(var(--v4-ink-rgb, 32, 30, 29), 0.38);
+  opacity: 1;
+}
+
+.sb-catalog-screen .sb-chips {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 9px 18px 0;
+  scrollbar-width: none;
+}
+
+.sb-catalog-screen .sb-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.sb-catalog-screen .sb-chip {
+  flex: 0 0 auto;
+  min-height: 20px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sb-card);
+  color: var(--sb-mut);
+  font: 700 9px/1 Figtree, sans-serif;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.sb-catalog-screen .sb-chip.is-on {
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
+}
+
+.sb-catalog-screen .sb-list {
+  display: flex;
+  gap: 0;
+  padding: 9px 18px 18px;
+}
+
+.sb-catalog-screen .sb-cat-row {
+  min-height: 72px;
+  gap: 10px;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 0;
+  background: var(--sb-card);
+  box-shadow: inset 0 -1px 0 rgba(var(--v4-ink-rgb, 32, 30, 29), 0.07);
+}
+
+.sb-catalog-screen .sb-cat-row:first-child {
+  border-radius: 20px 20px 0 0;
+}
+
+.sb-catalog-screen .sb-cat-row:last-of-type {
+  border-radius: 0 0 20px 20px;
+  box-shadow: none;
+}
+
+.sb-catalog-screen .sb-star {
+  width: 14px;
+  height: 44px;
+  border-radius: 0;
+  color: rgba(var(--v4-ink-rgb, 32, 30, 29), 0.18);
+  font: 600 13px/1 Figtree, sans-serif;
+}
+
+.sb-catalog-screen .sb-star.is-on {
+  color: var(--sb-acc);
+}
+
+.sb-catalog-screen .sb-cat-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sb-catalog-screen .sb-cat-title b {
+  color: var(--sb-tx);
+  font: 700 13px/1.2 Figtree, sans-serif;
+}
+
+.sb-catalog-screen .sb-cat-title span {
+  color: var(--sb-mut);
+  font: 500 11px/1.3 Figtree, sans-serif;
+}
+
+.sb-catalog-screen .sb-cat-add {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--sb-bg);
+  box-shadow: inset 0 0 0 1.5px var(--v4-act, #c67139);
+  color: var(--sb-acc);
+  font: 600 18px/1 Figtree, sans-serif;
+}
+
+.sb-catalog-screen .sb-cat-create {
+  min-height: 76px;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--sb-soft);
+}
+
+.sb-catalog-screen .sb-cat-create .sb-cat-title b {
+  color: var(--sb-acc);
+  font-size: 12.5px;
+}
+
+.sb-catalog-note {
+  margin: 12px 0 0;
+  color: var(--sb-mut);
+  font: 500 11px/1.55 Figtree, sans-serif;
+}
