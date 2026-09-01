@@ -77,7 +77,7 @@ describe('UI v4 visual harness', () => {
     expect(UI_V4_VISUAL_CASES.find((entry) => entry.kind === 'demo-food-copy-existing')?.viewport)
       .toEqual({ width: 399, height: 812 });
     expect(UI_V4_VISUAL_CASES.find((entry) => entry.kind === 'demo-food-move-existing')?.viewport)
-      .toEqual({ width: 375, height: 812 });
+      .toEqual({ width: 399, height: 812 });
     for (const item of UI_V4_VISUAL_CASES.filter((entry) =>
       ['demo-food-copy-existing', 'demo-food-move-existing'].includes(entry.kind))) {
       expect(item.themeId).toBe('sand');
@@ -99,6 +99,7 @@ describe('UI v4 visual harness', () => {
     expect(paired.map((item) => item.id)).toContain('norm-correction-lowered-sand');
     expect(paired.map((item) => item.id)).toContain('food-copy-empty-target-sand');
     expect(paired.map((item) => item.id)).toContain('food-copy-existing-target-sand');
+    expect(paired.map((item) => item.id)).toContain('food-move-existing-target-sand');
     for (const item of paired) {
       expect(item.captureSelector, item.id).toBeTruthy();
       expect(item.canvasFrame.palette, item.id).toBe(item.themeId);
@@ -167,6 +168,17 @@ describe('UI v4 visual harness', () => {
         pixelAlign: true,
       },
     });
+    expect(paired.find((item) => item.id === 'food-move-existing-target-sand')).toMatchObject({
+      viewport: { width: 399, height: 812 },
+      captureSelector: '.move-modal.meal-transfer-v4__sheet--move',
+      canvasFrame: {
+        file: 'food-meal.v4.dc.html',
+        label: 'Действие · перенести',
+        oid: 'FM11',
+        palette: 'sand',
+        pixelAlign: true,
+      },
+    });
   });
 
   it('снимает element-boundary пары runtime↔Canvas и сохраняет diff без resize', () => {
@@ -194,6 +206,9 @@ describe('UI v4 visual harness', () => {
     expect(captureSource).toContain('visualChecks.productCount !== 8');
     expect(captureSource).toContain('!visualChecks.canScrollProducts');
     expect(captureSource).toContain("visualChecks.primaryText !== 'Копировать (8)'");
+    expect(captureSource).toContain('data-move-meal-target="visual-lunch"');
+    expect(captureSource).toContain("visualChecks.selectedMoveTarget !== 'visual-lunch'");
+    expect(captureSource).toContain("visualChecks.dateLabel !== 'Вчера, 26 августа'");
   });
 
   it('разрешает pixel-gate только зонам без вопросов и несовпадений', () => {

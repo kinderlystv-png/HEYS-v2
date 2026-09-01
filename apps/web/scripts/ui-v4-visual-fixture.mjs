@@ -210,8 +210,16 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     kind: 'demo-food-move-existing',
     tab: 'diary',
     themeId: 'sand',
-    viewport: { width: 375, height: 812 },
+    viewport: { width: 399, height: 812 },
     rootSelector: '.move-modal.meal-transfer-v4__sheet--move',
+    captureSelector: '.move-modal.meal-transfer-v4__sheet--move',
+    canvasFrame: {
+      file: 'food-meal.v4.dc.html',
+      label: 'Действие · перенести',
+      oid: 'FM11',
+      palette: 'sand',
+      pixelAlign: true,
+    },
   },
   {
     id: 'reports-whatif-inline-sand',

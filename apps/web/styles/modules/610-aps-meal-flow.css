@@ -4721,10 +4721,18 @@ button.meal-quality-badge:active {
 }
 
 .meal-transfer-v4__move-content {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
-  padding: 14px 18px 0;
+  padding: 6px 18px 0;
   overflow-y: auto;
+}
+
+.meal-transfer-v4__sheet--move .meal-transfer-v4__move-content > .meal-transfer-v4__tier:first-child {
+  margin-top: 14px;
+}
+
+.meal-transfer-v4__sheet--move .meal-transfer-v4__date {
+  min-height: 0;
 }
 
 .meal-transfer-v4__date {
@@ -4741,8 +4749,10 @@ button.meal-quality-badge:active {
 }
 
 .meal-transfer-v4__calendar {
+  display: flex;
   flex: 0 0 15px;
   color: var(--v4-act-text);
+  line-height: 0;
 }
 
 .meal-transfer-v4__date-label {
@@ -4751,13 +4761,16 @@ button.meal-quality-badge:active {
   overflow: hidden;
   font-size: 12.5px;
   font-weight: 600;
+  line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .meal-transfer-v4__chevron {
+  display: flex;
   flex: 0 0 auto;
   color: var(--v4-ink-secondary);
+  line-height: 0;
 }
 
 .meal-transfer-v4__date-select {

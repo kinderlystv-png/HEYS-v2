@@ -209,6 +209,19 @@ describe('food-meal · копирование и перенос v4', () => {
     });
   });
 
+  it('держит move-actions сразу после предупреждения, как в Canvas', () => {
+    expect(CSS).toMatch(/\.meal-transfer-v4__move-content\s*\{[^}]*flex:\s*0 1 auto;/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__move-content\s*\{[^}]*padding:\s*6px 18px 0;/s);
+    expect(CSS).toMatch(
+      /\.meal-transfer-v4__sheet--move \.meal-transfer-v4__move-content > \.meal-transfer-v4__tier:first-child\s*\{[^}]*margin-top:\s*14px;/s,
+    );
+    expect(CSS).toMatch(
+      /\.meal-transfer-v4__sheet--move \.meal-transfer-v4__date\s*\{[^}]*min-height:\s*0;/s,
+    );
+    expect(CSS).toMatch(/\.meal-transfer-v4__date-label\s*\{[^}]*line-height:\s*1;/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__calendar\s*\{[^}]*line-height:\s*0;/s);
+  });
+
   it('в пустом дне выбирает create-new и не выдумывает dstMealId', async () => {
     const onPick = vi.fn();
     await act(async () => {

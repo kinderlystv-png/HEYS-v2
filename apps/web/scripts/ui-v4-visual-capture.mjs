@@ -339,7 +339,8 @@ async function openCase(browser, item, snapshot) {
           item.kind === 'demo-registration' ||
           item.kind === 'demo-cycle-picker' ||
           item.kind === 'demo-food-copy-empty' ||
-          item.kind === 'demo-food-copy-existing',
+          item.kind === 'demo-food-copy-existing' ||
+          item.kind === 'demo-food-move-existing',
       });
       const tabLabels = { widgets: 'Главная', diary: 'Питание' };
       const tabLabel = tabLabels[item.tab];
@@ -1243,18 +1244,18 @@ async function openCase(browser, item, snapshot) {
         if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
         window.HEYS.MoveModal.show({
           mode: 'meal-move',
-          sourceDate: '2026-08-28',
+          sourceDate: '2026-08-27',
           daysWithMeals: [
             {
-              dateStr: '2026-08-28',
+              dateStr: '2026-08-27',
               dateLabel: 'Сегодня',
               meals: [{ id: 'visual-source', name: 'Ужин', time: '19:00' }],
             },
             {
-              dateStr: '2026-08-27',
+              dateStr: '2026-08-26',
               dateLabel: 'Вчера',
               meals: [
-                { id: 'visual-breakfast', name: 'Завтрак', time: '09:00' },
+                { id: 'visual-breakfast', name: 'Завтрак', time: '12:00' },
                 { id: 'visual-lunch', name: 'Обед', time: '14:00' },
               ],
             },
@@ -1262,6 +1263,7 @@ async function openCase(browser, item, snapshot) {
           onPick: () => {},
         });
       }, item.themeId || null);
+      await page.locator('[data-move-meal-target="visual-lunch"]').click();
     }
     if (item.kind === 'demo-tips') {
       await page.waitForFunction(
@@ -1559,6 +1561,64 @@ async function openCase(browser, item, snapshot) {
         throw new Error(`Long copy fixture не сохранил scroll/CTA: ${JSON.stringify(visualChecks)}`);
       }
     }
+    if (item.kind === 'demo-food-move-existing') {
+      await page.waitForTimeout(250);
+      visualChecks = await page.evaluate(() => {
+        const sheet = document.querySelector('.move-modal.meal-transfer-v4__sheet--move');
+        const sheetBox = sheet?.getBoundingClientRect();
+        const relativeRect = (target) => {
+          if (!sheetBox || !target) return null;
+          const box = target.getBoundingClientRect();
+          return {
+            x: Math.round((box.x - sheetBox.x) * 100) / 100,
+            y: Math.round((box.y - sheetBox.y) * 100) / 100,
+            width: Math.round(box.width * 100) / 100,
+            height: Math.round(box.height * 100) / 100,
+          };
+        };
+        const targets = [...(sheet?.querySelectorAll('.meal-transfer-v4__target') || [])];
+        const selected = sheet?.querySelector('[data-move-meal-target="visual-lunch"]');
+        const selectedInput = selected?.querySelector('input');
+        return {
+          dateLabel: sheet?.querySelector('.meal-transfer-v4__date-label')?.textContent || '',
+          targetLabels: targets.map((target) =>
+            target.querySelector('.meal-transfer-v4__target-label')?.textContent || ''),
+          selectedMoveTarget: selected?.dataset.moveMealTarget || '',
+          selectedChecked: Boolean(selectedInput?.checked),
+          selectedClass: Boolean(selected?.classList.contains('is-selected')),
+          warning: sheet?.querySelector('.meal-transfer-v4__warning')?.textContent || '',
+          cancelText: sheet?.querySelector('.meal-transfer-v4__button--cancel')?.textContent || '',
+          primaryText: sheet?.querySelector('.meal-transfer-v4__button--primary')?.textContent || '',
+          geometry: {
+            sheet: relativeRect(sheet),
+            header: relativeRect(sheet?.querySelector('.meal-transfer-v4__top')),
+            content: relativeRect(sheet?.querySelector('.meal-transfer-v4__move-content')),
+            date: relativeRect(sheet?.querySelector('.meal-transfer-v4__date')),
+            tiers: [...(sheet?.querySelectorAll('.meal-transfer-v4__tier') || [])].map(relativeRect),
+            targets: targets.map(relativeRect),
+            warning: relativeRect(sheet?.querySelector('.meal-transfer-v4__warning')),
+            footer: relativeRect(sheet?.querySelector('.meal-transfer-v4__footer')),
+            actions: relativeRect(sheet?.querySelector('.meal-transfer-v4__actions')),
+            cancel: relativeRect(sheet?.querySelector('.meal-transfer-v4__button--cancel')),
+            primary: relativeRect(sheet?.querySelector('.meal-transfer-v4__button--primary')),
+          },
+        };
+      });
+      const expectedWarning = 'Приём уйдёт из сегодняшнего дня целиком — итоги обоих дней пересчитаются.';
+      const expectedTargets = ['Завтрак · 12:00', 'Обед · 14:00', '+ Создать новый приём'];
+      if (
+        visualChecks.dateLabel !== 'Вчера, 26 августа' ||
+        JSON.stringify(visualChecks.targetLabels) !== JSON.stringify(expectedTargets) ||
+        visualChecks.selectedMoveTarget !== 'visual-lunch' ||
+        !visualChecks.selectedChecked ||
+        !visualChecks.selectedClass ||
+        visualChecks.warning !== expectedWarning ||
+        visualChecks.cancelText !== 'Отмена' ||
+        visualChecks.primaryText !== 'Перенести'
+      ) {
+        throw new Error(`Move fixture не совпал с Canvas-состоянием: ${JSON.stringify(visualChecks)}`);
+      }
+    }
     await page.addStyleTag({
       content: [
         '*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}',
@@ -1802,7 +1862,38 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
                 },
               };
             })
-          : null;
+          : item.kind === 'demo-food-move-existing'
+            ? await frame.evaluate((node) => {
+                const rootBox = node.getBoundingClientRect();
+                const relativeRect = (target) => {
+                  if (!target) return null;
+                  const box = target.getBoundingClientRect();
+                  return {
+                    x: Math.round((box.x - rootBox.x) * 100) / 100,
+                    y: Math.round((box.y - rootBox.y) * 100) / 100,
+                    width: Math.round(box.width * 100) / 100,
+                    height: Math.round(box.height * 100) / 100,
+                  };
+                };
+                const content = node.querySelector('.sc');
+                const children = content ? [...content.children] : [];
+                return {
+                  geometry: {
+                    sheet: relativeRect(node),
+                    header: relativeRect(node.querySelector('.top')),
+                    content: relativeRect(content),
+                    date: relativeRect(children[1]),
+                    tiers: [relativeRect(children[0]), relativeRect(children[2])],
+                    targets: children.slice(3, 6).map(relativeRect),
+                    warning: relativeRect(children[6]),
+                    footer: relativeRect(children[7]),
+                    actions: relativeRect(children[7]),
+                    cancel: relativeRect(children[7]?.children[0]),
+                    primary: relativeRect(children[7]?.children[1]),
+                  },
+                };
+              })
+            : null;
     const file = path.join(OUT_DIR, `${item.id}.canvas.png`);
     if (item.canvasFrame.captureSelector) {
       const boundary = frame.locator(item.canvasFrame.captureSelector);
