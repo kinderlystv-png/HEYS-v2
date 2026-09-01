@@ -11,6 +11,11 @@ import {
   UI_V4_VISUAL_CASES,
   UI_V4_VISUAL_CLOCK,
 } from '../scripts/ui-v4-visual-fixture.mjs';
+import {
+  CANVAS_PACK_DIR,
+  parseCanvasHtml,
+  resolveCanvasFrame,
+} from '../../../scripts/lib/ui-v4-canvas-index.mjs';
 
 const ROOT = path.resolve(__dirname, '../../..');
 const VERDICTS_DIR = path.join(ROOT, 'docs/ui/verdicts');
@@ -72,6 +77,36 @@ describe('UI v4 visual harness', () => {
     expect(
       UI_V4_VISUAL_CASES.filter((entry) => entry.status === 'dom-gate').map((entry) => entry.zone).sort(),
     ).toEqual([...UI_V4_DOM_GATE_ZONES].sort());
+  });
+
+  it('fail-closed привязывает парный capture к точному Canvas oid и уникальному runtime-корню', () => {
+    const paired = UI_V4_VISUAL_CASES.filter((item) => item.canvasFrame);
+    expect(paired.map((item) => item.id)).toContain('strength-finish-sand');
+    for (const item of paired) {
+      expect(item.captureSelector, item.id).toBeTruthy();
+      expect(item.canvasFrame.palette, item.id).toBe(item.themeId);
+      const canvasPath = path.join(CANVAS_PACK_DIR, item.canvasFrame.file);
+      const canvas = parseCanvasHtml(fs.readFileSync(canvasPath, 'utf8'), {
+        file: item.canvasFrame.file,
+      });
+      const frame = resolveCanvasFrame(canvas, item.canvasFrame);
+      expect(frame.oid, item.id).toBe(item.canvasFrame.oid);
+      expect(frame.label, item.id).toBe(item.canvasFrame.label);
+      expect(frame.canonicalLocator.key, item.id).toBeTruthy();
+    }
+  });
+
+  it('снимает element-boundary пары runtime↔Canvas и сохраняет diff без resize', () => {
+    const captureSource = fs.readFileSync(
+      path.resolve(__dirname, '../scripts/ui-v4-visual-capture.mjs'),
+      'utf8',
+    );
+    expect(captureSource).toContain("await captureRoot.screenshot({ path: file, animations: 'disabled' })");
+    expect(captureSource).toContain("await frame.screenshot({ path: file, animations: 'disabled' })");
+    expect(captureSource).toContain("result.comparison.source = 'live-canvas-pair'");
+    expect(captureSource).toContain('actualMeta.width !== expectedMeta.width');
+    expect(captureSource).not.toContain('resize(');
+    expect(captureSource).not.toContain('VERDICT_PATH');
   });
 
   it('food-meal visual capture fail-closed проверяет контраст выбранной цели', () => {

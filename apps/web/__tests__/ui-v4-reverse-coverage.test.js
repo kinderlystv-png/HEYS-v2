@@ -5,6 +5,7 @@ import {
   compareCanvasToVerdict,
   parseCanvasHtml,
   readCanvasPackage,
+  resolveCanvasFrame,
 } from '../../../scripts/lib/ui-v4-canvas-index.mjs';
 
 describe('UI v4 reverse coverage index', () => {
@@ -52,6 +53,65 @@ describe('UI v4 reverse coverage index', () => {
     expect(canvas.duplicateProductFrames).toEqual([{ identity: 'один кадр', count: 2 }]);
   });
 
+  it('exposes exact source identity, inherited palette, and duplicate-safe locator metadata', () => {
+    const canvas = parseCanvasHtml(`
+      <div class="pal dk">
+        <div id="first-frame" data-demo="stop" data-screen-label="Same label" data-oid="A 1"></div>
+      </div>
+      <div data-demo="stop" data-screen-label="Same label"></div>
+      <div data-demo="stop" data-screen-label="Same label"></div>
+    `, { file: 'synthetic.v4.dc.html' });
+
+    expect(canvas.frames[0]).toMatchObject({
+      identity: 'Same label',
+      label: 'Same label',
+      oid: 'A 1',
+      sourceOrdinal: 0,
+      sourceDomId: 'first-frame',
+      sourceIdentity: 'first-frame',
+      palette: 'sand-dark',
+      paletteSource: 'class:dk',
+      paletteInherited: true,
+      canonicalLocator: {
+        selector: '[data-screen-label="Same label"][data-oid="A 1"]',
+        matchOrdinal: 0,
+        sourceOrdinal: 0,
+      },
+    });
+    expect(canvas.frames[1].canonicalLocator).toMatchObject({
+      selector: '[data-screen-label="Same label"]',
+      matchOrdinal: 0,
+      sourceOrdinal: 1,
+    });
+    expect(canvas.frames[2].canonicalLocator).toMatchObject({
+      selector: '[data-screen-label="Same label"]',
+      matchOrdinal: 1,
+      sourceOrdinal: 2,
+    });
+    expect(canvas.frames.map((frame) => frame.canonicalLocator.key)).toHaveLength(
+      new Set(canvas.frames.map((frame) => frame.canonicalLocator.key)).size,
+    );
+  });
+
+  it('resolves a frame by exact label + oid and fails closed on missing or duplicated oid', () => {
+    const canvas = parseCanvasHtml(`
+      <div data-demo="stop" data-screen-label="Unique" data-oid="A1"></div>
+      <div data-demo="stop" data-screen-label="Missing oid"></div>
+      <div data-demo="stop" data-screen-label="Duplicate one" data-oid="D1"></div>
+      <div data-demo="stop" data-screen-label="Duplicate two" data-oid="D1"></div>
+    `);
+
+    expect(resolveCanvasFrame(canvas, { label: 'Unique', oid: 'A1' })).toBe(canvas.frames[0]);
+    expect(() => resolveCanvasFrame(canvas, { label: 'Unique' }))
+      .toThrow(/requires an explicit data-oid/);
+    expect(() => resolveCanvasFrame(canvas, { label: 'Missing oid', oid: 'M1' }))
+      .toThrow(/is missing data-oid/);
+    expect(() => resolveCanvasFrame(canvas, { label: 'Duplicate one', oid: 'D1' }))
+      .toThrow(/data-oid «D1» is duplicated/);
+    expect(() => resolveCanvasFrame(canvas, { label: 'Wrong label', oid: 'A1' }))
+      .toThrow(/belongs to «Unique»/);
+  });
+
   it('does not infer frame evidence from similarly named row verdicts', () => {
     const parsed = parseCanvasHtml(`
       <div data-contract="synthetic">
@@ -92,5 +152,21 @@ describe('UI v4 reverse coverage index', () => {
       duplicateFrameIdentities: 10,
       frameScope: { stop: 672, none: 76, protocol: 39, loop: 23 },
     });
+
+    for (const canvas of canvases) {
+      expect(canvas.frames.every((frame) => Object.hasOwn(frame, 'oid')), canvas.zoneId).toBe(true);
+      expect(canvas.frames.every((frame) => Object.hasOwn(frame, 'palette')), canvas.zoneId).toBe(true);
+      expect(canvas.frames.map((frame) => frame.sourceOrdinal), canvas.zoneId).toEqual(
+        canvas.frames.map((_frame, index) => index),
+      );
+      expect(
+        new Set(canvas.frames.map((frame) => frame.canonicalLocator.key)).size,
+        canvas.zoneId,
+      ).toBe(canvas.frames.length);
+    }
+
+    const strength = canvases.find((canvas) => canvas.zoneId === 'strength-builder');
+    expect(resolveCanvasFrame(strength, { label: 'План в ленте дня', oid: 'И3' }))
+      .toMatchObject({ identity: 'План в ленте дня', oid: 'И3' });
   }, 15_000);
 });

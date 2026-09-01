@@ -204,6 +204,13 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     themeId: 'sand',
     viewport: { width: 375, height: 812 },
     rootSelector: '.sb-finish-screen',
+    captureSelector: '.sb-finish-screen',
+    canvasFrame: {
+      file: 'strength-builder.v4.dc.html',
+      label: 'Конструктор · итоги',
+      oid: 'Б3',
+      palette: 'sand',
+    },
   },
   ...UI_V4_CANVAS_ZONES.filter(
     (zone) =>

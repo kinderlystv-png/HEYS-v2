@@ -46,6 +46,91 @@ function frameScope(element) {
   return { demo: demo || 'empty', product: false };
 }
 
+const PALETTE_CLASS_IDS = Object.freeze([
+  ['bldk', 'blue-dark'],
+  ['bd', 'blue-dark'],
+  ['bl', 'blue'],
+  ['dk', 'sand-dark'],
+  ['blue-dark', 'blue-dark'],
+  ['blue', 'blue'],
+  ['sand-dark', 'sand-dark'],
+  ['sand', 'sand'],
+]);
+
+function framePalette(element) {
+  let owner = element;
+  while (owner) {
+    if (owner.hasAttribute?.('data-palette')) {
+      const value = owner.getAttribute('data-palette');
+      if (normalizeText(value)) {
+        return {
+          id: value,
+          inherited: owner !== element,
+          source: 'data-palette',
+        };
+      }
+    }
+    for (const [className, paletteId] of PALETTE_CLASS_IDS) {
+      if (owner.classList?.contains(className)) {
+        return {
+          id: paletteId,
+          inherited: owner !== element,
+          source: `class:${className}`,
+        };
+      }
+    }
+    owner = owner.parentElement;
+  }
+  return null;
+}
+
+function cssAttributeValue(value) {
+  return JSON.stringify(String(value));
+}
+
+function frameLocatorSelector(sourceLabel, oid) {
+  const labelSelector = `[data-screen-label=${cssAttributeValue(sourceLabel)}]`;
+  return oid === null
+    ? labelSelector
+    : `${labelSelector}[data-oid=${cssAttributeValue(oid)}]`;
+}
+
+/**
+ * Resolves a source frame only when its label + data-oid identity is complete
+ * and globally unique. `data-oid` is deliberately mandatory here: callers
+ * must not silently fall back to DOM order when a Canvas has duplicate labels.
+ */
+export function resolveCanvasFrame(canvas, { label, oid } = {}) {
+  const normalizedLabel = normalizeText(label);
+  if (!normalizedLabel) throw new Error('Canvas frame label is required.');
+  if (oid === undefined || oid === null || !normalizeText(oid)) {
+    throw new Error(`Canvas frame «${normalizedLabel}» requires an explicit data-oid.`);
+  }
+
+  const frames = Array.isArray(canvas?.frames) ? canvas.frames : [];
+  const exactOid = String(oid);
+  const sameOid = frames.filter((frame) => frame.oid === exactOid);
+  if (sameOid.length > 1) {
+    throw new Error(`Canvas data-oid «${exactOid}» is duplicated (${sameOid.length} frames).`);
+  }
+
+  const sameLabel = frames.filter((frame) => frame.identity === normalizedLabel);
+  if (!sameOid.length) {
+    if (sameLabel.some((frame) => frame.oid === null || !normalizeText(frame.oid))) {
+      throw new Error(`Canvas frame «${normalizedLabel}» is missing data-oid.`);
+    }
+    throw new Error(`Canvas frame «${normalizedLabel}» with data-oid «${exactOid}» was not found.`);
+  }
+
+  const frame = sameOid[0];
+  if (frame.identity !== normalizedLabel) {
+    throw new Error(
+      `Canvas data-oid «${exactOid}» belongs to «${frame.identity}», not «${normalizedLabel}».`,
+    );
+  }
+  return frame;
+}
+
 /**
  * Parses the primary canvas markup without executing its embedded DC script.
  * A frame inherits data-demo from the nearest ancestor (including itself).
@@ -70,13 +155,37 @@ export function parseCanvasHtml(html, { file = '<inline>' } = {}) {
     });
   }
 
+  const locatorMatches = new Map();
   const frames = [...document.querySelectorAll('[data-screen-label]')].map((element, index) => {
     const scope = frameScope(element);
+    const sourceLabel = element.getAttribute('data-screen-label') ?? '';
+    const identity = normalizeText(sourceLabel);
+    const oid = element.hasAttribute('data-oid') ? element.getAttribute('data-oid') : null;
+    const sourceDomId = element.hasAttribute('id') ? element.getAttribute('id') : null;
+    const palette = framePalette(element);
+    const selector = frameLocatorSelector(sourceLabel, oid);
+    const matchOrdinal = locatorMatches.get(selector) || 0;
+    locatorMatches.set(selector, matchOrdinal + 1);
     return {
-      identity: normalizeText(element.getAttribute('data-screen-label')),
+      identity,
       demo: scope.demo,
       product: scope.product,
       index,
+      label: identity,
+      oid,
+      sourceLabel,
+      sourceOrdinal: index,
+      sourceDomId,
+      sourceIdentity: sourceDomId || (oid !== null ? `data-oid:${oid}` : `frame:${index}`),
+      palette: palette?.id ?? null,
+      paletteSource: palette?.source ?? null,
+      paletteInherited: palette?.inherited ?? false,
+      canonicalLocator: {
+        selector,
+        matchOrdinal,
+        sourceOrdinal: index,
+        key: `${file}::${selector}::${matchOrdinal}`,
+      },
     };
   });
 

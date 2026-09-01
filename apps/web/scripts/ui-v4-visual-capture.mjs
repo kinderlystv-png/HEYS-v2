@@ -1,11 +1,18 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import { createServer } from 'node:http';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { chromium } from '@playwright/test';
 import sharp from 'sharp';
+
+import {
+  CANVAS_PACK_DIR,
+  parseCanvasHtml,
+  resolveCanvasFrame,
+} from '../../../scripts/lib/ui-v4-canvas-index.mjs';
 
 import {
   buildUiV4VisualSnapshot,
@@ -22,6 +29,15 @@ const BASELINE_DIR = path.join(ROOT, 'apps', 'web', '__screenshots__', 'ui-v4');
 const RUN_ID = new Date().toISOString().replace(/[:.]/g, '-');
 const OUT_DIR = path.join(ROOT, 'tmp', 'ui-v4-visual', RUN_ID);
 const VERDICTS_DIR = path.join(ROOT, 'docs', 'ui', 'verdicts');
+const LOCAL_FIGTREE_PATH = path.join(
+  ROOT,
+  'apps',
+  'web',
+  'public',
+  'fonts',
+  'figtree',
+  'Figtree-Variable.ttf',
+);
 const DRIFT_SCRIPT = path.join(ROOT, 'scripts', 'ui-v4-check-contract-drift.mjs');
 const cliArgs = process.argv.slice(2);
 const args = new Set(cliArgs);
@@ -47,7 +63,7 @@ function validateManifest() {
   const problems = [];
 
   if (JSON.stringify(registryZones) !== JSON.stringify(manifestZones)) {
-    problems.push(`Список зон расходится с ${path.relative(ROOT, VERDICT_PATH)}.`);
+    problems.push(`Список зон расходится с ${path.relative(ROOT, VERDICTS_DIR)}.`);
   }
 
   const ids = new Set();
@@ -59,6 +75,29 @@ function validateManifest() {
     if (!UI_V4_CANVAS_ZONES.includes(item.zone)) problems.push(`Неизвестная зона: ${item.zone}`);
     if (item.status === 'automated' && !item.rootSelector) {
       problems.push(`Автоматический сценарий ${item.id} не имеет rootSelector.`);
+    }
+    if (item.canvasFrame) {
+      for (const field of ['file', 'label', 'oid', 'palette']) {
+        if (!String(item.canvasFrame[field] || '').trim()) {
+          problems.push(`Canvas-привязка ${item.id} не имеет поля ${field}.`);
+        }
+      }
+      if (!item.captureSelector) {
+        problems.push(`Парный сценарий ${item.id} не имеет уникального captureSelector.`);
+      }
+      const canvasPath = path.join(CANVAS_PACK_DIR, item.canvasFrame.file || '');
+      if (!fs.existsSync(canvasPath)) {
+        problems.push(`Canvas-файл ${item.id} не найден: ${path.relative(ROOT, canvasPath)}.`);
+      } else {
+        try {
+          const canvas = parseCanvasHtml(fs.readFileSync(canvasPath, 'utf8'), {
+            file: item.canvasFrame.file,
+          });
+          resolveCanvasFrame(canvas, item.canvasFrame);
+        } catch (error) {
+          problems.push(`Canvas-привязка ${item.id} неоднозначна: ${error?.message || error}`);
+        }
+      }
     }
     if (item.status === 'scenario-pending' && !item.reason) {
       problems.push(`Ожидающий сценарий ${item.id} не объясняет причину.`);
@@ -92,9 +131,10 @@ function assertPixelGateContracts(items) {
     );
   }
 
-  const verdicts = JSON.parse(fs.readFileSync(VERDICT_PATH, 'utf8'));
   const unresolved = zones.flatMap((zone) =>
-    Object.entries(verdicts.zones?.[zone]?.rows || {})
+    Object.entries(
+      JSON.parse(fs.readFileSync(path.join(VERDICTS_DIR, `${zone}.json`), 'utf8')).rows || {},
+    )
       .filter(([, row]) => row?.v !== '=' && row?.v !== '—')
       .map(([key, row]) => `${zone} · «${key}» = ${row?.v || 'нет вердикта'}`),
   );
@@ -167,6 +207,55 @@ async function installDeterminism(context, item, snapshot) {
       themeId: item.themeId || null,
     },
   );
+}
+
+async function startCanvasServer() {
+  const contentTypes = {
+    '.css': 'text/css; charset=utf-8',
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.png': 'image/png',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+  };
+  const rootPrefix = `${path.resolve(CANVAS_PACK_DIR)}${path.sep}`;
+  const server = createServer((request, response) => {
+    try {
+      const url = new URL(request.url || '/', 'http://127.0.0.1');
+      if (url.pathname === '/__heys-font/Figtree-Variable.ttf') {
+        response.writeHead(200, {
+          'content-type': 'font/ttf',
+          'cache-control': 'no-store',
+          'access-control-allow-origin': '*',
+        });
+        fs.createReadStream(LOCAL_FIGTREE_PATH).pipe(response);
+        return;
+      }
+      const relative = decodeURIComponent(url.pathname).replace(/^\/+/, '');
+      const target = path.resolve(CANVAS_PACK_DIR, relative);
+      if (!target.startsWith(rootPrefix) || !fs.statSync(target).isFile()) {
+        response.writeHead(404).end('Not found');
+        return;
+      }
+      response.writeHead(200, {
+        'content-type': contentTypes[path.extname(target).toLowerCase()] || 'application/octet-stream',
+        'cache-control': 'no-store',
+      });
+      fs.createReadStream(target).pipe(response);
+    } catch (_) {
+      response.writeHead(404).end('Not found');
+    }
+  });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const address = server.address();
+  return {
+    origin: `http://127.0.0.1:${address.port}`,
+    close: () => new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve()))),
+  };
 }
 
 async function openCase(browser, item, snapshot) {
@@ -750,20 +839,35 @@ async function openCase(browser, item, snapshot) {
         'input,textarea{caret-color:transparent!important}',
       ].join(''),
     });
-    await page.evaluate(async () => {
+    const fontState = await page.evaluate(async () => {
       if (document.fonts?.ready) await document.fonts.ready;
+      return {
+        ready: document.fonts?.status === 'loaded',
+        figtree: document.fonts?.check?.('12px Figtree') ?? false,
+      };
     });
     if (!item.preserveScroll) await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(250);
 
-    const file = path.join(OUT_DIR, `${item.id}.png`);
-    await page.screenshot({ path: file, fullPage: false });
+    const file = path.join(OUT_DIR, `${item.id}${item.canvasFrame ? '.runtime' : ''}.png`);
+    if (item.captureSelector) {
+      const captureRoot = page.locator(item.captureSelector);
+      const matches = await captureRoot.count();
+      if (matches !== 1) {
+        throw new Error(`captureSelector ${item.captureSelector} дал ${matches} узлов вместо одного`);
+      }
+      await captureRoot.screenshot({ path: file, animations: 'disabled' });
+    } else {
+      await page.screenshot({ path: file, fullPage: false });
+    }
     return {
       id: item.id,
       zone: item.zone,
+      gate: item.gate,
       status: 'captured',
       file: path.relative(ROOT, file).replaceAll('\\', '/'),
       visualChecks,
+      fontState,
       consoleErrors,
     };
   } catch (error) {
@@ -791,6 +895,7 @@ async function openCase(browser, item, snapshot) {
     return {
       id: item.id,
       zone: item.zone,
+      gate: item.gate,
       status: 'failed',
       error: error?.message || String(error),
       failureFile: fs.existsSync(failureFile)
@@ -804,7 +909,88 @@ async function openCase(browser, item, snapshot) {
   }
 }
 
-async function comparePng(actualPath, expectedPath) {
+async function captureCanvasFrame(browser, item, canvasOrigin) {
+  const viewport = item.viewport || { width: 390, height: 844 };
+  const context = await browser.newContext({
+    viewport,
+    screen: viewport,
+    deviceScaleFactor: 1,
+    locale: 'ru-RU',
+    timezoneId: 'Europe/Moscow',
+    colorScheme: item.themeId?.endsWith('-dark') ? 'dark' : 'light',
+    reducedMotion: 'reduce',
+    serviceWorkers: 'block',
+  });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
+  page.on('pageerror', (error) => consoleErrors.push(error.message));
+
+  try {
+    const canvasPath = path.join(CANVAS_PACK_DIR, item.canvasFrame.file);
+    const staticCanvasHtml = fs
+      .readFileSync(canvasPath, 'utf8')
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<link\b[^>]*fonts\.googleapis\.com[^>]*>/gi, '')
+      .replace('<head>', `<head><base href="${canvasOrigin}/">`);
+    await page.setContent(staticCanvasHtml, {
+      waitUntil: 'domcontentloaded',
+      timeout: 120_000,
+    });
+    await page.addStyleTag({
+      content: [
+        `@font-face{font-family:Figtree;src:url("${canvasOrigin}/__heys-font/Figtree-Variable.ttf") format("truetype");font-weight:400 800;font-style:normal;font-display:block}`,
+        '*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}',
+        'input,textarea{caret-color:transparent!important}',
+      ].join(''),
+    });
+    const fontState = await page.evaluate(async () => {
+      if (document.fonts?.ready) await document.fonts.ready;
+      return {
+        ready: document.fonts?.status === 'loaded',
+        figtree: document.fonts?.check?.('12px Figtree') ?? false,
+      };
+    });
+    const candidates = page.locator(`.ph[data-oid="${item.canvasFrame.oid}"]`);
+    const matches = await candidates.count();
+    if (matches !== 1) {
+      throw new Error(
+        `Canvas oid ${item.canvasFrame.oid} дал ${matches} кадров вместо одного в ${item.canvasFrame.file}`,
+      );
+    }
+    const frame = candidates.first();
+    const actualLabel = await frame.getAttribute('data-screen-label');
+    if (actualLabel !== item.canvasFrame.label) {
+      throw new Error(
+        `Canvas oid ${item.canvasFrame.oid}: ожидался «${item.canvasFrame.label}», найден «${actualLabel || ''}»`,
+      );
+    }
+    await frame.waitFor({ state: 'visible', timeout: 45_000 });
+    const file = path.join(OUT_DIR, `${item.id}.canvas.png`);
+    await frame.screenshot({ path: file, animations: 'disabled' });
+    return {
+      status: 'captured',
+      file: path.relative(ROOT, file).replaceAll('\\', '/'),
+      source: path.relative(ROOT, canvasPath).replaceAll('\\', '/'),
+      frame: item.canvasFrame,
+      fontState,
+      consoleErrors,
+    };
+  } catch (error) {
+    return {
+      status: 'failed',
+      error: error?.message || String(error),
+      frame: item.canvasFrame,
+      consoleErrors,
+    };
+  } finally {
+    await context.close();
+  }
+}
+
+async function comparePng(actualPath, expectedPath, { diffPath } = {}) {
   const actualImage = sharp(actualPath);
   const expectedImage = sharp(expectedPath);
   const [actualMeta, expectedMeta] = await Promise.all([
@@ -814,7 +1000,7 @@ async function comparePng(actualPath, expectedPath) {
   if (actualMeta.width !== expectedMeta.width || actualMeta.height !== expectedMeta.height) {
     return {
       ok: false,
-      reason: `Размер ${actualMeta.width}x${actualMeta.height}, baseline ${expectedMeta.width}x${expectedMeta.height}`,
+      reason: `Размер runtime ${actualMeta.width}x${actualMeta.height}, Canvas ${expectedMeta.width}x${expectedMeta.height}`,
     };
   }
 
@@ -824,6 +1010,7 @@ async function comparePng(actualPath, expectedPath) {
   ]);
   let changedPixels = 0;
   let maxDelta = 0;
+  const diff = diffPath ? Buffer.alloc(actual.length) : null;
   const threshold = 16;
   for (let offset = 0; offset < actual.length; offset += 4) {
     const delta = Math.max(
@@ -834,10 +1021,28 @@ async function comparePng(actualPath, expectedPath) {
     );
     maxDelta = Math.max(maxDelta, delta);
     if (delta > threshold) changedPixels += 1;
+    if (diff) {
+      diff[offset] = Math.abs(actual[offset] - expected[offset]);
+      diff[offset + 1] = Math.abs(actual[offset + 1] - expected[offset + 1]);
+      diff[offset + 2] = Math.abs(actual[offset + 2] - expected[offset + 2]);
+      diff[offset + 3] = 255;
+    }
+  }
+  if (diff) {
+    await sharp(diff, {
+      raw: { width: actualMeta.width, height: actualMeta.height, channels: 4 },
+    }).png().toFile(diffPath);
   }
   const totalPixels = actualMeta.width * actualMeta.height;
   const changedRatio = changedPixels / totalPixels;
-  return { ok: changedRatio <= 0.001, changedPixels, totalPixels, changedRatio, maxDelta };
+  return {
+    ok: changedRatio <= 0.001,
+    changedPixels,
+    totalPixels,
+    changedRatio,
+    maxDelta,
+    diffFile: diffPath ? path.relative(ROOT, diffPath).replaceAll('\\', '/') : undefined,
+  };
 }
 
 async function main() {
@@ -876,20 +1081,54 @@ async function main() {
 
   await ensureServer();
   fs.mkdirSync(OUT_DIR, { recursive: true });
+  const canvasServer = automated.some((item) => item.canvasFrame)
+    ? await startCanvasServer()
+    : null;
   const browser = await chromium.launch({
     headless: true,
   });
   const results = [];
   try {
     const snapshot = buildUiV4VisualSnapshot();
-    for (const item of automated) results.push(await openCase(browser, item, snapshot));
+    for (const item of automated) {
+      const result = await openCase(browser, item, snapshot);
+      if (result.status === 'captured' && item.canvasFrame) {
+        result.canvas = await captureCanvasFrame(browser, item, canvasServer.origin);
+        if (result.canvas.status !== 'captured') {
+          result.status = 'failed';
+          result.error = `Канонический кадр не снят: ${result.canvas.error}`;
+        } else {
+          const diffPath = path.join(OUT_DIR, `${item.id}.diff.png`);
+          result.comparison = await comparePng(
+            path.join(ROOT, result.file),
+            path.join(ROOT, result.canvas.file),
+            { diffPath },
+          );
+          result.comparison.source = 'live-canvas-pair';
+          result.evidenceReady = Boolean(
+            result.fontState?.ready &&
+              result.fontState?.figtree &&
+              result.canvas.fontState?.ready &&
+              result.canvas.fontState?.figtree &&
+              result.consoleErrors.length === 0 &&
+              result.canvas.consoleErrors.length === 0,
+          );
+          if (!result.evidenceReady) {
+            result.comparison.inconclusiveReason =
+              'Шрифт Figtree не подтверждён или во время capture были console/page errors.';
+          }
+        }
+      }
+      results.push(result);
+    }
   } finally {
     await browser.close();
+    await canvasServer?.close();
   }
 
   if (mode === 'update-baselines') {
     fs.mkdirSync(BASELINE_DIR, { recursive: true });
-    for (const result of results.filter((entry) => entry.status === 'captured')) {
+    for (const result of results.filter((entry) => entry.status === 'captured' && !entry.canvas)) {
       fs.copyFileSync(path.join(ROOT, result.file), path.join(BASELINE_DIR, `${result.id}.png`));
     }
   }
@@ -897,6 +1136,7 @@ async function main() {
   if (mode === 'verify') {
     for (const result of results) {
       if (result.status !== 'captured') continue;
+      if (result.canvas) continue;
       const baseline = path.join(BASELINE_DIR, `${result.id}.png`);
       if (!fs.existsSync(baseline)) {
         result.comparison = { ok: false, reason: 'Baseline отсутствует' };
@@ -907,7 +1147,7 @@ async function main() {
   }
 
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     mode,
     fixedClock: UI_V4_VISUAL_CLOCK.iso,
     viewport: { width: 390, height: 844, deviceScaleFactor: 1 },
@@ -920,7 +1160,10 @@ async function main() {
   fs.writeFileSync(path.join(OUT_DIR, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
 
   const failures = results.filter(
-    (entry) => entry.status === 'failed' || entry.comparison?.ok === false,
+    (entry) =>
+      entry.status === 'failed' ||
+      (entry.gate === 'pixel' &&
+        (entry.comparison?.ok === false || entry.evidenceReady === false)),
   );
   console.info(
     `[ui-v4-visual] ${results.length - failures.length}/${results.length} кадров готовы → ${OUT_DIR}`,
