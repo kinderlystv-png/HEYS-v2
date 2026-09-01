@@ -506,6 +506,69 @@ async function openCase(browser, item, snapshot) {
         window.__uiV4ReportsWeightRoot.render(element);
       }, item.themeId || null);
     }
+    if (item.kind === 'demo-norm-correction-lowered') {
+      await page.waitForFunction(
+        () =>
+          !!window.React &&
+          !!window.ReactDOM?.createRoot &&
+          typeof window.HEYS?.weeklyReports?.NormCorrectionScreen === 'function' &&
+          typeof window.HEYS?.NormCorrection?.compute === 'function' &&
+          typeof window.HEYS?.NormCorrection?.buildWeeklySyncCard === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const NC = window.HEYS.NormCorrection;
+        const result = NC.compute({
+          days: Array.from({ length: 21 }, () => ({
+            kcal: 2112,
+            isLogged: true,
+            isIncomplete: false,
+          })),
+          formulaPerDay: 2400,
+          trend: { deltaKg: -0.267, measuredDays: 21, windowDays: 21 },
+          currentFactor: 1,
+          historyDays: 60,
+        });
+        const card = NC.buildWeeklySyncCard({
+          result,
+          tariff: 'pro',
+          applied: true,
+          expenditure: 2400,
+          deficitPct: -12,
+          basalMetabolism: 1520,
+        });
+        let host = document.getElementById('ui-v4-norm-correction-lowered-host');
+        if (!host) {
+          host = document.createElement('main');
+          host.id = 'ui-v4-norm-correction-lowered-host';
+          Object.assign(host.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            zIndex: '20000',
+            width: '375px',
+            overflow: 'visible',
+            background: 'var(--v4-bg, #fffaf1)',
+          });
+          document.body.appendChild(host);
+        }
+        const component = window.React.createElement(
+          window.HEYS.weeklyReports.NormCorrectionScreen,
+          {
+            card,
+            rangeLabel: '24–30 авг',
+            onDecide: () => {},
+          },
+        );
+        window.__uiV4NormCorrectionLoweredRoot =
+          window.__uiV4NormCorrectionLoweredRoot || window.ReactDOM.createRoot(host);
+        window.__uiV4NormCorrectionLoweredRoot.render(component);
+      }, item.themeId || null);
+      await page.locator('#ui-v4-norm-correction-lowered-host .weekly-wrap-correction--lowered')
+        .waitFor({ state: 'visible', timeout: 45_000 });
+    }
     if (item.kind === 'demo-strength-finish') {
       await page.waitForFunction(
         () =>

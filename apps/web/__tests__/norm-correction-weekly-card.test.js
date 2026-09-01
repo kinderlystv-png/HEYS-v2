@@ -155,6 +155,19 @@ describe('поправка на факт · карточка сверки в ш�
     expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__footnote \{[^}]*margin-top: 12px;[^}]*font-weight: 500;[^}]*line-height: 1\.55/);
   });
 
+  it('применённое Pro-снижение открывается самостоятельным canvas-экраном', () => {
+    expect(SRC).toContain('function NormCorrectionScreen');
+    expect(SRC).toContain("correction?.card?.frame === 'lowered'");
+    expect(SRC).toContain("className: 'norm-correction-screen__header'");
+    expect(SRC).toContain("'Неделя закрыта'");
+    expect(SRC).toContain("modalClassName: 'mc-modal--weekly-wrap-v4'");
+    expect(SRC).toContain("if (action === 'ok')");
+    expect(SRC).toContain('HEYS.StepModal?.hide?.()');
+    expect(CSS).toMatch(/\.norm-correction-screen__header \{[^}]*padding: 16px 18px 0/);
+    expect(CSS).toMatch(/\.norm-correction-screen__content \{[^}]*padding: 6px 18px 18px/);
+    expect(CSS).toMatch(/\.norm-correction-screen__content > \.weekly-wrap-correction--lowered \{[^}]*margin-top: 12px/);
+  });
+
   it('карточка одета по контракту: радиус 20, заголовок 16/700, число 30/800', () => {
     const block = CSS.slice(
       CSS.indexOf('.weekly-wrap-correction {'),

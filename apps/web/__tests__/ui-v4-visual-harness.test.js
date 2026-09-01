@@ -63,6 +63,7 @@ describe('UI v4 visual harness', () => {
         'strength-plan-feed-sand',
         'strength-builder-collapsed-sand',
         'strength-superset-create-sand',
+        'norm-correction-lowered-sand',
       ]),
     );
     for (const item of UI_V4_VISUAL_CASES.filter((entry) => entry.kind === 'demo-food-copy-empty')) {
@@ -88,6 +89,7 @@ describe('UI v4 visual harness', () => {
     expect(paired.map((item) => item.id)).toContain('strength-plan-feed-sand');
     expect(paired.map((item) => item.id)).toContain('strength-builder-collapsed-sand');
     expect(paired.map((item) => item.id)).toContain('strength-superset-create-sand');
+    expect(paired.map((item) => item.id)).toContain('norm-correction-lowered-sand');
     for (const item of paired) {
       expect(item.captureSelector, item.id).toBeTruthy();
       expect(item.canvasFrame.palette, item.id).toBe(item.themeId);
@@ -130,6 +132,17 @@ describe('UI v4 visual harness', () => {
         file: 'strength-builder.v4.dc.html',
         label: 'Конструктор · итоги',
         oid: 'Б3',
+        palette: 'sand',
+      },
+    });
+    const normLowered = paired.find((item) => item.id === 'norm-correction-lowered-sand');
+    expect(normLowered).toMatchObject({
+      viewport: { width: 375, height: 620 },
+      captureSelector: '#ui-v4-norm-correction-lowered-host > .norm-correction-screen',
+      canvasFrame: {
+        file: 'norm-correction.v4.dc.html',
+        label: 'Сверка · норма снизилась',
+        oid: 'NC5',
         palette: 'sand',
       },
     });

@@ -1246,6 +1246,72 @@ body.tour-active .ios-pwa-banner {
   gap: 16px;
 }
 
+/* Применённая поправка — самостоятельный экран понедельничной сверки, а не
+   карточка внутри старой сводки. Внешняя геометрия повторяет canvas-frame:
+   шапка 16/18, прокрутка 6/18/18, без второго modal-header вокруг неё. */
+.mc-backdrop:has(.mc-modal--weekly-wrap-v4 .norm-correction-screen) {
+  align-items: flex-start;
+  padding: 0;
+}
+
+.mc-modal--weekly-wrap-v4:has(.norm-correction-screen) {
+  width: 100%;
+  max-width: 375px;
+  max-height: 100dvh;
+  border-radius: 28px;
+  background: var(--v4-bg, #fffaf1);
+  box-shadow: 0 1px 2px rgba(80, 50, 20, 0.09), 0 14px 40px rgba(80, 50, 20, 0.12);
+}
+
+.mc-modal--weekly-wrap-v4:has(.norm-correction-screen) .mc-header {
+  display: none;
+}
+
+.mc-modal--weekly-wrap-v4:has(.norm-correction-screen) .mc-step-content {
+  padding: 0;
+  overflow-y: auto;
+}
+
+.norm-correction-screen {
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 28px;
+  background: var(--v4-bg, #fffaf1);
+  font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
+}
+
+.norm-correction-screen__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 0;
+}
+
+.norm-correction-screen__title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+}
+
+.norm-correction-screen__range {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  font-variant-numeric: tabular-nums;
+}
+
+.norm-correction-screen__content {
+  padding: 6px 18px 18px;
+}
+
+.norm-correction-screen__content > .weekly-wrap-correction--lowered {
+  margin-top: 12px;
+}
+
 /* Карточка сверки нормы — контракт «вид · карточки сверки» канваса
    norm-correction.v4.dc.html. Стоит выше фактов недели: она меняет число, на
    которое человек будет есть, а факты только описывают прошедшее. */

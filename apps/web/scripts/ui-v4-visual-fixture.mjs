@@ -264,6 +264,23 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
       palette: 'sand',
     },
   },
+  {
+    id: 'norm-correction-lowered-sand',
+    zone: 'norm-correction',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-norm-correction-lowered',
+    themeId: 'sand',
+    viewport: { width: 375, height: 620 },
+    rootSelector: '#ui-v4-norm-correction-lowered-host > .norm-correction-screen',
+    captureSelector: '#ui-v4-norm-correction-lowered-host > .norm-correction-screen',
+    canvasFrame: {
+      file: 'norm-correction.v4.dc.html',
+      label: 'Сверка · норма снизилась',
+      oid: 'NC5',
+      palette: 'sand',
+    },
+  },
   ...UI_V4_CANVAS_ZONES.filter(
     (zone) =>
       ![
@@ -279,6 +296,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
         'food-meal',
         'reports-insights',
         'strength-builder',
+        'norm-correction',
       ].includes(zone),
   ).map((zone) => ({
     id: `${zone}-scenario-pending`,

@@ -680,6 +680,19 @@
         );
     }
 
+    function NormCorrectionScreen({ card, rangeLabel, onDecide }) {
+        const h = global.React.createElement;
+        return h('section', { className: 'norm-correction-screen' },
+            h('header', { className: 'norm-correction-screen__header' },
+                h('span', { className: 'norm-correction-screen__title' }, 'Неделя закрыта'),
+                h('span', { className: 'norm-correction-screen__range' }, rangeLabel || 'Неделя')
+            ),
+            h('div', { className: 'norm-correction-screen__content' },
+                h(NormCorrectionCard, { card, onDecide })
+            )
+        );
+    }
+
     function WeeklyWrapStep({ data }) {
         const React = global.React;
         if (!React) return null;
@@ -1032,7 +1045,10 @@
                 }));
             };
 
-            if (action === 'apply_tomorrow' || action === 'apply') {
+            if (action === 'ok') {
+                HEYS.StepModal?.hide?.();
+                return;
+            } else if (action === 'apply_tomorrow' || action === 'apply') {
                 applyFactor(correction.result.nextFactor, true);
                 HEYS.NormCorrection.recordDecision({ lsGet, lsSet, weekLabel, factor: correction.result.nextFactor, what: 'applied', now, by: 'client' });
             } else if (action === 'keep_current') {
@@ -1063,6 +1079,14 @@
             }
             setCorrectionTick((t) => t + 1);
         }, [correction, report]);
+
+        if (correction?.card?.frame === 'lowered') {
+            return h(NormCorrectionScreen, {
+                card: correction.card,
+                rangeLabel: report?.rangeLabel || 'Неделя',
+                onDecide: handleCorrectionDecision
+            });
+        }
 
         return h('div', { className: 'weekly-wrap-step' },
             h('div', { className: 'weekly-wrap-step__title' }, '📊 Итоги недели'),
@@ -1335,6 +1359,7 @@
         if (HEYS.StepModal?.show) {
             HEYS.StepModal.show({
                 steps: ['weekly_wrap_v2'],
+                modalClassName: 'mc-modal--weekly-wrap-v4',
                 showProgress: false,
                 showGreeting: false,
                 showTip: false,
@@ -1369,6 +1394,7 @@
         if (HEYS.StepModal?.show) {
             HEYS.StepModal.show({
                 steps: ['weekly_wrap_v2'],
+                modalClassName: 'mc-modal--weekly-wrap-v4',
                 showProgress: false,
                 showGreeting: false,
                 showTip: false,
@@ -1384,6 +1410,8 @@
     HEYS.weeklyReports = {
         buildWeekReport,
         WeeklyReportCard,
+        NormCorrectionCard,
+        NormCorrectionScreen,
         maybeShowWeeklyWrap,
         openWeeklyWrap,
         shouldShowWeeklyWrapPopup,
