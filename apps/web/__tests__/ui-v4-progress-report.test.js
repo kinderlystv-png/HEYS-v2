@@ -28,7 +28,12 @@ function fixture(overrides = {}) {
       {
         zoneId: 'alpha',
         file: 'alpha.v4.dc.html',
-        contractRows: ['one', 'two', 'three', 'four'].map((identity) => ({ identity })),
+        contractRows: [
+          { identity: 'one', value: 'ширина 44px' },
+          { identity: 'two', value: 'высота 48px и как раньше' },
+          { identity: 'three', value: 'двойное нажатие не создаёт запись' },
+          { identity: 'four', value: '«Готово»' },
+        ],
         productFrames: [{ identity: 'Screen' }, { identity: 'Screen' }],
         malformedContractRows: [],
       },
@@ -64,6 +69,14 @@ describe('UI v4 progress report', () => {
       duplicateOccurrences: 1,
       evidencePercent: 100,
     });
+    expect(report.assertions).toEqual({
+      rows: 4,
+      parsed: 2,
+      partial: 1,
+      unsupported: 1,
+      assertions: 3,
+      fullyParsedPercent: 50,
+    });
     expect(report.visuals).toEqual({
       cases: 2,
       zonesCovered: 1,
@@ -95,6 +108,8 @@ describe('UI v4 progress report', () => {
     expect(report.verdicts.total).toBeGreaterThan(15_000);
     expect(report.frames.productOccurrences).toBeGreaterThan(report.frames.uniqueProductFrames);
     expect(report.visuals.zonesCovered).toBe(report.visuals.canvasZones);
+    expect(report.assertions.rows).toBe(report.verdicts.total);
+    expect(report.assertions.assertions).toBeGreaterThan(report.verdicts.total);
     expect(Object.keys(report.zones)).toHaveLength(report.visuals.canvasZones);
   });
 });

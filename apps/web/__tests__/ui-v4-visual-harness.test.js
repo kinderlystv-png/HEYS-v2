@@ -60,6 +60,7 @@ describe('UI v4 visual harness', () => {
         'reports-whatif-inline-sand',
         'reports-weight-prediction-sand',
         'strength-finish-sand',
+        'strength-plan-feed-sand',
       ]),
     );
     for (const item of UI_V4_VISUAL_CASES.filter((entry) => entry.kind === 'demo-food-copy-empty')) {
@@ -82,6 +83,7 @@ describe('UI v4 visual harness', () => {
   it('fail-closed привязывает парный capture к точному Canvas oid и уникальному runtime-корню', () => {
     const paired = UI_V4_VISUAL_CASES.filter((item) => item.canvasFrame);
     expect(paired.map((item) => item.id)).toContain('strength-finish-sand');
+    expect(paired.map((item) => item.id)).toContain('strength-plan-feed-sand');
     for (const item of paired) {
       expect(item.captureSelector, item.id).toBeTruthy();
       expect(item.canvasFrame.palette, item.id).toBe(item.themeId);
@@ -94,6 +96,14 @@ describe('UI v4 visual harness', () => {
       expect(frame.label, item.id).toBe(item.canvasFrame.label);
       expect(frame.canonicalLocator.key, item.id).toBeTruthy();
     }
+    const planFeed = paired.find((item) => item.id === 'strength-plan-feed-sand');
+    expect(planFeed.canvasFrame).toMatchObject({
+      file: 'strength-builder.v4.dc.html',
+      label: 'План в ленте дня',
+      oid: 'И3',
+      palette: 'sand',
+      captureSelector: ':scope > .sc',
+    });
   });
 
   it('снимает element-boundary пары runtime↔Canvas и сохраняет diff без resize', () => {
@@ -103,6 +113,7 @@ describe('UI v4 visual harness', () => {
     );
     expect(captureSource).toContain("await captureRoot.screenshot({ path: file, animations: 'disabled' })");
     expect(captureSource).toContain("await frame.screenshot({ path: file, animations: 'disabled' })");
+    expect(captureSource).toContain("await boundary.screenshot({ path: file, animations: 'disabled' })");
     expect(captureSource).toContain("result.comparison.source = 'live-canvas-pair'");
     expect(captureSource).toContain('actualMeta.width !== expectedMeta.width');
     expect(captureSource).not.toContain('resize(');

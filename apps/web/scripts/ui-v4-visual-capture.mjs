@@ -581,6 +581,128 @@ async function openCase(browser, item, snapshot) {
         window.__uiV4StrengthFinishRoot.render(component);
       }, item.themeId || null);
     }
+    if (item.kind === 'demo-strength-plan-feed') {
+      await page.waitForFunction(
+        () =>
+          !!window.React &&
+          !!window.ReactDOM?.createRoot &&
+          typeof window.HEYS?.dayTrainings?.ProgramPlanCard === 'function' &&
+          typeof window.HEYS?.StrengthBuilderParts?.PlanCard === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const programId = 'visual-strength-program';
+        const planDate = '2026-09-02';
+        const approach = (weightKg, reps) => ({ weightKg: String(weightKg), reps });
+        const exercise = (id, name, sets, weightKg, reps, extra) => ({
+          id,
+          name,
+          approaches: Array.from({ length: sets }, (_, index) =>
+            approach(weightKg, Array.isArray(reps) ? reps[index % reps.length] : reps)),
+          ...(extra || {}),
+        });
+        const exercises = [
+          exercise('visual-bench', 'Жим лёжа', 4, 75, [8, 9, 10, 12]),
+          exercise('visual-row', 'Тяга штанги в наклоне', 4, 60, [8, 9, 10, 12]),
+          exercise('visual-press', 'Жим гантелей сидя', 3, 24, [10, 11, 12]),
+          exercise('visual-pullup', 'подтягивания', 3, '', 8, { ssGroup: 1 }),
+          exercise('visual-pulldown', 'тяга блока', 3, 55, 10, { ssGroup: 1 }),
+          exercise('visual-curl', 'Сгибание рук', 3, 14, 12),
+          exercise('visual-extension', 'Разгибание рук', 3, 18, 12),
+        ];
+        const plan = {
+          id: 'visual-plan-2026-09-02',
+          status: 'assigned',
+          programId,
+          weekIndex: 2,
+          dayLabel: 'День B · верх тела',
+          assignedBy: 'Артём',
+          assignedAt: new Date('2026-08-03T12:00:00+03:00').getTime(),
+        };
+        const training = {
+          id: 'visual-training-2026-09-02',
+          type: 'strength',
+          plan,
+          planSnapshot: { exercises },
+          workoutLog: { exercises: [] },
+        };
+        const dayBlob = (date, status, trainingId) => ({
+          date,
+          trainings: [{
+            id: trainingId,
+            type: 'strength',
+            plan: { status, programId },
+          }],
+        });
+        const program = {
+          id: programId,
+          status: 'active',
+          title: 'мезоцикл «База»',
+          weeks: 4,
+          days: [
+            { date: '2026-08-31', trainingId: 'visual-training-2026-08-31', dayLabel: 'День A', weekIndex: 2 },
+            { date: planDate, trainingId: training.id, dayLabel: plan.dayLabel, weekIndex: 2 },
+            { date: '2026-09-04', trainingId: 'visual-training-2026-09-04', dayLabel: 'День C', weekIndex: 2 },
+          ],
+        };
+        const programRows = new Map([
+          ['heys_dayv2_2026-08-31', dayBlob('2026-08-31', 'done', 'visual-training-2026-08-31')],
+          [`heys_dayv2_${planDate}`, { date: planDate, trainings: [training] }],
+          ['heys_dayv2_2026-09-04', dayBlob('2026-09-04', 'assigned', 'visual-training-2026-09-04')],
+        ]);
+        window.HEYS.YandexAPI = {
+          ...(window.HEYS.YandexAPI || {}),
+          getKV: async (_clientId, key) => ({ data: key === 'heys_training_program' ? program : null }),
+          getKVBatch: async (_clientId, keys) => ({
+            data: keys
+              .filter((key) => programRows.has(key))
+              .map((key) => ({ k: key, v: programRows.get(key) })),
+          }),
+        };
+        let host = document.getElementById('ui-v4-strength-plan-feed-host');
+        if (!host) {
+          host = document.createElement('main');
+          host.id = 'ui-v4-strength-plan-feed-host';
+          host.className = 'activity-v4-program';
+          Object.assign(host.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            zIndex: '20000',
+            boxSizing: 'border-box',
+            width: '375px',
+            padding: '14px',
+            overflow: 'visible',
+            background: 'var(--v4-bg, #fffaf3)',
+          });
+          document.body.appendChild(host);
+        }
+        const component = window.React.createElement(window.HEYS.dayTrainings.ProgramPlanCard, {
+          clientId: 'demo-client-female',
+          training,
+          dateKey: planDate,
+          isFutureDay: true,
+          isPastDay: false,
+          weekPlace: '',
+          moveOptions: [],
+          onStart: () => {},
+          onSkip: () => ({ ok: true }),
+          onMove: () => ({ ok: true }),
+          onResumeSkipped: () => ({ ok: true }),
+        });
+        window.__uiV4StrengthPlanFeedRoot =
+          window.__uiV4StrengthPlanFeedRoot || window.ReactDOM.createRoot(host);
+        window.__uiV4StrengthPlanFeedRoot.render(component);
+      }, item.themeId || null);
+      await page.locator('#ui-v4-strength-plan-feed-host .sb-plan-week-label')
+        .filter({ hasText: 'Неделя 2 из 4' })
+        .waitFor({ state: 'visible', timeout: 45_000 });
+      await page.locator('#ui-v4-strength-plan-feed-host .sb-plan-actions--future .sb-plan-cta')
+        .filter({ hasText: 'Перенести' })
+        .waitFor({ state: 'visible', timeout: 45_000 });
+    }
     if (item.kind === 'demo-food-copy-empty') {
       await page.waitForFunction(
         () => typeof window.HEYS?.CopyMealModal?.show === 'function',
@@ -969,7 +1091,18 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
     }
     await frame.waitFor({ state: 'visible', timeout: 45_000 });
     const file = path.join(OUT_DIR, `${item.id}.canvas.png`);
-    await frame.screenshot({ path: file, animations: 'disabled' });
+    if (item.canvasFrame.captureSelector) {
+      const boundary = frame.locator(item.canvasFrame.captureSelector);
+      const boundaryMatches = await boundary.count();
+      if (boundaryMatches !== 1) {
+        throw new Error(
+          `Canvas boundary ${item.canvasFrame.captureSelector} дал ${boundaryMatches} узлов вместо одного`,
+        );
+      }
+      await boundary.screenshot({ path: file, animations: 'disabled' });
+    } else {
+      await frame.screenshot({ path: file, animations: 'disabled' });
+    }
     return {
       status: 'captured',
       file: path.relative(ROOT, file).replaceAll('\\', '/'),

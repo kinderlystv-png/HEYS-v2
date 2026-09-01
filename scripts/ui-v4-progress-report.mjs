@@ -4,6 +4,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { readCanvasPackage } from './lib/ui-v4-canvas-index.mjs';
+import {
+  parseContractAssertions,
+  validateContractAssertions,
+} from './lib/ui-v4-assertions.mjs';
 import { readAllZones } from './lib/ui-v4-verdicts.mjs';
 import { UI_V4_VISUAL_CASES } from '../apps/web/scripts/ui-v4-visual-fixture.mjs';
 
@@ -138,12 +142,26 @@ export function buildUiV4ProgressReport({ verdicts, canvases, visualCases }) {
   let missingFrameEntries = 0;
   let missingFrameEvidence = 0;
   let extraFrameEntries = 0;
+  const assertionTotals = { parsed: 0, partial: 0, unsupported: 0, assertions: 0 };
 
   for (const canvas of [...canvases].sort((left, right) => left.zoneId.localeCompare(right.zoneId, 'en'))) {
     const zone = verdicts.zones[canvas.zoneId];
     const verdictCounts = validateVerdictZone(canvas.zoneId, zone, canvas);
     const rowTotal = Object.values(verdictCounts).reduce((sum, count) => sum + count, 0);
     for (const verdict of VERDICTS) globalCounts[verdict] += verdictCounts[verdict];
+
+    const assertionCounts = { parsed: 0, partial: 0, unsupported: 0, assertions: 0 };
+    for (const row of canvas.contractRows) {
+      const parsed = parseContractAssertions({ ...row, file: canvas.file });
+      const validation = validateContractAssertions(parsed);
+      invariant(
+        validation.ok,
+        `typed assertions for "${canvas.zoneId}" row "${row.identity}" are invalid`,
+      );
+      assertionCounts[parsed.parseStatus] += 1;
+      assertionCounts.assertions += parsed.assertions.length;
+    }
+    for (const key of Object.keys(assertionTotals)) assertionTotals[key] += assertionCounts[key];
 
     const frameIds = canvas.productFrames.map((frame) => frame.identity);
     const uniqueFrameIds = new Set(frameIds);
@@ -190,6 +208,7 @@ export function buildUiV4ProgressReport({ verdicts, canvases, visualCases }) {
         duplicateOccurrences,
         extraEntries: extraEntries.length,
       },
+      assertions: assertionCounts,
     };
   }
 
@@ -235,6 +254,11 @@ export function buildUiV4ProgressReport({ verdicts, canvases, visualCases }) {
       extraEntries: extraFrameEntries,
       evidencePercent: percentage(frameEvidence, uniqueProductFrames),
     },
+    assertions: {
+      rows: rowTotal,
+      ...assertionTotals,
+      fullyParsedPercent: percentage(assertionTotals.parsed, rowTotal),
+    },
     visuals: {
       cases: visualCases.length,
       zonesCovered: visualZones.size,
@@ -267,6 +291,9 @@ export function formatUiV4ProgressReport(report) {
     `Frames: ${report.frames.evidenced}/${report.frames.uniqueProductFrames} evidenced unique (${report.frames.evidencePercent.toFixed(1)}%)`,
     `  ${report.frames.productOccurrences} product occurrences; ${report.frames.duplicateIdentityGroups} duplicate identity groups (${report.frames.duplicateOccurrences} extra occurrences)`,
     `  missing entries ${report.frames.missingEntries}; missing evidence ${report.frames.missingEvidence}; extra entries ${report.frames.extraEntries}`,
+    '',
+    `Typed assertions: ${report.assertions.parsed}/${report.assertions.rows} fully parsed (${report.assertions.fullyParsedPercent.toFixed(1)}%)`,
+    `  partial ${report.assertions.partial}; unsupported ${report.assertions.unsupported}; assertions ${report.assertions.assertions}`,
     '',
     `Visual cases: ${report.visuals.cases}; zones ${report.visuals.zonesCovered}/${report.visuals.canvasZones}; canonical mappings ${report.visuals.canonicalMapped}`,
     `  status: ${Object.entries(report.visuals.byStatus).map(([key, value]) => `${key}=${value}`).join(', ')}`,

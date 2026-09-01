@@ -212,6 +212,24 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
       palette: 'sand',
     },
   },
+  {
+    id: 'strength-plan-feed-sand',
+    zone: 'strength-builder',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-strength-plan-feed',
+    themeId: 'sand',
+    viewport: { width: 375, height: 812 },
+    rootSelector: '#ui-v4-strength-plan-feed-host',
+    captureSelector: '#ui-v4-strength-plan-feed-host',
+    canvasFrame: {
+      file: 'strength-builder.v4.dc.html',
+      label: 'План в ленте дня',
+      oid: 'И3',
+      palette: 'sand',
+      captureSelector: ':scope > .sc',
+    },
+  },
   ...UI_V4_CANVAS_ZONES.filter(
     (zone) =>
       ![
