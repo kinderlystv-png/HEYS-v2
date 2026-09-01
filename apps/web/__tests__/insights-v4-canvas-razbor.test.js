@@ -181,6 +181,9 @@ const RHYTHM = [
 const DETAIL = [
   [2, '.insights-v4--detail .insights-v4-detail__head', ['align', 'gap']],
   [3, '.insights-v4-detail__title', ['fontWeight', 'fontSize', 'color']],
+  [7, '.insights-v4-weight__head', ['justify', 'align']],
+  [9, '.insights-v4-weight__value', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [10, '.insights-v4-weight__pace', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 const FAIL = [

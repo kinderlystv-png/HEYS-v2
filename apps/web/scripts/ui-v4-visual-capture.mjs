@@ -366,6 +366,57 @@ async function openCase(browser, item, snapshot) {
         window.__uiV4ReportsWhatIfRoot.render(element);
       }, item.themeId || null);
     }
+    if (item.kind === 'demo-reports-weight-prediction') {
+      await page.waitForFunction(
+        () =>
+          !!window.React &&
+          !!window.ReactDOM?.createRoot &&
+          typeof window.HEYS?.InsightsPI?.uiDashboard?.WeightPrediction === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        let host = document.getElementById('ui-v4-reports-weight-host');
+        if (!host) {
+          host = document.createElement('main');
+          host.id = 'ui-v4-reports-weight-host';
+          host.className = 'insights-v4';
+          Object.assign(host.style, {
+            position: 'fixed',
+            inset: '0',
+            zIndex: '20000',
+            overflow: 'auto',
+            padding: '24px 18px',
+            background: 'var(--v4-bg, #fffaf3)',
+          });
+          document.body.appendChild(host);
+        }
+        const WeightPrediction = window.HEYS.InsightsPI.uiDashboard.WeightPrediction;
+        const prediction = {
+          available: true,
+          projectedWeight: 90.7,
+          weeklyChange: -0.42,
+          monthlyChange: -1.8,
+          series: [91.2, 91, 91.1, 90.9, 90.8, 90.9].map((weight, index) => ({
+            date: `2026-08-${String(index + 1).padStart(2, '0')}`,
+            weight,
+          })),
+        };
+        const element = window.React.createElement(window.React.Fragment, null,
+          window.React.createElement('div', {
+            className: 'insights-v4-tier insights-v4-weight__tier',
+          }, 'Прогноз веса'),
+          window.React.createElement(WeightPrediction, { prediction, variant: 'v4' }),
+          window.React.createElement('p', {
+            className: 'insights-v4-detail__disclaimer',
+          }, 'Расчёт при условии точного учёта — не обещание даты на весах.'),
+        );
+        window.__uiV4ReportsWeightRoot =
+          window.__uiV4ReportsWeightRoot || window.ReactDOM.createRoot(host);
+        window.__uiV4ReportsWeightRoot.render(element);
+      }, item.themeId || null);
+    }
     if (item.kind === 'demo-strength-finish') {
       await page.waitForFunction(
         () =>

@@ -347,6 +347,66 @@
   color: var(--v4-act-text, #8a4a20);
 }
 
+/* Кадр «Инсайты · подробно»: прогноз — первая .grp второго слоя. Фактические
+   замеры и недельная точка используют одну линию, а короткий пунктир после
+   последней точки оставляет экстраполяцию визуально отличимой. */
+.insights-v4-weight__tier {
+  margin-top: 8px;
+}
+
+.insights-v4-weight {
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.insights-v4-weight__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.insights-v4-weight__key {
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.insights-v4-weight__value {
+  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ok-text, #5c6a45);
+  font-variant-numeric: tabular-nums;
+}
+
+.insights-v4-weight__spark {
+  display: block;
+  height: 66px;
+  margin-top: 10px;
+  overflow: visible;
+}
+
+.insights-v4-weight__line,
+.insights-v4-weight__forecast {
+  stroke: var(--v4-good-strong, #74845a);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.insights-v4-weight__forecast {
+  stroke-dasharray: 4 4;
+}
+
+.insights-v4-weight__dot {
+  fill: var(--v4-good-strong, #74845a);
+}
+
+.insights-v4-weight__pace {
+  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  font-variant-numeric: tabular-nums;
+}
+
 .insights-v4 .heys-score-insights-card--v4 {
   margin: 0;
   padding: 16px;

@@ -549,12 +549,20 @@
       rawTrend: Math.round(rawTrend * 1000) / 1000, // кг/день
       cleanTrend: Math.round(cleanTrend * 1000) / 1000,
       weeklyChange: Math.round(weeklyChange * 100) / 100,
+      // Сохраняем неокруглённую производную владельца расчёта: UI округляет
+      // только итоговое месячное представление, а не масштабирует уже
+      // округлённое недельное число.
+      monthlyChange: cleanTrend * 30,
       projectedWeight: Math.round(projectedWeight * 10) / 10,
       weeksToGoal: weeksToGoal ? Math.round(weeksToGoal) : null,
       reachDate,
       dataPoints: weightData.length,
       cleanDataPoints: cleanData.length,
       hasCycleAdjustment: cleanData.length !== weightData.length,
+      // UI второго слоя рисует только фактические замеры из того же
+      // фиксированного 30-дневного окна. Прогнозная точка добавляется UI из
+      // projectedWeight и не маскируется под наблюдение.
+      series: weightData.slice(-7).map(d => ({ date: d.date, weight: d.weight })),
       insight: weeklyChange > 0.3
         ? `📈 Набор ~${Math.round(weeklyChange * 100) / 100} кг/неделю`
         : weeklyChange < -0.3

@@ -186,6 +186,16 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     rootSelector: '.insights-v4-whatif__inline',
   },
   {
+    id: 'reports-weight-prediction-sand',
+    zone: 'reports-insights',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-reports-weight-prediction',
+    themeId: 'sand',
+    viewport: { width: 375, height: 812 },
+    rootSelector: '.insights-v4-weight',
+  },
+  {
     id: 'strength-finish-sand',
     zone: 'strength-builder',
     status: 'automated',

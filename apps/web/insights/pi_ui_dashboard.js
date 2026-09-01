@@ -235,8 +235,86 @@
       }
     }
 
-    function WeightPrediction({ prediction }) {
+    function getV4WeightPredictionData(prediction) {
+      if (!prediction || prediction.available !== true) return null;
+      const monthlyChange = +prediction.monthlyChange;
+      const projected = +prediction.projectedWeight;
+      const observed = Array.isArray(prediction.series)
+        ? prediction.series
+          .map((point) => ({
+            time: new Date(point?.date).getTime(),
+            weight: +point?.weight
+          }))
+          .filter((point) => Number.isFinite(point.time) && Number.isFinite(point.weight) && point.weight > 0)
+          .slice(-6)
+        : [];
+      if (
+        observed.length < 2 ||
+        !Number.isFinite(projected) || projected <= 0 ||
+        !Number.isFinite(monthlyChange) ||
+        observed[0].time === observed[observed.length - 1].time
+      ) return null;
+      return { observed, projected, monthlyChange };
+    }
+
+    function WeightPrediction({ prediction, variant = 'legacy' }) {
       if (!prediction || !prediction.available) return null;
+
+      if (variant === 'v4') {
+        const model = getV4WeightPredictionData(prediction);
+        if (!model) return null;
+        const { observed, projected, monthlyChange } = model;
+
+        const values = observed.map((point) => point.weight).concat(projected);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const span = Math.max(0.1, max - min);
+        const firstTime = observed[0].time;
+        const observedDuration = observed[observed.length - 1].time - firstTime;
+        const observedPoints = observed.map((point) => {
+          const x = 6 + 240 * (point.time - firstTime) / observedDuration;
+          const y = 14 + ((max - point.weight) / span) * 26;
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        });
+        const lastObservedPoint = observedPoints[observedPoints.length - 1];
+        const projectedY = 14 + ((max - projected) / span) * 26;
+        const monthlyAbs = Math.abs(monthlyChange).toFixed(1).replace('.', ',');
+        const monthlySign = monthlyChange < 0 ? '−' : monthlyChange > 0 ? '+' : '';
+        const projectedLabel = projected.toFixed(1).replace('.', ',') + ' кг';
+
+        return h('div', { className: 'insights-v4-weight grp' },
+          h('div', { className: 'insights-v4-weight__head' },
+            h('span', { className: 'insights-v4-weight__key k' }, 'Через неделю'),
+            h('span', { className: 'insights-v4-weight__value n' }, projectedLabel)
+          ),
+          h('svg', {
+            className: 'insights-v4-weight__spark',
+            viewBox: '0 0 292 66',
+            width: '100%',
+            height: '66',
+            role: 'img',
+            'aria-label': `Прогноз веса через неделю: ${projectedLabel}`
+          },
+            h('polyline', {
+              points: observedPoints.join(' '),
+              fill: 'none',
+              className: 'insights-v4-weight__line'
+            }),
+            h('polyline', {
+              points: `${lastObservedPoint} 286,${projectedY.toFixed(1)}`,
+              fill: 'none',
+              className: 'insights-v4-weight__forecast'
+            }),
+            h('circle', {
+              cx: '286', cy: projectedY.toFixed(1), r: '4.5',
+              className: 'insights-v4-weight__dot'
+            })
+          ),
+          h('div', { className: 'insights-v4-weight__pace' },
+            `такими темпами ${monthlySign}${monthlyAbs} кг в месяц`
+          )
+        );
+      }
 
       const changeClass = prediction.weeklyChange < -0.1 ? 'down'
         : prediction.weeklyChange > 0.1 ? 'up'
@@ -3375,15 +3453,9 @@
             ),
             h('div', { className: 'insights-tab__content insights-v4__content insights-v4-detail__content' },
               // Контракт «прогноз веса»: фиксированные 30 дней, не окно чипа.
-              weightPrediction30 && weightPrediction30.available !== false && h(CollapsibleSection, {
-                title: 'Прогноз веса',
-                // Значка нет: в v4 их нет ни на одном ярусе зоны — так же
-                // сегодня разобраны карточка каскада, предупреждения и
-                // «Что если». Заголовок секции называет её сам.
-                defaultOpen: true,
-                priority: 'MEDIUM'
-              },
-                h(WeightPrediction, { prediction: weightPrediction30 }),
+              getV4WeightPredictionData(weightPrediction30) && h(React.Fragment, null,
+                h('div', { className: 'insights-v4-tier insights-v4-weight__tier' }, 'Прогноз веса'),
+                h(WeightPrediction, { prediction: weightPrediction30, variant: 'v4' }),
                 h('p', { className: 'insights-v4-detail__disclaimer' },
                   'Расчёт при условии точного учёта — не обещание даты на весах.'
                 )

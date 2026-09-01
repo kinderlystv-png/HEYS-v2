@@ -53,6 +53,7 @@ describe('UI v4 visual harness', () => {
         'food-copy-existing-target-sand',
         'food-move-existing-target-sand',
         'reports-whatif-inline-sand',
+        'reports-weight-prediction-sand',
         'strength-finish-sand',
       ]),
     );
