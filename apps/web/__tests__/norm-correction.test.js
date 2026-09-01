@@ -497,11 +497,19 @@ describe('поправка на факт · кадры недельной све
   });
 
   it('рост применяет система и сообщает — отменить можно одной кнопкой', () => {
-    const c = NC.buildWeeklySyncCard({ result: up(), tariff: 'self' });
+    const c = NC.buildWeeklySyncCard({
+      result: up(), tariff: 'self',
+      expenditure: 2400, deficitPct: -12, basalMetabolism: 1520
+    });
     expect(c.frame).toBe('raised');
     expect(c.decidedBy).toBe('system');
     expect(c.needsConsent).toBe(false);
     expect(c.actions).toContain('revert');
+    expect(c.facts).toEqual([
+      { label: 'Было', value: '2\u00a0112' },
+      { label: 'Поправка', value: '×1,03', tone: 'fact' },
+      { label: 'Спрашивать согласие', value: 'на рост не спрашиваем', tone: 'quiet' }
+    ]);
   });
 
   it('на Pro до решения куратора клиент видит действующую норму, а не предложение', () => {
@@ -529,13 +537,28 @@ describe('поправка на факт · кадры недельной све
 
   it('третий отказ подряд перестаёт уходить в тишину', () => {
     const c = NC.buildWeeklySyncCard({
-      result: down(), tariff: 'self', refusalStreak: 3, weeksUnchanged: 6
+      result: down(), tariff: 'self', refusalStreak: 3, weeksUnchanged: 6,
+      recomposition: { noWaistEvidence: true },
+      expenditure: 2400, deficitPct: -12, basalMetabolism: 1520
     });
     expect(c.frame).toBe('refused_three_times');
     expect(c.weeksUnchanged).toBe(6);
     expect(c.mismatchPct).toBe(8);
     // Кнопки необязательные: плохо не то, что человек отказывается.
     expect(c.actions).toEqual(['apply', 'measure_waist', 'mute_month']);
+    expect(c.facts).toEqual([
+      { label: 'Норма', value: '2\u00a0112 · 6 недель' },
+      { label: 'Расхождение', value: '8 % и держится' },
+      { label: 'Замер талии', value: 'не было', tone: 'quiet' }
+    ]);
+  });
+
+  it('неизвестный замер не выдаётся за отрицательный результат', () => {
+    const c = NC.buildWeeklySyncCard({
+      result: down(), tariff: 'self', refusalStreak: 3, weeksUnchanged: 6,
+      recomposition: null
+    });
+    expect(c.facts.find((f) => f.label === 'Замер талии').value).toBe('нет данных');
   });
 
   it('подтверждение отказа помечает срок возврата информационным тоном', () => {
@@ -781,7 +804,7 @@ describe('поправка на факт · довод перестройки', 
   it('другой состав — не перестройка, даже когда замер есть', () => {
     stubPattern('fat_loss', -0.1);
     const days = Array.from({ length: 21 }, (_, i) => dayWith('2026-08-' + String(i + 1).padStart(2, '0'), 78));
-    expect(NC.detectRecomposition(days, {})).toBe(null);
+    expect(NC.detectRecomposition(days, {})).toEqual({ noWaistEvidence: false });
   });
 
   it('модуль инсайтов не загружен — сверка не падает', () => {
@@ -1056,6 +1079,34 @@ describe('поправка на факт · предел заморозки', ()
     });
     expect(card.frame).toBe('recomposition_unverified');
     expect(card.copy.body).toContain('Две недели ожидания истекли');
+    expect(card.copy.body).toContain('только с вашего согласия');
+    expect(card.needsConsent).toBe(true);
+    expect(card.actions).toEqual(['apply_tomorrow', 'keep_current']);
+    expect(card.facts).toEqual([
+      { label: 'Замер талии', value: 'не было', tone: 'quiet' },
+      { label: 'Рабочие веса', value: 'довод косвенный', tone: 'quiet' },
+      { label: 'Заморозка', value: 'две недели истекли' }
+    ]);
+  });
+
+  it('истёкшая заморозка не исчезает вместе с косвенным доводом', () => {
+    const now = new Date('2026-08-28T12:00:00');
+    const days = growingDays().map((day) => Object.assign({}, day, { trainings: [] }));
+    const r = NC.detectRecomposition(days, {}, { askedAt: now.getTime() - 15 * DAY, now });
+
+    expect(r).toMatchObject({
+      checkExpired: true,
+      waitedDays: 15,
+      workingWeights: 'no_data'
+    });
+
+    const card = NC.buildWeeklySyncCard({
+      result: { status: 'ready', direction: 'down', currentFactor: 1, nextFactor: 0.97 },
+      tariff: 'self', recomposition: r
+    });
+    expect(card.facts.find((fact) => fact.label === 'Рабочие веса'))
+      .toMatchObject({ value: 'данных нет', tone: 'quiet' });
+    expect(card.copy.body).toContain('данных о рабочих весах тоже');
   });
 
   it('вторая просьба заморозку не продлевает', () => {
@@ -1068,15 +1119,24 @@ describe('поправка на факт · предел заморозки', ()
     expect(second).toBe(1000);
   });
 
-  it('ответ на просьбу не стирает саму просьбу', () => {
-    // Порядок обратный: сначала метка, потом решение. Раньше recordDecision
-    // писал объект целиком и заморозка исчезала от ответа на неё же.
+  it('решение закрывает эпизод ожидания и не переносит старый срок в следующий', () => {
     const store = new Map();
     const lsGet = (k, fb = null) => (store.has(k) ? store.get(k) : fb);
     const lsSet = (k, v) => store.set(k, v);
     NC.recordMeasurementAsk({ lsGet, lsSet, now: 7 });
     NC.recordDecision({ lsGet, lsSet, weekLabel: '24 авг', factor: 0.97, what: 'applied', now: 9 });
-    expect(NC.readMeasurementAsk(lsGet)).toBe(7);
+    expect(NC.readMeasurementAsk(lsGet)).toBe(null);
+    expect(NC.readHistory(lsGet)).toHaveLength(1);
+  });
+
+  it('прямой замер закрывает эпизод ожидания без потери истории', () => {
+    const store = new Map();
+    const lsGet = (k, fb = null) => (store.has(k) ? store.get(k) : fb);
+    const lsSet = (k, v) => store.set(k, v);
+    NC.recordDecision({ lsGet, lsSet, weekLabel: '17 авг', factor: 1, what: 'postponed', now: 5 });
+    NC.recordMeasurementAsk({ lsGet, lsSet, now: 7 });
+    expect(NC.clearMeasurementAsk({ lsGet, lsSet })).toBe(true);
+    expect(NC.readMeasurementAsk(lsGet)).toBe(null);
     expect(NC.readHistory(lsGet)).toHaveLength(1);
   });
 

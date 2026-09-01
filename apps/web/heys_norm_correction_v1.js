@@ -459,6 +459,17 @@
     return at;
   }
 
+  /** Закрыть ожидание замера: следующий эпизод начинает собственные 14 дней. */
+  function clearMeasurementAsk({ lsGet, lsSet }) {
+    if (!lsSet) return false;
+    const raw = (lsGet && lsGet(HISTORY_KEY, null)) || {};
+    if (!raw.measurementAskedAt) return false;
+    const next = Object.assign({}, raw);
+    delete next.measurementAskedAt;
+    lsSet(HISTORY_KEY, next);
+    return true;
+  }
+
   /** Сколько дней прошло с первой просьбы; null — не просили. */
   function freezeAgeDays(askedAt, now) {
     if (!askedAt) return null;
@@ -499,7 +510,13 @@
       // Пишем поверх блоба, а не вместо него: рядом с решениями живёт метка
       // первой просьбы о замере, и заменить объект целиком значит стереть
       // заморозку ответом на неё же.
-      const raw = (lsGet && lsGet(HISTORY_KEY, null)) || {};
+      const raw = Object.assign({}, (lsGet && lsGet(HISTORY_KEY, null)) || {});
+      // Метка относится к одному эпизоду неопределённости. Решение закрывает
+      // его; сохранять timestamp навсегда означало бы мгновенно «истекать» при
+      // любом следующем застое спустя месяцы.
+      if (what === 'applied' || what === 'declined' || what === 'matched') {
+        delete raw.measurementAskedAt;
+      }
       lsSet(HISTORY_KEY, Object.assign({}, raw, {
         weeks: weeks.slice(0, HISTORY_MAX),
         updatedAt: now || 0
@@ -552,6 +569,10 @@
   function formatKcal(value) {
     // Тысячи разделяем неразрывным пробелом: «2 112» не должно переноситься.
     return String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
+  }
+
+  function formatFactor(value) {
+    return '\u00d7' + Number(value).toFixed(2).replace('.', ',');
   }
 
   function buildWeeklySyncCard({
@@ -696,15 +717,29 @@
     // быть ложью: две недели ожидания действительно были и действительно
     // кончились. Раньше он утверждал это на пустом месте, поэтому и был удалён.
     if (recomposition && recomposition.checkExpired) {
+      const weightsStillGrowing = recomposition.workingWeights === 'growing';
       return Object.assign(card, {
         frame: 'recomposition_unverified',
-        actions: ['ok', 'ask_curator'],
-        decidedBy: 'nobody',
+        actions: ['apply_tomorrow', 'keep_current'],
+        decidedBy: 'client',
+        needsConsent: true,
+        facts: [
+          { label: 'Замер талии', value: 'не было', tone: 'quiet' },
+          {
+            label: 'Рабочие веса',
+            value: weightsStillGrowing ? 'довод косвенный' : 'данных нет',
+            tone: 'quiet'
+          },
+          { label: 'Заморозка', value: 'две недели истекли' }
+        ],
         copy: {
           title: 'Отличить перестройку было нечем',
-          body: 'Замера не было, а рост рабочих весов — довод косвенный. Две недели ожидания истекли — поправку применяем по весу.',
+          body: weightsStillGrowing
+            ? 'Замера не было. Рост рабочих весов был косвенным доводом. Две недели ожидания истекли — поправку считаем по весу и применим только с вашего согласия.'
+            : 'Замера не было, данных о рабочих весах тоже. Две недели ожидания истекли — поправку считаем по весу и применим только с вашего согласия.',
+          heroCaption: '\u2212' + formatKcal(Math.abs(norms.deltaKcal)) + '\u00a0ккал',
           footnote: 'Поправка — про расчёт, а не про старание. Замер в любой момент вернёт ветку перестройки.',
-          actionLabels: { ok: 'Понятно', ask_curator: 'Написать куратору' }
+          actionLabels: { apply_tomorrow: 'Применить с завтра', keep_current: 'Оставить прежнюю' }
         }
       });
     }
@@ -732,6 +767,11 @@
         // Возврат идёт к значению до роста, а не к действующему: действующее —
         // это и есть поднятое число.
         previousFactor: justRaised.previousFactor,
+        facts: [
+          { label: 'Было', value: formatKcal(norms.current) },
+          { label: 'Поправка', value: formatFactor(afterFactor), tone: 'fact' },
+          { label: 'Спрашивать согласие', value: 'на рост не спрашиваем', tone: 'quiet' }
+        ],
         copy: {
           title: 'Можно есть больше',
           body: 'Вы ели больше плана, а вес всё равно шёл вниз. Значит, тратите вы больше, чем мы считали, — норму подняли под ваш результат.',
@@ -778,6 +818,11 @@
         needsConsent: false,
         actions: ['revert'],
         celebratory: true,
+        facts: [
+          { label: 'Было', value: formatKcal(norms.current) },
+          { label: 'Поправка', value: formatFactor(afterFactor), tone: 'fact' },
+          { label: 'Спрашивать согласие', value: 'на рост не спрашиваем', tone: 'quiet' }
+        ],
         copy: {
           title: 'Можно есть больше',
           body: 'Вы ели больше плана, а вес всё равно шёл вниз. Значит, тратите вы больше, чем мы считали, — норму подняли под ваш результат.',
@@ -869,16 +914,37 @@
 
     // Self: снижение требует явного согласия клиента.
     if (streak >= REFUSAL_STREAK_LIMIT) {
+      const unchanged = Number(weeksUnchanged) || 0;
+      const waistState = recomposition && (recomposition.noWaistEvidence || recomposition.checkExpired)
+        ? 'не было'
+        : (recomposition && recomposition.noWaistEvidence === false
+          ? 'перестройку не подтвердил'
+          : 'нет данных');
       return Object.assign(card, {
         frame: 'refused_three_times',
         decidedBy: 'client',
-        weeksUnchanged: Number(weeksUnchanged) || 0,
+        weeksUnchanged: unchanged,
         mismatchPct: Math.abs(res.mismatchPct || 0),
+        facts: [
+          {
+            label: 'Норма',
+            value: formatKcal(norms.current) + ' \u00b7 ' + pluralWeeksRu(unchanged)
+          },
+          {
+            label: 'Расхождение',
+            value: Math.abs(res.mismatchPct || 0) + ' % и держится'
+          },
+          {
+            label: 'Замер талии',
+            value: waistState,
+            tone: 'quiet'
+          }
+        ],
         // Кнопки необязательные: плохо не то, что человек отказывается, а то,
         // что он не знает о расхождении.
         actions: ['apply', 'measure_waist', 'mute_month'],
         copy: {
-          title: 'Норма не менялась ' + pluralWeeksRu(Number(weeksUnchanged) || 0),
+          title: 'Норма не менялась ' + pluralWeeksRu(unchanged),
           body: 'Вы трижды оставили прежнее число — это ваше право, и я его сохраняю. Но расчёт всё это время расходится с фактом, и вес стоит.',
           footnote: 'Ни одна из кнопок не обязательна. Плохо не то, что вы отказываетесь, — плохо, если вы не знаете, что расчёт разошёлся.',
           actionLabels: {
@@ -976,10 +1042,10 @@
    * карточку — без него экран превращается в убедительное оправдание застоя,
    * то есть в машину опаснее, чем отсутствие поправки вовсе.
    *
-   * Косвенный довод (замеров нет, но растут рабочие веса) здесь не считается:
-   * метрики роста рабочих весов в проекте пока нет, и заявлять «две недели
-   * заморозки истекли», не заводя саму заморозку, было бы неправдой. Пока
-   * такого довода нет, поправка идёт по весу — это и есть третья ступень.
+   * Косвенный довод (замеров нет, но растут рабочие веса) проверяется вторым:
+   * он замораживает решение не более чем на две недели. После предела карточка
+   * обязана назвать, был ли этот довод ещё доступен, а не утверждать отсутствие
+   * силовых данных независимо от факта.
    */
   /**
    * Две линии одного графика: вес и талия.
@@ -1057,6 +1123,7 @@
     // назван косвенным, потому что в первые месяцы это во многом нервная
     // адаптация: довод «тренировки продуктивны», а не «мышцы выросли».
     if (!evidence) {
+      const age = freezeAgeDays(freeze && freeze.askedAt, freeze && freeze.now);
       const weights = HEYS.WorkingWeights && HEYS.WorkingWeights.analyze;
       const growth = weights ? weights({ days: rawDays }) : null;
       if (growth && growth.available && growth.growing) {
@@ -1064,9 +1131,13 @@
         // просьбы о замере поправка применяется по весу, и тогда кадр
         // «проверить не удалось» перестаёт быть ложью — заморозка правда была
         // и правда истекла.
-        const age = freezeAgeDays(freeze && freeze.askedAt, freeze && freeze.now);
         if (age != null && age >= FREEZE_LIMIT_DAYS) {
-          return { checkExpired: true, weeks: growth.weeks, waitedDays: age };
+          return {
+            checkExpired: true,
+            weeks: growth.weeks,
+            waitedDays: age,
+            workingWeights: 'growing'
+          };
         }
         return {
           indirect: true,
@@ -1075,6 +1146,12 @@
           daysLeft: age == null ? FREEZE_LIMIT_DAYS : Math.max(0, FREEZE_LIMIT_DAYS - age),
           source: 'по росту рабочих весов за ' + growth.weeks + ' ' + weeksWordRu(growth.weeks)
         };
+      }
+      // Просьба могла появиться на прошлой неделе, когда косвенный довод был,
+      // а в текущем окне рабочие веса уже не набрались. Предел всё равно идёт
+      // от первой просьбы и не должен зависеть от того, сохранился ли довод.
+      if (age != null && age >= FREEZE_LIMIT_DAYS) {
+        return { checkExpired: true, waitedDays: age, workingWeights: 'no_data' };
       }
       // Ни замера, ни роста весов — третья ступень: поправка идёт по весу, и
       // говорит об этом вслух.
@@ -1087,9 +1164,11 @@
     try {
       pattern = analyze(rawDays, profile);
     } catch (e) {
-      return null;
+      return { noWaistEvidence: false };
     }
-    if (!pattern || !pattern.available || pattern.compositionQuality !== 'recomposition') return null;
+    if (!pattern || !pattern.available || pattern.compositionQuality !== 'recomposition') {
+      return { noWaistEvidence: false };
+    }
 
     // Конкретика важнее общей фразы: «талия ушла на 2 см» — это довод, а
     // «тело меняется» — утешение.
@@ -1214,6 +1293,8 @@
     });
     if (canWrite && recomposition && recomposition.indirect) {
       recordMeasurementAsk({ lsGet, lsSet, now: base.getTime() });
+    } else if (canWrite && recomposition && recomposition.noWaistEvidence === false) {
+      clearMeasurementAsk({ lsGet, lsSet });
     }
 
     // Рост норма применяет сама: молча она не двигается — карточка сообщит об
@@ -1574,6 +1655,7 @@
     FREEZE_LIMIT_DAYS,
     readMeasurementAsk,
     recordMeasurementAsk,
+    clearMeasurementAsk,
     freezeAgeDays,
     resolveTariff,
     formatKcal,

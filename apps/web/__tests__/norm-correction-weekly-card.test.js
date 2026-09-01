@@ -88,6 +88,13 @@ describe('поправка на факт · карточка сверки в ш�
     expect(CSS).toContain('.weekly-wrap-correction__evidence-note');
   });
 
+  it('после истечения ожидания предлагаемое число остаётся видимым', () => {
+    // Подтверждённая перестройка числа не меняет и скрывает героя. Когда
+    // ожидание истекло, снижение ещё требует согласия, но само предложение
+    // нельзя прятать: иначе кнопка «Применить» не называет результат.
+    expect(SRC).toContain("const showsNumber = card.frame !== 'recomposition';");
+  });
+
   it('праздничная заливка есть только у роста и подтверждённой перестройки', () => {
     expect(SRC).toContain('weekly-wrap-correction--good');
     expect(CSS).toMatch(/\.weekly-wrap-correction--good\s*\{[^}]*--v4-ok-bg/);
