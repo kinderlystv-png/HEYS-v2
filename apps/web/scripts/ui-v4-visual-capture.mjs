@@ -703,6 +703,148 @@ async function openCase(browser, item, snapshot) {
         .filter({ hasText: 'Перенести' })
         .waitFor({ state: 'visible', timeout: 45_000 });
     }
+    if (item.kind === 'demo-strength-builder-collapsed') {
+      await page.waitForFunction(
+        () =>
+          !!window.React &&
+          !!window.ReactDOM?.createRoot &&
+          typeof window.HEYS?.StrengthBuilder?.BuilderScreen === 'function' &&
+          typeof window.HEYS?.StrengthBuilderParts?.ExerciseCard === 'function' &&
+          typeof window.HEYS?.TrainingKernel?.strength?.trainingTonnage === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const approach = (weightKg, reps, done) => ({
+          weightKg: String(weightKg),
+          reps,
+          done: !!done,
+        });
+        const exercise = (name, weightKg, reps, doneCount, restSec) => ({
+          name,
+          restSec,
+          approaches: reps.map((value, index) => approach(weightKg, value, index < doneCount)),
+        });
+        const exercises = [
+          exercise('Жим лёжа', 75, [8, 10, 10, 12], 4, 120),
+          exercise('Тяга штанги в наклоне', 60, [8, 10, 10, 12], 4, 120),
+          exercise('Жим гантелей сидя', 24, [10, 10, 12, 12], 1, 90),
+          exercise('Разведение в тренажёре', 20, [12, 12, 12], 0, 60),
+        ];
+        let host = document.getElementById('ui-v4-strength-builder-collapsed-host');
+        if (!host) {
+          host = document.createElement('main');
+          host.id = 'ui-v4-strength-builder-collapsed-host';
+          Object.assign(host.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            zIndex: '20000',
+            width: '375px',
+            height: '100vh',
+            overflow: 'hidden',
+            background: 'var(--v4-bg, #fffaf3)',
+          });
+          document.body.appendChild(host);
+        }
+        const component = window.React.createElement(window.HEYS.StrengthBuilder.BuilderScreen, {
+          training: {
+            type: 'strength',
+            strengthEntryMode: 'workout_builder',
+            time: '18:40',
+            workoutLog: {
+              title: 'Силовая · грудь, спина, плечи',
+              startedAt: new Date('2026-08-28T08:42:48+03:00').getTime(),
+              exercises,
+            },
+          },
+          dateKey: '2026-08-28',
+          profile: { weight: 80 },
+          historyFor: (name) => name === 'Жим лёжа'
+            ? { record: { maxW: 75, maxSet: 900, total: 3000 } }
+            : null,
+          historyDetailFor: () => ({ usages: [], record: null }),
+          onPatch: () => {},
+          onPatchSession: () => {},
+          onClose: () => {},
+        });
+        window.__uiV4StrengthBuilderCollapsedRoot =
+          window.__uiV4StrengthBuilderCollapsedRoot || window.ReactDOM.createRoot(host);
+        window.__uiV4StrengthBuilderCollapsedRoot.render(component);
+      }, item.themeId || null);
+      const firstExercise = page
+        .locator('#ui-v4-strength-builder-collapsed-host .sb-ex-head')
+        .first();
+      await firstExercise.waitFor({ state: 'visible', timeout: 45_000 });
+      await firstExercise.click();
+      await page
+        .locator('#ui-v4-strength-builder-collapsed-host .sb-ex.is-open')
+        .waitFor({ state: 'detached', timeout: 45_000 });
+    }
+    if (item.kind === 'demo-strength-superset-create') {
+      await page.waitForFunction(
+        () =>
+          !!window.React &&
+          !!window.ReactDOM?.createRoot &&
+          typeof window.HEYS?.StrengthCatalogUI?.SupersetScreen === 'function' &&
+          typeof window.HEYS?.TrainingKernel?.strength?.makeSuperset === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const exercise = (name, weightKg, restSec) => ({
+          name,
+          restSec,
+          approaches: Array.from({ length: 3 }, () => ({
+            weightKg: String(weightKg),
+            reps: 10,
+            done: false,
+          })),
+        });
+        const exercises = [
+          exercise('Жим лёжа', 75, 90),
+          exercise('Тяга штанги в наклоне', 60, 120),
+          exercise('Жим гантелей сидя', 24, 90),
+          exercise('Разведение в тренажёре', 20, 60),
+        ];
+        let host = document.getElementById('ui-v4-strength-superset-create-host');
+        if (!host) {
+          host = document.createElement('main');
+          host.id = 'ui-v4-strength-superset-create-host';
+          Object.assign(host.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            zIndex: '20000',
+            width: '375px',
+            height: '100vh',
+            overflow: 'hidden',
+            background: 'var(--v4-bg, #fffaf3)',
+          });
+          document.body.appendChild(host);
+        }
+        const component = window.React.createElement(window.HEYS.StrengthCatalogUI.SupersetScreen, {
+          exercises,
+          startIndex: 0,
+          onCreate: () => {},
+          onCancel: () => {},
+        });
+        window.__uiV4StrengthSupersetCreateRoot =
+          window.__uiV4StrengthSupersetCreateRoot || window.ReactDOM.createRoot(host);
+        window.__uiV4StrengthSupersetCreateRoot.render(component);
+      }, item.themeId || null);
+      const triset = page
+        .locator('#ui-v4-strength-superset-create-host .sb-radio')
+        .filter({ hasText: 'Трисет' });
+      await triset.waitFor({ state: 'visible', timeout: 45_000 });
+      await triset.click();
+      await page
+        .locator('#ui-v4-strength-superset-create-host .sb-radio.is-on')
+        .filter({ hasText: 'Трисет' })
+        .waitFor({ state: 'visible', timeout: 45_000 });
+    }
     if (item.kind === 'demo-food-copy-empty') {
       await page.waitForFunction(
         () => typeof window.HEYS?.CopyMealModal?.show === 'function',

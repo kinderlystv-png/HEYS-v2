@@ -76,6 +76,14 @@ describe('UI v4 progress report', () => {
       unsupported: 1,
       assertions: 3,
       fullyParsedPercent: 50,
+      debt: {
+        rows: 1,
+        parsed: 0,
+        partial: 0,
+        unsupported: 1,
+        assertions: 0,
+        fullyParsedPercent: 0,
+      },
     });
     expect(report.visuals).toEqual({
       cases: 2,
@@ -110,6 +118,7 @@ describe('UI v4 progress report', () => {
     expect(report.visuals.zonesCovered).toBe(report.visuals.canvasZones);
     expect(report.assertions.rows).toBe(report.verdicts.total);
     expect(report.assertions.assertions).toBeGreaterThan(report.verdicts.total);
+    expect(report.assertions.debt.rows).toBe(report.verdicts.counts['?']);
     expect(Object.keys(report.zones)).toHaveLength(report.visuals.canvasZones);
   });
 });

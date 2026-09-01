@@ -61,6 +61,8 @@ describe('UI v4 visual harness', () => {
         'reports-weight-prediction-sand',
         'strength-finish-sand',
         'strength-plan-feed-sand',
+        'strength-builder-collapsed-sand',
+        'strength-superset-create-sand',
       ]),
     );
     for (const item of UI_V4_VISUAL_CASES.filter((entry) => entry.kind === 'demo-food-copy-empty')) {
@@ -84,6 +86,8 @@ describe('UI v4 visual harness', () => {
     const paired = UI_V4_VISUAL_CASES.filter((item) => item.canvasFrame);
     expect(paired.map((item) => item.id)).toContain('strength-finish-sand');
     expect(paired.map((item) => item.id)).toContain('strength-plan-feed-sand');
+    expect(paired.map((item) => item.id)).toContain('strength-builder-collapsed-sand');
+    expect(paired.map((item) => item.id)).toContain('strength-superset-create-sand');
     for (const item of paired) {
       expect(item.captureSelector, item.id).toBeTruthy();
       expect(item.canvasFrame.palette, item.id).toBe(item.themeId);
@@ -104,6 +108,20 @@ describe('UI v4 visual harness', () => {
       palette: 'sand',
       captureSelector: ':scope > .sc',
     });
+    expect(paired.find((item) => item.id === 'strength-builder-collapsed-sand')?.canvasFrame)
+      .toMatchObject({
+        file: 'strength-builder.v4.dc.html',
+        label: 'Конструктор · список свёрнут',
+        oid: 'А2',
+        palette: 'sand',
+      });
+    expect(paired.find((item) => item.id === 'strength-superset-create-sand')?.canvasFrame)
+      .toMatchObject({
+        file: 'strength-builder.v4.dc.html',
+        label: 'Связка · создание',
+        oid: 'З1',
+        palette: 'sand',
+      });
   });
 
   it('снимает element-boundary пары runtime↔Canvas и сохраняет diff без resize', () => {

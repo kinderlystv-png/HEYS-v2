@@ -143,6 +143,7 @@ export function buildUiV4ProgressReport({ verdicts, canvases, visualCases }) {
   let missingFrameEvidence = 0;
   let extraFrameEntries = 0;
   const assertionTotals = { parsed: 0, partial: 0, unsupported: 0, assertions: 0 };
+  const assertionDebtTotals = { rows: 0, parsed: 0, partial: 0, unsupported: 0, assertions: 0 };
 
   for (const canvas of [...canvases].sort((left, right) => left.zoneId.localeCompare(right.zoneId, 'en'))) {
     const zone = verdicts.zones[canvas.zoneId];
@@ -151,6 +152,7 @@ export function buildUiV4ProgressReport({ verdicts, canvases, visualCases }) {
     for (const verdict of VERDICTS) globalCounts[verdict] += verdictCounts[verdict];
 
     const assertionCounts = { parsed: 0, partial: 0, unsupported: 0, assertions: 0 };
+    const assertionDebtCounts = { rows: 0, parsed: 0, partial: 0, unsupported: 0, assertions: 0 };
     for (const row of canvas.contractRows) {
       const parsed = parseContractAssertions({ ...row, file: canvas.file });
       const validation = validateContractAssertions(parsed);
@@ -160,8 +162,16 @@ export function buildUiV4ProgressReport({ verdicts, canvases, visualCases }) {
       );
       assertionCounts[parsed.parseStatus] += 1;
       assertionCounts.assertions += parsed.assertions.length;
+      if (zone.rows[row.identity].v === '?') {
+        assertionDebtCounts.rows += 1;
+        assertionDebtCounts[parsed.parseStatus] += 1;
+        assertionDebtCounts.assertions += parsed.assertions.length;
+      }
     }
     for (const key of Object.keys(assertionTotals)) assertionTotals[key] += assertionCounts[key];
+    for (const key of Object.keys(assertionDebtTotals)) {
+      assertionDebtTotals[key] += assertionDebtCounts[key];
+    }
 
     const frameIds = canvas.productFrames.map((frame) => frame.identity);
     const uniqueFrameIds = new Set(frameIds);
@@ -208,7 +218,7 @@ export function buildUiV4ProgressReport({ verdicts, canvases, visualCases }) {
         duplicateOccurrences,
         extraEntries: extraEntries.length,
       },
-      assertions: assertionCounts,
+      assertions: { ...assertionCounts, debt: assertionDebtCounts },
     };
   }
 
@@ -258,6 +268,10 @@ export function buildUiV4ProgressReport({ verdicts, canvases, visualCases }) {
       rows: rowTotal,
       ...assertionTotals,
       fullyParsedPercent: percentage(assertionTotals.parsed, rowTotal),
+      debt: {
+        ...assertionDebtTotals,
+        fullyParsedPercent: percentage(assertionDebtTotals.parsed, assertionDebtTotals.rows),
+      },
     },
     visuals: {
       cases: visualCases.length,
@@ -294,6 +308,7 @@ export function formatUiV4ProgressReport(report) {
     '',
     `Typed assertions: ${report.assertions.parsed}/${report.assertions.rows} fully parsed (${report.assertions.fullyParsedPercent.toFixed(1)}%)`,
     `  partial ${report.assertions.partial}; unsupported ${report.assertions.unsupported}; assertions ${report.assertions.assertions}`,
+    `  unresolved ?: ${report.assertions.debt.parsed}/${report.assertions.debt.rows} fully parsed (${report.assertions.debt.fullyParsedPercent.toFixed(1)}%); partial ${report.assertions.debt.partial}; unsupported ${report.assertions.debt.unsupported}`,
     '',
     `Visual cases: ${report.visuals.cases}; zones ${report.visuals.zonesCovered}/${report.visuals.canvasZones}; canonical mappings ${report.visuals.canonicalMapped}`,
     `  status: ${Object.entries(report.visuals.byStatus).map(([key, value]) => `${key}=${value}`).join(', ')}`,
