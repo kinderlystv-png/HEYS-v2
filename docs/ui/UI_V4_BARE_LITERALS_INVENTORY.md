@@ -63,20 +63,20 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 
 | правило                       | мест |
 | ----------------------------- | ---: |
-| только hex                    | 1557 |
-| hex + непрозрачный `rgb()`    | 1564 |
-| hex + `rgba()` с альфой ≥ 0,5 | 1721 |
-| все, включая полупрозрачные   | 2445 |
+| только hex                    | 1576 |
+| hex + непрозрачный `rgb()`    | 1583 |
+| hex + `rgba()` с альфой ≥ 0,5 | 1740 |
+| все, включая полупрозрачные   | 2464 |
 
-В описи — последняя строка, **2445**.
+В описи — последняя строка, **2464**.
 
 ## Охват
 
 Просмотрены все модули стилей (46) и файлы кода, названные обоснованиями
-вердиктов закрытых зон (92). Закрытых зон 21; незакрытой считается та, где ещё
-стоят «?» — сейчас это `reports-insights`, `water-add`. Всего голых литералов в
-этих файлах 16001; тёплых 2445. Остальные палитре тоже не следуют, но песочными
-экран не делают, и это отдельный разговор.
+вердиктов закрытых зон (103). Закрытых зон 20; незакрытой считается та, где ещё
+стоят «?» — сейчас это `date-remainders`, `strength-builder`, `tab-activity`,
+`water-add`. Всего голых литералов в этих файлах 16083; тёплых 2464. Остальные
+палитре тоже не следуют, но песочными экран не делают, и это отдельный разговор.
 
 Файл, которого здесь нет, **просмотрен и чист**: его отсутствие означает ноль, а
 не «не смотрели». Так, `733-ui-v4-reports.css` и `734-ui-v4-curator-panel.css`
@@ -86,7 +86,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 **Звёздочка** у литерала означает, что это в точности значение песочной роли и
 ни одной синей — такое место переводится на роль без разговора. Их 38.
 
-Всего мест: **2445** в 60 файлах.
+Всего мест: **2464** в 63 файлах.
 
 ---
 
@@ -220,6 +220,82 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `30%`                                  |    1 | `#fbbf24`                                                                                                                                  |
 | `40%`                                  |    1 | `rgba(253, 224, 71, 1)`                                                                                                                    |
 | `70%`                                  |    1 | `rgba(245, 158, 11, 0.7)`                                                                                                                  |
+
+### `100-metrics-and-graphs.css` — 222
+
+Зоны: `reports-insights`
+
+| семейство                         | мест | литералы                                                                                                                                                            |
+| --------------------------------- | ---: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.sparkline-popup-v2`             |   36 | `#b45309`, `#fef3c7`, `#fde68a`, `#fcd34d`, `#92400e`, `#f59e0b`, … (+2)                                                                                            |
+| `.add-training-btn`               |   13 | `#f97316`, `rgba(249, 115, 22, 0.08)`, `#ea580c`, `#c2410c`, `rgba(249, 115, 22, 0.15)`, `rgba(245, 158, 11, 0.55)`, … (+6)                                         |
+| `50%`                             |    9 | `rgba(249, 115, 22, 0.8)`, `rgba(249, 115, 22, 1)`, `rgba(251, 191, 36, 0.8)`, `rgba(251, 191, 36, 1)`, `rgba(245, 158, 11, 0)`, `rgba(251, 191, 36, 0.6)`, … (+3)  |
+| `.training-card-rating`           |    8 | `#fef3c7`, `#fde68a`, `#fcd34d`, `#ffedd5`, `#fed7aa`, `#fdba74`, … (+2)                                                                                            |
+| `0%, 100%`                        |    8 | `rgba(249, 115, 22, 0.5)`, `rgba(249, 115, 22, 0.6)`, `rgba(251, 191, 36, 0.5)`, `rgba(251, 191, 36, 0.6)`, `rgba(245, 158, 11, 0.4)`, `#fbbf24`, … (+2)            |
+| `.weight-sparkline-container`     |    7 | `rgba(251, 146, 60, 0.18)`, `#f97316`                                                                                                                               |
+| `.goal-progress-bar`              |    6 | `rgba(245, 158, 11, 0.16)`, `rgba(245, 158, 11, 0.05)`, `rgba(245, 158, 11, 0.88)`, `rgba(234, 179, 8, 0.17)`, `rgba(234, 179, 8, 0.06)`, `rgba(234, 179, 8, 0.85)` |
+| `.sparkline-popup-tag`            |    6 | `#fef3c7`, `#d97706`, `#fde68a`, `#92400e`, `#f59e0b`                                                                                                               |
+| `.week-heatmap-deficit-badge`     |    6 | `#f97316`, `rgba(249, 115, 22, 0.12)`, `rgba(249, 115, 22, 0.3)`, `rgba(124, 45, 18, 0.34)`, `rgba(251, 146, 60, 0.34)`, `#fdba74`                                  |
+| `.week-heatmap-deficit`           |    5 | `rgba(234, 179, 8, 0.08)`, `rgba(245, 158, 11, 0.05)`, `rgba(234, 179, 8, 0.15)`, `rgba(180, 83, 9, 0.24)`, `rgba(251, 146, 60, 0.3)`                               |
+| `--toast-gradient`                |    4 | `#fde047`, `#f59e0b`, `#fdba74`, `#f97316`                                                                                                                          |
+| `.correlation-block`              |    4 | `#ffedd5`, `#fed7aa`, `#fef9c3`, `#fde047`                                                                                                                          |
+| `.macro-badge-popup-streak`       |    4 | `#d97706`, `#fef3c7`, `#fde68a`, `#fcd34d`                                                                                                                          |
+| `.macro-toast`                    |    4 | `#fef3c7`, `#fde68a`, `#fbbf24`, `#f59e0b`                                                                                                                          |
+| `.metric-popup-streak`            |    4 | `#d97706`, `#fef3c7`, `#fde68a`, `#fcd34d`                                                                                                                          |
+| `.week-heatmap-deficit-excluded`  |    4 | `rgba(234, 179, 8, 0.35)`, `rgba(113, 63, 18, 0.48)`, `rgba(234, 179, 8, 0.36)`, `#fde68a`                                                                          |
+| `.caloric-excess-cardio`          |    3 | `rgba(245, 158, 11, 0.08)`, `rgba(245, 158, 11, 0.25)`, `#d97706`                                                                                                   |
+| `.caloric-insight-item-v2`        |    3 | `#f59e0b`, `rgba(245, 158, 11, 0.05)`, `rgba(249, 115, 22, 0.06)`                                                                                                   |
+| `.debt-refeed-hint`               |    3 | `#f59e0b`, `rgba(245, 158, 11, 0.06)`, `rgba(245, 158, 11, 0.4)`                                                                                                    |
+| `.macro-tip-fat`                  |    3 | `rgba(245, 158, 11, 0.08)`, `rgba(251, 191, 36, 0.12)`, `rgba(245, 158, 11, 0.2)`                                                                                   |
+| `.sparkline-dot-gold`             |    3 | `#fbbf24`, `#f59e0b`, `rgba(251, 191, 36, 0.6)`                                                                                                                     |
+| `.sparkline-dot-gold-today`       |    3 | `#fbbf24`, `#f59e0b`, `rgba(251, 191, 36, 0.8)`                                                                                                                     |
+| `.sparkline-dot-refeed`           |    3 | `#f97316`, `#ea580c`, `rgba(249, 115, 22, 0.6)`                                                                                                                     |
+| `.sparkline-dot-refeed-today`     |    3 | `#f97316`, `#ea580c`, `rgba(249, 115, 22, 0.8)`                                                                                                                     |
+| `.sparkline-popup-header`         |    3 | `#fef3c7`, `#d97706`, `#b45309`                                                                                                                                     |
+| `.sparkline-popup-perfect`        |    3 | `#fef3c7`, `#fde68a`, `#f59e0b`                                                                                                                                     |
+| `.training-type-btn`              |    3 | `#f97316`, `#ffedd5`, `#ea580c`                                                                                                                                     |
+| `.week-heatmap-day`               |    3 | `rgba(251, 191, 36, 0.15)`, `rgba(251, 191, 36, 0.25)`, `#fbbf24`                                                                                                   |
+| `.weight-card-modern`             |    3 | `rgba(251, 146, 60, 0.08)`, `rgba(249, 115, 22, 0.12)`, `rgba(251, 146, 60, 0.3)`                                                                                   |
+| `--toast-bg`                      |    2 | `rgba(245, 158, 11, 0.15)`, `rgba(249, 115, 22, 0.15)`                                                                                                              |
+| `.activity-charge-card`           |    2 | `rgba(245, 158, 11, 0.2)`, `rgba(245, 158, 11, 0.22)`                                                                                                               |
+| `.caloric-balance-card`           |    2 | `rgba(234, 179, 8, 0.08)`, `rgba(234, 179, 8, 0.2)`                                                                                                                 |
+| `.context-badge-circadian`        |    2 | `#fef3c7`, `#92400e`                                                                                                                                                |
+| `.context-badge-emotional`        |    2 | `#fef9c3`, `#854d0e`                                                                                                                                                |
+| `.metric-popup-reminder`          |    2 | `#ea580c`, `#fed7aa`                                                                                                                                                |
+| `.sparkline-heatmap-day`          |    2 | `#fde047`, `#f97316`                                                                                                                                                |
+| `.sparkline-slider-tooltip-ratio` |    2 | `#fef3c7`, `#d97706`                                                                                                                                                |
+| `.sparkline-slider-tooltip-tag`   |    2 | `#fef3c7`, `#d97706`                                                                                                                                                |
+| `.sparkline-streak-line`          |    2 | `#f59e0b`, `rgba(245, 158, 11, 0.6)`                                                                                                                                |
+| `.tdee-row-empty`                 |    2 | `#fef3c7`, `#92400e`                                                                                                                                                |
+| `.training-zone-header`           |    2 | `#fef3c7`, `#d97706`                                                                                                                                                |
+| `.week-heatmap-streak`            |    2 | `#f59e0b`, `#fef3c7`                                                                                                                                                |
+| `.weight-goal-hint`               |    2 | `rgba(234, 179, 8, 0.1)`, `rgba(234, 179, 8, 0.3)`                                                                                                                  |
+| `.weight-goal-hint-link`          |    2 | `#d97706`, `#b45309`                                                                                                                                                |
+| `--goal-badge-bg`                 |    1 | `rgba(234, 179, 8, 0.15)`                                                                                                                                           |
+| `--goal-badge-color`              |    1 | `#ca8a04`                                                                                                                                                           |
+| `--macro-ring-color`              |    1 | `#f59e0b`                                                                                                                                                           |
+| `--macro-ring-over`               |    1 | `#b45309`                                                                                                                                                           |
+| `.caloric-debt-day`               |    1 | `rgba(245, 158, 11, 0.3)`                                                                                                                                           |
+| `.deficit-actual-value`           |    1 | `#f59e0b`                                                                                                                                                           |
+| `.deficit-card-trend`             |    1 | `#f59e0b`                                                                                                                                                           |
+| `.deficit-value-number`           |    1 | `#f59e0b`                                                                                                                                                           |
+| `.goal-progress-fill`             |    1 | `#f97316`                                                                                                                                                           |
+| `.macro-toast-extra-achievement`  |    1 | `rgba(234, 179, 8, 0.2)`                                                                                                                                            |
+| `.macro-toast-fat`                |    1 | `#f59e0b`                                                                                                                                                           |
+| `.sparkline-annotation-holiday`   |    1 | `#f59e0b`                                                                                                                                                           |
+| `.sparkline-burn-glow`            |    1 | `#f97316`                                                                                                                                                           |
+| `.sparkline-dot-warn`             |    1 | `#f59e0b`                                                                                                                                                           |
+| `.sparkline-popup-motivation`     |    1 | `#78350f`                                                                                                                                                           |
+| `.sparkline-popup-subtitle`       |    1 | `#92400e`                                                                                                                                                           |
+| `.sparkline-popup-value`          |    1 | `#f59e0b`                                                                                                                                                           |
+| `.sparkline-sleep-indicator`      |    1 | `rgba(249, 115, 22, 0.4)`                                                                                                                                           |
+| `.training-zones-kcal`            |    1 | `#f97316`                                                                                                                                                           |
+| `.week-heatmap-stat`              |    1 | `#ca8a04`                                                                                                                                                           |
+| `.weight-card-empty`              |    1 | `#c2410c`                                                                                                                                                           |
+| `.weight-sparkline-dot`           |    1 | `rgba(249, 115, 22, 0.35)`                                                                                                                                          |
+| `.zone-formula-result`            |    1 | `#f97316`                                                                                                                                                           |
+| `.zone-picker-kcal-hint`          |    1 | `#f97316`                                                                                                                                                           |
+| `0%`                              |    1 | `rgba(245, 158, 11, 0)`                                                                                                                                             |
 
 ### `heys-components.css` — 205
 
@@ -375,6 +451,51 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.widget-wd-sheet__opt`               |    1 | `rgba(207, 129, 68, 0.18)`                                                                                                                                                    |
 | `.widgets-grid`                       |    1 | `#c67139`                                                                                                                                                                     |
 | `.widgets-quick-scrim`                |    1 | `rgba(43, 22, 8, 0.34)`                                                                                                                                                       |
+
+### `720-predictive-insights.css` — 147
+
+Зоны: `reports-insights`
+
+| семейство                                  | мест | литералы                                                                                                                                                                   |
+| ------------------------------------------ | ---: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.metabolic-quick-status__badge`           |   15 | `#fed7aa`, `#fdba74`, `#9a3412`, `rgba(234, 88, 12, 0.2)`, `#fef3c7`, `#fde68a`, … (+7)                                                                                    |
+| `.dark`                                    |   12 | `rgba(251, 146, 60, 0.3)`, `rgba(234, 88, 12, 0.4)`, `#fed7aa`, `#78350f`, `#92400e`, `rgba(245, 158, 11, 0.2)`, … (+6)                                                    |
+| `.insights-ring-mini`                      |   11 | `rgba(251, 191, 36, 0.15)`, `rgba(245, 158, 11, 0.2)`, `rgba(245, 158, 11, 0.3)`, `rgba(251, 146, 60, 0.15)`, `rgba(249, 115, 22, 0.2)`, `rgba(249, 115, 22, 0.3)`, … (+5) |
+| `.insights-tab__score-interpretation`      |    8 | `rgba(234, 179, 8, 0.10)`, `#854d0e`, `rgba(234, 179, 8, 0.25)`, `rgba(249, 115, 22, 0.10)`, `#9a3412`, `rgba(249, 115, 22, 0.30)`, … (+2)                                 |
+| `.meal-timing-v2__sleep`                   |    8 | `#fef3c7`, `#fde68a`, `rgba(245, 158, 11, 0.2)`, `#b45309`, `rgba(234, 179, 8, 0.15)`, `rgba(245, 158, 11, 0.25)`, … (+1)                                                  |
+| `.early-warning-badge`                     |    6 | `rgba(249, 115, 22, 0.1)`, `#9a3412`, `rgba(249, 115, 22, 0.3)`, `rgba(249, 115, 22, 0.15)`, `#fdba74`, `rgba(249, 115, 22, 0.4)`                                          |
+| `.pattern-debug-modal__contribution-badge` |    6 | `#b45309`, `rgba(245, 158, 11, 0.14)`, `rgba(245, 158, 11, 0.24)`, `#fcd34d`, `rgba(245, 158, 11, 0.22)`, `rgba(251, 191, 36, 0.34)`                                       |
+| `.pattern-debug-modal__preview-badge`      |    6 | `rgba(245, 158, 11, 0.35)`, `rgba(245, 158, 11, 0.12)`, `#b45309`, `rgba(251, 191, 36, 0.38)`, `rgba(245, 158, 11, 0.2)`, `#fcd34d`                                        |
+| `.insights-streaks`                        |    5 | `rgba(251, 146, 60, 0.08)`, `rgba(249, 115, 22, 0.04)`, `#fb923c`, `rgba(251, 146, 60, 0.15)`, `rgba(249, 115, 22, 0.08)`                                                  |
+| `.insights-tab__section`                   |    5 | `#f59e0b`, `rgba(245, 158, 11, 0.04)`, `rgba(245, 158, 11, 0.03)`, `rgba(245, 158, 11, 0.06)`                                                                              |
+| `.meal-rec-card__macro-chip`               |    5 | `#f59e0b`, `rgba(245, 158, 11, 0.08)`, `#d97706`, `rgba(245, 158, 11, 0.15)`                                                                                               |
+| `.meal-timing-v2__header-icon`             |    5 | `#fef3c7`, `#fde68a`, `rgba(251, 191, 36, 0.25)`, `#78350f`, `#92400e`                                                                                                     |
+| `.pattern-debug-modal__reason`             |    5 | `rgba(217, 119, 6, 0.06)`, `#d97706`, `rgba(217, 119, 6, 0.12)`, `rgba(245, 158, 11, 0.1)`, `rgba(245, 158, 11, 0.15)`                                                     |
+| `.early-warning-card`                      |    4 | `#f97316`, `#ea580c`, `#fb923c`                                                                                                                                            |
+| `.info-modal__debug`                       |    4 | `rgba(245, 158, 11, 0.1)`, `#92400e`, `#fcd34d`                                                                                                                            |
+| `.risk-traffic-light__light`               |    4 | `rgba(245, 158, 11, 0.2)`, `#f59e0b`, `rgba(245, 158, 11, 0.5)`                                                                                                            |
+| `.insights-monthly-wrap__highlight`        |    3 | `rgba(245, 158, 11, 0.08)`, `#f59e0b`, `rgba(245, 158, 11, 0.15)`                                                                                                          |
+| `.meal-timing-v2__priority-badge`          |    3 | `#d97706`, `#fef3c7`, `#fde68a`                                                                                                                                            |
+| `.weekly-wrap-card__achievement`           |    3 | `rgba(251, 191, 36, 0.2)`, `rgba(245, 158, 11, 0.2)`, `rgba(245, 158, 11, 0.3)`                                                                                            |
+| `.early-warning-card__cta`                 |    2 | `#ea580c`, `#fb923c`                                                                                                                                                       |
+| `.early-warning-card__title`               |    2 | `#c2410c`, `#fdba74`                                                                                                                                                       |
+| `.info-modal__section`                     |    2 | `#f59e0b`, `rgba(245, 158, 11, 0.15)`                                                                                                                                      |
+| `.insights-metabolism-card__quality`       |    2 | `rgba(234, 179, 8, 0.15)`, `#ca8a04`                                                                                                                                       |
+| `.insights-streak__count`                  |    2 | `#ea580c`, `#fb923c`                                                                                                                                                       |
+| `.insights-tab`                            |    2 | `#23201b`                                                                                                                                                                  |
+| `.insights-wrap__effect-badge`             |    2 | `rgba(245, 158, 11, 0.15)`, `#d97706`                                                                                                                                      |
+| `.meal-timing-card`                        |    2 | `rgba(245, 158, 11, 0.08)`, `rgba(245, 158, 11, 0.2)`                                                                                                                      |
+| `.risk-traffic-light`                      |    2 | `rgba(245, 158, 11, 0.05)`, `rgba(245, 158, 11, 0.1)`                                                                                                                      |
+| `.whatif-scenarios-panel__warning`         |    2 | `rgba(245, 158, 11, 0.1)`, `#f59e0b`                                                                                                                                       |
+| `--insights-activity`                      |    1 | `#f59e0b`                                                                                                                                                                  |
+| `.insights-pattern__icon`                  |    1 | `rgba(245, 158, 11, 0.15)`                                                                                                                                                 |
+| `.insights-priority-action`                |    1 | `#f59e0b`                                                                                                                                                                  |
+| `.insights-ring-card`                      |    1 | `#f59e0b`                                                                                                                                                                  |
+| `.metabolic-quick-status__light`           |    1 | `rgba(234, 179, 8, 0.5)`                                                                                                                                                   |
+| `.pattern-debug-modal__score`              |    1 | `#d97706`                                                                                                                                                                  |
+| `.phenotype-panel__confidence`             |    1 | `#f59e0b`                                                                                                                                                                  |
+| `.phenotype-panel__warning`                |    1 | `#f59e0b`                                                                                                                                                                  |
+| `.weekly-wrap-card__achievement-label`     |    1 | `#92400e`                                                                                                                                                                  |
 
 ### `500-pwa-and-offline.css` — 71
 
@@ -570,7 +691,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 
 ### `_meals.js` — 33
 
-Зоны: `date-remainders`, `home-widgets`, `nutrition-tab`, `undo-bar`
+Зоны: `home-widgets`, `nutrition-tab`, `undo-bar`
 
 | где в коде               | мест | литералы                                                                                                         |
 | ------------------------ | ---: | ---------------------------------------------------------------------------------------------------------------- |
@@ -584,9 +705,24 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `utils`                  |    2 | `#fef3c7`, `#92400e`                                                                                             |
 | `y`                      |    2 | `#eab308`                                                                                                        |
 
+### `740-cascade-card.css` — 28
+
+Зоны: `reports-insights`
+
+| семейство                     | мест | литералы                                                                                                                                                                       |
+| ----------------------------- | ---: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--cascade-tone-overlay`      |    8 | `rgba(245, 158, 11, 0.24)`, `rgba(245, 158, 11, 0.11)`, `rgba(245, 158, 11, 0.05)`, `rgba(245, 158, 11, 0.02)`, `rgba(245, 158, 11, 0.30)`, `rgba(245, 158, 11, 0.15)`, … (+1) |
+| `.cascade-dot`                |    8 | `#f97316`, `#facc15`, `#f59e0b`, `#d97706`, `#b45309`                                                                                                                          |
+| `.cascade-card__hint`         |    3 | `rgba(245, 158, 11, 0.08)`, `#b45309`                                                                                                                                          |
+| `.cascade-timeline-row`       |    3 | `rgba(245, 158, 11, 0.12)`, `#b45309`, `rgba(245, 158, 11, 0.18)`                                                                                                              |
+| `.cascade-card__breaks-info`  |    2 | `rgba(245, 158, 11, 0.07)`, `rgba(245, 158, 11, 0.1)`                                                                                                                          |
+| `.cascade-dot-connector`      |    2 | `#fbbf24`, `#b45309`                                                                                                                                                           |
+| `.cascade-card__breaks-label` |    1 | `#b45309`                                                                                                                                                                      |
+| `.cascade-timeline-weight`    |    1 | `#b45309`                                                                                                                                                                      |
+
 ### `heys_consents_v1.js` — 25
 
-Зоны: `home-widgets`, `login`, `registration`, `spinners`
+Зоны: `home-widgets`, `login`, `registration`, `reports-insights`, `spinners`
 
 | где в коде         | мест | литералы                                                           |
 | ------------------ | ---: | ------------------------------------------------------------------ |
@@ -645,7 +781,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 
 ### `heys_steps_v1.js` — 17
 
-Зоны: `checkin-morning`, `cycle`, `date-remainders`, `undo-bar`
+Зоны: `checkin-morning`, `cycle`, `undo-bar`
 
 | где в коде            | мест | литералы                                                          |
 | --------------------- | ---: | ----------------------------------------------------------------- |
@@ -655,6 +791,25 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `getColor`            |    2 | `#eab308`                                                         |
 | `getSleepAdviceColor` |    2 | `#fef08a`, `#854d0e`                                              |
 | `thumbPx`             |    1 | `rgba(80, 50, 20, 0.25)`                                          |
+
+### `pi_ui_dashboard.js` — 17
+
+Зоны: `reports-insights`
+
+| где в коде                        | мест | литералы                        |
+| --------------------------------- | ---: | ------------------------------- |
+| `getGradientColor`                |    3 | `#eab308`, `#f59e0b`            |
+| `mealConfig`                      |    3 | `#fbbf24`, `#f59e0b`, `#fef3c7` |
+| `colors`                          |    2 | `#eab308`                       |
+| `color`                           |    1 | `#eab308`                       |
+| `config`                          |    1 | `#eab308`                       |
+| `DEMO_STATUS`                     |    1 | `#eab308`                       |
+| `getScoreColor`                   |    1 | `#eab308`                       |
+| `pillarConfig`                    |    1 | `#f59e0b`                       |
+| `riskColors`                      |    1 | `#eab308`                       |
+| `riskData`                        |    1 | `#eab308`                       |
+| `safeScore`                       |    1 | `#f59e0b`                       |
+| `SCORE_EXPLAINER_CATEGORY_CONFIG` |    1 | `#f59e0b`                       |
 
 ### `heys_user_v12.js` — 16
 
@@ -710,18 +865,17 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.card`           |    1 | `rgba(234, 179, 8, 0.08)`                             |
 | `.hdr`            |    1 | `#141210`                                             |
 
-### `heys_day_sparklines_v1.js` — 10
+### `heys_day_sparklines_v1.js` — 9
 
-Зоны: `cycle`
+Зоны: `cycle`, `reports-insights`
 
-| где в коде                | мест | литералы             |
-| ------------------------- | ---: | -------------------- |
-| `wd`                      |    4 | `#f97316`, `#eab308` |
-| `getDayScoreColor`        |    2 | `#f97316`, `#eab308` |
-| `cp2y`                    |    1 | `#f97316`            |
-| `trendAreaTopColor`       |    1 | `#fb923c`            |
-| `trendColor`              |    1 | `#f97316`            |
-| `weightLineGradientStops` |    1 | `#fb923c`            |
+| где в коде          | мест | литералы             |
+| ------------------- | ---: | -------------------- |
+| `wd`                |    4 | `#f97316`, `#eab308` |
+| `getDayScoreColor`  |    2 | `#f97316`, `#eab308` |
+| `cp2y`              |    1 | `#f97316`            |
+| `trendAreaTopColor` |    1 | `#fb923c`            |
+| `trendColor`        |    1 | `#f97316`            |
 
 ### `heys_board_tab_v1.js` — 7
 
@@ -733,7 +887,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 
 ### `heys_cascade_card_v1.js` — 7
 
-Зоны: `nutrition-tab`
+Зоны: `nutrition-tab`, `reports-insights`
 
 | где в коде     | мест | литералы                                             |
 | -------------- | ---: | ---------------------------------------------------- |
@@ -764,7 +918,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 
 ### `heys_day_stats_v1.js` — 5
 
-Зоны: `cycle`, `norm-correction`
+Зоны: `cycle`, `norm-correction`, `reports-insights`
 
 | где в коде      | мест | литералы             |
 | --------------- | ---: | -------------------- |
@@ -784,7 +938,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 
 ### `heys_weekly_reports_v2.js` — 5
 
-Зоны: `norm-correction`
+Зоны: `norm-correction`, `reports-insights`
 
 | где в коде           | мест | литералы             |
 | -------------------- | ---: | -------------------- |
@@ -793,8 +947,8 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 
 ### `heys_app_shell_v1.js` — 4
 
-Зоны: `curator-edits`, `date-remainders`, `home-widgets`, `login`,
-`nutrition-tab`, `settings-system`, `spinners`, `tips`
+Зоны: `curator-edits`, `home-widgets`, `login`, `nutrition-tab`,
+`reports-insights`, `settings-system`, `spinners`, `tips`
 
 | где в коде | мест | литералы             |
 | ---------- | ---: | -------------------- |
@@ -856,7 +1010,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 
 ### `heys_theme_v1.js` — 2
 
-Зоны: `settings-system`
+Зоны: `reports-insights`, `settings-system`
 
 | где в коде         | мест | литералы             |
 | ------------------ | ---: | -------------------- |
@@ -871,6 +1025,14 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `cardStyle`     |    1 | `rgba(40, 24, 8, 0.08)` |
 | `storageNotice` |    1 | `rgba(40, 24, 8, 0.16)` |
 
+### `pi_early_warning.js` — 2
+
+Зоны: `reports-insights`
+
+| где в коде    | мест | литералы  |
+| ------------- | ---: | --------- |
+| `isFirstCall` |    2 | `#ffaa00` |
+
 ### `heys_add_product_step_v1.js` — 1
 
 Зоны: `nutrition-tab`, `product-card`
@@ -878,6 +1040,14 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | где в коде | мест | литералы    |
 | ---------- | ---: | ----------- |
 | `h`        |    1 | `#d99a63`\* |
+
+### `heys_kernel_bibliography_ui_v1.js` — 1
+
+Зоны: `reports-insights`
+
+| где в коде | мест | литералы  |
+| ---------- | ---: | --------- |
+| `typeMeta` |    1 | `#1c1b19` |
 
 ### `heys_step_modal_v1.js` — 1
 
@@ -903,80 +1073,6 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 модуль **закрытой** зоны `tab-activity`, чьи вердикты ни разу не сослались на
 свой файл. Такие места разметки требуют наравне с первым разделом, и найти их
 можно было только просмотром по имени файла, а не по обоснованиям.
-
-### `100-metrics-and-graphs.css` — 222
-
-| семейство                         | мест | литералы                                                                                                                                                            |
-| --------------------------------- | ---: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.sparkline-popup-v2`             |   36 | `#b45309`, `#fef3c7`, `#fde68a`, `#fcd34d`, `#92400e`, `#f59e0b`, … (+2)                                                                                            |
-| `.add-training-btn`               |   13 | `#f97316`, `rgba(249, 115, 22, 0.08)`, `#ea580c`, `#c2410c`, `rgba(249, 115, 22, 0.15)`, `rgba(245, 158, 11, 0.55)`, … (+6)                                         |
-| `50%`                             |    9 | `rgba(249, 115, 22, 0.8)`, `rgba(249, 115, 22, 1)`, `rgba(251, 191, 36, 0.8)`, `rgba(251, 191, 36, 1)`, `rgba(245, 158, 11, 0)`, `rgba(251, 191, 36, 0.6)`, … (+3)  |
-| `.training-card-rating`           |    8 | `#fef3c7`, `#fde68a`, `#fcd34d`, `#ffedd5`, `#fed7aa`, `#fdba74`, … (+2)                                                                                            |
-| `0%, 100%`                        |    8 | `rgba(249, 115, 22, 0.5)`, `rgba(249, 115, 22, 0.6)`, `rgba(251, 191, 36, 0.5)`, `rgba(251, 191, 36, 0.6)`, `rgba(245, 158, 11, 0.4)`, `#fbbf24`, … (+2)            |
-| `.weight-sparkline-container`     |    7 | `rgba(251, 146, 60, 0.18)`, `#f97316`                                                                                                                               |
-| `.goal-progress-bar`              |    6 | `rgba(245, 158, 11, 0.16)`, `rgba(245, 158, 11, 0.05)`, `rgba(245, 158, 11, 0.88)`, `rgba(234, 179, 8, 0.17)`, `rgba(234, 179, 8, 0.06)`, `rgba(234, 179, 8, 0.85)` |
-| `.sparkline-popup-tag`            |    6 | `#fef3c7`, `#d97706`, `#fde68a`, `#92400e`, `#f59e0b`                                                                                                               |
-| `.week-heatmap-deficit-badge`     |    6 | `#f97316`, `rgba(249, 115, 22, 0.12)`, `rgba(249, 115, 22, 0.3)`, `rgba(124, 45, 18, 0.34)`, `rgba(251, 146, 60, 0.34)`, `#fdba74`                                  |
-| `.week-heatmap-deficit`           |    5 | `rgba(234, 179, 8, 0.08)`, `rgba(245, 158, 11, 0.05)`, `rgba(234, 179, 8, 0.15)`, `rgba(180, 83, 9, 0.24)`, `rgba(251, 146, 60, 0.3)`                               |
-| `--toast-gradient`                |    4 | `#fde047`, `#f59e0b`, `#fdba74`, `#f97316`                                                                                                                          |
-| `.correlation-block`              |    4 | `#ffedd5`, `#fed7aa`, `#fef9c3`, `#fde047`                                                                                                                          |
-| `.macro-badge-popup-streak`       |    4 | `#d97706`, `#fef3c7`, `#fde68a`, `#fcd34d`                                                                                                                          |
-| `.macro-toast`                    |    4 | `#fef3c7`, `#fde68a`, `#fbbf24`, `#f59e0b`                                                                                                                          |
-| `.metric-popup-streak`            |    4 | `#d97706`, `#fef3c7`, `#fde68a`, `#fcd34d`                                                                                                                          |
-| `.week-heatmap-deficit-excluded`  |    4 | `rgba(234, 179, 8, 0.35)`, `rgba(113, 63, 18, 0.48)`, `rgba(234, 179, 8, 0.36)`, `#fde68a`                                                                          |
-| `.caloric-excess-cardio`          |    3 | `rgba(245, 158, 11, 0.08)`, `rgba(245, 158, 11, 0.25)`, `#d97706`                                                                                                   |
-| `.caloric-insight-item-v2`        |    3 | `#f59e0b`, `rgba(245, 158, 11, 0.05)`, `rgba(249, 115, 22, 0.06)`                                                                                                   |
-| `.debt-refeed-hint`               |    3 | `#f59e0b`, `rgba(245, 158, 11, 0.06)`, `rgba(245, 158, 11, 0.4)`                                                                                                    |
-| `.macro-tip-fat`                  |    3 | `rgba(245, 158, 11, 0.08)`, `rgba(251, 191, 36, 0.12)`, `rgba(245, 158, 11, 0.2)`                                                                                   |
-| `.sparkline-dot-gold`             |    3 | `#fbbf24`, `#f59e0b`, `rgba(251, 191, 36, 0.6)`                                                                                                                     |
-| `.sparkline-dot-gold-today`       |    3 | `#fbbf24`, `#f59e0b`, `rgba(251, 191, 36, 0.8)`                                                                                                                     |
-| `.sparkline-dot-refeed`           |    3 | `#f97316`, `#ea580c`, `rgba(249, 115, 22, 0.6)`                                                                                                                     |
-| `.sparkline-dot-refeed-today`     |    3 | `#f97316`, `#ea580c`, `rgba(249, 115, 22, 0.8)`                                                                                                                     |
-| `.sparkline-popup-header`         |    3 | `#fef3c7`, `#d97706`, `#b45309`                                                                                                                                     |
-| `.sparkline-popup-perfect`        |    3 | `#fef3c7`, `#fde68a`, `#f59e0b`                                                                                                                                     |
-| `.training-type-btn`              |    3 | `#f97316`, `#ffedd5`, `#ea580c`                                                                                                                                     |
-| `.week-heatmap-day`               |    3 | `rgba(251, 191, 36, 0.15)`, `rgba(251, 191, 36, 0.25)`, `#fbbf24`                                                                                                   |
-| `.weight-card-modern`             |    3 | `rgba(251, 146, 60, 0.08)`, `rgba(249, 115, 22, 0.12)`, `rgba(251, 146, 60, 0.3)`                                                                                   |
-| `--toast-bg`                      |    2 | `rgba(245, 158, 11, 0.15)`, `rgba(249, 115, 22, 0.15)`                                                                                                              |
-| `.activity-charge-card`           |    2 | `rgba(245, 158, 11, 0.2)`, `rgba(245, 158, 11, 0.22)`                                                                                                               |
-| `.caloric-balance-card`           |    2 | `rgba(234, 179, 8, 0.08)`, `rgba(234, 179, 8, 0.2)`                                                                                                                 |
-| `.context-badge-circadian`        |    2 | `#fef3c7`, `#92400e`                                                                                                                                                |
-| `.context-badge-emotional`        |    2 | `#fef9c3`, `#854d0e`                                                                                                                                                |
-| `.metric-popup-reminder`          |    2 | `#ea580c`, `#fed7aa`                                                                                                                                                |
-| `.sparkline-heatmap-day`          |    2 | `#fde047`, `#f97316`                                                                                                                                                |
-| `.sparkline-slider-tooltip-ratio` |    2 | `#fef3c7`, `#d97706`                                                                                                                                                |
-| `.sparkline-slider-tooltip-tag`   |    2 | `#fef3c7`, `#d97706`                                                                                                                                                |
-| `.sparkline-streak-line`          |    2 | `#f59e0b`, `rgba(245, 158, 11, 0.6)`                                                                                                                                |
-| `.tdee-row-empty`                 |    2 | `#fef3c7`, `#92400e`                                                                                                                                                |
-| `.training-zone-header`           |    2 | `#fef3c7`, `#d97706`                                                                                                                                                |
-| `.week-heatmap-streak`            |    2 | `#f59e0b`, `#fef3c7`                                                                                                                                                |
-| `.weight-goal-hint`               |    2 | `rgba(234, 179, 8, 0.1)`, `rgba(234, 179, 8, 0.3)`                                                                                                                  |
-| `.weight-goal-hint-link`          |    2 | `#d97706`, `#b45309`                                                                                                                                                |
-| `--goal-badge-bg`                 |    1 | `rgba(234, 179, 8, 0.15)`                                                                                                                                           |
-| `--goal-badge-color`              |    1 | `#ca8a04`                                                                                                                                                           |
-| `--macro-ring-color`              |    1 | `#f59e0b`                                                                                                                                                           |
-| `--macro-ring-over`               |    1 | `#b45309`                                                                                                                                                           |
-| `.caloric-debt-day`               |    1 | `rgba(245, 158, 11, 0.3)`                                                                                                                                           |
-| `.deficit-actual-value`           |    1 | `#f59e0b`                                                                                                                                                           |
-| `.deficit-card-trend`             |    1 | `#f59e0b`                                                                                                                                                           |
-| `.deficit-value-number`           |    1 | `#f59e0b`                                                                                                                                                           |
-| `.goal-progress-fill`             |    1 | `#f97316`                                                                                                                                                           |
-| `.macro-toast-extra-achievement`  |    1 | `rgba(234, 179, 8, 0.2)`                                                                                                                                            |
-| `.macro-toast-fat`                |    1 | `#f59e0b`                                                                                                                                                           |
-| `.sparkline-annotation-holiday`   |    1 | `#f59e0b`                                                                                                                                                           |
-| `.sparkline-burn-glow`            |    1 | `#f97316`                                                                                                                                                           |
-| `.sparkline-dot-warn`             |    1 | `#f59e0b`                                                                                                                                                           |
-| `.sparkline-popup-motivation`     |    1 | `#78350f`                                                                                                                                                           |
-| `.sparkline-popup-subtitle`       |    1 | `#92400e`                                                                                                                                                           |
-| `.sparkline-popup-value`          |    1 | `#f59e0b`                                                                                                                                                           |
-| `.sparkline-sleep-indicator`      |    1 | `rgba(249, 115, 22, 0.4)`                                                                                                                                           |
-| `.training-zones-kcal`            |    1 | `#f97316`                                                                                                                                                           |
-| `.week-heatmap-stat`              |    1 | `#ca8a04`                                                                                                                                                           |
-| `.weight-card-empty`              |    1 | `#c2410c`                                                                                                                                                           |
-| `.weight-sparkline-dot`           |    1 | `rgba(249, 115, 22, 0.35)`                                                                                                                                          |
-| `.zone-formula-result`            |    1 | `#f97316`                                                                                                                                                           |
-| `.zone-picker-kcal-hint`          |    1 | `#f97316`                                                                                                                                                           |
-| `0%`                              |    1 | `rgba(245, 158, 11, 0)`                                                                                                                                             |
 
 ### `fingers.css` — 208
 
@@ -1038,49 +1134,6 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.fingers-tb__chart`                      |    1 | `rgba(60, 50, 42, 0.1)`                                                                                                                                                      |
 | `.fingers-tb__chart-delta`                |    1 | `#c0561f`                                                                                                                                                                    |
 | `.fingers-tb__due`                        |    1 | `#c0561f`                                                                                                                                                                    |
-
-### `720-predictive-insights.css` — 147
-
-| семейство                                  | мест | литералы                                                                                                                                                                   |
-| ------------------------------------------ | ---: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.metabolic-quick-status__badge`           |   15 | `#fed7aa`, `#fdba74`, `#9a3412`, `rgba(234, 88, 12, 0.2)`, `#fef3c7`, `#fde68a`, … (+7)                                                                                    |
-| `.dark`                                    |   12 | `rgba(251, 146, 60, 0.3)`, `rgba(234, 88, 12, 0.4)`, `#fed7aa`, `#78350f`, `#92400e`, `rgba(245, 158, 11, 0.2)`, … (+6)                                                    |
-| `.insights-ring-mini`                      |   11 | `rgba(251, 191, 36, 0.15)`, `rgba(245, 158, 11, 0.2)`, `rgba(245, 158, 11, 0.3)`, `rgba(251, 146, 60, 0.15)`, `rgba(249, 115, 22, 0.2)`, `rgba(249, 115, 22, 0.3)`, … (+5) |
-| `.insights-tab__score-interpretation`      |    8 | `rgba(234, 179, 8, 0.10)`, `#854d0e`, `rgba(234, 179, 8, 0.25)`, `rgba(249, 115, 22, 0.10)`, `#9a3412`, `rgba(249, 115, 22, 0.30)`, … (+2)                                 |
-| `.meal-timing-v2__sleep`                   |    8 | `#fef3c7`, `#fde68a`, `rgba(245, 158, 11, 0.2)`, `#b45309`, `rgba(234, 179, 8, 0.15)`, `rgba(245, 158, 11, 0.25)`, … (+1)                                                  |
-| `.early-warning-badge`                     |    6 | `rgba(249, 115, 22, 0.1)`, `#9a3412`, `rgba(249, 115, 22, 0.3)`, `rgba(249, 115, 22, 0.15)`, `#fdba74`, `rgba(249, 115, 22, 0.4)`                                          |
-| `.pattern-debug-modal__contribution-badge` |    6 | `#b45309`, `rgba(245, 158, 11, 0.14)`, `rgba(245, 158, 11, 0.24)`, `#fcd34d`, `rgba(245, 158, 11, 0.22)`, `rgba(251, 191, 36, 0.34)`                                       |
-| `.pattern-debug-modal__preview-badge`      |    6 | `rgba(245, 158, 11, 0.35)`, `rgba(245, 158, 11, 0.12)`, `#b45309`, `rgba(251, 191, 36, 0.38)`, `rgba(245, 158, 11, 0.2)`, `#fcd34d`                                        |
-| `.insights-streaks`                        |    5 | `rgba(251, 146, 60, 0.08)`, `rgba(249, 115, 22, 0.04)`, `#fb923c`, `rgba(251, 146, 60, 0.15)`, `rgba(249, 115, 22, 0.08)`                                                  |
-| `.insights-tab__section`                   |    5 | `#f59e0b`, `rgba(245, 158, 11, 0.04)`, `rgba(245, 158, 11, 0.03)`, `rgba(245, 158, 11, 0.06)`                                                                              |
-| `.meal-rec-card__macro-chip`               |    5 | `#f59e0b`, `rgba(245, 158, 11, 0.08)`, `#d97706`, `rgba(245, 158, 11, 0.15)`                                                                                               |
-| `.meal-timing-v2__header-icon`             |    5 | `#fef3c7`, `#fde68a`, `rgba(251, 191, 36, 0.25)`, `#78350f`, `#92400e`                                                                                                     |
-| `.pattern-debug-modal__reason`             |    5 | `rgba(217, 119, 6, 0.06)`, `#d97706`, `rgba(217, 119, 6, 0.12)`, `rgba(245, 158, 11, 0.1)`, `rgba(245, 158, 11, 0.15)`                                                     |
-| `.early-warning-card`                      |    4 | `#f97316`, `#ea580c`, `#fb923c`                                                                                                                                            |
-| `.info-modal__debug`                       |    4 | `rgba(245, 158, 11, 0.1)`, `#92400e`, `#fcd34d`                                                                                                                            |
-| `.risk-traffic-light__light`               |    4 | `rgba(245, 158, 11, 0.2)`, `#f59e0b`, `rgba(245, 158, 11, 0.5)`                                                                                                            |
-| `.insights-monthly-wrap__highlight`        |    3 | `rgba(245, 158, 11, 0.08)`, `#f59e0b`, `rgba(245, 158, 11, 0.15)`                                                                                                          |
-| `.meal-timing-v2__priority-badge`          |    3 | `#d97706`, `#fef3c7`, `#fde68a`                                                                                                                                            |
-| `.weekly-wrap-card__achievement`           |    3 | `rgba(251, 191, 36, 0.2)`, `rgba(245, 158, 11, 0.2)`, `rgba(245, 158, 11, 0.3)`                                                                                            |
-| `.early-warning-card__cta`                 |    2 | `#ea580c`, `#fb923c`                                                                                                                                                       |
-| `.early-warning-card__title`               |    2 | `#c2410c`, `#fdba74`                                                                                                                                                       |
-| `.info-modal__section`                     |    2 | `#f59e0b`, `rgba(245, 158, 11, 0.15)`                                                                                                                                      |
-| `.insights-metabolism-card__quality`       |    2 | `rgba(234, 179, 8, 0.15)`, `#ca8a04`                                                                                                                                       |
-| `.insights-streak__count`                  |    2 | `#ea580c`, `#fb923c`                                                                                                                                                       |
-| `.insights-tab`                            |    2 | `#23201b`                                                                                                                                                                  |
-| `.insights-wrap__effect-badge`             |    2 | `rgba(245, 158, 11, 0.15)`, `#d97706`                                                                                                                                      |
-| `.meal-timing-card`                        |    2 | `rgba(245, 158, 11, 0.08)`, `rgba(245, 158, 11, 0.2)`                                                                                                                      |
-| `.risk-traffic-light`                      |    2 | `rgba(245, 158, 11, 0.05)`, `rgba(245, 158, 11, 0.1)`                                                                                                                      |
-| `.whatif-scenarios-panel__warning`         |    2 | `rgba(245, 158, 11, 0.1)`, `#f59e0b`                                                                                                                                       |
-| `--insights-activity`                      |    1 | `#f59e0b`                                                                                                                                                                  |
-| `.insights-pattern__icon`                  |    1 | `rgba(245, 158, 11, 0.15)`                                                                                                                                                 |
-| `.insights-priority-action`                |    1 | `#f59e0b`                                                                                                                                                                  |
-| `.insights-ring-card`                      |    1 | `#f59e0b`                                                                                                                                                                  |
-| `.metabolic-quick-status__light`           |    1 | `rgba(234, 179, 8, 0.5)`                                                                                                                                                   |
-| `.pattern-debug-modal__score`              |    1 | `#d97706`                                                                                                                                                                  |
-| `.phenotype-panel__confidence`             |    1 | `#f59e0b`                                                                                                                                                                  |
-| `.phenotype-panel__warning`                |    1 | `#f59e0b`                                                                                                                                                                  |
-| `.weekly-wrap-card__achievement-label`     |    1 | `#92400e`                                                                                                                                                                  |
 
 ### `200-dark-and-effects.css` — 115
 
@@ -1266,19 +1319,6 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.messenger-offline-bar__dot`     |    1 | `#c9ae7a`                                             |
 | `.messenger-subtitle__dot`        |    1 | `#c9ae7a`                                             |
 | `.msg-row`                        |    1 | `rgba(255, 240, 201, 0.9)`                            |
-
-### `740-cascade-card.css` — 28
-
-| семейство                     | мест | литералы                                                                                                                                                                       |
-| ----------------------------- | ---: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--cascade-tone-overlay`      |    8 | `rgba(245, 158, 11, 0.24)`, `rgba(245, 158, 11, 0.11)`, `rgba(245, 158, 11, 0.05)`, `rgba(245, 158, 11, 0.02)`, `rgba(245, 158, 11, 0.30)`, `rgba(245, 158, 11, 0.15)`, … (+1) |
-| `.cascade-dot`                |    8 | `#f97316`, `#facc15`, `#f59e0b`, `#d97706`, `#b45309`                                                                                                                          |
-| `.cascade-card__hint`         |    3 | `rgba(245, 158, 11, 0.08)`, `#b45309`                                                                                                                                          |
-| `.cascade-timeline-row`       |    3 | `rgba(245, 158, 11, 0.12)`, `#b45309`, `rgba(245, 158, 11, 0.18)`                                                                                                              |
-| `.cascade-card__breaks-info`  |    2 | `rgba(245, 158, 11, 0.07)`, `rgba(245, 158, 11, 0.1)`                                                                                                                          |
-| `.cascade-dot-connector`      |    2 | `#fbbf24`, `#b45309`                                                                                                                                                           |
-| `.cascade-card__breaks-label` |    1 | `#b45309`                                                                                                                                                                      |
-| `.cascade-timeline-weight`    |    1 | `#b45309`                                                                                                                                                                      |
 
 ### `750-strength-builder.css` — 23
 
