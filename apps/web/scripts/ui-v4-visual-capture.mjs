@@ -203,7 +203,22 @@ async function installDeterminism(context, item, snapshot) {
     {
       fixedEpoch: UI_V4_VISUAL_CLOCK.epochMs,
       demoTab: item.kind === 'login' ? null : item.tab || 'widgets',
-      profile: item.kind === 'login' ? null : snapshot.lsKeys.heys_profile,
+      profile: item.kind === 'login'
+        ? null
+        : item.kind === 'demo-registration'
+          ? {
+              ...snapshot.lsKeys.heys_profile,
+              name: '',
+              firstName: '',
+              lastName: '',
+              displayName: '',
+              gender: '',
+              age: 25,
+              birthDate: '2001-01-01',
+              profileCompleted: false,
+              cycleTrackingEnabled: false,
+            }
+          : snapshot.lsKeys.heys_profile,
       themeId: item.themeId || null,
     },
   );
@@ -300,9 +315,13 @@ async function openCase(browser, item, snapshot) {
       await page.waitForFunction(() => localStorage.getItem('heys_profile') !== null, undefined, {
         timeout: 45_000,
       });
-      await page.evaluate(() => {
+      await page.evaluate(({ stubGamificationMerge }) => {
         window.HEYS = window.HEYS || {};
         window.HEYS.currentClientId = 'demo-client-female';
+        if (stubGamificationMerge) {
+          window.HEYS.YandexAPI = window.HEYS.YandexAPI || {};
+          window.HEYS.YandexAPI.mergeSaveKV = async () => ({ success: true });
+        }
         const rawProfile = localStorage.getItem('heys_profile');
         if (rawProfile && window.HEYS?.store?.set) {
           window.HEYS.store.set('heys_profile', JSON.parse(rawProfile));
@@ -315,7 +334,7 @@ async function openCase(browser, item, snapshot) {
           }),
         );
         window.__heysLoadingProgress?.forceHide?.();
-      });
+      }, { stubGamificationMerge: item.kind === 'demo-registration' });
       const tabLabels = { widgets: 'Главная', diary: 'Питание' };
       const tabLabel = tabLabels[item.tab];
       if (tabLabel) {
@@ -1339,6 +1358,8 @@ async function openCase(browser, item, snapshot) {
         { timeout: 45_000 },
       );
       await page.evaluate(() => {
+        // Diagnostic replay must not mark the fixture client as partially registered.
+        window.HEYS._registrationReplay = true;
         window.HEYS.MorningCheckinUtils.openRegistrationReplayWizard();
       });
     }
@@ -1361,6 +1382,46 @@ async function openCase(browser, item, snapshot) {
     }
     await page.locator(item.rootSelector).first().waitFor({ state: 'visible', timeout: 45_000 });
     let visualChecks = null;
+    if (item.kind === 'demo-registration') {
+      visualChecks = await page.evaluate(() => {
+        const rect = (selector) => {
+          const node = document.querySelector(selector);
+          if (!node) return null;
+          const box = node.getBoundingClientRect();
+          return {
+            x: Math.round(box.x * 100) / 100,
+            y: Math.round(box.y * 100) / 100,
+            width: Math.round(box.width * 100) / 100,
+            height: Math.round(box.height * 100) / 100,
+          };
+        };
+        const firstInput = document.querySelector('.profile-personal-step input[autocomplete="given-name"]');
+        const firstInputStyle = firstInput ? getComputedStyle(firstInput) : null;
+        return {
+          modal: rect('.mc-modal[data-heys-step-id="profile-personal"]'),
+          header: rect('.mc-modal[data-heys-step-id="profile-personal"] .mc-header--nav'),
+          content: rect('.mc-step-content[data-heys-step-id="profile-personal"]'),
+          title: rect('.profile-personal-step > div:first-child'),
+          firstInput: rect('.profile-personal-step input[autocomplete="given-name"]'),
+          firstInputStyle: firstInputStyle ? {
+            height: firstInputStyle.height,
+            minHeight: firstInputStyle.minHeight,
+            padding: firstInputStyle.padding,
+            boxSizing: firstInputStyle.boxSizing,
+            font: firstInputStyle.font,
+          } : null,
+          familyInput: rect('.profile-personal-step input[autocomplete="family-name"]'),
+          wheel: rect('.profile-personal-wheel-card'),
+          age: rect('.profile-personal-age'),
+          footer: rect('.mc-modal[data-heys-step-id="profile-personal"] .mc-daily-footer'),
+          primary: rect('.mc-modal[data-heys-step-id="profile-personal"] .mc-daily-footer-primary'),
+          registrationMarker: localStorage.getItem('heys_registration_in_progress'),
+        };
+      });
+      if (visualChecks.registrationMarker !== null) {
+        throw new Error('Registration visual fixture wrote heys_registration_in_progress');
+      }
+    }
     if (item.kind === 'demo-food-copy-empty') {
       visualChecks = await page.evaluate(() => {
         const label = document.querySelector('[data-copy-meal-target-label="new-meal"]');
@@ -1423,6 +1484,13 @@ async function openCase(browser, item, snapshot) {
     } else {
       await page.screenshot({ path: file, fullPage: false });
     }
+    const allowedConsoleErrors = item.allowedConsoleErrors || [];
+    const ignoredConsoleErrors = consoleErrors.filter((message) =>
+      allowedConsoleErrors.some((fragment) => message.includes(fragment)),
+    );
+    const evidenceConsoleErrors = consoleErrors.filter((message) =>
+      !allowedConsoleErrors.some((fragment) => message.includes(fragment)),
+    );
     return {
       id: item.id,
       zone: item.zone,
@@ -1432,6 +1500,8 @@ async function openCase(browser, item, snapshot) {
       visualChecks,
       fontState,
       consoleErrors,
+      ignoredConsoleErrors,
+      evidenceConsoleErrors,
     };
   } catch (error) {
     const failureFile = path.join(OUT_DIR, `${item.id}.failed.png`);
@@ -1531,6 +1601,35 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
       );
     }
     await frame.waitFor({ state: 'visible', timeout: 45_000 });
+    const visualChecks = item.kind === 'demo-registration'
+      ? await frame.evaluate((node) => {
+          const frameBox = node.getBoundingClientRect();
+          const relativeRect = (target) => {
+            if (!target) return null;
+            const box = target.getBoundingClientRect();
+            return {
+              x: Math.round((box.x - frameBox.x) * 100) / 100,
+              y: Math.round((box.y - frameBox.y) * 100) / 100,
+              width: Math.round(box.width * 100) / 100,
+              height: Math.round(box.height * 100) / 100,
+            };
+          };
+          const content = node.querySelector('.sc');
+          const children = content ? [...content.children] : [];
+          return {
+            modal: relativeRect(node),
+            header: relativeRect(node.querySelector('.top')),
+            content: relativeRect(content),
+            title: relativeRect(children[0]),
+            firstInput: relativeRect(children[1]?.querySelector('.fld')),
+            familyInput: relativeRect(children[2]?.querySelector('.fld')),
+            wheel: relativeRect(children[5]),
+            age: relativeRect(children[6]),
+            footer: relativeRect(node.querySelector('.foot')),
+            primary: relativeRect(node.querySelector('.foot .btn')),
+          };
+        })
+      : null;
     const file = path.join(OUT_DIR, `${item.id}.canvas.png`);
     if (item.canvasFrame.captureSelector) {
       const boundary = frame.locator(item.canvasFrame.captureSelector);
@@ -1549,6 +1648,7 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
       file: path.relative(ROOT, file).replaceAll('\\', '/'),
       source: path.relative(ROOT, canvasPath).replaceAll('\\', '/'),
       frame: item.canvasFrame,
+      visualChecks,
       fontState,
       consoleErrors,
     };
@@ -1684,7 +1784,7 @@ async function main() {
               result.fontState?.figtree &&
               result.canvas.fontState?.ready &&
               result.canvas.fontState?.figtree &&
-              result.consoleErrors.length === 0 &&
+              result.evidenceConsoleErrors.length === 0 &&
               result.canvas.consoleErrors.length === 0,
           );
           if (!result.evidenceReady) {

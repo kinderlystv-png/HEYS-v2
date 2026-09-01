@@ -185,6 +185,8 @@ describe('registration canvas parity', () => {
       expect(steps['profile-personal'].getValidationMessage({ firstName: 'Александра' }))
         .toBe('Остался пол');
       expect(steps['profile-personal'].getValidationMessage({ firstName: '' }))
+        .toBe('');
+      expect(steps['profile-personal'].getValidationMessage({ firstName: '', gender: 'Женский' }))
         .toBe('Осталось имя');
       expect(steps['profile-personal'].getValidationMessage({ firstName: '1', gender: 'Женский', birthDay: 1, birthMonth: 1, birthYear: 2001 }))
         .toBe('');

@@ -131,7 +131,16 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     gate: 'diagnostic',
     kind: 'demo-registration',
     tab: 'widgets',
+    themeId: 'sand',
+    viewport: { width: 399, height: 731 },
     rootSelector: '.mc-modal[data-heys-step-id="profile-personal"]',
+    captureSelector: '.mc-modal[data-heys-step-id="profile-personal"]',
+    canvasFrame: {
+      file: 'registration.v4.dc.html',
+      label: 'Регистрация · персональные данные',
+      oid: 'REG1',
+      palette: 'sand',
+    },
   },
   {
     id: 'curator-edits-default',

@@ -542,7 +542,7 @@
     const monthValues = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], []);
     const yearValues = useMemo(() => {
       const years = [];
-      for (let y = minAdultBirthYear(); y >= 1940; y--) years.push(y);
+      for (let y = 1940; y <= minAdultBirthYear(); y++) years.push(y);
       return years;
     }, [currentYear]);
 
@@ -557,16 +557,11 @@
     let lastNameNode = null;
 
     // «вид шага»: поля экрана общие для слоя (.mc-step-content 18px) — свой p-4/p-3 давал 34px по бокам
-    return React.createElement('div', { className: 'flex flex-col gap-4' },
+    return React.createElement('div', { className: 'profile-personal-step flex flex-col gap-4' },
       React.createElement('div', {
         style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
       }, 'Расскажите о себе'),
-      // Строка «пояснение под заголовком шага»: 12 px/500 тоном чернил 55 %
-      // через 9 под заголовком, дословно эта фраза. Стояло 8 и вес по умолчанию.
-      React.createElement('div', {
-        style: { fontSize: 12, fontWeight: 500, color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 9 }
-      }, 'Имя увидит только ваш куратор'),
-      React.createElement('div', { className: 'flex flex-col gap-2', style: { marginTop: 16 } },
+      React.createElement('div', { className: 'profile-personal-name flex flex-col gap-2' },
         React.createElement('label', { className: 'text-sm font-medium', style: { color: 'rgba(0,0,0,.7)' } },
           'Имя ',
           React.createElement('span', { style: { color: '#8a4a20' } }, '*')
@@ -609,7 +604,7 @@
           style: { fontSize: 11, fontWeight: 500, lineHeight: 1.5, marginTop: 5, color: INK_DATA }
         }, 'Куратор обращается к вам по имени, поэтому оно должно читаться.')
       ),
-      React.createElement('div', { className: 'flex flex-col gap-2' },
+      React.createElement('div', { className: 'profile-personal-family flex flex-col gap-2' },
         React.createElement('label', { className: 'text-sm', style: { color: 'rgba(0,0,0,.42)' } },
           'Фамилия ',
           React.createElement('span', { style: { fontWeight: 500 } }, '· необязательно')
@@ -641,7 +636,7 @@
           }
         })
       ),
-      React.createElement('div', { className: 'flex flex-col gap-2' },
+      React.createElement('div', { className: 'profile-personal-gender flex flex-col gap-2' },
         React.createElement('label', { className: 'text-sm font-medium', style: { color: 'rgba(0,0,0,.7)' } },
           'Пол ',
           React.createElement('span', { style: { color: '#8a4a20' } }, '*')
@@ -675,39 +670,16 @@
       ),
 
       // Дата рождения (WheelPickers v2)
-      React.createElement('div', { className: 'flex flex-col gap-3' },
+      React.createElement('div', { className: 'profile-personal-birth flex flex-col' },
         React.createElement('div', { className: 'flex items-center justify-between' },
           React.createElement('label', { className: 'text-sm font-medium', style: { color: 'rgba(0,0,0,.7)' } },
             'Дата рождения ',
             React.createElement('span', { style: { color: '#8a4a20' } }, '*')
           )
         ),
-        // «вид шага профиля»: герой 44/600 тоном --ac с единицей 12/600 ink38
-        // по baseline — и он стоит НАД капсулой колёс. Кадр канваса рисует
-        // возраст 24/700 под капсулой; контракт старше кадра (отступление
-        // названо в протоколе экрана).
-        React.createElement('div', {
-          style: {
-            display: 'flex', alignItems: 'baseline', justifyContent: 'center',
-            gap: 6, marginTop: 8
-          }
-        },
-          React.createElement('span', {
-            style: {
-              font: '600 44px/1 Figtree, system-ui, sans-serif',
-              color: under18 ? '#a1471c' : '#8a4a20'
-            }
-          }, String(age)),
-          React.createElement('span', {
-            style: {
-              font: '600 12px/1 Figtree, system-ui, sans-serif',
-              color: 'rgba(0,0,0,.38)'
-            }
-          }, 'лет')
-        ),
         // WheelPickers: День / Месяц / Год
         WheelPicker ? React.createElement('div', {
-          className: 'flex justify-center gap-2',
+          className: 'profile-personal-wheel-card flex justify-center gap-2',
           style: { background: '#f7efe2', borderRadius: 18, padding: '12px 10px 13px', marginTop: 8 }
         },
           // День
@@ -717,7 +689,8 @@
             onChange: (v) => onChange({ ...data, birthDay: v }),
             label: 'день',
             formatValue: pad2,
-            wrap: true
+            wrap: true,
+            compact: true
           }),
           // Месяц
           React.createElement(WheelPicker, {
@@ -726,7 +699,8 @@
             onChange: (v) => onChange({ ...data, birthMonth: v }),
             label: 'месяц',
             formatValue: formatMonth,
-            wrap: true
+            wrap: true,
+            compact: true
           }),
           // Год
           React.createElement(WheelPicker, {
@@ -734,7 +708,8 @@
             value: birthYear,
             onChange: (v) => onChange({ ...data, birthYear: v }),
             label: 'год',
-            wrap: false
+            wrap: false,
+            compact: true
           })
         ) : React.createElement('input', {
           type: 'date',
@@ -758,6 +733,15 @@
             color: '#201e1d',
           }
         }),
+        React.createElement('div', {
+          className: 'profile-personal-age',
+          style: {
+            textAlign: 'center',
+            font: '700 24px/1 Figtree, system-ui, sans-serif',
+            color: under18 ? '#a1471c' : '#8a4a20',
+            marginTop: 14,
+          },
+        }, `${age} лет`),
         // Кадр «возраст меньше 18»: плашка --tint радиусом 16 с полями 12/14
         // через 12, заголовок 700 12/1,4 тоном --ac2, объяснение 500 11,5/1,55
         // чернилами 55 % через 5. Та же форма, что у плашки «ниже нормы».
@@ -854,6 +838,7 @@
     },
     getValidationMessage: (data) => {
       const nameText = String(data.firstName || '').trim();
+      if (!nameText && !data.gender) return '';
       if (!nameText) return 'Осталось имя';
       if (!isValidGivenName(nameText)) return '';
       if (!data.gender) return 'Остался пол';

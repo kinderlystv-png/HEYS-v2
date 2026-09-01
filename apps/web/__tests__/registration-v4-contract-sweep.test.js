@@ -92,25 +92,24 @@ describe('registration · сведение с контрактом v4', () => {
     expect(weeks(undefined)).toBe(weeks('light'));
   });
 
-  it('«вид шага профиля» — герой 44/600 --ac с единицей стоит НАД капсулой колёс', () => {
+  it('«персональные данные» — возраст 24/700 --ac стоит ПОД компактным колесом', () => {
     const { steps } = loadProfileSteps(createMockStorage({ heys_profile: '{}' }));
     const tree = steps['profile-personal'].component({
       data: { firstName: 'Александра', lastName: '', gender: 'Женский', birthDay: 1, birthMonth: 1, birthYear: 2001 },
       onChange: vi.fn(),
     });
     const nodes = flatten(tree);
-    const heroIndex = nodes.findIndex((n) => String(n.props?.style?.font || '').startsWith('600 44px'));
-    const unitIndex = nodes.findIndex((n) => String(n.props?.style?.font || '').startsWith('600 12px')
-      && n.props?.style?.color === 'rgba(0,0,0,.38)');
+    const ageIndex = nodes.findIndex((n) => String(n.props?.style?.font || '').startsWith('700 24px'));
     const capsuleIndex = nodes.findIndex((n) => n.props?.style?.borderRadius === 18
       && n.props?.style?.padding === '12px 10px 13px');
+    const compactWheels = nodes.filter((n) => n.type === window.HEYS.StepModal.WheelPicker
+      && n.props?.compact === true);
 
-    expect(heroIndex).toBeGreaterThan(-1);
-    expect(unitIndex).toBeGreaterThan(heroIndex);
-    expect(capsuleIndex).toBeGreaterThan(unitIndex);
-    expect(nodes[heroIndex].props.style.color).toBe('#8a4a20');
-    // Старого 24/700 под колёсами больше нет.
-    expect(PROFILE_SRC).not.toContain("style: { fontSize: 24, color: under18 ? '#a1471c' : '#8a4a20', marginTop: 14 }");
+    expect(capsuleIndex).toBeGreaterThan(-1);
+    expect(ageIndex).toBeGreaterThan(capsuleIndex);
+    expect(nodes[ageIndex].props.style.color).toBe('#8a4a20');
+    expect(nodes[ageIndex].children).toContain('25 лет');
+    expect(compactWheels).toHaveLength(3);
   });
 
   // Строка «герой» (12-я сборка): «герой есть только на первом шаге профиля —
@@ -138,9 +137,10 @@ describe('registration · сведение с контрактом v4', () => {
     const step3 = render('profile-goals', { goalDirection: 'lose', deficitPctTarget: -15, activityLevel: 'light' });
     const step4 = render('profile-metabolism', { sleepHours: 8, insulinWaveHours: 3 });
 
-    // Шаг 1: герой 44 и единственный — второго крупного числа на экране нет.
-    expect(sizes(step1).filter((size) => size === 44).length).toBe(1);
-    expect(Math.max(...sizes(step1))).toBe(44);
+    // Шаг 1: возраст остаётся единственным акцентным числом, но следует кадру
+    // 24/700 под колесом, а не устаревшей строке 44/600 над ним.
+    expect(sizes(step1).filter((size) => size === 24).length).toBe(1);
+    expect(Math.max(...sizes(step1))).toBe(24);
 
     // Шаги 2–4: выше заголовка 20 px ничего не поднимается. Пустой список
     // кеглей засчитался бы как «прошло», поэтому он проверяется отдельно —
