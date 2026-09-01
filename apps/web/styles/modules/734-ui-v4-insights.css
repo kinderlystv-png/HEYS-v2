@@ -1425,6 +1425,204 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+/* «Инсайты · что если»: inline-сценарий живёт внутри второго слоя, а не
+   открывает ещё одну модалку. Геометрия следует актуальному HTML-кадру:
+   шапка 16/18, общий chip 44, карточка c2/r22/p18, результат 22/800. */
+.insights-v4-whatif__inline {
+  min-width: 0;
+  /* Detail content already owns 16 px screen gutters. Pull to that edge, then
+     let the frame's head/scroll apply their own 18 px fields: the resulting
+     screen gutter is 18, not an accidental 34. */
+  margin-inline: -16px;
+}
+
+.insights-v4-whatif__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 16px 18px 0;
+}
+
+.insights-v4-whatif__title {
+  margin: 0;
+  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.insights-v4-whatif__place {
+  font: 500 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.insights-v4-whatif__scroll {
+  min-width: 0;
+  overflow: visible;
+  padding: 6px 18px 16px;
+}
+
+.insights-v4-whatif__chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.insights-v4-whatif__chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v4-surface, #f7efe2);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.insights-v4-whatif__chip.is-active {
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
+}
+
+.insights-v4-whatif__chip:focus-visible,
+.insights-v4-whatif__action:focus-visible {
+  outline: 2px solid var(--v4-act, #c67139);
+  outline-offset: 2px;
+}
+
+.insights-v4-whatif__scenario {
+  margin-top: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--v4-hero, #efe3cf);
+}
+
+.insights-v4-whatif__scenario-title {
+  font: 700 13.5px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.insights-v4-whatif__parameter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.insights-v4-whatif__parameter-value {
+  flex: none;
+  max-width: 48%;
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.insights-v4-whatif__parameter-track {
+  flex: 1;
+  min-width: 56px;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--v4-ink, #201e1d) 10%, transparent);
+}
+
+.insights-v4-whatif__parameter-fill {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--v4-act, #c67139);
+}
+
+.insights-v4-whatif__score {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.insights-v4-whatif__score-label {
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.insights-v4-whatif__score-before,
+.insights-v4-whatif__score-after {
+  font: 800 22px/1 Figtree, system-ui, sans-serif;
+}
+
+.insights-v4-whatif__score-before {
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.insights-v4-whatif__score-arrow {
+  font: 600 13px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.insights-v4-whatif__score-after {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.insights-v4-whatif__score-delta {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--v4-ok-bg, #eaefe0);
+  color: var(--v4-ok-text, #5c6a45);
+  font: 700 10px/1 ui-monospace, Menlo, monospace;
+}
+
+.insights-v4-whatif__score-delta.is-negative {
+  background: var(--v4-bad-bg, #f2ddd1);
+  color: var(--v4-bad-text, #9b4635);
+}
+
+.insights-v4-whatif__unavailable {
+  margin: 16px 0 0;
+  font: 600 11px/1.45 Figtree, system-ui, sans-serif;
+  color: var(--v4-bad-text, #9b4635);
+}
+
+.insights-v4-whatif__actions {
+  margin-top: 10px;
+  padding: 2px 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.insights-v4-whatif__action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 0;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 7%, transparent);
+  background: transparent;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.insights-v4-whatif__action.is-last {
+  border-bottom: 0;
+}
+
+.insights-v4-whatif__chevron {
+  flex: none;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.3));
+}
+
+.insights-v4-whatif__explanation {
+  margin: 12px 0 0;
+  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  text-wrap: pretty;
+}
+
 .insights-v4-attention__sheet-link {
   margin-top: 8px;
   padding: 0;

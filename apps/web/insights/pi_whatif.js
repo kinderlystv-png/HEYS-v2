@@ -271,9 +271,12 @@
      * @param {object[]} days - Historical days
      * @param {object} profile
      * @param {object} pIndex
+     * @param {object} [context] - Optional current analysis. When patterns are
+     * supplied, the simulator must use only their observed scores and never
+     * substitute the legacy moderate baseline.
      * @returns {object} - Simulation result with predictions
      */
-    function simulateAction(actionType, actionParams, days, profile, pIndex) {
+    function simulateAction(actionType, actionParams, days, profile, pIndex, context) {
         console.info('[WhatIf] 🔮 simulateAction called:', {
             actionType,
             actionParams,
@@ -297,8 +300,30 @@
             return { available: false, error: 'No impact rules for action' };
         }
 
-        // 1. Get current pattern scores (baseline) — real 0-100 scores
-        const baseline = collectBaselineScores(days, profile, pIndex);
+        // 1. Get current pattern scores (baseline) — real 0-100 scores.
+        // The v4 inline flow passes the already calculated analysis here. This
+        // fail-closed path is intentionally separate from the legacy fallback:
+        // a user-facing «было → станет» pair cannot be built from defaults.
+        const requireObserved = context?.requireObserved === true;
+        const providedPatterns = Array.isArray(context?.patterns) ? context.patterns : null;
+        if (requireObserved && !providedPatterns) {
+            return {
+                available: false,
+                error: 'Подтверждённые паттерны для сценария недоступны',
+                reasonCode: 'observed_patterns_missing'
+            };
+        }
+        const baseline = providedPatterns
+            ? collectProvidedBaselineScores(providedPatterns)
+            : collectBaselineScores(days, profile, pIndex);
+
+        if (providedPatterns && Object.keys(baseline).length === 0) {
+            return {
+                available: false,
+                error: 'Недостаточно подтверждённых паттернов для сценария',
+                reasonCode: 'insufficient_observed_patterns'
+            };
+        }
 
         // 2. Calculate coefficient from action params
         const coeff = typeof rules.coeff === 'function' ? rules.coeff(actionParams || {}) : 1.0;
@@ -359,6 +384,14 @@
         // Sort by absolute delta descending
         impact.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 
+        if (providedPatterns && impact.length === 0) {
+            return {
+                available: false,
+                error: 'Для этого сценария пока нет подтверждённых паттернов',
+                reasonCode: 'scenario_patterns_unavailable'
+            };
+        }
+
         const result = {
             available: true,
             actionType,
@@ -381,6 +414,20 @@
         });
 
         return result;
+    }
+
+    /**
+     * Build a strict baseline from the analysis already shown on screen.
+     * Unavailable and non-numeric patterns stay unavailable; no replacement
+     * score is invented for them.
+     * @private
+     */
+    function collectProvidedBaselineScores(patterns) {
+        return patterns.reduce((scores, pattern) => {
+            if (!pattern?.available || !Number.isFinite(Number(pattern.score))) return scores;
+            scores[pattern.pattern] = Number(pattern.score);
+            return scores;
+        }, {});
     }
 
     /**

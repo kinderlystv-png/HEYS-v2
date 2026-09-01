@@ -3441,18 +3441,18 @@
                   );
                 })
               ),
-              // Контракт «что если»: порог 14 дней; сдвигается «Оценка дня» из
-              // паттернов, не HEYS Score. До порога — счётчик, не сценарии.
+              // Контракт «что если»: порог 14 дней; сценарий двигает оценку дня из паттернов, а не HEYS Score.
+              // До порога — счётчик, не сценарии.
               h('div', { className: 'insights-v4-whatif' },
-                h('div', { className: 'insights-v4-tier' }, 'Что если…'),
                 historyDaysWithData >= 14
-                  ? h(React.Fragment, null,
-                    HEYS.InsightsPI?.WhatIfScenariosCard && h(HEYS.InsightsPI.WhatIfScenariosCard, {
-                      onClick: function () { setShowWhatIfScenarios(true); }
-                    }),
-                    h('p', { className: 'insights-v4-whatif__note' },
-                      'Сценарий двигает оценку дня из паттернов, а не HEYS Score — каскад за 30 дней один приём не сдвинет.')
-                  )
+                  ? HEYS.InsightsPI?.WhatIfScenariosInline && h(HEYS.InsightsPI.WhatIfScenariosInline, {
+                    lsGet: lsGet || (window.HEYS?.utils?.lsGet),
+                    profile: effectiveData.profile,
+                    pIndex: effectiveData.pIndex,
+                    patterns: insights.patterns,
+                    currentScore: insights.healthScore?.total,
+                    historyDays: historyDaysWithData
+                  })
                   : h('p', { className: 'insights-v4-whatif__locked' },
                     'Откроется через ' + Math.max(1, 14 - historyDaysWithData) + ' ' + pluralDaysWord(Math.max(1, 14 - historyDaysWithData)) + ' — сценарий на коротких данных был бы гаданием.')
               ),
@@ -3482,12 +3482,6 @@
                 + 'данным — трогать их не нужно.')
             )
           ),
-          showWhatIfScenarios && HEYS.InsightsPI?.WhatIfScenariosPanel && h(HEYS.InsightsPI.WhatIfScenariosPanel, {
-            onClose: function () { setShowWhatIfScenarios(false); },
-            lsGet: lsGet || (window.HEYS?.utils?.lsGet),
-            profile: effectiveData.profile,
-            pIndex: effectiveData.pIndex
-          }),
           showPatternDebug && window.PatternDebugModal && h(window.PatternDebugModal, {
             lsGet: lsGet || (window.HEYS?.utils?.lsGet),
             profile: effectiveData.profile,

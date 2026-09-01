@@ -315,6 +315,57 @@ async function openCase(browser, item, snapshot) {
       await openPicker.waitFor({ state: 'visible', timeout: 45_000 });
       await openPicker.click();
     }
+    if (item.kind === 'demo-reports-whatif-inline') {
+      await page.waitForFunction(
+        () =>
+          !!window.React &&
+          !!window.ReactDOM?.createRoot &&
+          typeof window.HEYS?.InsightsPI?.WhatIfScenariosInline === 'function' &&
+          typeof window.HEYS?.InsightsPI?.whatif?.simulate === 'function' &&
+          typeof window.HEYS?.PredictiveInsights?.calculateHealthScore === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const patterns = [
+          { pattern: 'protein_satiety', available: true, score: 50 },
+          { pattern: 'meal_quality', available: true, score: 60 },
+          { pattern: 'protein_distribution', available: true, score: 55 },
+          { pattern: 'nutrition_quality', available: true, score: 65 },
+          { pattern: 'training_recovery', available: true, score: 58 },
+          { pattern: 'nutrient_density', available: true, score: 62 },
+        ];
+        let host = document.getElementById('ui-v4-reports-whatif-host');
+        if (!host) {
+          host = document.createElement('main');
+          host.id = 'ui-v4-reports-whatif-host';
+          Object.assign(host.style, {
+            position: 'fixed',
+            inset: '0',
+            zIndex: '20000',
+            overflow: 'auto',
+            padding: '24px 16px',
+            background: 'var(--v4-bg, #fffaf3)',
+          });
+          document.body.appendChild(host);
+        }
+        window.HEYS.InsightsPI.calculations = window.HEYS.InsightsPI.calculations || {};
+        window.HEYS.InsightsPI.calculations.getDaysData = () =>
+          Array.from({ length: 14 }, (_, index) => ({ date: `2026-08-${String(index + 1).padStart(2, '0')}` }));
+        const element = window.React.createElement(window.HEYS.InsightsPI.WhatIfScenariosInline, {
+          lsGet: () => ({}),
+          profile: {},
+          pIndex: {},
+          patterns,
+          currentScore: 58,
+          historyDays: 14,
+        });
+        window.__uiV4ReportsWhatIfRoot =
+          window.__uiV4ReportsWhatIfRoot || window.ReactDOM.createRoot(host);
+        window.__uiV4ReportsWhatIfRoot.render(element);
+      }, item.themeId || null);
+    }
     if (item.kind === 'demo-food-copy-empty') {
       await page.waitForFunction(
         () => typeof window.HEYS?.CopyMealModal?.show === 'function',

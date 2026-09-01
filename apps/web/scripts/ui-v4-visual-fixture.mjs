@@ -175,6 +175,16 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     viewport: { width: 375, height: 812 },
     rootSelector: '.move-modal.meal-transfer-v4__sheet--move',
   },
+  {
+    id: 'reports-whatif-inline-sand',
+    zone: 'reports-insights',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-reports-whatif-inline',
+    themeId: 'sand',
+    viewport: { width: 375, height: 812 },
+    rootSelector: '.insights-v4-whatif__inline',
+  },
   ...UI_V4_CANVAS_ZONES.filter(
     (zone) =>
       ![
@@ -188,6 +198,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
         'tips',
         'cycle',
         'food-meal',
+        'reports-insights',
       ].includes(zone),
   ).map((zone) => ({
     id: `${zone}-scenario-pending`,

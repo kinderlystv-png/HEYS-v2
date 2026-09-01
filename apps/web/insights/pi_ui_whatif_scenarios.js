@@ -40,7 +40,7 @@
             label: 'Добавить клетчатку',
             description: 'Увеличить клетчатку в рационе',
             params: [
-                { key: 'fiberGrams', label: 'Грамм клетчатки', type: 'number', min: 5, max: 40, default: 15, step: 5 },
+                { key: 'fiberGrams', label: 'Грамм клетчатки', type: 'number', min: 5, max: 40, default: 10, step: 5 },
                 { key: 'mealIndex', label: 'Приём пищи', type: 'select', options: ['Завтрак', 'Обед', 'Ужин'], default: 1 }
             ]
         },
@@ -128,6 +128,13 @@
         activity: { label: 'Активность' }
     };
 
+    const INLINE_ACTION_ORDER = {
+        meal: ['add_protein', 'reduce_carbs', 'add_fiber'],
+        timing: ['increase_meal_gap', 'shift_meal_time', 'skip_late_meal'],
+        sleep: ['increase_sleep', 'adjust_bedtime'],
+        activity: ['add_training', 'increase_steps']
+    };
+
     /**
      * Человеко-читаемые названия паттернов
      */
@@ -163,6 +170,242 @@
      */
     function getPatternLabel(patternKey) {
         return PATTERN_LABELS[patternKey] || patternKey.replace(/_/g, ' ');
+    }
+
+    function createDefaultParams(actionKey) {
+        const config = ACTION_CONFIG[actionKey];
+        return (config?.params || []).reduce((params, param) => {
+            params[param.key] = param.default;
+            return params;
+        }, {});
+    }
+
+    function formatNumber(value) {
+        return Number(value).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
+    }
+
+    function formatScenarioValue(actionKey, params) {
+        const mealNames = ['завтраку', 'обеду', 'ужину'];
+        switch (actionKey) {
+            case 'add_protein':
+                return '+' + formatNumber(params.proteinGrams) + ' г к ' + (mealNames[params.mealIndex] || 'приёму');
+            case 'add_fiber':
+                return '+' + formatNumber(params.fiberGrams) + ' г клетчатки';
+            case 'reduce_carbs':
+                return '−' + formatNumber(params.carbsPercent) + ' % быстрых углеводов';
+            case 'increase_meal_gap':
+                return 'промежуток ' + formatNumber(params.targetGapHours) + ' ч';
+            case 'shift_meal_time': {
+                const shift = Number(params.shiftMinutes) || 0;
+                return 'завтрак на ' + Math.abs(shift) + ' мин ' + (shift <= 0 ? 'раньше' : 'позже');
+            }
+            case 'skip_late_meal':
+                return 'убрать приём после 19:00';
+            case 'increase_sleep':
+                return 'сон ' + formatNumber(params.targetSleepHours) + ' ч';
+            case 'adjust_bedtime':
+                return 'отбой в ' + params.targetBedtime;
+            case 'add_training':
+                return 'тренировка ' + formatNumber(params.durationMinutes) + ' мин';
+            case 'increase_steps':
+                return formatNumber(params.targetSteps) + ' шагов';
+            default:
+                return ACTION_CONFIG[actionKey]?.description || '';
+        }
+    }
+
+    function getInlineActionLabel(actionKey) {
+        if (actionKey === 'add_fiber') return 'Клетчатка +10 г';
+        return ACTION_CONFIG[actionKey]?.label || actionKey;
+    }
+
+    function getScenarioProgress(actionKey, params) {
+        // Единственное зафиксированное canvas-значение: +30 г белка занимает
+        // 55 % полосы. Для остальных presets нормализуем их единственный
+        // числовой параметр по реальному диапазону engine-конфига.
+        if (actionKey === 'add_protein' && Number(params.proteinGrams) === 30) return 55;
+        const numeric = (ACTION_CONFIG[actionKey]?.params || []).find((param) => param.type === 'number');
+        if (!numeric) return 55;
+        const value = Number(params[numeric.key]);
+        return Math.max(0, Math.min(100, ((value - numeric.min) / (numeric.max - numeric.min)) * 100));
+    }
+
+    function buildCanonicalScoreChange(simulation, patterns, profile, currentScore) {
+        if (!simulation?.available || !Array.isArray(patterns)) return null;
+        const calculate = HEYS.PredictiveInsights?.calculateHealthScore;
+        if (typeof calculate !== 'function') return null;
+
+        const predicted = simulation.predicted || {};
+        let affected = 0;
+        const projectedPatterns = patterns.map((pattern) => {
+            if (!Object.prototype.hasOwnProperty.call(predicted, pattern?.pattern)) return pattern;
+            affected += 1;
+            return { ...pattern, score: predicted[pattern.pattern] };
+        });
+        if (!affected) return null;
+
+        try {
+            const baselineResult = Number.isFinite(Number(currentScore))
+                ? { total: Number(currentScore) }
+                : calculate(patterns, profile);
+            const projectedResult = calculate(projectedPatterns, profile);
+            const baseline = Math.round(Number(baselineResult?.total));
+            const next = Math.round(Number(projectedResult?.total));
+            if (!Number.isFinite(baseline) || !Number.isFinite(next)) return null;
+            return { baseline, predicted: next, delta: next - baseline };
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function ScenarioChevron() {
+        return h('svg', {
+            className: 'insights-v4-whatif__chevron',
+            width: 14,
+            height: 14,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            'aria-hidden': 'true'
+        }, h('path', {
+            d: 'M9 6l6 6-6 6',
+            stroke: 'currentColor',
+            strokeWidth: 2.75,
+            strokeLinecap: 'round'
+        }));
+    }
+
+    /**
+     * Inline v4 flow inside «Подробно».
+     *
+     * It consumes the already calculated pattern set and asks the existing
+     * action engine only for its delta. The final pair is recomputed by the
+     * canonical PredictiveInsights score owner, so fixture numbers and the
+     * unrelated Cascade/HEYS Score never enter this surface.
+     */
+    function WhatIfScenariosInline({ lsGet, profile, pIndex, patterns, currentScore, historyDays }) {
+        const categoryKeys = Object.keys(CATEGORY_CONFIG);
+        const [activeCategory, setActiveCategory] = useState(categoryKeys[0]);
+        const [selectedAction, setSelectedAction] = useState('add_protein');
+        const [actionParams, setActionParams] = useState(() => createDefaultParams('add_protein'));
+
+        const daysData = useMemo(() => {
+            const getDays = HEYS.InsightsPI?.calculations?.getDaysData;
+            const getter = lsGet || HEYS.utils?.lsGet;
+            if (typeof getDays !== 'function' || typeof getter !== 'function') return [];
+            try { return getDays(30, getter); } catch (_) { return []; }
+        }, [lsGet, patterns, historyDays]);
+
+        const categoryActions = useMemo(() => {
+            return (INLINE_ACTION_ORDER[activeCategory] || [])
+                .map((key) => ({ key, ...ACTION_CONFIG[key] }));
+        }, [activeCategory]);
+
+        const simulation = useMemo(() => {
+            if ((historyDays || 0) < 14 || daysData.length < 14) {
+                return {
+                    available: false,
+                    error: 'Сценарии откроются, когда будет 14 заполненных дней.',
+                    reasonCode: 'minimum_history'
+                };
+            }
+            const simulate = HEYS.InsightsPI?.whatif?.simulate;
+            if (typeof simulate !== 'function') {
+                return { available: false, error: 'Расчёт сценариев пока недоступен.' };
+            }
+            try {
+                const result = simulate(
+                    selectedAction,
+                    actionParams,
+                    daysData,
+                    profile,
+                    pIndex,
+                    { patterns, requireObserved: true }
+                );
+                if (!result?.available) return result || { available: false };
+                return {
+                    ...result,
+                    scoreChange: buildCanonicalScoreChange(result, patterns, profile, currentScore)
+                };
+            } catch (_) {
+                return { available: false, error: 'Не удалось пересчитать сценарий.' };
+            }
+        }, [selectedAction, actionParams, daysData, profile, pIndex, patterns, currentScore, historyDays]);
+
+        const selectAction = (actionKey) => {
+            setSelectedAction(actionKey);
+            setActionParams(createDefaultParams(actionKey));
+        };
+
+        const selectCategory = (categoryKey) => {
+            const first = INLINE_ACTION_ORDER[categoryKey]?.[0];
+            setActiveCategory(categoryKey);
+            if (first) selectAction(first);
+        };
+
+        const config = ACTION_CONFIG[selectedAction];
+        const progress = getScenarioProgress(selectedAction, actionParams);
+        const scoreChange = simulation?.scoreChange;
+        const delta = scoreChange?.delta || 0;
+
+        return h('section', { className: 'insights-v4-whatif__inline', 'aria-labelledby': 'insights-v4-whatif-title' },
+            h('div', { className: 'insights-v4-whatif__head' },
+                h('h3', { id: 'insights-v4-whatif-title', className: 'insights-v4-whatif__title' }, 'Что если…'),
+                h('span', { className: 'insights-v4-whatif__place' }, 'внутри «Подробно»')
+            ),
+            h('div', { className: 'insights-v4-whatif__scroll' },
+                h('div', { className: 'insights-v4-whatif__chips', role: 'tablist', 'aria-label': 'Категория сценария' },
+                    categoryKeys.map((key) => h('button', {
+                        key,
+                        type: 'button',
+                        role: 'tab',
+                        className: 'insights-v4-whatif__chip' + (activeCategory === key ? ' is-active' : ''),
+                        'aria-selected': activeCategory === key,
+                        onClick: () => selectCategory(key)
+                    }, CATEGORY_CONFIG[key].label))
+                ),
+                h('div', { className: 'insights-v4-whatif__scenario' },
+                    h('div', { className: 'insights-v4-whatif__scenario-title' }, config.label),
+                    h('div', { className: 'insights-v4-whatif__parameter' },
+                        h('span', { className: 'insights-v4-whatif__parameter-value' }, formatScenarioValue(selectedAction, actionParams)),
+                        h('span', { className: 'insights-v4-whatif__parameter-track', 'aria-hidden': 'true' },
+                            h('span', {
+                                className: 'insights-v4-whatif__parameter-fill',
+                                style: { width: progress + '%' }
+                            })
+                        )
+                    ),
+                    scoreChange
+                        ? h('div', { className: 'insights-v4-whatif__score', 'aria-live': 'polite' },
+                            h('span', { className: 'insights-v4-whatif__score-label' }, 'Оценка дня'),
+                            h('span', { className: 'insights-v4-whatif__score-before' }, scoreChange.baseline),
+                            h('span', { className: 'insights-v4-whatif__score-arrow', 'aria-hidden': 'true' }, '→'),
+                            h('span', { className: 'insights-v4-whatif__score-after' }, scoreChange.predicted),
+                            h('span', {
+                                className: 'insights-v4-whatif__score-delta' + (delta < 0 ? ' is-negative' : '')
+                            }, (delta > 0 ? '+' : '') + delta)
+                        )
+                        : h('p', { className: 'insights-v4-whatif__unavailable', role: 'status' },
+                            simulation?.error || 'Недостаточно подтверждённых данных для этого сценария.')
+                ),
+                h('div', { className: 'insights-v4-whatif__actions' },
+                    categoryActions.filter((action) => action.key !== selectedAction).map((action, index, others) =>
+                        h('button', {
+                            key: action.key,
+                            type: 'button',
+                            className: 'insights-v4-whatif__action' + (index === others.length - 1 ? ' is-last' : ''),
+                            onClick: () => selectAction(action.key)
+                        },
+                            h('span', null, getInlineActionLabel(action.key)),
+                            h(ScenarioChevron)
+                        )
+                    )
+                ),
+                h('p', { className: 'insights-v4-whatif__explanation' },
+                    'Сценарий двигает оценку дня из паттернов, а не HEYS Score — каскад за 30 дней один приём не сдвинет. '
+                    + 'До 14 дней данных вместо сценариев — счётчик «откроется через N дней»; один параметр за раз.'
+                )
+            )
+        );
     }
 
     /**
@@ -545,6 +788,7 @@
     // Export components
     HEYS.InsightsPI.WhatIfScenariosCard = WhatIfScenariosCard;
     HEYS.InsightsPI.WhatIfScenariosPanel = WhatIfScenariosPanel;
+    HEYS.InsightsPI.WhatIfScenariosInline = WhatIfScenariosInline;
 
     console.info('[HEYS.InsightsPI] ✅ What-If Scenarios UI components loaded (v2.0.0)');
 
