@@ -387,7 +387,7 @@
 
 .insights-v4-weight__line,
 .insights-v4-weight__forecast {
-  stroke: var(--v4-good-strong, #74845a);
+  stroke: var(--v4-act, #c06f36);
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -398,7 +398,7 @@
 }
 
 .insights-v4-weight__dot {
-  fill: var(--v4-good-strong, #74845a);
+  fill: var(--v4-act, #c06f36);
 }
 
 .insights-v4-weight__pace {
