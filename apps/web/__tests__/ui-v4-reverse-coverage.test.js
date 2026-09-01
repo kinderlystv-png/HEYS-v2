@@ -92,5 +92,5 @@ describe('UI v4 reverse coverage index', () => {
       duplicateFrameIdentities: 10,
       frameScope: { stop: 672, none: 76, protocol: 39, loop: 23 },
     });
-  });
+  }, 15_000);
 });

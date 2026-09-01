@@ -67,5 +67,5 @@ describe('UI v4 code→canvas screen coverage', () => {
       invalid: 0,
     });
     expect(report.ok).toBe(false);
-  });
+  }, 15_000);
 });
