@@ -183,7 +183,7 @@ Figtree (Caprasimo заплывает в maskable-иконке), капсула 
 спросите дизайнера.
 
 Образец формата — `reports-insights.v4.dc.html`. Контракт есть у **25**
-канвасов, **15561 строка `data-v` всего:** `home-widgets` (4059),
+канвасов, **15574 строки `data-v` всего:** `home-widgets` (4059),
 `strength-builder` (1812), `reports-insights` (1010), `food-meal` (1009),
 `checkin-morning` (970), `login` (788), `tips` (700), `registration` (555),
 `nutrition-tab` (524), `norm-correction` (479), `curator-cabinet` (444),
