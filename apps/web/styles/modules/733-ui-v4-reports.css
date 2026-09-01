@@ -491,6 +491,17 @@
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
+.reports-v4-dynamics-card--cycle .reports-v4-dynamics-card__period {
+  font-size: 10px;
+}
+
+.reports-v4-dynamics-card--cycle .reports-v4-dynamics-card__hint {
+  margin-top: 7px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
 .reports-v4-wellbeing {
   margin-top: 10px;
   padding: 16px;

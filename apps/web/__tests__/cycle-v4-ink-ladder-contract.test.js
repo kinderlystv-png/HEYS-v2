@@ -39,10 +39,23 @@ describe('cycle v4 · data ink ladder', () => {
   });
 
   it('keeps the calorie period and chart explanation at the canvas sizes', () => {
-    expect(rule(REPORTS_CSS, '.reports-v4-dynamics-card__period')).toContain('font-size: 10px');
-    expect(rule(REPORTS_CSS, '.reports-v4-dynamics-card__hint')).toContain('margin-top: 7px');
-    expect(rule(REPORTS_CSS, '.reports-v4-dynamics-card__hint')).toContain('font-weight: 600');
+    const cyclePeriod = rule(
+      REPORTS_CSS,
+      '.reports-v4-dynamics-card--cycle .reports-v4-dynamics-card__period',
+    );
+    const chartHint = rule(
+      REPORTS_CSS,
+      '.reports-v4-dynamics-card--cycle .reports-v4-dynamics-card__hint',
+    );
+    expect(cyclePeriod).toContain('font-size: 10px');
+    expect(chartHint).toContain('margin-top: 7px');
+    expect(chartHint).toContain('font-size: 10px');
+    expect(chartHint).toContain('font-weight: 600');
+    expect(chartHint).toContain('line-height: 1');
+    expect(STATS_UI).toContain('reports-v4-dynamics-card--cycle');
+    expect(STATS_UI).toContain('isCycleTrackingEnabled');
     expect(STATS_UI).toContain('ступенька — надбавка второй половины, зоны здесь нет');
+    expect(STATS_UI).toContain('Столбик вверх — недобор, вниз — перебор. Пунктир это план.');
   });
 });
 

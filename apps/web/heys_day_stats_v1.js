@@ -1129,6 +1129,16 @@
 
     // Отчёты v4: вкладка DayTab subTab === 'stats' (в навигации — «Отчёты»).
     const useReportsV4 = !isMobile || mobileSubTab === 'stats';
+    const hasCycleReportContext = (() => {
+      try {
+        const healthFeatures = HEYS.healthFeatures;
+        if (healthFeatures && typeof healthFeatures.isCycleTrackingEnabled === 'function') {
+          return healthFeatures.isCycleTrackingEnabled(prof);
+        }
+      } catch (_) { /* noop */ }
+      return (prof?.gender === 'Женский' || prof?.sex === 'female')
+        && prof?.cycleTrackingEnabled === true;
+    })();
     const reportsClientId = HEYS.currentClientId || deps?.clientId || '';
     const reportsPeriodMeta = useReportsV4
       ? buildReportsPeriodMeta(sparklineData, chartPeriod, ratioZones, lsGet, reportsClientId)
@@ -1666,7 +1676,9 @@
         const renderData = vmProgress.sparklineRenderData || sparklineData;
 
         return React.createElement('div', {
-          className: 'kcal-sparkline-container' + (useReportsV4 ? ' reports-v4-dynamics-card' : ''),
+          className: 'kcal-sparkline-container'
+            + (useReportsV4 ? ' reports-v4-dynamics-card' : '')
+            + (useReportsV4 && hasCycleReportContext ? ' reports-v4-dynamics-card--cycle' : ''),
           id: 'tour-calorie-graph'
         },
           !useReportsV4 && React.createElement('div', { className: 'kcal-sparkline-header' },
@@ -1715,7 +1727,9 @@
             )
           ),
           useReportsV4 && React.createElement('div', { className: 'reports-v4-dynamics-card__hint' },
-            'ступенька — надбавка второй половины, зоны здесь нет'
+            hasCycleReportContext
+              ? 'ступенька — надбавка второй половины, зоны здесь нет'
+              : 'Столбик вверх — недобор, вниз — перебор. Пунктир это план.'
           ),
           shouldOfferRealDataConfirmation && React.createElement('div', {
             className: 'kcal-realdata-card'
