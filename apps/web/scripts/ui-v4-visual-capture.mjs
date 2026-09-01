@@ -427,14 +427,51 @@ async function openCase(browser, item, snapshot) {
       );
       await page.evaluate((themeId) => {
         if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        document.body.style.background = '#e9dfcd';
         const patterns = [
-          { pattern: 'protein_satiety', available: true, score: 50 },
-          { pattern: 'meal_quality', available: true, score: 60 },
-          { pattern: 'protein_distribution', available: true, score: 55 },
-          { pattern: 'nutrition_quality', available: true, score: 65 },
-          { pattern: 'training_recovery', available: true, score: 58 },
-          { pattern: 'nutrient_density', available: true, score: 62 },
+          { pattern: 'protein_satiety', available: true, score: 69 },
+          { pattern: 'meal_quality', available: true, score: 69 },
+          { pattern: 'protein_distribution', available: true, score: 69 },
+          { pattern: 'nutrition_quality', available: true, score: 69 },
+          { pattern: 'training_recovery', available: true, score: 69 },
+          { pattern: 'nutrient_density', available: true, score: 69 },
         ];
+        const realSimulate = window.HEYS.InsightsPI.whatif.simulate;
+        const realCalculateHealthScore = window.HEYS.PredictiveInsights.calculateHealthScore;
+        window.__uiV4ReportsWhatIfEngineEvidence = {
+          simulateCalls: 0,
+          calculateHealthScoreCalls: 0,
+        };
+        window.HEYS.InsightsPI.whatif.simulate = function (...args) {
+          window.__uiV4ReportsWhatIfEngineEvidence.simulateCalls += 1;
+          const result = realSimulate.apply(this, args);
+          window.__uiV4ReportsWhatIfEngineEvidence.simulate = {
+            action: args[0],
+            params: args[1],
+            observedScores: (args[5]?.patterns || []).map((pattern) => pattern.score),
+            requireObserved: args[5]?.requireObserved === true,
+            available: result?.available === true,
+          };
+          return result;
+        };
+        window.HEYS.PredictiveInsights.calculateHealthScore = function (...args) {
+          window.__uiV4ReportsWhatIfEngineEvidence.calculateHealthScoreCalls += 1;
+          const result = realCalculateHealthScore.apply(this, args);
+          window.__uiV4ReportsWhatIfEngineEvidence.projectedScore = result?.total ?? null;
+          return result;
+        };
+        let backdrop = document.getElementById('ui-v4-reports-whatif-backdrop');
+        if (!backdrop) {
+          backdrop = document.createElement('div');
+          backdrop.id = 'ui-v4-reports-whatif-backdrop';
+          Object.assign(backdrop.style, {
+            position: 'fixed',
+            inset: '0',
+            zIndex: '19999',
+            background: '#e9dfcd',
+          });
+          document.body.appendChild(backdrop);
+        }
         let host = document.getElementById('ui-v4-reports-whatif-host');
         if (!host) {
           host = document.createElement('main');
@@ -443,8 +480,12 @@ async function openCase(browser, item, snapshot) {
             position: 'fixed',
             inset: '0',
             zIndex: '20000',
-            overflow: 'auto',
-            padding: '24px 16px',
+            boxSizing: 'border-box',
+            width: '375px',
+            height: '706px',
+            overflow: 'hidden',
+            padding: '0 16px',
+            borderRadius: '28px',
             background: 'var(--v4-bg, #fffaf3)',
           });
           document.body.appendChild(host);
@@ -457,7 +498,7 @@ async function openCase(browser, item, snapshot) {
           profile: {},
           pIndex: {},
           patterns,
-          currentScore: 58,
+          currentScore: 72,
           historyDays: 14,
         });
         window.__uiV4ReportsWhatIfRoot =
@@ -1434,6 +1475,75 @@ async function openCase(browser, item, snapshot) {
         throw new Error('Registration visual fixture wrote heys_registration_in_progress');
       }
     }
+    if (item.kind === 'demo-reports-whatif-inline') {
+      visualChecks = await page.evaluate(() => {
+        const host = document.querySelector('#ui-v4-reports-whatif-host');
+        const root = host?.querySelector('.insights-v4-whatif__inline');
+        const rootBox = root?.getBoundingClientRect();
+        const relativeRect = (target) => {
+          if (!rootBox || !target) return null;
+          const box = target.getBoundingClientRect();
+          return {
+            x: Math.round((box.x - rootBox.x) * 100) / 100,
+            y: Math.round((box.y - rootBox.y) * 100) / 100,
+            width: Math.round(box.width * 100) / 100,
+            height: Math.round(box.height * 100) / 100,
+          };
+        };
+        const tabs = [...(root?.querySelectorAll('[role="tab"]') || [])];
+        const actions = [...(root?.querySelectorAll('.insights-v4-whatif__action') || [])];
+        return {
+          engine: window.__uiV4ReportsWhatIfEngineEvidence || null,
+          hostSize: host ? { width: host.clientWidth, height: host.clientHeight } : null,
+          historyDays: window.HEYS?.InsightsPI?.calculations?.getDaysData?.()?.length || 0,
+          tabs: tabs.map((tab) => tab.textContent || ''),
+          activeTab: tabs.find((tab) => tab.getAttribute('aria-selected') === 'true')?.textContent || '',
+          selectedAction: root?.querySelector('.insights-v4-whatif__scenario-title')?.textContent || '',
+          parameter: root?.querySelector('.insights-v4-whatif__parameter-value')?.textContent || '',
+          score: {
+            before: root?.querySelector('.insights-v4-whatif__score-before')?.textContent || '',
+            after: root?.querySelector('.insights-v4-whatif__score-after')?.textContent || '',
+            delta: root?.querySelector('.insights-v4-whatif__score-delta')?.textContent || '',
+          },
+          actions: actions.map((action) => action.textContent?.trim() || ''),
+          explanation: root?.querySelector('.insights-v4-whatif__explanation')?.textContent || '',
+          geometry: {
+            root: relativeRect(root),
+            head: relativeRect(root?.querySelector('.insights-v4-whatif__head')),
+            chips: relativeRect(root?.querySelector('.insights-v4-whatif__chips')),
+            scenario: relativeRect(root?.querySelector('.insights-v4-whatif__scenario')),
+            score: relativeRect(root?.querySelector('.insights-v4-whatif__score')),
+            actions: relativeRect(root?.querySelector('.insights-v4-whatif__actions')),
+            explanation: relativeRect(root?.querySelector('.insights-v4-whatif__explanation')),
+          },
+        };
+      });
+      const expectedExplanation = 'Сценарий двигает оценку дня из паттернов, а не HEYS Score — каскад за 30 дней один приём не сдвинет. До 14 дней данных вместо сценариев — счётчик «откроется через N дней»; один параметр за раз.';
+      if (
+        !visualChecks.engine ||
+        visualChecks.engine.simulateCalls < 1 ||
+        visualChecks.engine.calculateHealthScoreCalls < 1 ||
+        visualChecks.engine.simulate?.action !== 'add_protein' ||
+        visualChecks.engine.simulate?.params?.proteinGrams !== 30 ||
+        visualChecks.engine.simulate?.params?.mealIndex !== 0 ||
+        !visualChecks.engine.simulate?.requireObserved ||
+        !visualChecks.engine.simulate?.available ||
+        JSON.stringify(visualChecks.engine.simulate?.observedScores) !== JSON.stringify([69, 69, 69, 69, 69, 69]) ||
+        Math.round(Number(visualChecks.engine.projectedScore)) !== 75 ||
+        visualChecks.historyDays !== 14 ||
+        JSON.stringify(visualChecks.tabs) !== JSON.stringify(['Питание', 'Тайминг', 'Сон', 'Активность']) ||
+        visualChecks.activeTab !== 'Питание' ||
+        visualChecks.selectedAction !== 'Добавить белок' ||
+        visualChecks.parameter !== '+30 г к завтраку' ||
+        visualChecks.score.before !== '72' ||
+        visualChecks.score.after !== '75' ||
+        visualChecks.score.delta !== '+3' ||
+        JSON.stringify(visualChecks.actions) !== JSON.stringify(['Снизить углеводы', 'Клетчатка +10 г']) ||
+        visualChecks.explanation !== expectedExplanation
+      ) {
+        throw new Error(`What-if fixture подменил Canvas-состояние или расчёт: ${JSON.stringify(visualChecks)}`);
+      }
+    }
     if (item.kind === 'demo-norm-correction-lowered') {
       visualChecks = await page.evaluate(() => {
         const root = document.querySelector('#ui-v4-norm-correction-lowered-host > .norm-correction-screen');
@@ -1959,7 +2069,35 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
                   },
                 };
               })
-            : item.kind === 'demo-norm-correction-lowered'
+            : item.kind === 'demo-reports-whatif-inline'
+              ? await frame.evaluate((node) => {
+                  const frameBox = node.getBoundingClientRect();
+                  const relativeRect = (target) => {
+                    if (!target) return null;
+                    const box = target.getBoundingClientRect();
+                    return {
+                      x: Math.round((box.x - frameBox.x) * 100) / 100,
+                      y: Math.round((box.y - frameBox.y) * 100) / 100,
+                      width: Math.round(box.width * 100) / 100,
+                      height: Math.round(box.height * 100) / 100,
+                    };
+                  };
+                  const content = node.querySelector('.sc');
+                  const children = content ? [...content.children] : [];
+                  const scenario = children[1];
+                  return {
+                    geometry: {
+                      root: relativeRect(node),
+                      head: relativeRect(node.children[0]),
+                      chips: relativeRect(children[0]),
+                      scenario: relativeRect(scenario),
+                      score: relativeRect(scenario?.children[2]),
+                      actions: relativeRect(children[2]),
+                      explanation: relativeRect(children[3]),
+                    },
+                  };
+                })
+              : item.kind === 'demo-norm-correction-lowered'
               ? await frame.evaluate((node) => {
                   const frameBox = node.getBoundingClientRect();
                   const inspect = (selector) => {

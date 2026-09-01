@@ -228,8 +228,16 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     gate: 'diagnostic',
     kind: 'demo-reports-whatif-inline',
     themeId: 'sand',
-    viewport: { width: 375, height: 812 },
+    viewport: { width: 375, height: 706 },
     rootSelector: '.insights-v4-whatif__inline',
+    captureSelector: '#ui-v4-reports-whatif-host',
+    canvasFrame: {
+      file: 'reports-insights.v4.dc.html',
+      label: 'Инсайты · что если',
+      oid: 'RI-WI1',
+      palette: 'sand',
+      pixelAlign: true,
+    },
   },
   {
     id: 'reports-weight-prediction-sand',

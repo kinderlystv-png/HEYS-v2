@@ -156,6 +156,18 @@ describe('UI v4 visual harness', () => {
         palette: 'sand',
       },
     });
+    const reportsWhatIf = paired.find((item) => item.id === 'reports-whatif-inline-sand');
+    expect(reportsWhatIf).toMatchObject({
+      viewport: { width: 375, height: 706 },
+      captureSelector: '#ui-v4-reports-whatif-host',
+      canvasFrame: {
+        file: 'reports-insights.v4.dc.html',
+        label: 'Инсайты · что если',
+        oid: 'RI-WI1',
+        palette: 'sand',
+        pixelAlign: true,
+      },
+    });
     const foodCopyEmpty = paired.find((item) => item.id === 'food-copy-empty-target-sand');
     expect(foodCopyEmpty).toMatchObject({
       viewport: { width: 399, height: 812 },
@@ -209,6 +221,20 @@ describe('UI v4 visual harness', () => {
     expect(captureSource).toContain('data-move-meal-target="visual-lunch"');
     expect(captureSource).toContain("visualChecks.selectedMoveTarget !== 'visual-lunch'");
     expect(captureSource).toContain("visualChecks.dateLabel !== 'Вчера, 26 августа'");
+  });
+
+  it('reports what-if capture доказывает реальный observed-pattern расчёт', () => {
+    const captureSource = fs.readFileSync(
+      path.resolve(__dirname, '../scripts/ui-v4-visual-capture.mjs'),
+      'utf8',
+    );
+    expect(captureSource).toContain('window.__uiV4ReportsWhatIfEngineEvidence');
+    expect(captureSource).toContain("visualChecks.engine.simulate?.action !== 'add_protein'");
+    expect(captureSource).toContain('!visualChecks.engine.simulate?.requireObserved');
+    expect(captureSource).toContain('Math.round(Number(visualChecks.engine.projectedScore)) !== 75');
+    expect(captureSource).toContain("visualChecks.score.before !== '72'");
+    expect(captureSource).toContain("visualChecks.score.after !== '75'");
+    expect(captureSource).toContain("visualChecks.score.delta !== '+3'");
   });
 
   it('разрешает pixel-gate только зонам без вопросов и несовпадений', () => {

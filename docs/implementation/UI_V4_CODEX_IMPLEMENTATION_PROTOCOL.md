@@ -935,3 +935,44 @@ callback-варианта.
 итоговую пару `tmp/ui-v4-visual/2026-09-01T23-40-21-049Z`; отдельно проверить
 оба действия на живом устройстве и не трактовать оставшиеся 5,2763% как полное
 pixel-equality — текущий gate этой зоны остаётся diagnostic.
+
+## Шаг 40 — Reports insights · «Что если»: exact Canvas pair и мобильный route-smoke
+
+Статус: второй слой `Инсайты → Подробнее → Что если` получил строгую живую пару
+с Canvas `RI-WI1`; продуктовая динамика оценки сохранена.
+
+- кадру `Инсайты · что если` добавлен единственный технический oid `RI-WI1`;
+  fixture теперь снимает уникальный runtime-root и точный Canvas frame в
+  одинаковом окне 375×706 без resize и без масок;
+- исходная официальная пара после одной только нормализации capture имела
+  changed ratio 20,2806% (53 693 из 264 750 пикселей): кириллический fallback
+  держал четыре вкладки в одной строке и смещал весь нижний контент;
+- scoped CSS использует буквальный Canvas fallback `Figtree, sans-serif`, а
+  строки альтернатив получили canvas-min-height 44 px. Теперь bounding boxes
+  шапки, двух рядов chips, сценария, score, alternatives и пояснения совпадают с
+  Canvas до сотых пикселя;
+- итоговый changed ratio — 2,1756% (5 760 пикселей), снижение расхождения на
+  89,3%. Остаток — raster/antialias diagnostic внутри уже совпавших boxes и края
+  camera-shell; pixel-gate всей зоны не включался;
+- fixture не хардкодит результат: real `add_protein` с `30 г`, завтраком, шестью
+  observed scores `69` и `requireObserved: true` проходит через живые `simulate`
+  и `calculateHealthScore`, который возвращает `75`; DOM показывает
+  `72 → 75 / +3`. Capture fail-closed сохраняет аргументы и результат обоих
+  engine-вызовов;
+- mobile route-smoke при viewport 375×706 прошёл реальный путь
+  `Инсайты → Подробнее`: панель видима, `Активность` переносится во второй ряд,
+  обе alternative-строки имеют 44 px, а пользовательские данные дали живую пару
+  `63 → 64 / +1`, то есть Canvas-литералы в production не подменяют расчёт;
+- дизайнерское расхождение записано отдельно: числа кадра — fixture example,
+  acceptance для произвольного пользователя должен проверять вычисляемую связь и
+  формат, а не конкретные литералы.
+- независимый focused suite: 2 файла, 15/15 green; visual evidence-ready,
+  runtime/Canvas console errors 0. `docs:reference:check` остановился только на
+  двух существовавших вне scope досье: `BACKGROUND_JOBS.md` и
+  `SUBSCRIPTION_AND_PAYMENTS.md`. Generated/public artifacts не входят в
+  source-only scope; push не выполнялся.
+
+Ревьюеру смотреть: baseline `tmp/ui-v4-visual/2026-09-01T23-44-59-287Z`,
+итоговую пару `tmp/ui-v4-visual/2026-09-01T23-49-21-511Z`; отдельно проверить
+переход в `Подробнее`, переключение четырёх категорий и сохранение fail-closed
+сообщения при отсутствии observed-patterns.
