@@ -1861,9 +1861,20 @@ function assignedPlanDay(date = '2026-08-11') {
   }, { nowMs: 1000, clientId: CLIENT });
 }
 
+function moveAssigned(base, index, toDate, nowMs = 2000) {
+  const plan = base.trainings[index].plan;
+  return day.moveTrainingOut(base, index, {
+    toDate,
+    expectedPlanId: plan.id,
+    expectedAssignedAt: plan.assignedAt,
+    nowMs,
+    clientId: CLIENT,
+  });
+}
+
 test('перенос помечает исходный день как moved, а не как пропуск', () => {
   const { day: base, index } = assignedPlanDay();
-  const res = day.moveTrainingOut(base, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
+  const res = moveAssigned(base, index, '2026-08-13');
 
   assert.equal(res.error, null);
   const src = res.day.trainings[index];
@@ -1877,10 +1888,10 @@ test('перенесённая запись несёт происхождени�
   const { day: base, index } = assignedPlanDay();
   base.trainings[index].workoutLog = {
     version: 1,
-    zoneMinutes: [0, 1, 0, 0],
+    zoneMinutes: [0, 0, 0, 0],
     exercises: JSON.parse(JSON.stringify(base.trainings[index].planSnapshot.exercises)),
   };
-  const res = day.moveTrainingOut(base, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
+  const res = moveAssigned(base, index, '2026-08-13');
   const moved = res.movedTraining;
 
   assert.equal(moved.plan.status, 'assigned');
@@ -1896,21 +1907,108 @@ test('перенос — не для начатой и не для заверш�
   for (const status of ['started', 'done']) {
     const d = { ...base };
     d.trainings = base.trainings.map((t, i) => (i === index ? { ...t, plan: { ...t.plan, status } } : t));
-    const res = day.moveTrainingOut(d, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
+    const res = moveAssigned(d, index, '2026-08-13');
     assert.match(res.error, /начата или закончена/);
   }
 });
 
+test('перенос fail-closed разрешает только assigned и не меняет отвергнутую запись', () => {
+  const { day: base, index } = assignedPlanDay();
+  for (const status of ['skipped', 'started', 'done', 'stale', 'unknown']) {
+    const training = base.trainings[index];
+    const candidate = {
+      ...base,
+      trainings: [{ ...training, plan: { ...training.plan, status } }],
+    };
+    const before = JSON.stringify(candidate);
+    const res = moveAssigned(candidate, index, '2026-08-13');
+    assert.ok(res.error, `status=${status} должен быть отвергнут`);
+    assert.equal(res.movedTraining, undefined);
+    assert.equal(JSON.stringify(candidate), before, `status=${status} не должен мутировать день`);
+  }
+});
+
+test('перенос требует строго будущую дату и свежую ревизию плана', () => {
+  const { day: base, index } = assignedPlanDay();
+  assert.match(moveAssigned(base, index, '2026-08-11').error, /только вперёд/);
+  assert.match(moveAssigned(base, index, '2026-08-10').error, /только вперёд/);
+
+  const stale = day.moveTrainingOut(base, index, {
+    toDate: '2026-08-13',
+    expectedPlanId: base.trainings[index].plan.id,
+    expectedAssignedAt: base.trainings[index].plan.assignedAt - 1,
+    nowMs: 2000,
+    clientId: CLIENT,
+  });
+  assert.match(stale.error, /изменился после чтения/);
+});
+
+test('assigned с meaningful live-log не переносится и не теряет факт', () => {
+  const { day: base, index } = assignedPlanDay();
+  base.trainings[index].workoutLog = {
+    version: 1,
+    zoneMinutes: [0, 0, 0, 0],
+    startedAt: 1500,
+    exercises: [{ approaches: [{ done: true }] }],
+  };
+  const before = JSON.stringify(base.trainings[index].workoutLog);
+  const res = moveAssigned(base, index, '2026-08-13');
+  assert.match(res.error, /live-log/);
+  assert.equal(JSON.stringify(base.trainings[index].workoutLog), before);
+});
+
+test('assigned с отмеченной ступенью дроп-сета не стирается переносом', () => {
+  const { day: base, index } = assignedPlanDay();
+  base.trainings[index].workoutLog = {
+    version: 1,
+    zoneMinutes: [0, 0, 0, 0],
+    exercises: [{ approaches: [{ done: false, drops: [{ done: true }] }] }],
+  };
+  const before = JSON.stringify(base.trainings[index].workoutLog);
+  const res = moveAssigned(base, index, '2026-08-13');
+  assert.match(res.error, /live-log/);
+  assert.equal(JSON.stringify(base.trainings[index].workoutLog), before);
+});
+
+test('transferId идемпотентен для той же ревизии и меняется после правки плана', () => {
+  const { day: base, index } = assignedPlanDay();
+  const first = moveAssigned(base, index, '2026-08-13');
+  const same = moveAssigned(base, index, '2026-08-13');
+  assert.equal(first.movedTraining.plan.transferId, same.movedTraining.plan.transferId);
+
+  const revised = JSON.parse(JSON.stringify(base));
+  revised.trainings[index].plan.assignedAt += 1;
+  revised.trainings[index].planSnapshot.exercises[0].approaches[0].weightKg = '80';
+  const changed = moveAssigned(revised, index, '2026-08-13');
+  assert.notEqual(first.movedTraining.plan.transferId, changed.movedTraining.plan.transferId);
+
+  const target = day.emptyDay('2026-08-13', CLIENT, 1000);
+  const once = day.moveTrainingIn(target, first.movedTraining, { nowMs: 2000, clientId: CLIENT });
+  const twice = day.moveTrainingIn(once.day, same.movedTraining, { nowMs: 3000, clientId: CLIENT });
+  assert.equal(twice.idempotent, true);
+  assert.equal(twice.day.trainings.filter((training) => training.plan && training.plan.transferId).length, 1);
+
+  const revisedInto = day.moveTrainingIn(once.day, changed.movedTraining, { nowMs: 3000, clientId: CLIENT });
+  assert.equal(revisedInto.reason, 'stale_transfer');
+  assert.equal(revisedInto.day.trainings.length, once.day.trainings.length, 'новая ревизия не дублирует orphan старой');
+});
+
 test('дважды одну тренировку не переносят', () => {
   const { day: base, index } = assignedPlanDay();
-  const once = day.moveTrainingOut(base, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
-  const twice = day.moveTrainingOut(once.day, index, { toDate: '2026-08-14', nowMs: 3000, clientId: CLIENT });
+  const once = moveAssigned(base, index, '2026-08-13');
+  const twice = day.moveTrainingOut(once.day, index, {
+    toDate: '2026-08-14',
+    expectedPlanId: once.day.trainings[index].plan.id,
+    expectedAssignedAt: once.day.trainings[index].plan.assignedAt,
+    nowMs: 3000,
+    clientId: CLIENT,
+  });
   assert.match(twice.error, /уже перенесена/);
 });
 
 test('целевой день с тремя тренировками перенос не принимает', () => {
   const { day: base, index } = assignedPlanDay();
-  const out = day.moveTrainingOut(base, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
+  const out = moveAssigned(base, index, '2026-08-13');
   const full = day.emptyDay('2026-08-13', CLIENT, 1000);
   full.trainings = [
     { time: '08:00', z: [30, 0, 0, 0] },
@@ -1924,7 +2022,7 @@ test('целевой день с тремя тренировками перен�
 test('перенесённый день не считается состоявшейся тренировкой', () => {
   // Иначе перенос удвоил бы нагрузку: и на исходном дне, и на новом.
   const { day: base, index } = assignedPlanDay();
-  const res = day.moveTrainingOut(base, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
+  const res = moveAssigned(base, index, '2026-08-13');
   assert.equal(day.isNotPerformedTraining(res.day.trainings[index]), true);
 });
 

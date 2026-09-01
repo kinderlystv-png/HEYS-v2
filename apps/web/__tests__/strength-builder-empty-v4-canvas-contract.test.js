@@ -7,6 +7,10 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WEB = path.resolve(HERE, '..');
 const source = fs.readFileSync(path.join(WEB, 'strength/heys_strength_builder_ui_v1.js'), 'utf8');
 const daySource = fs.readFileSync(path.join(WEB, 'heys_day_trainings_v1.js'), 'utf8');
+const dayNormSource = fs.readFileSync(path.join(WEB, 'heys_day_norm_v1.js'), 'utf8');
+const strengthKernelSource = fs.readFileSync(path.join(WEB, '_kernel/heys_kernel_strength_v1.js'), 'utf8');
+const tdeeSource = fs.readFileSync(path.join(WEB, 'heys_tdee_v1.js'), 'utf8');
+const iwSource = fs.readFileSync(path.join(WEB, 'heys_iw_constants.js'), 'utf8');
 const css = fs.readFileSync(path.join(WEB, 'styles/modules/750-strength-builder.css'), 'utf8');
 
 describe('strength builder · Б1 empty v4 canvas contract', () => {
@@ -51,5 +55,25 @@ describe('strength builder · Б1 empty v4 canvas contract', () => {
     expect(daySource).toContain("const assignedDraft = rawT.plan && rawT.plan.status === 'assigned';");
     expect(daySource).toContain("? { ...wlLive, zoneMinutes: [0, 0, 0, 0], exercises: [] }");
     expect(daySource).toContain("rawT.plan.status === 'moved'");
+  });
+
+  it('fails plan outcome actions closed on stale revision and rolls back only their new move target', () => {
+    expect(daySource).toContain('onMove: function (toDate, expectedPlan)');
+    expect(daySource).toContain("String(toDate) <= String(dateKey)");
+    expect(daySource).toContain("matchesOpenedPlanRevision(t0, expectedPlan, 'assigned', rawT.updatedAt)");
+    expect(daySource).toContain('hasMeaningfulLiveWorkout(t0) || !source.length');
+    expect(daySource).toContain('return patchTrainingAcknowledged(ti, function (cur)');
+    expect(daySource).toContain('|| hasMeaningfulLiveWorkout(cur)) return null;');
+    expect(daySource).toContain('removeTrainingFromDayById(toDate, targetTrainingId, moveTransferId)');
+    expect(daySource).toContain('onSkip: function (skipReason, expectedPlan)');
+    expect(daySource).toContain("matchesOpenedPlanRevision(t0, expectedPlan, 'skipped', rawT.updatedAt)");
+  });
+
+  it('treats moved as not performed in every web path and load fallback', () => {
+    expect(daySource.match(/return status === 'assigned' \|\| status === 'skipped' \|\| status === 'moved';/g)).toHaveLength(2);
+    expect(dayNormSource).toContain("['assigned', 'skipped', 'moved'].includes(t.plan.status)");
+    expect(strengthKernelSource).toContain("['assigned', 'skipped', 'moved'].indexOf(t.plan.status) !== -1");
+    expect(tdeeSource).toContain("['assigned', 'skipped', 'moved'].indexOf(training.plan.status) !== -1");
+    expect(iwSource).toContain("['assigned', 'skipped', 'moved'].indexOf(t.plan.status) !== -1");
   });
 });

@@ -35,7 +35,7 @@
   // (тот же приём, что Runner fallback guard, KERNEL_EXTRACTION_PLAN.md).
   function isPlanned(t) {
     return TK.load && TK.load.isNotPerformedTraining ? TK.load.isNotPerformedTraining(t)
-      : !!(t && t.plan && (t.plan.status === 'assigned' || t.plan.status === 'skipped'));
+      : !!(t && t.plan && ['assigned', 'skipped', 'moved'].indexOf(t.plan.status) !== -1);
   }
 
   // ——— Схема подхода: тип, довес, ступени дроп-сета ———

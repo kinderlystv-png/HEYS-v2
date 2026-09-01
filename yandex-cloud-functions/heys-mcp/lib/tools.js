@@ -2299,20 +2299,162 @@ function createTools({
       const fromDate = resolveDate(args.date, nowMs);
       const toDate = String(args.to_date || '').trim();
       const sourceDay = await readDay(fromDate);
-      const out = day.moveTrainingOut(sourceDay, args.index, { toDate, nowMs, clientId });
+      const sourceIndex = Number(args.index);
+      const currentTraining = Array.isArray(sourceDay.trainings) ? sourceDay.trainings[sourceIndex] : null;
+      const currentPlan = currentTraining && currentTraining.plan;
+
+      // The previous invocation may have committed both days and only lost its
+      // response. Confirm the exact counterpart instead of reporting failure or
+      // creating another target row.
+      if (
+        currentPlan && currentPlan.status === 'moved' && currentPlan.movedTo === toDate &&
+        currentPlan.transferId && String(args.expected_plan_id || '') === String(currentPlan.id || '') &&
+        Number(args.expected_assigned_at) === Number(currentPlan.assignedAt)
+      ) {
+        const completedTarget = await readDay(toDate);
+        const counterpartIndex = (completedTarget.trainings || []).findIndex((training) => (
+          training && training.plan && training.plan.transferId === currentPlan.transferId &&
+          training.plan.movedFrom === fromDate
+        ));
+        if (counterpartIndex < 0) {
+          throw new ToolError('move_partial', `Исходный день уже помечен перенесённым на ${toDate}, но целевая запись не найдена. transfer_id=${currentPlan.transferId}.`);
+        }
+        return {
+          text: `Тренировка уже перенесена с ${fromDate} на ${toDate}; повтор подтверждён по следу обеих дат.`,
+          structured: {
+            from: fromDate,
+            to: toDate,
+            index: counterpartIndex,
+            transfer_id: currentPlan.transferId,
+            target_reused: true,
+          },
+        };
+      }
+
+      const out = day.moveTrainingOut(sourceDay, args.index, {
+        toDate,
+        expectedPlanId: args.expected_plan_id,
+        expectedAssignedAt: args.expected_assigned_at,
+        nowMs,
+        clientId,
+      });
       if (out.error) throw new ToolError('invalid_move', out.error);
+
+      const transferId = out.movedTraining.plan.transferId;
+      const hasTransfer = (dayBlob, expectedStatus) => (
+        !!dayBlob && Array.isArray(dayBlob.trainings) && dayBlob.trainings.some((training) => (
+          training && training.plan && training.plan.transferId === transferId &&
+          (!expectedStatus || training.plan.status === expectedStatus)
+        ))
+      );
+      const savedDay = (saveResult, fallback) => (
+        saveResult && saveResult.value && typeof saveResult.value === 'object' && !Array.isArray(saveResult.value)
+          ? saveResult.value
+          : (saveResult && saveResult.outcome === 'stale_write_blocked' ? null : fallback)
+      );
+
+      // If the source write loses a revision race, remove only the target row
+      // created by this transfer. Re-read before every attempt so unrelated
+      // edits in the target day are retained. A row already started by the
+      // client is deliberately not deleted: that becomes an explicit partial
+      // failure rather than silent data loss.
+      const compensateTarget = async () => {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          const currentTarget = await readDay(toDate);
+          const targetIndex = (currentTarget.trainings || []).findIndex((training) => (
+            training && training.plan && training.plan.transferId === transferId &&
+            training.plan.movedFrom === fromDate
+          ));
+          if (targetIndex < 0) return { ok: true, outcome: 'already_absent' };
+          const targetTraining = currentTarget.trainings[targetIndex];
+          if (
+            !targetTraining.plan || targetTraining.plan.status !== 'assigned' ||
+            day.hasMeaningfulLiveTraining(targetTraining)
+          ) {
+            return { ok: false, outcome: 'target_changed' };
+          }
+          const removal = day.deleteTraining(currentTarget, targetIndex, { nowMs: nowMs + attempt + 1, clientId });
+          if (removal.error) return { ok: false, outcome: removal.error };
+          try {
+            const rollbackSave = await writeDay(toDate, removal.day, Number(currentTarget.updatedAt) || 0);
+            const actualTarget = savedDay(rollbackSave, removal.day);
+            if (!hasTransfer(actualTarget)) return { ok: true, outcome: 'removed' };
+          } catch (_) {
+            // A transient or revision failure is retried against a fresh read.
+          }
+        }
+        return { ok: false, outcome: 'rollback_failed' };
+      };
 
       const targetDay = await readDay(toDate);
       const into = day.moveTrainingIn(targetDay, out.movedTraining, { nowMs, clientId });
-      if (into.error) throw new ToolError('target_day_full', into.error);
+      if (into.error) throw new ToolError(into.reason === 'stale_transfer' ? 'stale_move' : 'target_day_full', into.error);
 
-      await writeDay(toDate, into.day, Number(targetDay.updatedAt) || 0);
-      await writeDay(fromDate, out.day, Number(sourceDay.updatedAt) || 0);
+      // Target first: losing the second write can create a duplicate workout,
+      // but never lose the only copy. transferId makes a retry reuse an orphan
+      // left by an interrupted invocation instead of appending another row.
+      if (!into.idempotent) {
+        let targetSave;
+        let actualTarget;
+        try {
+          targetSave = await writeDay(toDate, into.day, Number(targetDay.updatedAt) || 0);
+          actualTarget = savedDay(targetSave, into.day);
+        } catch (error) {
+          // A timeout can happen after commit. Resolve the ambiguity by reading
+          // the exact transfer trace before deciding that the write failed.
+          const freshTarget = await readDay(toDate);
+          if (!hasTransfer(freshTarget)) throw error;
+          actualTarget = freshTarget;
+        }
+        if (!hasTransfer(actualTarget)) {
+          throw new ToolError('stale_move', `Целевой день ${toDate} изменился параллельно: перенос не записан, исходный день не тронут.`);
+        }
+      }
+
+      let sourceSave;
+      let sourceFailure = null;
+      try {
+        sourceSave = await writeDay(fromDate, out.day, Number(sourceDay.updatedAt) || 0);
+      } catch (error) {
+        sourceFailure = error;
+      }
+      let actualSource = sourceFailure ? null : savedDay(sourceSave, out.day);
+      if (sourceFailure || !actualSource) {
+        try {
+          actualSource = await readDay(fromDate);
+        } catch (_) {
+          // Ambiguous commit: do not compensate, because the source may already
+          // be moved and deleting the target would lose the only usable copy.
+          throw new ToolError(
+            'move_partial',
+            `Не удалось подтвердить запись исходного дня ${fromDate}; целевая запись сохранена с transfer_id=${transferId}, повтор не создаст дубль.`,
+          );
+        }
+      }
+      if (!hasTransfer(actualSource, 'moved')) {
+        const compensation = await compensateTarget();
+        if (!compensation.ok) {
+          throw new ToolError(
+            'move_partial',
+            `Исходный день ${fromDate} не обновлён, а безопасно убрать перенос с ${toDate} не удалось (${compensation.outcome}). transfer_id=${transferId}; повтор не создаст ещё одну копию.`,
+          );
+        }
+        throw new ToolError(
+          'stale_move',
+          `Исходный день ${fromDate} изменился параллельно: перенос отменён на целевом дне (${compensation.outcome}), повтори после heys_get_day.`,
+        );
+      }
 
       const label = out.movedTraining.plan && out.movedTraining.plan.dayLabel;
       return {
         text: `Перенёс${label ? ` «${label}»` : ''} с ${fromDate} на ${toDate}. Это не пропуск: ${fromDate} освобождён заранее, тренировка ждёт на новой дате вместе с весами.`,
-        structured: { from: fromDate, to: toDate, index: into.index },
+        structured: {
+          from: fromDate,
+          to: toDate,
+          index: into.index,
+          transfer_id: transferId,
+          target_reused: into.idempotent === true,
+        },
       };
     },
 
@@ -2478,13 +2620,22 @@ function createTools({
         plan_status: t.plan && t.plan.status ? String(t.plan.status) : null,
         day_label: t.plan && t.plan.dayLabel ? t.plan.dayLabel : null,
         assigned_by: t.plan && t.plan.assignedBy ? t.plan.assignedBy : null,
+        plan_id: t.plan && t.plan.id ? t.plan.id : null,
+        assigned_at: t.plan && t.plan.assignedAt ? Number(t.plan.assignedAt) : null,
         program_id: t.plan && t.plan.programId ? t.plan.programId : null,
+        moved_from: t.plan && t.plan.movedFrom ? t.plan.movedFrom : null,
+        moved_to: t.plan && t.plan.movedTo ? t.plan.movedTo : null,
+        moved_at: t.plan && t.plan.movedAt ? Number(t.plan.movedAt) : null,
+        transfer_id: t.plan && t.plan.transferId ? t.plan.transferId : null,
         editable: !!(t.plan && t.plan.status === 'assigned'),
         exercises: day.exercisesToInput(trainingExercisesForRead(t)),
       }));
 
       const lines = trainings.map((t) => {
-        const head = `Тренировка ${t.index}${t.time ? ` в ${t.time}` : ''}${t.day_label ? ` («${t.day_label}»)` : ''}${t.plan_status ? ` — план, статус «${t.plan_status}»` : ''}`;
+        const transfer = t.moved_from
+          ? `, перенесена с ${t.moved_from}`
+          : (t.moved_to ? `, перенесена на ${t.moved_to}` : '');
+        const head = `Тренировка ${t.index}${t.time ? ` в ${t.time}` : ''}${t.day_label ? ` («${t.day_label}»)` : ''}${t.plan_status ? ` — план, статус «${t.plan_status}»` : ''}${transfer}`;
         const body = t.exercises.map((ex) => {
           const aps = ex.approaches.map((a) => {
             const load = a.weight_kg !== undefined ? `${a.weight_kg}кг` : 'свой вес';
@@ -4777,8 +4928,10 @@ const TOOL_SCHEMAS = [
         index: { type: 'integer', description: 'Номер тренировки в дне, с нуля — как в heys_get_day.' },
         date: DATE_ARG,
         to_date: { type: 'string', description: 'Куда переносим, YYYY-MM-DD.' },
+        expected_plan_id: { type: 'string', description: 'plan_id из свежего heys_get_training; защита от переноса устаревшей версии плана.' },
+        expected_assigned_at: { type: 'integer', description: 'assigned_at из свежего heys_get_training; защита от параллельной правки плана.' },
       },
-      required: ['index', 'to_date'],
+      required: ['index', 'to_date', 'expected_plan_id', 'expected_assigned_at'],
     },
   },
   {

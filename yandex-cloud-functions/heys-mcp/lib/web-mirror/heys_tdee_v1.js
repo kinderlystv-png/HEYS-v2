@@ -246,7 +246,7 @@
     const TK = HEYS.TrainingKernel;
     return TK && TK.load && TK.load.isNotPerformedTraining
       ? TK.load.isNotPerformedTraining(training)
-      : !!(training && training.plan && (training.plan.status === 'assigned' || training.plan.status === 'skipped'));
+      : !!(training && training.plan && ['assigned', 'skipped', 'moved'].indexOf(training.plan.status) !== -1);
   };
 
   /**

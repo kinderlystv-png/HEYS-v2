@@ -30,6 +30,7 @@ const strengthTraining = (extra) => Object.assign({
 const cardioTraining = (extra) => Object.assign({ type: 'cardio', z: [30, 0, 0, 0] }, extra || {});
 
 const ASSIGNED = { plan: { status: 'assigned' } };
+const MOVED = { plan: { status: 'moved' } };
 
 describe('назначенная тренировка не считается выполненной', () => {
     beforeEach(() => { window.HEYS = {}; });
@@ -39,6 +40,7 @@ describe('назначенная тренировка не считается в
         it('назначенное — да, начатое и выполненное — нет', () => {
             const tk = loadLoadKernel();
             expect(tk.isNotPerformedTraining({ plan: { status: 'assigned' } })).toBe(true);
+            expect(tk.isNotPerformedTraining({ plan: { status: 'moved' } })).toBe(true);
             expect(tk.isNotPerformedTraining({ plan: { status: 'started' } })).toBe(false);
             expect(tk.isNotPerformedTraining({ plan: { status: 'done' } })).toBe(false);
         });
@@ -129,6 +131,15 @@ describe('назначенная тренировка не считается в
             // молчаливый разрыв, ради которого предикат сделан единственным.
             const ks = loadStrengthKernel();
             expect(ks.dayTonnage({ trainings: [strengthTraining(SKIPPED)] })).toBe(0);
+        });
+
+        it('перенесённая исходная запись не даёт нагрузку ни через ядро, ни через strength fallback', () => {
+            const tk = loadLoadKernel();
+            expect(tk.isNotPerformedTraining(strengthTraining(MOVED))).toBe(true);
+            window.HEYS.TrainingKernel.load = null;
+            const ks = loadStrengthKernel();
+            expect(ks.dayTonnage({ trainings: [strengthTraining(MOVED)] })).toBe(0);
+            expect(ks.countStrengthWorkouts({ trainings: [strengthTraining(MOVED)] })).toBe(0);
         });
     });
 

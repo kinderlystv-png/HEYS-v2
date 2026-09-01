@@ -2020,7 +2020,7 @@
     const TK = global.HEYS && global.HEYS.TrainingKernel;
     return TK && TK.load && TK.load.isNotPerformedTraining
       ? TK.load.isNotPerformedTraining(t)
-      : !!(t && t.plan && (t.plan.status === 'assigned' || t.plan.status === 'skipped'));
+      : !!(t && t.plan && ['assigned', 'skipped', 'moved'].indexOf(t.plan.status) !== -1);
   };
 
   /**

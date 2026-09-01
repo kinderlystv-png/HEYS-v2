@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createTools, defaultMealName, TOOL_SCHEMAS, WRITE_TOOLS } = require('../lib/tools');
 const mcp = require('../lib/mcp');
+const dayModel = require('../lib/day');
 
 const CLIENT = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
 const SESSION = 'session-token';
@@ -692,7 +693,7 @@ const DRAFT_PLAN_DAY = () => ({
     strengthEntryMode: 'workout_builder',
     z: [0, 0, 0, 0],
     time: '18:00',
-    plan: { id: 'pl_1', status: 'assigned', assignedBy: 'Артём', dayLabel: 'День А' },
+    plan: { id: 'pl_1', status: 'assigned', assignedBy: 'Артём', assignedAt: NOW - 1000, dayLabel: 'День А' },
     planSnapshot: { exercises: [{
       id: 'ex1',
       name: 'Жим',
@@ -712,6 +713,53 @@ const DRAFT_PLAN_DAY = () => ({
   }],
 });
 
+function multiDayMoveApi(sourceDay, targetDay) {
+  const days = new Map([
+    [sourceDay.date, structuredClone(sourceDay)],
+    [targetDay.date, structuredClone(targetDay)],
+  ]);
+  const saves = [];
+  const api = {
+    days,
+    saves,
+    onDaySave: null,
+    async getKV(_session, key) {
+      if (key === 'heys_profile') return { data: PROPLUS_CARD.heys_profile, error: null };
+      if (key.startsWith('heys_dayv2_')) {
+        const date = key.slice('heys_dayv2_'.length);
+        return { data: days.get(date) || null, error: null };
+      }
+      return { data: null, error: null };
+    },
+    async mergeSaveKV(_session, key, value, lastSeenUpdatedAt) {
+      saves.push({ key, value, lastSeenUpdatedAt });
+      if (!key.startsWith('heys_dayv2_')) return { ok: true, outcome: 'incoming_wins', value };
+      const date = key.slice('heys_dayv2_'.length);
+      const current = days.get(date) || null;
+      const action = typeof api.onDaySave === 'function'
+        ? api.onDaySave({ date, key, value, current, lastSeenUpdatedAt })
+        : null;
+      if (action && action.outcome === 'stale_write_blocked') {
+        return { ok: true, outcome: 'stale_write_blocked', value: current };
+      }
+      days.set(date, structuredClone(value));
+      if (action && action.throwAfterCommit) throw new Error('response_lost_after_commit');
+      return { ok: true, outcome: 'incoming_wins', value: days.get(date) };
+    },
+  };
+  return api;
+}
+
+function moveArgs() {
+  return {
+    date: '2026-08-01',
+    index: 0,
+    to_date: '2026-08-03',
+    expected_plan_id: 'pl_1',
+    expected_assigned_at: NOW - 1000,
+  };
+}
+
 test('get_training показывает состав с id упражнений и подходов', async () => {
   const api = fakeApi({ day: DRAFT_PLAN_DAY(), card: PROPLUS_CARD });
   const res = await build(api).heys_get_training({});
@@ -722,9 +770,137 @@ test('get_training показывает состав с id упражнений 
   const [t] = res.structured.trainings;
   assert.equal(t.index, 0);
   assert.equal(t.plan_status, 'assigned');
+  assert.equal(t.plan_id, 'pl_1');
+  assert.equal(t.assigned_at, NOW - 1000);
   assert.equal(t.editable, true);
   assert.equal(t.exercises[0].approaches[0].weight_kg, 75);
   assert.equal(api.saves.length, 0, 'чтение ничего не пишет');
+});
+
+test('move_training пишет target первым, оставляет двусторонний trace и повторяется идемпотентно', async () => {
+  const api = multiDayMoveApi(DRAFT_PLAN_DAY(), { date: '2026-08-03', meals: [], trainings: [], updatedAt: 50 });
+  const tools = build(api);
+  const first = await tools.heys_move_training(moveArgs());
+  const second = await tools.heys_move_training(moveArgs());
+
+  assert.deepEqual(api.saves.slice(0, 2).map((save) => save.key), [
+    'heys_dayv2_2026-08-03',
+    'heys_dayv2_2026-08-01',
+  ]);
+  const source = api.days.get('2026-08-01').trainings[0];
+  const targets = api.days.get('2026-08-03').trainings.filter((training) => training.plan && training.plan.transferId);
+  assert.equal(source.plan.status, 'moved');
+  assert.equal(source.plan.movedTo, '2026-08-03');
+  assert.equal(targets.length, 1);
+  assert.equal(targets[0].plan.movedFrom, '2026-08-01');
+  assert.equal(targets[0].plan.transferId, source.plan.transferId);
+  assert.equal(first.structured.transfer_id, source.plan.transferId);
+  assert.equal(second.structured.target_reused, true);
+
+  const sourceRead = await tools.heys_get_training({ date: '2026-08-01', index: 0 });
+  const targetRead = await tools.heys_get_training({ date: '2026-08-03', index: 0 });
+  assert.equal(sourceRead.structured.trainings[0].moved_to, '2026-08-03');
+  assert.equal(targetRead.structured.trainings[0].moved_from, '2026-08-01');
+  assert.equal(targetRead.structured.trainings[0].transfer_id, source.plan.transferId);
+  assert.match(targetRead.text, /перенесена с 2026-08-01/);
+});
+
+test('move_training компенсирует target, когда source отвергнут как stale', async () => {
+  const api = multiDayMoveApi(DRAFT_PLAN_DAY(), { date: '2026-08-03', meals: [], trainings: [], updatedAt: 50 });
+  api.onDaySave = ({ date, value }) => (
+    date === '2026-08-01' && value.trainings[0].plan.status === 'moved'
+      ? { outcome: 'stale_write_blocked' }
+      : null
+  );
+  await assert.rejects(
+    () => build(api).heys_move_training(moveArgs()),
+    (error) => error.code === 'stale_move' && /перенос отменён/.test(error.message),
+  );
+  assert.equal(api.days.get('2026-08-01').trainings[0].plan.status, 'assigned');
+  assert.equal(
+    api.days.get('2026-08-03').trainings.some((training) => training.plan && training.plan.transferId),
+    false,
+    'точечная компенсация убирает только созданную target-запись',
+  );
+});
+
+test('move_training не удаляет target с live-work во время stale-компенсации', async () => {
+  const api = multiDayMoveApi(DRAFT_PLAN_DAY(), { date: '2026-08-03', meals: [], trainings: [], updatedAt: 50 });
+  api.onDaySave = ({ date, value }) => {
+    if (date !== '2026-08-01' || value.trainings[0].plan.status !== 'moved') return null;
+    const target = structuredClone(api.days.get('2026-08-03'));
+    target.trainings[0].workoutLog = {
+      version: 1,
+      zoneMinutes: [0, 0, 0, 0],
+      exercises: [{ approaches: [{ done: false, drops: [{ done: true }] }] }],
+    };
+    target.updatedAt += 1;
+    api.days.set('2026-08-03', target);
+    return { outcome: 'stale_write_blocked' };
+  };
+
+  await assert.rejects(
+    () => build(api).heys_move_training(moveArgs()),
+    (error) => error.code === 'move_partial' && /target_changed/.test(error.message),
+  );
+  const targetTraining = api.days.get('2026-08-03').trainings[0];
+  assert.equal(targetTraining.workoutLog.exercises[0].approaches[0].drops[0].done, true);
+  assert.ok(targetTraining.plan.transferId, 'target с живой работой сохранён');
+});
+
+for (const lostSide of ['target', 'source']) {
+  test(`move_training подтверждает fresh-read после потерянного ответа ${lostSide}`, async () => {
+    const api = multiDayMoveApi(DRAFT_PLAN_DAY(), { date: '2026-08-03', meals: [], trainings: [], updatedAt: 50 });
+    let thrown = false;
+    api.onDaySave = ({ date, value }) => {
+      const isLostWrite = lostSide === 'target'
+        ? date === '2026-08-03' && value.trainings.some((training) => training.plan && training.plan.transferId)
+        : date === '2026-08-01' && value.trainings[0].plan.status === 'moved';
+      if (!thrown && isLostWrite) {
+        thrown = true;
+        return { throwAfterCommit: true };
+      }
+      return null;
+    };
+
+    const result = await build(api).heys_move_training(moveArgs());
+    const source = api.days.get('2026-08-01').trainings[0];
+    const target = api.days.get('2026-08-03').trainings.find((training) => training.plan && training.plan.transferId);
+    assert.equal(source.plan.status, 'moved');
+    assert.equal(target.plan.transferId, source.plan.transferId);
+    assert.equal(result.structured.transfer_id, source.plan.transferId);
+  });
+}
+
+test('move_training не переиспользует orphan предыдущей ревизии плана', async () => {
+  const oldSource = DRAFT_PLAN_DAY();
+  const oldPlan = oldSource.trainings[0].plan;
+  const oldOut = dayModel.moveTrainingOut(oldSource, 0, {
+    toDate: '2026-08-03',
+    expectedPlanId: oldPlan.id,
+    expectedAssignedAt: oldPlan.assignedAt,
+    nowMs: NOW,
+    clientId: CLIENT,
+  });
+  const target = dayModel.moveTrainingIn(
+    { date: '2026-08-03', meals: [], trainings: [], updatedAt: 50 },
+    oldOut.movedTraining,
+    { nowMs: NOW, clientId: CLIENT },
+  ).day;
+  const revisedSource = DRAFT_PLAN_DAY();
+  revisedSource.trainings[0].plan.assignedAt += 1;
+  revisedSource.trainings[0].planSnapshot.exercises[0].approaches[0].weightKg = '80';
+  const api = multiDayMoveApi(revisedSource, target);
+
+  await assert.rejects(
+    () => build(api).heys_move_training({
+      ...moveArgs(),
+      expected_assigned_at: revisedSource.trainings[0].plan.assignedAt,
+    }),
+    (error) => error.code === 'stale_move' && /предыдущей ревизии/.test(error.message),
+  );
+  assert.equal(api.days.get('2026-08-03').trainings.filter((training) => training.plan && training.plan.transferId).length, 1);
+  assert.equal(api.saves.length, 0);
 });
 
 test('get_training читает skipped-план из snapshot, а не из пустого журнала', async () => {

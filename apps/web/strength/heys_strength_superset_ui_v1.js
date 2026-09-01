@@ -819,10 +819,10 @@
    * ни в коде»), сюда сознательно не входит: только «отпустить» день целиком.
    */
   function SkipSheet(props) {
-    const { onCancel, onConfirm } = props;
+    const { onCancel, onConfirm, busy, error } = props;
     const [reason, setReason] = React.useState('');
     const [custom, setCustom] = React.useState('');
-    return h('div', { className: 'sb-sheet-back', onClick: onCancel },
+    return h('div', { className: 'sb-sheet-back', onClick: busy ? undefined : onCancel },
       h('div', { className: 'sb-sheet', onClick: function (e) { e.stopPropagation(); } },
         h('div', { className: 'sb-sheet-grip' }),
         h('b', { className: 'sb-confirm-title' }, 'Что помешало · необязательно'),
@@ -831,7 +831,8 @@
             return h('button', {
               key: r, type: 'button',
               className: 'sb-chip' + (reason === r ? ' is-on' : ''),
-              onClick: function () { setReason(reason === r ? '' : r); }
+              disabled: !!busy,
+              onClick: function () { if (!busy) setReason(reason === r ? '' : r); }
             }, r);
           })
         ),
@@ -840,16 +841,19 @@
           type: 'text',
           placeholder: 'Своя причина',
           value: custom,
+          disabled: !!busy,
           onChange: function (e) { setCustom(e.target.value); setReason(''); }
         }),
         h('p', { className: 'sb-confirm-text' },
           'Пропуск не считается провалом: он просто не попадёт в объём. Куратор увидит и решение, и причину, если укажешь.'),
+        error && h('p', { className: 'sb-confirm-text', role: 'alert' }, error),
         h('div', { className: 'sb-pain-actions' },
-          h('button', { type: 'button', className: 'sb-btn', onClick: onCancel }, 'Передумал'),
+          h('button', { type: 'button', className: 'sb-btn', disabled: !!busy, onClick: onCancel }, 'Передумал'),
           h('button', {
             type: 'button', className: 'sb-btn is-accent',
+            disabled: !!busy,
             onClick: function () { onConfirm(custom.trim() || reason || ''); }
-          }, 'Отпустить')
+          }, busy ? 'Сохраняю…' : 'Отпустить')
         )
       )
     );
@@ -857,9 +861,9 @@
 
   /** Ближайшие свободные дни для переноса (16a). Занятый день не предлагается. */
   function MoveSheet(props) {
-    const { options, onCancel, onConfirm } = props;
+    const { options, onCancel, onConfirm, busy, error } = props;
     const [pick, setPick] = React.useState('');
-    return h('div', { className: 'sb-sheet-back', onClick: onCancel },
+    return h('div', { className: 'sb-sheet-back', onClick: busy ? undefined : onCancel },
       h('div', { className: 'sb-sheet', onClick: function (e) { e.stopPropagation(); } },
         h('div', { className: 'sb-sheet-grip' }),
         h('b', { className: 'sb-confirm-title' }, 'Когда сможешь?'),
@@ -870,8 +874,8 @@
             return h('button', {
               key: o.date, type: 'button',
               className: 'sb-move-day' + (pick === o.date ? ' is-on' : '') + (o.busy ? ' is-busy' : ''),
-              disabled: o.busy,
-              onClick: function () { if (!o.busy) setPick(o.date); }
+              disabled: !!busy || o.busy,
+              onClick: function () { if (!busy && !o.busy) setPick(o.date); }
             },
               h('b', null, o.weekday),
               h('span', null, o.human),
@@ -879,17 +883,19 @@
             );
           })
         ),
+        error && h('p', { className: 'sb-confirm-text', role: 'alert' }, error),
         h('div', { className: 'sb-pain-actions' },
-          h('button', { type: 'button', className: 'sb-btn', onClick: onCancel }, 'Передумал'),
+          h('button', { type: 'button', className: 'sb-btn', disabled: !!busy, onClick: onCancel }, 'Передумал'),
           h('button', {
             type: 'button', className: 'sb-btn is-accent',
-            disabled: !pick,
+            disabled: !pick || !!busy,
             onClick: function () { if (pick) onConfirm(pick); }
-          }, pick ? 'Перенести' : 'Выбери день')
+          }, busy ? 'Переношу…' : (pick ? 'Перенести' : 'Выбери день'))
         ),
         h('button', {
           type: 'button', className: 'sb-move-skip',
-          onClick: function () { if (props.onSkipInstead) props.onSkipInstead(); }
+          disabled: !!busy,
+          onClick: function () { if (!busy && props.onSkipInstead) props.onSkipInstead(); }
         }, 'Совсем пропустить')
       )
     );
@@ -909,7 +915,41 @@
     const [skipOpen, setSkipOpen] = React.useState(false);
     const [moveOpen, setMoveOpen] = React.useState(false);
     const [previewOpen, setPreviewOpen] = React.useState(false);
+    const [pendingAction, setPendingAction] = React.useState('');
+    const [actionError, setActionError] = React.useState('');
     if (!plan) return null;
+    function runPlanAction(actionName, action, onSuccess) {
+      if (pendingAction || typeof action !== 'function') return;
+      setPendingAction(actionName);
+      setActionError('');
+      let result;
+      try {
+        result = action();
+      } catch (_e) {
+        setPendingAction('');
+        setActionError('План не изменён. Обновите день и попробуйте ещё раз.');
+        return;
+      }
+      function finish(value) {
+        if (value === undefined || value === null || value === false || (value && value.ok === false)) {
+          setActionError(value && value.code === 'move_rollback_failed'
+            ? 'Перенос не завершён полностью. Обновите оба дня перед повтором.'
+            : 'План уже изменился. Обновите день и проверьте актуальную версию.');
+          return;
+        }
+        if (typeof onSuccess === 'function') onSuccess();
+      }
+      if (!result || typeof result.then !== 'function') {
+        finish(result);
+        setPendingAction('');
+        return;
+      }
+      Promise.resolve(result).then(finish, function () {
+        setActionError('План не изменён. Проверьте соединение и попробуйте ещё раз.');
+      }).then(function () {
+        setPendingAction('');
+      });
+    }
     const label = plan.dayLabel || sessionTitle(exercises);
     // Место в неделе вместо даты следующей тренировки — единственное, что
     // осталось от прежнего виджета обзора (дизайн-ревью 2026-08-10, 16c):
@@ -936,8 +976,12 @@
           plan.skipReason ? 'Причина: ' + plan.skipReason : 'Без объяснения — и это нормально'),
         h('button', {
           type: 'button', className: 'sb-btn sb-plan-cta',
-          onClick: onResumeSkipped
-        }, 'Начать всё же')
+          disabled: !!pendingAction,
+          onClick: function (e) {
+            runPlanAction('resume', function () { return onResumeSkipped(e, plan); });
+          }
+        }, pendingAction === 'resume' ? 'Возвращаю…' : 'Начать всё же'),
+        actionError && h('p', { className: 'sb-confirm-text', role: 'alert' }, actionError)
       );
     }
 
@@ -999,13 +1043,21 @@
       ),
       moveOpen && h(MoveSheet, {
         options: moveOptions,
+        busy: pendingAction === 'move',
+        error: actionError,
         onCancel: function () { setMoveOpen(false); },
-        onConfirm: function (toDate) { setMoveOpen(false); onMove(toDate); },
-        onSkipInstead: function () { setMoveOpen(false); setSkipOpen(true); }
+        onConfirm: function (toDate) {
+          runPlanAction('move', function () { return onMove(toDate, plan); }, function () { setMoveOpen(false); });
+        },
+        onSkipInstead: function () { setActionError(''); setMoveOpen(false); setSkipOpen(true); }
       }),
       skipOpen && h(SkipSheet, {
+        busy: pendingAction === 'skip',
+        error: actionError,
         onCancel: function () { setSkipOpen(false); },
-        onConfirm: function (skipReason) { setSkipOpen(false); onSkip(skipReason); }
+        onConfirm: function (skipReason) {
+          runPlanAction('skip', function () { return onSkip(skipReason, plan); }, function () { setSkipOpen(false); });
+        }
       })
     );
   }

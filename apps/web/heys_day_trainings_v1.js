@@ -117,20 +117,36 @@
    * целевой лежит в хранилище. Пишем тем же путём, что и остальной день
    * (lsSet → Store.set → облако), чтобы перенос доехал до куратора сам.
    */
-  function appendTrainingToDay(dateStr, training) {
+  function appendTrainingToDay(dateStr, training, transferId) {
     const U = HEYS.utils || {};
-    if (typeof U.lsGet !== 'function' || typeof U.lsSet !== 'function') return false;
+    if (typeof U.lsGet !== 'function' || typeof U.lsSet !== 'function') return { ok: false, inserted: false };
     let cid = '';
     try { cid = HEYS.currentClientId || ''; } catch (_) { cid = ''; }
     const key = cid ? 'heys_' + cid + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
     const existing = U.lsGet(key, null) || { date: dateStr, meals: [], trainings: [] };
     const list = Array.isArray(existing.trainings) ? existing.trainings.slice() : [];
+    const existingTransfer = transferId && list.find(function (item) {
+      return item && item.plan && item.plan.transferId === transferId;
+    });
+    if (existingTransfer) {
+      return { ok: true, inserted: false, trainingId: existingTransfer.id || null };
+    }
+    const movedFrom = training && training.plan && training.plan.movedFrom;
+    const movedSourceId = training && training.plan && training.plan.movedSourceId;
+    if (transferId && movedFrom && movedSourceId && list.some(function (item) {
+      return item && item.plan && item.plan.transferId
+        && item.plan.transferId !== transferId
+        && item.plan.movedFrom === movedFrom
+        && item.plan.movedSourceId === movedSourceId;
+    })) {
+      return { ok: false, inserted: false, reason: 'stale_transfer' };
+    }
     // Лимит тот же, что у дня: занятый день до сюда доходить не должен, но
     // проверка стоит и здесь — между показом списка и выбором проходит время.
     const real = list.filter(function (t) {
       return t && (t.time || (Array.isArray(t.z) && t.z.some(function (m) { return +m > 0; })) || t.workoutLog);
     });
-    if (real.length >= 3) return false;
+    if (real.length >= 3) return { ok: false, inserted: false };
     list.push(training);
     const next = Object.assign({}, existing, {
       date: existing.date || dateStr,
@@ -139,9 +155,9 @@
     });
     try {
       U.lsSet(key, next);
-      return true;
+      return { ok: true, inserted: true, trainingId: training && training.id || null };
     } catch (_) {
-      return false;
+      return { ok: false, inserted: false };
     }
   }
 
@@ -737,6 +753,94 @@
     return out;
   }
 
+  function stableMoveTransferId(fromDate, toDate, plan) {
+    const planId = plan && plan.id != null ? String(plan.id) : '';
+    const assignedAt = plan && Number.isFinite(+plan.assignedAt) ? String(+plan.assignedAt) : '';
+    if (!planId && !assignedAt) return null;
+    return 'strength_move_' + [fromDate, toDate, planId, assignedAt]
+      .map(function (part) { return encodeURIComponent(String(part || '')); })
+      .join('__');
+  }
+
+  /** Roll back only the target row created by the current move transfer. */
+  function removeTrainingFromDayById(dateStr, trainingId, transferId) {
+    const U = HEYS.utils || {};
+    if (!trainingId || !transferId || typeof U.lsGet !== 'function' || typeof U.lsSet !== 'function') {
+      return { ok: false, removed: false };
+    }
+    let cid = '';
+    try { cid = HEYS.currentClientId || ''; } catch (_) { cid = ''; }
+    const key = cid ? 'heys_' + cid + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
+    const existing = U.lsGet(key, null);
+    if (!existing || !Array.isArray(existing.trainings)) return { ok: true, removed: false };
+    const targetIndex = existing.trainings.findIndex(function (training) {
+      return training && training.id === trainingId && training.plan && training.plan.transferId === transferId;
+    });
+    if (targetIndex < 0) return { ok: true, removed: false };
+    const target = existing.trainings[targetIndex];
+    if (target.plan.status !== 'assigned' || hasMeaningfulLiveWorkout(target)) {
+      return { ok: false, removed: false, reason: 'target_changed' };
+    }
+    try {
+      const mutationTs = Date.now();
+      // Training merge remains positional for legacy rows without ids. Keep the
+      // array length stable and stamp every shifted survivor, matching the normal
+      // app/MCP delete path, so a trailing unrelated row cannot be merged against
+      // the removed slot and disappear.
+      const kept = existing.trainings.slice(0, targetIndex)
+        .concat(existing.trainings.slice(targetIndex + 1));
+      const list = kept.map(function (training) {
+        return training && typeof training === 'object'
+          ? Object.assign({}, training, { updatedAt: mutationTs })
+          : training;
+      }).concat([{ z: [0, 0, 0, 0], time: '', type: '' }]);
+      let deletionSignature = '';
+      try {
+        const shared = HEYS.sync && HEYS.sync.trainingDeletionSignature;
+        if (typeof shared === 'function') deletionSignature = shared(target) || '';
+      } catch (_) { /* noop */ }
+      if (!deletionSignature && target.id != null && String(target.id).trim()) {
+        deletionSignature = 'id:' + String(target.id).trim();
+      }
+      const previousTombstones = Array.isArray(existing.deletedTrainings) ? existing.deletedTrainings : [];
+      const deletedTrainings = deletionSignature
+        ? [{
+          tombstoneId: mutationTs + ':' + targetIndex + ':' + deletionSignature,
+          signature: deletionSignature,
+          deletedAt: mutationTs,
+          index: targetIndex
+        }].concat(previousTombstones).slice(0, 50)
+        : previousTombstones;
+      U.lsSet(key, Object.assign({}, existing, {
+        trainings: list,
+        deletedTrainings: deletedTrainings,
+        updatedAt: mutationTs
+      }));
+      return { ok: true, removed: true };
+    } catch (_) {
+      return { ok: false, removed: false };
+    }
+  }
+
+  function hasMeaningfulLiveWorkout(t0) {
+    if (!t0 || typeof t0 !== 'object') return false;
+    if (Array.isArray(t0.z) && t0.z.some(function (minutes) { return +minutes > 0; })) return true;
+    const wl0 = t0 && t0.workoutLog;
+    if (!wl0 || typeof wl0 !== 'object') return false;
+    if (+wl0.startedAt > 0 || +wl0.firstMarkAt > 0 || +wl0.lastMarkAt > 0
+      || +wl0.completedAt > 0 || (wl0.activeRest && typeof wl0.activeRest === 'object')) return true;
+    if (Array.isArray(wl0.zoneMinutes) && wl0.zoneMinutes.some(function (minutes) { return +minutes > 0; })) return true;
+    return Array.isArray(wl0.exercises) && wl0.exercises.some(function (exercise) {
+      return Array.isArray(exercise && exercise.approaches) && exercise.approaches.some(function (approach) {
+        if (approach && approach.done) return true;
+        const drops = Array.isArray(approach && approach.drops) ? approach.drops : [];
+        const stages = Array.isArray(approach && approach.stages) ? approach.stages : [];
+        return drops.some(function (drop) { return !!(drop && drop.done); })
+          || stages.some(function (stage) { return !!(stage && stage.done); });
+      });
+    });
+  }
+
   function finishStartedWorkoutPlan(training) {
     if (!training || !training.plan || training.plan.status !== 'started') return training;
     return {
@@ -835,7 +939,7 @@
       return load.isNotPerformedTraining(training);
     }
     const status = training && training.plan && training.plan.status;
-    return status === 'assigned' || status === 'skipped';
+    return status === 'assigned' || status === 'skipped' || status === 'moved';
   }
 
   /** Найти ближайшую прошлую workout_builder-тренировку; optional key оставляет только тот же состав. */
@@ -3078,7 +3182,7 @@
       const TKs = (HEYS.TrainingKernel && HEYS.TrainingKernel.strength) || null;
       if (TKs && TKs.pendingPlanProposal && TKs.pendingPlanProposal(training)) return true;
       const status = training.plan && training.plan.status;
-      return status === 'assigned' || status === 'skipped';
+      return status === 'assigned' || status === 'skipped' || status === 'moved';
     }
 
     function shouldRenderTraining(training) {
@@ -3899,9 +4003,14 @@
               plan: rawT.plan,
               planSnapshot: rawT.planSnapshot
             };
-            function matchesOpenedPlanRevision(t0, expectedPlan) {
+            function matchesOpenedPlanRevision(t0, expectedPlan, expectedStatus, expectedTrainingUpdatedAt) {
               if (!expectedPlan) return !t0.plan;
-              if (!t0.plan || t0.plan.status !== 'assigned') return false;
+              if (!t0.plan || t0.plan.status !== (expectedStatus || 'assigned')) return false;
+              if (expectedTrainingUpdatedAt !== undefined) {
+                const currentUpdatedAt = Number.isFinite(+t0.updatedAt) ? +t0.updatedAt : null;
+                const expectedUpdatedAt = Number.isFinite(+expectedTrainingUpdatedAt) ? +expectedTrainingUpdatedAt : null;
+                if (currentUpdatedAt !== expectedUpdatedAt) return false;
+              }
               const currentId = t0.plan.id || null;
               const currentAssignedAt = Number.isFinite(+t0.plan.assignedAt) ? +t0.plan.assignedAt : null;
               return currentId === (expectedPlan.id || null)
@@ -4151,33 +4260,66 @@
                 moveOptions: moveOptionsFor(dateKey),
                 // Клиент переносит сам, без подтверждения куратора (16a): пока
                 // тот ответит, день уйдёт, и перенос превратится в пропуск.
-                onMove: function (toDate) {
+                onMove: function (toDate, expectedPlan) {
+                  if (!toDate || String(toDate) <= String(dateKey)) return Promise.resolve(null);
                   const src = readDayFromStore(dateKey);
                   const t0 = src && Array.isArray(src.trainings) ? src.trainings[ti] : null;
                   const source = t0 && t0.planSnapshot && Array.isArray(t0.planSnapshot.exercises)
                     ? t0.planSnapshot.exercises
                     : [];
-                  if (!t0 || !t0.plan || !source.length) return;
+                  if (!t0 || !matchesOpenedPlanRevision(t0, expectedPlan, 'assigned', rawT.updatedAt)
+                    || hasMeaningfulLiveWorkout(t0) || !source.length) {
+                    return Promise.resolve(null);
+                  }
+                  const moveTransferId = stableMoveTransferId(dateKey, toDate, expectedPlan);
+                  if (!moveTransferId) return Promise.resolve(null);
+                  const movedTrainingId = 'tr_' + Math.random().toString(36).slice(2, 10);
+                  const movedAt = Date.now();
                   const moved = {
                     ...t0,
-                    id: 'tr_' + Math.random().toString(36).slice(2, 10),
+                    id: movedTrainingId,
                     workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
                     z: [0, 0, 0, 0],
-                    plan: { ...t0.plan, status: 'assigned', movedFrom: dateKey, movedAt: Date.now() },
-                    updatedAt: Date.now()
+                    plan: {
+                      ...t0.plan,
+                      status: 'assigned',
+                      movedFrom: dateKey,
+                      movedAt: movedAt,
+                      transferId: moveTransferId,
+                      movedSourceId: t0.id || null
+                    },
+                    updatedAt: movedAt
                   };
                   delete moved.plan.movedTo;
                   // Целевой день пишем первым: если не удастся, у клиента
                   // останется исходный план, а не потерянная тренировка.
-                  const okTarget = appendTrainingToDay(toDate, moved);
-                  if (!okTarget) return;
-                  patchTraining(ti, function (cur) {
+                  const targetReceipt = appendTrainingToDay(toDate, moved, moveTransferId);
+                  if (!targetReceipt.ok) return Promise.resolve(null);
+                  const targetTrainingId = targetReceipt.trainingId;
+                  if (!targetTrainingId) return Promise.resolve({ ok: false, code: 'move_rollback_failed' });
+                  return patchTrainingAcknowledged(ti, function (cur) {
+                    if (cur && cur.plan && cur.plan.status === 'moved'
+                      && cur.plan.transferId === moveTransferId) {
+                      return { training: cur, value: targetTrainingId };
+                    }
+                    if (!matchesOpenedPlanRevision(cur, expectedPlan, 'assigned', rawT.updatedAt)
+                      || hasMeaningfulLiveWorkout(cur)) return null;
                     return {
-                      ...cur,
-                      workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
-                      z: [0, 0, 0, 0],
-                      plan: { ...cur.plan, status: 'moved', movedTo: toDate, movedAt: Date.now() }
+                      training: {
+                        ...cur,
+                        workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
+                        z: [0, 0, 0, 0],
+                        plan: { ...cur.plan, status: 'moved', movedTo: toDate, movedAt: movedAt, transferId: moveTransferId }
+                      },
+                      value: targetTrainingId
                     };
+                  }).then(function (acceptedId) {
+                    if (acceptedId) return acceptedId;
+                    const rollback = removeTrainingFromDayById(toDate, targetTrainingId, moveTransferId);
+                    if (!rollback.ok) {
+                      return { ok: false, code: 'move_rollback_failed' };
+                    }
+                    return null;
                   });
                 },
                 onStart: function (e) {
@@ -4189,27 +4331,33 @@
                 // Пропуск — явное «не делал»: без него незакрытый план остаётся
                 // «assigned» и вечно просится начать. Перенос на другую дату не
                 // входит — открытый вопрос протокола, отдельная операция.
-                onSkip: function (skipReason) {
-                  patchTraining(ti, function (t0) {
+                onSkip: function (skipReason, expectedPlan) {
+                  return patchTrainingAcknowledged(ti, function (t0) {
+                    if (!matchesOpenedPlanRevision(t0, expectedPlan, 'assigned', rawT.updatedAt)
+                      || hasMeaningfulLiveWorkout(t0)) return null;
                     const patch = { ...t0.plan, status: 'skipped' };
                     if (skipReason) patch.skipReason = skipReason;
                     else delete patch.skipReason;
                     patch.skippedAt = Date.now();
                     return {
-                      ...t0,
-                      workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
-                      z: [0, 0, 0, 0],
-                      plan: patch
+                      training: {
+                        ...t0,
+                        workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
+                        z: [0, 0, 0, 0],
+                        plan: patch
+                      },
+                      value: true
                     };
                   });
                 },
-                onResumeSkipped: function (e) {
+                onResumeSkipped: function (e, expectedPlan) {
                   if (e && e.stopPropagation) e.stopPropagation();
-                  patchTraining(ti, function (t0) {
+                  return patchTrainingAcknowledged(ti, function (t0) {
+                    if (!matchesOpenedPlanRevision(t0, expectedPlan, 'skipped', rawT.updatedAt)) return null;
                     const patch = { ...t0.plan, status: 'assigned' };
                     delete patch.skipReason;
                     delete patch.skippedAt;
-                    return { ...t0, plan: patch };
+                    return { training: { ...t0, plan: patch }, value: true };
                   });
                 }
               });
@@ -4536,6 +4684,9 @@
     computeDayTotalTonnage,
     moveOptionsFor,
     appendTrainingToDay,
+    removeTrainingFromDayById,
+    stableMoveTransferId,
+    hasMeaningfulLiveWorkout,
     ProgramPathScreen,
     placeInWeek
   };

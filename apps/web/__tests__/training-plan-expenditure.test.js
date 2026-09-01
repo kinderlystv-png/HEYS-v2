@@ -30,6 +30,7 @@ const IW_ORDER = ['heys_iw_shim.js', 'heys_iw_constants.js'];
 const PROFILE = { weight: 80, height: 180, gender: 'Мужской', birthDate: '1990-01-01' };
 const CARDIO = { type: 'cardio', time: '10:00', z: [30, 20, 10, 5] };
 const assigned = (t) => ({ ...t, plan: { status: 'assigned' } });
+const moved = (t) => ({ ...t, plan: { status: 'moved' } });
 
 let IWI;
 let TDEE;
@@ -53,6 +54,10 @@ describe('HEYS.TDEE.trainingKcal — назначенное не даёт кал
   it('назначенная тренировка стоит 0 ккал, даже с полными зонами', () => {
     expect(TDEE.trainingKcal(CARDIO, 80)).toBeGreaterThan(0);
     expect(TDEE.trainingKcal(assigned(CARDIO), 80)).toBe(0);
+  });
+
+  it('перенесённая исходная запись стоит 0 ккал и через TDEE fallback', () => {
+    expect(TDEE.trainingKcal(moved(CARDIO), 80)).toBe(0);
   });
 
   it('начатая и выполненная — уже факт, считаются как раньше', () => {
@@ -133,6 +138,10 @@ describe('getPreviousDayTrainings — вчерашний план не разг�
     expect(IWI.getPreviousDayTrainings('2026-08-09', prevDayWith([]))).toEqual(EMPTY);
   });
 
+  it('вчера только перенесённая исходная запись — ответ такой же, как у дня без тренировок', () => {
+    expect(IWI.getPreviousDayTrainings('2026-08-09', prevDayWith([moved(CARDIO)]))).toEqual(EMPTY);
+  });
+
   it('вчерашний факт считается как раньше — и по калориям, и по счётчику', () => {
     const fact = IWI.getPreviousDayTrainings('2026-08-09', prevDayWith([CARDIO]));
     expect(fact.totalKcal).toBeGreaterThan(200);
@@ -181,6 +190,7 @@ describe('вторая копия формулы расхода внутри м�
     // (yandex-cloud-functions/heys-mcp/lib/day.js → insulinWaveInternals().utils).
     expect(IWI.utils.calculateTrainingKcal(CARDIO, 70)).toBeGreaterThan(0);
     expect(IWI.utils.calculateTrainingKcal(assigned(CARDIO), 70)).toBe(0);
+    expect(IWI.utils.calculateTrainingKcal(moved(CARDIO), 70)).toBe(0);
   });
 
   it('назначенное не создаёт контекста «после тренировки» у приёма пищи', () => {

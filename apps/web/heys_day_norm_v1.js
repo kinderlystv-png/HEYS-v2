@@ -50,7 +50,7 @@
     if (TK && TK.load && typeof TK.load.isNotPerformedTraining === 'function') {
       return TK.load.isNotPerformedTraining(t);
     }
-    return !!(t && t.plan && t.plan.status === 'assigned');
+    return !!(t && t.plan && ['assigned', 'skipped', 'moved'].includes(t.plan.status));
   }
 
   function lsGetFn(opts) {

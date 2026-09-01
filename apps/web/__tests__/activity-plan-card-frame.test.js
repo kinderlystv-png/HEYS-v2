@@ -15,7 +15,7 @@ import path from 'path';
 import React from 'react';
 import { fileURLToPath } from 'url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -151,6 +151,68 @@ describe('Перенос и пропуск — два разных действ�
     renderCard({ moveOptions: [{ date: '2026-08-31', label: 'завтра' }] });
     expect(screen.getByText('Перенести')).toBeTruthy();
     expect(screen.getByText('Пропустить')).toBeTruthy();
+  });
+
+  it('не закрывает перенос до owner-ack и оставляет шторку открытой при stale revision', async () => {
+    let resolveMove;
+    const onMove = vi.fn(() => new Promise((resolve) => { resolveMove = resolve; }));
+    renderCard({
+      moveOptions: [{ date: '2026-08-31', weekday: 'завтра', human: '31 августа' }],
+      onMove,
+    });
+
+    fireEvent.click(document.querySelector('.sb-plan-actions button'));
+    fireEvent.click(document.querySelector('.sb-move-day'));
+    fireEvent.click(document.querySelector('.sb-sheet .sb-btn.is-accent'));
+
+    expect(document.querySelector('.sb-sheet')).not.toBeNull();
+    expect(document.querySelector('.sb-sheet .sb-btn.is-accent').disabled).toBe(true);
+    expect(onMove).toHaveBeenCalledWith('2026-08-31', expect.objectContaining({ id: 'pl_1', status: 'assigned' }));
+
+    resolveMove(null);
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
+    expect(document.querySelector('.sb-sheet')).not.toBeNull();
+  });
+
+  it('не считает rollback failure успехом и явно оставляет перенос на проверку', async () => {
+    renderCard({
+      moveOptions: [{ date: '2026-08-31', weekday: 'завтра', human: '31 августа' }],
+      onMove: async () => ({ ok: false, code: 'move_rollback_failed' }),
+    });
+
+    fireEvent.click(document.querySelector('.sb-plan-actions button'));
+    fireEvent.click(document.querySelector('.sb-move-day'));
+    fireEvent.click(document.querySelector('.sb-sheet .sb-btn.is-accent'));
+
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('оба дня'));
+    expect(document.querySelector('.sb-sheet')).not.toBeNull();
+  });
+
+  it('void owner callback не считается acknowledgment и не закрывает пропуск', async () => {
+    renderCard({ onSkip: () => undefined });
+
+    const actions = document.querySelectorAll('.sb-plan-actions button');
+    fireEvent.click(actions[actions.length - 1]);
+    fireEvent.click(document.querySelector('.sb-sheet .sb-btn.is-accent'));
+
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
+    expect(document.querySelector('.sb-sheet')).not.toBeNull();
+  });
+
+  it('закрывает пропуск только после успешного owner-ack и передаёт открытую ревизию', async () => {
+    let resolveSkip;
+    const onSkip = vi.fn(() => new Promise((resolve) => { resolveSkip = resolve; }));
+    renderCard({ onSkip });
+
+    const actions = document.querySelectorAll('.sb-plan-actions button');
+    fireEvent.click(actions[actions.length - 1]);
+    fireEvent.click(document.querySelector('.sb-sheet .sb-btn.is-accent'));
+
+    expect(document.querySelector('.sb-sheet')).not.toBeNull();
+    expect(onSkip).toHaveBeenCalledWith('', expect.objectContaining({ id: 'pl_1', status: 'assigned' }));
+
+    resolveSkip(true);
+    await waitFor(() => expect(document.querySelector('.sb-sheet')).toBeNull());
   });
 });
 

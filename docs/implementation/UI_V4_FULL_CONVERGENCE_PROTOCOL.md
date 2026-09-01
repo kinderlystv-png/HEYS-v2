@@ -353,3 +353,28 @@ build, push и deploy не выполнялись.
   acceptance с лишней строкой `.grp` не использовался.
 - Текущее распределение: глобально 9 476 / 1 096 / 3 490 / 1 512;
   `strength-builder` 211 / 229 / 98 / 1 274 (`=` / `≠` / `—` / `?`).
+
+### 16. `strength-builder`: исходы назначенного плана — data-safety готова, visual pending
+
+- UI-гейт: цель — безопасно перенести, пропустить или вернуть назначенный план;
+  главное действие остаётся внутри открытого sheet; слой 1 показывает pending и
+  ошибку owner-write; слой 2 не меняется; live-log и partial cross-day исход
+  нельзя скрывать или стирать.
+- Web move/skip/resume теперь сверяют `plan.id`, `assignedAt`, status и открытый
+  `training.updatedAt`, блокируют lifecycle timestamps, active rest, минуты зон,
+  выполненные подходы/drop-stages и закрывают sheet только после явного ack.
+  `void/null/false/{ok:false}` считаются отказом, а не успехом.
+- Перенос разрешён только вперёд. Target пишется первым с детерминированным
+  `plan.transferId`; повтор использует existing counterpart. Stale source
+  вызывает точечный rollback exact target с tombstone и сохранением позиционной
+  длины массива. Изменённая/начатая цель не удаляется и даёт explicit partial.
+- MCP требует свежие `expected_plan_id + expected_assigned_at`, fresh-read'ом
+  разрешает lost-response/ambiguous commit, идемпотентно подтверждает полный
+  повтор и отдаёт moved/transfer trace. Четыре web-mirror синхронизированы.
+- `moved` исключён из program path, нагрузки, калорий и fallback-предикатов. Web
+  проверен 263/263, MCP 1 346/1 346; независимый cross-stack safety-review —
+  GREEN. Syntax и scoped diff-check зелёные.
+- 77 visual-строк не переклассифицированы: будущий `Начать сейчас`, composite
+  переноса и `missed-pending` требуют owner/design решений. Все три конфликта
+  записаны в `UI_V4_CODEX_DESIGN_DISCREPANCIES.md`; числовой snapshot не
+  менялся.

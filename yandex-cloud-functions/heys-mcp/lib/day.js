@@ -23,6 +23,46 @@ function makeId(prefix) {
 }
 
 /**
+ * Stable identity for one cross-day move. The target training itself keeps a
+ * fresh id (so a compensated retry is not blocked by its tombstone), while
+ * transferId lets orchestration find an already-written target after a partial
+ * previous attempt without appending a duplicate.
+ */
+function trainingTransferId(training, index, fromDate, toDate) {
+  const plan = training && training.plan ? training.plan : {};
+  const raw = [
+    fromDate,
+    toDate,
+    index,
+    training && training.id ? training.id : '',
+    plan.id || '',
+    Number(plan.assignedAt) || 0,
+  ].join('|');
+  return `mv_${crypto.createHash('sha256').update(raw).digest('hex').slice(0, 20)}`;
+}
+
+function hasMeaningfulLiveTraining(training) {
+  if (!training || typeof training !== 'object') return false;
+  const log = training.workoutLog && typeof training.workoutLog === 'object'
+    ? training.workoutLog
+    : {};
+  const lifecycleFields = ['startedAt', 'firstMarkAt', 'lastMarkAt', 'completedAt', 'activeRest'];
+  if (lifecycleFields.some((field) => training[field] || log[field])) return true;
+  if ((Array.isArray(training.z) ? training.z : []).some((value) => Number(value) > 0)) return true;
+  if ((Array.isArray(log.zoneMinutes) ? log.zoneMinutes : []).some((value) => Number(value) > 0)) return true;
+  const approachHasDoneWork = (approach) => {
+    if (!approach || typeof approach !== 'object') return false;
+    if (approach.done === true) return true;
+    return ['drops', 'stages', 'dropStages'].some((field) => (
+      Array.isArray(approach[field]) && approach[field].some(approachHasDoneWork)
+    ));
+  };
+  return (Array.isArray(log.exercises) ? log.exercises : []).some((exercise) => (
+    Array.isArray(exercise && exercise.approaches) && exercise.approaches.some(approachHasDoneWork)
+  ));
+}
+
+/**
  * Потолки на объём записи. Без них один кривой вызов модели пишет блоб дня
  * на десятки мегабайт, и день клиента перестаёт открываться (проверено
  * аудитом 2026-08-08: 2000 упражнений × 200 подходов = 25.9 МБ).
@@ -1214,7 +1254,7 @@ function proposeTrainingEdit(day, index, { exercises, proposedBy, note }, { nowM
  * записать её обязан вызывающий, потому что дни лежат под разными ключами и
  * транзакции между ними нет.
  */
-function moveTrainingOut(day, index, { toDate, nowMs, clientId }) {
+function moveTrainingOut(day, index, { toDate, expectedPlanId, expectedAssignedAt, nowMs, clientId }) {
   const list = Array.isArray(day.trainings) ? day.trainings : [];
   const i = Number(index);
   if (!Number.isInteger(i) || i < 0 || i >= list.length) {
@@ -1231,8 +1271,25 @@ function moveTrainingOut(day, index, { toDate, nowMs, clientId }) {
   if (prev.plan.status === 'moved') {
     return { day, error: `Тренировка ${i} уже перенесена на ${prev.plan.movedTo || 'другую дату'}.` };
   }
-  if (day.date && toDate === day.date) {
-    return { day, error: 'Перенос на тот же день ничего не меняет.' };
+  if (prev.plan.status !== 'assigned') {
+    return { day, error: `Тренировка ${i} имеет статус «${prev.plan.status}». Переносить можно только ещё не открытый план в статусе assigned.` };
+  }
+  const currentPlanId = String(prev.plan.id || '');
+  const currentAssignedAt = Number(prev.plan.assignedAt) || 0;
+  if (!currentPlanId || !currentAssignedAt) {
+    return { day, error: `У тренировки ${i} нет полной ревизии плана (plan.id + assignedAt). Сначала переназначь её, затем повтори перенос.` };
+  }
+  if (String(expectedPlanId || '') !== currentPlanId || Number(expectedAssignedAt) !== currentAssignedAt) {
+    return { day, error: `План тренировки ${i} изменился после чтения: ожидалась ревизия ${expectedPlanId || '—'}/${expectedAssignedAt || '—'}, сейчас ${currentPlanId}/${currentAssignedAt}. Сначала перечитай heys_get_training.` };
+  }
+  if (hasMeaningfulLiveTraining(prev)) {
+    return { day, error: `Тренировка ${i} содержит начатый live-log, несмотря на статус assigned. Перенос остановлен, чтобы не стереть отмеченные подходы, таймер или минуты зон.` };
+  }
+  if (!isValidDate(day.date)) {
+    return { day, error: 'У исходного дня нет валидной даты — безопасно проверить направление переноса нельзя.' };
+  }
+  if (toDate <= day.date) {
+    return { day, error: `Перенос возможен только вперёд: целевая дата ${toDate} должна быть позже ${day.date}.` };
   }
   if (!prev.planSnapshot || !Array.isArray(prev.planSnapshot.exercises) || !prev.planSnapshot.exercises.length) {
     return { day, error: `Тренировка ${i} не содержит planSnapshot с упражнениями: переносить план без подтверждённого источника нельзя.` };
@@ -1240,10 +1297,11 @@ function moveTrainingOut(day, index, { toDate, nowMs, clientId }) {
 
   // Исходный день: не пропуск, а «уехала на такую-то дату». Статус moved
   // держит её вне калорий и нагрузки — считаться она будет на новом дне.
+  const transferId = trainingTransferId(prev, i, day.date, toDate);
   const source = {
     ...prev,
     workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
-    plan: { ...prev.plan, status: 'moved', movedTo: toDate, movedAt: nowMs },
+    plan: { ...prev.plan, status: 'moved', movedTo: toDate, movedAt: nowMs, transferId },
     updatedAt: nowMs,
   };
   // Целевой день получает ту же тренировку целиком, вместе с весами, и след
@@ -1259,6 +1317,8 @@ function moveTrainingOut(day, index, { toDate, nowMs, clientId }) {
       status: 'assigned',
       movedFrom: day.date || null,
       movedAt: nowMs,
+      transferId,
+      movedSourceId: prev.id || null,
     },
     updatedAt: nowMs,
   };
@@ -1283,11 +1343,35 @@ function moveTrainingOut(day, index, { toDate, nowMs, clientId }) {
  */
 function moveTrainingIn(day, movedTraining, { nowMs, clientId }) {
   const list = Array.isArray(day.trainings) ? day.trainings : [];
+  const transferId = movedTraining && movedTraining.plan && movedTraining.plan.transferId;
+  if (transferId) {
+    const existingIndex = list.findIndex((training) => (
+      training && training.plan && training.plan.transferId === transferId
+    ));
+    if (existingIndex >= 0) {
+      return { day, index: existingIndex, idempotent: true, error: null };
+    }
+    const movedFrom = movedTraining.plan.movedFrom;
+    const movedSourceId = movedTraining.plan.movedSourceId;
+    const staleIndex = list.findIndex((training) => (
+      training && training.plan && training.plan.transferId &&
+      training.plan.transferId !== transferId &&
+      training.plan.movedFrom === movedFrom &&
+      movedSourceId && training.plan.movedSourceId === movedSourceId
+    ));
+    if (staleIndex >= 0) {
+      return {
+        day,
+        reason: 'stale_transfer',
+        error: `В целевом дне уже есть перенос этой тренировки из ${movedFrom} по предыдущей ревизии плана. Новый перенос не добавлен.`,
+      };
+    }
+  }
   if (list.filter(isRealTraining).length >= MAX_TRAININGS_PER_DAY) {
     return { day, error: `В дне ${day.date || ''} уже ${MAX_TRAININGS_PER_DAY} тренировки — перенести сюда некуда.` };
   }
   const trainings = list.concat([{ ...movedTraining, updatedAt: nowMs }]);
-  return { day: touch({ ...day, trainings }, nowMs, clientId), index: trainings.length - 1, error: null };
+  return { day: touch({ ...day, trainings }, nowMs, clientId), index: trainings.length - 1, idempotent: false, error: null };
 }
 
 /**
@@ -2713,6 +2797,10 @@ function summarizeDay(day) {
       // но помечено явно, чтобы не читалось как проведённая тренировка. Поле
       // необязательное, как time/type: у обычной записи `plan` нет вовсе.
       if (t.plan && t.plan.status) out.plan_status = String(t.plan.status);
+      if (t.plan && t.plan.movedFrom) out.moved_from = String(t.plan.movedFrom);
+      if (t.plan && t.plan.movedTo) out.moved_to = String(t.plan.movedTo);
+      if (t.plan && t.plan.movedAt) out.moved_at = Number(t.plan.movedAt);
+      if (t.plan && t.plan.transferId) out.transfer_id = String(t.plan.transferId);
       if (t.activityLabel) out.activity_label = t.activityLabel;
       if (t.comment) out.comment = t.comment;
       for (const field of ['mood', 'wellbeing', 'stress']) {
@@ -2932,6 +3020,7 @@ module.exports = {
   editTrainingPlan,
   exercisesToInput,
   proposeTrainingEdit,
+  hasMeaningfulLiveTraining,
   moveTrainingOut,
   moveTrainingIn,
   withdrawTrainingProposal,
