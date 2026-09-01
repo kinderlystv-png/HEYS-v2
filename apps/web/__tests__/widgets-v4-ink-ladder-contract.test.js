@@ -17,6 +17,11 @@ function contractValue(html, key) {
   return html.match(new RegExp(`<b>${escaped}<\\/b><span data-v="([^"]*)"`))?.[1] || '';
 }
 
+// `.widgets-longpress-hint__sub` в списке нет намеренно: у подсказки жеста есть
+// строка-владелец вида «вид подсказки жеста», и она называет свой тон —
+// «чернилами 60 %». Общая лестница не должна проглатывать элемент, у которого
+// свой контракт называет другую ступень: 60 % ближе к 62 % (`--v4-ink-prose`),
+// чем к 56 %. Тон подсказки сторожит `longpress-hint-product-rule.test.js`.
 const SMALL_NEUTRAL_TEXT = `
 .widget-v4-kicker
 .widget-calories__hero-unit
@@ -75,7 +80,6 @@ const SMALL_NEUTRAL_TEXT = `
 .widget-bd-sheet__factor-share
 .widget-bd-sheet__driver
 .widget-bd-sheet__contrib-label
-.widgets-longpress-hint__sub
 .widget-bd-sheet__source-name
 .widget-bd-sheet__source-val
 .widget-bd-sheet__meal-axis
