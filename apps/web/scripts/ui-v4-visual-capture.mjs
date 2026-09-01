@@ -910,18 +910,26 @@ async function openCase(browser, item, snapshot) {
         const exercise = (name, approaches, restSec) => ({ name, approaches, restSec });
         const exercises = [
           exercise('Жим лёжа', [
+            { weightKg: '20', reps: 12, done: false, type: 'warmup' },
+            { weightKg: '30', reps: 10, done: false, type: 'warmup' },
+            { weightKg: '40', reps: 8, done: false, type: 'warmup' },
             approach(75, 8, true), approach(75, 10, true),
             approach(75, 10, true), approach(75, 12, true),
           ], 120),
           exercise('Тяга штанги в наклоне', [
+            { weightKg: '20', reps: 12, done: false, type: 'warmup' },
+            { weightKg: '30', reps: 10, done: false, type: 'warmup' },
+            { weightKg: '40', reps: 8, done: false, type: 'warmup' },
             approach(60, 8, true), approach(60, 10, true),
             approach(60, 10, true), approach(60, 12, true),
           ], 120),
-          exercise('Жим гантелей сидя', [
+          { ...exercise('Жим гантелей сидя', [
             approach(22.5, 12, true), approach(24, 10, true),
             approach(24, 10, false), approach(24, 10, false),
-          ], 120),
+          ], 120), rpe: 7 },
           exercise('Разведение в тренажёре', [
+            { weightKg: '10', reps: 15, done: false, type: 'warmup' },
+            { weightKg: '15', reps: 12, done: false, type: 'warmup' },
             approach(20, 12, false), approach(20, 12, false), approach(20, 12, false),
           ], 60),
         ];
@@ -943,11 +951,12 @@ async function openCase(browser, item, snapshot) {
             time: '18:40',
             workoutLog: {
               title: 'Силовая · грудь, спина, плечи',
-              startedAt: new Date('2026-08-28T08:42:48+03:00').getTime(),
+              startedAt: new Date('2022-08-08T18:40:00+03:00').getTime(),
+              completedAt: new Date('2022-08-08T19:27:12+03:00').getTime(),
               exercises,
             },
           },
-          dateKey: '2026-08-28',
+          dateKey: '2022-08-08',
           profile: { weight: 80 },
           historyFor: (name) => name === 'Жим гантелей сидя'
             ? { record: { maxW: 25, maxSet: 250, total: 900 } }
