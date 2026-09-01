@@ -341,33 +341,209 @@
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
-.insights-v4 .heys-score-insights-card {
-  border-radius: 20px;
-  background: var(--v4-surface, #f7efe2);
+/* Каскад дня — отдельная v4-разметка. Общий InsightsCascadeCard остаётся у
+   legacy-пути; иначе точная геометрия кадра ломала бы прежний экран. */
+.insights-v4 .heys-score-insights-v4__tier {
+  color: var(--v4-act-text, #8a4a20);
 }
 
-/* Четыре блока по палитрам свёрнуты в два правила.
+.insights-v4 .heys-score-insights-card--v4 {
+  margin: 0;
+  padding: 16px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+  box-shadow: none;
+}
 
-   Половина их селекторов не совпадала никогда: data-palette держит только
-   семейство — «sand» и для sand-dark, «blue» и для blue-dark, — поэтому
-   [data-palette="sand-dark"] не выбирал ничего. Работали только светлые
-   правила, и работали во всех четырёх наборах.
+.heys-score-insights-v4__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
 
-   Это не было дефектом лишь потому, что --v4-hero и --v4-surface определены
-   в каждом наборе и переворачиваются сами. Ролям привязка к палитре не нужна
-   вовсе — она только создавала впечатление, что тёмным наборам нужны свои
-   значения. */
-/* Строка-уход в Отчёты. Из общего файла она приезжает синей ссылкой прежней
-   системы (--color-blue-600, #2563eb): в песочной палитре это единственный
-   синий на вкладке, а в тёмных он не меняется вовсе. Контракт задаёт ей
-   11/1,5 тоном --ac и отступ 10. Правило ограничено v4 — прежний вид живёт
-   по своим строкам. */
-.insights-v4 .heys-score-insights-card__transition {
-  margin-top: 10px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.5;
+.heys-score-insights-v4__state {
+  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.heys-score-insights-v4__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+}
+
+.heys-score-insights-v4__trend--up {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.heys-score-insights-v4__trend--down {
   color: var(--v4-act-text, #8a4a20);
+}
+
+.heys-score-insights-v4__trend--stable {
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.heys-score-insights-v4__scale {
+  position: relative;
+  height: 8px;
+  margin-top: 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--v4-ink, #201e1d) 8%, transparent);
+}
+
+.heys-score-insights-v4__scale-fill {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--v4-ok-fill, #7a8a5e);
+  transition: width 0.4s ease;
+}
+
+.heys-score-insights-v4__threshold {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--v4-ink, #201e1d) 14%, transparent);
+  transform: translateX(-1px);
+}
+
+.heys-score-insights-v4__threshold.is-maximum {
+  background: var(--v4-act, #c67139);
+}
+
+.heys-score-insights-v4__legend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 9px;
+  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.heys-score-insights-v4__legend .is-maximum {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.heys-score-insights-v4__story {
+  margin: 12px 0 0;
+  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  text-wrap: pretty;
+}
+
+.heys-score-insights-v4__today {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 7%, transparent);
+}
+
+.heys-score-insights-v4__today-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.heys-score-insights-v4__key {
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.heys-score-insights-v4__contribution {
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+.heys-score-insights-v4__contribution.is-positive {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.heys-score-insights-v4__contribution.is-negative {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.heys-score-insights-v4__dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 16px;
+  margin-top: 14px;
+  overflow: hidden;
+}
+
+.heys-score-insights-v4__dot {
+  display: block;
+  flex: none;
+  width: var(--cascade-dot-size);
+  height: var(--cascade-dot-size);
+  border-radius: 999px;
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
+.heys-score-insights-v4__dot.is-neutral {
+  background: color-mix(in srgb, var(--v4-ink, #201e1d) 12%, transparent);
+}
+
+.heys-score-insights-v4__dot.is-bad,
+.heys-score-insights-v4__dot.is-warn {
+  background: var(--v4-act-text, #8a4a20);
+}
+
+.heys-score-insights-v4__dot.is-peak {
+  background: var(--v4-act, #c67139);
+}
+
+.heys-score-insights-v4__dot.is-latest {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--v4-ok-fill, #7a8a5e) 22%, transparent);
+}
+
+.heys-score-insights-v4__axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 11px;
+  font: 500 10.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.heys-score-insights-v4__reports-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 7%, transparent);
+  background: none;
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  text-align: left;
+  cursor: pointer;
+}
+
+.heys-score-insights-v4__reports-link::before {
+  content: '';
+  position: absolute;
+  inset: -12px 0;
+}
+
+.heys-score-insights-v4__reports-link > svg {
+  flex: none;
+  color: var(--v4-ink-5, rgba(0, 0, 0, 0.3));
+}
+
+.heys-score-insights-v4__delta {
+  color: var(--v4-ink, #201e1d);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .insights-v4-attention,

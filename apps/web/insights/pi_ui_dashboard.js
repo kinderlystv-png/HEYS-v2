@@ -3508,6 +3508,7 @@
                 actions: priorityActions
               }),
               h(CascadeInsightsSlot, {
+                v4: true,
                 day: dayData,
                 dayTot,
                 normAbs,

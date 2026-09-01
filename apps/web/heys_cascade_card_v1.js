@@ -4416,6 +4416,165 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
   }
 
+  var INSIGHTS_CASCADE_DOT_SIZES = [9, 12, 7, 10, 11, 9, 13, 10, 7, 12];
+
+  function formatInsightsCascadeStreak(daysAtPeak, fallback) {
+    var n = Math.max(0, Math.round(Number(daysAtPeak) || 0));
+    var ordinals = [
+      '', 'Первый', 'Второй', 'Третий', 'Четвёртый', 'Пятый', 'Шестой',
+      'Седьмой', 'Восьмой', 'Девятый', 'Десятый', 'Одиннадцатый',
+      'Двенадцатый', 'Тринадцатый', 'Четырнадцатый'
+    ];
+    if (n > 1) {
+      return (ordinals[n] || (n + '-й')) + ' день подряд без срывов — ритм держится.';
+    }
+    return fallback || (n === 1
+      ? 'Первый день без срывов — ритм начинается.'
+      : 'Сегодняшние решения покажут, как меняется ритм.');
+  }
+
+  function buildInsightsCascadeV4Model(cascadeState, trend) {
+    var ceiling = trend && trend.ceiling > 0 ? trend.ceiling : 0.01;
+    var pct = function (value) {
+      return clamp(Number(value) || 0, 0, ceiling) / ceiling * 100;
+    };
+    var contribution = Number(cascadeState && cascadeState.dailyContribution) || 0;
+    var delta14 = trend && typeof trend.delta14 === 'number' && isFinite(trend.delta14)
+      ? Math.round(trend.delta14 * 100)
+      : null;
+    var direction = cascadeState && cascadeState.crsTrend;
+    if (direction !== 'up' && direction !== 'down') direction = 'stable';
+    var events = Array.isArray(cascadeState && cascadeState.events) ? cascadeState.events : [];
+    var firstTimedEvent = events.find(function (event) {
+      return event && formatTimeShort(event.time) !== '—';
+    });
+    var fallbackMessage = cascadeState && cascadeState.message && cascadeState.message.short;
+
+    return {
+      stateLabel: HEYS_SCORE_STATE_PHRASES[trend && trend.state] || HEYS_SCORE_STATE_PHRASES.BASE,
+      direction: direction,
+      directionLabel: direction === 'up' ? 'растёт' : (direction === 'down' ? 'снижается' : 'держится'),
+      fillPercent: pct(trend && trend.current),
+      thresholdPercents: [
+        pct(Math.min(CRS_RAW_TREND_THRESHOLDS.ACCELERATING, ceiling)),
+        pct(Math.min(CRS_RAW_TREND_THRESHOLDS.GROWING, ceiling)),
+        pct(ceiling * 0.9)
+      ],
+      streakText: formatInsightsCascadeStreak(cascadeState && cascadeState.daysAtPeak, fallbackMessage),
+      contributionText: (contribution >= 0 ? '+' : '') + contribution.toFixed(1).replace('.', ','),
+      contributionTone: contribution > 0 ? 'positive' : (contribution < 0 ? 'negative' : 'neutral'),
+      firstTime: firstTimedEvent ? formatTimeShort(firstTimedEvent.time) : '—',
+      delta14Text: delta14 === null ? null : (delta14 > 0 ? '+' : '') + delta14,
+      dots: events.map(function (event, index) {
+        return {
+          key: [index, event && event.type, event && event.time, event && event.weight].join('~'),
+          size: INSIGHTS_CASCADE_DOT_SIZES[index % INSIGHTS_CASCADE_DOT_SIZES.length],
+          tone: getEventTone(Number(event && event.weight) || 0),
+          latest: index === events.length - 1,
+          title: (event && event.time ? formatTimeShort(event.time) + ' · ' : '')
+            + ((event && event.label) || 'Решение')
+        };
+      })
+    };
+  }
+
+  function InsightsCascadeCardV4(props) {
+    var model = props.model;
+    var trendArrowPath = model.direction === 'up'
+      ? 'M6 15l6-6 6 6'
+      : (model.direction === 'down' ? 'M6 9l6 6 6-6' : 'M6 12h12');
+
+    return React.createElement('div', { className: 'heys-score-insights-v4' },
+      React.createElement('div', { className: 'insights-v4-tier heys-score-insights-v4__tier' }, 'Каскад'),
+      React.createElement('section', { className: 'heys-score-insights-card heys-score-insights-card--v4' },
+        React.createElement('div', { className: 'heys-score-insights-v4__head' },
+          React.createElement('span', { className: 'heys-score-insights-v4__state' }, model.stateLabel),
+          React.createElement('span', {
+            className: 'heys-score-insights-v4__trend heys-score-insights-v4__trend--' + model.direction
+          },
+            model.directionLabel,
+            React.createElement('svg', {
+              width: 12,
+              height: 12,
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth: 3,
+              strokeLinecap: 'round',
+              strokeLinejoin: 'round',
+              'aria-hidden': 'true'
+            }, React.createElement('path', { d: trendArrowPath }))
+          )
+        ),
+        React.createElement('div', { className: 'heys-score-insights-v4__scale' },
+          React.createElement('span', {
+            className: 'heys-score-insights-v4__scale-fill',
+            style: { width: model.fillPercent + '%' }
+          }),
+          model.thresholdPercents.map(function (left, index) {
+            return React.createElement('span', {
+              key: 'threshold-' + index,
+              className: 'heys-score-insights-v4__threshold'
+                + (index === model.thresholdPercents.length - 1 ? ' is-maximum' : ''),
+              style: { left: left + '%' }
+            });
+          })
+        ),
+        React.createElement('div', { className: 'heys-score-insights-v4__legend' },
+          React.createElement('span', null, 'Начало'),
+          React.createElement('span', null, 'Набираю'),
+          React.createElement('span', null, 'Держу ритм'),
+          React.createElement('span', { className: 'is-maximum' }, 'Максимум')
+        ),
+        React.createElement('p', { className: 'heys-score-insights-v4__story' }, model.streakText),
+        model.dots.length > 0 && React.createElement('div', { className: 'heys-score-insights-v4__today' },
+          React.createElement('div', { className: 'heys-score-insights-v4__today-head' },
+            React.createElement('span', { className: 'heys-score-insights-v4__key' }, 'Решения сегодня'),
+            React.createElement('span', {
+              className: 'heys-score-insights-v4__contribution is-' + model.contributionTone
+            }, model.contributionText)
+          ),
+          React.createElement('div', {
+            className: 'heys-score-insights-v4__dots',
+            style: { '--cascade-dot-total': model.dots.length }
+          }, model.dots.map(function (dot) {
+            return React.createElement('span', {
+              key: dot.key,
+              className: 'heys-score-insights-v4__dot is-' + dot.tone + (dot.latest ? ' is-latest' : ''),
+              style: { '--cascade-dot-size': dot.size + 'px' },
+              title: dot.title
+            });
+          })),
+          React.createElement('div', { className: 'heys-score-insights-v4__axis' },
+            React.createElement('span', null, model.firstTime),
+            React.createElement('span', null, 'сейчас')
+          )
+        ),
+        model.delta14Text !== null && React.createElement('button', {
+          type: 'button',
+          className: 'heys-score-insights-v4__reports-link',
+          onClick: props.onReports
+        },
+          React.createElement('span', null,
+            'За две недели ',
+            React.createElement('span', { className: 'heys-score-insights-v4__delta' }, model.delta14Text),
+            ' · смотреть в Отчётах'
+          ),
+          React.createElement('svg', {
+            width: 14,
+            height: 14,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: 2.75,
+            strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M9 6l6 6-6 6' }))
+        )
+      )
+    );
+  }
+
   /**
    * Карточка каскада в Инсайтах — точка дня, не месячная кривая. Состояние
    * и потолок берутся из getCrsRawTrend (та же шкала, что на плитке
@@ -4466,6 +4625,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var setTab = (HEYS.App && HEYS.App.setTab) || (HEYS.ui && HEYS.ui.switchTab);
       if (typeof setTab === 'function') setTab('stats');
     };
+
+    if (props.v4) {
+      return React.createElement(InsightsCascadeCardV4, {
+        model: buildInsightsCascadeV4Model(cascadeState, trend),
+        onReports: goToReports
+      });
+    }
 
     return React.createElement('div', { className: 'heys-score-insights-card' },
       React.createElement('div', { className: 'heys-score-insights-card__header' },
@@ -6204,6 +6370,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     CRS_SCORE_GROUPS: CRS_SCORE_GROUPS,
     HeysScoreTile: HeysScoreTile,
     InsightsCascadeCard: InsightsCascadeCard,
+    buildInsightsCascadeV4Model: buildInsightsCascadeV4Model,
     HeysScoreZoneBar: HeysScoreZoneBar,
     formatHeysScoreDelta14: formatHeysScoreDelta14,
     VERSION: '3.8.0'
