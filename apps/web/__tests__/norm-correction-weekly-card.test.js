@@ -145,6 +145,16 @@ describe('поправка на факт · карточка сверки в ш�
     expect(btn).not.toMatch(/border: 1px/);
   });
 
+  it('в кадре применённого снижения первое действие главное, кнопки идут колонкой', () => {
+    expect(SRC).toContain("weekly-wrap-correction--' + card.frame");
+    expect(SRC).toContain("card.frame === 'lowered' && action === 'ok'");
+    expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__actions \{[^}]*flex-direction: column;[^}]*gap: 9px;[^}]*margin-top: 14px/);
+    expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__title \{[^}]*line-height: 1\.32/);
+    expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__body \{[^}]*font-weight: 500;[^}]*line-height: 1\.55/);
+    expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__hero-value \{[^}]*line-height: 1;[^}]*letter-spacing: -0\.02em/);
+    expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__footnote \{[^}]*margin-top: 12px;[^}]*font-weight: 500;[^}]*line-height: 1\.55/);
+  });
+
   it('карточка одета по контракту: радиус 20, заголовок 16/700, число 30/800', () => {
     const block = CSS.slice(
       CSS.indexOf('.weekly-wrap-correction {'),

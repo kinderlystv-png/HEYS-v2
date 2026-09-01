@@ -1586,6 +1586,86 @@ body.tour-active .ios-pwa-banner {
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
+/* Применённое Pro-снижение — цельный кадр «Сверка · норма снизилась».
+   В отличие от карточек решения здесь уже нечего согласовывать: первый слой
+   повторяет ритм канваса, а две кнопки стоят друг под другом. */
+.weekly-wrap-correction--lowered {
+  padding: 0;
+  gap: 0;
+  background: transparent;
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__title {
+  padding: 16px 16px 0;
+  border-radius: 20px 20px 0 0;
+  background: var(--v4-c1, #f7efe2);
+  line-height: 1.32;
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__body {
+  margin-top: 0;
+  padding: 8px 16px 0;
+  background: var(--v4-c1, #f7efe2);
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.6));
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__hero {
+  margin-top: 0;
+  padding: 14px 16px 16px;
+  border-radius: 0 0 20px 20px;
+  background: var(--v4-c1, #f7efe2);
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__hero-value {
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__facts {
+  gap: 0;
+  margin-top: 12px;
+  padding: 2px 16px;
+  border-radius: 20px;
+  background: var(--v4-c1, #f7efe2);
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__fact {
+  align-items: center;
+  min-height: 0;
+  padding: 13px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 7%, transparent);
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__fact:last-child {
+  border-bottom: none;
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__fact-value {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__actions {
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__btn {
+  flex: none;
+  width: 100%;
+  line-height: 1;
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__footnote {
+  margin-top: 12px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
 .weekly-wrap-step__empty {
   background: var(--v4-hero, #f8fafc);
   border-radius: 12px;

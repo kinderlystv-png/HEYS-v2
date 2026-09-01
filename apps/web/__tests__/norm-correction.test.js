@@ -526,6 +526,29 @@ describe('поправка на факт · кадры недельной све
     const c = NC.buildWeeklySyncCard({ result: down(), tariff: 'pro', applied: true });
     expect(c.frame).toBe('lowered');
     expect(c.decidedBy).toBe('curator');
+    expect(c.facts).toEqual([
+      {
+        label: 'Дефицит остался тем же',
+        value: 'как договаривались',
+        tone: 'quiet'
+      },
+      { label: 'Дальше шагов', value: 'не больше 3 % в неделю' }
+    ]);
+    expect(c.copy.body).toContain('Три недели вес и обхваты держатся на месте');
+    expect(c.copy.footnote).toContain('Право отменить поправку есть только там, где куратора нет.');
+  });
+
+  it('применённое Pro-снижение не выдумывает обхваты без замера', () => {
+    const c = NC.buildWeeklySyncCard({
+      result: down(),
+      tariff: 'pro',
+      applied: true,
+      recomposition: { noWaistEvidence: true }
+    });
+    expect(c.frame).toBe('lowered');
+    expect(c.copy.body).toContain('замеров обхватов не было');
+    expect(c.copy.body).not.toContain('обхваты держатся на месте');
+    expect(c.copy.evidenceNote).toBeNull();
   });
 
   it('на Self снижение требует согласия клиента', () => {
@@ -597,7 +620,7 @@ describe('поправка на факт · кадры недельной све
 
   it('предохранители есть в обоих тарифах, слой разный', () => {
     const self = NC.buildWeeklySyncCard({ result: down(), tariff: 'self' });
-    const pro = NC.buildWeeklySyncCard({ result: down(), tariff: 'pro', applied: true });
+    const pro = NC.buildWeeklySyncCard({ result: down(), tariff: 'pro', applied: false });
     expect(self.safeguardsLayer).toBe('first');
     expect(pro.safeguardsLayer).toBe('second');
     // Содержание одно и то же — иначе это два разных набора правил.

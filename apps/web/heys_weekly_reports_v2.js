@@ -552,13 +552,14 @@
         if (!card || !card.copy) return null;
 
         const copy = card.copy;
-        const showsNumber = card.frame !== 'recomposition' && card.frame !== 'recomposition_unverified';
+        const showsNumber = card.frame !== 'recomposition';
         const heroValue = card.hero === 'currentNorm' || card.frame === 'matched' || card.frame === 'pending_curator'
             ? card.norms.current
             : card.norms.next;
 
         return h('div', {
             className: 'weekly-wrap-correction'
+                + (card.frame ? ' weekly-wrap-correction--' + card.frame : '')
                 + (card.celebratory ? ' weekly-wrap-correction--good' : '')
                 + (card.readOnly ? ' weekly-wrap-correction--reading' : '')
         },
@@ -667,7 +668,9 @@
                 card.actions.map((action) => h('button', {
                     key: action,
                     className: 'weekly-wrap-correction__btn'
-                        + (action === 'apply_tomorrow' || action === 'apply' ? ' weekly-wrap-correction__btn--primary' : ''),
+                        + (action === 'apply_tomorrow' || action === 'apply'
+                            || (card.frame === 'lowered' && action === 'ok')
+                            ? ' weekly-wrap-correction__btn--primary' : ''),
                     onClick: () => onDecide && onDecide(action, card)
                 }, copy.actionLabels[action] || action))
             ),
