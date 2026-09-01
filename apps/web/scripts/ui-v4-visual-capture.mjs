@@ -336,7 +336,9 @@ async function openCase(browser, item, snapshot) {
         window.__heysLoadingProgress?.forceHide?.();
       }, {
         stubGamificationMerge:
-          item.kind === 'demo-registration' || item.kind === 'demo-cycle-picker',
+          item.kind === 'demo-registration' ||
+          item.kind === 'demo-cycle-picker' ||
+          item.kind === 'demo-food-copy-empty',
       });
       const tabLabels = { widgets: 'Главная', diary: 'Питание' };
       const tabLabel = tabLabels[item.tab];
@@ -1193,14 +1195,21 @@ async function openCase(browser, item, snapshot) {
       );
       await page.evaluate((themeId) => {
         if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const sourceItems = [
+          { id: 'visual-soba', name: 'Лапша соба варёная', grams: 137, kcal100: 115 },
+          { id: 'visual-sauce', name: "Соус Хеллманн'с Бургер Гриль", grams: 30, kcal100: 270 },
+          { id: 'visual-coffee', name: 'Домашний кофе', grams: 300, kcal100: 17 },
+          { id: 'visual-chicken', name: 'Куриная грудка', grams: 160, kcal100: 165 },
+          { id: 'visual-cucumber', name: 'Огурец', grams: 120, kcal100: 15 },
+          { id: 'visual-tomato', name: 'Помидор', grams: 140, kcal100: 18 },
+          { id: 'visual-oil', name: 'Оливковое масло', grams: 10, kcal100: 884 },
+          { id: 'visual-bread', name: 'Хлеб цельнозерновой', grams: 45, kcal100: 247 },
+        ];
         window.HEYS.CopyMealModal.show({
           sourceMeal: {
             id: 'visual-source',
             name: 'Перекус',
-            items: [
-              { id: 'visual-coffee', name: 'Домашний кофе', grams: 100, kcal100: 17 },
-              { id: 'visual-cheese', name: 'Сыр', grams: 75, kcal100: 210 },
-            ],
+            items: sourceItems,
           },
           sourceMealIndex: 0,
           sourceDate: '2026-08-28',
@@ -1209,10 +1218,7 @@ async function openCase(browser, item, snapshot) {
             {
               id: 'visual-source',
               name: 'Перекус',
-              items: [
-                { id: 'visual-coffee', name: 'Домашний кофе', grams: 100, kcal100: 17 },
-                { id: 'visual-cheese', name: 'Сыр', grams: 75, kcal100: 210 },
-              ],
+              items: sourceItems,
             },
             {
               id: 'visual-breakfast',
@@ -1420,10 +1426,23 @@ async function openCase(browser, item, snapshot) {
       }
     }
     if (item.kind === 'demo-food-copy-empty') {
+      await page.waitForTimeout(250);
       visualChecks = await page.evaluate(() => {
         const label = document.querySelector('[data-copy-meal-target-label="new-meal"]');
         const row = document.querySelector('[data-copy-meal-target="new-meal"]');
         if (!label || !row) return { contrastRatio: 0, reason: 'target label is missing' };
+        const sheet = document.querySelector('.copy-meal-modal.meal-transfer-v4__sheet');
+        const relativeRect = (target) => {
+          if (!sheet || !target) return null;
+          const rootBox = sheet.getBoundingClientRect();
+          const box = target.getBoundingClientRect();
+          return {
+            x: Math.round((box.x - rootBox.x) * 100) / 100,
+            y: Math.round((box.y - rootBox.y) * 100) / 100,
+            width: Math.round(box.width * 100) / 100,
+            height: Math.round(box.height * 100) / 100,
+          };
+        };
         const parseRgb = (value) => {
           const canvas = document.createElement('canvas');
           canvas.width = 1;
@@ -1446,12 +1465,76 @@ async function openCase(browser, item, snapshot) {
         const backgroundLuminance = luminance(parseRgb(background));
         const contrastRatio = (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
           / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
-        return { color, background, contrastRatio: Math.round(contrastRatio * 100) / 100 };
+        return {
+          color,
+          background,
+          contrastRatio: Math.round(contrastRatio * 100) / 100,
+          geometry: {
+            sheet: relativeRect(sheet),
+            header: relativeRect(sheet?.querySelector('.meal-transfer-v4__top')),
+            tierRow: relativeRect(sheet?.querySelector('.meal-transfer-v4__tier-row')),
+            product: relativeRect(sheet?.querySelector('.meal-transfer-v4__product')),
+            productMain: relativeRect(sheet?.querySelector('.meal-transfer-v4__product-main')),
+            grams: relativeRect(sheet?.querySelector('.meal-transfer-v4__grams')),
+            gramStep: relativeRect(sheet?.querySelector('.meal-transfer-v4__gram-step')),
+            range: relativeRect(sheet?.querySelector('.meal-transfer-v4__range')),
+            targets: relativeRect(sheet?.querySelector('.meal-transfer-v4__targets')),
+            empty: relativeRect(sheet?.querySelector('.meal-transfer-v4__empty')),
+            target: relativeRect(row),
+            footer: relativeRect(sheet?.querySelector('.meal-transfer-v4__footer')),
+            actions: relativeRect(sheet?.querySelector('.meal-transfer-v4__actions')),
+            cancel: relativeRect(sheet?.querySelector('.meal-transfer-v4__button--cancel')),
+            primary: relativeRect(sheet?.querySelector('.meal-transfer-v4__button--primary')),
+          },
+          rangeStyle: (() => {
+            const range = sheet?.querySelector('.meal-transfer-v4__range');
+            if (!range) return null;
+            const style = getComputedStyle(range);
+            return {
+              height: style.height,
+              padding: style.padding,
+              border: style.border,
+              boxSizing: style.boxSizing,
+              appearance: style.appearance,
+            };
+          })(),
+        };
       });
       if (visualChecks.contrastRatio < 4.5) {
         throw new Error(
           `Контраст цели копирования ${visualChecks.contrastRatio}:1 ниже 4.5:1`,
         );
+      }
+    }
+    if (item.kind === 'demo-food-copy-existing') {
+      await page.waitForTimeout(250);
+      visualChecks = await page.evaluate(() => {
+        const sheet = document.querySelector('.copy-meal-modal.meal-transfer-v4__sheet');
+        const productList = sheet?.querySelector('.meal-transfer-v4__product-list');
+        const primary = sheet?.querySelector('.meal-transfer-v4__button--primary');
+        const sheetBox = sheet?.getBoundingClientRect();
+        const primaryBox = primary?.getBoundingClientRect();
+        return {
+          productCount: productList?.children.length || 0,
+          productListClientHeight: productList?.clientHeight || 0,
+          productListScrollHeight: productList?.scrollHeight || 0,
+          canScrollProducts: Boolean(productList && productList.scrollHeight > productList.clientHeight),
+          primaryVisible: Boolean(
+            sheetBox &&
+              primaryBox &&
+              primaryBox.top >= sheetBox.top &&
+              primaryBox.bottom <= sheetBox.bottom,
+          ),
+          primaryText: primary?.textContent || '',
+        };
+      });
+      if (
+        visualChecks.productCount !== 8 ||
+        !visualChecks.canScrollProducts ||
+        !visualChecks.primaryVisible ||
+        visualChecks.primaryText !== 'Копировать (8)'
+      ) {
+        throw new Error(`Long copy fixture не сохранил scroll/CTA: ${JSON.stringify(visualChecks)}`);
       }
     }
     await page.addStyleTag({
@@ -1598,6 +1681,14 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
       );
     }
     await frame.waitFor({ state: 'visible', timeout: 45_000 });
+    if (item.canvasFrame.pixelAlign) {
+      await frame.evaluate((node) => {
+        const box = node.getBoundingClientRect();
+        const offsetX = Math.round(box.x) - box.x;
+        const offsetY = Math.round(box.y) - box.y;
+        node.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+      });
+    }
     const visualChecks = item.kind === 'demo-registration'
       ? await frame.evaluate((node) => {
           const frameBox = node.getBoundingClientRect();
@@ -1626,7 +1717,43 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
             primary: relativeRect(node.querySelector('.foot .btn')),
           };
         })
-      : null;
+      : item.kind === 'demo-food-copy-empty'
+        ? await frame.evaluate((node) => {
+            const rootBox = node.getBoundingClientRect();
+            const relativeRect = (target) => {
+              if (!target) return null;
+              const box = target.getBoundingClientRect();
+              return {
+                x: Math.round((box.x - rootBox.x) * 100) / 100,
+                y: Math.round((box.y - rootBox.y) * 100) / 100,
+                width: Math.round(box.width * 100) / 100,
+                height: Math.round(box.height * 100) / 100,
+              };
+            };
+            const content = node.querySelector('.sc');
+            const children = content ? [...content.children] : [];
+            const product = children[1];
+            return {
+              geometry: {
+                sheet: relativeRect(node),
+                header: relativeRect(node.querySelector('.top')),
+                tierRow: relativeRect(children[0]),
+                product: relativeRect(product),
+                productMain: relativeRect(product?.children[0]),
+                grams: relativeRect(product?.children[1]),
+                gramStep: relativeRect(product?.children[1]?.children[0]),
+                range: relativeRect(product?.children[1]?.children[3]),
+                targets: relativeRect(children[2]),
+                empty: relativeRect(children[3]),
+                target: relativeRect(children[4]),
+                footer: relativeRect(children[5]),
+                actions: relativeRect(children[5]),
+                cancel: relativeRect(children[5]?.children[0]),
+                primary: relativeRect(children[5]?.children[1]),
+              },
+            };
+          })
+        : null;
     const file = path.join(OUT_DIR, `${item.id}.canvas.png`);
     if (item.canvasFrame.captureSelector) {
       const boundary = frame.locator(item.canvasFrame.captureSelector);

@@ -168,8 +168,20 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     kind: 'demo-food-copy-empty',
     tab: 'diary',
     themeId,
-    viewport: { width: 375, height: 812 },
+    viewport: themeId === 'sand'
+      ? { width: 399, height: 812 }
+      : { width: 375, height: 812 },
     rootSelector: '.copy-meal-modal',
+    ...(themeId === 'sand' ? {
+      captureSelector: '.copy-meal-modal.meal-transfer-v4__sheet',
+      canvasFrame: {
+        file: 'food-meal.v4.dc.html',
+        label: 'Действие · копировать без целей',
+        oid: 'FM10A',
+        palette: 'sand',
+        pixelAlign: true,
+      },
+    } : {}),
   })),
   {
     id: 'food-copy-existing-target-sand',

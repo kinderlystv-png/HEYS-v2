@@ -4409,6 +4409,7 @@ button.meal-quality-badge:active {
   flex-direction: column;
   gap: 8px;
   min-height: 120px;
+  margin-top: 8px;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -4526,10 +4527,13 @@ button.meal-quality-badge:active {
 .meal-transfer-v4__range {
   flex: 1 1 auto;
   width: 100%;
-  height: 14px;
+  height: 14px !important;
+  min-height: 0 !important;
   margin: 0;
+  padding: 0 !important;
   appearance: none;
   background: transparent;
+  border: 0;
   cursor: pointer;
 }
 
@@ -4646,6 +4650,20 @@ button.meal-quality-badge:active {
   flex: 0 0 auto;
   margin-top: auto;
   background: var(--v4-bg);
+}
+
+.meal-transfer-v4__sheet--empty-targets .meal-transfer-v4__items {
+  flex: 0 0 auto;
+  padding-top: 6px;
+}
+
+.meal-transfer-v4__sheet--empty-targets .meal-transfer-v4__product-list {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.meal-transfer-v4__sheet--empty-targets .meal-transfer-v4__footer {
+  margin-top: 0;
 }
 
 .meal-transfer-v4__summary {

@@ -125,6 +125,7 @@ describe('food-meal · копирование и перенос v4', () => {
     });
 
     const sheet = document.querySelector('.copy-meal-modal.meal-transfer-v4__sheet');
+    expect(sheet?.classList.contains('meal-transfer-v4__sheet--empty-targets')).toBe(false);
     expect(sheet?.querySelector('.meal-transfer-v4__title')?.textContent).toBe('копировать');
     expect(sheet?.querySelector('.meal-transfer-v4__tier-row')?.textContent).toContain('Продукты 2/2');
     expect(sheet?.querySelector('.meal-transfer-v4__product-meta')?.textContent).toBe('100 г · 17 ккал');

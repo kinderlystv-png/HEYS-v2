@@ -67,7 +67,11 @@ describe('UI v4 visual harness', () => {
       ]),
     );
     for (const item of UI_V4_VISUAL_CASES.filter((entry) => entry.kind === 'demo-food-copy-empty')) {
-      expect(item.viewport).toEqual({ width: 375, height: 812 });
+      expect(item.viewport).toEqual(
+        item.themeId === 'sand'
+          ? { width: 399, height: 812 }
+          : { width: 375, height: 812 },
+      );
       expect(['sand', 'sand-dark', 'blue', 'blue-dark']).toContain(item.themeId);
     }
     for (const item of UI_V4_VISUAL_CASES.filter((entry) =>
@@ -90,6 +94,7 @@ describe('UI v4 visual harness', () => {
     expect(paired.map((item) => item.id)).toContain('strength-builder-collapsed-sand');
     expect(paired.map((item) => item.id)).toContain('strength-superset-create-sand');
     expect(paired.map((item) => item.id)).toContain('norm-correction-lowered-sand');
+    expect(paired.map((item) => item.id)).toContain('food-copy-empty-target-sand');
     for (const item of paired) {
       expect(item.captureSelector, item.id).toBeTruthy();
       expect(item.canvasFrame.palette, item.id).toBe(item.themeId);
@@ -146,6 +151,18 @@ describe('UI v4 visual harness', () => {
         palette: 'sand',
       },
     });
+    const foodCopyEmpty = paired.find((item) => item.id === 'food-copy-empty-target-sand');
+    expect(foodCopyEmpty).toMatchObject({
+      viewport: { width: 399, height: 812 },
+      captureSelector: '.copy-meal-modal.meal-transfer-v4__sheet',
+      canvasFrame: {
+        file: 'food-meal.v4.dc.html',
+        label: 'Действие · копировать без целей',
+        oid: 'FM10A',
+        palette: 'sand',
+        pixelAlign: true,
+      },
+    });
   });
 
   it('снимает element-boundary пары runtime↔Canvas и сохраняет diff без resize', () => {
@@ -170,6 +187,9 @@ describe('UI v4 visual harness', () => {
     expect(captureSource).toContain('data-copy-meal-target-label="new-meal"');
     expect(captureSource).toContain('getImageData(0, 0, 1, 1)');
     expect(captureSource).toContain('visualChecks.contrastRatio < 4.5');
+    expect(captureSource).toContain('visualChecks.productCount !== 8');
+    expect(captureSource).toContain('!visualChecks.canScrollProducts');
+    expect(captureSource).toContain("visualChecks.primaryText !== 'Копировать (8)'");
   });
 
   it('разрешает pixel-gate только зонам без вопросов и несовпадений', () => {

@@ -452,7 +452,7 @@
             onClick: handleBackdropClick,
         },
             React.createElement('div', {
-                className: 'copy-meal-modal meal-transfer-v4__sheet',
+                className: `copy-meal-modal meal-transfer-v4__sheet${candidateMeals.length === 0 ? ' meal-transfer-v4__sheet--empty-targets' : ''}`,
                 onClick: (e) => e.stopPropagation(),
             },
                 header,
