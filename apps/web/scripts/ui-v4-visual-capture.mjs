@@ -340,6 +340,77 @@ async function openCase(browser, item, snapshot) {
         });
       }, item.themeId || null);
     }
+    if (item.kind === 'demo-food-copy-existing') {
+      await page.waitForFunction(
+        () => typeof window.HEYS?.CopyMealModal?.show === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        window.HEYS.CopyMealModal.show({
+          sourceMeal: {
+            id: 'visual-source',
+            name: 'Перекус',
+            items: [
+              { id: 'visual-coffee', name: 'Домашний кофе', grams: 100, kcal100: 17 },
+              { id: 'visual-cheese', name: 'Сыр', grams: 75, kcal100: 210 },
+            ],
+          },
+          sourceMealIndex: 0,
+          sourceDate: '2026-08-28',
+          targetDate: '2026-08-28',
+          targetMeals: [
+            {
+              id: 'visual-source',
+              name: 'Перекус',
+              items: [
+                { id: 'visual-coffee', name: 'Домашний кофе', grams: 100, kcal100: 17 },
+                { id: 'visual-cheese', name: 'Сыр', grams: 75, kcal100: 210 },
+              ],
+            },
+            {
+              id: 'visual-breakfast',
+              name: 'Завтрак',
+              time: '09:00',
+              items: [{ id: 'visual-oatmeal', name: 'Каша', grams: 200, kcal100: 92 }],
+            },
+          ],
+          onCopyToExisting: () => {},
+          onCopyToNew: () => {},
+        });
+      }, item.themeId || null);
+    }
+    if (item.kind === 'demo-food-move-existing') {
+      await page.waitForFunction(
+        () => typeof window.HEYS?.MoveModal?.show === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        window.HEYS.MoveModal.show({
+          mode: 'meal-move',
+          sourceDate: '2026-08-28',
+          daysWithMeals: [
+            {
+              dateStr: '2026-08-28',
+              dateLabel: 'Сегодня',
+              meals: [{ id: 'visual-source', name: 'Ужин', time: '19:00' }],
+            },
+            {
+              dateStr: '2026-08-27',
+              dateLabel: 'Вчера',
+              meals: [
+                { id: 'visual-breakfast', name: 'Завтрак', time: '09:00' },
+                { id: 'visual-lunch', name: 'Обед', time: '14:00' },
+              ],
+            },
+          ],
+          onPick: () => {},
+        });
+      }, item.themeId || null);
+    }
     if (item.kind === 'demo-tips') {
       await page.waitForFunction(
         () =>

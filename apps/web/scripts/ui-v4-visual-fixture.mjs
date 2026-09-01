@@ -153,6 +153,28 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     viewport: { width: 375, height: 812 },
     rootSelector: '.copy-meal-modal',
   })),
+  {
+    id: 'food-copy-existing-target-sand',
+    zone: 'food-meal',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-food-copy-existing',
+    tab: 'diary',
+    themeId: 'sand',
+    viewport: { width: 375, height: 812 },
+    rootSelector: '.copy-meal-modal',
+  },
+  {
+    id: 'food-move-existing-target-sand',
+    zone: 'food-meal',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-food-move-existing',
+    tab: 'diary',
+    themeId: 'sand',
+    viewport: { width: 375, height: 812 },
+    rootSelector: '.move-modal.meal-transfer-v4__sheet--move',
+  },
   ...UI_V4_CANVAS_ZONES.filter(
     (zone) =>
       ![

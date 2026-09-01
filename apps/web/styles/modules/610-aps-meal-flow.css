@@ -4289,6 +4289,481 @@ button.meal-quality-badge:active {
   margin-top: 16px;
 }
 
+/* === Food meal v4 · копирование и перенос ===========================
+   Канвас food-meal: один и тот же лист для копирования продуктов и переноса
+   целого приёма. Цвета живут только в ролях палитры; в JS остаётся одна
+   динамическая величина — заполнение ползунка граммов. */
+.meal-transfer-v4__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(12px + var(--safe-area-top, 0px))
+    calc(12px + var(--safe-area-right, 0px))
+    calc(12px + var(--safe-area-bottom, 0px))
+    calc(12px + var(--safe-area-left, 0px));
+  background: var(--v4-modal-backdrop-dim);
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur));
+  animation: copyMealFadeIn 150ms ease-out;
+}
+
+[data-theme-id$="dark"] .meal-transfer-v4__backdrop,
+[data-theme$="dark"] .meal-transfer-v4__backdrop {
+  background: var(--v4-modal-backdrop-dim-dark);
+}
+
+.meal-transfer-v4__sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 375px);
+  height: min(706px, calc(100dvh - 24px - var(--safe-area-top, 0px) - var(--safe-area-bottom, 0px)));
+  max-width: 375px;
+  max-height: 706px;
+  overflow: hidden;
+  color: var(--v4-ink);
+  background: var(--v4-bg);
+  border-radius: 28px;
+  box-shadow: 0 18px 50px color-mix(in srgb, var(--v4-ink) 22%, transparent);
+  animation: copyMealScaleIn 180ms ease-out;
+}
+
+.meal-transfer-v4__top {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 0;
+}
+
+.meal-transfer-v4__title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--v4-ink);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-transfer-v4__close {
+  display: inline-flex;
+  flex: 0 0 44px;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: -14px -8px -14px 0;
+  padding: 0;
+  color: rgba(var(--v4-ink-rgb), 0.35);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.meal-transfer-v4__items {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 18px;
+}
+
+.meal-transfer-v4__tier-row {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--v4-act-text);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.meal-transfer-v4__select-all {
+  min-height: 44px;
+  margin: -17px -8px -17px 0;
+  padding: 0 8px;
+  color: var(--v4-act-text);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.meal-transfer-v4__product-list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.meal-transfer-v4__product-list::-webkit-scrollbar {
+  display: none;
+}
+
+.meal-transfer-v4__product {
+  flex: 0 0 auto;
+  padding: 12px 14px;
+  background: var(--v4-card);
+  border-radius: 16px;
+}
+
+.meal-transfer-v4__product-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.meal-transfer-v4__native-control {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.meal-transfer-v4__check {
+  display: inline-flex;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  background: transparent;
+  border: 2px solid var(--v4-edge);
+  border-radius: 6px;
+}
+
+.meal-transfer-v4__native-control:focus-visible + .meal-transfer-v4__check,
+.meal-transfer-v4__native-control:focus-visible + .meal-transfer-v4__radio {
+  outline: 2px solid var(--v4-act);
+  outline-offset: 2px;
+}
+
+.meal-transfer-v4__native-control:checked + .meal-transfer-v4__check {
+  color: var(--v4-btn-on-act, var(--v4-bg));
+  background: var(--v4-act);
+  border-color: var(--v4-act);
+}
+
+.meal-transfer-v4__product-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--v4-ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: pretty;
+}
+
+.meal-transfer-v4__product-meta {
+  flex: 0 0 auto;
+  color: var(--v4-ink-data);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.meal-transfer-v4__grams {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.meal-transfer-v4__gram-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  flex: 0 0 28px;
+  color: var(--v4-act-text);
+  background: var(--v4-chip);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.meal-transfer-v4__gram-value {
+  flex: 0 0 auto;
+  min-width: 42px;
+  color: var(--v4-ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: center;
+}
+
+.meal-transfer-v4__range {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 14px;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.meal-transfer-v4__range::-webkit-slider-runnable-track {
+  height: 4px;
+  background: linear-gradient(90deg, var(--v4-act) var(--meal-transfer-progress), var(--v4-chip) var(--meal-transfer-progress));
+  border-radius: 999px;
+}
+
+.meal-transfer-v4__range::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  appearance: none;
+  background: var(--v4-bg);
+  border: 0;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(var(--v4-ink-rgb), 0.25);
+}
+
+.meal-transfer-v4__range::-moz-range-track {
+  height: 4px;
+  background: var(--v4-chip);
+  border-radius: 999px;
+}
+
+.meal-transfer-v4__range::-moz-range-progress {
+  height: 4px;
+  background: var(--v4-act);
+  border-radius: 999px;
+}
+
+.meal-transfer-v4__range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--v4-bg);
+  border: 0;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(var(--v4-ink-rgb), 0.25);
+}
+
+.meal-transfer-v4__targets {
+  flex: 0 0 auto;
+  padding: 16px 18px 0;
+}
+
+.meal-transfer-v4__tier {
+  margin-bottom: 8px;
+  color: var(--v4-act-text);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.meal-transfer-v4__empty {
+  margin-bottom: 8px;
+  color: var(--v4-ink-data);
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.meal-transfer-v4__target-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.meal-transfer-v4__target {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 14px;
+  color: var(--v4-ink);
+  background: var(--v4-card);
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.meal-transfer-v4__target.is-selected {
+  box-shadow: inset 0 0 0 2px var(--v4-act);
+}
+
+.meal-transfer-v4__radio {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  box-shadow: inset 0 0 0 2px var(--v4-edge);
+  border-radius: 50%;
+}
+
+.meal-transfer-v4__target.is-selected .meal-transfer-v4__radio {
+  box-shadow: inset 0 0 0 5px var(--v4-act);
+}
+
+.meal-transfer-v4__target-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-transfer-v4__footer {
+  flex: 0 0 auto;
+  margin-top: auto;
+  background: var(--v4-bg);
+}
+
+.meal-transfer-v4__summary {
+  padding: 14px 18px 0;
+  color: var(--v4-ink-data);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  text-align: center;
+}
+
+.meal-transfer-v4__actions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 18px 18px;
+}
+
+.meal-transfer-v4__button {
+  min-height: 48px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.meal-transfer-v4__button--cancel {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 20px;
+  color: var(--v4-act-text);
+  font-size: 12.5px;
+  background: var(--v4-card);
+}
+
+.meal-transfer-v4__button--primary {
+  flex: 1 1 auto;
+  color: var(--v4-btn-on-act, var(--v4-bg));
+  background: var(--v4-act);
+}
+
+.meal-transfer-v4__button:disabled {
+  color: var(--v4-ink-secondary);
+  background: var(--v4-chip);
+  cursor: not-allowed;
+}
+
+.meal-transfer-v4__sheet--move {
+  height: min(706px, calc(100dvh - 24px - var(--safe-area-top, 0px) - var(--safe-area-bottom, 0px)));
+}
+
+.meal-transfer-v4__move-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 14px 18px 0;
+  overflow-y: auto;
+}
+
+.meal-transfer-v4__date {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 13px 14px;
+  color: var(--v4-ink);
+  background: var(--v4-card);
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.meal-transfer-v4__calendar {
+  flex: 0 0 15px;
+  color: var(--v4-act-text);
+}
+
+.meal-transfer-v4__date-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-transfer-v4__chevron {
+  flex: 0 0 auto;
+  color: var(--v4-ink-secondary);
+}
+
+.meal-transfer-v4__date-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.meal-transfer-v4__tier--move-target {
+  margin-top: 16px;
+}
+
+.meal-transfer-v4__warning {
+  margin-top: 12px;
+  padding: 13px 14px;
+  color: var(--v4-act-text);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  background: var(--v4-chip);
+  border-radius: 18px;
+}
+/* === /Food meal v4 ================================================== */
+
 .aps-v4-preset-confirm__list {
   margin-top: 14px;
 }

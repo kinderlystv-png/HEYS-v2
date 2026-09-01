@@ -50,11 +50,18 @@ describe('UI v4 visual harness', () => {
         'food-copy-empty-target-sand-dark',
         'food-copy-empty-target-blue',
         'food-copy-empty-target-blue-dark',
+        'food-copy-existing-target-sand',
+        'food-move-existing-target-sand',
       ]),
     );
     for (const item of UI_V4_VISUAL_CASES.filter((entry) => entry.kind === 'demo-food-copy-empty')) {
       expect(item.viewport).toEqual({ width: 375, height: 812 });
       expect(['sand', 'sand-dark', 'blue', 'blue-dark']).toContain(item.themeId);
+    }
+    for (const item of UI_V4_VISUAL_CASES.filter((entry) =>
+      ['demo-food-copy-existing', 'demo-food-move-existing'].includes(entry.kind))) {
+      expect(item.viewport).toEqual({ width: 375, height: 812 });
+      expect(item.themeId).toBe('sand');
     }
     expect(
       UI_V4_VISUAL_CASES.filter((entry) => entry.gate === 'pixel').map((entry) => entry.zone).sort(),

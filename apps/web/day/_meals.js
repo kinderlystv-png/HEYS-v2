@@ -4832,6 +4832,177 @@
         });
     }
 
+    // Canvas food-meal задаёт два реальных исхода переноса: весь
+    // состав вливается в выбранный приём либо уезжает отдельной
+    // карточкой. Цель резолвится по id на свежем дне: исчезнувшая цель
+    // даёт null и блокирует запись, а не переключается молча на новый приём.
+    function buildMealMoveDestination(existingDay, options = {}) {
+        const {
+            targetMode,
+            dstMealId,
+            sourceMeal,
+            preparedItems,
+            newMealId,
+            updatedAt = Date.now(),
+            sortMeals,
+        } = options;
+        if (!existingDay || !sourceMeal || !Array.isArray(preparedItems)) return null;
+
+        const meals = Array.isArray(existingDay.meals) ? existingDay.meals : [];
+        if (targetMode === 'existing') {
+            if (!dstMealId) return null;
+            const targetIndex = meals.findIndex(meal => meal && meal.id === dstMealId);
+            if (targetIndex < 0) return null;
+
+            const targetMeal = meals[targetIndex];
+            const targetPhotos = Array.isArray(targetMeal.photos) ? targetMeal.photos : [];
+            const sourcePhotos = Array.isArray(sourceMeal.photos) ? sourceMeal.photos : [];
+            const knownPhotoIds = new Set(targetPhotos.map(photo => photo && photo.id).filter(Boolean));
+            const movedPhotos = sourcePhotos.filter(photo => !photo?.id || !knownPhotoIds.has(photo.id));
+            const mergedMeal = {
+                // Сохраняем source-only метаданные, но контекст цели
+                // (имя, время, тип и уже заданные оценки) имеет приоритет.
+                ...sourceMeal,
+                ...targetMeal,
+                id: targetMeal.id,
+                items: [...(targetMeal.items || []), ...preparedItems],
+                ...(targetPhotos.length > 0 || sourcePhotos.length > 0
+                    ? { photos: [...targetPhotos, ...movedPhotos] }
+                    : {}),
+                updatedAt,
+            };
+            const nextMeals = meals.map((meal, index) => index === targetIndex ? mergedMeal : meal);
+            return {
+                day: { ...existingDay, meals: nextMeals, updatedAt },
+                targetMode,
+                destinationMealId: targetMeal.id,
+                targetMealBefore: targetMeal,
+                createdMealId: null,
+            };
+        }
+
+        if (targetMode !== 'new' || !newMealId) return null;
+        const movedMeal = {
+            ...sourceMeal,
+            id: newMealId,
+            items: preparedItems,
+            updatedAt,
+        };
+        const appended = [...meals, movedMeal];
+        const nextMeals = typeof sortMeals === 'function' ? sortMeals(appended) : appended;
+        return {
+            day: { ...existingDay, meals: nextMeals, updatedAt },
+            targetMode,
+            destinationMealId: movedMeal.id,
+            targetMealBefore: null,
+            createdMealId: movedMeal.id,
+        };
+    }
+
+    function rollbackMealMoveDestination(existingDay, plan, updatedAt = Date.now()) {
+        if (!existingDay || !plan) return null;
+        const meals = Array.isArray(existingDay.meals) ? existingDay.meals : [];
+        if (plan.targetMode === 'existing') {
+            if (!plan.destinationMealId || !plan.targetMealBefore) return null;
+            const targetIndex = meals.findIndex(meal => meal && meal.id === plan.destinationMealId);
+            if (targetIndex < 0) return null;
+            return {
+                ...existingDay,
+                meals: meals.map((meal, index) => index === targetIndex ? plan.targetMealBefore : meal),
+                updatedAt,
+            };
+        }
+        if (plan.targetMode !== 'new' || !plan.createdMealId) return null;
+        if (!meals.some(meal => meal && meal.id === plan.createdMealId)) return null;
+        return {
+            ...existingDay,
+            meals: meals.filter(meal => meal && meal.id !== plan.createdMealId),
+            updatedAt,
+        };
+    }
+
+    async function executeMealMoveTransaction(options = {}) {
+        const {
+            srcDate,
+            dstDate,
+            srcMealId,
+            targetMode,
+            dstMealId,
+            readSourceDay,
+            prepareItems,
+            createItemId,
+            createMealId,
+            writeDay,
+            sortMeals,
+            now = () => Date.now(),
+        } = options;
+        if (!srcDate || !dstDate || srcDate === dstDate) return { ok: false, reason: 'same_day' };
+        if (!srcMealId) return { ok: false, reason: 'source_missing' };
+        if (targetMode !== 'existing' && targetMode !== 'new') return { ok: false, reason: 'target_mode_missing' };
+        if (targetMode === 'existing' && (!dstMealId || dstMealId === srcMealId)) {
+            return { ok: false, reason: dstMealId === srcMealId ? 'same_meal' : 'target_missing' };
+        }
+        if (typeof readSourceDay !== 'function' || typeof prepareItems !== 'function'
+            || typeof createItemId !== 'function' || typeof createMealId !== 'function'
+            || typeof writeDay !== 'function') {
+            return { ok: false, reason: 'dependency_missing' };
+        }
+
+        const sourceDay = readSourceDay();
+        const sourceMeal = (sourceDay?.meals || []).find(meal => meal && meal.id === srcMealId);
+        if (!sourceMeal) return { ok: false, reason: 'source_missing' };
+        const sourceMealSnapshot = JSON.parse(JSON.stringify(sourceMeal));
+        const sourceFingerprint = JSON.stringify(sourceMeal);
+        const sourceItems = (sourceMeal.items || []).map(item => ({ ...item, id: createItemId() }));
+        const preparedItems = await prepareItems(sourceItems);
+        if (!preparedItems || preparedItems.length !== sourceItems.length) {
+            return { ok: false, reason: 'items_not_ready' };
+        }
+
+        let destinationPlan = null;
+        const targetWriteOk = writeDay(dstDate, (existing) => {
+            const plan = buildMealMoveDestination(existing, {
+                targetMode,
+                dstMealId,
+                sourceMeal,
+                preparedItems,
+                newMealId: targetMode === 'new' ? createMealId() : null,
+                updatedAt: now(),
+                sortMeals,
+            });
+            if (!plan) return null;
+            destinationPlan = plan;
+            return { ...plan.day, date: dstDate };
+        }, 'move_meal_to_target');
+        if (!targetWriteOk || !destinationPlan) {
+            return { ok: false, reason: targetMode === 'existing' ? 'target_missing' : 'target_write_failed' };
+        }
+
+        const sourceWriteOk = writeDay(srcDate, (existing) => {
+            const liveSource = (existing.meals || []).find(meal => meal && meal.id === srcMealId);
+            if (!liveSource || JSON.stringify(liveSource) !== sourceFingerprint) return null;
+            return {
+                ...existing,
+                meals: (existing.meals || []).filter(meal => meal && meal.id !== srcMealId),
+                updatedAt: now(),
+            };
+        }, 'move_meal_from_source');
+        if (!sourceWriteOk) {
+            const rollbackOk = writeDay(dstDate, (existing) =>
+                rollbackMealMoveDestination(existing, destinationPlan, now()),
+            'rollback_move_meal_target');
+            return {
+                ok: false,
+                reason: 'source_changed',
+                rollbackOk,
+                destinationPlan,
+                sourceMealSnapshot,
+            };
+        }
+
+        return { ok: true, destinationPlan, sourceMealSnapshot };
+    }
+
     function cloneItemsFromMeal(meal, itemIds, gramsOverrides) {
         const idsSet = new Set(itemIds);
         const go = gramsOverrides || {};
@@ -7187,45 +7358,50 @@
             });
         }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, createNewMealAndAddItem, navigateAndScrollToMeal, prepareCopiedDiaryItem]);
 
-        const moveMealToDate = React.useCallback(async (srcMealIndex, dstDate) => {
+        const moveMealToDate = React.useCallback(async (srcMealId, destination = {}) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
                 HEYS.Paywall?.showBlockedToast?.('Перенос приёма недоступен');
-                return;
+                return false;
             }
-            const srcMeal = dayRef.current?.meals?.[srcMealIndex];
-            if (!srcMeal) return;
+            const { dstDate, targetMode, dstMealId } = destination;
             const srcDate = date;
-            if (dstDate === srcDate) {
-                HEYS.Toast?.info?.('Приём уже здесь');
-                return;
+            const result = await executeMealMoveTransaction({
+                srcDate,
+                dstDate,
+                srcMealId,
+                targetMode,
+                dstMealId,
+                readSourceDay: () => dayRef.current,
+                prepareItems: items => ensureDiaryItemsReadyForDayWrite(items, 'move_meal_to_target'),
+                createItemId: () => uid('it_'),
+                createMealId: () => uid('m_'),
+                writeDay,
+                sortMeals: sortMealsByTime,
+            });
+            if (!result.ok) {
+                if (result.reason === 'same_day') HEYS.Toast?.info?.('Приём уже здесь');
+                else if (result.reason === 'same_meal') HEYS.Toast?.error?.('Нельзя перенести приём в него же');
+                else if (result.reason === 'target_mode_missing') HEYS.Toast?.error?.('Не выбрана цель переноса');
+                else if (result.reason === 'target_missing') HEYS.Toast?.error?.('Целевой приём уже изменился — выберите цель ещё раз');
+                else if (result.reason === 'source_missing') HEYS.Toast?.error?.('Исходный приём уже изменился — откройте перенос ещё раз');
+                else if (result.reason === 'source_changed' && !result.rollbackOk) {
+                    trackError(new Error('Meal move rollback failed after source write rejection'), {
+                        source: 'day/_meals.js',
+                        action: 'move_meal_rollback',
+                        srcDate,
+                        dstDate,
+                        srcMealId,
+                        dstMealId: result.destinationPlan?.destinationMealId,
+                    });
+                    HEYS.Toast?.error?.('Перенос не завершён — проверьте оба дня');
+                } else if (result.reason === 'source_changed') {
+                    HEYS.Toast?.error?.('Приём изменился — перенос отменён');
+                } else if (result.reason !== 'items_not_ready') HEYS.Toast?.error?.('Не удалось записать в целевой день');
+                return false;
             }
-            const srcMealId = srcMeal.id;
-            const srcMealClone = JSON.parse(JSON.stringify(srcMeal));
-            const preparedItems = await ensureDiaryItemsReadyForDayWrite(
-                (srcMeal.items || []).map(it => ({ ...it, id: uid('it_') })),
-                'move_meal_to_target',
-            );
-            if (!preparedItems || preparedItems.length !== (srcMeal.items || []).length) return;
-            const dstMeal = {
-                ...srcMeal,
-                id: uid('m_'),
-                items: preparedItems,
-            };
 
-            const writeOk = writeDay(dstDate, (existing) => {
-                const newMeals = sortMealsByTime([...(existing.meals || []), dstMeal]);
-                return { ...existing, date: dstDate, meals: newMeals, updatedAt: Date.now() };
-            }, 'move_meal_to_target');
-
-            if (!writeOk) {
-                HEYS.Toast?.error?.('Не удалось записать в целевой день');
-                return;
-            }
-
-            writeDay(srcDate, (existing) => {
-                const meals = (existing.meals || []).filter(m => m && m.id !== srcMealId);
-                return { ...existing, meals, updatedAt: Date.now() };
-            }, 'move_meal_from_source');
+            const destinationPlan = result.destinationPlan;
+            const srcMealClone = result.sourceMealSnapshot;
 
             haptic('medium');
 
@@ -7236,14 +7412,30 @@
             const undo = () => {
                 if (undone) return;
                 undone = true;
-                writeDay(dstDate, (existing) => {
-                    const meals = (existing.meals || []).filter(m => m && m.id !== dstMeal.id);
-                    return { ...existing, meals, updatedAt: Date.now() };
-                }, 'undo_move_meal_target');
-                writeDay(srcDate, (existing) => {
+                const restoreSourceOk = writeDay(srcDate, (existing) => {
+                    if ((existing.meals || []).some(meal => meal && meal.id === srcMealId)) return null;
                     const meals = sortMealsByTime([...(existing.meals || []), srcMealClone]);
                     return { ...existing, meals, updatedAt: Date.now() };
                 }, 'undo_move_meal_source');
+                if (!restoreSourceOk) {
+                    HEYS.Toast?.error?.('Не удалось отменить перенос');
+                    return;
+                }
+                const rollbackTargetOk = writeDay(dstDate, (existing) =>
+                    rollbackMealMoveDestination(existing, destinationPlan, Date.now()),
+                'undo_move_meal_target');
+                if (!rollbackTargetOk) {
+                    // Возвращаем состояние «перенесено», чтобы не оставить дубль.
+                    writeDay(srcDate, (existing) => {
+                        if (!(existing.meals || []).some(meal => meal && meal.id === srcMealId)) return null;
+                        return {
+                            ...existing,
+                            meals: (existing.meals || []).filter(meal => meal && meal.id !== srcMealId),
+                            updatedAt: Date.now(),
+                        };
+                    }, 'undo_move_meal_compensate_source');
+                    HEYS.Toast?.error?.('Не удалось отменить перенос');
+                }
                 // Подтверждающего тоста после возврата нет — строка «тоста подтверждения нет».
             };
 
@@ -7252,6 +7444,7 @@
                 label: `Приём перемещён в ${dstLabel}`,
                 onUndo: undo,
             });
+            return true;
         }, [date, haptic, buildDaysWithMeals, writeDay, ensureDiaryItemsReadyForDayWrite]);
 
         const openMoveMealModal = React.useCallback((srcMealIndex) => {
@@ -7264,6 +7457,10 @@
                 HEYS.Toast?.info?.('Пустой приём — нечего переносить');
                 return;
             }
+            if (!meal.id) {
+                HEYS.Toast?.error?.('Приём не готов к переносу — обновите день');
+                return;
+            }
             const itemCount = (meal.items || []).length;
             const sourceLabel = `Переносим: ${localizeMealName(meal.name, 'Приём')}${meal.time ? ' (' + meal.time + ')' : ''}, ${itemCount} ${itemCount === 1 ? 'продукт' : (itemCount < 5 ? 'продукта' : 'продуктов')}`;
 
@@ -7272,7 +7469,7 @@
                 sourceDate: date,
                 sourceLabel,
                 daysWithMeals: buildDaysWithMeals({ includeEmpty: true }),
-                onPick: async ({ dstDate }) => moveMealToDate(srcMealIndex, dstDate),
+                onPick: async (destination) => moveMealToDate(meal.id, destination),
             });
         }, [date, buildDaysWithMeals, moveMealToDate]);
 

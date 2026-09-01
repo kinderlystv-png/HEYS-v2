@@ -1,6 +1,7 @@
 // heys_day_copy_meal_modal_v1.js — Модалка копирования продуктов между приёмами пищи
-// Собственный modal-shell (не через ConfirmModal): bottom-sheet ~92vh высоты с
-// scrollable body. Pattern совместим с heys_confirm_modal_v1.js (createRoot + setModalState + ModalManager).
+// Собственный modal-shell (не через ConfirmModal): centered v4-sheet 375×706
+// with a scrollable body. Pattern совместим с
+// heys_confirm_modal_v1.js (createRoot + setModalState + ModalManager).
 (function (global) {
     'use strict';
 
@@ -209,6 +210,35 @@
     // Тысячи разделяются узким пробелом, как в остальных числах флоу.
     const fmtKcal = (n) => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
+    function CloseIcon() {
+        return React.createElement('svg', {
+            width: 15,
+            height: 15,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: 2.75,
+            strokeLinecap: 'round',
+            'aria-hidden': 'true',
+        },
+            React.createElement('path', { d: 'M6 6l12 12M18 6L6 18' }),
+        );
+    }
+
+    function StepIcon({ direction }) {
+        const path = direction === 'minus' ? 'M6 12h12' : 'M12 6v12M6 12h12';
+        return React.createElement('svg', {
+            width: 12,
+            height: 12,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: 3,
+            strokeLinecap: 'round',
+            'aria-hidden': 'true',
+        }, React.createElement('path', { d: path }));
+    }
+
     function CopyMealView({ sourceMeal, sourceMealIndex, sourceDate, targetDate, targetMeals, onCopyToExisting, onCopyToNew }) {
         const allItems = (sourceMeal && sourceMeal.items) || [];
         const sameDay = sourceDate && targetDate && sourceDate === targetDate;
@@ -228,7 +258,7 @@
         const adjustGrams = React.useCallback((id, delta) => {
             setItemGrams(prev => {
                 const cur = prev[id] ?? 100;
-                return { ...prev, [id]: Math.max(1, Math.min(999, cur + delta)) };
+                return { ...prev, [id]: Math.max(5, Math.min(500, cur + delta)) };
             });
         }, []);
 
@@ -266,160 +296,63 @@
             if (e.target === e.currentTarget) hide();
         };
 
-        const sourceLabel = (sourceMeal && sourceMeal.name)
-            ? `«${sourceMeal.name}»${sourceMeal.time ? ' · ' + sourceMeal.time : ''}`
-            : 'приём';
-        const titleText = sameDay
-            ? `Копировать из ${sourceLabel}`
-            : `Копировать из ${sourceLabel} в сегодня`;
+        const titleText = candidateMeals.length > 0 ? 'копировать' : 'копировать без целей';
 
         // === Header ===
-        const header = React.createElement('div', {
-            style: {
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '14px 20px 12px',
-                borderBottom: '1px solid var(--border, #e2e8f0)',
-                flexShrink: 0,
-            },
-        },
-            React.createElement('div', {
-                style: {
-                    flex: '1 1 auto',
-                    minWidth: 0,
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    color: 'var(--text, #111827)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                },
-            }, titleText),
+        const header = React.createElement('div', { className: 'meal-transfer-v4__top' },
+            React.createElement('div', { className: 'meal-transfer-v4__title' }, titleText),
             React.createElement('button', {
                 type: 'button',
                 onClick: () => hide(),
                 'aria-label': 'Закрыть',
-                style: {
-                    flexShrink: 0,
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    border: 'none',
-                    background: 'var(--border, #f1f5f9)',
-                    color: 'var(--muted, #64748b)',
-                    fontSize: '16px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0,
-                },
-            }, '✕'),
+                className: 'meal-transfer-v4__close',
+            }, React.createElement(CloseIcon)),
         );
 
         // === Items section ===
-        const itemsSection = React.createElement('div', {
-            style: {
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: 0,
-                flex: '1 1 auto',
-                padding: '12px 20px 0',
-            },
-        },
-            React.createElement('div', {
-                style: {
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '8px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: 'var(--muted, #64748b)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                    gap: '8px',
-                    flexShrink: 0,
-                },
-            },
+        const itemsSection = React.createElement('div', { className: 'meal-transfer-v4__items' },
+            React.createElement('div', { className: 'meal-transfer-v4__tier-row' },
                 React.createElement('span', null, `Продукты ${selectedIds.size}/${allItems.length}`),
                 React.createElement('button', {
                     type: 'button',
                     onClick: toggleAll,
-                    style: {
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--acc, #3b82f6)',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        textTransform: 'none',
-                        letterSpacing: 0,
-                        cursor: 'pointer',
-                        padding: '2px 4px',
-                    },
+                    className: 'meal-transfer-v4__select-all',
                 }, allSelected ? 'Снять всё' : 'Выбрать всё'),
             ),
-            React.createElement('div', {
-                style: {
-                    flex: '1 1 auto',
-                    minHeight: '120px',
-                    overflowY: 'auto',
-                    border: '1px solid var(--border, #e2e8f0)',
-                    borderRadius: '12px',
-                    background: 'var(--card, #fff)',
-                },
-            },
+            React.createElement('div', { className: 'meal-transfer-v4__product-list' },
                 allItems.map((it) => {
                     const isSelected = selectedIds.has(it.id);
                     const currentGrams = itemGrams[it.id] ?? Number(it.grams) ?? 0;
                     const kcal = Math.round(((Number(it.kcal100) || 0) * currentGrams) / 100);
-                    const adjBtnStyle = {
-                        width: '28px', height: '28px', borderRadius: '8px',
-                        border: '1px solid var(--border, #e2e8f0)',
-                        background: 'var(--bg, #f8fafc)', color: 'var(--text, #374151)',
-                        fontSize: '16px', cursor: 'pointer',
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        flexShrink: 0, padding: 0, lineHeight: 1,
-                    };
                     return React.createElement('div', {
                         key: it.id,
-                        style: { borderBottom: '1px solid var(--border, #f1f5f9)' },
+                        className: `meal-transfer-v4__product${isSelected ? ' is-selected' : ''}`,
                     },
-                        React.createElement('label', {
-                            style: {
-                                display: 'flex', alignItems: 'center', gap: '12px',
-                                padding: isSelected ? '10px 14px 6px' : '10px 14px',
-                                cursor: 'pointer', minWidth: 0,
-                            },
-                        },
+                        React.createElement('label', { className: 'meal-transfer-v4__product-main' },
                             React.createElement('input', {
                                 type: 'checkbox',
                                 checked: isSelected,
                                 onChange: () => toggleItem(it.id),
-                                style: { cursor: 'pointer', flexShrink: 0, width: '18px', height: '18px', margin: 0 },
+                                className: 'meal-transfer-v4__native-control',
                             }),
-                            React.createElement('span', {
-                                style: { flex: '1 1 auto', minWidth: 0, fontSize: '14px', color: 'var(--text, #111827)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-                            }, it.name || 'Без названия'),
-                            React.createElement('span', {
-                                style: { fontSize: '12px', color: 'var(--muted, #64748b)', whiteSpace: 'nowrap', flexShrink: 0 },
-                            }, `${currentGrams}г · ${kcal}к`),
+                            React.createElement('span', { className: 'meal-transfer-v4__check', 'aria-hidden': 'true' }, '✓'),
+                            React.createElement('span', { className: 'meal-transfer-v4__product-name' }, it.name || 'Без названия'),
+                            React.createElement('span', { className: 'meal-transfer-v4__product-meta' }, `${currentGrams} г · ${kcal} ккал`),
                         ),
                         isSelected && React.createElement('div', {
-                            style: { display: 'flex', alignItems: 'center', gap: '6px', padding: '0 14px 8px 44px' },
+                            className: 'meal-transfer-v4__grams',
                             onClick: e => e.stopPropagation(),
                         },
-                            React.createElement('button', { type: 'button', onClick: () => adjustGrams(it.id, -10), style: adjBtnStyle }, '−'),
-                            React.createElement('span', {
-                                style: { fontSize: '12px', minWidth: '38px', textAlign: 'center', color: 'var(--text, #111827)', fontVariantNumeric: 'tabular-nums' },
-                            }, `${currentGrams}г`),
-                            React.createElement('button', { type: 'button', onClick: () => adjustGrams(it.id, +10), style: adjBtnStyle }, '+'),
+                            React.createElement('button', { type: 'button', onClick: () => adjustGrams(it.id, -10), className: 'meal-transfer-v4__gram-step', 'aria-label': `Уменьшить ${it.name || 'продукт'}` }, React.createElement(StepIcon, { direction: 'minus' })),
+                            React.createElement('span', { className: 'meal-transfer-v4__gram-value' }, `${currentGrams} г`),
+                            React.createElement('button', { type: 'button', onClick: () => adjustGrams(it.id, +10), className: 'meal-transfer-v4__gram-step', 'aria-label': `Увеличить ${it.name || 'продукт'}` }, React.createElement(StepIcon, { direction: 'plus' })),
                             React.createElement('input', {
                                 type: 'range', min: 5, max: 500, step: 5,
                                 value: currentGrams,
                                 onChange: e => setItemGrams(prev => ({ ...prev, [it.id]: +e.target.value })),
-                                style: { flex: '1 1 auto', cursor: 'pointer', accentColor: 'var(--acc, #3b82f6)', margin: 0 },
+                                className: 'meal-transfer-v4__range',
+                                'aria-label': `Количество ${it.name || 'продукта'}`,
+                                style: { '--meal-transfer-progress': `${Math.max(0, Math.min(100, ((currentGrams - 5) / 495) * 100))}%` },
                             }),
                         ),
                     );
@@ -431,59 +364,29 @@
         const targetItem = (label, isActive, onChange, key) =>
             React.createElement('label', {
                 key,
-                style: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '10px 14px',
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    background: isActive ? 'var(--acc-bg, #eff6ff)' : 'var(--card, #fff)',
-                    border: '1px solid ' + (isActive ? 'var(--acc, #3b82f6)' : 'var(--border, #e2e8f0)'),
-                    transition: 'background 0.15s, border 0.15s',
-                    minWidth: 0,
-                },
+                'data-copy-meal-target': key,
+                className: `meal-transfer-v4__target${isActive ? ' is-selected' : ''}`,
             },
                 React.createElement('input', {
                     type: 'radio',
                     name: 'copy-meal-target',
                     checked: isActive,
                     onChange,
-                    style: { cursor: 'pointer', flexShrink: 0, width: '18px', height: '18px', margin: 0 },
+                    className: 'meal-transfer-v4__native-control',
                 }),
+                React.createElement('span', { className: 'meal-transfer-v4__radio', 'aria-hidden': 'true' }),
                 React.createElement('span', {
-                    style: { flex: '1 1 auto', minWidth: 0, fontSize: '14px', color: 'var(--text, #111827)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+                    'data-copy-meal-target-label': key,
+                    className: 'meal-transfer-v4__target-label',
                 }, label),
             );
 
-        const targetsSection = React.createElement('div', {
-            style: {
-                padding: '12px 20px 0',
-                flexShrink: 0,
-            },
-        },
-            React.createElement('div', {
-                style: {
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: 'var(--muted, #64748b)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                    marginBottom: '8px',
-                },
-            }, sameDay ? 'Куда копировать' : 'Куда копировать (сегодня)'),
+        const targetsSection = React.createElement('div', { className: 'meal-transfer-v4__targets' },
+            React.createElement('div', { className: 'meal-transfer-v4__tier' }, candidateMeals.length > 0 ? 'Куда копировать · сегодня' : 'Куда копировать'),
             candidateMeals.length === 0 && React.createElement('div', {
-                style: { fontSize: '12px', color: 'var(--muted, #94a3b8)', marginBottom: '8px', fontStyle: 'italic' },
+                className: 'meal-transfer-v4__empty',
             }, 'На сегодня приёмов ещё нет — создадим новый.'),
-            React.createElement('div', {
-                style: {
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
-                    maxHeight: '180px',
-                    overflowY: 'auto',
-                },
-            },
+            React.createElement('div', { className: 'meal-transfer-v4__target-list' },
                 ...candidateMeals.map(({ meal, index }) =>
                     targetItem(
                         `${meal.name || 'Приём'}${meal.time ? ' · ' + meal.time : ''}`,
@@ -493,7 +396,7 @@
                     ),
                 ),
                 targetItem(
-                    '➕ Создать новый приём',
+                    '+ Создать новый приём',
                     targetType === 'new',
                     () => { setTargetType('new'); setDstMealIndex(null); },
                     'new-meal',
@@ -517,61 +420,26 @@
         }, [targetType, dstMealIndex, targetMeals, selectedIds, itemGrams, allItems]);
 
         // === Footer (buttons + optional KBJU preview) ===
-        const footer = React.createElement('div', {
-            style: {
-                borderTop: '1px solid var(--border, #e2e8f0)',
-                flexShrink: 0,
-                background: 'var(--card, #fff)',
-            },
-        },
+        const footer = React.createElement('div', { className: 'meal-transfer-v4__footer' },
             kbjuPreview && React.createElement('div', {
-                style: {
-                    padding: '10px 20px 0',
-                    fontSize: '12px',
-                    color: 'var(--muted, #64748b)',
-                    textAlign: 'center',
-                    letterSpacing: '0.01em',
-                },
+                className: 'meal-transfer-v4__summary',
             // Строка «итог копирования» пишет величины как на остальных экранах:
             // «Перекус: 17 → 1 610 ккал (+1 593)». Стояло «17к → 1610к (+1593к)» —
             // сокращение «к» больше нигде во флоу не встречается, а тысячи шли
             // без разделителя, и четырёхзначные числа читались сплошняком.
             }, `${kbjuPreview.dstName}: ${fmtKcal(kbjuPreview.dstKcal)} → `
               + `${fmtKcal(kbjuPreview.totalKcal)} ккал (+${fmtKcal(kbjuPreview.addedKcal)})`),
-            React.createElement('div', {
-                style: { display: 'flex', gap: '8px', padding: '12px 20px 16px' },
-            },
+            React.createElement('div', { className: 'meal-transfer-v4__actions' },
                 React.createElement('button', {
                     type: 'button',
                     onClick: () => hide(),
-                    style: {
-                        flex: '0 0 auto',
-                        padding: '12px 20px',
-                        borderRadius: '12px',
-                        border: '1px solid var(--border, #e2e8f0)',
-                        background: 'var(--card, #fff)',
-                        color: 'var(--text, #111827)',
-                        fontSize: '15px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                    },
+                    className: 'meal-transfer-v4__button meal-transfer-v4__button--cancel',
                 }, 'Отмена'),
                 React.createElement('button', {
                     type: 'button',
                     onClick: handleCopy,
                     disabled: !canSubmit,
-                    style: {
-                        flex: '1 1 auto',
-                        padding: '12px 16px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        background: canSubmit ? 'var(--acc, #3b82f6)' : 'var(--border, #cbd5e1)',
-                        color: '#fff',
-                        fontSize: '15px',
-                        fontWeight: 600,
-                        cursor: canSubmit ? 'pointer' : 'not-allowed',
-                        transition: 'background 0.15s',
-                    },
+                    className: 'meal-transfer-v4__button meal-transfer-v4__button--primary',
                 }, `Копировать (${selectedIds.size})`),
             ),
         );
@@ -580,38 +448,12 @@
         // Паттерн совпадает с .mc-modal (StepModal/heys_add_product_step_v1) — модалка центрирована,
         // занимает почти весь экран (calc(100dvh - 32px)), но с padding-зоной от backdrop.
         return React.createElement('div', {
-            className: 'copy-meal-modal-backdrop',
+            className: 'copy-meal-modal-backdrop meal-transfer-v4__backdrop',
             onClick: handleBackdropClick,
-            style: {
-                position: 'fixed',
-                inset: 0,
-                background: 'rgba(0, 0, 0, 0.55)',
-                backdropFilter: 'blur(3px)',
-                WebkitBackdropFilter: 'blur(3px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 'calc(20px + var(--safe-area-top, 0px)) calc(16px + var(--safe-area-right, 0px)) calc(32px + var(--safe-area-bottom, 0px)) calc(16px + var(--safe-area-left, 0px))',
-                zIndex: 10000,
-                animation: 'copyMealFadeIn 0.15s ease-out',
-            },
         },
             React.createElement('div', {
-                className: 'copy-meal-modal',
+                className: 'copy-meal-modal meal-transfer-v4__sheet',
                 onClick: (e) => e.stopPropagation(),
-                style: {
-                    width: '100%',
-                    maxWidth: '480px',
-                    height: '100%',
-                    maxHeight: 'calc(100dvh - 52px - var(--safe-area-top, 0px) - var(--safe-area-bottom, 0px))',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    background: 'var(--card, #fff)',
-                    borderRadius: '20px',
-                    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-                    overflow: 'hidden',
-                    animation: 'copyMealScaleIn 0.18s ease-out',
-                },
             },
                 header,
                 itemsSection,
@@ -642,8 +484,8 @@
         style.textContent = `
 @keyframes copyMealFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes copyMealScaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
-[data-theme$="dark"] .copy-meal-modal { background: #1e293b; color: #f1f5f9; }
-[data-theme$="dark"] .copy-meal-modal label { color: #f1f5f9; }
+[data-theme$="dark"] .copy-meal-modal:not(.meal-transfer-v4__sheet) { background: #1e293b; color: #f1f5f9; }
+[data-theme$="dark"] .copy-meal-modal:not(.meal-transfer-v4__sheet) label { color: #f1f5f9; }
 `;
         document.head.appendChild(style);
     }
