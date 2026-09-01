@@ -95,6 +95,14 @@ describe('Карточка плана говорит словами кадра',
     expect(onOpenReadonly).not.toHaveBeenCalled();
   });
 
+  it('будущий план дословно объясняет canvas-инвариант до старта', () => {
+    renderCard({ isFutureDay: true });
+
+    expect(screen.getByText(
+      'План — это назначение, а не факт: карточка запланированного дня не попадает ни в тоннаж, ни в счётчики, ни в движок нагрузки, пока тренировка не начата.',
+    )).toBeTruthy();
+  });
+
   it('будущий план показывает первые четыре упражнения, дозировку и честный остаток', () => {
     const exercises = Array.from({ length: 6 }, (_, index) => ({
       id: 'ex_' + index,
@@ -383,13 +391,20 @@ describe('Геометрия задана только внутри блока �
   });
 
   it('будущий состав и неделя повторяют геометрию строк canvas', () => {
+    expect(rule('.activity-v4-program .sb-plan-feed')).toContain('margin: 4px');
     expect(rule('.activity-v4-program .sb-plan-summary')).toContain('gap: 10px');
     expect(rule('.activity-v4-program .sb-plan-letter')).toContain('width: 34px');
     expect(rule('.activity-v4-program .sb-plan-letter')).toContain('border-radius: 11px');
     expect(rule('.activity-v4-program .sb-plan-exercises')).toContain('gap: 6px');
+    expect(rule('.activity-v4-program .sb-plan-actions--future .sb-plan-cta'))
+      .toContain('font: 700 12px/1 Figtree');
     expect(rule('.activity-v4-program .sb-plan-week-days')).toContain('gap: 5px');
     expect(rule('.activity-v4-program .sb-plan-exercises li > i')).toContain('Figtree');
     expect(rule('.activity-v4-program .sb-plan-exercises li > i')).toContain('tabular-nums');
+    const trace = rule('.activity-v4-program .sb-plan-feed > .sb-plan-trace');
+    expect(trace).toContain('margin-top: 12px');
+    expect(trace).toContain('line-height: 1.55');
+    expect(trace).toContain('rgba(var(--ink), 0.56)');
   });
 
   it('выбор переноса в Активе — вертикальный список строк', () => {

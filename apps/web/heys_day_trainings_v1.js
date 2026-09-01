@@ -3002,12 +3002,12 @@
     });
   }
 
-  function planWeekLabel(program, plan, weekPlace) {
+  function planWeekLabel(program, plan) {
     const week = plan && Number.isInteger(plan.weekIndex) && plan.weekIndex > 0
       ? 'Неделя ' + plan.weekIndex + (program && program.weeks ? ' из ' + program.weeks : '')
       : '';
     const title = program && typeof program.title === 'string' ? program.title.trim() : '';
-    return [week, title, weekPlace].filter(Boolean).join(' · ');
+    return [week, title].filter(Boolean).join(' · ');
   }
 
   function ProgramPlanCard(props) {
@@ -3029,7 +3029,7 @@
       moveOptions: hydratedMoveOptions,
       weekPlace: ownerWeekPlace,
       weekOverview: weekOverview,
-      weekLabel: weekOverview ? planWeekLabel(state.program, plan, ownerWeekPlace) : ''
+      weekLabel: weekOverview ? planWeekLabel(state.program, plan) : ''
     });
   }
 

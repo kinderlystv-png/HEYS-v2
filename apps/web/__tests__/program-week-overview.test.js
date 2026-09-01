@@ -330,6 +330,46 @@ describe('перенос тренировки — след в обе сторо�
     expect(screen.getByTestId('available-move-days').textContent).toBe('5');
   });
 
+  it('видимая подпись недели совпадает с Canvas и не добавляет порядковое место дня', async () => {
+    const { ProgramPlanCard } = loadModule();
+    globalThis.HEYS.YandexAPI = fakeYandexApi({
+      programData: {
+        ...program([
+          { date: '2026-08-10', weekIndex: 2, trainingId: 'tr_0' },
+          { date: T0, weekIndex: 2, trainingId: 'tr_1' },
+          { date: '2026-08-14', weekIndex: 2, trainingId: 'tr_2' },
+        ]),
+        title: 'мезоцикл «База»',
+      },
+      dayBlobs: {
+        ['heys_dayv2_' + T0]: {
+          trainings: [{ id: 'tr_1', plan: { status: 'assigned' } }],
+        },
+      },
+    });
+    globalThis.HEYS.StrengthBuilderParts = {
+      PlanCard(props) {
+        return React.createElement('span', { 'data-testid': 'week-label' }, props.weekLabel);
+      },
+    };
+
+    await act(async () => {
+      render(React.createElement(ProgramPlanCard, {
+        clientId: 'c1',
+        dateKey: T0,
+        training: {
+          plan: { id: 'pl_1', programId: 'pr_1', status: 'assigned', weekIndex: 2 },
+        },
+      }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId('week-label').textContent)
+      .toBe('Неделя 2 из 4 · мезоцикл «База»');
+    expect(screen.getByTestId('week-label').textContent).not.toContain('из трёх на неделе');
+  });
+
   it('варианты начинаются со следующего дня — сегодня переносить некуда', () => {
     const { moveOptionsFor } = loadModule();
     const opts = moveOptionsFor(T0);
