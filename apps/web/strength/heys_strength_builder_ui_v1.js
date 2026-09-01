@@ -308,9 +308,21 @@
             ? h('span', { className: 'sb-ex-state', 'aria-label': 'Упражнение закрыто' }, '✓')
             : started
               ? h('span', { className: 'sb-ex-state' }, 'раскрыть ›')
-              : null
+              : null,
+          !started && h('span', { className: 'sb-ex-chevron', 'aria-hidden': 'true' }, '›')
         )
       );
+    }
+
+    function historyForCard(name, index) {
+      const summary = typeof historyFor === 'function' ? historyFor(name, index) : null;
+      if (summary && summary.last) return summary;
+      const detail = typeof historyDetailFor === 'function' ? historyDetailFor(name, index) : null;
+      const latest = detail && Array.isArray(detail.usages) ? detail.usages[0] : null;
+      if (!latest || !Array.isArray(latest.approaches) || !latest.approaches.length) return summary;
+      return Object.assign({}, summary || {}, {
+        last: { approaches: latest.approaches }
+      });
     }
 
     function approachProgressLabel(exercise, approachIndex) {
@@ -833,7 +845,7 @@
         onToggleType: function (apIdx) { toggleType(i, apIdx); },
         onAddApproach: addApproach,
         onAddDrop: addDrop,
-        history: typeof historyFor === 'function' ? historyFor(ex.name, i) : null,
+        history: historyForCard(ex.name, i),
         onRpe: setRpe,
         onRename: renameExercise,
         onLink: function (exIdx) { setLinkFrom(exIdx); setView('superset'); },
@@ -857,7 +869,7 @@
       : 'по правилу «' + (restSourceName || 'отдыха') + '»';
 
     return h('div', {
-      className: 'sb-root sb-builder-screen' + (rest
+      className: 'sb-root sb-builder-screen' + (openIdx >= 0 ? ' is-exercise-open' : '') + (rest
         ? ' sb-root--rest-docked ' + (rest.collapsed ? 'sb-root--rest-collapsed' : 'sb-root--rest-expanded')
         : '')
     },
@@ -882,7 +894,8 @@
           className: 'sb-sync-badge',
           title: 'Сохранено на телефоне, ждёт сеть'
         }, '📡 Ждёт сеть'),
-        startedAt > 0 && !completedAt && h('span', { className: 'sb-session-badge' }, 'идёт'),
+        startedAt > 0 && !completedAt && openIdx < 0
+          && h('span', { className: 'sb-session-badge' }, 'идёт'),
         h('button', {
           type: 'button', className: 'sb-icon-btn',
           onClick: function () { setSheetOpen(true); },
@@ -896,7 +909,7 @@
         h('span', { className: 'sb-stat' + (rest && !rest.collapsed ? ' sb-stat--progress' : '') }, agg
           ? (rest && !rest.collapsed
             ? agg.doneApproaches + ' из ' + agg.totalApproaches + ' подходов'
-            : agg.doneApproaches + ' из ' + agg.totalApproaches + ' подходов')
+            : agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓')
           : '—'),
         !(rest && !rest.collapsed) && agg && agg.seconds > 0 && h('span', { className: 'sb-stat' }, fmtClock(agg.seconds)),
         !(rest && !rest.collapsed) && agg && agg.meters > 0 && h('span', { className: 'sb-stat' }, Math.round(agg.meters) + ' м'),
@@ -935,8 +948,31 @@
         h('div', {
           className: 'sb-sheet',
           onClick: function (e) { e.stopPropagation(); }
-        },
+          },
           h('div', { className: 'sb-sheet-grip' }),
+          openIdx >= 0 && h(React.Fragment, null,
+            h('button', {
+              type: 'button', className: 'sb-sheet-row',
+              onClick: function () { addApproach(openIdx); setSheetOpen(false); }
+            }, h('span', { className: 'sb-sheet-icon' }, '+'),
+            h('div', { className: 'sb-cat-title' }, h('b', null, 'Добавить подход'),
+              h('span', null, 'Новая строка текущего упражнения'))),
+            (function () {
+              const openUnit = ((exercises[openIdx] || {}).unit || 'weight_reps');
+              return (openUnit === 'weight_reps' || openUnit === 'bodyweight') && h('button', {
+                type: 'button', className: 'sb-sheet-row',
+                onClick: function () { addDrop(openIdx); setSheetOpen(false); }
+              }, h('span', { className: 'sb-sheet-icon' }, '↘'),
+              h('div', { className: 'sb-cat-title' }, h('b', null, 'Добавить сброс'),
+                h('span', null, 'Ступень сброса последнего подхода')));
+            })(),
+            h('button', {
+              type: 'button', className: 'sb-sheet-row',
+              onClick: function () { setLinkFrom(openIdx); setView('superset'); setSheetOpen(false); }
+            }, h('span', { className: 'sb-sheet-icon' }, '↔'),
+            h('div', { className: 'sb-cat-title' }, h('b', null, 'Связать упражнения'),
+              h('span', null, 'Суперсет или трисет')))
+          ),
           (HEYS.StrengthBuilderParts || {}).sheetRows({
             exercises: exercises,
             openIdx: openIdx,
@@ -1001,11 +1037,14 @@
         }, 'Добавить упражнение'),
         h('button', {
           type: 'button', className: 'sb-finish',
+          'aria-label': notClosed > 0
+            ? 'Завершить тренировку · ' + notClosed + ' не закрыто'
+            : 'Завершить тренировку',
           onClick: function () {
             if (notClosed > 0) { setCloseConfirm(true); return; }
             setView('finish');
           }
-        }, notClosed > 0 ? 'Завершить · ' + notClosed + ' не закрыто' : 'Завершить тренировку'),
+        }, 'Завершить тренировку'),
         !rest && h('div', { className: 'sb-builder-note' },
           'Состояние, в котором список живёт между упражнениями: карточку свернули, подход закрыт, следующее ещё не начато. Раскрытие — тап по карточке, и прежняя сворачивается сама: две открытые карточки не бывают. «Завершить» остаётся тихой, пока счёт незакрытых не дошёл до нуля.'),
         rest && !rest.collapsed && h('div', { className: 'sb-rest-note' },

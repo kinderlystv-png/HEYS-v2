@@ -223,7 +223,7 @@ describe('конструктор: сводка считается ядром', (
     }));
     // Прототип экрана 04: время и счётчик. Тоннаж живёт на финале, чтобы в
     // зале не отвлекать; сам подсчёт разминки проверяется тестами ядра.
-    expect(screen.getByText('2 из 2 подходов')).toBeTruthy();
+    expect(screen.getByText('2 / 2 ✓')).toBeTruthy();
     expect(screen.queryByText(/\d+ кг$/)).toBeNull();
   });
 
@@ -243,7 +243,7 @@ describe('конструктор: сводка считается ядром', (
     expect(screen.getByText('1 без тоннажа')).toBeTruthy();
   });
 
-  it('шапка показывает прогресс, а кнопка завершения — незакрытый остаток', () => {
+  it('шапка показывает прогресс, а незакрытый остаток остаётся в доступном имени кнопки', () => {
     render(React.createElement(SB.BuilderScreen, {
       training: training([{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }]),
       dateKey: '2026-08-09',
@@ -251,8 +251,8 @@ describe('конструктор: сводка считается ядром', (
       onPatch: () => {},
       onClose: () => {},
     }));
-    expect(screen.getByText('Завершить · 1 не закрыто')).toBeTruthy();
-    expect(screen.getByText('1 из 2 подходов')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Завершить тренировку · 1 не закрыто' })).toBeTruthy();
+    expect(screen.getByText('1 / 2 ✓')).toBeTruthy();
   });
 });
 
@@ -317,8 +317,42 @@ describe('конструктор: спокойная нижняя панель',
       onClose: () => {},
     }));
 
-    const finish = screen.getByRole('button', { name: 'Завершить · 1 не закрыто' });
+    const finish = screen.getByRole('button', { name: 'Завершить тренировку · 1 не закрыто' });
     expect(finish).toBeTruthy();
+  });
+
+  it('открытый кадр берёт прошлый подход из detail и переносит вторичные действия в overflow', () => {
+    const patched = [];
+    const source = training([{
+      name: 'Жим гантелей сидя',
+      unit: 'weight_reps',
+      approaches: [work(22.5, 12, true), work(24, 10, true), work(24, 10, false), work(24, 10, false)],
+    }]);
+    source.workoutLog.startedAt = Date.now();
+
+    render(React.createElement(SB.BuilderScreen, {
+      training: source,
+      dateKey: '2026-08-09',
+      profile: {},
+      historyFor: () => ({ record: { maxW: 25, maxSet: 250 } }),
+      historyDetailFor: () => ({
+        usages: [{ approaches: [{ weightKg: '22.5', reps: 12, done: true }] }],
+      }),
+      onPatch: (next) => patched.push(next),
+      onClose: () => {},
+    }));
+
+    expect(document.querySelector('.sb-builder-screen.is-exercise-open')).toBeTruthy();
+    expect(screen.getByText('Прошлый раз · 22,5 × 12')).toBeTruthy();
+    expect(screen.getByText('Рекорд · 25 × 10')).toBeTruthy();
+    expect(screen.queryByText('идёт')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ещё' }));
+    expect(screen.getByRole('button', { name: /Добавить подход/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Добавить сброс/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Связать упражнения/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Добавить подход/ }));
+    expect(patched.at(-1)[0].approaches).toHaveLength(5);
   });
 
   it('добавление подхода к закрытому упражнению сбрасывает время завершения и возвращает active-state', () => {
@@ -349,9 +383,9 @@ describe('конструктор: спокойная нижняя панель',
         workoutLog: { ...closed.workoutLog, completedAt: undefined, exercises: exercisePatches.at(-1) },
       },
     }));
-    const reopened = screen.getByRole('button', { name: 'Завершить · 1 не закрыто' });
+    const reopened = screen.getByRole('button', { name: 'Завершить тренировку · 1 не закрыто' });
     expect(reopened).toBeTruthy();
-    expect(screen.getByText('1 из 2 подходов')).toBeTruthy();
+    expect(screen.getByText('1 / 2 ✓')).toBeTruthy();
   });
 });
 
@@ -760,7 +794,7 @@ describe('остались незакрытые подходы (экран 11)',
       onPatch: () => {},
       onClose: () => {},
     }));
-    fireEvent.click(screen.getByText('Завершить · 1 не закрыто'));
+    fireEvent.click(screen.getByRole('button', { name: 'Завершить тренировку · 1 не закрыто' }));
     expect(screen.getByText('Остались незакрытые подходы')).toBeTruthy();
     expect(screen.getByText(/лучше убрать/)).toBeTruthy();
   });
@@ -779,7 +813,7 @@ describe('остались незакрытые подходы (экран 11)',
       onPatch: (next) => seen.push(next),
       onClose: () => {},
     }));
-    fireEvent.click(screen.getByText('Завершить · 1 не закрыто'));
+    fireEvent.click(screen.getByRole('button', { name: 'Завершить тренировку · 1 не закрыто' }));
     fireEvent.click(screen.getByText('Убрать пустые'));
     const aps = seen[seen.length - 1][0].approaches;
     expect(aps.length).toBe(2);
@@ -798,7 +832,7 @@ describe('остались незакрытые подходы (экран 11)',
       onPatch: (n) => patched.push(n),
       onClose: () => closed.push(1),
     }));
-    fireEvent.click(screen.getByText('Завершить · 1 не закрыто'));
+    fireEvent.click(screen.getByRole('button', { name: 'Завершить тренировку · 1 не закрыто' }));
     fireEvent.click(screen.getByText('Оставить'));
     expect(patched.length).toBe(0);
     expect(closed.length).toBe(1);

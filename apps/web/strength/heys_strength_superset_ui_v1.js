@@ -37,6 +37,10 @@
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
 
+  function fmtNumber(value) {
+    return String(value == null ? '' : value).replace('.', ',');
+  }
+
   // ——— Связка (экраны 23, 26) ———
 
   function SupersetBlock(props) {
@@ -558,7 +562,7 @@
         h('span', {
           className: 'sb-ex-count' + (totalCount > 0 && doneCount === totalCount ? ' is-done' : ' is-current')
         }, doneCount + '/' + totalCount),
-        h('span', { className: 'sb-ex-count' }, open ? '▾' : '›')
+        h('span', { className: 'sb-ex-count sb-ex-toggle' }, open ? '✕' : '›')
       ),
 
       open && h('div', { className: 'sb-ex-body' },
@@ -576,11 +580,14 @@
           if (last) {
             const w = last.weightKg || (last.approaches && last.approaches[0] && last.approaches[0].weightKg);
             const r = last.reps || (last.approaches && last.approaches[0] && last.approaches[0].reps);
-            if (w || r) chips.push(h('span', { key: 'last' }, 'Прошлый раз · ' + (w || 'свой') + ' × ' + (r || '—')));
+            if (w || r) chips.push(h('span', { key: 'last' }, 'Прошлый раз · ' + (w ? fmtNumber(w) : 'свой') + ' × ' + (r ? fmtNumber(r) : '—')));
           }
           if (rec && rec.maxW > 0) {
+            const recordReps = rec.maxSet > 0 && rec.maxW > 0
+              ? Math.round(rec.maxSet / rec.maxW)
+              : 0;
             chips.push(h('span', { key: 'rec', className: 'is-record' },
-              '🏆 Рекорд · ' + rec.maxW + ' кг'));
+              'Рекорд · ' + fmtNumber(rec.maxW) + (recordReps > 0 ? ' × ' + fmtNumber(recordReps) : ' кг')));
           }
           return chips.length ? h('div', { className: 'sb-hist' }, chips) : null;
         })(),

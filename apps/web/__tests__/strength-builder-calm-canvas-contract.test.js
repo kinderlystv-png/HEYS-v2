@@ -17,17 +17,20 @@ function lastRule(selector) {
 }
 
 describe('strength builder: спокойные состояния активного списка', () => {
-  it('оставляет зелёный сигнал галочке, а не карточке и полям', () => {
+  it('оставляет спокойный зелёный сигнал галочке, а не карточке и полям', () => {
     expect(lastRule('.sb-ap.is-done .sb-ap-field')).toContain('background: var(--sb-card)');
     expect(lastRule('.sb-ap.is-done .sb-ap-field')).not.toContain('--sb-okbg');
     expect(lastRule('.sb-ex.is-complete')).toContain('background: var(--sb-card)');
     expect(lastRule('.sb-ex.is-complete')).not.toContain('--sb-okbg');
-    expect(lastRule('.sb-ap-check.is-done')).toContain('background: var(--v4-ok-text');
+    const doneCheck = lastRule('.sb-builder-screen.is-exercise-open .sb-ap-check.is-done');
+    expect(doneCheck).toContain('background: var(--sb-okbg)');
+    expect(doneCheck).toContain('color: var(--sb-okTx)');
+    expect(doneCheck).not.toContain('--v4-ok-text');
   });
 
   it('выделяет открытое упражнение спокойно, а ввод — рамкой полей', () => {
-    expect(lastRule('.sb-ex.is-open')).toContain('box-shadow: inset 0 0 0 1px var(--sb-br)');
-    expect(lastRule('.sb-ap.is-current .sb-ap-field')).toContain('box-shadow: inset 0 0 0 1px var(--sb-acc)');
+    expect(lastRule('.sb-builder-screen.is-exercise-open .sb-ex.is-open')).toContain('box-shadow: inset 0 0 0 1px var(--sb-br)');
+    expect(lastRule('.sb-builder-screen.is-exercise-open .sb-ap.is-current .sb-ap-field')).toContain('border: 2px solid var(--sb-acc-strong)');
     expect(lastRule('.sb-ap.is-current .sb-ap-num')).not.toContain('background: var(--sb-acc)');
   });
 
