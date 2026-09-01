@@ -243,16 +243,91 @@ describe('placeInWeek — место дня в своей неделе', () => {
   });
 });
 
+describe('projectProgramWeek — проекция недели из owner-index программы', () => {
+  it('не рисует статусы константами и сохраняет неизвестный owner-день неизвестным', () => {
+    const { projectProgramWeek } = loadModule();
+    const ownerProgram = program([
+      { date: '2026-08-10', weekIndex: 2 },
+      { date: '2026-08-12', weekIndex: 2 },
+      { date: '2026-08-14', weekIndex: 2 },
+    ]);
+    const ownerDays = [
+      { date: '2026-08-10', status: 'done' },
+      { date: '2026-08-12', status: 'assigned' },
+      { date: '2026-08-14', status: null },
+    ];
+
+    const week = projectProgramWeek(
+      ownerProgram,
+      ownerDays,
+      '2026-08-12',
+      { id: 'pl_1', programId: 'pr_1', status: 'assigned' },
+    );
+    expect(week.map((day) => day.weekday)).toEqual(['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']);
+    expect(week.map((day) => day.kind)).toEqual([
+      'done', 'rest', 'assigned', 'rest', 'unknown', 'rest', 'rest',
+    ]);
+  });
+
+  it('чужой programId не получает чужую неделю', () => {
+    const { projectProgramWeek } = loadModule();
+    expect(projectProgramWeek(program([]), [], T0, { programId: 'pr_other' })).toBeNull();
+  });
+});
+
 describe('перенос тренировки — след в обе стороны', () => {
-  it('исходный день помечен как перенос, а не как пропуск', () => {
+  it('не называет отсутствующий в кэше день свободным', () => {
     const { moveOptionsFor } = loadModule();
-    // Сам расчёт вариантов дат: занятый день предлагается с пометкой, а не
-    // прячется — иначе человек не понимает, почему субботы нет в списке.
     expect(typeof moveOptionsFor).toBe('function');
     const opts = moveOptionsFor(T0);
     expect(opts.length).toBeGreaterThan(0);
     expect(opts.every((o) => typeof o.date === 'string' && typeof o.weekday === 'string')).toBe(true);
+    expect(opts[0].label).toMatch(/^Завтра,/);
+    expect(opts[0].unknown).toBe(true);
+    expect(opts[0].busy).toBe(true);
+    expect(opts[0].details).toBe('Данные дня ещё не загружены');
     expect(opts.some((o) => o.date === T1)).toBe(true);
+  });
+
+  it('явно загруженный пустой день можно назвать свободным', () => {
+    const { moveOptionsFor } = loadModule();
+    globalThis.HEYS.utils = {
+      lsGet(key, fallback) {
+        return key.endsWith('_dayv2_' + T1) || key === 'heys_dayv2_' + T1
+          ? { date: T1, trainings: [] }
+          : fallback;
+      },
+    };
+    const option = moveOptionsFor(T0).find((item) => item.date === T1);
+    expect(option.unknown).toBe(false);
+    expect(option.busy).toBe(false);
+    expect(option.details).toBe('Свободно');
+  });
+
+  it('авторитетный пустой batch снимает fail-closed блокировку выбора', async () => {
+    const { ProgramPlanCard } = loadModule();
+    globalThis.HEYS.YandexAPI = fakeYandexApi({
+      programData: program([{ date: T0, weekIndex: 1, trainingId: 'tr_1' }]),
+      dayBlobs: {},
+    });
+    globalThis.HEYS.StrengthBuilderParts = {
+      PlanCard(props) {
+        const available = (props.moveOptions || []).filter((option) => !option.busy).length;
+        return React.createElement('span', { 'data-testid': 'available-move-days' }, String(available));
+      },
+    };
+
+    await act(async () => {
+      render(React.createElement(ProgramPlanCard, {
+        clientId: 'c1',
+        dateKey: T0,
+        training: { plan: { id: 'pl_1', programId: 'pr_1', status: 'assigned', weekIndex: 1 } },
+      }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId('available-move-days').textContent).toBe('5');
   });
 
   it('варианты начинаются со следующего дня — сегодня переносить некуда', () => {

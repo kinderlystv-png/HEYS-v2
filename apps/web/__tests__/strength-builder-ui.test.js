@@ -800,7 +800,7 @@ describe('пропуск назначенного дня (экран 18, мин�
     expect(screen.queryByText('Что помешало · необязательно')).toBeNull();
   });
 
-  it('пропущенный план показывает причину и «Начать всё же», а не обычную сводку', () => {
+  it('отпущенный план показывает причину и даёт передумать в текущем дне', () => {
     loadModules();
     const Parts = globalThis.HEYS.StrengthBuilderParts;
     const resumed = [];
@@ -810,10 +810,24 @@ describe('пропуск назначенного дня (экран 18, мин�
       isFutureDay: false,
       onResumeSkipped: () => resumed.push(1),
     }));
-    expect(screen.getByText(/пропущен/)).toBeTruthy();
+    expect(screen.getByText(/отпущен/)).toBeTruthy();
     expect(screen.getByText(/Плохое самочувствие/)).toBeTruthy();
-    fireEvent.click(screen.getByText('Начать всё же'));
+    fireEvent.click(screen.getByText('Передумать'));
     expect(resumed.length).toBe(1);
+  });
+
+  it('прошедший отпущенный день не предлагает переписать задним числом', () => {
+    loadModules();
+    const Parts = globalThis.HEYS.StrengthBuilderParts;
+    render(React.createElement(Parts.PlanCard, {
+      training: planTraining({ status: 'skipped' }),
+      dateKey: '2026-08-08',
+      isFutureDay: false,
+      isPastDay: true,
+      onResumeSkipped: () => {},
+    }));
+    expect(screen.queryByText('Передумать')).toBeNull();
+    expect(screen.getByText(/Тоннажа и подходов нет/)).toBeTruthy();
   });
 
   it('пропуск без причины — нормальное состояние, не ошибка', () => {

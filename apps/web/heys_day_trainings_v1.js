@@ -2976,29 +2976,138 @@
   }
 
   const WEEKDAY_SHORT = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+  const WEEKDAY_LONG = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+  const MONTHS_GENITIVE = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+  /** Семь честных состояний недели из owner-index + прочитанных owner-дней. */
+  function projectProgramWeek(program, days, dateKey, plan) {
+    if (!program || !plan || !plan.programId || String(program.id || '') !== String(plan.programId)) return null;
+    const start = mondayOfWeek(dateKey);
+    const byDate = new Map((days || []).map(function (day) { return [day.date, day]; }));
+    return Array.from({ length: 7 }, function (_unused, index) {
+      const date = addDaysToKey(start, index);
+      const ownerDay = byDate.get(date);
+      const status = date === dateKey && plan && plan.status
+        ? plan.status
+        : ownerDay && ownerDay.status;
+      const kind = status === 'done'
+        ? 'done'
+        : status === 'assigned' || status === 'started'
+          ? 'assigned'
+          : status === 'skipped' || status === 'moved'
+            ? status
+            : ownerDay ? 'unknown' : 'rest';
+      return { date: date, weekday: WEEKDAY_SHORT[index === 6 ? 0 : index + 1], kind: kind };
+    });
+  }
+
+  function planWeekLabel(program, plan, weekPlace) {
+    const week = plan && Number.isInteger(plan.weekIndex) && plan.weekIndex > 0
+      ? 'Неделя ' + plan.weekIndex + (program && program.weeks ? ' из ' + program.weeks : '')
+      : '';
+    const title = program && typeof program.title === 'string' ? program.title.trim() : '';
+    return [week, title, weekPlace].filter(Boolean).join(' · ');
+  }
+
+  function ProgramPlanCard(props) {
+    const state = useProgramState(props.clientId);
+    const hydratedMoveOptions = useAuthoritativeMoveOptions(props.dateKey, props.clientId);
+    const plan = props.training && props.training.plan;
+    const weekOverview = !state.loading
+      ? projectProgramWeek(state.program, state.days, props.dateKey, plan)
+      : null;
+    const ownerWeekPlace = weekOverview
+      ? placeInWeek((state.days || []).filter(function (day) {
+        return day.date >= mondayOfWeek(props.dateKey) && day.date <= addDaysToKey(mondayOfWeek(props.dateKey), 6);
+      }), props.dateKey)
+      : props.weekPlace;
+    const Parts = HEYS.StrengthBuilderParts || {};
+    if (!Parts.PlanCard) return null;
+    return React.createElement(Parts.PlanCard, {
+      ...props,
+      moveOptions: hydratedMoveOptions,
+      weekPlace: ownerWeekPlace,
+      weekOverview: weekOverview,
+      weekLabel: weekOverview ? planWeekLabel(state.program, plan, ownerWeekPlace) : ''
+    });
+  }
+
+  function useAuthoritativeMoveOptions(dateKey, clientId) {
+    const [options, setOptions] = React.useState(function () { return moveOptionsFor(dateKey); });
+    React.useEffect(function () {
+      let cancelled = false;
+      const dates = Array.from({ length: 7 }, function (_unused, index) {
+        return addDaysToKey(dateKey, index + 1);
+      });
+      const api = HEYS.YandexAPI;
+      if (!clientId || !api || typeof api.getKVBatch !== 'function') {
+        setOptions(moveOptionsFor(dateKey));
+        return undefined;
+      }
+      (async function () {
+        try {
+          const result = await api.getKVBatch(clientId, dates.map(function (date) {
+            return 'heys_dayv2_' + date;
+          }));
+          if (!result || result.error || !Array.isArray(result.data)) return;
+          const existing = new Set(result.data.map(function (row) {
+            const match = row && String(row.k || '').match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+            return match && match[1];
+          }).filter(Boolean));
+          const knownEmpty = new Set(dates.filter(function (date) { return !existing.has(date); }));
+          const cloud = HEYS.cloud;
+          if (cloud && typeof cloud.fetchDays === 'function' && existing.size) {
+            await cloud.fetchDays(Array.from(existing));
+          }
+          if (!cancelled) setOptions(moveOptionsFor(dateKey, knownEmpty));
+        } catch (_) {
+          // Ошибка/неполный ответ не превращает отсутствующий кэш в «свободно».
+        }
+      })();
+      return function () { cancelled = true; };
+    }, [dateKey, clientId]);
+    return options;
+  }
 
   /**
    * Ближайшие дни для переноса (16a). Занятый день не предлагается — с
    * пометкой «занят», без диалога «что убрать»: лимит трёх тренировок решается
    * выбором, а не разговором посреди переноса.
    */
-  function moveOptionsFor(dateKey) {
+  function moveOptionsFor(dateKey, knownEmptyDates) {
     const out = [];
     for (let i = 1; i <= 7 && out.length < 5; i++) {
       const d = addDaysToKey(dateKey, i);
       let day = null;
       try { day = readDayFromStore(d); } catch (_) { day = null; }
+      if (!day && knownEmptyDates && knownEmptyDates.has(d)) {
+        day = { date: d, trainings: [] };
+      }
       const list = day && Array.isArray(day.trainings) ? day.trainings : [];
       const real = list.filter(function (t) {
         return t && (t.time || (Array.isArray(t.z) && t.z.some(function (m) { return +m > 0; })) || t.workoutLog);
       });
       const parts = d.split('-').map(Number);
       const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+      const occupiedPlan = real.find(function (training) {
+        return training && training.plan && training.plan.dayLabel;
+      });
+      const unknown = !day;
+      const busy = unknown || real.length >= 3;
+      const fullDate = WEEKDAY_LONG[dt.getDay()] + ', ' + parts[2] + ' ' + MONTHS_GENITIVE[parts[1] - 1];
       out.push({
         date: d,
         weekday: WEEKDAY_SHORT[dt.getDay()],
         human: parts[2] + '.' + String(parts[1]).padStart(2, '0'),
-        busy: real.length >= 3
+        label: i === 1 ? 'Завтра, ' + fullDate.toLowerCase() : fullDate,
+        busy: busy,
+        unknown: unknown,
+        details: unknown
+          ? 'Данные дня ещё не загружены'
+          : busy
+          ? (occupiedPlan ? 'Уже стоит ' + occupiedPlan.plan.dayLabel : 'Занято · 3 тренировки')
+          : 'Свободно'
       });
     }
     return out;
@@ -4249,14 +4358,18 @@
             }
             if (rawT.plan && (rawT.plan.status === 'assigned' || rawT.plan.status === 'skipped' || rawT.plan.status === 'moved') && Parts.PlanCard) {
               const isFutureDay = String(dateKey) > todayDateKeyForPlan();
-              return React.createElement(Parts.PlanCard, {
+              const isPastDay = String(dateKey) < todayDateKeyForPlan();
+              const storedWeekPlace = weekPlaceFromStore(dateKey);
+              return React.createElement(ProgramPlanCard, {
                 key: 'wb-plan-' + ti,
+                clientId: HEYS.currentClientId || '',
                 training: { workoutLog: wlLive, plan: rawT.plan, planSnapshot: rawT.planSnapshot },
                 dateKey: dateKey,
                 isFutureDay: isFutureDay,
+                isPastDay: isPastDay,
                 // Единственное, что забрано из прежнего виджета обзора (16c):
                 // место в неделе, а не дата следующей тренировки.
-                weekPlace: weekPlaceFromStore(dateKey),
+                weekPlace: storedWeekPlace,
                 moveOptions: moveOptionsFor(dateKey),
                 // Клиент переносит сам, без подтверждения куратора (16a): пока
                 // тот ответит, день уйдёт, и перенос превратится в пропуск.
@@ -4329,8 +4442,8 @@
                   openBuilder();
                 },
                 // Пропуск — явное «не делал»: без него незакрытый план остаётся
-                // «assigned» и вечно просится начать. Перенос на другую дату не
-                // входит — открытый вопрос протокола, отдельная операция.
+                // «assigned» и вечно просится начать. Перенос хранится отдельно
+                // и не подменяет этот исход.
                 onSkip: function (skipReason, expectedPlan) {
                   return patchTrainingAcknowledged(ti, function (t0) {
                     if (!matchesOpenedPlanRevision(t0, expectedPlan, 'assigned', rawT.updatedAt)
@@ -4352,6 +4465,7 @@
                 },
                 onResumeSkipped: function (e, expectedPlan) {
                   if (e && e.stopPropagation) e.stopPropagation();
+                  if (String(dateKey) < todayDateKeyForPlan()) return Promise.resolve(null);
                   return patchTrainingAcknowledged(ti, function (t0) {
                     if (!matchesOpenedPlanRevision(t0, expectedPlan, 'skipped', rawT.updatedAt)) return null;
                     const patch = { ...t0.plan, status: 'assigned' };
@@ -4688,6 +4802,8 @@
     stableMoveTransferId,
     hasMeaningfulLiveWorkout,
     ProgramPathScreen,
-    placeInWeek
+    placeInWeek,
+    projectProgramWeek,
+    ProgramPlanCard
   };
 })(window);

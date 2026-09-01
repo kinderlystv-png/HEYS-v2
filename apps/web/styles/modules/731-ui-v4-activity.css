@@ -973,6 +973,289 @@ body:has(.activity-v4) .hdr::after {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+/* Будущий план в ленте: состав виден до действия, потому что перенос выбирают
+   по реальному объёму, а не по одному названию дня. */
+.activity-v4-program .sb-plan-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.activity-v4-program .sb-plan-letter {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--v4-hero, #efe3cf);
+  font: 700 14px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.activity-v4-program .sb-plan-summary-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.activity-v4-program .sb-plan-summary-copy > b {
+  font: 700 12.5px/1.2 Figtree, system-ui, sans-serif;
+}
+
+.activity-v4-program .sb-plan-summary-copy .sb-plan-meta {
+  margin: 0;
+  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  color: rgba(var(--ink), 0.56);
+}
+
+.activity-v4-program .sb-plan-exercises {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activity-v4-program .sb-plan-exercises li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font: 600 12px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.activity-v4-program .sb-plan-exercises li > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-v4-program .sb-plan-exercises li > i {
+  flex: none;
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  color: rgba(var(--ink), 0.56);
+}
+
+.activity-v4-program .sb-plan-exercises .sb-plan-exercises-more {
+  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  color: rgba(var(--ink), 0.56);
+}
+
+.activity-v4-program .sb-plan-actions--future {
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.activity-v4-program .sb-plan-actions--future .sb-plan-cta {
+  flex: 1;
+  margin-top: 0;
+  min-height: 44px;
+  padding: 0 18px;
+}
+
+.activity-v4-program .sb-plan-week-label {
+  margin: 20px 0 10px;
+  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.activity-v4-program .sb-plan-week {
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-c1, #f7efe2);
+}
+
+.activity-v4-program .sb-plan-week-days {
+  display: flex;
+  gap: 5px;
+}
+
+.activity-v4-program .sb-plan-week-days > span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  border-radius: 10px;
+  background: var(--v4-bg, #fffaf1);
+}
+
+.activity-v4-program .sb-plan-week-days > span.is-done {
+  background: var(--v4-ok-bg, #e6f1df);
+}
+
+.activity-v4-program .sb-plan-week-days > span.is-assigned {
+  background: var(--v4-hero, #efe3cf);
+}
+
+.activity-v4-program .sb-plan-week-days > span.is-skipped {
+  background: var(--v4-tint, #f6e6dd);
+}
+
+.activity-v4-program .sb-plan-week-days > span.is-moved {
+  background: var(--v4-c2, #efe6d9);
+}
+
+.activity-v4-program .sb-plan-week-days > span.is-unknown {
+  background: var(--v4-c1, #f7efe2);
+}
+
+.activity-v4-program .sb-plan-week-days i {
+  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  font-style: normal;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.activity-v4-program .sb-plan-week-days b {
+  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.activity-v4-program .sb-plan-week-days .is-done b {
+  color: var(--v4-ok, #487c3a);
+}
+
+.activity-v4-program .sb-plan-week-days .is-assigned b {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.activity-v4-program .sb-plan-week-days .is-skipped b {
+  color: var(--v4-warn-text, #a1471c);
+}
+
+.activity-v4-program .sb-plan-week-days .is-moved b {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.activity-v4-program .sb-plan-week-days .is-unknown b {
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.activity-v4-program .sb-plan-week-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin-top: 10px;
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.activity-v4-program .sb-plan-week-legend span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.activity-v4-program .sb-plan-week-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--v4-line, rgba(0, 0, 0, 0.14));
+}
+
+.activity-v4-program .sb-plan-week-legend i.is-done {
+  background: var(--v4-ok, #487c3a);
+}
+
+.activity-v4-program .sb-plan-week-legend i.is-assigned {
+  background: var(--v4-act, #c67139);
+}
+
+.activity-v4-program .sb-plan-week-legend i.is-skipped {
+  background: var(--v4-warn-text, #a1471c);
+}
+
+.activity-v4-program .sb-plan-week-legend i.is-moved {
+  background: var(--v4-act-text, #8a4a20);
+}
+
+.activity-v4-program .sb-plan-week-legend i.is-unknown {
+  background: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.activity-v4-program .sb-plan-trace {
+  display: block;
+  margin-top: 10px;
+  font: 500 11px/1.45 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+/* Выбор переноса — список строк кадра, а не горизонтальная карусель. */
+.activity-v4-program .sb-move-days {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 8px 0 12px;
+  overflow: visible;
+  border-radius: 16px;
+  background: var(--v4-c1, #f7efe2);
+}
+
+.activity-v4-program .sb-move-day {
+  flex: none;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.14));
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.activity-v4-program .sb-move-day:last-child {
+  border-bottom: none;
+}
+
+.activity-v4-program .sb-move-day-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.activity-v4-program .sb-move-day-copy b {
+  font: 600 12.5px/1.2 Figtree, system-ui, sans-serif;
+  text-transform: none;
+}
+
+.activity-v4-program .sb-move-day-copy span {
+  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+}
+
+.activity-v4-program .sb-move-day > i {
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.activity-v4-program .sb-move-day.is-busy > i {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.activity-v4-program .sb-move-day.is-on {
+  border-color: var(--v4-line, rgba(0, 0, 0, 0.14));
+  background: transparent;
+}
+
 /* Карточка правки куратора — .grp кадра «Актив · правка куратора» на подложке
    предупреждения: она перехватывает день, и тон об этом говорит раньше текста. */
 .activity-v4-program .sb-proposal-card {

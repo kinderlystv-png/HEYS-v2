@@ -83,17 +83,106 @@ describe('Карточка плана говорит словами кадра',
     expect(document.querySelector('.sb-plan-meta').textContent).toContain('2 упр.');
   });
 
-  it('будущий «Посмотреть» раскрывает snapshot inline и не вызывает внешний mutating callback', () => {
+  it('будущий план сразу показывает состав snapshot и не предлагает небезопасный ранний старт', () => {
     const onOpenReadonly = vi.fn();
     renderCard({ isFutureDay: true, onOpenReadonly });
-
-    fireEvent.click(screen.getByText('Посмотреть'));
 
     expect(screen.getByRole('list', { name: 'Состав плана' })).toBeTruthy();
     expect(screen.getByText('Присед')).toBeTruthy();
     expect(screen.getByText('Тяга')).toBeTruthy();
-    expect(screen.getByText('Скрыть').getAttribute('aria-expanded')).toBe('true');
+    expect(screen.queryByText('Начать сейчас')).toBeNull();
+    expect(screen.queryByText('Начать')).toBeNull();
     expect(onOpenReadonly).not.toHaveBeenCalled();
+  });
+
+  it('будущий план показывает первые четыре упражнения, дозировку и честный остаток', () => {
+    const exercises = Array.from({ length: 6 }, (_, index) => ({
+      id: 'ex_' + index,
+      name: 'Упражнение ' + (index + 1),
+      approaches: Array.from({ length: index === 0 ? 4 : 3 }, (_unused, approachIndex) => ({
+        reps: approachIndex === 0 ? 8 : 12,
+        weightKg: index === 0 ? '75' : '60',
+      })),
+    }));
+    renderCard({
+      isFutureDay: true,
+      training: {
+        ...planTraining({ assignedAt: new Date(2026, 7, 3).getTime() }),
+        workoutLog: { exercises: [] },
+        planSnapshot: { exercises },
+      },
+    });
+
+    expect(screen.getByText('Запланировано куратором')).toBeTruthy();
+    expect(screen.getByText('Ноги и спина · Артём, 3 августа')).toBeTruthy();
+    expect(screen.getByText('4 × 8–12 · 75 кг')).toBeTruthy();
+    expect(screen.getByText('и ещё 2 · всего 19 подходов')).toBeTruthy();
+    expect(screen.getByText('план')).toBeTruthy();
+  });
+
+  it('будущий план выводит реальную проекцию недели, переданную owner-слоем', () => {
+    const kinds = ['done', 'rest', 'assigned', 'rest', 'assigned', 'rest', 'rest'];
+    renderCard({
+      isFutureDay: true,
+      weekLabel: 'Неделя 2 · вторая из трёх на неделе',
+      weekOverview: kinds.map((kind, index) => ({
+        date: '2026-08-' + String(10 + index).padStart(2, '0'),
+        weekday: ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'][index],
+        kind,
+      })),
+    });
+
+    expect(screen.getByText('Неделя 2 · вторая из трёх на неделе')).toBeTruthy();
+    expect(document.querySelectorAll('.sb-plan-week-days > span')).toHaveLength(7);
+    expect(document.querySelectorAll('.sb-plan-week-days > .is-done')).toHaveLength(1);
+    expect(document.querySelectorAll('.sb-plan-week-days > .is-assigned')).toHaveLength(2);
+    expect(screen.getByText('день отдыха')).toBeTruthy();
+  });
+
+  it('связка в snapshot остаётся одной строкой с раундами', () => {
+    const exercises = [
+      { id: 'press', name: 'Жим лёжа', approaches: [{ reps: 8, weightKg: 75 }] },
+      {
+        id: 'pull-up', name: 'Подтягивания', ssGroup: 1,
+        approaches: [{ reps: 8 }, { reps: 8 }, { reps: 8 }],
+      },
+      {
+        id: 'row', name: 'Тяга блока', ssGroup: 1,
+        approaches: [{ reps: 12, weightKg: 50 }, { reps: 12, weightKg: 50 }, { reps: 12, weightKg: 50 }],
+      },
+    ];
+    renderCard({
+      isFutureDay: true,
+      training: {
+        ...planTraining(),
+        workoutLog: { exercises: [] },
+        planSnapshot: { exercises },
+      },
+    });
+
+    expect(screen.getByText('Связка A · Подтягивания ⇄ Тяга блока')).toBeTruthy();
+    expect(screen.getByText('3 раунда')).toBeTruthy();
+    expect(screen.queryByText('Подтягивания')).toBeNull();
+    expect(screen.queryByText('Тяга блока')).toBeNull();
+  });
+
+  it('ssGroup: 0 остаётся обычными упражнениями, а не ложной связкой', () => {
+    renderCard({
+      isFutureDay: true,
+      training: {
+        ...planTraining(),
+        workoutLog: { exercises: [] },
+        planSnapshot: {
+          exercises: [
+            { id: 'one', name: 'Жим', ssGroup: 0, approaches: [{ reps: 8, weightKg: 60 }] },
+            { id: 'two', name: 'Тяга', ssGroup: 0, approaches: [{ reps: 10, weightKg: 50 }] },
+          ],
+        },
+      },
+    });
+    expect(screen.getByText('Жим')).toBeTruthy();
+    expect(screen.getByText('Тяга')).toBeTruthy();
+    expect(screen.queryByText(/Связка 0/)).toBeNull();
   });
 
   it('пилюля называет источник плана', () => {
@@ -104,7 +193,15 @@ describe('Карточка плана говорит словами кадра',
   it('перенесённый план говорит, откуда он, — вместо «от куратора»', () => {
     renderCard({ planOverrides: { movedFrom: '2026-08-29' } });
     expect(screen.getByText(/план с /)).toBeTruthy();
+    expect(screen.getByText(/Перенесено с .*веса те же/)).toBeTruthy();
     expect(screen.queryByText('от куратора')).toBeNull();
+  });
+
+  it('исходный день переноса остаётся следом, а не пропуском', () => {
+    renderCard({ planOverrides: { status: 'moved', movedTo: '2026-09-05' } });
+    expect(screen.getByText(/Не пропуск — тренировка ждёт/)).toBeTruthy();
+    expect(screen.getByText(/откуда перенесли/)).toBeTruthy();
+    expect(screen.queryByText(/пропущен/)).toBeNull();
   });
 
   it('состав ушёл в прозу и называет, что плана нет в расходе', () => {
@@ -125,9 +222,41 @@ describe('Перенос и пропуск — два разных действ�
   });
 
   it('«Перенести» ведёт в выбор даты, а не в причины', () => {
-    renderCard({ moveOptions: [{ date: '2026-08-31', label: 'завтра' }] });
+    renderCard({ moveOptions: [{ date: '2026-08-31', label: 'Завтра, понедельник 31 августа' }] });
     fireEvent.click(screen.getByText('Перенести'));
+    expect(screen.getByText('Куда перенести · выбор дня')).toBeTruthy();
+    expect(screen.getByText('Завтра, понедельник 31 августа')).toBeTruthy();
+    expect(screen.getByText('Свободно')).toBeTruthy();
     expect(screen.queryByText('Мало сил')).toBeNull();
+  });
+
+  it('на будущем дне перенос — единственное и визуально главное безопасное действие', () => {
+    renderCard({
+      isFutureDay: true,
+      moveOptions: [{ date: '2026-08-31', label: 'Завтра, понедельник 31 августа' }],
+    });
+    const move = screen.getByText('Перенести');
+    expect(move.className).toContain('is-accent');
+    expect(screen.queryByText('Начать сейчас')).toBeNull();
+  });
+
+  it('занятый день назван причиной и не выбирается', () => {
+    renderCard({
+      moveOptions: [{
+        date: '2026-08-31',
+        label: 'Понедельник, 31 августа',
+        busy: true,
+        details: 'Уже стоит День C',
+      }, {
+        date: '2026-09-01',
+        label: 'Вторник, 1 сентября',
+        busy: false,
+      }],
+    });
+    fireEvent.click(screen.getByText('Перенести'));
+    expect(screen.getByText('Уже стоит День C')).toBeTruthy();
+    expect(screen.getByText('занят')).toBeTruthy();
+    expect(document.querySelector('.sb-move-day').disabled).toBe(true);
   });
 
   it('«Пропустить» ведёт в причины и передаёт выбранную наружу', () => {
@@ -251,5 +380,22 @@ describe('Геометрия задана только внутри блока �
     expect(badge).toContain('ui-monospace');
     expect(badge).toContain('9px');
     expect(badge).toContain('var(--v4-act-text');
+  });
+
+  it('будущий состав и неделя повторяют геометрию строк canvas', () => {
+    expect(rule('.activity-v4-program .sb-plan-summary')).toContain('gap: 10px');
+    expect(rule('.activity-v4-program .sb-plan-letter')).toContain('width: 34px');
+    expect(rule('.activity-v4-program .sb-plan-letter')).toContain('border-radius: 11px');
+    expect(rule('.activity-v4-program .sb-plan-exercises')).toContain('gap: 6px');
+    expect(rule('.activity-v4-program .sb-plan-week-days')).toContain('gap: 5px');
+    expect(rule('.activity-v4-program .sb-plan-exercises li > i')).toContain('Figtree');
+    expect(rule('.activity-v4-program .sb-plan-exercises li > i')).toContain('tabular-nums');
+  });
+
+  it('выбор переноса в Активе — вертикальный список строк', () => {
+    const days = rule('.activity-v4-program .sb-move-days');
+    expect(days).toContain('flex-direction: column');
+    expect(days).toContain('overflow: visible');
+    expect(rule('.activity-v4-program .sb-move-day')).toContain('width: 100%');
   });
 });

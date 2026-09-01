@@ -240,6 +240,108 @@
   Parts.humanDate = humanDate;
   Parts.sessionTitle = sessionTitle;
 
+  function assignedDate(ms) {
+    const d = new Date(+ms || 0);
+    if (!Number.isFinite(d.getTime()) || d.getTime() <= 0) return '';
+    return d.getDate() + ' ' + MONTHS_RU[d.getMonth()];
+  }
+
+  function workApproaches(exercise) {
+    const SK = kernel();
+    return (Array.isArray(exercise && exercise.approaches) ? exercise.approaches : [])
+      .filter(function (approach) {
+        return !(SK && typeof SK.isWarmupApproach === 'function'
+          ? SK.isWarmupApproach(approach)
+          : approach && (approach.type === 'warmup' || approach.kind === 'warmup'));
+      });
+  }
+
+  function numberRange(values) {
+    const nums = values.map(Number).filter(function (value) { return Number.isFinite(value) && value > 0; });
+    if (!nums.length) return '';
+    const min = Math.min.apply(null, nums);
+    const max = Math.max.apply(null, nums);
+    return min === max ? String(min) : (String(min) + '–' + String(max));
+  }
+
+  /** Короткая строка состава плана: число подходов, диапазон повторов и вес. */
+  function planExerciseSummary(exercise) {
+    const approaches = workApproaches(exercise);
+    if (!approaches.length) return '';
+    const unit = exercise && exercise.unit;
+    const count = approaches.length;
+    const rawMeasure = unit === 'time'
+      ? numberRange(approaches.map(function (a) { return a && a.durationSec; }))
+      : unit === 'distance'
+        ? numberRange(approaches.map(function (a) { return a && a.distanceM; }))
+        : numberRange(approaches.map(function (a) { return a && a.reps; }));
+    const measure = rawMeasure + (rawMeasure && unit === 'time' ? ' с' : rawMeasure && unit === 'distance' ? ' м' : '');
+    const weight = numberRange(approaches.map(function (a) { return a && a.weightKg; }));
+    const countWord = count % 10 === 1 && count % 100 !== 11
+      ? 'подход'
+      : count % 10 >= 2 && count % 10 <= 4 && !(count % 100 >= 12 && count % 100 <= 14)
+        ? 'подхода'
+        : 'подходов';
+    const countBit = count + (measure ? ' × ' + measure : ' ' + countWord);
+    return countBit + (weight ? ' · ' + weight + ' кг' : '');
+  }
+
+  function planApproachCount(exercises) {
+    return (exercises || []).reduce(function (sum, exercise) {
+      return sum + workApproaches(exercise).length;
+    }, 0);
+  }
+
+  function planPreviewRows(exercises) {
+    const seenGroups = {};
+    const rows = [];
+    (exercises || []).forEach(function (exercise, index) {
+      const groupId = exercise && Number(exercise.ssGroup);
+      if (Number.isInteger(groupId) && groupId > 0) {
+        const key = String(groupId);
+        if (seenGroups[key]) return;
+        seenGroups[key] = true;
+        const members = exercises.filter(function (candidate) {
+          return candidate && Number(candidate.ssGroup) === groupId;
+        });
+        const rounds = members.length
+          ? Math.min.apply(null, members.map(function (member) { return workApproaches(member).length; }))
+          : 0;
+        const groupNumber = Number(groupId);
+        const groupLetter = Number.isInteger(groupNumber) && groupNumber > 0 && groupNumber <= 26
+          ? String.fromCharCode(64 + groupNumber)
+          : String(groupId);
+        rows.push({
+          key: 'group-' + key,
+          name: 'Связка ' + groupLetter + ' · ' + members.map(function (member) {
+            return member.name || 'Без названия';
+          }).join(' ⇄ '),
+          summary: rounds ? rounds + ' раунд' + (rounds === 1 ? '' : rounds < 5 ? 'а' : 'ов') : '',
+          memberCount: members.length
+        });
+        return;
+      }
+      rows.push({
+        key: (exercise && exercise.id) || ('plan-exercise-' + index),
+        name: exercise && typeof exercise.name === 'string' && exercise.name.trim()
+          ? exercise.name.trim()
+          : 'Упражнение ' + (index + 1),
+        summary: planExerciseSummary(exercise),
+        memberCount: 1
+      });
+    });
+    return rows;
+  }
+
+  function planLetter(label) {
+    const text = String(label || '');
+    const match = /(?:день|day)\s+([A-ZА-Я])(?:\s|$|·)/iu.exec(text)
+      || /(?:^|\s)([A-ZА-Я])(?:\s|$|·)/u.exec(text);
+    return match ? match[1] : 'П';
+  }
+
+  Parts.planExerciseSummary = planExerciseSummary;
+
   // ——— Строка подхода (экраны 07, 13, 24) ———
 
   function ApproachRow(props) {
@@ -813,11 +915,7 @@
    */
   const SKIP_REASONS = ['Не было времени', 'Мало сил', 'Плохое самочувствие', 'Другие приоритеты'];
 
-  /**
-   * Пропуск дня (экран 18, минимальная версия). Перенос на другую дату — открытый
-   * вопрос протокола («Перенос назначенной тренировки — операции нет ни в схеме,
-   * ни в коде»), сюда сознательно не входит: только «отпустить» день целиком.
-   */
+  /** Пропуск дня: отдельный исход, не маскирующий перенос. */
   function SkipSheet(props) {
     const { onCancel, onConfirm, busy, error } = props;
     const [reason, setReason] = React.useState('');
@@ -866,7 +964,7 @@
     return h('div', { className: 'sb-sheet-back', onClick: busy ? undefined : onCancel },
       h('div', { className: 'sb-sheet', onClick: function (e) { e.stopPropagation(); } },
         h('div', { className: 'sb-sheet-grip' }),
-        h('b', { className: 'sb-confirm-title' }, 'Когда сможешь?'),
+        h('b', { className: 'sb-confirm-title' }, 'Куда перенести · выбор дня'),
         h('p', { className: 'sb-confirm-text' },
           'Тренировка переедет целиком, вместе с весами. Куратор увидит новую дату.'),
         h('div', { className: 'sb-move-days' },
@@ -877,9 +975,11 @@
               disabled: !!busy || o.busy,
               onClick: function () { if (!busy && !o.busy) setPick(o.date); }
             },
-              h('b', null, o.weekday),
-              h('span', null, o.human),
-              o.busy && h('i', null, 'занят')
+              h('span', { className: 'sb-move-day-copy' },
+                h('b', null, o.label || o.human || o.weekday),
+                h('span', null, o.busy ? (o.details || 'Занято') : (pick === o.date ? 'выбрано' : 'Свободно'))
+              ),
+              h('i', null, o.unknown ? 'не загружен' : o.busy ? 'занят' : (pick === o.date ? '✓' : 'перенести'))
             );
           })
         ),
@@ -896,7 +996,9 @@
           type: 'button', className: 'sb-move-skip',
           disabled: !!busy,
           onClick: function () { if (!busy && props.onSkipInstead) props.onSkipInstead(); }
-        }, 'Совсем пропустить')
+        }, 'Совсем пропустить'),
+        h('p', { className: 'sb-plan-trace' },
+          'Исходный день останется со следом переноса, новый — с тем же планом и весами.')
       )
     );
   }
@@ -904,7 +1006,8 @@
   Parts.MoveSheet = MoveSheet;
 
   function PlanCard(props) {
-    const { training, dateKey, isFutureDay, weekPlace, moveOptions, onStart, onSkip, onMove, onResumeSkipped } = props;
+    const { training, dateKey, isFutureDay, isPastDay, weekPlace, weekOverview, weekLabel,
+      moveOptions, onStart, onSkip, onMove, onResumeSkipped } = props;
     const wl = (training && training.workoutLog) || {};
     const liveExercises = Array.isArray(wl.exercises) ? wl.exercises : [];
     const snapshot = (training && training.planSnapshot) || {};
@@ -914,7 +1017,6 @@
     const plan = training && training.plan;
     const [skipOpen, setSkipOpen] = React.useState(false);
     const [moveOpen, setMoveOpen] = React.useState(false);
-    const [previewOpen, setPreviewOpen] = React.useState(false);
     const [pendingAction, setPendingAction] = React.useState('');
     const [actionError, setActionError] = React.useState('');
     if (!plan) return null;
@@ -961,9 +1063,14 @@
     if (plan.status === 'moved') {
       // День, с которого тренировку унесли: не пропуск — она ждёт на новой дате.
       return h('div', { className: 'sb-plan-card is-moved' },
-        h('b', null, label + ' перенесён'),
+        h('div', { className: 'sb-plan-head' },
+          h('b', null, label + ' перенесён'),
+          h('span', { className: 'sb-plan-badge' }, 'перенос')
+        ),
         h('span', { className: 'sb-plan-meta' },
-          plan.movedTo ? 'Не пропуск — тренировка ждёт ' + humanDate(plan.movedTo) : 'Не пропуск — перенесён')
+          plan.movedTo ? 'Не пропуск — тренировка ждёт ' + humanDate(plan.movedTo) : 'Не пропуск — перенесён'),
+        plan.movedTo && h('span', { className: 'sb-plan-trace' },
+          humanDate(dateKey) + ' · откуда перенесли → ' + humanDate(plan.movedTo))
       );
     }
 
@@ -971,40 +1078,114 @@
       // Пропущенный день остаётся пустым: тоннажа нет, подходов нет (ядро уже
       // фильтрует skipped наравне с assigned) — но передумать можно.
       return h('div', { className: 'sb-plan-card is-skipped' },
-        h('b', null, label + ' пропущен'),
+        h('b', null, label + ' отпущен'),
         h('span', { className: 'sb-plan-meta' },
           plan.skipReason ? 'Причина: ' + plan.skipReason : 'Без объяснения — и это нормально'),
-        h('button', {
+        !isPastDay && h('button', {
           type: 'button', className: 'sb-btn sb-plan-cta',
           disabled: !!pendingAction,
           onClick: function (e) {
             runPlanAction('resume', function () { return onResumeSkipped(e, plan); });
           }
-        }, pendingAction === 'resume' ? 'Возвращаю…' : 'Начать всё же'),
+        }, pendingAction === 'resume' ? 'Возвращаю…' : 'Передумать'),
+        h('span', { className: 'sb-plan-trace' },
+          'Тоннажа и подходов нет; в отчёте день не считается выполненным.'),
         actionError && h('p', { className: 'sb-confirm-text', role: 'alert' }, actionError)
       );
     }
 
     if (isFutureDay) {
-      // Будущий день: локальный read-only preview текущего snapshot. Не открываем
-      // редактируемый Builder и не вызываем owner callback раньше своей даты.
-      return h('div', { className: 'sb-plan-card' },
-        h('div', { className: 'sb-plan-badge' }, 'Запланировано куратором'),
-        h('b', null, label),
-        h('span', { className: 'sb-plan-meta' }, meta + ' · ' + exercises.length + ' упр.'),
-        exercises.length > 0 && h('button', {
-          type: 'button', className: 'sb-btn sb-plan-cta',
-          'aria-expanded': previewOpen ? 'true' : 'false',
-          onClick: function () { setPreviewOpen(function (open) { return !open; }); }
-        }, previewOpen ? 'Скрыть' : 'Посмотреть'),
-        previewOpen && h('ol', { className: 'sb-plan-meta sb-plan-preview', 'aria-label': 'Состав плана' },
-          exercises.map(function (exercise, index) {
-            const name = exercise && typeof exercise.name === 'string' ? exercise.name.trim() : '';
-            return h('li', { key: (exercise && exercise.id) || ('plan-exercise-' + index) },
-              name || ('Упражнение ' + (index + 1))
-            );
+      // Будущий день остаётся read-only: canvas просит «Начать сейчас», но без
+      // owner-правила даты факта это записало бы завтрашнюю работу в завтра.
+      // Состав показываем сразу — решение о переносе принимают по объёму.
+      const previewRows = planPreviewRows(exercises);
+      const shown = previewRows.slice(0, 4);
+      const totalApproaches = planApproachCount(exercises);
+      const canMoveFuture = !!(moveOptions && moveOptions.some(function (option) { return !option.busy; }));
+      const hasSkippedWeekDay = Array.isArray(weekOverview)
+        && weekOverview.some(function (day) { return day.kind === 'skipped'; });
+      const hasMovedWeekDay = Array.isArray(weekOverview)
+        && weekOverview.some(function (day) { return day.kind === 'moved'; });
+      const hasUnknownWeekDay = Array.isArray(weekOverview)
+        && weekOverview.some(function (day) { return day.kind === 'unknown'; });
+      const sourceLine = label + ' · ' + (plan.assignedBy || 'куратор')
+        + (assignedDate(plan.assignedAt) ? ', ' + assignedDate(plan.assignedAt) : '');
+      return h('div', { className: 'sb-plan-feed' },
+        h('div', { className: 'sb-plan-card sb-plan-card--future' },
+          h('div', { className: 'sb-plan-summary' },
+            h('span', { className: 'sb-plan-letter', 'aria-hidden': 'true' }, planLetter(label)),
+            h('span', { className: 'sb-plan-summary-copy' },
+              h('b', null, 'Запланировано куратором'),
+              h('span', { className: 'sb-plan-meta' }, sourceLine)
+            ),
+            h('span', { className: 'sb-plan-badge' }, 'план')
+          ),
+          shown.length > 0 && h('ol', { className: 'sb-plan-exercises', 'aria-label': 'Состав плана' },
+            shown.map(function (row) {
+              return h('li', { key: row.key },
+                h('span', null, row.name),
+                h('i', null, row.summary)
+              );
+            }),
+            previewRows.length > shown.length && h('li', { className: 'sb-plan-exercises-more' },
+              'и ещё ' + previewRows.slice(shown.length).reduce(function (sum, row) { return sum + row.memberCount; }, 0)
+              + (totalApproaches ? ' · всего ' + totalApproaches + ' подходов' : ''))
+          ),
+          canMoveFuture && h('div', { className: 'sb-plan-actions sb-plan-actions--future' },
+            h('button', {
+              type: 'button', className: 'sb-btn is-accent sb-plan-cta',
+              onClick: function () { setMoveOpen(true); }
+            }, 'Перенести')
+          ),
+          moveOpen && h(MoveSheet, {
+            options: moveOptions,
+            busy: pendingAction === 'move',
+            error: actionError,
+            onCancel: function () { setMoveOpen(false); },
+            onConfirm: function (toDate) {
+              runPlanAction('move', function () { return onMove(toDate, plan); }, function () { setMoveOpen(false); });
+            },
+            onSkipInstead: function () { setActionError(''); setMoveOpen(false); setSkipOpen(true); }
+          }),
+          skipOpen && h(SkipSheet, {
+            busy: pendingAction === 'skip',
+            error: actionError,
+            onCancel: function () { setSkipOpen(false); },
+            onConfirm: function (skipReason) {
+              runPlanAction('skip', function () { return onSkip(skipReason, plan); }, function () { setSkipOpen(false); });
+            }
           })
-        )
+        ),
+        weekLabel && h('div', { className: 'sb-plan-week-label' }, weekLabel),
+        weekLabel && Array.isArray(weekOverview) && weekOverview.length === 7 && h('div', { className: 'sb-plan-week' },
+          h('div', { className: 'sb-plan-week-days' },
+            weekOverview.map(function (day) {
+              const symbol = day.kind === 'done'
+                ? '✓'
+                : day.kind === 'assigned'
+                  ? '●'
+                  : day.kind === 'skipped'
+                    ? '×'
+                    : day.kind === 'moved'
+                      ? '→'
+                      : day.kind === 'unknown' ? '?' : '—';
+              return h('span', { key: day.date, className: 'is-' + day.kind },
+                h('i', null, day.weekday), h('b', null, symbol));
+            })
+          ),
+          h('div', { className: 'sb-plan-week-legend' },
+            h('span', null, h('i', { className: 'is-done' }), 'сделано'),
+            h('span', null, h('i', { className: 'is-assigned' }), 'назначено'),
+            hasSkippedWeekDay && h('span', null, h('i', { className: 'is-skipped' }), 'отпущено'),
+            hasMovedWeekDay && h('span', null, h('i', { className: 'is-moved' }), 'перенесено'),
+            hasUnknownWeekDay && h('span', null, h('i', { className: 'is-unknown' }), 'нет данных'),
+            h('span', null, h('i', { className: 'is-rest' }), 'день отдыха')
+          )
+        ),
+        h('span', { className: 'sb-plan-trace' },
+          plan.movedFrom
+            ? 'Перенесено с ' + humanDate(plan.movedFrom) + ' · веса те же.'
+            : 'План — назначение, а не факт: до старта он не входит в объём и нагрузку.')
       );
     }
 
@@ -1015,7 +1196,7 @@
     // видно. Разнесены: «Перенести» уходит в выбор даты, «Пропустить» — в
     // причину. Переносить некуда — кнопки нет, а не погашена (то же правило,
     // что у листа действия, контракт строка 29).
-    const canMove = !!(moveOptions && moveOptions.length);
+    const canMove = !!(moveOptions && moveOptions.some(function (option) { return !option.busy; }));
     const planProse = label
       + (exercises.length ? ' · ' + exercises.length + ' упр.' : '')
       + (weekPlace ? ' · ' + weekPlace : '')
@@ -1027,6 +1208,8 @@
           plan.movedFrom ? 'план с ' + humanDate(plan.movedFrom) : 'от куратора')
       ),
       h('span', { className: 'sb-plan-meta' }, planProse),
+      plan.movedFrom && h('span', { className: 'sb-plan-trace' },
+        'Перенесено с ' + humanDate(plan.movedFrom) + ' · веса те же.'),
       h('button', {
         type: 'button', className: 'sb-btn is-accent sb-plan-cta',
         onClick: onStart
