@@ -63,6 +63,14 @@
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
 
+  function fmtAbsence(totalSec) {
+    const s = Math.max(0, Math.floor(totalSec || 0));
+    if (s < 60 * 60) return fmtClock(s);
+    const hours = Math.floor(s / 3600);
+    const minutes = Math.floor((s % 3600) / 60);
+    return String(hours) + ':' + String(minutes).padStart(2, '0');
+  }
+
   function repeatDateLabel(dateKey) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
     if (!m) return String(dateKey || '');
@@ -175,7 +183,9 @@
     }
 
     React.useEffect(function () {
-      if (wl.activeRest && !rest && typeof onPatchSession === 'function') {
+      const markAt = Number.isFinite(+wl.lastMarkAt) ? +wl.lastMarkAt : 0;
+      const interruptedOnMount = markAt && !wl.completedAt && Date.now() - markAt > 45 * 60 * 1000;
+      if (wl.activeRest && !rest && !interruptedOnMount && typeof onPatchSession === 'function') {
         patchSession({ activeRest: null });
       }
       // Только очистка протухшего входного снимка при первом монтировании.
@@ -193,6 +203,10 @@
     const workElapsedSec = firstMarkAt && lastMarkAt && lastMarkAt >= firstMarkAt
       ? Math.floor((lastMarkAt - firstMarkAt) / 1000)
       : elapsedSec;
+    const breakSec = lastMarkAt && !completedAt
+      ? Math.max(0, Math.floor((Date.now() - lastMarkAt) / 1000))
+      : 0;
+    const showInterrupted = breakSec > 45 * 60 && dismissedBreakAt !== lastMarkAt;
 
     React.useEffect(function () {
       if (!startedAt || completedAt) return undefined;
@@ -481,6 +495,59 @@
       global.setTimeout(function () { patchRest(null); }, 0);
     }
 
+    if (showInterrupted) {
+      const restMessage = wl.activeRest
+        ? (rest
+          ? 'Всё, что отмечено, на месте. Таймер отдыха продолжает идти и заново не запускается.'
+          : 'Всё, что отмечено, на месте. Таймер отдыха истёк, пока вас не было, и заново не запускается.')
+        : 'Всё, что отмечено, на месте. Таймер отдыха не был запущен — продолжите с нужного подхода.';
+
+      return h('div', { className: 'sb-root sb-root--interrupted' },
+        h('div', { className: 'sb-head sb-interrupted-head' },
+          h('button', {
+            type: 'button', className: 'sb-icon-btn',
+            onClick: onClose, 'aria-label': 'Закрыть конструктор'
+          }, '✕'),
+          h('div', { className: 'sb-head-title' },
+            h('b', null, 'Тренировка на паузе'),
+            h('div', { className: 'sb-head-sub' },
+              (agg ? agg.doneApproaches + ' из ' + agg.totalApproaches + ' подходов' : 'Тренировка начата')
+              + ' · вас не было ' + fmtAbsence(breakSec))
+          )
+        ),
+        h('main', { className: 'sb-interrupted-scroll' },
+          h('p', { className: 'sb-interrupted-copy' }, restMessage),
+          h('div', { className: 'sb-interrupted-meta' },
+            h('div', { className: 'sb-interrupted-row' },
+              h('span', null, 'Последняя отметка'),
+              h('b', null, fmtTime(lastMarkAt))
+            ),
+            h('div', { className: 'sb-interrupted-row' },
+              h('span', null, 'Сейчас'),
+              h('b', null, fmtTime(Date.now()))
+            )
+          ),
+          h('div', { className: 'sb-interrupted-actions' },
+            h('button', {
+              type: 'button', className: 'sb-btn is-accent',
+              onClick: function () { setDismissedBreakAt(lastMarkAt); }
+            }, 'Продолжить'),
+            h('button', {
+              type: 'button', className: 'sb-btn',
+              onClick: function () {
+                setFinishAtOverride(lastMarkAt);
+                setRest(null);
+                patchSession({ completedAt: lastMarkAt, activeRest: null });
+                setView('finish');
+              }
+            }, 'Завершить в ' + fmtTime(lastMarkAt))
+          ),
+          h('p', { className: 'sb-interrupted-note' },
+            'Разрыв больше 45 минут — и второй кнопкой предлагаем закрыть тренировку временем последней отметки, а не текущим: иначе в истории останется тренировка на два часа, из которых час человек ехал домой. Длительность в итогах всегда считается от первой отметки до последней.')
+        )
+      );
+    }
+
     const CatUI = HEYS.StrengthCatalogUI || {};
     function FinUIRef() { return HEYS.StrengthFinishUI || {}; }
     if (view === 'catalog' && CatUI.CatalogScreen) {
@@ -723,10 +790,6 @@
       }));
     });
 
-    const breakSec = lastMarkAt && !completedAt
-      ? Math.max(0, Math.floor((Date.now() - lastMarkAt) / 1000))
-      : 0;
-    const showInterrupted = breakSec > 45 * 60 && dismissedBreakAt !== lastMarkAt;
     const restSourceName = rest ? String(rest.source || '').split(/\s(?:→|·)\s/)[0] : '';
     const restOrigin = /^тяжесть\s/.test(restSourceName)
       ? 'из ' + restSourceName
@@ -786,32 +849,6 @@
           if (typeof onReviewProposal === 'function') onReviewProposal();
         }
       }),
-      showInterrupted && h('section', { className: 'sb-interrupted', 'aria-label': 'Тренировка на паузе' },
-        h('div', { className: 'sb-interrupted-title' }, 'Тренировка на паузе'),
-        h('b', { className: 'sb-interrupted-key' },
-          (agg ? agg.doneApproaches + ' из ' + agg.totalApproaches + ' подходов' : 'Тренировка начата')
-          + ' · вас не было ' + fmtClock(breakSec)),
-        h('p', null, 'Всё, что отмечено, на месте. Таймер отдыха истёк и заново не запускается.'),
-        h('div', { className: 'sb-interrupted-meta' },
-          h('span', null, 'Последняя отметка'),
-          h('b', null, fmtTime(lastMarkAt))
-        ),
-        h('div', { className: 'sb-interrupted-actions' },
-          h('button', {
-            type: 'button', className: 'sb-btn is-accent',
-            onClick: function () { setDismissedBreakAt(lastMarkAt); }
-          }, 'Продолжить'),
-          h('button', {
-            type: 'button', className: 'sb-btn',
-            onClick: function () {
-              setFinishAtOverride(lastMarkAt);
-              setRest(null);
-              patchSession({ completedAt: lastMarkAt, activeRest: null });
-              setView('finish');
-            }
-          }, 'Завершить в ' + fmtTime(lastMarkAt))
-        )
-      ),
       h('div', { className: 'sb-list' },
         rendered.length ? rendered : h('div', { className: 'sb-empty' }, 'Упражнений пока нет')
       ),

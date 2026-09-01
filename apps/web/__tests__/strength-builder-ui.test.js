@@ -1122,7 +1122,14 @@ describe('lifecycle силовой сессии', () => {
       }));
 
       expect(screen.getByText('Тренировка на паузе')).toBeTruthy();
-      expect(screen.getByText('1 из 2 подходов · вас не было 64:00')).toBeTruthy();
+      expect(screen.getByText('1 из 2 подходов · вас не было 1:04')).toBeTruthy();
+      expect(screen.getByText('Последняя отметка')).toBeTruthy();
+      expect(screen.getByText('Сейчас')).toBeTruthy();
+      expect(screen.getByText('20:51')).toBeTruthy();
+      expect(screen.getByText('Всё, что отмечено, на месте. Таймер отдыха не был запущен — продолжите с нужного подхода.')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Ещё' })).toBeNull();
+      expect(screen.queryByLabelText('Добавить упражнение')).toBeNull();
+      expect(screen.queryByLabelText('Отметить выполненным')).toBeNull();
       fireEvent.click(screen.getByText('Завершить в 19:47'));
       expect(patches.at(-1)).toEqual({ completedAt: lastMarkAt, activeRest: null });
       expect(screen.getByText('Тренировка завершена')).toBeTruthy();
@@ -1153,6 +1160,67 @@ describe('lifecycle силовой сессии', () => {
       fireEvent.click(screen.getByText('Продолжить'));
       expect(screen.queryByText('Тренировка на паузе')).toBeNull();
       expect(patches).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ровно 45:00 оставляет тренировку доступной, а в 45:01 требует решения', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-09T20:32:00'));
+    try {
+      const lastMarkAt = Date.now() - 45 * 60 * 1000;
+      const makeProps = () => ({
+        training: {
+          ...training([{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }]),
+          workoutLog: {
+            startedAt: lastMarkAt - 7 * 60 * 1000,
+            lastMarkAt,
+            exercises: [{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }],
+          },
+        },
+        dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
+      });
+
+      const atBoundary = render(React.createElement(SB.BuilderScreen, makeProps()));
+      expect(screen.queryByText('Тренировка на паузе')).toBeNull();
+      expect(screen.getByLabelText('Отметить выполненным')).toBeTruthy();
+      atBoundary.unmount();
+
+      vi.setSystemTime(Date.now() + 1000);
+      render(React.createElement(SB.BuilderScreen, makeProps()));
+      expect(screen.getByText('Тренировка на паузе')).toBeTruthy();
+      expect(screen.queryByLabelText('Отметить выполненным')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('протухший отдых назван точно и не очищается или запускается заново при продолжении', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-09T20:51:00'));
+    try {
+      const lastMarkAt = new Date('2026-08-09T19:47:00').getTime();
+      const patches = [];
+      render(React.createElement(SB.BuilderScreen, {
+        training: {
+          ...training([{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }]),
+          workoutLog: {
+            startedAt: new Date('2026-08-09T19:40:00').getTime(),
+            lastMarkAt,
+            activeRest: { startedAt: lastMarkAt, total: 90, exName: 'Жим' },
+            exercises: [{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }],
+          },
+        },
+        dateKey: '2026-08-09', profile: {}, onPatch: () => {},
+        onPatchSession: (patch) => patches.push(patch), onClose: () => {},
+      }));
+
+      expect(screen.getByText('Всё, что отмечено, на месте. Таймер отдыха истёк, пока вас не было, и заново не запускается.')).toBeTruthy();
+      expect(patches).toHaveLength(0);
+      fireEvent.click(screen.getByText('Продолжить'));
+      expect(patches).toHaveLength(0);
+      expect(screen.queryByLabelText(/Отдых/)).toBeNull();
     } finally {
       vi.useRealTimers();
     }
