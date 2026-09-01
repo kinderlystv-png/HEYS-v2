@@ -23,7 +23,7 @@
   .updDots{display:flex;gap:6px;justify-content:center;margin-top:15px}
   .updDots span{width:6px;height:6px;border-radius:999px;background:rgba(var(--ink),.2)}
   .updDots span.on{background:var(--acs);width:16px;border-radius:999px}
-  .updVer{font:600 10px/1.4 ui-monospace,Menlo,monospace;color:rgba(var(--ink),.38);margin-top:15px}
+  .updVer{font:600 10px/1.4 ui-monospace,Menlo,monospace;color:rgba(var(--ink),.56);margin-top:15px}
   .updBtn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--acs);font:700 14px/1 Figtree,sans-serif;color:var(--on-acs);margin-top:18px}
   .updGhost{display:flex;align-items:center;justify-content:center;min-height:40px;font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:8px}
   .offBar{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;justify-content:center;gap:7px;padding:16px 14px 9px;background:#1c1712;color:var(--tx);font:600 11px/1.3 Figtree,sans-serif;z-index:5;text-align:center}
@@ -34,10 +34,10 @@
   .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
   .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
   .spec>span[data-v]::before{content:attr(data-v)}
-  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);font-style:normal;text-wrap:pretty}
   .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin-bottom:30px}
   .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
-  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:16px 0 2px}
 </style>
 </helmet>
 
@@ -50,13 +50,13 @@
     <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Один тёмный кадр на 1–3 секунды, потом страховка на случай, если он не сработал</span>
   </div>
   <p style="margin:0 0 8px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Сценарий не меняется: приложение находит и ставит обновление само, без спроса. Дизайн закрывает три живых кадра модалки, страховку «Требуется обновление» (починена 2026-08-19) и офлайн-баннер. Бейдж, toast, системный баннер, «Всё актуально!» и стадии checking / found / installing — мёртвый код по решению владельца от 2026-08-19, не рисуются; см. «Решения» внизу.</p>
-  <p style="margin:0 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">Источник: docs/ui/handoff-v4/ПРОМПТ_дизайнеру_обновление_PWA.md · твик «Статично» показывает уменьшенное движение · экраны искать по data-screen-label</p>
+  <p style="margin:0 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);">Источник: docs/ui/handoff-v4/ПРОМПТ_дизайнеру_обновление_PWA.md · твик «Статично» показывает уменьшенное движение · экраны искать по data-screen-label</p>
 
   <div class="ctr" data-contract="pwa-update">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <span class="ctrTag">КОНТРАКТ</span>
       <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
-      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
 
     <div class="ctrH">Что это и чьё</div>
@@ -126,7 +126,7 @@
     <div class="spec"><b>жест обновления · названное отступление</b><span data-v="жест «потянуть вниз» показывает свой знак ожидания продукта, а не системное кольцо платформы: круг 56 с дугой, как у остальных ожиданий. Системное кольцо не используется вовсе — оно перезагружает страницу, а наш жест гоняет синхронизацию с этапами «идёт → готово → ошибка → слишком долго»"></span><i>решение 25 августа, названное отступление от требования системного кольца. Проверено предметно: в установленном PWA на iOS системный аффорданс не рисуется вовсе — он живёт в интерфейсе Safari, который standalone прячет; на Android кольцо есть, но его глушит наш обработчик прокрутки. Главное не в этом: буквальная реализация подменила бы адресную синхронизацию со статусом полным reload, а на iPhone оставила бы жест без обратной связи</i></div>
     <div class="ctrH">Не реализовывать</div>    <div class="spec" style="border-bottom:none"><b>мягкие уведомления</b><span data-v="бейдж, toast, системный баннер, «Всё актуально!», стадии checking / found / installing — не рисуем"></span><i>решение владельца 2026-08-19: код мёртв и уходит отдельной задачей по чистке, а не отрисовкой</i></div>
 
-                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Обновление · загрузка · 01</b><span data-v="фон #fffaf1"></span></div>
     <div class="spec"><b>Обновление · загрузка · 02</b><span data-v="поля 56px 18px 0"></span></div>
@@ -235,7 +235,7 @@
 </div>
 
   <div class="secH" style="margin-top:0;">Живые кадры модалки — путь по умолчанию</div>
-  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);text-wrap:pretty;">Один и тот же контейнер, DOM не пересоздаётся — стадии сменяют друг друга на месте. Три точки под подписью честно называют, где вы в последовательности, вместо процента, который ничего не измерял. Кольцо крутится только там, где реально идёт неопределённое ожидание (загрузка, перезагрузка); «Готово!» — вспышка на 0,8 с, ничего не грузится, кольцо стоит.</p>
+  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty;">Один и тот же контейнер, DOM не пересоздаётся — стадии сменяют друг друга на месте. Три точки под подписью честно называют, где вы в последовательности, вместо процента, который ничего не измерял. Кольцо крутится только там, где реально идёт неопределённое ожидание (загрузка, перезагрузка); «Готово!» — вспышка на 0,8 с, ничего не грузится, кольцо стоит.</p>
 
   <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
 
@@ -323,10 +323,10 @@
     <div class="swatch"><div class="updRing" style="width:40px;height:40px;background:var(--c2);margin:0 auto 10px;"><svg class="spin liveRing" width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(var(--ink),.16)" stroke-width="2.75"/><circle cx="12" cy="12" r="9.4" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-dasharray="18 41"/></svg><span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:var(--c2);"></span><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--acs);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0012.5 2.5M18.5 9A7 7 0 006 6.5"/></svg></span></div><div style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);text-align:center;">Перезагрузка</div></div>
     <div class="stg" style="width:110px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b>0,5 с → страница перезагружается</b></div>
   </div>
-  <p style="margin:12px 0 0;max-width:900px;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);text-wrap:pretty;">Аварийный предел: если модалка провисит на экране дольше 10 с (или 12 с при сверке версии) — её скрывают. У кадра есть потолок жизни, «вечного кольца» быть не должно.</p>
+  <p style="margin:12px 0 0;max-width:900px;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty;">Аварийный предел: если модалка провисит на экране дольше 10 с (или 12 с при сверке версии) — её скрывают. У кадра есть потолок жизни, «вечного кольца» быть не должно.</p>
 
   <div class="secH">«Требуется обновление» — страховка, починена 2026-08-19</div>
-  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);text-wrap:pretty;">Появляется, если три попытки подряд не встали. Тон признания сбоя, не тревоги — поэтому тот же тёплый тёмный слой, без движения: тут ничего не грузится, кольцо больше не крутится ни в одном варианте.</p>
+  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty;">Появляется, если три попытки подряд не встали. Тон признания сбоя, не тревоги — поэтому тот же тёплый тёмный слой, без движения: тут ничего не грузится, кольцо больше не крутится ни в одном варианте.</p>
   <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
 
     <div><div class="lab"><b>С версией</b><span>не-iOS, кнопка есть</span></div>
@@ -384,7 +384,7 @@
   </div>
 
   <div class="secH">Офлайн-баннер</div>
-  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);text-wrap:pretty;">Один визуальный язык с обновлением: тот же тёплый тёмный слой, та же линейная иконка вместо эмодзи. Отступ сверху теперь считает вырез экрана, а не липнет к самой кромке.</p>
+  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty;">Один визуальный язык с обновлением: тот же тёплый тёмный слой, та же линейная иконка вместо эмодзи. Отступ сверху теперь считает вырез экрана, а не липнет к самой кромке.</p>
   <div><div class="lab"><b>Офлайн</b><span>верхний отступ = safe-area-inset-top + 8</span></div>
   <div class="ph" data-demo="stop" data-screen-label="Офлайн-баннер">
     <div class="offBar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.82a15 15 0 0120 0M5 12.86a10 10 0 0114 0M8.5 16.5a5 5 0 017 0M12 20h.01M2 2l20 20"/></svg><span>Офлайн режим — данные сохраняются локально</span></div>

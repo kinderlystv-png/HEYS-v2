@@ -233,6 +233,7 @@
     frames.forEach(function (fr) {
       [].forEach.call(fr.querySelectorAll('div, span, button'), function (el) {
         if (el.children.length) return;                                       // только лист с самим глифом
+        if (el.closest('[data-nohit]')) return;                               // значок-индикатор: показывает, а не нажимается
         var t = (el.textContent || '').trim();
         if (GLYPH.indexOf(t) < 0) return;
         var st = getComputedStyle(el);
@@ -244,6 +245,18 @@
         var head = !!el.closest('.top') || el.hasAttribute('data-svc');       // служебные кнопки шапки и помеченные
         var need = head ? 36 : 44;
         if (side >= need - 0.5) return;
+        // Мишенью может быть ПРЕДОК: рисованая подложка 30 внутри обёртки 44 — легальный
+        // приём (знак узкий, цель полная). Без подъёма проверка объявляла нарушением
+        // то, что сама же требовала. Поднимаемся на два шага и только пока предок — обёртка
+        // одного глифа (один ребёнок, центрованный флексом): иначе целью сошла бы любая
+        // широкая строка, в которой глиф лежит среди других элементов, и проверка обнулилась бы.
+        for (var p = el.parentNode, hop = 0; p && p.nodeType === 1 && hop < 2; p = p.parentNode, hop++) {
+          if (p.children.length !== 1) break;
+          var ps = getComputedStyle(p);
+          if (ps.display.indexOf('flex') < 0 && ps.display.indexOf('grid') < 0) break;
+          var pr = p.getBoundingClientRect();
+          if (Math.min(pr.width, pr.height) >= need - 0.5) return;            // цель есть у предка
+        }
         small.push(t + ' ' + Math.round(side) + ' при ' + need + ' в «' + fr.getAttribute('data-screen-label') + '»');
       });
     });
@@ -305,6 +318,125 @@
     });
     if (dim.length) out.push('контраст ниже порога (' + dim.length + '): ' + uniq(dim).slice(0, 5).join(' · '));
     if (blind > 2) out.push('контраст не измерен у ' + blind + ' значений: фона нет среди предков — пометьте поверхность data-nocontrast или назовите её строкой');
+
+    // 18. заливка на такой же заливке. Нарисованная поверхность (радиус или рамка),
+    // чей фон совпадает с фоном окрашенного предка, в кадре просто не существует: ячейка
+    // «Назначено» на --c1 внутри карточки --c1 читалась как «фона нет», и пара колонок не читалась парой.
+    var flat = [];
+    frames.forEach(function (fr) {
+      [].forEach.call(fr.querySelectorAll('div, span'), function (el) {
+        var st = getComputedStyle(el);
+        var bg = parse(st.backgroundColor);
+        if (!bg || bg.a < 0.9) return;
+        // Порог радиуса 4, а не 8: при 8 проверка пропускала ячейки тренировок фазы (радиус 7) — восемь
+        // совершенно невидимых поверхностей. Прогон с порогом 3 даёт те же восемь и ни одного
+        // ложного: прежний порог был взят наугад, а не по ложным срабатываниям.
+        var drawnAsSurface = parseFloat(st.borderTopLeftRadius) >= 4 || (st.boxShadow && st.boxShadow.indexOf('inset') >= 0);
+        if (!drawnAsSurface) return;
+        var r = el.getBoundingClientRect();
+        if (Math.min(r.width, r.height) < 16) return;                         // точки и маркеры не поверхности
+        for (var p = el.parentNode; p && p.nodeType === 1 && p !== fr; p = p.parentNode) {
+          var pcs = getComputedStyle(p);
+          var pb = parse(pcs.backgroundColor);
+          if (!pb || pb.a < 0.9) continue;
+          // Строка списка — не поверхность внутри поверхности: она занимает всю контентную
+          // ширину родителя. Без этого отсева проверка давала 147 находок при 15 настоящих
+          // — то есть обнулялась шумом ровно так, как прежде проверка контраста.
+          var pr = p.getBoundingClientRect();
+          var inner = pr.width - (parseFloat(pcs.paddingLeft) || 0) - (parseFloat(pcs.paddingRight) || 0);
+          if (r.width >= inner - 2) break;
+          // Кольцо или рамка делают поверхность видимой даже при совпавшей заливке — это
+          // законный приём, а не дефект: без отсева проверка осталась бы красной на правильных кадрах.
+          var own = getComputedStyle(el);
+          if (/inset/.test(own.boxShadow || '') || (parseFloat(own.borderTopWidth) || 0) >= 1) break;
+          var d = Math.abs(pb.c[0] - bg.c[0]) + Math.abs(pb.c[1] - bg.c[1]) + Math.abs(pb.c[2] - bg.c[2]);
+          if (d <= 3) {
+            var t = (el.textContent || '').trim().slice(0, 18) || 'без текста';
+            flat.push('«' + t + '» в «' + (fr.getAttribute('data-screen-label') || '?') + '»');
+          }
+          break;                                                              // только ближайший окрашенный предок
+        }
+      });
+    });
+    if (flat.length) out.push('заливка на такой же заливке (' + flat.length + '): ' + uniq(flat).slice(0, 4).join(' · ') + ' — поверхность не видна вовсе');
+
+    // 19. один элемент — два вида. Шкала тяжести была нарисована двумя способами
+    // и даже разным числом ступеней: кадры смотрят поодиночке, а расхождение видно
+    // только при сравнении двух рядом. Ключ — текст ярлыка, отпечаток — геометрия соседа.
+    var shapes = {};
+    frames.forEach(function (fr) {
+      if (fr.hasAttribute('data-nouni')) return;
+      [].forEach.call(fr.querySelectorAll('span, div'), function (el) {
+        var t = (el.textContent || '').trim();
+        if (el.children.length || t.length < 4 || t.length > 22) return;
+        var st = getComputedStyle(el);
+        var isLabel = st.textTransform === 'uppercase' || /\bk\b/.test(el.className || '');
+        if (!isLabel) return;
+        // Подпись группы своей заливки не имеет. Без этого отсева в ключи попадали ЧИПЫ
+        // («разм.», «дроп», «время») — у них тоже прописные, но они сами значение, а не ярлык.
+        var own = parse(st.backgroundColor);
+        if (own && own.a > 0.05) return;
+        var sib = el.nextElementSibling;
+        if (!sib) return;
+        // Отпечаток снимается только с РЯДА однотипных детей (как шкала тяжести).
+        // Одиночное значение рядом с подписью отпечатком быть не может: так проверка
+        // сравнивала капсулу таблицы с прозой заметки и давала три ложные находки при нуле настоящих.
+        if (sib.children.length < 3) return;
+        var probe = sib.children[0];
+        var ps = getComputedStyle(probe);
+        var pr = probe.getBoundingClientRect();
+        if (!pr.height) return;
+        var sig = Math.round(pr.height) + '/' + Math.round(parseFloat(ps.borderTopLeftRadius) || 0) + '/' + Math.round(parseFloat(ps.fontSize) || 0);
+        var key = t.toLowerCase();
+        (shapes[key] = shapes[key] || {})[sig] = (shapes[key][sig] || 0) + 1;
+      });
+    });
+    var split = Object.keys(shapes).filter(function (k) {
+      var sigs = Object.keys(shapes[k]);
+      if (sigs.length < 2) return false;
+      var hs = sigs.map(function (x) { return +x.split('/')[0]; });
+      return Math.max.apply(null, hs) - Math.min.apply(null, hs) > 4;   // пара пикселей — раскладка, не два вида
+    });
+    if (split.length) out.push('один элемент — два вида: ' + split.slice(0, 4).map(function (k) {
+      return '«' + k + '» ' + Object.keys(shapes[k]).join(' и ');
+    }).join(' · '));
+
+    // 20. кадр со снимком канона не назвал своё отношение к нему. Девятнадцать
+    // проверок про канон знали только счёт покрытия: что расхождение НАЗВАНО, не проверял
+    // никто — именно так в Гб молча жили три фазы против четырёх канонных.
+    // Адресация такая же, как у data-vid: кадр сам называет, что и где сказано.
+    var canonPairs = [].slice.call(document.querySelectorAll('[data-canonpair]'));
+    var mute = [];
+    canonPairs.forEach(function (w) {
+      var fr = w.querySelector('[data-screen-label]');
+      if (!fr) return;
+      var note = fr.getAttribute('data-canon');
+      var lbl = fr.getAttribute('data-screen-label');
+      if (!note) { mute.push(lbl); return; }
+      if (note.indexOf('иначе') !== 0) return;                  // «как в каноне» — утверждение, его проверяет глаз
+      var key = note.replace(/^иначе\s*·?\s*/, '').toLowerCase();
+      if (!key) { mute.push(lbl + ' (причина не названа)'); return; }
+      if (!keysOf().some(function (k) { return k.indexOf(key) >= 0; })) mute.push(lbl + ' (строки «' + key + '» нет)');
+    });
+    if (mute.length) out.push('отношение к канону не названо у ' + mute.length + ' из ' + canonPairs.length + ' кадров со снимком: ' + mute.slice(0, 4).join(' · ') + ' — пометьте data-canon="как в каноне" либо data-canon="иначе · <ключ строки>"');
+
+
+    // 17. заливочная роль красит текст. Решение 1 сентября: у заливки обязана быть
+    // парная роль текста, и только она ставится в color. Роли без пары текстом не бывают:
+    // именно так --gr2 давал 3,27 на числах, а --ovl — 2,10 на подписи.
+    var FILL_ONLY = ['--gr2', '--ovl', '--tint', '--c1', '--c2', '--gr-bg', '--acs', '--fab', '--wat', '--kb', '--edge'];
+    var painted = [];
+    frames.forEach(function (fr) {
+      [].forEach.call(fr.querySelectorAll('[style*="color:var("]'), function (el) {
+        var s = el.getAttribute('style') || '';
+        FILL_ONLY.forEach(function (r) {
+          if (s.indexOf('color:var(' + r + ')') >= 0) {
+            painted.push(r + ' в «' + (fr.getAttribute('data-screen-label') || '?') + '»');
+          }
+        });
+      });
+    });
+    if (painted.length) out.push('заливочная роль красит текст (' + painted.length + '): ' + uniq(painted).slice(0, 4).join(' · ') + ' — у заливки берётся её парная роль текста');
 
     var shown = {};
     [].forEach.call(document.querySelectorAll('[data-screen-label]'), function (f) {
@@ -398,7 +530,21 @@
       : [];
   }
 
-  window.__auditVersion = '16.4';
+  // ключи авторских строк контракта (без машинного слепка — на нём совпало бы что угодно)
+  function keysOf() {
+    var box = document.querySelector('[data-contract]');
+    if (!box) return [];
+    var keys = [], stop = false;
+    [].forEach.call(box.children, function (n) {
+      if (stop) return;
+      if (n.className === 'ctrH' && /Разбор кадров/.test(n.textContent || '')) { stop = true; return; }
+      var b = n.querySelector && n.querySelector('b');
+      if (b) keys.push((b.textContent || '').toLowerCase());
+    });
+    return keys;
+  }
+
+  window.__auditVersion = '20.1';
   function paint() {
     var f = findings();
     if (!f) return;
@@ -434,7 +580,7 @@
     el.title = f.length ? '' : 'Проверено: у каждого кадра есть строка вида, кнопки идут общим рядом, числа в прозе есть в контракте, живые замеры сходятся со своей строкой, у каждого содержательного раздела есть вид, объявленные замеры измеряются, чужие канвасы названы, ключи не спорят, незакрытое собрано, роли на месте, литералы совпадают с таблицей ролей, каждая var(--…) из разметки разрешается, круглые мишени не ниже порога, каждый атом источника назван контрактом, кадры видны';
     var txt = f.length
       ? '\u26a0 сверка: ' + f.join(' | ')
-      : '\u2713 сверка чиста · 16 проверок' + (window.__coverage ? ' · источник покрыт ' + window.__coverage : '');
+      : '\u2713 сверка чиста · 20 проверок' + (window.__coverage ? ' · источник покрыт ' + window.__coverage : '');
     if (el.textContent === txt) return;
     el.textContent = txt;
     el.style.color = f.length ? '#a8382b' : '#5c6a45';

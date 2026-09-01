@@ -28,25 +28,25 @@
   .n{font-variant-numeric:tabular-nums}
   .lab{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
   .lab b{font:700 12.5px/1 Figtree,sans-serif;color:var(--tx)}
-  .lab span{font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45)}
+  .lab span{font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.56)}
   .h{font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:26px 0 12px}
   .nt{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.07)}
   .nt>b,.ntl>b{font:700 12.5px/1.35 Figtree,sans-serif;color:var(--tx);display:block}
-  .nt>span,.ntl>span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);display:block;margin-top:4px}
+  .nt>span,.ntl>span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.56);display:block;margin-top:4px}
   .top{padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between}
   .ttl{font:700 15px/1 Figtree,sans-serif;color:var(--tx)}
   .sc{flex:1;overflow:hidden;padding:16px 18px 0}
-  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.55)}
+  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.56)}
   .btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--acs);font:700 13px/1 Figtree,sans-serif;color:var(--on-acs)}
   .foot{padding:12px 18px 20px;background:var(--bg)}
   .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
   .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:var(--ac)}
   .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:var(--tx);text-wrap:pretty}
   .spec>span[data-v]::before{content:attr(data-v)}
-  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);font-style:normal;text-wrap:pretty}
   .ctr{background:var(--c2);border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
   .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:var(--acs);color:var(--on-acs)}
-  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:16px 0 2px}
 </style>
 </helmet>
 
@@ -62,7 +62,7 @@
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <span class="ctrTag">КОНТРАКТ</span>
       <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:var(--tx);cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
-      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
 
     <div class="ctrH">Что это и чьё</div>
@@ -137,7 +137,7 @@
     <div class="spec"><b>когда нет</b><span data-v="загрузка вкладки заканчивается содержимым — знак просто исчезает"></span><i>подтверждать нечего, галочка стала бы лишним экраном между человеком и данными</i></div>
     <div class="spec"><b>холодный старт</b><span data-v="галочкой не заканчивается — в отличие от обновления PWA"></span><i>там галочка оплачена событием: сборка сменилась без спроса и могла не встать, «Готово!» — расписка, что обошлось. У запуска события нет: открыть приложение — норма, подтверждение успеха — само содержимое. Плюс 300–500 мс налога на самом частом кадре продукта</i></div>
     <div class="spec" style="border-bottom:none"><b>локальные записи</b><span data-v="приём еды, вес, зарядка, тренировка подтверждают себя сами — знак не успевает появиться по порогу 300 мс"></span><i>«Чек-ин записан» — исключение смысловое: это конец утреннего ритуала, а не отчёт о сохранении</i></div>
-                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Спиннер · с подписью · 01</b><span data-v="выравнивание center, распределение center"></span></div>
     <div class="spec"><b>Спиннер · с подписью · 02</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--c2), выравнивание center, распределение center"></span></div>
@@ -155,14 +155,14 @@
     <div class="spec"><b>Спиннер · ошибка · 03</b><span data-v="«Не удалось» — шрифт 700 15px/1.35 Figtree, цвет var(--tx), отступ сверху 18px"></span></div>
     <div class="spec"><b>Спиннер · ошибка · 04</b><span data-v="«Проверьте связь.» — шрифт 500 12px/1.5 Figtree, цвет rgba(0,0,0,.5), отступ сверху 7px"></span></div>
     <div class="spec"><b>Спиннер · версия с превращением · 01</b><span data-v="распределение center, поля 0 18px"></span></div>
-    <div class="spec"><b>Спиннер · версия с превращением · 02</b><span data-v="«Три кадра одного перехода, 200 мс» — шрифт 600 10.5px/1 Figtree, трекинг .04em, цвет rgba(0,0,0,.45), выключка center"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · 02</b><span data-v="«Три кадра одного перехода, 200 мс» — шрифт 600 10.5px/1 Figtree, трекинг .04em, цвет rgba(0,0,0,.56), выключка center"></span></div>
     <div class="spec"><b>Спиннер · версия с превращением · 03</b><span data-v="выравнивание center, распределение center, зазор 14px, отступ сверху 22px"></span></div>
     <div class="spec"><b>Спиннер · версия с превращением · 04</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--c2), выравнивание center, распределение center, флекс none"></span></div>
     <div class="spec"><b>Спиннер · версия с превращением · 05</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон #eef0e6, выравнивание center, распределение center, флекс none"></span></div>
     <div class="spec"><b>Спиннер · версия с превращением · 06</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--gr-bg), выравнивание center, распределение center, флекс none"></span></div>
-    <div class="spec"><b>Спиннер · версия с превращением · 07</b><span data-v="распределение center, зазор 14px, отступ сверху 10px, шрифт 600 10px/1 Figtree, цвет rgba(0,0,0,.35)"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · 07</b><span data-v="распределение center, зазор 14px, отступ сверху 10px, шрифт 600 10px/1 Figtree, цвет rgba(0,0,0,.56)"></span></div>
     <div class="spec"><b>Спиннер · версия с превращением · 08</b><span data-v="«крутится» — ширина 56px, выключка center"></span></div>
-    <div class="spec"><b>Спиннер · версия с превращением · 09</b><span data-v="«Знак не исчезает и не подменяется другим: дуга дор» — фон var(--c1), радиус 16px, поля 12px 14px, отступ сверху 22px, шрифт 500 11.5px/1.55 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Спиннер · версия с превращением · 09</b><span data-v="«Знак не исчезает и не подменяется другим: дуга дор» — фон var(--c1), радиус 16px, поля 12px 14px, отступ сверху 22px, шрифт 500 11.5px/1.55 Figtree, цвет rgba(0,0,0,.56)"></span></div>
     <div class="spec"><b>Спиннер · в кнопке · 01</b><span data-v="поля 0"></span></div>
     <div class="spec"><b>Спиннер · в кнопке · 02</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Спиннер · в кнопке · 03</b><span data-v="ширина 44px"></span></div>
@@ -172,10 +172,10 @@
     <div class="spec"><b>Спиннер · в кнопке · 07</b><span data-v="«Баланс за период» — ключ"></span></div>
     <div class="spec"><b>Спиннер · в кнопке · 08</b><span data-v="выравнивание baseline, зазор 8px, отступ сверху 10px"></span></div>
     <div class="spec"><b>Спиннер · в кнопке · 09</b><span data-v="«−1 435» — моноцифры: шрифт 600 40px/.9 Figtree, цвет var(--ac), трекинг -.035em"></span></div>
-    <div class="spec"><b>Спиннер · в кнопке · 10</b><span data-v="«ккал» — шрифт 600 11px/1 Figtree, цвет rgba(0,0,0,.38)"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 10</b><span data-v="«ккал» — шрифт 600 11px/1 Figtree, цвет rgba(0,0,0,.56)"></span></div>
     <div class="spec"><b>Спиннер · в кнопке · 11</b><span data-v="фон var(--c1), радиус 20px, поля 18px, отступ сверху 12px, высота от 132px"></span></div>
     <div class="spec"><b>Спиннер · в кнопке · 12</b><span data-v="«−0,8» — моноцифры: шрифт 600 30px/.9 Figtree, цвет var(--tx), трекинг -.03em"></span></div>
-    <div class="spec"><b>Спиннер · в кнопке · 13</b><span data-v="«Данные считаются на устройстве и показываются сраз» — шрифт 500 11px/1.5 Figtree, цвет rgba(0,0,0,.42), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Спиннер · в кнопке · 13</b><span data-v="«Данные считаются на устройстве и показываются сраз» — шрифт 500 11px/1.5 Figtree, цвет rgba(0,0,0,.56), отступ сверху 12px"></span></div>
     <div class="spec"><b>Спиннер · в кнопке · 14</b><span data-v="подвал"></span></div>
     <div class="spec"><b>Спиннер · в кнопке · 15</b><span data-v="главная кнопка: зазор 9px"></span></div>
     <div class="spec"><b>Спиннер · без анимации · 01</b><span data-v="выравнивание center, распределение center"></span></div>
@@ -288,14 +288,14 @@
 
     <div><div class="lab"><b>Превращение в галочку</b><span>принято · только после действия</span></div>
     <div class="ph" data-demo="loop" data-screen-label="Спиннер · версия с превращением" style="justify-content:center;padding:0 18px;">
-      <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.45);text-align:center;">Три кадра одного перехода, 200 мс</div>
+      <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.56);text-align:center;">Три кадра одного перехода, 200 мс</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:22px;">
         <span style="width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
         <span style="width:56px;height:56px;border-radius:999px;background:#eef0e6;display:flex;align-items:center;justify-content:center;flex:none;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8a9a6a" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" opacity=".55"/><path d="M7.5 12.5l2.5 2.5" opacity=".8"/></svg></span>
         <span style="width:56px;height:56px;border-radius:999px;background:var(--gr-bg);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
       </div>
-      <div style="display:flex;justify-content:center;gap:14px;margin-top:10px;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.35);"><span style="width:56px;text-align:center;">крутится</span><span style="width:56px;text-align:center;">дуга сходится</span><span style="width:56px;text-align:center;">галочка</span></div>
-      <div style="background:var(--c1);border-radius:16px;padding:12px 14px;margin-top:22px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);text-wrap:pretty;">Знак не исчезает и не подменяется другим: дуга дорисовывается до круга и складывается в галочку на том же месте. Только для четырёх мест с ответом сервера: при загрузке вкладки галочки нет — там знак просто уходит.</div>
+      <div style="display:flex;justify-content:center;gap:14px;margin-top:10px;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.56);"><span style="width:56px;text-align:center;">крутится</span><span style="width:56px;text-align:center;">дуга сходится</span><span style="width:56px;text-align:center;">галочка</span></div>
+      <div style="background:var(--c1);border-radius:16px;padding:12px 14px;margin-top:22px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty;">Знак не исчезает и не подменяется другим: дуга дорисовывается до круга и складывается в галочку на том же месте. Только для четырёх мест с ответом сервера: при загрузке вкладки галочки нет — там знак просто уходит.</div>
     </div></div>
 
     <div><div class="lab"><b>В кнопке</b><span>единственное место внутри экрана</span></div>
@@ -304,14 +304,14 @@
       <div class="sc">
         <div style="background:var(--c2);border-radius:22px;padding:18px;">
           <div class="k">Баланс за период</div>
-          <div style="display:flex;align-items:baseline;gap:8px;margin-top:10px;"><span class="n" style="font:600 40px/.9 Figtree,sans-serif;color:var(--ac);letter-spacing:-.035em;">−1 435</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">ккал</span></div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-top:10px;"><span class="n" style="font:600 40px/.9 Figtree,sans-serif;color:var(--ac);letter-spacing:-.035em;">−1 435</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.56);">ккал</span></div>
         </div>
         <div style="background:var(--c1);border-radius:20px;padding:18px;margin-top:12px;min-height:132px;">
           <div class="k">Динамика веса</div>
-          <div style="display:flex;align-items:baseline;gap:8px;margin-top:10px;"><span class="n" style="font:600 30px/.9 Figtree,sans-serif;color:var(--tx);letter-spacing:-.03em;">−0,8</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">кг за неделю</span></div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-top:10px;"><span class="n" style="font:600 30px/.9 Figtree,sans-serif;color:var(--tx);letter-spacing:-.03em;">−0,8</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.56);">кг за неделю</span></div>
           <svg viewBox="0 0 260 46" width="100%" height="46" style="margin-top:14px;"><polyline points="6,14 46,24 86,22 126,32 166,28 206,38 254,34" fill="none" stroke="var(--acs)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="254" cy="34" r="4" fill="var(--acs)"/></svg>
         </div>
-        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:12px;text-wrap:pretty;">Данные считаются на устройстве и показываются сразу. Отдельный блок не ждёт — ждёт только кнопка, за которой стоит запрос к серверу.</div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);margin-top:12px;text-wrap:pretty;">Данные считаются на устройстве и показываются сразу. Отдельный блок не ждёт — ждёт только кнопка, за которой стоит запрос к серверу.</div>
       </div>
       <div class="foot"><div class="btn" style="gap:9px;"><svg class="spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--on-acs)" stroke-width="3" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".3"/><path d="M12 3a9 9 0 019 9"/></svg>Сохраняем</div></div>
     </div></div>

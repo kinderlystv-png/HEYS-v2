@@ -18,10 +18,10 @@
   .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
   .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
   .spec>span[data-v]::before{content:attr(data-v)}
-  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);font-style:normal;text-wrap:pretty}
   .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
   .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
-  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:16px 0 2px}
 </style>
 </helmet>
 
@@ -34,12 +34,12 @@
     <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Лист изменений и оболочка вокруг него: вкладка, дата, настройки</span>
   </div>
   <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Лист показывает итог дня, а не список нажатий, и никуда не уводит после подтверждения. Рядом — оболочка, через которую до правок вообще добираются: дата во вкладке, шторка настроек. Строка даты и её поведение при прокрутке живут в «Дата и остатки v4» — здесь их больше нет, чтобы одно поведение не описывалось в двух канвасах.</p>
-  <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">В пакете: curator-edits.v4.dc.html · протокол docs/implementation/CURATOR_CHANGELOG_SHEET_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
+  <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);">В пакете: curator-edits.v4.dc.html · протокол docs/implementation/CURATOR_CHANGELOG_SHEET_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
   <div class="ctr" data-contract="curator-edits">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <span class="ctrTag">КОНТРАКТ</span>
       <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
-      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
 
     <div class="ctrH">Что это и чьё</div>
@@ -106,7 +106,7 @@
     <div class="spec"><b>точка на «Питании»</b><span data-v="7 px у иконки вкладки, без числа; гаснет, когда неподтверждённых записей не осталось"></span><i>«43» превращает помощь куратора в долг, который нужно разгрести</i></div>
     <div class="spec" style="border-bottom:none"><b>строка входа</b><span data-v="в шапке дня: «Куратор обновил этот день · N изменений» открывает тот же лист, отфильтрованный датой; если правок на открытой дате нет — называет чужую дату и переключает день вместе с открытием"></span><i>по точке на активной вкладке нажать нельзя; это же единственный способ вернуться к правкам после «Понятно»</i></div>
 
-                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Куратор · один приём · 01</b><span data-v="область прокрутки"></span></div>
     <div class="spec"><b>Куратор · один приём · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Figtree, цвет var(--tx)"></span></div>

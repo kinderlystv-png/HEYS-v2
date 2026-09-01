@@ -28,16 +28,16 @@
   .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif}
   .lab{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
   .lab b{font:700 12.5px/1 Figtree,sans-serif;color:#201e1d}
-  .lab span{font:500 11px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.45)}
+  .lab span{font:500 11px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.56)}
   .top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 0}
   .ttl{font:700 15px/1 Figtree,sans-serif;color:var(--tx)}
   .btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--acs);font:700 13px/1 Figtree,sans-serif;color:var(--on-acs)}
   .btn2c{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c2);font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.58)}
   .badge{font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;padding:4px 7px;border-radius:999px;background:var(--c2);color:var(--ac)}
   .p{font:500 12px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.6);margin-top:8px;text-wrap:pretty}
-  .sm{font:500 11px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty}
+  .sm{font:500 11px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:12px;text-wrap:pretty}
   .big{font:800 30px/1 Figtree,sans-serif;color:var(--tx);letter-spacing:-.02em}
-  .pl{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:26px 0 10px}
+  .pl{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:26px 0 10px}
   .an{width:302px;flex:none}
   .anh{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ac);margin:0 0 12px}
   .ab{border-left:2px solid rgba(var(--ink),.14);padding:0 0 0 12px;margin:0 0 15px}
@@ -47,13 +47,13 @@
   .sect{display:flex;align-items:baseline;gap:10px;margin:44px 0 14px}
   .sect .lt{flex:none;font:700 10px/1 ui-monospace,Menlo,monospace;padding:6px 9px;background:var(--c2);color:var(--ac);border-radius:999px}
   .sect .tt{font:700 15px/1.2 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em}
-  .sect .st{font:500 11.5px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45)}
+  .sect .st{font:500 11.5px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56)}
   .spec{display:grid;grid-template-columns:210px 1fr;gap:6px 18px;padding:9px 0;border-bottom:1px solid rgba(var(--ink),.07);align-items:baseline}
   .spec>b{font:700 11.5px/1.4 Figtree,sans-serif;color:var(--tx)}
   .spec>span[data-v]{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.62);text-wrap:pretty}
   .spec>span[data-v]::after{content:attr(data-v)}
   .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;font-style:normal;text-wrap:pretty}
-  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(var(--ink),.38);margin:18px 0 2px}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(var(--ink),.56);margin:18px 0 2px}
   .trk{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid rgba(var(--ink),.07)}
   .pbar{position:relative;height:8px;border-radius:999px;background:rgba(var(--ink),.12)}
   .pfill{display:block;height:100%;border-radius:999px}
@@ -66,12 +66,12 @@
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <h1 style="font:800 22px/1.2 Figtree,sans-serif;color:#201e1d;letter-spacing:-.01em;margin:0;">Вкладка «Актив»</h1>
       <span style="font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:7px 11px;border-radius:999px;background:#b4442a;color:#fff;">В ПРОД — ПО РЕШЕНИЯМ 30 АВГУСТА</span>
-      <div data-protbar style="font:700 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);"></div>
+      <div data-protbar style="font:700 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);"></div>
     </div>
     <p style="font:500 13px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);margin:14px 0 0;text-wrap:pretty;">Канон — ветка <b>main</b>, не stable: там вкладка прошлого поколения, и восстанавливать нечего. Прежний файл был мудбордом без кадров и контракта — этот написан по десяти решениям владельца и разбору кода (<span style="font-family:ui-monospace,Menlo,monospace;">ACTIVITY_TAB_AS_IS.md</span>, §13). Главное решение: «Кардио» как имя семи сущностей снято — ярус «Сегодня» раскладывается на тренировки, быт и зарядку, а программа куратора выходит наверх.</p>
-    <p style="font:500 11px/1.6 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.45);margin:10px 0 0;">tab-activity · протокол: docs/implementation/ACTIVITY_TAB_AS_IS.md · экраны искать по data-screen-label · канон чисел: heys_tdee_v1.js (TDEE.calculate) · соседи: home-widgets (плитки шагов), reports-insights (матрица дисциплины), norm-correction (рост рабочих весов как довод)</p>
+    <p style="font:500 11px/1.6 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);margin:10px 0 0;">tab-activity · протокол: docs/implementation/ACTIVITY_TAB_AS_IS.md · экраны искать по data-screen-label · канон чисел: heys_tdee_v1.js (TDEE.calculate) · соседи: home-widgets (плитки шагов), reports-insights (матрица дисциплины), norm-correction (рост рабочих весов как довод)</p>
     <div style="margin-top:18px;padding:18px 20px;background:#fffaf1;border-radius:20px;">
-      <div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);">Предусловия — кадры верны только после них</div>
+      <div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);">Предусловия — кадры верны только после них</div>
       <div style="font:500 12px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-top:10px;text-wrap:pretty;">Пять дефектов портят числа прямо сейчас и закрываются до сведения экрана: <b>A</b> попапы формулы считают брутто вместо нетто · <b>B</b> бейдж быта внутри блока тренировок — брутто (расхождение в 1,67 раза на одном экране) · <b>C</b> третья тренировка не доходит до разбора и до «Тренировок» · <b>E</b> назначенный план засчитывается как сделанная тренировка · <b>T</b> запасной путь теряет разминку и дропсеты. Плюс два предусловия кадров: <b>L</b> — оценка шагов по медиане на экране дня не срабатывает вовсе, поэтому пометку рисовать не на чем; <b>bodyWeightKg</b> в дневном тоннаже — без него упражнения на своём весе дают ноль, и число в ярусе разойдётся с конструктором.</div>
     </div>
   </div>
@@ -87,13 +87,13 @@
             <div class="k">Цель дня</div>
             <div style="display:flex;align-items:baseline;gap:8px;margin-top:10px;"><span class="big n">2 210</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">ккал</span></div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;">
-              <span style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);">компенсация долга</span>
+              <span style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56);">компенсация долга</span>
               <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">из чего ›</span>
             </div>
           </div>
           <div class="cd" style="margin-top:10px;">
             <div class="row" style="border-bottom:none;">
-              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Программа · сегодня силовая</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">Ноги и спина · 5 упражнений</span></span>
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Программа · сегодня силовая</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">Ноги и спина · 5 упражнений</span></span>
               <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">начать ›</span>
             </div>
           </div>
@@ -106,12 +106,12 @@
             <div class="pbar" style="margin-top:14px;"><span class="pfill" style="width:67%;background:var(--gr2);"></span><span class="pknob" style="left:67%;"></span></div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;">
               <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">312 ккал</span>
-              <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">факт — ползунком, цель — тапом</span>
+              <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">факт — ползунком, цель — тапом</span>
             </div>
           </div>
           <div class="cd" style="margin-top:10px;">
             <div class="row">
-              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Тренировки</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">силовая 45 мин · 1,9 т объёма</span></span>
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Тренировки</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">силовая 45 мин · 1,9 т объёма</span></span>
               <span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">385 ккал</span>
             </div>
             <div class="row">
@@ -127,8 +127,8 @@
           <div class="btn">Добавить активность</div>
           <div class="tier">История</div>
           <div class="cd">
-            <div class="row"><span style="color:var(--tx);">Зарядка · 18 из 24</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">28 дней ›</span></div>
-            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Рабочие веса</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">за 4 недели · 6 общих упражнений</span></span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--gr);">+4 %</span></div>
+            <div class="row"><span style="color:var(--tx);">Зарядка · 18 из 24</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">28 дней ›</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Рабочие веса</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">за 4 недели · 6 общих упражнений</span></span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--gr);">+4 %</span></div>
             <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Тренировки за месяц</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">11 ›</span></div>
           </div>
           <div class="sm">Слово «Кардио» с экрана снято: под ним лежали семь разных сущностей, и кардио было одной из них.</div>
@@ -144,7 +144,7 @@
             <div class="k">Цель дня</div>
             <div style="display:flex;align-items:baseline;gap:8px;margin-top:10px;"><span class="big n">2 210</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">ккал</span></div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;">
-              <span style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);">компенсация долга</span>
+              <span style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56);">компенсация долга</span>
               <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">свернуть ›</span>
             </div>
           </div>
@@ -153,8 +153,8 @@
             <div class="row"><span style="color:var(--tx);">Шаги</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--gr);">+312</span></div>
             <div class="row"><span style="color:var(--tx);">Быт</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--gr);">+126</span></div>
             <div class="row"><span style="color:var(--tx);">Тренировки</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--gr);">+385</span></div>
-            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">База без термического эффекта</span><span style="font:500 10px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.42);">от неё считается цель</span></span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 343</span></div>
-            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Термический эффект еды</span><span style="font:500 10px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.42);">в затратах есть, в цели нет</span></span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">+188</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">База без термического эффекта</span><span style="font:500 10px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">от неё считается цель</span></span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 343</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Термический эффект еды</span><span style="font:500 10px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">в затратах есть, в цели нет</span></span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">+188</span></div>
             <div class="row"><span style="color:var(--tx);">Затраты</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">2 531</span></div>
             <div class="row"><span style="color:var(--tx);">Дефицит по договорённости</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">−15 %</span></div>
             <div class="row"><span style="color:var(--tx);">Компенсация долга</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--gr);">+218</span></div>
@@ -185,7 +185,7 @@
             <div class="k">Цель дня</div>
             <div style="display:flex;align-items:baseline;gap:8px;margin-top:10px;"><span class="big n">1 940</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">ккал</span></div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;">
-              <span style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);">от затрат без термического эффекта · −15 %</span>
+              <span style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56);">от затрат без термического эффекта · −15 %</span>
               <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">из чего ›</span>
             </div>
           </div>
@@ -198,7 +198,7 @@
             <div class="pbar" style="margin-top:14px;"><span class="pknob" style="left:0;box-shadow:0 1px 3px rgba(80,50,20,.28),inset 0 0 0 2px rgba(var(--ink),.28);"></span></div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;">
               <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">0 ккал</span>
-              <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">факт — ползунком, цель — тапом</span>
+              <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">факт — ползунком, цель — тапом</span>
             </div>
           </div>
           <div class="cd" style="margin-top:10px;">
@@ -231,7 +231,7 @@
             <div class="pbar" style="margin-top:14px;"><span class="pfill" style="width:63%;background:rgba(var(--ink),.22);"></span><span class="pknob" style="left:63%;box-shadow:0 1px 3px rgba(80,50,20,.28),inset 0 0 0 2px rgba(var(--ink),.28);"></span></div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;">
               <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">293 ккал</span>
-              <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">поставьте факт ползунком</span>
+              <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">поставьте факт ползунком</span>
             </div>
             <div class="sm" style="margin-top:10px;">Числа за этот день нет — взята медиана ваших последних 14 дней. Она участвует в расходе и в цели, поэтому помечена.</div>
           </div>
@@ -309,7 +309,7 @@
         <div class="sc">
           <div class="cd" style="margin-top:12px;">
             <div class="row" style="border-bottom:none;">
-              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Следующая тренировка — завтра</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">Грудь и руки · по программе</span></span>
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Следующая тренировка — завтра</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">Грудь и руки · по программе</span></span>
               <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">программа ›</span>
             </div>
           </div>
@@ -350,16 +350,16 @@
               <span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--val-bad);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:var(--gr);"></span><span class="dot" style="background:rgba(var(--ink),.16);"></span>
             </div>
             <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;">
-              <span style="display:flex;align-items:center;gap:6px;font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);"><span class="dot" style="background:var(--gr);"></span>сделана</span>
-              <span style="display:flex;align-items:center;gap:6px;font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);"><span class="dot" style="background:var(--gr2);"></span>тренировкой</span>
-              <span style="display:flex;align-items:center;gap:6px;font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);"><span class="dot" style="background:var(--val-bad);"></span>пропуск</span>
-              <span style="display:flex;align-items:center;gap:6px;font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);"><span class="dot" style="background:rgba(var(--ink),.1);"></span>не вели</span>
+              <span style="display:flex;align-items:center;gap:6px;font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);"><span class="dot" style="background:var(--gr);"></span>сделана</span>
+              <span style="display:flex;align-items:center;gap:6px;font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);"><span class="dot" style="background:var(--gr2);"></span>тренировкой</span>
+              <span style="display:flex;align-items:center;gap:6px;font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);"><span class="dot" style="background:var(--val-bad);"></span>пропуск</span>
+              <span style="display:flex;align-items:center;gap:6px;font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);"><span class="dot" style="background:rgba(var(--ink),.1);"></span>не вели</span>
             </div>
           </div>
           <div class="cd" style="margin-top:10px;">
             <div class="row" style="border-bottom:none;">
               <span style="display:flex;align-items:center;gap:12px;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--ac);">‹</span><span style="color:var(--tx);">Август 2026</span><span style="font:700 13px/1 Figtree,sans-serif;color:var(--ac);">›</span></span>
-              <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">режим «Месяц»</span>
+              <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">режим «Месяц»</span>
             </div>
           </div>
           <div class="sm">Четыре дня в начале окна — серые: до них зарядку не вели. Пропуском считается только день после первой отметки.</div>
@@ -374,7 +374,7 @@
           <div class="tier">Сегодня</div>
           <div class="cd">
             <div class="row" style="border-bottom:none;">
-              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Тренировки</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">силовая 45 мин · 1,9 т объёма</span></span>
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Тренировки</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">силовая 45 мин · 1,9 т объёма</span></span>
               <span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">385 ккал</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--ac);">›</span></span>
             </div>
           </div>
@@ -383,7 +383,7 @@
               <span style="font:700 13px/1.3 Figtree,sans-serif;color:var(--tx);">Ноги и спина</span>
               <span class="k n">18:40</span>
             </div>
-            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:5px;">Конструктор · 5 упражнений · 1,9 т фактического объёма</div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:5px;">Конструктор · 5 упражнений · 1,9 т фактического объёма</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">
               <span class="badge" style="color:rgba(var(--ink),.5);">Z1 · —</span>
               <span class="badge">Z2 · 45 мин · 315</span>
@@ -391,9 +391,9 @@
               <span class="badge" style="color:rgba(var(--ink),.5);">Z4 · —</span>
             </div>
             <div class="cd" style="background:var(--bg);margin-top:12px;">
-              <div class="row"><span style="color:var(--tx);">Приседания</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">4 × 8 · 80 кг</span></div>
-              <div class="row"><span style="color:var(--tx);">Тяга штанги</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">4 × 10 · 60 кг</span></div>
-              <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Подтягивания</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">3 × 8 · свой вес</span></div>
+              <div class="row"><span style="color:var(--tx);">Приседания</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">4 × 8 · 80 кг</span></div>
+              <div class="row"><span style="color:var(--tx);">Тяга штанги</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">4 × 10 · 60 кг</span></div>
+              <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Подтягивания</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">3 × 8 · свой вес</span></div>
             </div>
             <div class="btn2c" style="margin-top:12px;">Открыть конструктор</div>
             <div class="sm">Плановый объём — 2,1 т: он живёт здесь, где виден состав, и в ярус «Сегодня» не идёт.</div>
@@ -409,20 +409,20 @@
           <div class="tier">История</div>
           <div class="cd">
             <div class="row">
-              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Рабочие веса</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">данных 9 дней из 14</span></span>
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Рабочие веса</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">данных 9 дней из 14</span></span>
               <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">рано сравнивать</span>
             </div>
             <div class="row" style="border-bottom:none;">
-              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Рабочие веса</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">программа сменилась 12 августа</span></span>
+              <span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Рабочие веса</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">программа сменилась 12 августа</span></span>
               <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">нет общих упражнений</span>
             </div>
           </div>
           <div class="sm">Два состояния показаны рядом только на канвасе — в продукте строка одна. «Нет общих упражнений» не значит «веса не растут»: сравнивать нечего, а не результат плохой.</div>
           <div class="tier">Лист действия</div>
           <div class="cd">
-            <div class="row"><span style="color:var(--tx);">Тренировка</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">время, тип, минуты по зонам</span></div>
-            <div class="row"><span style="color:var(--tx);">Зарядка</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">сделал · сделаю · не сегодня</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Бытовая активность</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">минуты</span></div>
+            <div class="row"><span style="color:var(--tx);">Тренировка</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">время, тип, минуты по зонам</span></div>
+            <div class="row"><span style="color:var(--tx);">Зарядка</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">сделал · сделаю · не сегодня</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Бытовая активность</span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">минуты</span></div>
           </div>
           <div class="sm">Третий слот тренировки занят — пункт «Тренировка» в листе не показывается, а не гаснет.</div>
         </div>
@@ -457,14 +457,14 @@
               <span style="font:700 13px/1.3 Figtree,sans-serif;color:var(--tx);">Грудь, спина, плечи</span>
               <span class="badge">идёт</span>
             </div>
-            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:5px;">начата в 18:40 · упражнение 3 из 7</div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:5px;">начата в 18:40 · упражнение 3 из 7</div>
             <div style="display:flex;align-items:baseline;gap:8px;margin-top:12px;">
               <span class="n" style="font:800 26px/1 Figtree,sans-serif;color:var(--tx);letter-spacing:-.02em;">47:12</span>
               <span class="n" style="font:600 12px/1 Figtree,sans-serif;color:var(--gr);">10 из 23 подходов</span>
             </div>
             <div class="pbar" style="margin-top:10px;"><span class="pfill" style="width:43%;background:var(--acs);"></span></div>
             <div class="btn" style="margin-top:12px;">Продолжить тренировку</div>
-            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);text-align:center;margin-top:6px;">Жим гантелей сидя · подход 2 из 4</div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56);text-align:center;margin-top:6px;">Жим гантелей сидя · подход 2 из 4</div>
             <div class="sm">Пока тренировка идёт, объём и калории в ярусе «Сегодня» считаются по отмеченным подходам и растут на глазах. Итог придёт из конструктора, когда сессия закрыта.</div>
           </div>
         </div>
@@ -477,7 +477,7 @@
         <div class="sc">
           <div class="grp" style="margin-top:12px;background:var(--tint);">
             <div style="font:700 13px/1.32 Figtree,sans-serif;color:var(--ac2);">Спина третий день подряд</div>
-            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:4px;">восстановление ещё не закрыто с воскресенья</div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:4px;">восстановление ещё не закрыто с воскресенья</div>
             <div class="p">Сегодня лучше жать, чем тянуть. Если тяга принципиальна — оставьте два рабочих подхода вместо четырёх.</div>
             <div style="display:flex;gap:7px;margin-top:12px;">
               <span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:var(--acs);font:700 12px/1 Figtree,sans-serif;color:var(--on-acs);">Взять день жимов</span>
@@ -489,7 +489,7 @@
           <div class="cd">
             <div class="row"><span style="color:var(--tx);">Спина</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ac2);">тянули пт, чт, ср</span></div>
             <div class="row"><span style="color:var(--tx);">Грудь</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--gr);">отдыхала 4 дня</span></div>
-            <div class="row" style="border-bottom:none;"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Основная группа берёт полный вес</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">синергист — половину, как в конструкторе</span></span></div>
+            <div class="row" style="border-bottom:none;"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Основная группа берёт полный вес</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">синергист — половину, как в конструкторе</span></span></div>
           </div>
           <div class="sm">Совет считается по группам мышц упражнений, а не по названию тренировки: «спина» набирается и тягой блока, и подтягиваниями, где спина — основная.</div>
         </div>
@@ -502,16 +502,16 @@
         <div class="sc">
           <div class="tier">Как меняется</div>
           <div class="cd">
-            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Силовая нагрузка · накопленная</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">третью неделю подряд, окно 6 недель</span></span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--tx);">растёт</span></div>
-            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Силовая усталость · короткое окно</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">окно 7 дней · обгоняет накопленную</span></span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac2);">растёт быстрее</span></div>
-            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Кардио — отдельным рядом</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">в одно число с силовой не сводится</span></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">без изменений</span></div>
-            <div class="row" style="border-bottom:none;"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Вклад этой сессии</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.45);">в силовом ряду, своей единицей — тоннажем</span></span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">9,4 т</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Силовая нагрузка · накопленная</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">третью неделю подряд, окно 6 недель</span></span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--tx);">растёт</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Силовая усталость · короткое окно</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">окно 7 дней · обгоняет накопленную</span></span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac2);">растёт быстрее</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Кардио — отдельным рядом</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">в одно число с силовой не сводится</span></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">без изменений</span></div>
+            <div class="row" style="border-bottom:none;"><span style="display:flex;flex-direction:column;gap:3px;"><span style="color:var(--tx);">Вклад этой сессии</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);">в силовом ряду, своей единицей — тоннажем</span></span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">9,4 т</span></div>
           </div>
           <div class="sm">Абсолютных значений нет намеренно: шкала не откалибрована на живой истории, и «72 из 100» читалось бы как измерение. Числа не хранятся — считаются на чтении.</div>
           <div class="tier">Вердикт сессии</div>
           <div class="grp" style="background:var(--gr-bg);">
             <div style="font:700 13px/1.32 Figtree,sans-serif;color:var(--gr);">Сессия зачтена как тяжёлая</div>
-            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:4px;">следующая тяжёлая — не раньше четверга</div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:4px;">следующая тяжёлая — не раньше четверга</div>
             <div style="display:flex;gap:7px;margin-top:12px;">
               <span style="flex:1;background:var(--bg);border-radius:12px;padding:10px 11px;"><span class="k">восстановление</span><span style="display:block;height:8px;border-radius:999px;background:rgba(var(--ink),.1);overflow:hidden;margin:8px 0 7px;"><span style="display:block;width:38%;height:100%;border-radius:999px;background:var(--ovl);"></span></span><span class="n" style="font:700 12px/1 Figtree,sans-serif;color:var(--tx);">38 % · ~14 ч</span></span>
               <span style="flex:1;background:var(--bg);border-radius:12px;padding:10px 11px;"><span class="k">готовность</span><span style="display:block;height:8px;border-radius:999px;background:rgba(var(--ink),.1);overflow:hidden;margin:8px 0 7px;"><span style="display:block;width:44%;height:100%;border-radius:999px;background:var(--wat);"></span></span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--tx);">ниже нормы</span></span>
@@ -607,7 +607,7 @@
     <div class="ctrH">Открыто до передачи</div>
     <div class="spec"><b>предусловия кадров</b><span data-v="кадр «шаги оценены» верен только после починки механизма оценки на экране дня, строка тоннажа — после передачи массы тела в дневной расчёт. До этого оба помечаются «—», а не вердиктом: рисовать состояние, которого не бывает, нельзя"></span></div>
     <div class="spec" style="border-bottom:none"><b>переключатель «Месяц» в календаре</b><span data-v="СНЯТО 31 августа как открытый вопрос: решение принято и лежит строкой «режим „Месяц“ с листанием» — сетка с подписью месяца и стрелками ‹ ›, кадр «Календарь зарядки» её рисует, листание реализовано. Прежняя редакция просила «не рисовать кадр месяца до решения: возвращать листание или оставить только 28 дней» — она стояла открытой по недосмотру и могла заставить следующий проход снять листание обратно"></span></div>
-                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Актив · день собран · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Актив · день собран · 02</b><span data-v="«Актив» — имя экрана"></span></div>
@@ -619,13 +619,13 @@
     <div class="spec"><b>Актив · день собран · 08</b><span data-v="«2 210» — главное число + моноцифры"></span></div>
     <div class="spec"><b>Актив · день собран · 09</b><span data-v="«ккал» — шрифт 600 13px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
     <div class="spec"><b>Актив · день собран · 10</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 9px"></span></div>
-    <div class="spec"><b>Актив · день собран · 11</b><span data-v="«компенсация долга» — шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Актив · день собран · 11</b><span data-v="«компенсация долга» — шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · день собран · 12</b><span data-v="«из чего ›» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Актив · день собран · 13</b><span data-v="список .cd: отступ сверху 10px"></span></div>
     <div class="spec"><b>Актив · день собран · 14</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Актив · день собран · 15</b><span data-v="направление column, зазор 3px"></span></div>
     <div class="spec"><b>Актив · день собран · 16</b><span data-v="«Программа · сегодня силовая» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Актив · день собран · 17</b><span data-v="«Ноги и спина · 5 упражнений» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Актив · день собран · 17</b><span data-v="«Ноги и спина · 5 упражнений» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · день собран · 18</b><span data-v="«Сегодня» — ярус"></span></div>
     <div class="spec"><b>Актив · день собран · 19</b><span data-v="карточка .grp"></span></div>
     <div class="spec"><b>Актив · день собран · 20</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
@@ -636,13 +636,13 @@
     <div class="spec"><b>Актив · день собран · 25</b><span data-v="ширина 67%, фон var(--gr2)"></span></div>
     <div class="spec"><b>Актив · день собран · 26</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 10px"></span></div>
     <div class="spec"><b>Актив · день собран · 27</b><span data-v="«312 ккал» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
-    <div class="spec"><b>Актив · день собран · 28</b><span data-v="«факт — ползунком, цель — тапом» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · день собран · 28</b><span data-v="«факт — ползунком, цель — тапом» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · день собран · 29</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Актив · день собран · 30</b><span data-v="«385 ккал» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Актив · день собран · 31</b><span data-v="«07:20 · 34 ккал» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--gr)"></span></div>
     <div class="spec"><b>Актив · день собран · 32</b><span data-v="«Добавить активность» — главная кнопка"></span></div>
     <div class="spec"><b>Актив · день собран · 33</b><span data-v="список .cd"></span></div>
-    <div class="spec"><b>Актив · день собран · 34</b><span data-v="«28 дней ›» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · день собран · 34</b><span data-v="«28 дней ›» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · день собран · 35</b><span data-v="«+4 %» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--gr)"></span></div>
     <div class="spec"><b>Актив · день собран · 36</b><span data-v="«Слово «Кардио» с экрана снято: под ним лежали семь» — сноска"></span></div>
     <div class="spec"><b>Актив · разбор цели · 01</b><span data-v="шапка"></span></div>
@@ -655,7 +655,7 @@
     <div class="spec"><b>Актив · разбор цели · 08</b><span data-v="«2 210» — главное число + моноцифры"></span></div>
     <div class="spec"><b>Актив · разбор цели · 09</b><span data-v="«ккал» — шрифт 600 13px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
     <div class="spec"><b>Актив · разбор цели · 10</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 9px"></span></div>
-    <div class="spec"><b>Актив · разбор цели · 11</b><span data-v="«компенсация долга» — шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 11</b><span data-v="«компенсация долга» — шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · разбор цели · 12</b><span data-v="«свернуть ›» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Актив · разбор цели · 13</b><span data-v="список .cd: отступ сверху 10px"></span></div>
     <div class="spec"><b>Актив · разбор цели · 14</b><span data-v="строка списка"></span></div>
@@ -663,7 +663,7 @@
     <div class="spec"><b>Актив · разбор цели · 16</b><span data-v="«1 520» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Актив · разбор цели · 17</b><span data-v="«+312» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--gr)"></span></div>
     <div class="spec"><b>Актив · разбор цели · 18</b><span data-v="направление column, зазор 3px"></span></div>
-    <div class="spec"><b>Актив · разбор цели · 19</b><span data-v="«от неё считается цель» — шрифт 500 10px/1.3 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · разбор цели · 19</b><span data-v="«от неё считается цель» — шрифт 500 10px/1.3 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · разбор цели · 20</b><span data-v="«2 343» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Актив · разбор цели · 21</b><span data-v="«+188» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
     <div class="spec"><b>Актив · разбор цели · 22</b><span data-v="«+218» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--gr)"></span></div>
@@ -680,7 +680,7 @@
     <div class="spec"><b>Актив · новый человек · 08</b><span data-v="«1 940» — главное число + моноцифры"></span></div>
     <div class="spec"><b>Актив · новый человек · 09</b><span data-v="«ккал» — шрифт 600 13px/1 Figtree, цвет rgba(var(--ink),.45)"></span></div>
     <div class="spec"><b>Актив · новый человек · 10</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 9px"></span></div>
-    <div class="spec"><b>Актив · новый человек · 11</b><span data-v="«от затрат без термического эффекта · −15 %» — шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 11</b><span data-v="«от затрат без термического эффекта · −15 %» — шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · новый человек · 12</b><span data-v="«из чего ›» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Актив · новый человек · 13</b><span data-v="«Сегодня» — ярус"></span></div>
     <div class="spec"><b>Актив · новый человек · 14</b><span data-v="карточка .grp"></span></div>
@@ -691,7 +691,7 @@
     <div class="spec"><b>Актив · новый человек · 19</b><span data-v="рамка 0 1px 3px rgba(80,50,20,.28),inset 0 0 0 2px rgba(var(--ink),.28)"></span></div>
     <div class="spec"><b>Актив · новый человек · 20</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 10px"></span></div>
     <div class="spec"><b>Актив · новый человек · 21</b><span data-v="«0 ккал» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
-    <div class="spec"><b>Актив · новый человек · 22</b><span data-v="«факт — ползунком, цель — тапом» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · новый человек · 22</b><span data-v="«факт — ползунком, цель — тапом» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · новый человек · 23</b><span data-v="список .cd: отступ сверху 10px"></span></div>
     <div class="spec"><b>Актив · новый человек · 24</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Актив · новый человек · 25</b><span data-v="«Тренировки» — цвет var(--tx)"></span></div>
@@ -718,7 +718,7 @@
     <div class="spec"><b>Актив · шаги оценены · 15</b><span data-v="рамка 0 1px 3px rgba(80,50,20,.28),inset 0 0 0 2px rgba(var(--ink),.28)"></span></div>
     <div class="spec"><b>Актив · шаги оценены · 16</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ сверху 10px"></span></div>
     <div class="spec"><b>Актив · шаги оценены · 17</b><span data-v="«293 ккал» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
-    <div class="spec"><b>Актив · шаги оценены · 18</b><span data-v="«поставьте факт ползунком» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · шаги оценены · 18</b><span data-v="«поставьте факт ползунком» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · шаги оценены · 19</b><span data-v="«Числа за этот день нет — взята медиана ваших после» — сноска: отступ сверху 10px"></span></div>
     <div class="spec"><b>Актив · шаги оценены · 20</b><span data-v="список .cd: отступ сверху 10px"></span></div>
     <div class="spec"><b>Актив · шаги оценены · 21</b><span data-v="строка списка"></span></div>
@@ -771,7 +771,7 @@
     <div class="spec"><b>Актив · день отдыха · 06</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Актив · день отдыха · 07</b><span data-v="направление column, зазор 3px"></span></div>
     <div class="spec"><b>Актив · день отдыха · 08</b><span data-v="«Следующая тренировка — завтра» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Актив · день отдыха · 09</b><span data-v="«Грудь и руки · по программе» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Актив · день отдыха · 09</b><span data-v="«Грудь и руки · по программе» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · день отдыха · 10</b><span data-v="«программа ›» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Актив · день отдыха · 11</b><span data-v="«Сегодня» — ярус"></span></div>
     <div class="spec"><b>Актив · день отдыха · 12</b><span data-v="список .cd"></span></div>
@@ -795,13 +795,13 @@
     <div class="spec"><b>Календарь зарядки · 13</b><span data-v="точка: фон var(--gr2)"></span></div>
     <div class="spec"><b>Календарь зарядки · 14</b><span data-v="точка: фон rgba(var(--ink),.16)"></span></div>
     <div class="spec"><b>Календарь зарядки · 15</b><span data-v="зазор 12px, перенос строк wrap, отступ сверху 14px"></span></div>
-    <div class="spec"><b>Календарь зарядки · 16</b><span data-v="выравнивание center, зазор 6px, шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Календарь зарядки · 16</b><span data-v="выравнивание center, зазор 6px, шрифт 500 10.5px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Календарь зарядки · 17</b><span data-v="список .cd: отступ сверху 10px"></span></div>
     <div class="spec"><b>Календарь зарядки · 18</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Календарь зарядки · 19</b><span data-v="выравнивание center, зазор 12px"></span></div>
     <div class="spec"><b>Календарь зарядки · 20</b><span data-v="«‹» — шрифт 700 13px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Календарь зарядки · 21</b><span data-v="«Август 2026» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Календарь зарядки · 22</b><span data-v="«режим «Месяц»» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Календарь зарядки · 22</b><span data-v="«режим «Месяц»» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Календарь зарядки · 23</b><span data-v="«Четыре дня в начале окна — серые: до них зарядку н» — сноска"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 02</b><span data-v="«Актив» — имя экрана"></span></div>
@@ -812,20 +812,20 @@
     <div class="spec"><b>Тренировки · журнал подходов · 07</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 08</b><span data-v="направление column, зазор 3px"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 09</b><span data-v="«Тренировки» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Тренировки · журнал подходов · 10</b><span data-v="«силовая 45 мин · 1,9 т объёма» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 10</b><span data-v="«силовая 45 мин · 1,9 т объёма» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 11</b><span data-v="выравнивание center, зазор 8px"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 12</b><span data-v="«385 ккал» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 13</b><span data-v="«›» — шрифт 700 12px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 14</b><span data-v="карточка .grp: отступ сверху 10px"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 15</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 16</b><span data-v="«Ноги и спина» — шрифт 700 13px/1.3 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Тренировки · журнал подходов · 17</b><span data-v="«Конструктор · 5 упражнений · 1,9 т фактического об» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.45), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 17</b><span data-v="«Конструктор · 5 упражнений · 1,9 т фактического об» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 5px"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 18</b><span data-v="зазор 6px, перенос строк wrap, отступ сверху 12px"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 19</b><span data-v="«Z1 · —» — пилюля: цвет rgba(var(--ink),.5)"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 20</b><span data-v="«Z2 · 45 мин · 315» — пилюля"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 21</b><span data-v="список .cd: фон var(--bg), отступ сверху 12px"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 22</b><span data-v="строка списка"></span></div>
-    <div class="spec"><b>Тренировки · журнал подходов · 23</b><span data-v="«4 × 8 · 80 кг» — моноцифры: шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Тренировки · журнал подходов · 23</b><span data-v="«4 × 8 · 80 кг» — моноцифры: шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 24</b><span data-v="«Открыть конструктор» — вторичная кнопка: отступ сверху 12px"></span></div>
     <div class="spec"><b>Тренировки · журнал подходов · 25</b><span data-v="«Плановый объём — 2,1 т: он живёт здесь, где виден» — сноска"></span></div>
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 01</b><span data-v="шапка"></span></div>
@@ -837,11 +837,10 @@
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 07</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 08</b><span data-v="направление column, зазор 3px"></span></div>
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 09</b><span data-v="«Рабочие веса» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Рабочие веса · нечего сравнивать · 10</b><span data-v="«данных 9 дней из 14» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Рабочие веса · нечего сравнивать · 10</b><span data-v="«данных 9 дней из 14» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 11</b><span data-v="«рано сравнивать» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 12</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Рабочие веса · нечего сравнивать · 13</b><span data-v="«Два состояния показаны рядом только на канвасе — в» — сноска"></span></div>
-    <div class="spec"><b>Рабочие веса · нечего сравнивать · 14</b><span data-v="«время, тип, минуты по зонам» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
     <div class="spec"><b>Актив · тренировка идёт · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Актив · тренировка идёт · 02</b><span data-v="«Актив» — имя экрана"></span></div>
     <div class="spec"><b>Актив · тренировка идёт · 03</b><span data-v="«сб · 30 авг» — ключ + моноцифры"></span></div>
@@ -859,14 +858,14 @@
     <div class="spec"><b>Актив · тренировка идёт · 15</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
     <div class="spec"><b>Актив · тренировка идёт · 16</b><span data-v="«Грудь, спина, плечи» — шрифт 700 13px/1.3 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Актив · тренировка идёт · 17</b><span data-v="«идёт» — пилюля"></span></div>
-    <div class="spec"><b>Актив · тренировка идёт · 18</b><span data-v="«начата в 18:40 · упражнение 3 из 7» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.45), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 18</b><span data-v="«начата в 18:40 · упражнение 3 из 7» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 5px"></span></div>
     <div class="spec"><b>Актив · тренировка идёт · 19</b><span data-v="выравнивание baseline, зазор 8px, отступ сверху 12px"></span></div>
     <div class="spec"><b>Актив · тренировка идёт · 20</b><span data-v="«47:12» — моноцифры: шрифт 800 26px/1 Figtree, цвет var(--tx), трекинг -.02em"></span></div>
     <div class="spec"><b>Актив · тренировка идёт · 21</b><span data-v="«10 из 23 подходов» — моноцифры: шрифт 600 12px/1 Figtree, цвет var(--gr)"></span></div>
     <div class="spec"><b>Актив · тренировка идёт · 22</b><span data-v="отступ сверху 10px"></span></div>
     <div class="spec"><b>Актив · тренировка идёт · 23</b><span data-v="ширина 43%, фон var(--acs)"></span></div>
     <div class="spec"><b>Актив · тренировка идёт · 24</b><span data-v="«Продолжить тренировку» — главная кнопка: отступ сверху 12px"></span></div>
-    <div class="spec"><b>Актив · тренировка идёт · 25</b><span data-v="«Жим гантелей сидя · подход 2 из 4» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.42), выключка center, отступ сверху 6px"></span></div>
+    <div class="spec"><b>Актив · тренировка идёт · 25</b><span data-v="«Жим гантелей сидя · подход 2 из 4» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), выключка center, отступ сверху 6px"></span></div>
     <div class="spec"><b>Актив · тренировка идёт · 26</b><span data-v="«Пока тренировка идёт, объём и калории в ярусе «Сег» — сноска"></span></div>
     <div class="spec"><b>Актив · нагрузка предупреждает · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Актив · нагрузка предупреждает · 02</b><span data-v="«Актив» — имя экрана"></span></div>
@@ -874,7 +873,7 @@
     <div class="spec"><b>Актив · нагрузка предупреждает · 04</b><span data-v="область прокрутки"></span></div>
     <div class="spec"><b>Актив · нагрузка предупреждает · 05</b><span data-v="карточка .grp: отступ сверху 12px, фон var(--tint)"></span></div>
     <div class="spec"><b>Актив · нагрузка предупреждает · 06</b><span data-v="«Спина третий день подряд» — шрифт 700 13px/1.32 Figtree, цвет var(--ac2)"></span></div>
-    <div class="spec"><b>Актив · нагрузка предупреждает · 07</b><span data-v="«восстановление ещё не закрыто с воскресенья» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.5), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 07</b><span data-v="«восстановление ещё не закрыто с воскресенья» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 4px"></span></div>
     <div class="spec"><b>Актив · нагрузка предупреждает · 08</b><span data-v="«Сегодня лучше жать, чем тянуть. Если тяга принципи» — проза"></span></div>
     <div class="spec"><b>Актив · нагрузка предупреждает · 09</b><span data-v="зазор 7px, отступ сверху 12px"></span></div>
     <div class="spec"><b>Актив · нагрузка предупреждает · 10</b><span data-v="«Взять день жимов» — флекс 1, выравнивание center, распределение center, высота от 44px, радиус 999px, фон var(--acs), шрифт 700 12px/1 Figtree, цвет var(--on-acs)"></span></div>
@@ -888,7 +887,7 @@
     <div class="spec"><b>Актив · нагрузка предупреждает · 18</b><span data-v="«отдыхала 4 дня» — шрифт 600 11px/1 Figtree, цвет var(--gr)"></span></div>
     <div class="spec"><b>Актив · нагрузка предупреждает · 19</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Актив · нагрузка предупреждает · 20</b><span data-v="направление column, зазор 3px"></span></div>
-    <div class="spec"><b>Актив · нагрузка предупреждает · 21</b><span data-v="«синергист — половину, как в конструкторе» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Актив · нагрузка предупреждает · 21</b><span data-v="«синергист — половину, как в конструкторе» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · нагрузка предупреждает · 22</b><span data-v="«Совет считается по группам мышц упражнений, а не п» — сноска"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 02</b><span data-v="«Нагрузка» — имя экрана"></span></div>
@@ -899,16 +898,16 @@
     <div class="spec"><b>Актив · нагрузка слои · 07</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 08</b><span data-v="направление column, зазор 3px"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 09</b><span data-v="«Силовая нагрузка · накопленная» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Актив · нагрузка слои · 10</b><span data-v="«третью неделю подряд, окно 6 недель» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 10</b><span data-v="«третью неделю подряд, окно 6 недель» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 11</b><span data-v="«растёт» — шрифт 700 11.5px/1 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 12</b><span data-v="«растёт быстрее» — шрифт 700 11.5px/1 Figtree, цвет var(--ac2)"></span></div>
-    <div class="spec"><b>Актив · нагрузка слои · 13</b><span data-v="«без изменений» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.42)"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 13</b><span data-v="«без изменений» — шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 14</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 15</b><span data-v="«9,4 т» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 16</b><span data-v="«Абсолютных значений нет намеренно: шкала не откали» — сноска"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 17</b><span data-v="карточка .grp: фон var(--gr-bg)"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 18</b><span data-v="«Сессия зачтена как тяжёлая» — шрифт 700 13px/1.32 Figtree, цвет var(--gr)"></span></div>
-    <div class="spec"><b>Актив · нагрузка слои · 19</b><span data-v="«следующая тяжёлая — не раньше четверга» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.5), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Актив · нагрузка слои · 19</b><span data-v="«следующая тяжёлая — не раньше четверга» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 4px"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 20</b><span data-v="зазор 7px, отступ сверху 12px"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 21</b><span data-v="флекс 1, фон var(--bg), радиус 12px, поля 10px 11px"></span></div>
     <div class="spec"><b>Актив · нагрузка слои · 22</b><span data-v="«восстановление» — ключ"></span></div>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="./v4-canvas.css" rel="stylesheet">
+<script src="./contract-audit.js"></script>
+<style>
+  body{margin:0;background:#e9dfcd;font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  a{color:#8a4a20;text-decoration:none}
+  .ph{width:375px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12)}
+  .sc{min-height:600px;padding:6px 18px 16px}
+  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.56)}
+  .n{font-variant-numeric:tabular-nums}
+  .tier{font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#a75c2b;margin:20px 0 10px}
+  .cd{background:#f7efe2;border-radius:20px;padding:2px 16px}
+  .grp{background:#f7efe2;border-radius:20px;padding:16px}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif}
+  .row > :last-child{flex:none}
+  .h{font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:26px 0 12px}
+  .nt{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.07)}
+  .nt > b,.ntl > b{font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;display:block}
+  .nt > span,.ntl > span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.56);display:block;margin-top:4px}
+  [data-view="screens"] .h,[data-view="screens"] .h + div{display:none}
+  [data-view="notes"] .ph{display:none}
+  [data-view="notes"] .row-wrap{gap:0}
+  [data-density="tight"] .row-wrap{gap:14px}
+  [data-density="tight"] .ph{transform:scale(.82);transform-origin:top left;margin-right:-58px;margin-bottom:-124px}
+  [data-density="survey"] .row-wrap{gap:8px}
+  [data-density="survey"] .ph{transform:scale(.58);transform-origin:top left;margin-right:-138px;margin-bottom:-296px}
+  [data-ground="studio"]{color-scheme:dark}
+  [data-ground="studio"] .lead,[data-ground="studio"] .rowlab,[data-ground="studio"] .capd{color:rgba(242,237,230,.62)}
+  [data-ground="studio"] .h{color:rgba(242,237,230,.5)}
+  [data-ground="studio"] .nt,[data-ground="studio"] .ntl{border-color:rgba(242,237,230,.1)}
+  [data-ground="studio"] .nt > b,[data-ground="studio"] .ntl > b{color:#f2ede6}
+  [data-ground="studio"] .nt > span,[data-ground="studio"] .ntl > span{color:rgba(242,237,230,.6)}
+  [data-ground="studio"] .panel{background:#23201b}
+  [data-ground="studio"] .panel-alt{background:#2f2820}
+  [data-ground="studio"] .ph{box-shadow:0 1px 2px rgba(0,0,0,.5),0 18px 46px rgba(0,0,0,.55)}
+  [data-ground="neutral"] .panel{background:#f4f4f3}
+  [data-ground="neutral"] .panel-alt{background:#e8e8e6}
+  [data-ground="neutral"] .ph{box-shadow:0 1px 2px rgba(20,20,20,.08),0 14px 40px rgba(20,20,20,.1)}
+  .olab{display:flex;align-items:baseline;gap:8px;font:500 11.5px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.56);margin-bottom:9px}
+  .oid{font:700 10px/1 ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#201e1d;border-radius:999px}
+  .g{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:64px;gap:8px}
+  .w{background:#f7efe2;border-radius:16px;padding:11px;overflow:hidden;display:flex;flex-direction:column}
+  .v{font:600 21px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em}
+  .u{font-size:10px;font-weight:500;color:rgba(0,0,0,.56)}
+  #g1 .k{font:600 9px/1.1 Figtree,sans-serif;letter-spacing:.03em;color:rgba(0,0,0,.56)}
+  #g1 .sc{padding:14px 16px 16px}
+  .dk .ph{background:#141210;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45)}
+  .dk .cd,.dk .grp,.dk .w{background:#23201b}
+  .dk .row{border-bottom-color:rgba(242,237,230,.1)}
+  .dk .tier{color:#e2a468}
+  .dk .k{color:rgba(242,237,230,.5)}
+  .dk .v{color:#f2ede6}
+  .dk .u{color:rgba(242,237,230,.4)}
+  .dk #g1d .k{color:rgba(242,237,230,.5)}
+  .bl .ph{background:#fff;box-shadow:0 1px 2px rgba(16,24,38,.08),0 14px 40px rgba(16,24,38,.12)}
+  .bl .cd,.bl .grp,.bl .w{background:#eef3f9}
+  .bl .row{border-bottom-color:rgba(16,24,38,.08)}
+  .bl .tier{color:var(--ac)}
+  .logo path,.logo rect{fill:#201e1d}
+  .logo > g > g > path,.logo > g > g > rect{stroke:#201e1d;stroke-width:2.6;stroke-linejoin:round;paint-order:stroke}
+  .logo .lab path{fill:rgba(0,0,0,.42);stroke:none}
+  .logo .lp path{fill:#52A0D8;stroke:none}
+  .dk .logo path,.dk .logo rect{fill:#f2ede6}
+  .dk .logo > g > g > path{stroke:none}
+  .dk .logo > g > g > rect{stroke:#f2ede6;stroke-width:1.8}
+  .dk .logo .lab path{fill:rgba(242,237,230,.5);stroke:none}
+  .dk .logo .lp path{fill:#52A0D8;stroke:none}
+  .bl .logo path,.bl .logo rect{fill:#101826}
+  .bl .logo > g > g > path,.bl .logo > g > g > rect{stroke:#101826}
+  .bl .logo .lab path{fill:rgba(16,24,38,.45);stroke:none}
+  .bl .logo .lp path{fill:#52A0D8;stroke:none}
+  .cn .logo path,.cn .logo rect{fill:#182a3a}
+  .cn .logo > g > g > path,.cn .logo > g > g > rect{stroke:#182a3a}
+  .cn .logo .lab path{fill:#94a3b8;stroke:none}
+  .cn .logo .lp path{fill:#52A0D8;stroke:none}
+
+  .svc{color:rgba(0,0,0,.11)}
+  .dk .svc{color:rgba(242,237,230,.12)}
+  .bl .svc{color:rgba(16,24,38,.12)}
+  .bd .ph{background:#0d1a26;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45)}
+  .bd .cd,.bd .grp,.bd .w{background:#182a3a}
+  .bd .row{border-bottom-color:rgba(238,243,248,.1)}
+  .bd .tier{color:#8fc1e8}
+  .bd .k{color:rgba(238,243,248,.5)}
+  .bd .v{color:#eef3f9}
+  .bd .u{color:rgba(238,243,248,.4)}
+  .bd .logo path,.bd .logo rect{fill:#eef3f9}
+  .bd .logo > g > g > path{stroke:none}
+  .bd .logo > g > g > rect{stroke:#eef3f9;stroke-width:1.8}
+  .bd .logo .lab path{fill:rgba(238,243,248,.5);stroke:none}
+  .bd .logo .lp path{fill:#52A0D8;stroke:none}
+  .bd .svc{color:rgba(238,243,248,.12)}
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:16px 0 2px}
+</style>
+</helmet>
+<h1 style="font:800 26px/1.2 Figtree,sans-serif;color:#201e1d;margin:26px 0 6px;">Служебное · за входом куратора</h1>
+<p style="font:500 13px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.56);max-width:760px;margin:0 0 6px;">Раздел, который открывается только вошедшему куратору: версия сборки, состояние service worker, очистка кеша и выход. Кадр переехал сюда 1 сентября из канваса даты, где жил без владельца.</p>
+<p style="font:600 11px/1.6 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);margin:0 0 18px;">service-curator.v4.dc.html · экраны искать по data-screen-label</p>
+
+  <div class="ctr" data-contract="service-curator">
+    <div style="font:700 13px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8a4a20;margin:0 0 12px;">Контракт зоны</div>
+    <div class="spec"><b>фича</b><span data-v="служебный раздел, доступный за входом куратора: версия сборки, состояние service worker, очистка кеша, выход из режима куратора. Это не «Настройки» клиента — тот экран описан в settings-system.v4.dc.html"></span><i>зона заведена 1 сентября: кадр существовал в date-remainders без владельца и не сверялся никем</i></div>
+    <div class="spec"><b>источник</b><span data-v="главный файл для служебного раздела — этот. В date-remainders кадра больше нет"></span></div>
+    <div class="spec"><b>границы</b><span data-v="мои — содержимое служебного листа: ярусы, строки со значением, кнопки. Шапку листа и подложку рисует продукт по общему правилу листов (home-widgets, строка «шапка листа»)"></span></div>
+    <div class="spec"><b>кто видит</b><span data-v="только вошедший куратор; у клиента раздела нет вовсе, и пункта в настройках, ведущего к нему, тоже нет"></span></div>
+    <div class="spec"><b>вид · служебный лист</b><span data-v="лист на --bg радиусом 26 сверху, поля 18 по бокам. Ярус 10 px/700 в разрядку .16em прописными тоном чернил 56 %. Строка .row: имя 12,5 px/600 --tx слева, значение моноцифрами 12,5 px/600 чернил 56 % справа, разделитель 1 px чернил 7 %, высота 44. Действия — пилюли 44 радиусом 999 на --c2 тоном --ac 12,5 px/700; разрушающее («Очистить кеш») тоном --ac2"></span></div>
+    <div class="spec"><b>палитры</b><span data-v="все роли из v4-canvas.css; тёмная копия кадра идёт рядом. Литералов вне палитры в зоне нет"></span></div>
+    <div class="spec" style="border-bottom:none"><b>чего в зоне нет</b><span data-v="ни одного действия над данными клиента: правка дня, удаление записей и выгрузка живут в кабинете куратора. Служебный раздел трогает только устройство — кеш, версию, выход"></span></div>
+                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
+    <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12), направление column"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 02</b><span data-v="поля 18px 18px 0, выравнивание center, зазор 12px"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 03</b><span data-v="«Служебное» — шрифт 700 15px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 04</b><span data-v="флекс 1, поля 0 18px"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 05</b><span data-v="«Раздел виден только по входу куратора. Клиент сюда» — фон var(--tint), радиус 18px, поля 14px 15px, отступ сверху 18px, шрифт 500 11.5px/1.5 Figtree, цвет rgba(0,0,0,.56)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 06</b><span data-v="«Советы» — шрифт 700 10px/1 Figtree, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 20px 0 8px"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 07</b><span data-v="фон var(--c1), радиус 20px, поля 2px 16px"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 08</b><span data-v="выравнивание center, зазор 12px, поля 14px 0, разделитель 1px solid rgba(0,0,0,.07)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 09</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 10</b><span data-v="«Техлог» — шрифт 600 12.5px/1 Figtree, цвет rgba(0,0,0,.55)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 11</b><span data-v="«Что и почему сработало за день» — шрифт 500 10.5px/1.4 Figtree, цвет rgba(0,0,0,.56), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 12</b><span data-v="выравнивание center, зазор 12px, поля 14px 0"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 13</b><span data-v="«Раньше эти три кнопки стояли в шапке шторки совето» — шрифт 500 11px/1.5 Figtree, цвет rgba(0,0,0,.56), отступ сверху 14px"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · 14</b><span data-v="«служебный раздел» — поля 16px 18px 20px, шрифт 600 9.5px/1 Figtree, трекинг .18em, регистр uppercase, цвет rgba(0,0,0,.56), выключка center"></span></div>
+    <div class="ctrH">Разбор графики · SVG в кадрах</div>
+    <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · рисунок 03</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · рисунок 04</b><span data-v="кривая, точки M9 6l6 6-6 6"></span></div>
+    <div class="ctrH">Текст кадров дословно</div>
+    <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
+    <div class="spec"><b>Служебное · за входом куратора · текст</b><span data-v="Служебное › Раздел виден только по входу куратора. Клиент сюда не попадает ни из шапки, ни из настроек. › Советы › Техлог › Что и почему сработало за день › Диагностика › Почему совет не показался › Пул правил › Какие правила активны сейчас › Раньше эти три кнопки стояли в шапке шторки советов рядом с «Прочитать все» — на одном уровне с клиентским действием. › служебный раздел"></span></div>
+</div>
+
+<div style="margin-top:34px;">
+<div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:0 0 14px;">Служебный лист</div>
+<div class="row-wrap" style="display:flex;gap:30px;align-items:flex-start;">
+<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">Служебное</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.56);">за входом куратора</span></div><div class="ph" data-demo="stop" id="sv4" data-screen-label="Служебное · за входом куратора" style="width:375px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);display:flex;flex-direction:column;"><div style="padding:18px 18px 0;display:flex;align-items:center;gap:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span style="font:700 15px/1 Figtree,sans-serif;color:var(--tx);">Служебное</span></div><div style="flex:1;padding:0 18px;"><div style="background:var(--tint);border-radius:18px;padding:14px 15px;margin-top:18px;font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty;">Раздел виден только по входу куратора. Клиент сюда не попадает ни из шапки, ни из настроек.</div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:20px 0 8px;">Советы</div><div style="background:var(--c1);border-radius:20px;padding:2px 16px;"><div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid rgba(0,0,0,.07);"><span style="flex:1;"><span style="display:block;font:600 12.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Техлог</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);margin-top:5px;">Что и почему сработало за день</span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="2.75" stroke-linecap="round" style="flex:none;"><path d="M9 6l6 6-6 6"/></svg></div><div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid rgba(0,0,0,.07);"><span style="flex:1;"><span style="display:block;font:600 12.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Диагностика</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);margin-top:5px;">Почему совет не показался</span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="2.75" stroke-linecap="round" style="flex:none;"><path d="M9 6l6 6-6 6"/></svg></div><div style="display:flex;align-items:center;gap:12px;padding:14px 0;"><span style="flex:1;"><span style="display:block;font:600 12.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Пул правил</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);margin-top:5px;">Какие правила активны сейчас</span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="2.75" stroke-linecap="round" style="flex:none;"><path d="M9 6l6 6-6 6"/></svg></div></div><div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);margin-top:14px;text-wrap:pretty;">Раньше эти три кнопки стояли в шапке шторки советов рядом с «Прочитать все» — на одном уровне с клиентским действием.</div></div><div style="padding:16px 18px 20px;font:600 9.5px/1 Figtree,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:rgba(0,0,0,.56);text-align:center;">служебный раздел</div></div><div class="capd" style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="pal dk ph" data-demo="stop" id="sv4d" data-screen-label="Служебное · за входом куратора · тёмная" style="width:375px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--c1);border-radius:28px;box-shadow:0 1px 2px rgba(0,0,0,.45),0 14px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;"><div style="padding:18px 18px 0;display:flex;align-items:center;gap:12px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.63)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span style="font:700 15px/1 Figtree,sans-serif;color:var(--tx);">Служебное</span></div><div style="flex:1;padding:0 18px;"><div style="background:var(--tint);border-radius:18px;padding:14px 15px;margin-top:18px;font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(242,237,230,.63);text-wrap:pretty;">Раздел виден только по входу куратора. Клиент сюда не попадает ни из шапки, ни из настроек.</div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:20px 0 8px;">Советы</div><div style="background:var(--c1);border-radius:20px;padding:2px 16px;"><div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid rgba(242,237,230,.11000000000000001);"><span style="flex:1;"><span style="display:block;font:600 12.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Техлог</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(242,237,230,.56);margin-top:5px;">Что и почему сработало за день</span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.38)" stroke-width="2.75" stroke-linecap="round" style="flex:none;"><path d="M9 6l6 6-6 6"/></svg></div><div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid rgba(242,237,230,.11000000000000001);"><span style="flex:1;"><span style="display:block;font:600 12.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Диагностика</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(242,237,230,.56);margin-top:5px;">Почему совет не показался</span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.38)" stroke-width="2.75" stroke-linecap="round" style="flex:none;"><path d="M9 6l6 6-6 6"/></svg></div><div style="display:flex;align-items:center;gap:12px;padding:14px 0;"><span style="flex:1;"><span style="display:block;font:600 12.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Пул правил</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(242,237,230,.56);margin-top:5px;">Какие правила активны сейчас</span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.38)" stroke-width="2.75" stroke-linecap="round" style="flex:none;"><path d="M9 6l6 6-6 6"/></svg></div></div><div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(242,237,230,.56);margin-top:14px;text-wrap:pretty;">Раньше эти три кнопки стояли в шапке шторки советов рядом с «Прочитать все» — на одном уровне с клиентским действием.</div></div><div style="padding:16px 18px 20px;font:600 9.5px/1 Figtree,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:rgba(242,237,230,.56);text-align:center;">служебный раздел</div></div></div></div>
+</div>
+</div>
+</x-dc>
+</body>
+</html>

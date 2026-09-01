@@ -22,23 +22,23 @@
   .icb{width:168px;height:168px;flex:none;position:relative;display:flex;align-items:center;justify-content:center;font-family:Figtree,system-ui,sans-serif;font-weight:800;font-size:76px;line-height:1;padding-bottom:6px}
   .icg{position:absolute;inset:0;border-radius:16px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
   .safe{position:absolute;left:10%;top:10%;right:10%;bottom:10%;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(180,68,42,.55)}
-  .mn{font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.55)}
+  .mn{font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56)}
   .kv{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);align-items:baseline}
   .kv b{flex:none;width:126px;font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
   .kv span{font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.62);text-wrap:pretty}
-  .no{display:flex;gap:8px;align-items:flex-start;font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-bottom:8px}
+  .no{display:flex;gap:8px;align-items:flex-start;font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);margin-bottom:8px}
   .no i{flex:none;width:14px;height:14px;margin-top:2px;border-radius:999px;background:rgba(180,68,42,.14);display:flex;align-items:center;justify-content:center;font:800 9px/1 Figtree,sans-serif;color:#b4442a;font-style:normal}
-  .cap{width:330px;margin-top:11px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.5);text-wrap:pretty}
+  .cap{width:330px;margin-top:11px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty}
   .bm{width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none}
   .bml{font-family:Figtree,system-ui,sans-serif;font-weight:800;font-size:25px;line-height:1;color:var(--ac);padding-bottom:2px}
   .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
   .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
   .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
   .spec>span[data-v]::before{content:attr(data-v)}
-  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);font-style:normal;text-wrap:pretty}
   .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
   .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
-  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:16px 0 2px}
 </style>
 </helmet>
 
@@ -51,13 +51,13 @@
     <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Первый экран запуска: на iPhone пустой фон, на Android знак по лекалу спиннера</span>
   </div>
   <p style="margin:0 0 8px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Этот кадр рисует не приложение, а система — из иконки и манифеста: доступны иконка, подпись и два цвета, вёрстки там нет. Дальше платформы расходятся. На iPhone системных картинок запуска мы не задаём, поэтому по центру не рисуется ничего — только кремовый фон, на котором сразу проявляется наш круг ожидания. На Android кадр собирается из иконки ярлыка и убрать её нечем, поэтому там иконка построена на той же геометрии, что знак ожидания: тот же диск, тот же диаметр, буква по оптическому центру — круг остаётся на месте, буква гаснет, и на её месте появляется дуга. Состояния ожидания (медленная сеть, отказ, повтор) описаны в канвасе «Спиннеры», здесь только кадр запуска, подпись, цвета и стык.</p>
-  <p style="margin:0 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">В пакете: app-splash.v4.dc.html · манифест apps/web/public/manifest.json · экраны искать по data-screen-label</p>
+  <p style="margin:0 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);">В пакете: app-splash.v4.dc.html · манифест apps/web/public/manifest.json · экраны искать по data-screen-label</p>
 
   <div class="ctr" data-contract="app-splash">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <span class="ctrTag">КОНТРАКТ</span>
       <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
-      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
 
     <div class="ctrH">Что это и чьё</div>
@@ -107,7 +107,7 @@
     <div class="spec"><b>safe-area и кнопка назад</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «safe-area · правило продукта» и «аппаратная кнопка назад · правило продукта». Местное отличие: на системном кадре врезки задаёт платформа, наших правил там нет; в загрузчике знак центруется между врезками, аппаратная кнопка выходит из приложения"></span></div>
     <div class="spec" style="border-bottom:none"><b>появление Главной</b><span data-v="один кадр: круг гаснет, экран приезжает целиком"></span><i>скелетонов в продукте нет — причина записана в spinners.v4.dc.html</i></div>
 
-                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Стык · загрузчик · 01</b><span data-v="выравнивание center, распределение center"></span></div>
     <div class="spec"><b>Стык · загрузчик · 02</b><span data-v="ширина 64px, высота 64px"></span></div>
@@ -116,7 +116,7 @@
     <div class="spec"><b>Стык · Главная · 03</b><span data-v="«18» — моноцифры: шрифт 800 12px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Стык · Главная · 04</b><span data-v="флекс 1, высота 3px, радиус 999px, фон rgba(var(--ink),.09)"></span></div>
     <div class="spec"><b>Стык · Главная · 05</b><span data-v="ширина 34%, высота 3px, радиус 999px, фон var(--acs)"></span></div>
-    <div class="spec"><b>Стык · Главная · 06</b><span data-v="«Эксперт» — шрифт 600 10px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
+    <div class="spec"><b>Стык · Главная · 06</b><span data-v="«Эксперт» — шрифт 600 10px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Стык · Главная · 07</b><span data-v="выравнивание center, зазор 8px, отступ сверху 14px"></span></div>
     <div class="spec"><b>Стык · Главная · 08</b><span data-v="ширина 34px, высота 34px, флекс none, радиус 999px, фон var(--c1)"></span></div>
     <div class="spec"><b>Стык · Главная · 09</b><span data-v="«вс, 9 августа» — флекс 1, высота 36px, радиус 999px, фон var(--c1), выравнивание center, распределение center, шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
@@ -137,7 +137,7 @@
   <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
 
     <div style="background:#fffaf1;border-radius:24px;padding:24px 26px;flex:none;width:600px;">
-      <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.45);">iPhone · около 400 мс</div>
+      <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.56);">iPhone · около 400 мс</div>
       <div style="display:flex;align-items:center;gap:18px;margin-top:24px;">
         <span style="width:76px;height:76px;flex:none;border-radius:20px;background:#fffaf1;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);"></span>
         <span style="flex:none;color:rgba(0,0,0,.2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
@@ -147,7 +147,7 @@
         <span style="flex:none;color:rgba(0,0,0,.2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         <span style="width:76px;height:76px;flex:none;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="68" height="68" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="rgba(198,113,57,.28)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="#c67139" stroke-width="2.6" stroke-linecap="round"/></svg></span>
       </div>
-      <div style="display:flex;gap:18px;margin-top:12px;font:600 10px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.4);">
+      <div style="display:flex;gap:18px;margin-top:12px;font:600 10px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.56);">
         <span style="width:76px;flex:none;">пустой кадр системы</span><span style="width:18px;flex:none;"></span>
         <span style="width:76px;flex:none;">круг проявляется</span><span style="width:18px;flex:none;"></span>
         <span style="width:76px;flex:none;">дуга появляется</span><span style="width:18px;flex:none;"></span>
@@ -157,7 +157,7 @@
 
       <div style="height:1px;background:rgba(0,0,0,.07);margin:24px 0;"></div>
 
-      <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.45);">Android · тот же хвост, но кадр системы с иконкой</div>
+      <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.56);">Android · тот же хвост, но кадр системы с иконкой</div>
       <div style="display:flex;align-items:center;gap:18px;margin-top:24px;">
         <span style="width:76px;height:76px;flex:none;display:flex;align-items:center;justify-content:center;"><span style="font:800 34px/1 Figtree,system-ui,sans-serif;color:#a1471c;padding-bottom:3px;">H</span></span>
         <span style="flex:none;color:rgba(0,0,0,.2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
@@ -167,7 +167,7 @@
         <span style="flex:none;color:rgba(0,0,0,.2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
         <span style="width:76px;height:76px;flex:none;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="68" height="68" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="rgba(198,113,57,.28)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="#c67139" stroke-width="2.6" stroke-linecap="round"/></svg></span>
       </div>
-      <div style="display:flex;gap:18px;margin-top:12px;font:600 10px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.4);">
+      <div style="display:flex;gap:18px;margin-top:12px;font:600 10px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.56);">
         <span style="width:76px;flex:none;">иконка системы</span><span style="width:18px;flex:none;"></span>
         <span style="width:76px;flex:none;">буква гаснет</span><span style="width:18px;flex:none;"></span>
         <span style="width:76px;flex:none;">дуга появляется</span><span style="width:18px;flex:none;"></span>
@@ -227,24 +227,24 @@
   <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
 
     <div style="background:#fffaf1;border-radius:24px;padding:24px;flex:none;">
-      <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.45);margin-bottom:18px;">Исходник · содержимое внутри 80 %</div>
+      <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.56);margin-bottom:18px;">Исходник · содержимое внутри 80 %</div>
       <div style="display:flex;gap:24px;align-items:flex-start;">
         <div>
           <div class="icb" style="background:#fffaf1;color:#a1471c;border-radius:16px;">H<span class="safe"></span><span class="icg"></span></div>
-          <div style="width:168px;margin-top:10px;font:500 11px/1.45 Figtree,sans-serif;color:rgba(0,0,0,.5);text-wrap:pretty;">Заливка во весь квадрат, буква — внутри тонкого круга safe zone.</div>
+          <div style="width:168px;margin-top:10px;font:500 11px/1.45 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty;">Заливка во весь квадрат, буква — внутри тонкого круга safe zone.</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:16px;">
           <div style="display:flex;gap:14px;">
-            <div style="text-align:center;"><div class="icb" style="width:92px;height:92px;font-size:42px;background:#fffaf1;color:#a1471c;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);">H</div><div style="font:600 10px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">круг</div></div>
-            <div style="text-align:center;"><div class="icb" style="width:92px;height:92px;font-size:42px;background:#fffaf1;color:#a1471c;border-radius:28px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);">H</div><div style="font:600 10px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">squircle</div></div>
-            <div style="text-align:center;"><div class="icb" style="width:92px;height:92px;font-size:42px;background:#fffaf1;color:#a1471c;border-radius:16px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);">H</div><div style="font:600 10px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">скругл. квадрат</div></div>
+            <div style="text-align:center;"><div class="icb" style="width:92px;height:92px;font-size:42px;background:#fffaf1;color:#a1471c;border-radius:999px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);">H</div><div style="font:600 10px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.56);margin-top:7px;">круг</div></div>
+            <div style="text-align:center;"><div class="icb" style="width:92px;height:92px;font-size:42px;background:#fffaf1;color:#a1471c;border-radius:28px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);">H</div><div style="font:600 10px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.56);margin-top:7px;">squircle</div></div>
+            <div style="text-align:center;"><div class="icb" style="width:92px;height:92px;font-size:42px;background:#fffaf1;color:#a1471c;border-radius:16px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);">H</div><div style="font:600 10px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.56);margin-top:7px;">скругл. квадрат</div></div>
           </div>
-          <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);max-width:330px;text-wrap:pretty;">Одна картинка на трёх масках: форму выбирает лончер, поэтому скругление в самой иконке рисовать нельзя — только фон до края и буква по центру. Обводка на трёх примерах показывает границу маски, а не подложку: подложки в файле нет.</div>
+          <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);max-width:330px;text-wrap:pretty;">Одна картинка на трёх масках: форму выбирает лончер, поэтому скругление в самой иконке рисовать нельзя — только фон до края и буква по центру. Обводка на трёх примерах показывает границу маски, а не подложку: подложки в файле нет.</div>
           <div style="display:flex;gap:9px;align-items:center;padding:12px 14px;background:#f7efe2;border-radius:16px;max-width:330px;">
             <span style="width:34px;height:34px;flex:none;color:#a1471c;font:800 15px/1 Figtree,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;padding-bottom:2px;">H</span>
             <span style="width:34px;height:34px;flex:none;border-radius:10px;background:#dcd6cc;"></span>
             <span style="width:34px;height:34px;flex:none;border-radius:10px;background:#d2ccc2;"></span>
-            <span style="font:500 11px/1.45 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-left:4px;text-wrap:pretty;">Проверка одна: находится ли знак в ряду чужих иконок за полсекунды.</span>
+            <span style="font:500 11px/1.45 Figtree,sans-serif;color:rgba(0,0,0,.56);margin-left:4px;text-wrap:pretty;">Проверка одна: находится ли знак в ряду чужих иконок за полсекунды.</span>
           </div>
         </div>
       </div>
@@ -305,7 +305,7 @@
           <div style="font:600 10px/1.3 Figtree,sans-serif;color:#b4442a;margin-top:8px;">альфа → чёрный</div>
         </div>
       </div>
-      <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-top:16px;text-wrap:pretty;">iOS не понимает maskable и не уважает прозрачность: альфа заливается чёрным. Поэтому <span class="mn">apple-touch-icon</span> — отдельный PNG 180 × 180 с залитой подложкой <span class="mn">#efe3cf</span> и без скругления в самой картинке: углы система срежет сама.</div>
+      <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.56);margin-top:16px;text-wrap:pretty;">iOS не понимает maskable и не уважает прозрачность: альфа заливается чёрным. Поэтому <span class="mn">apple-touch-icon</span> — отдельный PNG 180 × 180 с залитой подложкой <span class="mn">#efe3cf</span> и без скругления в самой картинке: углы система срежет сама.</div>
     </div>
     </div>
 
@@ -353,7 +353,7 @@
         <div style="display:flex;align-items:center;gap:9px;">
           <span class="n" style="font:800 12px/1 Figtree,sans-serif;color:var(--ac);">18</span>
           <span style="flex:1;height:3px;border-radius:999px;background:rgba(var(--ink),.09);"><span style="display:block;width:34%;height:3px;border-radius:999px;background:var(--acs);"></span></span>
-          <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">Эксперт</span>
+          <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Эксперт</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
           <span style="width:34px;height:34px;flex:none;border-radius:999px;background:var(--c1);"></span>

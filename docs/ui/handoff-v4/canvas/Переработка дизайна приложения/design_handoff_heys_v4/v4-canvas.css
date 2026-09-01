@@ -1,8 +1,13 @@
 :root{
+  /* Затемнение под листами: тон НАБОРА, а не песочный литерал. color-mix по чернилам —
+     по образцу --v4-mark-*: четыре ручных объявления разошлись бы при следующей правке. */
+  --v4-scrim-dim:color-mix(in srgb, rgb(var(--ink)) 45%, transparent);
+  --v4-scrim-dim-strong:color-mix(in srgb, rgb(var(--ink)) 90%, transparent);
+
   --val-bad:#a8382b; --val-good:#7a8a5e; --ovl:#d99a63;
-  --fab:#c67139; --on-fab:#2b1608; --wat:#5e808f; --on-wat:#ffffff;
+  --fab:#c67139; --on-fab:#2b1608; --wat:#547482; --on-wat:#ffffff;
   --bg:#fffaf1; --c1:#f7efe2; --c2:#efe3cf; --tint:#f6e6dd; --tx:#201e1d; --ink:0,0,0;
-  --v4-line:rgba(var(--ink),.08); --v4-track:rgba(var(--ink),.12); --v4-edge:rgba(var(--ink),.18);
+  --v4-line:rgba(var(--ink),.08); --v4-track:rgba(var(--ink),.12); --v4-edge:rgba(var(--ink),.18); --v4-plan:rgba(var(--ink),.22);
   --ac:#8a4a20; --ac2:#a1471c; --acs:#c67139; --on-acs:#2b1608;
   --gr:#5c6a45; --gr2:#7a8a5e; --gr-bg:#eaefe0; --red:#b4442a; --warn:#c9922e; --on-gr:#171d0d;
   --kb:#e5ded2; --kbk:#fffaf1; --md:#fffaf1; --edge:#d6cec1;
@@ -20,7 +25,7 @@
 }
 .pal.bl{
   --val-bad:#a8382b; --val-good:#3e9a6b; --ovl:#b03a24;
-  --fab:#2e7cc0; --on-fab:#ffffff; --wat:#3d7f9e; --on-wat:#ffffff;
+  --fab:#286da9; --on-fab:#ffffff; --wat:#37718b; --on-wat:#ffffff;
   --bg:#ffffff; --c1:#eef3f9; --c2:#e2ecf6; --tint:#fbe6e2; --tx:#101826; --ink:16,24,38;
   --ac:#1d5e96; --ac2:#b03a24; --acs:#1d5e96; --on-acs:#ffffff;
   --gr:#1f6e4d; --gr2:#4f9a78; --gr-bg:#e6f3ec; --red:#b03a24; --warn:#c0871c; --on-gr:#04231a;
@@ -29,7 +34,7 @@
 }
 .pal.bldk{
   --val-bad:#e08a72; --val-good:#4caf7d; --ovl:#f0a08a;
-  --fab:#2e7cc0; --on-fab:#ffffff; --wat:#7fb6d0; --on-wat:#0b1621;
+  --fab:#286da9; --on-fab:#ffffff; --wat:#7fb6d0; --on-wat:#0b1621;
   --bg:#0d1a26; --c1:#182a3a; --c2:#1e3448; --tint:#33242a; --tx:#e8eef6; --ink:232,238,246;
   --ac:#7fbceb; --ac2:#f0a08a; --acs:#3f8fd0; --on-acs:#0b1621;
   --gr:#7fd0a8; --gr2:#6fbf9a; --gr-bg:#16302a; --red:#f08a6a; --warn:#e6b567; --on-gr:#052019;
@@ -56,6 +61,16 @@ a:hover{color:#c67139}
 .nt{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.07)}
 .nt>b,.ntl>b{font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;display:block}
 .nt>span,.ntl>span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);display:block;margin-top:4px}
+
+/* ПАРЫ «ЗАЛИВКА → ЕЁ ТЕКСТ» (решение 1 сентября)
+   Каждая заливочная роль обязана иметь парную роль текста, читаемую на ней:
+   --acs → --on-acs (4,77) · --fab → --on-fab (5,39) · --wat → --on-wat (5,00).
+   --gr в этот список НЕ входит: это роль ТЕКСТА, а не заливки — чёрный на ней даёт 3,60,
+   то есть читаемой пары у неё быть не может. Её заливка — --gr-bg, и текст на ней берёт --gr.
+   Роли без пары (--gr2, --ovl, --tint, --c1, --c2) текстом не красят вовсе:
+   текст на них берёт --tx, --ac, --ac2 или --gr. Проверку держит contract-audit.js.
+   Синий --fab затемнён с #2e7cc0 до #286da9 (значение владельца, 1 сентября):
+   белый на прежнем давал 4,41 < 4,5; на новом 5,45, тёплый белый 5,08, как текст 4,89. */
 
 /* 375 — ширина сверки экрана (правило проекта). На 330 кадр врал о переносах:
    строка, влезающая на кадре, на устройстве уходила на вторую */
