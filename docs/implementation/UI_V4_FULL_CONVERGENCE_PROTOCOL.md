@@ -437,3 +437,26 @@ build, push и deploy не выполнялись.
   уже имеет точную Canvas-привязку.
 - Focused-набор: 20/20; manifest-check и `git diff --check` зелёные. Source
   commit: `6381b2d35`. Generated/public scope не включался.
+
+### 19. Automation-first: typed assertions и второй strength-pair — готовы
+
+- Parser v1 раскладывает строку не в один взаимоисключающий тип, а в набор
+  `text/layout/typography/color/dimensions/semantic` assertions с обратимыми
+  source spans, `sourceHash` и статусом `parsed/partial/unsupported`.
+- Gate fail-closed: `=` требует полностью разобранную строку и matched evidence
+  на каждый assertion; `≠` — конкретный mismatched assertion, `reasonCode` и
+  разрешимый `decisionRef`; `—` — закрытый `naKind`. Parser сам вердикты не
+  меняет.
+- Весь пакет обработан без невалидных документов: 4 767 из 15 574 строк
+  полностью разбираются (30,6%), 6 167 частично, 4 640 пока unsupported;
+  получено 29 720 assertions. Эти числа вошли в машинный progress report.
+- Добавлен paired diagnostic `strength-plan-feed-sand`: реальный
+  `ProgramPlanCard` связан с `План в ленте дня / И3`. Обе стороны имеют Figtree,
+  ноль console/page errors и точный boundary; runtime 375×450, Canvas 375×469.
+  Mismatch ожидаемый и уже типизирован: Canvas показывает ранний старт, продукт
+  сознательно оставляет перенос единственным главным действием.
+- Инвентаризация оставшихся 1 272 `?` конструктора: 477 DOM/text, 739 visual, 51
+  semantic и 5 conflict/unsupported; 1 164 строки точно адресованы 52 кадрам.
+  Первый безопасный batch — 89 строк: И3 (34), З1 (28), А2 (27).
+- Общий focused-набор: 29/29; оба paired capture воспроизводятся. Source commit:
+  `5ba27d9b7`. Вердикты на этом инфраструктурном шаге не менялись.
