@@ -74,9 +74,12 @@ describe('UI v4 visual harness', () => {
       );
       expect(['sand', 'sand-dark', 'blue', 'blue-dark']).toContain(item.themeId);
     }
+    expect(UI_V4_VISUAL_CASES.find((entry) => entry.kind === 'demo-food-copy-existing')?.viewport)
+      .toEqual({ width: 399, height: 812 });
+    expect(UI_V4_VISUAL_CASES.find((entry) => entry.kind === 'demo-food-move-existing')?.viewport)
+      .toEqual({ width: 375, height: 812 });
     for (const item of UI_V4_VISUAL_CASES.filter((entry) =>
       ['demo-food-copy-existing', 'demo-food-move-existing'].includes(entry.kind))) {
-      expect(item.viewport).toEqual({ width: 375, height: 812 });
       expect(item.themeId).toBe('sand');
     }
     expect(
@@ -95,6 +98,7 @@ describe('UI v4 visual harness', () => {
     expect(paired.map((item) => item.id)).toContain('strength-superset-create-sand');
     expect(paired.map((item) => item.id)).toContain('norm-correction-lowered-sand');
     expect(paired.map((item) => item.id)).toContain('food-copy-empty-target-sand');
+    expect(paired.map((item) => item.id)).toContain('food-copy-existing-target-sand');
     for (const item of paired) {
       expect(item.captureSelector, item.id).toBeTruthy();
       expect(item.canvasFrame.palette, item.id).toBe(item.themeId);

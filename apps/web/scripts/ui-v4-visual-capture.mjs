@@ -338,7 +338,8 @@ async function openCase(browser, item, snapshot) {
         stubGamificationMerge:
           item.kind === 'demo-registration' ||
           item.kind === 'demo-cycle-picker' ||
-          item.kind === 'demo-food-copy-empty',
+          item.kind === 'demo-food-copy-empty' ||
+          item.kind === 'demo-food-copy-existing',
       });
       const tabLabels = { widgets: 'Главная', diary: 'Питание' };
       const tabLabel = tabLabels[item.tab];
@@ -1196,14 +1197,14 @@ async function openCase(browser, item, snapshot) {
       await page.evaluate((themeId) => {
         if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
         const sourceItems = [
-          { id: 'visual-soba', name: 'Лапша соба варёная', grams: 137, kcal100: 115 },
+          { id: 'visual-soba', name: 'Лапша соба варёная', grams: 137, kcal100: 114.6 },
           { id: 'visual-sauce', name: "Соус Хеллманн'с Бургер Гриль", grams: 30, kcal100: 270 },
-          { id: 'visual-coffee', name: 'Домашний кофе', grams: 300, kcal100: 17 },
+          { id: 'visual-coffee', name: 'Домашний кофе', grams: 300, kcal100: 16.67 },
           { id: 'visual-chicken', name: 'Куриная грудка', grams: 160, kcal100: 165 },
-          { id: 'visual-cucumber', name: 'Огурец', grams: 120, kcal100: 15 },
-          { id: 'visual-tomato', name: 'Помидор', grams: 140, kcal100: 18 },
-          { id: 'visual-oil', name: 'Оливковое масло', grams: 10, kcal100: 884 },
-          { id: 'visual-bread', name: 'Хлеб цельнозерновой', grams: 45, kcal100: 247 },
+          { id: 'visual-oil', name: 'Оливковое масло', grams: 50, kcal100: 884 },
+          { id: 'visual-bread', name: 'Хлеб цельнозерновой', grams: 100, kcal100: 247 },
+          { id: 'visual-cheese', name: 'Сыр', grams: 80, kcal100: 350 },
+          { id: 'visual-avocado', name: 'Авокадо', grams: 45, kcal100: 160 },
         ];
         window.HEYS.CopyMealModal.show({
           sourceMeal: {
@@ -1221,10 +1222,10 @@ async function openCase(browser, item, snapshot) {
               items: sourceItems,
             },
             {
-              id: 'visual-breakfast',
-              name: 'Завтрак',
-              time: '09:00',
-              items: [{ id: 'visual-oatmeal', name: 'Каша', grams: 200, kcal100: 92 }],
+              id: 'visual-snack',
+              name: 'Перекус',
+              time: '10:40',
+              items: [{ id: 'visual-target-coffee', name: 'Домашний кофе', grams: 100, kcal100: 17 }],
             },
           ],
           onCopyToExisting: () => {},
@@ -1514,6 +1515,17 @@ async function openCase(browser, item, snapshot) {
         const primary = sheet?.querySelector('.meal-transfer-v4__button--primary');
         const sheetBox = sheet?.getBoundingClientRect();
         const primaryBox = primary?.getBoundingClientRect();
+        const relativeRect = (target) => {
+          if (!sheetBox || !target) return null;
+          const box = target.getBoundingClientRect();
+          return {
+            x: Math.round((box.x - sheetBox.x) * 100) / 100,
+            y: Math.round((box.y - sheetBox.y) * 100) / 100,
+            width: Math.round(box.width * 100) / 100,
+            height: Math.round(box.height * 100) / 100,
+          };
+        };
+        const targets = [...(sheet?.querySelectorAll('.meal-transfer-v4__target') || [])];
         return {
           productCount: productList?.children.length || 0,
           productListClientHeight: productList?.clientHeight || 0,
@@ -1526,6 +1538,16 @@ async function openCase(browser, item, snapshot) {
               primaryBox.bottom <= sheetBox.bottom,
           ),
           primaryText: primary?.textContent || '',
+          geometry: {
+            header: relativeRect(sheet?.querySelector('.meal-transfer-v4__top')),
+            tierRow: relativeRect(sheet?.querySelector('.meal-transfer-v4__tier-row')),
+            productList: relativeRect(productList),
+            products: [...(productList?.children || [])].slice(0, 3).map(relativeRect),
+            targetTier: relativeRect(sheet?.querySelector('.meal-transfer-v4__tier')),
+            targets: targets.map(relativeRect),
+            summary: relativeRect(sheet?.querySelector('.meal-transfer-v4__summary')),
+            actions: relativeRect(sheet?.querySelector('.meal-transfer-v4__actions')),
+          },
         };
       });
       if (
@@ -1753,7 +1775,34 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
               },
             };
           })
-        : null;
+        : item.kind === 'demo-food-copy-existing'
+          ? await frame.evaluate((node) => {
+              const rootBox = node.getBoundingClientRect();
+              const relativeRect = (target) => {
+                if (!target) return null;
+                const box = target.getBoundingClientRect();
+                return {
+                  x: Math.round((box.x - rootBox.x) * 100) / 100,
+                  y: Math.round((box.y - rootBox.y) * 100) / 100,
+                  width: Math.round(box.width * 100) / 100,
+                  height: Math.round(box.height * 100) / 100,
+                };
+              };
+              const content = node.querySelector('.sc');
+              const children = content ? [...content.children] : [];
+              return {
+                geometry: {
+                  header: relativeRect(node.querySelector('.top')),
+                  tierRow: relativeRect(children[0]),
+                  products: children.slice(1, 4).map(relativeRect),
+                  targetTier: relativeRect(children[4]),
+                  targets: children.slice(5, 7).map(relativeRect),
+                  summary: relativeRect(children[7]),
+                  actions: relativeRect(children[8]),
+                },
+              };
+            })
+          : null;
     const file = path.join(OUT_DIR, `${item.id}.canvas.png`);
     if (item.canvasFrame.captureSelector) {
       const boundary = frame.locator(item.canvasFrame.captureSelector);

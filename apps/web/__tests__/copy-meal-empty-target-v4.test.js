@@ -68,13 +68,13 @@ describe('food-meal · копирование без целей', () => {
     expect(CSS).toMatch(/\.meal-transfer-v4__empty\s*{[^}]*color:\s*var\(--v4-ink-data\)/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__empty\s*{[^}]*font-size:\s*11px/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__empty\s*{[^}]*line-height:\s*1\.5/s);
-    expect(CSS).toMatch(/\.meal-transfer-v4__items\s*{[^}]*flex:\s*1 1 auto[^}]*padding:\s*0 18px/s);
-    expect(CSS).toMatch(/\.meal-transfer-v4__product-list\s*{[^}]*flex:\s*1 1 auto[^}]*min-height:\s*120px/s);
-    expect(CSS).toMatch(/\.meal-transfer-v4__product-list\s*{[^}]*margin-top:\s*8px/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__items\s*{[^}]*flex:\s*0 1 auto[^}]*padding:\s*6px 18px 0/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__product-list\s*{[^}]*flex:\s*0 1 262px[^}]*max-height:\s*262px[^}]*min-height:\s*120px/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__product-list\s*{[^}]*margin-top:\s*9px/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__range\s*{[^}]*height:\s*14px\s*!important[^}]*min-height:\s*0\s*!important[^}]*padding:\s*0\s*!important[^}]*border:\s*0/s);
-    expect(CSS).toMatch(/\.meal-transfer-v4__footer\s*{[^}]*margin-top:\s*auto/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__footer\s*{[^}]*margin-top:\s*0/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__sheet--empty-targets \.meal-transfer-v4__items\s*{[^}]*flex:\s*0 0 auto[^}]*padding-top:\s*6px/s);
-    expect(CSS).toMatch(/\.meal-transfer-v4__sheet--empty-targets \.meal-transfer-v4__product-list\s*{[^}]*flex:\s*0 0 auto[^}]*min-height:\s*0/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__sheet--empty-targets \.meal-transfer-v4__product-list\s*{[^}]*flex:\s*0 0 auto[^}]*min-height:\s*0[^}]*margin-top:\s*8px/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__sheet--empty-targets \.meal-transfer-v4__footer\s*{[^}]*margin-top:\s*0/s);
 
     const targets = [...document.querySelectorAll('input[name="copy-meal-target"]')];

@@ -4366,10 +4366,10 @@ button.meal-quality-badge:active {
 
 .meal-transfer-v4__items {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   flex-direction: column;
   min-height: 0;
-  padding: 0 18px;
+  padding: 6px 18px 0;
 }
 
 .meal-transfer-v4__tier-row {
@@ -4405,11 +4405,12 @@ button.meal-quality-badge:active {
 
 .meal-transfer-v4__product-list {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 1 262px;
   flex-direction: column;
   gap: 8px;
+  max-height: 262px;
   min-height: 120px;
-  margin-top: 8px;
+  margin-top: 9px;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -4613,6 +4614,7 @@ button.meal-quality-badge:active {
   align-items: center;
   gap: 11px;
   min-width: 0;
+  margin: 0;
   padding: 14px;
   color: var(--v4-ink);
   background: var(--v4-card);
@@ -4648,7 +4650,7 @@ button.meal-quality-badge:active {
 
 .meal-transfer-v4__footer {
   flex: 0 0 auto;
-  margin-top: auto;
+  margin-top: 0;
   background: var(--v4-bg);
 }
 
@@ -4660,6 +4662,7 @@ button.meal-quality-badge:active {
 .meal-transfer-v4__sheet--empty-targets .meal-transfer-v4__product-list {
   flex: 0 0 auto;
   min-height: 0;
+  margin-top: 8px;
 }
 
 .meal-transfer-v4__sheet--empty-targets .meal-transfer-v4__footer {

@@ -191,8 +191,16 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     kind: 'demo-food-copy-existing',
     tab: 'diary',
     themeId: 'sand',
-    viewport: { width: 375, height: 812 },
+    viewport: { width: 399, height: 812 },
     rootSelector: '.copy-meal-modal',
+    captureSelector: '.copy-meal-modal.meal-transfer-v4__sheet',
+    canvasFrame: {
+      file: 'food-meal.v4.dc.html',
+      label: 'Действие · копировать',
+      oid: 'FM10',
+      palette: 'sand',
+      pixelAlign: true,
+    },
   },
   {
     id: 'food-move-existing-target-sand',
