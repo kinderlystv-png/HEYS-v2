@@ -415,3 +415,25 @@ build, push и deploy не выполнялись.
   composite-кадр переноса и `missed-pending`. Они адресованы в журнале
   расхождений; canvas-сноска об отсутствии операции переноса отмечена
   устаревшей.
+
+### 18. Automation-first: каноническая пара Canvas ↔ runtime — базовый контур готов
+
+- Canvas-index теперь сохраняет обязательный `data-oid`, source identity,
+  palette и стабильный locator каждого кадра. Resolver принимает пару
+  `label + oid` и fail-closed отклоняет отсутствующий, дублирующийся или
+  переименованный кадр.
+- Visual harness получил element-boundary capture и живую каноническую сторону:
+  Canvas и runtime снимаются одним Chromium, с одинаковыми locale, timezone, DPR
+  и локальным Figtree. Resize эталона запрещён; сохраняются обе стороны, diff и
+  JSON evidence. Старый runtime-baseline не считается Canvas.
+- Первый парный сценарий связан с `strength-builder / Конструктор · итоги / Б3`.
+  Capture воспроизводится без console/page errors и с подтверждённым Figtree, но
+  честно красный: runtime имеет границу 375×812, Canvas — 375×1346; также
+  различаются композиция и данные. Вердикты этим прогоном не менялись.
+- Добавлен `scripts/ui-v4-progress-report.mjs`: fail-closed human/JSON отчёт
+  считает строки, кадры и readiness visual-сценариев из текущих канонических
+  источников. Сейчас: `=` 9 474 (60,8%), `≠` 1 100 (7,1%), `?` 1 510 (9,7%), `—`
+  3 490 (22,4%); 738/738 уникальных кадров имеют evidence; 1 из 31 visual cases
+  уже имеет точную Canvas-привязку.
+- Focused-набор: 20/20; manifest-check и `git diff --check` зелёные. Source
+  commit: `6381b2d35`. Generated/public scope не включался.
