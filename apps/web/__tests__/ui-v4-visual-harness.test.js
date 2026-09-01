@@ -53,6 +53,7 @@ describe('UI v4 visual harness', () => {
         'food-copy-existing-target-sand',
         'food-move-existing-target-sand',
         'reports-whatif-inline-sand',
+        'strength-finish-sand',
       ]),
     );
     for (const item of UI_V4_VISUAL_CASES.filter((entry) => entry.kind === 'demo-food-copy-empty')) {

@@ -455,6 +455,100 @@ describe('bodyWeightKg · тоннаж дня совпадает с констр
     // 70 × 0.95 × 10 = 665
     expect(HEYS.dayTrainings.computeDayTotalTonnage('2026-08-30')).toBe(665);
   });
+
+  it('рекорд подхода не включает дроп, хотя общий тоннаж включает всю работу', () => {
+    const HEYS = loadWithStore(dayWith(80));
+    const records = HEYS.dayTrainings.exerciseRecordsFromApproaches([{
+      weightKg: '75', reps: 8, done: true,
+      drops: [{ weightKg: '60', reps: 10, done: true }],
+    }]);
+    expect(records.maxW).toBe(75);
+    expect(records.maxSet).toBe(600);
+    expect(records.total).toBe(1200);
+  });
+
+  it('явно незавершённый подход не становится историческим рекордом', () => {
+    const HEYS = loadWithStore(dayWith(80));
+    const records = HEYS.dayTrainings.exerciseRecordsFromApproaches([
+      { weightKg: '100', reps: 10, done: false },
+      { weightKg: '70', reps: 8, done: true },
+    ]);
+    expect(records.maxW).toBe(70);
+    expect(records.maxSet).toBe(560);
+    expect(records.total).toBe(560);
+  });
+
+  it('ключ состава не зависит от порядка, но различает упражнение и единицу', () => {
+    const HEYS = loadWithStore(dayWith(80));
+    const key = HEYS.dayTrainings.workoutCompositionKey;
+    expect(key([
+      { name: 'Жим лёжа', unit: 'weight_reps' },
+      { name: 'Планка', unit: 'time' },
+    ])).toBe(key([
+      { name: 'планка', unit: 'time' },
+      { name: ' ЖИМ ЛЁЖА ', unit: 'weight_reps' },
+    ]));
+    expect(key([{ name: 'Жим лёжа', unit: 'weight_reps' }]))
+      .not.toBe(key([{ name: 'Жим гантелей', unit: 'weight_reps' }]));
+    expect(key([{ name: 'Планка', unit: 'time' }]))
+      .not.toBe(key([{ name: 'Планка', unit: 'weight_reps' }]));
+  });
+
+  it('сравнение итогов пропускает ближайшую силовую другого состава и сохраняет вес её дня', () => {
+    const HEYS = loadFiles(['_kernel/heys_kernel_strength_v1.js', 'heys_day_trainings_v1.js']);
+    const trainingWith = (name, extra = {}) => ({
+      type: 'strength', strengthEntryMode: 'workout_builder',
+      workoutLog: {
+        completedAt: 1,
+        exercises: [{ name, unit: 'weight_reps', approaches: [{ weightKg: '60', reps: 8, done: true }] }],
+        ...(extra.workoutLog || {}),
+      },
+      ...(extra.training || {}),
+    });
+    const days = {
+      '2026-08-29': {
+        date: '2026-08-29', weightMorning: 79, trainings: [
+          trainingWith('Присед'),
+          trainingWith('Жим лёжа', { workoutLog: { completedAt: 0 } }),
+          trainingWith('Жим лёжа', { training: { plan: { status: 'assigned' } } }),
+        ],
+      },
+      '2026-08-28': { date: '2026-08-28', weightMorning: 78, trainings: [trainingWith('Жим лёжа')] },
+    };
+    HEYS.utils = {
+      lsGet: (key, fallback) => {
+        if (key === 'heys_profile') return { weight: 70 };
+        const match = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
+        return match ? (days[match[1]] || fallback) : fallback;
+      },
+    };
+    const composition = HEYS.dayTrainings.workoutCompositionKey([
+      { name: 'Жим лёжа', unit: 'weight_reps' },
+    ]);
+    const hit = HEYS.dayTrainings.findLastWorkoutBuilderExercises('2026-08-30', 0, composition);
+    expect(hit.dateKey).toBe('2026-08-28');
+    expect(hit.exercises[0].name).toBe('Жим лёжа');
+    expect(hit.bodyWeightKg).toBe(78);
+  });
+
+  it('сравнение тоннажа не подставляет текущий вес в историческую работу со своим весом', () => {
+    const HEYS = loadWithStore(dayWith(80));
+    const previous = {
+      bodyWeightKg: 0,
+      exercises: [{
+        name: 'Подтягивания', unit: 'bodyweight', bodyweightFactor: 1,
+        approaches: [{ reps: 8, done: true }],
+      }],
+    };
+    expect(HEYS.dayTrainings.comparableSessionTonnage(previous)).toBeNull();
+    expect(HEYS.dayTrainings.comparableSessionTonnage({
+      bodyWeightKg: 0,
+      exercises: [{
+        name: 'Жим лёжа', unit: 'weight_reps',
+        approaches: [{ weightKg: '60', reps: 8, done: true }],
+      }],
+    })).toBe(480);
+  });
 });
 
 // ───────────────────────────────────────────────────────────────────────────

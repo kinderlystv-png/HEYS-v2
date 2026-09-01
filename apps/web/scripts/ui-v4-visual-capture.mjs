@@ -366,6 +366,81 @@ async function openCase(browser, item, snapshot) {
         window.__uiV4ReportsWhatIfRoot.render(element);
       }, item.themeId || null);
     }
+    if (item.kind === 'demo-strength-finish') {
+      await page.waitForFunction(
+        () =>
+          !!window.React &&
+          !!window.ReactDOM?.createRoot &&
+          typeof window.HEYS?.StrengthFinishUI?.FinishScreen === 'function' &&
+          typeof window.HEYS?.TrainingKernel?.strength?.trainingTonnage === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const done = (weightKg, reps, extra) => ({
+          weightKg: String(weightKg), reps, done: true, ...(extra || {}),
+        });
+        const training = {
+          type: 'strength',
+          strengthEntryMode: 'workout_builder',
+          workoutLog: {
+            exercises: [
+              {
+                name: 'Жим лёжа',
+                approaches: [done(40, 10, { type: 'warmup' }), done(75, 8), done(70, 10)],
+              },
+              {
+                name: 'Планка', unit: 'time',
+                approaches: [{ durationSec: 180, reps: 1, done: true }],
+              },
+              {
+                name: 'Подтягивания', unit: 'bodyweight', bodyweightFactor: 0.8,
+                approaches: [done('', 8)],
+              },
+              {
+                name: 'Отжимания на брусьях', unit: 'bodyweight',
+                approaches: [done('', 10)],
+              },
+            ],
+            feedback: { mood: 7, wellbeing: 8, stress: 5 },
+          },
+        };
+        let host = document.getElementById('ui-v4-strength-finish-host');
+        if (!host) {
+          host = document.createElement('main');
+          host.id = 'ui-v4-strength-finish-host';
+          Object.assign(host.style, {
+            position: 'fixed',
+            inset: '0',
+            zIndex: '20000',
+            overflow: 'hidden',
+            background: 'var(--v4-bg, #fffaf3)',
+          });
+          document.body.appendChild(host);
+        }
+        const component = window.React.createElement(window.HEYS.StrengthFinishUI.FinishScreen, {
+          training,
+          dateKey: '2026-08-08',
+          elapsedSec: 3270,
+          bodyWeightKg: 80,
+          dayTonnageKg: 14200,
+          strengthCount: 2,
+          previousComparableTonnageKg: 1618,
+          historyFor: (name) => name === 'Жим лёжа'
+            ? { record: { maxW: 70, maxSet: 550, total: 1200 } }
+            : { record: null },
+          historyDetailFor: () => ({
+            usages: [75, 72, 70, 68, 66].map((weight) => ({ approaches: [done(weight, 6)] })),
+          }),
+          onBack: () => {},
+          onDone: () => {},
+        });
+        window.__uiV4StrengthFinishRoot =
+          window.__uiV4StrengthFinishRoot || window.ReactDOM.createRoot(host);
+        window.__uiV4StrengthFinishRoot.render(component);
+      }, item.themeId || null);
+    }
     if (item.kind === 'demo-food-copy-empty') {
       await page.waitForFunction(
         () => typeof window.HEYS?.CopyMealModal?.show === 'function',

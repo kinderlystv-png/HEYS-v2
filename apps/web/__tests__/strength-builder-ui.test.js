@@ -470,6 +470,19 @@ describe('конструктор: безопасность не спрятана
 });
 
 describe('финал тренировки', () => {
+  it('open пробрасывает day-owned summary callback в production BuilderScreen', () => {
+    const finishSummaryFor = vi.fn();
+    globalThis.HEYS.TrainingKernel.fullscreen = {
+      mount: ({ render: renderScreen }) => renderScreen({ close: vi.fn() }),
+    };
+    const element = SB.open({
+      training: training([]),
+      dateKey: '2026-08-09',
+      finishSummaryFor,
+    });
+    expect(element.props.finishSummaryFor).toBe(finishSummaryFor);
+  });
+
   it('расчётный максимум считается по Эпли, а не по Бржицки', () => {
     loadModules();
     const Fin = globalThis.HEYS.StrengthFinishUI;
@@ -836,6 +849,34 @@ describe('сохраняемый отдых', () => {
 });
 
 describe('lifecycle силовой сессии', () => {
+  it('все отмеченные подходы без completedAt остаются активной сессией и ведут к завершению', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 9, 20, 16, 0));
+    try {
+      const opened = [];
+      const Parts = globalThis.HEYS.StrengthBuilderParts;
+      render(React.createElement(Parts.SummaryCard, {
+        training: {
+          ...training([{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, true)] }]),
+          workoutLog: {
+            startedAt: Date.now() - 20 * 60 * 1000,
+            lastMarkAt: Date.now() - 10 * 1000,
+            exercises: [{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, true)] }]
+          }
+        },
+        dateKey: '2026-08-09',
+        onOpen: () => opened.push(true)
+      }));
+
+      expect(screen.getByText('Тренировка готова к завершению · 20:00')).toBeTruthy();
+      expect(screen.getByText('все подходы закрыты · 2 из 2')).toBeTruthy();
+      fireEvent.click(screen.getByText('Завершить тренировку'));
+      expect(opened).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('после перезапуска показывает точное место возврата без второго кольца', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 7, 9, 20, 16, 0));

@@ -652,7 +652,11 @@
     // Незакрытые строки сами по себе не делают сессию активной: пользователь
     // мог явно закрыть вчерашнюю тренировку на последней отметке. completedAt
     // является lifecycle-границей и сразу убирает resume/stale surface.
-    const running = !completedAt && done > 0 && done < total;
+    // Все отмеченные подходы ещё не закрывают сессию: lifecycle заканчивается
+    // только completedAt. Иначе карточка дня маскирует незаписанный финал как
+    // обычную завершённую тренировку и не ведёт к экрану итогов.
+    const running = !completedAt && done > 0 && total > 0;
+    const readyToFinish = running && done === total;
     const pastOpen = running && String(dateKey || '') < localDateKey();
     const elapsedEnd = completedAt > 0 ? completedAt : (pastOpen && lastMarkAt ? lastMarkAt : Date.now());
     const elapsedSec = startedAt ? Math.max(0, Math.floor((elapsedEnd - startedAt) / 1000)) : 0;
@@ -694,13 +698,16 @@
     if (running && !pastOpen) {
       return h('div', { className: 'sb-card sb-offscreen-session sb-offscreen-session--resume' },
         h('div', { className: 'sb-offscreen-copy' },
-          h('b', null, 'Тренировка продолжается · ' + fmtClock(elapsedSec)),
+          h('b', null, (readyToFinish ? 'Тренировка готова к завершению · ' : 'Тренировка продолжается · ')
+            + fmtClock(elapsedSec)),
           h('span', null,
-            (lastMarkAt ? 'последняя отметка в ' + fmtTime(lastMarkAt) : 'отмеченные подходы сохранены')
-            + (progressLabel ? ' · ' + progressLabel : ''))
+            readyToFinish
+              ? 'все подходы закрыты · ' + done + ' из ' + total
+              : (lastMarkAt ? 'последняя отметка в ' + fmtTime(lastMarkAt) : 'отмеченные подходы сохранены')
+                + (progressLabel ? ' · ' + progressLabel : ''))
         ),
         h('button', { type: 'button', className: 'sb-offscreen-primary', onClick: onOpen },
-          'Вернуться в тренировку')
+          readyToFinish ? 'Завершить тренировку' : 'Вернуться в тренировку')
       );
     }
 

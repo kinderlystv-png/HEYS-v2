@@ -185,6 +185,16 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     viewport: { width: 375, height: 812 },
     rootSelector: '.insights-v4-whatif__inline',
   },
+  {
+    id: 'strength-finish-sand',
+    zone: 'strength-builder',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-strength-finish',
+    themeId: 'sand',
+    viewport: { width: 375, height: 812 },
+    rootSelector: '.sb-finish-screen',
+  },
   ...UI_V4_CANVAS_ZONES.filter(
     (zone) =>
       ![
@@ -199,6 +209,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
         'cycle',
         'food-meal',
         'reports-insights',
+        'strength-builder',
       ].includes(zone),
   ).map((zone) => ({
     id: `${zone}-scenario-pending`,

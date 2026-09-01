@@ -405,10 +405,22 @@
     if (!ex) return [];
     if (Array.isArray(ex.approaches) && ex.approaches.length > 0) {
       return ex.approaches.map(function (a) {
-        return {
+        const out = {
           weightKg: a.weightKg != null ? String(a.weightKg) : '',
           reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10
         };
+        if (Object.prototype.hasOwnProperty.call(a, 'done')) out.done = !!a.done;
+        if (a.type) out.type = String(a.type);
+        if (Array.isArray(a.drops) && a.drops.length) {
+          out.drops = a.drops.map(function (drop) {
+            return {
+              weightKg: drop && drop.weightKg != null ? String(drop.weightKg) : '',
+              reps: drop && drop.reps != null ? Math.max(1, Math.min(200, parseInt(drop.reps, 10) || 1)) : 10,
+              done: !!(drop && drop.done)
+            };
+          });
+        }
+        return out;
       });
     }
     const sets = ex.sets != null ? Math.max(1, parseInt(ex.sets, 10) || 1) : 1;
@@ -577,12 +589,18 @@
     for (let i = 0; i < approaches.length; i++) {
       const a = approaches[i];
       if (!a || approachIsWarmup(a)) continue;
+      // Legacy completed approaches may not have `done`; an explicit false is
+      // always a plan, never historical evidence for a personal record.
+      if (Object.prototype.hasOwnProperty.call(a, 'done') && !approachIsDone(a)) continue;
       const vol = approachVolumeKg(a);
-      if (vol > maxSet) maxSet = vol;
-      // Рекорд по весу — только основная ступень: иначе любой дроп-сет стал бы
-      // личным рекордом, хотя человек не поднял больше.
+      // Рекорд подхода — только основная ступень. Дропы входят в общий тоннаж,
+      // но не превращают тот же основной подход в новый PR.
       const stages = approachStagesOf(a);
-      const baseW = parseFloat(String((stages[0] && stages[0].weightKg) || '').replace(',', '.')) || 0;
+      const base = stages[0] || {};
+      const baseW = parseFloat(String(base.weightKg || '').replace(',', '.')) || 0;
+      const baseReps = Math.max(0, +base.reps || 0);
+      const baseSetVolume = baseW * baseReps;
+      if (baseSetVolume > maxSet) maxSet = baseSetVolume;
       if (baseW > maxW) maxW = baseW;
       total += vol;
     }
@@ -702,6 +720,20 @@
       if (next.activeRest && typeof next.activeRest === 'object') out.activeRest = next.activeRest;
       else delete out.activeRest;
     }
+    if (Object.prototype.hasOwnProperty.call(next, 'feedback')) {
+      const rawFeedback = next.feedback && typeof next.feedback === 'object' ? next.feedback : null;
+      if (!rawFeedback) {
+        delete out.feedback;
+      } else {
+        const feedback = {};
+        ['mood', 'wellbeing', 'stress'].forEach(function (key) {
+          const value = Math.round(+rawFeedback[key] || 0);
+          if (value > 0) feedback[key] = Math.max(1, Math.min(10, value));
+        });
+        if (Object.keys(feedback).length) out.feedback = feedback;
+        else delete out.feedback;
+      }
+    }
     return out;
   }
 
@@ -785,19 +817,43 @@
     return null;
   }
 
-  /** Найти ближайшую прошлую workout_builder-тренировку (до refDateKey/curTi) и вернуть копию её упражнений (без done, id обновлены). */
-  function findLastWorkoutBuilderExercises(refDateKey, curTi) {
+  function workoutCompositionKey(exercises) {
+    return (Array.isArray(exercises) ? exercises : [])
+      .map(function (exercise) {
+        const name = String(exercise && exercise.name || '').trim().toLocaleLowerCase('ru-RU');
+        if (!name) return '';
+        return name + '\u0000' + String(exercise && exercise.unit || 'weight_reps');
+      })
+      .filter(Boolean)
+      .sort()
+      .join('\u0001');
+  }
+
+  function isPlannedWorkout(training) {
+    const load = HEYS.TrainingKernel && HEYS.TrainingKernel.load;
+    if (load && typeof load.isNotPerformedTraining === 'function') {
+      return load.isNotPerformedTraining(training);
+    }
+    const status = training && training.plan && training.plan.status;
+    return status === 'assigned' || status === 'skipped';
+  }
+
+  /** Найти ближайшую прошлую workout_builder-тренировку; optional key оставляет только тот же состав. */
+  function findLastWorkoutBuilderExercises(refDateKey, curTi, requiredCompositionKey) {
     function takeFromTrainings(trainings, sameDayBeforeTi) {
       if (!Array.isArray(trainings)) return null;
       let bestIdx = -1;
       for (let tii = 0; tii < trainings.length; tii++) {
         const tr = trainings[tii];
         if (!tr || String(tr.type) !== 'strength' || tr.strengthEntryMode !== 'workout_builder') continue;
+        if (isPlannedWorkout(tr)) continue;
         const wl = tr.workoutLog;
         if (!wl || !Array.isArray(wl.exercises) || wl.exercises.length === 0) continue;
+        if (!(+wl.completedAt > 0)) continue;
         const hasName = wl.exercises.some(function (ex) { return ex && String(ex.name || '').trim(); });
         if (!hasName) continue;
         if (sameDayBeforeTi != null && tii >= sameDayBeforeTi) continue;
+        if (requiredCompositionKey && workoutCompositionKey(wl.exercises) !== requiredCompositionKey) continue;
         if (tii > bestIdx) bestIdx = tii;
       }
       if (bestIdx < 0) return null;
@@ -806,7 +862,13 @@
     }
     const day0 = readDayFromStore(refDateKey);
     const todayHit = day0 && takeFromTrainings(day0.trainings, curTi);
-    if (todayHit) return todayHit;
+    if (todayHit) {
+      return {
+        dateKey: refDateKey,
+        exercises: todayHit.exercises,
+        bodyWeightKg: bodyWeightForDay(day0)
+      };
+    }
     const m0 = refDateKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!m0) return null;
     let y = +m0[1], mo = +m0[2], d = +m0[3];
@@ -817,10 +879,23 @@
       const day = readDayFromStore(dk);
       const hit = day && takeFromTrainings(day.trainings, null);
       if (hit) {
-        return { dateKey: dk, exercises: hit.exercises };
+        return { dateKey: dk, exercises: hit.exercises, bodyWeightKg: +(day && day.weightMorning) || 0 };
       }
     }
     return null;
+  }
+
+  /** Exact comparison is fail-closed: historical bodyweight work needs that day's weight snapshot. */
+  function comparableSessionTonnage(session) {
+    const ks = HEYS.TrainingKernel && HEYS.TrainingKernel.strength;
+    if (!ks || !session || !Array.isArray(session.exercises)) return null;
+    const totals = ks.trainingTonnage({
+      type: 'strength',
+      strengthEntryMode: 'workout_builder',
+      workoutLog: { exercises: session.exercises }
+    }, { bodyWeightKg: +session.bodyWeightKg || 0 });
+    if (!totals || totals.unmeasuredExercises > 0) return null;
+    return Number.isFinite(+totals.totalVolume) ? +totals.totalVolume : null;
   }
 
   /** Скопировать упражнения для повтора: новые id, done сброшены, restManual сохранён. */
@@ -3412,6 +3487,16 @@
           collapsed: !!restRaw.collapsed
         };
       }
+      if (typeof raw.note === 'string' && raw.note) out.note = raw.note.slice(0, 2000);
+      const rawFeedback = raw.feedback && typeof raw.feedback === 'object' ? raw.feedback : null;
+      if (rawFeedback) {
+        const feedback = {};
+        ['mood', 'wellbeing', 'stress'].forEach(function (key) {
+          const value = Math.round(+rawFeedback[key] || 0);
+          if (value > 0) feedback[key] = Math.max(1, Math.min(10, value));
+        });
+        if (Object.keys(feedback).length) out.feedback = feedback;
+      }
       return out;
     }
 
@@ -3830,6 +3915,27 @@
                     if (!hit || !hit.exercises || !hit.exercises.length) return null;
                     return { dateKey: hit.dateKey || dateKey, exercises: hit.exercises };
                   } catch (_e) { return null; }
+                },
+                finishSummaryFor: function (currentExercises) {
+                  try {
+                    const currentDay = readDayFromStore(dateKey);
+                    const currentBodyWeightKg = bodyWeightForDay(currentDay);
+                    const compositionKey = workoutCompositionKey(currentExercises);
+                    const previous = compositionKey
+                      ? findLastWorkoutBuilderExercises(dateKey, ti, compositionKey)
+                      : null;
+                    const previousComparableTonnageKg = previous
+                      ? comparableSessionTonnage(previous)
+                      : null;
+                    return {
+                      dayTonnageKg: computeDayTotalTonnage(dateKey),
+                      strengthCount: countStrengthWorkoutsOnDay(dateKey),
+                      currentBodyWeightKg: currentBodyWeightKg,
+                      previousComparableTonnageKg: previousComparableTonnageKg
+                    };
+                  } catch (_e) {
+                    return null;
+                  }
                 },
                 onRepeatLast: function (srcExercises) {
                   patchTraining(ti, function (t0) {
@@ -4324,6 +4430,10 @@
     cloneExercisesForReplay,
     mergeWorkoutLifecyclePatch,
     finishStartedWorkoutPlan,
+    exerciseRecordsFromApproaches,
+    workoutCompositionKey,
+    findLastWorkoutBuilderExercises,
+    comparableSessionTonnage,
     // Тестовый шов — тоннаж дня: он обязан совпадать с числом в конструкторе,
     // а совпадает только когда знает массу тела.
     computeDayTotalTonnage,

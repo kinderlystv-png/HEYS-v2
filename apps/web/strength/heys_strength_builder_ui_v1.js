@@ -86,7 +86,7 @@
 
   function BuilderScreen(props) {
     const { training, dateKey, onPatch, onPatchSession, onPatchNote, profile, historyFor, historyDetailFor,
-      lastSessionFor, onRepeatLast, syncStatusFor, onReviewProposal, onFinishProposal, onClose } = props;
+      lastSessionFor, finishSummaryFor, onRepeatLast, syncStatusFor, onReviewProposal, onFinishProposal, onClose } = props;
     const SK = kernel();
     const wl = (training && training.workoutLog) || {};
     const [openIdx, setOpenIdx] = React.useState(0);
@@ -438,18 +438,43 @@
       });
     }
     if (view === 'finish' && FinUIRef().FinishScreen) {
+      const daySummary = typeof finishSummaryFor === 'function'
+        ? (finishSummaryFor(exercises) || {})
+        : {};
       return h(FinUIRef().FinishScreen, {
         training: liveTraining,
         dateKey: dateKey,
         elapsedSec: workElapsedSec,
         profile: profile,
-        dayTonnageKg: agg ? agg.totalVolume : 0,
-        strengthCount: 1,
+        dayTonnageKg: Number.isFinite(+daySummary.dayTonnageKg)
+          ? +daySummary.dayTonnageKg
+          : (agg ? agg.totalVolume : 0),
+        strengthCount: Number.isFinite(+daySummary.strengthCount)
+          ? +daySummary.strengthCount
+          : 1,
+        bodyWeightKg: Number.isFinite(+daySummary.currentBodyWeightKg)
+          ? +daySummary.currentBodyWeightKg
+          : 0,
+        previousComparableTonnageKg: Number.isFinite(+daySummary.previousComparableTonnageKg)
+          ? +daySummary.previousComparableTonnageKg
+          : null,
+        historyFor: historyFor,
+        historyDetailFor: historyDetailFor,
         onBack: function () { setView('list'); },
-        onDone: function (note) {
+        onDone: function (note, feedback) {
           const finishedAt = finishAtOverride || lastMarkAt || Date.now();
           setRest(null);
-          patchSession({ completedAt: finishedAt, activeRest: null, finish: true });
+          const finishPatch = {
+            completedAt: finishedAt,
+            activeRest: null,
+            finish: true
+          };
+          const feedbackValues = feedback && typeof feedback === 'object' ? feedback : null;
+          const hasFeedback = feedbackValues && ['mood', 'wellbeing', 'stress']
+            .some(function (key) { return +feedbackValues[key] > 0; });
+          if (hasFeedback) finishPatch.feedback = feedbackValues;
+          else if (sessionRef.current.feedback) finishPatch.feedback = null;
+          patchSession(finishPatch);
           // Заметка — часть журнала тренировки, а не состояние экрана: без
           // записи она исчезала бы вместе с закрытием слоя.
           if (typeof onPatchNote === 'function') onPatchNote(note);
@@ -782,6 +807,7 @@
         historyFor: state.historyFor,
         historyDetailFor: state.historyDetailFor,
         lastSessionFor: state.lastSessionFor,
+        finishSummaryFor: state.finishSummaryFor,
         onRepeatLast: state.onRepeatLast,
         syncStatusFor: state.syncStatusFor,
         onReviewProposal: state.onReviewProposal,
