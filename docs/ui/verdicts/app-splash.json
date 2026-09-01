@@ -30,12 +30,12 @@
     },
     "доступность": {
       "v": "=",
-      "f": "index.html:1531 role=status aria-live=polite, диск 1532 aria-hidden=true, short_name manifest.json:3; sr-текст «Загружаем», не «Загрузка»",
+      "f": "index.html:1546 role=status aria-live=polite, диск aria-hidden=true, short_name manifest.json:3; скрытый sr-текст дословно «Загрузка»",
       "h": "2fba78ec60d3"
     },
     "уменьшенное движение": {
-      "v": "=",
-      "f": "В загрузчике диск статичен: буква H до 300 мс (heys-boot-mark.css:206, подмена за 1 мс), дуга появляется только на пороге (:216). Движение начинается со знака ожидания, как требует строка",
+      "v": "≠",
+      "f": "Дуга стоит и вращается с первого кадра; при prefers-reduced-motion вращение заменяется дыханием 1,6 с. Это следует общему owner-контракту spinners «без анимации» и не совпадает с требованием app-splash о полностью статичном диске до 300 мс. Внутри самого app-splash строка «вид диска в загрузчике» отдельно отменяет порог 300 мс",
       "h": "41ece7827ed5"
     },
     "геометрия": {
@@ -55,7 +55,7 @@
     },
     "точка круга": {
       "v": "=",
-      "f": "heys-boot-mark.css:5 одна константа --heys-splash-anchor-y max(148px, 45dvh) — выше геометрического центра",
+      "f": "heys-boot-mark.css задаёт одну константу --heys-splash-anchor-y max(148px,45%) для обеих платформ; процент считается внутри контейнера между safe-area врезками и остаётся выше геометрического центра",
       "h": "eefbede00f4b"
     },
     "иконка и цвета": {
@@ -100,7 +100,7 @@
     },
     "вид загрузчика": {
       "v": "=",
-      "f": "heys-boot-mark.css:29-42 inset 0 фон inherit, диск на --heys-splash-anchor-y 45dvh (css:5,156-160), overlay var(--bg) css:437; тему ставит index.html:953-965",
+      "f": "heys-boot-mark.css: .heys-boot-mark занимает доступную область между safe-area врезками с фоном inherit; диск стоит на общем якоре max(148px,45%), overlay использует var(--bg); тему до первого пейнта ставит HEYS.Theme.applyBootGlobalTheme в index.html",
       "h": "75033f428dba"
     },
     "появление Главной": {
@@ -120,7 +120,7 @@
     },
     "выход, удаление данных, производительность": {
       "v": "=",
-      "f": "Кадр рисуется без сети и профиля (index.html:953 до всех бандлов); палитра в localStorage, ни один путь выхода эти ключи не чистит",
+      "f": "Статический .heys-boot-mark уже находится в index.html до boot-бандлов и не ждёт сеть или профиль; палитру читает heys_theme_v1.js из локального хранилища, а выход не удаляет theme keys",
       "h": "4f692810eb72"
     },
     "уведомления и точки входа": {
@@ -160,7 +160,7 @@
     },
     "откуда данные": {
       "v": "=",
-      "f": "Иконка и цвета из manifest:3,8; тема из localStorage через index.html:956; сетевых запросов до первого кадра нет",
+      "f": "Иконка и системные цвета приходят из public/manifest.json; heys_theme_v1.js:26-30,49,288-291 читает сохранённую тему и применяет её до первого пейнта; сам знак не инициирует сетевой запрос",
       "h": "30893aaf482a"
     },
     "слова на экране": {
@@ -170,12 +170,12 @@
     },
     "первое появление": {
       "v": "=",
-      "f": "Ветки первого запуска нет ни в index.html:1529, ни в loading_progress:448",
+      "f": "Статическая разметка index.html и boot() в heys_loading_progress_v1.js не читают install/first-run состояние: поведение зависит только от сессии, таймеров загрузки и heys:app-content-ready",
       "h": "59c5d1ae8819"
     },
     "safe-area и кнопка назад": {
       "v": "=",
-      "f": "Тот же якорь, тот же файл — верхняя врезка учтена",
+      "f": "heys-boot-mark.css ограничивает контейнер одновременно env(safe-area-inset-top) и env(safe-area-inset-bottom); абсолютный якорь max(148px,45%) считается по оставшейся между ними высоте. Аппаратная кнопка не перехватывается загрузчиком",
       "h": "cda0fa8e1cd1"
     },
     "вид диска в загрузчике": {
@@ -271,7 +271,7 @@
     "Стык · Главная · 06": {
       "v": "—",
       "f": "кадр «Стык · Главная» показывает домашний экран после первого пейнта — чужая поверхность. Её рисует home-widgets.v4.dc.html, и здесь она нужна только чтобы показать, во что превращается загрузчик. Строка «границы» отдаёт этому канвасу иконку, два цвета манифеста и момент стыка",
-      "h": "cf49ab303eaa"
+      "h": "d0e293c1f7be"
     },
     "Стык · Главная · 07": {
       "v": "—",
@@ -302,6 +302,72 @@
       "v": "—",
       "f": "кадр «Стык · Главная» показывает домашний экран после первого пейнта — чужая поверхность. Её рисует home-widgets.v4.dc.html, и здесь она нужна только чтобы показать, во что превращается загрузчик. Строка «границы» отдаёт этому канвасу иконку, два цвета манифеста и момент стыка",
       "h": "592333b07a50"
+    }
+  },
+  "frames": {
+    "Сплэш · как сейчас": {
+      "evidence": [
+        "apps/web/__tests__/boot-spinner-mark.test.js",
+        "apps/web/__tests__/boot-wait-steps-smoke.test.js",
+        "apps/web/index.html",
+        "apps/web/styles/heys-boot-mark.css"
+      ]
+    },
+    "Сплэш · знак v4": {
+      "evidence": [
+        "apps/web/__tests__/boot-spinner-mark.test.js",
+        "apps/web/__tests__/boot-wait-steps-smoke.test.js",
+        "apps/web/index.html",
+        "apps/web/styles/heys-boot-mark.css"
+      ]
+    },
+    "iOS · как сейчас": {
+      "evidence": [
+        "apps/web/__tests__/boot-spinner-mark.test.js",
+        "apps/web/__tests__/boot-wait-steps-smoke.test.js",
+        "apps/web/index.html",
+        "apps/web/styles/heys-boot-mark.css"
+      ]
+    },
+    "iOS · после правки": {
+      "evidence": [
+        "apps/web/__tests__/boot-spinner-mark.test.js",
+        "apps/web/__tests__/boot-wait-steps-smoke.test.js",
+        "apps/web/index.html",
+        "apps/web/styles/heys-boot-mark.css"
+      ]
+    },
+    "Стык · сплэш системы": {
+      "evidence": [
+        "apps/web/__tests__/boot-spinner-mark.test.js",
+        "apps/web/__tests__/boot-wait-steps-smoke.test.js",
+        "apps/web/index.html",
+        "apps/web/styles/heys-boot-mark.css"
+      ]
+    },
+    "Стык · сплэш системы · iPhone": {
+      "evidence": [
+        "apps/web/__tests__/boot-spinner-mark.test.js",
+        "apps/web/__tests__/boot-wait-steps-smoke.test.js",
+        "apps/web/index.html",
+        "apps/web/styles/heys-boot-mark.css"
+      ]
+    },
+    "Стык · загрузчик": {
+      "evidence": [
+        "apps/web/__tests__/boot-spinner-mark.test.js",
+        "apps/web/__tests__/boot-wait-steps-smoke.test.js",
+        "apps/web/index.html",
+        "apps/web/styles/heys-boot-mark.css"
+      ]
+    },
+    "Стык · Главная": {
+      "evidence": [
+        "apps/web/__tests__/boot-spinner-mark.test.js",
+        "apps/web/__tests__/boot-wait-steps-smoke.test.js",
+        "apps/web/index.html",
+        "apps/web/styles/heys-boot-mark.css"
+      ]
     }
   }
 }

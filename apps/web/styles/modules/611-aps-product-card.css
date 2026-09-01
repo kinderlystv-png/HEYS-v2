@@ -801,7 +801,7 @@
   font-weight: 500;
   line-height: 1.5;
   text-align: center;
-  color: rgba(242, 237, 230, 0.5);
+  color: rgba(242, 237, 230, 0.56);
 }
 
 /* Кадр «Штрихкод · не найден»: карточка на второй поверхности, внутри — код,
@@ -884,7 +884,7 @@
   cursor: pointer;
 }
 
-/* Счётчик базы в шапке шага: моноцифры 10,5/600 чернилами 40 % по разбору
+/* Счётчик базы в шапке шага: моноцифры 10,5/600 чернилами 56 % по разбору
    кадров. Прежде строка «🗃️ 170» наследовала тип шапки целиком. */
 .aps-v4-header-count {
   flex: none;
@@ -892,7 +892,7 @@
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 40%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-create-shell {
@@ -1106,7 +1106,7 @@
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-harm-breakdown__version {
@@ -1115,7 +1115,7 @@
   font-size: 9.5px;
   font-weight: 500;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 35%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-harm-breakdown__section-title {
@@ -1142,7 +1142,7 @@
   font-size: 10.5px;
   font-weight: 600;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-harm-breakdown__row {
@@ -1291,7 +1291,7 @@
   margin-left: auto;
   font-size: 10px;
   font-weight: 500;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 40%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Схема полей по кадру: карточка первой поверхности радиусом 14, моноширинным
@@ -1306,7 +1306,7 @@
   font-size: 10px;
   font-weight: 500;
   line-height: 1.55;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   background: var(--v4-surface, #f7efe2);
   padding: 11px 13px;
@@ -1461,13 +1461,13 @@
 }
 
 /* Примечание под полем: кадр «Продукт · вставка строки» даёт 10 px/1,4
-   чернилами 40 %. Прежде здесь стоял --color-gray-500 — токен снятой системы,
+   чернилами 56 %. Прежде здесь стоял --color-gray-500 — токен снятой системы,
    в наборах его нет, и на непесочном наборе строка красилась чужим серым. */
 .aps-create-barcode-note,
 .aps-create-brand-note {
   font-size: 10px;
   line-height: 1.4;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 40%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$='dark'] .aps-create-barcode-input,
@@ -1481,7 +1481,7 @@
 
 [data-theme$='dark'] .aps-create-barcode-note,
 [data-theme$='dark'] .aps-create-brand-note {
-  color: var(--color-gray-400);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 @media (max-width: 420px) {
@@ -1500,7 +1500,7 @@
 
 [data-theme$='dark'] .aps-create-format {
   background: #374151;
-  color: var(--color-gray-400);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$='dark'] .aps-create-prompt-btn {
@@ -1822,7 +1822,7 @@
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Готовая к нажатию — заливка акцентом. Прежде зелёный градиент из двух
@@ -1981,7 +1981,7 @@
   font-size: 10px;
   font-weight: 500;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 35%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   pointer-events: none;
 }
 
@@ -2026,12 +2026,12 @@
   line-height: 1;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* «Использовать шаблон» — третий вид вторичного: обводка вместо заливки.
    Кадр даёт высоту от 38, обводку 1,5 чернил 14 % и подпись 11 px/700
-   чернилами 55 %. Плашку --paper здесь снимаем: обводка и заливка вместе
+   чернилами 56 %. Плашку --paper здесь снимаем: обводка и заливка вместе
    дают ту самую двойную рамку, от которой набор уходит. */
 .aps-v4-portions-suggest .aps-v4-btn-ghost {
   min-height: 38px;
@@ -2039,7 +2039,7 @@
   background: none;
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--v4-ink, #201e1d) 14%, transparent);
   font-size: 11px;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-portions-suggest .aps-v4-portions-list {

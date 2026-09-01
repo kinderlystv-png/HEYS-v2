@@ -134,8 +134,8 @@
       "h": "1216f064dad0"
     },
     "переход по строке": {
-      "v": "=",
-      "f": "тап по строке: hideActionLocally banner:1887 (sessionStorage), ack уходит только когда видимых действий не осталось banner:1635",
+      "v": "≠",
+      "f": "тап скрывает конкретное действие локально, но если после этого у серверной записи не осталось видимых действий, maybeAckFullyHiddenEntries подтверждает запись на сервере. Это намеренная продуктовая защита от повторного показа полностью просмотренной записи, но контракт требует никогда не подтверждать сервер с перехода по строке",
       "h": "444afd7ab26d"
     },
     "подтверждение": {
@@ -219,8 +219,8 @@
       "h": "63ddc3fba9e2"
     },
     "пределы и формат": {
-      "v": "=",
-      "f": "Цифры табличные (500-pwa:5324), разряды по-русски (:617), «было → стало» без сокращений",
+      "v": "—",
+      "f": "формат реализован: табличные цифры, русские разряды, «было → стало» без сокращений. Предел строк сам контракт оставляет открытым, поэтому полного продуктового вердикта до решения дизайнера нет",
       "h": "bb3c6f72e872"
     },
     "слова на экране": {
@@ -230,7 +230,7 @@
     },
     "длинные названия": {
       "v": "=",
-      "f": "500-pwa:5367 у заголовка нет обрезки, перенос по словам; шеврон не сжимается (:5385). Оговорка: у подписи (:5376) запрета переноса нет — «не переносятся» не закреплено",
+      "f": ".ca-modal__item-title переносится без обрезки, шеврон flex:none остаётся по центру; подписи с числом продуктов или ккал получают .ca-modal__item-sub--nowrap, а длинные текстовые пояснения по-прежнему могут переноситься",
       "h": "8cd2844aafd8"
     },
     "офлайн": {
@@ -409,8 +409,8 @@
       "h": "af81bb6e54c6"
     },
     "Куратор · свёрнуто по типам · 08": {
-      "v": "≠",
-      "f": "перенос запрещён у счётчика (.ca-modal__type-count, white-space: nowrap), а не у самого названия типа: название переносится вместе с остальным текстом строки (text-wrap: pretty). Смысл кадра — не оторвать «· 12» от «Приёмы» — этим и достигается, а запрет переноса самому названию сделал бы длинный тип неразрывным и выдавил бы его за край в 330 px",
+      "v": "=",
+      "f": ".ca-modal__type-title держит white-space: nowrap; отдельный гейт curator-edits-canvas-razbor фиксирует контракт одной строки рядом со счётчиком",
       "h": "531eefe34e81"
     },
     "Куратор · свёрнуто по типам · 09": {
@@ -419,8 +419,8 @@
       "h": "22a1f6533424"
     },
     "Куратор · свёрнуто по типам · 10": {
-      "v": "≠",
-      "f": "строка раскрытия стоит тоном --v4-act-text, а не чернилами 50 %: это действие, а не подпись, и в остальных кадрах кадр сам красит её акцентом. Двух тонов у одной строки быть не должно",
+      "v": "=",
+      "f": ".ca-modal__type-more-title использует 50%-ный color-mix от палитровой роли --v4-ink; цвет напрямую сверен с кадром в curator-edits-canvas-razbor",
       "h": "a0a59d45f4a7"
     },
     "Куратор · свёрнуто по типам · 11": {
@@ -644,8 +644,8 @@
       "h": "af81bb6e54c6"
     },
     "Куратор · повторяющиеся правки · 09": {
-      "v": "≠",
-      "f": "выравнивание совпадает: у строки повтора есть свой модификатор .ca-modal__item--repeat с align-items: flex-start и зазором 10 — пилюля прижата к верху, как в кадре. Расходятся только поля: 10/13 из базового .ca-modal__item против 11/13/12 в кадре. Разница в один-два пикселя на трёх сторонах не читается, а третий набор полей ради одного вида строки завёл бы второй язык строки",
+      "v": "=",
+      "f": ".ca-modal__item--repeat задаёт align-items: flex-start и точные поля кадра 11px 13px 12px; оба свойства напрямую сведены в curator-edits-canvas-razbor",
       "h": "f3e47b9650bb"
     },
     "Куратор · повторяющиеся правки · 10": {
@@ -1102,6 +1102,72 @@
       "v": "=",
       "f": "копия кадра собирается кодом, а не совпадает случайно. Заголовок — «Куратор {имя} обновил ваш дневник» с запасным «Ваш куратор обновил дневник», когда имени нет. Подзаголовок даёт sheetSubtitle всеми вариантами кадров: «Пока вас не было — правки за N дней» от шести дат, «Изменения за два дня», «Еду не трогали — правки по весу и активности», «{Число словом} изменений за вчера» при более чем трёх правках и «Проверьте, что изменилось по вашим данным» в простом случае. Строки правок, «и ещё N», «Развернуть», «Свернуть», «Позже» и «Понятно» — оттуда же",
       "h": "3e62742b3317"
+    }
+  },
+  "frames": {
+    "Куратор · один приём": {
+      "evidence": [
+        "apps/web/heys_curator_actions_banner_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css",
+        "apps/web/__tests__/curator-edits-canvas-razbor.test.js",
+        "apps/web/__tests__/curator-edits-v4-product-rules.test.js"
+      ]
+    },
+    "Куратор · много правок за день": {
+      "evidence": [
+        "apps/web/heys_curator_actions_banner_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css",
+        "apps/web/__tests__/curator-edits-canvas-razbor.test.js",
+        "apps/web/__tests__/curator-edits-v4-product-rules.test.js"
+      ]
+    },
+    "Куратор · свёрнуто по типам": {
+      "evidence": [
+        "apps/web/heys_curator_actions_banner_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css",
+        "apps/web/__tests__/curator-edits-canvas-razbor.test.js",
+        "apps/web/__tests__/curator-edits-v4-product-rules.test.js"
+      ]
+    },
+    "Куратор · две даты": {
+      "evidence": [
+        "apps/web/heys_curator_actions_banner_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css",
+        "apps/web/__tests__/curator-edits-canvas-razbor.test.js",
+        "apps/web/__tests__/curator-edits-v4-product-rules.test.js"
+      ]
+    },
+    "Куратор · длинный приём": {
+      "evidence": [
+        "apps/web/heys_curator_actions_banner_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css",
+        "apps/web/__tests__/curator-edits-canvas-razbor.test.js",
+        "apps/web/__tests__/curator-edits-v4-product-rules.test.js"
+      ]
+    },
+    "Куратор · сухие строки": {
+      "evidence": [
+        "apps/web/heys_curator_actions_banner_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css",
+        "apps/web/__tests__/curator-edits-canvas-razbor.test.js",
+        "apps/web/__tests__/curator-edits-v4-product-rules.test.js"
+      ]
+    },
+    "Куратор · много дней": {
+      "evidence": [
+        "apps/web/heys_curator_actions_banner_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css",
+        "apps/web/__tests__/curator-edits-canvas-razbor.test.js",
+        "apps/web/__tests__/curator-edits-v4-product-rules.test.js"
+      ]
+    },
+    "Куратор · повторяющиеся правки": {
+      "evidence": [
+        "apps/web/heys_curator_actions_banner_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css",
+        "apps/web/__tests__/curator-edits-canvas-razbor.test.js",
+        "apps/web/__tests__/curator-edits-v4-product-rules.test.js"
+      ]
     }
   }
 }

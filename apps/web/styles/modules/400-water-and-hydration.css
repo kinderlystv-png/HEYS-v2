@@ -2015,7 +2015,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   margin: 10px 14px 12px;
   padding: 16px;
   border-radius: 22px;
-  background: #f7efe2;
+  background: var(--v4-c1, #f7efe2);
   box-shadow:
     0 2px 6px rgba(0, 0, 0, 0.14),
     0 16px 36px rgba(0, 0, 0, 0.2);
@@ -2052,7 +2052,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-panel--sync .advice-v4-panel__hint--sync {
   margin-top: 4px;
   font: 500 11px/1.4 Figtree, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .advice-v4-panel__head {
@@ -2064,13 +2064,13 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-panel__title {
   flex: 1;
   font: 700 12.5px/1.35 Figtree, sans-serif;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .advice-v4-panel__hint {
   margin-top: 10px;
   font: 500 11.5px/1.5 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.55);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -2099,12 +2099,12 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .advice-v4-panel__btn--useful {
-  background: #eaefe0;
-  color: #5c6a45;
+  background: var(--v4-ok-bg, #eaefe0);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .advice-v4-panel__btn--miss {
-  background: #efe3cf;
+  background: var(--v4-chip, #efe3cf);
   color: rgba(32, 30, 29, 0.55);
 }
 
@@ -2138,11 +2138,12 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   align-items: center;
   justify-content: center;
   font: 700 11.5px/1 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   border: none;
   background: transparent;
   width: 100%;
+  text-align: center;
 }
 
 /* Строка «не сохранено»: иконка облака тоном --red. */
@@ -2193,7 +2194,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 
 .advice-v4-hide-ring__progress {
   fill: none;
-  stroke: #c67139;
+  stroke: var(--v4-sand-act, #c67139);
   stroke-width: 3;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.35s linear;
@@ -2202,7 +2203,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-hide-ring__num {
   position: absolute;
   font: 700 11px/1 Figtree, sans-serif;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2221,7 +2222,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   display: block;
   margin-top: 5px;
   font: 500 11px/1.4 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2231,7 +2232,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   flex: none;
   margin-top: 0;
   border-radius: 999px;
-  background: #efe3cf;
+  background: var(--v4-chip, #efe3cf);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2239,7 +2240,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
      занижала, цель нажатия от этого не пострадала. */
   padding: 11px 15px;
   font: 700 11.5px/1 Figtree, sans-serif;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   border: none;
   cursor: pointer;
 }
@@ -2270,13 +2271,13 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   background: transparent;
   padding: 4px;
   cursor: pointer;
-  color: rgba(32, 30, 29, 0.55);
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
   display: inline-flex;
 }
 
 .advice-service-title {
   font: 700 15px/1 Figtree, sans-serif;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .advice-service-body {
@@ -2295,7 +2296,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
      ответом дизайнера №13, чужой день красится тем же --v4-tint. */
   background: var(--v4-tint, #f6e6dd);
   font: 500 11.5px/1.5 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.55);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -2304,11 +2305,11 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   font: 700 10px/1 Figtree, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .advice-service-list {
-  background: #f7efe2;
+  background: var(--v4-c1, #f7efe2);
   border-radius: 20px;
   padding: 2px 16px;
 }
@@ -2320,7 +2321,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   width: 100%;
   padding: 14px 0;
   border: none;
-  border-bottom: 1px solid rgba(32, 30, 29, 0.07);
+  border-bottom: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 7%, transparent);
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -2333,14 +2334,14 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-service-row__title {
   display: block;
   font: 600 12.5px/1 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.55);
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
 }
 
 .advice-service-row__hint {
   display: block;
   margin-top: 5px;
   font: 500 10.5px/1.4 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .advice-service-row__chevron {
@@ -2348,7 +2349,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.3);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 30%, transparent);
 }
 
 .advice-rules-pool-empty {
@@ -2386,7 +2387,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-service-footer-note {
   margin-top: 14px;
   font: 500 11px/1.5 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -2395,7 +2396,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   font: 600 9.5px/1 Figtree, sans-serif;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(32, 30, 29, 0.16);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 
@@ -2408,82 +2409,82 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 [data-theme$="dark"] .advice-v4-panel {
-  background: #23201b;
+  background: var(--v4-c1, #23201b);
   box-shadow:
     0 2px 6px rgba(0, 0, 0, 0.35),
     0 16px 36px rgba(0, 0, 0, 0.45);
 }
 
 [data-theme$="dark"] .advice-v4-panel--read .advice-v4-icon--check {
-  color: #d5e0c4;
+  color: var(--v4-ok-text, #9fb981);
 }
 
 [data-theme$="dark"] .advice-v4-hide-ring__track {
-  stroke: rgba(255, 255, 255, 0.12);
+  stroke: rgba(242, 237, 230, 0.14);
 }
 
 [data-theme$="dark"] .advice-v4-panel__title,
 [data-theme$="dark"] .advice-v4-hide-copy__title {
-  color: var(--v4-ink, #f5f2ed);
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .advice-v4-panel__hint,
 [data-theme$="dark"] .advice-v4-hide-copy__subtitle,
 [data-theme$="dark"] .advice-v4-panel__skip {
-  color: rgba(245, 242, 237, 0.55);
+  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
 }
 
 [data-theme$="dark"] .advice-v4-panel__btn--useful {
-  background: rgba(92, 106, 69, 0.35);
-  color: #d5e0c4;
+  background: var(--v4-ok-bg, #242c20);
+  color: var(--v4-ok-text, #9fb981);
 }
 
 [data-theme$="dark"] .advice-v4-panel__btn--miss,
 [data-theme$="dark"] .advice-v4-hide-return {
-  background: rgba(198, 113, 57, 0.22);
-  color: #e8b48a;
+  background: var(--v4-chip, #302a24);
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$="dark"] .advice-service-overlay {
-  background: #1a1817;
+  background: var(--v4-bg, #141210);
 }
 
 [data-theme$="dark"] .advice-service-note {
-  background: #3a2f28;
-  color: rgba(245, 242, 237, 0.62);
+  background: var(--v4-tint, #3a241a);
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$="dark"] .advice-service-list {
-  background: #23201b;
+  background: var(--v4-c1, #23201b);
 }
 
 [data-theme$="dark"] .advice-service-title,
 [data-theme$="dark"] .advice-service-back,
 [data-theme$="dark"] .advice-service-section-label {
-  color: var(--v4-ink, #f5f2ed);
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .advice-service-back,
 [data-theme$="dark"] .advice-service-row__chevron {
-  color: rgba(245, 242, 237, 0.55);
+  color: color-mix(in srgb, var(--v4-ink, #f2ede6) 38%, transparent);
 }
 
 [data-theme$="dark"] .advice-service-section-label {
-  color: #e8b48a;
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$="dark"] .advice-service-row__title,
 [data-theme$="dark"] .advice-rules-pool-row--active .advice-service-row__title {
-  color: rgba(245, 242, 237, 0.72);
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$="dark"] .advice-service-row__hint,
 [data-theme$="dark"] .advice-rules-pool-empty {
-  color: rgba(245, 242, 237, 0.42);
+  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
 }
 
 [data-theme$="dark"] .advice-service-row {
-  border-bottom-color: rgba(245, 242, 237, 0.08);
+  border-bottom-color: color-mix(in srgb, var(--v4-ink, #f2ede6) 11%, transparent);
 }
 
 [data-theme$="dark"] .advice-rules-pool-row {
@@ -2603,7 +2604,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 /* Строка «панель оценки»: в освободившемся месте открывается панель шириной 96
-   с подписью «Полезно?» 9,5 px/700 прописными тоном чернил 45 %. Панель стоит
+   с подписью «Полезно?» 9,5 px/700 прописными тоном данных 56 %. Панель стоит
    на месте, карточка над ней сужается — сдвига карточки нет. */
 .advice-v4-rate-panel {
   position: absolute;
@@ -2624,7 +2625,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   font: 700 9.5px/1 Figtree, sans-serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Строка «панель оценки»: ряд из двух кнопок высотой 44 и радиусом 999 —
@@ -2663,11 +2664,11 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: var(--v4-act-text, #8a4a20);
 }
 
-/* Строка «панель оценки»: ниже строка 11 px/500 тоном чернил 50 %. */
+/* Строка «панель оценки»: ниже строка 11 px/500 тоном данных 56 %. */
 .advice-v4-rate-note {
   margin-top: 12px;
   font: 500 11px/1.4 Figtree, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -2846,7 +2847,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   font: 600 10px/1 Figtree, sans-serif;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .advice-v4-detail__hero-text {
@@ -2877,7 +2878,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   padding: 14px 15px;
   margin-top: 6px;
   font: 500 11.5px/1.55 Figtree, sans-serif;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -3127,7 +3128,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-settings__intro {
   margin: 16px 0 0;
   font: 500 11.5px/1.55 Figtree, sans-serif;
-  color: var(--v4-ink-3, rgba(32, 30, 29, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -3180,7 +3181,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   display: block;
   margin-top: 5px;
   font: 500 11px/1.45 Figtree, sans-serif;
-  color: var(--v4-ink-3, rgba(32, 30, 29, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -3231,7 +3232,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-settings__footnote {
   margin: 12px 0 0;
   font: 500 11px/1.5 Figtree, sans-serif;
-  color: var(--v4-ink-3, rgba(32, 30, 29, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -3363,7 +3364,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-science__source-meta {
   margin-top: 4px;
   font: 500 10.5px/1.4 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Элементы 14 и 15: оговорка стоит карточкой на второй поверхности, а не
@@ -3510,7 +3511,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-toast-card__meta {
   margin: 6px 0 0;
   font: 500 11px/1.4 Figtree, sans-serif;
-  color: rgba(32, 30, 29, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .advice-v4-toast-card__actions {
@@ -3533,7 +3534,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 
 .advice-v4-toast-card__secondary {
   background: var(--v4-chip, #efe3cf);
-  color: rgba(32, 30, 29, 0.55);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .advice-v4-toast-card__primary {

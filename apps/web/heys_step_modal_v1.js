@@ -3,6 +3,7 @@
 (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const { useState, useMemo, useEffect, useCallback, useRef, useContext, createContext } = React;
+  const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';
 
   // === Контекст для передачи данных между шагами ===
   const StepModalContext = createContext({});
@@ -1651,7 +1652,7 @@
                 style: {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   minHeight: 44, padding: '14px 16px', borderRadius: 20,
-                  background: '#f7efe2', color: 'rgba(0,0,0,.55)',
+                  background: '#f7efe2', color: INK_DATA,
                   font: '600 11.5px/1.4 Figtree, system-ui, sans-serif', textAlign: 'center',
                 },
               }, profileRetryCountdown > 0

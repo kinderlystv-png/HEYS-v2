@@ -409,10 +409,14 @@
     return `<span class="ca-modal__chevron" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg></span>`;
   }
 
+  function renderItemSubtitleHtml(subtitle) {
+    if (!subtitle) return '';
+    const nowrap = /ккал|продукт/iu.test(subtitle) ? ' ca-modal__item-sub--nowrap' : '';
+    return `<span class="ca-modal__item-sub${nowrap}">${escapeHtml(subtitle)}</span>`;
+  }
+
   function renderRowCopyHtml(copy) {
-    const sub = copy.subtitle
-      ? `<span class="ca-modal__item-sub">${escapeHtml(copy.subtitle)}</span>`
-      : '';
+    const sub = renderItemSubtitleHtml(copy.subtitle);
     return `<span class="ca-modal__item-copy"><b class="ca-modal__item-title">${escapeHtml(copy.title)}</b>${sub}</span>`;
   }
 
@@ -461,9 +465,7 @@
     const kcalHtml = isFiniteNumber(action.kcal_total)
       ? `<span class="ca-modal__repeat-kcal">${escapeHtml(formatKcalForAll(action.count, action.kcal_total))}</span>`
       : '';
-    const subHtml = copy.subtitle
-      ? `<span class="ca-modal__item-sub">${escapeHtml(copy.subtitle)}</span>`
-      : '';
+    const subHtml = renderItemSubtitleHtml(copy.subtitle);
     const membersHtml = expanded && Array.isArray(action.members)
       ? action.members.map((member) => {
         const targetId = registerTarget(member.entry, member.action);
@@ -963,9 +965,7 @@
     const kcalHtml = isFiniteNumber(action.kcal_total)
       ? `<span class="ca-modal__repeat-kcal">${escapeHtml(formatKcalForAll(action.count, action.kcal_total))}</span>`
       : '';
-    const subHtml = copy.subtitle
-      ? `<span class="ca-modal__item-sub">${escapeHtml(copy.subtitle)}</span>`
-      : '';
+    const subHtml = renderItemSubtitleHtml(copy.subtitle);
     return `
       <li class="ca-modal__repeat-group">
         <button class="ca-modal__item ca-modal__item--repeat" type="button" data-ca-target-id="${escapeHtml(targetId)}">

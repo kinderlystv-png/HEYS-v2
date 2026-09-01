@@ -162,6 +162,21 @@ describe('ProgramPathScreen — второй слой', () => {
     expect(screen.getByText(/осталось 2/)).toBeTruthy();
   });
 
+  it('считает сделанным только done, но не started и не skipped', () => {
+    const { ProgramPathScreen } = loadModule();
+    render(React.createElement(ProgramPathScreen, {
+      program: program([], 'active'),
+      days: [
+        { date: '2026-08-10', status: 'done' },
+        { date: '2026-08-11', status: 'started' },
+        { date: '2026-08-12', status: 'skipped' },
+      ],
+      onClose: () => {},
+    }));
+
+    expect(screen.getByText('Сделано 1 из 3')).toBeTruthy();
+  });
+
   it('дат и слова «статус» во втором слое нет — это отчёт куратора, не путь клиента', () => {
     const { ProgramPathScreen } = loadModule();
     const { container } = render(React.createElement(ProgramPathScreen, {
@@ -181,6 +196,36 @@ describe('ProgramPathScreen — второй слой', () => {
 
     expect(screen.getByText('Ближайшая')).toBeTruthy();
     expect(screen.getByText(/День A/)).toBeTruthy();
+  });
+});
+
+describe('lifecycle workoutLog', () => {
+  it('частичный патч сохраняет первую/последнюю отметки и очищает activeRest явно', () => {
+    const { mergeWorkoutLifecyclePatch } = loadModule();
+    const merged = mergeWorkoutLifecyclePatch({
+      startedAt: 100,
+      firstMarkAt: 100,
+      lastMarkAt: 200,
+      activeRest: { startedAt: 200, total: 90 },
+      exercises: [],
+    }, { completedAt: 300, activeRest: null, finish: true });
+
+    expect(merged).toEqual({
+      startedAt: 100,
+      firstMarkAt: 100,
+      lastMarkAt: 200,
+      completedAt: 300,
+      exercises: [],
+    });
+  });
+
+  it('finish переводит только начатый план в done и хранит время завершения', () => {
+    const { finishStartedWorkoutPlan } = loadModule();
+    const done = finishStartedWorkoutPlan({ plan: { status: 'started', id: 'p1' } });
+    expect(done.plan).toEqual({ status: 'done', id: 'p1' });
+
+    const assigned = { plan: { status: 'assigned', id: 'p2' } };
+    expect(finishStartedWorkoutPlan(assigned)).toBe(assigned);
   });
 });
 

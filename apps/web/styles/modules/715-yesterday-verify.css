@@ -299,12 +299,10 @@
   gap: 10px;
 }
 
-/* Кадр «Чек-ин · вчера по ощущениям», элемент 17. Перевод экрана на v4 забрал
-   значение справа (.yv-slider-value ниже), а подпись слева осталась в прежнем
-   кегле и слейтовом тоне. */
+/* Подпись слева остаётся в своём кегле и использует общий data-floor. */
 .yv-slider-label {
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .yv-slider-value {
@@ -320,11 +318,10 @@
   color: var(--v4-ink-4, #9ca3af);
 }
 
-/* Кадр «Чек-ин · вчера по ощущениям», элемент 23: 11 px/500 тоном чернил 42 %
-   через 12 от дорожки. Тона 42 % у набора нет — ближайший --v4-ink-3. */
+/* Кадр «Чек-ин · вчера по ощущениям», элемент 23: data-текст через 12 от дорожки. */
 .yv-slider-note {
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-top: 12px;
 }
 
@@ -618,9 +615,12 @@
 }
 
 [data-theme$="dark"] .yv-day-editor-subtitle,
-[data-theme$="dark"] .yv-preset-desc,
-[data-theme$="dark"] .yv-slider-note {
+[data-theme$="dark"] .yv-preset-desc {
   color: var(--heys-text-secondary);
+}
+
+[data-theme$="dark"] .yv-slider-note {
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .yv-preset {
@@ -639,9 +639,12 @@
   border-color: rgba(52, 211, 153, 0.45);
 }
 
-[data-theme$="dark"] .yv-preset-title,
-[data-theme$="dark"] .yv-slider-label {
+[data-theme$="dark"] .yv-preset-title {
   color: var(--heys-text-primary);
+}
+
+[data-theme$="dark"] .yv-slider-label {
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .yv-slider-value {
@@ -751,14 +754,11 @@
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
 }
 
-/* Кадры развилки: строка под карточкой сводки и под списком дней — 11/1,5
-   тоном чернил 42 % через 12. Роль --v4-ink-2 даёт 55 % и молча меняла замысел,
-   записанный тут же запасным значением; тона 42 % у набора нет, ближайший
-   --v4-ink-3. */
+/* Кадры развилки: data-строка под карточкой сводки и списком дней через 12. */
 .yv-pack-note {
   margin-top: 12px;
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(32, 30, 29, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -766,9 +766,12 @@
   color: var(--v4-ink, #f2ede6);
 }
 
-[data-theme$="dark"] .yv-hero-sub,
-[data-theme$="dark"] .yv-pack-note {
+[data-theme$="dark"] .yv-hero-sub {
   color: rgba(242, 237, 230, 0.55);
+}
+
+[data-theme$="dark"] .yv-pack-note {
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .yv-pack-secondary {
@@ -854,7 +857,7 @@
 
 .yv-force-kcal {
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -905,7 +908,7 @@
 .yv-slider-tick {
   position: absolute;
   font: 600 9.5px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.3);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

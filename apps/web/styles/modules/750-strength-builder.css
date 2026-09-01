@@ -171,7 +171,8 @@
 }
 
 .sb-ex.is-open {
-  border-color: rgba(249, 115, 22, 0.45);
+  border-color: var(--sb-br);
+  box-shadow: inset 0 0 0 1px var(--sb-br);
 }
 
 .sb-ex-head {
@@ -233,7 +234,7 @@
 }
 
 .sb-ex-count.is-done {
-  color: var(--sb-okTx);
+  color: var(--sb-mut);
 }
 
 .sb-ex-body {
@@ -385,7 +386,7 @@
   color: var(--sb-mut);
 }
 
-/* ── RPE и отдых ───────────────────────────────────────────────────────── */
+/* ── Тяжесть подхода и отдых ───────────────────────────────────────────── */
 
 .sb-rpe {
   display: flex;
@@ -396,19 +397,65 @@
 }
 
 .sb-rpe-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-size: 11px;
   font-weight: 700;
   color: var(--sb-mut);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  cursor: help;
+  list-style: none;
+}
+
+.sb-rpe-label::-webkit-details-marker {
+  display: none;
+}
+
+.sb-rpe-label::marker {
+  content: '';
+}
+
+.sb-effort-help {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.sb-effort-help-copy {
+  position: absolute;
+  z-index: 2;
+  top: 40px;
+  left: 0;
+  width: min(238px, calc(100vw - 48px));
+  box-sizing: border-box;
+  padding: 9px 11px;
+  border: 1px solid var(--sb-br);
+  border-radius: 11px;
+  background: var(--sb-card);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--sb-tx) 14%, transparent);
+  color: var(--sb-tx);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.sb-rpe-steps {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
 }
 
 .sb-rpe-dot {
-  width: 44px;
+  width: auto;
+  min-width: 0;
   height: 44px;
-  border-radius: 11px;
+  border-radius: 999px;
   border: 1px solid var(--sb-br);
-  background: var(--sb-card);
+  background: var(--sb-bg);
   color: var(--sb-tx);
   font-size: 13px;
   font-weight: 700;
@@ -604,11 +651,10 @@
 .sb-finish {
   flex: 1;
   min-height: 52px;
-  border: none;
+  border: 1px solid var(--sb-br);
   border-radius: 13px;
-  /* Затемнён до 5,2 и 7,3 против нормы 4,5 (решение 8). */
-  background: linear-gradient(180deg, #c2410c, #9a3412);
-  color: var(--v4-bg, #ffffff);
+  background: var(--sb-card);
+  color: var(--sb-accTx);
   font-size: 15px;
   font-weight: 800;
   cursor: pointer;
@@ -630,19 +676,54 @@
 
 .sb-rest {
   position: absolute;
-  inset: 0;
+  z-index: 3;
+  right: 12px;
+  bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  left: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  background: var(--sb-bg);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--sb-br);
+  border-radius: 18px;
+  background: var(--sb-card);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--sb-tx) 16%, transparent);
+}
+
+.sb-rest--collapsed {
+  padding: 0;
+  border-radius: 14px;
+}
+
+.sb-rest-meta {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px 8px;
+}
+
+.sb-rest-meta b {
+  color: var(--sb-tx);
+  font-size: 12.5px;
+}
+
+.sb-rest-meta span,
+.sb-rest-meta small {
+  color: var(--sb-mut);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sb-rest-meta small {
+  width: 100%;
 }
 
 .sb-rest-ring {
   position: relative;
-  width: 184px;
-  height: 184px;
+  width: 168px;
+  height: 168px;
 }
 
 .sb-rest-ring svg {
@@ -669,7 +750,48 @@
 
 .sb-rest-actions {
   display: flex;
+  width: 100%;
   gap: 8px;
+}
+
+.sb-rest-actions .sb-btn {
+  flex: 1;
+}
+
+.sb-rest-compact {
+  display: grid;
+  width: 100%;
+  min-height: 52px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: var(--sb-tx);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sb-rest-compact b {
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-rest-compact span {
+  overflow: hidden;
+  color: var(--sb-mut);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sb-rest-compact i {
+  color: var(--sb-accTx);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
 }
 
 .sb-empty {
@@ -715,25 +837,27 @@
   cursor: pointer;
 }
 
-/* ── Состояния строк подходов: цвет говорит, где человек сейчас ──────────── */
+/* ── Состояния строк подходов: один сигнал на одно состояние ────────────── */
 
 .sb-ap.is-done .sb-ap-field {
-  border-color: var(--sb-okBr);
-  background: var(--sb-okbg);
+  border-color: var(--sb-br);
+  background: var(--sb-card);
 }
 
 .sb-ap.is-done .sb-ap-num {
-  background: var(--sb-okbg);
-  color: var(--sb-okTx);
+  background: var(--sb-soft);
+  color: var(--sb-tx);
 }
 
 .sb-ap.is-current .sb-ap-field {
   border-color: var(--sb-acc);
+  box-shadow: inset 0 0 0 1px var(--sb-acc);
 }
 
 .sb-ap.is-current .sb-ap-num {
-  background: var(--sb-acc);
-  color: var(--v4-bg, #fff);
+  background: var(--sb-bg);
+  box-shadow: inset 0 0 0 1px var(--sb-br);
+  color: var(--sb-tx);
 }
 
 .sb-ap-num {
@@ -755,8 +879,8 @@
 }
 
 .sb-ex.is-complete {
-  border-color: var(--sb-okBr);
-  background: var(--sb-okbg);
+  border-color: var(--sb-br);
+  background: var(--sb-card);
 }
 
 .sb-ex-count.is-current {
@@ -1402,6 +1526,56 @@
   font-size: 12.5px;
   line-height: 1.5;
   color: var(--sb-mut);
+}
+
+.sb-interrupted {
+  margin: 12px 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(var(--ink), .1);
+  border-radius: 16px;
+  background: var(--c1);
+  color: var(--tx);
+}
+
+.sb-interrupted-title {
+  margin-bottom: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(var(--ink), .55);
+}
+
+.sb-interrupted-key {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.sb-interrupted p {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.sb-interrupted-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg);
+  font-size: 12px;
+}
+
+.sb-interrupted-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.sb-interrupted-actions .sb-btn {
+  flex: 1;
+  min-height: 44px;
 }
 
 /* Перенумерация (экран 12) — переходы и анимации остаются открытым вопросом

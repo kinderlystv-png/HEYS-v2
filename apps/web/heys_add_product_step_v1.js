@@ -9855,7 +9855,7 @@ NOVA: 1
 
       calculatedHarm != null && e('div', { className: 'aps-v4-harm-calc-card' },
         e('div', { className: 'aps-v4-harm-calc-card__head' },
-          e('span', { className: 'aps-v4-harm-calc-card__label' }, 'Расчёт системы'),
+          e('span', { className: 'aps-v4-harm-calc-card__label' }, 'Расчёт по формуле'),
           e('span', { className: 'aps-v4-harm-calc-card__value' }, `${Number(systemHarmValue).toFixed(1)} из 10`)
         ),
         e('div', { className: 'aps-v4-harm-calc-card__category' }, systemCategory.name || '—')
@@ -9869,7 +9869,7 @@ NOVA: 1
             checked: harmSourceMode === 'system',
             onChange: () => { haptic('light'); setHarmSourceMode('system'); setShowCustom(false); }
           }),
-          e('span', null, 'Оставить расчёт системы')
+          e('span', null, 'Оставить расчёт')
         ),
         e('label', { className: 'aps-v4-harm-radio' + (harmSourceMode === 'own' ? ' is-active' : '') },
           e('input', {
@@ -9882,7 +9882,7 @@ NOVA: 1
               if (hasManualHarm) setSelectedHarm(manualHarm);
             }
           }),
-          e('span', null, hasManualHarm ? 'Поставить свою оценку' : 'Указать своё значение')
+          e('span', null, hasManualHarm ? 'Из описания продукта' : 'Указать значение')
         )
       ),
 

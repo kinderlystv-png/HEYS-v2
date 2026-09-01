@@ -71,24 +71,20 @@ const BASELINE = {
   '000-base-and-gamification.css': 414,
   '100-metrics-and-graphs.css': 207,
   '300-modals-and-day.css': 163,
-  '400-water-and-hydration.css': 87,
+  '400-water-and-hydration.css': 67,
   '500-pwa-and-offline.css': 115,
+  '600-steps-and-aps.css': 66,
+  '610-aps-meal-flow.css': 73,
+  '611-aps-product-card.css': 19,
   '715-yesterday-verify.css': 37,
   '720-predictive-insights.css': 210,
-  '730-widgets-dashboard.css': 178,
-  // Файл вошёл в охват 1 сентября: вердикты Актива стали называть его по
-  // имени при разборе нового пакета, и пять давних литералов стали видны.
-  // Все пять намеренные: #23201b дважды — фон под [data-theme$="dark"],
-  // где правило уже принадлежит тёмному набору и роль ему не нужна;
-  // #2b1608 трижды — текст на акценте, роли под него в наборе нет, и это
-  // отступление названо поимённо в activity-v4-canvas-geometry.test.js.
-  '731-ui-v4-activity.css': 5,
-  '733-ui-v4-login-theme.css': 104,
+  '730-widgets-dashboard.css': 160,
+  '733-ui-v4-login-theme.css': 94,
   '740-cascade-card.css': 23,
   '750-strength-builder.css': 6,
   'critical.css': 34,
   'heys-boot-mark.css': 1,
-  'heys-components.css': 446,
+  'heys-components.css': 445,
 };
 
 /** Файлы, на которые ссылаются вердикты, — то есть сведённые. */

@@ -437,7 +437,11 @@
           stateLine(row)
         )
       ),
-      agePill(row) ? h('span', { className: 'cur-row__age' }, agePill(row)) : null
+      agePill(row) ? h('span', {
+        className: 'cur-row__age'
+          + (['decided_today', 'collecting', 'in_corridor'].includes(row.state) ? ' is-data' : '')
+          + (['decided_today', 'collecting'].includes(row.state) ? ' is-strong' : '')
+      }, agePill(row)) : null
     );
 
     const fine = byState.get('fine') || [];
@@ -732,13 +736,13 @@
           ? h(React.Fragment, null,
             h('div', { className: 'cur-sheet__tier' }, 'История поправки'),
             h('div', { className: 'cur-sheet__hist' },
+              historyChart(React, card.history),
               h('div', { className: 'cur-sheet__hist-legend' },
                 h('span', null, 'пунктир сверху — 1,00'),
                 h('span', { className: 'is-target' },
                   'пунктир снизу — цель ×'
                   + (rec ? String(rec.targetFactorShown).replace('.', ',') : '—'))
               ),
-              historyChart(React, card.history),
               h('div', { className: 'cur-sheet__hist-dates' },
                 card.history.slice().reverse().map((w) => h('span', { key: w.weekLabel },
                   w.weekLabel))

@@ -10,7 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { fileURLToPath } from 'url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,8 +42,16 @@ function readerFor(doneOffsets) {
     : {});
 }
 
+beforeEach(() => {
+  // Статус текущего дня зависит от HEYS-today. Без фиксации часов этот тест
+  // начинал считать anchor-вчера пропуском сразу после смены календарной даты.
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(TODAY + 'T12:00:00'));
+});
+
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   delete globalThis.HEYS;
   if (globalThis.window) delete globalThis.window.HEYS;
 });

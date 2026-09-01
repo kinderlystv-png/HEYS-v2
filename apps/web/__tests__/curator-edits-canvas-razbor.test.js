@@ -38,6 +38,13 @@ const PAIRS_ONE = [
 // Кадр «свёрнуто по типам»: счётчик рядом с названием типа.
 const PAIRS_TYPES = [
   [9, '.ca-modal__type-count', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [10, '.ca-modal__type-more-title', ['color']],
+];
+
+// Кадр «повторяющиеся правки»: строка с пилюлей повтора имеет собственные
+// вертикальные поля и прижимает содержимое к верху.
+const PAIRS_REPEAT = [
+  [9, '.ca-modal__item--repeat', ['align', 'padding']],
 ];
 
 // Осознанные отступления — поимённо, иначе список молча растёт.
@@ -62,7 +69,7 @@ const EXCEPTIONS = [
 
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 3;
+const COVERAGE_FLOOR = 5;
 
 describe('лист правок куратора против разбора кадров канваса', () => {
   const canvas = fs.readFileSync(CANVAS, 'utf8');
@@ -79,7 +86,7 @@ describe('лист правок куратора против разбора к�
   });
 
   it('каждая пара указывает на существующее правило', () => {
-    const missing = [...PAIRS_ONE, ...PAIRS_TYPES]
+    const missing = [...PAIRS_ONE, ...PAIRS_TYPES, ...PAIRS_REPEAT]
       .map(([, sel]) => sel)
       .filter((s) => typeof s === 'string' && !rules.has(s));
     expect(missing).toEqual([]);
@@ -91,6 +98,27 @@ describe('лист правок куратора против разбора к�
 
   it('числа листа совпадают с кадром «свёрнуто по типам»', () => {
     expect(compare({ razbor, rules, frame: TYPES, pairs: PAIRS_TYPES })).toEqual([]);
+  });
+
+  it('название свёрнутого типа остаётся в одной строке со счётчиком', () => {
+    expect(rules.get('.ca-modal__type-title')?.['white-space']).toBe('nowrap');
+  });
+
+  it('иерархия тонов листа совпадает с численными контрактами канваса', () => {
+    const ink = (percent) => `color-mix(in srgb, var(--v4-ink, #201e1d) ${percent}%, transparent)`;
+    expect(rules.get('.ca-modal__header-subtitle')?.color).toBe(ink(50));
+    expect(rules.get('.ca-modal__item-sub')?.color).toBe(ink(50));
+    expect(rules.get('.ca-modal__item-sub--nowrap')?.['white-space']).toBe('nowrap');
+    expect(rules.get('.ca-modal__type-more-title')?.color).toBe(ink(50));
+    expect(rules.get('.ca-modal__close')?.color).toBe(ink(28));
+    expect(rules.get('.ca-modal__chevron')?.color).toBe(ink(28));
+    expect(rules.get('.ca-modal__date-label')?.color).toBe(ink(40));
+    expect(rules.get('.ca-modal__meal-divider')?.background).toBe(ink(7));
+    expect(rules.get('.ca-modal__later-btn')?.color).toBe(ink(58));
+  });
+
+  it('числа листа совпадают с кадром «повторяющиеся правки»', () => {
+    expect(compare({ razbor, rules, frame: REPEAT, pairs: PAIRS_REPEAT })).toEqual([]);
   });
 
   it('осознанные отступления не разрослись', () => {

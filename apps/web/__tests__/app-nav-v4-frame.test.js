@@ -373,6 +373,19 @@ describe('UI v4 chrome paint — рама', () => {
         expect(baseCss).toMatch(/@media \(max-width: 768px\)[\s\S]*?\.tabs--v4-primary \.tab-settings-wrap > \.tab[\s\S]*?display:\s*none !important/);
     });
 
+    it('неактивная подпись primary nav — 8,5/600 и светлые чернила 56 %', () => {
+        const navRule = [
+            ...baseCss.matchAll(/\.tabs--v4-primary \.tab\.tab-primary-nav \{[^}]+\}/g),
+        ].map((match) => match[0]).find((candidate) => candidate.includes('--v4-ink-data')) || '';
+        const textRule = baseCss.match(
+            /\.tabs--v4-primary \.tab\.tab-primary-nav \.tab-text \{[^}]+\}/,
+        )?.[0] || '';
+        expect(navRule).toMatch(/color:\s*var\(--v4-ink-data,\s*rgba\(0,\s*0,\s*0,\s*0\.56\)\)/);
+        expect(textRule).toMatch(/font-size:\s*8\.5px/);
+        expect(textRule).toMatch(/font-weight:\s*600/);
+        expect(textRule).toMatch(/line-height:\s*1/);
+    });
+
     it('шапка расстановки — Отмена откатывает, Готово сохраняет', () => {
         expect(shellSrc).toContain('handleWidgetsEditCancel');
         expect(shellSrc).toContain("exitEditMode({ revert: true })");

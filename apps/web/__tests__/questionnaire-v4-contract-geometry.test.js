@@ -38,7 +38,7 @@ describe('анкета v4: решения контракта', () => {
   });
 
   // Строка «вид сводки»: подпись вопроса 9,5/700 прописными тоном чернил 40 %.
-  // Кадр набирает 600 и 55 %.
+  // Кадр набирает 600 и теперь 56 %.
   it('подпись в сводке — 700 тоном чернил 40 %', () => {
     expect(SRC).toMatch(/fontSize: 9\.5, fontWeight: 700, lineHeight: 1, letterSpacing: '\.14em'[^}]*color: INK_40/);
   });
@@ -56,7 +56,27 @@ describe('анкета v4: решения контракта', () => {
     const block = SRC.slice(at - 400, at + 60);
     expect(block).not.toMatch(/background:\s*TINT/);
     expect(block).not.toContain('чтобы отправить анкету');
-    expect(block).toMatch(/textAlign: 'center', color: INK_55/);
+    expect(block).toMatch(/textAlign: 'center', color: INK_DATA/);
+  });
+
+  // Новая строка безопасных данных не заменяет весь вторичный текст: canvas
+  // оставляет обычную прозу на 55 %, а служебные значения поднимает до 56 %.
+  it('служебные данные используют отдельную роль 56 %, не глобальную замену', () => {
+    expect(SRC).toContain("const INK_DATA = 'var(--v4-ink-data, rgba(0, 0, 0, 0.56))'");
+    expect(SRC).toMatch(/color: INK_DATA[^}]*} },\s*STEP_TIME_LEFT\[step\]/);
+    expect(SRC).toMatch(/color: INK_DATA[^}]*} },\s*'Все заполненные ответы/);
+    expect(SRC).toContain("hint: 'Например: вес идёт вниз, вечером спокойнее', hintColor: INK_DATA");
+    expect(SRC).toContain("hint: 'Достаточно примерного ритма без адресов и названий мест', hintColor: INK_DATA");
+    expect(SRC).toMatch(/hintStyle = \{ marginTop: 5,[^}]*color: INK_55/);
+    expect(SRC).toMatch(/style: \{ \.\.\.inputStyle, marginTop: 8/);
+    expect(SRC).toMatch(/marginTop: 9, fontSize: 11\.5, fontWeight: 500, lineHeight: 1\.5, color: INK_DATA/);
+  });
+
+  // Именованная строка canvas требует монотонный остаток 10 → 7 → 5 → 3 →
+  // меньше минуты. Два кадровых слепка после перестановки согласия ставят
+  // «меньше минуты» перед «10 минутами»; это зафиксировано честным ≠.
+  it('остаток времени убывает по ходу пяти шагов', () => {
+    expect(SRC).toMatch(/STEP_TIME_LEFT = Object\.freeze\(\[\s*'Обычно занимает около 10 минут',\s*'Осталось примерно 7 минут',\s*'Осталось примерно 5 минут',\s*'Осталось примерно 3 минуты',\s*'Осталось меньше минуты'/);
   });
 
   // Строка «слова на экране» запрещает обращения от лица команды. Кадр с ней

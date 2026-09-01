@@ -2,5 +2,169 @@
   "canvas": "service-curator.v4.dc.html",
   "contractOnly": false,
   "recorded": "2026-09-01",
-  "rows": {}
+  "rows": {
+    "фича": {
+      "v": "≠",
+      "f": "Именованная строка требует версию/SW/очистку кеша/выход, но видимый кадр и живой renderAdviceServiceScreen показывают Техлог/Диагностику/Пул правил — day/_advice.js:458-533. Внутренний конфликт canvas вынесен дизайнеру; код сохраняет согласованный с кадром кураторский advice-service.",
+      "h": "358fdda24965"
+    },
+    "источник": {
+      "v": "—",
+      "f": "Правило владения дизайн-пакета: owner-canvas теперь service-curator, не продуктовая логика.",
+      "h": "430d27a2e1f2"
+    },
+    "границы": {
+      "v": "—",
+      "f": "Строка распределяет ownership общей шапки/подложки и содержимого листа; предметный контент проверяется отдельными строками.",
+      "h": "b39de47a4aa7"
+    },
+    "кто видит": {
+      "v": "=",
+      "f": "Глобальное событие открывает экран только после isCuratorReadOnlyMode(), а entry в settings стоит под isCuratorSettingsSession — day/_advice.js:3706-3715; heys_app_shell_v1.js:5815-5830; advice-v4-panels.test.js.",
+      "h": "4e09519b4af2"
+    },
+    "вид · служебный лист": {
+      "v": "≠",
+      "f": "Именованная строка описывает строки версия/SW со значением справа и действия cache/logout, но видимый кадр той же зоны и runtime содержат карточку advice-service без этих значений и пилюль — day/_advice.js:473-532. Нужна синхронизация canvas.",
+      "h": "715d0561ac5d"
+    },
+    "палитры": {
+      "v": "=",
+      "f": "Экран использует --v4-bg/ink/tint/c1/act-text и производные от --v4-ink; sand/dark/blue наследуют один набор ролей — 400-water-and-hydration.css:2252-2488.",
+      "h": "ee3d5123decd"
+    },
+    "чего в зоне нет": {
+      "v": "=",
+      "f": "Три действия открывают только технические advice-экраны; мутаций дневника клиента в renderAdviceServiceScreen нет — day/_advice.js:458-533.",
+      "h": "9b2c5449842d"
+    },
+    "как читать разбор": {
+      "v": "—",
+      "f": "Инструкция чтения element-by-element разбора canvas.",
+      "h": "a7c1cb6b25d9"
+    },
+    "Служебное · за входом куратора · 01": {
+      "v": "—",
+      "f": "Внешняя рамка телефона/экрана относится к общему shell по строке границ; content overlay заполняет viewport.",
+      "h": "9081ad5f75a2"
+    },
+    "Служебное · за входом куратора · 02": {
+      "v": "—",
+      "f": "Общая шапка листа вынесена строкой границ; текущая геометрия совпадает в .advice-service-header, но не засчитывается содержимому зоны.",
+      "h": "c4dc24e73776"
+    },
+    "Служебное · за входом куратора · 03": {
+      "v": "—",
+      "f": "Заголовок общей шапки относится к внешнему shell по строке границ; live .advice-service-title совпадает визуально.",
+      "h": "aee4b0774f87"
+    },
+    "Служебное · за входом куратора · 04": {
+      "v": "=",
+      "f": ".advice-service-body flex:1; padding:0 18px — 400-water-and-hydration.css:2282.",
+      "h": "0cd5a6f93e7b"
+    },
+    "Служебное · за входом куратора · 05": {
+      "v": "=",
+      "f": ".advice-service-note: --v4-tint, r18, padding 14/15, mt18, 11.5/500/1.5 и data tone; дословная копия в day/_advice.js — service-curator-v4-canvas-razbor.test.js.",
+      "h": "082f17d1f5e4"
+    },
+    "Служебное · за входом куратора · 06": {
+      "v": "=",
+      "f": ".advice-service-section-label: 10/700/1, .16em uppercase, --v4-act-text, margin 20 0 8 — canvas razbor test.",
+      "h": "5397e015cf57"
+    },
+    "Служебное · за входом куратора · 07": {
+      "v": "=",
+      "f": ".advice-service-list: --v4-c1, r20, padding 2/16 — canvas razbor test.",
+      "h": "71d5031ba678"
+    },
+    "Служебное · за входом куратора · 08": {
+      "v": "=",
+      "f": ".advice-service-row: center, gap12, padding14/0, border from --v4-ink 7%; last child removes divider — 400-water-and-hydration.css.",
+      "h": "10ff62c363ca"
+    },
+    "Служебное · за входом куратора · 09": {
+      "v": "=",
+      "f": "Текстовый wrapper — первый span строки; chevron получает margin-left:auto, поэтому контент занимает доступную ширину — day/_advice.js:493; CSS:2346.",
+      "h": "55bfcd532bba"
+    },
+    "Служебное · за входом куратора · 10": {
+      "v": "=",
+      "f": ".advice-service-row__title: 12.5/600/1 и --v4-ink-2 (.55 light/.63 dark) — canvas razbor test.",
+      "h": "4f5f47212eef"
+    },
+    "Служебное · за входом куратора · 11": {
+      "v": "=",
+      "f": ".advice-service-row__hint: 10.5/500/1.4, mt5, --v4-ink-data 56%; copy exact — canvas razbor test.",
+      "h": "08bf0309b139"
+    },
+    "Служебное · за входом куратора · 12": {
+      "v": "=",
+      "f": "Повторные service rows используют тот же .advice-service-row center/gap12/padding14 — day/_advice.js:501-526.",
+      "h": "b7ec65b01381"
+    },
+    "Служебное · за входом куратора · 13": {
+      "v": "=",
+      "f": ".advice-service-footer-note: 11/500/1.5, mt14, data 56%, exact copy — canvas razbor test.",
+      "h": "5864573c1c11"
+    },
+    "Служебное · за входом куратора · 14": {
+      "v": "=",
+      "f": ".advice-service-footer-tag: padding 16/18/20, 9.5/600/1, .18em uppercase, data56 center — canvas razbor test.",
+      "h": "d9f6eb095299"
+    },
+    "как читать графику": {
+      "v": "—",
+      "f": "Инструкция чтения SVG-разбора canvas.",
+      "h": "aff3381fee5e"
+    },
+    "Служебное · за входом куратора · рисунок 01": {
+      "v": "—",
+      "f": "Поле back-иконки общей шапки относится к внешнему shell по строке границ.",
+      "h": "57f7c5e99afc"
+    },
+    "Служебное · за входом куратора · рисунок 02": {
+      "v": "—",
+      "f": "Кривая back-иконки общей шапки относится к внешнему shell; renderAdviceV4Icon chevron-left использует M15 18l-6-6 6-6.",
+      "h": "2166f24e07e2"
+    },
+    "Служебное · за входом куратора · рисунок 03": {
+      "v": "=",
+      "f": "Chevron-right выводится renderAdviceV4Icon в каждой строке с полем 14×14 — day/_advice.js:497-525.",
+      "h": "0d870165fdc4"
+    },
+    "Служебное · за входом куратора · рисунок 04": {
+      "v": "=",
+      "f": "renderAdviceV4Icon chevron-right использует M9 6l6 6-6 6; source проверяется advice icon contracts.",
+      "h": "163302844c74"
+    },
+    "как читать текст": {
+      "v": "—",
+      "f": "Инструкция чтения дословного text snapshot canvas.",
+      "h": "68ab4749e19a"
+    },
+    "Служебное · за входом куратора · текст": {
+      "v": "=",
+      "f": "Вся последовательность Служебное/notice/Советы/Техлог/Диагностика/Пул правил/footer дословно присутствует в renderAdviceServiceScreen — service-curator-v4-canvas-razbor.test.js.",
+      "h": "71a70f4460f1"
+    }
+  },
+  "frames": {
+    "Служебное · за входом куратора": {
+      "evidence": [
+        "apps/web/__tests__/service-curator-v4-canvas-razbor.test.js",
+        "apps/web/day/_advice.js",
+        "apps/web/heys_app_gate_flow_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
+    },
+    "Служебное · за входом куратора · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/service-curator-v4-canvas-razbor.test.js",
+        "apps/web/day/_advice.js",
+        "apps/web/heys_app_gate_flow_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
+    }
+  }
 }

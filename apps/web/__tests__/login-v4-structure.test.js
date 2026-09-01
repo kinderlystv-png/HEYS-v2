@@ -67,7 +67,7 @@ describe('login v4 canvas structure', () => {
     expect(css).toContain('.heys-auth-shell-dock');
     expect(css).toContain('.heys-auth-shell--curator');
     expect(css).toMatch(/\.heys-auth-logo \.lab path[\s\S]*rgba\(0,\s*0,\s*0,\s*0\.42\)/);
-    expect(css).toMatch(/\.heys-auth-shell[\s\S]*?background:\s*#efe3cf/);
+    expect(css).toMatch(/\.heys-auth-shell[\s\S]*?background:\s*var\(--v4-hero,\s*#efe3cf\)/);
     expect(css).toMatch(/--auth-card-max:\s*339px/);
     expect(css).toMatch(/--auth-inline-gutter:\s*max\(/);
     expect(css).toMatch(/padding:\s*28px var\(--auth-inline-gutter\) 0\s*!important/);
@@ -114,11 +114,11 @@ describe('login v4 canvas structure', () => {
     expect(gridBlock?.[0]).not.toContain('space-between');
   });
 
-  it('paints dark auth controls with dark palette literals instead of light sand', () => {
-    expect(css).toMatch(/\[data-theme="sand-dark"\][\s\S]*?\.heys-auth-field[\s\S]*?background:\s*#2f2820/);
-    expect(css).toMatch(/\[data-theme="sand-dark"\][\s\S]*?\.heys-auth-pin-input[\s\S]*?background:\s*#2f2820/);
+  it('paints dark auth controls through active palette roles', () => {
+    expect(css).toMatch(/\[data-theme="sand-dark"\][\s\S]*?\.heys-auth-field[\s\S]*?background:\s*var\(--v4-hero,\s*#2f2820\)/);
+    expect(css).toMatch(/\[data-theme="sand-dark"\][\s\S]*?\.heys-auth-pin-input[\s\S]*?background:\s*var\(--v4-hero,\s*#2f2820\)/);
     expect(css).toMatch(/\[data-theme="sand-dark"\][\s\S]*?\.heys-auth-title[\s\S]*?color:\s*var\(--v4-ink/);
-    expect(css).toMatch(/\[data-theme="blue-dark"\][\s\S]*?\.heys-auth-shell[\s\S]*?background:\s*#2f2820/);
+    expect(css).toMatch(/\[data-theme="blue-dark"\][\s\S]*?\.heys-auth-shell[\s\S]*?background:\s*var\(--v4-hero,\s*#2f2820\)/);
   });
 
   it('keeps canvas section rhythm inside the client form', () => {

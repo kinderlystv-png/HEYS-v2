@@ -29,7 +29,7 @@ describe('cold-start spinner mark', () => {
     expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?r="9\.2"/);
     expect(html).not.toMatch(/heys-boot-mark__spin[\s\S]*?<svg width="26"/);
     expect(html).toContain('role="status"');
-    expect(html).toContain('Загружаем');
+    expect(html).toContain('<span class="heys-boot-mark__sr">Загрузка</span>');
     expect(html).not.toMatch(/id="root"[\s\S]*heys-skeleton/);
     expect(html).not.toContain('Bottom tab bar');
   });
@@ -122,15 +122,12 @@ describe('cold-start spinner mark', () => {
   });
 
   it('anchors boot disc and fail state on shared splash coordinates', () => {
-    // Контракт spinners/app-splash «safe-area и кнопка назад»: якорь несёт
-    // env(safe-area-inset-top) внутри каждого слагаемого max(), чтобы диск не
-    // считался от полного окна на устройствах с вырезом. На устройствах без
-    // врезки env() возвращает 0, и формула остаётся max(148px, 45dvh).
-    expect(css).toMatch(
-      /--heys-splash-anchor-y:\s*max\(\s*calc\(148px \+ env\(safe-area-inset-top,\s*0px\)\),\s*calc\(45dvh \+ env\(safe-area-inset-top,\s*0px\)\)\s*\)/,
-    );
+    // Контракт spinners/app-splash «safe-area и кнопка назад»: контейнер
+    // ограничен обеими врезками, поэтому 45% считаются по доступной высоте.
+    expect(css).toMatch(/\.heys-boot-mark \{[\s\S]*?inset:\s*env\(safe-area-inset-top,\s*0px\) 0 env\(safe-area-inset-bottom,\s*0px\)/);
+    expect(css).toMatch(/--heys-splash-anchor-y:\s*max\(148px,\s*45%\)/);
     expect(css).toContain('--heys-splash-disc-size: 56px');
-    expect(css).toMatch(/\.heys-boot-mark__disc[\s\S]*top:\s*var\(--heys-splash-anchor-y\)/);
+    expect(css).toMatch(/\.heys-boot-mark__disc \{[\s\S]*?position:\s*absolute;[\s\S]*?top:\s*var\(--heys-splash-anchor-y\)/);
     expect(css).toMatch(/\.heys-boot-mark__disc[\s\S]*transform:\s*translate\(-50%, -50%\)/);
     expect(css).toMatch(/\.heys-boot-mark\.is-fail[\s\S]*\.heys-boot-mark__disc[\s\S]*top:\s*var\(--heys-splash-anchor-y\)|\.heys-boot-mark__disc[\s\S]*top:\s*var\(--heys-splash-anchor-y\)/);
   });
@@ -172,40 +169,27 @@ describe('cold-start spinner mark', () => {
     expect(css).toMatch(
       /\.heys-boot-mark__btn \{[\s\S]*?margin-top: 22px;[\s\S]*?min-height: 48px;[\s\S]*?border-radius: 999px;[\s\S]*?background: var\(--boot-disc\);[\s\S]*?color: var\(--boot-ink-58\);[\s\S]*?font: 700 13px/,
     );
-    // Строка про куратора — под кнопкой, 11,5/500 вторичным, только на второй неудаче.
-    expect(css).toMatch(/\.heys-boot-mark__curator \{[\s\S]*?font: 500 11\.5px/);
-    expect(css).toContain('.heys-boot-mark.is-fail-again .heys-boot-mark__curator { display: block; }');
+    // На первой неудаче ссылка куратора уже видна под кнопкой, 11,5/500 вторичным.
+    expect(css).toMatch(/\.heys-boot-mark__curator \{[\s\S]*?font: 500 11\.5px[\s\S]*?display: block;/);
     expect(html).toMatch(
       /heys-boot-mark__btn heys-boot-mark__retry">Повторить<\/button>\s*<a class="heys-boot-mark__curator"/,
     );
   });
 
-  it('swaps the action hierarchy on the second fail, by the frame', () => {
-    // Ответ дизайнера №15 от 31 августа — единственное место, где вторая
-    // ступень идёт по кадру, а не по строке «вид ступеней холодного старта»:
-    // приложение не запустилось дважды подряд, «Повторить» уже не сработал, и
-    // «Написать куратору» остаётся единственным живым выходом. Тише кнопки он
-    // быть не может. Кадр «Спиннер · вторая неудача» рисует это элементами
-    // 05–07: куратор главной кнопкой, повтор вторичной строкой 44 px.
-    // Строку контракта дизайнер правит отдельным заходом — до тех пор эта
-    // проверка и есть единственный сторож решения.
+  it('shows equal 48 px actions on the second fail', () => {
+    // Решение 31 августа в строке «три ступени»: куратор не тише уже
+    // не сработавшего повтора, поэтому обе ссылки выглядят как кнопка ступени.
     expect(css).toMatch(
       /\.heys-boot-mark\.is-fail-again \.heys-boot-mark__curator \{[^}]*min-height: 48px;[^}]*border-radius: 999px;[^}]*background: var\(--boot-disc\);[^}]*font: 700 13px/,
     );
     expect(css).toMatch(
-      /\.heys-boot-mark\.is-fail-again \.heys-boot-mark__retry \{[^}]*min-height: 44px;[^}]*color: var\(--boot-ink-50\);[^}]*font: 700 12px/,
+      /\.heys-boot-mark__btn \{[^}]*min-height: 48px;[^}]*background: var\(--boot-disc\);[^}]*font: 700 13px/,
     );
-    // Куратор стоит выше повтора. Порядок задан order, а не перестановкой
-    // разметки: тот же блок собирается статикой и showRecoveryUI.
+    // Порядок остаётся явным: куратор выше повтора, но визуальный вес равен.
     expect(css).toMatch(/\.heys-boot-mark\.is-fail-again \.heys-boot-mark__curator \{\s*\n\s*order: 3;/);
     expect(css).toMatch(/\.heys-boot-mark\.is-fail-again \.heys-boot-mark__retry \{\s*\n\s*order: 4;/);
-    // Повтор на второй ступени называется полно. Сторожится пока только
-    // статическая сборка блока: та же копия в showRecoveryUI (index.html)
-    // лежит в файле вместе с чужим hash-sync бандлов и в этот коммит не
-    // вошла, поэтому проверять её здесь нечего — она уехала бы красной.
-    // Когда динамическая ветка закоммитится, сюда возвращается строка
-    // expect(html).toContain("(again ? 'Повторить ещё раз' : 'Повторить')").
-    expect(loading).toContain("retry: 'Повторить ещё раз'");
+    expect(html).not.toContain('Повторить ещё раз');
+    expect(loading).not.toContain("retry: 'Повторить ещё раз'");
   });
 
   it('keeps the sign palettes on the canvas --c2 / --acs values', () => {

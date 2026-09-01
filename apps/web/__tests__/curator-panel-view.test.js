@@ -434,6 +434,12 @@ describe('панель куратора · строка клиента', () => {
     expect(CP.agePill(row({ state: 'decided_today' }))).toBe('вы');
   });
 
+  it('коридор, нехватка данных и «вы» набраны как данные, а не пилюли', () => {
+    expect(SRC).toContain("['decided_today', 'collecting', 'in_corridor']");
+    expect(CSS).toMatch(/\.cur-row__age\.is-data[\s\S]{0,260}--v4-ink-data/);
+    expect(CSS).toMatch(/\.cur-row__age\.is-data\.is-strong[\s\S]{0,80}font-weight:\s*700/);
+  });
+
   it('у копящих данные пилюля говорит, чего не хватает', () => {
     const r = row({ state: 'collecting', result: { loggedDays: 14, weighIns: 4, missing: { weighIns: 2 } } });
     expect(CP.agePill(r)).toBe('нужно 2');

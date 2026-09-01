@@ -540,7 +540,10 @@
         // приёмами, а лист про подписку отвечает всего на четыре вопроса.
         const kv = (key, value, tone) => h('div', { key, className: 'cur-kv' },
             h('span', { className: 'cur-kv__key' }, key),
-            h('span', { className: 'cur-kv__val' + (tone ? ' is-' + tone : '') }, value)
+            h('span', {
+                className: 'cur-kv__val' + (tone ? ' is-' + tone : '')
+                    + (String(key).startsWith('ID ') ? ' is-id' : '')
+            }, value)
         );
 
         // Строка списка действий: имя слева, что произойдёт — справа. Прежде
@@ -1280,7 +1283,7 @@
                 ),
                 // Подпись формы, а не предупреждение: замок 🔒 на холодной
                 // плашке читался тревогой там, где просто объясняют вход.
-                React.createElement('div', { className: 'cur-cab__tab-note' },
+                React.createElement('div', { className: 'cur-cab__tab-note is-form-note' },
                     'Клиент войдёт по этому телефону и PIN-коду. '
                     + 'Сохраните их — второй раз показать не сможем.'),
                 // Выданный доступ — та же карточка, что в листе подписки

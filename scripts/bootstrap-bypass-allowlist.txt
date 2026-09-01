@@ -149,7 +149,7 @@ apps/web/heys_iw_config_loader.js:151
 apps/web/heys_iw_lipolysis.js:68
 apps/web/heys_iw_lipolysis.js:105
 apps/web/heys_leaderboard_v1.js:129
-apps/web/heys_meal_optimizer_v1.js:1822
+apps/web/heys_meal_optimizer_v1.js:1827
 apps/web/heys_meal_step_v1.js:30
 apps/web/heys_meal_step_v1.js:54
 apps/web/heys_metabolic_intelligence_v1.js:1256
@@ -193,7 +193,7 @@ apps/web/heys_simple_analytics.js:130
 apps/web/heys_smart_search_v2.js:809
 apps/web/heys_smart_search_v2.js:888
 apps/web/heys_smart_search_v2.js:959
-apps/web/heys_step_modal_v1.js:42
+apps/web/heys_step_modal_v1.js:43
 apps/web/heys_steps_v1.js:58
 apps/web/heys_storage_layer_v1.js:169
 apps/web/heys_storage_layer_v1.js:200
@@ -210,8 +210,8 @@ apps/web/heys_ui_onboarding_v1.js:1666
 apps/web/heys_ui_onboarding_v1.js:1681
 apps/web/heys_ui_onboarding_v1.js:171
 apps/web/heys_ui_onboarding_v1.js:778
-apps/web/heys_user_tab_impl_v1.js:476
-apps/web/heys_user_tab_impl_v1.js:761
+apps/web/heys_user_tab_impl_v1.js:480
+apps/web/heys_user_tab_impl_v1.js:765
 apps/web/heys_user_v12.js:166
 apps/web/heys_user_v12.js:177
 apps/web/heys_weekly_reports_v2.js:38

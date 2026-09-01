@@ -18,6 +18,8 @@ import { describe, expect, it } from 'vitest';
 const read = (rel) => fs.readFileSync(path.resolve(__dirname, rel), 'utf8');
 const profile = read('../heys_profile_step_v1.js');
 const consents = read('../heys_consents_v1.js');
+const stepModal = read('../heys_step_modal_v1.js');
+const userTab = read('../heys_user_tab_impl_v1.js');
 const loginCss = read('../styles/modules/733-ui-v4-login-theme.css');
 const pwaCss = read('../styles/modules/500-pwa-and-offline.css');
 
@@ -81,12 +83,47 @@ describe('регистрация v4: решения контракта', () => {
   // всех случаях, кроме нормы».
   it('тоном тревоги набран только недостаток веса', () => {
     expect(profile).toMatch(/bmiWord === 'недостаток' \? '#a1471c' : 'rgba\(0,0,0,\.45\)'/);
+    expect(profile).toMatch(/goalBmi > 0 && goalBmi < 18\.5[\s\S]{0,80}\? 'не строим'/);
   });
 
-  // Экран согласий: код следует строке «неактивная кнопка» (500 тоном 55 %), а
-  // кадр рисует 600 и 50 %.
+  // Экран согласий: код следует общей строке «неактивная кнопка» (500 тоном
+  // 55 %). Кадр после пересъёмки 31 августа рисует 600 и 56 %; конфликт внутри
+  // одного канваса остаётся именованным расхождением, а не молчаливой заменой
+  // правила доступности кадром.
   it('причина под неактивной кнопкой набрана по контракту, а не по кадру', () => {
     expect(consents).toMatch(/font: '500 11\.5px\/1\.45 Figtree[^']*',\s*\n?\s*color: 'rgba\(0,0,0,\.55\)'/);
+  });
+
+  it('обновлённые строки данных используют роль чернил 56 %, не локальные литералы', () => {
+    const role = "const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';";
+    expect(profile).toContain(role);
+    expect(consents).toContain(role);
+    expect(stepModal).toContain(role);
+    expect(userTab).toContain(role);
+
+    const nearby = (source, text, before = 320) => {
+      const at = source.indexOf(text);
+      expect(at, text).toBeGreaterThan(-1);
+      expect(source.slice(Math.max(0, at - before), at), text).toContain('color: INK_DATA');
+    };
+
+    nearby(profile, 'Формула основного обмена у мужчин и женщин разная.');
+    nearby(profile, 'Куратор обращается к вам по имени, поэтому оно должно читаться.');
+    nearby(profile, 'Программа рассчитана на взрослых, и документы подписывает совершеннолетний.');
+    nearby(profile, 'При росте ${height} см нижняя граница нормы');
+    nearby(profile, 'Волна задаёт, сколько после приёма пищи держится подъём инсулина');
+    nearby(profile, 'До этого дня приложение можно не открывать — считать ещё нечего.');
+    nearby(profile, 'Норма калорий считается каждый день по факту');
+    nearby(consents, 'Введите код доступа — он заменяет собственноручную подпись.');
+    nearby(consents, 'Необязательное отмечается тапом и меняется в настройках');
+    nearby(consents, 'Копия подписи хранится в профиле — её видно в настройках');
+    nearby(stepModal, 'Попытка ${profileRetryAttempt} · следующая через');
+    expect(userTab).toMatch(/className: 'profile-v4__subtier-title',[\s\S]{0,100}color: INK_DATA/);
+  });
+
+  it('кадр подписи показывает пояснение, а итог не повторяет заголовок ввода', () => {
+    expect(consents).toMatch(/!signSuccess && React\.createElement\(React\.Fragment[\s\S]*Введите код доступа — он заменяет собственноручную подпись\./);
+    expect(consents).toContain('Копия подписи хранится в профиле — её видно в настройках');
   });
 
   // Цвета снятой системы на шагах профиля: белый фон невыбранной цели, серые

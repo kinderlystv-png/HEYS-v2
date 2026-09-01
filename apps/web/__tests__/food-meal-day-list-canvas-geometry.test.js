@@ -53,14 +53,18 @@ describe('строка приёма дня против кадра food-meal', (
           ['flex', 'width', 'height', 'radius', 'background', 'align', 'justify', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
         [11, '.nutrition-v4-meal-row__title', ['flex', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
         [12, '.nutrition-v4-meal-row__kcal', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-        [14, '.nutrition-v4-meal-row__items', ['flex', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+        // Семантическая роль --v4-ink-data раскрывается по теме, поэтому её
+        // точное назначение проверяем ниже, а здесь оставляем числовую типографику.
+        [14, '.nutrition-v4-meal-row__items', ['flex', 'fontWeight', 'fontSize', 'lineHeight']],
         [15, '.nutrition-v4-meal-row__add',
           ['flex', 'minHeight', 'align', 'padding', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-        [21, '.nutrition-v4-streak',
+        [20, '.nutrition-v4-streak',
           ['background', 'radius', 'padding', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
       ],
     });
     expect(drift).toEqual([]);
+    expect(rules.get('.nutrition-v4-meal-row__items').color)
+      .toBe('var(--v4-ink-data, rgba(var(--ink),.56))');
   });
 
   it('числа листа правки совпадают с кадром', () => {

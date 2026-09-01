@@ -449,9 +449,9 @@
       "h": "96bad02efce0"
     },
     "Цикл · шаг 5, строка в стопке · 10": {
-      "v": "=",
-      "f": "heys_steps_v1.js — счётчик пунктов 500 11px/1 вторичным тоном",
-      "h": "023ccc735ab3"
+      "v": "≠",
+      "f": "В текущей строке цикла нет свёрнутого счётчика «2 пункта»: heys_steps_v1.js выводит отдельную полную карточку добавок",
+      "h": "de0d31c562f9"
     },
     "Цикл · шаг 5, строка в стопке · 11": {
       "v": "≠",
@@ -460,8 +460,8 @@
     },
     "Цикл · шаг 5, строка в стопке · 12": {
       "v": "=",
-      "f": "heys_steps_v1.js:6653 .mc-rest-card-hint — «Нормы дня подстроятся под них» 500 11px/1.4 вторичным тоном",
-      "h": "16e5ee63e8b6"
+      "f": "heys_steps_v1.js .mc-rest-row--cycle + 500-pwa-and-offline.css — точный текст, 500 11px/1.4, data 56 %, отступ 3px",
+      "h": "9390ba2600e3"
     },
     "Цикл · шаг 5, строка в стопке · 13": {
       "v": "=",
@@ -500,8 +500,8 @@
     },
     "Цикл · шаг 5, выбор дня · 04": {
       "v": "=",
-      "f": "heys_steps_v1.js:6689 — «Не идут» 700 11px/1 вторичным тоном",
-      "h": "6e02599a3620"
+      "f": "heys_steps_v1.js .mc-rest-cycle-none-btn — «Не идут» 700 11px/1, var(--v4-ink-data) 56 %",
+      "h": "5a1fb1844923"
     },
     "Цикл · шаг 5, выбор дня · 05": {
       "v": "=",
@@ -540,8 +540,8 @@
     },
     "Цикл · шаг 5, день предложен · 05": {
       "v": "=",
-      "f": "heys_steps_v1.js — пояснение о вчерашнем дне 500 11,5/1.5 вторичным тоном",
-      "h": "4266f6fa2633"
+      "f": "heys_steps_v1.js + .mc-rest-cycle-week-hint — точный текст, 500 11.5px/1.5, data 56 %, отступ 5px",
+      "h": "369e6ca60a1a"
     },
     "Цикл · шаг 5, день предложен · 06": {
       "v": "=",
@@ -615,8 +615,8 @@
     },
     "Цикл · день 29, вопрос · 03": {
       "v": "=",
-      "f": "heys_cycle_ui_v1.js — пояснение о 28 днях и базовых нормах 500 11,5/1.5 вторичным тоном",
-      "h": "71bad284d376"
+      "f": "heys_cycle_ui_v1.js — точный текст о 28 днях и базовых нормах; .cycle-card-v4__day29-sub 500 11.5px/1.5, data 56 %, отступ 7px",
+      "h": "b386251e3999"
     },
     "Цикл · день 29, вопрос · 04": {
       "v": "=",
@@ -675,8 +675,8 @@
     },
     "Цикл · карточка дня, заполнено · 08": {
       "v": "≠",
-      "f": "Кнопки «Сбросить неделю» в продукте нет: сброс сделан пунктом «✕ Сбросить» (heys_steps_v1.js:3744) без слова «неделю»",
-      "h": "9501491f6a97"
+      "f": "Кнопки «Сбросить неделю» в заполненной cycle-card-v4 нет; сброс доступен в другом check-in flow и не совпадает с кадром",
+      "h": "e3e5accbe376"
     },
     "Цикл · норма дня · 01": {
       "v": "=",
@@ -725,13 +725,13 @@
     },
     "Цикл · график калорий · 03": {
       "v": "=",
-      "f": "heys_day_stats_v1.js:1668 — «Съедено и норма» 600 10,5/1 разрядкой вторичным тоном",
-      "h": "bf828bb84a58"
+      "f": "heys_day_stats_v1.js .reports-v4-dynamics-card__label — «Съедено и норма» 600 10.5px/1, .04em, data 56 %",
+      "h": "683857c37883"
     },
     "Цикл · график калорий · 04": {
       "v": "=",
-      "f": "heys_day_stats_v1.js:1669 — «N дней» вторичным тоном 600 10px/1, число берётся из выбранного периода",
-      "h": "f5707769ac43"
+      "f": "heys_day_stats_v1.js .reports-v4-dynamics-card__period — «14 дней» при окне 14, 600 10px/1, data 56 %",
+      "h": "94af7352c4d2"
     },
     "Цикл · график калорий · 05": {
       "v": "=",
@@ -740,8 +740,8 @@
     },
     "Цикл · график калорий · 06": {
       "v": "=",
-      "f": "733-ui-v4-reports.css — пункт обозначения по центру с зазором 6, 600 10px/1 вторичным тоном",
-      "h": "19665b61dff0"
+      "f": "733-ui-v4-reports.css .reports-v4-dynamics-card__legend-item — center, gap 6px, 600 10px/1, data 56 %",
+      "h": "aa26f39960db"
     },
     "Цикл · график калорий · 07": {
       "v": "=",
@@ -754,9 +754,9 @@
       "h": "8270d9852cb8"
     },
     "Цикл · график калорий · 09": {
-      "v": "—",
-      "f": "Пояснение канваса о ступеньке и отсутствии зон; правило разбора, а не элемент экрана",
-      "h": "57eda204a496"
+      "v": "=",
+      "f": "heys_day_stats_v1.js выводит точную строку под графиком; .reports-v4-dynamics-card__hint — 600 10px/1, data 56 %, отступ 7px",
+      "h": "25cb494d193e"
     },
     "Цикл · график калорий · 10": {
       "v": "≠",
@@ -769,9 +769,9 @@
       "h": "10d7f95a470e"
     },
     "Цикл · график веса · 02": {
-      "v": "=",
-      "f": "733-ui-v4-reports.css — заголовок карточки веса 600 10,5/1 разрядкой вторичным тоном",
-      "h": "de7846c48bbe"
+      "v": "≠",
+      "f": "Типографика совпадает, но продукт выводит «Вес · 30 дней», а строка cycle-канваса требует «Вес и тренд»",
+      "h": "063e6984f3b0"
     },
     "Цикл · график веса · 03": {
       "v": "≠",
@@ -790,8 +790,8 @@
     },
     "Цикл · календарь · 03": {
       "v": "=",
-      "f": "heys_cycle_ui_v1.js — пункт обозначения по центру, зазор 6, 600 10,5/1 вторичным тоном",
-      "h": "f594e0509157"
+      "f": "000-base-and-gamification.css .date-picker-sheet .date-picker-legend — center, gap 6px, 600 10.5px, data 56 %",
+      "h": "92c8cc5319d6"
     },
     "Цикл · календарь · 04": {
       "v": "=",
@@ -819,9 +819,9 @@
       "h": "fe8cc0513feb"
     },
     "Цикл · инсайт баланса · 03": {
-      "v": "=",
-      "f": "500-pwa:2152-2156 .cycle-card-v4__insight-text — пояснение 500 11,5/1.45 тоном чернил 55 %",
-      "h": "2751166fe08d"
+      "v": "≠",
+      "f": "Типографика приведена к 500 11.5px/1.55 и data 56 %, но текущий динамический текст «Нормы дня уже подстроены» не совпадает с точной фразой канваса",
+      "h": "902d4b466231"
     },
     "Цикл · инсайт баланса · 04": {
       "v": "—",
@@ -840,8 +840,8 @@
     },
     "Цикл · календарь, лента периода · 03": {
       "v": "=",
-      "f": "heys_cycle_ui_v1.js:167 — «следующий — N-го» 600 10,5/1 вторичным тоном",
-      "h": "6ed492b65c3b"
+      "f": "heys_cycle_ui_v1.js formatForecastMonthLine + .date-picker-forecast-line — «следующий — N-го» 600 10.5px/1, data 56 %",
+      "h": "1df78744edd5"
     },
     "Цикл · календарь, лента периода · 04": {
       "v": "=",
@@ -855,8 +855,8 @@
     },
     "Цикл · календарь, лента периода · 06": {
       "v": "=",
-      "f": "heys_cycle_ui_v1.js — пункт обозначения по центру, зазор 6",
-      "h": "f594e0509157"
+      "f": "000-base-and-gamification.css .date-picker-sheet .date-picker-legend — center, gap 6px, 600 10.5px, data 56 %",
+      "h": "92c8cc5319d6"
     },
     "Цикл · календарь, лента периода · 07": {
       "v": "=",
@@ -910,8 +910,8 @@
     },
     "Цикл · закончились раньше · 05": {
       "v": "=",
-      "f": "heys_steps_v1.js — пояснение о счёте фаз 500 11px/1.45 вторичным тоном",
-      "h": "1e1ca4c332e0"
+      "f": "heys_steps_v1.js точный текст; .mc-rest-cycle-ended-note — 500 11px/1.45, data 56 %, отступ 5px",
+      "h": "a5d3ff5a231e"
     },
     "Цикл · закончились раньше · 06": {
       "v": "—",
@@ -930,8 +930,8 @@
     },
     "Цикл · сбой, раньше срока · 03": {
       "v": "=",
-      "f": "heys_cycle_ui_v1.js — пояснение о начале счёта заново 500 11,5/1.5 вторичным тоном",
-      "h": "bd099849e97f"
+      "f": "heys_cycle_ui_v1.js точный текст; .cycle-card-v4__warn-text — 500 11.5px/1.5, data 56 %, отступ 7px",
+      "h": "2d2a852ef6e6"
     },
     "Цикл · сбой, раньше срока · 04": {
       "v": "=",
@@ -955,13 +955,13 @@
     },
     "Цикл · прошлый день, отметка задним числом · 03": {
       "v": "=",
-      "f": "heys_day_page_shell.js — «N дней назад» 600 10,5/1 тоном чернил 50 %",
-      "h": "65069f525d0d"
+      "f": "date-picker--v4 .date-picker-sub--relative — относительная дата 600 10px/1, data 56 %; точный день задаётся состоянием кадра",
+      "h": "f7e37dbb333f"
     },
     "Цикл · прошлый день, отметка задним числом · 04": {
-      "v": "=",
-      "f": "heys_day_nutrition_v1.js — заголовок блока разрядкой прописными вторичным тоном",
-      "h": "7ac773c2ce80"
+      "v": "≠",
+      "f": "Продукт показывает заголовок «Особый период», но не выводит буквальную надстроку канваса «Питание · блок «Особый период»»",
+      "h": "95a293c0c595"
     },
     "Цикл · прошлый день, отметка задним числом · 05": {
       "v": "=",
@@ -989,9 +989,9 @@
       "h": "266381a7144f"
     },
     "Цикл · прошлый день, отметка задним числом · 10": {
-      "v": "=",
-      "f": "heys_cycle_ui_v1.js:259 — «Период встанет на …» 500 11px/1.45 вторичным тоном; на дате из капсулы, а не на сегодня",
-      "h": "dbe3792b610d"
+      "v": "≠",
+      "f": "Текущий formatter сообщает только диапазон «Период встанет на …» и не выводит полную фразу про первый день, нормы, съеденное и вес",
+      "h": "62297576ca71"
     },
     "Цикл · прошлый день, отметка задним числом · 11": {
       "v": "—",
@@ -999,9 +999,9 @@
       "h": "104cb612ff6f"
     },
     "Цикл · день выбран, подтверждение даты · 01": {
-      "v": "=",
-      "f": "heys_day_nutrition_v1.js — заголовок блока разрядкой прописными вторичным тоном",
-      "h": "45035bfc8495"
+      "v": "≠",
+      "f": "Продукт показывает заголовок «Особый период», но не выводит буквальную надстроку канваса «Питание · блок «Особый период»»",
+      "h": "84e64556196e"
     },
     "Цикл · день выбран, подтверждение даты · 02": {
       "v": "=",
@@ -1029,9 +1029,9 @@
       "h": "62ee523e4531"
     },
     "Цикл · день выбран, подтверждение даты · 07": {
-      "v": "=",
-      "f": "heys_cycle_ui_v1.js:259 — «дата · период N–M» 500 11px/1.4 вторичным тоном",
-      "h": "cce5c86620c3"
+      "v": "≠",
+      "f": "Стиль sub приведён к data 56 %, но formatWeekRangeForMark выводит «Период встанет на …», а не требуемое «дата · период N–M»",
+      "h": "bf65a0dbfb2d"
     },
     "Цикл · день выбран, подтверждение даты · 08": {
       "v": "=",
@@ -1089,9 +1089,9 @@
       "h": "16be489cecfc"
     },
     "Цикл · другой день, календарь · 10": {
-      "v": "=",
-      "f": "heys_cycle_ui_v1.js:259 — «Период встанет на …» 500 11px/1.45 вторичным тоном",
-      "h": "09b65def103a"
+      "v": "≠",
+      "f": "Текущий live-текст содержит день, дату и диапазон, но не точное продолжение «Их нормы пересчитаются, съеденное и вес останутся как есть»",
+      "h": "933353470b4f"
     },
     "Цикл · другой день, календарь · 11": {
       "v": "=",
@@ -1109,9 +1109,9 @@
       "h": "7166b6dd51f7"
     },
     "Цикл · тултип задержки · 02": {
-      "v": "=",
-      "f": "733-ui-v4-reports.css — заголовок карточки 600 10,5/1 разрядкой вторичным тоном",
-      "h": "de7846c48bbe"
+      "v": "≠",
+      "f": "Типографика совпадает, но продукт выводит «Вес · 30 дней», а строка cycle-канваса требует «Вес и тренд»",
+      "h": "063e6984f3b0"
     },
     "Цикл · тултип задержки · 03": {
       "v": "=",
@@ -1392,6 +1392,192 @@
       "v": "≠",
       "f": "heys_day_stats_v1.js:4237-4240 — заголовок и пояснение подсказки совпадают дословно, но подписи «Показан день до периода — самый пик набранной воды» под карточкой в продукте нет",
       "h": "3ccdb69df97c"
+    }
+  },
+  "frames": {
+    "Цикл · шаг 5, строка в стопке": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · шаг 5, выбор дня": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · шаг 5, день предложен": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · копия шага 5, канон": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · копия шага 5, период идёт": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · копия шага 5, строка": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · профиль, тумблер": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · профиль, выключение": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · день 29, вопрос": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · карточка дня, пусто": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · карточка дня, заполнено": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · норма дня": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · график калорий": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · график веса": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · календарь": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · инсайт баланса": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · календарь, лента периода": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · закончились раньше": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · сбой, раньше срока": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · прошлый день, отметка задним числом": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · день выбран, подтверждение даты": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · другой день, календарь": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
+    },
+    "Цикл · тултип задержки": {
+      "evidence": [
+        "apps/web/__tests__/cycle-v4-contract.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_cycle_ui_v1.js",
+        "apps/web/heys_day_cycle_card_v1.js"
+      ]
     }
   }
 }

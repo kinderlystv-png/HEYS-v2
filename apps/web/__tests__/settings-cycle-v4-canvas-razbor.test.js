@@ -45,6 +45,8 @@ const SETTINGS_LIST = [
   [3, `${H}head`, ['padding', 'align', 'justify', 'gap']],
   [4, `${H}title`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [5, `${H}close`, ['width', 'height', 'radius', 'background', 'align', 'justify']],
+  [9, `.tab-settings-menu.tab-settings-menu--v4-sheet ${H}push-toggle .tab-settings-diary-toggle__hint`,
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
   [13, `${H}group`, ['background', 'radius']],
   [14, `${H}row`, ['padding', 'align', 'justify', 'minHeight']],
   [15, [`${H}row`, `${H}label`], ['fontWeight', 'fontSize', 'color']],
@@ -58,8 +60,27 @@ const SETTINGS_LIST = [
 const SETTINGS_CHIPS = [
   [16, `${H}fab-card`, ['radius', 'padding']],
   [17, `${H}fab-lead`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [21, `${H}fab-count`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [23, `${H}fab-notice`, ['align', 'gap', 'background', 'radius', 'padding', 'marginTop']],
   [25, `${H}fab-notice-text`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
+const SETTINGS_DIAGNOSTICS = [
+  [14, `${H}diag-copy`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [17, [`${H}build`, `${H}diag-panel + ${H}build`],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'padding', 'marginTop']],
+];
+
+const SETTINGS_NOTIFY_DETAIL = [
+  [7, '.notify-detail__tier',
+    ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'color', 'marginTop', 'marginBottom']],
+  [19, '.notify-detail__quiet-note',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+];
+
+const SETTINGS_HOME_INSTALL = [
+  [8, '.ios-home-install-modal__footnote',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'padding']],
 ];
 
 const CYCLE_CARD = [
@@ -73,7 +94,7 @@ const CYCLE_CARD = [
 
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 15;
+const COVERAGE_FLOOR = 22;
 
 describe('«Настройки» и «Цикл» · разбор кадров канваса', () => {
   const settingsRazbor = readRazbor(fs.readFileSync(path.join(PACK, 'settings-system.v4.dc.html'), 'utf8'));
@@ -90,6 +111,27 @@ describe('«Настройки» и «Цикл» · разбор кадров к
   it('кадр «Настройки · чипы быстрых действий» совпадает с карточкой чипов', () => {
     expect(compare({
       razbor: settingsRazbor, rules: baseRules, frame: 'Настройки · чипы быстрых действий', pairs: SETTINGS_CHIPS,
+    })).toEqual([]);
+  });
+
+  it('кадр «Настройки · диагностика» совпадает с диагностической створкой', () => {
+    expect(compare({
+      razbor: settingsRazbor, rules: baseRules,
+      frame: 'Настройки · диагностика', pairs: SETTINGS_DIAGNOSTICS,
+    })).toEqual([]);
+  });
+
+  it('кадр «Настройки · настроить подробно» совпадает с листом уведомлений', () => {
+    expect(compare({
+      razbor: settingsRazbor, rules: baseRules,
+      frame: 'Настройки · настроить подробно', pairs: SETTINGS_NOTIFY_DETAIL,
+    })).toEqual([]);
+  });
+
+  it('кадр «Домашний экран · лист» совпадает со сноской iOS-инструкции', () => {
+    expect(compare({
+      razbor: settingsRazbor, rules: dailyRules,
+      frame: 'Домашний экран · лист', pairs: SETTINGS_HOME_INSTALL,
     })).toEqual([]);
   });
 

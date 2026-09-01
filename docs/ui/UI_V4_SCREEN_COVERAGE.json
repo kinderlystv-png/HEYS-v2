@@ -1,0 +1,866 @@
+{
+  "version": 1,
+  "reviewed": {
+    "achievement-story-modal": {
+      "status": "gap",
+      "reason": "Живая история достижения найдена обратным аудитом, но отдельного продуктового кадра в текущих 25 канвасах нет."
+    },
+    "activity-v4-sheet": {
+      "status": "gap",
+      "reason": "Живой лист «Добавить активность»; точного canvas-frame нет."
+    },
+    "advice-diagnostics-modal": {
+      "status": "excluded",
+      "reason": "Внутренняя диагностика механизма советов, не продуктовый экран."
+    },
+    "advice-diagnostics-modal-overlay": {
+      "status": "excluded",
+      "reason": "Backdrop внутренней диагностики."
+    },
+    "advice-list-overlay": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "tips",
+          "frame": "Советы · шторка"
+        },
+        {
+          "zone": "tips",
+          "frame": "Советы · не сохранено"
+        },
+        {
+          "zone": "tips",
+          "frame": "Совет · панель оценки"
+        },
+        {
+          "zone": "tips",
+          "frame": "Совет · отмена с таймером"
+        }
+      ]
+    },
+    "advice-rules-pool-overlay": {
+      "status": "excluded",
+      "reason": "Внутренний кураторский просмотр пула правил."
+    },
+    "advice-service-overlay": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "service-curator",
+          "frame": "Служебное · за входом куратора"
+        }
+      ]
+    },
+    "advice-v4-detail-overlay": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "tips",
+          "frame": "Совет · деталь"
+        }
+      ]
+    },
+    "advice-v4-disclaimer-overlay": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "tips",
+          "frame": "Оговорка"
+        }
+      ]
+    },
+    "advice-v4-science-overlay": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "tips",
+          "frame": "Научное описание"
+        }
+      ]
+    },
+    "advice-v4-settings-overlay": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "tips",
+          "frame": "Настройки советов"
+        }
+      ]
+    },
+    "aps-barcode-manager-modal": {
+      "status": "gap",
+      "reason": "Экран управления штрихкодами продукта отсутствует в canvas."
+    },
+    "aps-barcode-modal": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "product-card",
+          "frame": "Штрихкод · наведение"
+        },
+        {
+          "zone": "product-card",
+          "frame": "Штрихкод · состояния"
+        }
+      ]
+    },
+    "aps-barcode-not-found-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "product-card",
+          "frame": "Штрихкод · не найден"
+        }
+      ]
+    },
+    "aps-barcode-overlay": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "product-card",
+          "frame": "Штрихкод · наведение"
+        },
+        {
+          "zone": "product-card",
+          "frame": "Штрихкод · состояния"
+        }
+      ]
+    },
+    "assemble-day-screen": {
+      "status": "gap",
+      "reason": "Живой экран специализированного модуля; точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "board-talk-sheet": {
+      "status": "gap",
+      "reason": "Живой экран специализированного модуля; точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "board-today-screen": {
+      "status": "gap",
+      "reason": "Живой экран специализированного модуля; точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "chrono-delete-overlay": {
+      "status": "gap",
+      "reason": "Живое состояние Chrono; отдельной Chrono-зоны и точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "chrono-duration-overlay": {
+      "status": "gap",
+      "reason": "Живое состояние Chrono; отдельной Chrono-зоны и точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "chrono-entry-edit-overlay": {
+      "status": "gap",
+      "reason": "Живое состояние Chrono; отдельной Chrono-зоны и точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "chrono-history-overlay": {
+      "status": "gap",
+      "reason": "Живое состояние Chrono; отдельной Chrono-зоны и точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "chrono-overview-modal": {
+      "status": "gap",
+      "reason": "Живое состояние Chrono; отдельной Chrono-зоны и точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "chrono-overview-modal-overlay": {
+      "status": "gap",
+      "reason": "Живое состояние Chrono; отдельной Chrono-зоны и точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "chrono-picker-overlay": {
+      "status": "gap",
+      "reason": "Живое состояние Chrono; отдельной Chrono-зоны и точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "chrono-screen": {
+      "status": "gap",
+      "reason": "Живое состояние Chrono; отдельной Chrono-зоны и точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "chrono-timeline-overlay": {
+      "status": "gap",
+      "reason": "Живое состояние Chrono; отдельной Chrono-зоны и точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "chrono-timer-complete-overlay": {
+      "status": "gap",
+      "reason": "Живое состояние Chrono; отдельной Chrono-зоны и точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "chrono-timer-stop-overlay": {
+      "status": "gap",
+      "reason": "Живое состояние Chrono; отдельной Chrono-зоны и точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "chrono-untracked-tail-overlay": {
+      "status": "gap",
+      "reason": "Живое состояние Chrono; отдельной Chrono-зоны и точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "confirm-modal": {
+      "status": "excluded",
+      "reason": "Общий renderer подтверждения с произвольными заголовком, текстом и действиями; конкретные вызывающие экраны учитываются отдельно."
+    },
+    "copy-meal-modal": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "food-meal",
+          "frame": "Действие · копировать"
+        },
+        {
+          "zone": "food-meal",
+          "frame": "Действие · копировать без целей"
+        }
+      ]
+    },
+    "ct-wb-open-fullscreen": {
+      "status": "excluded",
+      "reason": "Кнопка открытия конструктора, а не экран."
+    },
+    "cur-sheet": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "curator-cabinet",
+          "frame": "Панель · лист поверх"
+        },
+        {
+          "zone": "norm-correction",
+          "frame": "Куратор · поправка предложена"
+        },
+        {
+          "zone": "norm-correction",
+          "frame": "Куратор · данных не хватает"
+        }
+      ]
+    },
+    "cycle-date-picker-sheet": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "cycle",
+          "frame": "Цикл · другой день, календарь"
+        }
+      ]
+    },
+    "date-picker-sheet": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "date-remainders",
+          "frame": "Календарь · легенда"
+        }
+      ]
+    },
+    "day-score-picker-modal": {
+      "status": "gap",
+      "reason": "Legacy picker оценки дня; widget breakdown не является точным соответствием."
+    },
+    "drums-ft-modal": {
+      "status": "gap",
+      "reason": "Живой экран специализированного модуля; точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "drums-ft-progress-screen": {
+      "status": "gap",
+      "reason": "Живой экран специализированного модуля; точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "early-warning-modal": {
+      "status": "gap",
+      "reason": "Отдельный warning-аудит; inline-карточка риска срыва — другой UI."
+    },
+    "fingers-bib-modal": {
+      "status": "gap",
+      "reason": "Живой экран специализированного модуля; точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "fingers-fs-day-detail-overlay": {
+      "status": "gap",
+      "reason": "Живой экран специализированного модуля; точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "fingers-fs-risk-modal": {
+      "status": "gap",
+      "reason": "Живой экран специализированного модуля; точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "fingers-fs-risk-overlay": {
+      "status": "gap",
+      "reason": "Живой экран специализированного модуля; точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "fingers-fs-rpe-overlay": {
+      "status": "gap",
+      "reason": "Живой экран специализированного модуля; точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "gantt-quick-edit-sheet": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "goal-map-screen": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "grams-modal": {
+      "status": "gap",
+      "reason": "Standalone-лист изменения граммов; canvas portion-flow имеет другой состав."
+    },
+    "h-screen": {
+      "status": "gap",
+      "reason": "Живое пользовательское состояние, но точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "hes-sheet": {
+      "status": "gap",
+      "reason": "Лист ввода/результата «Голод и энергия»; в canvas есть только display-блок."
+    },
+    "heys-auth-pin-overlay": {
+      "status": "excluded",
+      "reason": "Визуальный слой анимации PIN-поля."
+    },
+    "heys-consent-sign-sheet": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "registration",
+          "frame": "Регистрация · подпись кодом"
+        },
+        {
+          "zone": "registration",
+          "frame": "Регистрация · подписано"
+        }
+      ]
+    },
+    "heys-fullscreen": {
+      "status": "excluded",
+      "reason": "Инфраструктурный fullscreen/portal shell с произвольным содержимым."
+    },
+    "heys-score-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "reports-insights",
+          "frame": "Разбор Score"
+        }
+      ]
+    },
+    "heys-wait-mark-overlay": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "registration",
+          "frame": "Регистрация · сохранение"
+        },
+        {
+          "zone": "registration",
+          "frame": "Регистрация · ошибка сохранения"
+        },
+        {
+          "zone": "spinners",
+          "frame": "Спиннер · успех"
+        }
+      ]
+    },
+    "info-modal": {
+      "status": "excluded",
+      "reason": "Универсальный renderer произвольной справочной информации; конкретные вызовы учитываются отдельно."
+    },
+    "info-modal-overlay": {
+      "status": "excluded",
+      "reason": "Обёртка универсального info renderer."
+    },
+    "insights-v4-sheet": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "reports-insights",
+          "frame": "Раскрывашка · Как считается долг"
+        }
+      ]
+    },
+    "ios-home-install-modal": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "settings-system",
+          "frame": "Домашний экран · лист"
+        }
+      ]
+    },
+    "loading-overlay": {
+      "status": "excluded",
+      "reason": "Внутренний loading-слой OptimizedImage, не самостоятельный продуктовый экран."
+    },
+    "messenger-overlay": {
+      "status": "gap",
+      "reason": "Живой messenger overlay; соответствующей canvas-зоны нет."
+    },
+    "mobility-overlay": {
+      "status": "gap",
+      "reason": "Живой экран специализированного модуля; точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "mobility-overlay-root": {
+      "status": "excluded",
+      "reason": "Пустой portal-host; видимый интерфейс принадлежит mobility-overlay."
+    },
+    "modal": {
+      "status": "gap",
+      "reason": "Живое пользовательское состояние, но точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "move-modal": {
+      "status": "gap",
+      "reason": "Mixed root: meal/product move представлены, но product-copy mode точного frame не имеет."
+    },
+    "mpc-action-sheet": {
+      "status": "gap",
+      "reason": "Лист действий продукта/штрихкода отсутствует в canvas."
+    },
+    "mpr-overlay": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "food-meal",
+          "frame": "Добавление · наборы"
+        },
+        {
+          "zone": "food-meal",
+          "frame": "Добавление · правка набора"
+        },
+        {
+          "zone": "food-meal",
+          "frame": "Наборы · вкладка поиска"
+        },
+        {
+          "zone": "food-meal",
+          "frame": "Набор · сборка"
+        },
+        {
+          "zone": "food-meal",
+          "frame": "Набор · сборка пустая"
+        },
+        {
+          "zone": "food-meal",
+          "frame": "Набор · сохранение"
+        },
+        {
+          "zone": "food-meal",
+          "frame": "Набор · удаление"
+        }
+      ]
+    },
+    "nutrition-v4-sheet": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "nutrition-tab",
+          "frame": "Питание · лист правки приёма"
+        }
+      ]
+    },
+    "offline-nodata-overlay": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "nutrition-tab",
+          "frame": "Питание · офлайн без данных"
+        }
+      ]
+    },
+    "ops-dashboard-modal": {
+      "status": "excluded",
+      "reason": "Внутренний operational/dashboard-инструмент."
+    },
+    "outcome-modal": {
+      "status": "gap",
+      "reason": "Оценка результата совета «Как прошёл день?» отсутствует."
+    },
+    "pattern-debug-modal": {
+      "status": "excluded",
+      "reason": "Диагностический debugger паттернов, не пользовательский product flow."
+    },
+    "paywall-modal": {
+      "status": "gap",
+      "reason": "Живой экран оплаты внутри paywall не имеет отдельного продуктового кадра в текущих 25 канвасах."
+    },
+    "paywall-overlay": {
+      "status": "excluded",
+      "reason": "Backdrop/container отдельно учитываемого paywall-modal."
+    },
+    "photo-confirm-modal": {
+      "status": "gap",
+      "reason": "Подтверждение сохранения фото отсутствует; просмотр фото — другой root."
+    },
+    "photo-confirm-overlay": {
+      "status": "gap",
+      "reason": "Overlay подтверждения сохранения фото не представлен."
+    },
+    "photo-viewer-overlay": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "food-meal",
+          "frame": "Фото · просмотр"
+        }
+      ]
+    },
+    "pin-digit-overlay": {
+      "status": "excluded",
+      "reason": "Внутренний визуальный слой отдельной цифры PIN."
+    },
+    "planning-action-menu-overlay": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-calendar-conflict-overlay": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-calendar-conflict-sheet": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-calendar-display-settings-overlay": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-calendar-display-settings-sheet": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-calendar-screen": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-calendar-task-picker-overlay": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-checklists-modal": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-checklists-modal-overlay": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-checklists-screen": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-clear-tasks-modal": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-clear-tasks-modal-overlay": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-games-screen": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-gantt-overlay": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-gantt-screen": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-gantt2-screen": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-goals-screen": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-modal": {
+      "status": "excluded",
+      "reason": "Общий контейнер planning-диалогов; конкретные planning roots учитываются отдельно."
+    },
+    "planning-modal-overlay": {
+      "status": "excluded",
+      "reason": "Общий backdrop/container planning-диалогов."
+    },
+    "planning-quick-flow-overlay": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-quick-flow-sheet": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-reading-screen": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-slot-delete-overlay": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-slot-delete-sheet": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-task-matrix-overlay": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "planning-tasks-screen": {
+      "status": "gap",
+      "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
+    },
+    "reports-fullscreen-modal": {
+      "status": "gap",
+      "reason": "Лист «По месяцам и неделям» открыт из Отчётов; дизайнер подтвердил, что кадр ещё будет нарисован."
+    },
+    "sb-empty-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Конструктор · пусто"
+        }
+      ]
+    },
+    "sb-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Конструктор · каталог"
+        },
+        {
+          "zone": "strength-builder",
+          "frame": "Своё упражнение"
+        },
+        {
+          "zone": "strength-builder",
+          "frame": "Связка · создание"
+        },
+        {
+          "zone": "strength-builder",
+          "frame": "Порядок · режим перестановки"
+        },
+        {
+          "zone": "strength-builder",
+          "frame": "Конструктор · итоги"
+        },
+        {
+          "zone": "strength-builder",
+          "frame": "История упражнения"
+        }
+      ]
+    },
+    "sb-sheet": {
+      "status": "gap",
+      "reason": "Shared root содержит несколько live sheet-вариантов; соседние frames не покрывают их все точно."
+    },
+    "score-explainer-modal": {
+      "status": "gap",
+      "reason": "Старый технический modal не равен экрану «Разбор Score»."
+    },
+    "sleep-quality-picker-modal": {
+      "status": "gap",
+      "reason": "Legacy picker качества сна отсутствует."
+    },
+    "sparkline-brush-overlay": {
+      "status": "excluded",
+      "reason": "SVG-подсветка диапазона графика, не самостоятельный UI."
+    },
+    "sync-lock-overlay": {
+      "status": "gap",
+      "reason": "Живое пользовательское состояние, но точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "time-picker-modal": {
+      "status": "excluded",
+      "reason": "Переиспользуемый primitive выбора времени; конкретные вызывающие экраны учитываются отдельно."
+    },
+    "tour-overlay": {
+      "status": "gap",
+      "reason": "Живое пользовательское состояние, но точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "tour-welcome-modal": {
+      "status": "gap",
+      "reason": "Живое пользовательское состояние, но точного продуктового кадра в текущих 25 canvas-зонах нет."
+    },
+    "training-picker-modal": {
+      "status": "gap",
+      "reason": "Трёхшаговый выбор тренировки отсутствует."
+    },
+    "water-custom-sheet": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "water-add",
+          "frame": "Вода · свой объём · лист"
+        }
+      ]
+    },
+    "wave-details-overlay": {
+      "status": "gap",
+      "reason": "Живой попап «Расчёт волны» найден обратным аудитом, но продуктового кадра в текущих 25 канвасах нет."
+    },
+    "whatif-modal": {
+      "status": "gap",
+      "reason": "Старый симулятор еды не равен canvas-сценарию «Инсайты · что если»."
+    },
+    "whatif-modal-overlay": {
+      "status": "gap",
+      "reason": "Overlay старого food simulator не имеет точного frame."
+    },
+    "widget-bd-sheet": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Калории"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Вода"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Вес"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Сон"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Шаги"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Инсулиновая волна"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · БЖУ"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Оценка дня"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Риск-радар"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Тренд здоровья"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Карта активности"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Динамика веса"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Клетчатка"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Белок"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Окно до сна"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Качество еды"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Ритм приёмов"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Разбор · Готовность ко сну"
+        }
+      ]
+    },
+    "widget-wd-sheet": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "water-add",
+          "frame": "Вода · свой объём · лист"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Смена вида · лист выбора"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Шторка · Калории"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Шторка · Кольца БЖУ"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Шторка · Вода"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Шторка · Сон"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Шторка · Оценка дня"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Шторка · Тепловая карта"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Шторка · Риск-радар"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Шторка · Тренд здоровья"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Шторка · Инсулиновая волна"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Шторка · Вес"
+        }
+      ]
+    },
+    "widgets-catalog-overlay": {
+      "status": "excluded",
+      "reason": "Renderer объявлен, но вызовов в текущем коде нет."
+    },
+    "widgets-grid-overlay": {
+      "status": "excluded",
+      "reason": "Внутренний numbered overlay режима перестановки."
+    },
+    "widgets-quick-sheet": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "home-widgets",
+          "frame": "Быстрые действия · раскрыто"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Быстрые действия · один пункт · вода · раскрыто"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Быстрые действия · правка · режим"
+        },
+        {
+          "zone": "home-widgets",
+          "frame": "Быстрые действия · правка · скрытые"
+        }
+      ]
+    },
+    "widgets-settings-overlay": {
+      "status": "gap",
+      "reason": "Живой универсальный modal настроек/preview виджета отсутствует."
+    },
+    "zone-picker-modal": {
+      "status": "gap",
+      "reason": "Picker минут по зонам отсутствует."
+    }
+  },
+  "unreviewed": []
+}

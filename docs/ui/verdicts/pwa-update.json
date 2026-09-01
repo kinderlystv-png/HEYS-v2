@@ -251,7 +251,7 @@
     "слова на экране": {
       "v": "=",
       "f": "heys_platform_apis_v1.js:475 ready title «Готово» без «!»",
-      "h": "0ebd8ccd8740"
+      "h": "f82295e01517"
     },
     "первое появление": {
       "v": "=",
@@ -751,7 +751,7 @@
     "Офлайн-баннер · рисунок 02": {
       "v": "=",
       "f": "heys_platform_apis_v1.js:461 — значок wifiOff теми же кривыми, включая перечёркивающую M2 2l20 20",
-      "h": "d9d7182c13de"
+      "h": "eaccc2a32f73"
     },
     "как читать текст": {
       "v": "—",
@@ -797,6 +797,48 @@
       "v": "=",
       "f": "heys_platform_apis_v1.js:923 — «Офлайн режим — данные сохраняются локально»; слово «Сегодня» принадлежит экрану под баннером",
       "h": "5ed419bcd172"
+    }
+  },
+  "frames": {
+    "Обновление · готово": {
+      "evidence": [
+        "apps/web/__tests__/pwa-update-logic.test.js",
+        "apps/web/__tests__/spinners-pwa-v4-canvas-razbor.test.js",
+        "apps/web/heys_pwa_module_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css"
+      ]
+    },
+    "Требуется обновление · с версией": {
+      "evidence": [
+        "apps/web/__tests__/pwa-update-logic.test.js",
+        "apps/web/__tests__/spinners-pwa-v4-canvas-razbor.test.js",
+        "apps/web/heys_pwa_module_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css"
+      ]
+    },
+    "Требуется обновление · без версии": {
+      "evidence": [
+        "apps/web/__tests__/pwa-update-logic.test.js",
+        "apps/web/__tests__/spinners-pwa-v4-canvas-razbor.test.js",
+        "apps/web/heys_pwa_module_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css"
+      ]
+    },
+    "Требуется обновление · iOS": {
+      "evidence": [
+        "apps/web/__tests__/pwa-update-logic.test.js",
+        "apps/web/__tests__/spinners-pwa-v4-canvas-razbor.test.js",
+        "apps/web/heys_pwa_module_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css"
+      ]
+    },
+    "Офлайн-баннер": {
+      "evidence": [
+        "apps/web/__tests__/pwa-update-logic.test.js",
+        "apps/web/__tests__/spinners-pwa-v4-canvas-razbor.test.js",
+        "apps/web/heys_pwa_module_v1.js",
+        "apps/web/styles/modules/500-pwa-and-offline.css"
+      ]
     }
   }
 }

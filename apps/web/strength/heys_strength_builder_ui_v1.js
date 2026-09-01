@@ -58,12 +58,34 @@
     return v + ' кг';
   }
 
+  function fmtTime(ms) {
+    const d = new Date(ms || 0);
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  function restoreActiveRest(value, now) {
+    const raw = value && typeof value === 'object' ? value : null;
+    const startedAt = raw && Number.isFinite(+raw.startedAt) ? +raw.startedAt : 0;
+    const total = raw && Number.isFinite(+raw.total) ? Math.max(1, Math.min(3600, +raw.total)) : 0;
+    if (!startedAt || !total || startedAt + total * 1000 <= (now || Date.now())) return null;
+    return {
+      startedAt: startedAt,
+      total: total,
+      exName: String(raw.exName || ''),
+      owner: String(raw.owner || ''),
+      source: String(raw.source || ''),
+      nextLabel: String(raw.nextLabel || ''),
+      collapsed: !!raw.collapsed
+    };
+  }
+
   // ——— Экран целиком ———
 
   function BuilderScreen(props) {
-    const { training, dateKey, onPatch, onPatchNote, profile, historyFor, historyDetailFor,
+    const { training, dateKey, onPatch, onPatchSession, onPatchNote, profile, historyFor, historyDetailFor,
       lastSessionFor, onRepeatLast, syncStatusFor, onReviewProposal, onFinishProposal, onClose } = props;
     const SK = kernel();
+    const wl = (training && training.workoutLog) || {};
     const [openIdx, setOpenIdx] = React.useState(0);
     const [view, setView] = React.useState('list');
     const [draftName, setDraftName] = React.useState('');
@@ -71,18 +93,56 @@
     const [sheetOpen, setSheetOpen] = React.useState(false);
     const [closeConfirm, setCloseConfirm] = React.useState(false);
     const [historyName, setHistoryName] = React.useState('');
-    const [rest, setRest] = React.useState(null); // { total, startedAt }
+    const [dismissedBreakAt, setDismissedBreakAt] = React.useState(0);
+    const [finishAtOverride, setFinishAtOverride] = React.useState(0);
+    const [rest, setRest] = React.useState(function () {
+      return restoreActiveRest(wl.activeRest, Date.now());
+    });
+    const sessionRef = React.useRef(Object.assign({}, wl));
     const [tick, setTick] = React.useState(0);
 
-    // Время с начала тренировки: «начата в 18:40» превращается в ⏱ на экране.
-    const startedAt = (HEYS.StrengthBuilderParts || {}).startedAtMs(training, dateKey);
-    const elapsedSec = startedAt ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : 0;
+    function patchSession(patch) {
+      const nextPatch = patch && typeof patch === 'object' ? patch : {};
+      Object.keys(nextPatch).forEach(function (key) {
+        if (key === 'finish') return;
+        if (nextPatch[key] == null) delete sessionRef.current[key];
+        else sessionRef.current[key] = nextPatch[key];
+      });
+      if (typeof onPatchSession === 'function') {
+        onPatchSession(nextPatch);
+      }
+    }
+
+    function patchRest(next) {
+      setRest(next);
+      patchSession({ activeRest: next ? Object.assign({}, next) : null });
+    }
 
     React.useEffect(function () {
-      if (!startedAt) return undefined;
+      if (wl.activeRest && !rest && typeof onPatchSession === 'function') {
+        patchSession({ activeRest: null });
+      }
+      // Только очистка протухшего входного снимка при первом монтировании.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Время с начала тренировки: «начата в 18:40» превращается в ⏱ на экране.
+    const persistedStartedAt = Number.isFinite(+sessionRef.current.startedAt) ? +sessionRef.current.startedAt : 0;
+    const startedAt = persistedStartedAt || (HEYS.StrengthBuilderParts || {}).startedAtMs(training, dateKey);
+    const completedAt = Number.isFinite(+sessionRef.current.completedAt) ? +sessionRef.current.completedAt : 0;
+    const firstMarkAt = Number.isFinite(+sessionRef.current.firstMarkAt) ? +sessionRef.current.firstMarkAt : 0;
+    const lastMarkAt = Number.isFinite(+sessionRef.current.lastMarkAt) ? +sessionRef.current.lastMarkAt : 0;
+    const elapsedEnd = completedAt > 0 ? completedAt : Date.now();
+    const elapsedSec = startedAt ? Math.max(0, Math.floor((elapsedEnd - startedAt) / 1000)) : 0;
+    const workElapsedSec = firstMarkAt && lastMarkAt && lastMarkAt >= firstMarkAt
+      ? Math.floor((lastMarkAt - firstMarkAt) / 1000)
+      : elapsedSec;
+
+    React.useEffect(function () {
+      if (!startedAt || completedAt) return undefined;
       const id = global.setInterval(function () { setTick(function (t) { return t + 1; }); }, 1000);
       return function () { global.clearInterval(id); };
-    }, [startedAt]);
+    }, [startedAt, completedAt]);
 
     const [syncStatus, setSyncStatus] = React.useState(function () {
       return typeof syncStatusFor === 'function' ? syncStatusFor() : null;
@@ -99,7 +159,6 @@
       return function () { global.clearInterval(id); };
     }, [rest]);
 
-    const wl = (training && training.workoutLog) || {};
     // Список держим в состоянии экрана: полноэкранный слой смонтирован один
     // раз, и правка, ушедшая только наружу, на экране бы не появилась.
     const [exercises, setExercises] = React.useState(
@@ -108,7 +167,7 @@
     const bodyWeightKg = +(profile && profile.weight) || 0;
     // Тоннаж считается по тому, что на экране, а не по снимку из пропсов.
     const liveTraining = Object.assign({}, training, {
-      workoutLog: Object.assign({}, wl, { exercises: exercises })
+      workoutLog: Object.assign({}, wl, sessionRef.current, { exercises: exercises })
     });
     const agg = SK ? SK.trainingTonnage(liveTraining, { bodyWeightKg: bodyWeightKg }) : null;
     const groups = SK ? SK.supersetGroups(exercises) : [];
@@ -117,12 +176,33 @@
       g.indexes.forEach(function (i) { groupByIndex[i] = g; });
     });
 
+    function groupName(group) {
+      const index = groups.indexOf(group);
+      return 'Связка ' + (index >= 0 && index < 26 ? String.fromCharCode(65 + index) : String(group.groupId));
+    }
+
+    function isRoundDone(source, cells) {
+      return cells.every(function (cell) {
+        return SK.isApproachDone(source[cell.exerciseIndex].approaches[cell.approachIndex]);
+      });
+    }
+
     function patchExercises(next) {
       setExercises(next);
       if (typeof onPatch === 'function') onPatch(next);
     }
 
     function patchApproach(exIdx, apIdx, patch) {
+      const group = groupByIndex[exIdx];
+      const roundsBefore = group && SK ? SK.supersetRounds(exercises, group.groupId) : null;
+      const roundIndex = roundsBefore ? roundsBefore.findIndex(function (cells) {
+        return cells.some(function (cell) {
+          return cell.exerciseIndex === exIdx && cell.approachIndex === apIdx;
+        });
+      }) : -1;
+      const wasRoundDone = roundIndex >= 0 ? isRoundDone(exercises, roundsBefore[roundIndex]) : false;
+      const previousApproach = ((exercises[exIdx] || {}).approaches || [])[apIdx];
+      const wasApproachDone = SK ? SK.isApproachDone(previousApproach) : !!(previousApproach && previousApproach.done);
       const next = exercises.slice();
       const ex = Object.assign({}, next[exIdx]);
       const aps = (ex.approaches || []).slice();
@@ -130,9 +210,47 @@
       ex.approaches = aps;
       next[exIdx] = ex;
       patchExercises(next);
-      // Таймер — событие, а не виджет: он стартует, когда подход закрыт.
-      if (patch.done && SK && SK.isApproachDone(aps[apIdx]) && !groupByIndex[exIdx]) {
-        setRest({ total: +ex.restSec || 90, startedAt: Date.now(), exName: ex.name || '' });
+      const isApproachDone = SK ? SK.isApproachDone(aps[apIdx]) : !!(aps[apIdx] && aps[apIdx].done);
+      if (!wasApproachDone && isApproachDone) {
+        const markedAt = Date.now();
+        const lifecyclePatch = { lastMarkAt: markedAt };
+        if (!(+sessionRef.current.startedAt > 0)) lifecyclePatch.startedAt = markedAt;
+        if (!(+sessionRef.current.firstMarkAt > 0)) lifecyclePatch.firstMarkAt = markedAt;
+        patchSession(lifecyclePatch);
+      }
+      // Таймер — событие, а не виджет: одиночный стартует от подхода, связка —
+      // только от перехода последней клетки раунда в закрытое состояние.
+      if (patch.done && SK && SK.isApproachDone(aps[apIdx]) && !group) {
+        const total = +ex.restSec || 90;
+        patchRest({
+          total: total,
+          startedAt: Date.now(),
+          exName: ex.name || '',
+          owner: ex.name || 'Упражнение',
+          source: ex.rpe > 0 ? 'тяжесть ' + ex.rpe + ' → ' + fmtClock(total) : 'по умолчанию · ' + fmtClock(total),
+          nextLabel: 'Следующий подход'
+        });
+      } else if (patch.done && group && roundIndex >= 0) {
+        const roundsAfter = SK.supersetRounds(next, group.groupId);
+        const nowRoundDone = roundsAfter && isRoundDone(next, roundsAfter[roundIndex]);
+        if (!wasRoundDone && nowRoundDone) {
+          const total = +group.restSec || 90;
+          const effort = Math.max.apply(null, group.indexes.map(function (index) {
+            return +(next[index] && next[index].rpe) || 0;
+          }));
+          const owner = groupName(group);
+          const first = next[group.indexes[0]] || {};
+          patchRest({
+            total: total,
+            startedAt: Date.now(),
+            exName: owner,
+            owner: owner,
+            source: effort > 0 ? 'тяжесть ' + effort + ' → ' + fmtClock(total) : 'максимум участников · ' + fmtClock(total),
+            nextLabel: roundIndex + 1 < roundsAfter.length
+              ? 'Следующий раунд · A1 ' + (first.name || 'упражнение')
+              : 'Связка завершена'
+          });
+        }
       }
     }
 
@@ -269,7 +387,7 @@
           });
         }
       } catch (_e) { /* Notification недоступен — просто нет пуша */ }
-      global.setTimeout(function () { setRest(null); }, 0);
+      global.setTimeout(function () { patchRest(null); }, 0);
     }
 
     const CatUI = HEYS.StrengthCatalogUI || {};
@@ -285,12 +403,15 @@
       return h(FinUIRef().FinishScreen, {
         training: liveTraining,
         dateKey: dateKey,
-        elapsedSec: elapsedSec,
+        elapsedSec: workElapsedSec,
         profile: profile,
         dayTonnageKg: agg ? agg.totalVolume : 0,
         strengthCount: 1,
         onBack: function () { setView('list'); },
         onDone: function (note) {
+          const finishedAt = finishAtOverride || lastMarkAt || Date.now();
+          setRest(null);
+          patchSession({ completedAt: finishedAt, activeRest: null, finish: true });
           // Заметка — часть журнала тренировки, а не состояние экрана: без
           // записи она исчезала бы вместе с закрытием слоя.
           if (typeof onPatchNote === 'function') onPatchNote(note);
@@ -393,7 +514,10 @@
         ex: ex,
         index: i,
         open: openIdx === i,
-        onToggleOpen: function (idx) { setOpenIdx(openIdx === idx ? -1 : idx); },
+        onToggleOpen: function (idx) {
+          setOpenIdx(openIdx === idx ? -1 : idx);
+          if (rest && !rest.collapsed) patchRest(Object.assign({}, rest, { collapsed: true }));
+        },
         onPatchApproach: function (apIdx, patch) { patchApproach(i, apIdx, patch); },
         onToggleType: function (apIdx) { toggleType(i, apIdx); },
         onAddApproach: addApproach,
@@ -415,6 +539,11 @@
         onDiscomfortAction: discomfortAction
       }));
     });
+
+    const breakSec = lastMarkAt && !completedAt
+      ? Math.max(0, Math.floor((Date.now() - lastMarkAt) / 1000))
+      : 0;
+    const showInterrupted = breakSec > 45 * 60 && dismissedBreakAt !== lastMarkAt;
 
     return h('div', { className: 'sb-root' },
       h('div', { className: 'sb-head' },
@@ -458,14 +587,46 @@
           if (typeof onReviewProposal === 'function') onReviewProposal();
         }
       }),
+      showInterrupted && h('section', { className: 'sb-interrupted', 'aria-label': 'Тренировка на паузе' },
+        h('div', { className: 'sb-interrupted-title' }, 'Тренировка на паузе'),
+        h('b', { className: 'sb-interrupted-key' },
+          (agg ? agg.doneApproaches + ' из ' + agg.totalApproaches + ' подходов' : 'Тренировка начата')
+          + ' · вас не было ' + fmtClock(breakSec)),
+        h('p', null, 'Всё, что отмечено, на месте. Таймер отдыха истёк и заново не запускается.'),
+        h('div', { className: 'sb-interrupted-meta' },
+          h('span', null, 'Последняя отметка'),
+          h('b', null, fmtTime(lastMarkAt))
+        ),
+        h('div', { className: 'sb-interrupted-actions' },
+          h('button', {
+            type: 'button', className: 'sb-btn is-accent',
+            onClick: function () { setDismissedBreakAt(lastMarkAt); }
+          }, 'Продолжить'),
+          h('button', {
+            type: 'button', className: 'sb-btn',
+            onClick: function () {
+              setFinishAtOverride(lastMarkAt);
+              setRest(null);
+              patchSession({ completedAt: lastMarkAt, activeRest: null });
+              setView('finish');
+            }
+          }, 'Завершить в ' + fmtTime(lastMarkAt))
+        )
+      ),
       h('div', { className: 'sb-list' },
         rendered.length ? rendered : h('div', { className: 'sb-empty' }, 'Упражнений пока нет')
       ),
       rest && h((HEYS.StrengthBuilderParts || {}).RestRing, {
         secondsLeft: secondsLeft,
         total: rest.total,
-        onSkip: function () { setRest(null); },
-        onAdd: function () { setRest({ total: rest.total + 30, startedAt: rest.startedAt }); }
+        owner: rest.owner,
+        source: rest.source,
+        nextLabel: rest.nextLabel,
+        collapsed: !!rest.collapsed,
+        onSkip: function () { patchRest(null); },
+        onAdd: function () { patchRest(Object.assign({}, rest, { total: rest.total + 10 })); },
+        onCollapse: function () { patchRest(Object.assign({}, rest, { collapsed: true })); },
+        onExpand: function () { patchRest(Object.assign({}, rest, { collapsed: false })); }
       }),
       // Шторка ⋯ (экран 20). Показываем только рабочие входы: кнопка в пустоту
       // в разработку не уходит (решение 9).
@@ -543,7 +704,7 @@
             if (notClosed > 0) { setCloseConfirm(true); return; }
             setView('finish');
           }
-        }, notClosed > 0 ? 'Завершить · ' + notClosed + ' не закрыто' : 'Завершить')
+        }, 'Завершить тренировку')
       )
     );
   }
@@ -556,6 +717,7 @@
     function render(api) {
       return h(BuilderScreen, {
         training: state.training,
+        onPatchSession: state.onPatchSession,
         onPatchNote: state.onPatchNote,
         dateKey: state.dateKey,
         profile: state.profile,

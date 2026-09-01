@@ -2,14 +2,10 @@ html, body { background: #fffaf1; }
 html {
     /* Центр диска 56px — якорь сплэша PWA и heys-boot-mark (handoff app-splash.v4). */
     --heys-splash-disc-size: 56px;
-    /* Контракт spinners/app-splash «safe-area и кнопка назад»: знак центруется
-       в области между врезками, а не от полного окна. env() внутри каждого
-       слагаемого max() держит формулу прежней на устройствах без выреза —
-       там env() возвращает 0, и якорь остаётся max(148px, 45dvh). */
-    --heys-splash-anchor-y: max(
-        calc(148px + env(safe-area-inset-top, 0px)),
-        calc(45dvh + env(safe-area-inset-top, 0px))
-    );
+    /* Процент считается внутри safe-area контейнера .heys-boot-mark. Так 45%
+       остаются 45% доступной высоты и не сдвигаются вниз на всю верхнюю
+       врезку; 148px сохраняют прежний нижний предел для коротких экранов. */
+    --heys-splash-anchor-y: max(148px, 45%);
 }
 html[data-theme="sand"], html[data-theme-id="sand"],
 html[data-theme="light"] { background: #fffaf1; }
@@ -56,7 +52,7 @@ html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1
 .heys-boot-mark {
     box-sizing: border-box;
     position: fixed;
-    inset: 0;
+    inset: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
     z-index: 1;
     width: 100%;
     min-height: 0;
@@ -90,7 +86,7 @@ body:has(> .heys-boot-mark.is-fail) {
 #heys-boot-visual-guard .heys-boot-mark,
 .heys-boot-visual-guard .heys-boot-mark {
     position: fixed;
-    inset: 0;
+    inset: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
     width: 100%;
     min-height: 0;
     display: block;
@@ -177,7 +173,7 @@ html[data-theme="blue"] .heys-wait-mark-overlay { background-color: #ffffff; }
 html[data-theme-id="blue-dark"] .heys-wait-mark-overlay,
 html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26; }
 .heys-boot-mark__sign {
-    position: fixed;
+    position: absolute;
     left: 50%;
     top: calc(var(--heys-splash-anchor-y) + (var(--heys-splash-disc-size) / 2) + 18px);
     transform: translateX(-50%);
@@ -190,7 +186,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     pointer-events: auto;
 }
 .heys-boot-mark__disc {
-    position: fixed;
+    position: absolute;
     left: 50%;
     top: var(--heys-splash-anchor-y);
     transform: translate(-50%, -50%);
@@ -331,26 +327,20 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     opacity: 0.6;
     cursor: not-allowed;
 }
-/* Строка про куратора приходит под кнопкой на второй неудаче (контракт
-   «вторая неудача» + «вид ступеней»): 11,5/500 вторичным. Ссылкой, а не
-   текстом — см. «НУЖНО РЕШЕНИЕ» по строке «области нажатия». */
+/* По решению 31 августа строка про куратора приходит уже на первой неудаче:
+   под кнопкой, 11,5/500 вторичным. */
 .heys-boot-mark__curator {
     margin-top: 12px;
     font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
     color: var(--boot-muted);
     text-align: center;
     text-decoration: underline;
-    display: none;
+    display: block;
 }
-.heys-boot-mark.is-fail-again .heys-boot-mark__curator { display: block; }
-/* Вторая неудача меняет иерархию действий (ответ дизайнера №15 от 31 августа,
-   кадр «Спиннер · вторая неудача», элементы 05–07). Приложение не запустилось
-   дважды подряд, значит «Повторить» уже не сработал, и единственный живой
-   выход не может быть тише него: «Написать куратору» берёт вид кнопки ступени
-   и встаёт первым, «Повторить ещё раз» уходит вторичной строкой 44 px.
-   На первой ступени всё остаётся по контракту — там куратора нет вовсе.
-   Строка «вид ступеней холодного старта» пока просит обратное; дизайнер
-   правит её отдельным заходом, вердикт зоны до тех пор не трогаем.
+/* На второй неудаче «Написать куратору» и «Повторить» становятся равными
+   кнопками по 48 px: живой выход к человеку не тише уже не сработавшего
+   повтора. Старая строка «вторая неудача» и старый кадр всё ещё описывают
+   прежнюю иерархию; актуальнее датированное решение строки «три ступени».
    Порядок задан order, а не перестановкой разметки: тот же .heys-boot-mark__fail
    собирается в двух местах (статикой и showRecoveryUI), и одна точка правки
    надёжнее двух. */
@@ -374,11 +364,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
 .heys-boot-mark.is-fail-again .heys-boot-mark__retry {
     order: 4;
     width: 100%;
-    min-height: 44px;
     margin-top: 8px;
-    background: none;
-    color: var(--boot-ink-50);
-    font: 700 12px/1 Figtree, system-ui, sans-serif;
 }
 .heys-boot-mark.is-fail-again .heys-boot-mark__status { order: 5; }
 .heys-boot-mark__status {

@@ -92,6 +92,7 @@
   // наборах чернила-литерал давали тёмное по тёмному.
   const INK = 'var(--v4-ink, #201e1d)';
   const INK_55 = 'var(--v4-ink-2, rgba(0, 0, 0, 0.55))';   // строка «вторичный текст»
+  const INK_DATA = 'var(--v4-ink-data, rgba(0, 0, 0, 0.56))'; // безопасные данные и служебные подсказки
   const INK_60 = 'var(--v4-ink-2, rgba(0, 0, 0, 0.6))';
   const INK_40 = 'var(--v4-ink-4, rgba(0, 0, 0, 0.4))';
   const SURFACE_1 = 'var(--v4-card, #f7efe2)';             // --c1
@@ -141,10 +142,10 @@
   };
   // Строка «вид карточки вопроса»: карточка --c1, радиус 18, поля 14/16.
   const labelStyle = {
-    display: 'grid', gap: 8, fontSize: 12.5, fontWeight: 600, color: INK,
+    display: 'grid', fontSize: 12.5, fontWeight: 600, color: INK,
     background: SURFACE_1, borderRadius: 18, padding: '14px 16px',
   };
-  const hintStyle = { fontSize: 11.5, lineHeight: 1.45, color: INK_55, fontWeight: 500 };
+  const hintStyle = { marginTop: 5, fontSize: 11.5, lineHeight: 1.45, color: INK_55, fontWeight: 500 };
   const titleStyle = { fontSize: 22, fontWeight: 700, lineHeight: 1.2, letterSpacing: '-.02em', color: INK, margin: 0 };
   const subtitleStyle = { fontSize: 12.5, fontWeight: 500, lineHeight: 1.55, color: INK_55, margin: '9px 0 0' };
   // Строка «области нажатия»: кнопки футера 48.
@@ -392,18 +393,18 @@
   // поставить в него фокус: на шаге «Здоровье и ограничения» полей восемь,
   // часть появляется по условию, и сообщение «заполните обязательные поля» без
   // адреса заставляло искать пустое место глазами.
-  function Field({ label, hint, value, onChange, textarea = false, required = false, placeholder = '', type = 'text', fieldId = undefined }) {
+  function Field({ label, hint, hintColor = INK_55, value, onChange, textarea = false, required = false, placeholder = '', type = 'text', fieldId = undefined }) {
     const controlProps = {
       id: fieldId,
       value: value || '',
       onChange: (event) => onChange(event.target.value),
       placeholder,
       required,
-      style: { ...inputStyle, minHeight: textarea ? 104 : undefined, resize: textarea ? 'vertical' : undefined },
+      style: { ...inputStyle, marginTop: 8, minHeight: textarea ? 104 : undefined, resize: textarea ? 'vertical' : undefined },
     };
     return React.createElement('label', { style: labelStyle },
       React.createElement('span', { style: { lineHeight: 1.4 } }, label, requiredMark(required)),
-      hint ? React.createElement('span', { style: hintStyle }, hint) : null,
+      hint ? React.createElement('span', { style: { ...hintStyle, color: hintColor } }, hint) : null,
       textarea
         ? React.createElement('textarea', controlProps)
         : React.createElement('input', { ...controlProps, type })
@@ -425,7 +426,7 @@
       React.createElement('select', {
         id: fieldId,
         value: value || '', onChange: (event) => onChange(event.target.value),
-        required, style: inputStyle,
+        required, style: { ...inputStyle, marginTop: 8 },
       }, [
         React.createElement('option', { key: 'empty', value: '' }, 'Выберите вариант'),
         ...options.map(([optionValue, optionLabel]) => React.createElement('option', {
@@ -567,6 +568,7 @@
           placeholder: 'Что вы хотите изменить и почему это важно сейчас?', value: value.primary_goal,
           onChange: (next) => set('primary_goal', next) }),
         React.createElement(Field, { key: 'success_definition', fieldId: 'intake-success_definition', label: 'Как вы поймёте, что сопровождение помогает?', required: true, textarea: true,
+          hint: 'Например: вес идёт вниз, вечером спокойнее', hintColor: INK_DATA,
           placeholder: 'Какие изменения будут для вас значимыми?', value: value.success_definition,
           onChange: (next) => set('success_definition', next) }),
         React.createElement(Field, { key: 'time_expectations', fieldId: 'intake-time_expectations', label: 'Есть ли дата или срок, которые важно учитывать?', hint: 'Если срока нет, так и напишите.',
@@ -605,7 +607,7 @@
       required: ['schedule', 'sleep'],
       render: (value, set) => [
         React.createElement(Field, { key: 'schedule', fieldId: 'intake-schedule', label: 'Как обычно устроен ваш день?', required: true, textarea: true,
-          hint: 'Достаточно примерного ритма без адресов и названий мест.',
+          hint: 'Достаточно примерного ритма без адресов и названий мест', hintColor: INK_DATA,
           placeholder: 'Работа, учёба, дорога, семья, смены', value: value.schedule,
           onChange: (next) => set('schedule', next) }),
         React.createElement(Field, { key: 'sleep', fieldId: 'intake-sleep', label: 'Сколько вы обычно спите и как восстанавливаетесь?', required: true,
@@ -726,7 +728,7 @@
           style: { marginTop: 5, fontSize: 12.5, fontWeight: 600, lineHeight: 1.4, color: INK },
         }, reviewValue(value))
       ))),
-      React.createElement('div', { style: { fontSize: 11, fontWeight: 500, lineHeight: 1.5, color: INK_55 } },
+      React.createElement('div', { style: { fontSize: 11, fontWeight: 500, lineHeight: 1.5, color: INK_DATA } },
         'Все заполненные ответы. Пропущенные необязательные поля в список не попадают — их и не отправляем.')
     );
   }
@@ -1344,7 +1346,7 @@
                 // одна цифра. Так три состояния читаются как «сделано ·
                 // здесь · ещё нет», а не как три разных кружка. Стояло --c2.
                 background: done ? OK_BG : currentRow ? ACCENT_FILL : SURFACE_1,
-                color: done ? OK_TEXT : currentRow ? ON_ACCENT : INK_55,
+                color: done ? OK_TEXT : currentRow ? ON_ACCENT : INK_DATA,
               },
             }, done ? '✓' : String(index + 1)),
             React.createElement('span', {
@@ -1356,7 +1358,7 @@
           );
         })),
       React.createElement('div', {
-        style: { background: SURFACE_1, borderRadius: 18, padding: '14px 15px', fontSize: 11.5, fontWeight: 500, lineHeight: 1.5, color: INK_55 },
+        style: { background: SURFACE_1, borderRadius: 18, padding: '14px 15px', fontSize: 11.5, fontWeight: 500, lineHeight: 1.5, color: INK_DATA },
       }, DRAFT_STORAGE_COPY)
     );
 
@@ -1465,7 +1467,7 @@
           label
         ))),
         isFinal
-          ? React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, lineHeight: 1.5, color: INK_55, textAlign: 'center' } },
+          ? React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, lineHeight: 1.5, color: INK_DATA, textAlign: 'center' } },
             'Приложение откроется после согласования даты старта.')
           : React.createElement('button', { type: 'button', onClick: leaveIntake, style: primaryPill }, 'Вернуться в приложение')
       ));
@@ -1483,11 +1485,11 @@
       submitFailed
         ? React.createElement('div', { style: { fontSize: 12.5, fontWeight: 700, lineHeight: 1.35, color: WARN_TEXT } }, 'Анкета не отправилась')
         : null,
-      React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, lineHeight: 1.55, color: INK_55 } }, error),
+      React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, lineHeight: 1.55, color: INK_DATA } }, error),
       submitFailed ? React.createElement('div', {
         style: { display: 'flex', alignItems: 'center', gap: 9, fontSize: 12, fontWeight: 600, lineHeight: 1.4, color: OK_TEXT },
       }, '✓', 'Ответы и подтверждение предупреждения сохранены') : null,
-      submitFailed ? React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, lineHeight: 1.5, color: INK_55 } },
+      submitFailed ? React.createElement('div', { style: { marginTop: 9, fontSize: 11.5, fontWeight: 500, lineHeight: 1.5, color: INK_DATA } },
         'Если не получается несколько раз — напишите в тот же чат, где приходил код: куратор откроет анкету вручную.') : null
     ) : null;
 
@@ -1603,12 +1605,12 @@
         () => setCloseConfirmOpen(false),
       ) : null,
       // Строка «вид шапки шага»: слева «Шаг N из 5» 12/600 чернилами и под ним
-      // через 6 обещание времени 11/500 тоном чернил 55 %, справа «Закрыть»
+      // через 6 обещание времени 11/500 ролью безопасных данных 56 %, справа «Закрыть»
       // 12/600 тоном --ac с областью 44×64, вынесенной в поля.
       React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' } },
         React.createElement('div', null,
           React.createElement('div', { style: { fontSize: 12, fontWeight: 600, lineHeight: 1, color: INK } }, `Шаг ${step + 1} из ${STEPS.length}`),
-          React.createElement('div', { style: { marginTop: 6, fontSize: 11, fontWeight: 500, lineHeight: 1.4, color: INK_55 } },
+          React.createElement('div', { style: { marginTop: 6, fontSize: 11, fontWeight: 500, lineHeight: 1.4, color: INK_DATA } },
             STEP_TIME_LEFT[step] || STEP_TIME_LEFT[0]),
           // Строка «Ответы сохранены» — со второго шага: на первом сохранять
           // нечего, и строка была бы ложью.
@@ -1712,7 +1714,7 @@
             style: { display: 'block', fontSize: 12.5, fontWeight: 700, lineHeight: 1.35, color: INK },
           }, 'Проверьте ответы перед отправкой'),
           React.createElement('span', {
-            style: { display: 'block', marginTop: 5, fontSize: 11.5, fontWeight: 500, lineHeight: 1.45, color: INK_55 },
+            style: { display: 'block', marginTop: 5, fontSize: 11.5, fontWeight: 500, lineHeight: 1.45, color: INK_DATA },
           }, 'Цель, опыт, готовность присылать данные')
         ),
         React.createElement('span', {
@@ -1743,7 +1745,7 @@
         // алертом после нажатия — поэтому у неё свой id, а не role="alert".
         id: 'intake-blocked-reason',
         style: { marginTop: 22, fontSize: 11, fontWeight: 500, lineHeight: 1.45,
-          textAlign: 'center', color: INK_55 },
+          textAlign: 'center', color: INK_DATA },
       }, current?.id === 'warning' ? 'Поставьте галочку выше' : 'Заполните поля со звёздочкой') : null,
       React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: missingRequired ? 9 : 20 } },
         step > 0 ? React.createElement('button', {

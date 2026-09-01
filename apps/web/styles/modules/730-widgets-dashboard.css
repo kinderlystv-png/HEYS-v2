@@ -2843,7 +2843,7 @@ body:has(.page-reports) .hdr::after {
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widgets-quick-sheet__icon,
@@ -2884,7 +2884,7 @@ body:has(.page-reports) .hdr::after {
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widgets-quick-sheet__meta {
@@ -2892,7 +2892,7 @@ body:has(.page-reports) .hdr::after {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   /* «формат чисел»: счётчик воды меняется на месте — цифры табличные. */
   font-variant-numeric: tabular-nums;
 }
@@ -3463,7 +3463,7 @@ body:has(.page-reports) .hdr::after {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -3477,7 +3477,7 @@ body:has(.page-reports) .hdr::after {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -4280,7 +4280,7 @@ body:has(.page-reports) .hdr::after {
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Спарклайн недели слева от числа — кадр «Главная · дефолтная раскладка»,
@@ -4315,7 +4315,7 @@ body:has(.page-reports) .hdr::after {
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   /* «формат чисел»: число меняется на месте — цифры табличные. */
   font-variant-numeric: tabular-nums;
 }
@@ -5807,7 +5807,7 @@ body:has(.page-reports) .hdr::after {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-right: 8px;
 }
 
@@ -6116,7 +6116,7 @@ body:has(.page-reports) .hdr::after {
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--v4-ink-4, #9ca3af);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   pointer-events: none;
 }
 
@@ -9208,7 +9208,7 @@ body.reports-fullscreen-open {
 
 .meal-rec-card__goal-eyebrow {
   margin-bottom: 3px;
-  color: var(--v4-ink-2, #6f7196);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-size: 10px;
   font-weight: 700;
   line-height: 1.3;
@@ -9255,7 +9255,7 @@ body.reports-fullscreen-open {
 }
 
 .meal-rec-card__goal-metric-label {
-  color: var(--v4-ink-2, #73758b);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-size: 10px;
   font-weight: 600;
   line-height: 1.2;
@@ -10481,7 +10481,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: 0.03em;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Строка контракта «длинное значение в узком формате»: число не сжимается
@@ -10545,14 +10545,14 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 .widget-calories__hero-unit {
   font-size: 0.625rem;
   font-weight: 500;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-calories__hero-remaining-label {
   font-size: 0.625rem;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-top: 7px;
   flex-shrink: 0;
 }
@@ -10612,7 +10612,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -10629,7 +10629,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-size: 8.5px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.4));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] body:has(.widgets-tab) .widget {
@@ -10776,7 +10776,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   flex-shrink: 0;
   /* «формат чисел»: строки стоят столбцом — цифры табличные. */
   font-variant-numeric: tabular-nums;
@@ -10790,7 +10790,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 .widget-v4-unit {
   font-size: 0.625rem;
   font-weight: 500;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-ok {
@@ -10827,7 +10827,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 }
 
 .widget-v4-val--neutral {
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widget-v4-mini__value.widget-v4-val--good,
@@ -10880,7 +10880,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 }
 
 .widget-v4-muted {
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.4));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
@@ -10977,7 +10977,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.03em;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
 
@@ -10998,7 +10998,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 }
 
 .widget-v4-hero-num__val.widget-v4-val--neutral {
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widget-v4-hero-num__val.widget-v4-val--act {
@@ -11027,7 +11027,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 }
 
 .widget-v4-row__value.widget-v4-val--neutral {
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widget-v4-row__meta.widget-v4-val--good {
@@ -11051,7 +11051,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 }
 
 .widget-v4-stack__footer .widget-v4-val--neutral {
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widget-v4-stack__footer {
@@ -11094,7 +11094,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
 
@@ -11492,7 +11492,7 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
   font-size: 9.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-insulin-wave__note--next {
@@ -11576,7 +11576,7 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
   font-size: 8.5px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр «Главная · дефолтная раскладка», элемент 29: подпись волны прижата к
@@ -11593,7 +11593,7 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-stack__footer.widget-v4-insulin-wave__footer > span {
@@ -11645,7 +11645,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   white-space: nowrap;
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widget-v4-macro__fact--bad {
@@ -11657,7 +11657,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-macro__fact-sep,
 .widget-v4-macro__fact-tgt {
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
 }
 
 .widget-v4-macro__fact--bad .widget-v4-macro__fact-sep,
@@ -11667,7 +11667,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 
 .widget-v4-macro__num {
   font: 600 12px Figtree, system-ui, sans-serif;
-  fill: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  fill: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -11743,7 +11743,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-periods {
@@ -11760,7 +11760,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 9.5px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
@@ -11774,7 +11774,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-periods__suffix {
   font-size: 9.5px;
   font-weight: 500;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.28));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-spark--ok .widget-v4-spark__line,
@@ -11903,7 +11903,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 9.5px;
   font-weight: 500;
   line-height: 1.35;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-catalog__need {
@@ -11916,7 +11916,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-catalog__hint {
   font-size: 9px;
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Название готовой строки уже несёт превью; тут оно только для чтения с
@@ -11949,13 +11949,13 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-catalog__item--waiting .widget-v4-catalog__name {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-catalog__name {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Превью виджета в формате его дефолтного вида (канвас v4, строка 54).
@@ -12068,7 +12068,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-edit-footer__hint {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widgets-tab__hold-hint {
@@ -12155,12 +12155,12 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   cursor: pointer;
 }
 
 .widget-v4-edit-footer__icon.is-off {
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.25));
+  color: var(--v4-ink-mark, rgba(0, 0, 0, 0.3));
   cursor: default;
 }
 
@@ -12177,14 +12177,14 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-empty .widgets-empty__title {
   font-size: 13px;
   font-weight: 700;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widget-v4-empty .widgets-empty__desc {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-top: 6px;
 }
 
@@ -12255,11 +12255,13 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   letter-spacing: -0.03em;
 }
 
-/* Полоса до нормы — общая у клетчатки, белка и качества еды. */
+/* Полоса дневной цели: дорожка --v4-track; ниже 67 % --ovl, от 67 % --gr2.
+   v4-intentional: эти роли объявлены во всех четырёх палитрах; буквальный
+   fallback здесь нарушил бы контракт и мог бы окрасить тему чужим набором. */
 .widget-v4-goalbar {
   height: 4px;
   border-radius: 999px;
-  background: var(--v4-line, rgba(0, 0, 0, 0.08));
+  background: var(--v4-track); /* v4-intentional */
   margin-top: 7px;
 }
 
@@ -12272,7 +12274,11 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: currentColor;
+  background: var(--v4-overlay-fill); /* v4-intentional */
+}
+
+.widget-v4-goalbar__fill.is-on-track {
+  background: var(--v4-ok-fill); /* v4-intentional */
 }
 
 /* Подсказка «чем добрать»: строка не тянет плитку и обрезается по краю. */
@@ -12281,7 +12287,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 9.5px;
   font-weight: 500;
   line-height: 1.35;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -12326,7 +12332,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   flex: none;
   font-size: 9.5px;
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -12350,7 +12356,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   flex: none;
   font-size: 10px;
   font-weight: 600;
-  color: #201e1d;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -12399,7 +12405,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   margin-top: 4px;
   font-size: 9px;
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -12425,7 +12431,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   gap: 5px;
   font-size: 9.5px;
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
 }
 
@@ -12456,7 +12462,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   gap: 8px;
   font-size: 10px;
   font-weight: 500;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-checklist__row.is-done .widget-v4-checklist__label {
@@ -12466,7 +12472,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 
 .widget-v4-checklist__value {
   flex: none;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -12496,7 +12502,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1.3;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widget-v4-recommended__desc {
@@ -12505,7 +12511,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1.45;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -12615,7 +12621,7 @@ body:has(.widgets-tab) .widget-weight--2x2 .widget-v4-hero-num__val.widget-v4-va
 }
 
 body:has(.widgets-tab) .widget-weight--2x2 .widget-v4-hero-num__val.widget-v4-val--neutral {
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 body:has(.widgets-tab) .widget-weight--2x2 .widget-v4-unit {
@@ -12749,7 +12755,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
 }
 
@@ -12786,7 +12792,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
 }
 
 .widget-wd__spark {
@@ -12804,7 +12810,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
 }
 
 .widget-wd__spark.widget-v4-val--neutral {
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widget-wd__spark-line {
@@ -12997,7 +13003,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   font-size: 14px;
   font-weight: 700;
   line-height: 1.25;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widget-wd-sheet__subtitle {
@@ -13005,7 +13011,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-wd-sheet__list {
@@ -13086,7 +13092,7 @@ html[data-theme-id="blue-dark"] .widget-wd-sheet__opt.is-active {
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1.3;
-  color: #201e1d;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-wd-sheet__opt-sub {
@@ -13094,7 +13100,7 @@ html[data-theme-id="blue-dark"] .widget-wd-sheet__opt.is-active {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.3;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-wd-sheet__check {
@@ -13418,7 +13424,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 10px;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -13434,7 +13440,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 8.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-top: auto;
   /* «формат чисел»: число меняется на месте — цифры табличные. */
   font-variant-numeric: tabular-nums;
@@ -13475,14 +13481,14 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-calories__line-meta {
   font-size: 8.5px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   /* «формат чисел»: число меняется на месте — цифры табличные. */
   font-variant-numeric: tabular-nums;
 }
@@ -13508,7 +13514,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -13539,7 +13545,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-calories__dinner-budget {
@@ -13700,7 +13706,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-deficit-rows__row {
@@ -13746,7 +13752,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 8px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-water-rhythm {
@@ -13754,6 +13760,15 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   align-items: flex-end;
   gap: 4px;
   height: 24px;
+  flex: none;
+  width: 62px;
+}
+
+.widget-v4-water-rhythm__body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 9px;
   margin-top: auto;
 }
 
@@ -13821,13 +13836,13 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-weight__scatter-foot {
   font-size: 9px;
   font-weight: 600;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-top: 5px;
 }
 
@@ -13835,7 +13850,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 9.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-top: auto;
 }
 
@@ -13922,7 +13937,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
 }
 
 /* Кадр рисует круг 30×30, но палец меньше 44 px не ловит: зона нажатия
@@ -13948,7 +13963,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   line-height: 1;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-top: 16px;
 }
 
@@ -13971,7 +13986,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__hero-unit {
   font-size: 12px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.38);
+  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
 }
 
 .widget-bd-sheet__insight {
@@ -13979,7 +13994,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
   text-wrap: pretty;
 }
 
@@ -13988,7 +14003,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.38);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-top: 16px;
 }
 
@@ -14104,7 +14119,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__grid3x7 {
@@ -14124,7 +14139,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   flex: 0 0 12px;
   font-size: 9px;
   font-weight: 700;
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__grid-cell {
@@ -14197,7 +14212,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 7.5px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.3);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__sleep-timeline-track {
@@ -14237,7 +14252,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__wave-placeholder {
@@ -14267,7 +14282,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 8.5px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__wave-week-row.is-today .widget-bd-sheet__wave-week-label {
@@ -14342,14 +14357,14 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__hero-track-name {
   font-size: 12px;
   font-weight: 600;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .widget-bd-sheet__hero-track-val {
   font-size: 11.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__hero-track-bar {
@@ -14374,7 +14389,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__hero-track-label {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-size: 10px;
   font-weight: 700;
 }
@@ -14429,7 +14444,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 .widget-bd-sheet__stats--table .widget-bd-sheet__stat-row.is-total .widget-bd-sheet__stat-label {
   font-weight: 500;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__stats--table .widget-bd-sheet__stat-row.is-total .widget-bd-sheet__stat-value {
@@ -14448,7 +14463,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.3;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__stat-value {
@@ -14465,7 +14480,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.4;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -14528,7 +14543,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__factor-label {
   flex: none;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__factor-share {
@@ -14536,7 +14551,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   text-align: right;
   font-size: 9.5px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__factor-share.is-bad {
@@ -14595,7 +14610,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.3;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__chart-axis .is-accent {
@@ -14621,7 +14636,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__contrib-track {
@@ -14720,7 +14735,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 .widgets-longpress-hint__sub {
   font: 500 11px/1.45 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Источники вклада — кадр «Разбор · Клетчатка», элементы 84–92. */
@@ -14742,7 +14757,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__source-val {
@@ -14751,7 +14766,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__source-bar {
@@ -14792,7 +14807,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 8.5px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__meal-axis > span {
@@ -14888,7 +14903,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__evening-track {
@@ -14919,7 +14934,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 10.5px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.38);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__evening-dots {

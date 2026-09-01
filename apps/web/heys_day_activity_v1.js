@@ -194,6 +194,32 @@
     const trainings = Array.isArray(day && day.trainings) ? day.trainings : [];
     const performed = trainings.filter((t) => isTrainingSlotUsedMonth(t) && !isMorningActivationTraining(t));
     const planned = trainings.filter((t) => isNotPerformedTrainingMonth(t));
+    const ks = HEYS.TrainingKernel && HEYS.TrainingKernel.strength;
+    const round = typeof r0 === 'function' ? r0 : (v) => Math.round(v || 0);
+    let runningAgg = null;
+    if (ks && typeof ks.trainingTonnage === 'function') {
+      for (let i = 0; i < trainings.length; i++) {
+        const t = trainings[i];
+        if (isMorningActivationTraining(t)) continue;
+        const agg = ks.trainingTonnage(t);
+        if (agg && agg.doneApproaches > 0 && agg.doneApproaches < agg.totalApproaches) {
+          runningAgg = agg;
+          break;
+        }
+      }
+    }
+
+    if (runningAgg) {
+      const runningKcal = Number.isFinite(cardioKcal)
+        ? cardioKcal
+        : performed.reduce((s, t) => s + trainingKcalFromZones(t, kcalMin || [0, 0, 0, 0], round), 0);
+      return {
+        value: round(runningKcal) + ' ккал',
+        sub: 'силовая идёт · ' + runningAgg.doneApproaches + ' из ' + runningAgg.totalApproaches + ' подходов',
+        strong: true,
+        running: true
+      };
+    }
 
     if (!performed.length) {
       // Назначенное есть, сделанного нет — «не начаты», а не ноль.
@@ -214,7 +240,6 @@
       parts.push(minutes > 0 ? label + ' ' + minutes + ' мин' : label);
     }
 
-    const ks = HEYS.TrainingKernel && HEYS.TrainingKernel.strength;
     let tonnage = 0;
     if (ks && typeof ks.dayTonnage === 'function') {
       const bodyWeightKg = Number(day && day.weightMorning) || 0;
@@ -223,7 +248,6 @@
     const volume = formatVolumeShort(tonnage);
     const sub = parts.join(' · ') + (volume ? ' · ' + volume + ' объёма' : '');
 
-    const round = typeof r0 === 'function' ? r0 : (v) => Math.round(v || 0);
     const kcal = Number.isFinite(cardioKcal)
       ? cardioKcal
       : performed.reduce((s, t) => s + trainingKcalFromZones(t, kcalMin || [0, 0, 0, 0], round), 0);
@@ -365,6 +389,249 @@
     return rows;
   }
 
+  const LOAD_WINDOW_DAYS = 42;
+  const LOAD_ADVICE_DAYS = 14;
+
+  function loadDate(key) {
+    const parts = String(key || '').split('-').map(Number);
+    if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return null;
+    return new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0, 0);
+  }
+
+  function loadDateKey(date) {
+    if (!(date instanceof Date) || isNaN(date.getTime())) return '';
+    return date.getFullYear() + '-'
+      + String(date.getMonth() + 1).padStart(2, '0') + '-'
+      + String(date.getDate()).padStart(2, '0');
+  }
+
+  function loadDayKey(anchor, offset) {
+    const date = loadDate(anchor);
+    if (!date) return '';
+    date.setDate(date.getDate() + offset);
+    return loadDateKey(date);
+  }
+
+  function median(values) {
+    const list = (values || []).filter((v) => Number(v) > 0).map(Number).sort((a, b) => a - b);
+    if (!list.length) return 0;
+    const mid = Math.floor(list.length / 2);
+    return list.length % 2 ? list[mid] : (list[mid - 1] + list[mid]) / 2;
+  }
+
+  function trendWord(current, previous, faster) {
+    const cur = Number(current) || 0;
+    const prev = Number(previous) || 0;
+    if (!(cur > 0) && !(prev > 0)) return { text: 'без изменений', tone: 'muted', rate: 0 };
+    const rate = prev > 0 ? (cur - prev) / prev : 1;
+    if (rate > 0.05) return { text: faster ? 'растёт быстрее' : 'растёт', tone: faster ? 'warn' : '', rate };
+    if (rate < -0.05) return { text: 'снижается', tone: 'grow', rate };
+    return { text: 'без изменений', tone: 'muted', rate };
+  }
+
+  function formatTonnage(value) {
+    const kg = Number(value) || 0;
+    if (kg >= 1000) return String(Math.round(kg / 100) / 10).replace('.', ',') + ' т';
+    return Math.round(kg) + ' кг';
+  }
+
+  function weekdayShort(dateKey) {
+    const d = loadDate(dateKey);
+    if (!d) return dateKey;
+    return ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'][d.getDay()];
+  }
+
+  function weekdayFull(dateKey) {
+    const d = loadDate(dateKey);
+    if (!d) return dateKey;
+    return ['воскресенья', 'понедельника', 'вторника', 'среды', 'четверга', 'пятницы', 'субботы'][d.getDay()];
+  }
+
+  function groupVolumesForTraining(training, bodyWeightKg) {
+    const SK = HEYS.TrainingKernel?.strength;
+    const metaApi = HEYS.exerciseMeta;
+    const wl = training && training.workoutLog;
+    if (!SK || typeof SK.trainingTonnage !== 'function' || !metaApi || !wl) return {};
+    const exercises = Array.isArray(wl.exercises) ? wl.exercises : [];
+    const out = {};
+    exercises.forEach((exercise) => {
+      if (!exercise) return;
+      const one = {
+        ...training,
+        workoutLog: { ...wl, exercises: [exercise] }
+      };
+      const kg = Number(SK.trainingTonnage(one, { bodyWeightKg }).totalVolume) || 0;
+      if (!(kg > 0)) return;
+      const catalogMeta = typeof metaApi.get === 'function' ? metaApi.get(exercise.name || '') : null;
+      const snapshot = {
+        primaryGroup: exercise.primaryGroup || catalogMeta?.primaryGroup || '',
+        secondaryGroups: Array.isArray(exercise.secondaryGroups)
+          ? exercise.secondaryGroups
+          : (catalogMeta?.secondaryGroups || [])
+      };
+      const weights = typeof metaApi.groupWeights === 'function' ? metaApi.groupWeights(snapshot) : {};
+      Object.keys(weights).forEach((group) => {
+        out[group] = (out[group] || 0) + kg * (Number(weights[group]) || 0);
+      });
+    });
+    return out;
+  }
+
+  function averageRpe(training) {
+    const exercises = training?.workoutLog?.exercises || [];
+    const values = exercises.map((ex) => Number(ex?.rpe) || 0).filter((v) => v > 0);
+    return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+  }
+
+  /**
+   * Клиентский consumer существующего TK.load. Абсолютные CTL/ATL не выходят
+   * наружу как пользовательские баллы: шкала не откалибрована, поэтому UI
+   * получает только сравнение окон, вклад сессии и проверяемое время отдыха.
+   */
+  function collectTrainingLoadSummary(params) {
+    const { lsGet, anchorDate, liveDay, zoneMets, bodyWeightKg } = params || {};
+    const loadApi = HEYS.TrainingKernel?.load;
+    const strengthApi = HEYS.TrainingKernel?.strength;
+    if (typeof lsGet !== 'function' || !loadDate(anchorDate) || !loadApi || !strengthApi) return null;
+
+    const rows = [];
+    for (let offset = -(LOAD_WINDOW_DAYS - 1); offset <= 0; offset++) {
+      const dateKey = loadDayKey(anchorDate, offset);
+      let stored = lsGet('heys_dayv2_' + dateKey, null);
+      if (liveDay && (liveDay.date === dateKey || liveDay.dateKey === dateKey)
+        && (!stored || (Number(liveDay.updatedAt) || 0) >= (Number(stored.updatedAt) || 0))) {
+        stored = liveDay;
+      }
+      const day = stored && typeof stored === 'object' ? stored : null;
+      const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+      let cardio = 0;
+      let strength = 0;
+      const groups = {};
+      const closed = [];
+      trainings.forEach((training) => {
+        cardio += Number(loadApi.sessionLoad(training, zoneMets)) || 0;
+        if (loadApi.isNotPerformedTraining(training)) return;
+        const agg = strengthApi.trainingTonnage(training, { bodyWeightKg });
+        const volume = Number(agg?.totalVolume) || 0;
+        strength += volume;
+        const groupPart = groupVolumesForTraining(training, bodyWeightKg);
+        Object.keys(groupPart).forEach((group) => {
+          groups[group] = (groups[group] || 0) + groupPart[group];
+        });
+        if (volume > 0 && agg.totalApproaches > 0
+          && (training?.workoutLog?.completedAt || agg.doneApproaches >= agg.totalApproaches)) {
+          closed.push({ training, volume, rpe: averageRpe(training), dateKey });
+        }
+      });
+      rows.push({ dateKey, hasData: !!day, cardio, strength, groups, closed });
+    }
+
+    const daysWithData = rows.filter((row) => row.hasData).length;
+    if (!rows.some((row) => row.strength > 0 || row.cardio > 0)) return null;
+    const strengthSeries = rows.map((row) => row.strength);
+    const cardioSeries = rows.map((row) => row.cardio);
+    const strengthNow = loadApi.fitnessFatigue(strengthSeries, { daysWithData });
+    const strengthBefore = loadApi.fitnessFatigue(strengthSeries.slice(0, -7), {
+      daysWithData: Math.max(0, daysWithData - 7)
+    });
+    const cardioNow = loadApi.fitnessFatigue(cardioSeries, { daysWithData });
+    const cardioBefore = loadApi.fitnessFatigue(cardioSeries.slice(0, -7), {
+      daysWithData: Math.max(0, daysWithData - 7)
+    });
+    const accumulated = trendWord(strengthNow.ctl, strengthBefore.ctl, false);
+    const fatigueBase = trendWord(strengthNow.atl, strengthBefore.atl, false);
+    const fatigue = trendWord(strengthNow.atl, strengthBefore.atl, fatigueBase.rate > accumulated.rate + 0.05);
+    const cardioTrend = trendWord(cardioNow.ctl, cardioBefore.ctl, false);
+    const weeklyStrength = [];
+    for (let start = 0; start < strengthSeries.length; start += 7) {
+      weeklyStrength.push(strengthSeries.slice(start, start + 7).reduce((sum, value) => sum + value, 0));
+    }
+    let accumulatedWeeks = weeklyStrength.length ? 1 : 0;
+    for (let index = weeklyStrength.length - 1; index > 0; index--) {
+      const current = weeklyStrength[index];
+      const previous = weeklyStrength[index - 1];
+      if (current > 0 && (previous <= 0 || current > previous * 1.05)) accumulatedWeeks += 1;
+      else break;
+    }
+
+    const recent = rows.slice(-LOAD_ADVICE_DAYS);
+    const adviceDaysWithData = recent.filter((row) => row.hasData).length;
+    const allGroups = new Set();
+    recent.forEach((row) => Object.keys(row.groups).forEach((group) => allGroups.add(group)));
+    let warning = null;
+    allGroups.forEach((group) => {
+      const activeIndexes = [];
+      recent.forEach((row, index) => { if ((row.groups[group] || 0) > 0) activeIndexes.push(index); });
+      if (!activeIndexes.length) return;
+      let end = activeIndexes[activeIndexes.length - 1];
+      if (end < recent.length - 2) return;
+      let start = end;
+      while (start > 0 && (recent[start - 1].groups[group] || 0) > 0) start--;
+      const streak = end - start + 1;
+      if (streak < 3) return;
+      const score = recent.slice(start, end + 1).reduce((sum, row) => sum + (row.groups[group] || 0), 0);
+      if (!warning || score > warning.score) {
+        warning = { group, start, end, streak, score, dates: recent.slice(start, end + 1).map((row) => row.dateKey) };
+      }
+    });
+
+    if (warning) {
+      const lastByGroup = {};
+      recent.forEach((row, index) => Object.keys(row.groups).forEach((group) => {
+        if ((row.groups[group] || 0) > 0) lastByGroup[group] = index;
+      }));
+      const opposite = { back: 'chest', chest: 'back', biceps: 'triceps', triceps: 'biceps', quads: 'hamstrings', hamstrings: 'quads' };
+      let restedGroup = opposite[warning.group] || '';
+      if (!restedGroup || lastByGroup[restedGroup] === recent.length - 1) {
+        restedGroup = Array.from(allGroups).filter((group) => group !== warning.group)
+          .sort((a, b) => (lastByGroup[a] ?? -1) - (lastByGroup[b] ?? -1))[0] || '';
+      }
+      const lastIndex = lastByGroup[restedGroup];
+      const restDays = lastIndex === undefined ? LOAD_ADVICE_DAYS : Math.max(0, recent.length - 1 - lastIndex);
+      warning = {
+        ...warning,
+        groupLabel: HEYS.exerciseMeta?.groupLabel?.(warning.group) || warning.group,
+        restedGroup,
+        restedLabel: HEYS.exerciseMeta?.groupLabel?.(restedGroup) || restedGroup,
+        restDays,
+        historyDays: adviceDaysWithData,
+        since: weekdayFull(recent[warning.start].dateKey),
+        dateList: warning.dates.slice(-3).reverse().map(weekdayShort).join(', '),
+        isBackPull: warning.group === 'back'
+      };
+    }
+
+    const sessions = rows.flatMap((row) => row.closed);
+    const latest = sessions[sessions.length - 1] || null;
+    const previousVolumes = latest ? sessions.slice(0, -1).map((item) => item.volume) : [];
+    const baseline = median(previousVolumes);
+    const heavy = !!latest && (latest.rpe >= 8 || (baseline > 0 && latest.volume >= baseline * 1.25));
+    const completedAt = Number(latest?.training?.workoutLog?.completedAt) || 0;
+    const recoveryTotalHours = heavy ? 36 : 24;
+    const elapsedHours = completedAt > 0 ? Math.max(0, (Date.now() - completedAt) / 3600000) : recoveryTotalHours;
+    const recoveryPct = Math.max(0, Math.min(100, Math.round(elapsedHours / recoveryTotalHours * 100)));
+    const remainingHours = Math.max(0, Math.ceil(recoveryTotalHours - elapsedHours));
+    const readinessRatio = strengthNow.ctl > 0 ? strengthNow.tsb / strengthNow.ctl : 0;
+    const readinessPct = Math.max(20, Math.min(80, Math.round(50 + readinessRatio * 50)));
+    const readiness = readinessRatio < -0.05 ? 'ниже нормы' : readinessRatio > 0.05 ? 'выше обычного' : 'в норме';
+
+    return {
+      accumulated,
+      accumulatedWeeks,
+      fatigue,
+      cardio: cardioTrend,
+      sessionContribution: latest ? formatTonnage(latest.volume) : '—',
+      verdict: latest ? (heavy ? 'Сессия зачтена как тяжёлая' : 'Сессия зачтена как обычная') : '',
+      nextHeavyDate: latest ? loadDayKey(latest.dateKey, heavy ? 3 : 2) : '',
+      recoveryPct,
+      remainingHours,
+      readiness,
+      readinessPct,
+      warning,
+      daysWithData
+    };
+  }
+
   function ActivityTabV4(props) {
     const { React, ctx, actions } = props;
     const { useState, useMemo } = React;
@@ -404,7 +671,8 @@
       chargeTrackedDays,
       chargeDoneDays,
       morningActivationCalendarBlock,
-      kcalMin
+      kcalMin,
+      trainingLoad
     } = ctx;
 
     const safeR0 = typeof r0 === 'function' ? r0 : (v) => Math.round(v || 0);
@@ -423,6 +691,8 @@
     const [cardioOpen, setCardioOpen] = useState(false);
     const [monthOpen, setMonthOpen] = useState(false);
     const [calOpen, setCalOpen] = useState(false);
+    const [loadOpen, setLoadOpen] = useState(false);
+    const [loadDismissed, setLoadDismissed] = useState(false);
 
     const dateKey = day?.date || day?.dateKey || '';
     const safeKcalMin = Array.isArray(kcalMin) && kcalMin.length === 4
@@ -536,14 +806,20 @@
       },
         React.createElement('span', { className: 'activity-v4-today__key' },
           React.createElement('span', { className: 'activity-v4-today__name' }, name),
-          o.sub && React.createElement('span', { className: 'activity-v4-today__sub' }, o.sub)
+          o.sub && React.createElement('span', {
+            className: 'activity-v4-today__sub' + (o.running ? ' activity-v4-today__sub--running' : '')
+          }, o.sub)
         ),
         React.createElement('span', {
           className: 'activity-v4-today__value'
             + (o.muted ? ' activity-v4-today__value--muted' : '')
             + (o.strong ? ' activity-v4-today__value--strong' : '')
+            + (o.chevron ? ' activity-v4-today__value--chevron' : '')
             + (o.tone ? ' activity-v4-today__value--' + o.tone : '')
-        }, value)
+        },
+          React.createElement('span', null, value),
+          o.chevron && React.createElement('i', { 'aria-hidden': 'true' }, '›')
+        )
       );
     };
 
@@ -562,6 +838,8 @@
         sub: trainingsRow.sub,
         muted: trainingsRow.muted,
         strong: trainingsRow.strong,
+        running: trainingsRow.running,
+        chevron: trainingsRow.running,
         onClick: regularTrainingsBlock ? () => setCardioOpen((v) => !v) : undefined,
         expanded: regularTrainingsBlock ? cardioOpen : undefined
       }),
@@ -642,6 +920,134 @@
 
     const heroBreakdown = heroOpen
       && React.createElement('div', { className: 'activity-v4-breakdown' }, breakdownRows);
+
+    const warning = trainingLoad?.warning;
+    const loadWarning = warning && !loadDismissed && React.createElement(React.Fragment, null,
+      React.createElement('div', { className: 'activity-v4-load-warning' },
+        React.createElement('div', { className: 'activity-v4-load-warning__title' },
+          warning.groupLabel + ' ' + warning.streak + ' день подряд'),
+        React.createElement('div', { className: 'activity-v4-load-warning__reason' },
+          'восстановление ещё не закрыто с ' + warning.since),
+        React.createElement('div', { className: 'activity-v4-load-warning__text' },
+          warning.isBackPull
+            ? 'Сегодня лучше жать, чем тянуть. Если тяга принципиальна — оставьте два рабочих подхода вместо четырёх.'
+            : 'Сегодня лучше сменить группу, чем повторять ту же нагрузку. Если это принципиально — сократите рабочие подходы вдвое.'),
+        React.createElement('div', { className: 'activity-v4-load-warning__actions' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'activity-v4-load-warning__action activity-v4-load-warning__action--primary',
+            onClick: () => {
+              setLoadDismissed(true);
+              if ((Number(visibleTrainings) || 0) < 3) openTrainingPicker?.(visibleTrainings || 0);
+              else setCardioOpen(true);
+              haptic?.('light');
+            }
+          }, warning.isBackPull ? 'Взять день жимов' : 'Сменить группу'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'activity-v4-load-warning__action',
+            onClick: () => { setLoadDismissed(true); haptic?.('light'); }
+          }, warning.isBackPull ? 'Всё равно тянуть' : 'Всё равно продолжить')
+        ),
+        React.createElement('div', { className: 'activity-v4-load-warning__confidence' },
+          'Уверенность ' + (warning.historyDays >= 14 ? 'достаточная' : 'низкая')
+          + ' — данных ' + warning.historyDays + ' дней из 14. Совет остаётся советом: оба выхода равнозначны, запрета нет.')
+      ),
+      React.createElement('div', { className: 'activity-v4-tier' }, 'Что стоит за советом'),
+      React.createElement('div', { className: 'activity-v4-load-evidence' },
+        React.createElement('div', { className: 'activity-v4-load-evidence__row' },
+          React.createElement('span', null, warning.groupLabel),
+          React.createElement('span', { className: 'activity-v4-load-evidence__warn' }, 'нагружали ' + warning.dateList)
+        ),
+        warning.restedLabel && React.createElement('div', { className: 'activity-v4-load-evidence__row' },
+          React.createElement('span', null, warning.restedLabel),
+          React.createElement('span', { className: 'activity-v4-load-evidence__rest' },
+            'отдыхала ' + warning.restDays + ' ' + pluralRu(warning.restDays, 'день', 'дня', 'дней'))
+        ),
+        React.createElement('div', {
+          className: 'activity-v4-load-evidence__row activity-v4-load-evidence__row--last'
+        },
+          React.createElement('span', { className: 'activity-v4-load-evidence__rule' },
+            React.createElement('span', null, 'Основная группа берёт полный вес'),
+            React.createElement('span', null, 'синергист — половину, как в конструкторе')
+          )
+        )
+      ),
+      React.createElement('div', { className: 'activity-v4-load-note' },
+        'Совет считается по группам мышц упражнений, а не по названию тренировки: «спина» набирается и тягой блока, и подтягиваниями, где спина — основная.')
+    );
+
+    const loadRow = (key, note, value, tone, last) => React.createElement('div', {
+      key,
+      className: 'activity-v4-load-details__row' + (last ? ' activity-v4-load-details__row--last' : '')
+    },
+      React.createElement('span', { className: 'activity-v4-load-details__copy' },
+        React.createElement('span', { className: 'activity-v4-load-details__name' }, key),
+        React.createElement('span', { className: 'activity-v4-load-details__note' }, note)
+      ),
+      React.createElement('span', {
+        className: 'activity-v4-load-details__value'
+          + (tone ? ' activity-v4-load-details__value--' + tone : '')
+      }, value)
+    );
+
+    const growthWeeks = Number(trainingLoad?.accumulatedWeeks) || 0;
+    const growthNote = growthWeeks >= 3
+      ? 'третью неделю подряд, окно 6 недель'
+      : 'динамика по неделям, окно 6 недель';
+    const loadDetails = trainingLoad && loadOpen && React.createElement('div', {
+      className: 'activity-v4-load-details'
+    },
+      React.createElement('div', { className: 'activity-v4-tier' }, 'Как меняется'),
+      React.createElement('div', { className: 'activity-v4-load-details__list' },
+        loadRow('Силовая нагрузка · накопленная', growthNote,
+          trainingLoad.accumulated.text, trainingLoad.accumulated.tone),
+        loadRow('Силовая усталость · короткое окно',
+          trainingLoad.fatigue.text === 'растёт быстрее'
+            ? 'окно 7 дней · обгоняет накопленную'
+            : 'динамика за последние 7 дней',
+          trainingLoad.fatigue.text, trainingLoad.fatigue.tone),
+        loadRow('Кардио — отдельным рядом', 'в одно число с силовой не сводится',
+          trainingLoad.cardio.text, trainingLoad.cardio.tone),
+        loadRow('Вклад этой сессии', 'в силовом ряду, своей единицей — тоннажем',
+          trainingLoad.sessionContribution, 'number', true)
+      ),
+      React.createElement('div', { className: 'activity-v4-load-note' },
+        'Абсолютных значений нет намеренно: шкала не откалибрована на живой истории, и «72 из 100» читалось бы как измерение. Числа не хранятся — считаются на чтении.'),
+      trainingLoad.verdict && React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'activity-v4-tier' }, 'Вердикт сессии'),
+        React.createElement('div', { className: 'activity-v4-load-verdict' },
+          React.createElement('div', { className: 'activity-v4-load-verdict__title' }, trainingLoad.verdict),
+          React.createElement('div', { className: 'activity-v4-load-verdict__next' },
+            'следующая тяжёлая — не раньше ' + weekdayFull(trainingLoad.nextHeavyDate)),
+          React.createElement('div', { className: 'activity-v4-load-verdict__tiles' },
+            React.createElement('div', { className: 'activity-v4-load-verdict__tile' },
+              React.createElement('span', { className: 'activity-v4-load-verdict__key' }, 'восстановление'),
+              React.createElement('span', { className: 'activity-v4-load-verdict__track' },
+                React.createElement('span', {
+                  className: 'activity-v4-load-verdict__fill activity-v4-load-verdict__fill--recovery',
+                  style: { width: trainingLoad.recoveryPct + '%' }
+                })
+              ),
+              React.createElement('span', { className: 'activity-v4-load-verdict__value' },
+                trainingLoad.recoveryPct + ' % · ~' + trainingLoad.remainingHours + ' ч')
+            ),
+            React.createElement('div', { className: 'activity-v4-load-verdict__tile' },
+              React.createElement('span', { className: 'activity-v4-load-verdict__key' }, 'готовность'),
+              React.createElement('span', { className: 'activity-v4-load-verdict__track' },
+                React.createElement('span', {
+                  className: 'activity-v4-load-verdict__fill activity-v4-load-verdict__fill--readiness',
+                  style: { width: trainingLoad.readinessPct + '%' }
+                })
+              ),
+              React.createElement('span', { className: 'activity-v4-load-verdict__value' }, trainingLoad.readiness)
+            )
+          )
+        ),
+        React.createElement('div', { className: 'activity-v4-load-note' },
+          'Вердикт ставится по тоннажу и тяжести подходов закрытой сессии — их считает конструктор. Восстановление названо процентом и часами, готовность — словом: часы человек проверяет по себе, а процент готовности проверить нечем.')
+      )
+    );
     return React.createElement('div', {
       className: 'compact-activity activity-section activity-v4',
       'data-curator-target': 'activity'
@@ -667,6 +1073,8 @@
         ),
         heroBreakdown
       ),
+
+      loadWarning,
 
       // Три элемента программы стоят выше яруса: назначенная на сегодня
       // тренировка и правка куратора — самое важное на экране, и они не
@@ -734,12 +1142,12 @@
               style: { width: stepsPercent + '%' }
             })
           ),
-          React.createElement('div', { className: 'activity-v4-steps__slider steps-slider-container' },
-            // Тянут за саму полосу, а не за ползунок: в кадре отдельной ручки
-            // нет, полоса и есть ползунок. Пока захват висел на
-            // .steps-slider-thumb, при нуле шагов он стоял точкой в левом краю
-            // и был прозрачен — подпись «поставьте факт ползунком» указывала на
-            // то, чего не ухватить.
+          React.createElement('div', {
+            className: 'activity-v4-steps__slider steps-slider-container'
+              + ((stepsEstimated || !(Number(stepsValue) > 0)) ? ' activity-v4-steps__slider--muted' : '')
+          },
+            // Виден фактический маркер, а удобная зона захвата остаётся на всей
+            // полосе: в крайнем положении ручка не превращается в узкую цель.
             React.createElement('div', {
               className: 'steps-slider',
               onMouseDown: handleStepsDrag,
@@ -842,6 +1250,17 @@
         monthOpen && monthCount === 0 && React.createElement('div', { className: 'month-trainings-empty' }, 'Нет тренировок за последние 30 дней')
       ),
 
+      trainingLoad && React.createElement('button', {
+        type: 'button',
+        className: 'activity-v4-load-toggle',
+        onClick: () => setLoadOpen((value) => !value),
+        'aria-expanded': loadOpen
+      },
+        React.createElement('span', null, 'Нагрузка'),
+        React.createElement('span', null, (loadOpen ? 'Свернуть' : 'Подробнее') + ' ›')
+      ),
+      loadDetails,
+
       activitySheet
     );
   }
@@ -853,6 +1272,7 @@
   HEYS.dayActivity = {
     render: renderActivityCard,
     collectMonthTrainingRows,
+    collectTrainingLoadSummary,
     ActivityTabV4
   };
 

@@ -152,6 +152,13 @@ describe('поправка на факт · карточка сверки в ш�
     expect(block).toMatch(/is-up \{[^}]*--v4-ok-text/);
     expect(block).toMatch(/is-down \{[^}]*--v4-bad-text/);
   });
+
+  it('информационные значения карточки используют единую ступень 56 %', () => {
+    expect(SRC).toContain("+ (f.tone ? ' is-' + f.tone : '')");
+    expect(CSS).toMatch(/__fact-hint \{[^}]*--v4-ink-data/);
+    expect(CSS).toMatch(/__fact-value\.is-quiet \{[^}]*--v4-ink-data/);
+    expect(CSS).toMatch(/__legend-item\.is-weight \{[^}]*--v4-ink-data/);
+  });
 });
 
 describe('поправка · основания решения у клиента', () => {

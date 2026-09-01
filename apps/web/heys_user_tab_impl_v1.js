@@ -4,6 +4,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 (function (global) {
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
+    const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';
 
     // 🔍 DEBUG: Проверяем что HEYS.utils загружен
     if (!HEYS.utils || !HEYS.utils.lsGet) {
@@ -397,7 +398,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             className: 'profile-v4__subtier',
             id: id ? ('profile-v4-' + id) : undefined,
         },
-            React.createElement('h3', { className: 'profile-v4__subtier-title' }, title),
+            React.createElement('h3', {
+                className: 'profile-v4__subtier-title',
+                style: { color: INK_DATA },
+            }, title),
             children
         );
     }

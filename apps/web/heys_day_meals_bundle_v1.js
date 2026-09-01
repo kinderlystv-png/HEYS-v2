@@ -1951,7 +1951,8 @@
       mealIndex,
       mealId,
       mealPhotos: initialMealPhotos,
-      summaryTitle
+      summaryTitle,
+      dayKcal
     } = context || {};
 
     const [mealPhotos, setMealPhotos] = React.useState(() => Array.isArray(initialMealPhotos) ? initialMealPhotos : []);
@@ -2002,7 +2003,11 @@
     const openPhotoViewer = (photoIndex) => {
       if (!mealPhotos.length) return;
       if (typeof HEYS.showPhotoViewer === 'function') {
-        HEYS.showPhotoViewer([...mealPhotos], photoIndex, null);
+        // Кадр «Фото · просмотр»: в шапке имя приёма, внизу «Ещё снимок».
+        HEYS.showPhotoViewer([...mealPhotos], photoIndex, null, {
+          title: summaryTitle || '',
+          onAddMore: photosAtLimit ? null : handlePhotoPick
+        });
       } else {
         const src = mealPhotos[photoIndex]?.data || mealPhotos[photoIndex]?.url;
         if (src) window.open(src, '_blank');
@@ -2025,10 +2030,15 @@
           React.createElement('span', { className: 'aps-v4-meal-summary__hero-meta' },
             `ккал · ${mealItemCount} ${productWord}`)
         ),
+        // Строка «число дня в блоке „В приёме"»: под калорийностью приёма идут
+        // две величины — сколько всего за день и сколько осталось до нормы. В
+        // переборе меняется только вторая половина, первая остаётся как есть.
         React.createElement('div', { className: 'aps-v4-meal-summary__hero-foot' },
+          Number.isFinite(dayKcal) ? `Всего за день ${dayKcal} · ` : '',
           isGoalReached
-            ? 'Норма дня выполнена'
-            : `До нормы дня остаётся ${Math.max(0, remainingKcal)}`)
+            ? React.createElement('span', { className: 'aps-v4-meal-summary__hero-over' },
+              `перебор ${Math.abs(Math.min(0, remainingKcal))}`)
+            : `до нормы остаётся ${Math.max(0, remainingKcal)}`)
       ),
       React.createElement('div', { className: 'aps-v4-meal-summary__list' },
         (mealItems || []).map((item, index) =>
@@ -2079,21 +2089,32 @@
               className: 'aps-v4-meal-summary__photo-delete',
               onClick: handleDeletePhoto,
               'aria-label': 'Удалить фото'
-            }, '×')
+            })
           );
         }),
         !photosAtLimit && React.createElement('button', {
           type: 'button',
           className: 'aps-v4-meal-summary__photo-add',
           onClick: handlePhotoPick,
-          'aria-label': 'Добавить фото приёма'
+          'aria-label': 'Снять фото приёма'
         },
-          React.createElement('span', { className: 'aps-v4-meal-summary__photo-add-icon', 'aria-hidden': 'true' }, '+'),
-          React.createElement('span', null, 'Добавить')
+          // Кадр «Приём собран · фото»: значок камеры 19 px тоном --ac и слово
+          // «Снять». Стоял знак «+» 22 px и слово «Добавить» — по виду это была
+          // ещё одна кнопка добавления рядом с «Добавить ещё».
+          React.createElement('svg', {
+            className: 'aps-v4-meal-summary__photo-add-icon',
+            width: 19, height: 19, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.5, strokeLinecap: 'round',
+            strokeLinejoin: 'round', 'aria-hidden': 'true'
+          },
+            React.createElement('path', { d: 'M4 8h3l2-2h6l2 2h3v11H4z' }),
+            React.createElement('circle', { cx: 12, cy: 13, r: 3.5 })
+          ),
+          React.createElement('span', null, 'Снять')
         )
       ),
       typeof onPhoto === 'function' && React.createElement('div', { className: 'aps-v4-meal-summary__photo-note' },
-        'Фото принадлежит приёму, а не отдельному продукту.'
+        'Фото принадлежит приёму, не продукту. Снимков может быть несколько, тап открывает на весь экран.'
       ),
       React.createElement('div', { className: 'aps-v4-meal-summary__actions aps-v4-meal-summary__actions--row' },
         React.createElement('button', {
@@ -2217,8 +2238,11 @@
           dateKey: currentDay?.date || null,
           mealItems,
           mealKcal,
+          dayKcal: eatenKcal,
           mealItemCount: mealItems.length,
-          remainingKcal: Math.max(0, remainingKcal),
+          // Не зажимаем в ноль: в переборе строка показывает, на сколько именно
+          // норма пройдена, а Math.max терял знак и показывал «перебор 0».
+          remainingKcal,
           isGoalReached,
           mealPhotos: currentMeal.photos || [],
           summaryTitle,

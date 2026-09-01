@@ -673,8 +673,8 @@
         // срока стоят рядом с просьбой о замере — иначе «заморожена» звучит
         // бессрочно, а заморозка кончается на четырнадцатый день.
         facts: [
-          { label: 'Довод', value: 'косвенный' },
-          { label: 'Норма', value: 'заморожена' },
+          { label: 'Довод', value: 'косвенный', tone: 'quiet' },
+          { label: 'Норма', value: 'заморожена', tone: 'quiet' },
           {
             label: 'Ждём замер',
             value: 'ещё ' + recomposition.daysLeft
@@ -850,7 +850,7 @@
         titleAs: null,
         facts: [
           { label: 'Норма дня', value: formatKcal(norms.current) + '\u00a0ккал' },
-          { label: 'Поправка вернётся', value: 'в понедельник' },
+          { label: 'Поправка вернётся', value: 'в понедельник', tone: 'quiet' },
           { label: 'Отказ учли', value: 'да' }
         ],
         copy: {

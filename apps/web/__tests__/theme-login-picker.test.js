@@ -4,6 +4,8 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const originalHEYS = window.HEYS;
+const pickerSource = fs.readFileSync(path.resolve(__dirname, '../heys_login_theme_picker_v1.js'), 'utf8');
+const pickerCss = fs.readFileSync(path.resolve(__dirname, '../styles/modules/733-ui-v4-login-theme.css'), 'utf8');
 
 function mockSystemMode(initial) {
     const state = { dark: initial === 'dark', handlers: [] };
@@ -46,6 +48,12 @@ describe('heys_login_theme_picker_v1', () => {
         loadModules();
         const picker = window.HEYS.LoginThemePicker;
         expect(picker.PALETTE_VARIANTS.map((v) => v.id)).toEqual(['sand', 'blue']);
+    });
+
+    it('keeps the full device/system hint and canvas label typography', () => {
+        expect(pickerSource).toContain('«Как в системе» следит за настройкой телефона, пока вы не выберете режим руками.');
+        expect(pickerCss).toMatch(/\.heys-login-theme__soft-label\s*\{[^}]*margin-top:\s*10px;[^}]*font-size:\s*11px;[^}]*font-weight:\s*700;[^}]*line-height:\s*1\.3;/);
+        expect(pickerCss).toMatch(/\.heys-login-theme__hint\s*\{[^}]*margin-top:\s*16px;[^}]*font-size:\s*11px;[^}]*font-weight:\s*500;[^}]*line-height:\s*1\.5;/);
     });
 
     it('applies palette and mode immediately through HEYS.Theme', () => {

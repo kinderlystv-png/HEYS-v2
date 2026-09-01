@@ -94,6 +94,7 @@ function inkRole(alpha, prop) {
     if (alpha === 0.18) return '--v4-edge';
     return '--v4-line';
   }
+  if (alpha === 0.56) return '--v4-ink-data';
   if (alpha >= 0.55) return '--v4-ink-2';
   if (alpha >= 0.38) return '--v4-ink-3';
   return '--v4-line';
@@ -353,6 +354,37 @@ describe('геометрия панели куратора против кадр
       '.sheet', '.fld', '.stc'];
     for (const sel of everyTab) {
       expect(PAIRS.some(([c]) => c === sel), sel).toBe(true);
+    }
+  });
+});
+
+describe('кабинет куратора · единая роль данных', () => {
+  const product = parseRules(fs.readFileSync(CSS, 'utf8'));
+  const selectors = [
+    '.cur-row__count--muted',
+    '.cur-row__age.is-data',
+    '.cur-sheet__fact-hint',
+    '.cur-cab__subtitle',
+    '.cur-cab__tab',
+    '.cur-cab__mch',
+    '.cur-cab__event',
+    '.cdo-metric span',
+    '.cdo-list-row:last-child .cdo-list-val',
+    '.cur-cab__tab-note',
+    '.cur-cab__source',
+    '.cur-kv__val',
+    '.cur-cab__queue-limits-key',
+    '.cur-cab__queue-limits-val',
+    '.cur-field__label',
+    '.cdo-note',
+    '.cur-cab__subtabs-hint',
+    '.cur-cab__queue-state',
+  ];
+
+  it('изменённые строки canvas используют --v4-ink-data (56 %)', () => {
+    for (const selector of selectors) {
+      expect(declarations(product.get(selector)).color, selector)
+        .toContain('--v4-ink-data');
     }
   });
 });

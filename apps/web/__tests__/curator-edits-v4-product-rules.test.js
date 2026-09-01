@@ -159,6 +159,7 @@ describe('лист правок куратора · правила продук�
       // название приёма, подзаголовок называет результат правки числом.
       expect(itemCopy.textContent).toContain('Обед');
       expect(itemCopy.textContent).toContain('7 продуктов');
+      expect(itemCopy.querySelector('.ca-modal__item-sub--nowrap')).toBeTruthy();
       expect(getComputedStyle(itemCopy).userSelect).toBe('none');
 
       const dateRow = document.querySelector('.ca-modal__date');

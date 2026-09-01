@@ -1425,6 +1425,20 @@
             }) || [];
         }, [activityContentEnabled, lsGet, kcalMin, trainingTypes, r0, date, day?.date, day?.updatedAt, day?.trainings]);
 
+        // Существующая TK.load уже считает 42/7-дневные окна; вкладка только
+        // собирает плотную историю и переводит результат в честные слова без
+        // неоткалиброванных абсолютных баллов.
+        const trainingLoad = useMemo(() => {
+            if (!activityContentEnabled) return null;
+            return HEYS.dayActivity?.collectTrainingLoadSummary?.({
+                lsGet,
+                anchorDate: date,
+                liveDay: day,
+                zoneMets: mets,
+                bodyWeightKg: weight
+            }) || null;
+        }, [activityContentEnabled, lsGet, date, day?.updatedAt, day?.trainings, mets, weight]);
+
         const readMaDayForActivityCalendar = React.useCallback((dk) => {
             // Logical key heys_dayv2_* — HEYS.utils.lsGet applies client scope via nsKey (do not pass heys_<cid>_dayv2_* or key doubles).
             const stored = lsGet('heys_dayv2_' + dk, {}) || {};
@@ -2377,6 +2391,7 @@
                 tdee,
                 caloricDebt,
                 monthTrainingsRows,
+                trainingLoad,
                 workingWeights,
                 chargeTrackedDays,
                 chargeDoneDays,
@@ -2391,7 +2406,7 @@
                 openHouseholdPicker,
                 openTrainingPicker
             });
-        }, [showActivityContent, shownSteps, stepsGoal, shownStepsPercent, stepsColor, stepsK, stepsEstimated, stepsMissing, bmr, householdK, totalHouseholdMin, train1k, train2k, train3k, visibleTrainings, trainingTypes, regularTrainingsBlock, programTrainingsBlock, monthTrainingsRows, workingWeights, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, optimum, cycleKcalMultiplier, tdee, caloricDebt, day?.isRefeedDay]);
+        }, [showActivityContent, shownSteps, stepsGoal, shownStepsPercent, stepsColor, stepsK, stepsEstimated, stepsMissing, bmr, householdK, totalHouseholdMin, train1k, train2k, train3k, visibleTrainings, trainingTypes, regularTrainingsBlock, programTrainingsBlock, monthTrainingsRows, trainingLoad, workingWeights, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, optimum, cycleKcalMultiplier, tdee, caloricDebt, day?.isRefeedDay]);
 
         if (!HEYS.dayNutritionCard?.buildNutritionCard) {
             throw new Error('[heys_day_v12] HEYS.dayNutritionCard not loaded before heys_day_v12.js');

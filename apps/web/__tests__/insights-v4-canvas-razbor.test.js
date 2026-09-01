@@ -125,7 +125,7 @@ const SHEET2 = [
 const NUTRITION = [
   [9, '.insights-v4-nutrition__rhythm-track', ['align', 'gap']],
   [10, '.insights-v4-nutrition__rhythm-time', ['fontWeight', 'fontSize', 'lineHeight']],
-  [25, '.insights-v4-nutrition__legend-item', ['align', 'gap']],
+  [24, '.insights-v4-nutrition__legend-item', ['align', 'gap']],
 ];
 
 const PRAISE = [

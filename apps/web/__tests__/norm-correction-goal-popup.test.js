@@ -45,6 +45,11 @@ describe('поправка на факт · строка в разборе но�
   it('холодный старт — видимое состояние со счётом, а не пустая строка', () => {
     expect(SRC).toContain('копим данные');
     expect(SRC).toMatch(/done \+ ' дней из ' \+ coldDays/);
+    const at = SRC.indexOf("}, 'пока нет')");
+    const state = SRC.slice(at - 280, at);
+    expect(state).toContain('fontWeight: 600');
+    expect(state).toContain('lineHeight: 1');
+    expect(state).toContain('var(--v4-ink-data, rgba(0, 0, 0, 0.56))');
   });
 
   it('в первом слое нет слова «коэффициент»', () => {

@@ -198,6 +198,14 @@ const SKIP_MARGIN = new Set(['.hero', '.cfg', '.shR', '.shDel']);
 const EXCEPTIONS = new Set([
   // home-widgets «цель у чипов в переносимых рядах»: 30 px, не 44 и не 34 кадра.
   '.nutrition-v4-chip|min-height',
+  // Строкой списка владеет food-meal: там «Окно приёмов» переведено на
+  // актуальный уровень данных 56 %, пока дубль nutrition-tab ещё хранит --dim.
+  '.nutrition-v4-window__label|color',
+  // Решение дизайнера 31.08 в строке «шкала полосы» новее CSS демо-кадра:
+  // дорожка теперь --v4-track, вклад — --gr2. В helmet канваса пока остались
+  // прежние rgba(...,.08) и --acs; отдельный тест ниже держит текстовый контракт.
+  '.nutrition-v4-timeline__track|background',
+  '.nutrition-v4-timeline__track i|background',
 ]);
 
 // Строка приёма дня сверяется не здесь. Контракт этого канваса сам отдаёт её
@@ -235,7 +243,8 @@ const DELEGATED = new Set([
 // 31 августа опустилось с 340 до 275: 65 клеток строки приёма уехали в гейт
 // food-meal вместе с самой строкой (см. DELEGATED выше), а не перестали
 // сверяться. Затем с 275 до 267 — туда же уехало «Удалить приём» листа правки.
-const COVERAGE_FLOOR = 267;
+// До 266 снята конфликтующая копия тона «Окно приёмов»: её проверяет food-meal.
+const COVERAGE_FLOOR = 264;
 
 describe('геометрия вкладки «Питание» против кадров канваса', () => {
   const canvasSource = fs.readFileSync(CANVAS, 'utf8');
@@ -282,7 +291,21 @@ describe('геометрия вкладки «Питание» против ка
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(1);
+    expect([...EXCEPTIONS]).toEqual([
+      '.nutrition-v4-chip|min-height',
+      '.nutrition-v4-window__label|color',
+      '.nutrition-v4-timeline__track|background',
+      '.nutrition-v4-timeline__track i|background',
+    ]);
+  });
+
+  it('ритм приёмов следует новому текстовому контракту, а не старой краске кадра', () => {
+    expect(canvasSource).toContain('Полосы «Ритма приёмов» показывают ВКЛАД промежутка');
+    expect(canvasSource).toContain('заливка одна — --gr2, дорожка --v4-track');
+    const track = declarations(product.get('.nutrition-v4-timeline__track'));
+    const fill = declarations(product.get('.nutrition-v4-timeline__track i'));
+    expect(track.background).toContain('var(--v4-track');
+    expect(fill.background).toContain('var(--v4-ok-fill');
   });
 
   it('гейт называет свой охват', () => {

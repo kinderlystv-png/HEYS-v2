@@ -67,14 +67,14 @@ describe('ClientAccessCodeSetup keypad', () => {
     expect(first.value).toBe('2');
     expect(document.querySelectorAll('.heys-auth-pin-dot, .pin-digit-overlay').length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
     expect(document.querySelector('.heys-auth-title')?.textContent).toContain('Повторите код');
 
     fireEvent.click(screen.getByRole('button', { name: '2' }));
     fireEvent.click(screen.getByRole('button', { name: '1' }));
     fireEvent.click(screen.getByRole('button', { name: '2' }));
     fireEvent.click(screen.getByRole('button', { name: '3' }));
-    fireEvent.click(screen.getByRole('checkbox'));
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
 
     await waitFor(() => {
@@ -84,7 +84,7 @@ describe('ClientAccessCodeSetup keypad', () => {
     });
   });
 
-  it('explains a weak code instead of silently blocking Далее', () => {
+  it('explains a weak code instead of silently blocking Продолжить', () => {
     const Setup = loadSetup();
     render(React.createElement(Setup, {
       phone: '76666666666',
@@ -96,13 +96,39 @@ describe('ClientAccessCodeSetup keypad', () => {
     fireEvent.click(screen.getByRole('button', { name: '2' }));
     fireEvent.click(screen.getByRole('button', { name: '3' }));
     fireEvent.click(screen.getByRole('button', { name: '4' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
 
-    expect(screen.getByRole('alert').textContent).toMatch(/слишком простой/i);
+    expect(document.querySelector('.heys-auth-title')?.textContent).toMatch(/слишком простой/i);
+    expect(screen.getByText(/Не подходят: подряд идущие цифры/i)).toBeTruthy();
     // Подпись поля — «Новый код» (кадры nc1/nc4 канваса login); прежняя
     // строка «Придумайте код доступа» дублировала заголовок экрана.
     expect(screen.getByText('Новый код')).toBeTruthy();
     expect(window.HEYS.auth.setClientAccessCode).not.toHaveBeenCalled();
+  });
+
+  it('returns a mismatched confirmation to the first step with the canvas copy', () => {
+    const Setup = loadSetup();
+    render(React.createElement(Setup, {
+      phone: '76666666666',
+      clientId: 'client-1',
+      sessionToken: 'sess-1',
+    }));
+
+    ['2', '1', '2', '3'].forEach((digit) => {
+      fireEvent.click(screen.getByRole('button', { name: digit }));
+    });
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
+    ['2', '1', '2', '4'].forEach((digit) => {
+      fireEvent.click(screen.getByRole('button', { name: digit }));
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
+
+    expect(document.querySelector('.heys-auth-title')?.textContent).toBe('Коды не совпали');
+    expect(screen.getByText('Введите новый код заново — с первого шага.')).toBeTruthy();
+    expect(screen.getByText('Начнём сначала: придумайте код и повторите его')).toBeTruthy();
+    expect(document.getElementById('heys-access-code-code-1')?.value).toBe('');
   });
 
   it('paints the setup card as pep and keeps change-code copy quiet', () => {
@@ -118,19 +144,21 @@ describe('ClientAccessCodeSetup keypad', () => {
     // Подпись поля — «Новый код» (кадры nc1/nc4 канваса login); прежняя
     // строка «Придумайте код доступа» дублировала заголовок экрана.
     expect(screen.getByText('Новый код')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Далее' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Продолжить' })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: '2' }));
     fireEvent.click(screen.getByRole('button', { name: '1' }));
     fireEvent.click(screen.getByRole('button', { name: '2' }));
     fireEvent.click(screen.getByRole('button', { name: '3' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
 
     expect(document.querySelector('.heys-auth-title')?.textContent).toContain('Повторите код');
     expect(screen.getByRole('button', { name: 'Изменить код' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: '← Изменить код' })).toBeNull();
-    expect(document.querySelector('.heys-auth-pep-check')).toBeTruthy();
+    expect(document.querySelector('.heys-auth-pep-check')).toBeNull();
     expect(document.querySelector('.heys-auth-change-code')).toBeTruthy();
+    expect(screen.getByText('Соглашение вы приняли на прошлом шаге')).toBeTruthy();
   });
 });
 
@@ -144,7 +172,7 @@ describe('код доступа · оба факта в момент созда�
     expect(src).toContain('Код доступа заменяет собственноручную подпись.');
     expect(src).toContain('Не сообщайте его никому, включая куратора.');
     // Условие показа — сам шаг, а не признак сброса.
-    expect(src).not.toContain("skipPepAgreement && phase === 'code'");
+    expect(src).toContain("phase === 'code' && entryIssue !== 'mismatch'");
     // Строка про прежний код остаётся, но только после сброса.
     expect(src).toContain('Прежний код перестал работать');
   });

@@ -1715,7 +1715,7 @@
             )
           ),
           useReportsV4 && React.createElement('div', { className: 'reports-v4-dynamics-card__hint' },
-            'Ступенька — надбавка второй половины, зоны здесь нет'
+            'ступенька — надбавка второй половины, зоны здесь нет'
           ),
           shouldOfferRealDataConfirmation && React.createElement('div', {
             className: 'kcal-realdata-card'
@@ -3509,7 +3509,7 @@
                 }
 
                 // Холодный старт — видимое состояние со счётом и полосой, а не
-                // пустая строка: «пока нет» 11 px тоном чернил 38 %, пилюля
+                // пустая строка: «пока нет» 11 px/600 тоном данных 56 %, пилюля
                 // «копим данные» 50 %, полоса 6 px радиусом 999 на --acs.
                 const done = Math.min(coldDays, d.correctionHistoryDays || 0);
                 const pct = coldDays > 0 ? Math.round((done / coldDays) * 100) : 0;
@@ -3522,7 +3522,10 @@
                       }, 'копим данные')
                     ),
                     React.createElement('span', {
-                      style: { fontSize: 11, color: 'color-mix(in srgb, var(--v4-ink, #201e1d) 38%, transparent)' }
+                      style: {
+                        fontSize: 11, fontWeight: 600, lineHeight: 1,
+                        color: 'var(--v4-ink-data, rgba(0, 0, 0, 0.56))'
+                      }
                     }, 'пока нет')
                   ),
                   React.createElement('div', {

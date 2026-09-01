@@ -344,9 +344,9 @@
       "h": "3e5d6f4f8947"
     },
     "слова на экране": {
-      "v": "=",
-      "f": "login_screen:495 без «аккаунт», «Код не подошёл». Ответы 31 августа сделаны: отказ кода остался строкой над клавиатурой (:1215), блокировка развёрнута карточкой .heys-auth-lockout (:1198, 733-login-theme:816) — заголовок 12,5/700 --v4-warn-text против 11,5/600 строки ошибки; обе строки про подпись переехали к созданию кода (access_code_setup:490). Отсчёт локального ограничителя оставлен строкой: выход из него — подождать, а не куратор",
-      "h": "68d82bb8b9bd"
+      "v": "≠",
+      "f": "Обычный отказ остаётся строкой над клавиатурой, блокировка — отдельной карточкой, обе строки про подпись показаны при создании кода. Но точный остаток серверных попыток сейчас не приходит из login_client_v1: экран честно пишет «Код не подошёл — попробуйте ещё раз», а не выдумывает «Осталось две попытки». Расхождение вынесено дизайнеру вместе с серверным контрактом счётчика",
+      "h": "ab64967a4e5d"
     },
     "возврат на экран и прокрутка": {
       "v": "=",
@@ -391,7 +391,7 @@
     "Вход в анкету · 06": {
       "v": "=",
       "f": "css:266-275 .heys-auth-label — «Телефон» 600 10px/1 разрядкой прописными",
-      "h": "0649e53ddb3e"
+      "h": "63e5af27751b"
     },
     "Вход в анкету · 07": {
       "v": "=",
@@ -461,12 +461,12 @@
     "Вход в анкету · 20": {
       "v": "=",
       "f": "heys_login_screen_v1.js:27 — «Это только анкета. Приложение откроется, когда куратор её проверит.» плашкой радиусом 16",
-      "h": "b866fdba8b10"
+      "h": "874587d2026b"
     },
     "Вход в анкету · 21": {
       "v": "=",
       "f": "heys_login_screen_v1.js:29 — «Код не пришёл? » 500 11px/1.5 вторичным тоном",
-      "h": "c22e40e080ef"
+      "h": "a4b2222bd360"
     },
     "Вход · выбор свёрнут · 01": {
       "v": "=",
@@ -496,7 +496,7 @@
     "Вход · выбор свёрнут · 06": {
       "v": "=",
       "f": "css:266-275 .heys-auth-label — «Телефон» 600 10px/1 разрядкой .14em прописными",
-      "h": "0649e53ddb3e"
+      "h": "63e5af27751b"
     },
     "Вход · выбор свёрнут · 07": {
       "v": "=",
@@ -561,7 +561,7 @@
     "Вход · выбор свёрнут · 19": {
       "v": "=",
       "f": "heys_login_screen_v1.js:11 — «Не помните код? » 500 11px/1.5 вторичным тоном по центру, отбито сверху 18",
-      "h": "7dc31e3d0959"
+      "h": "eeccb1b73673"
     },
     "Вход · выбор свёрнут · 20": {
       "v": "=",
@@ -594,9 +594,9 @@
       "h": "9f3649d99c18"
     },
     "Вход · выбор свёрнут · 26": {
-      "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:429 .heys-login-theme__caption — подпись несёт название набора, кадр просит слово «Оформление»",
-      "h": "48eac4b6d857"
+      "v": "=",
+      "f": "heys_login_theme_picker_v1.js COPY.title и .heys-login-theme__caption — свёрнутый выбор подписан «Оформление»",
+      "h": "78bc912ad442"
     },
     "Вход · Вход клиента · 01": {
       "v": "=",
@@ -636,7 +636,7 @@
     "Вход · Вход клиента · 08": {
       "v": "=",
       "f": "Строка разбора сверена парой «элемент кадра → правило продукта» в login-v4-canvas-razbor.test.js: числа этого элемента читаются из самого канваса, расхождение всплывает при правке любой из сторон",
-      "h": "0649e53ddb3e"
+      "h": "63e5af27751b"
     },
     "Вход · Вход клиента · 09": {
       "v": "=",
@@ -701,7 +701,7 @@
     "Вход · Вход клиента · 21": {
       "v": "=",
       "f": "Строка разбора сверена парой «элемент кадра → правило продукта» в login-v4-canvas-razbor.test.js: числа этого элемента читаются из самого канваса, расхождение всплывает при правке любой из сторон",
-      "h": "7dc31e3d0959"
+      "h": "eeccb1b73673"
     },
     "Вход · Вход клиента · 22": {
       "v": "=",
@@ -736,7 +736,7 @@
     "Вход · ошибка и выбор · 06": {
       "v": "=",
       "f": "css:266-275 .heys-auth-label — «Телефон» 600 10px/1 разрядкой .14em прописными",
-      "h": "0649e53ddb3e"
+      "h": "63e5af27751b"
     },
     "Вход · ошибка и выбор · 07": {
       "v": "=",
@@ -796,7 +796,7 @@
     "Вход · ошибка и выбор · 18": {
       "v": "=",
       "f": "heys_login_screen_v1.js:11 — «Не помните код? » 500 11px/1.5 вторичным тоном по центру, отбито сверху 18",
-      "h": "7dc31e3d0959"
+      "h": "eeccb1b73673"
     },
     "Вход · ошибка и выбор · 19": {
       "v": "=",
@@ -829,9 +829,9 @@
       "h": "9f3649d99c18"
     },
     "Вход · ошибка и выбор · 25": {
-      "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:429 .heys-login-theme__caption — подпись несёт название набора, кадр просит слово «Оформление»",
-      "h": "48eac4b6d857"
+      "v": "=",
+      "f": "heys_login_theme_picker_v1.js COPY.title и .heys-login-theme__caption — свёрнутый выбор подписан «Оформление»",
+      "h": "78bc912ad442"
     },
     "Вход · блокировка · 01": {
       "v": "=",
@@ -861,7 +861,7 @@
     "Вход · блокировка · 06": {
       "v": "=",
       "f": "css:266-275 .heys-auth-label — «Телефон» 600 10px/1 разрядкой .14em прописными",
-      "h": "0649e53ddb3e"
+      "h": "63e5af27751b"
     },
     "Вход · блокировка · 07": {
       "v": "=",
@@ -911,7 +911,7 @@
     "Вход · блокировка · 16": {
       "v": "=",
       "f": "733-login-theme:833 .heys-auth-lockout__body — 500 11,5px/1.5 чернил 55 %, отступ сверху 7; текст «Напишите куратору — он снимет блокировку.» отдельной строкой (login_screen:1200)",
-      "h": "46dda7096a31"
+      "h": "792797d42470"
     },
     "Вход · блокировка · 17": {
       "v": "≠",
@@ -931,7 +931,7 @@
     "Вход · блокировка · 20": {
       "v": "=",
       "f": "heys_login_screen_v1.js:11 — строка поддержки 500 11px/1.5 вторичным тоном по центру, отбита сверху 18",
-      "h": "10831f8dd8fe"
+      "h": "205005d17d80"
     },
     "Вход · блокировка · 21": {
       "v": "=",
@@ -964,9 +964,9 @@
       "h": "9f3649d99c18"
     },
     "Вход · блокировка · 27": {
-      "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:429 .heys-login-theme__caption — подпись свёрнутого выбора несёт название набора, а кадр в этом состоянии просит слово «Оформление»",
-      "h": "48eac4b6d857"
+      "v": "=",
+      "f": "heys_login_theme_picker_v1.js COPY.title и .heys-login-theme__caption — свёрнутый выбор подписан «Оформление»",
+      "h": "78bc912ad442"
     },
     "Вход · закрыт · 01": {
       "v": "=",
@@ -996,7 +996,7 @@
     "Вход · закрыт · 06": {
       "v": "=",
       "f": "css:266-275 .heys-auth-label — «Телефон» 600 10px/1 разрядкой .14em прописными",
-      "h": "0649e53ddb3e"
+      "h": "63e5af27751b"
     },
     "Вход · закрыт · 07": {
       "v": "=",
@@ -1051,7 +1051,7 @@
     "Вход · закрыт · 17": {
       "v": "=",
       "f": "heys_login_screen_v1.js:60 — под плашкой строка о сроке «Попробуйте зайти через полчаса», 500 11px/1.5 вторичным тоном; точный срок приходит от оператора",
-      "h": "10831f8dd8fe"
+      "h": "205005d17d80"
     },
     "Вход · закрыт · 18": {
       "v": "=",
@@ -1084,9 +1084,9 @@
       "h": "9f3649d99c18"
     },
     "Вход · закрыт · 24": {
-      "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:429 .heys-login-theme__caption — подпись несёт название набора, кадр просит слово «Оформление»",
-      "h": "48eac4b6d857"
+      "v": "=",
+      "f": "heys_login_theme_picker_v1.js COPY.title и .heys-login-theme__caption — свёрнутый выбор подписан «Оформление»",
+      "h": "78bc912ad442"
     },
     "Свой код · первый вход · 01": {
       "v": "=",
@@ -1186,7 +1186,7 @@
     "Свой код · первый вход · 20": {
       "v": "=",
       "f": "heys_client_access_code_setup_v1.js:594 — «Нажимая «Продолжить», вы заключаете соглашение и создаёте код доступа» 500 10,5px/1.5",
-      "h": "ea84213e6706"
+      "h": "21ab206d6352"
     },
     "Свой код · подтверждение · 01": {
       "v": "=",
@@ -1249,9 +1249,9 @@
       "h": "21dd598f9156"
     },
     "Свой код · подтверждение · 13": {
-      "v": "≠",
-      "f": "Сноски «Соглашение вы приняли на прошлом шаге» в продукте нет: под кнопкой всегда стоит строка о заключении соглашения (heys_client_access_code_setup_v1.js:594)",
-      "h": "62f50bbc60b5"
+      "v": "=",
+      "f": "heys_client_access_code_setup_v1.js: согласие и обязательная строка перенесены на первый шаг, под подтверждением стоит «Соглашение вы приняли на прошлом шаге»",
+      "h": "fbe1c1f8b320"
     },
     "Вход с нового устройства · 01": {
       "v": "=",
@@ -1321,7 +1321,7 @@
     "Вход с нового устройства · 14": {
       "v": "=",
       "f": "heys_login_screen_v1.js:20 — «Не помните код? » 500 11px/1.5 вторичным тоном",
-      "h": "e222f113a861"
+      "h": "fc7723f26bdf"
     },
     "Новый код после сброса · 01": {
       "v": "=",
@@ -1444,9 +1444,9 @@
       "h": "21dd598f9156"
     },
     "Коды не совпали · 12": {
-      "v": "≠",
-      "f": "Сноски «Начнём сначала: придумайте код и повторите его» в продукте нет: под кнопкой стоит строка о заключении соглашения",
-      "h": "f7b233a703ad"
+      "v": "=",
+      "f": "heys_client_access_code_setup_v1.js entryIssue=mismatch: сбрасывает оба ввода на первый шаг и показывает сноску «Начнём сначала: придумайте код и повторите его»",
+      "h": "40d11f429c84"
     },
     "Код слишком простой · 01": {
       "v": "=",
@@ -1509,9 +1509,9 @@
       "h": "21dd598f9156"
     },
     "Код слишком простой · 13": {
-      "v": "≠",
-      "f": "Сноски «Проверка идёт на устройстве, код никуда не отправляется» в продукте нет, хотя проверка простоты действительно локальная (heys_client_access_code_setup_v1.js:246-248)",
-      "h": "e798f1556393"
+      "v": "=",
+      "f": "heys_client_access_code_setup_v1.js entryIssue=weak: локальная проверка выводит сноску «Проверка идёт на устройстве, код никуда не отправляется»",
+      "h": "691fa5f84105"
     },
     "Подпись документа · 01": {
       "v": "—",
@@ -1606,7 +1606,7 @@
     "Подпись документа · 19": {
       "v": "=",
       "f": "heys_consents_v1.js:1486 — «Код вводится каждый раз при подписании — даже на запомненном устройстве. Так подпись не зависит от того, у кого в руках телефон.» 500 11px/1.5",
-      "h": "520fb4f5ad86"
+      "h": "11b29898aa06"
     },
     "Подпись документа · 20": {
       "v": "=",
@@ -1701,7 +1701,7 @@
     "Подпись · код не подошёл · 17": {
       "v": "=",
       "f": "heys_consents_v1.js — строка под боксами 500 11px/1.5 тоном чернил 55 %",
-      "h": "3f82a9ece9e5"
+      "h": "7becf273688c"
     },
     "Подпись · код не подошёл · 18": {
       "v": "=",
@@ -1796,7 +1796,7 @@
     "Подпись · готово · 16": {
       "v": "=",
       "f": "heys_consents_v1.js:1461 — «Запись о подписании сохранена: документ, версия, время и устройство. Копию можно запросить у куратора.» 500 11px/1.5",
-      "h": "c6a0a5f294c8"
+      "h": "9deec09ebe91"
     },
     "Подпись · готово · 17": {
       "v": "≠",
@@ -1826,7 +1826,7 @@
     "Вход · Вход куратора · 05": {
       "v": "=",
       "f": "Строка разбора сверена парой «элемент кадра → правило продукта» в login-v4-canvas-razbor.test.js: числа этого элемента читаются из самого канваса, расхождение всплывает при правке любой из сторон",
-      "h": "2bcd393b29bd"
+      "h": "c7c16d6e8701"
     },
     "Вход · Вход куратора · 06": {
       "v": "=",
@@ -1836,7 +1836,7 @@
     "Вход · Вход куратора · 07": {
       "v": "=",
       "f": "Строка разбора сверена парой «элемент кадра → правило продукта» в login-v4-canvas-razbor.test.js: числа этого элемента читаются из самого канваса, расхождение всплывает при правке любой из сторон",
-      "h": "81aafd3af262"
+      "h": "50a2e898d14a"
     },
     "Вход · Вход куратора · 08": {
       "v": "=",
@@ -1846,7 +1846,7 @@
     "Вход · Вход куратора · 09": {
       "v": "=",
       "f": "heys_login_screen_v1.js:1370 и css:266-275 — «Пароль» 600 10px/1 разрядкой прописными",
-      "h": "0434b2a4e830"
+      "h": "82ccebab848b"
     },
     "Вход · Вход куратора · 10": {
       "v": "=",
@@ -1861,7 +1861,7 @@
     "Вход · Вход куратора · 12": {
       "v": "=",
       "f": "Строка разбора сверена парой «элемент кадра → правило продукта» в login-v4-canvas-razbor.test.js: числа этого элемента читаются из самого канваса, расхождение всплывает при правке любой из сторон",
-      "h": "d2d1c47efc3a"
+      "h": "4e0e74da67b3"
     },
     "Вход · Вход куратора · 13": {
       "v": "=",
@@ -1896,7 +1896,7 @@
     "Выбор · мягкая бежевая · 06": {
       "v": "=",
       "f": "css:266-275 .heys-auth-label — «Телефон» 600 10px/1 разрядкой .14em прописными вторичным тоном",
-      "h": "0649e53ddb3e"
+      "h": "63e5af27751b"
     },
     "Выбор · мягкая бежевая · 07": {
       "v": "=",
@@ -1956,7 +1956,7 @@
     "Выбор · мягкая бежевая · 18": {
       "v": "=",
       "f": "css:1215-1221 .heys-login-theme__section-label — «Оформление» 600 10px/1 разрядкой прописными",
-      "h": "f3ab2a8bd018"
+      "h": "9e5d408c70da"
     },
     "Выбор · мягкая бежевая · 19": {
       "v": "=",
@@ -2019,14 +2019,14 @@
       "h": "178399564ab3"
     },
     "Выбор · мягкая бежевая · 31": {
-      "v": "≠",
-      "f": "css:1233-1241 — подпись невыбранной карточки 700 12,5px/1 вторичным тоном; кадр просит 700 11px/1.3",
-      "h": "0fc13f076e07"
+      "v": "=",
+      "f": "733-ui-v4-login-theme.css .heys-login-theme__soft-label — 700 11px/1.3, margin-top 10px; невыбранная подпись получает data-тон",
+      "h": "75771ceb2b63"
     },
     "Выбор · мягкая бежевая · 32": {
       "v": "=",
       "f": "heys_login_screen_v1.js:11 — «Не помните код? » вторичным тоном 500 11px/1.5, дальше ссылка на куратора",
-      "h": "7dc31e3d0959"
+      "h": "eeccb1b73673"
     },
     "Выбор · мягкая бежевая · 33": {
       "v": "=",
@@ -2056,7 +2056,7 @@
     "Выбор · мягкая бежевая · 38": {
       "v": "=",
       "f": "heys_login_theme_picker_v1.js:429 .heys-login-theme__caption — название набора 600 11px/1 вторичным тоном",
-      "h": "9d2d6e827899"
+      "h": "016ddc748b4a"
     },
     "Оформление внутри приложения · 01": {
       "v": "—",
@@ -2086,7 +2086,7 @@
     "Оформление внутри приложения · 06": {
       "v": "—",
       "f": "Декорация кадра: предпросмотр Главной внутри выбора оформления — показывает, как набор смотрится на живом экране. Сам экран разбирается в зоне home-widgets",
-      "h": "334aa729a1e0"
+      "h": "ee06956e1454"
     },
     "Оформление внутри приложения · 07": {
       "v": "—",
@@ -2131,7 +2131,7 @@
     "Оформление внутри приложения · 15": {
       "v": "—",
       "f": "Декорация кадра: предпросмотр Главной внутри выбора оформления — показывает, как набор смотрится на живом экране. Сам экран разбирается в зоне home-widgets",
-      "h": "29ec8b7e791a"
+      "h": "3df3191201eb"
     },
     "Оформление внутри приложения · 16": {
       "v": "—",
@@ -2171,7 +2171,7 @@
     "Оформление внутри приложения · 23": {
       "v": "—",
       "f": "Декорация кадра: предпросмотр Главной внутри выбора оформления — показывает, как набор смотрится на живом экране. Сам экран разбирается в зоне home-widgets",
-      "h": "e335a0d6f0ad"
+      "h": "0ef8f3e97636"
     },
     "Оформление внутри приложения · 24": {
       "v": "—",
@@ -2191,7 +2191,7 @@
     "Оформление внутри приложения · 27": {
       "v": "—",
       "f": "Декорация кадра: предпросмотр Главной внутри выбора оформления — показывает, как набор смотрится на живом экране. Сам экран разбирается в зоне home-widgets",
-      "h": "786553bd25ab"
+      "h": "8e6455bde67b"
     },
     "Оформление внутри приложения · 28": {
       "v": "—",
@@ -2211,7 +2211,7 @@
     "Оформление внутри приложения · 31": {
       "v": "—",
       "f": "Декорация кадра: предпросмотр Главной внутри выбора оформления — показывает, как набор смотрится на живом экране. Сам экран разбирается в зоне home-widgets",
-      "h": "d7ca8d060391"
+      "h": "e1392ec9c023"
     },
     "Оформление внутри приложения · 32": {
       "v": "—",
@@ -2316,7 +2316,7 @@
     "Оформление внутри приложения · 52": {
       "v": "—",
       "f": "Декорация кадра: предпросмотр Главной внутри выбора оформления — показывает, как набор смотрится на живом экране. Сам экран разбирается в зоне home-widgets",
-      "h": "2acf2d0edb98"
+      "h": "f6b3591d42e2"
     },
     "Оформление внутри приложения · 53": {
       "v": "—",
@@ -2411,7 +2411,7 @@
     "Оформление внутри приложения · 71": {
       "v": "—",
       "f": "Декорация кадра: предпросмотр Главной внутри выбора оформления — показывает, как набор смотрится на живом экране. Сам экран разбирается в зоне home-widgets",
-      "h": "a10daca40de2"
+      "h": "c7d6d185cea4"
     },
     "Оформление внутри приложения · 72": {
       "v": "≠",
@@ -2431,7 +2431,7 @@
     "Оформление внутри приложения · 75": {
       "v": "=",
       "f": "733-ui-v4-login-theme.css:1215-1221 .heys-login-theme__section-label и heys_login_theme_picker_v1.js:9 — «Палитра» 600 10px/1 разрядкой .14em прописными вторичным тоном",
-      "h": "e9c79ebf37c4"
+      "h": "bfad11be4122"
     },
     "Оформление внутри приложения · 76": {
       "v": "=",
@@ -2489,14 +2489,14 @@
       "h": "178399564ab3"
     },
     "Оформление внутри приложения · 87": {
-      "v": "≠",
-      "f": "733-ui-v4-login-theme.css:1233-1241 — подпись невыбранной карточки 700 12,5px/1 вторичным тоном; кадр просит 700 11px/1.3",
-      "h": "0fc13f076e07"
+      "v": "=",
+      "f": "733-ui-v4-login-theme.css .heys-login-theme__soft-label — 700 11px/1.3, margin-top 10px; невыбранная подпись получает data-тон",
+      "h": "75771ceb2b63"
     },
     "Оформление внутри приложения · 88": {
       "v": "=",
       "f": "733-ui-v4-login-theme.css:1215-1221 и heys_login_theme_picker_v1.js:10 — «Режим» тем же ярусом 600 10px разрядкой прописными",
-      "h": "ed4d676b453f"
+      "h": "484727f1e67b"
     },
     "Оформление внутри приложения · 89": {
       "v": "=",
@@ -2514,9 +2514,9 @@
       "h": "83888e8e2d52"
     },
     "Оформление внутри приложения · 92": {
-      "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:16 — сноска короче кадровой: «Выбор запоминается на этом устройстве» без второй фразы про «Как в системе»",
-      "h": "698722d28ab4"
+      "v": "=",
+      "f": "heys_login_theme_picker_v1.js COPY.hint содержит обе фразы про сохранение и «Как в системе»; 733-ui-v4-login-theme.css — 500 11px/1.5, margin-top 16px",
+      "h": "879b25ddd7eb"
     },
     "как читать графику": {
       "v": "—",
@@ -3942,6 +3942,392 @@
       "v": "—",
       "f": "Декорация кадра: предпросмотр Главной внутри выбора оформления — показывает, как набор смотрится на живом экране. Сам экран разбирается в зоне home-widgets; слова самого выбора — «Палитра», «Режим», названия наборов и сноска — проверены строками 75, 82, 87, 88, 91, 92",
       "h": "8fda36a8a516"
+    }
+  },
+  "frames": {
+    "Вход в анкету": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход в анкету · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · выбор свёрнут": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · выбор свёрнут · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · Вход клиента": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · Вход клиента · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · ошибка и выбор": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · ошибка и выбор · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · блокировка": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · блокировка · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · закрыт": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · закрыт · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Свой код · первый вход": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Свой код · первый вход · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Свой код · подтверждение": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Свой код · подтверждение · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход с нового устройства": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход с нового устройства · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Новый код после сброса": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Новый код после сброса · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Коды не совпали": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Коды не совпали · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Код слишком простой": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Код слишком простой · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Подпись документа": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Подпись документа · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Подпись · код не подошёл": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Подпись · код не подошёл · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Подпись · готово": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Подпись · готово · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · Вход куратора": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · Вход куратора · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Выбор · мягкая бежевая": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Выбор · мягкая бежевая · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Оформление внутри приложения": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Оформление внутри приложения · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · выбор свёрнут · синяя": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · выбор свёрнут · сине-тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · Вход клиента · синяя": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · Вход клиента · сине-тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · ошибка и выбор · синяя": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · ошибка и выбор · сине-тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · Вход куратора · синяя": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Вход · Вход куратора · сине-тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Выбор · мягкая синяя": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Выбор · мягкая синяя · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Оформление внутри приложения · синяя": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
+    },
+    "Оформление внутри приложения · сине-тёмная": {
+      "evidence": [
+        "apps/web/__tests__/login-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/login-v4-structure.test.js",
+        "apps/web/heys_login_theme_picker_v1.js",
+        "apps/web/styles/modules/733-ui-v4-login-theme.css"
+      ]
     }
   }
 }

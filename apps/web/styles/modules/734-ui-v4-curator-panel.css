@@ -177,7 +177,7 @@
    чернилами 38 %, а не акцентом: акцент в этом списке значит «здесь есть на
    что нажать», и на «нет» он обещал действие, которого нет. */
 .cur-row__count--muted {
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 38%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .cur-row__avatar {
@@ -267,6 +267,21 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.cur-row__age.is-data {
+  padding: 0;
+  background: transparent;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.cur-row__age.is-data.is-strong {
+  font-weight: 700;
 }
 
 /* Самая частая группа — одна строка со счётом: тревожное и спокойное не
@@ -386,7 +401,7 @@
   font-size: 10px;
   font-weight: 500;
   line-height: 1.3;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Имя факта в кадре набрано полными чернилами кеглем ряда: приглушена только
@@ -536,10 +551,11 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 10px;
+  margin-top: 8px;
   font-size: 10px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .cur-sheet__hist-legend .is-target {
@@ -547,7 +563,6 @@
 }
 
 .cur-sheet__hist-svg {
-  margin-top: 8px;
   display: block;
 }
 
@@ -582,7 +597,7 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -605,7 +620,7 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Предложение нормы — главным числом экрана. В первом слое остаётся вывод и
@@ -923,7 +938,7 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Возврат — круглая кнопка, а не квадрат с рамкой: в наборе круг значит
@@ -958,7 +973,7 @@
   border: none;
   border-radius: 999px;
   background: var(--v4-surface, #f7efe2);
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-size: 10.5px;
   font-weight: 700;
   line-height: 1;
@@ -1114,7 +1129,7 @@
   white-space: nowrap;
   /* Нейтральная величина без нормы — вес: у него нет «хорошо» и «плохо». */
   background: var(--v4-hero, #efe3cf);
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .cur-cab__mch.is-ok {
@@ -1139,7 +1154,7 @@
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.45;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Отклонение от цели: тёплое предупреждение, не красный — красный в наборе
@@ -1233,7 +1248,7 @@
   line-height: 1.3;
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Сбой и отклонение отличаются тоном числа, а не рамкой: рамка вокруг
@@ -1280,6 +1295,13 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
+}
+
+.cdo-list-row:last-child .cdo-list-val {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .cdo-list-val.is-ok {
@@ -1793,7 +1815,13 @@
   font-weight: 600;
   line-height: 1;
   margin-top: 4px;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.cur-cab__tab-note.is-form-note {
+  margin-top: 12px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 /* Прокручиваемая область вкладок: только прокрутка и грунт набора, полей у
@@ -1853,7 +1881,7 @@
   margin-top: 10px;
   font-size: 10.5px;
   font-weight: 600;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .cur-cab__source .is-act {
@@ -1894,8 +1922,14 @@
   text-align: right;
   font-size: 11.5px;
   font-weight: 600;
-  line-height: 1.35;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.5));
+  line-height: 1;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  font-variant-numeric: tabular-nums;
+}
+
+.cur-kv__val.is-id {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .cur-kv__val.is-ok {
@@ -1975,14 +2009,15 @@
   border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   font-size: 10.5px;
   font-weight: 600;
+  line-height: 1.4;
 }
 
 .cur-cab__queue-limits-key {
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .cur-cab__queue-limits-val {
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -2102,7 +2137,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Поле без рамки: в кадре оно отличается от листа заливкой, а не контуром —
@@ -2219,10 +2254,10 @@
 
 .cdo-note {
   margin-top: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.5;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Разбор кадров «Диагностика · 13» и «· 14» даёт кнопкам высоту от 44,
@@ -2316,7 +2351,7 @@
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -2341,7 +2376,8 @@
 }
 
 .cur-cab__queue-state {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  line-height: 1;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }

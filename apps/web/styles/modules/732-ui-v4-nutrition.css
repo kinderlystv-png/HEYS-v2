@@ -112,13 +112,8 @@
   margin-top: 13px;
 }
 
-/* Цвет числа — текстовая роль палитры, не тон кнопки: на подложке героя
-   акцент действия даёт 2,84:1, а крупный текст живёт по порогу 3:1.
-
-   Демо-кадр «Питание · зона нейтральная» красит это же число чернилами, и я
-   его послушал — до того, как парная сверка классов показала, что все
-   основные кадры экрана дают --ac. Спорят два кадра одного канваса, а не
-   кадр с кодом; большинство и парный гейт на стороне акцента. */
+/* Цвет числа — текстовая роль палитры, не тон кнопки. Решение дизайнера
+   01.09 подтвердило роль --ac; старый нейтральный демо-кадр переснят. */
 .nutrition-v4-hero__value {
   font-size: 54px;
   font-weight: 600;
@@ -216,7 +211,7 @@
 }
 
 .nutrition-v4-window__label {
-  color: var(--nut-dim);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 /* Шалфей только когда окно действительно открыто: раньше значение было
@@ -332,7 +327,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 50%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 .nutrition-v4-meal-row__chevron {
@@ -382,7 +377,7 @@
 }
 
 .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__num {
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 40%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__title,
@@ -797,7 +792,7 @@
   flex: 1;
   height: 8px;
   border-radius: 999px;
-  background: var(--v4-line, rgba(0, 0, 0, 0.08));
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
   overflow: hidden;
 }
 
@@ -807,7 +802,7 @@
   display: block;
   height: 8px;
   border-radius: 999px;
-  background: var(--v4-act, #2563eb);
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .nutrition-v4-timeline__track i.is-overlap {

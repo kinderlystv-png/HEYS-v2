@@ -7992,8 +7992,8 @@ body:has(.offline-banner) .wrap {
 
 .date-picker--v4 .date-picker-day-nav {
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: none;
   border-radius: 999px;
@@ -8006,15 +8006,6 @@ body:has(.offline-banner) .wrap {
   align-items: center;
   justify-content: center;
   transition: opacity 0.15s ease;
-}
-
-/* Цель касания 44 pt при рисунке 34 — прозрачным припуском (строка
-   «стрелки»). Припуск вертикальный и горизонтальный: стрелки стоят по
-   краям ряда, соседей у них с внешней стороны нет. */
-.date-picker--v4 .date-picker-day-nav::after {
-  content: '';
-  position: absolute;
-  inset: -5px;
 }
 
 @media (hover: hover) {
@@ -8264,8 +8255,7 @@ body:has(.offline-banner) .wrap {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  /* v4-intentional */
-  color: var(--v4-act-text);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .date-picker--v4 .date-picker-text {
@@ -8529,20 +8519,16 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   pointer-events: none;
 }
 
-/* Кадр «Календарь · легенда», элемент 21: строка легенды 10,5 px/600 тоном
-   чернил 42 %. Именованной строки о типографике легенды в зоне нет, поэтому
-   верен кадр. Тон берётся тем же приёмом, что ряд сокращений дней выше:
-   в наборе тонов чернил три (55 / 45 / 38), сорока двух среди них нет. */
+/* Кадр «Календарь · легенда»: переносимая data-строка с точной сеткой. */
 .date-picker-sheet .date-picker-legend {
   flex-wrap: wrap;
   justify-content: flex-start;
   gap: 10px 14px;
-  padding: 12px 2px 4px;
-  margin: 0;
+  padding: 0 2px 4px;
+  margin: 16px 0 0;
   font-size: 10.5px;
   font-weight: 600;
-  /* v4-intentional */
-  color: color-mix(in srgb, var(--v4-ink) 42%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .date-picker-sheet .legend-item,
@@ -9374,8 +9360,8 @@ svg.date-picker-icon {
   }
 
   .date-picker--v4 .date-picker-day-nav {
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
   }
 
   /* Одна строка «Сегодня, 15 мая» */
@@ -9905,7 +9891,7 @@ body:has([data-heys-visible-frame="consent"]) .tabs {
   padding: 8px 10px;
   gap: 6px;
   border-radius: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   background: transparent;
   box-shadow: none;
 }
@@ -9922,11 +9908,9 @@ body:has([data-heys-visible-frame="consent"]) .tabs {
   flex-shrink: 0;
 }
 
-/* Вид нижней навигации ни один канвас не описывает — home-widgets прямо
-   говорит «вид нижней навигации не мой». Роль оставлена как есть: --v4-hero это
-   вторая поверхность, и пилюля активной вкладки видна на полосе (--v4-bg).
-   Запасное значение обещало сам фон полосы, то есть невидимую пилюлю; приведено
-   к значению роли. Тёмная тема ниже уже права литералами #141210 / #2f2820. */
+/* Повторяющиеся shell-кадры задают неактивной подписи 8,5/600 и чернила 56 %.
+   Активная пилюля остаётся на второй поверхности --v4-hero. Тёмная тема ниже
+   переопределяет неактивный тон кадровой ролью --v4-ink-2 (63 %). */
 .tabs--v4-primary .tab.tab-primary-nav.active {
   color: var(--v4-sand-act-text, #8a4a20);
   background: var(--v4-hero, #efe3cf);
@@ -10602,7 +10586,7 @@ body:has(:is(
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__hint {
   margin-top: 4px;
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .hdr-settings-sheet__tier {
@@ -10843,7 +10827,7 @@ body:has(:is(
 .hdr-settings-sheet__fab-lead {
   margin: 0;
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -10902,7 +10886,7 @@ body:has(:is(
 
 .hdr-settings-sheet__fab-count {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .hdr-settings-sheet__fab-ok {
@@ -10978,7 +10962,7 @@ body:has(:is(
 
 .hdr-settings-sheet__diag-copy {
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
   margin-bottom: 4px;
 }
@@ -10999,7 +10983,11 @@ body:has(:is(
   margin-top: 8px;
   padding: 0 3px;
   font: 500 10.5px/1.4 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.32);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.hdr-settings-sheet__diag-panel + .hdr-settings-sheet__build {
+  margin-top: 14px;
 }
 
 [data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__card {
@@ -11033,7 +11021,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__hint {
-  color: rgba(242, 237, 230, 0.5);
+  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__tier {
@@ -11089,7 +11077,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-lead {
-  color: rgba(242, 237, 230, 0.55);
+  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-chip {
@@ -11102,7 +11090,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-count {
-  color: rgba(242, 237, 230, 0.42);
+  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-ok,
@@ -11120,7 +11108,7 @@ body:has(:is(
 
 [data-theme$="dark"] .hdr-settings-sheet__hint,
 [data-theme$="dark"] .hdr-settings-sheet__diag-copy {
-  color: rgba(242, 237, 230, 0.55);
+  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__diag-panel {
@@ -11134,7 +11122,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__build {
-  color: rgba(242, 237, 230, 0.32);
+  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__dot--outline {
@@ -11239,7 +11227,7 @@ body:has(:is(
   font: 700 10px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .notify-detail__card {
@@ -11349,7 +11337,7 @@ body:has(:is(
 .notify-detail__quiet-note {
   margin: 10px 0 0;
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -18051,7 +18039,7 @@ html.heys-bg-paused *::after {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр «Геймификация · первый день», элемент 07: заголовок миссии через 12. */
@@ -18102,15 +18090,14 @@ html.heys-bg-paused *::after {
   background: rgba(0, 0, 0, 0.1);
 }
 
-/* Кадр «Геймификация · обзор», элемент 16: тон чернил 40 %. У набора три тона —
-   55 / 45 / 38, взят ближайший --v4-ink-4. */
+/* Кадр «Геймификация · обзор», элемент 16: data-подпись ряда. */
 .game-v4-sheet__streak-bar-caption {
   display: flex;
   justify-content: space-between;
   margin-top: 10px;
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Радиус 20 — строки «вид карточки „Ближе всего“» и «вид · строки XP и таблица
@@ -18161,7 +18148,7 @@ html.heys-bg-paused *::after {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Строка «области нажатия»: полоса прогресса не нажимается вовсе. */
@@ -18200,7 +18187,18 @@ html.heys-bg-paused *::after {
   margin-top: 10px;
   font-size: 10.5px;
   font-weight: 500;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.game-v4-sheet__hero .game-v4-sheet__card-meta {
+  margin-top: 11px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.game-v4-sheet__mission-card .game-v4-sheet__card-meta {
+  margin-top: 9px;
 }
 
 .game-v4-sheet__card-meta--ok {
@@ -18230,6 +18228,7 @@ html.heys-bg-paused *::after {
    лестницы — поля 16/18. */
 .game-v4-sheet__level-line {
   padding: 16px 18px;
+  margin-top: 18px;
   font-size: 12.5px;
   font-weight: 600;
 }
@@ -18247,14 +18246,14 @@ html.heys-bg-paused *::after {
 .game-v4-sheet__level-floor-hint {
   font-size: 11.5px;
   font-weight: 700;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр «Геймификация · первый день», элемент 37: 600 тоном чернил 38 %. */
 .game-v4-sheet__level-line-hint {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Тон 40 % у обоих кадров, ближайшая роль набора --v4-ink-4. Вес разный:
@@ -18266,7 +18265,7 @@ html.heys-bg-paused *::after {
   justify-content: space-between;
   margin-top: 10px;
   font-size: 10.5px;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .game-v4-sheet__level-floor-xp {
@@ -18375,7 +18374,7 @@ html.heys-bg-paused *::after {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Строка «состав группы»: заголовок группы раскрывает дальние закрытые. */
@@ -18400,16 +18399,25 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__more-groups {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
   border: 0;
-  border-radius: 18px;
-  padding: 14px 16px;
+  border-radius: 20px;
+  padding: 16px 18px;
+  margin-top: 14px;
   background: var(--v4-sand-surface, #f7efe2);
   color: var(--v4-sand-act-text, #8a4a20);
   font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
   text-align: left;
+}
+
+.game-v4-sheet__more-groups svg {
+  flex: none;
 }
 
 /* Строка «вид строки уровня в списке»: номер и титул слева 12,5/600, порог XP
@@ -18461,7 +18469,7 @@ html.heys-bg-paused *::after {
   font-size: 11.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .game-v4-sheet__mult-card {
@@ -18492,7 +18500,7 @@ html.heys-bg-paused *::after {
   flex: none;
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-align: right;
 }
 

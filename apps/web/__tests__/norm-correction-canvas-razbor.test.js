@@ -78,10 +78,6 @@ const EXCEPTIONS = [
   // 35–37: ряд решений прилипает к низу листа и отбит от прокрутки своим
   // правилом — отступ сверху у кнопок кадра к нему не сводится.
   '.cur-sheet__actions | липкий ряд вместо отступов кадра',
-  // 28: у канваса два красных — --red #b4442a и --val-bad #a8382b, — а в наборе
-  // роль одна: --v4-bad-text #b4442a. Число Δ берёт её. Отдана дизайнеру
-  // записью в UI_V4_FINDINGS: либо второй роли не нужно, либо её надо завести.
-  '.cur-sheet__rec-delta | цвет: у набора одна роль красного, у канваса две',
   // 30: делитель берёт роль линии (8 %), кадр рисует чернила 9 %. Собственное
   // значение вывело бы его из-под палитры, а разница не читается.
   '.cur-sheet__rec-split | 8 % роли линии против 9 % кадра',
@@ -91,6 +87,8 @@ const EXCEPTIONS = [
 const PAIRS_DOWN = [
   [8, '.weekly-wrap-correction__hero', ['align', 'gap']],
   [10, '.weekly-wrap-correction__hero-caption', ['fontWeight', 'fontSize', 'lineHeight']],
+  [14, ['.weekly-wrap-correction__fact', '.weekly-wrap-correction__fact-value.is-quiet'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   // 12 — сама строка списка, шрифт у неё от .row кадра; проверяем по значению.
   [16, '.weekly-wrap-correction__fact', ['fontWeight', 'fontSize', 'lineHeight']],
 ];
@@ -98,7 +96,7 @@ const PAIRS_DOWN = [
 // Кадр Self: природа числа подписью, тон факта, ярус и предохранители.
 const PAIRS_SELF = [
   [10, '.weekly-wrap-correction__fact-copy', ['direction', 'gap']],
-  [12, '.weekly-wrap-correction__fact-hint', ['fontWeight', 'fontSize', 'lineHeight']],
+  [12, '.weekly-wrap-correction__fact-hint', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   // Кегль и интерлиньяж значение берёт у самой строки — так же, как их видит
   // браузер: цепочка идёт от общего к частному.
   [14, ['.weekly-wrap-correction__fact', '.weekly-wrap-correction__fact-value',
@@ -106,19 +104,26 @@ const PAIRS_SELF = [
   ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [21, ['.weekly-wrap-correction__fact', '.weekly-wrap-correction__fact-value',
     '.weekly-wrap-correction__fact-value.is-quiet'],
-  ['fontWeight', 'fontSize', 'lineHeight']],
+  ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // График перестройки: карточка, две линии, легенда плашками.
 const PAIRS_REC = [
   [11, '.weekly-wrap-correction__legend', ['gap']],
-  [12, '.weekly-wrap-correction__legend-item', ['align', 'gap', 'fontWeight', 'fontSize', 'lineHeight']],
+  [12, ['.weekly-wrap-correction__legend-item', '.weekly-wrap-correction__legend-item.is-weight'],
+    ['align', 'gap', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
   [13, '.weekly-wrap-correction__swatch', ['width', 'height', 'radius']],
+];
+
+const PAIRS_HISTORY = [
+  [6, '.cur-sheet__hist-legend', ['justify', 'align', 'gap', 'fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [8, '.cur-sheet__hist-dates', ['justify', 'fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [14, '.cur-sheet__hist-who', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 23;
+const COVERAGE_FLOOR = 27;
 
 describe('лист поправки против разбора кадров канваса', () => {
   const canvas = fs.readFileSync(CANVAS, 'utf8');
@@ -141,7 +146,13 @@ describe('лист поправки против разбора кадров к�
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.length).toBe(7);
+    expect(EXCEPTIONS.length).toBe(6);
+  });
+
+  it('история использует общую ступень информационных чернил', () => {
+    expect(compare({
+      razbor, rules, frame: 'Куратор · история поправки', pairs: PAIRS_HISTORY
+    })).toEqual([]);
   });
 });
 

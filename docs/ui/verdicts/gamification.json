@@ -200,13 +200,13 @@
     },
     "вид строки уровня в списке": {
       "v": "=",
-      "f": "000-base .game-v4-sheet__ladder-* — номер и титул 12,5/600 чернилами, порог XP 11,5/600 тоном чернил 45 % табличными, пройденные гаснут до 45 %, текущий 700, разделитель 1 px тоном 7 %. Строка 13 px по вертикали и зазор 13 приведены к кадру 30 августа (стояло 12/12). Кадр «Уровни» рисует номер квадратом 34×34 радиусом 12 с заливкой по состоянию — контракт старше кадра, вопрос дизайнеру в UI_V4_FINDINGS.md; отступление в gamification-v4-canvas-razbor.test.js",
-      "h": "f2ddac5ea42b"
+      "f": "000-base .game-v4-sheet__ladder-* — номер и титул текстом 12.5/600, текущий 700, порог XP 11.5/600 data 56 %, строки 13px по вертикали, разделитель 1px тоном 7 %; квадрат кадра остаётся осознанным исключением",
+      "h": "0ed39b0ccedf"
     },
     "титулы": {
       "v": "=",
       "f": "LEVEL_TITLES heys_gamification_v1.js:106-112 — ровно пять титулов с указанными диапазонами",
-      "h": "5e1c75a3b8ae"
+      "h": "f1d8a6aae8f8"
     },
     "экран уровней": {
       "v": "=",
@@ -315,8 +315,8 @@
     },
     "вид карточки «Ближе всего»": {
       "v": "=",
-      "f": "000-base:18255 near-card --v4-sand-surface r20 поля 14/16; XP акцент без --ok",
-      "h": "8e06b5069b57"
+      "f": "Решение 31 августа соблюдено: ProgressTab не содержит «Ближе всего», единственный блок живёт в AchievementsTab; gamification-v4-ink-ladder-contract.test.js",
+      "h": "fc5bab6ad23c"
     },
     "вид строки достижения": {
       "v": "=",
@@ -380,8 +380,8 @@
     },
     "слова на экране": {
       "v": "=",
-      "f": "Достижения и уровни названы делом человека; ключ героя достижений 30 августа исправлен с «Открыто» на «Достигнуто» — «открыто» говорит о доступе, а не о сделанном. Восклицательных знаков нет; тихая минута без текста поздравления. Закреплено gamification-v4-canvas-razbor.test.js",
-      "h": "59fb7922806a"
+      "f": "Аннотации кадров не превращены в product copy; достижения названы измеримыми условиями, герой — «Достигнуто», тихая минута без поздравления. Проверяют canvas-razbor и ink-ladder tests",
+      "h": "0708038fc59c"
     },
     "празднование в продукте одно": {
       "v": "=",
@@ -449,9 +449,9 @@
       "h": "0daeb4a0b6f7"
     },
     "Геймификация · первый день · 11": {
-      "v": "≠",
-      "f": ".game-v4-sheet__card-meta — 10,5/500 тоном --v4-ink-4 с отступом 10; кадр здесь просит 11/600 тоном 42 % с отступом 11. Подпись в продукте одна на героя-миссию, миссию и карточку «Ближе всего», её числа взяты по кадру «Достижения», элемент 21",
-      "h": "0ba36b10eba4"
+      "v": "=",
+      "f": ".game-v4-sheet__hero .game-v4-sheet__card-meta — 11/600/1, data 56 %, отступ 11px; контекстный override не меняет остальные карточки",
+      "h": "ed5445cbd71e"
     },
     "Геймификация · первый день · 12": {
       "v": "=",
@@ -480,8 +480,8 @@
     },
     "Геймификация · первый день · 17": {
       "v": "=",
-      "f": ".game-v4-sheet__card-sub — отступ 6, 11,5/500/1,4; кадр просит чернила 50 %, у набора три тона — оставлен ближайший сверху --v4-ink-2 (55 %)",
-      "h": "f00aafa14cfc"
+      "f": ".game-v4-sheet__card-sub — отступ 6px, 11.5/500/1.4, var(--v4-ink-data) 56 %",
+      "h": "e94cf738f7e6"
     },
     "Геймификация · первый день · 18": {
       "v": "≠",
@@ -494,9 +494,9 @@
       "h": "07d1bf4bf23b"
     },
     "Геймификация · первый день · 20": {
-      "v": "≠",
-      "f": ".game-v4-sheet__card-meta — 10,5/500 тоном --v4-ink-4 совпадает, отступ сверху 10 против 9 в кадре: та же одна подпись на три места, числа взяты по кадру «Достижения», элемент 21",
-      "h": "010f9aa9b9ad"
+      "v": "=",
+      "f": ".game-v4-sheet__mission-card .game-v4-sheet__card-meta — 10.5/500, data 56 %, контекстный отступ 9px",
+      "h": "a70f90af69d2"
     },
     "Геймификация · первый день · 21": {
       "v": "=",
@@ -545,8 +545,8 @@
     },
     "Геймификация · первый день · 30": {
       "v": "=",
-      "f": ".game-v4-sheet__ach-cond — 11/500/1,4, отступ 5; кадр просит 42 %, у набора три тона (55/45/38) — взят ближайший --v4-ink-3",
-      "h": "8f073e48230c"
+      "f": ".game-v4-sheet__ach-cond — 11/500/1.4, data 56 %, отступ 5px",
+      "h": "1eb34a41378b"
     },
     "Геймификация · первый день · 31": {
       "v": "=",
@@ -564,13 +564,13 @@
       "h": "768441817582"
     },
     "Геймификация · первый день · 34": {
-      "v": "≠",
-      "f": ".game-v4-sheet__footnote — 11/500/1,5, отступ сверху 12 (стояло 4, приведено к кадру 31 августа), тон --v4-ink-3 (кадр просит 42 %, ближайшая роль 45 %). Текст короче кадра: продукт выводит «Остальные группы появятся, когда в них будет что показать.» (screens:517), а кадр начинает с «Остальные четыре — по тапу на группу»",
-      "h": "a64d37ebb50f"
+      "v": "—",
+      "f": "Решение «слова на экране» от 31 августа: эта строка объясняет правило кадра и в product copy не входит",
+      "h": "2af84fdf7ebf"
     },
     "Геймификация · первый день · 35": {
-      "v": "≠",
-      "f": ".game-v4-sheet__level-line — center, space-between, фон --v4-sand-surface, радиус 20 и поля 16/18 совпадают (поля приведены к кадру 31 августа); отступа сверху 14 нет — расстояние даёт колонка панели с зазором 10",
+      "v": "=",
+      "f": ".game-v4-sheet__level-line — center/space-between, --c1, radius 20px, padding 16px 18px, margin-top 18px",
       "h": "b53778d3ca5d"
     },
     "Геймификация · первый день · 36": {
@@ -580,8 +580,8 @@
     },
     "Геймификация · первый день · 37": {
       "v": "=",
-      "f": ".game-v4-sheet__level-line-hint — 11,5/600 тоном --v4-ink-4 (38 %); стояла роль --v4-ink-3 (45 %) с запасным .38 — код обещал одно, рисовал другое. Текст «до N-го M» — screens:602",
-      "h": "0f15265d84af"
+      "f": ".game-v4-sheet__level-line-hint — 11.5/600, var(--v4-ink-data) 56 %; текст «до N-го M» — screens",
+      "h": "e9c06dfe338a"
     },
     "Геймификация · первый день · 38": {
       "v": "—",
@@ -606,7 +606,7 @@
     "Геймификация · первый день · 42": {
       "v": "—",
       "f": "окружение кадра, а не его предмет: строка «границы» отдаёт нижнее меню продукту. Предмет кадра — вкладка «Прогресс» в первой ветке (элементы 01–37)",
-      "h": "7105841d02dc"
+      "h": "b0c44037717b"
     },
     "Геймификация · обзор · 01": {
       "v": "≠",
@@ -660,8 +660,8 @@
     },
     "Геймификация · обзор · 11": {
       "v": "=",
-      "f": ".game-v4-sheet__hero-muted — отступ 8, 11,5/500/1,5; тон приведён к --v4-ink-3 (45 %) по строке «вид строк под героем». Стояла роль --v4-ink-2 (55 %) с запасным .45 — код обещал одно, рисовал другое. Текст — STREAK_CORRIDOR_HINT (screens:588)",
-      "h": "d285d95ae67e"
+      "f": ".game-v4-sheet__hero-muted — точный STREAK_CORRIDOR_HINT, отступ 8px, 11.5/500/1.5, data 56 %",
+      "h": "41a579a0e6b3"
     },
     "Геймификация · обзор · 12": {
       "v": "=",
@@ -685,8 +685,8 @@
     },
     "Геймификация · обзор · 16": {
       "v": "=",
-      "f": ".game-v4-sheet__streak-bar-caption — space-between, отступ 10, 10,5/600. Кадр просит чернила 40 %, у набора три тона (55/45/38) — взят ближайший --v4-ink-4; то же отступление, что у подписи под полосой",
-      "h": "838ee3a735d6"
+      "f": ".game-v4-sheet__streak-bar-caption — space-between, отступ 10px, 10.5/600, data 56 %",
+      "h": "63ec430f6fb5"
     },
     "Геймификация · обзор · 17": {
       "v": "=",
@@ -715,8 +715,8 @@
     },
     "Геймификация · обзор · 22": {
       "v": "=",
-      "f": ".game-v4-sheet__card-sub — отступ 6, 11,5/500/1,4; кадр просит чернила 50 %, у набора три тона — оставлен ближайший сверху --v4-ink-2 (55 %). Текст собирает missionSubtitle (screens:279)",
-      "h": "1935fc9eb87d"
+      "f": ".game-v4-sheet__card-sub — отступ 6px, 11.5/500/1.4, data 56 %; текст собирает missionSubtitle",
+      "h": "ae562e2bff9a"
     },
     "Геймификация · обзор · 23": {
       "v": "≠",
@@ -729,9 +729,9 @@
       "h": "be35280e48e5"
     },
     "Геймификация · обзор · 25": {
-      "v": "≠",
-      "f": ".game-v4-sheet__card-meta — 10,5/500 тоном --v4-ink-4, но отступ сверху 10, а кадр обзора просит 9. Подпись в продукте одна на миссию и на карточку «Ближе всего», где кадр «Достижения» (элемент 21) даёт 10; взято 10",
-      "h": "3426f21baea4"
+      "v": "=",
+      "f": ".game-v4-sheet__mission-card .game-v4-sheet__card-meta — 10.5/500, data 56 %, контекстный отступ 9px",
+      "h": "76403c8b0860"
     },
     "Геймификация · обзор · 26": {
       "v": "=",
@@ -755,8 +755,8 @@
     },
     "Геймификация · обзор · 30": {
       "v": "=",
-      "f": ".game-v4-sheet__level-floor-hint — 11,5/700, тон --v4-ink-3 (45 %): кадр просит 42 %, у набора три тона (55/45/38), взят ближайший. Правило разделено с .game-v4-sheet__level-line-hint, которому первый день даёт 600 и 38 %",
-      "h": "a48384de898f"
+      "f": ".game-v4-sheet__level-floor-hint — flex none, 11.5/700, var(--v4-ink-data) 56 %",
+      "h": "6784c34ab116"
     },
     "Геймификация · обзор · 31": {
       "v": "≠",
@@ -770,101 +770,101 @@
     },
     "Геймификация · обзор · 33": {
       "v": "=",
-      "f": ".game-v4-sheet__level-floor-xp — space-between, отступ 10, 10,5/500 тоном --v4-ink-4 (кадр просит 40 %, ближайшая роль 38 %). Вес отделён от .game-v4-sheet__level-hero-meta (600) 31 августа. Текст «N из M XP» — screens:506",
-      "h": "ca15b4ae005c"
+      "f": ".game-v4-sheet__level-floor-xp — space-between, отступ 10px, 10.5/500, data 56 %; текст «N из M XP» — screens",
+      "h": "7fe6b3f42857"
     },
     "Геймификация · обзор · 34": {
-      "v": "≠",
-      "f": "блока «XP за неделю» в продукте нет: ProgressTab (screens:522-617) заканчивается блоком уровня. Решение владельца 31 августа — строить, но отдельной задачей (todo.md D10); именованной строки контракта у блока пока нет. Данные готовы: HEYS.game.getXPHistory (heys_gamification_v1.js:3264, экспорт 5146) отдаёт семь дней {date, day, xp}",
+      "v": "—",
+      "f": "Решение «вид карточки «Ближе всего»» от 31 августа прямо снимает недельный XP-график с обзора как дорисованную заявку без продуктового контракта",
       "h": "049dd6f1e5bf"
     },
     "Геймификация · обзор · 35": {
-      "v": "≠",
+      "v": "—",
       "f": "часть блока «XP за неделю», которого в продукте нет; решение владельца 31 августа — строить отдельной задачей, см. элемент 34",
       "h": "fd10ac793d99"
     },
     "Геймификация · обзор · 36": {
-      "v": "≠",
+      "v": "—",
       "f": "часть блока «XP за неделю», которого в продукте нет; решение владельца 31 августа — строить отдельной задачей, см. элемент 34",
       "h": "1cd517dae673"
     },
     "Геймификация · обзор · 37": {
-      "v": "≠",
+      "v": "—",
       "f": "часть блока «XP за неделю», которого в продукте нет; решение владельца 31 августа — строить отдельной задачей, см. элемент 34",
       "h": "8744cc58ad5e"
     },
     "Геймификация · обзор · 38": {
-      "v": "≠",
+      "v": "—",
       "f": "часть блока «XP за неделю», которого в продукте нет; решение владельца 31 августа — строить отдельной задачей, см. элемент 34",
       "h": "764acacc4665"
     },
     "Геймификация · обзор · 39": {
-      "v": "≠",
+      "v": "—",
       "f": "часть блока «XP за неделю», которого в продукте нет; решение владельца 31 августа — строить отдельной задачей, см. элемент 34",
       "h": "b6a1d3b54d3d"
     },
     "Геймификация · обзор · 40": {
-      "v": "≠",
+      "v": "—",
       "f": "часть блока «XP за неделю», которого в продукте нет; решение владельца 31 августа — строить отдельной задачей, см. элемент 34",
       "h": "ce50eedf1cc8"
     },
     "Геймификация · обзор · 41": {
-      "v": "≠",
+      "v": "—",
       "f": "часть блока «XP за неделю», которого в продукте нет; решение владельца 31 августа — строить отдельной задачей, см. элемент 34",
       "h": "da23bdd6b62e"
     },
     "Геймификация · обзор · 42": {
-      "v": "≠",
+      "v": "—",
       "f": "часть блока «XP за неделю», которого в продукте нет; решение владельца 31 августа — строить отдельной задачей, см. элемент 34",
       "h": "f1822eb171fe"
     },
     "Геймификация · обзор · 43": {
-      "v": "≠",
+      "v": "—",
       "f": "часть блока «XP за неделю», которого в продукте нет; решение владельца 31 августа — строить отдельной задачей, см. элемент 34",
       "h": "1fdd2f19d29b"
     },
     "Геймификация · обзор · 44": {
-      "v": "≠",
+      "v": "—",
       "f": "подписи дней недели под столбиками — часть блока «XP за неделю», которого в продукте нет; строить отдельной задачей, см. элемент 34",
-      "h": "293bd2d6b9ab"
+      "h": "435f61388bff"
     },
     "Геймификация · обзор · 45": {
-      "v": "≠",
+      "v": "—",
       "f": "подпись «За семь дней N XP · сегодня M» — часть блока «XP за неделю», которого в продукте нет; строить отдельной задачей, см. элемент 34",
-      "h": "92fe422db623"
+      "h": "e8d883c7b78b"
     },
     "Геймификация · обзор · 46": {
-      "v": "≠",
+      "v": "—",
       "f": "решение владельца 31 августа — карточка «Ближе всего» остаётся только на вкладке «Достижения» (renderNearAchievement, screens:620): строка «Ближе всего» называет её единственным местом в геймификации, которое подсказывает действие. На обзоре не строится, кадр ждёт снятия дизайнером. Отдельно: кадр обзора красит .grp в var(--gr-bg), а награду в var(--gr) — строка «вид карточки „Ближе всего“» и кадр «Достижения» дают --c1 и --ac, и по правилу «контракт старше кадра» верны они",
       "h": "3e2da02db3f3"
     },
     "Геймификация · обзор · 47": {
-      "v": "≠",
+      "v": "—",
       "f": "часть карточки «Ближе всего», которой на обзоре нет; решение владельца 31 августа — остаётся только в «Достижениях», см. элемент 46",
       "h": "320904dce855"
     },
     "Геймификация · обзор · 48": {
-      "v": "≠",
+      "v": "—",
       "f": "часть карточки «Ближе всего», которой на обзоре нет; решение владельца 31 августа — остаётся только в «Достижениях», см. элемент 46",
-      "h": "80a12fe59eaf"
+      "h": "a61462f5d122"
     },
     "Геймификация · обзор · 49": {
-      "v": "≠",
+      "v": "—",
       "f": "часть карточки «Ближе всего», которой на обзоре нет; решение владельца 31 августа — остаётся только в «Достижениях», см. элемент 46",
       "h": "2acc8b62637a"
     },
     "Геймификация · обзор · 50": {
-      "v": "≠",
+      "v": "—",
       "f": "часть карточки «Ближе всего», которой на обзоре нет; решение владельца 31 августа — остаётся только в «Достижениях», см. элемент 46",
       "h": "bee1877fde88"
     },
     "Геймификация · обзор · 51": {
-      "v": "≠",
+      "v": "—",
       "f": "часть карточки «Ближе всего», которой на обзоре нет; решение владельца 31 августа — остаётся только в «Достижениях», см. элемент 46",
       "h": "9702a2821d84"
     },
     "Геймификация · обзор · 52": {
-      "v": "≠",
+      "v": "—",
       "f": "часть карточки «Ближе всего», которой на обзоре нет; решение владельца 31 августа — остаётся только в «Достижениях», см. элемент 46",
       "h": "11a262f8da3f"
     },
@@ -891,7 +891,7 @@
     "Геймификация · обзор · 57": {
       "v": "—",
       "f": "окружение кадра, а не его предмет: строка «границы» отдаёт нижнее меню продукту. Предмет кадра — вкладка «Прогресс» (элементы 01–52)",
-      "h": "7105841d02dc"
+      "h": "b0c44037717b"
     },
     "Достижения · 01": {
       "v": "≠",
@@ -976,7 +976,7 @@
     "Достижения · 17": {
       "v": "=",
       "f": "Строка разбора сверена парой «элемент кадра → правило продукта» в gamification-v4-canvas-razbor.test.js: числа этого элемента читаются из самого канваса, расхождение всплывает при правке любой из сторон",
-      "h": "e2ea082ba602"
+      "h": "ff9c22fd7b00"
     },
     "Достижения · 18": {
       "v": "=",
@@ -996,7 +996,7 @@
     "Достижения · 21": {
       "v": "=",
       "f": "Строка разбора сверена парой «элемент кадра → правило продукта» в gamification-v4-canvas-razbor.test.js: числа этого элемента читаются из самого канваса, расхождение всплывает при правке любой из сторон",
-      "h": "8e71c4a525fc"
+      "h": "aadb2038082b"
     },
     "Достижения · 22": {
       "v": "=",
@@ -1035,8 +1035,8 @@
     },
     "Достижения · 29": {
       "v": "=",
-      "f": ".game-v4-sheet__ach-cond (000-base:18312) — 11/500/1,4 тоном --v4-ink-3 (42 %), отступ сверху 5",
-      "h": "d4f02e9a8335"
+      "f": ".game-v4-sheet__ach-cond — 11/500/1.4, var(--v4-ink-data) 56 %, отступ 5px",
+      "h": "02db52a8f942"
     },
     "Достижения · 30": {
       "v": "=",
@@ -1054,13 +1054,13 @@
       "h": "e6f41cbed359"
     },
     "Достижения · 33": {
-      "v": "≠",
-      "f": "подписи под группами лист достижений не выводит вовсе. .game-v4-sheet__footnote (000-base:18439) стоит только в первой ветке — renderOnboardingAchievements (screens:516) с другим текстом. Именованной строки об этой подписи нет, то есть верен кадр; расхождение вынесено в протокол зоны",
-      "h": "d73ae5d9ccb4"
+      "v": "—",
+      "f": "Решение «слова на экране» от 31 августа: подпись объясняет правило отбора группы и в product copy не входит",
+      "h": "3a0b4ee7b46a"
     },
     "Достижения · 34": {
-      "v": "≠",
-      "f": ".game-v4-sheet__more-groups (000-base:18342) — радиус 18 против 20 в кадре, поля 14/16 против 16/18, без флекса и space-between и без отступа сверху 14 (зазор даёт колонка листа). Именованной строки об этой карточке нет — верен кадр",
+      "v": "=",
+      "f": ".game-v4-sheet__more-groups — center/space-between, --c1, radius 20px, padding 16px 18px, margin-top 14px",
       "h": "9daccbf0d62e"
     },
     "Достижения · 35": {
@@ -1091,7 +1091,7 @@
     "Достижения · 40": {
       "v": "—",
       "f": "окружение кадра, а не его предмет: строка «границы» отдаёт нижнее меню продукту. Предмет кадра — лист достижений (элементы 01–35)",
-      "h": "7105841d02dc"
+      "h": "b0c44037717b"
     },
     "Новый уровень · 0 мс · 01": {
       "v": "≠",
@@ -1175,8 +1175,8 @@
     },
     "Новый уровень · 0 мс · 17": {
       "v": "=",
-      "f": ".game-v4-sheet__ladder-xp — flex none, 11,5/600 табличными цифрами тоном --v4-ink-3 (45 %) по строке «вид строки уровня в списке»; роль приведена к строке 31 августа, стояла --v4-ink-2 (55 %)",
-      "h": "d7adf6e521af"
+      "f": ".game-v4-sheet__ladder-xp — flex none, 11.5/600 tabular, var(--v4-ink-data) 56 %",
+      "h": "cb83f513393e"
     },
     "Новый уровень · 0 мс · 18": {
       "v": "≠",
@@ -1270,8 +1270,8 @@
     },
     "Новый уровень · 420 мс · 17": {
       "v": "=",
-      "f": ".game-v4-sheet__ladder-xp — flex none, 11,5/600 табличными цифрами тоном --v4-ink-3 (45 %) по строке «вид строки уровня в списке»; роль приведена к строке 31 августа, стояла --v4-ink-2 (55 %)",
-      "h": "d7adf6e521af"
+      "f": ".game-v4-sheet__ladder-xp — flex none, 11.5/600 tabular, var(--v4-ink-data) 56 %",
+      "h": "cb83f513393e"
     },
     "Новый уровень · 420 мс · 18": {
       "v": "≠",
@@ -1365,8 +1365,8 @@
     },
     "Новый уровень · 1200 мс · 17": {
       "v": "=",
-      "f": ".game-v4-sheet__ladder-xp — flex none, 11,5/600 табличными цифрами тоном --v4-ink-3 (45 %) по строке «вид строки уровня в списке»; роль приведена к строке 31 августа, стояла --v4-ink-2 (55 %)",
-      "h": "d7adf6e521af"
+      "f": ".game-v4-sheet__ladder-xp — flex none, 11.5/600 tabular, var(--v4-ink-data) 56 %",
+      "h": "cb83f513393e"
     },
     "Новый уровень · 1200 мс · 18": {
       "v": "≠",
@@ -1460,8 +1460,8 @@
     },
     "Новый уровень · 1600 мс · 17": {
       "v": "=",
-      "f": ".game-v4-sheet__ladder-xp — flex none, 11,5/600 табличными цифрами тоном --v4-ink-3 (45 %) по строке «вид строки уровня в списке»; роль приведена к строке 31 августа, стояла --v4-ink-2 (55 %)",
-      "h": "d7adf6e521af"
+      "f": ".game-v4-sheet__ladder-xp — flex none, 11.5/600 tabular, var(--v4-ink-data) 56 %",
+      "h": "cb83f513393e"
     },
     "Новый уровень · 1600 мс · 18": {
       "v": "≠",
@@ -1530,8 +1530,8 @@
     },
     "Уровни · 12": {
       "v": "=",
-      "f": ".game-v4-sheet__level-hero-meta (000-base:18211) — space-between, отступ сверху 10, 10,5/600 тоном --v4-ink-3 (40 %); табличные цифры у всего листа (000-base:17894)",
-      "h": "f0fea073e386"
+      "f": ".game-v4-sheet__level-hero-meta — space-between, отступ 10px, 10.5/600 tabular, var(--v4-ink-data) 56 %",
+      "h": "76f0a3e24cdf"
     },
     "Уровни · 13": {
       "v": "=",
@@ -1561,7 +1561,7 @@
     "Уровни · 18": {
       "v": "=",
       "f": "Строка разбора сверена парой «элемент кадра → правило продукта» в gamification-v4-canvas-razbor.test.js: числа этого элемента читаются из самого канваса, расхождение всплывает при правке любой из сторон",
-      "h": "59c4c5cbd526"
+      "h": "446f246a5d1c"
     },
     "Уровни · 19": {
       "v": "≠",
@@ -1605,8 +1605,8 @@
     },
     "Уровни · 27": {
       "v": "≠",
-      "f": ".game-v4-sheet__card-sub (000-base:18130) — отступ сверху 6 и тон --v4-ink-2 по строке «вид карточки „Ближе всего“» («под шапкой через 6 условие 11,5 px/500 тоном чернил 50 %»; у набора три тона 55/45/38, взят ближайший сверху). Кадр даёт отступ 8, межстрочный 1,45 и ровно 50 % — контракт старше кадра",
-      "h": "4cc4e98c247f"
+      "f": ".game-v4-sheet__card-sub теперь использует data 56 %, но геометрия остаётся 6px и 1.4 против кадровых 8px и 1.45; общий контракт карточки старше этого кадра",
+      "h": "cd4fb46087cc"
     },
     "Уровни · 28": {
       "v": "=",
@@ -1620,8 +1620,8 @@
     },
     "Уровни · 30": {
       "v": "=",
-      "f": ".game-v4-sheet__xp-value (000-base:18431) — flex none, 11,5/600 тоном --v4-ink-3 (38 %); текст «+N · статус» собирает xpRowStatus (screens:415-423). Зазор 8 в кадре разделяет номинал и статус, в продукте это одна строка",
-      "h": "31d802cc86b1"
+      "f": ".game-v4-sheet__xp-value — flex none, 11.5/600, var(--v4-ink-data) 56 %; текст «+N · статус» собирает xpRowStatus",
+      "h": "fb0072881a15"
     },
     "Уровни · 31": {
       "v": "=",
@@ -1629,9 +1629,9 @@
       "h": "6b286135ed76"
     },
     "Уровни · 32": {
-      "v": "≠",
-      "f": "кадр даёт три фразы про таблицу с отступом 12; продукт выводит XP_FOOTNOTE «работают 17 из 17» (screens:17, 1024) в .game-v4-sheet__footnote (000-base:18439) с отступом 4. Начертание совпадает (11/500/1,5, тон 42 %). Именованной строки об этой подписи нет — верен кадр; расхождение вынесено в протокол зоны",
-      "h": "8ad23530a02d"
+      "v": "—",
+      "f": "Решение «слова на экране» от 31 августа: три фразы объясняют правило таблицы и в product copy не входят",
+      "h": "0ad507147056"
     },
     "Уровни · 33": {
       "v": "—",
@@ -1656,7 +1656,7 @@
     "Уровни · 37": {
       "v": "—",
       "f": "окружение кадра, а не его предмет: строка «границы» отдаёт нижнее меню продукту. Предмет кадра — лист уровней (элементы 01–32)",
-      "h": "7105841d02dc"
+      "h": "b0c44037717b"
     },
     "как читать графику": {
       "v": "—",
@@ -1794,8 +1794,8 @@
       "h": "02d0dfa42897"
     },
     "Достижения · рисунок 08": {
-      "v": "≠",
-      "f": "шеврона у строки «Ещё N групп» в продукте нет: .game-v4-sheet__more-groups (screens:832) выводит только текст. Именованной строки об этой карточке нет — верен кадр; расхождение вынесено в протокол зоны",
+      "v": "=",
+      "f": "renderMoreChevron выводит SVG path M9 6l6 6-6 6 внутри кнопки «Ещё N групп»",
       "h": "163302844c74"
     },
     "Достижения · рисунок 09": {
@@ -1914,13 +1914,13 @@
       "h": "68ab4749e19a"
     },
     "Геймификация · первый день · текст": {
-      "v": "≠",
-      "f": "копия совпадает вся, кроме подписи под группой: продукт выводит «Остальные группы появятся, когда в них будет что показать.» (screens:517), а кадр начинает её с «Остальные четыре — по тапу на группу». Остальное на месте: «Прогресс» и «Первая миссия» (screens:552), «Ещё сегодня» (screens:596), «Первые шаги · N из M» (headText screens:757), «Уровень N · M XP» и «до N-го M» (screens:601-603); названия миссий и достижений приходят из каталога движка",
+      "v": "—",
+      "f": "Сводная строка смешивает product copy, поясняющую аннотацию и нижнюю навигацию; после решения «слова на экране» проверяется по отдельным атомам, а не целиком",
       "h": "17697ff4b604"
     },
     "Геймификация · обзор · текст": {
-      "v": "≠",
-      "f": "двух блоков копии в продукте нет: «XP за неделю» с подписями дней и строкой «За семь дней N XP · сегодня M» и «Ближе всего» с условием достижения. Решение владельца 31 августа: график строится отдельной задачей (todo.md D10), «Ближе всего» остаётся только в «Достижениях». См. элементы 34 и 46",
+      "v": "—",
+      "f": "Сводная строка старого кадра включает два блока, прямо снятых решением 31 августа, и нижнюю навигацию; актуальная копия проверяется отдельными атомами",
       "h": "b709fb324978"
     },
     "Достижения · текст 1/2": {
@@ -1929,8 +1929,8 @@
       "h": "3b88e70064e5"
     },
     "Достижения · текст 2/2": {
-      "v": "≠",
-      "f": "подписи «В группе показываются достигнутые и два ближайших…» лист достижений не выводит: .game-v4-sheet__footnote стоит только в первой ветке, с другим текстом (screens:516). Строка «Ещё N групп» на месте (screens:834)",
+      "v": "—",
+      "f": "Решение «слова на экране»: пояснение отбора группы — аннотация кадра; остаток строки относится к общей нижней навигации",
       "h": "50f105bd3ae0"
     },
     "Новый уровень · 0 мс · текст": {
@@ -1959,9 +1959,267 @@
       "h": "9e4a3f5bce78"
     },
     "Уровни · текст 2/2": {
-      "v": "≠",
-      "f": "подпись под таблицей короче кадровой: продукт выводит XP_FOOTNOTE «работают 17 из 17» (screens:17), а кадр даёт три фразы — про восемь строк по убыванию номинала, пять раскрываемых действий и почему «День выполнен» и «Идеальный день» стоят первыми. Содержание этих фраз описано строками «длина таблицы» и «таблица наград», и продукт им следует; на экране их нет",
+      "v": "—",
+      "f": "Решение «слова на экране»: три фразы — аннотация правила таблицы, остаток строки относится к общей нижней навигации",
       "h": "7c4da4e0a7fd"
+    }
+  },
+  "frames": {
+    "Геймификация · первый день": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Геймификация · обзор": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Достижения": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · 0 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · 420 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · 1200 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · 1600 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · тёмная · 0 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · тёмная · 420 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · тёмная · 1200 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · тёмная · 1600 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · синяя · 0 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · синяя · 420 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · синяя · 1200 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · синяя · 1600 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · сине-тёмная · 0 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · сине-тёмная · 420 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · сине-тёмная · 1200 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Новый уровень · сине-тёмная · 1600 мс": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Уровни": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Геймификация · первый день · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Геймификация · обзор · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Достижения · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Уровни · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Геймификация · первый день · синяя": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Геймификация · обзор · синяя": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Достижения · синяя": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Уровни · синяя": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Геймификация · первый день · сине-тёмная": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Геймификация · обзор · сине-тёмная": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Достижения · сине-тёмная": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Уровни · сине-тёмная": {
+      "evidence": [
+        "apps/web/__tests__/gamification-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/gamification-screens-v4-structure.test.js",
+        "apps/web/heys_gamification_screens_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
     }
   }
 }

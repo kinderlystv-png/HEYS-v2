@@ -27,83 +27,83 @@ const CSS = path.resolve(__dirname, '../styles/modules/730-widgets-dashboard.css
 // значение роли из самого набора; здесь остаются только таблицы пар этой зоны.
 
 const SHELL = [
-  [75, '.widget-bd-sheet__grab', ['width', 'height']],
-  [76, '.widget-bd-sheet__head', ['gap']],
-  [77, '.widget-bd-sheet__title', ['fontWeight', 'fontSize', 'lineHeight']],
-  [78, '.widget-bd-sheet__close', ['width', 'height']],
-  [79, '.widget-bd-sheet__kicker', ['marginTop', 'fontWeight', 'fontSize']],
-  [80, '.widget-bd-sheet__hero', ['marginTop', 'gap']],
-  [81, '.widget-bd-sheet__hero-val', ['fontWeight', 'fontSize', 'lineHeight', 'tracking']],
-  [82, '.widget-bd-sheet__hero-unit', ['fontWeight', 'fontSize']],
-  [83, '.widget-bd-sheet__insight', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight']],
-  [84, '.widget-bd-sheet__bars', ['marginTop', 'gap', 'height']],
-  [95, '.widget-bd-sheet__stats', ['marginTop', 'gap']],
-  [96, '.widget-bd-sheet__stat-row', ['gap']],
-  [97, '.widget-bd-sheet__stat-label', ['fontWeight', 'fontSize', 'lineHeight']],
-  [98, '.widget-bd-sheet__stat-value', ['fontWeight', 'fontSize', 'lineHeight']],
-  [99, '.widget-bd-sheet__norm', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight']],
-  [100, '.widget-bd-sheet__action', ['marginTop']]
+  [74, '.widget-bd-sheet__grab', ['width', 'height']],
+  [75, '.widget-bd-sheet__head', ['gap']],
+  [76, '.widget-bd-sheet__title', ['fontWeight', 'fontSize', 'lineHeight']],
+  [77, '.widget-bd-sheet__close', ['width', 'height']],
+  [78, '.widget-bd-sheet__kicker', ['marginTop', 'fontWeight', 'fontSize']],
+  [79, '.widget-bd-sheet__hero', ['marginTop', 'gap']],
+  [80, '.widget-bd-sheet__hero-val', ['fontWeight', 'fontSize', 'lineHeight', 'tracking']],
+  [81, '.widget-bd-sheet__hero-unit', ['fontWeight', 'fontSize']],
+  [82, '.widget-bd-sheet__insight', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight']],
+  [83, '.widget-bd-sheet__bars', ['marginTop', 'gap', 'height']],
+  [94, '.widget-bd-sheet__stats', ['marginTop', 'gap']],
+  [95, '.widget-bd-sheet__stat-row', ['gap']],
+  [96, '.widget-bd-sheet__stat-label', ['fontWeight', 'fontSize', 'lineHeight']],
+  [97, '.widget-bd-sheet__stat-value', ['fontWeight', 'fontSize', 'lineHeight']],
+  [98, '.widget-bd-sheet__norm', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight']],
+  [99, '.widget-bd-sheet__action', ['marginTop']]
 ];
 
 // Новые виды графика шести листов пакета 22 августа: кадр → правило продукта.
 const CHARTS = [
   // Графики двенадцати листов первого пакета.
-  ['Разбор · Сон', 84, '.widget-bd-sheet__sleep-strip', ['marginTop', 'direction', 'gap']],
-  ['Разбор · Сон', 85, '.widget-bd-sheet__sleep-timeline-avg', ['width', 'background']],
-  ['Разбор · Сон', 86, '.widget-bd-sheet__sleep-timeline-row', ['align', 'gap']],
-  ['Разбор · Сон', 87, '.widget-bd-sheet__sleep-timeline-label', ['width', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  ['Разбор · Сон', 88, '.widget-bd-sheet__sleep-timeline-track', ['height', 'radius', 'background']],
-  ['Разбор · Сон', 89, '.widget-bd-sheet__sleep-timeline-bar', ['height', 'radius', 'background']],
-  ['Разбор · Сон', 103, '.widget-bd-sheet__sleep-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  ['Разбор · Вода', 84, '.widget-bd-sheet__water-profile', ['marginTop', 'height', 'align', 'gap']],
-  ['Разбор · Вода', 85, '.widget-bd-sheet__water-profile-gap', ['background', 'radius']],
-  ['Разбор · Вода', 86, '.widget-bd-sheet__water-profile-bar > i', ['radius', 'background']],
-  ['Разбор · Вода', 98, '.widget-bd-sheet__water-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  ['Разбор · БЖУ', 81, '.widget-bd-sheet__hero-tracks', ['marginTop', 'direction', 'gap']],
-  ['Разбор · БЖУ', 84, '.widget-bd-sheet__hero-track-bar', ['height', 'radius', 'background', 'marginTop']],
-  ['Разбор · БЖУ', 88, '.widget-bd-sheet__grid3x7', ['marginTop', 'direction', 'gap']],
-  ['Разбор · БЖУ', 89, '.widget-bd-sheet__grid-row', ['align', 'gap']],
-  ['Разбор · БЖУ', 91, ['.widget-bd-sheet__grid-cell', '.widget-bd-sheet__grid-cell.is-ok'], ['height', 'radius', 'background']],
-  ['Разбор · Оценка дня', 93, '.widget-bd-sheet__factors', ['marginTop', 'direction', 'gap']],
-  ['Разбор · Риск-радар', 100, '.widget-bd-sheet__drivers', ['marginTop', 'direction', 'gap']],
-  ['Разбор · Риск-радар', 101, ['.widget-bd-sheet__driver-mark', '.widget-bd-sheet__driver-row.is-bad .widget-bd-sheet__driver-mark'], ['width', 'height', 'radius', 'background']],
-  ['Разбор · Тренд здоровья', 87, '.widget-bd-sheet__contrib', ['marginTop', 'direction', 'gap']],
-  ['Разбор · Тренд здоровья', 88, '.widget-bd-sheet__contrib-row', ['align', 'gap']],
-  ['Разбор · Тренд здоровья', 89, '.widget-bd-sheet__contrib-label', ['width', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  ['Разбор · Карта активности', 84, '.widget-bd-sheet__grid7x5', ['marginTop', 'direction', 'gap']],
+  ['Разбор · Сон', 83, '.widget-bd-sheet__sleep-strip', ['marginTop', 'direction', 'gap']],
+  ['Разбор · Сон', 84, '.widget-bd-sheet__sleep-timeline-avg', ['width', 'background']],
+  ['Разбор · Сон', 85, '.widget-bd-sheet__sleep-timeline-row', ['align', 'gap']],
+  ['Разбор · Сон', 86, '.widget-bd-sheet__sleep-timeline-label', ['width', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · Сон', 87, '.widget-bd-sheet__sleep-timeline-track', ['height', 'radius', 'background']],
+  ['Разбор · Сон', 88, '.widget-bd-sheet__sleep-timeline-bar', ['height', 'radius', 'background']],
+  ['Разбор · Сон', 102, '.widget-bd-sheet__sleep-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · Вода', 83, '.widget-bd-sheet__water-profile', ['marginTop', 'height', 'align', 'gap']],
+  ['Разбор · Вода', 84, '.widget-bd-sheet__water-profile-gap', ['background', 'radius']],
+  ['Разбор · Вода', 85, '.widget-bd-sheet__water-profile-bar > i', ['radius', 'background']],
+  ['Разбор · Вода', 97, '.widget-bd-sheet__water-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · БЖУ', 80, '.widget-bd-sheet__hero-tracks', ['marginTop', 'direction', 'gap']],
+  ['Разбор · БЖУ', 83, '.widget-bd-sheet__hero-track-bar', ['height', 'radius', 'background', 'marginTop']],
+  ['Разбор · БЖУ', 87, '.widget-bd-sheet__grid3x7', ['marginTop', 'direction', 'gap']],
+  ['Разбор · БЖУ', 88, '.widget-bd-sheet__grid-row', ['align', 'gap']],
+  ['Разбор · БЖУ', 90, ['.widget-bd-sheet__grid-cell', '.widget-bd-sheet__grid-cell.is-ok'], ['height', 'radius', 'background']],
+  ['Разбор · Оценка дня', 92, '.widget-bd-sheet__factors', ['marginTop', 'direction', 'gap']],
+  ['Разбор · Риск-радар', 99, '.widget-bd-sheet__drivers', ['marginTop', 'direction', 'gap']],
+  ['Разбор · Риск-радар', 100, ['.widget-bd-sheet__driver-mark', '.widget-bd-sheet__driver-row.is-bad .widget-bd-sheet__driver-mark'], ['width', 'height', 'radius', 'background']],
+  ['Разбор · Тренд здоровья', 86, '.widget-bd-sheet__contrib', ['marginTop', 'direction', 'gap']],
+  ['Разбор · Тренд здоровья', 87, '.widget-bd-sheet__contrib-row', ['align', 'gap']],
+  ['Разбор · Тренд здоровья', 88, '.widget-bd-sheet__contrib-label', ['width', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · Карта активности', 83, '.widget-bd-sheet__grid7x5', ['marginTop', 'direction', 'gap']],
   // Профиль по часам у риска — тот же, что у воды, но со своими номерами.
-  ['Разбор · Риск-радар', 83, '.widget-bd-sheet__water-profile', ['marginTop', 'height', 'align', 'gap']],
-  ['Разбор · Риск-радар', 84, '.widget-bd-sheet__water-profile-gap', ['background', 'radius']],
-  ['Разбор · Риск-радар', 85, '.widget-bd-sheet__water-profile-bar > i', ['radius', 'background']],
-  ['Разбор · Риск-радар', 99, '.widget-bd-sheet__water-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · Риск-радар', 82, '.widget-bd-sheet__water-profile', ['marginTop', 'height', 'align', 'gap']],
+  ['Разбор · Риск-радар', 83, '.widget-bd-sheet__water-profile-gap', ['background', 'radius']],
+  ['Разбор · Риск-радар', 84, '.widget-bd-sheet__water-profile-bar > i', ['radius', 'background']],
+  ['Разбор · Риск-радар', 98, '.widget-bd-sheet__water-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
   // Лента «Окно до сна» — та же лента, что у сна, со своими номерами.
-  ['Разбор · Окно до сна', 84, '.widget-bd-sheet__sleep-strip', ['marginTop', 'direction', 'gap']],
-  ['Разбор · Окно до сна', 85, '.widget-bd-sheet__sleep-timeline-row', ['align', 'gap']],
-  ['Разбор · Окно до сна', 86, '.widget-bd-sheet__sleep-timeline-label', ['width', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  ['Разбор · Окно до сна', 87, '.widget-bd-sheet__sleep-timeline-track', ['height', 'radius', 'background']],
-  ['Разбор · Окно до сна', 88, '.widget-bd-sheet__sleep-timeline-bar', ['height', 'radius', 'background']],
-  ['Разбор · Окно до сна', 102, '.widget-bd-sheet__sleep-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · Окно до сна', 83, '.widget-bd-sheet__sleep-strip', ['marginTop', 'direction', 'gap']],
+  ['Разбор · Окно до сна', 84, '.widget-bd-sheet__sleep-timeline-row', ['align', 'gap']],
+  ['Разбор · Окно до сна', 85, '.widget-bd-sheet__sleep-timeline-label', ['width', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · Окно до сна', 86, '.widget-bd-sheet__sleep-timeline-track', ['height', 'radius', 'background']],
+  ['Разбор · Окно до сна', 87, '.widget-bd-sheet__sleep-timeline-bar', ['height', 'radius', 'background']],
+  ['Разбор · Окно до сна', 101, '.widget-bd-sheet__sleep-axis', ['justify', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
   // Дельта недели у веса 2×2 — тот же кегль, что на плитке 2×1.
   ['Разбор · Калории', 65, ['.widget-v4-delta', '.widget-v4-delta.widget-v4-val--act'], ['fontWeight', 'fontSize', 'lineHeight']],
   // Разбор таблицей: строки «разбор · Шаги» и «разбор · Динамика веса».
-  ['Разбор · Шаги', 95, ['.widget-bd-sheet__stats', '.widget-bd-sheet__stats--table'], ['marginTop', 'direction']],
-  ['Разбор · Шаги', 96, ['.widget-bd-sheet__stat-row', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-row'], ['align', 'justify', 'padding']],
-  ['Разбор · Шаги', 97, ['.widget-bd-sheet__stat-label', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-label'], ['fontWeight', 'fontSize', 'lineHeight']],
-  ['Разбор · Шаги', 98, ['.widget-bd-sheet__stat-value', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-value'], ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  ['Разбор · Шаги', 103, ['.widget-bd-sheet__stat-row', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-row.is-total'], ['align', 'justify', 'marginTop']],
+  ['Разбор · Шаги', 94, ['.widget-bd-sheet__stats', '.widget-bd-sheet__stats--table'], ['marginTop', 'direction']],
+  ['Разбор · Шаги', 95, ['.widget-bd-sheet__stat-row', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-row'], ['align', 'justify', 'padding']],
+  ['Разбор · Шаги', 96, ['.widget-bd-sheet__stat-label', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-label'], ['fontWeight', 'fontSize', 'lineHeight']],
+  ['Разбор · Шаги', 97, ['.widget-bd-sheet__stat-value', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-value'], ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Разбор · Шаги', 102, ['.widget-bd-sheet__stat-row', '.widget-bd-sheet__stats--table .widget-bd-sheet__stat-row.is-total'], ['align', 'justify', 'marginTop']],
   // Шесть листов пакета 22 августа.
-  ['Разбор · Клетчатка', 84, '.widget-bd-sheet__sources', ['marginTop', 'gap']],
-  ['Разбор · Клетчатка', 87, '.widget-bd-sheet__source-bar', ['height', 'marginTop']],
-  ['Разбор · Белок', 84, '.widget-bd-sheet__meal-bars', ['marginTop', 'gap', 'height']],
-  ['Разбор · Белок', 90, '.widget-bd-sheet__meal-axis', ['gap', 'marginTop', 'fontWeight', 'fontSize']],
-  ['Разбор · Качество еды', 84, '.widget-bd-sheet__stack', ['marginTop', 'gap', 'height']],
-  ['Разбор · Качество еды', 85, '.widget-bd-sheet__stack-col', ['gap']],
-  ['Разбор · Готовность ко сну', 84, '.widget-bd-sheet__evening', ['marginTop', 'gap']],
-  ['Разбор · Готовность ко сну', 85, '.widget-bd-sheet__evening-row', ['gap']],
-  ['Разбор · Готовность ко сну', 86, '.widget-bd-sheet__evening-label', ['width', 'fontWeight', 'fontSize']],
-  ['Разбор · Готовность ко сну', 87, '.widget-bd-sheet__evening-track', ['height']],
-  ['Разбор · Готовность ко сну', 91, '.widget-bd-sheet__evening-dots', ['gap', 'marginTop']],
-  ['Разбор · Готовность ко сну', 93, '.widget-bd-sheet__evening-dot', ['width', 'height']]
+  ['Разбор · Клетчатка', 83, '.widget-bd-sheet__sources', ['marginTop', 'gap']],
+  ['Разбор · Клетчатка', 86, '.widget-bd-sheet__source-bar', ['height', 'marginTop']],
+  ['Разбор · Белок', 83, '.widget-bd-sheet__meal-bars', ['marginTop', 'gap', 'height']],
+  ['Разбор · Белок', 89, '.widget-bd-sheet__meal-axis', ['gap', 'marginTop', 'fontWeight', 'fontSize']],
+  ['Разбор · Качество еды', 83, '.widget-bd-sheet__stack', ['marginTop', 'gap', 'height']],
+  ['Разбор · Качество еды', 84, '.widget-bd-sheet__stack-col', ['gap']],
+  ['Разбор · Готовность ко сну', 83, '.widget-bd-sheet__evening', ['marginTop', 'gap']],
+  ['Разбор · Готовность ко сну', 84, '.widget-bd-sheet__evening-row', ['gap']],
+  ['Разбор · Готовность ко сну', 85, '.widget-bd-sheet__evening-label', ['width', 'fontWeight', 'fontSize']],
+  ['Разбор · Готовность ко сну', 86, '.widget-bd-sheet__evening-track', ['height']],
+  ['Разбор · Готовность ко сну', 90, '.widget-bd-sheet__evening-dots', ['gap', 'marginTop']],
+  ['Разбор · Готовность ко сну', 92, '.widget-bd-sheet__evening-dot', ['width', 'height']]
 ];
 
 // Кадр «Главная · дефолтная раскладка» — плитка за плиткой. Он же подложка
@@ -126,7 +126,9 @@ const MAIN = [
   ['плитка: фон var(--c2), поля 14px', 6, '.widget-calories__hero-bar-fill', ['height', 'radius', 'background']],
   ['плитка: фон var(--c2), поля 14px', 7, '.widget-calories__hero-bar-foot', ['justify', 'align', 'marginTop']],
   ['плитка: фон var(--c2), поля 14px', 8, '.widget-calories__hero-bar-col', ['direction', 'gap']],
-  ['плитка: фон var(--c2), поля 14px', 9, '.widget-calories__hero-bar-num', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  // Цвет мелкого числа держит более новое общее правило лестницы чернил;
+  // строка кадра здесь остаётся донором только типографики.
+  ['плитка: фон var(--c2), поля 14px', 9, '.widget-calories__hero-bar-num', ['fontWeight', 'fontSize', 'lineHeight']],
   ['плитка: фон var(--c2), поля 14px', 10, '.widget-calories__hero-bar-cap', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   ['плитка: фон var(--c2), поля 14px', 11, '.widget-calories__hero-bar-col--end', ['align']],
   ['плитка: фон var(--c2), поля 14px', 12, '.widget-calories__hero-bar-num--good', ['color']],
@@ -178,7 +180,9 @@ const MAIN = [
   ['«−0,9 за неделю»', 1, '.widget-weight__number-week-spark', ['marginBottom']],
 
   // Белок и Клетчатка 1×1
-  ['высота 4px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 7px', 0, '.widget-v4-goalbar', ['height', 'radius', 'background', 'marginTop']],
+  // Фон кадра устарел: строка контракта «вид · полоса цели» сильнее и задаёт
+  // дорожку --v4-track. Здесь остаются только геометрические свойства кадра.
+  ['высота 4px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 7px', 0, '.widget-v4-goalbar', ['height', 'radius', 'marginTop']],
   ['высота 4px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 7px', 1, '.widget-v4-goalbar__fill', ['radius']],
 
   // Ярус «Рекомендуемый экран» и пустой экран
@@ -230,8 +234,8 @@ function shapePairs(razbor, stopFrames) {
 const SHEET_TAIL = [
   ['отступ сверху 16px, направление column, зазор 11px', '.widget-bd-sheet__stats', ['marginTop', 'direction', 'gap']],
   ['выравнивание baseline, распределение space-between, зазор 12px', '.widget-bd-sheet__stat-row', ['align', 'justify', 'gap']],
-  ['шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.5)', '.widget-bd-sheet__stat-label', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  ['шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.55), отступ сверху 14px', '.widget-bd-sheet__norm', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  ['шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.56)', '.widget-bd-sheet__stat-label', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 14px', '.widget-bd-sheet__norm', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
   ['моноцифры: флекс none, шрифт 700 12px/1 Figtree, цвет var(--tx)', '.widget-bd-sheet__stat-value', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   ['высота от 48px, радиус 999px, фон var(--acs), цвет var(--on-acs)', ['.widget-bd-sheet__chip', '.widget-bd-sheet__action'], ['minHeight', 'radius', 'background', 'color', 'align', 'justify', 'fontWeight', 'fontSize', 'lineHeight']]
 ];
@@ -316,7 +320,7 @@ const MACROS = [
     ['justify', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
 
   ['Шторка · Кольца БЖУ', 'высота 4px, радиус 999px, фон rgba(var(--ink),.08)', 0,
-    '.widget-v4-goalbar', ['height', 'radius', 'background']]
+    '.widget-v4-goalbar', ['height', 'radius']]
 ];
 
 // Кадры шторок «Инсулиновая волна» и «Сон» — виды этих двух плиток. Оба
@@ -357,7 +361,7 @@ const WAVE_SLEEP = [
     '.widget-v4-sleep-window__target', ['radius', 'background']],
   ['Шторка · Сон', 'позиция absolute, ширина 57%, радиус 999px', 0,
     '.widget-v4-sleep-window__actual', ['radius', 'background']],
-  ['Шторка · Сон', 'распределение space-between, шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.4), отступ сверху 7px', 0,
+  ['Шторка · Сон', 'распределение space-between, шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56), отступ сверху 7px', 0,
     '.widget-v4-sleep-window__labels', ['justify', 'fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']]
 ];
 
@@ -436,7 +440,9 @@ function shutterPairs(razbor) {
       const value = razbor.get(`${frame}|${i}`);
       if (value == null) continue;
       if (!title && /шрифт 700 11\.5px\/1\.3/.test(value)) {
-        title = [frame, i, '.widget-wd-sheet__opt-title', ['fontWeight', 'fontSize', 'lineHeight', 'color']];
+        // Цвет 11.5px подписи задаёт общее правило data-56, а не более старая
+        // локальная строка вида; здесь сверяем только типографику.
+        title = [frame, i, '.widget-wd-sheet__opt-title', ['fontWeight', 'fontSize', 'lineHeight']];
       }
       if (!check && /^флекс none, цвет var\(--ac\)$/.test(value)) {
         check = [frame, i, '.widget-wd-sheet__check', ['color']];

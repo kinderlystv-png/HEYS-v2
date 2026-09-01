@@ -125,8 +125,8 @@
     },
     "цвет числа": {
       "v": "=",
-      "f": "002:592 — сине-тёмная --v4-act-text #8fc1e8 → #7fbceb; другой строки контракта на эту роль нет",
-      "h": "268cf7e468a7"
+      "f": "Решение 01.09 подтвердило --ac: .nutrition-v4-hero__value использует --v4-act-text, который мапится на роль --ac во всех четырёх наборах; старый конфликт нейтрального кадра снят",
+      "h": "60e2983d7802"
     },
     "перебор": {
       "v": "=",
@@ -375,8 +375,8 @@
     },
     "шкала полосы": {
       "v": "=",
-      "f": "Шкала — то же пищевое окно, что у итогов — heys_day_nutrition_v1.js:574-578",
-      "h": "85b64f54fb09"
+      "f": "Позиция считается в том же пищевом окне resolveEatingWindow; после решения 31.08 дорожка .nutrition-v4-timeline__track = --v4-track, спокойный вклад = --v4-ok-fill (--gr2), нахлёст остаётся --v4-bad-text. Текстовый контракт новее старой краски CSS кадра; это охраняет nutrition-v4-canvas-geometry.test.js",
+      "h": "3191dd724a90"
     },
     "строка приёма · полосы": {
       "v": "=",
@@ -704,9 +704,9 @@
       "h": "162f23124868"
     },
     "действия приёма": {
-      "v": "=",
-      "f": "Блок «Действия с приёмом» — четыре строки «Повторить сегодня» · «Копировать приём» · «Переместить на другой день» · «Сохранить набором», ниже «Удалить приём»; у пустого приёма все четыре погашены (heys_day_nutrition_v1.js:1384-1401). TDZ repeatTodayMeal→navigateAndScrollToMeal исправлен (day/_meals.js:6364+). vitest 2026-08-26: nutrition-repeat-today-sheet 3/3, meal-plate-guide 9/9",
-      "h": "e1517f219884"
+      "v": "≠",
+      "f": "Четыре действия, disabled пустого приёма и новые смысловые иконки уже совпадают: перенос — календарь со стрелкой, набор — документ, svgIcon умеет кривые и rect; meal-actions-icons.test.js 6/6. Но обновлённая строка требует перед ними условную строку «Советы · N», а в NutritionTabV4 её пока нет, поэтому весь состав строки не отмечен как совпавший",
+      "h": "a95ab6f80bb9"
     },
     "лист выбора цели": {
       "v": "=",
@@ -759,28 +759,28 @@
       "h": "13369ee14a27"
     },
     "советы приёма": {
-      "v": "=",
-      "f": "Движка советов приёма нет, и в релиз идёт вкладка без строки «Советы» — heys_day_nutrition_v1.js:1374-1610",
-      "h": "84b8bd88f510"
+      "v": "≠",
+      "f": "MealOptimizer уже анализирует конкретный meal и с 01.09 явно возвращает scope='meal' (meal-optimizer-scope-contract.test.js), но NutritionTabV4 не рендерит лучший совет и не реализует пару «Понятно» до конца дня / «Не показывать» для правила. Существующий MealOptimizerSection живёт только в legacy meal card и его dismiss-семантика другая",
+      "h": "90691775fe1f"
     },
     "формат совета": {
-      "v": "—",
-      "f": "Целевой вид отложенных советов приёма; контракт сам выводит их из релиза",
+      "v": "≠",
+      "f": "После решения владельца 01.09 это снова релизный контракт, но NutritionTabV4 карточку совета не рендерит: нет пары «действие + причина» и потому нет основания отмечать строку как неприменимую",
       "h": "f57d9311a5bd"
     },
     "сколько советов": {
-      "v": "—",
-      "f": "Правило для отложенных советов приёма; механики в релизе нет по решению контракта",
+      "v": "≠",
+      "f": "После решения владельца 01.09 механика входит в релиз, но NutritionTabV4 не выбирает и не считает карточки. Дополнительно родительская строка говорит «показывается один», а эта — «максимум 3»; до решения код не должен выдать одно за другое",
       "h": "6cc3b1f9b788"
     },
     "совет с заменой": {
-      "v": "—",
-      "f": "Правило для отложенных советов приёма; механики в релизе нет по решению контракта",
+      "v": "≠",
+      "f": "После решения владельца 01.09 правило входит в релиз; MealOptimizer умеет вернуть products, но NutritionTabV4 не рендерит внутри совета строку «Заменить → …» и не связывает её с механикой замены продукта",
       "h": "6711397c78e9"
     },
     "советов нет": {
-      "v": "=",
-      "f": "Строки «Советы» на вкладке нет вовсе, пустого списка тоже — heys_day_nutrition_v1.js:1374-1610",
+      "v": "≠",
+      "f": "Сейчас строки «Советы» нет всегда, а контракт требует скрывать её только при пустом результате meal-scoped движка. Условного рендера по числу рекомендаций в NutritionTabV4 пока нет",
       "h": "a0eda7225e15"
     },
     "два удаления подряд": {
@@ -1019,9 +1019,9 @@
       "h": "f0e715a9dea4"
     },
     "держатель места": {
-      "v": "—",
-      "f": "правило вынесено в home-widgets.v4.dc.html и там же проверяется; здесь строка только ссылается на него, своего утверждения о вкладке не делая",
-      "h": "93b4e88c36e2"
+      "v": "=",
+      "f": "Решение 31.08 сняло держатели полностью: NutritionTabV4 читает синхронные day/pIndex/insulinWaveData и рендерит данные либо прочерки; skeleton/placeholder веток и сетевого loading-состояния у блоков вкладки нет",
+      "h": "56265eaf8a2d"
     },
     "выход, удаление данных, производительность": {
       "v": "—",
@@ -1409,14 +1409,19 @@
       "h": "2afdb58a5f0b"
     },
     "Питание · зона нейтральная · 04": {
-      "v": "≠",
-      "f": "тон нейтрального числа: демо-кадр зоны даёт --tx, а все основные кадры экрана — --ac, и парная сверка классов (nutrition-v4-canvas-geometry.test.js) держит акцент. Спорят два кадра одного канваса, а не кадр с кодом; большинство и парный гейт на стороне акцента, поэтому код оставлен на --v4-act-text",
-      "h": "7c49687719e8"
+      "v": "=",
+      "f": ".nutrition-v4-hero__value использует --v4-act-text, соответствующий роли canvas --ac; решение дизайнера 01.09 пересняло прежний конфликтующий нейтральный кадр",
+      "h": "23f1b43c08ab"
     },
     "Питание · зона нейтральная · 05": {
       "v": "—",
       "f": "доля заполнения на демонстрационных данных: ширина полосы считается из съеденного и нормы человека, поэтому число кадра — пример, а не правило. Само правило — «полоса по шкале зон» — стоит отдельной строкой контракта",
       "h": "bcf82aa7d4c4"
+    },
+    "Питание · зона нейтральная · 06": {
+      "v": "=",
+      "f": "buildHeroState для 105 % возвращает rightZone='over'; .nutrition-v4-hero__budget [data-zone='over'] использует --v4-ink, то есть роль canvas --tx",
+      "h": "ac4f539142b5"
     },
     "Питание · зона предупреждения · 01": {
       "v": "—",
@@ -2169,9 +2174,9 @@
       "h": "8e2200176eac"
     },
     "Питание · лист правки приёма · рисунок 15": {
-      "v": "—",
-      "f": "значок или кривая, принадлежащие встроенным виджетам Главной и общей обвязке кадра (шеврон строки, крестик листа): собственных глифов у вкладки нет, она берёт общий svgIcon",
-      "h": "d3da9afa1bab"
+      "v": "=",
+      "f": "Первая кривая документа «Сохранить набором» дословно передана actionRow('preset') в heys_day_nutrition_v1.js; meal-actions-icons.test.js читает полную форму из кадра и проверяет обе кривые",
+      "h": "f0196b3a5dda"
     },
     "Питание · лист правки приёма · рисунок 16": {
       "v": "≠",
@@ -2410,18 +2415,18 @@
     },
     "Питание · вода без кнопки · рисунок 05": {
       "v": "—",
-      "f": "точки кривой — данные человека за неделю, а не правило: путь строит catmullRomPath(points) (heys_day_water_v1.js:393-397), кадровые координаты это чей-то дневник. Поле кривой сверено строкой «рисунок 04»",
-      "h": "b4833d8784c7"
+      "f": "Точная залитая кривая зависит от семи фактов демонстрационного человека; продукт строит её catmullRomPath(points) и заливает currentColor с opacity .14. Геометрический контракт поля и алгоритма проверяются соседними строками, literal этого набора данных в код не вшивается",
+      "h": "48cef96418ab"
     },
     "Питание · вода без кнопки · рисунок 06": {
       "v": "—",
-      "f": "точки кривой — данные человека за неделю, а не правило: путь строит catmullRomPath(points) (heys_day_water_v1.js:393-397), кадровые координаты это чей-то дневник. Поле кривой сверено строкой «рисунок 04»",
-      "h": "f84e0522db19"
+      "f": "Точная пунктирная кривая зависит от семи дневных норм демонстрационного человека; продукт строит динамическую normPath тем же Catmull-Rom и рисует currentColor 1 px, dash 3 3, opacity .5. Literal координат не является runtime-контрактом",
+      "h": "6ffbb95f9084"
     },
     "Питание · вода без кнопки · рисунок 07": {
       "v": "—",
-      "f": "точки кривой — данные человека за неделю, а не правило: путь строит catmullRomPath(points) (heys_day_water_v1.js:393-397), кадровые координаты это чей-то дневник. Поле кривой сверено строкой «рисунок 04»",
-      "h": "4334d617acfa"
+      "f": "Точная линия зависит от семи фактов демонстрационного человека; продукт строит динамический linePath Catmull-Rom и рисует currentColor толщиной 1.8. Literal координат не вшивается, чтобы реальные данные не подменялись макетным примером",
+      "h": "12a36741c0c8"
     },
     "Питание · вода без кнопки · рисунок 08": {
       "v": "=",
@@ -2617,6 +2622,424 @@
       "v": "=",
       "f": "копия кадра найдена в коде. Проверял не целиком строкой, а поимённо: из каждой копии взяты фразы длиннее восемнадцати знаков без чисел и найдены поиском по дереву. Числа и названия продуктов в кадре — демонстрационные, они приходят из данных человека",
       "h": "28354cb6e684"
+    }
+  },
+  "frames": {
+    "Питание · блок · Шапка": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Плашка куратора": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Герой": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Окно приёмов": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Дневник": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Добавить приём": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Итоги дня": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Вода": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Качество еды": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Приёмы за день": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Голод и энергия": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Добавки · частично": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Ряд чипов": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Нижняя навигация": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Итоги дня · шкала зон": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Итоги дня · утро": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Итоги дня · вечер": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Вода · норма набрана": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Вода · пустой день": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Вода · отстаёт": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Добавки": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Добавки · группа отмечена": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Добавки · всё принято": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Добавки · длинные названия": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Добавки · длинный курс": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Добавки · прошлый день": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Добавки · курса нет": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · пустой день": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · перебор": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · прошлый день": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · лист правки приёма": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блоки выключены": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · только чтение": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · офлайн без данных": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · зона нейтральная": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · зона предупреждения": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · зона красная": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Волна сейчас": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Оценка и риск": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · вопрос о дате": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · куда перенести приём": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · советы приёма": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · копирование частью": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · отмена удаления": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · куда переместить": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · вода без кнопки": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · блок · Рефид": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · окно и трассировка": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · чем добрать клетчатку": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · приём раскрыт": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · приёмы полосами": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · дневник с номерами": {
+      "evidence": [
+        "apps/web/__tests__/nutrition-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
     }
   }
 }

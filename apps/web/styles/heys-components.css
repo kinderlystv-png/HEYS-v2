@@ -1413,7 +1413,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-correction__legend-item.is-weight {
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .weekly-wrap-correction__legend-item.is-waist {
@@ -1479,7 +1479,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 10px;
   font-weight: 500;
   line-height: 1.3;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Тон разводит расчёт и измерение — тот же приём, что в листе куратора. */
@@ -1493,7 +1493,7 @@ body.tour-active .ios-pwa-banner {
 .weekly-wrap-correction__fact-value.is-quiet {
   font-size: 11px;
   font-weight: 600;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Ключ строки — обычными чернилами, как в кадре: пару «ключ — значение»
@@ -4444,7 +4444,7 @@ body.tour-active .ios-pwa-banner {
   flex-direction: column;
 }
 
-/* Подпись поля по кадру: 10 px/600 чернилами 42 % через 5 до самого поля.
+/* Подпись поля по кадру: 10 px/600 чернилами 56 % через 5 до самого поля.
    Прежде 12 px на легаси --muted с запасным #6b7280 — токеном снятой системы,
    которого в наборах нет. Правка была объявлена в 5908f6658, но в файл тогда
    не попала: скрипт оборвался до записи, а сообщение коммита это утверждало. */
@@ -4453,7 +4453,7 @@ body.tour-active .ios-pwa-banner {
   font-weight: 600;
   line-height: 1;
   margin-bottom: 5px;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Поля кадра отличаются от листа заливкой, а не контуром: первая поверхность
@@ -4562,8 +4562,8 @@ body.tour-active .ios-pwa-banner {
   gap: 8px;
 }
 
-/* Клетка витамина — плашка кадра: подпись и значение в одну строку, высота от
-   31, радиус 9. Прежде подпись фиксированной шириной 48 и поле в полный рост
+/* Клетка витамина — плашка кадра: подпись и значение в одну строку тоном 56 %,
+   высота от 31, радиус 9. Прежде подпись фиксированной шириной 48 и поле в полный рост
    рядом, отчего одиннадцать витаминов занимали пол-экрана. */
 .pe-field--inline {
   flex-direction: row;
@@ -4580,7 +4580,7 @@ body.tour-active .ios-pwa-banner {
   flex-shrink: 0;
   margin-bottom: 0;
   font-size: 10.5px;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .pe-field--inline .pe-input {
@@ -4592,6 +4592,7 @@ body.tour-active .ios-pwa-banner {
   background: none;
   font-size: 10.5px;
   text-align: center;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Группа полей — не карточка: ни один кадр шагов правки не рисует под полями
@@ -4673,7 +4674,7 @@ body.tour-active .ios-pwa-banner {
 .pe-portions-block .pe-section-title {
   margin: 0;
   letter-spacing: 0.1em;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .pe-portions-name,
@@ -4695,7 +4696,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 10px;
   font-weight: 500;
   line-height: 1.4;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 40%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Кнопка «Шаблон» на грунте по кадру: высота от 32, пилюля, 11 px/700 тоном
@@ -4752,14 +4753,14 @@ body.tour-active .ios-pwa-banner {
   padding: 0 22px 0 10px;
 }
 
-/* «г» рядом со значением: 10 px/500 чернилами 35 %. Прежде роль третьих
+/* «г» рядом со значением: 10 px/500 чернилами 56 %. Прежде роль третьих
    чернил с запасным #94a3b8 — сланец снятой системы. */
 .pe-portions-grams-unit {
   position: absolute;
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 35%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-size: 10px;
   font-weight: 500;
   line-height: 1;
@@ -4880,7 +4881,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
 
@@ -4915,7 +4916,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 /* Авто-расчёт по кадру — строка подписи под полями, а не коробка: 10,5 px/500
-   чернилами 42 % через 9. Прежде пунктирная рамка на второй поверхности —
+   чернилами 56 % через 9. Прежде пунктирная рамка на второй поверхности —
    приём прежней системы, и запасные значения в ней были из чужого набора
    (#f9fafb и #e5e7eb вместо тёплых). */
 .pe-preview {
@@ -4926,7 +4927,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .pe-preview-label {
@@ -4994,6 +4995,10 @@ body.tour-active .ios-pwa-banner {
   color: #9ca3af;
 }
 
+[data-theme$="dark"] .pe-portions-block .pe-section-title {
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
 [data-theme$="dark"] .pe-accordion-chevron {
   background: var(--v4-bg, #0f172a);
   border-color: #1f2937;
@@ -5028,7 +5033,11 @@ body.tour-active .ios-pwa-banner {
 [data-theme$="dark"] .pe-preview {
   background: var(--v4-bg, #0f172a);
   border-color: #1f2937;
-  color: #cbd5f5;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+[data-theme$="dark"] .pe-field--inline .pe-input {
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .pe-warning {

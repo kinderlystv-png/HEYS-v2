@@ -8,6 +8,7 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
   const { useState, useEffect, useCallback, useRef, useMemo } = React || {};
+  const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';
 
   function useFallbackAccessSignPin() {
     const [value, setValue] = useState('');
@@ -1397,22 +1398,36 @@
             'aria-hidden': 'true',
           }),
           React.createElement('div', { className: 'heys-consent-sign-sheet__body' },
-          React.createElement('div', { className: 'heys-consent-sign-sheet__kicker' }, 'Подписание'),
-          React.createElement('div', { className: 'heys-consent-sign-sheet__title' }, signSheetTitle),
-          signedDocsForDisplay.map((item) => React.createElement('div', {
-            key: 'sign_doc_' + item.type,
-            className: 'heys-consent-sign-sheet__doc-link-row',
-          },
-            React.createElement('span', { className: 'heys-consent-sign-sheet__doc-edition' },
-              (signedDocsForDisplay.length === 1 ? 'Редакция ' : signDocName(item.type) + ', редакция ')
-              + (item.version || CURRENT_VERSIONS[item.type] || '1.0')
-            ),
-            React.createElement('button', {
-              type: 'button',
-              className: 'heys-consent-sign-sheet__doc-link',
-              onClick: () => setShowFullText(item.type),
-            }, 'Читать')
-          )),
+          !signSuccess && React.createElement(React.Fragment, null,
+            React.createElement('div', { className: 'heys-consent-sign-sheet__kicker' }, 'Подписание'),
+            React.createElement('div', {
+              className: 'heys-consent-sign-sheet__title',
+              style: { font: '700 15px/1.35 Figtree, system-ui, sans-serif', textAlign: 'center' },
+            }, signSheetTitle),
+            React.createElement('p', {
+              style: {
+                margin: '7px 0 0',
+                color: INK_DATA,
+                font: '500 11.5px/1.5 Figtree, system-ui, sans-serif',
+                textAlign: 'center',
+                textWrap: 'pretty',
+              },
+            }, 'Введите код доступа — он заменяет собственноручную подпись.'),
+            signedDocsForDisplay.map((item) => React.createElement('div', {
+              key: 'sign_doc_' + item.type,
+              className: 'heys-consent-sign-sheet__doc-link-row',
+            },
+              React.createElement('span', { className: 'heys-consent-sign-sheet__doc-edition' },
+                (signedDocsForDisplay.length === 1 ? 'Редакция ' : signDocName(item.type) + ', редакция ')
+                + (item.version || CURRENT_VERSIONS[item.type] || '1.0')
+              ),
+              React.createElement('button', {
+                type: 'button',
+                className: 'heys-consent-sign-sheet__doc-link',
+                onClick: () => setShowFullText(item.type),
+              }, 'Читать')
+            ))
+          ),
           signSuccess
             ? React.createElement(React.Fragment, null,
               React.createElement('div', { className: 'heys-consent-sign-sheet__done', role: 'status' },
@@ -1432,7 +1447,7 @@
                 // снимается здесь, в своём файле, а не правкой чужого модуля.
                 React.createElement('div', {
                   className: 'heys-consent-sign-sheet__done-meta',
-                  style: { userSelect: 'text', WebkitUserSelect: 'text' },
+                  style: { color: INK_DATA, userSelect: 'text', WebkitUserSelect: 'text' },
                 },
                   formatAccessCodeSignMeta(signedAt)
                 )
@@ -1455,10 +1470,13 @@
                   );
                 })
               ),
-              // Строка «после подписи»: запись — документ, версия, время и
-              // устройство, тот же список, что в журнале.
-              React.createElement('p', { className: 'heys-consent-sign-sheet__done-note' },
-                'Запись о подписании сохранена: документ, версия, время и устройство. Копию можно запросить у куратора.'
+              // Кадр «подписано»: коротко сообщает, где потом найти копию;
+              // полные реквизиты подписи остаются строкой выше.
+              React.createElement('p', {
+                className: 'heys-consent-sign-sheet__done-note',
+                style: { color: INK_DATA },
+              },
+                'Копия подписи хранится в профиле — её видно в настройках'
               )
             )
             : React.createElement(React.Fragment, null,
@@ -1688,7 +1706,7 @@
                 style: {
                   marginTop: 12,
                   font: '500 11px/1.5 Figtree, system-ui, sans-serif',
-                  color: 'rgba(0,0,0,.42)',
+                  color: INK_DATA,
                   textWrap: 'pretty',
                 }
               }, 'Необязательное отмечается тапом и меняется в настройках в любой момент. Заранее ничего не включено.')
@@ -2094,7 +2112,7 @@
             style: {
               marginTop: 4,
               font: '500 11px/1.5 Figtree, system-ui, sans-serif',
-              color: 'rgba(0,0,0,.55)',
+              color: INK_DATA,
               textWrap: 'pretty',
             }
           }, disclosure)
@@ -2105,7 +2123,7 @@
             display: 'block',
             marginTop: 3,
             font: '500 10.5px/1.4 Figtree, system-ui, sans-serif',
-            color: 'rgba(0,0,0,.42)',
+            color: INK_DATA,
           }
         }, optionalHint),
 
@@ -2777,7 +2795,10 @@
                 React.createElement('h1', { className: 'consent-fulltext__title' }, docTitle),
                 (docVersion || docEffectiveDate) && React.createElement('div', { className: 'consent-fulltext__badges' },
                   docVersion && React.createElement('span', { className: 'consent-fulltext__badge consent-fulltext__badge--version' }, `Версия ${docVersion}`),
-                  docEffectiveDate && React.createElement('span', { className: 'consent-fulltext__badge consent-fulltext__badge--date' }, `В силе с ${docEffectiveDate}`)
+                  docEffectiveDate && React.createElement('span', {
+                    className: 'consent-fulltext__badge consent-fulltext__badge--date',
+                    style: { color: INK_DATA },
+                  }, `В силе с ${docEffectiveDate}`)
                 ),
                 React.createElement('div', { className: 'consent-fulltext__hero-divider' })
               ),

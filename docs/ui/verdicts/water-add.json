@@ -94,9 +94,9 @@
       "h": "6b63375b115a"
     },
     "раскладка плитки": {
-      "v": "=",
-      "f": "norm right8/top7, label left8/bottom8, numV right8/bottom8 — 730-widgets-dashboard.css:10458-10487,10652",
-      "h": "04a4891dd87b"
+      "v": "≠",
+      "f": "Строка сама содержит три несовместимые редакции. Код следует последнему ответу дизайнера от 31 августа: label left8/top8, numV right8/top8, без нормы на 1×1 — heys_widgets_ui_v1.js:4231-4249; 730-widgets-dashboard.css:11160-11178,11350-11365. Начальная фраза той же строки всё ещё требует label/факт снизу и норму сверху; это зафиксировано в UI_V4_CODEX_DESIGN_DISCREPANCIES.md.",
+      "h": "922b9de29b12"
     },
     "норма": {
       "v": "=",
@@ -494,8 +494,8 @@
       "h": "eddac038eb9a"
     },
     "вид · плитка воды 1×1": {
-      "v": "?",
-      "f": "Дизайнер снял спор строки с кадром — число 12 px справа сверху, — но строка разошлась с соседней «раскладка плитки» той же зоны: та требует «Вода» слева внизу, факт справа внизу, норму справа сверху, обе нижние строки по общей базовой линии. Это разная раскладка, а не разница в пикселях, и вердикт «раскладки плитки» стоит «=». Код следует ей (numV справа внизу); плитка вдобавок живёт в 730-widgets-dashboard.css — файле зоны home-widgets, который правит другая сессия. Новый вопрос дизайнеру в UI_V4_FINDINGS.md",
+      "v": "=",
+      "f": "Актуальная часть строки и позднее решение «раскладки плитки» совпадают с runtime: label left/top 8, 9.5px/600; numV right/top 8, 12px/600; нормы на 1×1 нет. heys_widgets_ui_v1.js:4227-4249; 730-widgets-dashboard.css:11160-11178,11350-11365",
       "h": "05c691f0c7cd"
     },
     "вид · плитка в увеличении": {
@@ -672,6 +672,96 @@
       "v": "—",
       "f": "кадр помечен data-demo=\"protocol\": это предложение варианта для дизайнера, а не экран продукта. CLAUDE.md прямо говорит «геометрия сверяется только по кадрам data-demo=\"stop\" на 375 px; кадры protocol не реализуются». Три варианта (Б, В, Г) — развилка о том, как вода показывается на Главной, и её решает дизайнер, а не сведение",
       "h": "3a755f83303c"
+    }
+  },
+  "frames": {
+    "Вода · В3 · уменьшенное движение": {
+      "evidence": [
+        "apps/web/__tests__/water-add-v4.test.js",
+        "apps/web/__tests__/water-custom-volume-v4.test.js",
+        "apps/web/heys_water_custom_volume_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
+    },
+    "Вода · карточка · Кольцо": {
+      "evidence": [
+        "apps/web/__tests__/water-add-v4.test.js",
+        "apps/web/__tests__/water-custom-volume-v4.test.js",
+        "apps/web/heys_water_custom_volume_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
+    },
+    "Вода · свой объём · лист": {
+      "evidence": [
+        "apps/web/__tests__/water-add-v4.test.js",
+        "apps/web/__tests__/water-custom-volume-v4.test.js",
+        "apps/web/heys_water_custom_volume_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
+    },
+    "Вода · норма · 0,4 л": {
+      "evidence": [
+        "apps/web/__tests__/water-add-v4.test.js",
+        "apps/web/__tests__/water-custom-volume-v4.test.js",
+        "apps/web/heys_water_custom_volume_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
+    },
+    "Вода · норма · 0,8 л": {
+      "evidence": [
+        "apps/web/__tests__/water-add-v4.test.js",
+        "apps/web/__tests__/water-custom-volume-v4.test.js",
+        "apps/web/heys_water_custom_volume_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
+    },
+    "Вода · норма · 1,0 л": {
+      "evidence": [
+        "apps/web/__tests__/water-add-v4.test.js",
+        "apps/web/__tests__/water-custom-volume-v4.test.js",
+        "apps/web/heys_water_custom_volume_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
+    },
+    "Вода · норма · 2,1 л": {
+      "evidence": [
+        "apps/web/__tests__/water-add-v4.test.js",
+        "apps/web/__tests__/water-custom-volume-v4.test.js",
+        "apps/web/heys_water_custom_volume_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
+    },
+    "Вода · норма · 2,7 л": {
+      "evidence": [
+        "apps/web/__tests__/water-add-v4.test.js",
+        "apps/web/__tests__/water-custom-volume-v4.test.js",
+        "apps/web/heys_water_custom_volume_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
+    },
+    "Чипы объёма · обычный вид": {
+      "evidence": [
+        "apps/web/__tests__/water-add-v4.test.js",
+        "apps/web/__tests__/water-custom-volume-v4.test.js",
+        "apps/web/heys_water_custom_volume_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
+    },
+    "Чипы объёма · нечего убавлять": {
+      "evidence": [
+        "apps/web/__tests__/water-add-v4.test.js",
+        "apps/web/__tests__/water-custom-volume-v4.test.js",
+        "apps/web/heys_water_custom_volume_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
+    },
+    "Чипы объёма · нажатие": {
+      "evidence": [
+        "apps/web/__tests__/water-add-v4.test.js",
+        "apps/web/__tests__/water-custom-volume-v4.test.js",
+        "apps/web/heys_water_custom_volume_v1.js",
+        "apps/web/styles/modules/400-water-and-hydration.css"
+      ]
     }
   }
 }

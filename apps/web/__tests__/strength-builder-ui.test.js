@@ -242,7 +242,7 @@ describe('конструктор: сводка считается ядром', (
     expect(screen.getByText('1 без тоннажа')).toBeTruthy();
   });
 
-  it('главная кнопка называет, сколько не закрыто', () => {
+  it('главная кнопка не дублирует счёт незакрытых из шапки', () => {
     render(React.createElement(SB.BuilderScreen, {
       training: training([{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }]),
       dateKey: '2026-08-09',
@@ -250,7 +250,51 @@ describe('конструктор: сводка считается ядром', (
       onPatch: () => {},
       onClose: () => {},
     }));
-    expect(screen.getByText('Завершить · 1 не закрыто')).toBeTruthy();
+    expect(screen.getByText('Завершить тренировку')).toBeTruthy();
+    expect(screen.getByText('1 / 2 ✓')).toBeTruthy();
+  });
+});
+
+describe('конструктор: тяжесть подхода без профессионального жаргона', () => {
+  it('показывает тяжесть понятными словами и раскрывает краткую шкалу', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{
+        name: 'Жим',
+        rpe: 7,
+        restSec: 120,
+        approaches: [work(75, 8, false)],
+      }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+    }));
+
+    const helpTrigger = screen.getByLabelText('Что значит тяжесть подхода');
+    const help = helpTrigger.closest('details');
+    expect(help?.open).toBe(false);
+    fireEvent.click(helpTrigger);
+    expect(help?.open).toBe(true);
+    expect(screen.getByText(/6 — легко; 7–8 — тяжело/)).toBeTruthy();
+    expect(screen.getByText('· по тяжести 7')).toBeTruthy();
+    expect(screen.getByLabelText('Тяжесть подхода 7 из 10')).toBeTruthy();
+    expect(screen.queryByText(/RPE/i)).toBeNull();
+    expect(screen.queryByLabelText(/RPE/i)).toBeNull();
+  });
+});
+
+describe('конструктор: спокойная нижняя панель', () => {
+  it('не дублирует счёт незакрытых подходов на кнопке завершения', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{ name: 'Жим', approaches: [work(75, 8, false)] }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+    }));
+
+    expect(screen.getByRole('button', { name: 'Завершить тренировку' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /не закрыто/ })).toBeNull();
   });
 });
 
@@ -270,11 +314,50 @@ describe('конструктор: связка', () => {
     expect(screen.getByText('A2')).toBeTruthy();
   });
 
+  it('не предлагает сброс веса внутри связки', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: superset(), dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
+    }));
+
+    expect(screen.queryByRole('button', { name: '+ Сброс' })).toBeNull();
+  });
+
   it('отдых связки — максимум из участников', () => {
     render(React.createElement(SB.BuilderScreen, {
       training: superset(), dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
     }));
     expect(screen.getByText(/Отдых 2:00 пойдёт, когда закрыт весь раунд/)).toBeTruthy();
+  });
+
+  it('закрытие последней клетки раунда один раз запускает отдых связки', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: superset(), dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
+    }));
+
+    const round = screen.getByText('Р2').closest('.sb-round');
+    const cells = within(round).getAllByRole('button');
+    fireEvent.click(cells[0]);
+    expect(screen.queryByText('Отдых · Связка A')).toBeNull();
+    fireEvent.click(cells[1]);
+    expect(screen.getByText('Отдых · Связка A')).toBeTruthy();
+    expect(screen.getByText('максимум участников · 2:00')).toBeTruthy();
+    expect(screen.getByText(/Следующий раунд|Связка завершена/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Завершить тренировку' })).toBeTruthy();
+  });
+
+  it('таймер дока прибавляет 10 секунд и сворачивается, не закрывая список', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{ name: 'Жим', restSec: 90, approaches: [work(75, 8, false)] }]),
+      dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
+    }));
+
+    fireEvent.click(screen.getByLabelText('Отметить выполненным'));
+    expect(screen.getByText('+10 секунд')).toBeTruthy();
+    fireEvent.click(screen.getByText('+10 секунд'));
+    expect(screen.getByText('1:40')).toBeTruthy();
+    fireEvent.click(screen.getByText('Свернуть'));
+    expect(screen.getByLabelText('Развернуть таймер отдыха')).toBeTruthy();
+    expect(screen.getByText('Жим')).toBeTruthy();
   });
 
   it('старая связка с неравными подходами показана плоско и объясняет почему', () => {
@@ -417,7 +500,7 @@ describe('остались незакрытые подходы (экран 11)',
       onPatch: () => {},
       onClose: () => {},
     }));
-    fireEvent.click(screen.getByText('Завершить · 1 не закрыто'));
+    fireEvent.click(screen.getByText('Завершить тренировку'));
     expect(screen.getByText('Остались незакрытые подходы')).toBeTruthy();
     expect(screen.getByText(/лучше убрать/)).toBeTruthy();
   });
@@ -436,7 +519,7 @@ describe('остались незакрытые подходы (экран 11)',
       onPatch: (next) => seen.push(next),
       onClose: () => {},
     }));
-    fireEvent.click(screen.getByText('Завершить · 1 не закрыто'));
+    fireEvent.click(screen.getByText('Завершить тренировку'));
     fireEvent.click(screen.getByText('Убрать пустые'));
     const aps = seen[seen.length - 1][0].approaches;
     expect(aps.length).toBe(2);
@@ -455,7 +538,7 @@ describe('остались незакрытые подходы (экран 11)',
       onPatch: (n) => patched.push(n),
       onClose: () => closed.push(1),
     }));
-    fireEvent.click(screen.getByText('Завершить · 1 не закрыто'));
+    fireEvent.click(screen.getByText('Завершить тренировку'));
     fireEvent.click(screen.getByText('Оставить'));
     expect(patched.length).toBe(0);
     expect(closed.length).toBe(1);
@@ -626,6 +709,223 @@ describe('пуш об окончании отдыха (экран 11, тольк
       expect(created.length).toBe(1);
       expect(created[0].title).toBe('Отдых закончился');
       expect(created[0].opts.body).toContain('Жим лёжа');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('сохраняемый отдых', () => {
+  it('восстанавливает незавершённый activeRest и сохраняет +10 секунд', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-09T18:41:40Z'));
+    try {
+      const startedAt = Date.now() - 10000;
+      const patches = [];
+      render(React.createElement(SB.BuilderScreen, {
+        training: {
+          ...training([{ name: 'Жим', approaches: [work(75, 8, true)] }]),
+          workoutLog: {
+            exercises: [{ name: 'Жим', approaches: [work(75, 8, true)] }],
+            activeRest: {
+              startedAt, total: 90, owner: 'Жим', source: 'тяжесть 7 → 1:30',
+              nextLabel: 'Следующий подход', collapsed: false,
+            },
+          },
+        },
+        dateKey: '2026-08-09', profile: {}, onPatch: () => {},
+        onPatchSession: (patch) => patches.push(patch), onClose: () => {},
+      }));
+
+      expect(screen.getByText('1:20')).toBeTruthy();
+      fireEvent.click(screen.getByText('+10 секунд'));
+      expect(patches.at(-1).activeRest).toMatchObject({ startedAt, total: 100, owner: 'Жим' });
+      expect(screen.getByText('1:30')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('не запускает истёкший activeRest заново и просит очистить снимок', () => {
+    const patches = [];
+    render(React.createElement(SB.BuilderScreen, {
+      training: {
+        ...training([{ name: 'Жим', approaches: [work(75, 8, true)] }]),
+        workoutLog: {
+          exercises: [{ name: 'Жим', approaches: [work(75, 8, true)] }],
+          activeRest: { startedAt: Date.now() - 120000, total: 90 },
+        },
+      },
+      dateKey: '2026-08-09', profile: {}, onPatch: () => {},
+      onPatchSession: (patch) => patches.push(patch), onClose: () => {},
+    }));
+
+    expect(screen.queryByText('+10 секунд')).toBeNull();
+    expect(patches).toContainEqual({ activeRest: null });
+  });
+
+  it('проводит activeRest через нормализацию workoutLog и оба входа конструктора', () => {
+    const daySource = fs.readFileSync(path.join(WEB_DIR, 'heys_day_trainings_v1.js'), 'utf8');
+    const normalizer = daySource.slice(
+      daySource.indexOf('function ensureWorkoutLogShape'),
+      daySource.indexOf('function patchTraining'),
+    );
+    expect(normalizer).toContain('out.activeRest = {');
+    expect(normalizer).toContain('collapsed: !!restRaw.collapsed');
+    expect(normalizer).toContain('out.firstMarkAt = firstMarkAtNum');
+    expect(normalizer).toContain('out.lastMarkAt = lastMarkAtNum');
+    expect(daySource.match(/onPatchSession: function \(patch\)/g)).toHaveLength(2);
+  });
+});
+
+describe('lifecycle силовой сессии', () => {
+  it('после паузы больше 45 минут предлагает продолжить или завершить последней отметкой', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-09T20:51:00'));
+    try {
+      const lastMarkAt = new Date('2026-08-09T19:47:00').getTime();
+      const patches = [];
+      render(React.createElement(SB.BuilderScreen, {
+        training: {
+          ...training([{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }]),
+          workoutLog: {
+            startedAt: new Date('2026-08-09T19:40:00').getTime(),
+            firstMarkAt: new Date('2026-08-09T19:41:00').getTime(),
+            lastMarkAt,
+            exercises: [{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }],
+          },
+        },
+        dateKey: '2026-08-09', profile: {}, onPatch: () => {},
+        onPatchSession: (patch) => patches.push(patch), onClose: () => {},
+      }));
+
+      expect(screen.getByText('Тренировка на паузе')).toBeTruthy();
+      expect(screen.getByText('1 из 2 подходов · вас не было 64:00')).toBeTruthy();
+      fireEvent.click(screen.getByText('Завершить в 19:47'));
+      expect(patches.at(-1)).toEqual({ completedAt: lastMarkAt, activeRest: null });
+      expect(screen.getByText('Тренировка завершена')).toBeTruthy();
+      expect(screen.getByText('6:00')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('«Продолжить» убирает паузу без изменения журнала', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-09T20:51:00'));
+    try {
+      const patches = [];
+      render(React.createElement(SB.BuilderScreen, {
+        training: {
+          ...training([{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }]),
+          workoutLog: {
+            startedAt: new Date('2026-08-09T19:40:00').getTime(),
+            lastMarkAt: new Date('2026-08-09T19:47:00').getTime(),
+            exercises: [{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }],
+          },
+        },
+        dateKey: '2026-08-09', profile: {}, onPatch: () => {},
+        onPatchSession: (patch) => patches.push(patch), onClose: () => {},
+      }));
+
+      fireEvent.click(screen.getByText('Продолжить'));
+      expect(screen.queryByText('Тренировка на паузе')).toBeNull();
+      expect(patches).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('таймер берёт persisted startedAt и замирает на completedAt', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-09T18:42:00Z'));
+    try {
+      const completedAt = Date.now() - 30000;
+      const startedAt = completedAt - 60000;
+      const persistedTraining = {
+          ...training([{ name: 'Жим', approaches: [work(75, 8, true)] }]),
+          time: '06:00',
+          workoutLog: {
+            startedAt,
+            completedAt,
+            exercises: [{ name: 'Жим', approaches: [work(75, 8, true)] }],
+          },
+        };
+      const builderView = render(React.createElement(SB.BuilderScreen, {
+        training: persistedTraining,
+        dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
+      }));
+
+      expect(screen.getByText(/⏱ 1:00/)).toBeTruthy();
+      act(() => { vi.advanceTimersByTime(5000); });
+      expect(screen.getByText(/⏱ 1:00/)).toBeTruthy();
+
+      builderView.unmount();
+      const Parts = globalThis.HEYS.StrengthBuilderParts;
+      render(React.createElement(Parts.SummaryCard, {
+        training: persistedTraining, dateKey: '2026-08-09', onOpen: () => {},
+      }));
+      expect(screen.getByText('1:00')).toBeTruthy();
+      act(() => { vi.advanceTimersByTime(5000); });
+      expect(screen.getByText('1:00')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('первая отметка пишет старт и обе метки, следующая двигает только lastMarkAt', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-09T18:40:00Z'));
+    try {
+      const patches = [];
+      render(React.createElement(SB.BuilderScreen, {
+        training: training([{ name: 'Жим', approaches: [work(75, 8, false), work(75, 8, false)] }]),
+        dateKey: '2026-08-09', profile: {}, onPatch: () => {},
+        onPatchSession: (patch) => patches.push(patch), onClose: () => {},
+      }));
+
+      fireEvent.click(screen.getAllByLabelText('Отметить выполненным')[0]);
+      const first = patches.find((patch) => patch.firstMarkAt);
+      expect(first).toEqual({
+        startedAt: Date.now(), firstMarkAt: Date.now(), lastMarkAt: Date.now(),
+      });
+
+      vi.setSystemTime(new Date('2026-08-09T18:40:30Z'));
+      fireEvent.click(screen.getByLabelText('Отметить выполненным'));
+      const marks = patches.filter((patch) => patch.lastMarkAt);
+      expect(marks).toHaveLength(2);
+      expect(marks[1]).toEqual({ lastMarkAt: Date.now() });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('«Готово» фиксирует completedAt и одним патчем очищает отдых', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-09T18:45:00Z'));
+    try {
+      const patches = [];
+      const closed = [];
+      render(React.createElement(SB.BuilderScreen, {
+        training: {
+          ...training([{ name: 'Жим', approaches: [work(75, 8, true)] }]),
+          workoutLog: {
+            startedAt: Date.now() - 300000,
+            activeRest: { startedAt: Date.now() - 10000, total: 90 },
+            exercises: [{ name: 'Жим', approaches: [work(75, 8, true)] }],
+          },
+        },
+        dateKey: '2026-08-09', profile: {}, onPatch: () => {},
+        onPatchSession: (patch) => patches.push(patch), onClose: () => closed.push(1),
+      }));
+
+      fireEvent.click(screen.getByText('Завершить тренировку'));
+      fireEvent.click(screen.getByText('Готово'));
+
+      expect(patches).toContainEqual({
+        completedAt: Date.now(), activeRest: null, finish: true,
+      });
+      expect(closed).toHaveLength(1);
     } finally {
       vi.useRealTimers();
     }

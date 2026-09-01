@@ -31,6 +31,25 @@ describe('home-widgets owner batch: дата, куратор, вода, онбо
     expect(dataSrc).not.toContain('timeZone: "Europe/Moscow"');
   });
 
+  it('новые короткие шапки воды и недельного долга не выталкивают данные из 2×1', () => {
+    const rhythm = uiSrc.slice(
+      uiSrc.indexOf("if (variantId === 'rhythm')"),
+      uiSrc.indexOf('// 2x2 — Оптимальный layout', uiSrc.indexOf("if (variantId === 'rhythm')")),
+    );
+    const debt = uiSrc.slice(
+      uiSrc.indexOf("if (variantId === 'week_debt')"),
+      uiSrc.indexOf("if (variantId === 'window')"),
+    );
+
+    expect(rhythm).toContain("v4Kicker('Вода')");
+    expect(rhythm).not.toContain('v4Kicker(`Вода ·');
+    expect(rhythm).toContain("className: 'widget-v4-water-rhythm__body'");
+    expect(rhythm).toContain('formatRuDecimal(drunk / 1000, 1)');
+    expect(debt).toContain("v4Kicker('Недосып · 7 дней')");
+    expect(debt).not.toContain('норма ${formatRuDecimal(target, 1)}');
+    expect(debt).toContain("formatRuUnit(formatRuDecimal(target, 1), 'ч')");
+  });
+
   it('подсказка долгого тапа после третьего открытия', () => {
     expect(uiSrc).toContain('homeOpensCount');
     expect(uiSrc).toContain('longPressHintShown');

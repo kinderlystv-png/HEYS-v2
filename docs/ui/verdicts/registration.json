@@ -170,8 +170,8 @@
     },
     "желаемый вес": {
       "v": "=",
-      "f": "profile_step:848 колесо цели без предела, :876 предупреждение об ИМТ и «прогноз не строим»; но итог печатает прогноз :1774. Решение 31 августа сделано: profile_step:971 тревожный тон #a1471c (--ac2) остался только у «недостатка», «избыток» и «ожирение» идут чернилами 45 %; гейт registration-v4-contract-geometry сторожил обратное и переписан",
-      "h": "08bd366908cb"
+      "f": "Решение 31 августа выполнено целиком: колесо цели остаётся в общих пределах веса; ИМТ показывается; при ИМТ цели ниже 18,5 шаг объясняет, что прогноз не строится, и итог выводит «не строим»; тревожный тон --ac2 применяется только к «недостатку», «избыток» и «ожирение» идут приглушёнными чернилами (heys_profile_step_v1.js)",
+      "h": "561a5dc24854"
     },
     "ошибка": {
       "v": "=",
@@ -390,8 +390,8 @@
     },
     "Регистрация · согласия · 14": {
       "v": "=",
-      "f": "суть документа — 500 11/1,5, чернила 55 %, отступ 4 (heys_consents_v1.js:2095)",
-      "h": "216f8413d96f"
+      "f": "суть документа — 500 11/1,5, роль --v4-ink-data (56 %), отступ 4 (heys_consents_v1.js, ConsentCheckbox disclosure)",
+      "h": "abd3d370b2dd"
     },
     "Регистрация · согласия · 15": {
       "v": "≠",
@@ -405,8 +405,8 @@
     },
     "Регистрация · согласия · 17": {
       "v": "≠",
-      "f": "причина над кнопкой набрана 500 тоном чернил 55 % по строке «неактивная кнопка» («причина стоит над ней 11,5 px/500 тоном чернил 55 %»). Кадр рисует 600 и 50 %; контракт старше кадра, и код на него прямо ссылается (heys_consents_v1.js:1867)",
-      "h": "e5e27560ab7a"
+      "f": "причина над кнопкой набрана 500 тоном чернил 55 % по общей строке «неактивная кнопка» этой зоны. Обновлённый кадр рисует 600 и 56 %; это внутренний конфликт канваса, поэтому продукт сохраняет именованное правило доступности (heys_consents_v1.js, requiredConsentReason)",
+      "h": "1df1c213e372"
     },
     "Регистрация · согласия · 18": {
       "v": "=",
@@ -470,8 +470,8 @@
     },
     "Документ · начало · 11": {
       "v": "=",
-      "f": ".consent-fulltext__badge--date — тот же чип фоном --c1, 600 10/1, чернила 50 % (733-ui-v4-login-theme:2223)",
-      "h": "8b3d35ef82b4"
+      "f": "чип даты — фон --c1, 600 10/1; инлайн-переопределение использует роль --v4-ink-data (56 %) поверх общего класса (heys_consents_v1.js, FullTextModal)",
+      "h": "6f34adfcb398"
     },
     "Документ · начало · 12": {
       "v": "=",
@@ -525,8 +525,8 @@
     },
     "Документ · начало · 22": {
       "v": "≠",
-      "f": "причина над кнопкой набрана 500 11,5/1,45 тоном чернил 55 % по строке «неактивная кнопка», кадр рисует 600 11/1,4 и 50 % — контракт старше кадра (heys_consents_v1.js:1867)",
-      "h": "980d06691312"
+      "f": "причина над кнопкой документа подчиняется общей строке «неактивная кнопка»: 500 11,5/1,45 и 55 %. Обновлённый кадр рисует 600 11/1,4 и 56 %; внутренний конфликт канваса оставлен именованным (consent-fulltext__scroll-hint)",
+      "h": "4f18a4b2e3ea"
     },
     "Документ · начало · 23": {
       "v": "=",
@@ -610,8 +610,8 @@
     },
     "Документ · конец · 16": {
       "v": "≠",
-      "f": "оговорка про телеграм стоит внутри пункта рядом с телеграмом и набрана как пара — 600 12/1,4. Так требует строка «реквизиты»: «оговорка про телеграм стоит рядом с телеграмом». Кадр выносит её отдельной сноской 500 11/1,5 тоном 50 %; контракт старше кадра. Текст приходит из apps/web/public/docs/v1.11/user-agreement.md, где это хвост пункта списка контактов",
-      "h": "71c1d16e3066"
+      "f": "оговорка про Telegram остаётся внутри пункта рядом с Telegram и набрана как пара 600 12/1,4 — так прямо требует строка «реквизиты». Обновлённый кадр по-прежнему выносит её отдельной сноской, теперь 500 11/1,5 тоном 56 %; конфликт структуры важнее смены тона и оставлен дизайнеру",
+      "h": "e2f858d1a32e"
     },
     "Документ · конец · 17": {
       "v": "≠",
@@ -690,13 +690,13 @@
     },
     "Регистрация · необязательные согласия · 12": {
       "v": "=",
-      "f": "суть под названием — 500 10,5/1,4 чернилами 42 %, отступ 3 (heys_consents_v1.js:2106)",
-      "h": "d28c1e784b70"
+      "f": "суть под названием — 500 10,5/1,4 ролью --v4-ink-data (56 %), отступ 3 (heys_consents_v1.js, optionalHint)",
+      "h": "4e4965859791"
     },
     "Регистрация · необязательные согласия · 13": {
       "v": "=",
-      "f": "сноска «Необязательное отмечается тапом» — 500 11/1,5 чернилами 42 %, отступ 12 (heys_consents_v1.js)",
-      "h": "3f3cd877c0d6"
+      "f": "сноска «Необязательное отмечается тапом» — 500 11/1,5 ролью --v4-ink-data (56 %), отступ 12 (heys_consents_v1.js)",
+      "h": "4bd2eca6010e"
     },
     "Регистрация · необязательные согласия · 14": {
       "v": "=",
@@ -745,8 +745,8 @@
     },
     "Регистрация · подпись кодом · 08": {
       "v": "=",
-      "f": "проза про код вместо подписи — 500 11,5/1,5 чернилами 55 %, отступ 7, по центру (heys_consents_v1.js:1355-1361)",
-      "h": "4a6c18d29700"
+      "f": "проза про код вместо подписи теперь живёт в реальной шторке ввода: 500 11,5/1,5 ролью --v4-ink-data (56 %), отступ 7, по центру (heys_consents_v1.js, access_code_sign)",
+      "h": "ddecd35f31ed"
     },
     "Регистрация · подпись кодом · 09": {
       "v": "=",
@@ -829,9 +829,9 @@
       "h": "d9c074850c22"
     },
     "Регистрация · подписано · 10": {
-      "v": "=",
-      "f": ".__done-meta — 500 11,5/1,5 чернилами 50 %, отступ 5, по центру; реквизиты подписи выделяются и копируются по строке «вид пункта согласия» (733-ui-v4-login-theme:1907)",
-      "h": "ad30bedd890b"
+      "v": "≠",
+      "f": ".__done-meta — 500 11,5/1,5 ролью --v4-ink-data (56 %), отступ 5, по центру. Продукт дополнительно показывает устройство и разрешает копирование: это требует общая строка «после подписи», хотя кадр обрывает пример после времени (heys_consents_v1.js)",
+      "h": "f58ea0c01fd0"
     },
     "Регистрация · подписано · 11": {
       "v": "=",
@@ -860,8 +860,8 @@
     },
     "Регистрация · подписано · 16": {
       "v": "=",
-      "f": ".__done-note — 500 11/1,5 чернилами 50 %, отступ 10, по центру (733-ui-v4-login-theme:1950)",
-      "h": "24eee4555cf5"
+      "f": "точная копия «Копия подписи хранится в профиле — её видно в настройках»; 500 11/1,5 ролью --v4-ink-data (56 %), отступ 10, по центру (heys_consents_v1.js)",
+      "h": "c6f0c0455875"
     },
     "Регистрация · подписано · 17": {
       "v": "=",
@@ -920,8 +920,8 @@
     },
     "Регистрация · персональные данные · 11": {
       "v": "=",
-      "f": "«Формула основного обмена у мужчин и женщин разная.» — 500 11/1,5, чернила 42 %, отступ 6 (heys_profile_step_v1.js:671)",
-      "h": "685188a6fb69"
+      "f": "«Формула основного обмена у мужчин и женщин разная.» — 500 11/1,5 ролью --v4-ink-data (56 %), отступ 6 (heys_profile_step_v1.js)",
+      "h": "0da925bef3b3"
     },
     "Регистрация · персональные данные · 12": {
       "v": "≠",
@@ -1100,8 +1100,8 @@
     },
     "Регистрация · рост и вес · 22": {
       "v": "=",
-      "f": "единица «кг» во второй карточке — 600 10,5 чернилами 45 % (heys_profile_step_v1.js:946)",
-      "h": "502e57b6a633"
+      "f": "единица «кг» во второй карточке — 600 10,5 ролью --v4-ink-data (56 %) (heys_profile_step_v1.js)",
+      "h": "c1c2cdb9b36a"
     },
     "Регистрация · рост и вес · 23": {
       "v": "=",
@@ -1190,8 +1190,8 @@
     },
     "Регистрация · цель и активность · 16": {
       "v": "=",
-      "f": "подсказка темпа — 500 10,5/1,45 чернилами 42 %, отступ 8. Было 12 px тоном --color-gray-500 снятой системы (heys_profile_step_v1.js)",
-      "h": "a62680564013"
+      "f": "подсказка выбранного темпа — 500 10,5/1,45 ролью --v4-ink-data (56 %), отступ 8 (heys_profile_step_v1.js)",
+      "h": "48932c26a9e3"
     },
     "Регистрация · цель и активность · 17": {
       "v": "=",
@@ -1270,8 +1270,8 @@
     },
     "Регистрация · сон и инсулиновая волна · 14": {
       "v": "=",
-      "f": "пометка невыбранного — 500 11/1 чернилами 40 % (heys_profile_step_v1.js)",
-      "h": "d622783723ff"
+      "f": "пометка «быстрый обмен» — 500 11/1 ролью --v4-ink-data (56 %); та же семантическая роль применена ко всем пометкам пресетов (heys_profile_step_v1.js)",
+      "h": "736a3e9931d0"
     },
     "Регистрация · сон и инсулиновая волна · 15": {
       "v": "=",
@@ -1285,20 +1285,15 @@
     },
     "Регистрация · сон и инсулиновая волна · 17": {
       "v": "=",
-      "f": "пометка выбранного — 500 11/1 чернилами 45 % (heys_profile_step_v1.js)",
-      "h": "d8b5ccca01a0"
+      "f": "сноска про волну — 500 10,5/1,45 ролью --v4-ink-data (56 %), отступ 10 (heys_profile_step_v1.js)",
+      "h": "5d388715bcee"
     },
     "Регистрация · сон и инсулиновая волна · 18": {
-      "v": "=",
-      "f": "сноска про волну — 500 10,5/1,45 чернилами 42 %, отступ 10. Было 12 px через 8 (heys_profile_step_v1.js)",
-      "h": "191ff8f6aa54"
-    },
-    "Регистрация · сон и инсулиновая волна · 19": {
       "v": "=",
       "f": "подвал шага — общий для слоя",
       "h": "1df511bb5a89"
     },
-    "Регистрация · сон и инсулиновая волна · 20": {
+    "Регистрация · сон и инсулиновая волна · 19": {
       "v": "=",
       "f": "«Готово» — главная кнопка последнего шага (registerStep profile-metabolism, nextLabel)",
       "h": "c615fb6d9ae3"
@@ -1355,8 +1350,8 @@
     },
     "Регистрация · итог доступ открыт · 11": {
       "v": "=",
-      "f": "сноска про норму по факту — 500 11/1,5 чернилами 42 %; та же мысль, что в строке «норма» (heys_profile_step_v1.js)",
-      "h": "5402886fc5c2"
+      "f": "сноска про норму по факту — 500 11/1,5 ролью --v4-ink-data (56 %); та же мысль, что в строке «норма» (heys_profile_step_v1.js)",
+      "h": "37ac1c1bd7ce"
     },
     "Регистрация · итог доступ открыт · 12": {
       "v": "=",
@@ -1495,8 +1490,8 @@
     },
     "Регистрация · неделя начнётся позже · 12": {
       "v": "=",
-      "f": "сноска «приложение можно не открывать» — 500 11/1,5 чернилами 42 % (heys_profile_step_v1.js)",
-      "h": "8ec79dff3018"
+      "f": "сноска «приложение можно не открывать» — 500 11/1,5 ролью --v4-ink-data (56 %) (heys_profile_step_v1.js)",
+      "h": "1db69bacbe79"
     },
     "Регистрация · неделя начнётся позже · 13": {
       "v": "=",
@@ -1630,8 +1625,8 @@
     },
     "Регистрация · имя не подходит · 10": {
       "v": "=",
-      "f": "объяснение — 500 11/1,5 чернилами 42 %, отступ 5. Было 12 px без отступа (heys_profile_step_v1.js:605)",
-      "h": "390c01498556"
+      "f": "объяснение — 500 11/1,5 ролью --v4-ink-data (56 %), отступ 5 (heys_profile_step_v1.js)",
+      "h": "8408ef1fe444"
     },
     "Регистрация · имя не подходит · 11": {
       "v": "=",
@@ -1750,8 +1745,8 @@
     },
     "Регистрация · возраст меньше 18 · 22": {
       "v": "=",
-      "f": "объяснение — 500 11,5/1,55 чернилами 55 %, отступ 5. Было 12 px через 4 (heys_profile_step_v1.js:753)",
-      "h": "825d1a70151d"
+      "f": "объяснение — 500 11,5/1,55 ролью --v4-ink-data (56 %), отступ 5 (heys_profile_step_v1.js)",
+      "h": "b68e40c9ddeb"
     },
     "Регистрация · возраст меньше 18 · 23": {
       "v": "=",
@@ -1845,8 +1840,8 @@
     },
     "Регистрация · ниже нормы имт · 17": {
       "v": "=",
-      "f": "объяснение — 500 11,5/1,55 чернилами 55 %, отступ 5. Стояло 12 и отступ 4 (heys_profile_step_v1.js:933)",
-      "h": "fab44f291477"
+      "f": "объяснение — 500 11,5/1,55 ролью --v4-ink-data (56 %), отступ 5 (heys_profile_step_v1.js)",
+      "h": "d9ca56a0bb70"
     },
     "Регистрация · ниже нормы имт · 18": {
       "v": "=",
@@ -2015,8 +2010,8 @@
     },
     "Регистрация · ошибка сохранения · 07": {
       "v": "=",
-      "f": "строка попытки — 600 11,5/1,4 чернилами 55 % (heys_step_modal_v1.js:1637)",
-      "h": "89487e959505"
+      "f": "строка попытки — 600 11,5/1,4 ролью --v4-ink-data (56 %) (heys_step_modal_v1.js)",
+      "h": "44b0c175750e"
     },
     "Регистрация · ошибка сохранения · 08": {
       "v": "=",
@@ -2165,8 +2160,8 @@
     },
     "Профиль · верх · 14": {
       "v": "=",
-      "f": ".profile-v4__subtier-title — 600 9,5/1, трекинг .14em, прописные, чернила 40 %, отступы 10/0/6 (000-base-and-gamification:16034)",
-      "h": "89d4a874c946"
+      "f": ".profile-v4__subtier-title сохраняет 600 9,5/1, трекинг .14em, прописные и отступы 10/0/6; цвет переопределён ролью --v4-ink-data (56 %) в ProfileV4Subtier (heys_user_tab_impl_v1.js)",
+      "h": "6395619fb747"
     },
     "Профиль · верх · 15": {
       "v": "=",
@@ -2210,8 +2205,8 @@
     },
     "Профиль · низ · 06": {
       "v": "=",
-      "f": "подъярус «Нормы» — 600 9,5/1, трекинг .14em, чернила 40 %, отступы 10/0/6 (000-base-and-gamification:16034)",
-      "h": "8baab5e6c531"
+      "f": "подъярус «Нормы» — 600 9,5/1, трекинг .14em, отступы 10/0/6; цвет переопределён ролью --v4-ink-data (56 %) в общем ProfileV4Subtier (heys_user_tab_impl_v1.js)",
+      "h": "fe576d5133b5"
     },
     "Профиль · низ · 07": {
       "v": "=",
@@ -2689,8 +2684,8 @@
       "h": "8d50059a184a"
     },
     "Регистрация · подписано · текст": {
-      "v": "=",
-      "f": "копия сверена пословно: «Документы подписаны», строка реквизитов «Подпись — код доступа» с датой и временем, названия обоих документов с версиями, сноска про копию в профиле, «Продолжить» (heys_consents_v1.js:1418-1460)",
+      "v": "≠",
+      "f": "смысл и почти вся копия совпадают, включая новую сноску про копию в профиле. Намеренные отличия: продукт показывает устройство по общей строке «после подписи», а актуальная версия согласия на персональные данные в коде и legal registry — 1.0, не нарисованная в кадре 1.4 (heys_consents_v1.js, heys_legal_versions_v1.js)",
       "h": "7d5f81d7ae70"
     },
     "Регистрация · персональные данные · текст": {
@@ -2782,6 +2777,200 @@
       "v": "≠",
       "f": "продуктовая часть на месте — ярус «Медицинское», строки согласий и «отозвать». Копия самого листа в продукте другая: системное окно говорит «Отозвать согласие на обработку данных о здоровье?» и перечисляет пульсовые зоны и анкету, а кадр — про добавки, курс и отметки приёма. Согласия на добавки в коде нет как отдельного вида",
       "h": "2980f36bef51"
+    }
+  },
+  "frames": {
+    "Регистрация · согласия": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Документ · начало": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Документ · конец": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · необязательные согласия": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · подпись кодом": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · подписано": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · персональные данные": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · рост и вес": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · цель и активность": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · сон и инсулиновая волна": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · итог доступ открыт": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · ожидание куратора": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · неделя начнётся позже": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · одна ошибка": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · имя не подходит": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · возраст меньше 18": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · ниже нормы имт": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · клавиатура": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · сохранение": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · ошибка сохранения": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Регистрация · возврат к незавершённой": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Профиль · верх": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Профиль · низ": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
+    },
+    "Профиль · отзыв согласия на добавки": {
+      "evidence": [
+        "apps/web/__tests__/registration-v4-contract-geometry.test.js",
+        "apps/web/__tests__/registration-canvas-parity.test.js",
+        "apps/web/heys_profile_step_v1.js",
+        "apps/web/heys_consents_v1.js"
+      ]
     }
   }
 }

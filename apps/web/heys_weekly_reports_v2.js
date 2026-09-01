@@ -603,7 +603,10 @@
                 ? h('div', { className: 'weekly-wrap-correction__facts' },
                     card.facts.map((f) => h('div', { className: 'weekly-wrap-correction__fact', key: f.label },
                         h('span', { className: 'weekly-wrap-correction__fact-label' }, f.label),
-                        h('span', { className: 'weekly-wrap-correction__fact-value' }, f.value)
+                        h('span', {
+                            className: 'weekly-wrap-correction__fact-value'
+                                + (f.tone ? ' is-' + f.tone : '')
+                        }, f.value)
                     ))
                 )
                 : null,

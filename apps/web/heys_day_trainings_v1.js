@@ -685,6 +685,34 @@
   }
 
   const REST_PRESETS = [60, 90, 120, 180];
+
+  /** Lifecycle-снимок сессии меняется частичным патчем и не стирает соседние поля. */
+  function mergeWorkoutLifecyclePatch(workoutLog, patch) {
+    const out = { ...(workoutLog || {}) };
+    const next = patch && typeof patch === 'object' ? patch : {};
+    const fields = ['startedAt', 'firstMarkAt', 'lastMarkAt', 'completedAt'];
+    for (let i = 0; i < fields.length; i++) {
+      const key = fields[i];
+      if (!Object.prototype.hasOwnProperty.call(next, key)) continue;
+      const value = Number.isFinite(+next[key]) ? +next[key] : 0;
+      if (value > 0) out[key] = value;
+      else delete out[key];
+    }
+    if (Object.prototype.hasOwnProperty.call(next, 'activeRest')) {
+      if (next.activeRest && typeof next.activeRest === 'object') out.activeRest = next.activeRest;
+      else delete out.activeRest;
+    }
+    return out;
+  }
+
+  function finishStartedWorkoutPlan(training) {
+    if (!training || !training.plan || training.plan.status !== 'started') return training;
+    return {
+      ...training,
+      plan: { ...training.plan, status: 'done' }
+    };
+  }
+
   function nextRestPreset(cur) {
     const i = REST_PRESETS.indexOf(+cur || 90);
     return REST_PRESETS[(i + 1) % REST_PRESETS.length];
@@ -1265,10 +1293,9 @@
     const wlCompletedAt = +(wlLive && wlLive.completedAt) || 0;
     React.useEffect(function () {
       if (!workoutAggregate.hasAnyDone) {
-        if (wlStartedAt > 0 && workoutAggregate.totalApproaches > 0) {
+        if (wlStartedAt > 0 && wlCompletedAt > 0 && workoutAggregate.totalApproaches > 0) {
           patchTraining(ti, function (t0) {
             const wl0 = ensureWorkoutLogShape(t0);
-            delete wl0.startedAt;
             delete wl0.completedAt;
             return applyWorkoutLogToTraining(t0, wl0);
           });
@@ -1877,7 +1904,6 @@
                         const hasDoneNew = doneAp > 0;
                         const nowTs = Date.now();
                         if (!hasDoneNew) {
-                          delete wl0.startedAt;
                           delete wl0.completedAt;
                         } else if (allDoneNew) {
                           if (!wl0.startedAt) wl0.startedAt = nowTs;
@@ -1885,6 +1911,10 @@
                         } else {
                           if (!wl0.startedAt) wl0.startedAt = nowTs;
                           if (wl0.completedAt) delete wl0.completedAt;
+                        }
+                        if (!wasDone) {
+                          if (!wl0.firstMarkAt) wl0.firstMarkAt = nowTs;
+                          wl0.lastMarkAt = nowTs;
                         }
                         return applyWorkoutLogToTraining(t0, wl0);
                       });
@@ -2679,7 +2709,7 @@
     return nth && total ? nth + ' из ' + total + ' на неделе' : '';
   }
 
-  const PROGRAM_DONE_STATES = { done: 1, started: 1 };
+  const PROGRAM_DONE_STATES = { done: 1 };
 
   /** Второй слой (16d): путь, а не таблица статусов — сколько прошёл и сколько осталось. */
   function ProgramPathScreen({ program, days, onClose }) {
@@ -3357,8 +3387,28 @@
       };
       const startedAtNum = Number.isFinite(+raw.startedAt) ? +raw.startedAt : 0;
       if (startedAtNum > 0) out.startedAt = startedAtNum;
+      const firstMarkAtNum = Number.isFinite(+raw.firstMarkAt) ? +raw.firstMarkAt : 0;
+      if (firstMarkAtNum > 0) out.firstMarkAt = firstMarkAtNum;
+      const lastMarkAtNum = Number.isFinite(+raw.lastMarkAt) ? +raw.lastMarkAt : 0;
+      if (lastMarkAtNum > 0) out.lastMarkAt = lastMarkAtNum;
       const completedAtNum = Number.isFinite(+raw.completedAt) ? +raw.completedAt : 0;
       if (completedAtNum > 0) out.completedAt = completedAtNum;
+      const restRaw = raw.activeRest && typeof raw.activeRest === 'object' ? raw.activeRest : null;
+      const restStartedAt = restRaw && Number.isFinite(+restRaw.startedAt) ? +restRaw.startedAt : 0;
+      const restTotal = restRaw && Number.isFinite(+restRaw.total)
+        ? Math.max(1, Math.min(3600, +restRaw.total))
+        : 0;
+      if (restStartedAt > 0 && restTotal > 0) {
+        out.activeRest = {
+          startedAt: restStartedAt,
+          total: restTotal,
+          exName: String(restRaw.exName || '').slice(0, 160),
+          owner: String(restRaw.owner || '').slice(0, 160),
+          source: String(restRaw.source || '').slice(0, 160),
+          nextLabel: String(restRaw.nextLabel || '').slice(0, 160),
+          collapsed: !!restRaw.collapsed
+        };
+      }
       return out;
     }
 
@@ -3800,6 +3850,14 @@
                     return applyWorkoutLogToTraining(t0, wl0);
                   });
                 },
+                onPatchSession: function (patch) {
+                  patchTraining(ti, function (t0) {
+                    const wl0 = mergeWorkoutLifecyclePatch(ensureWorkoutLogShape(t0), patch);
+                    const next = applyWorkoutLogToTraining(t0, wl0);
+                    if (patch && patch.finish) return finishStartedWorkoutPlan(next);
+                    return next;
+                  });
+                },
                 syncStatusFor: function () {
                   try {
                     const cloud = HEYS.cloud;
@@ -3989,6 +4047,14 @@
                     const wl0 = ensureWorkoutLogShape(t0);
                     wl0.exercises = nextExercises;
                     return applyWorkoutLogToTraining(t0, wl0);
+                  });
+                },
+                onPatchSession: function (patch) {
+                  patchTraining(ti, function (t0) {
+                    const wl0 = mergeWorkoutLifecyclePatch(ensureWorkoutLogShape(t0), patch);
+                    const next = applyWorkoutLogToTraining(t0, wl0);
+                    if (patch && patch.finish) return finishStartedWorkoutPlan(next);
+                    return next;
                   });
                 }
               });
@@ -4238,6 +4304,8 @@
     carryApproachSnapshotFields,
     carryExerciseSnapshotFields,
     cloneExercisesForReplay,
+    mergeWorkoutLifecyclePatch,
+    finishStartedWorkoutPlan,
     // Тестовый шов — тоннаж дня: он обязан совпадать с числом в конструкторе,
     // а совпадает только когда знает массу тела.
     computeDayTotalTonnage,

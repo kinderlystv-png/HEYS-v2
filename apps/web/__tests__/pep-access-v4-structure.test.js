@@ -23,7 +23,6 @@ describe('PEP access-code setup v4 structure', () => {
     expect(setupSource).toContain("'Новый код'");
     expect(setupSource).toContain('Придумайте свой код');
     expect(setupSource).toContain('Повторите код');
-    expect(setupSource).toContain("'Далее'");
     expect(setupSource).toContain("'Продолжить'");
     expect(setupSource).toContain("'Изменить код'");
     expect(setupSource).not.toContain('← Изменить код');

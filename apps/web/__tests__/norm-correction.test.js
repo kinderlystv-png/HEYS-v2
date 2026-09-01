@@ -538,6 +538,17 @@ describe('поправка на факт · кадры недельной све
     expect(c.actions).toEqual(['apply', 'measure_waist', 'mute_month']);
   });
 
+  it('подтверждение отказа помечает срок возврата информационным тоном', () => {
+    const c = NC.buildWeeklySyncCard({
+      result: down(), tariff: 'self',
+      lastDecision: { what: 'declined' },
+      expenditure: 2400, deficitPct: -12, basalMetabolism: 1520
+    });
+    expect(c.frame).toBe('refusal_accepted');
+    expect(c.facts.find((f) => f.label === 'Поправка вернётся'))
+      .toMatchObject({ value: 'в понедельник', tone: 'quiet' });
+  });
+
   it('рекомпозиция показывается только при подтверждённом доводе', () => {
     const ok = NC.buildWeeklySyncCard({
       result: down(), tariff: 'self',
@@ -790,6 +801,8 @@ describe('поправка на факт · довод перестройки', 
     expect(card.celebratory).toBeUndefined();
     expect(card.frozenCycle).toBe(true);
     expect(card.evidence).toBe('по росту рабочих весов за 4 недели');
+    expect(card.facts.find((f) => f.label === 'Довод').tone).toBe('quiet');
+    expect(card.facts.find((f) => f.label === 'Норма').tone).toBe('quiet');
     expect(card.copy.body).toContain('рабочие веса в зале растут 4 недели');
     // Предлагаем замер, а не решение: он отличит перестройку прямо.
     expect(card.actions).toEqual(['enable_measurements', 'later']);

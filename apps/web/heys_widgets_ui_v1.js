@@ -4325,24 +4325,31 @@
       const maxBin = Math.max(1, ...bins);
       return React.createElement('div', { className: 'widget-water widget-water--2x1 widget-v4-stack' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
-          v4Kicker(`Вода · ${formatRuDecimal(drunk / 1000, 1)} / ${formatRuUnit(formatRuDecimal(target / 1000, 1), 'л')}`),
+          v4Kicker('Вода'),
           // Кадр «Шторка · Вода», вид «Ритм дня»: строка провала идёт счётчиком
           // — 9.5px/700, а не подписью меты 9px/600.
           React.createElement('span', {
             className: 'widget-v4-row__meta widget-v4-row__meta--count widget-v4-val--bad'
           }, rhythmLabel)
         ),
-        React.createElement('div', { className: 'widget-v4-water-rhythm' },
-          bins.map((ml, index) => {
-            const heightPct = ml > 0 ? Math.max(12, Math.round((ml / maxBin) * 100)) : 12;
-            return React.createElement('span', {
-              key: `rhythm-${index}`,
-              className: ml > 0
-                ? 'widget-v4-water-rhythm__bin widget-v4-water-rhythm__bin--fill'
-                : 'widget-v4-water-rhythm__bin',
-              style: { height: `${heightPct}%` }
-            });
-          })
+        React.createElement('div', { className: 'widget-v4-water-rhythm__body' },
+          React.createElement('span', { className: 'widget-v4-row__value' },
+            formatRuDecimal(drunk / 1000, 1),
+            React.createElement('span', { className: 'widget-v4-unit' },
+              ` / ${formatRuUnit(formatRuDecimal(target / 1000, 1), 'л')}`)
+          ),
+          React.createElement('div', { className: 'widget-v4-water-rhythm' },
+            bins.map((ml, index) => {
+              const heightPct = ml > 0 ? Math.max(12, Math.round((ml / maxBin) * 100)) : 12;
+              return React.createElement('span', {
+                key: `rhythm-${index}`,
+                className: ml > 0
+                  ? 'widget-v4-water-rhythm__bin widget-v4-water-rhythm__bin--fill'
+                  : 'widget-v4-water-rhythm__bin',
+                style: { height: `${heightPct}%` }
+              });
+            })
+          )
         )
       );
     }
@@ -4483,9 +4490,9 @@
       const maxHours = Math.max(target || 0, ...week.map((d) => Number(d.hours) || 0), 1);
       return React.createElement('div', { className: 'widget-sleep widget-sleep--2x1 widget-v4-stack' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
-          v4Kicker('Недосып за 7 дней'),
+          v4Kicker('Недосып · 7 дней'),
           React.createElement('span', { className: 'widget-v4-row__meta' },
-            target ? `норма ${formatRuDecimal(target, 1)}` : '')
+            target ? formatRuUnit(formatRuDecimal(target, 1), 'ч') : '')
         ),
         React.createElement('div', { className: 'widget-v4-sleep-debt' },
           React.createElement('span', { className: 'widget-v4-sleep-debt__num' },
@@ -5564,12 +5571,12 @@
   // Общее по цвету: недобор ни у одного не красится. Красный есть только у
   // «Окна до сна» и только в одном случае — ел меньше чем за час до отбоя.
 
-  /** Полоса до нормы. Общая для клетчатки, белка и качества еды. */
-  function v4GoalBar(pct, state) {
+  /** Полоса дневной цели: ниже 67 % — --ovl, от 67 % — --gr2. */
+  function v4GoalBar(pct) {
     const width = Math.max(0, Math.min(100, Number(pct) || 0));
     return React.createElement('div', { className: 'widget-v4-goalbar' },
       React.createElement('span', {
-        className: 'widget-v4-goalbar__fill ' + v4ValueStateClass(state),
+        className: 'widget-v4-goalbar__fill' + (width >= 67 ? ' is-on-track' : ''),
         style: { width: `${width}%` }
       })
     );
@@ -5682,7 +5689,7 @@
         }, hasData ? String(fiber) : '—'),
         hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
       ),
-      hasData ? v4GoalBar(pct, state) : null
+      hasData ? v4GoalBar(pct) : null
     );
   }
 
@@ -5771,7 +5778,7 @@
         }, hasData ? String(protein) : '—'),
         hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
       ),
-      hasData ? v4GoalBar(pct, state) : null
+      hasData ? v4GoalBar(pct) : null
     );
   }
 

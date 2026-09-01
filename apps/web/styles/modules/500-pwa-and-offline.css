@@ -383,10 +383,11 @@
 
 .ios-home-install-modal__footnote {
   margin: 0 0 16px;
-  font-size: 12px;
+  padding: 2px 2px 0;
+  font-size: 10.5px;
   font-weight: 500;
-  line-height: 1.35;
-  color: rgba(26, 23, 20, 0.45);
+  line-height: 1.45;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .ios-home-install-modal__actions {
@@ -477,7 +478,7 @@
 }
 
 [data-theme$="dark"] .ios-home-install-modal__footnote {
-  color: rgba(245, 242, 238, 0.45);
+  color: var(--v4-ink-data, rgba(245, 242, 238, 0.56));
 }
 
 [data-theme$="dark"] .ios-home-install-modal__btn--later {
@@ -807,7 +808,7 @@
   margin-top: 11px;
   text-align: center;
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -816,7 +817,7 @@
 }
 
 [data-theme$="dark"] .mc-recorded .mc-recorded-sub {
-  color: rgba(242, 237, 230, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .mc-recorded-card {
@@ -841,7 +842,7 @@
 }
 
 [data-theme$="dark"] .mc-recorded .mc-recorded-hint {
-  color: rgba(242, 237, 230, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-daily-footer {
@@ -983,7 +984,7 @@
 
 .mc-scale-value {
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   user-select: none;
   -webkit-user-select: none;
 }
@@ -1072,17 +1073,15 @@
   margin-top: 30px;
 }
 
-/* Тот же кадр, элементы 11 и 19: обе строки — не пояснение карточки шага, а
-   подписи самого шага, и кадр набирает их по-своему. Тона 42 % у набора нет,
-   ближайший --v4-ink-3. */
+/* Тот же кадр, элементы 11 и 19: обе строки — data-подписи самого шага. */
 .mc-weight-hero > .mc-recorded-hint {
   font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-weight-step > .mc-recorded-hint {
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-kilo-label,
@@ -1090,7 +1089,7 @@
   font: 600 10px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 
@@ -1130,7 +1129,7 @@
 .mc-sleep-norm {
   margin-top: 12px;
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 
@@ -1270,7 +1269,7 @@
 .mc-rest-layer-hint {
   margin-top: 6px;
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -1327,7 +1326,7 @@
 
 .mc-rest-measure-unit {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.38);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   flex: none;
 }
 
@@ -1341,7 +1340,7 @@
 
 .mc-rest-measure-side-label {
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-rest-measure-side-pills {
@@ -1357,7 +1356,7 @@
   border-radius: 999px;
   background: var(--v4-sand-surface, #f7efe2);
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
 
@@ -1370,6 +1369,7 @@
 .mc-rest-measure-foot-hint {
   text-align: center;
   margin-top: 2px;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-recorded-check {
@@ -1385,7 +1385,7 @@
 .mc-rest-empty-note {
   margin-top: 14px;
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -1401,7 +1401,7 @@
    серии холодного душа, — она напоминает правило, а не хвалит за серию. */
 .mc-rest-coffee-note {
   font: 500 11px/1.2 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
   flex: none;
 }
@@ -1422,7 +1422,7 @@
 }
 
 /* Кадр «Чек-ин · остальное», элемент 19: строка «зачем спрашиваем» мельче
-   пояснения карточки — 11/1,45 тоном чернил 45 %. Она наследовала семейство
+   пояснения карточки — 11/1,45 ролью data. Она наследовала семейство
    .mc-rest-card-hint (11,5/1,5 и чернила 55 %), потому что при сборке блока
    переиспользовался готовый класс; своих чисел строке контракт не даёт, значит
    верен кадр. */
@@ -1430,7 +1430,7 @@
   margin-top: 10px;
   font-size: 11px;
   line-height: 1.45;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-rest-routine-actions {
@@ -1480,7 +1480,7 @@
 .mc-rest-consent-card-body {
   margin-top: 4px;
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -1552,7 +1552,7 @@
 .mc-steps-refeed-hint {
   margin-top: 3px;
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   max-width: 220px;
 }
 
@@ -1646,25 +1646,21 @@
 .mc-recorded-hint,
 .mc-recorded-sub {
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-top: 5px;
 }
 
-/* Общее правило выше — пояснение ВНУТРИ карточки шага: его описывает строка
-   контракта «вид карточки шага» («под заголовком через 5 пояснение 11,5 px/500
-   тоном чернил 50 %»), и пятый шаг ей следует. Строки, которые живут на самом
-   шаге — подпись под шкалами, подсказка под дорожкой шагов и сноска, — тем же
-   классом только пользуются; кадры набирают их мельче и светлее. Тона 42 % у
-   набора нет, ближайший --v4-ink-3. */
+/* Контекстные строки шага используют общие классы пояснений, но именованная
+   лестница относит их к data-тексту и задаёт единый floor 56 %. */
 .mc-mood-step > .mc-recorded-sub {
   margin-top: 8px;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-mood-step > .mc-recorded-hint {
   margin-top: 12px;
   font: 500 10.5px/1.45 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-steps-step > .mc-recorded-sub {
@@ -1673,12 +1669,12 @@
 
 .mc-steps-slider-container > .mc-recorded-hint {
   font: 600 10.5px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-steps-step > .mc-recorded-hint {
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр «Чек-ин · как вы сегодня»: первая шкала отбита от подписи на 22,
@@ -1736,7 +1732,7 @@
 }
 
 .mc-rest-type.is-on .mc-rest-wave {
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
 }
 
 .mc-rest-row {
@@ -1822,7 +1818,7 @@
 .mc-rest-cycle-week-hint {
   margin-top: 5px;
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-rest-cycle-expanded-head {
@@ -1836,7 +1832,7 @@
   border: none;
   background: transparent;
   font: 700 11px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
 
@@ -1930,7 +1926,13 @@
 .mc-rest-cycle-ended-note {
   margin-top: 5px;
   font: 500 11px/1.45 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+/* В свёрнутой строке цикла пояснение компактнее общего текста карточки. */
+.mc-rest-row--cycle .mc-rest-card-hint {
+  margin-top: 3px;
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
 }
 
 .profile-v4-cycle-toggle {
@@ -2115,7 +2117,7 @@
   display: block;
   margin-top: 4px;
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .cycle-card-v4__date-confirm-chip {
@@ -2156,7 +2158,7 @@
 .cycle-card-v4__warn-text {
   margin-top: 7px;
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .cycle-card-v4__warn {
@@ -2179,9 +2181,9 @@
 }
 
 .cycle-card-v4__insight-text {
-  margin-top: 6px;
-  font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.55);
+  margin-top: 7px;
+  font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .cycle-card-v4__norm-rows {
@@ -2331,7 +2333,7 @@
 .cycle-date-picker-sheet__live {
   margin-top: 12px;
   font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .cycle-date-picker-sheet__actions {
@@ -2341,8 +2343,8 @@
 .date-picker-forecast-line {
   display: block;
   margin-top: 2px;
-  font: 600 10.5px/1.2 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.4);
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .date-picker-title {
@@ -2556,7 +2558,7 @@
 
 .mc-rest-supp-time {
   font: 500 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
 }
 
@@ -2726,14 +2728,14 @@
 
 .mc-supp-flow-empty-body {
   font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-top: 6px;
   text-wrap: pretty;
 }
 
 .mc-supp-flow-note {
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-top: 14px;
   text-wrap: pretty;
   text-align: center;
@@ -2750,7 +2752,7 @@
 
 .mc-supp-flow-lead {
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -2965,7 +2967,7 @@
 
 .mc-supp-flow-dose-hint {
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.42);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-top: 12px;
   text-align: center;
   text-wrap: pretty;
@@ -5330,7 +5332,7 @@
   justify-content: space-between;
   margin-top: 8px;
   font: 600 9.5px/1 Figtree, system-ui, sans-serif;
-  color: rgba(32, 30, 29, 0.3);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-steps-slider-label-health {
@@ -5343,7 +5345,7 @@
 }
 
 [data-theme$="dark"] .mc-steps-slider-labels {
-  color: var(--color-gray-500);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-steps-recommendation {
@@ -6061,7 +6063,7 @@
   font-size: 11.5px;
   line-height: 1.45;
   font-weight: 500;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
   text-wrap: pretty;
 }
 
@@ -6075,7 +6077,7 @@
   border: none;
   background: transparent;
   border-radius: 50%;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.28));
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 28%, transparent);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -6123,7 +6125,7 @@
   line-height: 1;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.4));
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 40%, transparent);
 }
 
 .ca-modal__date-kcal {
@@ -6192,12 +6194,16 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+}
+
+.ca-modal__item-sub--nowrap {
+  white-space: nowrap;
 }
 
 .ca-modal__chevron {
   flex: none;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.28));
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 28%, transparent);
   display: flex;
 }
 
@@ -6235,7 +6241,7 @@
 
 .ca-modal__meal-divider {
   height: 1px;
-  background: var(--v4-line, rgba(0, 0, 0, 0.08));
+  background: color-mix(in srgb, var(--v4-ink, #201e1d) 7%, transparent);
   margin: 9px 0;
 }
 
@@ -6303,7 +6309,7 @@
 }
 
 .ca-modal__type-more-title {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
 }
 
 .ca-modal__type-members {
@@ -6342,6 +6348,7 @@
 .ca-modal__item--repeat {
   align-items: flex-start;
   gap: 10px;
+  padding: 11px 13px 12px;
 }
 
 .ca-modal__repeat-badge {
@@ -6411,7 +6418,7 @@
 .ca-modal__later-btn {
   flex: 0 0 auto;
   background: var(--v4-chip-2, #efe3cf);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.58));
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 58%, transparent);
 }
 
 .ca-modal__ack-btn {
@@ -6824,7 +6831,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   font: 600 10px/1 Figtree, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 

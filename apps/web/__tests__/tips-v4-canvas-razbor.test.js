@@ -29,11 +29,6 @@ const V4 = '.advice-list-container--v4';
 // Осознанные отступления: строка разбора не сверяется, и здесь сказано почему.
 // Список закрытый и может только уменьшаться; всё остальное гейт называет вслух.
 const EXCEPTIONS = new Map([
-  // Кадр просит чернила 50 %, у набора три тона — 55 / 45 / 38. Берём
-  // ближайший --v4-ink-3 (45 %); запасное значение приведено к самой роли,
-  // чтобы код не обещал тон, которого не рисует.
-  ['Совет · панель оценки · 20|color', 'у набора нет тона 50 %, ближайший 45 %'],
-  ['Советы · не сохранено · 12|color', 'тот же тон 50 % против 45 % набора'],
   // Кадр рисует крестик плашки глифом 12 px, крестик детали — 14 px. Глиф
   // общий (renderAdviceV4Icon 'close'), второго размера не заводим.
   ['Совет · всплывающий · 27|glyph', 'общий глиф крестика 14 px вместо 12'],
@@ -41,12 +36,6 @@ const EXCEPTIONS = new Map([
   // безопасной зоне телефона — иначе на аппаратах с жестовой панелью кнопка
   // упирается в неё. Число кадра сохранено внутри max().
   ['Научное описание · 16|padding', 'нижнее поле уступает env(safe-area-inset-bottom)'],
-  // Кадр настроек просит чернила 42 %, у набора три тона — 55 / 45 / 38.
-  // Взят ближайший --v4-ink-3 (45 %) во всех трёх местах разом: разные тона у
-  // вводной строки, подписи тумблера и сноски развели бы один вес на три.
-  ['Настройки советов · 05|color', 'у набора нет тона 42 %, ближайший 45 %'],
-  ['Настройки советов · 13|color', 'тот же тон 42 % против 45 % набора'],
-  ['Настройки советов · 17|color', 'тот же тон 42 % против 45 % набора'],
   // Дорожка тумблера в кадре — чернила 14 %; у набора три роли линии
   // (8 / 12 / 18), четвёртую под один тон не заводим. Взята --v4-track.
   ['Настройки советов · 09|background', 'у набора нет тона 14 %, ближайший 12 %'],
@@ -81,7 +70,7 @@ const RATING = [
     ['minHeight', 'radius', 'background', 'color', 'align', 'justify', 'fontWeight', 'fontSize', 'lineHeight']],
   [19, ['.advice-v4-rate-btn', '.advice-v4-rate-btn--mute'],
     ['minHeight', 'radius', 'background', 'color', 'align', 'justify', 'fontWeight', 'fontSize', 'lineHeight']],
-  [20, '.advice-v4-rate-note', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight']],
+  [20, '.advice-v4-rate-note', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // Кадр «Советы · не сохранено» — плашка над списком.
@@ -89,7 +78,36 @@ const UNSAVED = [
   [9, '.advice-v4-panel--sync', ['align', 'gap', 'background', 'radius', 'padding']],
   [11, '.advice-v4-panel--sync .advice-v4-panel__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [12, '.advice-v4-panel--sync .advice-v4-panel__hint--sync',
-    ['marginTop', 'fontWeight', 'fontSize', 'lineHeight']],
+    ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
+// Кадр «Совет · оценка после свайпа» перенесён в tips 1 сентября. Фон дня,
+// шапка и нижнее меню принадлежат своим зонам; здесь сверяется сама панель.
+const RATING_AFTER_SWIPE = [
+  [21, '.advice-v4-panel', ['background', 'radius', 'padding']],
+  [22, '.advice-v4-panel__head', ['align', 'gap']],
+  [23, '.advice-v4-panel__title', ['flex', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [24, '.advice-v4-panel__hint', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [25, '.advice-v4-panel__actions', ['gap', 'marginTop']],
+  [26, ['.advice-v4-panel__btn', '.advice-v4-panel__btn--useful'],
+    ['flex', 'minHeight', 'radius', 'background', 'align', 'justify', 'gap', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [27, ['.advice-v4-panel__btn', '.advice-v4-panel__btn--miss'],
+    ['flex', 'minHeight', 'radius', 'background', 'align', 'justify', 'gap', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [28, '.advice-v4-panel__skip',
+    ['textAlign', 'marginTop', 'minHeight', 'align', 'justify', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+];
+
+// Кадр «Совет · отмена с таймером»: окружающий экран принадлежит другим
+// зонам; tips владеет панелью, кольцом обратного отсчёта и кнопкой возврата.
+const HIDE_UNDO = [
+  [21, ['.advice-v4-panel', '.advice-v4-panel--hide'], ['background', 'radius', 'padding']],
+  [22, '.advice-v4-hide-row', ['align', 'gap']],
+  [23, '.advice-v4-hide-ring', ['width', 'height', 'align', 'justify']],
+  [24, '.advice-v4-hide-ring__num', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [25, '.advice-v4-hide-copy', ['flex']],
+  [26, '.advice-v4-hide-copy__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [27, '.advice-v4-hide-copy__subtitle', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [28, '.advice-v4-hide-return', ['padding', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // Кадр «Совет · деталь» — экран, а не третий слой над шторкой.
@@ -159,7 +177,7 @@ const SCIENCE = [
 const SETTINGS = [
   [2, '.advice-v4-settings__header', ['align', 'gap']],
   [3, '.advice-v4-settings__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [5, '.advice-v4-settings__intro', ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  [5, '.advice-v4-settings__intro', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
   [6, '.advice-v4-settings__section-label',
     ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'color']],
   [7, '.advice-v4-settings__group', ['background', 'radius', 'padding', 'marginTop']],
@@ -168,10 +186,10 @@ const SETTINGS = [
   [10, '.advice-v4-settings__toggle-thumb', ['width', 'height', 'radius', 'background']],
   [12, '.advice-v4-settings__row-title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [13, '.advice-v4-settings__row-hint',
-    ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
   [15, '.advice-v4-settings__toggle.is-on', ['background']],
   [17, '.advice-v4-settings__footnote',
-    ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
 ];
 
 // Кадр «Оговорка» — лист первого совета. Зоне принадлежат элементы 20–30;
@@ -195,11 +213,12 @@ const DISCLAIMER = [
 
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 83;
+const COVERAGE_FLOOR = 99;
 
 describe('«Советы» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
-  const rules = readRules(fs.readFileSync(CSS, 'utf8'));
+  const css = fs.readFileSync(CSS, 'utf8');
+  const rules = readRules(css);
 
   it('кадр «Советы · шторка» совпадает с листом советов', () => {
     expect(compare({ razbor, rules, frame: 'Советы · шторка', pairs: SHEET })).toEqual([]);
@@ -223,6 +242,26 @@ describe('«Советы» · разбор кадров канваса', () => {
 
   it('кадр «Советы · не сохранено» совпадает с плашкой синхронизации', () => {
     expect(compare({ razbor, rules, frame: 'Советы · не сохранено', pairs: UNSAVED })).toEqual([]);
+  });
+
+  it('кадр «Совет · оценка после свайпа» совпадает с панелью оценки тоста', () => {
+    expect(compare({ razbor, rules, frame: 'Совет · оценка после свайпа', pairs: RATING_AFTER_SWIPE })).toEqual([]);
+  });
+
+  it('кадр «Совет · отмена с таймером» совпадает с панелью возврата', () => {
+    expect(compare({ razbor, rules, frame: 'Совет · отмена с таймером', pairs: HIDE_UNDO })).toEqual([]);
+  });
+
+  it('тёмные панели сохраняют те же семантические роли, а не старые локальные тона', () => {
+    const start = css.indexOf('[data-theme$="dark"] .advice-v4-panel {');
+    const end = css.indexOf('/* === UI v4: шторка списка', start);
+    const darkPanels = css.slice(start, end);
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    expect(darkPanels).toContain('background: var(--v4-c1');
+    expect(darkPanels).toContain('color: var(--v4-ink-data');
+    expect(darkPanels).toContain('background: var(--v4-ok-bg');
+    expect(darkPanels).toContain('background: var(--v4-chip');
   });
 
   it('кадр «Совет · деталь» совпадает с экраном детали', () => {
@@ -256,7 +295,7 @@ describe('«Советы» · разбор кадров канваса', () => {
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(8);
+    expect(EXCEPTIONS.size).toBe(3);
   });
 
   it('гейт называет свой охват', () => {

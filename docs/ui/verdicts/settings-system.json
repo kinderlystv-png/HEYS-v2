@@ -405,8 +405,8 @@
     },
     "Настройки · список · 09": {
       "v": "=",
-      "f": "000-base:10583-10589 .tab-settings-diary-toggle__hint — 500 11px/1.4, чернила 50 %, отступ сверху 4",
-      "h": "75a5aafb107a"
+      "f": "000-base .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__hint — 500 11px/1.4, роль --v4-ink-data 56 %, отступ сверху 4; прямая пара в settings-cycle-v4-canvas-razbor.test.js",
+      "h": "f842da6919dd"
     },
     "Настройки · список · 10": {
       "v": "≠",
@@ -490,8 +490,8 @@
     },
     "Настройки · список · 26": {
       "v": "=",
-      "f": "Строка разбора сверена парой «элемент кадра → правило продукта» в settings-cycle-v4-canvas-razbor.test.js: числа этого элемента читаются из самого канваса, расхождение всплывает при правке любой из сторон",
-      "h": "832ce75d3f4d"
+      "f": "000-base .hdr-settings-sheet__build — 500 10.5px/1.4, роль --v4-ink-data 56 %, поля 0 3px; прямая пара в settings-cycle-v4-canvas-razbor.test.js",
+      "h": "0a3eeec6ad46"
     },
     "Настройки · диагностика · 01": {
       "v": "=",
@@ -560,8 +560,8 @@
     },
     "Настройки · диагностика · 14": {
       "v": "=",
-      "f": "heys_app_shell_v1.js:5733 — «Локальные сценарии без сброса клиента. Профиль и день пишутся как обычно.» вторичным тоном",
-      "h": "28c06e7cc467"
+      "f": "heys_app_shell_v1.js выводит диагностическое пояснение классом .hdr-settings-sheet__diag-copy; 000-base задаёт 500 11.5px/1.5 и роль --v4-ink-data 56 %, что напрямую сверяет settings-cycle-v4-canvas-razbor.test.js",
+      "h": "0369041f60d8"
     },
     "Настройки · диагностика · 15": {
       "v": "=",
@@ -575,8 +575,8 @@
     },
     "Настройки · диагностика · 17": {
       "v": "=",
-      "f": "heys_app_shell_v1.js:4979 — строка сборки собирается из «HEYS 4.0», номера сборки и укороченного идентификатора клиента",
-      "h": "5ca72fad7e15"
+      "f": "heys_app_shell_v1.js собирает строку версии и клиента; 000-base .hdr-settings-sheet__build и соседство после .hdr-settings-sheet__diag-panel задают 500 10.5px/1.4, роль --v4-ink-data 56 %, поля 0 3px и отступ сверху 14px; прямая пара в settings-cycle-v4-canvas-razbor.test.js",
+      "h": "ed9e96831ae1"
     },
     "Домашний экран · лист · 01": {
       "v": "=",
@@ -615,8 +615,8 @@
     },
     "Домашний экран · лист · 08": {
       "v": "=",
-      "f": "heys_push_v1.js:597 — «Ничего не скачивается: иконка — ярлык на то же приложение.» вторичным тоном",
-      "h": "4e504f309a69"
+      "f": "heys_push_v1.js выводит точную сноску классом .ios-home-install-modal__footnote; 500-pwa-and-offline задаёт 500 10.5px/1.45, роль --v4-ink-data 56 % и поля 2px 2px 0; прямая пара в settings-cycle-v4-canvas-razbor.test.js",
+      "h": "833c34ba36b0"
     },
     "Домашний экран · лист · 09": {
       "v": "=",
@@ -660,8 +660,8 @@
     },
     "Настройки · настроить подробно · 07": {
       "v": "=",
-      "f": "heys_app_shell_v1.js:5983 — ярус «Что присылать» разрядкой прописными вторичным тоном",
-      "h": "9b7d97547719"
+      "f": "heys_app_shell_v1.js выводит ярус «Что присылать» классом .notify-detail__tier; 000-base задаёт 700 10px/1, .14em uppercase, роль --v4-ink-data 56 % и отступы 18px 0 8px; прямая пара в settings-cycle-v4-canvas-razbor.test.js",
+      "h": "0cf97c97479f"
     },
     "Настройки · настроить подробно · 08": {
       "v": "=",
@@ -720,8 +720,8 @@
     },
     "Настройки · настроить подробно · 19": {
       "v": "=",
-      "f": "heys_app_shell_v1.js:6013 — «В это время ничего не приходит. Сообщения от куратора тихие часы не глушат.» вторичным тоном 500 11/1.4",
-      "h": "ab1098ef0d1f"
+      "f": "heys_app_shell_v1.js выводит точное пояснение классом .notify-detail__quiet-note; 000-base задаёт 500 11px/1.4, роль --v4-ink-data 56 % и отступ сверху 10px; прямая пара в settings-cycle-v4-canvas-razbor.test.js",
+      "h": "3ca2b684fde9"
     },
     "Настройки · чипы быстрых действий · 01": {
       "v": "=",
@@ -805,8 +805,8 @@
     },
     "Настройки · чипы быстрых действий · 17": {
       "v": "=",
-      "f": "Строка разбора сверена парой «элемент кадра → правило продукта» в settings-cycle-v4-canvas-razbor.test.js: числа этого элемента читаются из самого канваса, расхождение всплывает при правке любой из сторон",
-      "h": "a2142899b12c"
+      "f": "000-base .hdr-settings-sheet__fab-lead — 500 11.5px/1.5 и роль --v4-ink-data 56 %; прямая пара в settings-cycle-v4-canvas-razbor.test.js",
+      "h": "c2e874f8c3af"
     },
     "Настройки · чипы быстрых действий · 18": {
       "v": "=",
@@ -825,8 +825,8 @@
     },
     "Настройки · чипы быстрых действий · 21": {
       "v": "=",
-      "f": "heys_app_shell_v1.js:5528-5536 — «Включено N из M», где M — длина FAB_VISIBILITY_OPTIONS; тон и кегль из .hdr-settings-sheet__fab-count",
-      "h": "8cced145e0e9"
+      "f": "heys_app_shell_v1.js выводит «Включено N из M», где M — длина FAB_VISIBILITY_OPTIONS; 000-base .hdr-settings-sheet__fab-count задаёт 600 11px/1 и роль --v4-ink-data 56 %, что напрямую сверяет settings-cycle-v4-canvas-razbor.test.js",
+      "h": "c808b5d73184"
     },
     "Настройки · чипы быстрых действий · 22": {
       "v": "=",
@@ -931,7 +931,7 @@
     "Быстрые действия · прогон перестройки стопки · 15": {
       "v": "—",
       "f": "Декорация кадра: экран приложения под стопкой быстрых действий; сами вкладки разбираются в своих зонах — подпись невыбранной вкладки",
-      "h": "7105841d02dc"
+      "h": "b0c44037717b"
     },
     "как читать графику": {
       "v": "—",
@@ -1197,6 +1197,48 @@
       "v": "—",
       "f": "Декорация кадра: экран приложения под стопкой быстрых действий; сами вкладки разбираются в своих зонах — слова экрана и навигации, к стопке быстрых действий не относятся",
       "h": "bbdc5d2d7323"
+    }
+  },
+  "frames": {
+    "Настройки · список": {
+      "evidence": [
+        "apps/web/__tests__/settings-v4-notify-detail.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_app_shell_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Настройки · диагностика": {
+      "evidence": [
+        "apps/web/__tests__/settings-v4-notify-detail.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_app_shell_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Домашний экран · лист": {
+      "evidence": [
+        "apps/web/__tests__/settings-v4-notify-detail.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_app_shell_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Настройки · настроить подробно": {
+      "evidence": [
+        "apps/web/__tests__/settings-v4-notify-detail.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_app_shell_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
+    },
+    "Настройки · чипы быстрых действий": {
+      "evidence": [
+        "apps/web/__tests__/settings-v4-notify-detail.test.js",
+        "apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js",
+        "apps/web/heys_app_shell_v1.js",
+        "apps/web/styles/modules/000-base-and-gamification.css"
+      ]
     }
   }
 }

@@ -29,6 +29,10 @@ export const UI_V4_CANVAS_ZONES = Object.freeze([
   'norm-correction',
   'curator-cabinet',
   'tab-activity',
+  // Заведены в снимок 31 августа коммитом 72b13b793: два канваса с
+  // контрактом жили вне снимка, и 1382 строки не считались долгом.
+  'food-meal',
+  'product-card',
 ]);
 
 // Pixel-gate держим только на сведённых зонах: попиксельное сравнение с кадром

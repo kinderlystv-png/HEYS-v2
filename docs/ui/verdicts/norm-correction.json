@@ -185,12 +185,12 @@
     },
     "вид · строка поправки": {
       "v": "=",
-      "f": "имя 12,5 px/600 на --v4-ink с пилюлей даты 9 px моношириной на --v4-hero тоном --v4-act-text, значение 12,5 px/700 тем же тоном. Холодный старт: «пока нет» 11 px чернил 38 %, пилюля «копим данные» чернил 50 %, полоса 6 px радиусом 999 на --v4-act и счёт 11 px/700 моноцифрами",
+      "f": "имя 12,5 px/600 на --v4-ink с пилюлей даты 9 px моношириной на --v4-hero тоном --v4-act-text, значение 12,5 px/700 тем же тоном. Холодный старт: «пока нет» 11 px/600 на --v4-ink-data (56 %), пилюля «копим данные» чернил 50 %, полоса 6 px радиусом 999 на --v4-act и счёт 11 px/700 моноцифрами",
       "h": "80288e302c23"
     },
     "кадры Self": {
       "v": "=",
-      "f": "lowered_needs_consent, raised, refused_three_times и pending_curator собраны моделью; «Self · отказ принят» отдельным кадром не рисуется — после отказа карточка исчезает до следующего понедельника, а норма и так видна на Главной",
+      "f": "lowered_needs_consent, raised, refused_three_times, pending_curator и refusal_accepted собраны моделью; подтверждение отказа появляется из lastDecision.what=declined и называет срок возврата предложения",
       "h": "1cac28bea067"
     },
     "решение владельца": {
@@ -249,9 +249,9 @@
       "h": "57d2e99a25f7"
     },
     "роли цвета": {
-      "v": "≠",
-      "f": "рост — --v4-ok-text и заливка --v4-ok-bg, снижение — --v4-bad-text только на числе разницы, --v4-act заливает главную кнопку, --v4-act-text — ярусы и ссылки. Отступление: предупреждение о нехватке данных стоит тоном --v4-warn-text на обычной подложке, а не на --tint: отдельной подложки предупреждения в наборе нет, и заводить её ради двух строк гейта не стал",
-      "h": "595d219bf7aa"
+      "v": "=",
+      "f": "красная роль одна: снижение использует --v4-bad-text только на числе разницы; рост — --v4-ok-text и --v4-ok-bg, главное действие — --v4-act, ярусы и ссылки — --v4-act-text. Решение дизайнера от 31 августа сняло отдельную --val-bad и совпало с продуктом",
+      "h": "77bc70d80ca7"
     },
     "кнопки": {
       "v": "=",
@@ -606,7 +606,7 @@
     "Куратор · данных не хватает · 16": {
       "v": "≠",
       "f": "строки «Расчётные веса — в зачёт не идут» в листе нет: движок отдаёт в карточку только два гейта — взвешивания и дни, — а расчётные веса отфильтровывает раньше, в тренде. Показать их отдельной строкой значило бы завести третий гейт, которого в расчёте нет",
-      "h": "d63249b53977"
+      "h": "edb20cbc291d"
     },
     "Куратор · данных не хватает · 17": {
       "v": "≠",
@@ -860,8 +860,8 @@
     },
     "Сверка · норма снизилась · 14": {
       "v": "=",
-      "f": ".weekly-wrap-correction__fact-value.is-quiet 11 px/600 чернил 45 %",
-      "h": "f14006fa38d6"
+      "f": ".weekly-wrap-correction__fact-value.is-quiet 11 px/600 на --v4-ink-data (56 %) — сведено разбором кадра",
+      "h": "2998c998497d"
     },
     "Сверка · норма снизилась · 15": {
       "v": "=",
@@ -945,8 +945,8 @@
     },
     "Сверка · рекомпозиция · 12": {
       "v": "=",
-      "f": ".weekly-wrap-correction__legend-item — сведено разбором: пара «элемент → правило» в norm-correction-canvas-razbor",
-      "h": "cb54533dfc07"
+      "f": ".weekly-wrap-correction__legend-item.is-weight: 10,5 px/600, зазор 6, выравнивание center, цвет --v4-ink-data (56 %) — сведено разбором",
+      "h": "92c8cc5319d6"
     },
     "Сверка · рекомпозиция · 13": {
       "v": "=",
@@ -1036,7 +1036,7 @@
     "Замер · запрос в момент неопределённости · 13": {
       "v": "≠",
       "f": "смысл кадра в продукте есть, но на другой поверхности: заморозка, счёт оставшихся дней и предложение включить замеры стоят в карточке сверки (кадр «Перестройка · по косвенным»), а не действием в «Сделай сегодня» на Инсайтах. Тот список строит зона reports-insights, ещё не сведённая, и лезть в её генератор действий из этой зоны значит писать в чужой несведённый экран. Отдано записью в UI_V4_FINDINGS",
-      "h": "37370e3e5742"
+      "h": "e53b8fb6e38d"
     },
     "Замер · запрос в момент неопределённости · 14": {
       "v": "≠",
@@ -1121,7 +1121,7 @@
     "Замер · включение с согласием · 14": {
       "v": "≠",
       "f": "включение замеров работает: measurementsTrackingEnabled выключен по умолчанию, включается согласием body_measurements 1.0 и при выключении чистит внесённые замеры — ровно как в подписанном документе. Отдельного экрана с ярусом «Что это даёт» и двумя строками пользы нет: стоит общий тумблер здоровья с текстом согласия. Отдано записью в UI_V4_FINDINGS",
-      "h": "c897314c4bf4"
+      "h": "b29db480574a"
     },
     "Замер · включение с согласием · 15": {
       "v": "≠",
@@ -1200,8 +1200,8 @@
     },
     "Перестройка · по косвенным · 13": {
       "v": "=",
-      "f": ".weekly-wrap-correction__fact-value.is-quiet 11 px/600 чернил 45 %",
-      "h": "3031e64cc3d9"
+      "f": "модель помечает «Довод — косвенный» tone=quiet, рендер добавляет .is-quiet; правило даёт 11 px/600 на --v4-ink-data (56 %)",
+      "h": "d12272bf19ec"
     },
     "Перестройка · по косвенным · 14": {
       "v": "=",
@@ -1295,8 +1295,8 @@
     },
     "Сверка · перестройку проверить не удалось · 14": {
       "v": "≠",
-      "f": "значение стоит тоном .is-quiet (чернила 45 %), а не 38 %: третьей ступени приглушения в наборе нет, а разница между 38 и 45 % на одиннадцати пикселях не читается",
-      "h": "99098e8126fd"
+      "f": "в модели есть кадр recomposition_unverified после истечения заморозки, но строки фактов «Замер талии / Рабочие веса / Заморозка» в card.facts не собраны; значение из этой строки в runtime отсутствует",
+      "h": "3db6d9bcecaf"
     },
     "Сверка · перестройку проверить не удалось · 15": {
       "v": "=",
@@ -1495,8 +1495,8 @@
     },
     "Цель · холодный старт · 11": {
       "v": "=",
-      "f": "«пока нет» 11 px чернил 38 % вместо множителя",
-      "h": "bfcd6b7c36de"
+      "f": "«пока нет» задано inline как 11 px/600/1 на --v4-ink-data (56 %) вместо множителя; точечный source-тест закрепляет свойства",
+      "h": "5c955cab8828"
     },
     "Цель · холодный старт · 12": {
       "v": "—",
@@ -1560,8 +1560,8 @@
     },
     "Куратор · история поправки · 06": {
       "v": "=",
-      "f": ".cur-sheet__hist-legend: space-between, baseline, зазор 10, 10 px/500 чернил 38 %",
-      "h": "21bfbe1501f4"
+      "f": ".cur-sheet__hist-legend идёт после SVG: space-between, baseline, зазор 10, отступ 8, 10 px/500 на --v4-ink-data (56 %)",
+      "h": "30528a7f1527"
     },
     "Куратор · история поправки · 07": {
       "v": "=",
@@ -1570,8 +1570,8 @@
     },
     "Куратор · история поправки · 08": {
       "v": "=",
-      "f": ".cur-sheet__hist-dates: space-between, 10 px/600 чернил 42 %, моноцифры, отступ сверху 6",
-      "h": "0cde440614b1"
+      "f": ".cur-sheet__hist-dates: space-between, 10 px/600 на --v4-ink-data (56 %), моноцифры, отступ сверху 6",
+      "h": "365ed06c5b12"
     },
     "Куратор · история поправки · 09": {
       "v": "=",
@@ -1600,8 +1600,8 @@
     },
     "Куратор · история поправки · 14": {
       "v": "=",
-      "f": ".cur-sheet__hist-who 11 px/600 чернил 42 %. Хозяин решения теперь едет вместе с ним полем by: «применил» без хозяина одинаково подходит куратору и клиенту, а это разные вещи. Безличные исходы хозяина не имеют — «отложено», «сошлось», «холодный старт» никто не выбирал",
-      "h": "eef56fe41545"
+      "f": ".cur-sheet__hist-who 11 px/600 на --v4-ink-data (56 %). Хозяин решения едет полем by; безличные исходы хозяина не получают",
+      "h": "4292958f1fd3"
     },
     "Куратор · история поправки · 15": {
       "v": "=",
@@ -1670,8 +1670,8 @@
     },
     "Self · снижение ждёт согласия · 12": {
       "v": "=",
-      "f": ".weekly-wrap-correction__fact-hint 10 px/1,3 чернил 42 % — сведено разбором: пара «элемент → правило» в norm-correction-canvas-razbor",
-      "h": "5e7a5567ac79"
+      "f": ".weekly-wrap-correction__fact-hint 10 px/500/1,3 на --v4-ink-data (56 %) — сведено разбором кадра",
+      "h": "e8cf1dcad5d7"
     },
     "Self · снижение ждёт согласия · 13": {
       "v": "≠",
@@ -1715,8 +1715,8 @@
     },
     "Self · снижение ждёт согласия · 21": {
       "v": "=",
-      "f": ".weekly-wrap-correction__fact-value.is-quiet 11 px/600 чернил 45 % — сведено разбором: пара «элемент → правило» в norm-correction-canvas-razbor",
-      "h": "dae54152c183"
+      "f": ".weekly-wrap-correction__fact-value.is-quiet 11 px/600 на --v4-ink-data (56 %) — сведено разбором кадра",
+      "h": "a5bb25ae62e3"
     },
     "Self · снижение ждёт согласия · 22": {
       "v": "≠",
@@ -1805,8 +1805,8 @@
     },
     "Pro · на согласовании · 16": {
       "v": "=",
-      "f": ".weekly-wrap-correction__fact-hint — природа числа подписью под ключом",
-      "h": "5e7a5567ac79"
+      "f": ".weekly-wrap-correction__fact-hint — природа числа подписью под ключом, 10 px/500/1,3 на --v4-ink-data (56 %)",
+      "h": "e8cf1dcad5d7"
     },
     "Pro · на согласовании · 17": {
       "v": "≠",
@@ -1879,9 +1879,9 @@
       "h": "b396c1e0d977"
     },
     "Self · отказ принят · 12": {
-      "v": "≠",
-      "f": "кадра в продукте нет: после «Оставить прежнюю» карточка просто закрывается, и подтверждения отказа человек не видит. Что для него нужно — отдельная запись в UI_V4_FINDINGS",
-      "h": "19401b59f19c"
+      "v": "=",
+      "f": "кадр refusal_accepted собирается при lastDecision.what=declined; строка «Поправка вернётся — в понедельник» помечена tone=quiet и рендерится 11 px/600 на --v4-ink-data (56 %)",
+      "h": "6b49bd79fe86"
     },
     "Self · отказ принят · 13": {
       "v": "=",
@@ -1979,9 +1979,9 @@
       "h": "6b286135ed76"
     },
     "Self · рост применён · 17": {
-      "v": "=",
-      "f": ".weekly-wrap-correction__fact-value.is-quiet 11 px/600 чернил 45 %",
-      "h": "314e59ba4c29"
+      "v": "≠",
+      "f": "кадр raised сообщает рост заголовком, прозой, главным числом и кнопкой возврата, но список «Было / Поправка / Спрашивать согласие» в card.facts не собирается; строки «на рост не спрашиваем» в runtime нет",
+      "h": "17e1965e7720"
     },
     "Self · рост применён · 18": {
       "v": "≠",
@@ -2055,8 +2055,8 @@
     },
     "Self · третий отказ подряд · 13": {
       "v": "≠",
-      "f": "значение стоит тоном .is-quiet (чернила 45 %), а не 38 %: третьей ступени приглушения в наборе нет, а разница между 38 и 45 % на одиннадцати пикселях не читается",
-      "h": "99098e8126fd"
+      "f": "кадр refused_three_times есть, но список «Норма / Расхождение / Замер талии» в card.facts не собирается; значение «не было» в runtime отсутствует",
+      "h": "3db6d9bcecaf"
     },
     "Self · третий отказ подряд · 14": {
       "v": "=",
@@ -2075,12 +2075,7 @@
     },
     "Self · третий отказ подряд · 17": {
       "v": "=",
-      "f": ".weekly-wrap-correction__fact-value.is-quiet 11 px/600 чернил 45 %",
-      "h": "9f7bc775f9f4"
-    },
-    "Self · третий отказ подряд · 18": {
-      "v": "=",
-      "f": ".weekly-wrap-correction__footnote 11 px/1,4 чернил 45 %",
+      "f": "copy.footnote дословно несёт сноску «Ни одна из кнопок не обязательна…» и рендерится .weekly-wrap-correction__footnote",
       "h": "edcf022851de"
     },
     "Pro · куратор решил не менять · 01": {
@@ -2156,7 +2151,7 @@
     "Pro · куратор решил не менять · 15": {
       "v": "≠",
       "f": "кадра в продукте нет: решение куратора «не менять» до клиента не доезжает — движок знает только исходы своего расчёта. Что для него нужно — отдельная запись в UI_V4_FINDINGS",
-      "h": "a15881789429"
+      "h": "1ce22ae6b79c"
     },
     "Pro · куратор решил не менять · 16": {
       "v": "=",
@@ -2402,6 +2397,160 @@
       "v": "=",
       "f": "под полосой строка «Пока считаем по формуле. Через неделю проверим расчёт на вашем результате и, если он разойдётся с фактом, подстроим»",
       "h": "4bb83e189c44"
+    }
+  },
+  "frames": {
+    "Куратор · поправка предложена": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Куратор · данных не хватает": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Сверка · сошлось": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Сверка · норма выросла": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Сверка · норма снизилась": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Сверка · рекомпозиция": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Замер · запрос в момент неопределённости": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Замер · включение с согласием": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Перестройка · по косвенным": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Сверка · перестройку проверить не удалось": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Цель · строка поправки": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Цель · холодный старт": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Куратор · история поправки": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Self · снижение ждёт согласия": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Pro · на согласовании": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Self · отказ принят": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Self · рост применён": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Self · третий отказ подряд": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Pro · куратор решил не менять": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
     }
   }
 }

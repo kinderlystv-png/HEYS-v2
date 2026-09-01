@@ -28,10 +28,6 @@ const EXCEPTIONS = new Map([
   // медаль достижения. Контракт старше кадра; вопрос дизайнеру заведён.
   ['Уровни · 16|*', 'строка «вид строки уровня в списке»: номер текстом 12,5/600, не квадратом'],
   ['Уровни · 17|fontWeight', 'та же строка: титул 600, вес 700 только у текущего уровня'],
-  // Кадр просит чернила 40 %; у набора три тона — 55 / 45 / 38. Взят
-  // ближайший --v4-ink-4.
-  ['Достижения · 21|color', 'у набора нет тона 40 %, ближайший --v4-ink-4'],
-  ['Уровни · 12|color', 'тот же тон 40 %: строка «сколько из скольких» тоже на --v4-ink-4'],
   // Кадр даёт строкам списка межстрочный 1; в коде он не задан и наследуется.
   // Однострочные подписи от этого не меняются.
   ['Уровни · 17|lineHeight', 'межстрочный однострочной подписи не задан'],
@@ -49,11 +45,11 @@ const ACHIEVEMENTS = [
   [11, `${G}bar-fill`, ['radius', 'background']],
   [15, `${G}card-title`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [16, `${G}card-xp`, ['fontWeight', 'fontSize', 'color']],
-  [17, `${G}card-sub`, ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  [17, `${G}card-sub`, ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
   [18, [`${G}near-card ${G}streak-bar-row`, `${G}streak-bar-row`], ['gap', 'marginTop']],
   [19, [`${G}streak-bar`, `${G}streak-bar.is-earned.is-ok`], ['height', 'radius', 'background']],
   [20, `${G}streak-bar`, ['height', 'radius', 'background']],
-  [21, `${G}card-meta`, ['fontWeight', 'fontSize', 'marginTop']],
+  [21, `${G}card-meta`, ['fontWeight', 'fontSize', 'color', 'marginTop']],
   [23, `${G}ach-row`, ['align', 'gap', 'padding']],
   [24, [`${G}ach-medal`, `${G}ach-row.is-unlocked ${G}ach-medal`],
     ['width', 'height', 'radius', 'background', 'align', 'justify']],
@@ -62,7 +58,7 @@ const ACHIEVEMENTS = [
   [26, `${G}ach-head`, ['align', 'justify', 'gap']],
   [27, `${G}ach-name`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [28, `${G}ach-xp`, ['flex', 'fontWeight', 'fontSize', 'color']],
-  [29, `${G}ach-cond`, ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
+  [29, `${G}ach-cond`, ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
   [30, `${G}ach-row`, ['align', 'gap', 'padding']],
   [31, [`${G}ach-medal`, `${G}ach-row.is-locked ${G}ach-medal`],
     ['width', 'height', 'flex', 'radius', 'background', 'align', 'justify']],
@@ -75,12 +71,12 @@ const LEVELS = [
   [10, [`${G}bar`, `${G}bar--thin`], ['height', 'radius', 'background', 'marginTop']],
   [15, `${G}ladder-row`, ['align', 'gap', 'padding']],
   [17, `${G}ladder-title`, ['fontSize']],
-  [18, `${G}ladder-xp`, ['fontWeight', 'fontSize']],
+  [18, `${G}ladder-xp`, ['fontWeight', 'fontSize', 'color']],
   [2, `${G}header`, ['align', 'gap']],
   [5, `${G}hero--cream`, ['background', 'radius', 'padding', 'marginTop']],
   [7, `${G}hero-metric`, ['align', 'gap', 'marginTop']],
   [11, `${G}bar-fill`, ['radius', 'background']],
-  [12, `${G}level-hero-meta`, ['justify', 'marginTop', 'fontWeight', 'fontSize']],
+  [12, `${G}level-hero-meta`, ['justify', 'marginTop', 'fontWeight', 'fontSize', 'color']],
   [22, `${G}ladder-row`, ['align', 'gap', 'padding']],
   [23, [`${G}card`, `${G}mult-card`], ['background']],
   [24, `${G}card-head`, ['justify', 'align', 'gap']],
@@ -124,7 +120,7 @@ describe('«Геймификация» · разбор кадров канвас
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(6);
+    expect(EXCEPTIONS.size).toBe(4);
   });
 
   it('гейт называет свой охват', () => {

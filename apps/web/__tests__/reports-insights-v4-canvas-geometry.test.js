@@ -19,6 +19,8 @@ const insightsCss = fs.readFileSync(
   path.resolve(__dirname, '../styles/modules/734-ui-v4-insights.css'), 'utf8');
 const reportsCss = fs.readFileSync(
   path.resolve(__dirname, '../styles/modules/733-ui-v4-reports.css'), 'utf8');
+const paletteCss = fs.readFileSync(
+  path.resolve(__dirname, '../styles/modules/002-ui-v4-palette-roles.css'), 'utf8');
 
 // Плитка Score живᄅт в своём модуле: файл передан зоне «Отчёты и Инсайты»
 // 31 августа — Главная не печатает ни одного его класса.
@@ -127,7 +129,7 @@ const MATRIX = [
 // Шапка экрана и сноска про особый период — два места, где класс есть,
 // а правила до 31 августа не было вовсе либо оно расходилось с кадром.
 const HEAD_AND_NOTES = [
-  [13, '.reports-v4-meta', ['align', 'gap']],
+  [13, '.reports-v4-meta', ['gap']],
   [24, '.reports-v4-hero__unit', ['fontWeight', 'fontSize', 'lineHeight']],
   [70, '.reports-v4-weight-cycle-footnote',
     ['fontWeight', 'fontSize', 'lineHeight', 'marginTop']],
@@ -198,10 +200,14 @@ const ZERO_ROW = [
     ['flex', 'height', 'radius']],
   [17, ['.reports-v4-discipline__score', '.reports-v4-discipline__score.is-zero'],
     ['flex', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [19, '.reports-v4-discipline__avg', ['fontWeight', 'fontSize', 'lineHeight']],
-  [26, '.reports-v4-discipline__delta',
+  [18, '.reports-v4-discipline__avg',
+    ['flex', 'width', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [20, ['.reports-v4-discipline__delta', '.reports-v4-discipline__delta.is-down'],
     ['flex', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight']],
-  [28, '.reports-v4-discipline__footnote', ['fontWeight', 'fontSize', 'lineHeight']],
+  [24, '.reports-v4-discipline__delta',
+    ['flex', 'textAlign', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [26, '.reports-v4-discipline__footnote',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // Одна закрытая неделя: прочерки вместо чисел в незакрытых колонках.
@@ -361,6 +367,8 @@ const SCORE_TILE = [
   [32, '.heys-score-tile__body', ['align', 'justify', 'gap', 'marginTop']],
   [33, '.heys-score-tile__figure', ['direction', 'gap']],
   [34, '.heys-score-tile__number', ['fontWeight', 'fontSize', 'lineHeight', 'tracking']],
+  [35, ['.heys-score-tile__state', '.reports-v4-score-slot .heys-score-tile__state'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [36, '.heys-score-tile__entry', ['align', 'justify', 'marginTop']],
   [37, '.heys-score-tile__entry-label', ['fontWeight', 'fontSize', 'lineHeight']],
 ];
@@ -378,14 +386,23 @@ const SUMMARY = [
 ];
 
 const HEADER = [
-  [12, '.reports-v4-meta', ['marginTop']],
+  [12, '.reports-v4-meta', ['align', 'justify', 'marginTop']],
   [14, '.reports-v4-meta__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [15, '.reports-v4-meta__range', ['align', 'gap']],
+  [15, '.reports-v4-meta__range',
+    ['align', 'gap', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
   [20, '.reports-v4-hero', ['background', 'radius', 'padding', 'marginTop']],
   [22, '.reports-v4-hero__value-row', ['align', 'gap', 'marginTop']],
   [25, '.reports-v4-hero__phrase',
     ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
   [26, '.reports-v4-hero__footer', ['justify', 'align', 'marginTop']],
+];
+
+const PERIOD_TABS = [
+  [16, '.reports-v4-period-pills', ['gap', 'fontWeight', 'fontSize', 'lineHeight']],
+  [17, ['.reports-v4-period-pill', '.reports-v4-period-pill.is-active'],
+    ['color', 'minWidth', 'minHeight', 'align', 'justify', 'padding']],
+  [18, '.reports-v4-period-pill',
+    ['color', 'minWidth', 'minHeight', 'align', 'justify', 'padding']],
 ];
 
 describe('Отчёты · разбор кадров канваса', () => {
@@ -396,6 +413,18 @@ describe('Отчёты · разбор кадров канваса', () => {
     expect(compare({
       razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: HEADER,
     })).toEqual([]);
+  });
+
+  it('выбор периода — текстовые табы с подчёркиванием и областью 44px', () => {
+    expect(compare({
+      razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: PERIOD_TABS,
+    })).toEqual([]);
+    expect(rules.get('.reports-v4-period-pill').background).toBe('none');
+    expect(rules.get('.reports-v4-period-pill')['border-radius']).toBe('0');
+    expect(rules.get('.reports-v4-period-pill').margin).toBe('-16px -6px');
+    expect(rules.get('.reports-v4-period-pill')['border-bottom']).toBe('2px solid transparent');
+    expect(rules.get('.reports-v4-period-pill.is-active')['border-bottom-color'])
+      .toBe('var(--v4-act, #c67139)');
   });
 
   // Карточка баланса стоит на ВТОРОЙ поверхности — так говорят и строка
@@ -413,10 +442,13 @@ describe('Отчёты · разбор кадров канваса', () => {
   });
 
   it('плитка Score в «Итоге периода» собрана по кадру', () => {
+    const cascadeRules = readRules(cascadeCss);
     expect(compare({
-      razbor, rules: readRules(cascadeCss), frame: 'Визуал v4 · Отчёты',
+      razbor, rules: cascadeRules, frame: 'Визуал v4 · Отчёты',
       pairs: SCORE_TILE,
     })).toEqual([]);
+    expect(cascadeRules.get('.reports-v4-score-slot .heys-score-tile__state')['letter-spacing'])
+      .toBe('normal');
   });
 
   it('плитки «Итога периода» совпадают с кадром', () => {
@@ -525,9 +557,8 @@ describe('Отчёты · разбор кадров канваса', () => {
     expect(goal, 'правила плановой линии нет').toBeTruthy();
     expect(line, 'правила линии факта нет').toBeTruthy();
 
-    // План: чернила вместо дорожки. 22 % своей ступени в наборе не имеют —
-    // взята ближайшая, --v4-edge (18 %); отступление названо в реестре.
-    expect(goal.stroke).toContain('var(--v4-edge');
+    // План: своя ступень чернил 22 %, не 18%-край и не 12%-дорожка.
+    expect(goal.stroke).toContain('var(--v4-plan');
     expect(goal.stroke, 'дорожка 12 % вместо чернил — вдвое бледнее кадра')
       .not.toContain('--v4-track');
     expect(norm(goal['stroke-width'])).toBe('2');
@@ -576,6 +607,15 @@ describe('Отчёты · разбор кадров канваса', () => {
     // прежнем виде.
     expect(spark).toContain(
       "!reportsV4 && points.filter((p, i) => i > 0 && p.dayOfWeek === 1)");
+  });
+
+  it('роль плановой линии равна 22 % во всех четырёх палитрах', () => {
+    expect([...paletteCss.matchAll(/--v4-plan:\s*([^;]+);/g)].map((m) => m[1])).toEqual([
+      'rgba(0, 0, 0, 0.22)',
+      'rgba(242, 237, 230, 0.22)',
+      'rgba(0, 0, 0, 0.22)',
+      'rgba(238, 243, 248, 0.22)',
+    ]);
   });
 
   // Кривая веса: тот же приём, что у соседнего графика калорий — пара
@@ -1105,10 +1145,6 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
       // её заливкой акцента.
       // Тон надписи входа плитки Score: кадр 50 %, ближайшая ступень 55 %.
       'Визуал v4 · Отчёты · 37',
-      // Выбор окна: кадр рисует подчёркнутый текст, строки контракта — чипы.
-      'Визуал v4 · Отчёты · 16',
-      'Визуал v4 · Отчёты · 17',
-      'Визуал v4 · Отчёты · 18',
       // Главное число и «съедено · план»: три источника с разными кеглями,
       // записано дизайнеру; тоны 42 % и 50 % — трёхступенчатая шкала.
       'Визуал v4 · Отчёты · 23',
@@ -1158,13 +1194,11 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
       'Неделя к неделе · одна закрытая · 26',
       'Отчёты · нулевая строка матрицы · 16',
       'Отчёты · нулевая строка матрицы · 21',
-      // Средняя доля у нулевой строки: две строки контракта ставят её в разные места —
-      // в колонку Δ либо второй строкой со сдвигом 98. Спор записан в UI_V4_FINDINGS.md.
-      'Отчёты · нулевая строка матрицы · 18',
       'Отчёты · нулевая строка матрицы · 19',
+      // Кадр красит отрицательную метрику через --val-bad, но именованный контракт
+      // «роли цвета» резервирует красный только для необратимых действий.
       'Отчёты · нулевая строка матрицы · 20',
       'Отчёты · нулевая строка матрицы · 22',
-      'Отчёты · нулевая строка матрицы · 35',
       'Отчёты · нулевая строка матрицы · текст',
       // Кадр отстал от контракта по границам окна: 500 11px против 600 10,5.
       'Отчёты · мало данных · 04',
@@ -1220,10 +1254,6 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
       // из 158 приходятся на пустые поля.
       'Мало калорий · подтверждение · рисунок 01',
       'Отчёты · нет веса · рисунок 01',
-      // Тон плановой линии: кадр и обе строки контракта просят чернила 22 %,
-      // своей ступени под 22 % в наборе нет — взята ближайшая --v4-edge
-      // (18 %). Тот же род отступления, что у кнопки «· 16» ниже.
-      'Мало калорий · подтверждение · рисунок 02',
       // Устройство фразы движка предупреждений: контракт просит число в
       // первой строке, а следствие или опору во второй; код делает наоборот —
       // число уходит в detail, и вторая строка есть лишь у 30 фраз из 75.
@@ -1283,7 +1313,6 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
       'Отчёты · нулевая строка матрицы · 31',
       'Отчёты · нулевая строка матрицы · 32',
       'Отчёты · нулевая строка матрицы · 33',
-      'Отчёты · нулевая строка матрицы · 34',
       // Третья строка зоны, где просят скелетон. Ответ тот же: знак ожидания
       // в продукте один — спиннер, полос на #f4f4f3 у него не бывает.
       'карточка · скелетон расчёта',

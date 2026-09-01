@@ -12,6 +12,7 @@
 
   const { WheelPicker, registerStep, utils } = HEYS.StepModal;
   const { lsGet, lsSet, getTodayKey } = utils;
+  const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';
 
   // ============================================================
   // УТИЛИТЫ
@@ -605,7 +606,7 @@
           style: { fontSize: 11, fontWeight: 600, lineHeight: 1.4, marginTop: 6, color: '#a1471c' }
         }, nameError),
         nameError && firstName && React.createElement('div', {
-          style: { fontSize: 11, fontWeight: 500, lineHeight: 1.5, marginTop: 5, color: 'rgba(0,0,0,.42)' }
+          style: { fontSize: 11, fontWeight: 500, lineHeight: 1.5, marginTop: 5, color: INK_DATA }
         }, 'Куратор обращается к вам по имени, поэтому оно должно читаться.')
       ),
       React.createElement('div', { className: 'flex flex-col gap-2' },
@@ -669,7 +670,7 @@
         !gender && isValidGivenName(firstName)
           ? React.createElement('div', { className: 'text-xs font-semibold', style: { color: '#a1471c' } },
             'Выберите один вариант')
-          : React.createElement('div', { className: 'text-xs', style: { color: 'rgba(0,0,0,.42)' } },
+          : React.createElement('div', { className: 'text-xs', style: { color: INK_DATA } },
             'Формула основного обмена у мужчин и женщин разная.')
       ),
 
@@ -765,7 +766,7 @@
         },
           React.createElement('div', { style: { fontSize: 12, fontWeight: 700, lineHeight: 1.4, color: '#a1471c' } },
             'Приложением можно пользоваться с 18 лет'),
-          React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, marginTop: 5, color: 'rgba(0,0,0,.55)', lineHeight: 1.55 } },
+          React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, marginTop: 5, color: INK_DATA, lineHeight: 1.55 } },
             'Программа рассчитана на взрослых, и документы подписывает совершеннолетний. Колесо дальше не идёт.')
         )
       ),
@@ -948,7 +949,7 @@
         },
           React.createElement('div', { style: { fontSize: 12, fontWeight: 700, lineHeight: 1.4, color: '#a1471c' } },
             `ИМТ цели ${goalBmi.toFixed(1).replace('.', ',')} — ниже нормы`),
-          React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, marginTop: 5, color: 'rgba(0,0,0,.55)', lineHeight: 1.55 } },
+          React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, marginTop: 5, color: INK_DATA, lineHeight: 1.55 } },
             `При росте ${height} см нижняя граница нормы — ${minKg} кг. Цель можно оставить, но прогноз по срокам для неё мы не строим — обсудите её с куратором.`)
         )
         : React.createElement('div', { style: { display: 'flex', gap: 8 } },
@@ -979,7 +980,7 @@
             React.createElement('div', { className: 'text-xs', style: { color: 'rgba(0,0,0,.45)' } }, 'До цели'),
             React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 6 } },
               React.createElement('span', { style: { fontSize: 18, fontWeight: 700, color: '#201e1d' } }, String(weightDiff)),
-              React.createElement('span', { className: 'text-xs font-semibold', style: { color: 'rgba(0,0,0,.45)' } }, 'кг')
+              React.createElement('span', { className: 'text-xs font-semibold', style: { color: INK_DATA } }, 'кг')
             )
           )
         )
@@ -1154,7 +1155,7 @@
           }, tempo.label))
         ),
         selectedTempo && React.createElement('p', {
-          style: { fontSize: 10.5, fontWeight: 500, lineHeight: 1.45, color: 'rgba(0,0,0,.42)', margin: '8px 0 0' }
+          style: { fontSize: 10.5, fontWeight: 500, lineHeight: 1.45, color: INK_DATA, margin: '8px 0 0' }
         }, selectedTempo.hint)
       ),
       tier('Активность сейчас', 32),
@@ -1353,14 +1354,14 @@
               React.createElement('span', {
                 style: {
                   fontSize: 11, fontWeight: 500, lineHeight: 1,
-                  color: isSelected ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.4)',
+                  color: INK_DATA,
                 }
               }, preset.desc)
             );
           })
         ),
         React.createElement('p', {
-          style: { fontSize: 10.5, fontWeight: 500, lineHeight: 1.45, color: 'rgba(0,0,0,.42)', margin: '10px 0 0' }
+          style: { fontSize: 10.5, fontWeight: 500, lineHeight: 1.45, color: INK_DATA, margin: '10px 0 0' }
         }, 'Волна задаёт, сколько после приёма пищи держится подъём инсулина: от неё зависят подсказки о перекусах. Меняется в настройках.')
       )
     );
@@ -1712,12 +1713,16 @@
     const firstName = step1.firstName || profile.firstName || '';
     const weight = Number(step2.weight) || Number(profile.weight) || 70;
     const weightGoal = Number(step2.weightGoal) || Number(profile.weightGoal) || weight;
+    const height = Number(step2.height) || Number(profile.height) || 175;
     const deficitPctTarget = Number.isFinite(Number(step3.deficitPctTarget))
       ? Number(step3.deficitPctTarget)
       : (Number.isFinite(Number(profile.deficitPctTarget)) ? Number(profile.deficitPctTarget) : 0);
     const serverNorms = lsGet('heys_norms', {}) || {};
     const activityLevel = step3.activityLevel || profile.activityLevel || '';
-    const weeks = calcTimeToGoal(weight, weightGoal, deficitPctTarget, activityLevel);
+    const goalBmi = calcBMI(weightGoal, height);
+    const weeks = goalBmi > 0 && goalBmi < 18.5
+      ? 'не строим'
+      : calcTimeToGoal(weight, weightGoal, deficitPctTarget, activityLevel);
     const protPct = Number(serverNorms.proteinPct);
     const carbsPct = Number(serverNorms.carbsPct);
     const hasServerMacros = serverNorms.source === 'registration-server'
@@ -1896,7 +1901,7 @@
         React.createElement('p', {
           style: {
             fontSize: 11,
-            color: 'rgba(0,0,0,.42)',
+            color: INK_DATA,
             marginTop: 12,
             lineHeight: 1.5,
             maxWidth: 320
@@ -1946,7 +1951,7 @@
       React.createElement('p', {
         style: {
           fontSize: 11,
-          color: 'rgba(0,0,0,.42)',
+          color: INK_DATA,
           marginTop: 12,
           marginBottom: 20,
           lineHeight: 1.5,

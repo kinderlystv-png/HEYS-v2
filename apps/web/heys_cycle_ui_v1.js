@@ -485,7 +485,7 @@
       const day29Card = (showDay29 || day29Open) && React.createElement('div', { className: 'cycle-card-v4 cycle-card-v4--day29' },
         React.createElement('div', { className: 'cycle-card-v4__day29-title' }, 'Период начался?'),
         React.createElement('div', { className: 'cycle-card-v4__day29-sub' },
-          'Если да — отметьте первый день. Если нет — счёт останется без новой недели.'
+          'С последней отметки прошло 28 дней. Пока не ответите, нормы считаются базовыми.'
         ),
         renderDecisionButtons(React, [
           { key: 'not', label: 'Ещё нет', kind: 'secondary', onClick: () => setDay29Open(false) },

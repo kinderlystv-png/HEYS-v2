@@ -52,8 +52,8 @@ const BASELINE = {
   truncated: 0,
   missing: 0,
   beyond: 0,
-  absent: 18,
-  moved: 134,
+  absent: 15,
+  moved: 122,
 };
 
 const args = process.argv.slice(2);

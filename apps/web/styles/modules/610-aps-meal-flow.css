@@ -428,7 +428,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.45;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 /* Строка «вид · модалка»: подпись 11 px/1,4 тоном чернил 50 %. Стояли 10 px/1
@@ -439,7 +439,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 .flow-selection-btn__chevron {
@@ -601,7 +601,7 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1.35;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 .meal-mood-prefill__icon {
@@ -616,7 +616,7 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 35%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 .meal-mood-scale__slider {
@@ -1437,7 +1437,7 @@
   padding: 0 16px;
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
   font-size: 11.5px;
   font-weight: 700;
 }
@@ -1487,7 +1487,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 42%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -1520,7 +1520,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 42%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
   text-wrap: pretty;
 }
 
@@ -1857,7 +1857,7 @@
   margin-top: 5px;
   font-size: 11px;
   font-weight: 500;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
   line-height: 1.3;
 }
 
@@ -1932,7 +1932,7 @@
 .mpr-preview-item-kcal {
   flex: 1;
   font-size: 11px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 .mpr-preview-item-grams {
@@ -2062,7 +2062,7 @@
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 .mpr-preview-total__value {
@@ -2215,7 +2215,7 @@
 .mpr-create-item-kcal {
   flex: 1;
   font-size: 11px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 /* «Сохранить набор» — главная кнопка экрана. Стояла янтарным градиентом
@@ -3433,7 +3433,7 @@ button.meal-quality-badge:active {
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -3466,7 +3466,7 @@ button.meal-quality-badge:active {
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 38%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 .aps-v4-search-footnote {
@@ -3646,7 +3646,7 @@ button.meal-quality-badge:active {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 45%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 .aps-v4-grams-last {
@@ -3654,7 +3654,7 @@ button.meal-quality-badge:active {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 45%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 .aps-v4-grams-impact {
@@ -3690,7 +3690,7 @@ button.meal-quality-badge:active {
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 45%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 .aps-v4-grams-impact__bar {
@@ -3742,7 +3742,7 @@ button.meal-quality-badge:active {
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 42%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 /* Кадр «Порция · продукт уже в приёме» даёт карточке ту же вторую бумагу
@@ -3807,7 +3807,7 @@ button.meal-quality-badge:active {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.4;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 /* «В переборе вторая половина меняется на „перебор M" тоном --val-bad,
@@ -4037,7 +4037,7 @@ button.meal-quality-badge:active {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 30%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 .aps-v4-search-state__similar {
@@ -4146,7 +4146,7 @@ button.meal-quality-badge:active {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 /* Строка «вид · две кнопки над вкладками», переписана 31 августа: над вкладками
@@ -4251,7 +4251,7 @@ button.meal-quality-badge:active {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.45;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
 }
 
 /* === Модалки набора: сохранение и удаление ==========================
@@ -4314,7 +4314,7 @@ button.meal-quality-badge:active {
   flex: none;
   font-size: 11.5px;
   font-weight: 600;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+  color: var(--v4-ink-data, rgba(var(--ink),.56));
   font-variant-numeric: tabular-nums;
 }
 

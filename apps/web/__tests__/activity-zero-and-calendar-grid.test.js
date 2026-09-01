@@ -43,14 +43,15 @@ describe('Ноль шагов приглушён целиком', () => {
   });
 
   it('оценка нулём не считается — у неё свой тон', () => {
-    // Подставленная медиана — настоящее число, просто не факт: 55 %, не 38 %.
-    expect(rule('.activity-v4-steps__value--zero')).toContain('var(--v4-ink-4');
+    // Нулевой факт следует обновлённой data-роли 56 %, а подставленная
+    // медиана — отдельному кадру оценённых шагов с ближайшей ступенью 55 %.
+    expect(rule('.activity-v4-steps__value--zero')).toContain('var(--v4-ink-data');
     expect(rule('.activity-v4-steps__value--estimated')).toContain('var(--v4-ink-2');
   });
 
   it('калории при нуле приглушены вместе с числом', () => {
     expect(ACTIVITY_SRC).toContain('activity-v4-steps__kcal--zero');
-    expect(rule('.activity-v4-steps__kcal--zero')).toContain('var(--v4-ink-4');
+    expect(rule('.activity-v4-steps__kcal--zero')).toContain('var(--v4-ink-data');
   });
 
   it('модификатор стоит после базового правила, иначе он проигрывает', () => {

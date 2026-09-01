@@ -161,7 +161,7 @@ describe('ступени холодного старта', () => {
     expect(reload).toHaveBeenCalledTimes(2);
   });
 
-  it('60 с без продвижения байтов дают отказ, вторая неудача добавляет строку про куратора', () => {
+  it('60 с без продвижения дают отказ со ссылкой куратора, второй отказ повышает её до кнопки', () => {
     const mark = bootColdStart();
 
     vi.advanceTimersByTime(59000);
@@ -172,7 +172,7 @@ describe('ступени холодного старта', () => {
     expect(mark.classList.contains('is-fail-again')).toBe(false);
     expect(mark.querySelector('.heys-boot-mark__title').textContent)
       .toBe('Не удалось загрузить приложение');
-    // Строка про куратора приходит только со второй неудачи.
+    // Строка про куратора доступна уже на первой неудаче.
     expect(mark.querySelector('.heys-boot-mark__curator')).not.toBeNull();
 
     // Вторая неудача в той же сессии.

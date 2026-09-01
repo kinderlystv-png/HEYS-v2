@@ -1767,6 +1767,11 @@
 
         const rec = {
           id: rule.id,
+          // Решение владельца nutrition-tab 01.09: совет обязан называть
+          // область действия. MealOptimizer анализирует один конкретный
+          // приём, поэтому его рекомендации всегда meal-scoped; советы дня и
+          // периода остаются у своих потребителей и сюда не подмешиваются.
+          scope: 'meal',
           priority: rule.priority || 50,
           icon: rule.icon,
           title: contextual.title,

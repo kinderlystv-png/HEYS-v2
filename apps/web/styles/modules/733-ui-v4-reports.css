@@ -9,8 +9,8 @@
 
 .reports-v4-meta {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
   /* Кадр даёт один зазор 10 по обеим осям; стояло 10/12, и имя экрана с окном
      разъезжались по горизонтали на два пиксела больше, чем по вертикали. */
   gap: 10px;
@@ -30,8 +30,8 @@
   gap: 7px;
   flex: 1;
   min-width: 120px;
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  font: 500 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -41,9 +41,9 @@
 
 .reports-v4-period-pills {
   display: flex;
-  flex-basis: 100%;
-  gap: 6px;
-  margin-top: 12px;
+  flex: none;
+  gap: 16px;
+  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
 }
 
 .reports-v4-period-pill {
@@ -51,39 +51,24 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
-  padding: 0 11px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -16px -6px;
+  padding: 0 6px;
   border: none;
-  border-radius: 999px;
-  background: var(--v4-chip, #efe3cf);
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
-  /* Текст акцента — --v4-act-text, а не --v4-sand-act-deep: вторая держит
-     коричневый #8a4a20 и в синем наборе, то есть роль с именем набора врёт в
-     чужом наборе. Здесь строка новая, поэтому взята сразу честная роль;
-     прежние места уходят общей задачей по описи UI_V4_SAND_ROLES_INVENTORY.md. */
-  color: var(--v4-act-text, #8a4a20);
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   white-space: nowrap;
 }
 
-.reports-v4-period-pill::after {
-  content: '';
-  position: absolute;
-  inset: -8px 0;
-}
-
-/* Заливка — --v4-act, роль, которая следует за набором (#c67139 в песочном,
-   #2e7cc0 в синем). Стояла --v4-sand-act: она держит коричневый и в синем, то
-   есть выбранный чип был коричневым на синей вкладке. Это второй раз, когда
-   роль с именем набора попала в новую строку, — первый был у текста чипа.
-
-   Текст на заливке — --v4-btn-on-act. В синем наборе роль намеренно не
-   объявлена: «белый на #2e7cc0 даёт 4.41:1 < 4.5, ждёт дизайнера»
-   (002-ui-v4-palette-roles.css). Своего тона тут не выдумываем — чип встаёт в
-   ту же очередь, что и остальные кнопки акцента, вопрос уже заведён. */
+/* Выбранное окно отмечается только подчёркиванием: все три таба сохраняют
+   одинаковую 44px область нажатия и не меняют ширину при переключении. */
 .reports-v4-period-pill.is-active {
-  background: var(--v4-act, #c67139);
-  color: var(--v4-btn-on-act, #2b1608);
+  border-bottom-color: var(--v4-act, #c67139);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .reports-v4-hero {
@@ -314,7 +299,7 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Текущий вес и Δ за период — правая половина шапки карточки.
@@ -345,7 +330,7 @@
   font-size: 10.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-dynamics-card__legend {
@@ -362,7 +347,7 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-dynamics-card__legend-swatch {
@@ -409,13 +394,10 @@
    факт — ломаная 2,5 тоном --acs»; кадр рисует факт именно так, 2,5 с
    округлыми концами.
 
-   31 августа доведён и сам план: чернила вместо дорожки. Стояла --v4-track
-   (12 %) толщиной 1,5 — вдвое бледнее и тоньше кадра, хотя обе строки просят
-   22 %. Своей ступени под 22 % в наборе нет, ближайшая — --v4-edge (18 %);
-   отступление названо в реестре теста сверки. Толщина 2 — по кадру
-   «Мало калорий · подтверждение». */
+   План использует отдельную 22%-ступень чернил, а не поверхность или
+   12%-дорожку. Толщина 2 — по кадру «Мало калорий · подтверждение». */
 .reports-v4-dynamics-card .sparkline-goal--reports-v4 {
-  stroke: var(--v4-edge, rgba(0, 0, 0, 0.18));
+  stroke: var(--v4-plan, rgba(0, 0, 0, 0.22));
   stroke-width: 2;
   stroke-dasharray: 4 4;
 }
@@ -506,7 +488,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-wellbeing {
@@ -777,14 +759,6 @@
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 60%, transparent);
 }
 
-/* Переопределение выбранного чипа снято целиком. Оно осталось от прежнего вида
-   выбора окна — слова с подчёркиванием — и рисовало `inset 0 -2px` поверх новой
-   заливки, а текст красило тоном акцента вместо тона НА акценте. Правило
-   срабатывало во всех палитрах, то есть подчёркивание висело под залитым чипом
-   везде; ветка "blue-dark" при этом была мёртвой (data-palette держит только
-   семейство, см. комментарий выше). Вид чипа задан один раз в
-   .reports-v4-period-pill.is-active и от набора не зависит. */
-
 /* === reports-insights.v4 contract (2026-08-29): матрица «Дисциплина» и
    заглушка «мало данных» === */
 
@@ -797,14 +771,12 @@
   gap: 10px;
 }
 
-/* Оговорка к ярусу: контракт «ярус вместо заголовка блока» задаёт 10,5 px/600
-   чернил 38 %. Стояло 9,5/500 — на два шага мельче шкалы зоны, и рядом с
-   ярусом 10 px оговорка читалась как случайный мелкий текст. */
+/* Оговорка к ярусу: 10,5 px/600 на общей ступени данных 56 %. */
 .reports-v4-tier__note {
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-discipline {
@@ -885,7 +857,7 @@
   text-align: right;
   font: 700 10px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-discipline__delta.is-up {
@@ -893,7 +865,7 @@
 }
 
 .reports-v4-discipline__delta.is-down {
-  color: var(--v4-bad-text, #b3402a);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-discipline__off {
@@ -928,7 +900,7 @@
 }
 
 .reports-v4-discipline__score.is-zero {
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Средняя доля вместо Δ у нулевой строки: контракт «карточка · нулевая строка
@@ -936,22 +908,20 @@
    больше, чем у Δ, — «в среднем 71 %» длиннее «+3», а колонка одна. */
 .reports-v4-discipline__avg {
   flex: none;
+  width: 62px;
   text-align: right;
-  font: 600 10px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  font: 600 10px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-discipline__footnote {
   /* Отступ 12 от последней строки — по контракту: подпись объясняет матрицу
      целиком, а не продолжает её последнюю строку.
 
-     Тон: строка «карточка · подпись под матрицей» и кадр сходятся на 42 %.
-     Такого тона у набора нет, и ближайший к нему --v4-ink-3 (45 %), а не
-     --v4-ink-4 (38 %) — прежняя правка выровняла запасное значение по роли
-     вместо того, чтобы взять роль, ближайшую к замыслу. */
+     Тон актуального кадра — общая ступень данных 56 %. */
   padding-top: 12px;
   font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр «Отчёты · мало данных»: карточка на второй поверхности --c2. Роль
@@ -1221,7 +1191,7 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-ready__state.is-on {
@@ -1450,7 +1420,7 @@
    на две ступени мельче шкалы зоны. */
 .heys-score-screen__note {
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Строка каскада собрана в два этажа — так её рисует кадр «Разбор Score»

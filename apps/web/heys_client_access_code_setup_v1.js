@@ -41,6 +41,7 @@
         { d: '', k: 0 },
       ]);
       const [phase, setPhase] = useState('code');
+      const [entryIssue, setEntryIssue] = useState('');
       const [pepAccepted, setPepAccepted] = useState(false);
       const [err, setErr] = useState('');
       const [busy, setBusy] = useState(false);
@@ -62,10 +63,18 @@
       // Строки «создание кода» и «после сброса»: экран объясняет, зачем нужен
       // код, а после сброса — что прежний код и другие входы уже не работают.
       // Раньше на первом шаге стоял только заголовок с подписью поля.
-      const screenTitle = phase === 'confirm'
+      const screenTitle = entryIssue === 'mismatch'
+        ? 'Коды не совпали'
+        : entryIssue === 'weak'
+          ? 'Код слишком простой'
+          : phase === 'confirm'
         ? 'Повторите код'
         : (skipPepAgreement ? 'Придумайте новый код' : 'Придумайте свой код');
-      const screenSubtitle = phase === 'confirm'
+      const screenSubtitle = entryIssue === 'mismatch'
+        ? 'Введите новый код заново — с первого шага.'
+        : entryIssue === 'weak'
+          ? 'Такой код подберут за минуту. Придумайте другой.'
+          : phase === 'confirm'
         ? 'Ещё раз, чтобы не ошибиться. Восстановить его нельзя — только выпустить новый через куратора.'
         : (skipPepAgreement
           ? 'Куратор выдал код для входа, вы им вошли. Соглашение подписано ранее — заново принимать не нужно.'
@@ -77,8 +86,8 @@
       // Пока кнопка гасла до совпадения кодов, отказ «Коды не совпали» был
       // недостижим — человек молча тыкал в мёртвую кнопку.
       const canContinue = phase === 'code'
-        ? code.length === 4
-        : confirm.length === 4 && (skipPepAgreement || pepAccepted);
+        ? code.length === 4 && (skipPepAgreement || pepAccepted)
+        : confirm.length === 4;
 
       function getActiveDigits() {
         return phase === 'code' ? codeDigitsRef.current : confirmDigitsRef.current;
@@ -163,6 +172,7 @@
         const arr = (nextDigits || []).slice(0, 4);
         while (arr.length < 4) arr.push('');
         setErr('');
+        setEntryIssue('');
         if (phase === 'code') {
           codeDigitsRef.current = arr;
           setCodeDigits(arr);
@@ -244,9 +254,12 @@
         if (phase === 'code') {
           if (!auth.validatePinStrict(codeNow)) {
             // Строка «отказы кода»: «Код слишком простой» перечисляет требования.
-            setErr(codeNow.length === 4
-              ? 'Код слишком простой. Не подходят подряд идущие цифры, одна цифра четыре раза и код, который выдал куратор.'
-              : 'Введите код из 4 цифр');
+            if (codeNow.length === 4) {
+              setEntryIssue('weak');
+              setErr('');
+            } else {
+              setErr('Введите код из 4 цифр');
+            }
             return;
           }
           setErr('');
@@ -261,7 +274,8 @@
         if (!auth.validatePinStrict(confirmNow) || confirmNow !== codeNow) {
           // Строка «отказы кода»: «Коды не совпали» отправляет с первого шага,
           // а не оставляет повторять ввод поверх забытого кода.
-          setErr('Коды не совпали. Введите новый код заново — с первого шага.');
+          setEntryIssue('mismatch');
+          setErr('');
           setPhase('code');
           codeDigitsRef.current = ['', '', '', ''];
           confirmDigitsRef.current = ['', '', '', ''];
@@ -287,7 +301,8 @@
           if (!res || res.ok === false) {
             const codeErr = res && res.error;
             if (codeErr === 'weak_access_code' || codeErr === 'access_code_matches_onetime_pin') {
-              setErr('Код слишком простой или совпадает с одноразовым. Придумайте другой.');
+              setEntryIssue('weak');
+              setErr('');
               setPhase('code');
               codeDigitsRef.current = ['', '', '', ''];
               confirmDigitsRef.current = ['', '', '', ''];
@@ -484,14 +499,16 @@
         // узнать в момент, когда его придумывает, а не позже. «Заменяет подпись»
         // жило на экране подписания, «никому не сообщайте» — только в плашке
         // после сброса, то есть большинство не видело ни того, ни другого.
-        phase === 'code'
+        phase === 'code' && entryIssue !== 'mismatch'
           ? React.createElement(
             'div',
             { className: 'heys-auth-reset-note' },
-            (skipPepAgreement
-              ? 'Прежний код перестал работать, и все входы на других устройствах завершены. '
-              : '')
-            + 'Код доступа заменяет собственноручную подпись. Не сообщайте его никому, включая куратора.',
+            entryIssue === 'weak'
+              ? 'Не подходят: подряд идущие цифры, одна цифра четыре раза и код, который выдал куратор.'
+              : (skipPepAgreement
+                ? 'Прежний код перестал работать, и все входы на других устройствах завершены. '
+                : '')
+              + 'Код доступа заменяет собственноручную подпись. Не сообщайте его никому, включая куратора.',
           )
           : null,
         React.createElement(
@@ -539,7 +556,7 @@
             '⌫',
           ),
         ),
-        !skipPepAgreement && phase === 'confirm' && React.createElement(
+        !skipPepAgreement && phase === 'code' && !entryIssue && React.createElement(
           'label',
           { className: 'heys-auth-pep-agree heys-auth-subtitle' },
           React.createElement('input', {
@@ -577,7 +594,7 @@
               disabled: !canContinue || busy,
               onClick: handleSubmit,
             },
-            busy ? 'Сохраняем…' : (phase === 'code' ? 'Далее' : 'Продолжить'),
+            busy ? 'Сохраняем…' : 'Продолжить',
           ),
           phase === 'confirm' && typeof onCancel === 'function' && React.createElement(
             'button',
@@ -595,10 +612,21 @@
             },
             'Изменить код',
           ),
-          !skipPepAgreement && phase === 'confirm' && React.createElement(
+          phase === 'confirm' && React.createElement(
             'p',
             { className: 'heys-auth-meta' },
-            'Нажимая «Продолжить», вы заключаете соглашение и создаёте код доступа',
+            skipPepAgreement
+              ? 'Проверка идёт на устройстве, код никуда не отправляется'
+              : 'Соглашение вы приняли на прошлом шаге',
+          ),
+          !skipPepAgreement && phase === 'code' && React.createElement(
+            'p',
+            { className: 'heys-auth-meta' },
+            entryIssue === 'weak'
+              ? 'Проверка идёт на устройстве, код никуда не отправляется'
+              : entryIssue === 'mismatch'
+                ? 'Начнём сначала: придумайте код и повторите его'
+                : 'Нажимая «Продолжить», вы заключаете соглашение и создаёте код доступа',
           ),
         ),
       );

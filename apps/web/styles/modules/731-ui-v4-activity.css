@@ -224,20 +224,19 @@ body:has(.activity-v4) .hdr::after {
    ни числу, ни цели нечего выделять. Оценка приглушается иначе (55 %), потому
    что число там настоящее, просто подставленное. */
 .activity-v4-steps__value--zero {
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-steps__value--estimated {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
-/* Заливка полосы гаснет: число подставлено, и полоса не должна выглядеть
-   достижением. Контракт просит чернила 16 %, ближайшая роль набора — 30 %;
-   отступление названо в протоколе. */
+/* Оценочная заливка не должна выглядеть достижением; используем именованную
+   плановую ступень 22 %, чтобы тон следовал активному набору. */
 /* Два класса в селекторе намеренно: базовое правило заливки стоит ниже по
    файлу, и с равной специфичностью выигрывало бы оно. */
 .activity-v4-steps__fill.activity-v4-steps__fill--estimated {
-  background: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
+  background: var(--v4-plan, rgba(0, 0, 0, 0.22));
 }
 
 .activity-v4-steps__foot {
@@ -251,11 +250,11 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-steps__kcal {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-steps__kcal--zero {
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-steps__note {
@@ -305,6 +304,10 @@ body:has(.activity-v4) .hdr::after {
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
+.activity-v4-today__sub--running {
+  color: var(--v4-act-text, #8a4a20);
+}
+
 .activity-v4-today__value {
   flex: none;
   font: 600 12.5px/1 Figtree, system-ui, sans-serif;
@@ -316,6 +319,18 @@ body:has(.activity-v4) .hdr::after {
   font-weight: 700;
 }
 
+.activity-v4-today__value--chevron {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.activity-v4-today__value--chevron i {
+  font: 700 18px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
+}
+
 /* Зарядка — тоном роста: она про сделанное, а не про число расхода. */
 .activity-v4-today__value--grow {
   color: var(--v4-ok-text, #5c6a45);
@@ -324,7 +339,7 @@ body:has(.activity-v4) .hdr::after {
 /* «не отмечено» — не число, поэтому мельче и приглушено. */
 .activity-v4-today__value--muted {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-today__body {
@@ -375,14 +390,14 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-steps__track-wrap {
   position: relative;
-  margin-top: 10px;
+  margin-top: 14px;
 }
 
 .activity-v4-steps__track {
   /* Контракт «вид · шаги», строка 29: полоса высотой 8, радиус 999. */
   height: 8px;
   border-radius: 999px;
-  background: var(--v4-line, rgba(0, 0, 0, 0.08));
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
   overflow: hidden;
 }
 
@@ -394,8 +409,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-steps__slider {
   position: absolute;
-  inset: -10px 0;
-  opacity: 0.001;
+  inset: -18px 0;
 }
 
 .activity-v4-steps__slider .steps-slider-track,
@@ -403,9 +417,31 @@ body:has(.activity-v4) .hdr::after {
   display: none;
 }
 
-.activity-v4-steps__slider .steps-slider-fill,
-.activity-v4-steps__slider .steps-slider-thumb {
+.activity-v4-steps__slider .steps-slider-fill {
   opacity: 0;
+}
+
+.activity-v4-steps__slider .steps-slider {
+  position: relative;
+  width: 100%;
+  height: 44px;
+}
+
+.activity-v4-steps__slider .steps-slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--v4-bg, #fffaf1);
+  box-shadow: 0 1px 3px rgba(80, 50, 20, 0.28), inset 0 0 0 2px var(--v4-act, #c67139);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.activity-v4-steps__slider--muted .steps-slider-thumb {
+  box-shadow: 0 1px 3px rgba(80, 50, 20, 0.28), inset 0 0 0 2px rgba(var(--v4-ink-rgb, 0, 0, 0), 0.28);
 }
 
 .activity-v4-steps__hint {
@@ -791,7 +827,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-history__delta--muted {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Пункт листа действия: имя и под ним — что именно спросят (контракт строка 22). */
@@ -984,21 +1020,48 @@ body:has(.activity-v4) .hdr::after {
   color: var(--v4-act-text, #8a4a20);
 }
 
-/* Карточка силовой — .grp кадра «Тренировки · журнал подходов»: первая
-   поверхность, радиус 20, поля 16, отступ сверху 10. Общий .sb-card живёт в
-   конструкторе своей оранжевой рамкой радиусом 16 и не тронут.
-
-   Внутренний состав кадру не следует, и это не долг вида, а расхождение по
-   существу: кадр рисует завершённый журнал (чипы зон, список упражнений,
-   кнопка), а продукт показывает идущую тренировку — таймер, счёт подходов,
-   полосу и «Продолжить». Ни одного из этих состояний в кадре нет. Вынесено
-   вопросом дизайнеру в docs/ui/UI_V4_FINDINGS.md. */
+/* Карточка силовой: спокойная поверхность для обычного состояния и явный
+   акцент только у незавершённой тренировки. */
 .activity-v4 .sb-card {
   margin: 10px 0 0;
   padding: 16px;
   border: none;
   border-radius: 20px;
   background: var(--v4-c1, #f7efe2);
+}
+
+.activity-v4 .sb-card--running {
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
+}
+
+.activity-v4 .sb-card-badge {
+  background: color-mix(in srgb, var(--v4-act, #c67139) 14%, transparent);
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.activity-v4 .sb-card-metrics {
+  gap: 8px;
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+.activity-v4 .sb-card-clock {
+  font: 800 26px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.activity-v4 .sb-card-count {
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.activity-v4 .sb-card-bar {
+  margin-top: 10px;
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
+}
+
+.activity-v4 .sb-card-bar span {
+  background: var(--v4-act, #c67139);
 }
 
 .activity-v4 .sb-card-title b {
@@ -1027,6 +1090,28 @@ body:has(.activity-v4) .hdr::after {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+.activity-v4 .sb-card--running .sb-card-cta {
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, var(--v4-bg, #fffaf1));
+}
+
+.activity-v4 .sb-card--running .sb-card-cta b {
+  color: inherit;
+}
+
+.activity-v4 .sb-card-current {
+  margin-top: 6px;
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  text-align: center;
+}
+
+.activity-v4 .sb-card-note {
+  margin-top: 10px;
+  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
 .activity-v4 .sb-card-cta b {
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
@@ -1048,4 +1133,229 @@ body:has(.activity-v4) .hdr::after {
   margin-top: 8px;
   font: 500 12px/1.55 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+/* Нагрузка: первый слой предупреждает, второй раскрывает модель по запросу. */
+.activity-v4-load-warning {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-tint, #f6e6dd);
+}
+
+.activity-v4-load-warning__title {
+  font: 700 13px/1.32 Figtree, system-ui, sans-serif;
+  color: var(--v4-warn-text, #a1471c);
+}
+
+.activity-v4-load-warning__reason {
+  margin-top: 4px;
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.activity-v4-load-warning__text {
+  margin-top: 12px;
+  font: 500 12px/1.55 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+}
+
+.activity-v4-load-warning__actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.activity-v4-load-warning__action {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v4-bg, #fffaf1);
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  cursor: pointer;
+}
+
+.activity-v4-load-warning__action--primary {
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, var(--v4-bg, #fffaf1));
+}
+
+.activity-v4-load-warning__confidence,
+.activity-v4-load-note {
+  margin-top: 10px;
+  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.activity-v4-load-evidence,
+.activity-v4-load-details__list {
+  padding: 2px 16px;
+  border-radius: 20px;
+  background: var(--v4-c1, #f7efe2);
+}
+
+.activity-v4-load-evidence__row,
+.activity-v4-load-details__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.activity-v4-load-evidence__row--last,
+.activity-v4-load-details__row--last {
+  border-bottom: 0;
+}
+
+.activity-v4-load-evidence__warn,
+.activity-v4-load-evidence__rest {
+  flex: none;
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+}
+
+.activity-v4-load-evidence__warn {
+  color: var(--v4-warn-text, #a1471c);
+}
+
+.activity-v4-load-evidence__rest {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.activity-v4-load-evidence__rule,
+.activity-v4-load-details__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.activity-v4-load-evidence__rule span:last-child,
+.activity-v4-load-details__note {
+  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.activity-v4-load-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v4-c1, #f7efe2);
+  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+  cursor: pointer;
+}
+
+.activity-v4-load-toggle span:last-child {
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.activity-v4-load-details__name {
+  color: var(--v4-ink, #201e1d);
+}
+
+.activity-v4-load-details__value {
+  flex: none;
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.activity-v4-load-details__value--warn {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.activity-v4-load-details__value--grow {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.activity-v4-load-details__value--muted {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.activity-v4-load-details__value--number {
+  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.activity-v4-load-verdict {
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-ok-bg, #eaefe0);
+}
+
+.activity-v4-load-verdict__title {
+  font: 700 13px/1.32 Figtree, system-ui, sans-serif;
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.activity-v4-load-verdict__next {
+  margin-top: 4px;
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.activity-v4-load-verdict__tiles {
+  display: flex;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.activity-v4-load-verdict__tile {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: var(--v4-bg, #fffaf1);
+}
+
+.activity-v4-load-verdict__key {
+  display: block;
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.activity-v4-load-verdict__track {
+  display: block;
+  height: 8px;
+  margin: 8px 0 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
+}
+
+.activity-v4-load-verdict__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.activity-v4-load-verdict__fill--recovery {
+  background: var(--v4-overlay-fill, #d99a63);
+}
+
+.activity-v4-load-verdict__fill--readiness {
+  background: var(--v4-water, #7d98a6);
+}
+
+.activity-v4-load-verdict__value {
+  display: block;
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink, #201e1d);
 }

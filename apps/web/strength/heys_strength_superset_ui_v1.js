@@ -113,19 +113,37 @@
   // ——— Отдых (экран 05) ———
 
   function RestRing(props) {
-    const { secondsLeft, total, onSkip, onAdd } = props;
-    const r = 84;
+    const { secondsLeft, total, owner, source, nextLabel, collapsed,
+      onSkip, onAdd, onCollapse, onExpand } = props;
+    if (collapsed) {
+      return h('div', { className: 'sb-rest sb-rest--collapsed' },
+        h('button', {
+          type: 'button', className: 'sb-rest-compact', onClick: onExpand,
+          'aria-label': 'Развернуть таймер отдыха'
+        },
+          h('b', null, fmtClock(secondsLeft)),
+          h('span', null, (owner || 'Отдых') + (nextLabel ? ' · ' + nextLabel : '')),
+          h('i', null, 'развернуть')
+        )
+      );
+    }
+    const r = 76;
     const c = 2 * Math.PI * r;
     const ratio = total > 0 ? Math.max(0, Math.min(1, secondsLeft / total)) : 0;
     return h('div', { className: 'sb-rest' },
+      h('div', { className: 'sb-rest-meta' },
+        h('b', null, 'Отдых · ' + (owner || 'упражнение')),
+        h('span', null, source || 'по настройке'),
+        nextLabel && h('small', null, nextLabel)
+      ),
       h('div', { className: 'sb-rest-ring' },
-        h('svg', { width: 184, height: 184, viewBox: '0 0 184 184' },
+        h('svg', { width: 168, height: 168, viewBox: '0 0 168 168' },
           h('circle', {
-            cx: 92, cy: 92, r: r, fill: 'none',
+            cx: 84, cy: 84, r: r, fill: 'none',
             stroke: 'var(--sb-br)', strokeWidth: 10
           }),
           h('circle', {
-            cx: 92, cy: 92, r: r, fill: 'none',
+            cx: 84, cy: 84, r: r, fill: 'none',
             stroke: 'var(--sb-acc)', strokeWidth: 10, strokeLinecap: 'round',
             strokeDasharray: c, strokeDashoffset: c * (1 - ratio)
           })
@@ -136,8 +154,9 @@
         )
       ),
       h('div', { className: 'sb-rest-actions' },
-        h('button', { type: 'button', className: 'sb-btn', onClick: onAdd }, '+30 с'),
-        h('button', { type: 'button', className: 'sb-btn is-accent', onClick: onSkip }, 'Пропустить')
+        h('button', { type: 'button', className: 'sb-btn', onClick: onAdd }, '+10 секунд'),
+        h('button', { type: 'button', className: 'sb-btn is-accent', onClick: onSkip }, 'Пропустить'),
+        h('button', { type: 'button', className: 'sb-btn', onClick: onCollapse }, 'Свернуть')
       )
     );
   }
@@ -473,24 +492,33 @@
         ),
 
         h('div', { className: 'sb-rpe' },
-          h('span', { className: 'sb-rpe-label' }, 'RPE'),
-          [6, 7, 8, 9, 10].map(function (v) {
-            return h('button', {
-              key: 'rpe' + v,
-              type: 'button',
-              className: 'sb-rpe-dot' + (+ex.rpe === v ? ' is-on' : ''),
-              onClick: function () { onRpe(index, v); },
-              'aria-label': 'RPE ' + v
-            }, String(v));
-          })
+          h('details', { className: 'sb-effort-help' },
+            h('summary', {
+              className: 'sb-rpe-label',
+              'aria-label': 'Что значит тяжесть подхода'
+            }, 'Тяжесть'),
+            h('span', { className: 'sb-effort-help-copy', role: 'note' },
+              '6 — легко; 7–8 — тяжело, но с запасом; 9 — почти предел; 10 — предел.')
+          ),
+          h('span', { className: 'sb-rpe-steps' },
+            [6, 7, 8, 9, 10].map(function (v) {
+              return h('button', {
+                key: 'rpe' + v,
+                type: 'button',
+                className: 'sb-rpe-dot' + (+ex.rpe === v ? ' is-on' : ''),
+                onClick: function () { onRpe(index, v); },
+                'aria-label': 'Тяжесть подхода ' + v + ' из 10'
+              }, String(v));
+            })
+          )
         ),
         h('div', { className: 'sb-rest-line' },
           h('span', null, '⏱ Отдых ' + fmtClock(+ex.restSec || 90)),
-          // Без RPE это значение по умолчанию, а не вывод из него: подпись,
+          // Без оценки тяжести это значение по умолчанию, а не вывод из неё: подпись,
           // называющая источником незаполненное поле, врёт.
           h('span', null, ex.restManual
             ? '· вручную'
-            : (+ex.rpe > 0 ? '· выведен из RPE ' + ex.rpe : '· по умолчанию')),
+            : (+ex.rpe > 0 ? '· по тяжести ' + ex.rpe : '· по умолчанию')),
           h('button', {
             type: 'button',
             className: 'sb-rest-manual' + (ex.restManual ? ' is-on' : ''),
@@ -528,6 +556,9 @@
 
   /** Начало тренировки в миллисекундах: «начата в 18:40» + дата дня. */
   function startedAtMs(training, dateKey) {
+    const wl = (training && training.workoutLog) || {};
+    const persisted = Number.isFinite(+wl.startedAt) ? +wl.startedAt : 0;
+    if (persisted > 0) return persisted;
     const m = /^(\d{1,2}):(\d{2})$/.exec(String((training && training.time) || ''));
     const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
     if (!m || !d) return 0;
@@ -560,15 +591,17 @@
     // «47:12» превращается в момент последней перерисовки дня.
     const [, setTick] = React.useState(0);
     const startedAt = startedAtMs(training, dateKey);
+    const wl = (training && training.workoutLog) || {};
+    const completedAt = Number.isFinite(+wl.completedAt) ? +wl.completedAt : 0;
     React.useEffect(function () {
-      if (!startedAt) return undefined;
+      if (!startedAt || completedAt) return undefined;
       const id = setInterval(function () { setTick(function (t) { return t + 1; }); }, 1000);
       return function () { clearInterval(id); };
-    }, [startedAt]);
-    const elapsedSec = startedAt ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : 0;
+    }, [startedAt, completedAt]);
+    const elapsedEnd = completedAt > 0 ? completedAt : Date.now();
+    const elapsedSec = startedAt ? Math.max(0, Math.floor((elapsedEnd - startedAt) / 1000)) : 0;
     const TK = HEYS.TrainingKernel;
     const SK = (TK && TK.strength) ? TK.strength : null;
-    const wl = (training && training.workoutLog) || {};
     const exercises = Array.isArray(wl.exercises) ? wl.exercises : [];
     const agg = SK ? SK.trainingTonnage(training) : null;
     const done = agg ? agg.doneApproaches : 0;
@@ -578,21 +611,29 @@
     // Текущее упражнение — первое незакрытое: подпись под кнопкой отвечает на
     // вопрос «а где я сейчас».
     let currentIdx = -1;
+    let currentApproachIdx = -1;
     for (let i = 0; i < exercises.length && currentIdx < 0; i++) {
       const aps = (exercises[i] && exercises[i].approaches) || [];
       for (let k = 0; k < aps.length; k++) {
         if (SK && SK.isBlankApproach(aps[k])) continue;
-        if (!(SK ? SK.isApproachDone(aps[k]) : aps[k].done)) { currentIdx = i; break; }
+        if (!(SK ? SK.isApproachDone(aps[k]) : aps[k].done)) {
+          currentIdx = i;
+          currentApproachIdx = k;
+          break;
+        }
       }
     }
     const current = currentIdx >= 0 ? exercises[currentIdx] : null;
     const running = done > 0 && done < total;
 
-    return h('div', { className: 'sb-card' },
+    return h('div', { className: 'sb-card' + (running ? ' sb-card--running' : '') },
       h('div', { className: 'sb-card-head' },
         h('div', { className: 'sb-card-title' },
           h('b', null, sessionTitle(exercises)),
-          h('span', null, humanDate(dateKey) + (training && training.time ? ' · начата в ' + training.time : ''))
+          h('span', null, running
+            ? (training && training.time ? 'начата в ' + training.time + ' · ' : '')
+              + 'упражнение ' + (currentIdx + 1) + ' из ' + exercises.length
+            : humanDate(dateKey) + (training && training.time ? ' · начата в ' + training.time : ''))
         ),
         running && h('span', { className: 'sb-card-badge' }, '● идёт')
       ),
@@ -607,11 +648,15 @@
         type: 'button', className: 'sb-card-cta', onClick: onOpen
       },
         h('b', null, running ? 'Продолжить тренировку' : 'Открыть конструктор'),
-        current && h('span', null,
-          'Упражнение ' + (currentIdx + 1) + ' из ' + exercises.length
-          + (current.name ? ' · ' + current.name : '')),
         h('i', null, '›')
-      )
+      ),
+      running && current && h('div', { className: 'sb-card-current' },
+        (current.name || 'Текущее упражнение')
+        + (currentApproachIdx >= 0
+          ? ' · подход ' + (currentApproachIdx + 1) + ' из ' + ((current.approaches || []).length)
+          : '')),
+      running && h('div', { className: 'sb-card-note' },
+        'Пока тренировка идёт, объём и калории в ярусе «Сегодня» считаются по отмеченным подходам и растут на глазах. Итог придёт из конструктора, когда сессия закрыта.')
     );
   }
 
