@@ -96,10 +96,12 @@ day-owned переход: старт плана клонирует snapshot не
 ревизия, concurrent skip/move или появившийся новый план отклоняют stale
 действие. Пустые `started`/`skipped`/`moved` с валидным snapshot переживают
 `ensureDay`. Будущий план раскрывается только read-only списком в `PlanCard`, не
-редактируемым builder. После подтверждённого старта ручной сборки Builder
-локально гасит именно эту ревизию плана: возврат из каталога не восстанавливает
-уже недействующие CTA, даже если родительские props ещё содержат старый
-`assigned`-снимок.
+редактируемым builder. Список показывает реальные дозы и связки, а неделя
+строится из owner-index программы и прочитанных owner-дней: непрочитанное
+назначение не становится отдыхом. После подтверждённого старта ручной сборки
+Builder локально гасит именно эту ревизию плана: возврат из каталога не
+восстанавливает уже недействующие CTA, даже если родительские props ещё содержат
+старый `assigned`-снимок.
 
 Перенос, пропуск и возврат пропущенного плана используют тот же fail-closed
 owner-переход: кроме `plan.id/assignedAt/status` web сверяет открытый
@@ -114,7 +116,11 @@ exact counterpart. Если исходный owner-write не принят, уд
 MCP требует свежие `expected_plan_id + expected_assigned_at`, использует тот же
 trace-контракт и отдаёт `moved_from/moved_to/moved_at/transfer_id`. Статус
 `moved` исключён из нагрузки, калорий, истории выполненных тренировок и пути
-программы во всех web/MCP fallback-копиях.
+программы во всех web/MCP fallback-копиях. Выбор новой даты сначала читает
+authoritative batch: до ответа и при сетевой ошибке отсутствующий локальный день
+остаётся `не загружен`, а успешное отсутствие day-key означает свободный день.
+Прошлый explicit skipped не возвращается в assigned задним числом; late backfill
+ранее назначенного дня остаётся допустимым.
 
 Финал `workout_builder` показывает только фактически закрытые
 рабочие/разминочные подходы, PR по основной ступени подхода, отзыв 1–10 и
@@ -258,7 +264,7 @@ Coverage checker mobility проверяет связность implementation m
 | TR8  | Mobility defaults, public builders и UI блокируют запуск без возраста и предупреждения    | `rg -n 'DEFAULT_PROFILE                                                                                                                              \| validateBuildProfile                                                                       \| SafetyOnboardingGate                                     \| onboarding.disclaimer' apps/web/mobility/heys_mobility_entry_v1.js apps/web/mobility/heys_mobility_ui_v1.js apps/web/mobility/heys_mobility_onboarding_v1.js`                                                                                                                                                                                                 | проверено 2026-07-17                                     |
 | TR9  | Есть kernel, domain и equivalence regression tests                                        | `find apps/web/**tests** -maxdepth 1 -type f \( -name 'kernel-_.test.js' -o -name 'fingers-_.test.js' -o -name 'mobility-\*.test.js' \)              \| sort`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | проверено 2026-07-17                                     |
 | TR10 | Legacy dependency map знает fingers, но не mobility training bundle                       | `rg -n 'fingers                                                                                                                                      \| mobility' scripts/legacy-bundle-config.mjs`                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | проверено 2026-07-17: fingers есть, mobility отсутствует |
-| TR11 | Исходы назначенного силового плана stale-safe, перенос идемпотентен и не стирает live-log | `pnpm --dir apps/web exec vitest run __tests__/strength-plan-outcome-web.test.js __tests__/activity-plan-card-frame.test.js && node --test yandex-cloud-functions/heys-mcp/__tests__/day.test.cjs yandex-cloud-functions/heys-mcp/__tests__/tools.test.cjs`                                                                                                                                                                                                                                                                                                                                                                                                                     | проверено 2026-09-01: web 75/75, MCP 415/415             |
+| TR11 | Исходы назначенного силового плана stale-safe, перенос идемпотентен и не стирает live-log | `pnpm --dir apps/web exec vitest run __tests__/strength-plan-outcome-web.test.js __tests__/activity-plan-card-frame.test.js __tests__/program-week-overview.test.js __tests__/strength-builder-ui.test.js __tests__/kernel-training-plan.test.js __tests__/strength-builder-empty-v4-canvas-contract.test.js __tests__/training-plan-expenditure.test.js && node --test yandex-cloud-functions/heys-mcp/__tests__/day.test.cjs yandex-cloud-functions/heys-mcp/__tests__/tools.test.cjs`                                                                                                                                                                                        | проверено 2026-09-01: web 151/151, MCP 415/415           |
 
 ## Куда идти глубже
 

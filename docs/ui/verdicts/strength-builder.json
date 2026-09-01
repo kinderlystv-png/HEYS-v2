@@ -234,13 +234,13 @@
       "h": "f6d47f78e6af"
     },
     "план в ленте — назначение, а не факт": {
-      "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "v": "?",
+      "f": "Карточка и правило нагрузки реализованы, но полный контракт строки ещё не закрыт: будущий early-start не имеет owner-семантики, а mesocycle label отсутствует в схеме.",
       "h": "031a43f74339"
     },
     "пропущенный день — выбор, а не упрёк": {
-      "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "v": "?",
+      "f": "Kernel исключает skipped из объёма, но полный контракт строки не закрыт: отдельного missed-pending с выбором перенести/отпустить и owner-cutoff пока нет.",
       "h": "a5bcabdd63c8"
     },
     "инвариант · подход — единица учёта": {
@@ -2534,9 +2534,11 @@
       "h": "52b78efc80b1"
     },
     "Перенос · след в обе стороны · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "616ba9d55e48"
+      "v": "≠",
+      "f": "Canvas-сноска утверждает отсутствие отдельного механизма переноса, но runtime уже имеет target-first операцию, transferId и двусторонний след.",
+      "h": "616ba9d55e48",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-кадр-переноса-склеивает-четыре-разных-момента"
     },
     "Перенос · след в обе стороны · 19": {
       "v": "?",
@@ -4969,14 +4971,18 @@
       "h": "77e4b4025f38"
     },
     "План в ленте дня · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "32404415abea"
+      "v": "≠",
+      "f": "Кнопка «Начать сейчас» намеренно не рендерится: owner-контракт не определяет дату факта для раннего старта будущего назначения.",
+      "h": "32404415abea",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате"
     },
     "План в ленте дня · 19": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "096e30f25e4f"
+      "v": "≠",
+      "f": "Без безопасного early-start «Перенести» становится единственным главным действием; canvas задаёт его вторичным рядом с отсутствующим CTA.",
+      "h": "096e30f25e4f",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате"
     },
     "План в ленте дня · 20": {
       "v": "?",
@@ -5139,9 +5145,11 @@
       "h": "54643961e08d"
     },
     "День не состоялся · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "cff1ba69217d"
+      "v": "≠",
+      "f": "Canvas помечает попадание пропущенного плана в факт как долг кода, но kernel уже исключает assigned/skipped/moved из тоннажа, калорий и отчёта; возвращать ложную нагрузку нельзя.",
+      "h": "cff1ba69217d",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-день-не-состоялся-не-имеет-доменного-факта"
     },
     "Спорное · тап по закрытому во время отдыха · 01": {
       "v": "?",
