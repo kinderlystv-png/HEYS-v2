@@ -580,9 +580,12 @@ test('assign_program пишет несколько дней и индекс пр
   const dayDates = api.saves.filter((s) => s.key.startsWith('heys_dayv2_')).map((s) => s.key);
   assert.deepEqual(dayDates.sort(), ['heys_dayv2_2026-08-11', 'heys_dayv2_2026-08-13']);
   for (const s of api.saves.filter((s2) => s2.key.startsWith('heys_dayv2_'))) {
-    const plan = s.value.trainings[0].plan;
+    const training = s.value.trainings[0];
+    const plan = training.plan;
     assert.equal(plan.status, 'assigned');
     assert.equal(plan.programId, res.structured.program_id);
+    assert.equal(training.planSnapshot.exercises.length, 1);
+    assert.deepEqual(training.workoutLog, { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] });
   }
 
   const index = api.saves.find((s) => s.key === 'heys_training_program');
@@ -663,6 +666,20 @@ test('assign_program и assign_training отказывают без тарифа
   assert.equal(apiWrongPlan.saves.length, 0);
 });
 
+test('assign_training сохраняет состав в snapshot и оставляет живой журнал пустым', async () => {
+  const api = fakeApi({ day: null, card: PROPLUS_CARD });
+  const res = await build(api).heys_assign_training({
+    assigned_by: 'Артём',
+    exercises: PROGRAM_EXERCISE,
+  });
+
+  assert.equal(res.structured.exercises, 1, 'ответ считает упражнения плана, а не пустого журнала');
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  const training = saved.value.trainings[0];
+  assert.equal(training.planSnapshot.exercises.length, 1);
+  assert.deepEqual(training.workoutLog, { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] });
+});
+
 /** День с черновиком, который клиент ещё не открывал. */
 const DRAFT_PLAN_DAY = () => ({
   date: '2026-08-01',
@@ -676,20 +693,21 @@ const DRAFT_PLAN_DAY = () => ({
     z: [0, 0, 0, 0],
     time: '18:00',
     plan: { id: 'pl_1', status: 'assigned', assignedBy: 'Артём', dayLabel: 'День А' },
-    planSnapshot: { exercises: [] },
+    planSnapshot: { exercises: [{
+      id: 'ex1',
+      name: 'Жим',
+      ssGroup: 0,
+      rpe: 0,
+      restSec: 90,
+      approaches: [
+        { id: 'a1', weightKg: '75', reps: 8, done: false },
+        { id: 'a2', weightKg: '75', reps: 8, done: false },
+      ],
+    }] },
     workoutLog: {
       version: 1,
-      exercises: [{
-        id: 'ex1',
-        name: 'Жим',
-        ssGroup: 0,
-        rpe: 0,
-        restSec: 90,
-        approaches: [
-          { id: 'a1', weightKg: '75', reps: 8, done: false },
-          { id: 'a2', weightKg: '75', reps: 8, done: false },
-        ],
-      }],
+      zoneMinutes: [0, 0, 0, 0],
+      exercises: [],
     },
   }],
 });
@@ -709,10 +727,20 @@ test('get_training показывает состав с id упражнений 
   assert.equal(api.saves.length, 0, 'чтение ничего не пишет');
 });
 
+test('get_training читает skipped-план из snapshot, а не из пустого журнала', async () => {
+  const skipped = DRAFT_PLAN_DAY();
+  skipped.trainings[0].plan.status = 'skipped';
+  const res = await build(fakeApi({ day: skipped, card: PROPLUS_CARD })).heys_get_training({ index: 0 });
+
+  assert.equal(res.structured.trainings[0].plan_status, 'skipped');
+  assert.equal(res.structured.trainings[0].exercises[0].name, 'Жим');
+});
+
 test('get_training про начатый план говорит, что правка только предложением', async () => {
   const api = fakeApi({ day: STARTED_PLAN_DAY(), card: PROPLUS_CARD });
   const res = await build(api).heys_get_training({ index: 0 });
   assert.equal(res.structured.trainings[0].editable, false);
+  assert.equal(res.structured.trainings[0].exercises[0].name, 'Жим', 'начатый план читается из живого журнала');
   assert.match(res.text, /heys_propose_training_edit/);
 });
 
@@ -725,11 +753,12 @@ test('update_training правит состав черновика адресн�
   });
 
   const saved = api.saves.find((x) => x.key.startsWith('heys_dayv2_'));
-  const ex = saved.value.trainings[0].workoutLog.exercises;
+  const ex = saved.value.trainings[0].planSnapshot.exercises;
   assert.equal(ex.length, 2);
   assert.equal(ex[0].approaches[1].weightKg, '80');
   assert.equal(ex[0].approaches[1].id, 'a2', 'подход остался тем же');
   assert.equal(ex[1].name, 'Тяга');
+  assert.deepEqual(saved.value.trainings[0].workoutLog, { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] });
   assert.equal(saved.value.trainings[0].plan.status, 'assigned');
   assert.equal(saved.value.trainings[0].time, '18:00', 'карточка тренировки не тронута');
   assert.equal(res.structured.exercises.length, 2, 'в ответе состав в той же форме, что на вход');

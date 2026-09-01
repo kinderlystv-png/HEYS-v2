@@ -10,7 +10,7 @@ import path from 'path';
 import React from 'react';
 import { fileURLToPath } from 'url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -470,8 +470,9 @@ describe('конструктор: безопасность не спрятана
 });
 
 describe('финал тренировки', () => {
-  it('open пробрасывает day-owned summary callback в production BuilderScreen', () => {
+  it('open пробрасывает day-owned summary и старт плана в production BuilderScreen', () => {
     const finishSummaryFor = vi.fn();
+    const onStartPlan = vi.fn();
     globalThis.HEYS.TrainingKernel.fullscreen = {
       mount: ({ render: renderScreen }) => renderScreen({ close: vi.fn() }),
     };
@@ -479,8 +480,10 @@ describe('финал тренировки', () => {
       training: training([]),
       dateKey: '2026-08-09',
       finishSummaryFor,
+      onStartPlan,
     });
     expect(element.props.finishSummaryFor).toBe(finishSummaryFor);
+    expect(element.props.onStartPlan).toBe(onStartPlan);
   });
 
   it('расчётный максимум считается по Эпли, а не по Бржицки', () => {
@@ -507,7 +510,7 @@ describe('финал тренировки', () => {
 });
 
 describe('пустая тренировка (экран 02)', () => {
-  it('план куратора не показываем — под него нет схемы данных', () => {
+  it('без плана главным остаётся «Собрать свою», а недоступные способы старта скрыты', () => {
     render(React.createElement(SB.BuilderScreen, {
       training: training([]),
       dateKey: '2026-08-09',
@@ -516,9 +519,126 @@ describe('пустая тренировка (экран 02)', () => {
       onClose: () => {},
     }));
     expect(screen.getByText('Пустая тренировка')).toBeTruthy();
-    expect(screen.getByText('+ Собрать свою')).toBeTruthy();
+    expect(screen.getByText('пусто · 0 подходов')).toBeTruthy();
+    expect(screen.getByText('Собрать свою')).toBeTruthy();
+    expect(screen.getByText(/Плана нет — главной становится/)).toBeTruthy();
     expect(screen.queryByText(/Начать по плану/)).toBeNull();
     expect(screen.queryByText(/Шаблон/)).toBeNull();
+  });
+
+  it('валидный снимок назначенного плана показывает состав и переходит только по owner acknowledgement', async () => {
+    const started = [
+      { name: 'Жим', approaches: [work(75, 8, false)] },
+      { name: 'Тяга', approaches: [work(60, 10, false)] },
+    ];
+    const onStartPlan = vi.fn(async () => started);
+    render(React.createElement(SB.BuilderScreen, {
+      training: {
+        workoutLog: { exercises: [] },
+        plan: { id: 'pl_1', status: 'assigned', assignedAt: 1000, dayLabel: 'День B', assignedBy: 'Артём' },
+        planSnapshot: {
+          exercises: [
+            { name: 'Жим', approaches: [work(75, 8, true)] },
+            { name: 'Тяга', approaches: [work(60, 10, true)] },
+          ],
+        },
+      },
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onStartPlan,
+      onClose: () => {},
+    }));
+    expect(screen.getByText('Начать по плану · День B')).toBeTruthy();
+    expect(screen.getByText('2 упражнения · назначил Артём')).toBeTruthy();
+    fireEvent.click(screen.getByText('Начать по плану · День B'));
+    expect(onStartPlan).toHaveBeenCalledWith({ id: 'pl_1', assignedAt: 1000 });
+    await waitFor(() => expect(screen.getByText('Жим')).toBeTruthy());
+    expect(started[0].approaches[0].done).toBe(false);
+  });
+
+  it('отклонённый owner transition оставляет Builder пустым', async () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: {
+        workoutLog: { exercises: [] },
+        plan: { id: 'pl_stale', status: 'assigned', dayLabel: 'День B', assignedBy: 'Артём' },
+        planSnapshot: { exercises: [{ name: 'Жим', approaches: [work(75, 8, false)] }] },
+      },
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onStartPlan: async () => null,
+      onClose: () => {},
+    }));
+    fireEvent.click(screen.getByText('Начать по плану · День B'));
+    await waitFor(() => expect(screen.getByText('Пустая тренировка')).toBeTruthy());
+    expect(screen.queryByText('Жим')).toBeNull();
+  });
+
+  it('собственная тренировка из назначенного draft открывает каталог только после owner acknowledgement', async () => {
+    const onStartCustom = vi.fn(async () => true);
+    globalThis.HEYS.StrengthCatalogUI = {
+      CatalogScreen: ({ onBack }) => React.createElement('div', null,
+        'Каталог упражнений',
+        React.createElement('button', { type: 'button', onClick: onBack }, 'Назад из каталога')
+      ),
+    };
+    render(React.createElement(SB.BuilderScreen, {
+      training: {
+        workoutLog: { exercises: [] },
+        plan: { id: 'pl_custom', status: 'assigned', assignedAt: 2000, dayLabel: 'День B', assignedBy: 'Артём' },
+        planSnapshot: { exercises: [{ name: 'Жим', approaches: [work(75, 8, false)] }] },
+      },
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onStartPlan: async () => null,
+      onStartCustom,
+      onClose: () => {},
+    }));
+    fireEvent.click(screen.getByText('Собрать свою'));
+    expect(onStartCustom).toHaveBeenCalledWith({ id: 'pl_custom', assignedAt: 2000 });
+    await waitFor(() => expect(screen.getByText('Каталог упражнений')).toBeTruthy());
+    fireEvent.click(screen.getByText('Назад из каталога'));
+    expect(screen.queryByText(/Начать по плану/)).toBeNull();
+    fireEvent.click(screen.getByText('Собрать свою'));
+    expect(onStartCustom).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Каталог упражнений')).toBeTruthy();
+  });
+
+  it('отклонённая собственная тренировка оставляет назначенный draft пустым', async () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: {
+        workoutLog: { exercises: [] },
+        plan: { id: 'pl_stale_custom', status: 'assigned', dayLabel: 'День B', assignedBy: 'Артём' },
+        planSnapshot: { exercises: [{ name: 'Жим', approaches: [work(75, 8, false)] }] },
+      },
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onStartPlan: async () => null,
+      onStartCustom: async () => false,
+      onClose: () => {},
+    }));
+    fireEvent.click(screen.getByText('Собрать свою'));
+    await waitFor(() => expect(screen.getByText('Пустая тренировка')).toBeTruthy());
+    expect(screen.queryByText('Каталог упражнений')).toBeNull();
+  });
+
+  it('план без снимка или owner callback не рисует кнопку в пустоту', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: {
+        workoutLog: { exercises: [] },
+        plan: { status: 'assigned', dayLabel: 'День B', assignedBy: 'Артём' },
+      },
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onStartPlan: () => {},
+      onClose: () => {},
+    }));
+    expect(screen.queryByText(/Начать по плану/)).toBeNull();
+    expect(screen.getByText('Собрать свою')).toBeTruthy();
   });
 
   it('без прошлой сессии кнопка повтора не показывается', () => {
@@ -533,8 +653,9 @@ describe('пустая тренировка (экран 02)', () => {
     expect(screen.queryByText(/Повторить/)).toBeNull();
   });
 
-  it('с прошлой сессией повтор клонирует упражнения, не ссылается на старые', () => {
-    const repeated = [];
+  it('с прошлой сессией повтор переходит в журнал только после owner acknowledgement', async () => {
+    const repeated = [{ name: 'Жим', approaches: [work(75, 8, false)] }];
+    const onRepeatLast = vi.fn(async () => repeated);
     render(React.createElement(SB.BuilderScreen, {
       training: training([]),
       dateKey: '2026-08-09',
@@ -542,11 +663,14 @@ describe('пустая тренировка (экран 02)', () => {
       onPatch: () => {},
       onClose: () => {},
       lastSessionFor: () => ({ dateKey: '2026-08-05', exercises: [{ name: 'Жим', approaches: [work(75, 8, true)] }] }),
-      onRepeatLast: (ex) => repeated.push(ex),
+      onRepeatLast,
     }));
-    fireEvent.click(screen.getByText(/Повторить/));
-    expect(repeated.length).toBe(1);
-    expect(repeated[0][0].name).toBe('Жим');
+    expect(screen.getByText('Повторить 5 августа')).toBeTruthy();
+    expect(screen.getByText('1 упр.')).toBeTruthy();
+    fireEvent.click(screen.getByText('Повторить 5 августа'));
+    expect(onRepeatLast).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getByText('Жим')).toBeTruthy());
+    expect(repeated[0].name).toBe('Жим');
   });
 });
 
@@ -841,6 +965,13 @@ describe('сохраняемый отдых', () => {
     expect(normalizer).toContain('out.firstMarkAt = firstMarkAtNum');
     expect(normalizer).toContain('out.lastMarkAt = lastMarkAtNum');
     expect(daySource.match(/onPatchSession: function \(patch\)/g)).toHaveLength(2);
+    expect(daySource).toContain('onStartPlan: function (expectedPlan)');
+    expect(daySource).toContain('onStartCustom: function (expectedPlan)');
+    expect(daySource).toContain('matchesOpenedPlanRevision(t0, expectedPlan)');
+    expect(daySource).toContain('return patchTrainingAcknowledged(ti, function (t0)');
+    expect(daySource).toContain('ack.resolve(null);');
+    expect(daySource).toContain('return prevDay;');
+    expect(daySource).toContain("plan: { ...t0.plan, status: 'started' }");
     expect(daySource).toContain('onCloseAtLastMark: function (e)');
     expect(daySource).toContain('wl0.completedAt = closedAt');
     expect(daySource).toContain('delete wl0.activeRest');

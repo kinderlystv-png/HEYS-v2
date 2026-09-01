@@ -82,6 +82,23 @@ function makeId(prefix) {
   return `${prefix}${crypto.randomBytes(6).toString('hex')}`;
 }
 
+/**
+ * До явного старта состав живёт в planSnapshot, после старта — в workoutLog.
+ * Skipped остаётся планом без факта; moved хранит состав для истории переноса.
+ */
+function trainingExercisesForRead(training) {
+  const t = training || {};
+  const status = t.plan && t.plan.status;
+  if (status === 'assigned' || status === 'skipped' || status === 'moved') {
+    return t.planSnapshot && Array.isArray(t.planSnapshot.exercises)
+      ? t.planSnapshot.exercises
+      : [];
+  }
+  return t.workoutLog && Array.isArray(t.workoutLog.exercises)
+    ? t.workoutLog.exercises
+    : [];
+}
+
 /** Название приёма по времени — те же ярлыки, что пользователь ставит руками. */
 function defaultMealName(time) {
   const minutes = day.timeToMinutes(time);
@@ -2216,7 +2233,7 @@ function createTools({
       const saved = await writeDay(date, res.day, Number(current.updatedAt) || 0);
       const after = await dayAfterWrite(saved, res.day);
       const written = res.day.trainings[res.index];
-      const exCount = written.workoutLog.exercises.length;
+      const exCount = trainingExercisesForRead(written).length;
       return {
         text: `${res.replaced ? 'Обновил план силовой на' : 'Назначил силовую на'} ${date}${written.plan.dayLabel ? ` («${written.plan.dayLabel}»)` : ''}: ${exCount} упр. Клиент увидит план при открытии дня, в калории и нагрузку не войдёт, пока не начнёт.${dayAfterText(after)}`,
         structured: {
@@ -2463,7 +2480,7 @@ function createTools({
         assigned_by: t.plan && t.plan.assignedBy ? t.plan.assignedBy : null,
         program_id: t.plan && t.plan.programId ? t.plan.programId : null,
         editable: !!(t.plan && t.plan.status === 'assigned'),
-        exercises: day.exercisesToInput(t.workoutLog && t.workoutLog.exercises),
+        exercises: day.exercisesToInput(trainingExercisesForRead(t)),
       }));
 
       const lines = trainings.map((t) => {
@@ -2514,7 +2531,7 @@ function createTools({
           structured: {
             date,
             index: res.index,
-            exercises: day.exercisesToInput(written.workoutLog && written.workoutLog.exercises),
+            exercises: day.exercisesToInput(trainingExercisesForRead(written)),
             day_after: after,
           },
         };

@@ -929,6 +929,18 @@
         const ex = t.workoutLog.exercises;
         if (Array.isArray(ex) && ex.length >= 1) return true;
       }
+      // An assigned curator plan may intentionally keep the live workout empty
+      // until the client starts it. The current assignment snapshot is its content;
+      // preserving this draft makes the empty-state start flow reachable without
+      // treating a corrupt/empty snapshot as a valid training.
+      if (
+        String(t.type) === 'strength'
+        && t.plan
+        && ['assigned', 'started', 'skipped', 'moved'].includes(t.plan.status)
+      ) {
+        const snapshotExercises = t.planSnapshot && t.planSnapshot.exercises;
+        if (Array.isArray(snapshotExercises) && snapshotExercises.length >= 1) return true;
+      }
       return false;
     };
     // Нормализуем существующие тренировки (миграция полей)

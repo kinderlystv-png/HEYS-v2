@@ -49,6 +49,38 @@ describe('ensureDay: plan и planSnapshot переживают нормализ�
     expect(t.planSnapshot.exercises[0].name).toBe('Жим');
   });
 
+  it('assigned план с пустым live workout сохраняется по непустому snapshot текущей ревизии', () => {
+    const day = models.ensureDay({
+      trainings: [planTraining({ workoutLog: { version: 1, exercises: [] } })],
+    }, {});
+    expect(day.trainings).toHaveLength(1);
+    expect(day.trainings[0].workoutLog.exercises).toEqual([]);
+    expect(day.trainings[0].plan.status).toBe('assigned');
+    expect(day.trainings[0].planSnapshot.exercises[0].name).toBe('Жим');
+  });
+
+  it.each(['started', 'skipped', 'moved'])('%s план с пустым live workout не исчезает при ensureDay', (status) => {
+    const day = models.ensureDay({
+      trainings: [planTraining({
+        workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
+        plan: { id: 'pl_1', status, assignedBy: 'Артём', assignedAt: 1000 },
+      })],
+    }, {});
+    expect(day.trainings).toHaveLength(1);
+    expect(day.trainings[0].plan.status).toBe(status);
+    expect(day.trainings[0].workoutLog.exercises).toEqual([]);
+  });
+
+  it('assigned пустышка без состава в snapshot не становится валидной тренировкой', () => {
+    const day = models.ensureDay({
+      trainings: [planTraining({
+        workoutLog: { version: 1, exercises: [] },
+        planSnapshot: { exercises: [] },
+      })],
+    }, {});
+    expect(day.trainings).toEqual([]);
+  });
+
   it('planSnapshot — независимая копия, а не ссылка на живой workoutLog', () => {
     const day = models.ensureDay({ trainings: [planTraining()] }, {});
     const t = day.trainings[0];

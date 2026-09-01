@@ -63,6 +63,57 @@
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
 
+  function repeatDateLabel(dateKey) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+    if (!m) return String(dateKey || '');
+    const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    return String(+m[3]) + ' ' + months[+m[2] - 1];
+  }
+
+  function exerciseCountLabel(count) {
+    const n = Math.max(0, Math.round(+count || 0));
+    const mod100 = n % 100;
+    const mod10 = n % 10;
+    const word = mod100 >= 11 && mod100 <= 14 ? 'упражнений'
+      : mod10 === 1 ? 'упражнение'
+        : mod10 >= 2 && mod10 <= 4 ? 'упражнения' : 'упражнений';
+    return n + ' ' + word;
+  }
+
+  function plannedExercisesFor(training) {
+    const plan = training && training.plan;
+    const snapshot = training && training.planSnapshot;
+    const source = snapshot && Array.isArray(snapshot.exercises) ? snapshot.exercises : [];
+    if (!plan || plan.status !== 'assigned' || !source.length) return null;
+    if (!source.every(function (ex) { return ex && String(ex.name || '').trim(); })) return null;
+    return source.map(function (ex) {
+      const next = Object.assign({}, ex);
+      next.approaches = (Array.isArray(ex.approaches) ? ex.approaches : []).map(function (approach) {
+        const fresh = Object.assign({}, approach, { done: false });
+        if (Array.isArray(approach && approach.drops)) {
+          fresh.drops = approach.drops.map(function (drop) {
+            return Object.assign({}, drop, { done: false });
+          });
+        }
+        return fresh;
+      });
+      return next;
+    });
+  }
+
+  function planRevisionFor(plan) {
+    if (!plan || typeof plan !== 'object') return null;
+    return {
+      id: plan.id || null,
+      assignedAt: Number.isFinite(+plan.assignedAt) ? +plan.assignedAt : null
+    };
+  }
+
+  function samePlanRevision(left, right) {
+    return !!left && !!right && left.id === right.id && left.assignedAt === right.assignedAt;
+  }
+
   function restoreActiveRest(value, now) {
     const raw = value && typeof value === 'object' ? value : null;
     const startedAt = raw && Number.isFinite(+raw.startedAt) ? +raw.startedAt : 0;
@@ -86,7 +137,7 @@
 
   function BuilderScreen(props) {
     const { training, dateKey, onPatch, onPatchSession, onPatchNote, profile, historyFor, historyDetailFor,
-      lastSessionFor, finishSummaryFor, onRepeatLast, syncStatusFor, onReviewProposal, onFinishProposal, onClose } = props;
+      lastSessionFor, finishSummaryFor, onRepeatLast, onStartPlan, onStartCustom, syncStatusFor, onReviewProposal, onFinishProposal, onClose } = props;
     const SK = kernel();
     const wl = (training && training.workoutLog) || {};
     const [openIdx, setOpenIdx] = React.useState(0);
@@ -98,6 +149,8 @@
     const [historyName, setHistoryName] = React.useState('');
     const [dismissedBreakAt, setDismissedBreakAt] = React.useState(0);
     const [finishAtOverride, setFinishAtOverride] = React.useState(0);
+    const [emptyActionPending, setEmptyActionPending] = React.useState(false);
+    const [consumedPlanRevision, setConsumedPlanRevision] = React.useState(null);
     const [rest, setRest] = React.useState(function () {
       return restoreActiveRest(wl.activeRest, Date.now());
     });
@@ -521,33 +574,100 @@
       });
     }
 
-    // Экран 02: пустая тренировка. «Начать по плану» не показываем — под неё
-    // нет схемы данных (см. протокол, раздел «Открытое»); кнопка в пустоту не
-    // уходит в разработку (решение 9).
+    // Б1 «Конструктор · пусто»: показываем только те способы старта, для
+    // которых есть данные и рабочий callback. Статичный макет сводит в одном
+    // кадре взаимоисключающие состояния (план есть / «Плана нет»), поэтому
+    // иерархия динамическая: план главный, когда его снимок валиден; иначе
+    // главное действие — собрать тренировку самому.
     if (exercises.length === 0) {
       const last = typeof lastSessionFor === 'function' ? lastSessionFor() : null;
+      const planExercises = plannedExercisesFor(training);
+      const candidatePlan = planExercises ? training.plan : null;
+      const planRevision = planRevisionFor(candidatePlan);
+      const planWasConsumed = samePlanRevision(consumedPlanRevision, planRevision);
+      const canStartPlan = !!(candidatePlan && !planWasConsumed && typeof onStartPlan === 'function');
+      const plan = canStartPlan ? candidatePlan : null;
+      const planLabel = plan && String(plan.dayLabel || '').trim();
+      const assignedBy = plan && String(plan.assignedBy || 'куратор').trim();
       return h('div', { className: 'sb-root' },
-        h('div', { className: 'sb-head' },
+        h('div', { className: 'sb-head is-empty' },
           h('button', {
             type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть'
           }, '✕'),
           h('div', { className: 'sb-head-title' },
             h('b', null, 'Силовая'),
-            h('div', { className: 'sb-head-sub' }, 'Пусто · 0 подходов')
+            h('div', { className: 'sb-head-sub' }, 'пусто · 0 подходов')
           )
         ),
-        h('div', { className: 'sb-empty-screen' },
-          h('div', { className: 'sb-empty-emoji' }, '🏆'),
-          h('b', null, 'Пустая тренировка'),
-          h('p', null, 'Добавляйте упражнения по ходу — план не обязан быть готов заранее.'),
+        h('div', { className: 'sb-empty-scroll' },
+          h('div', { className: 'sb-empty-card' },
+            h('b', null, 'Пустая тренировка'),
+            h('p', null, 'Добавляйте упражнения по ходу — план не обязан быть готов заранее.')
+          ),
+          canStartPlan && h(React.Fragment, null,
+            h('button', {
+              type: 'button', className: 'sb-empty-action is-primary',
+              disabled: emptyActionPending,
+              onClick: async function () {
+                if (emptyActionPending) return;
+                setEmptyActionPending(true);
+                try {
+                  const startedExercises = await onStartPlan(planRevision);
+                  if (!Array.isArray(startedExercises) || !startedExercises.length) return;
+                  setExercises(startedExercises);
+                  setOpenIdx(0);
+                } finally {
+                  setEmptyActionPending(false);
+                }
+              }
+            }, emptyActionPending ? 'Начинаем…' : 'Начать по плану' + (planLabel ? ' · ' + planLabel : '')),
+            h('div', { className: 'sb-empty-plan-meta' },
+              exerciseCountLabel(planExercises.length) + ' · назначил ' + assignedBy
+            )
+          ),
           h('button', {
-            type: 'button', className: 'sb-btn is-accent sb-empty-cta',
-            onClick: function () { setView('catalog'); }
-          }, '+ Собрать свою'),
-          last && h('button', {
-            type: 'button', className: 'sb-btn sb-empty-cta',
-            onClick: function () { onRepeatLast(last.exercises); }
-          }, '↻ Повторить ' + (Parts.humanDate ? Parts.humanDate(last.dateKey) : last.dateKey))
+            type: 'button', className: 'sb-empty-action' + (canStartPlan ? '' : ' is-primary'),
+            disabled: emptyActionPending,
+            onClick: async function () {
+              if (emptyActionPending) return;
+              if (canStartPlan && typeof onStartCustom === 'function') {
+                setEmptyActionPending(true);
+                try {
+                  const accepted = await onStartCustom(planRevision);
+                  if (accepted !== true) return;
+                  setConsumedPlanRevision(planRevision);
+                } finally {
+                  setEmptyActionPending(false);
+                }
+              }
+              setView('catalog');
+            }
+          }, emptyActionPending ? 'Начинаем…' : 'Собрать свою'),
+          last && Array.isArray(last.exercises) && last.exercises.length > 0 && typeof onRepeatLast === 'function'
+            && h('div', { className: 'sb-empty-options' },
+              h('button', {
+                type: 'button', className: 'sb-empty-option',
+                disabled: emptyActionPending,
+                onClick: async function () {
+                  if (emptyActionPending) return;
+                  setEmptyActionPending(true);
+                  try {
+                    const repeatedExercises = await onRepeatLast(last.exercises, planRevision);
+                    if (!Array.isArray(repeatedExercises) || !repeatedExercises.length) return;
+                    setExercises(repeatedExercises);
+                    setOpenIdx(0);
+                  } finally {
+                    setEmptyActionPending(false);
+                  }
+                }
+              },
+                h('span', null, 'Повторить ' + repeatDateLabel(last.dateKey)),
+                h('b', null, last.exercises.length + ' упр.')
+              )
+            ),
+          h('p', { className: 'sb-empty-note' }, canStartPlan
+            ? 'Можно начать назначенный план или собрать свою тренировку. Повтор прошлой сессии остаётся быстрым способом старта.'
+            : 'Плана нет — главной становится «Собрать свою». Повтор прошлой сессии стоит строкой, а не кнопкой: это способ начать, а не решение.')
         )
       );
     }
@@ -809,6 +929,8 @@
         lastSessionFor: state.lastSessionFor,
         finishSummaryFor: state.finishSummaryFor,
         onRepeatLast: state.onRepeatLast,
+        onStartPlan: state.onStartPlan,
+        onStartCustom: state.onStartCustom,
         syncStatusFor: state.syncStatusFor,
         onReviewProposal: state.onReviewProposal,
         onFinishProposal: state.onFinishProposal,

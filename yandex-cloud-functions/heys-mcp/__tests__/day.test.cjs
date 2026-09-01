@@ -1418,12 +1418,12 @@ test('assignTraining назначает план: подходы невыпол�
   assert.equal(res.error, null);
   const t = res.day.trainings[res.index];
   assert.deepEqual(t.z, [0, 0, 0, 0]);
-  assert.equal(t.workoutLog.exercises[0].approaches[0].done, false);
+  assert.deepEqual(t.workoutLog, { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] });
+  assert.equal(t.planSnapshot.exercises[0].approaches[0].done, false);
   assert.equal(t.plan.status, 'assigned');
   assert.equal(t.plan.dayLabel, 'День B');
   assert.equal(t.plan.assignedBy, 'Артём');
-  // Снимок — та же форма, что и живой journal на момент назначения.
-  assert.deepEqual(t.planSnapshot.exercises, t.workoutLog.exercises);
+  assert.equal(t.planSnapshot.exercises.length, 1);
 });
 
 test('assignTraining без assigned_by отклоняется', () => {
@@ -1515,9 +1515,9 @@ test('assignTraining правит свой черновик, пока клиен
   assert.equal(second.error, null);
   assert.equal(second.replaced, true);
   const t = second.day.trainings[second.index];
-  assert.equal(t.workoutLog.exercises.length, 2);
+  assert.deepEqual(t.workoutLog, { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] });
   assert.equal(t.planSnapshot.exercises.length, 2, 'снимок задания едет за правкой');
-  assert.equal(t.workoutLog.exercises[0].approaches[0].done, false, 'план остаётся невыполненным');
+  assert.equal(t.planSnapshot.exercises[0].approaches[0].done, false, 'план остаётся невыполненным');
   assert.equal(t.plan.status, 'assigned');
   // Не переданное поле значит «оставь как было»: иначе правка упражнений молча
   // стирала бы время, метку дня и связь с программой.
@@ -1541,24 +1541,24 @@ function draftDay() {
 
 test('editTrainingPlan дописывает упражнение, не трогая остальные', () => {
   const draft = draftDay();
-  const before = draft.day.trainings[0].workoutLog.exercises.map((e) => e.id);
+  const before = draft.day.trainings[0].planSnapshot.exercises.map((e) => e.id);
 
   const res = day.editTrainingPlan(draft.day, 0, {
     exercises_add: [{ name: 'Присед', approaches: [{ reps: 5, weight_kg: 100 }] }],
   }, { nowMs: 2000, clientId: CLIENT });
 
   assert.equal(res.error, null);
-  const after = res.day.trainings[0].workoutLog.exercises;
+  const after = res.day.trainings[0].planSnapshot.exercises;
   assert.equal(after.length, 3);
   assert.deepEqual(after.slice(0, 2).map((e) => e.id), before, 'прежние упражнения те же');
   assert.equal(after[2].name, 'Присед');
   assert.equal(after[2].approaches[0].done, false, 'дописанное — тоже задание, а не факт');
-  assert.equal(res.day.trainings[0].planSnapshot.exercises.length, 3, 'снимок задания едет за правкой');
+  assert.deepEqual(res.day.trainings[0].workoutLog, { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] });
 });
 
 test('editTrainingPlan правит подход по id, и id подхода живёт', () => {
   const draft = draftDay();
-  const ex = draft.day.trainings[0].workoutLog.exercises[0];
+  const ex = draft.day.trainings[0].planSnapshot.exercises[0];
   const apId = ex.approaches[1].id;
 
   const res = day.editTrainingPlan(draft.day, 0, {
@@ -1566,7 +1566,7 @@ test('editTrainingPlan правит подход по id, и id подхода �
   }, { nowMs: 2000, clientId: CLIENT });
 
   assert.equal(res.error, null);
-  const got = res.day.trainings[0].workoutLog.exercises[0];
+  const got = res.day.trainings[0].planSnapshot.exercises[0];
   assert.equal(got.id, ex.id);
   assert.equal(got.restSec, 120);
   assert.equal(got.approaches[1].id, apId, 'для приложения это тот же подход');
@@ -1577,29 +1577,30 @@ test('editTrainingPlan правит подход по id, и id подхода �
 
 test('editTrainingPlan убирает упражнение и переставляет порядок', () => {
   const draft = draftDay();
-  const [zhim, tyaga] = draft.day.trainings[0].workoutLog.exercises;
+  const [zhim, tyaga] = draft.day.trainings[0].planSnapshot.exercises;
 
   const added = day.editTrainingPlan(draft.day, 0, {
     exercises_add: [{ name: 'Присед', approaches: [{ reps: 5, weight_kg: 100 }] }],
   }, { nowMs: 2000, clientId: CLIENT });
-  const prisedId = added.day.trainings[0].workoutLog.exercises[2].id;
+  const prisedId = added.day.trainings[0].planSnapshot.exercises[2].id;
 
   const removed = day.editTrainingPlan(added.day, 0, {
     exercises_remove: [zhim.id],
   }, { nowMs: 3000, clientId: CLIENT });
   assert.equal(removed.error, null);
-  assert.deepEqual(removed.day.trainings[0].workoutLog.exercises.map((e) => e.id), [tyaga.id, prisedId]);
+  assert.deepEqual(removed.day.trainings[0].planSnapshot.exercises.map((e) => e.id), [tyaga.id, prisedId]);
 
   const ordered = day.editTrainingPlan(removed.day, 0, {
     exercises_order: [prisedId, tyaga.id],
   }, { nowMs: 4000, clientId: CLIENT });
   assert.equal(ordered.error, null);
-  assert.deepEqual(ordered.day.trainings[0].workoutLog.exercises.map((e) => e.id), [prisedId, tyaga.id]);
+  assert.deepEqual(ordered.day.trainings[0].planSnapshot.exercises.map((e) => e.id), [prisedId, tyaga.id]);
+  assert.equal(ordered.day.trainings[0].workoutLog.exercises.length, 0);
 });
 
 test('editTrainingPlan не даёт опустошить план и не молчит о чужих id', () => {
   const draft = draftDay();
-  const [zhim, tyaga] = draft.day.trainings[0].workoutLog.exercises;
+  const [zhim, tyaga] = draft.day.trainings[0].planSnapshot.exercises;
 
   const empty = day.editTrainingPlan(draft.day, 0, {
     exercises_remove: [zhim.id, tyaga.id],
@@ -1618,9 +1619,26 @@ test('editTrainingPlan не даёт опустошить план и не мо�
   assert.match(lastAp.error, /exercises_remove/);
 });
 
+test('editTrainingPlan fail-closed отказывает без planSnapshot', () => {
+  const draft = draftDay();
+  const legacy = JSON.parse(JSON.stringify(draft.day));
+  legacy.trainings[0].workoutLog = {
+    version: 1,
+    exercises: JSON.parse(JSON.stringify(legacy.trainings[0].planSnapshot.exercises)),
+  };
+  delete legacy.trainings[0].planSnapshot;
+
+  const res = day.editTrainingPlan(legacy, 0, {
+    exercises_add: [{ name: 'Присед', approaches: [{ reps: 5, weight_kg: 100 }] }],
+  }, { nowMs: 2000, clientId: CLIENT });
+
+  assert.match(res.error, /planSnapshot/);
+  assert.deepEqual(res.day, legacy, 'неподтверждённый legacy-источник не переписывается');
+});
+
 test('editTrainingPlan не трогает начатое клиентом и чужие записи', () => {
   const draft = draftDay();
-  const ex = draft.day.trainings[0].workoutLog.exercises[0];
+  const ex = draft.day.trainings[0].planSnapshot.exercises[0];
 
   const opened = JSON.parse(JSON.stringify(draft.day));
   opened.trainings[0].plan.status = 'started';
@@ -1653,7 +1671,7 @@ test('exercisesToInput отдаёт упражнение в той же форм
     assignedBy: 'Артём',
   }, { nowMs: 1000, clientId: CLIENT });
 
-  const [ex] = day.exercisesToInput(assigned.day.trainings[0].workoutLog.exercises);
+  const [ex] = day.exercisesToInput(assigned.day.trainings[0].planSnapshot.exercises);
   assert.equal(ex.unit, 'bodyweight');
   assert.equal(ex.bodyweight_factor, 1);
   assert.equal(ex.rest_sec, 120);
@@ -1700,11 +1718,12 @@ function startedPlanDay() {
   const started = { ...assigned.day };
   started.trainings = started.trainings.map((t, i) => {
     if (i !== assigned.index) return t;
-    const aps = t.workoutLog.exercises[0].approaches.map((a, k) => (k === 0 ? { ...a, done: true } : a));
+    const plannedExercise = JSON.parse(JSON.stringify(t.planSnapshot.exercises[0]));
+    const aps = plannedExercise.approaches.map((a, k) => (k === 0 ? { ...a, done: true } : a));
     return {
       ...t,
       plan: { ...t.plan, status: 'started' },
-      workoutLog: { ...t.workoutLog, exercises: [{ ...t.workoutLog.exercises[0], approaches: aps }] },
+      workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [{ ...plannedExercise, approaches: aps }] },
     };
   });
   return { day: started, index: assigned.index };
@@ -1850,18 +1869,25 @@ test('перенос помечает исходный день как moved, а
   const src = res.day.trainings[index];
   assert.equal(src.plan.status, 'moved');
   assert.equal(src.plan.movedTo, '2026-08-13');
+  assert.equal(src.workoutLog.exercises.length, 0);
   assert.notEqual(src.plan.status, 'skipped', 'перенос не должен читаться как пропуск');
 });
 
 test('перенесённая запись несёт происхождение и веса целиком', () => {
   const { day: base, index } = assignedPlanDay();
+  base.trainings[index].workoutLog = {
+    version: 1,
+    zoneMinutes: [0, 1, 0, 0],
+    exercises: JSON.parse(JSON.stringify(base.trainings[index].planSnapshot.exercises)),
+  };
   const res = day.moveTrainingOut(base, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
   const moved = res.movedTraining;
 
   assert.equal(moved.plan.status, 'assigned');
   assert.equal(moved.plan.movedFrom, '2026-08-11');
   assert.equal(moved.plan.movedTo, undefined, 'на новом дне «уехала туда-то» уже неверно');
-  assert.equal(moved.workoutLog.exercises[0].approaches[0].weightKg, '75', 'веса едут вместе с тренировкой');
+  assert.equal(moved.planSnapshot.exercises[0].approaches[0].weightKg, '75', 'веса едут вместе с тренировкой');
+  assert.equal(moved.workoutLog.exercises.length, 0, 'перенос не превращает план в факт');
   assert.notEqual(moved.id, base.trainings[index].id, 'на новом дне это отдельная запись');
 });
 

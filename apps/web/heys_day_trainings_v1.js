@@ -3500,29 +3500,52 @@
       return out;
     }
 
-    function patchTraining(ti, mutator) {
-      if (typeof setDay !== 'function') return;
+    function patchTraining(ti, mutator, ack) {
+      if (typeof setDay !== 'function') {
+        if (ack && typeof ack.resolve === 'function') ack.resolve(null);
+        return;
+      }
       const ts = Date.now();
       // Синхронно поднимаем ref до setDay: иначе heys:day-updated в том же тике видит старый LS и
       // stale-guard (storageUpdatedAt < lastLoadedUpdatedAtRef) не срабатывает до коммита React —
       // overlay из LS откатывает только что открытый дневник.
+      function markAcceptedWrite() {
+        try {
+          if (HEYS.Day && typeof HEYS.Day.setLastLoadedUpdatedAt === 'function') {
+            HEYS.Day.setLastLoadedUpdatedAt(ts);
+          }
+          if (HEYS.Day && typeof HEYS.Day.setBlockCloudUpdates === 'function') {
+            HEYS.Day.setBlockCloudUpdates(ts + 3000);
+          }
+        } catch (_) { /* noop */ }
+      }
+      function requestAcceptedFlush() {
+        try {
+          global.setTimeout(function () {
+            if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
+              HEYS.Day.requestFlush({ force: true });
+            }
+          }, 16);
+        } catch (_) { /* noop */ }
+      }
+      if (!ack) markAcceptedWrite();
       try {
-        if (HEYS.Day && typeof HEYS.Day.setLastLoadedUpdatedAt === 'function') {
-          HEYS.Day.setLastLoadedUpdatedAt(ts);
-        }
-        if (HEYS.Day && typeof HEYS.Day.setBlockCloudUpdates === 'function') {
-          HEYS.Day.setBlockCloudUpdates(ts + 3000);
-        }
-      } catch (_) { /* noop */ }
-      setDay((prevDay) => {
+        setDay((prevDay) => {
         const list = [...(prevDay.trainings || [])];
         const cur = { ...(list[ti] || {}) };
+        const mutation = mutator(cur);
+        if (ack && (!mutation || !mutation.training)) {
+          ack.resolve(null);
+          return prevDay;
+        }
+        const nextTraining = ack ? mutation.training : mutation;
+        if (ack) markAcceptedWrite();
         // Метка на самой строке, а не только на дне: merge сравнивает
         // тренировки по training.updatedAt, а day.updatedAt двигают фоновые
         // reconcile/autosave. Без неё правка конструктора опиралась на
         // авто-штамп stamper'а — тот же путь, которым stale-снимок
         // откатывал кураторские зоны (heys/9cb568).
-        list[ti] = { ...mutator(cur), updatedAt: ts };
+        list[ti] = { ...nextTraining, updatedAt: ts };
         var nextDay = { ...prevDay, trainings: list, updatedAt: ts };
         try {
           HEYS.Day = HEYS.Day || {};
@@ -3542,16 +3565,24 @@
             }
           } catch (_eSs) { /* noop */ }
         } catch (_eWb) { /* noop */ }
+        if (ack) {
+          ack.resolve(mutation.value);
+          requestAcceptedFlush();
+        }
         return nextDay;
-      });
-      try {
-        global.setTimeout(function () {
-          if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
-            HEYS.Day.requestFlush({ force: true });
-          }
-        }, 16);
-      } catch (_) { /* noop */ }
+        });
+      } catch (_) {
+        if (ack) ack.resolve(null);
+        return;
+      }
+      if (!ack) requestAcceptedFlush();
       // Не шлём heys:day-updated сами: слушатель перечитывает LS до debounced autosave; requestFlush форсит запись в store/облако.
+    }
+
+    function patchTrainingAcknowledged(ti, mutator) {
+      return new Promise(function (resolve) {
+        patchTraining(ti, mutator, { resolve: resolve });
+      });
     }
 
     function applyWorkoutLogToTraining(t, wl) {
@@ -3852,17 +3883,30 @@
                 return (t && t.time) || '';
               } catch (_e) { return ''; }
             })();
+            const assignedDraft = rawT.plan && rawT.plan.status === 'assigned';
             const trainingForBuilder = {
               type: 'strength',
               strengthEntryMode: 'workout_builder',
               time: startedTime,
-              workoutLog: wlLive,
+              // Старые assigned-записи дублировали snapshot в live-log. В UI
+              // проецируем их как draft без факта; облако при чтении не меняем.
+              workoutLog: assignedDraft
+                ? { ...wlLive, zoneMinutes: [0, 0, 0, 0], exercises: [] }
+                : wlLive,
               // plan нужен полоске правки (экран 14b) и итогу «легла не
               // полностью» (15b): без него конструктор не знает, что у этой
               // тренировки вообще есть неотвеченное предложение куратора.
               plan: rawT.plan,
               planSnapshot: rawT.planSnapshot
             };
+            function matchesOpenedPlanRevision(t0, expectedPlan) {
+              if (!expectedPlan) return !t0.plan;
+              if (!t0.plan || t0.plan.status !== 'assigned') return false;
+              const currentId = t0.plan.id || null;
+              const currentAssignedAt = Number.isFinite(+t0.plan.assignedAt) ? +t0.plan.assignedAt : null;
+              return currentId === (expectedPlan.id || null)
+                && currentAssignedAt === (Number.isFinite(+expectedPlan.assignedAt) ? +expectedPlan.assignedAt : null);
+            }
             function openBuilder() {
               const U = HEYS.utils;
               builder.open({
@@ -3937,11 +3981,55 @@
                     return null;
                   }
                 },
-                onRepeatLast: function (srcExercises) {
-                  patchTraining(ti, function (t0) {
+                onRepeatLast: function (srcExercises, expectedPlan) {
+                  return patchTrainingAcknowledged(ti, function (t0) {
+                    if (!matchesOpenedPlanRevision(t0, expectedPlan)) return null;
+                    const repeatedExercises = cloneExercisesForReplay(srcExercises);
                     const wl0 = ensureWorkoutLogShape(t0);
-                    wl0.exercises = cloneExercisesForReplay(srcExercises);
-                    return applyWorkoutLogToTraining(t0, wl0);
+                    wl0.zoneMinutes = [0, 0, 0, 0];
+                    wl0.exercises = repeatedExercises;
+                    const nextBase = t0.plan && t0.plan.status === 'assigned'
+                      ? { ...t0, plan: { ...t0.plan, status: 'started' } }
+                      : t0;
+                    return {
+                      training: applyWorkoutLogToTraining(nextBase, wl0),
+                      value: repeatedExercises
+                    };
+                  });
+                },
+                onStartPlan: function (expectedPlan) {
+                  return patchTrainingAcknowledged(ti, function (t0) {
+                    if (!t0 || !matchesOpenedPlanRevision(t0, expectedPlan)) return null;
+                    const source = t0.planSnapshot && Array.isArray(t0.planSnapshot.exercises)
+                      ? t0.planSnapshot.exercises
+                      : [];
+                    if (!source.length || !source.every(function (ex) { return ex && String(ex.name || '').trim(); })) return null;
+                    const startedExercises = cloneExercisesForReplay(source);
+                    const wl0 = ensureWorkoutLogShape(t0);
+                    wl0.zoneMinutes = [0, 0, 0, 0];
+                    wl0.exercises = startedExercises;
+                    return {
+                      training: applyWorkoutLogToTraining({
+                        ...t0,
+                        plan: { ...t0.plan, status: 'started' }
+                      }, wl0),
+                      value: startedExercises
+                    };
+                  });
+                },
+                onStartCustom: function (expectedPlan) {
+                  return patchTrainingAcknowledged(ti, function (t0) {
+                    if (!t0 || !matchesOpenedPlanRevision(t0, expectedPlan)) return null;
+                    const wl0 = ensureWorkoutLogShape(t0);
+                    wl0.zoneMinutes = [0, 0, 0, 0];
+                    wl0.exercises = [];
+                    return {
+                      training: applyWorkoutLogToTraining({
+                        ...t0,
+                        plan: { ...t0.plan, status: 'started' }
+                      }, wl0),
+                      value: true
+                    };
                   });
                 },
                 historyDetailFor: function (name, exIdx) {
@@ -3954,6 +4042,7 @@
                 },
                 onPatch: function (nextExercises) {
                   patchTraining(ti, function (t0) {
+                    if (t0 && t0.plan && t0.plan.status === 'assigned') return t0;
                     const wl0 = ensureWorkoutLogShape(t0);
                     wl0.exercises = nextExercises;
                     return applyWorkoutLogToTraining(t0, wl0);
@@ -4049,11 +4138,11 @@
                 }
               });
             }
-            if (rawT.plan && (rawT.plan.status === 'assigned' || rawT.plan.status === 'skipped') && Parts.PlanCard) {
+            if (rawT.plan && (rawT.plan.status === 'assigned' || rawT.plan.status === 'skipped' || rawT.plan.status === 'moved') && Parts.PlanCard) {
               const isFutureDay = String(dateKey) > todayDateKeyForPlan();
               return React.createElement(Parts.PlanCard, {
                 key: 'wb-plan-' + ti,
-                training: { workoutLog: wlLive, plan: rawT.plan },
+                training: { workoutLog: wlLive, plan: rawT.plan, planSnapshot: rawT.planSnapshot },
                 dateKey: dateKey,
                 isFutureDay: isFutureDay,
                 // Единственное, что забрано из прежнего виджета обзора (16c):
@@ -4065,10 +4154,15 @@
                 onMove: function (toDate) {
                   const src = readDayFromStore(dateKey);
                   const t0 = src && Array.isArray(src.trainings) ? src.trainings[ti] : null;
-                  if (!t0 || !t0.plan) return;
+                  const source = t0 && t0.planSnapshot && Array.isArray(t0.planSnapshot.exercises)
+                    ? t0.planSnapshot.exercises
+                    : [];
+                  if (!t0 || !t0.plan || !source.length) return;
                   const moved = {
                     ...t0,
                     id: 'tr_' + Math.random().toString(36).slice(2, 10),
+                    workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
+                    z: [0, 0, 0, 0],
                     plan: { ...t0.plan, status: 'assigned', movedFrom: dateKey, movedAt: Date.now() },
                     updatedAt: Date.now()
                   };
@@ -4078,22 +4172,20 @@
                   const okTarget = appendTrainingToDay(toDate, moved);
                   if (!okTarget) return;
                   patchTraining(ti, function (cur) {
-                    return { ...cur, plan: { ...cur.plan, status: 'moved', movedTo: toDate, movedAt: Date.now() } };
+                    return {
+                      ...cur,
+                      workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
+                      z: [0, 0, 0, 0],
+                      plan: { ...cur.plan, status: 'moved', movedTo: toDate, movedAt: Date.now() }
+                    };
                   });
                 },
                 onStart: function (e) {
                   if (e && e.stopPropagation) e.stopPropagation();
-                  // Старт снимает «assigned» один раз: дальше это обычная
-                  // сессия конструктора, куратор её больше не правит поверх
-                  // (setStrengthWorkout откажет на статусе started/done).
-                  patchTraining(ti, function (t0) {
-                    return { ...t0, plan: { ...t0.plan, status: 'started' } };
-                  });
+                  // Карточка только открывает draft. Конкретный выбор внутри
+                  // Builder атомарно материализует live-log и снимает assigned.
                   openBuilder();
                 },
-                // «Посмотреть» до своей даты не переводит план в started: это
-                // просмотр состава, а не начало тренировки раньше срока.
-                onOpenReadonly: function (e) { if (e && e.stopPropagation) e.stopPropagation(); openBuilder(); },
                 // Пропуск — явное «не делал»: без него незакрытый план остаётся
                 // «assigned» и вечно просится начать. Перенос на другую дату не
                 // входит — открытый вопрос протокола, отдельная операция.
@@ -4103,7 +4195,12 @@
                     if (skipReason) patch.skipReason = skipReason;
                     else delete patch.skipReason;
                     patch.skippedAt = Date.now();
-                    return { ...t0, plan: patch };
+                    return {
+                      ...t0,
+                      workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
+                      z: [0, 0, 0, 0],
+                      plan: patch
+                    };
                   });
                 },
                 onResumeSkipped: function (e) {

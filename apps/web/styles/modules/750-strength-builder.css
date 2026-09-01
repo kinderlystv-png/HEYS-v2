@@ -2167,41 +2167,145 @@
   gap: 5px;
 }
 
-/* ── Пустая тренировка (экран 02) ────────────────────────────────────────── */
+/* ── Пустая тренировка · Б1 ──────────────────────────────────────────────── */
 
-.sb-empty-screen {
+.sb-head.is-empty {
+  align-items: flex-start;
+  padding: 16px 18px 0;
+  border-bottom: 0;
+  background: transparent;
+}
+
+.sb-head.is-empty .sb-icon-btn {
+  order: 2;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v4-c1, var(--sb-card));
+}
+
+.sb-head.is-empty .sb-head-title {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 48px 20px 20px;
-  text-align: center;
+  gap: 3px;
 }
 
-.sb-empty-emoji {
-  font-size: 40px;
-  margin-bottom: 4px;
+.sb-head.is-empty .sb-head-title b {
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 700;
 }
 
-.sb-empty-screen b {
-  font-size: 17px;
-  font-weight: 800;
-  color: var(--sb-tx);
+.sb-head.is-empty .sb-head-sub {
+  font-size: 10.5px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: .04em;
 }
 
-.sb-empty-screen p {
-  margin: 6px 0 18px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--sb-mut);
-  max-width: 320px;
+.sb-empty-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 18px 18px;
+  -webkit-overflow-scrolling: touch;
 }
 
-.sb-empty-cta {
+.sb-empty-card {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-c1, var(--sb-card));
+}
+
+.sb-empty-card b {
+  display: block;
+  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.32;
+  font-weight: 700;
+  color: var(--v4-ink, var(--sb-tx));
+}
+
+.sb-empty-card p {
+  margin: 8px 0 0;
+  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.55;
+  font-weight: 500;
+  color: rgba(var(--v4-ink-rgb, 0, 0, 0), .60);
+}
+
+.sb-empty-action {
   width: 100%;
-  max-width: 320px;
-  min-height: 52px;
-  margin-bottom: 9px;
+  min-height: 48px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v4-accent-bg, var(--sb-soft));
+  color: var(--v4-ink-2, var(--sb-mut));
+  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sb-empty-action.is-primary {
+  background: var(--v4-act, var(--sb-acc));
+  color: var(--v4-btn-on-act, var(--v4-bg, #fffaf1));
+}
+
+.sb-empty-plan-meta {
+  margin-top: 6px;
+  text-align: center;
+  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 1.4;
+  font-weight: 500;
+  color: var(--v4-ink-data, var(--sb-mut));
+}
+
+.sb-empty-options {
+  margin-top: 10px;
+  padding: 2px 16px;
+  border-radius: 20px;
+  background: var(--v4-c1, var(--sb-card));
+}
+
+.sb-empty-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 13px 0;
+  border: 0;
+  background: transparent;
+  color: var(--v4-ink, var(--sb-tx));
+  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-size: 12.5px;
+  line-height: 1;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sb-empty-option b {
+  flex: none;
+  color: var(--v4-act-text, var(--sb-accTx));
+  font-size: 11.5px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.sb-empty-note {
+  margin: 12px 0 0;
+  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 1.55;
+  font-weight: 500;
+  color: var(--v4-ink-2, var(--sb-mut));
 }
 
 .sb-confirm-title {

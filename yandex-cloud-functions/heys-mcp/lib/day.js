@@ -940,7 +940,11 @@ function assignTraining(day, index, { exercises, time, dayLabel, assignedBy, wee
     z: [0, 0, 0, 0],
     type: 'strength',
     strengthEntryMode: 'workout_builder',
-    workoutLog: built.log,
+    // До явного старта это только задание. Живой журнал намеренно пуст:
+    // иначе приложение обходит экран явного выбора и принимает план за уже
+    // начатую тренировку. Нулевая оболочка сохраняет запись для isRealTraining,
+    // но не добавляет фиктивную минуту из buildWorkoutLog.
+    workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
     // Снимок задания фиксируется здесь, при назначении, а не при старте:
     // иначе правка куратора между назначением и стартом прошла бы мимо него.
     planSnapshot: { exercises: built.log.exercises },
@@ -994,7 +998,13 @@ function editTrainingPlan(day, index, ops, { nowMs, clientId }) {
     return { day, error: 'Нечего менять: передай exercises_add, exercises_remove, exercises_patch или exercises_order.' };
   }
 
-  let current = exercisesToInput(prev.workoutLog && prev.workoutLog.exercises);
+  const snapshotExercises = prev.planSnapshot && Array.isArray(prev.planSnapshot.exercises)
+    ? prev.planSnapshot.exercises
+    : [];
+  if (!snapshotExercises.length) {
+    return { day, error: `Тренировка ${i} не содержит planSnapshot с упражнениями: править план без подтверждённого источника нельзя.` };
+  }
+  let current = exercisesToInput(snapshotExercises);
   const known = () => current.map((ex) => `${ex.id} («${ex.name}»)`).join(', ');
 
   // Порядок фиксирован: сначала правки существующего, затем удаление, затем
@@ -1096,7 +1106,7 @@ function editTrainingPlan(day, index, ops, { nowMs, clientId }) {
 
   const training = {
     ...prev,
-    workoutLog: built.log,
+    workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
     // Снимок задания едет за правкой, как и при повторном назначении: клиент
     // ещё не начал, сравнивать план с фактом пока не с чем.
     planSnapshot: { exercises: built.log.exercises },
@@ -1224,11 +1234,15 @@ function moveTrainingOut(day, index, { toDate, nowMs, clientId }) {
   if (day.date && toDate === day.date) {
     return { day, error: 'Перенос на тот же день ничего не меняет.' };
   }
+  if (!prev.planSnapshot || !Array.isArray(prev.planSnapshot.exercises) || !prev.planSnapshot.exercises.length) {
+    return { day, error: `Тренировка ${i} не содержит planSnapshot с упражнениями: переносить план без подтверждённого источника нельзя.` };
+  }
 
   // Исходный день: не пропуск, а «уехала на такую-то дату». Статус moved
   // держит её вне калорий и нагрузки — считаться она будет на новом дне.
   const source = {
     ...prev,
+    workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
     plan: { ...prev.plan, status: 'moved', movedTo: toDate, movedAt: nowMs },
     updatedAt: nowMs,
   };
@@ -1237,6 +1251,9 @@ function moveTrainingOut(day, index, { toDate, nowMs, clientId }) {
   const moved = {
     ...prev,
     id: makeId('tr_'),
+    // Старые assigned-записи могли хранить назначенный состав в live-log.
+    // На новом дне перенос нормализует их к текущему draft-контракту.
+    workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
     plan: {
       ...prev.plan,
       status: 'assigned',

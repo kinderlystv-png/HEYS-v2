@@ -40,6 +40,7 @@ function loadParts() {
 function planTraining(planOverrides) {
   return {
     workoutLog: { exercises: [{ name: 'Присед' }, { name: 'Тяга' }] },
+    planSnapshot: { exercises: [{ id: 'snap_1', name: 'Присед' }, { id: 'snap_2', name: 'Тяга' }] },
     plan: { id: 'pl_1', status: 'assigned', dayLabel: 'Ноги и спина', assignedBy: 'Артём', ...planOverrides },
   };
 }
@@ -70,6 +71,29 @@ describe('Карточка плана говорит словами кадра',
     renderCard();
     expect(screen.getByText('Сегодня по программе')).toBeTruthy();
     expect(screen.queryByText(/Сегодня по плану/)).toBeNull();
+  });
+
+  it('состав и счётчик берёт из snapshot текущей ревизии, когда live workout ещё пуст', () => {
+    renderCard({
+      training: {
+        ...planTraining(),
+        workoutLog: { exercises: [] },
+      },
+    });
+    expect(document.querySelector('.sb-plan-meta').textContent).toContain('2 упр.');
+  });
+
+  it('будущий «Посмотреть» раскрывает snapshot inline и не вызывает внешний mutating callback', () => {
+    const onOpenReadonly = vi.fn();
+    renderCard({ isFutureDay: true, onOpenReadonly });
+
+    fireEvent.click(screen.getByText('Посмотреть'));
+
+    expect(screen.getByRole('list', { name: 'Состав плана' })).toBeTruthy();
+    expect(screen.getByText('Присед')).toBeTruthy();
+    expect(screen.getByText('Тяга')).toBeTruthy();
+    expect(screen.getByText('Скрыть').getAttribute('aria-expanded')).toBe('true');
+    expect(onOpenReadonly).not.toHaveBeenCalled();
   });
 
   it('пилюля называет источник плана', () => {

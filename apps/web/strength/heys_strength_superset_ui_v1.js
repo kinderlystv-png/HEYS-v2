@@ -898,12 +898,17 @@
   Parts.MoveSheet = MoveSheet;
 
   function PlanCard(props) {
-    const { training, dateKey, isFutureDay, weekPlace, moveOptions, onStart, onOpenReadonly, onSkip, onMove, onResumeSkipped } = props;
+    const { training, dateKey, isFutureDay, weekPlace, moveOptions, onStart, onSkip, onMove, onResumeSkipped } = props;
     const wl = (training && training.workoutLog) || {};
-    const exercises = Array.isArray(wl.exercises) ? wl.exercises : [];
+    const liveExercises = Array.isArray(wl.exercises) ? wl.exercises : [];
+    const snapshot = (training && training.planSnapshot) || {};
+    // PlanCard presents the current assignment revision, not a live workout that may
+    // still be empty or already edited after start.
+    const exercises = Array.isArray(snapshot.exercises) ? snapshot.exercises : liveExercises;
     const plan = training && training.plan;
     const [skipOpen, setSkipOpen] = React.useState(false);
     const [moveOpen, setMoveOpen] = React.useState(false);
+    const [previewOpen, setPreviewOpen] = React.useState(false);
     if (!plan) return null;
     const label = plan.dayLabel || sessionTitle(exercises);
     // Место в неделе вместо даты следующей тренировки — единственное, что
@@ -937,15 +942,25 @@
     }
 
     if (isFutureDay) {
-      // Будущий день: только просмотр состава, старт недоступен раньше своей даты.
+      // Будущий день: локальный read-only preview текущего snapshot. Не открываем
+      // редактируемый Builder и не вызываем owner callback раньше своей даты.
       return h('div', { className: 'sb-plan-card' },
         h('div', { className: 'sb-plan-badge' }, 'Запланировано куратором'),
         h('b', null, label),
         h('span', { className: 'sb-plan-meta' }, meta + ' · ' + exercises.length + ' упр.'),
-        h('button', {
+        exercises.length > 0 && h('button', {
           type: 'button', className: 'sb-btn sb-plan-cta',
-          onClick: onOpenReadonly
-        }, 'Посмотреть')
+          'aria-expanded': previewOpen ? 'true' : 'false',
+          onClick: function () { setPreviewOpen(function (open) { return !open; }); }
+        }, previewOpen ? 'Скрыть' : 'Посмотреть'),
+        previewOpen && h('ol', { className: 'sb-plan-meta sb-plan-preview', 'aria-label': 'Состав плана' },
+          exercises.map(function (exercise, index) {
+            const name = exercise && typeof exercise.name === 'string' ? exercise.name.trim() : '';
+            return h('li', { key: (exercise && exercise.id) || ('plan-exercise-' + index) },
+              name || ('Упражнение ' + (index + 1))
+            );
+          })
+        )
       );
     }
 
