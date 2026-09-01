@@ -334,7 +334,10 @@ async function openCase(browser, item, snapshot) {
           }),
         );
         window.__heysLoadingProgress?.forceHide?.();
-      }, { stubGamificationMerge: item.kind === 'demo-registration' });
+      }, {
+        stubGamificationMerge:
+          item.kind === 'demo-registration' || item.kind === 'demo-cycle-picker',
+      });
       const tabLabels = { widgets: 'Главная', diary: 'Питание' };
       const tabLabel = tabLabels[item.tab];
       if (tabLabel) {
@@ -380,48 +383,32 @@ async function openCase(browser, item, snapshot) {
         () =>
           !!window.React &&
           !!window.ReactDOM?.createRoot &&
-          typeof window.HEYS?.CycleUI?.renderNutritionCycleBlock === 'function',
+          typeof window.HEYS?.dayPickers?.CycleDatePickerSheet === 'function',
         undefined,
         { timeout: 45_000 },
       );
-      await page.evaluate(() => {
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
         let host = document.getElementById('ui-v4-cycle-host');
         if (!host) {
           host = document.createElement('div');
           host.id = 'ui-v4-cycle-host';
-          host.className = 'nutrition-v4';
-          Object.assign(host.style, {
-            position: 'fixed',
-            inset: '0',
-            zIndex: '20000',
-            overflow: 'auto',
-            padding: '24px 16px',
-            background: '#fffaf3',
-          });
           document.body.appendChild(host);
         }
-        const profile = window.HEYS.utils?.lsGet?.('heys_profile', {}) || {};
-        const element = window.HEYS.CycleUI.renderNutritionCycleBlock(window.React, {
-          day: { date: '2026-08-28' },
-          date: '2026-08-28',
-          prof: profile,
-          isReadOnly: false,
-          haptic: () => {},
-          lsGet: window.HEYS.utils?.lsGet?.bind(window.HEYS.utils),
-          lsSet: window.HEYS.utils?.lsSet?.bind(window.HEYS.utils),
-          eatenKcal: 1240,
-          budgetKcal: 1900,
-          cycleKcalMultiplier: 1,
+        const element = window.React.createElement(window.HEYS.dayPickers.CycleDatePickerSheet, {
+          React: window.React,
+          isOpen: true,
+          cycleDay: 7,
+          valueISO: '2026-08-24',
+          todayISO: '2026-08-26',
+          onClose: () => {},
+          onConfirm: () => {},
         });
         window.__uiV4CycleRoot = window.__uiV4CycleRoot || window.ReactDOM.createRoot(host);
         window.__uiV4CycleRoot.render(element);
-      });
-      const cycleBlock = page.locator('.nutrition-v4-block[data-block="cycle"]');
-      await cycleBlock.waitFor({ state: 'attached', timeout: 45_000 });
-      await cycleBlock.evaluate((element) => element.scrollIntoView({ block: 'center' }));
-      const openPicker = cycleBlock.locator('.cycle-card-v4__action');
-      await openPicker.waitFor({ state: 'visible', timeout: 45_000 });
-      await openPicker.click();
+      }, item.themeId || null);
+      await page.locator('.cycle-date-picker-sheet[aria-label="Когда это было"]')
+        .waitFor({ state: 'visible', timeout: 45_000 });
     }
     if (item.kind === 'demo-reports-whatif-inline') {
       await page.waitForFunction(

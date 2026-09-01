@@ -691,57 +691,143 @@
     if (!utils.parseISO || !utils.fmtDate) return null;
     const { parseISO, fmtDate } = utils;
     const todayStr = todayISO || utils.todayISO?.() || utils.calendarTodayISO?.();
-    const [cur, setCur] = R.useState(parseISO(valueISO || todayStr));
-    const [selected, setSelected] = R.useState(valueISO || todayStr);
-    const liveRef = R.useRef(null);
+    const minDate = HEYS.CycleUI?.addDaysIso?.(todayStr, -27) || todayStr;
+    const normalizeDate = (iso) => {
+      const candidate = iso || todayStr;
+      if (candidate < minDate) return minDate;
+      if (candidate > todayStr) return todayStr;
+      return candidate;
+    };
+    const initialDate = normalizeDate(valueISO);
+    const [cur, setCur] = R.useState(parseISO(initialDate));
+    const [selected, setSelected] = R.useState(initialDate);
+    const [focused, setFocused] = R.useState(initialDate);
+    const sheetRef = R.useRef(null);
     const dayNum = Number(cycleDay) || 1;
 
     R.useEffect(() => {
-      setCur(parseISO(valueISO || todayStr));
-      setSelected(valueISO || todayStr);
-    }, [valueISO, todayStr]);
-
-    const minDate = HEYS.CycleUI?.addDaysIso?.(todayStr, -27) || todayStr;
-    const y = cur.getFullYear();
-    const m = cur.getMonth();
-    const first = new Date(y, m, 1);
-    const start = (first.getDay() + 6) % 7;
-    const dim = new Date(y, m + 1, 0).getDate();
-    const cells = [];
-    for (let i = 0; i < start; i++) cells.push(null);
-    for (let d = 1; d <= dim; d++) cells.push(new Date(y, m, d));
-
-    const recalcText = (() => {
-      const ordinal = HEYS.CycleUI?.formatCycleWeekBadge?.(dayNum) || `День ${dayNum}`;
-      const human = selected ? HEYS.CycleUI?.formatShortHumanDate?.(selected) : '';
-      const range = HEYS.CycleUI?.formatWeekRangeForMark?.(selected, dayNum) || '';
-      return `${ordinal} — ${human}. ${range}`;
-    })();
+      const next = normalizeDate(valueISO);
+      setCur(parseISO(next));
+      setSelected(next);
+      setFocused(next);
+    }, [valueISO, todayStr, minDate]);
 
     R.useEffect(() => {
-      if (liveRef.current) liveRef.current.textContent = recalcText;
-    }, [recalcText]);
+      const target = sheetRef.current?.querySelector?.(`[data-date="${focused}"]`);
+      target?.focus?.();
+    }, [focused, cur, isOpen]);
 
-    const sheet = R.createElement('div', { className: 'cycle-date-picker-backdrop' },
+    const y = cur.getFullYear();
+    const m = cur.getMonth();
+    const dim = new Date(y, m + 1, 0).getDate();
+    const cells = Array.from({ length: dim }, (_, index) => new Date(y, m, index + 1));
+    const minMonth = parseISO(minDate);
+    const todayMonth = parseISO(todayStr);
+    const monthIndex = (date) => date.getFullYear() * 12 + date.getMonth();
+    const canMovePrevious = monthIndex(cur) > monthIndex(minMonth);
+    const canMoveNext = monthIndex(cur) < monthIndex(todayMonth);
+    const monthLabel = cur.toLocaleString('ru-RU', { month: 'long' });
+    const monthName = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+
+    const moveMonth = (delta) => {
+      if ((delta < 0 && !canMovePrevious) || (delta > 0 && !canMoveNext)) return;
+      const nextMonth = new Date(y, m + delta, 1);
+      const nextMonthLast = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0);
+      setCur(nextMonth);
+      setFocused(normalizeDate(delta < 0 ? fmtDate(nextMonthLast) : fmtDate(nextMonth)));
+    };
+
+    const moveFocusByDays = (event, delta) => {
+      const next = HEYS.CycleUI?.addDaysIso?.(focused, delta);
+      if (!next || next < minDate || next > todayStr) return;
+      event.preventDefault();
+      setCur(parseISO(next));
+      setFocused(next);
+    };
+
+    const onCellKeyDown = (event) => {
+      if (event.key === 'ArrowLeft') return moveFocusByDays(event, -1);
+      if (event.key === 'ArrowRight') return moveFocusByDays(event, 1);
+      if (event.key === 'ArrowUp') return moveFocusByDays(event, -7);
+      if (event.key === 'ArrowDown') return moveFocusByDays(event, 7);
+      if (event.key === 'PageUp' && canMovePrevious) {
+        event.preventDefault();
+        moveMonth(-1);
+      }
+      if (event.key === 'PageDown' && canMoveNext) {
+        event.preventDefault();
+        moveMonth(1);
+      }
+    };
+
+    const ordinalWords = ['Первый', 'Второй', 'Третий', 'Четвёртый', 'Пятый', 'Шестой', 'Седьмой'];
+    const selectedHuman = HEYS.CycleUI?.formatShortHumanDate?.(selected) || selected;
+    const rangeStart = HEYS.CycleUI?.addDaysIso?.(selected, -(dayNum - 1));
+    const rangeEnd = HEYS.CycleUI?.addDaysIso?.(selected, 7 - dayNum);
+    const rangeStartDate = rangeStart ? parseISO(rangeStart) : null;
+    const rangeEndDate = rangeEnd ? parseISO(rangeEnd) : null;
+    const rangeLabel = rangeStartDate && rangeEndDate
+      ? (rangeStartDate.getFullYear() === rangeEndDate.getFullYear()
+        && rangeStartDate.getMonth() === rangeEndDate.getMonth()
+        ? `${rangeStartDate.getDate()}–${HEYS.CycleUI?.formatShortHumanDate?.(rangeEnd) || rangeEnd}`
+        : `${HEYS.CycleUI?.formatShortHumanDate?.(rangeStart) || rangeStart}–${HEYS.CycleUI?.formatShortHumanDate?.(rangeEnd) || rangeEnd}`)
+      : '';
+    const selectedTitle = `${ordinalWords[dayNum - 1] || `${dayNum}-й`} день — ${selectedHuman}`;
+    const selectedCopy = rangeLabel
+      ? `Период встанет на ${rangeLabel}. Их нормы пересчитаются, съеденное и вес останутся как есть.`
+      : 'Нормы выбранной недели пересчитаются, съеденное и вес останутся как есть.';
+
+    const navControl = (direction, available) => available
+      ? R.createElement('button', {
+        type: 'button',
+        className: 'cycle-date-picker-sheet__month-nav',
+        'aria-label': direction < 0 ? 'Предыдущий месяц' : 'Следующий месяц',
+        onClick: () => moveMonth(direction),
+      }, R.createElement('svg', {
+        width: 13,
+        height: 13,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        'aria-hidden': 'true',
+      }, R.createElement('path', {
+        d: direction < 0 ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6',
+      })))
+      : R.createElement('span', {
+        className: 'cycle-date-picker-sheet__month-nav-placeholder',
+        'aria-hidden': 'true',
+      });
+
+    const sheet = R.createElement('div', {
+      className: 'cycle-date-picker-backdrop',
+      onPointerDown: (event) => {
+        if (event.target === event.currentTarget) onClose?.();
+      },
+    },
       R.createElement('div', {
         className: 'cycle-date-picker-sheet',
         role: 'dialog',
         'aria-modal': 'true',
         'aria-label': 'Когда это было',
+        ref: sheetRef,
         onKeyDown: (e) => { if (e.key === 'Escape') onClose?.(); },
       },
+        R.createElement('span', { className: 'cycle-date-picker-sheet__handle', 'aria-hidden': 'true' }),
         R.createElement('div', { className: 'cycle-date-picker-sheet__head' },
+          navControl(-1, canMovePrevious),
           R.createElement('b', null, 'Когда это было'),
-          R.createElement('span', null, cur.toLocaleString('ru-RU', { month: 'long', year: 'numeric' }))
+          navControl(1, canMoveNext)
         ),
-        R.createElement('div', { className: 'cycle-date-picker-sheet__weekdays' },
-          ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((d) =>
-            R.createElement('span', { key: d }, d)
-          )
-        ),
-        R.createElement('div', { className: 'cycle-date-picker-sheet__grid' },
-          cells.map((dt, idx) => {
-            if (!dt) return R.createElement('span', { key: 'e' + idx, className: 'cycle-date-picker-cell empty' });
+        R.createElement('div', {
+          className: 'cycle-date-picker-sheet__month',
+          'aria-live': 'polite',
+          'aria-label': cur.toLocaleString('ru-RU', { month: 'long', year: 'numeric' }),
+        }, monthName),
+        R.createElement('div', {
+          className: 'cycle-date-picker-sheet__grid',
+          role: 'grid',
+          'aria-label': `Дата начала, доступно с ${minDate} по ${todayStr}`,
+        },
+          cells.map((dt) => {
             const dateStr = fmtDate(dt);
             const disabled = dateStr < minDate || dateStr > todayStr;
             const isSelected = dateStr === selected;
@@ -750,36 +836,46 @@
             return R.createElement('button', {
               key: dateStr,
               type: 'button',
+              role: 'gridcell',
+              'data-date': dateStr,
               className: [
                 'cycle-date-picker-cell',
                 disabled ? 'is-disabled' : '',
                 isSelected ? 'is-selected' : '',
                 isToday ? 'is-today' : '',
               ].join(' ').trim(),
-              'aria-label': speech,
+              'aria-label': speech + (isToday ? ', сегодня' : '') + (isSelected ? ', выбрано' : ''),
               'aria-selected': isSelected ? 'true' : 'false',
-              'aria-disabled': disabled ? 'true' : undefined,
-              tabIndex: disabled ? -1 : 0,
-              onClick: disabled ? undefined : () => setSelected(dateStr),
+              'aria-current': isToday ? 'date' : undefined,
+              disabled,
+              tabIndex: !disabled && dateStr === focused ? 0 : -1,
+              onFocus: () => { if (!disabled) setFocused(dateStr); },
+              onKeyDown: onCellKeyDown,
+              onClick: () => {
+                setSelected(dateStr);
+                setFocused(dateStr);
+              },
             }, dt.getDate());
           })
         ),
         R.createElement('div', {
           className: 'cycle-date-picker-sheet__live',
           'aria-live': 'polite',
-          ref: liveRef,
-        }, recalcText),
-        R.createElement('div', { className: 'cycle-v4-btns cycle-date-picker-sheet__actions' },
-          R.createElement('button', {
-            type: 'button',
-            className: 'cycle-v4-btn cycle-v4-btn--secondary',
-            onClick: () => onClose?.(),
-          }, 'Отмена'),
-          R.createElement('button', {
-            type: 'button',
-            className: 'cycle-v4-btn cycle-v4-btn--primary',
-            onClick: () => onConfirm?.(selected),
-          }, 'Подтвердить')
+        },
+          R.createElement('div', { className: 'cycle-date-picker-sheet__selected-title' }, selectedTitle),
+          R.createElement('div', { className: 'cycle-date-picker-sheet__selected-copy' }, selectedCopy),
+          R.createElement('div', { className: 'cycle-v4-btns cycle-date-picker-sheet__actions' },
+            R.createElement('button', {
+              type: 'button',
+              className: 'cycle-v4-btn cycle-v4-btn--secondary',
+              onClick: () => onClose?.(),
+            }, 'Отмена'),
+            R.createElement('button', {
+              type: 'button',
+              className: 'cycle-v4-btn cycle-v4-btn--primary',
+              onClick: () => onConfirm?.(selected),
+            }, 'Подтвердить')
+          )
         )
       )
     );

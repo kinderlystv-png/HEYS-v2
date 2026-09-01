@@ -2261,13 +2261,22 @@
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
 }
 
-.cycle-v4-dialog,
-.cycle-date-picker-sheet {
+.cycle-v4-dialog {
   width: min(100%, 360px);
   border-radius: 18px;
   background: var(--v4-sand-surface-soft, #fffaf1);
   padding: 16px;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+.cycle-date-picker-sheet {
+  width: min(100%, 360px);
+  border-radius: 26px 26px 18px 18px;
+  background: var(--v4-bg, #fffaf1);
+  padding: 14px 16px 16px;
+  box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.06);
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .cycle-v4-dialog__title {
@@ -2283,61 +2292,128 @@
 
 .cycle-date-picker-sheet__head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .cycle-date-picker-sheet__head b {
-  font: 700 14px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
 }
 
-.cycle-date-picker-sheet__weekdays,
+.cycle-date-picker-sheet__handle {
+  display: block;
+  width: 38px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--v4-ink, #201e1d) 14%, transparent);
+}
+
+.cycle-date-picker-sheet__month-nav,
+.cycle-date-picker-sheet__month-nav-placeholder {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 999px;
+}
+
+.cycle-date-picker-sheet__month-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: var(--v4-c1, var(--v4-surface, #f7efe2));
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  cursor: pointer;
+}
+
+.cycle-date-picker-sheet__month-nav svg {
+  stroke: currentColor;
+  stroke-width: 2.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cycle-date-picker-sheet__month {
+  margin-bottom: 11px;
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
 .cycle-date-picker-sheet__grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.cycle-date-picker-sheet__weekdays span {
-  text-align: center;
-  font: 600 10px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.45);
+  gap: 5px;
 }
 
 .cycle-date-picker-cell {
-  min-height: 44px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
   border: none;
-  border-radius: 14px;
-  background: var(--v4-sand-surface, #f7efe2);
-  font: 600 13px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #201e1d);
+  border-radius: 11px;
+  background: var(--v4-c1, var(--v4-surface, #f7efe2));
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
   cursor: pointer;
 }
 
 .cycle-date-picker-cell.is-today {
-  background: var(--v4-sand-act, #c67139);
+  background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
 }
 
 .cycle-date-picker-cell.is-selected {
-  box-shadow: inset 0 0 0 2px var(--v4-sand-act-text, #8a4a20);
+  box-shadow: inset 0 0 0 2px var(--v4-act-text, #8a4a20);
+  color: var(--v4-ink, #201e1d);
 }
 
 .cycle-date-picker-cell.is-disabled {
   opacity: 0.3;
-  pointer-events: none;
+  cursor: default;
+}
+
+.cycle-date-picker-cell:focus-visible,
+.cycle-date-picker-sheet__month-nav:focus-visible {
+  outline: 2px solid var(--v4-act-text, #8a4a20);
+  outline-offset: 2px;
 }
 
 .cycle-date-picker-sheet__live {
-  margin-top: 12px;
-  font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 8%, transparent);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.cycle-date-picker-sheet__selected-title {
+  font: 600 12.5px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.cycle-date-picker-sheet__selected-copy {
+  margin-top: 4px;
+  font: 500 11px/1.45 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .cycle-date-picker-sheet__actions {
-  margin-top: 14px;
+  margin-top: 13px;
+}
+
+.cycle-date-picker-sheet .cycle-v4-btn--secondary {
+  background: var(--v4-c1, var(--v4-surface, #f7efe2));
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
+}
+
+.cycle-date-picker-sheet .cycle-v4-btn--primary {
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 .date-picker-forecast-line {
