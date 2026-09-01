@@ -48,15 +48,20 @@ describe('DatePicker v4 капсула', () => {
         expect(baseCss).toContain('.date-picker--v4 .date-picker-weekend-abbr');
     });
 
-    it('CSS — геометрия dcap: капсула 36px, стрелки 34px', () => {
+    // Стрелки стали 44×44 ответом дизайнера 1 сентября: «кружок и цель нажатия
+    // совпадают. „34 × 44" — это вертикальная пилюля, а не кружок, а прозрачный
+    // припуск делает цель невидимой глазу и непроверяемой замером». Тест до
+    // этого сторожил литерал 34 и потому упал на починке — ровно тот случай,
+    // о котором правило «тест, записанный литералом, охраняет литерал».
+    it('CSS — геометрия dcap: капсула 36px, стрелки 44px без припуска', () => {
         expect(baseCss).toMatch(
             /\.date-picker--v4 \.date-picker-trigger[\s\S]{0,200}height:\s*36px/,
         );
         expect(baseCss).toMatch(
-            /\.date-picker--v4 \.date-picker-day-nav[\s\S]{0,120}width:\s*34px/,
+            /\.date-picker--v4 \.date-picker-day-nav[\s\S]{0,120}width:\s*44px/,
         );
         expect(baseCss).toMatch(
-            /\.date-picker--v4 \.date-picker-day-nav[\s\S]{0,160}height:\s*34px/,
+            /\.date-picker--v4 \.date-picker-day-nav[\s\S]{0,160}height:\s*44px/,
         );
     });
 });
