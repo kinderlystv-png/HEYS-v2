@@ -107,6 +107,18 @@ describe('registration · сведение с контрактом v4', () => {
 
     expect(capsuleIndex).toBeGreaterThan(-1);
     expect(ageIndex).toBeGreaterThan(capsuleIndex);
+    expect(nodes[capsuleIndex].props.style).toMatchObject({
+      background: '#f7efe2',
+      borderRadius: 18,
+      padding: '12px 10px 13px',
+      marginTop: 8,
+    });
+    expect(nodes[ageIndex].props.style).toMatchObject({
+      textAlign: 'center',
+      font: '700 24px/1 Figtree, system-ui, sans-serif',
+      color: '#8a4a20',
+      marginTop: 14,
+    });
     expect(nodes[ageIndex].props.style.color).toBe('#8a4a20');
     expect(nodes[ageIndex].children).toContain('25 лет');
     expect(compactWheels).toHaveLength(3);

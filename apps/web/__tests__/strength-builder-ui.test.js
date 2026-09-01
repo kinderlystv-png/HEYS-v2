@@ -409,6 +409,7 @@ describe('каталог конструктора по Canvas Б2', () => {
     }));
 
     expect(document.querySelector('.sb-catalog-screen')).toBeTruthy();
+    expect(document.querySelector('.sb-cat-row')).toBeTruthy();
     expect(screen.getByText('Спина · прошлый раз 60 × 8')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Ноги' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Квадрицепс' })).toBeTruthy();

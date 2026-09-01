@@ -50,6 +50,14 @@ describe('strength builder: спокойные состояния активно
     expect(lastRule('.sb-rest-ring')).toContain('width: 168px');
   });
 
+  it('держит пилюли прошлого подхода и рекорда в точных спокойных ролях А1б', () => {
+    const history = lastRule('.sb-builder-screen.is-exercise-open .sb-hist span');
+    expect(history).toContain('background: var(--sb-bg)');
+    expect(history).toContain('color: var(--sb-mut)');
+    expect(lastRule('.sb-builder-screen.is-exercise-open .sb-hist span.is-record'))
+      .toContain('color: var(--sb-acc)');
+  });
+
   it('повторяет контракт кольца Е3: контекст, число, подпись и три действия', () => {
     expect(BUILDER).toContain("'отдых между подходами'");
     expect(BUILDER).toContain("' из ' + agg.totalApproaches + ' подходов'");

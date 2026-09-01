@@ -6,10 +6,16 @@ const TESTS = Object.freeze({
   finish: 'apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js',
   normGeometry: 'apps/web/__tests__/norm-correction-canvas-razbor.test.js',
   normCard: 'apps/web/__tests__/norm-correction-weekly-card.test.js',
+  registration: 'apps/web/__tests__/registration-v4-contract-sweep.test.js',
+  builderCalm: 'apps/web/__tests__/strength-builder-calm-canvas-contract.test.js',
 });
 
 function exact(kind, ref, fact) {
   return Object.freeze({ verdict: '=', evidence: Object.freeze([`${kind}: ${ref}`]), fact });
+}
+
+function exactMany(evidence, fact) {
+  return Object.freeze({ verdict: '=', evidence: Object.freeze(evidence), fact });
 }
 
 function unknown(frame) {
@@ -48,8 +54,39 @@ const COLLAPSED_LABEL = 'Конструктор · список свёрнут';
 const SUPERSET_LABEL = 'Связка · создание';
 const FINISH_LABEL = 'Конструктор · итоги';
 const LOWERED_LABEL = 'Сверка · норма снизилась';
+const REGISTRATION_PERSONAL_LABEL = 'Регистрация · персональные данные';
+const ACTIVE_CALM_LABEL = 'Конструктор · тренировка идёт · спокойнее';
+const CATALOG_LABEL = 'Конструктор · каталог';
 
 export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
+  Object.freeze({
+    zoneId: 'registration', label: REGISTRATION_PERSONAL_LABEL, oid: 'REG1',
+    rows: suffixRows(REGISTRATION_PERSONAL_LABEL, {
+      12: 'DOM-тест подтверждает весь контракт капсулы колёс: фон, радиус, поля и верхний отступ.',
+      23: 'DOM-тест подтверждает точный текст возраста, выключку, шрифт, цвет и верхний отступ под колесом.',
+    }, 'computed-style', TESTS.registration),
+  }),
+  Object.freeze({
+    zoneId: 'strength-builder', label: ACTIVE_CALM_LABEL, oid: 'А1б',
+    rows: Object.freeze({
+      [`${ACTIVE_CALM_LABEL} · 26`]: exactMany([
+        `dom: ${TESTS.builder}`,
+        `computed-style: ${TESTS.builderCalm}`,
+      ], 'DOM и CSS-тест подтверждают точный прошлый подход и спокойную пилюлю на фоне --sb-bg.'),
+      [`${ACTIVE_CALM_LABEL} · 27`]: exactMany([
+        `dom: ${TESTS.builder}`,
+        `computed-style: ${TESTS.builderCalm}`,
+      ], 'DOM и CSS-тест подтверждают точный рекорд и акцентный цвет пилюли.'),
+    }),
+  }),
+  Object.freeze({
+    zoneId: 'strength-builder', label: CATALOG_LABEL, oid: 'Б2',
+    rows: suffixRows(CATALOG_LABEL, {
+      '04': 'DOM-тест подтверждает точное имя экрана «Каталог упражнений».',
+      14: 'DOM-тест подтверждает наличие строки списка каталога для найденного упражнения.',
+      25: 'DOM-тест подтверждает точную сноску о появлении строки создания.',
+    }, 'dom', TESTS.builder),
+  }),
   Object.freeze({ zoneId: 'strength-builder', label: PLAN_FEED_FRAME.label, oid: PLAN_FEED_FRAME.oid, rows: PLAN_ROWS }),
   Object.freeze({
     zoneId: 'strength-builder', label: COLLAPSED_LABEL, oid: 'А2',
