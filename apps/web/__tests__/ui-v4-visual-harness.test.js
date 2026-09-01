@@ -46,14 +46,32 @@ describe('UI v4 visual harness', () => {
         'tips-sheet',
         'registration-personal',
         'curator-edits-default',
+        'food-copy-empty-target-sand',
+        'food-copy-empty-target-sand-dark',
+        'food-copy-empty-target-blue',
+        'food-copy-empty-target-blue-dark',
       ]),
     );
+    for (const item of UI_V4_VISUAL_CASES.filter((entry) => entry.kind === 'demo-food-copy-empty')) {
+      expect(item.viewport).toEqual({ width: 375, height: 812 });
+      expect(['sand', 'sand-dark', 'blue', 'blue-dark']).toContain(item.themeId);
+    }
     expect(
       UI_V4_VISUAL_CASES.filter((entry) => entry.gate === 'pixel').map((entry) => entry.zone).sort(),
     ).toEqual([...UI_V4_PIXEL_GATE_ZONES].sort());
     expect(
       UI_V4_VISUAL_CASES.filter((entry) => entry.status === 'dom-gate').map((entry) => entry.zone).sort(),
     ).toEqual([...UI_V4_DOM_GATE_ZONES].sort());
+  });
+
+  it('food-meal visual capture fail-closed проверяет контраст выбранной цели', () => {
+    const captureSource = fs.readFileSync(
+      path.resolve(__dirname, '../scripts/ui-v4-visual-capture.mjs'),
+      'utf8',
+    );
+    expect(captureSource).toContain('data-copy-meal-target-label="new-meal"');
+    expect(captureSource).toContain('getImageData(0, 0, 1, 1)');
+    expect(captureSource).toContain('visualChecks.contrastRatio < 4.5');
   });
 
   it('разрешает pixel-gate только зонам без вопросов и несовпадений', () => {

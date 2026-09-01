@@ -114,7 +114,7 @@ async function ensureServer() {
 
 async function installDeterminism(context, item, snapshot) {
   await context.addInitScript(
-    ({ fixedEpoch, demoTab, profile }) => {
+    ({ fixedEpoch, demoTab, profile, themeId }) => {
       const RealDate = Date;
       class FixedDate extends RealDate {
         constructor(...values) {
@@ -141,6 +141,11 @@ async function installDeterminism(context, item, snapshot) {
           const clientId = 'demo-client-female';
           localStorage.setItem('heys_pin_auth_client', JSON.stringify(clientId));
           localStorage.setItem('heys_client_current', JSON.stringify(clientId));
+          if (themeId) {
+            localStorage.setItem('heys_theme_id', themeId);
+            localStorage.setItem('heys_theme_mode_pref', themeId.endsWith('-dark') ? 'dark' : 'light');
+            localStorage.setItem('heys_theme_explicit', '1');
+          }
           if (profile) {
             const serializedProfile = JSON.stringify(profile);
             localStorage.setItem('heys_profile', serializedProfile);
@@ -159,20 +164,22 @@ async function installDeterminism(context, item, snapshot) {
       fixedEpoch: UI_V4_VISUAL_CLOCK.epochMs,
       demoTab: item.kind === 'login' ? null : item.tab || 'widgets',
       profile: item.kind === 'login' ? null : snapshot.lsKeys.heys_profile,
+      themeId: item.themeId || null,
     },
   );
 }
 
 async function openCase(browser, item, snapshot) {
+  const viewport = item.viewport || { width: 390, height: 844 };
   const context = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-    screen: { width: 390, height: 844 },
+    viewport,
+    screen: viewport,
     deviceScaleFactor: 1,
     isMobile: true,
     hasTouch: true,
     locale: 'ru-RU',
     timezoneId: 'Europe/Moscow',
-    colorScheme: 'light',
+    colorScheme: item.themeId?.endsWith('-dark') ? 'dark' : 'light',
     reducedMotion: 'reduce',
     serviceWorkers: 'block',
   });
@@ -308,6 +315,31 @@ async function openCase(browser, item, snapshot) {
       await openPicker.waitFor({ state: 'visible', timeout: 45_000 });
       await openPicker.click();
     }
+    if (item.kind === 'demo-food-copy-empty') {
+      await page.waitForFunction(
+        () => typeof window.HEYS?.CopyMealModal?.show === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        window.HEYS.CopyMealModal.show({
+          sourceMeal: {
+            id: 'visual-source',
+            name: 'Перекус',
+            items: [
+              { id: 'visual-coffee', name: 'Домашний кофе', grams: 100, kcal100: 17 },
+            ],
+          },
+          sourceMealIndex: 0,
+          sourceDate: '2026-08-28',
+          targetDate: '2026-08-28',
+          targetMeals: [],
+          onCopyToExisting: () => {},
+          onCopyToNew: () => {},
+        });
+      }, item.themeId || null);
+    }
     if (item.kind === 'demo-tips') {
       await page.waitForFunction(
         () =>
@@ -428,6 +460,42 @@ async function openCase(browser, item, snapshot) {
       await page.getByRole('button', { name: 'Настройки', exact: true }).click();
     }
     await page.locator(item.rootSelector).first().waitFor({ state: 'visible', timeout: 45_000 });
+    let visualChecks = null;
+    if (item.kind === 'demo-food-copy-empty') {
+      visualChecks = await page.evaluate(() => {
+        const label = document.querySelector('[data-copy-meal-target-label="new-meal"]');
+        const row = document.querySelector('[data-copy-meal-target="new-meal"]');
+        if (!label || !row) return { contrastRatio: 0, reason: 'target label is missing' };
+        const parseRgb = (value) => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 1;
+          canvas.height = 1;
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          context.fillStyle = value;
+          context.fillRect(0, 0, 1, 1);
+          return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3);
+        };
+        const luminance = (rgb) => {
+          const channels = rgb.map((value) => {
+            const channel = value / 255;
+            return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+        };
+        const color = getComputedStyle(label).color;
+        const background = getComputedStyle(row).backgroundColor;
+        const foregroundLuminance = luminance(parseRgb(color));
+        const backgroundLuminance = luminance(parseRgb(background));
+        const contrastRatio = (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
+          / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
+        return { color, background, contrastRatio: Math.round(contrastRatio * 100) / 100 };
+      });
+      if (visualChecks.contrastRatio < 4.5) {
+        throw new Error(
+          `Контраст цели копирования ${visualChecks.contrastRatio}:1 ниже 4.5:1`,
+        );
+      }
+    }
     await page.addStyleTag({
       content: [
         '*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}',
@@ -447,6 +515,7 @@ async function openCase(browser, item, snapshot) {
       zone: item.zone,
       status: 'captured',
       file: path.relative(ROOT, file).replaceAll('\\', '/'),
+      visualChecks,
       consoleErrors,
     };
   } catch (error) {

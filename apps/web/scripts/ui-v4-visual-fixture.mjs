@@ -142,6 +142,17 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     tab: 'widgets',
     rootSelector: '.ca-modal-backdrop--visible .ca-modal',
   },
+  ...['sand', 'sand-dark', 'blue', 'blue-dark'].map((themeId) => ({
+    id: `food-copy-empty-target-${themeId}`,
+    zone: 'food-meal',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-food-copy-empty',
+    tab: 'diary',
+    themeId,
+    viewport: { width: 375, height: 812 },
+    rootSelector: '.copy-meal-modal',
+  })),
   ...UI_V4_CANVAS_ZONES.filter(
     (zone) =>
       ![
@@ -154,6 +165,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
         'settings-system',
         'tips',
         'cycle',
+        'food-meal',
       ].includes(zone),
   ).map((zone) => ({
     id: `${zone}-scenario-pending`,

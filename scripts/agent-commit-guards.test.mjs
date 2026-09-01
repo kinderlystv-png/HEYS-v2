@@ -6,7 +6,9 @@ import test from 'node:test';
 
 import {
   assertMultiZoneStaging,
+  assertUiV4CoordinationStaging,
   getMultiZoneInfo,
+  isUiV4CoordinationFile,
   mirrorSourceOf,
 } from './check-agent-staging.mjs';
 import {
@@ -76,6 +78,27 @@ test('assertMultiZoneStaging blocks multiple zones by default', () => {
   assert.equal(assertMultiZoneStaging({ multiZone, env: {} }).ok, false);
   assert.equal(assertMultiZoneStaging({ multiZone, env: { HEYS_ALLOW_MULTI_ZONE: '1' } }).ok, true);
   assert.equal(assertMultiZoneStaging({ multiZone, env: { HEYS_SHIP: '1' } }).ok, true);
+});
+
+test('UI v4 coordination files are blocked in agent mode', () => {
+  const files = [
+    'apps/web/heys_day_norm_v1.js',
+    'docs/ui/UI_V4_FINDINGS.md',
+    'scripts/lib/ui-v4-verdicts.mjs',
+  ];
+  const result = assertUiV4CoordinationStaging({ mode: 'agent', files });
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.forbidden, [
+    'docs/ui/UI_V4_FINDINGS.md',
+    'scripts/lib/ui-v4-verdicts.mjs',
+  ]);
+});
+
+test('UI v4 coordination files are allowed only in integration mode', () => {
+  const files = ['docs/implementation/UI_V4_FULL_CONVERGENCE_PROTOCOL.md', 'package.json'];
+  assert.equal(assertUiV4CoordinationStaging({ mode: 'integration', files }).ok, true);
+  assert.equal(isUiV4CoordinationFile('docs/ui/verdicts/norm-correction.json'), false);
+  assert.equal(isUiV4CoordinationFile('docs/implementation/UI_V4_NORM_CORRECTION_HANDOFF.md'), false);
 });
 
 function writeFakeRuntimeRoot(rootDir) {

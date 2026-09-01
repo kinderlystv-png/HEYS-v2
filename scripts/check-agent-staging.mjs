@@ -85,6 +85,37 @@ const INTEGRATION_MANAGED_ALLOWLISTS = new Set([
   'scripts/raw-session-clear-allowlist.txt',
 ]);
 
+// UI v4 coordination is single-writer work. Zone agents own their source,
+// tests, zonal handoff and one docs/ui/verdicts/<zone>.json file; the files
+// below aggregate multiple zones or define their shared measurement contract.
+// They may only be staged in explicit integration mode.
+const UI_V4_COORDINATION_FILES = new Set([
+  'docs/implementation/UI_V4_FULL_CONVERGENCE_PROTOCOL.md',
+  'docs/ui/UI_V4_CONDUCTOR_BOARD.md',
+  'docs/ui/UI_V4_HANDOFF_CODEX.md',
+  'package.json',
+  'scripts/lib/ui-v4-verdicts.mjs',
+  'scripts/ui-v4-check-contract-drift.mjs',
+  'scripts/ui-v4-check-verdict-addresses.mjs',
+  'scripts/ui-v4-check-verdict-semantics.mjs',
+]);
+
+function isUiV4CoordinationFile(filePath) {
+  return (
+    UI_V4_COORDINATION_FILES.has(filePath) ||
+    /^docs\/ui\/UI_V4_FINDINGS(?:_HISTORY)?\.md$/.test(filePath)
+  );
+}
+
+function assertUiV4CoordinationStaging({
+  mode = detectStagingMode(),
+  files = getStagedFiles(),
+} = {}) {
+  if (mode !== 'agent') return { ok: true, mode, forbidden: [] };
+  const forbidden = files.filter(isUiV4CoordinationFile);
+  return { ok: forbidden.length === 0, mode, forbidden };
+}
+
 function isTaskWorkFile(filePath) {
   return (
     !isGeneratedFile(filePath) &&
@@ -235,6 +266,17 @@ function printFailure(forbidden) {
   forbidden.forEach((file) => process.stderr.write(`  - ${file}\n`));
 }
 
+function printUiV4CoordinationFailure(forbidden) {
+  process.stderr.write('[agent-staging] UI v4 coordination files are integration-owned.\n');
+  process.stderr.write(
+    '[agent-staging] Pass findings through the zonal verdict/handoff; root integrates shared state:\n',
+  );
+  forbidden.forEach((file) => process.stderr.write(`  - ${file}\n`));
+  process.stderr.write(
+    '[agent-staging] Root integrator: rerun intentionally with --mode=integration / HEYS_STAGING_MODE=integration.\n',
+  );
+}
+
 // Paranoid isolation guard: an agent doing source-only work from the SHARED
 // root checkout (not its own worktree) while other agent worktrees are live is
 // off the isolation model — two such agents in one checkout would interleave
@@ -309,6 +351,12 @@ async function main() {
     return 1;
   }
 
+  const coordination = assertUiV4CoordinationStaging({ mode });
+  if (!coordination.ok) {
+    printUiV4CoordinationFailure(coordination.forbidden);
+    return 1;
+  }
+
   const multiZone = await getMultiZoneInfo();
   const zoneGate = assertMultiZoneStaging({ multiZone });
   if (!zoneGate.ok) {
@@ -344,6 +392,7 @@ export {
   assertMainIsIntegrationOnly,
   assertMultiZoneStaging,
   assertNotSharedRootDuringParallel,
+  assertUiV4CoordinationStaging,
   detectStagingMode,
   getForbiddenAgentStagedFiles,
   getMultiZoneInfo,
@@ -351,5 +400,6 @@ export {
   isIntegrationBranch,
   isProtectedTrunk,
   isTaskWorkFile,
+  isUiV4CoordinationFile,
   listAgentWorktrees,
 };

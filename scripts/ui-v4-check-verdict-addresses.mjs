@@ -38,6 +38,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { countShorthandAddresses } from './lib/ui-v4-addresses.mjs';
 
 const VERDICTS = 'docs/ui/verdicts';
 const ROOTS = ['apps/web', 'apps/landing', 'scripts', 'packages', 'database', '.'];
@@ -214,9 +215,7 @@ for (const file of fs.readdirSync(VERDICTS).filter((f) => f.endsWith('.json'))) 
     withEvidence += 1;
 
     // Сокращения без расширения (`ui:2513`, `css:10741`) адресом не считаем.
-    shorthandSkipped += (evidence.match(/\b[a-z_]{2,20}:\d+/g) || []).filter(
-      (m) => !/\.(js|mjs|ts|tsx|css|html|sql):/.test(m),
-    ).length;
+    shorthandSkipped += countShorthandAddresses(evidence);
 
     // Все файлы, названные этим доказательством, — их имена якорями не служат.
     const mentionedFiles = [...evidence.matchAll(/[A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:js|mjs|ts|tsx|css|html|sql)/g)].map(
