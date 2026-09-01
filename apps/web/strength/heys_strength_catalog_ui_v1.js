@@ -307,78 +307,88 @@
     }
     if (!rest) rest = 90;
 
-    const members = [];
-    for (let i = startIndex; i < startIndex + count && i < exercises.length; i++) {
-      members.push(exercises[i].name || 'Без названия');
-    }
     const kinds = [
       { n: 2, t: 'Суперсет', d: 'Два упражнения подряд без паузы' },
       { n: 3, t: 'Трисет', d: 'Три подряд — плотнее и тяжелее' },
       { n: 4, t: 'Круговая', d: 'Четыре и больше, круг за кругом' }
     ];
+    const restLabel = Math.floor(rest / 60) + ':' + (rest % 60 < 10 ? '0' : '') + (rest % 60);
+    const totalApproaches = count * rounds;
+    const estimatedMinutes = Math.ceil((totalApproaches * 45 + rounds * rest) / 60);
+    const countWord = count === 2 ? '2 упражнения' : count === 3 ? '3 упражнения' : count + ' упражнений';
 
-    return h('div', { className: 'sb-root sb-screen' },
+    return h('div', { className: 'sb-root sb-screen sb-superset-create-screen' },
       h('div', { className: 'sb-head' },
-        h('button', {
-          type: 'button', className: 'sb-icon-btn', onClick: onCancel, 'aria-label': 'Отменить'
-        }, '✕'),
         h('div', { className: 'sb-head-title' },
           h('b', null, 'Новая связка'),
-          h('div', { className: 'sb-head-sub' }, 'Упражнения подряд, отдых — после круга')
-        )
+          h('div', { className: 'sb-head-sub' }, 'упражнения подряд, отдых — после круга')
+        ),
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onCancel, 'aria-label': 'Отменить'
+        }, '✕')
       ),
       h('div', { className: 'sb-list' },
         h('div', { className: 'sb-step' }, h('span', null, 'Сколько упражнений')),
-        kinds.map(function (k) {
-          const disabled = k.n > available;
-          return h('button', {
-            key: k.n,
-            type: 'button',
-            className: 'sb-radio' + (count === k.n ? ' is-on' : ''),
-            disabled: disabled,
-            onClick: function () { setCount(k.n); }
-          },
-            h('span', { className: 'sb-ex-num' }, k.n === 4 ? '4+' : String(k.n)),
-            h('div', { className: 'sb-cat-title' },
-              h('b', null, k.t),
-              h('span', null, disabled ? 'Не хватает упражнений ниже по списку' : k.d)
-            )
-          );
-        }),
-
-        h('div', { className: 'sb-step' }, h('span', null, 'Раундов')),
-        h('div', { className: 'sb-stepper' },
-          h('button', {
-            type: 'button', className: 'sb-btn',
-            onClick: function () { setRounds(Math.max(1, rounds - 1)); }
-          }, '−'),
-          h('b', null, String(rounds)),
-          h('button', {
-            type: 'button', className: 'sb-btn is-accent',
-            onClick: function () { setRounds(Math.min(20, rounds + 1)); }
-          }, '+')
+        h('div', { className: 'sb-superset-kinds' },
+          kinds.map(function (k) {
+            const disabled = k.n > available;
+            return h('button', {
+              key: k.n,
+              type: 'button',
+              className: 'sb-radio' + (count === k.n ? ' is-on' : ''),
+              disabled: disabled,
+              onClick: function () { setCount(k.n); }
+            },
+              h('span', { className: 'sb-ex-num' }, k.n === 4 ? '4+' : String(k.n)),
+              h('div', { className: 'sb-cat-title' },
+                h('b', null, k.t),
+                h('span', null, disabled ? 'Не хватает упражнений ниже по списку' : k.d)
+              ),
+              count === k.n && h('span', { className: 'sb-radio-check', 'aria-hidden': 'true' }, '✓')
+            );
+          })
         ),
-        h('div', { className: 'sb-step-hint' },
-          'Отдых после круга — ' + Math.floor(rest / 60) + ':' + (rest % 60 < 10 ? '0' : '') + (rest % 60)
-          + '. Максимум из значений участников: первым можно стать перетаскиванием, и отдых поехал бы молча.'),
 
-        h('div', { className: 'sb-block' },
-          h('div', { className: 'sb-step' }, h('span', null, 'Что получится')),
-          h('div', { className: 'sb-step-hint' },
-            members.join(' → ') + '. Затем отдых. Так ' + rounds + ' раза.'),
-          h('div', { className: 'sb-tiles' },
-            h('div', { className: 'sb-tile' }, h('span', null, 'Подходов'), h('b', null, String(count * rounds))),
-            h('div', { className: 'sb-tile' }, h('span', null, 'Пауз'), h('b', null, String(rounds)))
+        h('div', { className: 'sb-superset-controls' },
+          h('div', { className: 'sb-superset-control' },
+            h('div', { className: 'sb-control-label' }, 'Раундов'),
+            h('div', { className: 'sb-stepper' },
+              h('button', {
+                type: 'button', className: 'sb-btn',
+                onClick: function () { setRounds(Math.max(1, rounds - 1)); }
+              }, '−'),
+              h('b', null, String(rounds)),
+              h('button', {
+                type: 'button', className: 'sb-btn is-accent',
+                onClick: function () { setRounds(Math.min(20, rounds + 1)); }
+              }, '+')
+            )
+          ),
+          h('div', { className: 'sb-superset-control' },
+            h('div', { className: 'sb-control-label' }, 'Отдых после круга'),
+            h('div', { className: 'sb-rest-preview' }, restLabel),
+            h('div', { className: 'sb-control-hint' }, 'максимум из значений участников')
           )
-        )
-      ),
-      h('div', { className: 'sb-panel' },
+        ),
+
+        h('div', { className: 'sb-step' }, h('span', null, 'Что получится')),
+        h('div', { className: 'sb-block sb-superset-result' },
+          h('div', { className: 'sb-step-hint' },
+            countWord + ' подряд без паузы, затем отдых ' + restLabel + '. Так ' + rounds + ' раза.'),
+          h('div', { className: 'sb-tiles' },
+            h('div', { className: 'sb-tile' }, h('span', null, 'подходов'), h('b', null, String(totalApproaches))),
+            h('div', { className: 'sb-tile' }, h('span', null, 'пауз'), h('b', null, String(rounds))),
+            h('div', { className: 'sb-tile' }, h('span', null, 'время'), h('b', null, estimatedMinutes + ' мин'))
+          )
+        ),
         h('button', {
           type: 'button',
           className: 'sb-finish',
           disabled: !SK || count < 2 || count > available,
           onClick: function () { onCreate(SK.makeSuperset(exercises, startIndex, count, rounds, rest)); }
-        }, 'Собрать связку · ' + (count * rounds) + ' подходов')
+        }, 'Собрать связку · ' + totalApproaches + ' подходов'),
+        h('div', { className: 'sb-superset-note' },
+          'Суперсет, трисет и круговая — один объект с разным числом участников: жёсткой двойки нет нигде. Экран считает вперёд — подходы, паузы и время, — чтобы человек увидел цену связки до того, как её соберёт.')
       )
     );
   }

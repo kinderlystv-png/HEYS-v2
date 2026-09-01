@@ -257,6 +257,62 @@
       });
     }
 
+    function collapsedExerciseRow(exercise, index) {
+      const source = exercise || {};
+      const approaches = Array.isArray(source.approaches) ? source.approaches : [];
+      const workApproaches = approaches.filter(function (approach) {
+        return !(SK && SK.isWarmupApproach(approach));
+      });
+      const doneCount = workApproaches.filter(function (approach) {
+        return SK ? SK.isApproachDone(approach) && !SK.isBlankApproach(approach) : !!approach.done;
+      }).length;
+      const totalCount = workApproaches.filter(function (approach) {
+        return SK ? !SK.isBlankApproach(approach) : true;
+      }).length;
+      const allDone = totalCount > 0 && doneCount === totalCount;
+      const started = doneCount > 0 && !allDone;
+      const weights = workApproaches.map(function (approach) { return +approach.weightKg || 0; }).filter(Boolean);
+      const maxWeight = weights.length ? Math.max.apply(null, weights) : 0;
+      const parts = HEYS.StrengthBuilderParts || {};
+      const dose = typeof parts.planExerciseSummary === 'function'
+        ? parts.planExerciseSummary(source)
+        : totalCount + ' подходов';
+      const history = typeof historyFor === 'function' ? historyFor(source.name, index) : null;
+      const record = history && history.record && +history.record.maxW === maxWeight;
+      const stateLabel = allDone
+        ? dose + (record ? ' · рекорд' : '')
+        : started
+          ? 'сейчас · подход ' + (doneCount + 1) + ' из ' + totalCount
+          : (dose ? dose + ' · ' : '') + 'не начато';
+
+      return h('div', {
+        key: 'e' + index,
+        className: 'sb-ex sb-ex--collapsed'
+          + (allDone ? ' is-complete' : started ? ' is-current' : ' is-pending')
+      },
+        h('button', {
+          type: 'button',
+          className: 'sb-ex-head',
+          onClick: function () {
+            setOpenIdx(index);
+            if (rest && !rest.collapsed) patchRest(Object.assign({}, rest, { collapsed: true }));
+          },
+          'aria-expanded': 'false'
+        },
+          h('span', { className: 'sb-ex-num' }, String(index + 1)),
+          h('span', { className: 'sb-ex-title' },
+            h('b', null, source.name || 'Без названия'),
+            h('span', { className: 'sb-ex-sub' }, stateLabel)
+          ),
+          allDone
+            ? h('span', { className: 'sb-ex-state', 'aria-label': 'Упражнение закрыто' }, '✓')
+            : started
+              ? h('span', { className: 'sb-ex-state' }, 'раскрыть ›')
+              : null
+        )
+      );
+    }
+
     function approachProgressLabel(exercise, approachIndex) {
       const source = exercise || {};
       const approaches = Array.isArray(source.approaches) ? source.approaches : [];
@@ -759,6 +815,10 @@
         }));
         return;
       }
+      if (openIdx !== i) {
+        rendered.push(collapsedExerciseRow(ex, i));
+        return;
+      }
       rendered.push(h((HEYS.StrengthBuilderParts || {}).ExerciseCard, {
         key: 'e' + i,
         ex: ex,
@@ -796,7 +856,7 @@
       : 'по правилу «' + (restSourceName || 'отдыха') + '»';
 
     return h('div', {
-      className: 'sb-root' + (rest
+      className: 'sb-root sb-builder-screen' + (rest
         ? ' sb-root--rest-docked ' + (rest.collapsed ? 'sb-root--rest-collapsed' : 'sb-root--rest-expanded')
         : '')
     },
@@ -811,7 +871,8 @@
           h('b', null, wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises)),
           h('div', { className: 'sb-head-sub' }, rest && !rest.collapsed
             ? 'отдых между подходами'
-            : (HEYS.StrengthBuilderParts || {}).humanDate(dateKey))
+            : (HEYS.StrengthBuilderParts || {}).humanDate(dateKey)
+              + (startedAt ? ' · начата в ' + fmtTime(startedAt) : ''))
         ),
         // Очередь отправки: зал без сети — основной сценарий (решение 6). Статус
         // берётся у уже существующей общей sync-очереди приложения, конструктор
@@ -820,6 +881,7 @@
           className: 'sb-sync-badge',
           title: 'Сохранено на телефоне, ждёт сеть'
         }, '📡 Ждёт сеть'),
+        startedAt > 0 && !completedAt && h('span', { className: 'sb-session-badge' }, 'идёт'),
         h('button', {
           type: 'button', className: 'sb-icon-btn',
           onClick: function () { setSheetOpen(true); },
@@ -829,11 +891,11 @@
       h('div', { className: 'sb-stats' + (rest && !rest.collapsed ? ' sb-stats--rest' : '') },
         rest && !rest.collapsed
           ? elapsedSec > 0 && h('span', { className: 'sb-stat sb-stat-time' }, fmtClock(elapsedSec))
-          : elapsedSec > 0 && h('span', { className: 'sb-stat sb-stat-time' }, '⏱ ' + fmtClock(elapsedSec)),
+          : elapsedSec > 0 && h('span', { className: 'sb-stat sb-stat-time' }, fmtClock(elapsedSec)),
         h('span', { className: 'sb-stat' + (rest && !rest.collapsed ? ' sb-stat--progress' : '') }, agg
           ? (rest && !rest.collapsed
             ? agg.doneApproaches + ' из ' + agg.totalApproaches + ' подходов'
-            : agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓')
+            : agg.doneApproaches + ' из ' + agg.totalApproaches + ' подходов')
           : '—'),
         !(rest && !rest.collapsed) && agg && agg.seconds > 0 && h('span', { className: 'sb-stat' }, fmtClock(agg.seconds)),
         !(rest && !rest.collapsed) && agg && agg.meters > 0 && h('span', { className: 'sb-stat' }, Math.round(agg.meters) + ' м'),
@@ -935,7 +997,7 @@
         h('button', {
           type: 'button', className: 'sb-panel-add', 'aria-label': 'Добавить упражнение',
           onClick: function () { setView('catalog'); }
-        }, '+'),
+        }, 'Добавить упражнение'),
         h('button', {
           type: 'button', className: 'sb-finish',
           onClick: function () {
@@ -943,6 +1005,8 @@
             setView('finish');
           }
         }, notClosed > 0 ? 'Завершить · ' + notClosed + ' не закрыто' : 'Завершить тренировку'),
+        !rest && h('div', { className: 'sb-builder-note' },
+          'Состояние, в котором список живёт между упражнениями: карточку свернули, подход закрыт, следующее ещё не начато. Раскрытие — тап по карточке, и прежняя сворачивается сама: две открытые карточки не бывают. «Завершить» остаётся тихой, пока счёт незакрытых не дошёл до нуля.'),
         rest && !rest.collapsed && h('div', { className: 'sb-rest-note' },
           'Кольцо стоит над кнопкой «Завершить», а не поверх списка: пока идёт отдых, упражнения видны и правятся. Число подписано, откуда взялось — ' + restOrigin + ', — и правится теми же двумя кнопками, а не настройками.')
       )

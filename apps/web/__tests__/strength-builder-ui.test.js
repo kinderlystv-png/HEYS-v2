@@ -27,6 +27,7 @@ function loadModules() {
   ev('_kernel/heys_kernel_strength_v1.js');
   ev('heys_exercise_catalog_v1.js');
   ev('strength/heys_strength_superset_ui_v1.js');
+  ev('strength/heys_strength_catalog_ui_v1.js');
   ev('strength/heys_strength_finish_ui_v1.js');
   ev('strength/heys_strength_builder_ui_v1.js');
   return globalThis.HEYS.StrengthBuilder;
@@ -222,7 +223,7 @@ describe('конструктор: сводка считается ядром', (
     }));
     // Прототип экрана 04: время и счётчик. Тоннаж живёт на финале, чтобы в
     // зале не отвлекать; сам подсчёт разминки проверяется тестами ядра.
-    expect(screen.getByText('2 / 2 ✓')).toBeTruthy();
+    expect(screen.getByText('2 из 2 подходов')).toBeTruthy();
     expect(screen.queryByText(/\d+ кг$/)).toBeNull();
   });
 
@@ -251,7 +252,7 @@ describe('конструктор: сводка считается ядром', (
       onClose: () => {},
     }));
     expect(screen.getByText('Завершить · 1 не закрыто')).toBeTruthy();
-    expect(screen.getByText('1 / 2 ✓')).toBeTruthy();
+    expect(screen.getByText('1 из 2 подходов')).toBeTruthy();
   });
 });
 
@@ -284,6 +285,29 @@ describe('конструктор: тяжесть подхода без проф�
 });
 
 describe('конструктор: спокойная нижняя панель', () => {
+  it('свёрнутый список показывает состояния из Canvas в номере и одной строке', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([
+        { name: 'Жим лёжа', approaches: [work(75, 8, true), work(75, 12, true)] },
+        { name: 'Жим гантелей сидя', approaches: [work(24, 10, true), work(24, 12, false)] },
+        { name: 'Разведение', approaches: [work(20, 12, false)] },
+      ]),
+      dateKey: '2026-08-09',
+      profile: {},
+      historyFor: (name) => name === 'Жим лёжа' ? { record: { maxW: 75 } } : null,
+      onPatch: () => {},
+      onClose: () => {},
+    }));
+
+    fireEvent.click(screen.getByRole('button', { name: /Жим лёжа/ }));
+    expect(screen.getByText('2 × 8–12 · 75 кг · рекорд')).toBeTruthy();
+    expect(screen.getByText('сейчас · подход 2 из 2')).toBeTruthy();
+    expect(screen.getByText('1 × 12 · 20 кг · не начато')).toBeTruthy();
+    expect(screen.getByText('Добавить упражнение')).toBeTruthy();
+    expect(document.querySelector('.sb-ex.is-complete .sb-ex-state')?.textContent).toBe('✓');
+    expect(document.querySelector('.sb-ex.is-current .sb-ex-state')?.textContent).toBe('раскрыть ›');
+  });
+
   it('показывает незакрытый остаток тихой кнопкой', () => {
     render(React.createElement(SB.BuilderScreen, {
       training: training([{ name: 'Жим', approaches: [work(75, 8, false)] }]),
@@ -327,7 +351,33 @@ describe('конструктор: спокойная нижняя панель',
     }));
     const reopened = screen.getByRole('button', { name: 'Завершить · 1 не закрыто' });
     expect(reopened).toBeTruthy();
-    expect(screen.getByText('1 / 2 ✓')).toBeTruthy();
+    expect(screen.getByText('1 из 2 подходов')).toBeTruthy();
+  });
+});
+
+describe('создание связки по Canvas З1', () => {
+  it('собирает выбор, раунды, отдых и прогноз в одну композицию', () => {
+    const Cat = globalThis.HEYS.StrengthCatalogUI;
+    const exercises = [
+      { name: 'Жим лёжа', restSec: 90, approaches: [work(75, 8, false)] },
+      { name: 'Тяга', restSec: 120, approaches: [work(60, 10, false)] },
+      { name: 'Жим гантелей', restSec: 90, approaches: [work(24, 12, false)] },
+      { name: 'Разведение', restSec: 60, approaches: [work(20, 12, false)] },
+    ];
+    render(React.createElement(Cat.SupersetScreen, {
+      exercises,
+      startIndex: 0,
+      onCreate: () => {},
+      onCancel: () => {},
+    }));
+
+    fireEvent.click(screen.getByRole('button', { name: /Трисет/ }));
+    expect(screen.getByText('2:00')).toBeTruthy();
+    expect(screen.getByText('3 упражнения подряд без паузы, затем отдых 2:00. Так 3 раза.')).toBeTruthy();
+    expect(screen.getByText('9')).toBeTruthy();
+    expect(screen.getByText('13 мин')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Собрать связку · 9 подходов' })).toBeTruthy();
+    expect(document.querySelectorAll('.sb-superset-result .sb-tile')).toHaveLength(3);
   });
 });
 
@@ -1260,9 +1310,9 @@ describe('lifecycle силовой сессии', () => {
         dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
       }));
 
-      expect(screen.getByText(/⏱ 1:00/)).toBeTruthy();
+      expect(screen.getByText('1:00')).toBeTruthy();
       act(() => { vi.advanceTimersByTime(5000); });
-      expect(screen.getByText(/⏱ 1:00/)).toBeTruthy();
+      expect(screen.getByText('1:00')).toBeTruthy();
 
       builderView.unmount();
       const Parts = globalThis.HEYS.StrengthBuilderParts;
