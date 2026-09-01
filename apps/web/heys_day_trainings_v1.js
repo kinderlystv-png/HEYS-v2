@@ -3405,6 +3405,9 @@
           exName: String(restRaw.exName || '').slice(0, 160),
           owner: String(restRaw.owner || '').slice(0, 160),
           source: String(restRaw.source || '').slice(0, 160),
+          closedLabel: String(restRaw.closedLabel || '').slice(0, 160),
+          contextNextLabel: String(restRaw.contextNextLabel || '').slice(0, 160),
+          notificationLabel: String(restRaw.notificationLabel || '').slice(0, 160),
           nextLabel: String(restRaw.nextLabel || '').slice(0, 160),
           collapsed: !!restRaw.collapsed
         };
@@ -4015,7 +4018,22 @@
                 key: 'wb-summary-' + ti,
                 training: trainingForBuilder,
                 dateKey: dateKey,
-                onOpen: function (e) { if (e && e.stopPropagation) e.stopPropagation(); openBuilder(); }
+                onOpen: function (e) { if (e && e.stopPropagation) e.stopPropagation(); openBuilder(); },
+                onDelete: function (e) {
+                  if (e && e.stopPropagation) e.stopPropagation();
+                  removeTraining(ti);
+                },
+                onCloseAtLastMark: function (e) {
+                  if (e && e.stopPropagation) e.stopPropagation();
+                  patchTraining(ti, function (t0) {
+                    const wl0 = ensureWorkoutLogShape(t0);
+                    const closedAt = Number.isFinite(+wl0.lastMarkAt) ? +wl0.lastMarkAt : 0;
+                    if (!(closedAt > 0)) return t0;
+                    wl0.completedAt = closedAt;
+                    delete wl0.activeRest;
+                    return finishStartedWorkoutPlan(applyWorkoutLogToTraining(t0, wl0));
+                  });
+                }
               });
             }
             return React.createElement('button', {

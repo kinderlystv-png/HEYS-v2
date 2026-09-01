@@ -696,34 +696,181 @@
   border-radius: 14px;
 }
 
-.sb-rest-meta {
-  display: flex;
-  width: 100%;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 3px 8px;
+/* Active rest is a dock between the scrollable list and the finish panel.
+ * Keeping all three as flex siblings makes the available list height follow
+ * the real expanded/collapsed dock height instead of relying on padding magic. */
+.sb-root--rest-docked .sb-list {
+  min-height: 0;
+  padding-bottom: 10px;
 }
 
-.sb-rest-meta b {
-  color: var(--sb-tx);
-  font-size: 12.5px;
+.sb-root--rest-docked .sb-rest {
+  position: relative;
+  flex: 0 0 auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  margin: 0 12px 8px;
 }
 
-.sb-rest-meta span,
-.sb-rest-meta small {
-  color: var(--sb-mut);
-  font-size: 11px;
+.sb-root--rest-docked .sb-panel {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.sb-root--rest-expanded .sb-head {
+  gap: 10px;
+  padding: 16px 18px 0;
+  border-bottom: 0;
+  background: transparent;
+}
+
+.sb-root--rest-expanded .sb-icon-btn {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--c1, var(--sb-card));
+  color: rgba(var(--ink, 15, 23, 42), 0.56);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sb-root--rest-expanded .sb-head > .sb-icon-btn:first-child {
   font-weight: 600;
 }
 
-.sb-rest-meta small {
+.sb-root--rest-expanded .sb-head-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 10px;
+}
+
+.sb-root--rest-expanded .sb-head-title b {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.sb-root--rest-expanded .sb-head-sub {
+  color: rgba(var(--ink, 15, 23, 42), 0.56);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.sb-root--rest-expanded .sb-stats--rest {
+  gap: 6px;
+  padding: 12px 18px 0;
+  border-bottom: 0;
+  background: transparent;
+}
+
+.sb-root--rest-expanded .sb-stat {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--c2, var(--sb-soft));
+  color: rgba(var(--ink, 15, 23, 42), 0.55);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.06em;
+}
+
+.sb-root--rest-expanded .sb-stat--progress {
+  background: var(--gr-bg, var(--sb-okbg));
+  color: var(--gr, var(--sb-okTx));
+}
+
+.sb-root--rest-expanded .sb-list {
+  padding-top: 12px;
+}
+
+.sb-root--rest-expanded .sb-rest {
+  gap: 0;
+  margin: 0 0 9px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sb-rest-context {
+  display: flex;
   width: 100%;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-radius: 20px;
+  background: var(--c1, var(--sb-card));
+}
+
+.sb-rest-context > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sb-rest-context b {
+  color: var(--tx, var(--sb-tx));
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.sb-rest-context small {
+  color: rgba(var(--ink, 15, 23, 42), 0.56);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.sb-rest-context i {
+  color: var(--gr, var(--sb-okTx));
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sb-rest-meta {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0;
+  margin-top: 16px;
+  color: var(--ac, var(--sb-accTx));
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.sb-rest-meta b {
+  color: inherit;
+  font-size: inherit;
+}
+
+.sb-rest-meta span {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 .sb-rest-ring {
   position: relative;
   width: 168px;
   height: 168px;
+  margin-top: 12px;
 }
 
 .sb-rest-ring svg {
@@ -737,32 +884,64 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 34px;
+  gap: 6px;
+  color: var(--tx, var(--sb-tx));
+  font-size: 38px;
   font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 
 .sb-rest-value small {
-  font-size: 12px;
+  color: rgba(var(--ink, 15, 23, 42), 0.56);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sb-rest-next {
+  margin-top: 10px;
+  color: rgba(var(--ink, 15, 23, 42), 0.56);
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--sb-mut);
+  line-height: 1.4;
 }
 
 .sb-rest-actions {
   display: flex;
   width: 100%;
-  gap: 8px;
+  gap: 7px;
+  margin-top: 14px;
 }
 
 .sb-rest-actions .sb-btn {
   flex: 1;
+  border: 0;
+  border-radius: 999px;
+  background: var(--c2, var(--sb-card));
+  color: rgba(var(--ink, 15, 23, 42), 0.58);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.sb-rest-actions .sb-rest-add {
+  background: var(--tint, var(--sb-accbg));
+  color: var(--ac, var(--sb-accTx));
+}
+
+.sb-rest-actions .sb-rest-collapse {
+  flex: none;
+  padding: 0 14px;
 }
 
 .sb-rest-compact {
   display: grid;
   width: 100%;
   min-height: 52px;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
   padding: 0 12px;
@@ -774,15 +953,30 @@
   cursor: pointer;
 }
 
-.sb-rest-compact b {
+.sb-rest-compact-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sb-rest-compact-copy b {
+  overflow: hidden;
+  color: var(--tx, var(--sb-tx));
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.sb-rest-compact span {
+.sb-rest-compact-copy span {
   overflow: hidden;
-  color: var(--sb-mut);
-  font-size: 11.5px;
-  font-weight: 600;
+  color: rgba(var(--ink, 15, 23, 42), 0.45);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -792,6 +986,38 @@
   font-size: 11px;
   font-style: normal;
   font-weight: 700;
+}
+
+.sb-root--rest-expanded .sb-panel {
+  flex-direction: column;
+  gap: 0;
+  padding: 0 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  border-top: 0;
+  background: transparent;
+}
+
+.sb-root--rest-expanded .sb-panel-add {
+  display: none;
+}
+
+.sb-root--rest-expanded .sb-finish {
+  min-height: 48px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--c2, var(--sb-card));
+  color: rgba(var(--ink, 15, 23, 42), 0.58);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sb-rest-note {
+  margin-top: 12px;
+  color: rgba(var(--ink, 15, 23, 42), 0.56);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.55;
+  text-wrap: pretty;
 }
 
 .sb-empty {
@@ -1052,6 +1278,98 @@
 .sb-card-cta > div {
   flex: 1;
   min-width: 0;
+}
+
+/* Таймер вне конструктора остаётся состоянием сессии, а не вторым кольцом. */
+.sb-offscreen-session {
+  padding: 13px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--c1, var(--sb-card));
+}
+
+.sb-offscreen-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sb-offscreen-copy b {
+  color: var(--tx, var(--sb-tx));
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-offscreen-copy span {
+  color: rgba(var(--ink, 15, 23, 42), 0.56);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.sb-offscreen-primary {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--acs, var(--sb-acc));
+  color: var(--on-acs, #fff);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sb-offscreen-eyebrow {
+  margin-bottom: 10px;
+  color: rgba(var(--ink, 15, 23, 42), 0.56);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sb-offscreen-session--stale .sb-offscreen-copy b {
+  font-size: 12.5px;
+}
+
+.sb-offscreen-session--stale .sb-offscreen-copy span {
+  line-height: 1.4;
+}
+
+.sb-offscreen-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.sb-offscreen-actions button {
+  min-height: 44px;
+  flex: 1;
+  border: 0;
+  border-radius: 999px;
+  background: var(--c2, var(--sb-soft));
+  color: rgba(var(--ink, 15, 23, 42), 0.58);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sb-offscreen-actions .is-close {
+  background: var(--gr-bg, var(--sb-okbg));
+  color: var(--gr, var(--sb-okTx));
+}
+
+.sb-offscreen-note {
+  margin-top: 12px;
+  color: rgba(var(--ink, 15, 23, 42), 0.56);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.55;
 }
 
 /* ── Каталог (экран 03) и новое упражнение (экран 25) ───────────────────── */

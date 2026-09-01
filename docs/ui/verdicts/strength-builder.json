@@ -45,7 +45,7 @@
     },
     "дроп — продолжение подхода": {
       "v": "=",
-      "f": "Дроп хранится ступенью drops[] внутри подхода и не получает отдельного номера; связка рендерится SupersetBlock без кнопки «+ Сброс». Подтверждено apps/web/_kernel/heys_kernel_strength_v1.js:48, apps/web/strength/heys_strength_builder_ui_v1.js:495 и apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "Дроп хранится ступенью drops[] внутри подхода и не получает отдельного номера; writer запрещает новую ступень участнику связки до записи. Evidence apps/web/strength/heys_strength_builder_ui_v1.js:300.",
       "h": "756a50b365e8"
     },
     "единица измерения даёт или не даёт тоннаж": {
@@ -80,7 +80,7 @@
     },
     "дроп-сет — продолжение подхода": {
       "v": "=",
-      "f": "Дроп хранится ступенью drops[] внутри подхода и не получает отдельного номера; связка рендерится SupersetBlock без кнопки «+ Сброс». Подтверждено apps/web/_kernel/heys_kernel_strength_v1.js:48, apps/web/strength/heys_strength_builder_ui_v1.js:495 и apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "Дроп остаётся drops[] внутри одного подхода; SupersetBlock не предлагает действие, а writer независимо блокирует groupByIndex. Evidence apps/web/__tests__/strength-builder-calm-canvas-contract.test.js:73.",
       "h": "39f172586541"
     },
     "шкала отдыха": {
@@ -300,7 +300,7 @@
     },
     "случай 2 · подход добавлен к закрытому упражнению": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "Lifecycle закрытая сессия → новый подход → active-state, очистка completedAt, прогресс 1/2 и точная кнопка «Завершить · 1 не закрыто» закреплены focused regression apps/web/__tests__/strength-builder-ui.test.js:300.",
       "h": "2074037db30c"
     },
     "случай 3 · рабочий подход переключили в разминку": {
@@ -315,7 +315,7 @@
     },
     "случай 5 · дроп или разминка внутри связки": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "Дроп внутри связки закрыт двумя независимыми границами: кнопки нет в DOM и addDrop прекращает запись по groupByIndex. Evidence apps/web/__tests__/strength-builder-ui.test.js:350.",
       "h": "76441d414a59"
     },
     "случай 6 · галочка при пустых полях": {
@@ -1489,8 +1489,8 @@
       "h": "cbf1bd50d9f4"
     },
     "Конструктор · итоги · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The finish screen header is confirmed at apps/web/strength/heys_strength_finish_ui_v1.js:83.",
       "h": "175bdcc2e73a"
     },
     "Конструктор · итоги · 02": {
@@ -1504,18 +1504,18 @@
       "h": "b4a4fa9ae422"
     },
     "Конструктор · итоги · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The exact finish title is confirmed at apps/web/strength/heys_strength_finish_ui_v1.js:88.",
       "h": "5869247ca78e"
     },
     "Конструктор · итоги · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The finish subtitle/date line is confirmed at apps/web/strength/heys_strength_finish_ui_v1.js:89.",
       "h": "0a9b59c671ec"
     },
     "Конструктор · итоги · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The finish screen content container is confirmed at apps/web/strength/heys_strength_finish_ui_v1.js:94.",
       "h": "c629f84f9712"
     },
     "Конструктор · итоги · 07": {
@@ -1529,8 +1529,8 @@
       "h": "7c8059955d00"
     },
     "Конструктор · итоги · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The finish summary grid and values are confirmed at apps/web/strength/heys_strength_finish_ui_v1.js:96.",
       "h": "2665113ba46b"
     },
     "Конструктор · итоги · 10": {
@@ -1674,8 +1674,8 @@
       "h": "34b181335f8a"
     },
     "Конструктор · итоги · 38": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The finish note control is confirmed at apps/web/strength/heys_strength_finish_ui_v1.js:135.",
       "h": "c46890146dce"
     },
     "Конструктор · итоги · 39": {
@@ -3479,268 +3479,268 @@
       "h": "372c53e4d42b"
     },
     "Отдых · кольцо · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Exact current builder header is confirmed at apps/web/strength/heys_strength_builder_ui_v1.js:555.",
       "h": "175bdcc2e73a"
     },
     "Отдых · кольцо · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 02»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:721.",
       "h": "dbd19d6c8f05"
     },
     "Отдых · кольцо · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 03»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:721.",
       "h": "f143b5d4e1e4"
     },
     "Отдых · кольцо · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Exact current rest owner/context is confirmed at apps/web/strength/heys_strength_builder_ui_v1.js:563.",
       "h": "97774a22c8cb"
     },
     "Отдых · кольцо · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 05»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:721.",
       "h": "b1140b89d213"
     },
     "Отдых · кольцо · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 06»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:721.",
       "h": "a6047f6cec68"
     },
     "Отдых · кольцо · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The scrollable list primitive is confirmed by current CSS at apps/web/styles/modules/750-strength-builder.css:156.",
       "h": "c629f84f9712"
     },
     "Отдых · кольцо · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 08»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_builder_ui_v1.js:597.",
       "h": "c00d4648c76a"
     },
     "Отдых · кольцо · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 09»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_builder_ui_v1.js:597.",
       "h": "62b302d6ea9a"
     },
     "Отдых · кольцо · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 10»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_builder_ui_v1.js:597.",
       "h": "fe40e91a4987"
     },
     "Отдых · кольцо · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 11»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_superset_ui_v1.js:136.",
       "h": "f06d6e12de2e"
     },
     "Отдых · кольцо · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 12»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_superset_ui_v1.js:136.",
       "h": "6b286135ed76"
     },
     "Отдых · кольцо · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 13»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_superset_ui_v1.js:136.",
       "h": "07ffbada0ee7"
     },
     "Отдых · кольцо · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 14»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_superset_ui_v1.js:136.",
       "h": "cca692c3db34"
     },
     "Отдых · кольцо · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 15»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_superset_ui_v1.js:136.",
       "h": "ddb99cd315a1"
     },
     "Отдых · кольцо · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 16»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_superset_ui_v1.js:136.",
       "h": "4668dbccd211"
     },
     "Отдых · кольцо · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 17»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:842.",
       "h": "7fb13358cd95"
     },
     "Отдых · кольцо · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 18»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:842.",
       "h": "af79072cccad"
     },
     "Отдых · кольцо · 19": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 19»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:869.",
       "h": "fa5a30b0410b"
     },
     "Отдых · кольцо · 20": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 20»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:869.",
       "h": "0d09081df2a6"
     },
     "Отдых · кольцо · 21": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 21»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:869.",
       "h": "cb32f3d033c6"
     },
     "Отдых · кольцо · 22": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 22»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:869.",
       "h": "80b11d6f3cb1"
     },
     "Отдых · кольцо · 23": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 23»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:869.",
       "h": "5f52e02edc6e"
     },
     "Отдых · кольцо · 24": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 24»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:913.",
       "h": "133cc9c4e027"
     },
     "Отдых · кольцо · 25": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 25»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:913.",
       "h": "2250163dd9af"
     },
     "Отдых · кольцо · 26": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 26»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:913.",
       "h": "4cb389b424c2"
     },
     "Отдых · кольцо · 27": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 27»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:913.",
       "h": "25e133e01763"
     },
     "Отдых · кольцо · 28": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · 28»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/__tests__/strength-builder-rest-dock-geometry.test.js:70.",
       "h": "199223f7327a"
     },
     "Отдых · кольцо · 29": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The dock is in flow above the finish panel and is geometry-checked at 375x812 in apps/web/__tests__/strength-builder-rest-dock-geometry.test.js:70.",
       "h": "981227ecbe97"
     },
     "Таймер вне экрана · 01": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "175bdcc2e73a"
     },
     "Таймер вне экрана · 02": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "07ffbada0ee7"
     },
     "Таймер вне экрана · 03": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "ac3943d7921e"
     },
     "Таймер вне экрана · 04": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "4bbbae14e194"
     },
     "Таймер вне экрана · 05": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "c629f84f9712"
     },
     "Таймер вне экрана · 06": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "f27abc5004ba"
     },
     "Таймер вне экрана · 07": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "d9a337aab838"
     },
     "Таймер вне экрана · 08": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "6b286135ed76"
     },
     "Таймер вне экрана · 09": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "03ca3a96df77"
     },
     "Таймер вне экрана · 10": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "a4c3da126eda"
     },
     "Таймер вне экрана · 11": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "f8a6cf1bc4c3"
     },
     "Таймер вне экрана · 12": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "261457d55ebb"
     },
     "Таймер вне экрана · 13": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "dbaf9b6d9d8c"
     },
     "Таймер вне экрана · 14": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "b4a4fa9ae422"
     },
     "Таймер вне экрана · 15": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "e9d55b11c9b4"
     },
     "Таймер вне экрана · 16": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "54643961e08d"
     },
     "Таймер вне экрана · 17": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "ceff18c9f410"
     },
     "Таймер вне экрана · 18": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "b216f19be65b"
     },
     "Таймер вне экрана · 19": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "e538fb2b001d"
     },
     "Таймер вне экрана · 20": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "45317308088b"
     },
     "Таймер вне экрана · 21": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "77e4b4025f38"
     },
     "Таймер вне экрана · 22": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "5b02526cf674"
     },
     "Таймер вне экрана · 23": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "76f24f0bd3f8"
     },
     "Таймер вне экрана · 24": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "00b09f4bb7ee"
     },
     "Перенумерация · 01": {
@@ -4269,8 +4269,8 @@
       "h": "62fdb9627056"
     },
     "Связка · создание · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The creation screen header is confirmed at apps/web/strength/heys_strength_catalog_ui_v1.js:321.",
       "h": "175bdcc2e73a"
     },
     "Связка · создание · 02": {
@@ -4279,8 +4279,8 @@
       "h": "07ffbada0ee7"
     },
     "Связка · создание · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The exact screen title is confirmed at apps/web/strength/heys_strength_catalog_ui_v1.js:326.",
       "h": "e4be91b17c51"
     },
     "Связка · создание · 04": {
@@ -4289,13 +4289,13 @@
       "h": "6031e987e93a"
     },
     "Связка · создание · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The creation screen uses the shared scrollable list primitive confirmed at apps/web/strength/heys_strength_catalog_ui_v1.js:330.",
       "h": "c629f84f9712"
     },
     "Связка · создание · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The creation screen list structure is confirmed at apps/web/strength/heys_strength_catalog_ui_v1.js:331.",
       "h": "ae51c9227c86"
     },
     "Связка · создание · 07": {
@@ -4319,8 +4319,8 @@
       "h": "5c6c1c3e858a"
     },
     "Связка · создание · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "The selected-member count and selection flow are confirmed at apps/web/strength/heys_strength_catalog_ui_v1.js:344.",
       "h": "4ae5a0621f39"
     },
     "Связка · создание · 12": {
@@ -8034,18 +8034,18 @@
       "h": "aff3381fee5e"
     },
     "Отдых · кольцо · рисунок 01": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "The linked-set round structure used by the frame is confirmed at apps/web/strength/heys_strength_superset_ui_v1.js:139.",
       "h": "57d185e6118c"
     },
     "Отдых · кольцо · рисунок 02": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · рисунок 02»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_superset_ui_v1.js:152.",
       "h": "adb5c2592deb"
     },
     "Отдых · кольцо · рисунок 03": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · рисунок 03»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_superset_ui_v1.js:152.",
       "h": "b3a1a99d07a8"
     },
     "Правка · клиент уже начал · рисунок 01": {
@@ -8159,13 +8159,13 @@
       "h": "4aa65e96d9e0"
     },
     "Отдых · кольцо · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Построчно подтверждено для «Отдых · кольцо · текст»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/__tests__/strength-builder-ui.test.js:388.",
       "h": "df5182db5ae5"
     },
     "Таймер вне экрана · текст": {
-      "v": "≠",
-      "f": "Есть persisted activeRest и notification, но нет всех четырёх canvas-состояний вне builder.",
+      "v": "?",
+      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
       "h": "8b9f80b95fcc"
     },
     "Перенумерация · текст": {

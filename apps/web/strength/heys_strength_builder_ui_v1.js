@@ -74,6 +74,9 @@
       exName: String(raw.exName || ''),
       owner: String(raw.owner || ''),
       source: String(raw.source || ''),
+      closedLabel: String(raw.closedLabel || ''),
+      contextNextLabel: String(raw.contextNextLabel || ''),
+      notificationLabel: String(raw.notificationLabel || ''),
       nextLabel: String(raw.nextLabel || ''),
       collapsed: !!raw.collapsed
     };
@@ -187,6 +190,22 @@
       });
     }
 
+    function approachProgressLabel(exercise, approachIndex) {
+      const source = exercise || {};
+      const approaches = Array.isArray(source.approaches) ? source.approaches : [];
+      if (SK && SK.isWarmupApproach(approaches[approachIndex])) {
+        return (source.name || 'Упражнение') + ' · разминка';
+      }
+      let workNumber = 0;
+      let workTotal = 0;
+      approaches.forEach(function (approach, index) {
+        if (SK && SK.isWarmupApproach(approach)) return;
+        workTotal += 1;
+        if (index <= approachIndex) workNumber += 1;
+      });
+      return (source.name || 'Упражнение') + ' · подход ' + workNumber + ' из ' + workTotal;
+    }
+
     function patchExercises(next) {
       setExercises(next);
       if (typeof onPatch === 'function') onPatch(next);
@@ -228,6 +247,9 @@
           exName: ex.name || '',
           owner: ex.name || 'Упражнение',
           source: ex.rpe > 0 ? 'тяжесть ' + ex.rpe + ' → ' + fmtClock(total) : 'по умолчанию · ' + fmtClock(total),
+          closedLabel: ex.name ? ex.name + ' закрыт' : 'Подход закрыт',
+          contextNextLabel: 'дальше · следующий подход',
+          notificationLabel: approachProgressLabel(ex, apIdx),
           nextLabel: 'Следующий подход'
         });
       } else if (patch.done && group && roundIndex >= 0) {
@@ -246,6 +268,11 @@
             exName: owner,
             owner: owner,
             source: effort > 0 ? 'тяжесть ' + effort + ' → ' + fmtClock(total) : 'максимум участников · ' + fmtClock(total),
+            closedLabel: ex.name ? ex.name + ' закрыт' : 'Подход закрыт',
+            contextNextLabel: roundIndex + 1 < roundsAfter.length
+              ? 'дальше ' + owner.charAt(0).toLowerCase() + owner.slice(1) + ' · раунд ' + (roundIndex + 2) + ' из ' + roundsAfter.length
+              : 'дальше · завершение связки',
+            notificationLabel: approachProgressLabel(ex, apIdx),
             nextLabel: roundIndex + 1 < roundsAfter.length
               ? 'Следующий раунд · A1 ' + (first.name || 'упражнение')
               : 'Связка завершена'
@@ -263,6 +290,12 @@
 
     function addApproach(exIdx) {
       const g = groupByIndex[exIdx];
+      // Новый подход снова делает завершённую сессию активной: старое время
+      // завершения больше не описывает тренировку с незакрытым подходом.
+      if (+sessionRef.current.completedAt > 0 || finishAtOverride > 0) {
+        setFinishAtOverride(0);
+        patchSession({ completedAt: null });
+      }
       // «+ Подход» внутри связки добавляет раунд целиком: подходов у
       // участников должно остаться поровну.
       if (g && SK) {
@@ -280,6 +313,10 @@
     }
 
     function addDrop(exIdx) {
+      // Защита держится у writer, а не только у SupersetBlock: скрытая кнопка
+      // не должна быть единственной причиной, почему группа сохраняет равные
+      // раунды при программном/устаревшем вызове.
+      if (groupByIndex[exIdx]) return;
       const next = exercises.slice();
       const ex = Object.assign({}, next[exIdx]);
       const aps = (ex.approaches || []).slice();
@@ -382,7 +419,8 @@
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted'
           && typeof document !== 'undefined' && document.hidden) {
           new Notification('Отдых закончился', {
-            body: (rest.exName || 'Тренировка') + ' · пора продолжать',
+            body: rest.notificationLabel || (rest.exName || 'Тренировка') + ' · пора продолжать',
+            icon: '/icon-192.png',
             tag: 'heys-strength-rest', renotify: false
           });
         }
@@ -544,8 +582,16 @@
       ? Math.max(0, Math.floor((Date.now() - lastMarkAt) / 1000))
       : 0;
     const showInterrupted = breakSec > 45 * 60 && dismissedBreakAt !== lastMarkAt;
+    const restSourceName = rest ? String(rest.source || '').split(/\s(?:→|·)\s/)[0] : '';
+    const restOrigin = /^тяжесть\s/.test(restSourceName)
+      ? 'из ' + restSourceName
+      : 'по правилу «' + (restSourceName || 'отдыха') + '»';
 
-    return h('div', { className: 'sb-root' },
+    return h('div', {
+      className: 'sb-root' + (rest
+        ? ' sb-root--rest-docked ' + (rest.collapsed ? 'sb-root--rest-collapsed' : 'sb-root--rest-expanded')
+        : '')
+    },
       h('div', { className: 'sb-head' },
         h('button', {
           type: 'button', className: 'sb-icon-btn',
@@ -555,7 +601,9 @@
           // Название собирается из основных групп упражнений (решение 12):
           // подпись не должна врать про то, что человек делает.
           h('b', null, wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises)),
-          h('div', { className: 'sb-head-sub' }, (HEYS.StrengthBuilderParts || {}).humanDate(dateKey))
+          h('div', { className: 'sb-head-sub' }, rest && !rest.collapsed
+            ? 'отдых между подходами'
+            : (HEYS.StrengthBuilderParts || {}).humanDate(dateKey))
         ),
         // Очередь отправки: зал без сети — основной сценарий (решение 6). Статус
         // берётся у уже существующей общей sync-очереди приложения, конструктор
@@ -570,12 +618,18 @@
           'aria-label': 'Ещё'
         }, '⋯')
       ),
-      h('div', { className: 'sb-stats' },
-        elapsedSec > 0 && h('span', { className: 'sb-stat sb-stat-time' }, '⏱ ' + fmtClock(elapsedSec)),
-        h('span', { className: 'sb-stat' }, agg ? (agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓') : '—'),
-        agg && agg.seconds > 0 && h('span', { className: 'sb-stat' }, fmtClock(agg.seconds)),
-        agg && agg.meters > 0 && h('span', { className: 'sb-stat' }, Math.round(agg.meters) + ' м'),
-        agg && agg.unmeasuredExercises > 0 && h('span', { className: 'sb-stat' },
+      h('div', { className: 'sb-stats' + (rest && !rest.collapsed ? ' sb-stats--rest' : '') },
+        rest && !rest.collapsed
+          ? elapsedSec > 0 && h('span', { className: 'sb-stat sb-stat-time' }, fmtClock(elapsedSec))
+          : elapsedSec > 0 && h('span', { className: 'sb-stat sb-stat-time' }, '⏱ ' + fmtClock(elapsedSec)),
+        h('span', { className: 'sb-stat' + (rest && !rest.collapsed ? ' sb-stat--progress' : '') }, agg
+          ? (rest && !rest.collapsed
+            ? agg.doneApproaches + ' из ' + agg.totalApproaches + ' подходов'
+            : agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓')
+          : '—'),
+        !(rest && !rest.collapsed) && agg && agg.seconds > 0 && h('span', { className: 'sb-stat' }, fmtClock(agg.seconds)),
+        !(rest && !rest.collapsed) && agg && agg.meters > 0 && h('span', { className: 'sb-stat' }, Math.round(agg.meters) + ' м'),
+        !(rest && !rest.collapsed) && agg && agg.unmeasuredExercises > 0 && h('span', { className: 'sb-stat' },
           agg.unmeasuredExercises + ' без тоннажа')
       ),
       // Правка куратора, пришедшая посреди тренировки (экран 14b): полоска, а
@@ -621,6 +675,8 @@
         total: rest.total,
         owner: rest.owner,
         source: rest.source,
+        closedLabel: rest.closedLabel,
+        contextNextLabel: rest.contextNextLabel,
         nextLabel: rest.nextLabel,
         collapsed: !!rest.collapsed,
         onSkip: function () { patchRest(null); },
@@ -704,7 +760,9 @@
             if (notClosed > 0) { setCloseConfirm(true); return; }
             setView('finish');
           }
-        }, 'Завершить тренировку')
+        }, notClosed > 0 ? 'Завершить · ' + notClosed + ' не закрыто' : 'Завершить тренировку'),
+        rest && !rest.collapsed && h('div', { className: 'sb-rest-note' },
+          'Кольцо стоит над кнопкой «Завершить», а не поверх списка: пока идёт отдых, упражнения видны и правятся. Число подписано, откуда взялось — ' + restOrigin + ', — и правится теми же двумя кнопками, а не настройками.')
       )
     );
   }

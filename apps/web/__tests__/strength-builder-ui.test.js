@@ -242,7 +242,7 @@ describe('конструктор: сводка считается ядром', (
     expect(screen.getByText('1 без тоннажа')).toBeTruthy();
   });
 
-  it('главная кнопка не дублирует счёт незакрытых из шапки', () => {
+  it('шапка показывает прогресс, а кнопка завершения — незакрытый остаток', () => {
     render(React.createElement(SB.BuilderScreen, {
       training: training([{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }]),
       dateKey: '2026-08-09',
@@ -250,7 +250,7 @@ describe('конструктор: сводка считается ядром', (
       onPatch: () => {},
       onClose: () => {},
     }));
-    expect(screen.getByText('Завершить тренировку')).toBeTruthy();
+    expect(screen.getByText('Завершить · 1 не закрыто')).toBeTruthy();
     expect(screen.getByText('1 / 2 ✓')).toBeTruthy();
   });
 });
@@ -284,7 +284,7 @@ describe('конструктор: тяжесть подхода без проф�
 });
 
 describe('конструктор: спокойная нижняя панель', () => {
-  it('не дублирует счёт незакрытых подходов на кнопке завершения', () => {
+  it('показывает незакрытый остаток тихой кнопкой', () => {
     render(React.createElement(SB.BuilderScreen, {
       training: training([{ name: 'Жим', approaches: [work(75, 8, false)] }]),
       dateKey: '2026-08-09',
@@ -293,8 +293,41 @@ describe('конструктор: спокойная нижняя панель',
       onClose: () => {},
     }));
 
+    const finish = screen.getByRole('button', { name: 'Завершить · 1 не закрыто' });
+    expect(finish).toBeTruthy();
+  });
+
+  it('добавление подхода к закрытому упражнению сбрасывает время завершения и возвращает active-state', () => {
+    const sessionPatches = [];
+    const exercisePatches = [];
+    const closed = training([{ name: 'Жим', approaches: [work(75, 8, true)] }]);
+    closed.workoutLog.completedAt = 123456;
+
+    const props = {
+      training: closed,
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: (next) => exercisePatches.push(next),
+      onPatchSession: (patch) => sessionPatches.push(patch),
+      onClose: () => {},
+    };
+    const view = render(React.createElement(SB.BuilderScreen, props));
     expect(screen.getByRole('button', { name: 'Завершить тренировку' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /не закрыто/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Подход' }));
+    expect(sessionPatches).toContainEqual({ completedAt: null });
+    expect(exercisePatches.at(-1)[0].approaches).toHaveLength(2);
+
+    view.rerender(React.createElement(SB.BuilderScreen, {
+      ...props,
+      training: {
+        ...closed,
+        workoutLog: { ...closed.workoutLog, completedAt: undefined, exercises: exercisePatches.at(-1) },
+      },
+    }));
+    const reopened = screen.getByRole('button', { name: 'Завершить · 1 не закрыто' });
+    expect(reopened).toBeTruthy();
+    expect(screen.getByText('1 / 2 ✓')).toBeTruthy();
   });
 });
 
@@ -340,24 +373,37 @@ describe('конструктор: связка', () => {
     expect(screen.queryByText('Отдых · Связка A')).toBeNull();
     fireEvent.click(cells[1]);
     expect(screen.getByText('Отдых · Связка A')).toBeTruthy();
-    expect(screen.getByText('максимум участников · 2:00')).toBeTruthy();
+    expect(screen.getByText(/максимум участников · 2:00/)).toBeTruthy();
     expect(screen.getByText(/Следующий раунд|Связка завершена/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Завершить тренировку' })).toBeTruthy();
   });
 
   it('таймер дока прибавляет 10 секунд и сворачивается, не закрывая список', () => {
     render(React.createElement(SB.BuilderScreen, {
-      training: training([{ name: 'Жим', restSec: 90, approaches: [work(75, 8, false)] }]),
+      training: training([
+        { name: 'Жим', restSec: 90, approaches: [work(75, 8, false)] },
+        { name: 'Тяга', restSec: 90, approaches: [work(60, 10, false)] },
+      ]),
       dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
     }));
 
     fireEvent.click(screen.getByLabelText('Отметить выполненным'));
+    expect(screen.getByText('отдых между подходами')).toBeTruthy();
+    expect(screen.getByText('1 из 2 подходов')).toBeTruthy();
+    expect(screen.getByText('Жим закрыт')).toBeTruthy();
+    expect(screen.getByText('дальше · следующий подход')).toBeTruthy();
+    expect(screen.getByText('осталось')).toBeTruthy();
+    expect(screen.getByText(/Число подписано, откуда взялось — по правилу «по умолчанию»/)).toBeTruthy();
     expect(screen.getByText('+10 секунд')).toBeTruthy();
     fireEvent.click(screen.getByText('+10 секунд'));
     expect(screen.getByText('1:40')).toBeTruthy();
-    fireEvent.click(screen.getByText('Свернуть'));
+    expect(screen.getByText('свернуть')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Тяга/ }));
     expect(screen.getByLabelText('Развернуть таймер отдыха')).toBeTruthy();
-    expect(screen.getByText('Жим')).toBeTruthy();
+    expect(screen.getByText('Отдых 1:40 · Жим')).toBeTruthy();
+    expect(screen.getByText('идёт от подхода, который его запустил')).toBeTruthy();
+    expect(screen.getByText('Отдых 1:40 · Жим')).toBeTruthy();
+    expect(screen.getByLabelText('Развернуть таймер отдыха')).toBeTruthy();
   });
 
   it('старая связка с неравными подходами показана плоско и объясняет почему', () => {
@@ -500,7 +546,7 @@ describe('остались незакрытые подходы (экран 11)',
       onPatch: () => {},
       onClose: () => {},
     }));
-    fireEvent.click(screen.getByText('Завершить тренировку'));
+    fireEvent.click(screen.getByText('Завершить · 1 не закрыто'));
     expect(screen.getByText('Остались незакрытые подходы')).toBeTruthy();
     expect(screen.getByText(/лучше убрать/)).toBeTruthy();
   });
@@ -519,7 +565,7 @@ describe('остались незакрытые подходы (экран 11)',
       onPatch: (next) => seen.push(next),
       onClose: () => {},
     }));
-    fireEvent.click(screen.getByText('Завершить тренировку'));
+    fireEvent.click(screen.getByText('Завершить · 1 не закрыто'));
     fireEvent.click(screen.getByText('Убрать пустые'));
     const aps = seen[seen.length - 1][0].approaches;
     expect(aps.length).toBe(2);
@@ -538,7 +584,7 @@ describe('остались незакрытые подходы (экран 11)',
       onPatch: (n) => patched.push(n),
       onClose: () => closed.push(1),
     }));
-    fireEvent.click(screen.getByText('Завершить тренировку'));
+    fireEvent.click(screen.getByText('Завершить · 1 не закрыто'));
     fireEvent.click(screen.getByText('Оставить'));
     expect(patched.length).toBe(0);
     expect(closed.length).toBe(1);
@@ -698,7 +744,10 @@ describe('пуш об окончании отдыха (экран 11, тольк
     vi.useFakeTimers();
     try {
       render(React.createElement(SB.BuilderScreen, {
-        training: training([{ name: 'Жим лёжа', restSec: 90, approaches: [{ weightKg: '75', reps: 8, done: false }] }]),
+        training: training([{
+          name: 'Жим гантелей сидя', restSec: 90,
+          approaches: [work(24, 10, true), work(24, 10, true), work(24, 10, false)],
+        }]),
         dateKey: '2026-08-09',
         profile: {},
         onPatch: () => {},
@@ -708,7 +757,8 @@ describe('пуш об окончании отдыха (экран 11, тольк
       act(() => { vi.advanceTimersByTime(91000); });
       expect(created.length).toBe(1);
       expect(created[0].title).toBe('Отдых закончился');
-      expect(created[0].opts.body).toContain('Жим лёжа');
+      expect(created[0].opts.body).toBe('Жим гантелей сидя · подход 3 из 3');
+      expect(created[0].opts.icon).toBe('/icon-192.png');
     } finally {
       vi.useRealTimers();
     }
@@ -772,13 +822,113 @@ describe('сохраняемый отдых', () => {
     );
     expect(normalizer).toContain('out.activeRest = {');
     expect(normalizer).toContain('collapsed: !!restRaw.collapsed');
+    expect(normalizer).toContain("closedLabel: String(restRaw.closedLabel || '').slice(0, 160)");
+    expect(normalizer).toContain("contextNextLabel: String(restRaw.contextNextLabel || '').slice(0, 160)");
+    expect(normalizer).toContain("notificationLabel: String(restRaw.notificationLabel || '').slice(0, 160)");
     expect(normalizer).toContain('out.firstMarkAt = firstMarkAtNum');
     expect(normalizer).toContain('out.lastMarkAt = lastMarkAtNum');
     expect(daySource.match(/onPatchSession: function \(patch\)/g)).toHaveLength(2);
+    expect(daySource).toContain('onCloseAtLastMark: function (e)');
+    expect(daySource).toContain('wl0.completedAt = closedAt');
+    expect(daySource).toContain('delete wl0.activeRest');
+    expect(daySource).toContain('removeTraining(ti)');
   });
 });
 
 describe('lifecycle силовой сессии', () => {
+  it('после перезапуска показывает точное место возврата без второго кольца', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 9, 20, 16, 0));
+    try {
+      const opened = [];
+      const startedAt = Date.now() - (52 * 60 + 14) * 1000;
+      const lastMarkAt = new Date(2026, 7, 9, 19, 24, 0).getTime();
+      const Parts = globalThis.HEYS.StrengthBuilderParts;
+      render(React.createElement(Parts.SummaryCard, {
+        training: {
+          ...training([{ name: 'Жим гантелей', approaches: [work(24, 10, true), work(24, 10, true), work(24, 10, false)] }]),
+          workoutLog: {
+            startedAt,
+            lastMarkAt,
+            exercises: [{ name: 'Жим гантелей', approaches: [work(24, 10, true), work(24, 10, true), work(24, 10, false)] }],
+          },
+        },
+        dateKey: '2026-08-09',
+        onOpen: () => opened.push(true),
+      }));
+
+      expect(screen.getByText('Тренировка продолжается · 52:14')).toBeTruthy();
+      expect(screen.getByText('последняя отметка в 19:24 · Жим гантелей 2 из 3')).toBeTruthy();
+      expect(screen.queryByText('осталось')).toBeNull();
+      fireEvent.click(screen.getByText('Вернуться в тренировку'));
+      expect(opened).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('вчерашняя сессия не мотает ночь и даёт удалить, дописать или закрыть', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 10, 12, 0, 0));
+    try {
+      const actions = [];
+      const Parts = globalThis.HEYS.StrengthBuilderParts;
+      render(React.createElement(Parts.SummaryCard, {
+        training: {
+          ...training([{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }]),
+          workoutLog: {
+            startedAt: new Date(2026, 7, 9, 18, 40, 0).getTime(),
+            lastMarkAt: new Date(2026, 7, 9, 19, 24, 0).getTime(),
+            exercises: [{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }],
+          },
+        },
+        dateKey: '2026-08-09',
+        onDelete: () => actions.push('delete'),
+        onOpen: () => actions.push('edit'),
+        onCloseAtLastMark: () => actions.push('close'),
+      }));
+
+      expect(screen.getByText('Вчерашняя не закрыта')).toBeTruthy();
+      expect(screen.getByText('Тренировка 9 августа')).toBeTruthy();
+      expect(screen.getByText('таймер остановлен на последней отметке в 19:24, чтобы не мотать всю ночь')).toBeTruthy();
+      act(() => { vi.advanceTimersByTime(6 * 60 * 60 * 1000); });
+      expect(screen.getByText('таймер остановлен на последней отметке в 19:24, чтобы не мотать всю ночь')).toBeTruthy();
+      for (const label of ['удалить', 'дописать', 'закрыть']) fireEvent.click(screen.getByText(label));
+      expect(actions).toEqual(['delete', 'edit', 'close']);
+      expect(screen.getByText(/Таймер привязан к подходу, который его запустил/)).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('completedAt закрывает offscreen-сессию даже при оставшихся подходах', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 10, 12, 0, 0));
+    try {
+      const completedAt = new Date(2026, 7, 9, 19, 24, 0).getTime();
+      const Parts = globalThis.HEYS.StrengthBuilderParts;
+      render(React.createElement(Parts.SummaryCard, {
+        training: {
+          ...training([{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }]),
+          workoutLog: {
+            startedAt: new Date(2026, 7, 9, 18, 40, 0).getTime(),
+            lastMarkAt: completedAt,
+            completedAt,
+            exercises: [{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }],
+          },
+        },
+        dateKey: '2026-08-09',
+        onOpen: () => {},
+      }));
+
+      expect(screen.queryByText('Вчерашняя не закрыта')).toBeNull();
+      expect(screen.queryByText(/Тренировка продолжается/)).toBeNull();
+      expect(screen.getByText('Открыть конструктор')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('после паузы больше 45 минут предлагает продолжить или завершить последней отметкой', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-09T20:51:00'));

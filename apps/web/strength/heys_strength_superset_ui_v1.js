@@ -32,6 +32,11 @@
     return String(mm) + ':' + (ss < 10 ? '0' : '') + ss;
   }
 
+  function fmtTime(ms) {
+    const d = new Date(ms || 0);
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
   // ——— Связка (экраны 23, 26) ———
 
   function SupersetBlock(props) {
@@ -113,7 +118,7 @@
   // ——— Отдых (экран 05) ———
 
   function RestRing(props) {
-    const { secondsLeft, total, owner, source, nextLabel, collapsed,
+    const { secondsLeft, total, owner, source, closedLabel, contextNextLabel, nextLabel, collapsed,
       onSkip, onAdd, onCollapse, onExpand } = props;
     if (collapsed) {
       return h('div', { className: 'sb-rest sb-rest--collapsed' },
@@ -121,8 +126,10 @@
           type: 'button', className: 'sb-rest-compact', onClick: onExpand,
           'aria-label': 'Развернуть таймер отдыха'
         },
-          h('b', null, fmtClock(secondsLeft)),
-          h('span', null, (owner || 'Отдых') + (nextLabel ? ' · ' + nextLabel : '')),
+          h('span', { className: 'sb-rest-compact-copy' },
+            h('b', null, 'Отдых ' + fmtClock(secondsLeft) + ' · ' + (owner || 'упражнение')),
+            h('span', null, 'идёт от подхода, который его запустил')
+          ),
           h('i', null, 'развернуть')
         )
       );
@@ -131,32 +138,40 @@
     const c = 2 * Math.PI * r;
     const ratio = total > 0 ? Math.max(0, Math.min(1, secondsLeft / total)) : 0;
     return h('div', { className: 'sb-rest' },
+      h('div', { className: 'sb-rest-context' },
+        h('span', null,
+          h('b', null, closedLabel || 'Подход закрыт'),
+          (contextNextLabel || nextLabel) && h('small', null,
+            contextNextLabel || nextLabel.charAt(0).toLowerCase() + nextLabel.slice(1))
+        ),
+        h('i', null, '✓')
+      ),
       h('div', { className: 'sb-rest-meta' },
         h('b', null, 'Отдых · ' + (owner || 'упражнение')),
-        h('span', null, source || 'по настройке'),
-        nextLabel && h('small', null, nextLabel)
+        h('span', null, ' · ' + (source || 'по настройке'))
       ),
       h('div', { className: 'sb-rest-ring' },
         h('svg', { width: 168, height: 168, viewBox: '0 0 168 168' },
           h('circle', {
             cx: 84, cy: 84, r: r, fill: 'none',
-            stroke: 'var(--sb-br)', strokeWidth: 10
+            stroke: 'var(--v4-track, var(--sb-br))', strokeWidth: 9
           }),
           h('circle', {
             cx: 84, cy: 84, r: r, fill: 'none',
-            stroke: 'var(--sb-acc)', strokeWidth: 10, strokeLinecap: 'round',
+            stroke: 'var(--acs, var(--sb-acc))', strokeWidth: 9, strokeLinecap: 'round',
             strokeDasharray: c, strokeDashoffset: c * (1 - ratio)
           })
         ),
         h('div', { className: 'sb-rest-value' },
           fmtClock(secondsLeft),
-          h('small', null, 'отдых')
+          h('small', null, 'осталось')
         )
       ),
+      nextLabel && h('div', { className: 'sb-rest-next' }, nextLabel),
       h('div', { className: 'sb-rest-actions' },
-        h('button', { type: 'button', className: 'sb-btn', onClick: onAdd }, '+10 секунд'),
-        h('button', { type: 'button', className: 'sb-btn is-accent', onClick: onSkip }, 'Пропустить'),
-        h('button', { type: 'button', className: 'sb-btn', onClick: onCollapse }, 'Свернуть')
+        h('button', { type: 'button', className: 'sb-btn sb-rest-add', onClick: onAdd }, '+10 секунд'),
+        h('button', { type: 'button', className: 'sb-btn sb-rest-skip', onClick: onSkip }, 'пропустить'),
+        h('button', { type: 'button', className: 'sb-btn sb-rest-collapse', onClick: onCollapse }, 'свернуть')
       )
     );
   }
@@ -565,6 +580,22 @@
     return new Date(+d[1], +d[2] - 1, +d[3], +m[1], +m[2], 0).getTime();
   }
 
+  function localDateKey(value) {
+    const d = value instanceof Date ? value : new Date(value == null ? Date.now() : value);
+    const pad = function (part) { return String(part).padStart(2, '0'); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  function previousLocalDateKey() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return localDateKey(d);
+  }
+
+  function dateWithoutWeekday(dateKey) {
+    return humanDate(dateKey).replace(/^[^,]+,\s*/, '');
+  }
+
   /** Подпись упражнения во втором слое: группы из справочника, а не выдумка UI. */
   function groupsLabel(name) {
     const m = HEYS.exerciseMeta;
@@ -586,20 +617,14 @@
    * нажать, чтобы продолжить.
    */
   function SummaryCard(props) {
-    const { training, dateKey, onOpen } = props;
+    const { training, dateKey, onOpen, onDelete, onCloseAtLastMark } = props;
     // Таймер тикает сам: карточка обязана показывать идущее время, иначе
     // «47:12» превращается в момент последней перерисовки дня.
     const [, setTick] = React.useState(0);
     const startedAt = startedAtMs(training, dateKey);
     const wl = (training && training.workoutLog) || {};
     const completedAt = Number.isFinite(+wl.completedAt) ? +wl.completedAt : 0;
-    React.useEffect(function () {
-      if (!startedAt || completedAt) return undefined;
-      const id = setInterval(function () { setTick(function (t) { return t + 1; }); }, 1000);
-      return function () { clearInterval(id); };
-    }, [startedAt, completedAt]);
-    const elapsedEnd = completedAt > 0 ? completedAt : Date.now();
-    const elapsedSec = startedAt ? Math.max(0, Math.floor((elapsedEnd - startedAt) / 1000)) : 0;
+    const lastMarkAt = Number.isFinite(+wl.lastMarkAt) ? +wl.lastMarkAt : 0;
     const TK = HEYS.TrainingKernel;
     const SK = (TK && TK.strength) ? TK.strength : null;
     const exercises = Array.isArray(wl.exercises) ? wl.exercises : [];
@@ -624,7 +649,83 @@
       }
     }
     const current = currentIdx >= 0 ? exercises[currentIdx] : null;
-    const running = done > 0 && done < total;
+    // Незакрытые строки сами по себе не делают сессию активной: пользователь
+    // мог явно закрыть вчерашнюю тренировку на последней отметке. completedAt
+    // является lifecycle-границей и сразу убирает resume/stale surface.
+    const running = !completedAt && done > 0 && done < total;
+    const pastOpen = running && String(dateKey || '') < localDateKey();
+    const elapsedEnd = completedAt > 0 ? completedAt : (pastOpen && lastMarkAt ? lastMarkAt : Date.now());
+    const elapsedSec = startedAt ? Math.max(0, Math.floor((elapsedEnd - startedAt) / 1000)) : 0;
+
+    React.useEffect(function () {
+      if (!startedAt || completedAt || pastOpen) return undefined;
+      const id = setInterval(function () { setTick(function (t) { return t + 1; }); }, 1000);
+      return function () { clearInterval(id); };
+    }, [startedAt, completedAt, pastOpen]);
+
+    function exerciseProgress(exercise) {
+      const approaches = Array.isArray(exercise && exercise.approaches) ? exercise.approaches : [];
+      let exerciseDone = 0;
+      let exerciseTotal = 0;
+      approaches.forEach(function (approach) {
+        if (SK && (SK.isWarmupApproach(approach) || SK.isBlankApproach(approach))) return;
+        exerciseTotal += 1;
+        if (SK ? SK.isApproachDone(approach) : approach.done) exerciseDone += 1;
+      });
+      return { done: exerciseDone, total: exerciseTotal };
+    }
+
+    let progressExercise = current;
+    let progress = exerciseProgress(progressExercise);
+    if ((!progressExercise || progress.done === 0) && currentIdx > 0) {
+      for (let i = currentIdx - 1; i >= 0; i--) {
+        const candidate = exerciseProgress(exercises[i]);
+        if (candidate.done > 0) {
+          progressExercise = exercises[i];
+          progress = candidate;
+          break;
+        }
+      }
+    }
+    const progressLabel = progressExercise && progress.total > 0
+      ? (progressExercise.name || 'Упражнение') + ' ' + progress.done + ' из ' + progress.total
+      : '';
+
+    if (running && !pastOpen) {
+      return h('div', { className: 'sb-card sb-offscreen-session sb-offscreen-session--resume' },
+        h('div', { className: 'sb-offscreen-copy' },
+          h('b', null, 'Тренировка продолжается · ' + fmtClock(elapsedSec)),
+          h('span', null,
+            (lastMarkAt ? 'последняя отметка в ' + fmtTime(lastMarkAt) : 'отмеченные подходы сохранены')
+            + (progressLabel ? ' · ' + progressLabel : ''))
+        ),
+        h('button', { type: 'button', className: 'sb-offscreen-primary', onClick: onOpen },
+          'Вернуться в тренировку')
+      );
+    }
+
+    if (running && pastOpen) {
+      const isYesterday = String(dateKey || '') === previousLocalDateKey();
+      return h('div', { className: 'sb-card sb-offscreen-session sb-offscreen-session--stale' },
+        h('div', { className: 'sb-offscreen-eyebrow' },
+          isYesterday ? 'Вчерашняя не закрыта' : 'Незавершённая тренировка'),
+        h('div', { className: 'sb-offscreen-copy' },
+          h('b', null, 'Тренировка ' + dateWithoutWeekday(dateKey)),
+          h('span', null, lastMarkAt
+            ? 'таймер остановлен на последней отметке в '
+              + fmtTime(lastMarkAt)
+              + ', чтобы не мотать всю ночь'
+            : 'таймер остановлен, чтобы не мотать всю ночь')
+        ),
+        h('div', { className: 'sb-offscreen-actions' },
+          h('button', { type: 'button', onClick: onDelete }, 'удалить'),
+          h('button', { type: 'button', onClick: onOpen }, 'дописать'),
+          h('button', { type: 'button', className: 'is-close', onClick: onCloseAtLastMark }, 'закрыть')
+        ),
+        h('div', { className: 'sb-offscreen-note' },
+          'Таймер привязан к подходу, который его запустил, а не к тому, что открыто на экране: тап по закрытому упражнению его не останавливает, кольцо схлопывается в строку. Ночью он не идёт — остановлен на последней отметке.')
+      );
+    }
 
     return h('div', { className: 'sb-card' + (running ? ' sb-card--running' : '') },
       h('div', { className: 'sb-card-head' },
