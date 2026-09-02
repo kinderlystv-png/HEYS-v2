@@ -1055,3 +1055,24 @@ semantics green; живой smoke 375×812 без console errors. Повторн
 Ревьюеру смотреть: пустой Home на 375×812, отсутствие SVG у живого Health Trend
 без ряда, корректный `Первые дни` только при `emptyReason=insufficient_history`,
 а также неизменность exact filled-fixture, где sparkline передан явно.
+
+## Шаг 43 — Home · пустой день получил воспроизводимый visual evidence
+
+Статус: semantic smoke шага 42 превращён в отдельный автоматический diagnostic,
+чтобы его можно было повторить без пароля и ручной подготовки клиента.
+
+- `home-widgets-empty-day` снимает полный viewport 375×812 с header, date, 13
+  плитками, обоими FAB и нижней навигацией; exact Canvas frame ему намеренно не
+  назначен, поэтому сценарий не выдаётся за pixel equality;
+- fail-closed checks требуют 13 плиток, прочерки
+  calories/macros/protein/fiber/steps, отсутствие calorie bars, macro rings и
+  Health SVG, а также разрешённый ноль воды;
+- filled fixture перестал shallow-merge будущие production-поля: для всех 13
+  известных типов используются точные объекты кадра, неизвестный тип отдельно
+  откатывается к штатному provider;
+- evidence: `tmp/ui-v4-visual/2026-09-02T00-52-39-964Z`, все проверки true,
+  Figtree ready, console errors `0`.
+
+Это первый полный скриншот Главной в новой метрике, но не первый full-screen
+pixel pair: Canvas HW1 не содержит FAB/nav. Следующий шаг — отдельные строгие
+пары header/date и сохранение grid как самостоятельной области с diff `8,0678%`.

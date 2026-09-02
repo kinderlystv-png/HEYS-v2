@@ -1558,16 +1558,48 @@ async function openCase(browser, item, snapshot) {
           fiber: { hasData: true, fiber: 5, norm: 30, pct: 17, remaining: 25 },
         };
 
-        widgetData.getDataForWidget = (widget) => ({
-          ...(original(widget) || {}),
-          ...(homeCanvasData[widget?.type] || {}),
-        });
+        widgetData.getDataForWidget = (widget) => homeCanvasData[widget?.type] || original(widget) || {};
         widgetData.refresh?.();
       });
       await page.waitForFunction(() => {
         const gridText = document.querySelector('.widgets-grid')?.textContent || '';
         return ['1289', '1931', '3 приёма', '6,4', '8940', '5 из 7', 'низкий', '91,1', '115']
           .every((token) => gridText.replace(/\s/g, '').includes(token.replace(/\s/g, '')));
+      }, undefined, { timeout: 10_000 });
+    }
+    if (item.id === 'home-widgets-empty-day') {
+      await page.evaluate(() => {
+        const widgetData = window.HEYS?.Widgets?.data;
+        if (!widgetData?.getDataForWidget) {
+          throw new Error('Home empty visual fixture: Widgets.data.getDataForWidget is unavailable.');
+        }
+        const original = widgetData.getDataForWidget.bind(widgetData);
+        const emptyDayData = {
+          calories: { hasData: false, eaten: 0, target: 1931 },
+          macros: {
+            hasData: false,
+            protein: 0,
+            fat: 0,
+            carbs: 0,
+            proteinTarget: 160,
+            fatTarget: 64,
+            carbsTarget: 210,
+          },
+          protein: { hasData: false, protein: null, target: 160 },
+          fiber: { hasData: false, fiber: null, norm: 30 },
+          steps: { hasData: false, steps: null, daysNeededLabel: 'нужно 2 дня' },
+          water: { hasData: true, drunk: 0, target: 1800, pct: 0 },
+          healthTrend: { hasData: true, delta: -37, periodDays: 7 },
+        };
+        widgetData.getDataForWidget = (widget) => emptyDayData[widget?.type] || original(widget) || {};
+        widgetData.refresh?.();
+      });
+      await page.waitForFunction(() => {
+        const calories = document.querySelector('[data-widget-type="calories"]')?.textContent || '';
+        const macros = document.querySelector('[data-widget-type="macros"]');
+        return calories.includes('—')
+          && macros?.querySelectorAll('.widget-v4-macro--empty').length === 3
+          && !document.querySelector('[data-widget-type="healthTrend"] svg');
       }, undefined, { timeout: 10_000 });
     }
     let visualChecks = null;
@@ -1583,6 +1615,40 @@ async function openCase(browser, item, snapshot) {
               .includes(token.replace(/\s/g, ''))),
         };
       });
+    }
+    if (item.id === 'home-widgets-empty-day') {
+      visualChecks = await page.evaluate(() => {
+        const widgets = window.HEYS?.Widgets?.state?.getWidgets?.() || [];
+        const tile = (type) => document.querySelector(`[data-widget-type="${type}"]`);
+        const text = (type) => (tile(type)?.textContent || '').replace(/\s+/g, ' ').trim();
+        const checks = {
+          widgetCount: widgets.length,
+          caloriesDash: text('calories').includes('—'),
+          caloriesBars: tile('calories')?.querySelectorAll('.widget-calories__hero-bar,.widget-calories__bar').length || 0,
+          macroDashes: tile('macros')?.querySelectorAll('.widget-v4-macro--empty').length || 0,
+          macroRings: tile('macros')?.querySelectorAll('svg').length || 0,
+          proteinDash: text('protein').includes('—'),
+          fiberDash: text('fiber').includes('—'),
+          stepsDash: text('steps').includes('—'),
+          waterZero: /0(?:[,.]0)?/.test(text('water')),
+          healthSparks: tile('healthTrend')?.querySelectorAll('svg').length || 0,
+        };
+        return checks;
+      });
+      if (
+        visualChecks.widgetCount !== 13
+        || !visualChecks.caloriesDash
+        || visualChecks.caloriesBars !== 0
+        || visualChecks.macroDashes !== 3
+        || visualChecks.macroRings !== 0
+        || !visualChecks.proteinDash
+        || !visualChecks.fiberDash
+        || !visualChecks.stepsDash
+        || !visualChecks.waterZero
+        || visualChecks.healthSparks !== 0
+      ) {
+        throw new Error(`Home empty fixture не соответствует fail-closed контракту: ${JSON.stringify(visualChecks)}`);
+      }
     }
     if (item.kind === 'demo-registration') {
       visualChecks = await page.evaluate(() => {

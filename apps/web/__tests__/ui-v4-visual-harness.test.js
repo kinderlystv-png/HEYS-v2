@@ -46,6 +46,7 @@ describe('UI v4 visual harness', () => {
       UI_V4_VISUAL_CASES.filter((entry) => entry.status === 'automated').map((entry) => entry.id),
     ).toEqual(
       expect.arrayContaining([
+        'home-widgets-empty-day',
         'water-custom-volume',
         'cycle-day-picker',
         'tips-sheet',
@@ -88,6 +89,27 @@ describe('UI v4 visual harness', () => {
     expect(
       UI_V4_VISUAL_CASES.filter((entry) => entry.status === 'dom-gate').map((entry) => entry.zone).sort(),
     ).toEqual([...UI_V4_DOM_GATE_ZONES].sort());
+  });
+
+  it('empty Home — отдельный воспроизводимый diagnostic, а не обещание pixel equality', () => {
+    const emptyHome = UI_V4_VISUAL_CASES.find((entry) => entry.id === 'home-widgets-empty-day');
+    expect(emptyHome).toMatchObject({
+      zone: 'home-widgets',
+      status: 'automated',
+      gate: 'diagnostic',
+      viewport: { width: 375, height: 812 },
+    });
+    expect(emptyHome.canvasFrame).toBeUndefined();
+
+    const captureSource = fs.readFileSync(
+      path.resolve(__dirname, '../scripts/ui-v4-visual-capture.mjs'),
+      'utf8',
+    );
+    expect(captureSource).toContain("item.id === 'home-widgets-empty-day'");
+    expect(captureSource).toContain('visualChecks.macroDashes !== 3');
+    expect(captureSource).toContain('visualChecks.caloriesBars !== 0');
+    expect(captureSource).toContain('visualChecks.healthSparks !== 0');
+    expect(captureSource).toContain('!visualChecks.waterZero');
   });
 
   it('fail-closed привязывает парный capture к точному Canvas oid и уникальному runtime-корню', () => {

@@ -91,6 +91,18 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     },
   },
   {
+    id: 'home-widgets-empty-day',
+    zone: 'home-widgets',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-tab',
+    tab: 'widgets',
+    themeId: 'sand',
+    stubGamificationMerge: true,
+    rootSelector: '.widgets-grid .widget',
+    viewport: { width: 375, height: 812 },
+  },
+  {
     id: 'nutrition-default',
     zone: 'nutrition-tab',
     status: 'automated',
