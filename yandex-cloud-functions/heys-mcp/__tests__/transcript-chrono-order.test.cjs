@@ -70,3 +70,31 @@ test('файл без единого заголовка принимает бл�
   const out = insertBlockByTime('просто текст', '## 09:00\n\nутро');
   assert.match(out, /просто текст[\s\S]*## 09:00/);
 });
+
+/**
+ * Писать в файл будет не эта копия.
+ *
+ * tasks_checkpoint шлёт дельту в heys-api-rpc, и разбирает её тамошняя копия
+ * того же модуля — heys-api-rpc/lib/heys_tasks_kv.cjs. 02.09 режим chrono
+ * приехал только сюда: тесты были зелёные, а сервер отвечал invalid_mode на
+ * каждый checkpoint — стенограмма не записывалась вовсе. Копии держатся
+ * руками, поэтому расхождение ловится тестом, а не дисциплиной.
+ */
+const fs = require('node:fs');
+const path = require('node:path');
+
+const MCP_LIB = path.resolve(__dirname, '..', 'lib', 'tasks.js');
+const RPC_LIB = path.resolve(__dirname, '..', '..', 'heys-api-rpc', 'lib', 'heys_tasks_kv.cjs');
+const lf = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
+
+test('копия модуля в heys-api-rpc не разошлась с этой', () => {
+  assert.equal(lf(RPC_LIB), lf(MCP_LIB), 'heys_tasks_kv.cjs разошёлся с lib/tasks.js — дельта-запись пойдёт по старому коду');
+});
+
+test('дельта mode=chrono принимается той копией, которая пишет файл', () => {
+  const kv = require(RPC_LIB);
+  const file = kv.ensureFile(null, 'transcript/2026-09-02.md');
+  file.text = ['## 14:20', '', 'раз', '', '## 20:10', '', 'два'].join('\n');
+  const applied = kv.applyDeltaToFile(file, 'chrono', '## 18:45\n\nтри', Date.now());
+  assert.deepEqual(heads(applied.file.text), ['## 14:20', '## 18:45', '## 20:10']);
+});
