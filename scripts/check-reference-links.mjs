@@ -95,8 +95,19 @@ const historicalSourceContracts = [
   ['docs/Quick Start Checklist.md', 'reference/systems/INFRA_OPERATIONS.md'],
 ];
 
+// Файлы читаются с нормализацией переносов строк. На Windows checkout
+// выкладывает их с CRLF, а разбор паспорта досье склеивает строки по
+// переносу с маркером цитаты и оставляет возврат каретки внутри фразы:
+// «Не подтверждено:» разрывалось пополам, и проверка краснела на файлах,
+// где всё на месте. Врущая проверка учит себя игнорировать, поэтому
+// нормализуем на входе, а не подгоняем регулярные выражения под мусор.
+function readMarkdown(file) {
+  const text = readFileSync(file, 'utf8');
+  return text.replace(/\r\n/g, '\n');
+}
+
 for (const file of markdownFiles) {
-  const markdown = readFileSync(file, 'utf8');
+  const markdown = readMarkdown(file);
   markdownCache.set(file, markdown);
   const linkPattern = /\[[^\]]*\]\(([^)]+)\)/g;
 
@@ -114,7 +125,7 @@ for (const file of markdownFiles) {
     }
 
     if (localLink.anchorPart && targetFile.endsWith('.md')) {
-      const targetMarkdown = markdownCache.get(targetFile) ?? readFileSync(targetFile, 'utf8');
+      const targetMarkdown = markdownCache.get(targetFile) ?? readMarkdown(targetFile);
       markdownCache.set(targetFile, targetMarkdown);
       if (!headingAnchors(targetMarkdown).has(localLink.anchorPart)) {
         brokenLinks.push(`${relative(ROOT, file)}:${line} -> ${match[1]} (missing anchor)`);
