@@ -2446,7 +2446,7 @@
         }, centerLabel != null
           ? centerLabel
           : [
-            React.createElement('tspan', { key: 'sign', className: 'widget-v4-macro__num-sign' }, '-'),
+            React.createElement('tspan', { key: 'sign', className: 'widget-v4-macro__num-sign' }, '−'),
             React.createElement('tspan', { key: 'val' }, String(remainingRounded))
           ])
       ),
@@ -3216,7 +3216,7 @@
 
     if (!hasData) {
       return v4EmptyTile(
-        `Тренд · ${formatRuUnit(periodDays, 'дней')}`,
+        `Тренд здоровья · ${formatRuUnit(periodDays, 'дней')}`,
         daysWithData < 3 ? 'нужно 3 дня' : null
       );
     }
@@ -3224,6 +3224,8 @@
     // === 2×1 «Компакт» — канвас: kicker «Тренд · N дней», дельта и мини-линия ===
     if (isShort || variantId === 'compact') {
       const compactDelta = Number(data?.delta);
+      const compactSpark = data?.sparkline || {};
+      const compactSparkLast = compactSpark.last || { x: 56, y: 4, r: 3 };
       const compactHero = Number.isFinite(compactDelta)
         ? `${compactDelta > 0 ? '+' : (compactDelta < 0 ? '−' : '')}${formatRuNumber(Math.abs(Math.round(compactDelta)))}`
         : formatRuNumber(Math.round(score));
@@ -3245,9 +3247,9 @@
             'aria-hidden': 'true'
           },
             React.createElement('polyline', {
-              points: '2,19 13,17 24,18 35,11 46,8 56,5',
+              points: compactSpark.points || '2,18 11,16 20,17 29,12 38,9 47,6 56,4',
               stroke: 'currentColor',
-              strokeWidth: 2,
+              strokeWidth: compactSpark.strokeWidth || 2.5,
               strokeLinecap: 'round',
               strokeLinejoin: 'round'
             }),
@@ -3255,7 +3257,10 @@
             // и у веса, и у динамики. Здесь линия обрывалась без неё, и
             // «сегодня» на ней не читалось.
             React.createElement('circle', {
-              cx: 56, cy: 5, r: 2.4, fill: 'currentColor'
+              cx: compactSparkLast.x,
+              cy: compactSparkLast.y,
+              r: compactSparkLast.r || 2.4,
+              fill: 'currentColor'
             })
           )
         )
@@ -6614,7 +6619,9 @@
     if (size === '2x1' || size === '3x1' || variantId === 'week_bar') {
       const week = days.slice(-7);
       while (week.length < 7) week.unshift(null);
-      const filled = week.filter((day) => day?.status && day.status !== 'empty').length;
+      const filled = week.filter((day) =>
+        day?.status === 'green' || day?.status === 'good' || day?.status === 'ok'
+      ).length;
       // Строка контракта «тепловая карта»: у клеток своя шкала плотности в
       // одном тоне, а не роли состояния. Роль остаётся только у итогового
       // числа над картой.
@@ -7200,7 +7207,7 @@
     const message = data?.message || '';
 
     if (!hasData) {
-      return v4EmptyTile('Динамика веса', data?.daysNeededLabel || null);
+      return v4EmptyTile('Первые дни', data?.daysNeededLabel || 'нужна неделя');
     }
 
     if (data?.dynamicsV4) {

@@ -193,9 +193,9 @@ describe('геометрия виджетов Главной против кад
     expect(root['--widget-grid-columns']).toBe('4');
   });
 
-  it('паддинг сетки — 16 px по контракту, второго значения нет', () => {
+  it('паддинг сетки — 14 px сверху и 16 px по бокам/снизу', () => {
     const gridRule = declarations(product.get('body:has(.widgets-tab) .widgets-grid'));
-    expect(gridRule.padding).toBe('16px');
+    expect(gridRule.padding).toBe('14px 16px 16px');
     expect(gridRule['max-width']).toBe('480px');
 
     // Ни одна медиа-ширина не переопределяет зазор и высоту ряда:
@@ -219,6 +219,17 @@ describe('геометрия виджетов Главной против кад
     expect(css).not.toContain('[data-theme$="dark"] .widget-v4-heat__bar--d1');
 
     expect(css).toMatch(/\.widget-v4-mini\.widget-v4-fiber \.widget-v4-goal-value,[\s\S]*?\.widget-v4-mini\.widget-v4-protein \.widget-v4-goal-value \{[\s\S]*?font-size:\s*21px/);
+  });
+
+  it('содержимое дефолтной сетки держит однозначные графические контракты Canvas', () => {
+    const ui = fs.readFileSync(path.resolve(__dirname, '../heys_widgets_ui_v1.js'), 'utf8');
+
+    expect(ui).toContain("`Тренд здоровья · ${formatRuUnit(periodDays, 'дней')}`");
+    expect(ui).toContain("compactSpark.points || '2,18 11,16 20,17 29,12 38,9 47,6 56,4'");
+    expect(ui).toContain('strokeWidth: compactSpark.strokeWidth || 2.5');
+    expect(ui).toContain("className: 'widget-v4-macro__num-sign' }, '−'");
+    expect(ui).toContain("day?.status === 'green' || day?.status === 'good' || day?.status === 'ok'");
+    expect(ui).toContain("return v4EmptyTile('Первые дни', data?.daysNeededLabel || 'нужна неделя')");
   });
 
   it('осознанные отступления не разрослись', () => {

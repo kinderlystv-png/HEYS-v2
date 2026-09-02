@@ -10435,7 +10435,7 @@ body:has(.widgets-tab) .widgets-grid {
   /* Паддинг сетки 16 px и от ширины не зависит; сетка тянется до 480 px,
      дальше растут поля и она центрируется — колонка не шире 106 px
      (канвас v4, строки 8, 9, 78). */
-  padding: 16px;
+  padding: 14px 16px 16px;
   max-width: 480px;
   margin-inline: auto;
 }

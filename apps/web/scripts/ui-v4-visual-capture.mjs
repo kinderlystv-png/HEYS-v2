@@ -336,6 +336,7 @@ async function openCase(browser, item, snapshot) {
         window.__heysLoadingProgress?.forceHide?.();
       }, {
         stubGamificationMerge:
+          item.stubGamificationMerge === true ||
           item.kind === 'demo-registration' ||
           item.kind === 'demo-cycle-picker' ||
           item.kind === 'demo-food-copy-empty' ||
@@ -1434,7 +1435,154 @@ async function openCase(browser, item, snapshot) {
       await page.getByRole('button', { name: 'Настройки', exact: true }).click();
     }
     await page.locator(item.rootSelector).first().waitFor({ state: 'visible', timeout: 45_000 });
+    if (item.id === 'home-widgets-default') {
+      // The strict pair is the Canvas grid crop. Product FABs are fixed overlays outside
+      // that crop's DOM contract, so exclude them from this measurement only.
+      await page.addStyleTag({
+        content: '.widgets-fab-left,.widgets-quick-fab-wrap{display:none!important}',
+      });
+      await page.evaluate(() => {
+        const widgetData = window.HEYS?.Widgets?.data;
+        if (!widgetData?.getDataForWidget) {
+          throw new Error('Home visual fixture: Widgets.data.getDataForWidget is unavailable.');
+        }
+
+        const original = widgetData.getDataForWidget.bind(widgetData);
+        const homeCanvasData = {
+          calories: { eaten: 1289, target: 1931 },
+          insulinWave: {
+            hasData: true,
+            status: 'active',
+            isLipolysis: false,
+            v4: {
+              hasMeals: true,
+              isOvernight: false,
+              mealCount: 3,
+              mealCountLabel: '3 приёма',
+              overlapCount: 0,
+              overlapCountLabel: null,
+              jointCountLabel: null,
+              underWaveLabel: 'под волной 6:20',
+              calmWindowMinutes: 200,
+              scheme: {
+                figures: [
+                  { id: 'm1', d: 'M4,46 C15.4,46 12.9,22 24.3,22 C35.7,22 33.3,46 44.7,46 Z', opacity: 0.45 },
+                  { id: 'm2', d: 'M44.7,46 C56.1,46 53.6,16 65,16 C76.4,16 73.9,46 85.3,46 Z', opacity: 0.45 },
+                  { id: 'm3', d: 'M85.3,46 C96.7,46 94.3,26 105.7,26 C117.1,26 114.6,46 126,46 Z', opacity: 0.8 },
+                ],
+                dividers: [44.7, 85.3],
+                joints: [],
+                overlaps: [],
+              },
+            },
+          },
+          macros: {
+            protein: 96,
+            proteinTarget: 150,
+            fat: 48,
+            fatTarget: 62,
+            carbs: 198,
+            carbsTarget: 180,
+          },
+          sleep: { hours: 6.4, target: 7.5 },
+          water: { drunk: 1700, target: 2700 },
+          steps: {
+            hasData: true,
+            steps: 9655,
+            goal: 10000,
+            avgWeek: 8940,
+            daysWithData: 7,
+            week: [9298, 7510, 10728, 6080, 10370, 8940, 9655].map((value, index) => ({
+              iso: `2026-08-${String(22 + index).padStart(2, '0')}`,
+              value,
+              hasData: true,
+              isToday: index === 6,
+            })),
+          },
+          heatmap: {
+            days: [
+              { date: '2026-08-22', status: 'good' },
+              { date: '2026-08-23', status: 'good' },
+              { date: '2026-08-24', status: 'empty' },
+              { date: '2026-08-25', status: 'good' },
+              { date: '2026-08-26', status: 'warn' },
+              { date: '2026-08-27', status: 'good' },
+              { date: '2026-08-28', status: 'good' },
+            ],
+          },
+          relapseRisk: {
+            level: 'low',
+            primaryDrivers: [
+              { label: 'недосып', text: '2 дня' },
+              { label: 'вода', text: 'ниже нормы' },
+            ],
+          },
+          healthTrend: {
+            hasData: true,
+            delta: -1,
+            periodDays: 7,
+            sparkline: {
+              points: '2,18 11,16 20,17 29,12 38,9 47,6 56,4',
+              strokeWidth: 2.5,
+              last: { x: 56, y: 4, r: 3 },
+            },
+          },
+          weight: {
+            current: 91.1,
+            weekChange: -0.9,
+            windowDeltaKg: -0.9,
+            sparkline: [92, 91.85, 91.925, 91.55, 91.625, 91.25, 91.1].map((weight, index) => ({
+              date: `2026-08-${String(22 + index).padStart(2, '0')}`,
+              weight,
+            })),
+          },
+          crashRisk: {
+            hasData: true,
+            dynamicsV4: {
+              hasDynamics: true,
+              window: { label: 'Вес за месяц' },
+              deltaKg: -1.8,
+              delta: { sign: '−', text: '1,8' },
+              deltaState: 'good',
+              goalWeight: 87.5,
+              goalReached: false,
+              remainderLabel: 'до цели 3,6',
+              sparkline: {
+                points: '2,6 11,9 20,7 29,13 38,12 47,17 56,19',
+                last: { x: 56, y: 19 },
+              },
+            },
+          },
+          protein: { hasData: true, protein: 115, target: 160, pct: 72, remaining: 45 },
+          fiber: { hasData: true, fiber: 5, norm: 30, pct: 17, remaining: 25 },
+        };
+
+        widgetData.getDataForWidget = (widget) => ({
+          ...(original(widget) || {}),
+          ...(homeCanvasData[widget?.type] || {}),
+        });
+        widgetData.refresh?.();
+      });
+      await page.waitForFunction(() => {
+        const gridText = document.querySelector('.widgets-grid')?.textContent || '';
+        return ['1289', '1931', '3 приёма', '6,4', '8940', '5 из 7', 'низкий', '91,1', '115']
+          .every((token) => gridText.replace(/\s/g, '').includes(token.replace(/\s/g, '')));
+      }, undefined, { timeout: 10_000 });
+    }
     let visualChecks = null;
+    if (item.id === 'home-widgets-default') {
+      visualChecks = await page.evaluate(() => {
+        const widgets = window.HEYS?.Widgets?.state?.getWidgets?.() || [];
+        return {
+          widgetCount: widgets.length,
+          widgetTypes: widgets.map((widget) => widget.type),
+          canvasTokensPresent: ['1289', '1931', '3 приёма', '6,4', '8940', '5 из 7', 'низкий', '91,1', '115']
+            .every((token) => (document.querySelector('.widgets-grid')?.textContent || '')
+              .replace(/\s/g, '')
+              .includes(token.replace(/\s/g, ''))),
+        };
+      });
+    }
     if (item.kind === 'demo-registration') {
       visualChecks = await page.evaluate(() => {
         const rect = (selector) => {
