@@ -26,13 +26,14 @@ describe('strength builder · Б1 empty v4 canvas contract', () => {
   });
 
   it('uses the canvas geometry for scroll, card, actions, options and note', () => {
+    expect(css).toMatch(/\.sb-root\s*\{[\s\S]*font-family: Figtree, -apple-system, system-ui, sans-serif;/);
     expect(css).toMatch(/\.sb-head\.is-empty\s*\{[\s\S]*position: relative;/);
     expect(css).toMatch(/\.sb-head\.is-empty \.sb-icon-btn\s*\{[\s\S]*position: absolute;[\s\S]*top: 16px;[\s\S]*right: 18px;/);
     expect(css).toMatch(/\.sb-empty-scroll\s*\{[\s\S]*padding: 7px 18px 18px;/);
     expect(css).toMatch(/\.sb-empty-card\s*\{[\s\S]*margin-top: 12px;[\s\S]*border-radius: 20px;/);
     expect(css).toMatch(/\.sb-empty-card b\s*\{[\s\S]*font-size: 15px;[\s\S]*line-height: 1\.32;[\s\S]*font-weight: 700;/);
     expect(css).toMatch(/\.sb-empty-action\s*\{[\s\S]*min-height: 48px;[\s\S]*margin-top: 10px;[\s\S]*border-radius: 999px;/);
-    expect(css).toMatch(/\.sb-empty-action:not\(\.is-primary\)\s*\{[\s\S]*font-weight: 500;/);
+    expect(css).toMatch(/\.sb-empty-action:not\(\.is-primary\)\s*\{[\s\S]*font-weight: 700;/);
     expect(css).toMatch(/\.sb-empty-options\s*\{[\s\S]*margin-top: 10px;[\s\S]*padding: 2px 16px;[\s\S]*border-radius: 20px;/);
     expect(css).toMatch(/\.sb-empty-note\s*\{[\s\S]*margin: 12px 0 0;[\s\S]*font-size: 11px;[\s\S]*line-height: 1\.55;/);
   });
