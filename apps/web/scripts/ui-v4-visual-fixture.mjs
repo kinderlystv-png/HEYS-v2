@@ -114,6 +114,23 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     rootSelector: '.widgets-grid .widget',
     viewport: { width: 320, height: 700 },
   },
+  // Вкладка «Актив» — основная, а стенда у зоны не было вовсе: сравнить экран
+  // с кадром было нечем. Пара с кадром пока не заводится: состояние фикстуры
+  // (день без тренировок) не совпадает ни с одним кадром зоны дословно, а
+  // привязка к неточному кадру дала бы ложное расхождение. Снимок рантайма
+  // нужен сам по себе — чтобы экран было на что смотреть.
+  {
+    id: 'tab-activity-default-sand',
+    zone: 'tab-activity',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-tab',
+    tab: 'activity',
+    themeId: 'sand',
+    stubGamificationMerge: true,
+    rootSelector: '.activity-v4',
+    viewport: { width: 375, height: 812 },
+  },
   {
     id: 'nutrition-empty-day-sand',
     zone: 'nutrition-tab',

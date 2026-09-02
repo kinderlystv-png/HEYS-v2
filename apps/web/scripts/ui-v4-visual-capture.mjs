@@ -344,7 +344,10 @@ async function openCase(browser, item, snapshot) {
           item.kind === 'demo-food-copy-existing' ||
           item.kind === 'demo-food-move-existing',
       });
-      const tabLabels = { widgets: 'Главная', diary: 'Питание' };
+      // «Актив» не входит в список валидных вкладок демо-режима в index.html,
+      // поэтому попасть на неё через ?defaultTab нельзя: демо откатится на
+      // «Главную». Переключаемся тем же тапом по подписи, что и на «Питание».
+      const tabLabels = { widgets: 'Главная', diary: 'Питание', activity: 'Актив' };
       const tabLabel = tabLabels[item.tab];
       if (tabLabel) {
         const tabButton = page.getByText(tabLabel, { exact: true }).last();
