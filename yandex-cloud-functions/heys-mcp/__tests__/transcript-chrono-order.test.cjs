@@ -98,3 +98,26 @@ test('дельта mode=chrono принимается той копией, ко�
   const applied = kv.applyDeltaToFile(file, 'chrono', '## 18:45\n\nтри', Date.now());
   assert.deepEqual(heads(applied.file.text), ['## 14:20', '## 18:45', '## 20:10']);
 });
+
+/**
+ * Проверок режима на пути записи две, и внешняя стоит раньше.
+ *
+ * 03.09 первая починка ушла только во внутреннюю (applyDeltaToFile) — деплой
+ * прошёл, а checkpoint продолжил падать: запрос отсекался в index.js, до
+ * библиотеки не доходя. Список режимов у двух проверок обязан совпадать,
+ * иначе один из них молча недостижим.
+ */
+const RPC_INDEX = path.resolve(__dirname, '..', '..', 'heys-api-rpc', 'index.js');
+const modesOf = (text) => {
+  const guard = /if \(mode !== [^)]*\)/.exec(text);
+  assert.ok(guard, 'проверка режима не найдена — путь записи изменился, тест надо переписать');
+  return [...guard[0].matchAll(/mode !== '([a-z_]+)'/g)].map((m) => m[1]).sort();
+};
+
+test('внешняя проверка режима в index.js знает те же режимы, что и библиотека', () => {
+  assert.deepEqual(
+    modesOf(lf(RPC_INDEX)),
+    modesOf(lf(RPC_LIB).slice(lf(RPC_LIB).indexOf('function applyDeltaToFile'))),
+    'index.js и applyDeltaToFile расходятся в списке режимов — внешняя проверка отсечёт запрос раньше внутренней',
+  );
+});

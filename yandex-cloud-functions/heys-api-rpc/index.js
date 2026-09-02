@@ -3548,7 +3548,10 @@ async function handleRpcRequest(event, context) {
           body: JSON.stringify({ ok: false, error: 'invalid_path' }),
         };
       }
-      if (mode !== 'prepend' && mode !== 'append') {
+      // chrono — вставка блока по времени его заголовка (heys/cf4935).
+      // Проверок режима две: эта и внутри applyDeltaToFile. Правка только
+      // второй ничего не даёт — запрос не доходит до неё.
+      if (mode !== 'prepend' && mode !== 'append' && mode !== 'chrono') {
         try { client.release(); } catch (_) { /* ignore */ }
         return {
           statusCode: 400,
