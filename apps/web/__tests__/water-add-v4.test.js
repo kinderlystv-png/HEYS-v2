@@ -254,12 +254,20 @@ describe('добавление воды — канвас water-add v4, ветк�
     // Контракт «safe-area и кнопка назад» (water-add.v4.dc.html): «столбик
     // объёмов у кнопки вне Главной поднимается от нижней врезки». Столбик не
     // читает env(safe-area-inset-bottom) сам — он наследует врезку через
-    // getBoundingClientRect() кнопки, а .widgets-quick-fab-wrap отсчитывает bottom
-    // от env(safe-area-inset-bottom). Если это когда-нибудь разойдётся —
+    // getBoundingClientRect() кнопки, а .widgets-quick-fab-wrap отсчитывает
+    // bottom от реальной высоты навигации. Если это когда-нибудь разойдётся —
     // добавлять свой env() в JS не нужно, чинить нужно позицию обёртки.
+    //
+    // Формула обёртки сменилась коммитом 01f78f09f («align home shell
+    // geometry», шаг 41 протокола): вместо захардкоженных 76px+env — реально
+    // измеренная высота нижней навигации через --heys-primary-nav-height,
+    // которую heys_app_shell_v1.js ставит на root по факту рендера; запасное
+    // значение переменной остаётся тем же вычислением, что было раньше.
     expect(handlersSrc).not.toContain('safe-area-inset-bottom');
     expect(handlersSrc).toMatch(/showWaterColumn[\s\S]*?anchor\.getBoundingClientRect\(\)/);
-    expect(widgetsCss).toMatch(/\.widgets-quick-fab-wrap \{[\s\S]*?bottom: calc\(76px \+ 14px \+ env\(safe-area-inset-bottom, 0px\)\)/);
+    expect(widgetsCss).toMatch(
+      /\.widgets-quick-fab-wrap \{[\s\S]*?bottom: calc\(var\(--heys-primary-nav-height, calc\(67\.5px \+ env\(safe-area-inset-bottom, 0px\)\)\) \+ 14px\)/,
+    );
   });
 
   it('выделение и копирование: карточка воды не выделяется — весь текст служебный', () => {

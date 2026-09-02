@@ -293,9 +293,12 @@
       dataKeys: ['historyDays', 'profile'],
       component: 'WidgetHealthTrend',
       scalableElements: SCALABLE_ELEMENTS.healthTrend,
+      // showCategories снят вместе с категорийной линией тренда коммитом
+      // e75faf61c («make home empty states honest», 2 сентября): 2×2-плитка
+      // больше не строит псевдо-линию из очков категорий, а честно молчит без
+      // sparkline. Тумблер остался бы фиктивным, ничего не переключая.
       settings: {
-        periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 7, max: 30 },
-        showCategories: { type: 'boolean', default: true, label: 'Показывать категории' }
+        periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 7, max: 30 }
       }
     },
 
