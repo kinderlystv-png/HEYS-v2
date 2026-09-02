@@ -85,7 +85,7 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(chunk).toContain('macroRingArcPct(arcNum, tgt, 0)');
         expect(chunk).not.toContain('widget-v4-macro__ring-over');
         expect(chunk).not.toContain('hasOver && overPct > 0');
-        expect(cssSrc).toMatch(/\.widget-v4-macro svg\s*\{[^}]*display:\s*inline;/s);
+        expect(cssSrc).toMatch(/\.widget-v4-macro svg\s*\{[^}]*display:\s*inline;[^}]*vertical-align:\s*baseline;/s);
         expect(cssSrc).toMatch(/\.widget-v4-macro\s*\{[^}]*font-size:\s*16px;[^}]*line-height:\s*normal;/s);
     });
 
@@ -242,6 +242,11 @@ describe('виджеты g1 в сфере палитры', () => {
         const stepsChunk = uiSrc.slice(stepsStart, stepsStart + 900);
         expect(stepsChunk).toContain("Math.max(2, Math.round((value / max) * 30)) + 'px'");
         expect(cssSrc).toMatch(/\.widget-heatmap \.widget-v4-row__meta--count\.widget-v4-val--good\s*\{[^}]*--v4-sand-ok-text/s);
+        expect(cssSrc).toMatch(/\.widget-v4-insulin-wave__footer > \.widget-v4-val--good\s*\{[^}]*--v4-sand-ok-text/s);
+        expect(cssSrc).toMatch(/\.widget-v4-mini__value\.widget-v4-val--bad\s*\{[^}]*--v4-val-bad/s);
+        expect(cssSrc).toMatch(/\.widget-v4-macro__fact--bad\s*\{[^}]*--v4-val-bad/s);
+        expect(cssSrc).toMatch(/body:has\(\.widgets-tab\) \.widget-heatmap--2x1\.widget-v4-stack\s*\{[^}]*padding-inline:\s*0;/s);
+        expect(cssSrc).toMatch(/body:has\(\.widgets-tab\) \.widgets-grid\s*\{[^}]*font-family:\s*Figtree, sans-serif;/s);
         expect(cssSrc).toMatch(/\.widget-v4-goalbar\s*\{[^}]*background:\s*var\(--v4-line\)/s);
         expect(cssSrc).toMatch(/\.widget--crashRisk\.widget--2x1[^}]*\.widget-wd__delta,[\s\S]*?font-size:\s*21px;[\s\S]*?font-weight:\s*600;/s);
         expect(cssSrc).toMatch(/\.widget--crashRisk\.widget--2x1[^}]*\.widget-wd__delta\.widget-v4-val--good,[\s\S]*?--v4-sand-ok-text/s);

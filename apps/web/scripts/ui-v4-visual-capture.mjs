@@ -2082,6 +2082,14 @@ async function openCase(browser, item, snapshot) {
       if (matches !== 1) {
         throw new Error(`captureSelector ${item.captureSelector} дал ${matches} узлов вместо одного`);
       }
+      if (item.canvasFrame?.pixelAlign) {
+        await captureRoot.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          const offsetX = Math.round(box.x) - box.x;
+          const offsetY = Math.round(box.y) - box.y;
+          node.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
+        });
+      }
       await captureRoot.screenshot({ path: file, animations: 'disabled' });
     } else {
       await page.screenshot({ path: file, fullPage: false });
@@ -2218,7 +2226,7 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
         const box = node.getBoundingClientRect();
         const offsetX = Math.round(box.x) - box.x;
         const offsetY = Math.round(box.y) - box.y;
-        node.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+        node.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
       });
     }
     const visualChecks = item.kind === 'demo-registration'

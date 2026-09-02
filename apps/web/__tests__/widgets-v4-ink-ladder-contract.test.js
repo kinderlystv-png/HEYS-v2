@@ -121,6 +121,9 @@ describe('семантическая лестница чернил home-widgets'
     expect(palette).toContain('--v4-ink-rgb: 242, 237, 230;');
     expect(palette).toContain('--v4-ink-rgb: 16, 24, 38;');
     expect(palette).toContain('--v4-ink-rgb: 232, 238, 246;');
+    expect(palette.match(/--v4-val-bad:/g)).toHaveLength(4);
+    expect(palette.match(/--v4-val-bad: #a8382b;/g)).toHaveLength(2);
+    expect(palette.match(/--v4-val-bad: #e08a72;/g)).toHaveLength(2);
   });
 
   it('держит все названные мелкие нейтральные подписи на data 56 %', () => {

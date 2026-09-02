@@ -10431,8 +10431,12 @@ html.heys-android[data-theme$="dark"] body:has(.page-reports) .hdr {
  * Flat sand tiles, 64px grid unit, hero calories, sage health trend
  * =================================================================== */
 
+body:has(.widgets-tab) {
+  -webkit-font-smoothing: antialiased;
+}
+
 body:has(.widgets-tab) .widgets-grid {
-  font-family: Figtree, system-ui, sans-serif;
+  font-family: Figtree, sans-serif;
   /* Паддинг сетки 16 px и от ширины не зависит; сетка тянется до 480 px,
      дальше растут поля и она центрируется — колонка не шире 106 px
      (канвас v4, строки 8, 9, 78). */
@@ -10742,6 +10746,10 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   line-height: 1;
 }
 
+.widget-v4-insulin-wave__footer > .widget-v4-val--good {
+  color: var(--v4-sand-ok-text, #5c6a45);
+}
+
 .widget-v4-delta.widget-v4-val--good,
 .widget-v4-delta.widget-v4-val--bad,
 .widget-v4-delta.widget-v4-val--neutral,
@@ -10772,6 +10780,10 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 .widget-heatmap--3x1.widget-v4-stack {
   align-items: stretch;
   justify-content: space-between;
+}
+
+body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
+  padding-inline: 0;
 }
 
 /* В шапке плитки кадр держит два разных числа. По умолчанию это сравнение
@@ -11113,7 +11125,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 }
 
 .widget-v4-mini__value.widget-v4-val--bad {
-  color: var(--v4-bad-text, #a8382b);
+  color: var(--v4-val-bad, #a8382b);
 }
 
 .widget-v4-mini__value.widget-v4-val--act {
@@ -11649,6 +11661,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 
 .widget-v4-macro svg {
   display: inline;
+  vertical-align: baseline;
   width: 46px;
   height: 46px;
   margin: 0 auto;
@@ -11667,7 +11680,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 .widget-v4-macro__fact--bad {
-  color: var(--v4-bad-text, #a8382b);
+  color: var(--v4-val-bad, #a8382b);
 }
 
 /* Кадр Главной пишет « / 150» одним узлом тоном чернил 42 %: косая относится
@@ -11705,12 +11718,12 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 .widget-v4-macro__num--bad {
-  fill: var(--v4-bad-text, #a8382b);
+  fill: var(--v4-val-bad, #a8382b);
   font-weight: 600;
 }
 
 .widget-v4-macro__num--bad .widget-v4-macro__num-sign {
-  fill: var(--v4-bad-text, #a8382b);
+  fill: var(--v4-val-bad, #a8382b);
   font-weight: 600;
 }
 

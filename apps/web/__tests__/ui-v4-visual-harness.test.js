@@ -45,6 +45,9 @@ describe('UI v4 visual harness', () => {
     }
     expect(captureSource).toContain("node.style.position = 'fixed'");
     expect(captureSource).toContain("node.style.inset = '0 auto auto 0'");
+    expect(captureSource.match(/item\.canvasFrame\?\.pixelAlign/g)?.length).toBe(1);
+    expect(captureSource).toContain('if (item.canvasFrame.pixelAlign)');
+    expect(captureSource.match(/Math\.round\(box\.x\) - box\.x/g)?.length).toBe(2);
   });
 
   it('явно учитывает все зоны текущего Canvas-реестра', () => {
