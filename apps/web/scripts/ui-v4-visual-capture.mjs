@@ -562,6 +562,46 @@ async function openCase(browser, item, snapshot) {
         window.__uiV4ReportsWeightRoot.render(element);
       }, item.themeId || null);
     }
+    // Карточка продукта: у зоны product-card не было стенда вовсе, а её экраны
+    // видят при каждом добавлении еды. Открываем штатной модалкой правки, а не
+    // монтируем шаг голым: кадр рисует его вместе с шапкой шага и подзаголовком,
+    // и без обрамления сравнивать было бы не с чем.
+    if (item.kind === 'demo-product-edit-basic') {
+      await page.waitForFunction(
+        () =>
+          !!window.HEYS?.AddProductStep?.showEditProduct &&
+          !!window.HEYS?.currentClientId,
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        // Продукт кадра: макросы дают дробные значения, на них видно, как шаг
+        // печатает числа и что показывает строка авто-расчёта.
+        const product = {
+          id: 'demo-coffee',
+          name: 'Домашний кофе (растворимый 200 мл + молоко 50 мл)',
+          kcal100: 16.6,
+          carbs100: 1.6,
+          simple100: 1.6,
+          complex100: 0,
+          protein100: 0.9,
+          fat100: 0.8,
+          badFat100: 0.5,
+          goodFat100: 0.3,
+          trans100: 0,
+          fiber100: 0,
+          gi: 30,
+          harmScore: 1,
+          portions: [{ name: '1 чашка', grams: 300 }],
+        };
+        window.HEYS.AddProductStep.showEditProduct(product, {
+          initialStep: 0,
+          onSave: () => {},
+          onClose: () => {},
+        });
+      }, item.themeId || null);
+    }
     if (item.kind === 'demo-norm-correction-lowered') {
       await page.waitForFunction(
         () =>

@@ -131,6 +131,18 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     rootSelector: '.activity-v4',
     viewport: { width: 375, height: 812 },
   },
+  // Карточка продукта: зона видна при каждом добавлении еды, стенда не было.
+  {
+    id: 'product-edit-basic-sand',
+    zone: 'product-card',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-product-edit-basic',
+    themeId: 'sand',
+    stubGamificationMerge: true,
+    rootSelector: '[data-heys-step-modal][data-heys-step-id="edit_basic"]',
+    viewport: { width: 375, height: 812 },
+  },
   {
     id: 'nutrition-empty-day-sand',
     zone: 'nutrition-tab',
