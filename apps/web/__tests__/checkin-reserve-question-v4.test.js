@@ -113,16 +113,21 @@ describe('резервный вопрос после еды', () => {
       expect(step, literal).not.toContain(literal);
     }
   });
-  it('крест уходит вправо, заголовок остаётся по центру', () => {
+  it('крест справа, оба текста шапки слева, как в кадре', () => {
     // Кадр креста не рисует вовсе — лист v4 закрывается ручкой или свайпом, —
-    // но выход из шторки продуктовый инвариант. Слева он спорил с заголовком,
-    // справа уравновешивает его. Выравнивание влево из кадра при этом не
-    // переносится: кадр выровнял текст влево именно потому, что креста в нём
-    // нет, а с крестом справа заголовок вплотную к краю листа.
+    // но выход из шторки продуктовый инвариант, и слева он спорил с
+    // заголовком. Текст при этом прижат влево, как нарисовано: прежняя
+    // попытка ставила заголовок вплотную к краю, но это было поле, а не
+    // выравнивание — шапка шла на общих 12/8 против 14 у листа кадра.
     const moved = CSS.indexOf('[data-heys-step-id="morning_activation_followup"] .mc-header-left');
     expect(moved, 'правило переноса креста найдено').toBeGreaterThan(-1);
     expect(CSS.slice(moved, CSS.indexOf('}', moved))).toContain('order: 3');
-    expect(CSS).not.toContain('[data-heys-step-id="morning_activation_followup"] .mc-header-center');
+    const center = CSS.indexOf('[data-heys-step-id="morning_activation_followup"] .mc-header-center {');
+    expect(center, 'правило выравнивания найдено').toBeGreaterThan(-1);
+    expect(CSS.slice(center, CSS.indexOf('}', center))).toContain('text-align: left');
+    // AutoFitText центрирует строку инлайном, и до неё выравнивание родителя
+    // не доходит: подпись оставалась по центру при левом заголовке.
+    expect(CSS).toContain('.mc-header-hint-container');
   });
 
 });

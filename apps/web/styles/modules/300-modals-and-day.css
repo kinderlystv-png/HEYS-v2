@@ -1803,6 +1803,34 @@
   order: 3;
 }
 
+/* Имя экрана и подпись прижаты влево, как в кадре. Прежняя попытка ставила
+   заголовок вплотную к краю листа — это было поле, а не выравнивание: шапка
+   шла на общих 12/8, а лист кадра держит 14. Отступ выправлен, и левое
+   выравнивание встаёт как нарисовано. */
+[data-heys-step-id="morning_activation_followup"] .mc-header--nav {
+  padding: 12px 14px 0;
+  align-items: flex-start;
+}
+
+[data-heys-step-id="morning_activation_followup"] .mc-header-center {
+  align-items: flex-start;
+  text-align: left;
+}
+
+[data-heys-step-id="morning_activation_followup"] .mc-header-center .mc-header-titles {
+  align-items: stretch;
+  width: 100%;
+}
+
+/* AutoFitText оборачивает строку в контейнер с инлайновым
+   `justify-content: center` — выравнивание родителя до него не доходит, и
+   подпись оставалась по центру, когда имя экрана уже стояло слева. Перебиваем
+   адресно: правило живёт только на этом шаге. */
+[data-heys-step-id="morning_activation_followup"] .mc-header-title-container,
+[data-heys-step-id="morning_activation_followup"] .mc-header-hint-container {
+  justify-content: flex-start !important;
+}
+
 /* Кегли шапки по кадру этого листа: имя экрана 16 px/700 --tx, подпись
    11,5 px/500 чернил 56 %. Общее правило шапки даёт 15/700 и 12 — так его
    задают семь других канвасов, и менять их ради одного листа нельзя. */
