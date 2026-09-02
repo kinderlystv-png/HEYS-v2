@@ -41,11 +41,15 @@ describe('insulin wave v4', () => {
 
   it('UI — 5 видов инсулиновой волны', () => {
     const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
+    const cssSrc = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8');
     expect(uiSrc).toContain('InsulinWaveDaySvg');
     expect(uiSrc).toContain('InsulinWaveCurrentSvg');
     expect(uiSrc).toContain('InsulinWaveOverlapSvg');
     expect(uiSrc).toContain('InsulinWaveDayBar');
     expect(uiSrc).toContain("variantId === 'calm_window'");
     expect(uiSrc).toContain('InsulinWaveDaySvg');
+    expect(uiSrc).toContain('widget-v4-insulin-wave--day');
+    expect(cssSrc).toMatch(/\.widget-v4-insulin-wave--day\s*\{[^}]*margin-top:\s*8px;/s);
+    expect(cssSrc).toMatch(/body:has\(\.widgets-tab\) \.widgets-grid\s*\{[^}]*font-family:\s*Figtree,/s);
   });
 });

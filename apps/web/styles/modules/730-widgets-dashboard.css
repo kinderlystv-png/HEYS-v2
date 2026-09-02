@@ -10432,6 +10432,7 @@ html.heys-android[data-theme$="dark"] body:has(.page-reports) .hdr {
  * =================================================================== */
 
 body:has(.widgets-tab) .widgets-grid {
+  font-family: Figtree, system-ui, sans-serif;
   /* Паддинг сетки 16 px и от ширины не зависит; сетка тянется до 480 px,
      дальше растут поля и она центрируется — колонка не шире 106 px
      (канвас v4, строки 8, 9, 78). */
@@ -10860,6 +10861,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 
 .widget-risk-scale-hero .widget-v4-hero-num__val--risk {
   font-size: 24px;
+  letter-spacing: 0;
 }
 
 .widget-v4-delta.widget-v4-val--good,
@@ -11419,6 +11421,12 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
   overflow: visible;
 }
 
+/* HW1: дневные купола начинаются через 8px после ключа. Auto остаётся только
+   у footer; иначе свободное место опускает сам SVG на 14px ниже Canvas. */
+.widget-v4-insulin-wave--day {
+  margin-top: 8px;
+}
+
 .widget-v4-insulin-wave__fill {
   fill: var(--v4-sand-wave, #e6cfa8);
 }
@@ -11680,6 +11688,10 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font: 600 21px/1 Figtree, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
   font-variant-numeric: tabular-nums;
+}
+
+.widget-v4-macro__empty.widget-v4-val--neutral {
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 .widget-v4-macro__num--bad {
@@ -13430,6 +13442,10 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   background: currentColor;
 }
 
+.widget-risk-steps__seg--on.widget-v4-val--good {
+  color: var(--v4-sand-ok-text, #5c6a45);
+}
+
 .widget-risk-rise {
   margin-top: auto;
   font-size: 10px;
@@ -13439,8 +13455,8 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   text-wrap: pretty;
 }
 
-/* В канвасе слова риск-радара стоят на тёмном шалфее #5c6a45, а не на общем
-   #7a8a5e: светлый оттенок остаётся у заливок (активный отрезок шкалы). */
+/* В канвасе слово и активный сегмент риск-радара стоят на тёмном шалфее
+   #5c6a45, а не на общем светлом тоне заливок #7a8a5e. */
 .widget-relapse-risk .widget-v4-hero-num__val--risk.widget-v4-val--good,
 .widget-risk-level.widget-v4-val--good,
 .widget-relapse-risk .widget-v4-kv__row .widget-v4-val--good {

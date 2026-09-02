@@ -2406,7 +2406,9 @@
     const remaining = tgt - num;
     const remainingRounded = Math.round(Math.abs(remaining));
     const centerLabel = remaining >= 0 ? String(remainingRounded) : null;
-    const { basePct, hasOver, overPct } = macroRingArcPct(arcNum, tgt);
+    // Canvas задаёт фактическую долю окружности. Round caps уже входят в
+    // геометрию SVG, поэтому компенсация legacy-кольца здесь не применяется.
+    const { basePct, hasOver, overPct } = macroRingArcPct(arcNum, tgt, 0);
     const overTone = toneClass === 'protein' ? 'protein' : 'warn';
     const centerBad = macroCenterBad(num, tgt, toneClass);
     const factBad = macroDeviationBad(num, tgt, toneClass);
@@ -2821,7 +2823,7 @@
     }
 
     return React.createElement('svg', {
-      className: 'widget-v4-wave widget-v4-insulin-wave',
+      className: 'widget-v4-wave widget-v4-insulin-wave widget-v4-insulin-wave--day',
       viewBox: `0 0 130 ${height}`,
       width: '100%',
       height,

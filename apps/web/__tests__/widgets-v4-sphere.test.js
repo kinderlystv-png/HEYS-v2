@@ -82,6 +82,7 @@ describe('виджеты g1 в сфере палитры', () => {
     it('БЖУ 3×2 — перебор второй дугой (как macro-ring-fill--over)', () => {
         const start = uiSrc.indexOf('function v4SageRing');
         const chunk = uiSrc.slice(start, start + 3200);
+        expect(chunk).toContain('macroRingArcPct(arcNum, tgt, 0)');
         expect(chunk).toContain('widget-v4-macro__ring-over');
         expect(chunk).toContain('hasOver && overPct > 0');
         expect(chunk).toContain('--v4-macro-over-offset');
@@ -180,6 +181,8 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(uiSrc).toContain('function v4InsulinWaveState');
         expect(uiSrc).toContain('function v4HeatmapMetaState');
         expect(uiSrc).toContain('V4_MACRO_DEVIATION_PCT = 0.05');
+        expect(cssSrc).toMatch(/\.widget-risk-scale-hero \.widget-v4-hero-num__val--risk\s*\{[^}]*letter-spacing:\s*0;/s);
+        expect(cssSrc).toMatch(/\.widget-risk-steps__seg--on\.widget-v4-val--good\s*\{[^}]*--v4-sand-ok-text/s);
 
         expect(uiSrc).toContain('function HealthTrendVariantBody');
         expect(uiSrc).toContain('v4HealthTrendState');

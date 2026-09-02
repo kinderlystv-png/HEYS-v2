@@ -1609,12 +1609,23 @@ async function openCase(browser, item, snapshot) {
         return {
           widgetCount: widgets.length,
           widgetTypes: widgets.map((widget) => widget.type),
+          gridFontFamily: getComputedStyle(document.querySelector('.widgets-grid')).fontFamily,
+          gridUsesFigtree: getComputedStyle(document.querySelector('.widgets-grid')).fontFamily
+            .toLowerCase()
+            .startsWith('figtree'),
           canvasTokensPresent: ['1289', '1931', '3 приёма', '6,4', '8940', '5 из 7', 'низкий', '91,1', '115']
             .every((token) => (document.querySelector('.widgets-grid')?.textContent || '')
               .replace(/\s/g, '')
               .includes(token.replace(/\s/g, ''))),
         };
       });
+      if (
+        visualChecks.widgetCount !== 13
+        || !visualChecks.canvasTokensPresent
+        || !visualChecks.gridUsesFigtree
+      ) {
+        throw new Error(`Home filled fixture не соответствует Canvas-состоянию: ${JSON.stringify(visualChecks)}`);
+      }
     }
     if (item.id.startsWith('home-widgets-empty-day')) {
       visualChecks = await page.evaluate(() => {
