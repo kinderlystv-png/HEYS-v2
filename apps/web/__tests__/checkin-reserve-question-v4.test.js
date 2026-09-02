@@ -113,4 +113,16 @@ describe('резервный вопрос после еды', () => {
       expect(step, literal).not.toContain(literal);
     }
   });
+  it('крест уходит вправо, заголовок остаётся по центру', () => {
+    // Кадр креста не рисует вовсе — лист v4 закрывается ручкой или свайпом, —
+    // но выход из шторки продуктовый инвариант. Слева он спорил с заголовком,
+    // справа уравновешивает его. Выравнивание влево из кадра при этом не
+    // переносится: кадр выровнял текст влево именно потому, что креста в нём
+    // нет, а с крестом справа заголовок вплотную к краю листа.
+    const moved = CSS.indexOf('[data-heys-step-id="morning_activation_followup"] .mc-header-left');
+    expect(moved, 'правило переноса креста найдено').toBeGreaterThan(-1);
+    expect(CSS.slice(moved, CSS.indexOf('}', moved))).toContain('order: 3');
+    expect(CSS).not.toContain('[data-heys-step-id="morning_activation_followup"] .mc-header-center');
+  });
+
 });
