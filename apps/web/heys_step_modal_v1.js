@@ -1526,7 +1526,14 @@
                   })
                 )
               ),
-              !isDailyLayout && showProgress && totalSteps > 1 && !currentConfig?.hideProgressDots && React.createElement('div', { className: 'mc-progress-dots mc-progress-dots--in-header' },
+              !isDailyLayout && showProgress && totalSteps > 1 && !currentConfig?.hideProgressDots && React.createElement('div', {
+                // Вид полосы прогресса — общий для всех мастеров: точки 7×7,
+                // текущая пилюлей 18 акцентом палитры. Прежде `--pills` был
+                // только у дневного, а остальные держали синюю точку прежней
+                // системы. Ветки остаются разными: у них разные списки шагов и
+                // разная разметка доступности, общий у них только вид.
+                className: 'mc-progress-dots mc-progress-dots--in-header mc-progress-dots--pills'
+              },
                 visibleStepConfigs.map((config, i) =>
                   config.hidden ? null : React.createElement('button', {
                     key: i,

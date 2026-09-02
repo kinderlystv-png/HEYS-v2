@@ -616,11 +616,17 @@
    MORNING CHECK-IN MODAL
    ======================================================== */
 
+/* Подложка и лист шаговых модалок. До 2 сентября на v4 был переведён только
+   чек-ин (.mc-modal--daily), а остальные 28 точек входа StepModal.show из 34
+   стояли на доv4 оболочке: чёрные 60 % вместо токена и холодный белый градиент
+   вместо кремовой поверхности. Разошлось это не в одном экране, а во всех —
+   поэтому чинится в самой оболочке, а не заплатой на карточку продукта.
+   Инвариант подложки продуктовых модалок — CLAUDE.md, «Product UI invariants». */
 .mc-backdrop {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   display: flex;
@@ -630,10 +636,13 @@
   overflow: hidden;
 }
 
+[data-theme$="dark"] .mc-backdrop {
+  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
+}
+
+/* У чек-ина от прежнего правила осталась только своя врезка: тон подложки и
+   размытие теперь общие. */
 .mc-backdrop:has(.mc-modal--daily) {
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
-  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
-  -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   padding: calc(12px + var(--safe-area-top)) calc(12px + var(--safe-area-right)) calc(12px + var(--safe-area-bottom)) calc(12px + var(--safe-area-left));
 }
 
@@ -644,15 +653,15 @@
   max-height: calc(100dvh - 32px - var(--safe-area-top) - var(--safe-area-bottom));
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, var(--color-white) 0%, #f8fafc 100%);
+  background: var(--v4-sand-surface-soft, #fffaf1);
   border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 2px rgba(80, 50, 20, 0.09), 0 14px 40px rgba(80, 50, 20, 0.12);
 }
 
+/* Чек-ин отличается размером и скруглением, но не поверхностью: тон и тень
+   ушли в общее правило выше. */
 .mc-modal--daily {
-  background: var(--v4-sand-surface-soft, #fffaf1);
-  box-shadow: 0 1px 2px rgba(80, 50, 20, 0.09), 0 14px 40px rgba(80, 50, 20, 0.12);
   border-radius: 28px;
   max-width: min(390px, 100%);
   max-height: calc(100dvh - 24px - var(--safe-area-top) - var(--safe-area-bottom));

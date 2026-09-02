@@ -299,9 +299,6 @@ describe('чек-ин v4: геометрия по контракту канва�
               <button class="mc-progress-dot"></button>
             </div>
           </div>
-          <div class="mc-progress-dots mc-progress-dots--in-header" id="plain">
-            <button class="mc-progress-dot active"></button>
-          </div>
         </div>`;
 
       const dots = getComputedStyle(document.querySelector('.mc-progress-dots--pills'));
@@ -317,9 +314,15 @@ describe('чек-ин v4: геометрия по контракту канва�
       // Контракт увеличения текущей точки не знает: ширина 18 при той же высоте.
       expect(active.transform === 'none' || active.transform === '').toBe(true);
 
-      // Компактный вариант остальных мастеров не задет.
-      const plain = getComputedStyle(document.querySelector('#plain .mc-progress-dot'));
-      expect(plain.width).toBe('6px');
+      // Компактного варианта 6×6 больше нет: решением владельца 2 сентября вид
+      // полосы прогресса стал общим для всех шаговых модалок, и обе ветки
+      // разметки вешают `--pills`. Сторожим это в исходнике — иначе новая
+      // ветка без класса вернула бы синюю точку прежней системы молча.
+      const modalSrc = fs.readFileSync(path.resolve(__dirname, '../heys_step_modal_v1.js'), 'utf8');
+      const containers = modalSrc.match(/mc-progress-dots mc-progress-dots--in-header[^']*/g) || [];
+      expect(containers.length).toBeGreaterThanOrEqual(2);
+      for (const cls of containers) expect(cls).toContain('mc-progress-dots--pills');
+      expect(STEPS_CSS).not.toContain(':not(.mc-progress-dots--pills)');
     } finally {
       late.remove();
     }

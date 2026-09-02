@@ -2346,14 +2346,15 @@
     return num > tgt + margin;
   }
 
-  // Тренд здоровья красится по дельте за окно 14 дней: рост — шалфей, падение
-  // — красный, мёртвая зона ±2 пункта — чернила (канвас v4, строка 94).
-  const V4_HEALTH_TREND_DEAD_ZONE = 2;
-
-  function v4HealthTrendState(delta) {
-    if (!Number.isFinite(delta)) return 'neutral';
-    if (Math.abs(delta) <= V4_HEALTH_TREND_DEAD_ZONE) return 'neutral';
-    return delta > 0 ? 'good' : 'bad';
+  // Тренд здоровья: кадр «Главная · дефолтная раскладка» красит плитку шалфеем
+  // безусловно — `color: var(--gr)` стоит в разметке и у числа, и у линии, а
+  // нарисовано на нём −1, то есть значение внутри мёртвой зоны. Строка
+  // контракта «тренд здоровья» просит там чернила, и до 2 сентября код держал
+  // её: на зелёной подложке --gr-bg выходило чернильное число, сочетание, не
+  // нарисованное ни в одном кадре. Решением владельца 2 сентября код следует
+  // кадру. Расхождение со строкой ведётся в UI_V4_FINDINGS.md.
+  function v4HealthTrendState() {
+    return 'good';
   }
 
   // Инсулиновая волна красится по текущему состоянию, а не по итогу дня
@@ -3267,9 +3268,8 @@
       const compactHero = Number.isFinite(compactDelta)
         ? `${compactDelta > 0 ? '+' : (compactDelta < 0 ? '−' : '')}${formatRuNumber(Math.abs(Math.round(compactDelta)))}`
         : formatRuNumber(Math.round(score));
-      const compactTone = Number.isFinite(compactDelta)
-        ? v4ValueStateClass(v4HealthTrendState(compactDelta))
-        : '';
+      // Тон не зависит от значения — см. v4HealthTrendState.
+      const compactTone = v4ValueStateClass(v4HealthTrendState());
       return React.createElement('div', { className: 'widget-v4-stack widget-trend-compact' },
         v4Kicker(`Тренд здоровья · ${formatRuUnit(periodDays, 'дней')}`),
         React.createElement('div', { className: 'widget-trend-compact__row' },
@@ -3328,7 +3328,7 @@
       v4Kicker('Тренд здоровья'),
       React.createElement('div', { className: 'widget-v4-hero-num' },
         React.createElement('span', {
-          className: 'widget-v4-hero-num__val ' + v4ValueStateClass(v4HealthTrendState(delta))
+          className: 'widget-v4-hero-num__val ' + v4ValueStateClass(v4HealthTrendState())
         }, hero),
         React.createElement('span', { className: 'widget-v4-unit' }, `за ${formatRuUnit(periodDays, 'дней')}`)
       ),
