@@ -5397,74 +5397,35 @@
       finishFollowup('morning-activation-skipped');
     };
 
-    const actionBtnStyle = {
-      borderRadius: '12px',
-      border: '1px solid rgba(100,116,139,0.35)',
-      background: '#fff',
-      color: '#0f172a',
-      fontSize: '13px',
-      fontWeight: '600',
-      padding: '11px 12px',
-      minHeight: '44px',
-      cursor: 'pointer'
-    };
+    // Кадр «Рутина · резервный вопрос после еды». Всё, кроме самого слоя и
+    // его выезда, — содержимое листа: заметка на --gr-bg, календарь тем же
+    // блоком, что в «Активе», и три ответа ОДНИМ РЯДОМ пилюль. Прежде здесь
+    // стояли изумрудные литералы прежней системы и три кнопки стопкой на всю
+    // ширину — обе ветки сняты строкой «резервный вопрос · снято».
+    const answerPill = (label, kind, onClick) => React.createElement('button', {
+      type: 'button',
+      className: 'ma-followup-answer' + (kind === 'done' ? ' ma-followup-answer--done' : ''),
+      onClick
+    }, label);
 
-    return React.createElement('div', {
-      className: 'ma-followup-step',
-      style: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        padding: '8px 0'
-      }
-    },
-      React.createElement('div', {
-        style: {
-          borderRadius: '14px',
-          border: '1px solid rgba(16,185,129,0.2)',
-          background: 'rgba(16,185,129,0.08)',
-          padding: '12px'
-        }
-      },
-        React.createElement('div', {
-          style: { fontSize: '14px', fontWeight: '700', color: '#065f46', marginBottom: '4px' }
-        }, 'Утренняя рутина'),
-        React.createElement('div', {
-          style: { fontSize: '12px', color: '#334155', lineHeight: '1.45' }
-        }, `Утром ответа не было. После первого приёма пищи (${firstMealTimeLabel}) отметьте статус.`)
+    return React.createElement('div', { className: 'ma-followup-step' },
+      React.createElement('div', { className: 'ma-followup-note' },
+        React.createElement('div', { className: 'ma-followup-note-title' }, 'Утренняя рутина'),
+        React.createElement('div', { className: 'ma-followup-note-text' },
+          `Утром ответа не было. После первого приёма пищи (${firstMealTimeLabel}) отметьте статус.`)
       ),
       MorningActivationHabitCalendar
         ? React.createElement(MorningActivationHabitCalendar, {
           dateKey,
           readDayData: readMaDayForCalendar,
           headingTitle: 'Календарь привычки',
-          layoutClass: 'ma-habit-cal--modal'
+          layoutClass: 'ma-habit-cal--sheet'
         })
         : null,
-      React.createElement('div', {
-        className: 'mc-rest-routine-actions',
-        style: { display: 'flex', flexDirection: 'column', gap: '8px' }
-      },
-        React.createElement('button', {
-          type: 'button',
-          style: {
-            ...actionBtnStyle,
-            border: '1px solid rgba(16,185,129,0.35)',
-            background: 'rgba(16,185,129,0.12)',
-            color: '#047857'
-          },
-          onClick: () => saveAnswer('done')
-        }, 'Сделал'),
-        React.createElement('button', {
-          type: 'button',
-          style: actionBtnStyle,
-          onClick: () => saveAnswer('planned')
-        }, 'Сделаю'),
-        React.createElement('button', {
-          type: 'button',
-          style: actionBtnStyle,
-          onClick: () => saveAnswer('skipped')
-        }, 'Не сегодня')
+      React.createElement('div', { className: 'ma-followup-answers' },
+        answerPill('Сделал', 'done', () => saveAnswer('done')),
+        answerPill('Сделаю', 'plain', () => saveAnswer('planned')),
+        answerPill('Не сегодня', 'plain', () => saveAnswer('skipped'))
       )
     );
   }

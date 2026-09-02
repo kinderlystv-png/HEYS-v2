@@ -382,6 +382,14 @@
     );
 
     const isActivityV4 = (layoutClass || '').includes('ma-habit-cal--activity-v4');
+    // Шторка резервного вопроса вставляет тот же блок, что «Актив», — строка
+    // «календарь в резервном вопросе» прямо запрещает ей свой вариант. Своего
+    // у неё два добавления: шапка «Календарь привычки» вместо «Зарядка · N из
+    // M» и строка счёта под легендой. Прежняя раскладка с числами дней и
+    // шапкой дней недели снята вместе с ней (строка «резервный вопрос ·
+    // снято»); у вкладки Дня она пока остаётся — это её экран.
+    const isSheet = (layoutClass || '').includes('ma-habit-cal--sheet');
+    const isDotGrid = isActivityV4 || isSheet;
     // Знаменатель — дни, которые привычку уже вели, а не длина окна.
     const activeDays = calendarData.trackedCount;
     const v4Heading = 'Зарядка · ' + calendarData.doneCount + ' из ' + activeDays;
@@ -439,15 +447,16 @@
       + (isActivityV4 ? '' : 'compact-card widget-shadow-diary-glass widget-outline-diary-glass ')
       + (layoutClass || '').trim();
 
-    const displayGrid = isActivityV4
+    const displayGrid = isDotGrid
       ? calendarData.grid.filter((cell) => !cell.isEmpty)
       : calendarData.grid;
 
     return React.createElement('div', { className: shellClass.trim() },
       React.createElement('div', { className: 'ma-habit-cal-head' },
-        isActivityV4
+        isDotGrid
           ? React.createElement('div', { className: 'ma-habit-cal-head-title-group' },
-            React.createElement('span', { className: 'ma-habit-cal-heading' }, v4Heading),
+            React.createElement('span', { className: 'ma-habit-cal-heading' },
+              isSheet ? headingTitle : v4Heading),
             modeButtons
           )
           : React.createElement('div', { className: 'ma-habit-cal-head-title-group' },
@@ -458,14 +467,14 @@
       ),
       periodRow,
       React.createElement('div', { className: 'ma-habit-cal-matrix' },
-        !isActivityV4 && React.createElement('div', { className: 'ma-habit-cal-weekdays' },
+        !isDotGrid && React.createElement('div', { className: 'ma-habit-cal-weekdays' },
           WEEKDAY_SHORT.map((label, idx) => React.createElement('div', {
             key: 'wd-' + label,
             className: 'ma-habit-cal-wd' + (idx >= 5 ? ' ma-habit-cal-wd--weekend' : '')
           }, label))
         ),
         React.createElement('div', {
-          className: 'ma-habit-cal-grid' + (isActivityV4 ? ' ma-habit-cal-grid--dot' : '')
+          className: 'ma-habit-cal-grid' + (isDotGrid ? ' ma-habit-cal-grid--dot' : '')
         },
           displayGrid.map((cell) => {
           if (cell.isEmpty) {
@@ -495,14 +504,14 @@
             className: 'ma-habit-cal-cell ' + rowStatus + (cell.isToday ? ' is-today' : '') + (weekend ? ' is-weekend' : ''),
             title
           },
-          !isActivityV4 && React.createElement('div', { className: 'ma-habit-cal-cell-inner' },
+          !isDotGrid && React.createElement('div', { className: 'ma-habit-cal-cell-inner' },
             React.createElement('span', { className: 'ma-habit-cal-daynum' }, cell.dayOfMonth)
           )
           );
         })
         )
       ),
-      !isActivityV4 && React.createElement('div', { className: 'ma-habit-cal-footer' },
+      !isDotGrid && React.createElement('div', { className: 'ma-habit-cal-footer' },
         React.createElement('span', null, `Сделано: ${calendarData.doneCount}`),
         calendarData.replacementCount > 0 && React.createElement('span', null, `Тренировкой: ${calendarData.replacementCount}`),
         React.createElement('span', null, `Пропущено: ${calendarData.missedCount}`)
@@ -510,7 +519,7 @@
 
       // Легенда: без подписей серый читается как пропуск, а два зелёных не
       // различаются вовсе (контракт «легенда календаря»).
-      isActivityV4 && React.createElement('div', { className: 'ma-habit-cal-legend' },
+      isDotGrid && React.createElement('div', { className: 'ma-habit-cal-legend' },
         LEGEND_ITEMS.map((item) => React.createElement('span', {
           key: 'lg-' + item.status,
           className: 'ma-habit-cal-legend-item'
@@ -521,6 +530,12 @@
           }),
           item.label
         ))
+      ),
+      // Строка счёта — добавление шторки: в «Активе» его нет, там счёт стоит
+      // в самой шапке («Зарядка · 18 из 24»).
+      isSheet && React.createElement('div', { className: 'ma-habit-cal-tally' },
+        `Сделано ${calendarData.doneCount} · Тренировкой ${calendarData.replacementCount}`
+        + ` · Пропущено ${calendarData.missedCount}`
       )
     );
   }
