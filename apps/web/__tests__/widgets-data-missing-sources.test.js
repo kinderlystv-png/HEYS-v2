@@ -135,12 +135,13 @@ describe('widget_data: виджет «Инсулин» получает кано
 describe('crash risk: ранний прогноз (EWS) действительно считается', () => {
   let getCrashRiskData;
   let seenDays;
+  let store;
 
   beforeEach(() => {
     global.window = global;
     global.HEYS = {};
 
-    const store = new Map();
+    store = new Map();
     for (let i = 0; i < 20; i++) {
       store.set(isoDaysAgo(i), { weightMorning: 80 - i * 0.05, meals: [], steps: 5000 });
     }
@@ -191,6 +192,45 @@ describe('crash risk: ранний прогноз (EWS) действительн
   it('на 7-дневном периоде окно шире порога — пропуск дня не гасит прогноз', () => {
     getCrashRiskData({ days: 7 });
     expect(seenDays.length).toBeGreaterThan(7);
+  });
+
+  it('нехватка истории отличается от ошибки провайдера и сохраняет честный v4 placeholder', () => {
+    store.clear();
+    store.set(isoDaysAgo(0), { weightMorning: 80, meals: [], steps: 5000 });
+
+    const result = getCrashRiskData({ days: 7 });
+
+    expect(result.hasData).toBe(false);
+    expect(result.emptyReason).toBe('insufficient_history');
+    expect(result.dynamicsV4).toMatchObject({
+      hasDynamics: false,
+      placeholder: 'нужна неделя',
+    });
+  });
+});
+
+describe('home widgets: fail-closed empty states не маскируют ошибки данными', () => {
+  it('crash-risk различает нехватку истории, недоступный provider и ошибку', () => {
+    const dataSource = readSource('apps/web/widgets/widget_data.js');
+    const uiSource = readSource('apps/web/heys_widgets_ui_v1.js');
+
+    expect(dataSource).toContain("emptyReason: 'provider_unavailable'");
+    expect(dataSource).toContain("emptyReason: 'provider_error'");
+    expect(uiSource).toContain("data?.emptyReason === 'insufficient_history'");
+    expect(uiSource).toContain("v4EmptyTile('Динамика веса', 'данные недоступны')");
+  });
+
+  it('Health Trend рисует линию только из фактического sparkline', () => {
+    const uiSource = readSource('apps/web/heys_widgets_ui_v1.js');
+    const start = uiSource.indexOf('function HealthTrendVariantBody');
+    const end = uiSource.indexOf('function HealthTrendWidgetContent', start);
+    const chunk = uiSource.slice(start, end);
+
+    expect(uiSource).toContain('function normalizeHealthSparkPoints(value)');
+    expect(chunk).toContain('compactSparkPoints ? React.createElement');
+    expect(chunk).toContain('const trendPts = normalizeHealthSparkPoints(data?.sparkline?.points)');
+    expect(chunk).not.toContain('2,18 11,16 20,17 29,12 38,9 47,6 56,4');
+    expect(chunk).not.toContain("['4,32', '26,28', '48,30'");
   });
 });
 

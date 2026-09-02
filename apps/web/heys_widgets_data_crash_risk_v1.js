@@ -170,11 +170,14 @@
 
         try {
             const weightData = loadWeightData(days);
+            const dynamicsV4 = HEYS.Widgets.WeightDynamicsV4?.compute?.({ profile }) || null;
 
             if (weightData.length < 3) {
                 console.info('[HEYS.widgets.weightProgress] ⚠️ Insufficient data:', weightData.length);
                 return {
                     hasData: false,
+                    emptyReason: 'insufficient_history',
+                    dynamicsV4,
                     weeklyLossPercent: 0,
                     pctPerWeek: 0,
                     slopePerWeek: 0,
@@ -263,8 +266,6 @@
                     console.warn('[HEYS.widgets.weightProgress] ⚠️ EWS failed:', err);
                 }
             }
-
-            const dynamicsV4 = HEYS.Widgets.WeightDynamicsV4?.compute?.({ profile }) || null;
 
             const result = {
                 hasData: true,

@@ -3198,21 +3198,26 @@
   }
 
   // === Health Trend Widget Content (Тренд здоровья 0-100 из инсайтов) ===
+  function normalizeHealthSparkPoints(value) {
+    if (typeof value !== 'string') return '';
+    const points = value.trim();
+    if (!points) return '';
+    const pairs = points.split(/\s+/).map((pair) => pair.split(',').map(Number));
+    if (pairs.length < 2 || pairs.some((pair) => pair.length !== 2 || pair.some((n) => !Number.isFinite(n)))) {
+      return '';
+    }
+    return points;
+  }
+
   function HealthTrendVariantBody({ variantId, widget, data, meta = {} }) {
     const score = data?.score ?? 0;
     const hasData = data?.hasData ?? false;
     const periodDays = widget?.settings?.periodDays ?? data?.periodDays ?? 14;
-    const categories = Array.isArray(data?.categories) ? data.categories : [];
     const daysWithData = data?.daysWithData ?? 0;
-    const showCategories = widget.settings?.showCategories !== false;
 
     const d = getWidgetDims(widget);
     const isShort = d.isShort; // 2x1
     const healthTrendRevealed = useWidgetV4HealthTrendReveal();
-
-    const getColor = (s) => widgetHealthScoreColor(s);
-
-    const color = getColor(score);
 
     if (!hasData) {
       return v4EmptyTile(
@@ -3224,8 +3229,12 @@
     // === 2×1 «Компакт» — канвас: kicker «Тренд · N дней», дельта и мини-линия ===
     if (isShort || variantId === 'compact') {
       const compactDelta = Number(data?.delta);
-      const compactSpark = data?.sparkline || {};
-      const compactSparkLast = compactSpark.last || { x: 56, y: 4, r: 3 };
+      const compactSpark = data?.sparkline || null;
+      const compactSparkPoints = normalizeHealthSparkPoints(compactSpark?.points);
+      const compactSparkLast = Number.isFinite(Number(compactSpark?.last?.x))
+        && Number.isFinite(Number(compactSpark?.last?.y))
+        ? compactSpark.last
+        : null;
       const compactHero = Number.isFinite(compactDelta)
         ? `${compactDelta > 0 ? '+' : (compactDelta < 0 ? '−' : '')}${formatRuNumber(Math.abs(Math.round(compactDelta)))}`
         : formatRuNumber(Math.round(score));
@@ -3238,7 +3247,7 @@
           React.createElement('span', {
             className: 'widget-trend-compact__value ' + compactTone
           }, compactHero),
-          React.createElement('svg', {
+          compactSparkPoints ? React.createElement('svg', {
             className: 'widget-trend-compact__spark ' + compactTone,
             viewBox: '0 0 58 24',
             width: 58,
@@ -3247,7 +3256,7 @@
             'aria-hidden': 'true'
           },
             React.createElement('polyline', {
-              points: compactSpark.points || '2,18 11,16 20,17 29,12 38,9 47,6 56,4',
+              points: compactSparkPoints,
               stroke: 'currentColor',
               strokeWidth: compactSpark.strokeWidth || 2.5,
               strokeLinecap: 'round',
@@ -3256,27 +3265,20 @@
             // Точка на последнем дне: кадр ставит её у всех спарклайнов —
             // и у веса, и у динамики. Здесь линия обрывалась без неё, и
             // «сегодня» на ней не читалось.
-            React.createElement('circle', {
+            compactSparkLast ? React.createElement('circle', {
               cx: compactSparkLast.x,
               cy: compactSparkLast.y,
               r: compactSparkLast.r || 2.4,
               fill: 'currentColor'
-            })
-          )
+            }) : null
+          ) : null
         )
       );
     }
 
     // === 2×2 — канвас g1: kicker + число + «за N дней» + линия тренда
-    const trendPts = (showCategories && categories.length
-      ? categories.map((cat, i) => {
-        const x = 4 + (i / Math.max(1, categories.length - 1)) * 122;
-        const y = 36 - Math.max(0, Math.min(100, Number(cat.score) || 0)) / 100 * 28;
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      : ['4,32', '26,28', '48,30', '70,20', '92,16', '114,10', '126,8']
-    ).join(' ');
-    const lastPt = trendPts.split(' ').pop().split(',');
+    const trendPts = normalizeHealthSparkPoints(data?.sparkline?.points);
+    const lastPt = trendPts ? trendPts.split(' ').pop().split(',') : null;
     const delta = Number(data?.delta);
     const hero = Number.isFinite(delta)
       ? `${delta > 0 ? '+' : (delta < 0 ? '−' : '')}${formatRuNumber(Math.abs(Math.round(delta)))}`
@@ -3295,14 +3297,14 @@
         }, hero),
         React.createElement('span', { className: 'widget-v4-unit' }, `за ${formatRuUnit(periodDays, 'дней')}`)
       ),
-      React.createElement(WidgetV4DrawSparkSvg, {
+      trendPts ? React.createElement(WidgetV4DrawSparkSvg, {
         className: 'widget-v4-spark widget-v4-spark--ok',
         viewBox: '0 0 130 40',
         height: 40,
         points: trendPts,
         dotCx: Number(lastPt[0]),
         dotCy: Number(lastPt[1])
-      })
+      }) : null
     );
   }
 
@@ -3887,15 +3889,19 @@
       motionId: `${widget?.id || 'cal'}:eaten`,
       quantize: 10
     });
+    const animActivity = useWidgetMotionValue(activityKcal, {
+      motionId: `${widget?.id || 'cal'}:activity`,
+      quantize: 10
+    });
     const animPct = animTarget > 0 ? Math.round((animEaten / animTarget) * 100) : 0;
     const animBarPct = animTarget > 0 ? Math.min(100, Math.max(0, (animEaten / animTarget) * 100)) : 0;
     const animRemaining = Math.max(0, animTarget - animEaten);
 
+    if (data?.hasData !== true) {
+      return v4EmptyTile('Калории');
+    }
+
     if (variantId === 'activity') {
-      const animActivity = useWidgetMotionValue(activityKcal, {
-        motionId: `${widget?.id || 'cal'}:activity`,
-        quantize: 10
-      });
       const effectiveTarget = animTarget + animActivity;
       const remainingWithActivity = Math.max(0, effectiveTarget - animEaten);
       return React.createElement('div', {
@@ -6134,6 +6140,22 @@
     const canUseMacroRings = d.cols >= 2 && d.rows >= 2 && size !== '4x1';
     const ringsDensityClass = d.area >= 12 ? 'widget-macros--rings-lg' : d.area >= 8 ? 'widget-macros--rings-md' : 'widget-macros--rings-sm';
 
+    if (data?.hasData !== true) {
+      if (d.cols >= 3 && d.rows >= 2) {
+        return React.createElement('div', { className: 'widget-macros widget-macros--3x2 widget-v4-stack' },
+          React.createElement('div', { className: 'widget-v4-macros' },
+            ['Белки', 'Жиры', 'Углеводы'].map((label) =>
+              React.createElement('div', { key: label, className: 'widget-v4-macro widget-v4-macro--empty' },
+                React.createElement('div', { className: 'widget-v4-kicker widget-v4-macro__label' }, label),
+                React.createElement('div', { className: 'widget-v4-macro__empty widget-v4-val--neutral' }, '—')
+              )
+            )
+          )
+        );
+      }
+      return v4EmptyTile('БЖУ');
+    }
+
     const macroItems = [
       { label: 'Белки', shortLabel: 'Б', value: animProtein, target: animProteinTarget, pct: pctP, toneClass: 'protein' },
       { label: 'Жиры', shortLabel: 'Ж', value: animFat, target: animFatTarget, pct: pctF, toneClass: 'fat' },
@@ -7207,7 +7229,12 @@
     const message = data?.message || '';
 
     if (!hasData) {
-      return v4EmptyTile('Первые дни', data?.daysNeededLabel || 'нужна неделя');
+      if (data?.emptyReason === 'insufficient_history') {
+        return data?.dynamicsV4
+          ? React.createElement(CrashRiskDynamicsVariantTile, { widget, data })
+          : v4EmptyTile('Первые дни', 'нужна неделя');
+      }
+      return v4EmptyTile('Динамика веса', 'данные недоступны');
     }
 
     if (data?.dynamicsV4) {

@@ -1449,7 +1449,7 @@ async function openCase(browser, item, snapshot) {
 
         const original = widgetData.getDataForWidget.bind(widgetData);
         const homeCanvasData = {
-          calories: { eaten: 1289, target: 1931 },
+          calories: { hasData: true, eaten: 1289, target: 1931 },
           insulinWave: {
             hasData: true,
             status: 'active',
@@ -1477,6 +1477,7 @@ async function openCase(browser, item, snapshot) {
             },
           },
           macros: {
+            hasData: true,
             protein: 96,
             proteinTarget: 150,
             fat: 48,

@@ -25,6 +25,7 @@
   // Реалистичные данные для демонстрации возможностей виджетов
   const DEMO_WIDGET_DATA = {
     calories: {
+      hasData: true,
       eaten: 1650,
       target: 2100,
       remaining: 450,
@@ -80,6 +81,7 @@
       pct: 79
     },
     macros: {
+      hasData: true,
       protein: 95,
       fat: 52,
       carbs: 185,
@@ -518,6 +520,7 @@
       const optimum = this._getOptimum();
       const prof = this._getProfile();
       const target = optimum || 2000;
+      const hasData = this._dayHasItems(day);
       let activityKcal = 0;
       try {
         if (HEYS.TDEE?.calculate) {
@@ -530,6 +533,7 @@
       }
 
       return {
+        hasData,
         eaten: dayTot?.kcal || 0,
         target,
         remaining: Math.max(0, target - (dayTot?.kcal || 0)),
@@ -1124,15 +1128,17 @@
       // что DayTab и Weekly (с учётом рефида и savedDisplayOptimum). Это устраняет
       // главное расхождение виджета с другими вкладками.
       const core = (typeof HEYS !== 'undefined') ? HEYS.MacroRings : null;
+      const day = this._getDay() || {};
+      const hasData = this._dayHasItems(day);
       if (core && core.computeDayRingData) {
         try {
-          const day = this._getDay() || {};
           const profile = this._getProfile() || {};
           const products = HEYS.products?.getAll?.() || [];
           const pIndex = HEYS.dayUtils?.buildProductIndex ? HEYS.dayUtils.buildProductIndex(products) : null;
           const normPerc = this._getNorms();
           const r = core.computeDayRingData(day, profile, pIndex, { normPerc });
           return {
+            hasData,
             protein: r.protein.value,
             fat: r.fat.value,
             carbs: r.carbs.value,
@@ -1150,6 +1156,7 @@
       const normAbs = this._getNormAbs();
 
       return {
+        hasData,
         protein: dayTot?.prot || 0,
         fat: dayTot?.fat || 0,
         carbs: dayTot?.carbs || 0,
@@ -1832,6 +1839,7 @@
           console.warn('[widget_data.getCrashRiskData] crashRisk provider not loaded');
           return {
             hasData: false,
+            emptyReason: 'provider_unavailable',
             weeklyLossPercent: 0,
             isWarning: false,
             severity: 'none',
@@ -1846,6 +1854,19 @@
 
         // Запрашиваем данные у provider
         const result = provider.getData({ days });
+
+        if (!result) {
+          return {
+            hasData: false,
+            emptyReason: 'provider_error',
+            weeklyLossPercent: 0,
+            isWarning: false,
+            severity: 'none',
+            message: 'Ошибка загрузки данных',
+            ewsCount: 0,
+            ewsData: null
+          };
+        }
 
         // Добавляем verification logging
         if (result?.hasData) {
@@ -1863,6 +1884,7 @@
         console.error('[widget_data.getCrashRiskData] ❌ Error:', error);
         return {
           hasData: false,
+          emptyReason: 'provider_error',
           weeklyLossPercent: 0,
           isWarning: false,
           severity: 'none',

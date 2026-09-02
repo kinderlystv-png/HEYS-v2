@@ -355,12 +355,12 @@
     },
     "нет данных за день": {
       "v": "=",
-      "f": "heys_widgets_ui_v1.js:1670 v4EmptyTile — прочерк, подпись, без графики; у воды 0 показывается числом",
+      "f": "widgets/widget_data.js getCaloriesData/getMacrosData fail-closed ставят hasData только при записанном продукте; heys_widgets_ui_v1.js CaloriesVariantBody/MacrosVariantBody после обязательных hooks показывают подписи и прочерки без полос/колец; Fiber/Protein уже используют тот же контракт, вода сохраняет честный 0",
       "h": "58d77c69446b"
     },
     "первый день": {
       "v": "=",
-      "f": "Плитки стоят с прочерками (v4EmptyTile), обучающего экрана нет: heys_ui_onboarding_v1.js:24-27 все три тура выключены константами (ONBOARDING/WIDGETS/INSIGHTS_TOUR_ENABLED = false). Изменение строки: подсказка на плитках выведена в отдельную строку «обучение · правило продукта» — там она и судится (её в коде нет)",
+      "f": "Пустой runtime smoke подтверждает 13 плиток на местах: Calories/insulin/macros/steps/weight/protein/fiber показывают прочерки, графика питания снята, вода остаётся 0; отдельного обучающего экрана нет: heys_ui_onboarding_v1.js держит ONBOARDING/WIDGETS/INSIGHTS_TOUR_ENABLED=false",
       "h": "c85609100d4e"
     },
     "запись появляется сразу": {

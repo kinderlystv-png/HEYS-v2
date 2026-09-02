@@ -94,7 +94,7 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(ringChunk).toContain('const remaining = tgt - num');
         expect(ringChunk).toContain('widget-v4-macro__num--bad');
         expect(ringChunk).toContain("className: 'widget-v4-macro__num-sign'");
-        expect(ringChunk).toContain("}, '-'),");
+        expect(ringChunk).toContain("}, '−'),");
         expect(ringChunk).toContain('widget-v4-macro__fact');
         expect(ringChunk).toContain('widget-v4-macro__label');
         expect(ringChunk).toContain('macroDeviationBad');

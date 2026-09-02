@@ -11671,6 +11671,17 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-variant-numeric: tabular-nums;
 }
 
+.widget-v4-macro__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  font: 600 21px/1 Figtree, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  font-variant-numeric: tabular-nums;
+}
+
 .widget-v4-macro__num--bad {
   fill: var(--v4-bad-text, #a8382b);
   font-weight: 600;

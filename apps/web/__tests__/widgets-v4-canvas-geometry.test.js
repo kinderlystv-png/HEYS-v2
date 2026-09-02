@@ -225,11 +225,15 @@ describe('геометрия виджетов Главной против кад
     const ui = fs.readFileSync(path.resolve(__dirname, '../heys_widgets_ui_v1.js'), 'utf8');
 
     expect(ui).toContain("`Тренд здоровья · ${formatRuUnit(periodDays, 'дней')}`");
-    expect(ui).toContain("compactSpark.points || '2,18 11,16 20,17 29,12 38,9 47,6 56,4'");
+    expect(ui).toContain('compactSparkPoints ? React.createElement');
+    expect(ui).toContain('points: compactSparkPoints');
+    expect(ui).not.toContain("compactSpark.points || '2,18 11,16 20,17 29,12 38,9 47,6 56,4'");
     expect(ui).toContain('strokeWidth: compactSpark.strokeWidth || 2.5');
     expect(ui).toContain("className: 'widget-v4-macro__num-sign' }, '−'");
     expect(ui).toContain("day?.status === 'green' || day?.status === 'good' || day?.status === 'ok'");
-    expect(ui).toContain("return v4EmptyTile('Первые дни', data?.daysNeededLabel || 'нужна неделя')");
+    expect(ui).toContain("data?.emptyReason === 'insufficient_history'");
+    expect(ui).toContain("v4EmptyTile('Первые дни', 'нужна неделя')");
+    expect(ui).toContain("v4EmptyTile('Динамика веса', 'данные недоступны')");
   });
 
   it('осознанные отступления не разрослись', () => {
