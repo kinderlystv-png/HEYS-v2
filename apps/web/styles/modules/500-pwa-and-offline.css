@@ -3073,12 +3073,15 @@
   gap: 6px;
 }
 
+/* Линии под шапкой нет ни в одном кадре шагового листа: ни у карточки
+   продукта, ни у резервного вопроса, ни у чек-ина — последнему её сняли
+   отдельным правилом ещё раньше (.mc-modal--daily .mc-header--nav). Отбивка
+   осталась от доv4 оболочки и делила лист там, где кадр держит его цельным. */
 .mc-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px 8px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   gap: 8px;
 }
 

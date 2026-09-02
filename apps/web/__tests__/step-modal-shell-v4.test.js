@@ -84,4 +84,13 @@ describe('оболочка шаговых модалок', () => {
     // мастеров вне шапки, но в шапке его больше никто не получает.
     expect(rule(STEPS, '.mc-progress-dot.active')).toContain('var(--color-blue-500)');
   });
+  it('шапку не отбивает линия — её нет ни в одном кадре', () => {
+    // Отбивка осталась от доv4 оболочки: чек-ину её снимали отдельным
+    // правилом (.mc-modal--daily .mc-header--nav), остальные 28 мастеров
+    // держали. Ни карточка продукта, ни резервный вопрос её не рисуют.
+    const header = rule(SHELL, '.mc-header');
+    expect(header, 'правило .mc-header найдено').toBeTruthy();
+    expect(header).not.toContain('border-bottom');
+  });
+
 });

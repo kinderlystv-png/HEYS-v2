@@ -1803,6 +1803,21 @@
   order: 3;
 }
 
+/* Кегли шапки по кадру этого листа: имя экрана 16 px/700 --tx, подпись
+   11,5 px/500 чернил 56 %. Общее правило шапки даёт 15/700 и 12 — так его
+   задают семь других канвасов, и менять их ради одного листа нельзя. */
+[data-heys-step-id="morning_activation_followup"] .mc-header-title {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+[data-heys-step-id="morning_activation_followup"] .mc-header-hint {
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--v4-ink-data) /* v4-intentional */;
+}
+
 .ma-followup-step {
   display: flex;
   flex-direction: column;
