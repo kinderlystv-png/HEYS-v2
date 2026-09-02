@@ -1482,8 +1482,8 @@
                 ? headerCenterContent
                 : context.headerExtra
                 ? context.headerExtra
-                : (!isDailyLayout && (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-header-titles' },
-                  currentConfig.title && React.createElement(AutoFitText, {
+                : (!isDailyLayout && currentConfig.title && React.createElement('div', { className: 'mc-header-titles' },
+                  React.createElement(AutoFitText, {
                     className: 'mc-header-title',
                     // Только заголовок. Эмодзи перед ним сняты 2 сентября: их нет
                     // ни в одной шапке пакета дизайна, а канвас «Питание» держит
@@ -1494,12 +1494,6 @@
                     text: currentConfig.title,
                     maxFontSize: 16,
                     minFontSize: 11
-                  }),
-                  currentConfig.hint && React.createElement(AutoFitText, {
-                    className: 'mc-header-hint',
-                    text: currentConfig.hint,
-                    maxFontSize: 12,
-                    minFontSize: 9
                   })
                 )),
               !showDailyProgressDots && dailyHeaderCaption && React.createElement('div', {
@@ -1559,7 +1553,18 @@
                     'aria-label': `Шаг ${i + 1}`
                   })
                 )
-              )
+              ),
+              // Подпись шага идёт ПОСЛЕ точек: так её ставят кадры шапки —
+              // «Основные», под ними полоса прогресса, под ней «Название, КБЖУ
+              // и порции». Прежде подпись стояла в одном блоке с заголовком, и
+              // точки оказывались под ней.
+              !headerCenterContent && !context.headerExtra && !isDailyLayout
+                && currentConfig.hint && React.createElement(AutoFitText, {
+                  className: 'mc-header-hint',
+                  text: currentConfig.hint,
+                  maxFontSize: 12,
+                  minFontSize: 9
+                })
             ),
 
             // Правая часть: headerRight ИЛИ кнопка Готово/Далее

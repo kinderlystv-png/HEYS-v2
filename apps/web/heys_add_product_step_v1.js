@@ -10729,6 +10729,14 @@ NOVA: 1
         isProductEditor: true,
         editProduct: product,
         focusField,
+        // Строка «вид · правка продукта»: «справа счётчик базы». Те же
+        // моноцифры, что и у шагов создания, — в потоке правки их не было
+        // вовсе, и справа в шапке было пусто.
+        headerRight: () => {
+          const total = HEYS.products?.getAll?.()?.length;
+          if (!Number.isFinite(total)) return null;
+          return React.createElement('span', { className: 'aps-v4-header-count' }, String(total));
+        },
         onFinish: async ({ product: updatedProduct, portions }) => {
           const finalProduct = {
             ...product,

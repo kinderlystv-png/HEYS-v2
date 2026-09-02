@@ -38,13 +38,17 @@ describe('meal time step v4 structure', () => {
     expect(mealStepSource).not.toContain('Расчётный постпрандиальный период');
   });
 
-  it('does not fall back to clipboard icon when meal step clears it', () => {
+  it('шапка шага не рисует иконку — ни своей, ни подставленной', () => {
+    // Прежде проверка сторожила, что шаг, погасивший `icon: ''`, не получит
+    // умолчание 📋. С 2 сентября шапка не рисует иконку вовсе: эмодзи сняты во
+    // всём пакете дизайна, и подставлять стало нечего. Сам вид шапки сторожит
+    // step-modal-shell-v4; здесь достаточно, что склейки нет.
     const stepModal = fs.readFileSync(
       path.resolve(__dirname, '../heys_step_modal_v1.js'),
       'utf8',
     );
-    expect(stepModal).toContain("hasOwnProperty.call(config, 'icon')");
-    expect(stepModal).toContain('[currentConfig.icon, currentConfig.title].filter(Boolean)');
+    expect(stepModal).not.toContain('[currentConfig.icon, currentConfig.title]');
+    expect(stepModal).not.toContain("'📋'");
   });
 
   it('keeps snack slot by time instead of a single snack1 key', () => {
