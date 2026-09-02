@@ -4,8 +4,23 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { fileURLToPath } from 'url';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
+
+// Кадр называет время старта литералом «начата в 18:40», а экран печатает его
+// в поясе машины: на московской это 18:40, на раннере CI в UTC — 15:40, и тест
+// падал не на расхождении с кадром, а на часовом поясе. Пояс закреплён так же,
+// как в norm-correction-direction-date.
+const originalTz = process.env.TZ;
+
+beforeAll(() => {
+  process.env.TZ = 'Europe/Moscow';
+});
+
+afterAll(() => {
+  if (originalTz === undefined) delete process.env.TZ;
+  else process.env.TZ = originalTz;
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

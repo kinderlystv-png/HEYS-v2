@@ -38,7 +38,9 @@ async function renderCards() {
   return page;
 }
 
-describe('strength builder offscreen timer geometry at 375x812', () => {
+// Запуск Chromium и отрисовка макета не укладываются в пятисекундный лимит
+// vitest по умолчанию: набор меряет живую геометрию, а не читает исходник.
+describe('strength builder offscreen timer geometry at 375x812', { timeout: 45_000 }, () => {
   it('keeps the restart surface compact and its primary action 48px tall', async () => {
     const page = await renderCards();
     const geometry = await page.evaluate(() => {

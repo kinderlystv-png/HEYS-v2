@@ -69,7 +69,9 @@ async function measureAtMaxScroll(collapsed) {
   return geometry;
 }
 
-describe('strength builder rest dock geometry at 375x812', () => {
+// Запуск Chromium и отрисовка макета не укладываются в пятисекундный лимит
+// vitest по умолчанию: набор меряет живую геометрию, а не читает исходник.
+describe('strength builder rest dock geometry at 375x812', { timeout: 45_000 }, () => {
   it('activates the in-flow dock layout only while rest is present', () => {
     expect(BUILDER).toContain("rest.collapsed ? 'sb-root--rest-collapsed' : 'sb-root--rest-expanded'");
     expect(BUILDER.indexOf("className: 'sb-list'")).toBeLessThan(BUILDER.indexOf('RestRing'));

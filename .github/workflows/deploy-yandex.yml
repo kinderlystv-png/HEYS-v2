@@ -146,6 +146,12 @@ jobs:
           PGPASSWORD: ${{ secrets.PG_PASSWORD }}
           PGSSLROOTCERT: ${{ github.workspace }}/yandex-cloud-functions/certs/root.crt
         run: node scripts/db/migrate.mjs --status --require-current
+      # Два набора геометрии конструктора меряют живой макет в Chromium
+      # (strength-builder-rest-dock, strength-builder-offscreen-timer). Без
+      # браузера они не пропускаются, а роняют шард в beforeAll — и это верно:
+      # пропущенная проверка геометрии читалась бы как сошедшаяся.
+      - name: Install Chromium for geometry suites
+        run: pnpm exec playwright install chromium
       - name: Run apps/web unit suite shard ${{ matrix.shard }}/2
         run: cd apps/web && pnpm exec vitest run --retry=1 --shard=${{ matrix.shard }}/2
       - name: Run migration safety gate
