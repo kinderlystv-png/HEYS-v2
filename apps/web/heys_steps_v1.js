@@ -5419,7 +5419,7 @@
           dateKey,
           readDayData: readMaDayForCalendar,
           headingTitle: 'Календарь привычки',
-          layoutClass: 'ma-habit-cal--sheet'
+          layoutClass: 'ma-habit-cal--activity-v4 ma-habit-cal--sheet'
         })
         : null,
       React.createElement('div', { className: 'ma-followup-answers' },

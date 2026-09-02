@@ -149,6 +149,19 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     rootSelector: '[data-heys-step-modal][data-heys-step-id="weight"]',
     viewport: { width: 375, height: 812 },
   },
+  // Резервный вопрос после еды: шторка, которую человек видит только на дне без
+  // утреннего ответа — то есть ровно тот стык, который вручную не собрать.
+  {
+    id: 'checkin-reserve-question-sand',
+    zone: 'checkin-morning',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-checkin-reserve',
+    themeId: 'sand',
+    stubGamificationMerge: true,
+    rootSelector: '[data-heys-step-modal][data-heys-step-id="morning_activation_followup"]',
+    viewport: { width: 375, height: 812 },
+  },
   // Карточка продукта: зона видна при каждом добавлении еды, стенда не было.
   {
     id: 'product-edit-basic-sand',

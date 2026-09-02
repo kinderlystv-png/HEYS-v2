@@ -81,8 +81,16 @@ describe('резервный вопрос после еды', () => {
 
   it('календарь вставляется тем же блоком, что в «Активе», без своего варианта', () => {
     // Строка «календарь в резервном вопросе» запрещает шторке свой вид.
-    expect(STEPS).toContain("layoutClass: 'ma-habit-cal--sheet'");
+    // Класс раскладки «Актива» стоит рядом со своим: вид блока держат его
+    // правила, а `--sheet` отвечает только за два добавления шторки.
+    expect(STEPS).toContain("layoutClass: 'ma-habit-cal--activity-v4 ma-habit-cal--sheet'");
     expect(STEPS).not.toContain("layoutClass: 'ma-habit-cal--modal'");
+    // Вид больше не требует предка `.activity-v4`: блок вставляет и шторка.
+    const activityCss = fs.readFileSync(
+      path.join(ROOT, 'apps/web/styles/modules/731-ui-v4-activity.css'),
+      'utf8',
+    );
+    expect(activityCss).not.toContain('.activity-v4 .ma-habit-cal--activity-v4');
     expect(CALENDAR).toContain("const isSheet = (layoutClass || '').includes('ma-habit-cal--sheet')");
     expect(CALENDAR).toContain('const isDotGrid = isActivityV4 || isSheet;');
     // Числа дней и шапка дней недели — снятая ветка: у точечной сетки их нет.

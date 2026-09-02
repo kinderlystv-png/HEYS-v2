@@ -562,6 +562,40 @@ async function openCase(browser, item, snapshot) {
         window.__uiV4ReportsWeightRoot.render(element);
       }, item.themeId || null);
     }
+    // Резервный вопрос после еды открывается тем же вызовом, что и из «Актива»
+    // (heys_day_activity_v1.js): один шаг morning_activation_followup без
+    // прогресса и подсказок. Свой план тут не строим — он разошёлся бы с
+    // продуктовым.
+    if (item.kind === 'demo-checkin-reserve') {
+      await page.waitForFunction(
+        () =>
+          !!window.HEYS?.StepModal?.show
+          && !!window.HEYS?.StepModal?.registry?.morning_activation_followup
+          && !!window.HEYS?.currentClientId,
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const dateKey = window.HEYS.StepModal.utils?.getTodayKey?.()
+          || new Date().toISOString().slice(0, 10);
+        window.HEYS.StepModal.show({
+          steps: ['morning_activation_followup'],
+          title: 'Утренняя зарядка',
+          showProgress: false,
+          showStreak: false,
+          showGreeting: false,
+          showTip: false,
+          allowSwipe: false,
+          // Время первого приёма кадр называет в тексте заметки.
+          context: { dateKey, firstMealTime: '12:40' },
+        });
+      }, item.themeId || null);
+      await page.waitForSelector(
+        '[data-heys-step-modal][data-heys-step-id="morning_activation_followup"]',
+        { timeout: 45_000 },
+      );
+    }
     // Чек-ин: продукт уже умеет переоткрывать его целиком —
     // `HEYS.debug.replayCheckin()` собирает план и показывает StepModal ровно
     // так, как его видит человек утром. Свой план тут не строим: он разошёлся бы

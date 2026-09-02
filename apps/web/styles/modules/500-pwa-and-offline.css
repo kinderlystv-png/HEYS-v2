@@ -3105,9 +3105,15 @@
   justify-content: flex-end;
 }
 
+/* Центр шапки — колонка: заголовок, полоса прогресса, подпись шага стоят
+   друг под другом во всех кадрах. Прежде колонкой он становился только при
+   точках (`:has(.mc-progress-dots--in-header)`), а без них подпись вставала
+   РЯДОМ с заголовком и выдавливала его: у листа с `showProgress: false`
+   заголовка не было видно вовсе. */
 .mc-header-center {
   flex: 1;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;

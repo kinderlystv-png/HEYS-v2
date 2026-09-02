@@ -550,6 +550,11 @@ body:has(.activity-v4) .hdr::after {
   text-align: left;
 }
 
+/* Вид точечного календаря привычки. Селекторы держали ещё и предка
+   `.activity-v4` — вкладку, где блок родился. С 3 сентября его вставляет и
+   шторка резервного вопроса, и строка «календарь в резервном вопросе» прямо
+   запрещает ей свой вариант; ждать вид от чужого предка она не может.
+   Требование самого класса раскладки осталось — он и есть адрес блока. */
 .activity-v4 .ma-habit-cal-shell.ma-habit-cal--activity-v4 {
   padding: 0;
   border: none;
@@ -558,15 +563,15 @@ body:has(.activity-v4) .hdr::after {
   box-shadow: none;
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-footer {
+.ma-habit-cal--activity-v4 .ma-habit-cal-footer {
   display: none;
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-head {
+.ma-habit-cal--activity-v4 .ma-habit-cal-head {
   margin-bottom: 12px;
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-heading {
+.ma-habit-cal--activity-v4 .ma-habit-cal-heading {
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -579,7 +584,7 @@ body:has(.activity-v4) .hdr::after {
    (контракт «вид · календарь зарядки», строка 30). Прежняя редакция рисовала
    их текстом с подчёркиванием. Площадь нажатия добита прозрачной вставкой:
    пилюля кадра ниже 44 px, а палец меньше не становится. */
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn {
+.ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -594,28 +599,28 @@ body:has(.activity-v4) .hdr::after {
   color: var(--v4-act-text, #8a4a20);
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn::after {
+.ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn::after {
   content: '';
   position: absolute;
   inset: -14px -8px;
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active {
+.ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active {
   border-bottom: none;
   background: var(--v4-act, #c67139);
   color: #2b1608;
 }
 
-[data-palette="blue"] .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active,
-[data-palette="blue-dark"] .activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active {
+[data-palette="blue"] .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active,
+[data-palette="blue-dark"] .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active {
   color: var(--v4-ink, #eef3f8);
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-head-dot {
+.ma-habit-cal--activity-v4 .ma-habit-cal-head-dot {
   display: none;
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-head-title-group {
+.ma-habit-cal--activity-v4 .ma-habit-cal-head-title-group {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -623,14 +628,14 @@ body:has(.activity-v4) .hdr::after {
   gap: 12px;
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-group {
+.ma-habit-cal--activity-v4 .ma-habit-cal-mode-group {
   display: flex;
   gap: 6px;
   flex: none;
 }
 
 /* v4 activity history: dot grid (14 cols), no weekday header or day numbers */
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-weekdays {
+.ma-habit-cal--activity-v4 .ma-habit-cal-weekdays {
   display: none;
 }
 
@@ -638,13 +643,13 @@ body:has(.activity-v4) .hdr::after {
    неделе, и вертикаль сама становится осью недель. В две строки по 14 неделя
    не читалась вовсе. Точка фиксированные 9 px и центрируется в колонке —
    ячейки некликабельны, площадь нажатия им не нужна. */
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot {
+.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot {
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 9px;
   justify-items: center;
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell {
+.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell {
   width: 9px;
   height: 9px;
   min-height: 0;
@@ -657,15 +662,15 @@ body:has(.activity-v4) .hdr::after {
   color: transparent;
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-done {
+.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-done {
   background: var(--v4-ok-text, #5c6a45);
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-replacement {
+.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-replacement {
   background: var(--v4-ok-fill, #7a8a5e);
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-missed {
+.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-missed {
   background: var(--v4-bad-text, #b4442a);
   color: transparent;
 }
@@ -675,34 +680,34 @@ body:has(.activity-v4) .hdr::after {
    вели» 10 % сводились к одной ступени 30 % и давали в сетке две одинаковые
    серые точки. Форма разводит их, не занимая ступень набора. Обводка идёт
    тенью внутрь: у точки фиксированные 9 px, и border сдвинул бы геометрию. */
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-neutral {
+.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-neutral {
   background: transparent;
   box-shadow: inset 0 0 0 1.5px var(--v4-ink-30, rgba(0, 0, 0, 0.3));
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-done {
+.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-done {
   background: var(--v4-ok-text, #5c6a45);
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-replacement {
+.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-replacement {
   background: var(--v4-ok-fill, #7a8a5e);
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-missed {
+.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-missed {
   background: var(--v4-bad-text, #b4442a);
 }
 
 /* Легенда календаря — ряд из четырёх пар «точка + слово» с переносом
    (контракт «вид · календарь зарядки», строка 23). Без подписей серый читается
    как пропуск, а два зелёных не различаются вовсе. */
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend {
+.ma-habit-cal--activity-v4 .ma-habit-cal-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 14px;
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-item {
+.ma-habit-cal--activity-v4 .ma-habit-cal-legend-item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -710,7 +715,7 @@ body:has(.activity-v4) .hdr::after {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot {
+.ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot {
   width: 9px;
   height: 9px;
   border-radius: 999px;
@@ -718,27 +723,27 @@ body:has(.activity-v4) .hdr::after {
   background: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-done {
+.ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-done {
   background: var(--v4-ok-text, #5c6a45);
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-replacement {
+.ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-replacement {
   background: var(--v4-ok-fill, #7a8a5e);
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-missed {
+.ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-missed {
   background: var(--v4-bad-text, #b4442a);
 }
 
 /* «Не вели» — тон времени до первой отметки: это не результат, и красить его
    как плохой результат нельзя. */
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-cell.is-none,
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-none {
+.ma-habit-cal--activity-v4 .ma-habit-cal-cell.is-none,
+.ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-none {
   background: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
 }
 
 /* Строка листания месяцев: стрелки по краям названия (контракт строка 20). */
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-period--month {
+.ma-habit-cal--activity-v4 .ma-habit-cal-period--month {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -747,7 +752,7 @@ body:has(.activity-v4) .hdr::after {
   padding: 2px 0;
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-period-nav {
+.ma-habit-cal--activity-v4 .ma-habit-cal-period-nav {
   border: 0;
   background: none;
   cursor: pointer;
@@ -756,7 +761,7 @@ body:has(.activity-v4) .hdr::after {
   color: var(--v4-act-text, #8a4a20);
 }
 
-.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-period-label--month {
+.ma-habit-cal--activity-v4 .ma-habit-cal-period-label--month {
   font: 600 12.5px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
