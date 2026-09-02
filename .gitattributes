@@ -1,0 +1,40 @@
+# Переводы строк: контракт вместо догадок.
+#
+# До 02.09 файла не было, а core.autocrlf стоял в true. Git ждал в рабочем
+# дереве CRLF, инструменты и агенты писали LF — и полторы тысячи файлов
+# числились изменёнными при полностью совпадающем содержимом. Это трижды за
+# один вечер блокировало работу: pre-commit hook принимал их за чужой WIP,
+# гейт деплоя — за незакоммиченные правки, а обход задач — за чужую работу
+# в дереве.
+#
+# Договор простой: в репозитории и в рабочем дереве всегда LF. Исключение —
+# скрипты, которые исполняет сама Windows: их интерпретаторы историю с CRLF
+# помнят лучше, и ломать это незачем.
+
+* text=auto eol=lf
+
+# Скрипты Windows: CRLF по существу, а не по привычке.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# Двоичное — не трогать ни при каких настройках.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.pdf  binary
+*.zip  binary
+*.gz   binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.eot  binary
+*.mp3  binary
+*.mp4  binary
+*.xlsx binary
+*.docx binary
+*.keystore binary
+*.jks  binary
