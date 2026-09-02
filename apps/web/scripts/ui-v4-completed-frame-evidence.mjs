@@ -6,6 +6,8 @@ const TESTS = Object.freeze({
   finish: 'apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js',
   normGeometry: 'apps/web/__tests__/norm-correction-canvas-razbor.test.js',
   normCard: 'apps/web/__tests__/norm-correction-weekly-card.test.js',
+  normOwner: 'apps/web/__tests__/norm-correction-owner-flow.test.js',
+  normVisual: 'apps/web/scripts/ui-v4-visual-capture.mjs',
   registration: 'apps/web/__tests__/registration-v4-contract-sweep.test.js',
   builderCalm: 'apps/web/__tests__/strength-builder-calm-canvas-contract.test.js',
 });
@@ -126,6 +128,26 @@ export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
     zoneId: 'norm-correction', label: LOWERED_LABEL, oid: 'NC5',
     rows: Object.freeze({
       ...suffixRows(LOWERED_LABEL, {
+        '01': 'Live Canvas pair checks the exact header geometry and contents.',
+        '02': 'Live Canvas pair checks the exact screen title text and typography.',
+        '03': 'Live Canvas pair checks the exact range text and tabular-number typography.',
+        '05': 'Live Canvas pair checks the real summary card, 12px top offset and its geometry.',
+        '07': 'Live Canvas pair checks the exact explanatory copy for confirmed stable girths.',
+        '11': 'Live Canvas pair checks the facts card and its 12px top offset.',
+        '12': 'Live Canvas pair checks the exact facts row geometry and typography.',
+        '13': 'Live Canvas pair checks the exact primary fact text and color.',
+        '15': 'Live Canvas pair checks that the last facts row has no divider.',
+        '\u0442\u0435\u043a\u0441\u0442': 'Live Canvas pair checks all 13 text atoms in their exact order.',
+      }, 'computed-style', TESTS.normVisual),
+      [`${LOWERED_LABEL} \u00b7 07`]: exactMany([
+        `computed-style: ${TESTS.normVisual}`,
+        `semantic-test: ${TESTS.normOwner}`,
+      ], 'The exact copy is rendered only for a versioned curator decision with stable-girth evidence.'),
+      [`${LOWERED_LABEL} \u00b7 \u0442\u0435\u043a\u0441\u0442`]: exactMany([
+        `computed-style: ${TESTS.normVisual}`,
+        `semantic-test: ${TESTS.normOwner}`,
+      ], 'Live Canvas pair checks all 13 text atoms; owner-flow tests fail closed on missing evidence.'),
+      ...suffixRows(LOWERED_LABEL, {
         '06': 'CSS-контракт подтверждает заголовок 16px/700.',
         '08': 'Разбор Canvas подтверждает baseline и gap hero-блока.',
         '09': 'CSS-контракт подтверждает число 30px/800.',
@@ -138,6 +160,17 @@ export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
         '18': 'CSS/semantic-тест подтверждает вторичное действие в колонке.',
         '19': 'CSS-тест подтверждает отступ и типографику сноски.',
       }, 'semantic-test', TESTS.normCard),
+      ...suffixRows(LOWERED_LABEL, {
+        '06': 'Live Canvas pair checks the exact title and its typography.',
+        '08': 'Live Canvas pair checks baseline alignment, 10px gap and 14px top offset.',
+        '09': 'Live Canvas pair checks the exact hero value and 30px/800 typography.',
+        '10': 'Live Canvas pair checks the exact delta, 12px/700 typography and bad-value color.',
+        '14': 'Live Canvas pair checks the quiet value typography and color.',
+        '16': 'Live Canvas pair checks the final fact text and typography.',
+        '17': 'Live Canvas pair checks the primary action and 14px top offset.',
+        '18': 'Live Canvas pair checks the secondary action and 9px top offset.',
+        '19': 'Live Canvas pair checks the exact footnote text, offset and typography.',
+      }, 'computed-style', TESTS.normVisual),
     }),
   }),
 ]);

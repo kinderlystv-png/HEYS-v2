@@ -817,6 +817,16 @@
   box-shadow: 0 -8px 16px -8px var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
 }
 
+.cur-sheet__save-error {
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: var(--v4-bad-soft, #f7ded6);
+  color: var(--v4-bad-text, #9f3526);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
 /* Строка контракта «кнопки»: пилюля 48 радиусом 999. Прямоугольник радиусом 14
    и рамка вместо заливки делали вторичные кнопки похожими на поля ввода — и
    спорили с пилюлями во всей остальной системе. */

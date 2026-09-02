@@ -30,6 +30,22 @@ function days(n, kcal, extra) {
   ));
 }
 
+function appliedDownDecision(evidenceKind = 'stable_girths') {
+  return {
+    schemaVersion: 2,
+    what: 'applied',
+    by: 'curator',
+    periodEnd: '2026-08-30',
+    effectiveAt: '2026-08-31',
+    previousFactor: 1,
+    factor: 0.97,
+    normBefore: 2112,
+    normAfter: 2049,
+    deficitPct: -12,
+    evidence: { kind: evidenceKind }
+  };
+}
+
 describe('поправка на факт · сквозной пример контракта', () => {
   it('цепочка воспроизводится числом в число', () => {
     // Человек ел 2112 (норму до поправки) и за 21 день потерял 0,267 кг.
@@ -523,7 +539,9 @@ describe('поправка на факт · кадры недельной све
   });
 
   it('на Pro применённое снижение показывается как результат', () => {
-    const c = NC.buildWeeklySyncCard({ result: down(), tariff: 'pro', applied: true });
+    const c = NC.buildWeeklySyncCard({
+      result: down(), tariff: 'pro', appliedDecision: appliedDownDecision()
+    });
     expect(c.frame).toBe('lowered');
     expect(c.decidedBy).toBe('curator');
     expect(c.facts).toEqual([
@@ -542,7 +560,7 @@ describe('поправка на факт · кадры недельной све
     const c = NC.buildWeeklySyncCard({
       result: down(),
       tariff: 'pro',
-      applied: true,
+      appliedDecision: appliedDownDecision('missing'),
       recomposition: { noWaistEvidence: true }
     });
     expect(c.frame).toBe('lowered');
@@ -643,8 +661,8 @@ describe('поправка на факт · тон карточек сверки
   const allFrames = () => [
     NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'self', expenditure: 2400, deficitPct: -12, basalMetabolism: 1520 }),
     NC.buildWeeklySyncCard({ result: ready(1), tariff: 'self', expenditure: 2400, deficitPct: -12, basalMetabolism: 1520 }),
-    NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'pro', applied: true, expenditure: 2400, deficitPct: -12, basalMetabolism: 1520 }),
-    NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'pro', applied: false, expenditure: 2400, deficitPct: -12, basalMetabolism: 1520 }),
+    NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'pro', appliedDecision: appliedDownDecision(), expenditure: 2400, deficitPct: -12, basalMetabolism: 1520 }),
+    NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'pro', expenditure: 2400, deficitPct: -12, basalMetabolism: 1520 }),
     NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'self', refusalStreak: 3, weeksUnchanged: 6, expenditure: 2400, deficitPct: -12, basalMetabolism: 1520 }),
     NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'self', recomposition: { confirmed: true, source: 'по замеру от 12 августа' } }),
     NC.buildWeeklySyncCard({ result: ready(-1), tariff: 'self', recomposition: { checkFailed: true } })
@@ -682,7 +700,7 @@ describe('поправка на факт · тон карточек сверки
 
   it('причина снижения — система, а не человек', () => {
     const c = NC.buildWeeklySyncCard({
-      result: ready(-1), tariff: 'pro', applied: true,
+      result: ready(-1), tariff: 'pro', appliedDecision: appliedDownDecision(),
       expenditure: 2400, deficitPct: -12, basalMetabolism: 1520
     });
     expect(c.copy.body).toContain('мы поправили его, а не вас');
@@ -731,7 +749,10 @@ describe('поправка на факт · довод перестройки', 
   it('без замера талии довода нет, но и молчания нет', () => {
     stubPattern('recomposition', -0.1);
     const days = Array.from({ length: 21 }, (_, i) => dayWith('2026-08-' + String(i + 1).padStart(2, '0'), null));
-    expect(NC.detectRecomposition(days, {})).toEqual({ noWaistEvidence: true });
+    expect(NC.detectRecomposition(days, {})).toMatchObject({
+      noWaistEvidence: true,
+      evidence: { kind: 'missing' }
+    });
   });
 
   it('замер есть — довод назван источником и числом', () => {
@@ -827,12 +848,15 @@ describe('поправка на факт · довод перестройки', 
   it('другой состав — не перестройка, даже когда замер есть', () => {
     stubPattern('fat_loss', -0.1);
     const days = Array.from({ length: 21 }, (_, i) => dayWith('2026-08-' + String(i + 1).padStart(2, '0'), 78));
-    expect(NC.detectRecomposition(days, {})).toEqual({ noWaistEvidence: false });
+    expect(NC.detectRecomposition(days, {})).toMatchObject({ noWaistEvidence: false });
   });
 
   it('модуль инсайтов не загружен — сверка не падает', () => {
     delete window.HEYS.InsightsPI;
-    expect(NC.detectRecomposition([dayWith('2026-08-01', 78)], {})).toEqual({ noWaistEvidence: false });
+    expect(NC.detectRecomposition([dayWith('2026-08-01', 78)], {})).toMatchObject({
+      noWaistEvidence: false,
+      evidence: { kind: 'analysis_failed' }
+    });
   });
 
   it('замера нет, но веса растут — довод косвенный, и он назван косвенным', () => {
@@ -946,7 +970,10 @@ describe('поправка на факт · довод перестройки', 
     }));
     // Замера нет — прямого довода тоже; но веса растут, значит вторая ступень.
     window.HEYS.WorkingWeights = undefined;
-    expect(NC.detectRecomposition(days, {})).toEqual({ noWaistEvidence: true });
+    expect(NC.detectRecomposition(days, {})).toMatchObject({
+      noWaistEvidence: true,
+      evidence: { kind: 'missing' }
+    });
   });
 
   it('в тексте карточки стоит конкретика замера, а не утешение', () => {
@@ -964,11 +991,10 @@ describe('поправка на факт · «применено» относи�
   it('старая дата применения не выдаёт новое предложение за принятое решение', () => {
     // Клиент, которому куратор поправил норму месяц назад, иначе прочитал бы
     // свежее предложение как уже применённое.
-    expect(src).toContain('appliedThisWeek(prof.normCorrectionAppliedAt');
-    const fn = src.slice(src.indexOf('function appliedThisWeek'), src.indexOf('const MONTHS_RU'));
-    expect(fn).toContain('7 * 24 * 60 * 60 * 1000');
-    // Битая дата не должна превращаться в «применено».
-    expect(fn).toContain('Number.isNaN');
+    expect(NC.appliedThisWeek('2026-07-01', new Date('2026-08-31'))).toBe(false);
+    expect(NC.appliedThisWeek('битая дата', new Date('2026-08-31'))).toBe(false);
+    // Решение со следующего дня ещё не применено сегодня.
+    expect(NC.appliedThisWeek('2026-09-01', new Date('2026-08-31T12:00:00'))).toBe(false);
   });
 });
 

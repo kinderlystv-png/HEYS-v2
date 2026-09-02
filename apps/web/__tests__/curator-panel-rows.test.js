@@ -280,6 +280,25 @@ describe('панель куратора · сборка строк', () => {
     expect(rows[0].result.status).not.toBe('ready');
     expect(rows[0].silentDays).toBe(21);
   });
+
+  it('фиксирует доступные куратору замеры в evidence решения без выдуманных обхватов', () => {
+    const missing = NC.buildPanelRows({
+      windowRows: days21(),
+      contextRows: [contextRow()]
+    })[0];
+    expect(missing.evidence).toEqual({ kind: 'missing' });
+
+    const waistOnly = NC.buildPanelRows({
+      windowRows: days21((i) => ({ waist: [0, 7, 14].includes(i) ? 80 : null })),
+      contextRows: [contextRow()]
+    })[0];
+    expect(waistOnly.evidence).toEqual({
+      kind: 'waist_only',
+      waistPoints: 3,
+      spanDays: 14
+    });
+    expect(waistOnly.evidence.kind).not.toBe('stable_girths');
+  });
 });
 
 describe('панель куратора · коридор', () => {

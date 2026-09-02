@@ -17,6 +17,10 @@ const CSS = fs.readFileSync(
   path.resolve(__dirname, '../styles/heys-components.css'),
   'utf8'
 );
+const CURATOR_SRC = fs.readFileSync(
+  path.resolve(__dirname, '../heys_curator_panel_v1.js'),
+  'utf8'
+);
 
 describe('поправка на факт · карточка сверки в шторке недели', () => {
   it('сверка стоит выше фактов недели', () => {
@@ -88,6 +92,20 @@ describe('поправка на факт · карточка сверки в ш�
     expect(CSS).toContain('.weekly-wrap-correction__evidence-note');
   });
 
+  it('куратор пишет snapshot раньше профиля — число без доказательства не применяется', () => {
+    const helper = CURATOR_SRC.slice(
+      CURATOR_SRC.indexOf('async function persistDecision'),
+      CURATOR_SRC.indexOf('async function persistDecision') + 1800
+    );
+    const historyWrite = helper.indexOf('await api.mergeSaveKV(clientId, NC.HISTORY_KEY');
+    const profileWrite = helper.indexOf("await api.mergeSaveKV(clientId, 'heys_profile', profilePatch)");
+    expect(historyWrite).toBeGreaterThan(-1);
+    expect(profileWrite).toBeGreaterThan(historyWrite);
+    expect(helper).toContain("stage: 'history'");
+    expect(helper).toContain("stage: 'profile'");
+    expect(CURATOR_SRC).toContain('NC.buildDecisionSnapshot?.({');
+  });
+
   it('после истечения ожидания предлагаемое число остаётся видимым', () => {
     // Подтверждённая перестройка числа не меняет и скрывает героя. Когда
     // ожидание истекло, снижение ещё требует согласия, но само предложение
@@ -148,7 +166,9 @@ describe('поправка на факт · карточка сверки в ш�
   it('в кадре применённого снижения первое действие главное, кнопки идут колонкой', () => {
     expect(SRC).toContain("weekly-wrap-correction--' + card.frame");
     expect(SRC).toContain("card.frame === 'lowered' && action === 'ok'");
-    expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__actions \{[^}]*flex-direction: column;[^}]*gap: 9px;[^}]*margin-top: 14px/);
+    expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__actions \{[^}]*flex-direction: column;[^}]*gap: 0;[^}]*margin-top: 0/);
+    expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__btn--primary \{[^}]*margin-top: 14px/);
+    expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__btn \+ \.weekly-wrap-correction__btn \{[^}]*margin-top: 9px/);
     expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__title \{[^}]*line-height: 1\.32/);
     expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__body \{[^}]*font-weight: 500;[^}]*line-height: 1\.55/);
     expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__hero-value \{[^}]*line-height: 1;[^}]*letter-spacing: -0\.02em/);
@@ -166,7 +186,8 @@ describe('поправка на факт · карточка сверки в ш�
     expect(CSS).toMatch(/\.norm-correction-screen \{[^}]*font-family: Figtree, sans-serif/);
     expect(CSS).toMatch(/\.norm-correction-screen__header \{[^}]*padding: 16px 18px 0/);
     expect(CSS).toMatch(/\.norm-correction-screen__content \{[^}]*padding: 6px 18px 18px/);
-    expect(CSS).toMatch(/\.norm-correction-screen__content > \.weekly-wrap-correction--lowered \{[^}]*margin-top: 12px/);
+    expect(CSS).toMatch(/\.norm-correction-screen__content > \.weekly-wrap-correction--lowered \{[^}]*margin-top: 0/);
+    expect(CSS).toMatch(/\.weekly-wrap-correction--lowered \.weekly-wrap-correction__summary \{[^}]*margin-top: 12px/);
   });
 
   it('карточка одета по контракту: радиус 20, заголовок 16/700, число 30/800', () => {
@@ -181,7 +202,7 @@ describe('поправка на факт · карточка сверки в ш�
     // Рост тоном --gr контракта: --v4-good это вторая, светлая зелень набора, и
     // на подписи она читается слабее самого числа.
     expect(block).toMatch(/is-up \{[^}]*--v4-ok-text/);
-    expect(block).toMatch(/is-down \{[^}]*--v4-bad-text/);
+    expect(block).toMatch(/is-down \{[^}]*--v4-val-bad/);
   });
 
   it('информационные значения карточки используют единую ступень 56 %', () => {

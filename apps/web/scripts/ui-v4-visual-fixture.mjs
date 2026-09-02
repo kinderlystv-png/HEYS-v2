@@ -463,6 +463,8 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
       label: 'Сверка · норма снизилась',
       oid: 'NC5',
       palette: 'sand',
+      pixelAlign: true,
+      clipRoundedCorners: 28,
     },
   },
   ...UI_V4_CANVAS_ZONES.filter(

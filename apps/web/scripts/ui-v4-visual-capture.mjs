@@ -574,6 +574,9 @@ async function openCase(browser, item, snapshot) {
       // under review after that bundle is ready so a late lazy chunk cannot replace
       // it with stale generated code from another agent's QA session.
       await page.addScriptTag({
+        path: path.join(ROOT, 'apps', 'web', 'heys_norm_correction_v1.js'),
+      });
+      await page.addScriptTag({
         path: path.join(ROOT, 'apps', 'web', 'heys_weekly_reports_v2.js'),
       });
       await page.evaluate((themeId) => {
@@ -593,7 +596,24 @@ async function openCase(browser, item, snapshot) {
         const card = NC.buildWeeklySyncCard({
           result,
           tariff: 'pro',
-          applied: true,
+          appliedDecision: {
+            schemaVersion: 2,
+            what: 'applied',
+            by: 'curator',
+            periodEnd: '2026-08-30',
+            effectiveAt: '2026-08-31',
+            previousFactor: 1,
+            factor: 0.97,
+            normBefore: 2112,
+            normAfter: 2049,
+            deficitPct: -12,
+            evidence: {
+              kind: 'stable_girths',
+              spanDays: 21,
+              waistPoints: 5,
+              observedGirths: ['waist', 'biceps'],
+            },
+          },
           expenditure: 2400,
           deficitPct: -12,
           basalMetabolism: 1520,
@@ -1980,7 +2000,7 @@ async function openCase(browser, item, snapshot) {
         const root = document.querySelector('#ui-v4-norm-correction-lowered-host > .norm-correction-screen');
         const rootBox = root?.getBoundingClientRect();
         const inspect = (selector) => {
-          const node = root?.querySelector(selector);
+          const node = selector === ':scope' ? root : root?.querySelector(selector);
           if (!node || !rootBox) return null;
           const box = node.getBoundingClientRect();
           const style = getComputedStyle(node);
@@ -1990,6 +2010,9 @@ async function openCase(browser, item, snapshot) {
             width: Math.round(box.width * 100) / 100,
             height: Math.round(box.height * 100) / 100,
             font: style.font,
+            fontSize: style.fontSize,
+            fontWeight: style.fontWeight,
+            lineHeight: style.lineHeight,
             color: style.color,
             background: style.backgroundColor,
             padding: style.padding,
@@ -1999,19 +2022,51 @@ async function openCase(browser, item, snapshot) {
             fontStretch: style.fontStretch,
             fontVariationSettings: style.fontVariationSettings,
             fontFeatureSettings: style.fontFeatureSettings,
+            display: style.display,
+            alignItems: style.alignItems,
+            gap: style.gap,
+            borderBottom: style.borderBottom,
+            borderRadius: style.borderRadius,
+            fontVariantNumeric: style.fontVariantNumeric,
+            overflowY: style.overflowY,
+            webkitFontSmoothing: style.webkitFontSmoothing,
           };
         };
+        const text = (selector) => root?.querySelector(selector)?.textContent?.trim() || null;
+        const factAtoms = [...(root?.querySelectorAll('.weekly-wrap-correction__fact') || [])]
+          .flatMap((row) => [...row.children].map((child) => child.textContent.trim()));
         return {
+          screen: inspect(':scope'),
           header: inspect('.norm-correction-screen__header'),
+          headerTitle: inspect('.norm-correction-screen__title'),
+          range: inspect('.norm-correction-screen__range'),
           content: inspect('.norm-correction-screen__content'),
-          card: inspect('.weekly-wrap-correction--lowered'),
+          card: inspect('.weekly-wrap-correction__summary'),
           title: inspect('.weekly-wrap-correction__title'),
           body: inspect('.weekly-wrap-correction__body'),
           hero: inspect('.weekly-wrap-correction__hero'),
+          heroValue: inspect('.weekly-wrap-correction__hero-value'),
+          heroCaption: inspect('.weekly-wrap-correction__hero-caption'),
           facts: inspect('.weekly-wrap-correction__facts'),
+          firstFact: inspect('.weekly-wrap-correction__fact'),
+          lastFact: inspect('.weekly-wrap-correction__fact:last-child'),
           primary: inspect('.weekly-wrap-correction__btn--primary'),
           secondary: inspect('.weekly-wrap-correction__btn:not(.weekly-wrap-correction__btn--primary)'),
           footnote: inspect('.weekly-wrap-correction__footnote'),
+          summaryChildCount: root?.querySelector('.weekly-wrap-correction__summary')?.childElementCount || 0,
+          factCount: root?.querySelectorAll('.weekly-wrap-correction__fact').length || 0,
+          textAtoms: [
+            text('.norm-correction-screen__title'),
+            text('.norm-correction-screen__range'),
+            text('.weekly-wrap-correction__title'),
+            text('.weekly-wrap-correction__body'),
+            text('.weekly-wrap-correction__hero-value'),
+            text('.weekly-wrap-correction__hero-caption'),
+            ...factAtoms,
+            ...[...(root?.querySelectorAll('.weekly-wrap-correction__btn') || [])]
+              .map((button) => button.textContent.trim()),
+            text('.weekly-wrap-correction__footnote'),
+          ],
           bodyLines: (() => {
             const text = root?.querySelector('.weekly-wrap-correction__body')?.firstChild;
             if (!text) return null;
@@ -2034,6 +2089,59 @@ async function openCase(browser, item, snapshot) {
           })(),
         };
       });
+      const near = (actual, expected, tolerance = 0.02) =>
+        Number.isFinite(actual) && Math.abs(actual - expected) <= tolerance;
+      const expectedTextAtoms = [
+        'Неделя закрыта',
+        '24–30 авг',
+        'Норму подстроили под факт',
+        'Три недели вес и обхваты держатся на месте. Значит, наш расчёт расхода для вас завышен — мы поправили его, а не вас.',
+        '2 049',
+        '−63 ккал',
+        'Дефицит остался тем же',
+        'как договаривались',
+        'Дальше шагов',
+        'не больше 3 % в неделю',
+        'Понятно',
+        'Написать куратору',
+        'Решение куратора остаётся в силе — отменить его здесь нельзя, можно спросить, почему так. Право отменить поправку есть только там, где куратора нет.',
+      ];
+      if (
+        JSON.stringify(visualChecks.textAtoms) !== JSON.stringify(expectedTextAtoms)
+        || visualChecks.summaryChildCount !== 3
+        || visualChecks.factCount !== 2
+        || !near(visualChecks.card?.x, 18)
+        || !near(visualChecks.card?.y, 49)
+        || !near(visualChecks.card?.width, 339)
+        || !near(visualChecks.card?.height, 160.89)
+        || visualChecks.card?.padding !== '16px'
+        || visualChecks.card?.marginTop !== '12px'
+        || visualChecks.card?.background !== 'rgb(247, 239, 226)'
+        || visualChecks.card?.borderRadius !== '20px'
+        || visualChecks.title?.font !== '700 16px / 21.12px Figtree, sans-serif'
+        || visualChecks.body?.font !== '500 12px / 18.6px Figtree, sans-serif'
+        || visualChecks.body?.color !== 'rgba(0, 0, 0, 0.6)'
+        || visualChecks.body?.marginTop !== '8px'
+        || visualChecks.hero?.display !== 'flex'
+        || visualChecks.hero?.alignItems !== 'baseline'
+        || visualChecks.hero?.gap !== '10px'
+        || visualChecks.hero?.marginTop !== '14px'
+        || visualChecks.heroValue?.fontSize !== '30px'
+        || visualChecks.heroValue?.fontWeight !== '800'
+        || visualChecks.heroValue?.lineHeight !== '30px'
+        || visualChecks.heroValue?.fontVariantNumeric !== 'tabular-nums'
+        || visualChecks.heroCaption?.font !== '700 12px / 12px Figtree, sans-serif'
+        || visualChecks.facts?.marginTop !== '12px'
+        || visualChecks.lastFact?.borderBottom !== '0px none rgb(32, 30, 29)'
+        || visualChecks.primary?.marginTop !== '14px'
+        || visualChecks.secondary?.marginTop !== '9px'
+        || visualChecks.footnote?.font !== '500 11px / 17.05px Figtree, sans-serif'
+        || visualChecks.footnote?.color !== 'rgba(0, 0, 0, 0.56)'
+        || visualChecks.footnote?.marginTop !== '12px'
+        || visualChecks.screen?.webkitFontSmoothing !== 'antialiased'
+      ) {
+        throw new Error(`Norm correction lowered fixture не соответствует fail-closed контракту: ${JSON.stringify(visualChecks)}`);
+      }
     }
     if (item.kind === 'demo-food-copy-empty') {
       await page.waitForTimeout(250);
@@ -2592,6 +2700,9 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
                       width: Math.round(box.width * 100) / 100,
                       height: Math.round(box.height * 100) / 100,
                       font: style.font,
+                      fontSize: style.fontSize,
+                      fontWeight: style.fontWeight,
+                      lineHeight: style.lineHeight,
                       color: style.color,
                       background: style.backgroundColor,
                       padding: style.padding,
@@ -2601,20 +2712,51 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
                       fontStretch: style.fontStretch,
                       fontVariationSettings: style.fontVariationSettings,
                       fontFeatureSettings: style.fontFeatureSettings,
+                      display: style.display,
+                      alignItems: style.alignItems,
+                      gap: style.gap,
+                      borderBottom: style.borderBottom,
+                      borderRadius: style.borderRadius,
+                      fontVariantNumeric: style.fontVariantNumeric,
+                      overflowY: style.overflowY,
+                      webkitFontSmoothing: style.webkitFontSmoothing,
                     };
                   };
+                  const text = (selector) => node.querySelector(selector)?.textContent?.trim() || null;
+                  const factAtoms = [...node.querySelectorAll('.cd .row')]
+                    .flatMap((row) => [...row.children].map((child) => child.textContent.trim()));
                   return {
                     root: inspect(':scope'),
                     header: inspect('.top'),
+                    headerTitle: inspect('.top .ttl'),
+                    range: inspect('.top .k'),
                     content: inspect('.sc'),
                     card: inspect('.grp'),
                     title: inspect('.h1'),
                     body: inspect('.p'),
                     hero: inspect('.grp > div:nth-child(3)'),
+                    heroValue: inspect('.big'),
+                    heroCaption: inspect('.big + span'),
                     facts: inspect('.cd'),
+                    firstFact: inspect('.cd .row'),
+                    lastFact: inspect('.cd .row:last-child'),
                     primary: inspect('.btn'),
                     secondary: inspect('.btn2c'),
                     footnote: inspect('.sm'),
+                    summaryChildCount: node.querySelector('.grp')?.childElementCount || 0,
+                    factCount: node.querySelectorAll('.cd .row').length,
+                    textAtoms: [
+                      text('.top .ttl'),
+                      text('.top .k'),
+                      text('.grp .h1'),
+                      text('.grp .p'),
+                      text('.grp .big'),
+                      text('.grp .big + span'),
+                      ...factAtoms,
+                      text('.btn'),
+                      text('.btn2c'),
+                      text('.sm'),
+                    ],
                     bodyLines: (() => {
                       const text = node.querySelector('.p')?.firstChild;
                       if (!text) return null;
@@ -2748,6 +2890,59 @@ async function comparePng(actualPath, expectedPath, { diffPath, clipRoundedCorne
   };
 }
 
+function compareNormCorrectionComputedPair(runtime, canvas) {
+  const paths = [
+    'textAtoms', 'summaryChildCount', 'factCount',
+    'header.x', 'header.y', 'header.width', 'header.height', 'header.padding',
+    'headerTitle.fontSize', 'headerTitle.fontWeight', 'headerTitle.lineHeight',
+    'range.fontSize', 'range.fontWeight', 'range.lineHeight', 'range.color',
+    'range.fontVariantNumeric', 'content.padding',
+    'card.x', 'card.y', 'card.width', 'card.height', 'card.background',
+    'card.padding', 'card.marginTop', 'card.borderRadius',
+    'title.x', 'title.y', 'title.width', 'title.height', 'title.font',
+    'title.color', 'title.padding', 'title.marginTop', 'title.textWrap',
+    'body.x', 'body.y', 'body.width', 'body.height', 'body.font',
+    'body.color', 'body.padding', 'body.marginTop', 'body.textWrap',
+    'hero.x', 'hero.y', 'hero.width', 'hero.height', 'hero.display',
+    'hero.alignItems', 'hero.gap', 'hero.padding', 'hero.marginTop',
+    'heroValue.fontSize', 'heroValue.fontWeight', 'heroValue.lineHeight',
+    'heroCaption.fontSize', 'heroCaption.fontWeight', 'heroCaption.lineHeight',
+    'heroCaption.color',
+    'facts.x', 'facts.y', 'facts.width', 'facts.height', 'facts.background',
+    'facts.padding', 'facts.marginTop', 'facts.borderRadius',
+    'firstFact.fontSize', 'firstFact.fontWeight', 'firstFact.lineHeight',
+    'firstFact.padding', 'firstFact.alignItems', 'firstFact.gap',
+    'lastFact.borderBottom',
+    'primary.x', 'primary.y', 'primary.width', 'primary.height', 'primary.font',
+    'primary.color', 'primary.background', 'primary.marginTop', 'primary.borderRadius',
+    'secondary.x', 'secondary.y', 'secondary.width', 'secondary.height', 'secondary.font',
+    'secondary.color', 'secondary.background', 'secondary.marginTop', 'secondary.borderRadius',
+    'footnote.x', 'footnote.y', 'footnote.width', 'footnote.height', 'footnote.font',
+    'footnote.color', 'footnote.marginTop', 'footnote.textWrap',
+  ];
+  const read = (value, pathName) => pathName.split('.').reduce(
+    (current, key) => current == null ? undefined : current[key],
+    value,
+  );
+  const normalize = (pathName, value) => {
+    if (pathName === 'textAtoms' && Array.isArray(value)) {
+      return value.map((item) => item.replaceAll('\u00a0', ' '));
+    }
+    if (pathName === 'lastFact.borderBottom' && /^0px none /.test(value || '')) {
+      return '0px none';
+    }
+    return value;
+  };
+  const mismatches = paths.flatMap((pathName) => {
+    const actual = normalize(pathName, read(runtime, pathName));
+    const expected = normalize(pathName, read(canvas, pathName));
+    return JSON.stringify(actual) === JSON.stringify(expected)
+      ? []
+      : [{ path: pathName, runtime: actual, canvas: expected }];
+  });
+  return { ok: mismatches.length === 0, checked: paths.length, mismatches };
+}
+
 async function main() {
   const manifest = validateManifest();
   if (manifest.problems.length) {
@@ -2822,6 +3017,16 @@ async function main() {
           if (!result.evidenceReady) {
             result.comparison.inconclusiveReason =
               'Шрифт Figtree не подтверждён или во время capture были console/page errors.';
+          }
+          if (item.id === 'norm-correction-lowered-sand') {
+            result.computedPair = compareNormCorrectionComputedPair(
+              result.visualChecks,
+              result.canvas.visualChecks,
+            );
+            if (!result.computedPair.ok) {
+              result.status = 'failed';
+              result.error = `Computed pair NC5 разошлась: ${JSON.stringify(result.computedPair.mismatches)}`;
+            }
           }
         }
       }

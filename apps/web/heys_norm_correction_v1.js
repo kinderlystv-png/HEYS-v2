@@ -491,13 +491,16 @@
    * сохраняет то, что человек выбрал, и не решает сам.
    *
    * Массивы при синхронизации сливаются атомарно: свежая сторона выигрывает
-   * целиком. Для решения раз в неделю одним актором это приемлемо, а потеря
-   * косметическая — испортится график истории, но не норма: действующее
-   * значение живёт скалярами в профиле и сливается отдельно.
+   * целиком. Для legacy/self-решения раз в неделю одним актором это приемлемо.
+   * У применённого решения куратора v2 строка уже не косметическая: она хранит
+   * snapshot, а профиль применяется только после её успешной записи.
    */
-  function recordDecision({ lsGet, lsSet, weekLabel, factor, what, now, by }) {
+  function recordDecision({
+    lsGet, lsSet, weekLabel, factor, what, now, by,
+    periodEnd, effectiveAt, previousFactor, normBefore, normAfter, deficitPct, evidence
+  }) {
     const weeks = readHistory(lsGet).filter((w) => w && w.weekLabel !== weekLabel);
-    weeks.unshift({
+    const entry = {
       weekLabel,
       factor: Number(factor),
       what,
@@ -505,7 +508,21 @@
       // тогда называет только действие, и это честнее выдуманного хозяина.
       by: by || null,
       at: now || null
-    });
+    };
+    if (periodEnd && effectiveAt && Number.isFinite(Number(previousFactor))
+        && Number.isFinite(Number(normBefore)) && Number.isFinite(Number(normAfter))) {
+      Object.assign(entry, {
+        schemaVersion: 2,
+        periodEnd,
+        effectiveAt,
+        previousFactor: Number(previousFactor),
+        normBefore: Number(normBefore),
+        normAfter: Number(normAfter),
+        deficitPct: Number(deficitPct) || 0,
+        evidence: evidence && evidence.kind ? evidence : { kind: 'unknown' }
+      });
+    }
+    weeks.unshift(entry);
     if (lsSet) {
       // Пишем поверх блоба, а не вместо него: рядом с решениями живёт метка
       // первой просьбы о замере, и заменить объект целиком значит стереть
@@ -576,7 +593,7 @@
   }
 
   function buildWeeklySyncCard({
-    result, tariff, applied, refusalStreak, weeksUnchanged, matchedStreak, recomposition,
+    result, tariff, appliedDecision, refusalStreak, weeksUnchanged, matchedStreak, recomposition,
     justRaised, expenditure, deficitPct, basalMetabolism,
     // Решение этой недели и предыдущей: первое отвечает человеку на его же
     // нажатие, второе не даёт прошлому предложению исчезнуть молча.
@@ -586,24 +603,40 @@
     const isSelf = tariff === 'self';
     const streak = Number(refusalStreak) || 0;
     const exp = Number(expenditure) || res.formulaPerDay || 0;
+    const acceptedDecrease = !isSelf && appliedDecision
+      && appliedDecision.schemaVersion === 2
+      && appliedDecision.what === 'applied'
+      && appliedDecision.by === 'curator'
+      && Number.isFinite(Number(appliedDecision.previousFactor))
+      && Number.isFinite(Number(appliedDecision.factor))
+      && Number.isFinite(Number(appliedDecision.normBefore))
+      && Number.isFinite(Number(appliedDecision.normAfter))
+      && Number(appliedDecision.factor) < Number(appliedDecision.previousFactor)
+      && Number(appliedDecision.normAfter) < Number(appliedDecision.normBefore);
 
     // Рост уже применён, и расчёт с ним сошёлся — но сказать об этом человеку
     // нужно всё равно. Тогда «было» берётся из истории решений, иначе разница
     // вышла бы нулевой и карточка сообщила бы о росте на ноль килокалорий.
     const raiseApplied = !!(justRaised && Number.isFinite(justRaised.previousFactor));
-    const beforeFactor = raiseApplied ? justRaised.previousFactor : res.currentFactor;
+    const beforeFactor = acceptedDecrease
+      ? Number(appliedDecision.previousFactor)
+      : (raiseApplied ? justRaised.previousFactor : res.currentFactor);
     const afterFactor = raiseApplied
       ? res.currentFactor
-      : (res.status === 'ready' ? res.nextFactor : res.currentFactor);
+      : (acceptedDecrease
+        ? Number(appliedDecision.factor)
+        : (res.status === 'ready' ? res.nextFactor : res.currentFactor));
 
     // Оба числа считаем здесь одним способом: рисующему нечего округлять
     // самому, и клиент с куратором видят одно и то же.
     const before = applyFactor({ expenditure: exp, factor: beforeFactor, deficitPct, basalMetabolism });
     const after = applyFactor({ expenditure: exp, factor: afterFactor, deficitPct, basalMetabolism });
     const norms = {
-      current: before.norm,
-      next: after.norm,
-      deltaKcal: after.norm - before.norm,
+      current: acceptedDecrease ? Number(appliedDecision.normBefore) : before.norm,
+      next: acceptedDecrease ? Number(appliedDecision.normAfter) : after.norm,
+      deltaKcal: acceptedDecrease
+        ? Number(appliedDecision.normAfter) - Number(appliedDecision.normBefore)
+        : after.norm - before.norm,
       hitFloor: after.hitFloor
     };
 
@@ -837,7 +870,7 @@
     // читает предложение и ждёт — отменить решение куратора он не может, двух
     // хозяев у одного числа быть не должно.
     if (!isSelf) {
-      return applied
+      return acceptedDecrease
         ? Object.assign(card, {
             frame: 'lowered',
             decidedBy: 'curator',
@@ -861,9 +894,11 @@
             copy: {
               title: 'Норму подстроили под факт',
               // Причина — система, никогда человек.
-              body: evidenceNote
-                ? 'Три недели вес держится на месте, но замеров обхватов не было. Проверить перестройку по ним нельзя. Расчёт расхода подстроили по доступным данным, а не вас.'
-                : 'Три недели вес и обхваты держатся на месте. Значит, наш расчёт расхода для вас завышен — мы поправили его, а не вас.',
+              body: appliedDecision.evidence?.kind === 'stable_girths'
+                ? 'Три недели вес и обхваты держатся на месте. Значит, наш расчёт расхода для вас завышен — мы поправили его, а не вас.'
+                : (appliedDecision.evidence?.kind === 'missing'
+                  ? 'Три недели вес держится на месте, но замеров обхватов не было. Проверить перестройку по ним нельзя. Расчёт расхода подстроили по доступным данным, а не вас.'
+                  : 'Три недели вес держится на месте, но стабильность обхватов не подтверждена. Расчёт расхода подстроили по доступным данным, а не вас.'),
               heroCaption: '\u2212' + formatKcal(Math.abs(norms.deltaKcal)) + '\u00a0ккал',
               // В fallback причина уже названа в первом слое; повторять её
               // отдельной строкой после фактов не нужно.
@@ -1004,7 +1039,66 @@
     const at = new Date(appliedAt);
     if (Number.isNaN(at.getTime())) return false;
     const base = now instanceof Date ? now : new Date();
-    return (base - at) <= 7 * 24 * 60 * 60 * 1000;
+    const age = base - at;
+    return age >= 0 && age <= 7 * 24 * 60 * 60 * 1000;
+  }
+
+  function localIsoDate(value) {
+    const d = value instanceof Date ? new Date(value) : new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    const pad = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  // Решение понедельничной сверки относится к закрывшейся неделе, поэтому
+  // канонический ключ — предыдущее воскресенье, а не локализованная подпись.
+  function previousPeriodEnd(now) {
+    const d = now instanceof Date ? new Date(now) : new Date();
+    const daysBack = d.getDay() || 7;
+    d.setDate(d.getDate() - daysBack);
+    return localIsoDate(d);
+  }
+
+  function buildDecisionSnapshot({ result, card, periodEnd, effectiveAt, evidence }) {
+    const res = result || {};
+    const recommendation = card && card.recommendation;
+    if (!periodEnd || !effectiveAt || !recommendation
+        || !Number.isFinite(Number(res.currentFactor))
+        || !Number.isFinite(Number(res.nextFactor))
+        || !Number.isFinite(Number(recommendation.currentNorm))
+        || !Number.isFinite(Number(recommendation.norm))
+        || Number(res.nextFactor) >= Number(res.currentFactor)
+        || Number(recommendation.norm) >= Number(recommendation.currentNorm)) return null;
+    return {
+      schemaVersion: 2,
+      periodEnd,
+      effectiveAt,
+      previousFactor: Number(res.currentFactor),
+      factor: Number(res.nextFactor),
+      normBefore: Number(recommendation.currentNorm),
+      normAfter: Number(recommendation.norm),
+      deficitPct: Number(recommendation.deficitPct) || 0,
+      evidence: evidence && evidence.kind ? evidence : { kind: 'unknown' }
+    };
+  }
+
+  function findAppliedDecision({ weeks, periodEnd, appliedAt, currentFactor, now }) {
+    if (!periodEnd || !appliedThisWeek(appliedAt, now)) return null;
+    const effectiveAt = localIsoDate(appliedAt);
+    const factor = Number(currentFactor);
+    if (!effectiveAt || !Number.isFinite(factor)) return null;
+    return (weeks || []).find((row) => row
+      && row.schemaVersion === 2
+      && row.what === 'applied'
+      && row.by === 'curator'
+      && row.periodEnd === periodEnd
+      && localIsoDate(row.effectiveAt) === effectiveAt
+      && Math.abs(Number(row.factor) - factor) < 1e-9
+      && Number.isFinite(Number(row.previousFactor))
+      && Number.isFinite(Number(row.normBefore))
+      && Number.isFinite(Number(row.normAfter))
+      && Number(row.factor) < Number(row.previousFactor)
+      && Number(row.normAfter) < Number(row.normBefore)) || null;
   }
 
   /**
@@ -1133,6 +1227,11 @@
     const analyze = HEYS.InsightsPI?.patternModules?.analyzeHypertrophy;
     if (!rawDays || !rawDays.length) return null;
 
+    const girthKeys = ['waist', 'biceps', 'thigh'];
+    const girthPoints = Object.fromEntries(girthKeys.map((key) => [key, rawDays
+      .map((day) => ({ date: day && day.date, value: Number(day?.measurements?.[key]) }))
+      .filter((point) => point.date && Number.isFinite(point.value) && point.value > 0)]));
+
     // Дата последнего замера талии в окне — она же источник довода на карточке.
     let evidence = null;
     for (let i = rawDays.length - 1; i >= 0; i--) {
@@ -1175,19 +1274,63 @@
       }
       // Ни замера, ни роста весов — третья ступень: поправка идёт по весу, и
       // говорит об этом вслух.
-      return { noWaistEvidence: true };
+      return { noWaistEvidence: true, evidence: { kind: 'missing' } };
     }
 
-    if (!analyze) return { noWaistEvidence: false };
+    if (!analyze) return {
+      noWaistEvidence: false,
+      evidence: { kind: 'analysis_failed' }
+    };
 
     let pattern;
     try {
       pattern = analyze(rawDays, profile);
     } catch (e) {
-      return { noWaistEvidence: false };
+      return {
+        noWaistEvidence: false,
+        evidence: { kind: 'analysis_failed' }
+      };
     }
-    if (!pattern || !pattern.available || pattern.compositionQuality !== 'recomposition') {
-      return { noWaistEvidence: false };
+    if (!pattern || !pattern.available) {
+      return {
+        noWaistEvidence: false,
+        evidence: { kind: 'insufficient' }
+      };
+    }
+    if (pattern.compositionQuality !== 'recomposition') {
+      const trendByKey = {
+        waist: Number(pattern.waistTrend),
+        biceps: Number(pattern.bicepsTrend),
+        thigh: Number(pattern.thighTrend)
+      };
+      const observedGirths = girthKeys.filter((key) => {
+        const points = girthPoints[key];
+        if (points.length < 3 || !Number.isFinite(trendByKey[key])) return false;
+        const spanDays = Math.round((new Date(points[points.length - 1].date)
+          - new Date(points[0].date)) / (24 * 60 * 60 * 1000));
+        return spanDays >= 14 && Math.abs(trendByKey[key]) <= 0.1;
+      });
+      const weightStable = Number.isFinite(Number(pattern.weightTrend))
+        && Math.abs(Number(pattern.weightTrend)) <= 0.05;
+      if (pattern.compositionQuality === 'maintenance' && weightStable
+          && observedGirths.length >= 2) {
+        return {
+          noWaistEvidence: false,
+          evidence: {
+            kind: 'stable_girths',
+            spanDays: rawDays.length,
+            waistPoints: girthPoints.waist.length,
+            observedGirths
+          }
+        };
+      }
+      return {
+        noWaistEvidence: false,
+        evidence: {
+          kind: observedGirths.length ? 'stable_partial' : 'insufficient',
+          observedGirths
+        }
+      };
     }
 
     // Конкретика важнее общей фразы: «талия ушла на 2 см» — это довод, а
@@ -1195,6 +1338,7 @@
     const d = new Date(evidence);
     return {
       confirmed: true,
+      evidence: { kind: 'recomposition' },
       dropCm: Math.round(Math.abs(pattern.waistTrend || 0) * rawDays.length * 10) / 10,
       weeks: Math.max(1, Math.round(rawDays.length / 7)),
       source: 'по замеру от ' + d.getDate() + '\u00a0' + MONTHS_RU[d.getMonth()],
@@ -1212,7 +1356,9 @@
    * Окно кончается вчерашним днём: сегодняшний ещё пишется, и его неполнота
    * тянула бы средний съеденный вниз каждую неделю одинаково.
    */
-  function gather({ lsGet, lsSet, profile, pIndex, now, tariff, weekLabel, readOnly }) {
+  function gather({
+    lsGet, lsSet, profile, pIndex, now, tariff, weekLabel, periodEnd, readOnly
+  }) {
     if (!lsGet) return null;
     // Чтение без последствий: разбор нормы у клиента открывается тапом по
     // числу, и собирать сверку оттуда обычным способом значило бы применять
@@ -1357,6 +1503,13 @@
     // то, чем кончилось прошлое предложение.
     const thisWeekDecision = (weeks[0] && weeks[0].weekLabel === weekKey) ? weeks[0] : null;
     const prevWeekDecision = weeks.find((w) => w && w.weekLabel !== weekKey) || null;
+    const appliedDecision = findAppliedDecision({
+      weeks,
+      periodEnd,
+      appliedAt: prof.normCorrectionAppliedAt,
+      currentFactor: prof.normCorrectionFactor,
+      now: base
+    });
 
     const card = buildWeeklySyncCard({
       result,
@@ -1366,10 +1519,9 @@
       matchedStreak,
       recomposition: recomposition,
       tariff: activeTariff,
-      // «Применено» — про эту неделю, а не про то, что поправку когда-то
-      // трогали. Иначе клиент, которому куратор поправил норму месяц назад,
-      // читал бы новое предложение как уже принятое решение.
-      applied: appliedThisWeek(prof.normCorrectionAppliedAt, base),
+      // Применённое решение привязано к ISO-концу периода и снимку чисел,
+      // поэтому новый расчёт не выдаётся за то, что куратор уже применил.
+      appliedDecision,
       refusalStreak,
       weeksUnchanged,
       expenditure: formulaPerDay,
@@ -1439,6 +1591,22 @@
       trainings: zones && zones.some((m) => m > 0) ? [{ z: zones }] : [],
       isIncomplete: !!row.is_incomplete
     };
+  }
+
+  // Кураторское RPC пока отдаёт только талию. Этого хватает, чтобы в момент
+  // решения зафиксировать наличие/отсутствие замеров, но не хватает для
+  // stable_girths (там контракт требует минимум два разных обхвата).
+  function decisionEvidenceFromWindowRows(rows) {
+    const points = (rows || [])
+      .map((row) => ({ date: row?.day_date, value: Number(row?.waist) }))
+      .filter((point) => point.date && Number.isFinite(point.value) && point.value > 0);
+    if (!points.length) return { kind: 'missing' };
+    const first = new Date(points[0].date);
+    const last = new Date(points[points.length - 1].date);
+    const spanDays = Number.isNaN(first.getTime()) || Number.isNaN(last.getTime())
+      ? 0
+      : Math.max(0, Math.round((last - first) / (24 * 60 * 60 * 1000)));
+    return { kind: 'waist_only', waistPoints: points.length, spanDays };
   }
 
   /**
@@ -1627,6 +1795,7 @@
         // «Ждёт решения» — расчёт готов, а последнего решения по нему нет.
         awaitsDecision: state === 'awaits',
         mismatchPct,
+        evidence: decisionEvidenceFromWindowRows(entry.days),
         card: buildCuratorCard({
           result,
           expenditure: expDays ? expSum / expDays : 0,
@@ -1667,11 +1836,16 @@
     daysSinceMonday,
     buildPanelRows,
     dayFromWindowRow,
+    decisionEvidenceFromWindowRows,
     profileFromContextRow,
     buildWeeklySyncCard,
     gather,
     detectRecomposition,
     detectAppliedRaise,
+    appliedThisWeek,
+    previousPeriodEnd,
+    buildDecisionSnapshot,
+    findAppliedDecision,
     FREEZE_LIMIT_DAYS,
     readMeasurementAsk,
     recordMeasurementAsk,

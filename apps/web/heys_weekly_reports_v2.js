@@ -563,11 +563,32 @@
                 + (card.celebratory ? ' weekly-wrap-correction--good' : '')
                 + (card.readOnly ? ' weekly-wrap-correction--reading' : '')
         },
-            h('div', {
-                className: 'weekly-wrap-correction__title'
-                    + (card.titleAs === 'key' ? ' is-key' : '')
-            }, copy.title),
-            card.evidence
+            card.frame === 'lowered'
+                ? h('div', { className: 'weekly-wrap-correction__summary' },
+                    h('div', {
+                        className: 'weekly-wrap-correction__title'
+                            + (card.titleAs === 'key' ? ' is-key' : '')
+                    }, copy.title),
+                    h('div', { className: 'weekly-wrap-correction__body' }, copy.body),
+                    showsNumber
+                        ? h('div', { className: 'weekly-wrap-correction__hero' },
+                            h('span', { className: 'weekly-wrap-correction__hero-value' },
+                                HEYS.NormCorrection.formatKcal(heroValue)
+                            ),
+                            copy.heroCaption
+                                ? h('span', {
+                                    className: 'weekly-wrap-correction__hero-caption'
+                                        + (card.norms.deltaKcal > 0 ? ' is-up' : (card.norms.deltaKcal < 0 ? ' is-down' : ''))
+                                }, copy.heroCaption)
+                                : null
+                        )
+                        : null
+                )
+                : h('div', {
+                    className: 'weekly-wrap-correction__title'
+                        + (card.titleAs === 'key' ? ' is-key' : '')
+                }, copy.title),
+            card.frame !== 'lowered' && card.evidence
                 ? h('span', {
                     // Косвенный довод слабее подтверждённого замером, и пилюля
                     // у него приглушена: слабый довод не должен выглядеть как
@@ -576,7 +597,9 @@
                         + (card.frame === 'recomposition_indirect' ? ' is-weak' : '')
                 }, card.evidence)
                 : null,
-            h('div', { className: 'weekly-wrap-correction__body' }, copy.body),
+            card.frame !== 'lowered'
+                ? h('div', { className: 'weekly-wrap-correction__body' }, copy.body)
+                : null,
             // Предложение не исчезает молча: чем кончилось прошлое — видно
             // здесь, пока нет канала «что решил куратор» из кабинета в шторку.
             card.previousNote
@@ -587,7 +610,7 @@
             // данных, и выбирать его рисующему нельзя. Ось значений не
             // рисуется: числа стоят подписями у последних точек.
             card.chart ? h(NormCorrectionChart, { chart: card.chart }) : null,
-            showsNumber
+            card.frame !== 'lowered' && showsNumber
                 ? h('div', { className: 'weekly-wrap-correction__hero' },
                     h('span', { className: 'weekly-wrap-correction__hero-value' },
                         HEYS.NormCorrection.formatKcal(heroValue)
@@ -1015,7 +1038,10 @@
                     lsGet: getLsGet(),
                     lsSet: getLsSet(),
                     pIndex: HEYS.products?.buildIndex?.(),
-                    weekLabel: report?.rangeLabel || ''
+                    weekLabel: report?.rangeLabel || '',
+                    periodEnd: Array.isArray(report?.dates) && report.dates.length
+                        ? report.dates[report.dates.length - 1]
+                        : null
                 });
             } catch (e) {
                 console.warn('[HEYS.weeklyReports] сверка нормы не собралась', e);

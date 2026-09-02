@@ -1279,6 +1279,7 @@ body.tour-active .ios-pwa-banner {
   border-radius: 28px;
   background: var(--v4-bg, #fffaf1);
   font-family: Figtree, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 .norm-correction-screen__header {
@@ -1309,7 +1310,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .norm-correction-screen__content > .weekly-wrap-correction--lowered {
-  margin-top: 12px;
+  margin-top: 0;
 }
 
 /* Карточка сверки нормы — контракт «вид · карточки сверки» канваса
@@ -1399,7 +1400,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-correction__hero-caption.is-down {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-val-bad, #a8382b);
 }
 
 /* Пока куратор не решил, есть нужно на действующее число — предложение идёт
@@ -1661,27 +1662,34 @@ body.tour-active .ios-pwa-banner {
   background: transparent;
 }
 
-.weekly-wrap-correction--lowered .weekly-wrap-correction__title {
-  padding: 16px 16px 0;
-  border-radius: 20px 20px 0 0;
+.weekly-wrap-correction--lowered .weekly-wrap-correction__summary {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 20px;
   background: var(--v4-c1, #f7efe2);
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__title {
+  padding: 0;
+  background: transparent;
   line-height: 1.32;
+  text-wrap: pretty;
 }
 
 .weekly-wrap-correction--lowered .weekly-wrap-correction__body {
-  margin-top: 0;
-  padding: 8px 16px 0;
-  background: var(--v4-c1, #f7efe2);
+  margin-top: 8px;
+  padding: 0;
+  background: transparent;
   font-weight: 500;
   line-height: 1.55;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.6));
+  color: rgba(0, 0, 0, 0.6);
+  text-wrap: pretty;
 }
 
 .weekly-wrap-correction--lowered .weekly-wrap-correction__hero {
-  margin-top: 0;
-  padding: 14px 16px 16px;
-  border-radius: 0 0 20px 20px;
-  background: var(--v4-c1, #f7efe2);
+  margin-top: 14px;
+  padding: 0;
+  background: transparent;
 }
 
 .weekly-wrap-correction--lowered .weekly-wrap-correction__hero-value {
@@ -1715,8 +1723,8 @@ body.tour-active .ios-pwa-banner {
 
 .weekly-wrap-correction--lowered .weekly-wrap-correction__actions {
   flex-direction: column;
-  gap: 9px;
-  margin-top: 14px;
+  gap: 0;
+  margin-top: 0;
 }
 
 .weekly-wrap-correction--lowered .weekly-wrap-correction__btn {
@@ -1725,11 +1733,24 @@ body.tour-active .ios-pwa-banner {
   line-height: 1;
 }
 
+.weekly-wrap-correction--lowered .weekly-wrap-correction__btn--primary {
+  margin-top: 14px;
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__btn + .weekly-wrap-correction__btn {
+  margin-top: 9px;
+}
+
+.weekly-wrap-correction--lowered .weekly-wrap-correction__btn:not(.weekly-wrap-correction__btn--primary) {
+  color: rgba(0, 0, 0, 0.58);
+}
+
 .weekly-wrap-correction--lowered .weekly-wrap-correction__footnote {
   margin-top: 12px;
   font-weight: 500;
   line-height: 1.55;
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  text-wrap: pretty;
 }
 
 .weekly-wrap-step__empty {

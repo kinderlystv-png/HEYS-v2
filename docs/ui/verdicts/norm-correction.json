@@ -796,22 +796,22 @@
       "h": "3a6d76cdbba8"
     },
     "Сверка · норма снизилась · 01": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Live Canvas pair проверяет точную геометрию и содержимое шапки.",
       "h": "175bdcc2e73a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 02": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Live Canvas pair проверяет точный текст и типографику имени экрана.",
       "h": "c52f98769887",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 03": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Live Canvas pair проверяет точный диапазон и табличные цифры.",
       "h": "8fb45e91d910",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 04": {
       "v": "?",
@@ -820,94 +820,97 @@
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
     "Сверка · норма снизилась · 05": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Live Canvas pair проверяет реальную summary-карточку, отступ 12px и её геометрию.",
       "h": "81d6d8e40a85",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 06": {
       "v": "=",
-      "f": "CSS-контракт подтверждает заголовок 16px/700.",
+      "f": "Live Canvas pair проверяет точный заголовок и его типографику 16px/700.",
       "h": "4aaa4eacee5d",
-      "evidence": ["computed-style: apps/web/__tests__/norm-correction-canvas-razbor.test.js"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 07": {
       "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "f": "Текст и ветка реализованы для evidence.kind=stable_girths, но текущее кураторское RPC отдаёт только талию и не может доказать стабильность минимум двух обхватов в момент решения. До расширения server contract реальный owner-flow сохраняет missing/waist_only и не достигает этого Canvas-state.",
       "h": "755acd2651a3",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
+      "evidence": [
+        "unsupported: get_curator_clients_window returns waist but not biceps/thigh",
+        "semantic-test: apps/web/__tests__/curator-panel-rows.test.js"
+      ]
     },
     "Сверка · норма снизилась · 08": {
       "v": "=",
-      "f": "Разбор Canvas подтверждает baseline и gap hero-блока.",
+      "f": "Live Canvas pair проверяет baseline, зазор 10px и отступ сверху 14px.",
       "h": "4aeb3bc27912",
-      "evidence": ["computed-style: apps/web/__tests__/norm-correction-canvas-razbor.test.js"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 09": {
       "v": "=",
-      "f": "CSS-контракт подтверждает число 30px/800.",
+      "f": "Live Canvas pair проверяет точное главное число и типографику 30px/800.",
       "h": "54de2db2a05b",
-      "evidence": ["computed-style: apps/web/__tests__/norm-correction-canvas-razbor.test.js"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 10": {
       "v": "=",
-      "f": "Разбор Canvas подтверждает типографику подписи снижения.",
+      "f": "Live Canvas pair проверяет точную подпись, типографику 12px/700 и цвет отрицательного значения.",
       "h": "fd162881325c",
-      "evidence": ["computed-style: apps/web/__tests__/norm-correction-canvas-razbor.test.js"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 11": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Live Canvas pair проверяет карточку фактов и её отступ сверху 12px.",
       "h": "f06d6e12de2e",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 12": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Live Canvas pair проверяет геометрию и типографику строки списка.",
       "h": "af81bb6e54c6",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 13": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Live Canvas pair проверяет точный текст и цвет основного факта.",
       "h": "e275ea395284",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 14": {
       "v": "=",
-      "f": "Разбор Canvas подтверждает типографику и тон тихого значения.",
+      "f": "Live Canvas pair проверяет типографику и тон тихого значения.",
       "h": "2998c998497d",
-      "evidence": ["computed-style: apps/web/__tests__/norm-correction-canvas-razbor.test.js"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 15": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Live Canvas pair проверяет отсутствие разделителя у последней строки.",
       "h": "6b286135ed76",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 16": {
       "v": "=",
-      "f": "Разбор Canvas подтверждает типографику строки факта.",
+      "f": "Live Canvas pair проверяет точный текст и типографику строки факта.",
       "h": "e8d92cb6e617",
-      "evidence": ["computed-style: apps/web/__tests__/norm-correction-canvas-razbor.test.js"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 17": {
       "v": "=",
-      "f": "CSS/semantic-тест подтверждает главное действие и колонку действий.",
+      "f": "Live Canvas pair проверяет главное действие и отступ сверху 14px.",
       "h": "1ab7cbe80528",
-      "evidence": ["semantic-test: apps/web/__tests__/norm-correction-weekly-card.test.js"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 18": {
       "v": "=",
-      "f": "CSS/semantic-тест подтверждает вторичное действие в колонке.",
+      "f": "Live Canvas pair проверяет вторичное действие и отступ сверху 9px.",
       "h": "773e15836138",
-      "evidence": ["semantic-test: apps/web/__tests__/norm-correction-weekly-card.test.js"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 19": {
       "v": "=",
-      "f": "CSS-тест подтверждает отступ и типографику сноски.",
+      "f": "Live Canvas pair проверяет точный текст, отступ и типографику сноски.",
       "h": "18abbac96f2e",
-      "evidence": ["semantic-test: apps/web/__tests__/norm-correction-weekly-card.test.js"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · рекомпозиция · 01": {
       "v": "?",
@@ -2265,10 +2268,13 @@
       "h": "da724d11a7bc"
     },
     "Сверка · норма снизилась · текст": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Live Canvas pair проверяет все 13 текстовых атомов в точном порядке; owner-flow тесты fail-closed отклоняют неподтверждённое основание.",
       "h": "e75bf7785edd",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
+      "evidence": [
+        "computed-style: apps/web/scripts/ui-v4-visual-capture.mjs",
+        "semantic-test: apps/web/__tests__/norm-correction-owner-flow.test.js"
+      ]
     },
     "Сверка · рекомпозиция · текст": {
       "v": "=",

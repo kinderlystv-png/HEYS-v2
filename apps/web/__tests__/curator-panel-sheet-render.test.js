@@ -73,7 +73,7 @@ function card(opts) {
   };
 }
 
-function render(row) {
+function render(row, props = {}) {
   const host = document.createElement('div');
   document.body.appendChild(host);
   const root = createRoot(host);
@@ -85,7 +85,8 @@ function render(row) {
       range: { from: new Date(Date.UTC(2026, 7, 10)), to: new Date(Date.UTC(2026, 7, 30)) },
       onClose: () => {},
       onDecide: () => {},
-      onOpenClient: () => {}
+      onOpenClient: () => {},
+      ...props
     }));
   });
   return host;
@@ -102,6 +103,17 @@ describe('лист поправки · рендер', () => {
     expect(host.querySelector('.cur-sheet__meta').textContent).toContain('окно 21');
     // «Открыть дневник» есть всегда — даже когда решать нечего.
     expect(text(host, '.cur-sheet__actions button')).toContain('Открыть дневник');
+  });
+
+  it('ошибка сохранения остаётся в открытом листе и объявляется alert', () => {
+    const { result, card: c } = card();
+    const host = render({ clientId: 'c1', card: c, result }, {
+      decisionError: 'Решение не сохранено. Повторите.'
+    });
+    const alert = host.querySelector('.cur-sheet__save-error');
+    expect(alert).toBeTruthy();
+    expect(alert.getAttribute('role')).toBe('alert');
+    expect(alert.textContent).toContain('не сохранено');
   });
 
   it('порядок блоков — контракта поправки, а не произвольный', () => {

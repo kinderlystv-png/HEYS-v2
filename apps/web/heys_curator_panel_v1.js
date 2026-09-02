@@ -39,7 +39,41 @@
   ];
 
   function fmtDate(d) {
-    return d.toISOString().split('T')[0];
+    const date = d instanceof Date ? d : new Date(d);
+    if (Number.isNaN(date.getTime())) return null;
+    const pad = (n) => String(n).padStart(2, '0');
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
+  }
+
+  /**
+   * История — доказательство решения, профиль — применённое значение. Пишем
+   * строго в этом порядке и проверяем не только reject, но и договор API:
+   * mergeSaveKV сообщает часть ошибок успешным Promise с success=false.
+   */
+  async function persistDecision({ api, NC, clientId, historyPatch, profilePatch }) {
+    let historyResult;
+    try {
+      historyResult = await api.mergeSaveKV(clientId, NC.HISTORY_KEY, historyPatch);
+    } catch (error) {
+      return { success: false, stage: 'history', error };
+    }
+    if (!historyResult || historyResult.success !== true) {
+      return { success: false, stage: 'history', error: historyResult?.error || null };
+    }
+
+    if (profilePatch) {
+      let profileResult;
+      try {
+        profileResult = await api.mergeSaveKV(clientId, 'heys_profile', profilePatch);
+      } catch (error) {
+        return { success: false, stage: 'profile', error };
+      }
+      if (!profileResult || profileResult.success !== true) {
+        return { success: false, stage: 'profile', error: profileResult?.error || null };
+      }
+    }
+
+    return { success: true };
   }
 
   /**
@@ -181,6 +215,7 @@
     const [allRows, setRows] = React.useState(null);
     const [error, setError] = React.useState(null);
     const [sheet, setSheet] = React.useState(null);
+    const [decisionError, setDecisionError] = React.useState(null);
     const [filter, setFilter] = React.useState(null);
     const [fineOpen, setFineOpen] = React.useState(false);
     const [tick, setTick] = React.useState(0);
@@ -255,6 +290,9 @@
       const result = row.result || {};
       const now = Date.now();
       const weekLabel = fmtDate(new Date(now));
+      setDecisionError(null);
+      let appliedSnapshot = null;
+      let profilePatch = null;
 
       // Пишем серверным merge, а не заменой: профиль и история клиента — не
       // наши объекты, у них есть поля, о которых панель не знает. Заменить
@@ -264,23 +302,49 @@
       if (action === 'apply_tomorrow') {
         const at = new Date(now);
         at.setDate(at.getDate() + 1);
-        await api.mergeSaveKV(clientId, 'heys_profile', {
+        const effectiveAt = fmtDate(at);
+        appliedSnapshot = NC.buildDecisionSnapshot?.({
+          result,
+          card: row.card,
+          periodEnd: NC.previousPeriodEnd?.(new Date(now)),
+          effectiveAt,
+          evidence: row.evidence || { kind: 'unknown' }
+        }) || null;
+        if (!appliedSnapshot) {
+          setDecisionError('Это предложение нельзя применить из этого листа: направление или числа изменились. Обновите расчёт.');
+          return;
+        }
+        profilePatch = {
           normCorrectionFactor: result.nextFactor,
-          normCorrectionAppliedAt: fmtDate(at),
+          normCorrectionAppliedAt: effectiveAt,
           updatedAt: now
-        });
+        };
       }
 
       // «Отложить» и «Заморозить» норму не двигают, но ответом считаются: без
       // записи строка не уйдёт из «ждут решения» и вернётся завтра такой же.
       const what = action === 'apply_tomorrow' ? 'applied'
         : action === 'freeze' ? 'frozen' : 'postponed';
-      await api.mergeSaveKV(clientId, NC.HISTORY_KEY, {
+      const historyPatch = {
         // Хозяин решения едет вместе с ним: в истории «применил» без него
         // одинаково подходит куратору и клиенту, а это разные вещи.
-        weeks: [{ weekLabel, factor: result.nextFactor, what, by: 'curator', at: now }],
+        weeks: [Object.assign(
+          { weekLabel, factor: result.nextFactor, what, by: 'curator', at: now },
+          appliedSnapshot || {}
+        )],
         updatedAt: now
-      });
+      };
+      // Snapshot идёт первым. Если профиль не запишется, findAppliedDecision
+      // проигнорирует строку из-за несовпавшего factor; обратный порядок мог
+      // применить число без доказательства решения.
+      const saved = await persistDecision({ api, NC, clientId, historyPatch, profilePatch });
+      if (!saved.success) {
+        setDecisionError(saved.stage === 'history'
+          ? 'Решение не сохранено. Повторите — норма не изменилась.'
+          : 'Решение записано, но норма не применилась. Повторите действие.');
+        console.warn('[HEYS.curatorPanel] decision save failed', saved.stage, saved.error || '');
+        return;
+      }
 
       setSheet(null);
       setTick((t) => t + 1);
@@ -425,7 +489,7 @@
       key: row.clientId,
       type: 'button',
       className: 'cur-row',
-      onClick: () => setSheet(row)
+      onClick: () => { setDecisionError(null); setSheet(row); }
     },
       h('span', { className: 'cur-row__avatar' }, initials(nameOf(row.clientId))),
       h('span', { className: 'cur-row__copy' },
@@ -486,7 +550,9 @@
       ) : null,
 
       sheet ? CuratorPanelSheet({ React, row: sheet, name: nameOf(sheet.clientId), range,
-        onClose: () => setSheet(null), onDecide: decide, onOpenClient }) : null
+        decisionError,
+        onClose: () => { setDecisionError(null); setSheet(null); },
+        onDecide: decide, onOpenClient }) : null
     );
   }
 
@@ -496,7 +562,9 @@
    *
    * Лист показывает числа кураторской карточки и ничего не пересчитывает.
    */
-  function CuratorPanelSheet({ React, row, name, range, onClose, onDecide, onOpenClient }) {
+  function CuratorPanelSheet({
+    React, row, name, range, decisionError, onClose, onDecide, onOpenClient
+  }) {
     const h = React.createElement;
     const card = row.card || {};
     const rec = card.recommendation;
@@ -769,6 +837,9 @@
         // и главное действие уехало за прокрутку. Читать механизм и решать —
         // одно движение, а не два.
         h('div', { className: 'cur-sheet__actions' },
+          decisionError ? h('div', {
+            className: 'cur-sheet__save-error', role: 'alert'
+          }, decisionError) : null,
           // Ряд решений показывается по действиям карточки, а не по наличию
           // предложения: внутри мёртвой зоны предложение есть (норма дня), а
           // решать нечего — применение не сдвинуло бы её ни на калорию.
@@ -869,7 +940,9 @@
     Sheet: CuratorPanelSheet,
     stateLine,
     agePill,
-    initials
+    initials,
+    localIsoDate: fmtDate,
+    persistDecision
   };
 
   console.info('[HEYS.curatorPanel] ✅ loaded');
