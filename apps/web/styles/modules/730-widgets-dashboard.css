@@ -4302,7 +4302,17 @@ body:has(.page-reports) .hdr::after {
 }
 
 /* Кадр красит само число тоном --gr, темнее дельты рядом (--gr2). */
-.widget-weight__number-week-val.widget-v4-val--good {
+.widget-weight__number-week-val/* Тон «хорошего» значения берётся текстовой ролью, а не заливочной.
+   У шалфея их две: --v4-sand-ok-text #5c6a45 для текста и --v4-sand-ok-fill
+   #7a8a5e для заливок и полос. На песочном фоне первая даёт контраст 5,11,
+   вторая — 3,27 при норме 4,5 для мелкого текста; подпись волны набрана
+   9,5 px, и заливочным тоном она читалась плохо. Замер снимка 2 сентября:
+   кадр даёт «3 приёма» цветом rgb(92,106,69), продукт отдавал
+   rgb(122,138,94). Кадр тем же тоном красит и крупное число тренда, то есть
+   текстовая роль верна независимо от кегля. Правило дизайнера: роли заливки
+   текст не красят. Линия спарклайна (.widget-wd__spark) — не текст, у неё
+   заливочная роль остаётся. */
+.widget-v4-val--good {
   color: var(--v4-sand-ok-text, #5c6a45);
 }
 
@@ -10828,8 +10838,12 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
   line-height: 1;
 }
 
+/* Дубль объявления: то же правило стоит выше в файле с текстовой ролью, но
+   побеждало это — оно ниже, а вес селекторов равный. Приведено к текстовой
+   роли, чтобы каскад давал один и тот же тон независимо от того, какое из
+   двух объявлений выиграет. */
 .widget-v4-val--good {
-  color: var(--v4-sand-ok-fill, #7a8a5e);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .widget-v4-val--bad {
@@ -11012,7 +11026,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-hero-num__val.widget-v4-val--good {
-  color: var(--v4-sand-ok-fill, #7a8a5e);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .widget-v4-hero-num__val.widget-v4-val--bad {
@@ -11037,7 +11051,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-row__value.widget-v4-val--good {
-  color: var(--v4-sand-ok-fill, #7a8a5e);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .widget-v4-row__value.widget-v4-val--bad {
@@ -11053,7 +11067,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-row__meta.widget-v4-val--good {
-  color: var(--v4-sand-ok-fill, #7a8a5e);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .widget-v4-row__meta.widget-v4-val--bad {
@@ -11061,7 +11075,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-stack__footer .widget-v4-val--good {
-  color: var(--v4-sand-ok-fill, #7a8a5e);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .widget-v4-stack__footer .widget-v4-val--act {
@@ -11121,7 +11135,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-mini__value.widget-v4-val--good {
-  color: var(--v4-sand-ok-fill, #7a8a5e);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .widget-v4-mini__value.widget-v4-val--bad {
@@ -12469,7 +12483,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 .widget-v4-checklist__chip.is-done {
-  color: var(--v4-sand-ok-fill, #7a8a5e);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .widget-v4-checklist__chip.is-empty {
@@ -12499,7 +12513,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 .widget-v4-checklist__row.is-done .widget-v4-checklist__label {
-  color: var(--v4-sand-ok-fill, #7a8a5e);
+  color: var(--v4-sand-ok-text, #5c6a45);
   font-weight: 600;
 }
 
@@ -13645,7 +13659,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 }
 
 .widget-calories__line-meta.widget-v4-val--good {
-  color: var(--v4-sand-ok-fill, #7a8a5e);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .widget-calories__line-meta.widget-v4-val--bad {
