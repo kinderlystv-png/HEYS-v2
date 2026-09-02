@@ -452,7 +452,7 @@
   height: 8px;
   margin-top: 14px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--v4-ink, #201e1d) 8%, transparent);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .heys-score-insights-v4__scale-fill {
@@ -469,7 +469,7 @@
   width: 2px;
   height: 14px;
   border-radius: 2px;
-  background: color-mix(in srgb, var(--v4-ink, #201e1d) 14%, transparent);
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
   transform: translateX(-1px);
 }
 
@@ -500,7 +500,7 @@
 .heys-score-insights-v4__today {
   margin-top: 18px;
   padding-top: 16px;
-  border-top: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 7%, transparent);
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .heys-score-insights-v4__today-head {
@@ -548,7 +548,7 @@
 }
 
 .heys-score-insights-v4__dot.is-neutral {
-  background: color-mix(in srgb, var(--v4-ink, #201e1d) 12%, transparent);
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
 }
 
 .heys-score-insights-v4__dot.is-bad,
@@ -581,7 +581,7 @@
   margin-top: 16px;
   padding: 14px 0 0;
   border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 7%, transparent);
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: none;
   font: 600 12px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
@@ -866,7 +866,7 @@
      рисовалось запасное rgba(0,0,0,.14), то есть тёмная рамка мимо набора.
      Запись тоном чернил сама переворачивается в тёмных темах — --v4-ink там
      светлый. */
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-ink, #201e1d) 14%, transparent);
+  box-shadow: inset 0 0 0 1px var(--v4-track, rgba(0, 0, 0, 0.12));
   font: 600 11px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
@@ -1089,7 +1089,7 @@
      виден только залитый кусок, а сколько осталось, неизвестно. Именованной
      роли под этот тон в наборе нет; берём ту же запись тоном, что и в других
      местах зоны. */
-  background: color-mix(in srgb, var(--v4-ink, #201e1d) 9%, transparent);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
   overflow: hidden;
 }
 
@@ -1583,7 +1583,7 @@
   height: 6px;
   border-radius: 999px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--v4-ink, #201e1d) 10%, transparent);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .insights-v4-whatif__parameter-fill {
@@ -1610,6 +1610,7 @@
 .insights-v4-whatif__score-before,
 .insights-v4-whatif__score-after {
   font: 800 22px/1 Figtree, sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 .insights-v4-whatif__score-before {
@@ -1633,9 +1634,13 @@
   font: 700 10px/1 ui-monospace, Menlo, monospace;
 }
 
+/* Красный не значит «плохое число», он значит «действие, которое не отменить»
+   — строка «роли цвета» той же зоны. Отрицательная дельта Score это число, не
+   действие: тот же случай уже решён в 733-ui-v4-reports.css для каскада Score,
+   минус остаётся на data-чернилах. */
 .insights-v4-whatif__score-delta.is-negative {
   background: var(--v4-tint, #f6e6dd);
-  color: var(--v4-bad-text, #9b4635);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-whatif__unavailable {
@@ -1660,7 +1665,7 @@
   min-height: 44px;
   padding: 13px 0;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 7%, transparent);
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: transparent;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   font: 600 12.5px/1 Figtree, sans-serif;
@@ -1849,7 +1854,7 @@
   background: var(--v4-surface, #f7efe2);
   font-size: 12px;
   line-height: 1.55;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 60%, transparent);
+  color: var(--v4-plan, rgba(0, 0, 0, 0.22));
 }
 
 /* Контракт «карточка · отказ расчёта»: разбор упал — человек должен увидеть,
@@ -1877,7 +1882,7 @@
   font-weight: 500;
   font-size: 10.5px;
   line-height: 1.5;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 60%, transparent);
+  color: var(--v4-plan, rgba(0, 0, 0, 0.22));
 }
 
 /* Повтор — главное действие: разбор местный, и второй заход чаще всего
@@ -1980,7 +1985,7 @@
   margin-top: 8px;
   font-size: 12px;
   line-height: 1.55;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 60%, transparent);
+  color: var(--v4-plan, rgba(0, 0, 0, 0.22));
 }
 
 .meal-rec-done__foot {
