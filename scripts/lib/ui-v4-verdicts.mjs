@@ -73,7 +73,11 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [74, 'e25cf3e3560a00f1'],
   }),
   'home-widgets': Object.freeze({
-    mismatch: [128, 'edf7bb7aa487450a'],
+    // 2 сентября: 128 -> 110. Восемнадцать строк «Разбор · … · 78» стояли
+    // отступлением по чужому обоснованию (про круг 30x30 и зону нажатия), а
+    // сами описывают подпись листа. Замер на живом дереве показал совпадение
+    // по всем свойствам после починки Figtree — вердикт стал «=».
+    mismatch: [110, '019406feea2773db'],
     notApplicable: [1358, 'a9b8ff121eab0f64'],
   }),
   login: Object.freeze({

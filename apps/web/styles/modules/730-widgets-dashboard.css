@@ -13915,6 +13915,24 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   to { opacity: 1; }
 }
 
+/* Листы виджетов портируются в document.body, а не остаются внутри
+   .widgets-grid — иначе position:fixed считался бы от трансформированного
+   предка. Побочный эффект: Figtree объявлен на `body:has(.widgets-tab)
+   .widgets-grid`, и до листа он не доходит — лист набирался системным
+   шрифтом, хотя плитка, из которой он открыт, набрана Figtree.
+   Замер 2 сентября на живом дереве: подпись `.widget-bd-sheet__kicker`
+   отдавала `ui-sans-serif, system-ui, …`, та же подпись внутри сетки —
+   `Figtree`. Кегль, вес, интерлиньяж, трекинг и цвет при этом сходились с
+   контрактом: расходилось только семейство, и потому расхождение не было
+   видно проверкам, читающим правило класса. */
+.widget-bd-sheet,
+.widget-bd-sheet__scrim,
+.widget-wd-sheet,
+.widget-wd-sheet__scrim,
+.widget-wd-sheet__blocker {
+  font-family: Figtree, sans-serif;
+}
+
 .widget-bd-sheet {
   position: fixed;
   left: 12px;
