@@ -333,7 +333,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     gate: 'diagnostic',
     kind: 'demo-strength-finish',
     themeId: 'sand',
-    viewport: { width: 375, height: 1346 },
+    viewport: { width: 375, height: 1345 },
     rootSelector: '.sb-finish-screen',
     captureSelector: '.sb-finish-screen',
     canvasFrame: {

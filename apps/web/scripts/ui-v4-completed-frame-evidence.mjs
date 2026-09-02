@@ -59,6 +59,20 @@ const LOWERED_LABEL = 'Сверка · норма снизилась';
 const REGISTRATION_PERSONAL_LABEL = 'Регистрация · персональные данные';
 const ACTIVE_CALM_LABEL = 'Конструктор · тренировка идёт · спокойнее';
 const CATALOG_LABEL = 'Конструктор · каталог';
+const FINISH_PROVEN_SUFFIXES = Object.freeze([
+  ...Array.from({ length: 24 }, (_, index) => String(index + 1).padStart(2, '0')),
+  ...Array.from({ length: 31 }, (_, index) => String(index + 27).padStart(2, '0')),
+  '59',
+]);
+const FINISH_ROWS = Object.freeze(Object.fromEntries(FINISH_PROVEN_SUFFIXES.map((suffix) => [
+  `${FINISH_LABEL} · ${suffix}`,
+  exactMany([
+    `dom: ${TESTS.finish}`,
+    `computed-style: ${TESTS.finish}`,
+  ], suffix === '56'
+    ? 'Точная строка «2 028 кг в тоннаже» доказана; конфликт соседних missing-строк 25/26 этим не снят.'
+    : `Table-driven DOM/computed-style тест доказывает точный контракт строки Б3 · ${suffix}.`),
+])));
 
 export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
   Object.freeze({
@@ -109,20 +123,7 @@ export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
   }),
   Object.freeze({
     zoneId: 'strength-builder', label: FINISH_LABEL, oid: 'Б3',
-    rows: suffixRows(FINISH_LABEL, {
-      '04': 'DOM-тест подтверждает точное имя экрана «Тренировка завершена».',
-      '13': 'DOM-тест подтверждает точную длительность «54:30».',
-      '19': 'DOM-тест подтверждает подпись «Рабочих подходов».',
-      '20': 'DOM-тест подтверждает точное число рабочих подходов «19».',
-      '21': 'DOM-тест подтверждает точное значение «4 · вне объёма».',
-      '22': 'DOM-тест подтверждает точную строку рекорда «Жим лёжа · 75 × 8».',
-      '40': 'CSS-контракт подтверждает точную высоту графика 112px.',
-      '42': 'DOM-тест подтверждает точное первое значение графика «88».',
-      '49': 'DOM-тест подтверждает точное последнее значение графика «95».',
-      '53': 'DOM-тест подтверждает точный общий тоннаж «14,2 т».',
-      '55': 'DOM-тест подтверждает точное значение времени под нагрузкой «3:00 под нагрузкой».',
-      '59': 'DOM-тест подтверждает точное главное действие «Готово».',
-    }, 'semantic-test', TESTS.finish),
+    rows: FINISH_ROWS,
   }),
   Object.freeze({
     zoneId: 'norm-correction', label: LOWERED_LABEL, oid: 'NC5',
@@ -132,17 +133,20 @@ export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
         '02': 'Live Canvas pair checks the exact screen title text and typography.',
         '03': 'Live Canvas pair checks the exact range text and tabular-number typography.',
         '05': 'Live Canvas pair checks the real summary card, 12px top offset and its geometry.',
-        '07': 'Live Canvas pair checks the exact explanatory copy for confirmed stable girths.',
         '11': 'Live Canvas pair checks the facts card and its 12px top offset.',
         '12': 'Live Canvas pair checks the exact facts row geometry and typography.',
         '13': 'Live Canvas pair checks the exact primary fact text and color.',
         '15': 'Live Canvas pair checks that the last facts row has no divider.',
         '\u0442\u0435\u043a\u0441\u0442': 'Live Canvas pair checks all 13 text atoms in their exact order.',
       }, 'computed-style', TESTS.normVisual),
-      [`${LOWERED_LABEL} \u00b7 07`]: exactMany([
-        `computed-style: ${TESTS.normVisual}`,
-        `semantic-test: ${TESTS.normOwner}`,
-      ], 'The exact copy is rendered only for a versioned curator decision with stable-girth evidence.'),
+      [`${LOWERED_LABEL} \u00b7 07`]: Object.freeze({
+        verdict: '?',
+        evidence: Object.freeze([
+          'unsupported: get_curator_clients_window returns waist but not biceps/thigh',
+          'semantic-test: apps/web/__tests__/curator-panel-rows.test.js',
+        ]),
+        fact: 'The production owner cannot currently supply the stable-girth evidence required by this exact Canvas copy.',
+      }),
       [`${LOWERED_LABEL} \u00b7 \u0442\u0435\u043a\u0441\u0442`]: exactMany([
         `computed-style: ${TESTS.normVisual}`,
         `semantic-test: ${TESTS.normOwner}`,

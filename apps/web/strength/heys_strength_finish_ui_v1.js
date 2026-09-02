@@ -32,6 +32,10 @@
     return v + ' кг';
   }
 
+  function fmtExactKg(kg) {
+    return String(Math.round(kg || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + ' кг';
+  }
+
   /** Эпли: 75 кг × 8 повторов → 95 кг. */
   function epley(weightKg, reps) {
     const w = parseFloat(String(weightKg == null ? '' : weightKg).replace(',', '.'));
@@ -215,7 +219,7 @@
       if (!(value > 0)) return;
       if (unit === 'time') rows.push({ label: (exercise.name || 'Упражнение') + ' · время', value: fmtClock(value) + ' под нагрузкой', quiet: true });
       else if (unit === 'distance') rows.push({ label: (exercise.name || 'Упражнение') + ' · дистанция', value: Math.round(value) + ' м', quiet: true });
-      else if (unit === 'bodyweight') rows.push({ label: (exercise.name || 'Упражнение') + ' · свой вес', value: fmtTonnage(value) + ' в тоннаже' });
+      else if (unit === 'bodyweight') rows.push({ label: (exercise.name || 'Упражнение') + ' · свой вес', value: fmtExactKg(value) + ' в тоннаже' });
     });
     return rows;
   }

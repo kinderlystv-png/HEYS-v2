@@ -205,7 +205,7 @@ describe('UI v4 visual harness', () => {
       });
     const finish = paired.find((item) => item.id === 'strength-finish-sand');
     expect(finish).toMatchObject({
-      viewport: { width: 375, height: 1346 },
+      viewport: { width: 375, height: 1345 },
       captureSelector: '.sb-finish-screen',
       canvasFrame: {
         file: 'strength-builder.v4.dc.html',

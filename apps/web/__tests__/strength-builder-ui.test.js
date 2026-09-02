@@ -1423,12 +1423,12 @@ describe('lifecycle силовой сессии', () => {
     }
   });
 
-  it('«Готово» фиксирует completedAt и одним патчем очищает отдых', () => {
+  it('«Готово» сохраняет feedback и заметку, фиксирует completedAt и одним патчем очищает отдых', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-09T18:45:00Z'));
     try {
       const patches = [];
-      const closed = [];
+      const calls = [];
       render(React.createElement(SB.BuilderScreen, {
         training: {
           ...training([{ name: 'Жим', approaches: [work(75, 8, true)] }]),
@@ -1439,16 +1439,28 @@ describe('lifecycle силовой сессии', () => {
           },
         },
         dateKey: '2026-08-09', profile: {}, onPatch: () => {},
-        onPatchSession: (patch) => patches.push(patch), onClose: () => closed.push(1),
+        onPatchSession: (patch) => patches.push(patch),
+        onPatchNote: (note) => calls.push(['note', note]),
+        onFinishProposal: () => calls.push(['proposal']),
+        onClose: () => calls.push(['close']),
       }));
 
       fireEvent.click(screen.getByText('Завершить тренировку'));
+      fireEvent.change(screen.getByLabelText('настроение'), { target: { value: '7' } });
+      fireEvent.change(screen.getByLabelText('самочувствие'), { target: { value: '8' } });
+      fireEvent.change(screen.getByLabelText('стресс'), { target: { value: '5' } });
+      fireEvent.change(screen.getByLabelText('Заметка к тренировке'), { target: { value: 'Легко' } });
       fireEvent.click(screen.getByText('Готово'));
 
       expect(patches).toContainEqual({
         completedAt: Date.now(), activeRest: null, finish: true,
+        feedback: { mood: 7, wellbeing: 8, stress: 5 },
       });
-      expect(closed).toHaveLength(1);
+      expect(calls).toEqual([
+        ['note', 'Легко'],
+        ['proposal'],
+        ['close'],
+      ]);
     } finally {
       vi.useRealTimers();
     }
