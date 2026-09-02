@@ -469,9 +469,12 @@ describe('food-meal · копирование и перенос v4', () => {
 
   it('фиксирует точную геометрию общего листа из food-meal canvas', () => {
     expect(CSS).toMatch(/\.meal-transfer-v4__sheet\s*{[^}]*width:\s*min\(100%, 375px\)[^}]*height:\s*min\(706px/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__sheet\s*{[^}]*font-family:\s*Figtree, sans-serif[^}]*-webkit-font-smoothing:\s*antialiased/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__tier-row\s*{[^}]*align-items:\s*baseline[^}]*gap:\s*10px[^}]*min-height:\s*11px/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__product-main\s*{[^}]*gap:\s*10px/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__product-meta\s*{[^}]*font-size:\s*10\.5px[^}]*line-height:\s*1/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__grams\s*{[^}]*gap:\s*10px[^}]*margin-top:\s*10px/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__range::-webkit-slider-runnable-track\s*{[^}]*rgba\(var\(--v4-ink-rgb\), 0\.1\)/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__target\s*{[^}]*gap:\s*11px[^}]*padding:\s*14px/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__target-label\s*{[^}]*font-size:\s*12\.5px[^}]*line-height:\s*1/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__date-label\s*{[^}]*font-size:\s*12\.5px/s);

@@ -2075,6 +2075,10 @@ async function openCase(browser, item, snapshot) {
     if (!item.preserveScroll) await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(250);
 
+    if (await page.locator('#heys-optional-feature-consent-root').isVisible().catch(() => false)) {
+      throw new Error(`Optional feature consent перекрыл visual case ${item.id}`);
+    }
+
     const file = path.join(OUT_DIR, `${item.id}${item.canvasFrame ? '.runtime' : ''}.png`);
     if (item.captureSelector) {
       const captureRoot = page.locator(item.captureSelector);
@@ -2473,7 +2477,7 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
   }
 }
 
-async function comparePng(actualPath, expectedPath, { diffPath } = {}) {
+async function comparePng(actualPath, expectedPath, { diffPath, clipRoundedCorners = 0 } = {}) {
   const actualImage = sharp(actualPath);
   const expectedImage = sharp(expectedPath);
   const [actualMeta, expectedMeta] = await Promise.all([
@@ -2492,10 +2496,30 @@ async function comparePng(actualPath, expectedPath, { diffPath } = {}) {
     expectedImage.ensureAlpha().raw().toBuffer(),
   ]);
   let changedPixels = 0;
+  let maskedPixels = 0;
   let maxDelta = 0;
   const diff = diffPath ? Buffer.alloc(actual.length) : null;
   const threshold = 16;
   for (let offset = 0; offset < actual.length; offset += 4) {
+    const pixelIndex = offset / 4;
+    const x = pixelIndex % actualMeta.width;
+    const y = Math.floor(pixelIndex / actualMeta.width);
+    const radius = Math.max(0, Number(clipRoundedCorners) || 0);
+    const leftDistance = radius - (x + 0.5);
+    const rightDistance = x + 0.5 - (actualMeta.width - radius);
+    const topDistance = radius - (y + 0.5);
+    const bottomDistance = y + 0.5 - (actualMeta.height - radius);
+    const outsideRoundedCorner = radius > 0 && (
+      (leftDistance > 0 && topDistance > 0 && leftDistance ** 2 + topDistance ** 2 > radius ** 2) ||
+      (rightDistance > 0 && topDistance > 0 && rightDistance ** 2 + topDistance ** 2 > radius ** 2) ||
+      (leftDistance > 0 && bottomDistance > 0 && leftDistance ** 2 + bottomDistance ** 2 > radius ** 2) ||
+      (rightDistance > 0 && bottomDistance > 0 && rightDistance ** 2 + bottomDistance ** 2 > radius ** 2)
+    );
+    if (outsideRoundedCorner) {
+      maskedPixels += 1;
+      if (diff) diff[offset + 3] = 255;
+      continue;
+    }
     const delta = Math.max(
       Math.abs(actual[offset] - expected[offset]),
       Math.abs(actual[offset + 1] - expected[offset + 1]),
@@ -2516,11 +2540,12 @@ async function comparePng(actualPath, expectedPath, { diffPath } = {}) {
       raw: { width: actualMeta.width, height: actualMeta.height, channels: 4 },
     }).png().toFile(diffPath);
   }
-  const totalPixels = actualMeta.width * actualMeta.height;
+  const totalPixels = actualMeta.width * actualMeta.height - maskedPixels;
   const changedRatio = changedPixels / totalPixels;
   return {
     ok: changedRatio <= 0.001,
     changedPixels,
+    maskedPixels,
     totalPixels,
     changedRatio,
     maxDelta,
@@ -2585,7 +2610,10 @@ async function main() {
           result.comparison = await comparePng(
             path.join(ROOT, result.file),
             path.join(ROOT, result.canvas.file),
-            { diffPath },
+            {
+              diffPath,
+              clipRoundedCorners: item.canvasFrame.clipRoundedCorners,
+            },
           );
           result.comparison.source = 'live-canvas-pair';
           result.evidenceReady = Boolean(

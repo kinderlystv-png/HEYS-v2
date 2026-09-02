@@ -4325,7 +4325,11 @@ button.meal-quality-badge:active {
   color: var(--v4-ink);
   background: var(--v4-bg);
   border-radius: 28px;
-  box-shadow: 0 18px 50px color-mix(in srgb, var(--v4-ink) 22%, transparent);
+  box-shadow:
+    0 1px 2px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.09),
+    0 14px 40px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.12);
+  font-family: Figtree, sans-serif;
+  -webkit-font-smoothing: antialiased;
   animation: copyMealScaleIn 180ms ease-out;
 }
 
@@ -4375,9 +4379,10 @@ button.meal-quality-badge:active {
 .meal-transfer-v4__tier-row {
   display: flex;
   flex: 0 0 auto;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+  min-height: 11px;
   margin-top: 12px;
   color: var(--v4-act-text);
   font-size: 10px;
@@ -4410,7 +4415,7 @@ button.meal-quality-badge:active {
   gap: 8px;
   max-height: 262px;
   min-height: 120px;
-  margin-top: 9px;
+  margin-top: 8px;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -4540,7 +4545,11 @@ button.meal-quality-badge:active {
 
 .meal-transfer-v4__range::-webkit-slider-runnable-track {
   height: 4px;
-  background: linear-gradient(90deg, var(--v4-act) var(--meal-transfer-progress), var(--v4-chip) var(--meal-transfer-progress));
+  background: linear-gradient(
+    90deg,
+    var(--v4-act) var(--meal-transfer-progress),
+    rgba(var(--v4-ink-rgb), 0.1) var(--meal-transfer-progress)
+  );
   border-radius: 999px;
 }
 
@@ -4557,7 +4566,7 @@ button.meal-quality-badge:active {
 
 .meal-transfer-v4__range::-moz-range-track {
   height: 4px;
-  background: var(--v4-chip);
+  background: rgba(var(--v4-ink-rgb), 0.1);
   border-radius: 999px;
 }
 

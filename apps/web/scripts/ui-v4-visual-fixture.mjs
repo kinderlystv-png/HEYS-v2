@@ -216,6 +216,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
         oid: 'FM10A',
         palette: 'sand',
         pixelAlign: true,
+        clipRoundedCorners: 28,
       },
     } : {}),
   })),
@@ -236,6 +237,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
       oid: 'FM10',
       palette: 'sand',
       pixelAlign: true,
+      clipRoundedCorners: 28,
     },
   },
   {
@@ -255,6 +257,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
       oid: 'FM11',
       palette: 'sand',
       pixelAlign: true,
+      clipRoundedCorners: 28,
     },
   },
   {
@@ -541,6 +544,7 @@ export function buildUiV4VisualSnapshot() {
     cycleTrackingEnabled: true,
     supplementsTrackingEnabled: true,
     plannedSupplements: ['vitamin-d', 'omega-3'],
+    optionalFeatureConsentsOfferedAt: updatedAt,
     updatedAt,
   };
 

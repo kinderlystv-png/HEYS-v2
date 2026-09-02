@@ -48,6 +48,8 @@ describe('UI v4 visual harness', () => {
     expect(captureSource.match(/item\.canvasFrame\?\.pixelAlign/g)?.length).toBe(1);
     expect(captureSource).toContain('if (item.canvasFrame.pixelAlign)');
     expect(captureSource.match(/Math\.round\(box\.x\) - box\.x/g)?.length).toBe(2);
+    expect(captureSource).toContain("page.locator('#heys-optional-feature-consent-root').isVisible()");
+    expect(captureSource).toContain('clipRoundedCorners: item.canvasFrame.clipRoundedCorners');
   });
 
   it('явно учитывает все зоны текущего Canvas-реестра', () => {
@@ -230,6 +232,7 @@ describe('UI v4 visual harness', () => {
         oid: 'FM10A',
         palette: 'sand',
         pixelAlign: true,
+        clipRoundedCorners: 28,
       },
     });
     expect(paired.find((item) => item.id === 'food-move-existing-target-sand')).toMatchObject({
@@ -241,6 +244,7 @@ describe('UI v4 visual harness', () => {
         oid: 'FM11',
         palette: 'sand',
         pixelAlign: true,
+        clipRoundedCorners: 28,
       },
     });
   });
@@ -302,6 +306,8 @@ describe('UI v4 visual harness', () => {
     const snapshot = buildUiV4VisualSnapshot();
     const serialized = JSON.stringify(snapshot);
     expect(snapshot.generatedAt).toBe(UI_V4_VISUAL_CLOCK.iso);
+    expect(snapshot.lsKeys.heys_profile.optionalFeatureConsentsOfferedAt)
+      .toBe(UI_V4_VISUAL_CLOCK.epochMs);
     expect(snapshot.pseudonym).toBe('Визуальный стенд');
     expect(serialized).not.toMatch(
       /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i,
