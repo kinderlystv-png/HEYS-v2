@@ -270,7 +270,13 @@
       }
     };
 
-    return React.createElement('div', { className: 'aps-v4-meal-summary' },
+    // `aps-v4-flow` держит полотно потока: радиус 28, поля шапки и содержимого
+    // 6/18/18 живут на `.mc-modal:has(.aps-v4-flow)`, и итог приёма — последний
+    // экран потока — был единственным без этого класса. Общий фон листа со 2
+    // сентября держит сама `.mc-modal` (e94c3b549 перевёл оболочку шаговых
+    // модалок на песочный); до него отсюда тянулся ещё и бело-голубой градиент
+    // прежней системы под песочными карточками.
+    return React.createElement('div', { className: 'aps-v4-flow aps-v4-meal-summary' },
       typeof onPhoto === 'function' && React.createElement('input', {
         ref: fileInputRef,
         type: 'file',
@@ -372,23 +378,26 @@
       typeof onPhoto === 'function' && React.createElement('div', { className: 'aps-v4-meal-summary__photo-note' },
         'Фото принадлежит приёму, не продукту. Снимков может быть несколько, тап открывает на весь экран.'
       ),
-      React.createElement('div', { className: 'aps-v4-meal-summary__actions aps-v4-meal-summary__actions--row' },
-        React.createElement('button', {
-          type: 'button',
-          className: 'aps-v4-btn-ghost aps-v4-meal-summary__btn aps-v4-btn-paper',
-          onClick: onAddMore
-        }, 'Добавить ещё'),
-        typeof onSavePreset === 'function' && React.createElement('button', {
-          type: 'button',
-          className: 'aps-v4-btn-ghost aps-v4-meal-summary__btn aps-v4-btn-paper',
-          onClick: onSavePreset
-        }, 'Сохранить как набор')
-      ),
+      // Строка «вес четырёх действий»: «Добавить ещё» — главная кнопка
+      // заливкой, ниже «Завершить приём» вторичной, ниже «Сохранить как набор»
+      // текстом. Раньше здесь стояли две одинаковые призрачные плашки в ряд и
+      // «Готово» главной — глаз не различал вес действий, а главной оказывалась
+      // «закончить» вместо «продолжить сборку».
       React.createElement('button', {
         type: 'button',
-        className: 'aps-v4-btn-primary aps-v4-meal-summary__done',
+        className: 'aps-v4-btn-primary aps-v4-meal-summary__add-more',
+        onClick: onAddMore
+      }, 'Добавить ещё'),
+      React.createElement('button', {
+        type: 'button',
+        className: 'aps-v4-btn-ghost aps-v4-meal-summary__done',
         onClick: onDone
-      }, 'Готово')
+      }, 'Завершить приём'),
+      typeof onSavePreset === 'function' && React.createElement('button', {
+        type: 'button',
+        className: 'aps-v4-meal-summary__preset',
+        onClick: onSavePreset
+      }, 'Сохранить как набор')
     );
   }
 

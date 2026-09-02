@@ -5150,6 +5150,74 @@
             }
         }, [date, protectCheckinFields]);
 
+        // Фото приёма: снимок сразу ложится в день (человек видит его в ту же
+        // секунду), а облачная загрузка догоняет и снимает pending/uploading.
+        // Один обработчик на все точки входа — лист нового приёма и итог приёма
+        // после добавления продукта.
+        const addMealPhoto = React.useCallback(async ({ mealIndex, mealId: requestedMealId, photo, filename, timestamp } = {}) => {
+            const photoLimit = HEYS.dayGallery?.PHOTO_LIMIT_PER_MEAL || 10;
+            const activeDay = HEYS.Day?.getDay?.() || dayRef.current || {};
+            const resolvedMealIndex = resolveMealIndex(activeDay, mealIndex, requestedMealId);
+            const activeMeal = activeDay?.meals?.[resolvedMealIndex];
+            if ((activeMeal?.photos?.length || 0) >= photoLimit) {
+                HEYS.Toast?.warning?.(`Максимум ${photoLimit} фото на приём пищи`);
+                return false;
+            }
+
+            const clientId = HEYS.utils?.getCurrentClientId?.() || 'default';
+            const mealId = activeMeal?.id || requestedMealId || uid('meal_');
+            const photoId = uid('photo_');
+            const photoData = {
+                id: photoId,
+                data: photo,
+                filename,
+                timestamp,
+                pending: true,
+                uploading: true,
+                uploaded: false,
+            };
+
+            setDay((prevDay = {}) => {
+                const targetIndex = resolveMealIndex(prevDay, resolvedMealIndex, mealId);
+                const meals = (prevDay.meals || []).map((m, i) =>
+                    i === targetIndex
+                        ? { ...m, photos: [...(m.photos || []), photoData] }
+                        : m
+                );
+                const nextDay = { ...prevDay, meals, updatedAt: Date.now() };
+                persistDayData(nextDay, 'meal_photo_add');
+                return nextDay;
+            });
+
+            if (!HEYS.cloud?.uploadPhoto) return true;
+            try {
+                const result = await HEYS.cloud.uploadPhoto(photo, clientId, date, mealId);
+                // Признак успеха — `path`, а не `url`: публичной ссылки на бакет
+                // больше нет (2026-08-11), и по `url` снимок навсегда оставался бы
+                // «загружается».
+                if (result?.uploaded && result?.path) {
+                    setDay((prevDay = {}) => {
+                        const targetIndex = resolveMealIndex(prevDay, resolvedMealIndex, mealId);
+                        const meals = (prevDay.meals || []).map((m, i) => {
+                            if (i !== targetIndex || !m.photos) return m;
+                            return {
+                                ...m,
+                                photos: m.photos.map((p) => (p.id === photoId
+                                    ? { ...p, path: result.path, data: undefined, pending: false, uploading: false, uploaded: true }
+                                    : p)),
+                            };
+                        });
+                        const nextDay = { ...prevDay, meals, updatedAt: Date.now() };
+                        persistDayData(nextDay, 'meal_photo_uploaded');
+                        return nextDay;
+                    });
+                }
+            } catch (e) {
+                console.warn('[HEYS.day] Photo upload failed:', e);
+            }
+            return true;
+        }, [date, setDay, persistDayData]);
+
         const readScopedDayForDate = React.useCallback((targetDate) => {
             const key = _scopedDayKey(targetDate);
             try {
@@ -5371,70 +5439,9 @@
                             const mealIndex = newMealIndex;
                             expandOnlyMeal(mealIndex);
 
-                            const PHOTO_LIMIT_PER_MEAL = HEYS.dayGallery?.PHOTO_LIMIT_PER_MEAL || 10;
-
-                            const handleAddPhoto = async ({ mealIndex: photoMealIndex, mealId: requestedMealId, photo, filename, timestamp }) => {
-                                const activeDay = HEYS.Day?.getDay?.() || day || {};
-                                const resolvedMealIndex = resolveMealIndex(activeDay, photoMealIndex, requestedMealId);
-                                const activeMeal = activeDay?.meals?.[resolvedMealIndex];
-                                const currentPhotos = activeMeal?.photos?.length || 0;
-                                if (currentPhotos >= PHOTO_LIMIT_PER_MEAL) {
-                                    HEYS.Toast?.warning?.(`Максимум ${PHOTO_LIMIT_PER_MEAL} фото на приём пищи`);
-                                    return;
-                                }
-
-                                const clientId = HEYS.utils?.getCurrentClientId?.() || 'default';
-                                const mealId = activeMeal?.id || requestedMealId || uid('meal_');
-                                const photoId = uid('photo_');
-                                const photoData = {
-                                    id: photoId,
-                                    data: photo,
-                                    filename,
-                                    timestamp,
-                                    pending: true,
-                                    uploading: true,
-                                    uploaded: false
-                                };
-
-                                setDay((prevDay = {}) => {
-                                    const targetIndex = resolveMealIndex(prevDay, photoMealIndex, mealId);
-                                    const meals = (prevDay.meals || []).map((m, i) =>
-                                        i === targetIndex
-                                            ? { ...m, photos: [...(m.photos || []), photoData] }
-                                            : m
-                                    );
-                                    const nextDay = { ...prevDay, meals, updatedAt: Date.now() };
-                                    persistDayData(nextDay, 'meal_photo_add');
-                                    return nextDay;
-                                });
-
-                                if (HEYS.cloud?.uploadPhoto) {
-                                    try {
-                                        const result = await HEYS.cloud.uploadPhoto(photo, clientId, date, mealId);
-                                        if (result?.uploaded && result?.path) {
-                                            setDay((prevDay = {}) => {
-                                                const targetIndex = resolveMealIndex(prevDay, photoMealIndex, mealId);
-                                                const meals = (prevDay.meals || []).map((m, i) => {
-                                                    if (i !== targetIndex || !m.photos) return m;
-                                                    return {
-                                                        ...m,
-                                                        photos: m.photos.map((p) =>
-                                                            p.id === photoId
-                                                                ? { ...p, path: result.path, data: undefined, pending: false, uploading: false, uploaded: true }
-                                                                : p
-                                                        )
-                                                    };
-                                                });
-                                                const nextDay = { ...prevDay, meals, updatedAt: Date.now() };
-                                                persistDayData(nextDay, 'meal_photo_uploaded');
-                                                return nextDay;
-                                            });
-                                        }
-                                    } catch (e) {
-                                        console.warn('[HEYS.day] Photo upload failed:', e);
-                                    }
-                                }
-                            };
+                            // Фото приёма — общий обработчик выше по файлу: он же
+                            // питает итог приёма после добавления продукта.
+                            const handleAddPhoto = addMealPhoto;
 
                             // Функция открытия модалки добавления продукта
                             const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride, autoRepeatCount, options = {}) => {
@@ -6327,12 +6334,17 @@
                     source: 'day-add-product-to-meal'
                 }
             }));
-            dispatchMealFlowFinished({
-                source: 'day-add-product-to-meal',
-                dateKey: newDayData?.date || date || null,
-                mealIndex: targetMealIndex,
-                mealId: newDayData?.meals?.[targetMealIndex]?.id || targetMealId || null,
-            });
+            // deferFlowFinished: вызывающий поток ещё не закончился (режим
+            // «несколько продуктов» — впереди итог приёма), и о завершении
+            // скажет он сам.
+            if (options.deferFlowFinished !== true) {
+                dispatchMealFlowFinished({
+                    source: 'day-add-product-to-meal',
+                    dateKey: newDayData?.date || date || null,
+                    mealIndex: targetMealIndex,
+                    mealId: newDayData?.meals?.[targetMealIndex]?.id || targetMealId || null,
+                });
+            }
             emitPlannerReplanRequest('PRODUCT_ADDED', { mealIndex: targetMealIndex, mealId: newDayData?.meals?.[targetMealIndex]?.id || targetMealId || null, productId: item.product_id });
             return true;
         }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem, ensureProductReadyForDayWrite]);
@@ -6747,6 +6759,61 @@
             });
         }, [day, date, addProductToMeal]);
 
+        // Итог приёма после добавления («ещё» / «завершить», канвас v4 · экран 6).
+        // Лист граммов в режиме «несколько продуктов» намеренно не закрывает себя
+        // сам: он отдаёт продукт наружу и ждёт, что дневник покажет итог. Если
+        // этого не сделать, человек после «Добавить» остаётся на том же шаге
+        // граммов — продукт записан, а выхода из потока не видно.
+        const showMealSummaryAfterAdd = React.useCallback((mealIndex, mealId) => {
+            const showSummary = HEYS.dayAddProductSummary?.show;
+            HEYS.StepModal?.hide?.({ scrollToDiary: false });
+            if (typeof showSummary !== 'function') {
+                dispatchMealFlowFinished({
+                    source: 'day-add-product-for-meal-no-summary',
+                    dateKey: date,
+                    mealIndex,
+                    mealId,
+                });
+                return;
+            }
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    // День берём из LS: addProductToMeal уже записал туда новую
+                    // позицию, а dayRef ждёт commit React и на этот момент отстаёт.
+                    const freshDay = readFreshScopedDay() || dayRef.current || {};
+                    showSummary({
+                        day: freshDay,
+                        mealIndex,
+                        mealId,
+                        pIndex,
+                        getProductFromItem,
+                        per100,
+                        scale,
+                        onAddMore: (_updatedDay, autoRepeatCount) => openAddProductForMeal({
+                            mealIndex,
+                            mealId,
+                            autoRepeatCount: autoRepeatCount || 0,
+                        }),
+                        onAddLast: () => openAddProductForMeal({
+                            mealIndex,
+                            mealId,
+                            multiProductMode: false,
+                        }),
+                        onPhoto: (payload) => addMealPhoto({
+                            ...payload,
+                            mealIndex,
+                            mealId: payload?.mealId || mealId,
+                        }),
+                        onSavePreset: () => openAddProductForMeal({
+                            mealIndex,
+                            mealId,
+                            openPresetsCreate: true,
+                        }),
+                    });
+                }, 100);
+            });
+        }, [date, pIndex, getProductFromItem, readFreshScopedDay, addMealPhoto]);
+
         const openAddProductForMeal = React.useCallback((target) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
                 HEYS.Paywall?.showBlockedToast?.('Добавление продукта недоступно');
@@ -6766,11 +6833,16 @@
             }
             if (typeof expandOnlyMeal === 'function') expandOnlyMeal(resolvedIndex);
             const mealId = meal.id || opts.mealId || null;
+            const multiProductMode = opts.multiProductMode !== false;
+            const autoRepeatCount = opts.autoRepeatCount || 0;
+            // «Подряд N» ведёт лист сам: он молча возвращается к поиску и
+            // закрывается на последнем повторе — итог приёма туда не вклинивается.
+            const autoRepeatActive = autoRepeatCount > 1;
             HEYS.AddProductStep.show({
                 mealIndex: resolvedIndex,
                 mealId,
-                multiProductMode: opts.multiProductMode !== false,
-                autoRepeatCount: opts.autoRepeatCount || 0,
+                multiProductMode,
+                autoRepeatCount,
                 products,
                 day: currentDay,
                 dateKey: date,
@@ -6781,7 +6853,7 @@
                 // переходника весь объект попадал в слот номера приёма, продукт
                 // оказывался undefined, и запись падала на «Продукт не сохранён в
                 // базу» при живом и целом продукте.
-                onAdd: ({ product, grams, mealIndex: addMealIndex, mealId: addMealId, productCommitVerified, _origin } = {}) => {
+                onAdd: async ({ product, grams, mealIndex: addMealIndex, mealId: addMealId, productCommitVerified, _origin } = {}) => {
                     const idx = resolveMealIndex(
                         dayRef.current || currentDay,
                         addMealIndex ?? resolvedIndex,
@@ -6789,10 +6861,18 @@
                     );
                     // Граммы едут на самом продукте — их читает buildAddProductItem.
                     const withGrams = (grams != null) ? { ...product, grams } : product;
-                    return addProductToMeal(idx, withGrams, {
+                    const added = await addProductToMeal(idx, withGrams, {
                         productCommitVerified,
                         source: _origin || 'add-product-step',
+                        // Поток ещё не закончен: «завершено» скажет итог приёма
+                        // (или последний повтор «Подряд N»), иначе утренний
+                        // чек-ин просыпается поверх открытого листа.
+                        deferFlowFinished: multiProductMode,
                     });
+                    if (added !== false && multiProductMode && !autoRepeatActive) {
+                        showMealSummaryAfterAdd(idx, addMealId || mealId);
+                    }
+                    return added;
                 },
                 onAddMany: async ({ entries, mealIndex: addMealIndex, mealId: addMealId } = {}) => {
                     const idx = resolveMealIndex(
@@ -6808,7 +6888,7 @@
                     });
                 },
             });
-        }, [date, day, products, expandOnlyMeal, addProductToMeal, addProductsToMeal]);
+        }, [date, day, products, expandOnlyMeal, addProductToMeal, addProductsToMeal, showMealSummaryAfterAdd]);
 
         const copyItemsToMeal = React.useCallback(async (srcMealIndex, itemIds, dstMealIndex, targetDate, gramsMap) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
@@ -7596,6 +7676,7 @@
             copyItem,
             openMoveMealModal,
             moveMealToDate,
+            addMealPhoto,
             removePhoto,
             updateMealField,
             changeMealMood,

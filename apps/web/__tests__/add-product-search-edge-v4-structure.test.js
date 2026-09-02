@@ -123,7 +123,9 @@ describe('meal summary wiring v4', () => {
     expect(dayMealsSource).toContain('onSavePreset: () =>');
     expect(dayAddSource).toContain('aps-v4-meal-summary__photo-grid');
     expect(dayAddSource).toContain('Итого за приём');
-    expect(dayAddSource).toContain('aps-v4-btn-paper');
+    // Вкладка питания открывает лист своим путём — там итог получает фото от
+    // общего обработчика приёма, а не от потока нового приёма.
+    expect(dayMealsSource).toContain('onPhoto: (payload) => addMealPhoto');
   });
 
   it('paints edge and summary shells in APS css', () => {

@@ -55,15 +55,39 @@ describe('meal summary v4 canvas structure', () => {
     expect(dayAddSource).toContain('Итого за приём');
     expect(dayAddSource).toContain('Добавить ещё');
     expect(dayAddSource).toContain('Сохранить как набор');
-    expect(dayAddSource).toContain('aps-v4-btn-paper');
     expect(dayAddSource).not.toContain('confirm-modal-btn--last-one');
     expect(dayAddSource).not.toContain('confirm-modal-btn--multi-continue');
+  });
+
+  it('экран лежит на полотне потока, а не на базовой модалке', () => {
+    // Радиус 28 и поля шапки/содержимого 6/18/18 висят на
+    // `.mc-modal:has(.aps-v4-flow)`; итог приёма был единственным экраном потока
+    // без этого класса. Общий фон листа со 2 сентября держит сама `.mc-modal`
+    // (e94c3b549), до него отсюда тянулся и бело-голубой градиент прежней
+    // системы под песочными карточками.
+    expect(dayAddSource).toMatch(/className: 'aps-v4-flow aps-v4-meal-summary'/);
+    expect(cssSource).toContain('.mc-modal:has(.aps-v4-flow)');
+  });
+
+  it('подвал даёт трём действиям три разных веса (строка «вес четырёх действий»)', () => {
+    // «Добавить ещё» — главная кнопка заливкой, «Завершить приём» — вторичная,
+    // «Сохранить как набор» — текст. Раньше первые две были одинаковыми
+    // призрачными плашками в ряд, а главной оказывалась «Готово».
+    const footer = dayAddSource.slice(dayAddSource.indexOf('aps-v4-btn-primary aps-v4-meal-summary__add-more'));
+    expect(footer).toMatch(/aps-v4-btn-primary aps-v4-meal-summary__add-more[\s\S]{0,120}Добавить ещё/);
+    expect(footer).toMatch(/aps-v4-btn-ghost aps-v4-meal-summary__done[\s\S]{0,120}Завершить приём/);
+    expect(footer).toMatch(/'aps-v4-meal-summary__preset'[\s\S]{0,120}Сохранить как набор/);
+    // «Готово» не говорит, что именно закрывается — снято контрактом 27 августа.
+    expect(footer).not.toContain("}, 'Готово')");
   });
 
   it('paints summary shell with v4 classes', () => {
     expect(cssSource).toContain('.aps-v4-meal-summary__hero');
     expect(cssSource).toContain('.aps-v4-meal-summary__photo-grid');
     expect(cssSource).toContain('.aps-v4-meal-summary__done');
+    // Вторичная кнопка зоны — заливка второй поверхностью: на песочном полотне
+    // плашка цвета полотна кнопкой не читается.
+    expect(cssSource).toMatch(/\.aps-v4-meal-summary__done \{[^}]*--v4-sand-surface/);
   });
 });
 
