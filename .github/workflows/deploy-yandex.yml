@@ -29,7 +29,6 @@ env:
   NODE_VERSION: "22"
   # Yandex Cloud Object Storage
   YC_BUCKET_PWA: heys-app # PWA приложение → app.heyslab.ru
-  YC_BUCKET_DEMO: try-heyslab-ru # Demo PWA → try.heyslab.ru
   YC_BUCKET_LANDING: heys-static # Лендинг → heyslab.ru (CDN origin: heys-static.website.yandexcloud.net)
   YC_BUCKET_SOURCE_INDEX: heys-backups # Срез исходников для MCP-коннектора (приватный бакет)
   YC_ENDPOINT: https://storage.yandexcloud.net
@@ -611,17 +610,6 @@ jobs:
 
           echo "✅ PWA deployment complete!"
 
-      - name: Mirror PWA artifact to Demo
-        run: |
-          # Demo subdomain runs the same PWA artifact. DEMO_MODE is gated by
-          # hostname in apps/web/index.html, so no separate build is needed.
-          echo "🪞 Mirroring PWA bucket to demo bucket..."
-          aws s3 sync s3://${{ env.YC_BUCKET_PWA }}/ s3://${{ env.YC_BUCKET_DEMO }}/ \
-            --endpoint-url=${{ env.YC_ENDPOINT }} \
-            --no-progress
-
-          echo "✅ Demo PWA mirror complete!"
-
       - name: Deploy Landing to Yandex Object Storage
         run: |
           # === Landing Page → heys-static bucket ===
@@ -657,8 +645,7 @@ jobs:
           YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
           YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
           # app.heyslab.ru is served directly from Object Storage/nginx and has no
-          # Yandex CDN resource. Only the two active CDN resources are purged here.
-          CDN_DEMO_ID: bc8r24iwog2zxvppd4i4
+          # Yandex CDN resource. Only the Landing CDN resource is purged here.
           CDN_LANDING_ID: bc8rk3pnqppsfime3nth
         run: |
           set -euo pipefail
@@ -675,26 +662,12 @@ jobs:
           yc config set token "$YC_TOKEN"
           yc config set folder-id "$YC_FOLDER"
 
-          echo "🔄 Purging mutable Demo + Landing entrypoints (parallel)..."
-          timeout 90s yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
-            --path "/" \
-            --path "/index.html" \
-            --path "/sw.js" \
-            --path "/manifest.json" \
-            --path "/manifest.webmanifest" \
-            --path "/version.json" \
-            --path "/build-meta.json" \
-            --path "/whats-new.json" \
-            --path "/react-bundle.js" &
-          DEMO_PID=$!
+          echo "🔄 Purging mutable Landing entrypoint..."
           timeout 90s yc cdn cache purge --resource-id "$CDN_LANDING_ID" \
             --path "/" \
-            --path "/index.html" &
-          LANDING_PID=$!
-          wait "$DEMO_PID"
-          wait "$LANDING_PID"
+            --path "/index.html"
 
-          echo "✅ Active CDN resources purged"
+          echo "✅ Landing CDN purged"
 
       - name: Health check
         run: |
@@ -702,18 +675,16 @@ jobs:
 
           # Validate ORIGIN (Object Storage) — this is the real signal that deploy succeeded.
           PWA_ORIGIN_URL="${YC_ENDPOINT}/${YC_BUCKET_PWA}/index.html"
-          DEMO_ORIGIN_URL="${YC_ENDPOINT}/${YC_BUCKET_DEMO}/index.html"
           LANDING_ORIGIN_URL="${YC_ENDPOINT}/${YC_BUCKET_LANDING}/index.html"
           API_URL="https://api.heyslab.ru/health"
 
           PWA_ORIGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$PWA_ORIGIN_URL")
-          DEMO_ORIGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$DEMO_ORIGIN_URL")
           LANDING_ORIGIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$LANDING_ORIGIN_URL")
           API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL")
 
-          echo "Origin: PWA $PWA_ORIGIN_STATUS | Demo $DEMO_ORIGIN_STATUS | Landing $LANDING_ORIGIN_STATUS | API $API_STATUS"
+          echo "Origin: PWA $PWA_ORIGIN_STATUS | Landing $LANDING_ORIGIN_STATUS | API $API_STATUS"
 
-          if [ "$PWA_ORIGIN_STATUS" != "200" ] || [ "$DEMO_ORIGIN_STATUS" != "200" ] || [ "$LANDING_ORIGIN_STATUS" != "200" ] || [ "$API_STATUS" != "200" ]; then
+          if [ "$PWA_ORIGIN_STATUS" != "200" ] || [ "$LANDING_ORIGIN_STATUS" != "200" ] || [ "$API_STATUS" != "200" ]; then
             echo "❌ Origin/API health check failed"
             exit 1
           fi
@@ -815,7 +786,6 @@ jobs:
           echo "| Site | URL |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
           echo "| PWA | https://app.heyslab.ru |" >> $GITHUB_STEP_SUMMARY
-          echo "| Demo PWA | https://try.heyslab.ru |" >> $GITHUB_STEP_SUMMARY
           echo "| Landing | https://heyslab.ru |" >> $GITHUB_STEP_SUMMARY
           echo "| API | https://api.heyslab.ru |" >> $GITHUB_STEP_SUMMARY
 
@@ -871,7 +841,6 @@ jobs:
           }
 
           upload_release_meta "${{ env.YC_BUCKET_PWA }}"
-          upload_release_meta "${{ env.YC_BUCKET_DEMO }}"
 
       - name: Sync whats-new/ assets (release-note screenshots)
         # isReleaseMetaOnlyFile() matches `apps/web/public/whats-new/` ⇒ release-bump
@@ -885,46 +854,16 @@ jobs:
               "s3://${{ env.YC_BUCKET_PWA }}/whats-new/" \
               --cache-control "public, max-age=31536000, immutable" \
               --endpoint-url "${{ env.YC_ENDPOINT }}"
-            aws s3 sync apps/web/public/whats-new/ \
-              "s3://${{ env.YC_BUCKET_DEMO }}/whats-new/" \
-              --cache-control "public, max-age=31536000, immutable" \
-              --endpoint-url "${{ env.YC_ENDPOINT }}"
           else
             echo "ℹ️  apps/web/public/whats-new/ directory absent — nothing to sync"
           fi
-
-      - name: Invalidate CDN cache
-        timeout-minutes: 8
-        env:
-          YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
-          YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
-          CDN_DEMO_ID: bc8r24iwog2zxvppd4i4
-        run: |
-          set -euo pipefail
-
-          if [ -z "$YC_TOKEN" ]; then
-            echo "::error::YC_OAUTH_TOKEN is required for CDN invalidation"
-            exit 1
-          fi
-          if ! command -v yc >/dev/null 2>&1; then
-            curl -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
-            export PATH="$HOME/yandex-cloud/bin:$PATH"
-          fi
-          yc config set token "$YC_TOKEN"
-          yc config set folder-id "$YC_FOLDER"
-
-          # Release-note assets are immutable and must use unique names. Only the
-          # mutable metadata entrypoints need invalidation on the active Demo CDN.
-          timeout 90s yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
-            --path "/whats-new.json" \
-            --path "/build-meta.json"
 
       - name: Fast-path summary
         run: |
           echo "## ⚡ Fast Release-Bump Deploy" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Only whats-new.json (and build-meta.json if present) deployed." >> $GITHUB_STEP_SUMMARY
-          echo "PWA and demo buckets were both updated." >> $GITHUB_STEP_SUMMARY
+          echo "PWA bucket updated." >> $GITHUB_STEP_SUMMARY
           echo "Full bundles unchanged — skipped 11.84MB rebuild + upload." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Commit: \`${GITHUB_SHA::7}\`" >> $GITHUB_STEP_SUMMARY

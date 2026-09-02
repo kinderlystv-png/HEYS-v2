@@ -13,7 +13,6 @@ push main
   ├─ deploy-yandex.yml
   │    → test/build gates
   │    → PWA dist → heys-app S3 → app.heyslab.ru proxy
-  │    → demo mirror → try-heyslab-ru
   │    → landing export → heys-static S3 → heyslab.ru CDN
   │    → build-meta verification
   └─ cloud-functions-deploy.yml (только подходящие backend paths)
@@ -53,14 +52,19 @@ baseline отсутствует или не найден в истории, вы
 release metadata может идти по fast path без пересборки приложения.
 
 Full path запускает web tests, собирает deploy artifact, загружает PWA в
-`heys-app`, зеркалирует demo и выгружает статический landing в `heys-static`.
-Критичные entry files и hashed assets получают разные cache policies;
-`build-meta.json` загружается последним как маркер целостного релиза. Финальная
-проверка сопоставляет deployed hash с ожидаемым commit/ancestor contract. Перед
-тестами frontend workflow проверяет production migration-ledger, а после сборки
-сверяет legal manifest, server registry migration и версии внутри
-`boot-core`/consent bundle. Поэтому frontend с новой legal-версией не может
-пройти deploy поверх отставшей схемы или со старым runtime bundle.
+`heys-app` и выгружает статический landing в `heys-static`. Демо-стенд
+`try.heyslab.ru` из выкладки убран 2 сентября 2026: поддомен не отвечает (нет
+валидного сертификата), а его зеркалирование, сброс CDN и health check стояли в
+цепочке до сброса кеша прода — сбой хранилища 502 на копии в мёртвый бакет
+оставил живое приложение с непогашенным CDN-кешем. Бакет и поддомен оставлены
+как есть, из workflow убраны только шаги. Критичные entry files и hashed assets
+получают разные cache policies; `build-meta.json` загружается последним как
+маркер целостного релиза. Финальная проверка сопоставляет deployed hash с
+ожидаемым commit/ancestor contract. Перед тестами frontend workflow проверяет
+production migration-ledger, а после сборки сверяет legal manifest, server
+registry migration и версии внутри `boot-core`/consent bundle. Поэтому frontend
+с новой legal-версией не может пройти deploy поверх отставшей схемы или со
+старым runtime bundle.
 
 Ручной scoped deploy до первой cloud mutation собирает все hashed bundle-ссылки
 из загружаемых `index.html`, `bundle-manifest.json` и `lazy-manifest.json`.
@@ -243,7 +247,7 @@ versioned seed migration и отдельно разрешённого production
 | ID  | Утверждение                                                                                                  | Проверка                                                                                                                                                                                                                                                          | Статус                                                                                                             |
 | --- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | I1  | Frontend workflow сериализует main deploy и использует production build-meta baseline                        | `sed -n '1,105p' .github/workflows/deploy-yandex.yml`                                                                                                                                                                                                             | проверено 2026-07-17                                                                                               |
-| I2  | Workflow загружает PWA/demo/landing в три bucket                                                             | `rg -n 'YC*BUCKET*                                                                                                                        \| aws s3 (sync                                         \| cp)' .github/workflows/deploy-yandex.yml`                    | проверено 2026-07-17                                                                                               |
+| I2  | Workflow загружает PWA/landing в два bucket                                                                  | `rg -n 'YC*BUCKET*                                                                                                                        \| aws s3 (sync                                         \| cp)' .github/workflows/deploy-yandex.yml`                    | проверено 2026-07-17                                                                                               |
 | I3  | Явный inventory полностью покрывает 19 source functions; docs/classifier-only diff не создаёт runtime deploy | `node yandex-cloud-functions/function-inventory.cjs --verify && node --test yandex-cloud-functions/__tests__/function-inventory.test.cjs`                                                                                                                         | проверено 2026-08-04; 15 inventory tests                                                                           |
 | I4  | Deploy guard запрещает plaintext secret env, а весь target set preflight'ится до mutation                    | `node --test yandex-cloud-functions/__tests__/serverless-capacity-contract.test.cjs`                                                                                                                                                                              | проверено 2026-07-27                                                                                               |
 | I5  | Gateway update и ops canary являются отдельными deploy steps                                                 | `rg -n 'api-gateway update                                                                                                                \| check-heys-ops-status                                \| record_deploy_receipt' yandex-cloud-functions/deploy-all.sh` | проверено 2026-07-17                                                                                               |
