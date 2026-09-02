@@ -562,6 +562,27 @@ async function openCase(browser, item, snapshot) {
         window.__uiV4ReportsWeightRoot.render(element);
       }, item.themeId || null);
     }
+    // Чек-ин: продукт уже умеет переоткрывать его целиком —
+    // `HEYS.debug.replayCheckin()` собирает план и показывает StepModal ровно
+    // так, как его видит человек утром. Свой план тут не строим: он разошёлся бы
+    // с продуктовым при первой же правке порядка шагов.
+    if (item.kind === 'demo-checkin-weight') {
+      await page.waitForFunction(
+        () =>
+          typeof window.HEYS?.debug?.replayCheckin === 'function' &&
+          !!window.HEYS?.StepModal?.show &&
+          !!window.HEYS?.currentClientId,
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        window.HEYS.debug.replayCheckin();
+      }, item.themeId || null);
+      await page.waitForSelector('[data-heys-step-modal][data-heys-step-id="weight"]', {
+        timeout: 45_000,
+      });
+    }
     // Карточка продукта: у зоны product-card не было стенда вовсе, а её экраны
     // видят при каждом добавлении еды. Открываем штатной модалкой правки, а не
     // монтируем шаг голым: кадр рисует его вместе с шапкой шага и подзаголовком,

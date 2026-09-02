@@ -131,6 +131,21 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     rootSelector: '.activity-v4',
     viewport: { width: 375, height: 812 },
   },
+  // Чек-ин: первый экран, который человек видит каждое утро, а стенда у зоны не
+  // было. Открываем штатным `HEYS.debug.replayCheckin()`, а не монтируем шаг
+  // голым: кадр рисует его вместе с приветствием, точками прогресса и парой
+  // кнопок внизу — без обрамления сравнивать было бы не с чем.
+  {
+    id: 'checkin-weight-sand',
+    zone: 'checkin-morning',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-checkin-weight',
+    themeId: 'sand',
+    stubGamificationMerge: true,
+    rootSelector: '[data-heys-step-modal][data-heys-step-id="weight"]',
+    viewport: { width: 375, height: 812 },
+  },
   // Карточка продукта: зона видна при каждом добавлении еды, стенда не было.
   {
     id: 'product-edit-basic-sand',
