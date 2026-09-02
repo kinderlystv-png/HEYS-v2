@@ -77,7 +77,16 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(uiSrc).not.toContain('widget-water--norm-on-water');
     expect(widgetsCss).not.toContain('.widget-water__norm');
     expect(uiSrc).toContain("className: 'widget-water__label'");
-    expect(uiSrc).toContain('WATER_TILE_LINES_CREAM_PCT = 31');
+    // Порог кремового тона сторожим правилом, а не числом: подпись читаема
+    // кремовым только когда её накрыла вода, иначе кремовое по песочному не
+    // видно. Подпись стоит top:8 и кончается на 20 px от верха, ряд сетки —
+    // 64 px, значит вода доходит до середины строки при доле (64-14)/64 = 78 %.
+    // Порог ниже этого красит текст кремовым над водой — так и было при 31 %,
+    // оставшемся от раскладки, где подпись лежала внизу.
+    const creamPct = Number(/WATER_TILE_LINES_CREAM_PCT = (\d+)/.exec(uiSrc)[1]);
+    expect(creamPct, 'порог кремового ниже уровня, на котором вода доходит до текста')
+      .toBeGreaterThanOrEqual(78);
+    expect(creamPct, 'порог кремового выше полного погружения подписи').toBeLessThanOrEqual(88);
     expect(uiSrc).toContain('widget-water--lines-on-water');
     expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__label \{[^}]*left: 8px/);
     expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__label \{[^}]*top: 8px/);
