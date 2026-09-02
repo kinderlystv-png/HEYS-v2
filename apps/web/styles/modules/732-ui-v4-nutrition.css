@@ -17,7 +17,41 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  margin-top: 4px;
+  margin-top: 0;
+}
+
+/* Nutrition owns a dedicated Canvas shell: no global gamification row, and the
+   title/date chrome uses the same Figtree metrics as the screen content. */
+.wrap--tab-diary {
+  font-family: Figtree, sans-serif;
+  padding-top: 0;
+}
+
+.wrap--tab-diary .hdr {
+  padding: 16px 18px 0;
+}
+
+.wrap--tab-diary .hdr-bottom {
+  margin-top: 0;
+  padding: 0;
+}
+
+.wrap--tab-diary .hdr-client-tab-title-text {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.wrap--tab-diary .hdr-tab-title-group {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wrap--tab-diary .date-picker-icon {
+  display: none;
+}
+
+.wrap--tab-diary .hdr-sticky-strip {
+  padding: 11px 18px 0;
 }
 
 /* Выделение и копирование · правило продукта (nutrition-tab.v4.dc.html,

@@ -151,6 +151,7 @@ describe('UI v4 visual harness', () => {
     expect(paired.map((item) => item.id)).toContain('strength-builder-collapsed-sand');
     expect(paired.map((item) => item.id)).toContain('strength-superset-create-sand');
     expect(paired.map((item) => item.id)).toContain('norm-correction-lowered-sand');
+    expect(paired.map((item) => item.id)).toContain('nutrition-empty-day-sand');
     expect(paired.map((item) => item.id)).toContain('food-copy-empty-target-sand');
     expect(paired.map((item) => item.id)).toContain('food-copy-existing-target-sand');
     expect(paired.map((item) => item.id)).toContain('food-move-existing-target-sand');
@@ -173,6 +174,20 @@ describe('UI v4 visual harness', () => {
       oid: 'И3',
       palette: 'sand',
       captureSelector: ':scope > .sc',
+    });
+    expect(paired.find((item) => item.id === 'nutrition-empty-day-sand')).toMatchObject({
+      viewport: { width: 375, height: 640 },
+      captureSelector: '.wrap.wrap--tab-diary',
+      captureHideSelectors: ['.tabs.tabs--v4-primary'],
+      stubGamificationMerge: true,
+      clock: { day: '2025-08-21' },
+      canvasFrame: {
+        file: 'nutrition-tab.v4.dc.html',
+        label: 'Питание · пустой день',
+        oid: 'NT-EMPTY1',
+        palette: 'sand',
+        clipRoundedCorners: 26,
+      },
     });
     expect(paired.find((item) => item.id === 'strength-builder-collapsed-sand')?.canvasFrame)
       .toMatchObject({

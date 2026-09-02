@@ -104,6 +104,7 @@ describe('вкладка «Питание» v4 — состояния', () => {
 
     const view = renderTab(renderFn, { ctx: { day: { date: '2026-08-20', meals: [] }, eatenKcal: 0, dayTot: {} } });
     expect(view.getByText('Пока нет приёмов — добавьте первый')).toBeTruthy();
+    expect(view.container.querySelectorAll('.nutrition-v4-total-row')).toHaveLength(3);
     expect(view.container.querySelectorAll('.nutrition-v4-bar')).toHaveLength(0);
   });
 

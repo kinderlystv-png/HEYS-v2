@@ -3278,10 +3278,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             const bump = () => setDiaryMetaTick((value) => value + 1);
             window.addEventListener('heys:day-updated', bump);
             window.addEventListener('heys:client-changed', bump);
+            window.addEventListener('heys:nutrition-v4-ready', bump);
             const unscheduleNight = HEYS.dayUtils?.scheduleNightBoundaryRefresh?.(bump);
             return () => {
                 window.removeEventListener('heys:day-updated', bump);
                 window.removeEventListener('heys:client-changed', bump);
+                window.removeEventListener('heys:nutrition-v4-ready', bump);
                 if (typeof unscheduleNight === 'function') unscheduleNight();
             };
         }, [tab, selectedDate, clientId]);
@@ -3460,7 +3462,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     'Копия для сравнения · только чтение'
                 ),
             // === ВЕРХНЯЯ ЛИНИЯ: Gamification Bar ===
-            React.createElement(
+            tab !== 'diary' && React.createElement(
                 'div',
                 { className: 'hdr-top hdr-gamification' },
                 React.createElement(GamificationBar, { leadingHeaderActions: cloudSyncHeaderActions })
@@ -6481,7 +6483,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 shouldRenderContent && React.createElement(MemoAppTabContent, Object.assign({}, props, {
                     key: 'appTabContent_' + String(clientId || '') + '_' + profilerMountKey
                 })),
-                shouldRenderContent && MessageFabButton && !hideProductHeader && showMessengerFabGroup && React.createElement(
+                shouldRenderContent && MessageFabButton && !hideProductHeader && tab !== 'diary' && showMessengerFabGroup && React.createElement(
                     'div',
                     {
                         className: 'fab-group fab-group--messenger-only'

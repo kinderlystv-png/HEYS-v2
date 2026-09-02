@@ -1676,6 +1676,7 @@
     const windowState = buildWindowState(insulinWaveData);
     const progressK = eatingProgressK(day, isPastDay);
     const totalRows = buildTotalRows(dayTot, normAbs, hasData, { isPastDay, progressK });
+    const visibleTotalRows = hasData ? totalRows : totalRows.slice(0, 3);
     const streak = hasData ? buildMealStreak(meals, pIndex, budgetKcal) : null;
 
     const allMeals = Array.isArray(day?.meals) ? day.meals : [];
@@ -1870,7 +1871,7 @@
 
       React.createElement('section', { className: 'nutrition-v4-totals' },
         React.createElement('div', { className: 'nutrition-v4-totals__title' }, 'Итоги дня'),
-        totalRows.map((row) => React.createElement('div', { key: row.key, className: 'nutrition-v4-total-row' },
+        visibleTotalRows.map((row) => React.createElement('div', { key: row.key, className: 'nutrition-v4-total-row' },
           React.createElement('div', { className: 'nutrition-v4-total-row__head' },
             React.createElement('b', null, row.label),
             React.createElement('span', { 'data-zone': row.zone },
@@ -2026,5 +2027,11 @@
     chipAriaLabel,
     formatProductCountLabel
   };
+
+  // AppShell may mount before this lazy day bundle. Wake its header memo once
+  // the formatter exists so Canvas meta is not silently absent on first load.
+  try {
+    global.dispatchEvent(new CustomEvent('heys:nutrition-v4-ready'));
+  } catch (_) { }
 
 })(window);

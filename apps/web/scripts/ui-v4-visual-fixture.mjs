@@ -115,13 +115,51 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     viewport: { width: 320, height: 700 },
   },
   {
-    id: 'nutrition-default',
+    id: 'nutrition-empty-day-sand',
     zone: 'nutrition-tab',
     status: 'automated',
     gate: 'diagnostic',
     kind: 'demo-tab',
     tab: 'diary',
+    themeId: 'sand',
+    stubGamificationMerge: true,
+    clock: {
+      iso: '2025-08-21T09:30:00+03:00',
+      day: '2025-08-21',
+      epochMs: Date.parse('2025-08-21T09:30:00+03:00'),
+    },
+    fixtureProfile: {
+      weight: 80,
+      weightGoal: 75,
+      deficitPctTarget: 0,
+      carbsPct: 73,
+      proteinPct: 27,
+      cycleTrackingEnabled: false,
+      supplementsTrackingEnabled: false,
+      plannedSupplements: [],
+    },
+    fixtureNorms: {
+      carbsPct: 73,
+      proteinPct: 27,
+    },
+    fixtureDay: {
+      date: '2025-08-21',
+      weightMorning: 0,
+      steps: 7937,
+      meals: [],
+      trainings: [],
+    },
     rootSelector: '.nutrition-v4',
+    captureSelector: '.wrap.wrap--tab-diary',
+    captureHideSelectors: ['.tabs.tabs--v4-primary'],
+    viewport: { width: 375, height: 640 },
+    canvasFrame: {
+      file: 'nutrition-tab.v4.dc.html',
+      label: 'Питание · пустой день',
+      oid: 'NT-EMPTY1',
+      palette: 'sand',
+      clipRoundedCorners: 26,
+    },
   },
   {
     id: 'settings-default',
@@ -522,9 +560,10 @@ function mealItem(product, grams) {
   };
 }
 
-export function buildUiV4VisualSnapshot() {
+export function buildUiV4VisualSnapshot(item = {}) {
   const [oats, berries, chicken, rice] = PRODUCTS;
-  const updatedAt = UI_V4_VISUAL_CLOCK.epochMs;
+  const clock = item.clock || UI_V4_VISUAL_CLOCK;
+  const updatedAt = clock.epochMs;
   const profile = {
     name: 'Анна',
     firstName: 'Анна',
@@ -546,13 +585,18 @@ export function buildUiV4VisualSnapshot() {
     plannedSupplements: ['vitamin-d', 'omega-3'],
     optionalFeatureConsentsOfferedAt: updatedAt,
     updatedAt,
+    ...(item.fixtureProfile || {}),
   };
+
+  const fixtureDay = item.fixtureDay
+    ? { ...item.fixtureDay, updatedAt }
+    : null;
 
   return {
     schemaVersion: 1,
     gender: 'female',
     pseudonym: 'Визуальный стенд',
-    generatedAt: UI_V4_VISUAL_CLOCK.iso,
+    generatedAt: clock.iso,
     daysIncluded: 1,
     lsKeys: {
       heys_profile: profile,
@@ -563,8 +607,9 @@ export function buildUiV4VisualSnapshot() {
         source: 'visual-fixture',
         profileUpdatedAt: updatedAt,
         updatedAt,
+        ...(item.fixtureNorms || {}),
       },
-      [`heys_dayv2_${FIXED_DAY}`]: {
+      ...(!fixtureDay ? { [`heys_dayv2_${FIXED_DAY}`]: {
         date: FIXED_DAY,
         weightMorning: 64.2,
         sleepHours: 7.8,
@@ -588,7 +633,8 @@ export function buildUiV4VisualSnapshot() {
         ],
         trainings: [],
         updatedAt,
-      },
+      } } : {}),
+      ...(fixtureDay ? { [`heys_dayv2_${fixtureDay.date}`]: fixtureDay } : {}),
       heys_advice_settings: {
         toastsEnabled: false,
         soundEnabled: false,

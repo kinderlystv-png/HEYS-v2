@@ -153,6 +153,7 @@ async function ensureServer() {
 }
 
 async function installDeterminism(context, item, snapshot) {
+  const clock = item.clock || UI_V4_VISUAL_CLOCK;
   await context.addInitScript(
     ({ fixedEpoch, demoTab, profile, themeId }) => {
       const RealDate = Date;
@@ -201,7 +202,7 @@ async function installDeterminism(context, item, snapshot) {
       }
     },
     {
-      fixedEpoch: UI_V4_VISUAL_CLOCK.epochMs,
+      fixedEpoch: clock.epochMs,
       demoTab: item.kind === 'login' ? null : item.tab || 'widgets',
       profile: item.kind === 'login'
         ? null
@@ -1627,6 +1628,77 @@ async function openCase(browser, item, snapshot) {
         throw new Error(`Home filled fixture не соответствует Canvas-состоянию: ${JSON.stringify(visualChecks)}`);
       }
     }
+    if (item.id === 'nutrition-empty-day-sand') {
+      visualChecks = await page.evaluate(() => {
+        const root = document.querySelector('.nutrition-v4');
+        const rect = (selector) => {
+          const box = document.querySelector(selector)?.getBoundingClientRect();
+          return box ? {
+            x: Math.round(box.x * 100) / 100,
+            y: Math.round(box.y * 100) / 100,
+            width: Math.round(box.width * 100) / 100,
+            height: Math.round(box.height * 100) / 100,
+          } : null;
+        };
+        const normalized = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+        const visibleText = (node) => {
+          if (!node) return '';
+          const copy = node.cloneNode(true);
+          copy.querySelectorAll('.nutrition-v4-sr-only').forEach((hidden) => hidden.remove());
+          return normalized(copy.textContent);
+        };
+        const totalRows = [...(root?.querySelectorAll('.nutrition-v4-total-row') || [])];
+        return {
+          date: window.HEYS?.dayUtils?.todayISO?.() || window.HEYS?.models?.todayISO?.() || null,
+          rootCount: document.querySelectorAll('.nutrition-v4').length,
+          mealCount: root?.querySelectorAll('.nutrition-v4-meal-row').length || 0,
+          heroLabel: normalized(root?.querySelector('.nutrition-v4-hero__label')?.textContent),
+          heroValue: normalized(root?.querySelector('.nutrition-v4-hero__value')?.textContent),
+          heroBudget: normalized(root?.querySelector('.nutrition-v4-hero__budget')?.textContent),
+          windowValue: normalized(root?.querySelector('.nutrition-v4-window__value')?.textContent),
+          diaryEmpty: normalized(root?.querySelector('.nutrition-v4-diary__empty')?.textContent),
+          cta: normalized(root?.querySelector('#nutrition-v4-cta')?.textContent),
+          totals: totalRows.slice(0, 3).map(visibleText),
+          geometry: {
+            title: rect('.hdr-client-tab-title-text'),
+            meta: rect('.hdr-tab-meta'),
+            date: rect('.hdr-date-row'),
+            hero: rect('.nutrition-v4-hero'),
+            window: rect('.nutrition-v4-window'),
+            empty: rect('.nutrition-v4-diary'),
+            cta: rect('#nutrition-v4-cta'),
+            totals: rect('.nutrition-v4-totals'),
+          },
+          shellCount: document.querySelectorAll('.wrap.wrap--tab-diary').length,
+          shell: (() => {
+            const box = document.querySelector('.wrap.wrap--tab-diary')?.getBoundingClientRect();
+            return box ? { width: Math.round(box.width), height: Math.round(box.height) } : null;
+          })(),
+        };
+      });
+      if (
+        visualChecks.date !== '2025-08-21' ||
+        visualChecks.rootCount !== 1 ||
+        visualChecks.mealCount !== 0 ||
+        visualChecks.heroLabel !== 'Осталось на сегодня' ||
+        visualChecks.heroValue.replace(/\s/g, '') !== '1931' ||
+        !visualChecks.heroBudget.includes('съедено —') ||
+        !visualChecks.heroBudget.includes('бюджет 1 931') ||
+        visualChecks.windowValue.replace(/\s/g, '') !== 'добавьтеприёмдлярасчёта' ||
+        visualChecks.diaryEmpty !== 'Пока нет приёмов — добавьте первый' ||
+        !visualChecks.cta.includes('Добавить приём пищи') ||
+        JSON.stringify(visualChecks.totals.map((value) => value.replace(/\s/g, ''))) !== JSON.stringify([
+          'Калории—из1931ккал',
+          'Белок—из128г',
+          'Жиры—из64г',
+        ]) ||
+        visualChecks.shellCount !== 1 ||
+        visualChecks.shell?.width !== 375 ||
+        visualChecks.shell?.height !== 640
+      ) {
+        throw new Error(`Nutrition empty fixture не соответствует Canvas-состоянию: ${JSON.stringify(visualChecks)}`);
+      }
+    }
     if (item.id.startsWith('home-widgets-empty-day')) {
       visualChecks = await page.evaluate(() => {
         const widgets = window.HEYS?.Widgets?.state?.getWidgets?.() || [];
@@ -2063,6 +2135,9 @@ async function openCase(browser, item, snapshot) {
       content: [
         '*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}',
         'input,textarea{caret-color:transparent!important}',
+        ...(item.captureHideSelectors || []).map(
+          (selector) => `${selector}{visibility:hidden!important}`,
+        ),
       ].join(''),
     });
     const fontState = await page.evaluate(async () => {
@@ -2233,7 +2308,32 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
         node.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0)`;
       });
     }
-    const visualChecks = item.kind === 'demo-registration'
+    const visualChecks = item.id === 'nutrition-empty-day-sand'
+      ? await frame.evaluate((node) => {
+          const frameBox = node.getBoundingClientRect();
+          const rect = (selector) => {
+            const box = node.querySelector(selector)?.getBoundingClientRect();
+            return box ? {
+              x: Math.round((box.x - frameBox.x) * 100) / 100,
+              y: Math.round((box.y - frameBox.y) * 100) / 100,
+              width: Math.round(box.width * 100) / 100,
+              height: Math.round(box.height * 100) / 100,
+            } : null;
+          };
+          return {
+            geometry: {
+              title: rect('.ttl'),
+              meta: rect('.capM'),
+              date: rect('.dcap'),
+              hero: rect('.hero'),
+              window: rect('.win'),
+              empty: rect('.dry'),
+              cta: rect('.cta'),
+              totals: rect('.tot'),
+            },
+          };
+        })
+      : item.kind === 'demo-registration'
       ? await frame.evaluate((node) => {
           const frameBox = node.getBoundingClientRect();
           const relativeRect = (target) => {
@@ -2597,8 +2697,8 @@ async function main() {
   });
   const results = [];
   try {
-    const snapshot = buildUiV4VisualSnapshot();
     for (const item of automated) {
+      const snapshot = buildUiV4VisualSnapshot(item);
       const result = await openCase(browser, item, snapshot);
       if (result.status === 'captured' && item.canvasFrame) {
         result.canvas = await captureCanvasFrame(browser, item, canvasServer.origin);
@@ -2657,11 +2757,19 @@ async function main() {
     }
   }
 
+  const caseContexts = automated.map((item) => ({
+    id: item.id,
+    fixedClock: (item.clock || UI_V4_VISUAL_CLOCK).iso,
+    viewport: item.viewport || { width: 390, height: 844 },
+  }));
+  const reportClocks = [...new Set(caseContexts.map((item) => item.fixedClock))];
+  const reportViewports = [...new Set(caseContexts.map((item) => JSON.stringify(item.viewport)))];
   const report = {
     schemaVersion: 2,
     mode,
-    fixedClock: UI_V4_VISUAL_CLOCK.iso,
-    viewport: { width: 390, height: 844, deviceScaleFactor: 1 },
+    fixedClock: reportClocks.length === 1 ? reportClocks[0] : 'per-case',
+    viewport: reportViewports.length === 1 ? JSON.parse(reportViewports[0]) : 'per-case',
+    caseContexts,
     appOrigin: APP_ORIGIN,
     demoActivation: 'init-script@localhost',
     results,

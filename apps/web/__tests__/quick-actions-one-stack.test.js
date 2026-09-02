@@ -15,7 +15,7 @@ describe('стопка быстрых действий: одно v4-исполн
     const guard = dayShell.slice(Math.max(0, idx - 220), idx);
     expect(guard).toContain('isTabActive');
     expect(guard).toContain("mobileSubTab === 'stats'");
-    expect(guard).toContain("mobileSubTab === 'diary'");
+    expect(guard).not.toContain("mobileSubTab === 'diary'");
     expect(guard).toContain("mobileSubTab === 'activity'");
     expect(dayShell).toContain('const DayQuickActionsFab = HEYS.Widgets?.QuickActionsFab');
     expect(dayShell).not.toContain('QuickActionsFabGroup');

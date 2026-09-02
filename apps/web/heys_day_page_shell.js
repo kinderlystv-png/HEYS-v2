@@ -427,9 +427,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 isTabActive && reportsFullscreenModal,
 
-                isMobile && isTabActive && (mobileSubTab === 'stats' || mobileSubTab === 'diary' || mobileSubTab === 'activity') && !offlineColdStart && DayQuickActionsFab && React.createElement(DayQuickActionsFab, {
+                isMobile && isTabActive && (mobileSubTab === 'stats' || mobileSubTab === 'activity') && !offlineColdStart && DayQuickActionsFab && React.createElement(DayQuickActionsFab, {
                     id: 'tour-fab-buttons',
-                    suppressKeys: mobileSubTab === 'diary' ? ['meal'] : [],
                     waterMl: day?.waterMl || 0,
                     onAddWater: (ml) => {
                         addWater(ml, { source: 'day-fab' });
