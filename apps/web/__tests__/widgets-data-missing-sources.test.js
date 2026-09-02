@@ -228,7 +228,15 @@ describe('home widgets: fail-closed empty states не маскируют оши�
 
     expect(uiSource).toContain('function normalizeHealthSparkPoints(value)');
     expect(chunk).toContain('compactSparkPoints ? React.createElement');
-    expect(chunk).toContain('const trendPts = normalizeHealthSparkPoints(data?.sparkline?.points)');
+    // Сторожим правило, а не текст строки: точки берутся из данных, а не из
+    // захардкоженной заглушки. Прежняя дословная проверка падала на любой
+    // переписи вызова — так и вышло с 6fe9701bb, где линию научили считать
+    // геометрией (trendGeom) и вызов стал многострочным, хотя источник данных
+    // остался тем же. Тест на форму записи ломается на починке; две проверки
+    // ниже, про отсутствие фиксированных координат, и есть суть этого теста.
+    expect(chunk).toMatch(
+      /const trendPts = normalizeHealthSparkPoints\([\s\S]{0,200}?data\?\.sparkline\?\.points/,
+    );
     expect(chunk).not.toContain('2,18 11,16 20,17 29,12 38,9 47,6 56,4');
     expect(chunk).not.toContain("['4,32', '26,28', '48,30'");
   });

@@ -19,7 +19,9 @@
     3. copy_files: tmp/<slug>.html → «Имя канваса v4.dc.html» и design_handoff_heys_v4/<slug>.v4.dc.html
     4. пересобрать ACCEPTANCE-<slug>.md, обновить счётчики INDEX.md и README.md
 
-  ЧТО ДЕЛАЕТ. Находит песочные кадры (data-screen-label без суффикса палитры), для каждого:
+  ЧТО ДЕЛАЕТ. Находит песочные кадры — ЛЮБОЙ <div> с data-screen-label без суффикса палитры: и экраны .ph,
+  и одиночные плитки .w в рядах состояний («нет данных», «пустой день», «три состояния»). Вложенные
+  метки внутри уже снятого кадра пропускаются — иначе один элемент получал бы две строки. Для каждого:
     • «Разбор кадров · элемент за элементом» — по строке на элемент со style/class: текст,
       роль по классу, все заданные свойства словами. Повторы одного вида внутри кадра свёрнуты.
     • «Разбор графики · SVG в кадрах» — поля рисунков с viewBox, точки ломаных, пунктиры,
@@ -103,15 +105,17 @@ function gfx(tag, a) {
 }
 
 function framesOf(s) {
-  const out = [], re = /<div class="ph"([^>]*)data-screen-label="([^"]*)"([^>]*)>/g;
-  let m;
+  const out = [], re = /<div\b([^>]*)data-screen-label="([^"]*)"([^>]*)>/g;
+  let m, guard = -1;                                  // конец последнего снятого кадра
   while ((m = re.exec(s))) {
     const lab = m[2];
     if (/тёмная|синяя|сине/.test(lab)) continue;      // зеркала палитр — копии песочного ряда
+    if (m.index < guard) continue;                    // метка внутри уже снятого кадра
     let d = 0, end = -1;
     const r2 = /<div\b|<\/div>/g; r2.lastIndex = m.index;
     let k;
     while ((k = r2.exec(s))) { d += k[0] === '</div>' ? -1 : 1; if (d === 0) { end = k.index; break; } }
+    guard = end;
     out.push({ lab, html: s.slice(m.index, end) });
   }
   return out;
