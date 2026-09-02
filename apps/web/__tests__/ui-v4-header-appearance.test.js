@@ -69,6 +69,67 @@ describe('UI v4 · «что в шапке» (tips) — ровно два адр�
     });
 });
 
+describe('UI v4 · значки шапки не режутся строкой уровня', () => {
+    const css = fs.readFileSync(
+        path.resolve(__dirname, '../styles/modules/000-base-and-gamification.css'),
+        'utf8',
+    );
+    // Одно правило целиком: от селектора до ближайшей закрывающей скобки.
+    const rule = (selector) => {
+        // Селектор ищем от начала строки: '.game-bar {' встречается и хвостом
+        // составного селектора, и это было бы чужое правило.
+        const at = css.indexOf('\n' + selector + ' {');
+        if (at < 0) throw new Error('правило «' + selector + '» не найдено');
+        const open = css.indexOf('{', at);
+        const close = css.indexOf('}', open);
+        // Без комментариев: значение, названное в пояснении, — не декларация.
+        return css.slice(open + 1, close).replace(/\/\*[\s\S]*?\*\//g, '');
+    };
+
+    it('строка уровня по-прежнему обрезает, а значки по-прежнему выходят за неё', () => {
+        // Обе половины дефекта: клип у полосы и отрицательные поля у целей 44 pt.
+        // Уйдёт любая — компенсация ниже станет лишней, и тест об этом скажет.
+        expect(rule('.game-bar')).toMatch(/overflow:\s*hidden/);
+        expect(css).toMatch(
+            /\.wrap--tab-widgets \.hdr-gamification \.hdr-header-icon-btn--advice[^{]*\{[^}]*margin-block:\s*-\d/,
+        );
+    });
+
+    it('счётчик советов стоит в углу значка, а не в углу кнопки', () => {
+        // Строка «вид бейджа счётчика»: кружок в правом верхнем углу иконки
+        // лампочки. Значок 17 стоит по центру бокса 34 × 44, значит угол — это
+        // 13,5 сверху и 8,5 справа; сдвиг на половину держит угол и при
+        // двузначном счётчике. Отсчёт от угла кнопки сажал бейдж на макушку.
+        const badge = rule('.hdr-advice-badge,\n.hdr-header-icon-btn--advice #nav-advice-badge');
+        expect(badge).toMatch(/top:\s*13\.5px/);
+        expect(badge).toMatch(/right:\s*8\.5px/);
+        expect(badge).toMatch(/transform:\s*translate\(50%,\s*-50%\)/);
+    });
+
+    it('шапочная полоса поднимает границу отсечения ровно настолько, насколько опускает край', () => {
+        // Сверху за строку выходит счётчик: кружок 14 с обводкой 2 в углу
+        // значка — 18 px, которые в строку 16 не помещаются по построению.
+        // Снизу выходит 0,5 px самой лампочки: её дуга доходит до края квадрата
+        // 24, в отличие от ползунков и облака. Поля сдвигают границу отсечения,
+        // отрицательные отступы возвращают внешнюю геометрию строки.
+        const header = rule('.hdr-top.hdr-gamification .game-bar');
+        const decl = (name) => {
+            const match = header.match(new RegExp(name + ':\\s*(-?[\\d.]+)px'));
+            return match ? Number(match[1]) : null;
+        };
+        expect(decl('padding-top'), 'нет верхнего поля — счётчик снова режется').toBeGreaterThanOrEqual(8);
+        expect(decl('padding-bottom'), 'нет нижнего поля — макушка лампочки снова режется').toBeGreaterThan(0);
+        expect(decl('margin-top'), 'верхнее поле не скомпенсировано — строка стала выше').toBe(-decl('padding-top'));
+        expect(decl('margin-bottom'), 'нижнее поле не скомпенсировано — строка стала выше').toBe(-decl('padding-bottom'));
+    });
+
+    it('подсказка полосы XP в шапке не показывается', () => {
+        // Её прятал тот же клип, что резал значки. Клип поднят — подсказку надо
+        // снимать явно, иначе при нажатии на полосу она вылезает поверх даты.
+        expect(rule('.hdr-top.hdr-gamification .game-progress-tooltip')).toMatch(/display:\s*none/);
+    });
+});
+
 describe('UI v4 · «шторка в приложении» (login) — один адрес смены оформления', () => {
     it('канвас просит две оси в одной шторке и сам выводит из правила ридер плана', () => {
         const row = readContractRow('login.v4.dc.html', 'шторка в приложении');
