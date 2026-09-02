@@ -346,6 +346,13 @@ describe('конструктор: спокойная нижняя панель',
     expect(screen.getByText('Прошлый раз · 22,5 × 12')).toBeTruthy();
     expect(screen.getByText('Рекорд · 25 × 10')).toBeTruthy();
     expect(screen.queryByText('идёт')).toBeNull();
+    expect(document.querySelectorAll('.sb-aps > .sb-ap')).toHaveLength(3);
+    expect(document.querySelectorAll('.sb-aps > .sb-ap.is-current')).toHaveLength(1);
+    expect(document.querySelectorAll('.sb-aps > .sb-ap.is-done .sb-ap-value')).toHaveLength(4);
+
+    fireEvent.click(screen.getByLabelText('Отметить выполненным'));
+    expect(document.querySelectorAll('.sb-aps > .sb-ap')).toHaveLength(4);
+    expect(document.querySelectorAll('.sb-aps > .sb-ap.is-current')).toHaveLength(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Ещё' }));
     expect(screen.getByRole('button', { name: /Добавить подход/ })).toBeTruthy();

@@ -15,11 +15,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const NUTRITION_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_nutrition_v1.js'), 'utf8');
 const NUTRITION_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/732-ui-v4-nutrition.css'), 'utf8');
+const DIARY_SECTION_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_diary_section.js'), 'utf8');
 
 function loadModule() {
   eval(NUTRITION_SRC);
   return { api: window.HEYS.NutritionV4, render: window.HEYS.dayNutrition.render };
 }
+
+describe('nutrition-tab · browser runtime contract', () => {
+  it('optional panels используют browser-safe HEYS closure, а не Node global', () => {
+    expect(DIARY_SECTION_SRC).toContain('const hf = HEYS.healthFeatures;');
+    expect(DIARY_SECTION_SRC).not.toContain('global.HEYS?.healthFeatures');
+  });
+});
 
 function seedHEYS(profile) {
   const store = { heys_profile: profile || {} };

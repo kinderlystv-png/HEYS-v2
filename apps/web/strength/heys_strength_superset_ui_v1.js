@@ -349,7 +349,7 @@
   // ——— Строка подхода (экраны 07, 13, 24) ———
 
   function ApproachRow(props) {
-    const { approach, index, workNumber, onPatch, onToggleType, readOnly, unit } = props;
+    const { approach, index, workNumber, onPatch, onToggleType, readOnly, unit, isCurrent } = props;
     const SK = kernel();
     const warmup = SK ? SK.isWarmupApproach(approach) : false;
 
@@ -362,7 +362,7 @@
       const field = isTime ? 'durationSec' : 'distanceM';
       const value = approach && approach[field];
       const blankMeasured = !(approach && (approach.weightKg || value || approach.done));
-      const rowState = approach.done ? ' is-done' : (!warmup && !approach.done ? ' is-current' : '');
+      const rowState = approach.done ? ' is-done' : (!warmup && isCurrent ? ' is-current' : '');
       const rows = [
         h('div', {
           key: 'st0',
@@ -375,31 +375,35 @@
             title: warmup ? 'Разминка — вне тоннажа. Нажмите, чтобы сделать рабочим' : 'Рабочий подход. Нажмите, чтобы сделать разминочным',
             'aria-label': warmup ? 'Разминочный подход' : 'Рабочий подход номер ' + workNumber
           }, warmup ? 'разм' : String(workNumber || '—')),
-          h('input', {
-            className: 'sb-ap-field',
-            type: 'text',
-            inputMode: 'decimal',
-            value: approach.weightKg || '',
-            placeholder: 'свой',
-            disabled: readOnly,
-            onChange: function (e) { if (!readOnly) onPatch(index, { weightKg: e.target.value }); },
-            'aria-label': 'Вес, кг'
-          }),
-          h('input', {
-            className: 'sb-ap-field',
-            type: 'text',
-            inputMode: 'numeric',
-            value: value ? String(value) : '',
-            placeholder: isTime ? 'сек' : 'м',
-            disabled: readOnly,
-            onChange: function (e) {
-              const n = parseInt(String(e.target.value).replace(/\D/g, ''), 10);
-              const max = isTime ? 86400 : 200000;
-              const clamped = isFinite(n) ? Math.max(0, Math.min(max, n)) : 0;
-              if (!readOnly) onPatch(index, isTime ? { durationSec: clamped } : { distanceM: clamped });
-            },
-            'aria-label': isTime ? 'Время, сек' : 'Дистанция, м'
-          }),
+          approach.done
+            ? h('span', { className: 'sb-ap-field sb-ap-value' }, fmtNumber(approach.weightKg) || 'свой')
+            : h('input', {
+              className: 'sb-ap-field',
+              type: 'text',
+              inputMode: 'decimal',
+              value: approach.weightKg || '',
+              placeholder: 'свой',
+              disabled: readOnly,
+              onChange: function (e) { if (!readOnly) onPatch(index, { weightKg: e.target.value }); },
+              'aria-label': 'Вес, кг'
+            }),
+          approach.done
+            ? h('span', { className: 'sb-ap-field sb-ap-value' }, value ? fmtNumber(value) : (isTime ? 'сек' : 'м'))
+            : h('input', {
+              className: 'sb-ap-field',
+              type: 'text',
+              inputMode: 'numeric',
+              value: value ? String(value) : '',
+              placeholder: isTime ? 'сек' : 'м',
+              disabled: readOnly,
+              onChange: function (e) {
+                const n = parseInt(String(e.target.value).replace(/\D/g, ''), 10);
+                const max = isTime ? 86400 : 200000;
+                const clamped = isFinite(n) ? Math.max(0, Math.min(max, n)) : 0;
+                if (!readOnly) onPatch(index, isTime ? { durationSec: clamped } : { distanceM: clamped });
+              },
+              'aria-label': isTime ? 'Время, сек' : 'Дистанция, м'
+            }),
           h('button', {
             type: 'button',
             className: 'sb-ap-check' + (approach.done ? ' is-done' : ''),
@@ -438,9 +442,10 @@
     }
 
     const rows = [];
+    const firstPendingStage = stages.findIndex(function (stage) { return !stage.done; });
     stages.forEach(function (stage, si) {
       const isDrop = stage.isDrop;
-      const rowState = stage.done ? ' is-done' : (si === 0 && !warmup && !stage.done ? ' is-current' : '');
+      const rowState = stage.done ? ' is-done' : (isCurrent && si === firstPendingStage && !warmup ? ' is-current' : '');
       rows.push(h('div', {
         key: 'st' + si,
         className: (isDrop ? 'sb-drop' : 'sb-ap') + (blank && !isDrop ? ' is-blank' : '') + rowState
@@ -454,29 +459,33 @@
             title: warmup ? 'Разминка — вне тоннажа. Нажмите, чтобы сделать рабочим' : 'Рабочий подход. Нажмите, чтобы сделать разминочным',
             'aria-label': warmup ? 'Разминочный подход' : 'Рабочий подход номер ' + workNumber
           }, warmup ? 'разм' : String(workNumber || '—')),
-        h('input', {
-          className: 'sb-ap-field',
-          type: 'text',
-          inputMode: 'decimal',
-          value: stage.weightKg,
-          placeholder: 'свой',
-          disabled: readOnly,
-          onChange: function (e) { patchStage(si, { weightKg: e.target.value }); },
-          'aria-label': 'Вес, кг'
-        }),
-        h('input', {
-          className: 'sb-ap-field',
-          type: 'text',
-          inputMode: 'numeric',
-          value: stage.reps ? String(stage.reps) : '',
-          placeholder: '—',
-          disabled: readOnly,
-          onChange: function (e) {
-            const n = parseInt(String(e.target.value).replace(/\D/g, ''), 10);
-            patchStage(si, { reps: isFinite(n) ? Math.max(0, Math.min(200, n)) : 0 });
-          },
-          'aria-label': 'Повторы'
-        }),
+        stage.done
+          ? h('span', { className: 'sb-ap-field sb-ap-value' }, fmtNumber(stage.weightKg) || 'свой')
+          : h('input', {
+            className: 'sb-ap-field',
+            type: 'text',
+            inputMode: 'decimal',
+            value: stage.weightKg,
+            placeholder: 'свой',
+            disabled: readOnly,
+            onChange: function (e) { patchStage(si, { weightKg: e.target.value }); },
+            'aria-label': 'Вес, кг'
+          }),
+        stage.done
+          ? h('span', { className: 'sb-ap-field sb-ap-value' }, stage.reps ? fmtNumber(stage.reps) : '—')
+          : h('input', {
+            className: 'sb-ap-field',
+            type: 'text',
+            inputMode: 'numeric',
+            value: stage.reps ? String(stage.reps) : '',
+            placeholder: '—',
+            disabled: readOnly,
+            onChange: function (e) {
+              const n = parseInt(String(e.target.value).replace(/\D/g, ''), 10);
+              patchStage(si, { reps: isFinite(n) ? Math.max(0, Math.min(200, n)) : 0 });
+            },
+            'aria-label': 'Повторы'
+          }),
         h('button', {
           type: 'button',
           className: 'sb-ap-check' + (stage.done ? ' is-done' : ''),
@@ -507,8 +516,12 @@
     const meta = (metaApi && typeof metaApi.get === 'function') ? metaApi.get(ex.name) : null;
     const unit = (ex.unit || (meta && meta.unit) || 'weight_reps');
 
+    const firstPendingIndex = aps.findIndex(function (a) {
+      return !(SK ? SK.isApproachDone(a) : !!a.done);
+    });
+    const visibleApproaches = firstPendingIndex < 0 ? aps : aps.slice(0, firstPendingIndex + 1);
     let workNo = 0;
-    const rows = aps.map(function (a, ai) {
+    const rows = visibleApproaches.map(function (a, ai) {
       const warmup = SK ? SK.isWarmupApproach(a) : false;
       if (!warmup) workNo += 1;
       return h(ApproachRow, {
@@ -519,7 +532,8 @@
         onPatch: onPatchApproach,
         onToggleType: onToggleType,
         readOnly: readOnly,
-        unit: unit
+        unit: unit,
+        isCurrent: ai === firstPendingIndex
       });
     });
 

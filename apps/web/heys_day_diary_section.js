@@ -150,7 +150,7 @@
     function readDiaryPanelEnabled(profile, field) {
         const source = getDiaryPanelVisibilitySource(profile, field);
         if (field === SUPPLEMENTS_PANEL_PROFILE_FIELD) {
-            const hf = global.HEYS?.healthFeatures;
+            const hf = HEYS.healthFeatures;
             const trackingOn = hf && typeof hf.isSupplementsTrackingEnabled === 'function'
                 ? hf.isSupplementsTrackingEnabled(profile)
                 : source?.supplementsTrackingEnabled === true;

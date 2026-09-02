@@ -1628,6 +1628,54 @@ async function openCase(browser, item, snapshot) {
         throw new Error(`Home filled fixture не соответствует Canvas-состоянию: ${JSON.stringify(visualChecks)}`);
       }
     }
+    if (item.id === 'strength-builder-active-calm-sand') {
+      visualChecks = await page.evaluate(() => {
+        const host = document.querySelector('#ui-v4-strength-builder-active-calm-host');
+        const rows = [...(host?.querySelectorAll('.sb-ex.is-open .sb-ap') || [])];
+        const normalized = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+        const rect = (selector) => {
+          const box = host?.querySelector(selector)?.getBoundingClientRect();
+          return box ? {
+            x: Math.round(box.x * 100) / 100,
+            y: Math.round(box.y * 100) / 100,
+            width: Math.round(box.width * 100) / 100,
+            height: Math.round(box.height * 100) / 100,
+          } : null;
+        };
+        return {
+          exerciseCount: host?.querySelectorAll('.sb-ex').length || 0,
+          openExerciseCount: host?.querySelectorAll('.sb-ex.is-open').length || 0,
+          approachCount: rows.length,
+          doneApproachCount: rows.filter((row) => row.classList.contains('is-done')).length,
+          currentApproachCount: rows.filter((row) => row.classList.contains('is-current')).length,
+          currentValues: [...(host?.querySelectorAll('.sb-ex.is-open .sb-ap.is-current input') || [])]
+            .map((input) => input.value),
+          progress: normalized(host?.querySelector('.sb-ex.is-open .sb-ex-count')?.textContent),
+          noteStartsWithCanvasCopy: normalized(host?.querySelector('.sb-builder-note')?.textContent)
+            .startsWith('Тот же состав, шесть правок против шума.'),
+          geometry: {
+            header: rect('.sb-head'),
+            stats: rect('.sb-stats'),
+            list: rect('.sb-list'),
+            openExercise: rect('.sb-ex.is-open'),
+            panel: rect('.sb-panel'),
+            note: rect('.sb-builder-note'),
+          },
+        };
+      });
+      if (
+        visualChecks.exerciseCount !== 4
+        || visualChecks.openExerciseCount !== 1
+        || visualChecks.approachCount !== 3
+        || visualChecks.doneApproachCount !== 2
+        || visualChecks.currentApproachCount !== 1
+        || JSON.stringify(visualChecks.currentValues) !== JSON.stringify(['24', '10'])
+        || visualChecks.progress !== '2/4'
+        || !visualChecks.noteStartsWithCanvasCopy
+      ) {
+        throw new Error(`Strength active fixture не соответствует Canvas-состоянию: ${JSON.stringify(visualChecks)}`);
+      }
+    }
     if (item.id === 'nutrition-empty-day-sand') {
       visualChecks = await page.evaluate(() => {
         const root = document.querySelector('.nutrition-v4');
