@@ -253,7 +253,7 @@ export default defineConfig({
   // Dependency optimization
   optimizeDeps: {
     // Предварительная обработка больших зависимостей
-    include: ['react', 'react-dom', 'react-router-dom', '@emotion/react', '@emotion/styled'],
+    include: ['react', 'react-dom', '@emotion/react', '@emotion/styled'],
 
     // Исключаем из предварительной обработки
     exclude: ['@vite/client', '@vite/env'],

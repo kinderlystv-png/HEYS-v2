@@ -25,13 +25,13 @@
         <div class="header">
             <h1>📦 Dependency Security Report</h1>
             <p class="meta">Project: @heys/monorepo v13.0.0</p>
-            <p class="meta">Generated: 2026-08-17T06:26:46.363Z</p>
+            <p class="meta">Generated: 2026-09-02T11:26:44.807Z</p>
         </div>
         
         <div class="stats">
             <div class="stat-card">
                 <h3>Total Packages</h3>
-                <p style="font-size: 24px; margin: 5px 0; color: #3b82f6;">54</p>
+                <p style="font-size: 24px; margin: 5px 0; color: #3b82f6;">55</p>
             </div>
             <div class="stat-card">
                 <h3>Direct Dependencies</h3>
@@ -39,7 +39,7 @@
             </div>
             <div class="stat-card">
                 <h3>Total Vulnerabilities</h3>
-                <p style="font-size: 24px; margin: 5px 0; color: #dc2626;">3</p>
+                <p style="font-size: 24px; margin: 5px 0; color: #dc2626;">0</p>
             </div>
             <div class="stat-card">
                 <h3>Critical</h3>
@@ -52,39 +52,6 @@
         </div>
         
         <h2>Vulnerabilities</h2>
-        
-            <div class="vulnerability moderate">
-                <h3>React Router: Open redirect via backslash in <Link> and useNavigate (CVE-2025-68470 bypass)</h3>
-                <p class="meta">Package: react-router | Severity: MODERATE | ID: 1124268</p>
-                <p>This is a follow up to [CVE-2025-68470](https://github.com/remix-run/react-router/security/advisories/GHSA-9jcx-v3wj-wh4m).  React Router was alerted to certain scenarios in which the fix there was incomplete so there still existed some scenarios where attacker supplied paths passed to navigation mechanisms could result in unexpected external navigations.</p>
-                <div class="recommendation">
-                    <strong>Recommendation:</strong> Upgrade to version 7.18.0 or later
-                </div>
-                <p class="meta">Vulnerable versions: >=6.0.0 <7.18.0 | Patched: >=7.18.0</p>
-            </div>
-        
-            <div class="vulnerability moderate">
-                <h3>React Router: Open redirect leading to XSS</h3>
-                <p class="meta">Package: react-router-dom | Severity: MODERATE | ID: 1124270</p>
-                <p>Applications with open redirects could permit attacker crafted links to result in redirects to unexpected external location or XSS vectors.</p>
-                <div class="recommendation">
-                    <strong>Recommendation:</strong> None
-                </div>
-                <p class="meta">Vulnerable versions: >=6.30.2 <=6.30.4 | Patched: <0.0.0</p>
-            </div>
-        
-            <div class="vulnerability moderate">
-                <h3>React Router: Arbitrary Constructor Injection via deserializeErrors() in React Router SSR Hydration</h3>
-                <p class="meta">Package: react-router | Severity: MODERATE | ID: 1124272</p>
-                <p>If application code allows attacker supplied input to overwrite certain aspects of errors caught by the SSR process, then it was possible for attacker to trigger unexpected constructor execution on the client which would trigger outbound network traffic.  This is only possible with very specific (and unlikely) application layer code.
-
-> [!NOTE]
-> This does not impact your application if you are using Declarative Mode.  This only impacts Framework Mode and Data Mode applications doing manual SSR/hydration</p>
-                <div class="recommendation">
-                    <strong>Recommendation:</strong> Upgrade to version 7.18.0 or later
-                </div>
-                <p class="meta">Vulnerable versions: >=6.4.0 <7.18.0 | Patched: >=7.18.0</p>
-            </div>
         
         
         <h2>Security Recommendations</h2>

@@ -10,7 +10,7 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -683,8 +683,12 @@ class DependencySecurityChecker {
   }
 }
 
-// Запуск если вызван напрямую
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Запуск если вызван напрямую.
+// Сравнивать со строкой `file://${argv[1]}` нельзя: на Windows argv[1] — это
+// `C:\...`, а import.meta.url — `file:///C:/...`, они не совпадают никогда, и
+// проверка молча ничего не делала, выходя нулём. Ровно тот случай, когда
+// зелёный код возврата означает «не смотрели», а не «сошлось».
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const checker = new DependencySecurityChecker();
   checker
     .runCheck()
