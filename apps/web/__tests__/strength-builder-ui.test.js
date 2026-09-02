@@ -223,7 +223,7 @@ describe('конструктор: сводка считается ядром', (
     }));
     // Прототип экрана 04: время и счётчик. Тоннаж живёт на финале, чтобы в
     // зале не отвлекать; сам подсчёт разминки проверяется тестами ядра.
-    expect(screen.getByText('2 / 2 ✓')).toBeTruthy();
+    expect(screen.getByText('1 / 1 ✓')).toBeTruthy();
     expect(screen.queryByText(/\d+ кг$/)).toBeNull();
   });
 
@@ -314,6 +314,29 @@ describe('конструктор: спокойная нижняя панель',
     expect(document.querySelector('.sb-ex.is-current .sb-ex-state')?.textContent).toBe('раскрыть ›');
   });
 
+  it('держит открытой не больше одной карточки и синхронизирует aria-expanded', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([
+        { name: 'Жим', approaches: [work(75, 8, false)] },
+        { name: 'Тяга', approaches: [work(60, 10, false)] },
+      ]),
+      dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
+    }));
+
+    const first = screen.getByRole('button', { name: /Жим/ });
+    const second = screen.getByRole('button', { name: /Тяга/ });
+    expect(first.getAttribute('aria-expanded')).toBe('true');
+    expect(second.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(second);
+    expect(document.querySelectorAll('.sb-ex.is-open')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /Жим/ }).getAttribute('aria-expanded')).toBe('false');
+    const openedSecond = screen.getByRole('button', { name: /Тяга/ });
+    expect(openedSecond.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(openedSecond);
+    expect(document.querySelectorAll('.sb-ex.is-open')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: /Тяга/ }).getAttribute('aria-expanded')).toBe('false');
+  });
+
   it('показывает незакрытый остаток тихой кнопкой', () => {
     render(React.createElement(SB.BuilderScreen, {
       training: training([{ name: 'Жим', approaches: [work(75, 8, false)] }]),
@@ -325,6 +348,19 @@ describe('конструктор: спокойная нижняя панель',
 
     const finish = screen.getByRole('button', { name: 'Завершить тренировку · 1 не закрыто' });
     expect(finish).toBeTruthy();
+    expect(finish.classList.contains('is-ready')).toBe(false);
+  });
+
+  it('делает завершение главным действием только при нулевом остатке', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{ name: 'Жим', approaches: [work(75, 8, true)] }]),
+      dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
+    }));
+
+    const finish = screen.getByRole('button', { name: 'Завершить тренировку' });
+    expect(finish.classList.contains('is-ready')).toBe(true);
+    fireEvent.click(finish);
+    expect(screen.getByText('Тренировка завершена')).toBeTruthy();
   });
 
   it('открытый кадр берёт прошлый подход из detail и переносит вторичные действия в overflow', () => {
@@ -522,13 +558,15 @@ describe('конструктор: связка', () => {
     expect(screen.getByText('+10 секунд')).toBeTruthy();
     fireEvent.click(screen.getByText('+10 секунд'));
     expect(screen.getByText('1:40')).toBeTruthy();
+    expect(screen.getByRole('timer', { name: 'Отдых 1:40 осталось' })).toBeTruthy();
+    expect(document.querySelector('.sb-rest-ring svg')?.getAttribute('aria-hidden')).toBe('true');
     expect(screen.getByText('свернуть')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Тяга/ }));
-    expect(screen.getByLabelText('Развернуть таймер отдыха')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Отдых 1:40 · Жим. Идёт от подхода, который его запустил. Развернуть' })).toBeTruthy();
     expect(screen.getByText('Отдых 1:40 · Жим')).toBeTruthy();
     expect(screen.getByText('идёт от подхода, который его запустил')).toBeTruthy();
     expect(screen.getByText('Отдых 1:40 · Жим')).toBeTruthy();
-    expect(screen.getByLabelText('Развернуть таймер отдыха')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Отдых 1:40 · Жим.*Развернуть/ })).toBeTruthy();
   });
 
   it('старая связка с неравными подходами показана плоско и объясняет почему', () => {
@@ -810,7 +848,37 @@ describe('остались незакрытые подходы (экран 11)',
     }));
     fireEvent.click(screen.getByRole('button', { name: 'Завершить тренировку · 1 не закрыто' }));
     expect(screen.getByText('Остались незакрытые подходы')).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Остались незакрытые подходы' })).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Оставить' }));
     expect(screen.getByText(/лучше убрать/)).toBeTruthy();
+  });
+
+  it('удерживает фокус внутри подтверждения и возвращает его после Escape или тапа по фону', async () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{ name: 'Жим', approaches: [work(75, 8, false)] }]),
+      dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
+    }));
+
+    const finish = screen.getByRole('button', { name: 'Завершить тренировку · 1 не закрыто' });
+    fireEvent.click(finish);
+    const keep = screen.getByRole('button', { name: 'Оставить' });
+    const remove = screen.getByRole('button', { name: 'Убрать пустые' });
+
+    remove.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(keep);
+    keep.focus();
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(remove);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(finish));
+
+    fireEvent.click(finish);
+    fireEvent.click(document.querySelector('.sb-sheet-back'));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(finish));
   });
 
   it('«Убрать пустые» чистит незакрытые заполненные, но не трогает закрытые и прочерки', () => {
@@ -834,9 +902,10 @@ describe('остались незакрытые подходы (экран 11)',
     expect(aps[0].done).toBe(true);
     expect(aps[1].weightKg).toBe('');
     expect(aps[1].reps).toBe(0);
+    expect(screen.getByText('Тренировка завершена')).toBeTruthy();
   });
 
-  it('«Оставить» закрывает конструктор, ничего не меняя', () => {
+  it('«Оставить» сохраняет строки и переходит к итогу', () => {
     const patched = [];
     const closed = [];
     render(React.createElement(SB.BuilderScreen, {
@@ -849,7 +918,8 @@ describe('остались незакрытые подходы (экран 11)',
     fireEvent.click(screen.getByRole('button', { name: 'Завершить тренировку · 1 не закрыто' }));
     fireEvent.click(screen.getByText('Оставить'));
     expect(patched.length).toBe(0);
-    expect(closed.length).toBe(1);
+    expect(closed.length).toBe(0);
+    expect(screen.getByText('Тренировка завершена')).toBeTruthy();
   });
 });
 

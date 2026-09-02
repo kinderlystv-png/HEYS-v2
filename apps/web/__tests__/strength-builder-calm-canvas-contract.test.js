@@ -105,6 +105,15 @@ function canvasProps() {
       { weightKg: '10', reps: 15, done: false, type: 'warmup' },
       { weightKg: '15', reps: 12, done: false, type: 'warmup' },
       approach(20, 12, false), approach(20, 12, false), approach(20, 12, false)
+    ], 60),
+    exercise('Подтягивания', [
+      approach(0, 9, false), approach(0, 9, false), approach(0, 8, false)
+    ], 120),
+    exercise('Тяга блока', [
+      approach(55, 10, false), approach(55, 10, false), approach(55, 10, false)
+    ], 90),
+    exercise('Французский жим', [
+      approach(30, 12, false), approach(30, 10, false)
     ], 60)
   ];
   return {
@@ -129,6 +138,31 @@ function canvasProps() {
 function lastRule(selector) {
   const pattern = new RegExp('(?:^|\\n)' + selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]+)\\}', 'g');
   return Array.from(CSS.matchAll(pattern)).at(-1)?.[1] || '';
+}
+
+function renderedRowMismatches(rows) {
+  const mismatches = [];
+  const normalizeCss = (value) => String(value == null ? '' : value).replace(/0\.(\d+)/g, '.$1');
+  rows.forEach(([id, selector, text, expectedStyle, expectedFields]) => {
+    const node = document.querySelector(selector);
+    if (!node) {
+      mismatches.push({ id, selector, field: 'selector', expected: 'present', actual: 'missing' });
+      return;
+    }
+    if (text != null && node.textContent !== text) {
+      mismatches.push({ id, selector, field: 'text', expected: text, actual: node.textContent });
+    }
+    Object.entries(expectedFields || {}).forEach(([field, expected]) => {
+      if (node[field] !== expected) mismatches.push({ id, selector, field, expected, actual: node[field] });
+    });
+    const actualStyle = getComputedStyle(node);
+    Object.entries(expectedStyle || {}).forEach(([property, expected]) => {
+      if (normalizeCss(actualStyle[property]) !== normalizeCss(expected)) {
+        mismatches.push({ id, selector, field: `computed.${property}`, expected, actual: actualStyle[property] });
+      }
+    });
+  });
+  return mismatches;
 }
 
 describe('А1б · rendered Canvas contract', () => {
@@ -391,8 +425,157 @@ describe('А1б · rendered Canvas contract', () => {
   });
 });
 
+describe('А2 · rendered Canvas contract', () => {
+  it('доказывает все 26 numbered rows и составную строку свёрнутого списка', () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(new Date('2022-08-08T19:27:12+03:00').getTime());
+    const style = document.createElement('style');
+    style.textContent = `${BASE_CSS}\n${COMPUTED_CSS}`;
+    document.head.appendChild(style);
+
+    try {
+      const SB = loadBuilder();
+      const props = canvasProps();
+      // A2 shows the first four cards of a scrollable 23-work-set fixture.
+      // The tenth completed work set belongs to the off-screen continuation.
+      props.training.workoutLog.exercises[2].approaches[1].done = false;
+      props.training.workoutLog.exercises[4].approaches[0].done = true;
+      render(React.createElement(SB.BuilderScreen, props));
+      fireEvent.click(document.querySelector('.sb-ex-head'));
+
+      const rows = [
+        ['01', '.sb-builder-screen > .sb-head', null, {
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+          paddingTop: '16px', paddingRight: '18px', paddingBottom: '0px', paddingLeft: '18px'
+        }],
+        ['02', '.sb-builder-screen > .sb-head > .sb-icon-btn:first-child', '✕', {
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexGrow: '0', flexShrink: '0',
+          width: '36px', height: '36px', borderRadius: '999px', backgroundColor: CANVAS.c1,
+          color: CANVAS.ink56, fontSize: '13px', fontWeight: '600', lineHeight: '1'
+        }],
+        ['03', '.sb-builder-screen > .sb-head > .sb-head-title', null, {
+          display: 'flex', flexGrow: '1', minWidth: '0', flexDirection: 'column', gap: '3px',
+          paddingTop: '0px', paddingRight: '10px', paddingBottom: '0px', paddingLeft: '10px'
+        }],
+        ['04', '.sb-builder-screen > .sb-head .sb-head-title > b', 'Силовая · грудь, спина, плечи', {
+          color: CANVAS.tx, fontSize: '15px', fontWeight: '700', lineHeight: '1'
+        }],
+        ['05', '.sb-builder-screen > .sb-head .sb-head-sub', 'пн, 8 авг · начата в 18:40', {
+          color: CANVAS.ink56, fontSize: '10.5px', fontWeight: '600', lineHeight: '1',
+          letterSpacing: '0.52px', fontVariantNumeric: 'tabular-nums'
+        }],
+        ['06', '.sb-builder-screen > .sb-head > .sb-session-badge', 'идёт', {
+          flexGrow: '0', flexShrink: '0', paddingTop: '4px', paddingRight: '7px',
+          paddingBottom: '4px', paddingLeft: '7px', borderRadius: '999px',
+          backgroundColor: CANVAS.c2, color: CANVAS.ac, fontSize: '9px', fontWeight: '700',
+          lineHeight: '1', letterSpacing: '0.54px', textTransform: 'uppercase'
+        }],
+        ['07', '.sb-builder-screen > .sb-head > .sb-icon-btn:last-child', '⋯', {
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexGrow: '0', flexShrink: '0',
+          width: '36px', height: '36px', borderRadius: '999px', backgroundColor: CANVAS.c1,
+          color: CANVAS.ink56, fontSize: '13px', fontWeight: '700', lineHeight: '1'
+        }],
+        ['08', '.sb-builder-screen > .sb-list', null, {
+          display: 'flex', flexDirection: 'column', overflowY: 'auto'
+        }],
+        ['09', '.sb-builder-screen > .sb-stats', null, {
+          display: 'flex', gap: '6px', paddingTop: '18px', paddingRight: '18px',
+          paddingBottom: '0px', paddingLeft: '18px'
+        }],
+        ['10', '.sb-builder-screen > .sb-stats > .sb-stat:first-child', '47:12', {
+          paddingTop: '4px', paddingRight: '7px', paddingBottom: '4px', paddingLeft: '7px',
+          borderRadius: '999px', backgroundColor: CANVAS.c2, color: CANVAS.ink55,
+          fontSize: '9px', fontWeight: '700', lineHeight: '1', fontVariantNumeric: 'tabular-nums'
+        }],
+        ['11', '.sb-builder-screen > .sb-stats > .sb-stat:nth-child(2)', '10 из 23 подходов', {
+          borderRadius: '999px', backgroundColor: CANVAS.grBg, color: CANVAS.gr,
+          fontSize: '9px', fontWeight: '700', lineHeight: '1', fontVariantNumeric: 'tabular-nums'
+        }],
+        ['12', '.sb-builder-screen > .sb-list', null, { paddingTop: '12px' }],
+        ['13', '.sb-list > .sb-ex.is-complete:first-child .sb-ex-num', '1', {
+          width: '26px', height: '26px', backgroundColor: CANVAS.bg,
+          boxShadow: `inset 0 0 0 1px ${CANVAS.grBg}`, color: CANVAS.gr
+        }],
+        ['14', '.sb-list > .sb-ex.is-complete:first-child .sb-ex-title', null, {
+          display: 'flex', flexGrow: '1', minWidth: '0', flexDirection: 'column', gap: '2px'
+        }],
+        ['15', '.sb-list > .sb-ex.is-complete:first-child .sb-ex-title > b', 'Жим лёжа', {
+          color: CANVAS.tx, fontSize: '13px', fontWeight: '700', lineHeight: '1.2'
+        }],
+        ['16', '.sb-list > .sb-ex.is-complete:first-child .sb-ex-sub', '4 × 8–12 · 75 кг · рекорд', {
+          color: CANVAS.ink56, fontSize: '11px', fontWeight: '500', lineHeight: '1.3'
+        }],
+        ['17', '.sb-list > .sb-ex.is-complete:first-child .sb-ex-state', '✓', {
+          color: CANVAS.gr, fontSize: '12px', fontWeight: '700', lineHeight: '1'
+        }],
+        ['18', '.sb-builder-screen > .sb-list', null, { gap: '8px' }],
+        ['19', '.sb-list > .sb-ex.is-current .sb-ex-num', '3', {
+          backgroundColor: CANVAS.acs, color: CANVAS.onAcs
+        }],
+        ['20', '.sb-list > .sb-ex.is-current .sb-ex-sub', 'сейчас · подход 2 из 4', {
+          color: CANVAS.ac, fontSize: '11px', fontWeight: '500', lineHeight: '1.3'
+        }],
+        ['21', '.sb-list > .sb-ex.is-current .sb-ex-state', 'раскрыть ›', {
+          color: CANVAS.ac, fontSize: '11px', fontWeight: '700', lineHeight: '1'
+        }],
+        ['22', '.sb-list > .sb-ex.is-pending .sb-ex-num', '4', { color: CANVAS.ink56 }],
+        ['23', '.sb-list > .sb-ex.is-pending .sb-ex-title > b', 'Разведение в тренажёре', {
+          color: CANVAS.ink55, fontSize: '13px', fontWeight: '700', lineHeight: '1.2'
+        }],
+        ['24', '.sb-builder-screen > .sb-panel > .sb-panel-add', 'Добавить упражнение', {
+          marginTop: '4px', minHeight: '48px', borderRadius: '999px', backgroundColor: CANVAS.c2,
+          color: CANVAS.ink58, fontSize: '13px', fontWeight: '700', lineHeight: '1'
+        }],
+        ['25', '.sb-builder-screen > .sb-panel > .sb-finish', 'Завершить · 13 не закрыто', {
+          marginTop: '9px', minHeight: '48px', borderRadius: '999px', backgroundColor: CANVAS.c2,
+          color: CANVAS.ink58, fontSize: '13px', fontWeight: '700', lineHeight: '1'
+        }],
+        ['26', '.sb-builder-screen > .sb-panel > .sb-builder-note', null, {
+          marginTop: '12px', color: CANVAS.ink56, fontSize: '11px', fontWeight: '500', lineHeight: '1.55'
+        }]
+      ];
+
+      expect(rows.map(([id]) => id)).toEqual(
+        Array.from({ length: 26 }, (_, index) => String(index + 1).padStart(2, '0'))
+      );
+      const mismatches = renderedRowMismatches(rows);
+      const value = (selector) => document.querySelector(selector)?.textContent || '';
+      const composite = [
+        value('.sb-head-title > b'), value('.sb-head-sub'), value('.sb-session-badge'),
+        value('.sb-stat:first-child'), value('.sb-stat:nth-child(2)'),
+        value('.sb-ex.is-complete:nth-child(1) .sb-ex-title > b'),
+        value('.sb-ex.is-complete:nth-child(1) .sb-ex-sub'),
+        value('.sb-ex.is-complete:nth-child(2) .sb-ex-title > b'),
+        value('.sb-ex.is-complete:nth-child(2) .sb-ex-sub'),
+        value('.sb-ex.is-current .sb-ex-title > b'), value('.sb-ex.is-current .sb-ex-sub'),
+        value('.sb-ex.is-current .sb-ex-state'), value('.sb-ex.is-pending .sb-ex-title > b'),
+        value('.sb-ex.is-pending .sb-ex-sub'), value('.sb-panel-add'), value('.sb-finish'), value('.sb-builder-note')
+      ].join(' › ');
+      const expectedComposite = 'Силовая · грудь, спина, плечи › пн, 8 авг · начата в 18:40 › идёт › 47:12 › 10 из 23 подходов › Жим лёжа › 4 × 8–12 · 75 кг · рекорд › Тяга штанги в наклоне › 4 × 8–12 · 60 кг › Жим гантелей сидя › сейчас · подход 2 из 4 › раскрыть › › Разведение в тренажёре › 3 × 12 · 20 кг · не начато › Добавить упражнение › Завершить · 13 не закрыто › Состояние, в котором список живёт между упражнениями: карточку свернули, подход закрыт, следующее ещё не начато. Раскрытие — тап по карточке, и прежняя сворачивается сама: две открытые карточки не бывают. «Завершить» остаётся тихой, пока счёт незакрытых не дошёл до нуля.';
+      if (composite !== expectedComposite) {
+        mismatches.push({ id: 'текст', field: 'composite text', expected: expectedComposite, actual: composite });
+      }
+      expect(document.querySelectorAll('.sb-ex-chevron')).toHaveLength(0);
+      expect(mismatches).toEqual([]);
+    } finally {
+      cleanup();
+      style.remove();
+      now.mockRestore();
+    }
+  });
+});
+
 describe('strength builder: спокойные состояния активного списка', () => {
   it('оставляет спокойный зелёный сигнал галочке, а не карточке и полям', () => {
+    expect(lastRule('.sb-builder-screen.is-exercise-open .sb-ex-head'))
+      .toContain('padding: 8px 11px');
+    expect(lastRule('.sb-builder-screen.is-exercise-open .sb-ex.is-open .sb-ex-head'))
+      .toContain('min-height: 0');
+    expect(lastRule('.sb-builder-screen.is-exercise-open .sb-ex.is-open .sb-ex-head'))
+      .toContain('padding: 12px 14px 0');
+    expect(lastRule('.sb-builder-screen.is-exercise-open .sb-ex-body'))
+      .toContain('padding: 0 14px 12px');
+    expect(lastRule('.sb-builder-screen.is-exercise-open .sb-rpe'))
+      .toContain('padding: 0');
     expect(lastRule('.sb-ap.is-done .sb-ap-field')).toContain('background: var(--sb-card)');
     expect(lastRule('.sb-ap.is-done .sb-ap-field')).not.toContain('--sb-okbg');
     expect(lastRule('.sb-ex.is-complete')).toContain('background: var(--sb-card)');

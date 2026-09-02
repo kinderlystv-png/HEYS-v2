@@ -883,21 +883,51 @@ async function openCase(browser, item, snapshot) {
       );
       await page.evaluate((themeId) => {
         if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const caseNow = new Date('2022-08-08T19:27:12+03:00').getTime();
+        window.Date.now = () => caseNow;
         const approach = (weightKg, reps, done) => ({
           weightKg: String(weightKg),
           reps,
           done: !!done,
         });
-        const exercise = (name, weightKg, reps, doneCount, restSec) => ({
+        const exercise = (name, approaches, restSec) => ({
           name,
           restSec,
-          approaches: reps.map((value, index) => approach(weightKg, value, index < doneCount)),
+          approaches,
         });
         const exercises = [
-          exercise('Жим лёжа', 75, [8, 10, 10, 12], 4, 120),
-          exercise('Тяга штанги в наклоне', 60, [8, 10, 10, 12], 4, 120),
-          exercise('Жим гантелей сидя', 24, [10, 10, 12, 12], 1, 90),
-          exercise('Разведение в тренажёре', 20, [12, 12, 12], 0, 60),
+          exercise('Жим лёжа', [
+            { weightKg: '20', reps: 12, done: false, type: 'warmup' },
+            { weightKg: '30', reps: 10, done: false, type: 'warmup' },
+            { weightKg: '40', reps: 8, done: false, type: 'warmup' },
+            approach(75, 8, true), approach(75, 10, true),
+            approach(75, 10, true), approach(75, 12, true),
+          ], 120),
+          exercise('Тяга штанги в наклоне', [
+            { weightKg: '20', reps: 12, done: false, type: 'warmup' },
+            { weightKg: '30', reps: 10, done: false, type: 'warmup' },
+            { weightKg: '40', reps: 8, done: false, type: 'warmup' },
+            approach(60, 8, true), approach(60, 10, true),
+            approach(60, 10, true), approach(60, 12, true),
+          ], 120),
+          exercise('Жим гантелей сидя', [
+            approach(22.5, 12, true), approach(24, 10, false),
+            approach(24, 10, false), approach(24, 10, false),
+          ], 90),
+          exercise('Разведение в тренажёре', [
+            { weightKg: '10', reps: 15, done: false, type: 'warmup' },
+            { weightKg: '15', reps: 12, done: false, type: 'warmup' },
+            approach(20, 12, false), approach(20, 12, false), approach(20, 12, false),
+          ], 60),
+          exercise('Подтягивания', [
+            approach(0, 9, true), approach(0, 9, false), approach(0, 8, false),
+          ], 120),
+          exercise('Тяга блока', [
+            approach(55, 10, false), approach(55, 10, false), approach(55, 10, false),
+          ], 90),
+          exercise('Французский жим', [
+            approach(30, 12, false), approach(30, 10, false),
+          ], 60),
         ];
         let host = document.getElementById('ui-v4-strength-builder-collapsed-host');
         if (!host) {
@@ -922,11 +952,11 @@ async function openCase(browser, item, snapshot) {
             time: '18:40',
             workoutLog: {
               title: 'Силовая · грудь, спина, плечи',
-              startedAt: new Date('2026-08-28T08:42:48+03:00').getTime(),
+              startedAt: new Date('2022-08-08T18:40:00+03:00').getTime(),
               exercises,
             },
           },
-          dateKey: '2026-08-28',
+          dateKey: '2022-08-08',
           profile: { weight: 80 },
           historyFor: (name) => name === 'Жим лёжа'
             ? { record: { maxW: 75, maxSet: 900, total: 3000 } }
@@ -993,6 +1023,15 @@ async function openCase(browser, item, snapshot) {
             { weightKg: '10', reps: 15, done: false, type: 'warmup' },
             { weightKg: '15', reps: 12, done: false, type: 'warmup' },
             approach(20, 12, false), approach(20, 12, false), approach(20, 12, false),
+          ], 60),
+          exercise('Подтягивания', [
+            approach(0, 9, false), approach(0, 9, false), approach(0, 8, false),
+          ], 120),
+          exercise('Тяга блока', [
+            approach(55, 10, false), approach(55, 10, false), approach(55, 10, false),
+          ], 90),
+          exercise('Французский жим', [
+            approach(30, 12, false), approach(30, 10, false),
           ], 60),
         ];
         let host = document.getElementById('ui-v4-strength-builder-active-calm-host');
@@ -1684,7 +1723,7 @@ async function openCase(browser, item, snapshot) {
         };
       });
       if (
-        visualChecks.exerciseCount !== 4
+        visualChecks.exerciseCount !== 7
         || visualChecks.openExerciseCount !== 1
         || visualChecks.approachCount !== 3
         || visualChecks.doneApproachCount !== 2

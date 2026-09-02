@@ -376,6 +376,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
       label: 'Конструктор · список свёрнут',
       oid: 'А2',
       palette: 'sand',
+      clipRoundedCorners: 28,
     },
   },
   {

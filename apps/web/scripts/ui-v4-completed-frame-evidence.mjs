@@ -63,6 +63,20 @@ const ACTIVE_CALM_PROVEN_SUFFIXES = Object.freeze(
   Array.from({ length: 48 }, (_, index) => String(index + 1).padStart(2, '0'))
     .filter((suffix) => suffix !== '11')
 );
+const COLLAPSED_PROVEN_SUFFIXES = Object.freeze([
+  ...Array.from({ length: 26 }, (_, index) => String(index + 1).padStart(2, '0')),
+  'текст',
+]);
+const COLLAPSED_ROWS = Object.freeze(Object.fromEntries(COLLAPSED_PROVEN_SUFFIXES.map((suffix) => [
+  `${COLLAPSED_LABEL} · ${suffix}`,
+  suffix === 'текст'
+    ? exact('dom', TESTS.builderCalm,
+      'Rendered DOM тест доказывает точную составную строку текста А2.')
+    : exactMany([
+      `dom: ${TESTS.builderCalm}`,
+      `computed-style: ${TESTS.builderCalm}`,
+    ], `Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · ${suffix}.`),
+])));
 const ACTIVE_CALM_ROWS = Object.freeze({
   ...Object.fromEntries(ACTIVE_CALM_PROVEN_SUFFIXES.map((suffix) => [
     `${ACTIVE_CALM_LABEL} · ${suffix}`,
@@ -123,11 +137,7 @@ export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
   Object.freeze({ zoneId: 'strength-builder', label: PLAN_FEED_FRAME.label, oid: PLAN_FEED_FRAME.oid, rows: PLAN_ROWS }),
   Object.freeze({
     zoneId: 'strength-builder', label: COLLAPSED_LABEL, oid: 'А2',
-    rows: suffixRows(COLLAPSED_LABEL, {
-      17: 'DOM-тест подтверждает точный знак завершённого упражнения «✓».',
-      21: 'DOM-тест подтверждает точную строку состояния «раскрыть ›».',
-      24: 'DOM-тест подтверждает точное вторичное действие «Добавить упражнение».',
-    }, 'dom', TESTS.builder),
+    rows: COLLAPSED_ROWS,
   }),
   Object.freeze({
     zoneId: 'strength-builder', label: SUPERSET_LABEL, oid: 'З1',

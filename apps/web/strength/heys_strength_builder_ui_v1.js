@@ -163,7 +163,18 @@
       return restoreActiveRest(wl.activeRest, Date.now());
     });
     const sessionRef = React.useRef(Object.assign({}, wl));
+    const closeConfirmDialogRef = React.useRef(null);
+    const finishButtonRef = React.useRef(null);
     const [tick, setTick] = React.useState(0);
+
+    function dismissCloseConfirm() {
+      setCloseConfirm(false);
+      global.setTimeout(function () {
+        if (finishButtonRef.current && typeof finishButtonRef.current.focus === 'function') {
+          finishButtonRef.current.focus();
+        }
+      }, 0);
+    }
 
     function patchSession(patch) {
       const nextPatch = patch && typeof patch === 'object' ? patch : {};
@@ -213,6 +224,38 @@
       const id = global.setInterval(function () { setTick(function (t) { return t + 1; }); }, 1000);
       return function () { global.clearInterval(id); };
     }, [startedAt, completedAt]);
+
+    React.useEffect(function () {
+      if (!closeConfirm || !global.document) return undefined;
+      function onConfirmKeyDown(event) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          dismissCloseConfirm();
+          return;
+        }
+        if (event.key !== 'Tab') return;
+        const dialog = closeConfirmDialogRef.current;
+        if (!dialog) return;
+        const focusable = Array.from(dialog.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ));
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = global.document.activeElement;
+        if (event.shiftKey && (active === first || !dialog.contains(active))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+      global.document.addEventListener('keydown', onConfirmKeyDown);
+      return function () { global.document.removeEventListener('keydown', onConfirmKeyDown); };
+      // Закрытие подтверждения возвращает фокус через refs текущего fullscreen.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [closeConfirm]);
 
     const [syncStatus, setSyncStatus] = React.useState(function () {
       return typeof syncStatusFor === 'function' ? syncStatusFor() : null;
@@ -311,7 +354,7 @@
               : started
                 ? h('span', { className: 'sb-ex-state' }, 'раскрыть ›')
                 : null,
-            (showDoneChevron || (!allDone && !started))
+            showDoneChevron
               && h('span', { className: 'sb-ex-chevron', 'aria-hidden': 'true' }, '›')
           )
         )
@@ -1024,17 +1067,24 @@
       ),
       // Осталось незакрытым: если это не сделано — лучше убрать, иначе тоннаж и
       // объём по группам завышаются пустыми строками (экран 11).
-      closeConfirm && h('div', { className: 'sb-sheet-back', onClick: function () { setCloseConfirm(false); } },
-        h('div', { className: 'sb-sheet', onClick: function (e) { e.stopPropagation(); } },
+      closeConfirm && h('div', { className: 'sb-sheet-back', onClick: dismissCloseConfirm },
+        h('div', {
+          ref: closeConfirmDialogRef,
+          className: 'sb-sheet',
+          role: 'dialog',
+          'aria-modal': 'true',
+          'aria-labelledby': 'sb-close-confirm-title',
+          onClick: function (e) { e.stopPropagation(); }
+        },
           h('div', { className: 'sb-sheet-grip' }),
-          h('b', { className: 'sb-confirm-title' }, 'Остались незакрытые подходы'),
+          h('b', { className: 'sb-confirm-title', id: 'sb-close-confirm-title' }, 'Остались незакрытые подходы'),
           h('p', { className: 'sb-confirm-text' },
             notClosed + (notClosed === 1 ? ' подход' : notClosed < 5 ? ' подхода' : ' подходов')
             + ' без отметки. Если они не сделаны — лучше убрать: иначе тоннаж и объём по группам будут завышены.'),
           h('div', { className: 'sb-pain-actions' },
             h('button', {
-              type: 'button', className: 'sb-btn',
-              onClick: function () { setCloseConfirm(false); onClose(); }
+              type: 'button', className: 'sb-btn', autoFocus: true,
+              onClick: function () { setCloseConfirm(false); setView('finish'); }
             }, 'Оставить'),
             h('button', {
               type: 'button', className: 'sb-btn is-accent',
@@ -1048,7 +1098,7 @@
                 });
                 patchExercises(cleaned);
                 setCloseConfirm(false);
-                onClose();
+                setView('finish');
               }
             }, 'Убрать пустые')
           )
@@ -1060,7 +1110,8 @@
           onClick: function () { setView('catalog'); }
         }, 'Добавить упражнение'),
         h('button', {
-          type: 'button', className: 'sb-finish',
+          ref: finishButtonRef,
+          type: 'button', className: 'sb-finish' + (notClosed === 0 ? ' is-ready' : ''),
           'aria-label': notClosed > 0
             ? 'Завершить тренировку · ' + notClosed + ' не закрыто'
             : 'Завершить тренировку',

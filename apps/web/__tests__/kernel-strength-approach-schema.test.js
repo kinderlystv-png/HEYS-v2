@@ -11,6 +11,47 @@ function loadKernel() {
     return window.HEYS.TrainingKernel.strength;
 }
 
+function findFile(root, name) {
+    for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+        const target = path.join(root, entry.name);
+        if (entry.isDirectory()) {
+            const nested = findFile(target, name);
+            if (nested) return nested;
+        } else if (entry.name === name) return target;
+    }
+    return null;
+}
+
+function canvasWorkoutTraining() {
+    const canvasRoot = path.resolve(__dirname, '../../../docs/ui/handoff-v4/canvas');
+    const fixturePath = findFile(canvasRoot, 'workout-23-sets.json');
+    if (!fixturePath) throw new Error('Canvas fixture workout-23-sets.json not found');
+    const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+    const exercises = fixture.exercises.map((exercise) => ({
+        name: exercise.name,
+        unit: exercise.unit === 'weight' ? 'weight_reps' : exercise.unit,
+        bodyweightFactor: exercise.bodyweightShare,
+        approaches: exercise.sets.map((set) => ({
+            type: set.type,
+            weightKg: set.weightKg == null ? '' : String(set.weightKg),
+            extraWeightKg: set.addedKg == null ? '' : String(set.addedKg),
+            reps: set.reps || 0,
+            durationSec: set.seconds || 0,
+            done: !!set.done,
+            drops: (set.drops || []).map((drop) => ({
+                weightKg: String(drop.weightKg), reps: drop.reps, done: !!drop.done,
+            })),
+        })),
+    }));
+    return {
+        fixture,
+        training: {
+            type: 'strength', strengthEntryMode: 'workout_builder',
+            workoutLog: { exercises },
+        },
+    };
+}
+
 /**
  * Шаги 2 и 3 протокола STRENGTH_BUILDER_REDESIGN_PROTOCOL_2026-08-09.md:
  * схема подхода (тип, довес, ступени дроп-сета) и тоннаж, который её понимает.
@@ -141,7 +182,35 @@ describe('TrainingKernel.strength — тоннаж по новой схеме', 
         workoutLog: { exercises },
     });
 
-    it('разминка не идёт ни в фактический тоннаж, ни в плановый', () => {
+    it('сходится с канонической Canvas-fixture 23 / 10 870 без разминки в счётчике', () => {
+        const ks = loadKernel();
+        const { fixture, training: sourceTraining } = canvasWorkoutTraining();
+        const agg = ks.trainingTonnage(sourceTraining, { bodyWeightKg: fixture.bodyWeightKg });
+        expect(agg.totalApproaches).toBe(fixture.expected.workingSets);
+        expect(agg.doneApproaches).toBe(fixture.expected.workingSets);
+        expect(agg.warmupApproaches).toBe(2);
+        expect(agg.totalVolume).toBe(fixture.expected.tonnageKg);
+
+        let workingIndex = 0;
+        sourceTraining.workoutLog.exercises.forEach((exercise) => {
+            exercise.approaches.forEach((approach) => {
+                if (approach.type === 'warmup') {
+                    approach.done = true;
+                } else {
+                    workingIndex += 1;
+                    approach.done = workingIndex <= 10;
+                }
+                approach.drops.forEach((drop) => { drop.done = approach.done; });
+            });
+        });
+        const interrupted = ks.trainingTonnage(sourceTraining, { bodyWeightKg: fixture.bodyWeightKg });
+        expect(interrupted.totalApproaches).toBe(23);
+        expect(interrupted.doneApproaches).toBe(10);
+        expect(interrupted.warmupApproaches).toBe(2);
+        expect(interrupted.totalApproaches - interrupted.doneApproaches).toBe(13);
+    });
+
+    it('разминка не идёт ни в рабочий счётчик, ни в тоннаж', () => {
         const ks = loadKernel();
         const agg = ks.trainingTonnage(training([{
             approaches: [
@@ -152,7 +221,8 @@ describe('TrainingKernel.strength — тоннаж по новой схеме', 
         expect(agg.totalVolume).toBe(75 * 8);
         expect(agg.plannedVolume).toBe(75 * 8);
         expect(agg.warmupApproaches).toBe(1);
-        expect(agg.totalApproaches).toBe(2);
+        expect(agg.totalApproaches).toBe(1);
+        expect(agg.doneApproaches).toBe(1);
         expect(agg.maxWeight).toBe(75);
     });
 

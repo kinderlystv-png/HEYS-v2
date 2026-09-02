@@ -1029,160 +1029,238 @@
       "h": "a7c1cb6b25d9"
     },
     "Конструктор · список свёрнут · 01": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 01.",
       "h": "175bdcc2e73a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 02": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 02.",
       "h": "dbd19d6c8f05",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 03": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 03.",
       "h": "f143b5d4e1e4",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 04": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 04.",
       "h": "97774a22c8cb",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 05": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 05.",
       "h": "946ab5761d8f",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 06": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 06.",
       "h": "c97cc5075bc8",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 07": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 07.",
       "h": "a6047f6cec68",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 08": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 08.",
       "h": "c629f84f9712",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 09": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 09.",
       "h": "c00d4648c76a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 10": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 10.",
       "h": "6081a9540084",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 11": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 11.",
       "h": "de5c3c15e816",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 12": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 12.",
       "h": "7f9aee8f3e6d",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 13": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 13.",
       "h": "7c91f7740c38",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 14": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 14.",
       "h": "7590f4699d43",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 15": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 15.",
       "h": "a45ee30c055e",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 16": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 16.",
       "h": "73f2ff511749",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 17": {
       "v": "=",
-      "f": "DOM-тест подтверждает точный знак завершённого упражнения «✓».",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 17.",
       "h": "4668dbccd211",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 18": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 18.",
       "h": "5c72c132f5a3",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 19": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 19.",
       "h": "61464eb844e9",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 20": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 20.",
       "h": "58182d9bbb24",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 21": {
       "v": "=",
-      "f": "DOM-тест подтверждает точную строку состояния «раскрыть ›».",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 21.",
       "h": "f71e7844aea2",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 22": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 22.",
       "h": "bc025e8f605f",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 23": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 23.",
       "h": "c4dc01779567",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 24": {
       "v": "=",
-      "f": "DOM-тест подтверждает точное вторичное действие «Добавить упражнение».",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 24.",
       "h": "f28608232f83",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 25": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 25.",
       "h": "3cb07e9dbf4d",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · список свёрнут · 26": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 26.",
       "h": "ce1ad1b14ae6",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · разминка и дроп-сет · 01": {
       "v": "?",
@@ -8308,10 +8386,10 @@
       "h": "68ab4749e19a"
     },
     "Конструктор · список свёрнут · текст": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Rendered DOM тест доказывает точную составную строку текста А2.",
       "h": "98feae4e48c2",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А2"]
+      "evidence": ["dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"]
     },
     "Конструктор · разминка и дроп-сет · текст": {
       "v": "?",

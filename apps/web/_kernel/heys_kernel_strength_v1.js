@@ -1118,9 +1118,14 @@
           // Прочерк участника, добавленного по ходу: подход существует, но не
           // заполнен — ни в счётчик, ни в тоннаж он не идёт.
           if (isBlankApproach(a)) continue;
-          out.totalApproaches += 1;
           const warmup = isWarmupApproach(a);
-          if (warmup) out.warmupApproaches += 1;
+          // Canvas acceptance: разминка хранится и показывается отдельно, но
+          // не входит ни в рабочий прогресс, ни в число незакрытых подходов.
+          if (warmup) {
+            out.warmupApproaches += 1;
+            continue;
+          }
+          out.totalApproaches += 1;
           const done = isApproachDone(a);
           if (done) out.doneApproaches += 1;
 
@@ -1151,8 +1156,6 @@
             // стал бы личным рекордом, хотя человек не поднял больше.
             if (!st.isDrop && !warmup && done && w > out.maxWeight) out.maxWeight = w;
           }
-          // Разминка вне тоннажа — ни в фактическом, ни в плановом.
-          if (warmup) continue;
           out.plannedVolume += vol;
           if (done) out.totalVolume += vol;
         }

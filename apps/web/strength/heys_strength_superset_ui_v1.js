@@ -128,7 +128,8 @@
       return h('div', { className: 'sb-rest sb-rest--collapsed' },
         h('button', {
           type: 'button', className: 'sb-rest-compact', onClick: onExpand,
-          'aria-label': 'Развернуть таймер отдыха'
+          'aria-label': 'Отдых ' + fmtClock(secondsLeft) + ' · ' + (owner || 'упражнение')
+            + '. Идёт от подхода, который его запустил. Развернуть'
         },
           h('span', { className: 'sb-rest-compact-copy' },
             h('b', null, 'Отдых ' + fmtClock(secondsLeft) + ' · ' + (owner || 'упражнение')),
@@ -154,8 +155,11 @@
         h('b', null, 'Отдых · ' + (owner || 'упражнение')),
         h('span', null, ' · ' + (source || 'по настройке'))
       ),
-      h('div', { className: 'sb-rest-ring' },
-        h('svg', { width: 168, height: 168, viewBox: '0 0 168 168' },
+      h('div', {
+        className: 'sb-rest-ring', role: 'timer',
+        'aria-label': 'Отдых ' + fmtClock(secondsLeft) + ' осталось'
+      },
+        h('svg', { width: 168, height: 168, viewBox: '0 0 168 168', 'aria-hidden': 'true', focusable: 'false' },
           h('circle', {
             cx: 84, cy: 84, r: r, fill: 'none',
             stroke: 'var(--v4-track, var(--sb-br))', strokeWidth: 9
