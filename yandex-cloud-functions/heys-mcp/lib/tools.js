@@ -165,10 +165,10 @@ const RELATIVE_DATE_OFFSETS = {
 };
 
 function resolveDate(input, nowMs) {
-  if (input === undefined || input === null || input === '') return day.nowParts(nowMs).date;
+  if (input === undefined || input === null || input === '') return diaryToday(nowMs);
   const raw = String(input).trim();
   const relative = RELATIVE_DATE_OFFSETS[raw.toLowerCase()];
-  if (relative !== undefined) return day.addDays(day.nowParts(nowMs).date, relative);
+  if (relative !== undefined) return day.addDays(diaryToday(nowMs), relative);
   if (!day.isValidDate(raw)) {
     throw new ToolError('invalid_date', `Дата "${raw}" не в формате YYYY-MM-DD и не «вчера»/«позавчера».`);
   }
@@ -176,15 +176,26 @@ function resolveDate(input, nowMs) {
 }
 
 /**
- * «Сегодня» для чек-ина — тот же порог 3 утра, что в самом приложении
- * (apps/web/heys_morning_checkin_v1.js:getTodayKey). Это не общий `resolveDate`:
- * остальные day-инструменты берут календарную дату по Москве, и здесь этого
- * не менял — блока радиус слишком широкий для правки чек-ина. Расхождение
- * бьёт только в окне 00:00–03:00: календарный день уже следующий, а
- * приложение (и чек-ин вместе с ним) ещё живёт вчерашним.
+ * «Сегодня» для дневника — сутки с трёх утра, как в самом приложении
+ * (apps/web/heys_morning_checkin_v1.js:58 и ещё три места, все `getHours() < 3`).
+ *
+ * До 02.09 этот порог стоял только у чек-ина, а остальные day-инструменты брали
+ * календарную дату по Москве. В окне 00:00–03:00 они расходились: приём в 02:00
+ * уезжал в наступивший календарный день, хотя человек и приложение считали его
+ * вчерашним, — и два дня подряд показывали неверные итоги, причём молча, потому
+ * что сервер отвечал ok.
+ *
+ * Порог применяется только там, где дату выбираем мы сами: явно переданная
+ * дата и относительная («вчера») остаются тем, что попросили, — вторая считается
+ * от той же базы, иначе ночью «вчера» означало бы позавчера.
  */
-function checkinToday(nowMs) {
+function diaryToday(nowMs) {
   return day.nowParts(nowMs - 3 * 60 * 60 * 1000).date;
+}
+
+/** Чек-ин живёт по той же границе; имя оставлено ради читаемости вызовов. */
+function checkinToday(nowMs) {
+  return diaryToday(nowMs);
 }
 
 class ToolError extends Error {
@@ -3923,7 +3934,7 @@ function createTools({
       if (syncDay) {
         const syncDate = args.sync_planned_date
           ? resolveDate(args.sync_planned_date, nowMs)
-          : day.nowParts(nowMs).date;
+          : diaryToday(nowMs);
         const dayCurrent = await readDay(syncDate);
         const dayNext = day.patchSupplementsPlanned(dayCurrent, { set: plannedList }, { nowMs, clientId });
         if (!day.plannedSupplementsEqual(plannedList, dayCurrent.supplementsPlanned)) {
@@ -3991,7 +4002,7 @@ function createTools({
 
 const DATE_ARG = {
   type: 'string',
-  description: 'Дата: YYYY-MM-DD или «сегодня»/«вчера»/«позавчера». По умолчанию — сегодня по московскому времени.',
+  description: 'Дата: YYYY-MM-DD или «сегодня»/«вчера»/«позавчера». По умолчанию — текущий день дневника: сутки идут с 3 утра по Москве, поэтому до трёх ночи это ещё вчерашняя дата.',
 };
 
 /** Одна позиция: какой продукт и сколько. Количество — граммы либо штуки. */
@@ -5113,6 +5124,9 @@ const TOOL_SCHEMAS_ANNOTATED = annotateToolSchemas(TOOL_SCHEMAS);
 
 module.exports = {
   createTools,
+  // Граница дневниковых суток — чистая функция, вынесена ради теста:
+  // на ней держится, в какой день попадёт ночная запись.
+  diaryToday,
   TOOL_SCHEMAS: TOOL_SCHEMAS_ANNOTATED,
   WRITE_TOOLS,
   ToolError,
