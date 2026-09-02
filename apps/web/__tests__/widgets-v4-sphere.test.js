@@ -79,14 +79,14 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(cssSrc).toContain('gap: 6px');
     });
 
-    it('БЖУ 3×2 — перебор второй дугой (как macro-ring-fill--over)', () => {
+    it('БЖУ 3×2 — дуга упирается в норму, отклонение несут остаток и факт', () => {
         const start = uiSrc.indexOf('function v4SageRing');
         const chunk = uiSrc.slice(start, start + 3200);
         expect(chunk).toContain('macroRingArcPct(arcNum, tgt, 0)');
-        expect(chunk).toContain('widget-v4-macro__ring-over');
-        expect(chunk).toContain('hasOver && overPct > 0');
-        expect(chunk).toContain('--v4-macro-over-offset');
-        expect(cssSrc).toContain('.widget-v4-macro__ring-over--warn');
+        expect(chunk).not.toContain('widget-v4-macro__ring-over');
+        expect(chunk).not.toContain('hasOver && overPct > 0');
+        expect(cssSrc).toMatch(/\.widget-v4-macro svg\s*\{[^}]*display:\s*inline;/s);
+        expect(cssSrc).toMatch(/\.widget-v4-macro\s*\{[^}]*font-size:\s*16px;[^}]*line-height:\s*normal;/s);
     });
 
     it('БЖУ 3×2 — подпись над кольцом, факт/норма под, без шапки БЖУ', () => {
@@ -233,6 +233,18 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(cssSrc).toContain('.widget-calories__hero-bar-num--good');
         expect(cssSrc).toContain('.widget-calories__hero-bar-num--bad');
         expect(cssSrc).toContain('.widget-calories__hero-bar-over');
+        expect(cssSrc).toMatch(/\.widget-calories__hero-bar\s*\{[^}]*background:\s*rgba\(var\(--v4-ink-rgb\), 0\.1\)/s);
+        expect(cssSrc).toMatch(/\.widget-calories__hero-bar-num--ink\s*\{[^}]*0\.85/s);
+    });
+
+    it('главная — малые плитки используют точную геометрию и тона HW1', () => {
+        const stepsStart = uiSrc.indexOf('function v4StepsBars');
+        const stepsChunk = uiSrc.slice(stepsStart, stepsStart + 900);
+        expect(stepsChunk).toContain("Math.max(2, Math.round((value / max) * 30)) + 'px'");
+        expect(cssSrc).toMatch(/\.widget-heatmap \.widget-v4-row__meta--count\.widget-v4-val--good\s*\{[^}]*--v4-sand-ok-text/s);
+        expect(cssSrc).toMatch(/\.widget-v4-goalbar\s*\{[^}]*background:\s*var\(--v4-line\)/s);
+        expect(cssSrc).toMatch(/\.widget--crashRisk\.widget--2x1[^}]*\.widget-wd__delta,[\s\S]*?font-size:\s*21px;[\s\S]*?font-weight:\s*600;/s);
+        expect(cssSrc).toMatch(/\.widget--crashRisk\.widget--2x1[^}]*\.widget-wd__delta\.widget-v4-val--good,[\s\S]*?--v4-sand-ok-text/s);
     });
 
     it('вода — медиана подъёма 14 дней в widget_data', () => {

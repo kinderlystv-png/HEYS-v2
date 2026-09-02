@@ -29,6 +29,24 @@ const readZone = (zone) => JSON.parse(
 );
 
 describe('UI v4 visual harness', () => {
+  it('captures runtime and Canvas in the same mobile touch context', () => {
+    const captureSource = fs.readFileSync(
+      path.resolve(__dirname, '../scripts/ui-v4-visual-capture.mjs'),
+      'utf8',
+    );
+    const runtimeStart = captureSource.indexOf('async function openCase');
+    const canvasStart = captureSource.indexOf('async function captureCanvasFrame');
+    const runtimeContext = captureSource.slice(runtimeStart, runtimeStart + 700);
+    const canvasContext = captureSource.slice(canvasStart, canvasStart + 700);
+
+    for (const contextSource of [runtimeContext, canvasContext]) {
+      expect(contextSource).toContain('isMobile: true');
+      expect(contextSource).toContain('hasTouch: true');
+    }
+    expect(captureSource).toContain("node.style.position = 'fixed'");
+    expect(captureSource).toContain("node.style.inset = '0 auto auto 0'");
+  });
+
   it('явно учитывает все зоны текущего Canvas-реестра', () => {
     expect([...UI_V4_CANVAS_ZONES].sort()).toEqual(listZones().sort());
     expect(new Set(UI_V4_VISUAL_CASES.map((item) => item.zone))).toEqual(

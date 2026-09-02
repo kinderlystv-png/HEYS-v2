@@ -2150,6 +2150,8 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
     viewport,
     screen: viewport,
     deviceScaleFactor: 1,
+    isMobile: true,
+    hasTouch: true,
     locale: 'ru-RU',
     timezoneId: 'Europe/Moscow',
     colorScheme: item.themeId?.endsWith('-dark') ? 'dark' : 'light',
@@ -2202,6 +2204,14 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
         `Canvas oid ${item.canvasFrame.oid}: ожидался «${item.canvasFrame.label}», найден «${actualLabel || ''}»`,
       );
     }
+    await frame.evaluate((node) => {
+      node.style.position = 'fixed';
+      node.style.inset = '0 auto auto 0';
+      node.style.margin = '0';
+      node.style.zIndex = '2147483647';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    });
     await frame.waitFor({ state: 'visible', timeout: 45_000 });
     if (item.canvasFrame.pixelAlign) {
       await frame.evaluate((node) => {

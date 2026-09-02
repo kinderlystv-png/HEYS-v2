@@ -2408,13 +2408,12 @@
     const centerLabel = remaining >= 0 ? String(remainingRounded) : null;
     // Canvas задаёт фактическую долю окружности. Round caps уже входят в
     // геометрию SVG, поэтому компенсация legacy-кольца здесь не применяется.
-    const { basePct, hasOver, overPct } = macroRingArcPct(arcNum, tgt, 0);
-    const overTone = toneClass === 'protein' ? 'protein' : 'warn';
+    const { basePct } = macroRingArcPct(arcNum, tgt, 0);
     const centerBad = macroCenterBad(num, tgt, toneClass);
     const factBad = macroDeviationBad(num, tgt, toneClass);
     const factRounded = Math.round(num);
     const tgtRounded = Math.round(tgt);
-    return React.createElement('div', { className: `widget-v4-macro${hasOver ? ' widget-v4-macro--over' : ''}` },
+    return React.createElement('div', { className: 'widget-v4-macro' },
       React.createElement('div', { className: 'widget-v4-kicker widget-v4-macro__label' }, label),
       React.createElement('svg', { width: 46, height: 46, viewBox: '0 0 44 44', 'aria-hidden': 'true' },
         React.createElement('circle', {
@@ -2430,18 +2429,6 @@
           strokeDasharray: macroRingDasharray(basePct),
           transform: 'rotate(-90 22 22)'
         }),
-        hasOver && overPct > 0
-          ? React.createElement('circle', {
-            cx: 22, cy: 22, r: 18, fill: 'none',
-            className: `widget-v4-macro__ring-over widget-v4-macro__ring-over--${overTone}`,
-            pathLength: 100,
-            strokeWidth: 5,
-            strokeLinecap: 'round',
-            strokeDasharray: macroRingDasharray(overPct, 100 - overPct),
-            style: { '--v4-macro-over-offset': -(100 - overPct) },
-            transform: 'rotate(-90 22 22)'
-          })
-          : null,
         React.createElement('text', {
           x: 22, y: 26, textAnchor: 'middle',
           className: 'widget-v4-macro__num' + (centerBad ? ' widget-v4-macro__num--bad' : '')
@@ -5507,7 +5494,7 @@
           className: 'widget-v4-stepbars__bar'
             + (item?.hasData ? '' : ' is-empty')
             + (done ? ' is-goal' : ''),
-          style: { height: item?.hasData ? Math.max(8, Math.round((value / max) * 100)) + '%' : '2px' }
+          style: { height: item?.hasData ? Math.max(2, Math.round((value / max) * 30)) + 'px' : '2px' }
         });
       })
     );
@@ -5699,8 +5686,10 @@
       React.createElement('div', { className: 'widget-v4-goal-hero' },
         React.createElement('span', {
           className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
-        }, hasData ? String(fiber) : '—'),
-        hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
+        },
+          hasData ? String(fiber) : '—',
+          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, ' г') : null
+        )
       ),
       hasData ? v4GoalBar(pct) : null
     );
@@ -5788,8 +5777,10 @@
       React.createElement('div', { className: 'widget-v4-goal-hero' },
         React.createElement('span', {
           className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
-        }, hasData ? String(protein) : '—'),
-        hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
+        },
+          hasData ? String(protein) : '—',
+          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, ' г') : null
+        )
       ),
       hasData ? v4GoalBar(pct) : null
     );

@@ -10567,7 +10567,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   position: relative;
   height: 6px;
   border-radius: 999px;
-  background: var(--v4-line, rgba(0, 0, 0, 0.1));
+  background: rgba(var(--v4-ink-rgb), 0.1);
   overflow: hidden;
 }
 
@@ -10620,6 +10620,10 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 /* Красится число, подпись под ним остаётся нейтральной. */
 .widget-calories__hero-bar-num--good {
   color: var(--v4-sand-ok-text, #5c6a45);
+}
+
+.widget-calories__hero-bar-num--ink {
+  color: rgba(var(--v4-ink-rgb), 0.85);
 }
 
 .widget-calories__hero-bar-num--bad {
@@ -10786,6 +10790,10 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 .widget-v4-row__meta--count {
   font-size: 9.5px;
   font-weight: 700;
+}
+
+.widget-heatmap .widget-v4-row__meta--count.widget-v4-val--good {
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .widget-v4-unit {
@@ -11630,6 +11638,8 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   min-width: 0;
   max-width: none;
   text-align: center;
+  font-size: 16px;
+  line-height: normal;
 }
 
 .widget-v4-macro__label {
@@ -11638,7 +11648,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 .widget-v4-macro svg {
-  display: block;
+  display: inline;
   width: 46px;
   height: 46px;
   margin: 0 auto;
@@ -11707,22 +11717,6 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-macro__ring-fill {
   stroke: #7a8a5e;
   transition: stroke-dasharray var(--widget-motion-ms, 1100ms) cubic-bezier(0.65, 0, 0.35, 1);
-}
-
-.widget-v4-macro__ring-over {
-  fill: none;
-  stroke-width: 5;
-  stroke-linecap: round;
-  stroke-dashoffset: var(--v4-macro-over-offset, 0);
-  transition: stroke-dasharray var(--widget-motion-ms, 1100ms) cubic-bezier(0.65, 0, 0.35, 1);
-}
-
-.widget-v4-macro__ring-over--warn {
-  stroke: var(--v4-warn-1, #ef4444);
-}
-
-.widget-v4-macro__ring-over--protein {
-  stroke: #7a8a5e;
 }
 
 .widget-v4-heat {
@@ -12278,13 +12272,13 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   letter-spacing: -0.03em;
 }
 
-/* Полоса дневной цели: дорожка --v4-track; ниже 67 % --ovl, от 67 % --gr2.
+/* Полоса дневной цели: дорожка --v4-line; ниже 67 % --ovl, от 67 % --gr2.
    v4-intentional: эти роли объявлены во всех четырёх палитрах; буквальный
    fallback здесь нарушил бы контракт и мог бы окрасить тему чужим набором. */
 .widget-v4-goalbar {
   height: 4px;
   border-radius: 999px;
-  background: var(--v4-track); /* v4-intentional */
+  background: var(--v4-line); /* v4-intentional */
   margin-top: 7px;
 }
 
@@ -12696,7 +12690,13 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
 /* 2×1 на сетке 64px: без лишнего padding crash-risk, чуть компактнее цифра */
 .widget--crashRisk.widget--2x1 .widget-wd:not(.widget-wd--preview) .widget-wd__delta,
 .widget--crashRisk.widget--2x1 .widget-wd:not(.widget-wd--preview) .widget-wd__goal-main {
-  font-size: 1.2rem;
+  font-size: 21px;
+  font-weight: 600;
+}
+
+.widget--crashRisk.widget--2x1 .widget-wd:not(.widget-wd--preview) .widget-wd__delta.widget-v4-val--good,
+.widget--crashRisk.widget--2x1 .widget-wd:not(.widget-wd--preview) .widget-wd__spark.widget-v4-val--good {
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .widget--crashRisk.widget--2x1 .widget-wd:not(.widget-wd--preview) .widget-wd__bar-track {
