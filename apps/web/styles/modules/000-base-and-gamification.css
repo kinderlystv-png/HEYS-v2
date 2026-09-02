@@ -9861,7 +9861,7 @@ svg.date-picker-icon {
 .tabs.tabs--v4-primary {
   justify-content: stretch;
   gap: 0;
-  padding: 4px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 4px 10px calc(16px + env(safe-area-inset-bottom, 0px));
   background: var(--v4-bg, #fffaf1);
   border-top: none;
   box-shadow: none;
@@ -9963,7 +9963,7 @@ body:has([data-heys-visible-frame="consent"]) .tabs {
   .tabs.tabs--v4-primary {
     justify-content: stretch;
     gap: 0;
-    padding: 4px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 4px 10px calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
   .tabs--v4-primary .tab-primary-nav-row {
@@ -13920,6 +13920,36 @@ body:has(:is(
   .hdr {
     padding: 8px 16px 0;
     margin-bottom: 0;
+  }
+
+  /* Home HW1: строка уровня занимает 16 px, а 44 px touch-targets выходят
+     наружу отрицательными полями — так же, как в каноническом кадре. */
+  .wrap--tab-widgets {
+    padding-top: 0;
+  }
+
+  .wrap--tab-widgets .hdr {
+    padding: 16px 18px 0;
+  }
+
+  .wrap--tab-widgets .hdr-top.hdr-gamification {
+    padding: 0;
+  }
+
+  .wrap--tab-widgets .hdr-gamification .cloud-sync-indicator,
+  .wrap--tab-widgets .hdr-gamification .hdr-header-icon-btn--advice,
+  .wrap--tab-widgets .hdr-gamification .hdr-header-icon-btn--settings {
+    margin-block: -14px;
+  }
+
+  .wrap--tab-widgets .hdr-gamification .cloud-sync-indicator {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+  }
+
+  .wrap--tab-widgets .hdr-sticky-strip {
+    padding: 14px 18px 0;
   }
 
   .hdr-top {

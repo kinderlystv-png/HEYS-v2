@@ -1567,7 +1567,7 @@ async function openCase(browser, item, snapshot) {
           .every((token) => gridText.replace(/\s/g, '').includes(token.replace(/\s/g, '')));
       }, undefined, { timeout: 10_000 });
     }
-    if (item.id === 'home-widgets-empty-day') {
+    if (item.id.startsWith('home-widgets-empty-day')) {
       await page.evaluate(() => {
         const widgetData = window.HEYS?.Widgets?.data;
         if (!widgetData?.getDataForWidget) {
@@ -1616,11 +1616,19 @@ async function openCase(browser, item, snapshot) {
         };
       });
     }
-    if (item.id === 'home-widgets-empty-day') {
+    if (item.id.startsWith('home-widgets-empty-day')) {
       visualChecks = await page.evaluate(() => {
         const widgets = window.HEYS?.Widgets?.state?.getWidgets?.() || [];
         const tile = (type) => document.querySelector(`[data-widget-type="${type}"]`);
         const text = (type) => (tile(type)?.textContent || '').replace(/\s+/g, ' ').trim();
+        const rect = (selector) => {
+          const box = document.querySelector(selector)?.getBoundingClientRect();
+          return box
+            ? Object.fromEntries(
+                ['x', 'y', 'width', 'height'].map((key) => [key, Math.round(box[key] * 100) / 100]),
+              )
+            : null;
+        };
         const checks = {
           widgetCount: widgets.length,
           caloriesDash: text('calories').includes('—'),
@@ -1632,9 +1640,21 @@ async function openCase(browser, item, snapshot) {
           stepsDash: text('steps').includes('—'),
           waterZero: /0(?:[,.]0)?/.test(text('water')),
           healthSparks: tile('healthTrend')?.querySelectorAll('svg').length || 0,
+          header: rect('.hdr-top.hdr-gamification'),
+          date: rect('.hdr-date-group'),
+          grid: rect('.widgets-grid'),
+          settingsFab: rect('.widgets-settings-fab'),
+          quickFab: rect('.widgets-quick-fab'),
+          nav: rect('.tabs.tabs--v4-primary'),
+          navRow: rect('.tabs.tabs--v4-primary .tab-primary-nav-row'),
+          cloudTarget: rect('.hdr-gamification .cloud-sync-indicator'),
         };
         return checks;
       });
+      const near = (actual, expected) => Number.isFinite(actual) && Math.abs(actual - expected) <= 0.75;
+      const viewportWidth = item.viewport?.width || 375;
+      const viewportHeight = item.viewport?.height || 812;
+      const navHeight = visualChecks.nav?.height;
       if (
         visualChecks.widgetCount !== 13
         || !visualChecks.caloriesDash
@@ -1646,6 +1666,24 @@ async function openCase(browser, item, snapshot) {
         || !visualChecks.stepsDash
         || !visualChecks.waterZero
         || visualChecks.healthSparks !== 0
+        || !near(visualChecks.header?.x, 18)
+        || !near(visualChecks.header?.y, 16)
+        || !near(visualChecks.header?.width, viewportWidth - 36)
+        || !near(visualChecks.date?.x, 18)
+        || !near(visualChecks.date?.y, 46)
+        || !near(visualChecks.date?.width, viewportWidth - 36)
+        || !near(visualChecks.date?.height, 36)
+        || !near(visualChecks.grid?.y, 82)
+        || !near(visualChecks.settingsFab?.x, 14)
+        || !near(visualChecks.settingsFab?.y, viewportHeight - navHeight - 18 - 40)
+        || !near(visualChecks.quickFab?.x, viewportWidth - 14 - 52)
+        || !near(visualChecks.quickFab?.y, viewportHeight - navHeight - 14 - 52)
+        || !near(visualChecks.nav?.y, viewportHeight - navHeight)
+        || !Number.isFinite(navHeight)
+        || !near(visualChecks.navRow?.x, 10)
+        || !near(visualChecks.navRow?.width, viewportWidth - 20)
+        || visualChecks.cloudTarget?.width < 44
+        || visualChecks.cloudTarget?.height < 44
       ) {
         throw new Error(`Home empty fixture не соответствует fail-closed контракту: ${JSON.stringify(visualChecks)}`);
       }

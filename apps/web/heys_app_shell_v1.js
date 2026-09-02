@@ -4161,6 +4161,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             || 'dark'
         ));
         const settingsWrapRef = React.useRef(null);
+        const primaryNavRef = React.useRef(null);
         const settingsSheetCardRef = React.useRef(null);
         const settingsSheetScrollRef = React.useRef(null);
         const settingsSheetScrollAnimRef = React.useRef(0);
@@ -4173,6 +4174,29 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 setBoardNavTheme(window.HEYS?.Board?.readTheme?.() || 'dark');
             }
         }, [tab]);
+
+        React.useEffect(() => {
+            const nav = primaryNavRef.current;
+            const root = document.documentElement;
+            if (!nav || !root) return undefined;
+            const updateNavHeight = () => {
+                const height = nav.getBoundingClientRect().height;
+                if (height > 0) {
+                    root.style.setProperty('--heys-primary-nav-height', `${Math.round(height * 100) / 100}px`);
+                }
+            };
+            updateNavHeight();
+            const observer = typeof ResizeObserver === 'function'
+                ? new ResizeObserver(updateNavHeight)
+                : null;
+            observer?.observe(nav);
+            window.addEventListener('resize', updateNavHeight);
+            return () => {
+                observer?.disconnect();
+                window.removeEventListener('resize', updateNavHeight);
+                root.style.removeProperty('--heys-primary-nav-height');
+            };
+        }, []);
 
         React.useEffect(() => {
             const onBoardTheme = (event) => {
@@ -5263,6 +5287,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         return React.createElement(
             'div',
             {
+                ref: primaryNavRef,
                 className: 'tabs tabs--v4-primary'
                     + (settingsMenuOpen ? ' tabs--settings-open' : '')
                     + (boardDarkNav ? ' tabs--board-dark' : '')
@@ -6448,7 +6473,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             React.createElement(
                 'div',
                 {
-                    className: 'wrap' + (hideProductHeader ? ' wrap--no-header' : ''),
+                    className: 'wrap'
+                        + (hideProductHeader ? ' wrap--no-header' : '')
+                        + (tab ? ' wrap--tab-' + tab : ''),
                     style: hideContent ? { display: 'none' } : undefined
                 },
                 shouldRenderContent && React.createElement(MemoAppTabContent, Object.assign({}, props, {

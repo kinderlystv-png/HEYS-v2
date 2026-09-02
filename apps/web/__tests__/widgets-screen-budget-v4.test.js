@@ -163,6 +163,7 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
     expect(sheetIn?.[1]).not.toContain('transform');
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab-wrap[\s\S]*width:\s*52px/);
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab-wrap[\s\S]*height:\s*52px/);
+    expect(CSS_SRC).toContain('var(--heys-primary-nav-height');
     expect(CSS_SRC).toMatch(/\.widgets-quick-sheet[\s\S]*position:\s*absolute/);
     expect(CSS_SRC).toContain('@keyframes widgets-quick-scrim-in');
     expect(CSS_SRC).toContain('.widgets-quick-portal');
@@ -182,8 +183,10 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*0 10px 22px/);
     expect(CSS_SRC).toMatch(/\[data-theme\$="dark"\] \.widgets-quick-fab[\s\S]*#cf8144/);
     expect(CSS_SRC).toMatch(/\[data-theme\$="dark"\] \.widgets-quick-fab[\s\S]*#1a0f04/);
-    expect(CSS_SRC).toMatch(/\[data-theme-id="blue"\] \.widgets-quick-fab[\s\S]*#2e7cc0/);
-    expect(CSS_SRC).toMatch(/\[data-theme-id="blue-dark"\] \.widgets-quick-fab[\s\S]*#2e7cc0/);
+    expect(CSS_SRC).toMatch(/\[data-theme-id="blue"\] \.widgets-quick-fab[\s\S]*#286da9/);
+    expect(CSS_SRC).toMatch(/\[data-theme-id="blue-dark"\] \.widgets-quick-fab[\s\S]*#286da9/);
+    expect(CSS_SRC).toMatch(/\.widgets-quick-fab--water[\s\S]*#547482/);
+    expect(CSS_SRC).toMatch(/\[data-theme-id="blue"\] \.widgets-quick-fab--water[\s\S]*#37718b/);
     expect(CSS_SRC).toMatch(/\.widgets-settings-fab[\s\S]*background:\s*var\(--v4-bg/);
   });
 });

@@ -2643,7 +2643,7 @@ body:has(.page-reports) .hdr::after {
 .widgets-fab-left {
   position: fixed;
   left: 14px;
-  bottom: calc(76px + 18px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--heys-primary-nav-height, calc(67.5px + env(safe-area-inset-bottom, 0px))) + 18px);
   z-index: var(--v4-z-fab, 1001);
 }
 
@@ -2719,15 +2719,15 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme-id="blue-dark"] .widgets-settings-fab {
-  background: #13222f;
-  color: #8fc1e8;
+  background: #12222f;
+  color: #7fbceb;
 }
 
 /* Быстрые действия — одна кнопка «+» 52 px справа */
 .widgets-quick-fab-wrap {
   position: fixed;
   right: 14px;
-  bottom: calc(76px + 14px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--heys-primary-nav-height, calc(67.5px + env(safe-area-inset-bottom, 0px))) + 14px);
   z-index: var(--v4-z-fab, 1001);
   display: flex;
   flex-direction: column;
@@ -3260,7 +3260,7 @@ body:has(.page-reports) .hdr::after {
 .widgets-quick-portal .widgets-quick-sheet {
   position: fixed;
   right: 14px;
-  bottom: calc(76px + 14px + 52px + 10px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--heys-primary-nav-height, calc(67.5px + env(safe-area-inset-bottom, 0px))) + 76px);
   z-index: 2;
   pointer-events: auto;
 }
@@ -3395,7 +3395,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme-id="blue"] .widgets-quick-fab {
-  background: #2e7cc0;
+  background: #286da9;
   color: #ffffff;
   box-shadow:
     0 2px 4px rgba(16, 24, 38, 0.12),
@@ -3403,7 +3403,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme-id="blue-dark"] .widgets-quick-fab {
-  background: #2e7cc0;
+  background: #286da9;
   color: #ffffff;
   box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.5),
@@ -3416,7 +3416,7 @@ body:has(.page-reports) .hdr::after {
    акцентом палитры, и вода ничем не отличалась от еды. Тень — тона заливки,
    обводки нет. Правила стоят после палитровых, чтобы перебить акцент. */
 .widgets-quick-fab--water {
-  background: #5e808f;
+  background: #547482;
   color: #ffffff;
   box-shadow:
     0 2px 4px rgba(40, 60, 70, 0.16),
@@ -3432,7 +3432,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme-id="blue"] .widgets-quick-fab--water {
-  background: #3d7f9e;
+  background: #37718b;
   color: #ffffff;
   box-shadow:
     0 2px 4px rgba(16, 24, 38, 0.12),

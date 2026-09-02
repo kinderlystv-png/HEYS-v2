@@ -407,7 +407,10 @@ describe('UI v4 chrome paint — рама', () => {
     it('v4 nav chrome — отступы и фон как в макете', () => {
         const shellRules = [...baseCss.matchAll(/\.tabs\.tabs--v4-primary \{[^}]+\}/g)].map((m) => m[0]);
         const shellRule = shellRules.find((rule) => rule.includes('padding:')) || '';
-        expect(shellRule).toMatch(/padding:\s*4px 16px calc\(16px \+ env\(safe-area-inset-bottom/);
+        // Canvas shell frames dt1/dt1d: внешний ряд начинается на x=10 при
+        // viewport 375 px. Старые 16 px сужали навигацию до 343 вместо 355 px.
+        expect(shellRule).toMatch(/padding:\s*4px 10px calc\(16px \+ env\(safe-area-inset-bottom/);
+        expect(shellRules.join('\n')).not.toMatch(/padding:\s*4px 16px calc\(16px \+ env\(safe-area-inset-bottom/);
         expect(shellRule).toMatch(/background:\s*var\(--v4-bg/);
         expect(shellRule).toMatch(/border-top:\s*none/);
         expect(baseCss).toMatch(
@@ -424,6 +427,8 @@ describe('UI v4 chrome paint — рама', () => {
         expect(baseCss.slice(start, start + 800)).toMatch(/padding:\s*8px 10px/);
         expect(baseCss).toMatch(/\.tabs--v4-primary \.crs-bar-container[\s\S]*?display:\s*none/);
         expect(baseCss).toMatch(/body:has\(\[data-heys-visible-frame="consent"\]\) \.tabs/);
+        expect(shellSrc).toContain("root.style.setProperty('--heys-primary-nav-height'");
+        expect(shellSrc).toContain('new ResizeObserver(updateNavHeight)');
     });
 });
 

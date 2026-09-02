@@ -47,6 +47,7 @@ describe('UI v4 visual harness', () => {
     ).toEqual(
       expect.arrayContaining([
         'home-widgets-empty-day',
+        'home-widgets-empty-day-narrow',
         'water-custom-volume',
         'cycle-day-picker',
         'tips-sheet',
@@ -100,16 +101,24 @@ describe('UI v4 visual harness', () => {
       viewport: { width: 375, height: 812 },
     });
     expect(emptyHome.canvasFrame).toBeUndefined();
+    expect(UI_V4_VISUAL_CASES.find((entry) => entry.id === 'home-widgets-empty-day-narrow'))
+      .toMatchObject({ viewport: { width: 320, height: 700 }, gate: 'diagnostic' });
 
     const captureSource = fs.readFileSync(
       path.resolve(__dirname, '../scripts/ui-v4-visual-capture.mjs'),
       'utf8',
     );
-    expect(captureSource).toContain("item.id === 'home-widgets-empty-day'");
+    expect(captureSource).toContain("item.id.startsWith('home-widgets-empty-day')");
     expect(captureSource).toContain('visualChecks.macroDashes !== 3');
     expect(captureSource).toContain('visualChecks.caloriesBars !== 0');
     expect(captureSource).toContain('visualChecks.healthSparks !== 0');
     expect(captureSource).toContain('!visualChecks.waterZero');
+    expect(captureSource).toContain("near(visualChecks.header?.y, 16)");
+    expect(captureSource).toContain("near(visualChecks.date?.y, 46)");
+    expect(captureSource).toContain("near(visualChecks.grid?.y, 82)");
+    expect(captureSource).toContain('viewportHeight - navHeight - 14 - 52');
+    expect(captureSource).toContain("near(visualChecks.navRow?.x, 10)");
+    expect(captureSource).toContain('visualChecks.cloudTarget?.width < 44');
   });
 
   it('fail-closed привязывает парный capture к точному Canvas oid и уникальному runtime-корню', () => {
