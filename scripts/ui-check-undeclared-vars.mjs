@@ -75,8 +75,6 @@ const SKIP_SCAN = new Set(['styles/tailwind.css', 'src/tailwind.css']);
 // добавлять имя сюда можно лишь вместе с решением, почему оно остаётся
 // необъявленным.
 const BASELINE = [
-  'ac',
-  'acc-bg',
   'accent-color',
   'bg-accent-dark',
   'bg-accent-light',
@@ -100,7 +98,6 @@ const BASELINE = [
   'border-dark',
   'border-light',
   'border-soft',
-  'c1',
   'card-bg-dark',
   'card-header-bg',
   'color-bg-primary',
@@ -138,7 +135,6 @@ const BASELINE = [
   'fingers-skin-2',
   'fingers-text-muted',
   'font-family',
-  'gr',
   'gray-100',
   'gray-200',
   'gray-300',
@@ -160,7 +156,6 @@ const BASELINE = [
   'heys-gray',
   'heys-green',
   'heys-text-tertiary',
-  'ink',
   'inkTxt',
   'level-color',
   'link-color',
@@ -169,7 +164,6 @@ const BASELINE = [
   'primary-bg',
   'primary-color',
   'primary-dark',
-  'progress',
   'safe-bottom',
   'success-color',
   'text-color',
@@ -182,7 +176,6 @@ const BASELINE = [
   'text-secondary-dark',
   'text-success',
   'token',
-  'tx',
   'widget-bg',
   'widget-border-radius',
   'widget-font-headline',

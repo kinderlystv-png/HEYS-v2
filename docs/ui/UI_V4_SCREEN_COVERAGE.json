@@ -432,6 +432,15 @@
         }
       ]
     },
+    "norm-correction-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "norm-correction",
+          "frame": "Сверка · норма снизилась"
+        }
+      ]
+    },
     "nutrition-v4-sheet": {
       "status": "covered",
       "frames": [
@@ -599,12 +608,38 @@
       "status": "gap",
       "reason": "Лист «По месяцам и неделям» открыт из Отчётов; дизайнер подтвердил, что кадр ещё будет нарисован."
     },
-    "sb-empty-screen": {
+    "sb-builder-screen": {
       "status": "covered",
       "frames": [
         {
           "zone": "strength-builder",
           "frame": "Конструктор · пусто"
+        },
+        {
+          "zone": "strength-builder",
+          "frame": "Конструктор · список свёрнут"
+        },
+        {
+          "zone": "strength-builder",
+          "frame": "Конструктор · тренировка идёт · спокойнее"
+        }
+      ]
+    },
+    "sb-catalog-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Конструктор · каталог"
+        }
+      ]
+    },
+    "sb-finish-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Конструктор · итоги"
         }
       ]
     },
@@ -640,6 +675,15 @@
     "sb-sheet": {
       "status": "gap",
       "reason": "Shared root содержит несколько live sheet-вариантов; соседние frames не покрывают их все точно."
+    },
+    "sb-superset-create-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Связка · создание"
+        }
+      ]
     },
     "score-explainer-modal": {
       "status": "gap",

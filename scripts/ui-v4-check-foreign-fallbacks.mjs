@@ -70,7 +70,7 @@ const BASELINE = {
   '733-ui-v4-login-theme.css': 4,
   '733-ui-v4-reports.css': 19,
   '734-ui-v4-curator-panel.css': 7,
-  '734-ui-v4-insights.css': 4,
+  '734-ui-v4-insights.css': 3,
   '740-cascade-card.css': 14,
   '750-strength-builder.css': 20,
   '800-meal-optimizer.css': 40,

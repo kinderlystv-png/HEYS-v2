@@ -132,13 +132,17 @@ describe('Инсайты v4 · геометрия каскада и палитр
     expect(scale).toMatch(/height:\s*8px/);
     expect(scale).toMatch(/margin-top:\s*14px/);
     expect(scale).toMatch(/border-radius:\s*999px/);
-    expect(scale).toContain('var(--v4-ink, #201e1d) 8%');
+    // Лестница чернил дизайнера (1 сентября): линии стоят на ступенях
+    // 8 · 12 · 18 · 22 · 30 и задаются ролью, а не процентом в color-mix.
+    // Здесь проверяется роль: литерал вывел бы место из-под охраны — при
+    // переводе на роль тест падал бы на самой починке.
+    expect(scale).toContain('var(--v4-line');
     expect(rule('.heys-score-insights-v4__scale-fill')).toContain('var(--v4-ok-fill');
 
     const threshold = rule('.heys-score-insights-v4__threshold');
     expect(threshold).toMatch(/width:\s*2px/);
     expect(threshold).toMatch(/height:\s*14px/);
-    expect(threshold).toContain('var(--v4-ink, #201e1d) 14%');
+    expect(threshold).toContain('var(--v4-track');
     expect(rule('.heys-score-insights-v4__threshold.is-maximum')).toContain('var(--v4-act');
 
     const legend = rule('.heys-score-insights-v4__legend');
@@ -155,7 +159,7 @@ describe('Инсайты v4 · геометрия каскада и палитр
     const today = rule('.heys-score-insights-v4__today');
     expect(today).toMatch(/margin-top:\s*18px/);
     expect(today).toMatch(/padding-top:\s*16px/);
-    expect(today).toContain('7%');
+    expect(today).toContain('var(--v4-line');
     expect(rule('.heys-score-insights-v4__contribution')).toMatch(/font:\s*700 11\.5px\/1/);
 
     const dots = rule('.heys-score-insights-v4__dots');
@@ -169,7 +173,7 @@ describe('Инсайты v4 · геометрия каскада и палитр
     expect(reports).toMatch(/margin-top:\s*16px/);
     expect(reports).toMatch(/padding:\s*14px 0 0/);
     expect(reports).toMatch(/font:\s*600 12px\/1/);
-    expect(reports).toContain('7%');
+    expect(reports).toContain('var(--v4-line');
   });
 
   it('использует четыре palette-sensitive роли вместо песочных литералов', () => {

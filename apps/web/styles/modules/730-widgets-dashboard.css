@@ -12285,13 +12285,16 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   letter-spacing: -0.03em;
 }
 
-/* Полоса дневной цели: дорожка --v4-line; ниже 67 % --ovl, от 67 % --gr2.
+/* Полоса дневной цели: дорожка --v4-track; ниже 67 % --ovl, от 67 % --gr2.
    v4-intentional: эти роли объявлены во всех четырёх палитрах; буквальный
-   fallback здесь нарушил бы контракт и мог бы окрасить тему чужим набором. */
+   fallback здесь нарушил бы контракт и мог бы окрасить тему чужим набором.
+   Дорожка стоит на --v4-track по строке «вид · полоса цели», а не по кадру:
+   замер кадра 2 сентября дал 8 % чернил вместо 12 %, но контракт старше кадра,
+   и расхождение уехало дизайнеру записью в UI_V4_FINDINGS.md, а не правкой. */
 .widget-v4-goalbar {
   height: 4px;
   border-radius: 999px;
-  background: var(--v4-line); /* v4-intentional */
+  background: var(--v4-track); /* v4-intentional */
   margin-top: 7px;
 }
 

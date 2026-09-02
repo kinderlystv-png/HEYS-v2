@@ -97,6 +97,16 @@ function linesOf(file) {
 }
 
 /** Первая строка файла, где встречается имя. 1-based, 0 если нет. */
+function linesOfName(file, name) {
+  const lines = linesOf(file);
+  if (!lines) return [];
+  const hits = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lines[i].includes(name)) hits.push(i + 1);
+  }
+  return hits;
+}
+
 function lineOfName(file, name) {
   const lines = linesOf(file);
   if (!lines) return 0;
@@ -231,6 +241,34 @@ for (const item of report.problems.absent) {
     `${item.rel}:${item.line}`,
     `${best.file}:${best.line}`,
     `имя «${best.name}» нашлось ровно в одном файле`,
+  );
+}
+
+// --- имя есть, но далеко от адреса -------------------------------------------
+// Строки уезжают от обычной правки соседнего кода, и адрес указывает мимо, хотя
+// доказательство осталось тем же. Чиню только однозначное: имя встречается в
+// файле ровно один раз, значит другого места, куда мог бы указывать адрес, нет.
+// Имя, встречающееся дважды, отдаю человеку — выбрать за него нельзя.
+for (const item of report.problems.moved) {
+  const names = item.names || [];
+  let target = null;
+  for (const n of names) {
+    const hits = linesOfName(item.rel, n);
+    if (hits.length === 1) {
+      target = { line: hits[0], name: n };
+      break;
+    }
+  }
+  if (!target) {
+    unresolved.push({ ...item, kind: 'moved', candidates: [], note: 'имя встречается не один раз' });
+    continue;
+  }
+  push(
+    'moved',
+    item,
+    `${item.rel}:${item.line}`,
+    `${item.rel}:${target.line}`,
+    `имя «${target.name}» стоит в файле ровно один раз`,
   );
 }
 

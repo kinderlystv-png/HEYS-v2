@@ -2413,12 +2413,12 @@
     },
     "Инсайты · подробно · 03": {
       "v": "=",
-      "f": "«Подробно» — 700 15/1 чернилами (.insights-v4-detail__title, apps/web/insights/pi_ui_dashboard.js:3374)",
+      "f": "«Подробно» — 700 15/1 чернилами (.insights-v4-detail__title, apps/web/insights/pi_ui_dashboard.js:3452)",
       "h": "e6ff52d16513"
     },
     "Инсайты · подробно · 04": {
       "v": "=",
-      "f": "область прокрутки экрана (.insights-v4-detail__content, apps/web/insights/pi_ui_dashboard.js:3376)",
+      "f": "область прокрутки экрана (.insights-v4-detail__content, apps/web/insights/pi_ui_dashboard.js:3454)",
       "h": "c629f84f9712"
     },
     "Инсайты · подробно · 05": {
@@ -4689,7 +4689,7 @@
     },
     "Инсайты · подробно · рисунок 01": {
       "v": "=",
-      "f": "стрелка назад — поле 17×17 при системе координат 24 (.insights-v4-detail__back, apps/web/insights/pi_ui_dashboard.js:3371)",
+      "f": "стрелка назад — поле 17×17 при системе координат 24 (.insights-v4-detail__back, apps/web/insights/pi_ui_dashboard.js:3449)",
       "h": "57f7c5e99afc"
     },
     "Инсайты · подробно · рисунок 02": {

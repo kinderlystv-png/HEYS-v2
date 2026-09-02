@@ -55,10 +55,10 @@ describe('UI v4 code→canvas screen coverage', () => {
     const registry = readScreenCoverageRegistry();
     const report = buildCodeScreenCoverageReport(roots, readCanvasPackage(), registry);
 
-    expect(roots).toHaveLength(127);
+    expect(roots).toHaveLength(131);
     expect(report.totals).toMatchObject({
-      codeRoots: 127,
-      covered: 28,
+      codeRoots: 131,
+      covered: 32,
       excluded: 21,
       gaps: 78,
       pending: 0,

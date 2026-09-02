@@ -247,7 +247,7 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(cssSrc).toMatch(/\.widget-v4-macro__fact--bad\s*\{[^}]*--v4-val-bad/s);
         expect(cssSrc).toMatch(/body:has\(\.widgets-tab\) \.widget-heatmap--2x1\.widget-v4-stack\s*\{[^}]*padding-inline:\s*0;/s);
         expect(cssSrc).toMatch(/body:has\(\.widgets-tab\) \.widgets-grid\s*\{[^}]*font-family:\s*Figtree, sans-serif;/s);
-        expect(cssSrc).toMatch(/\.widget-v4-goalbar\s*\{[^}]*background:\s*var\(--v4-line\)/s);
+        expect(cssSrc).toMatch(/\.widget-v4-goalbar\s*\{[^}]*background:\s*var\(--v4-track\)/s);
         expect(cssSrc).toMatch(/\.widget--crashRisk\.widget--2x1[^}]*\.widget-wd__delta,[\s\S]*?font-size:\s*21px;[\s\S]*?font-weight:\s*600;/s);
         expect(cssSrc).toMatch(/\.widget--crashRisk\.widget--2x1[^}]*\.widget-wd__delta\.widget-v4-val--good,[\s\S]*?--v4-sand-ok-text/s);
     });

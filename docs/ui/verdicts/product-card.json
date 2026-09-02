@@ -740,7 +740,7 @@
     },
     "Правка продукта · основные · 20": {
       "v": "=",
-      "f": "Подпись «Как продукт обычно добавляют в дневник» использует .pe-portions-subtitle: 500 10/1.4, margin 4 и data-role 56 % в apps/web/styles/heys-components.css:4694.",
+      "f": "Подпись «Как продукт обычно добавляют в дневник» использует .pe-portions-subtitle: 500 10/1.4, margin 4 и data-role 56 % в apps/web/styles/heys-components.css:4861.",
       "h": "36ec14b2817d"
     },
     "Правка продукта · основные · 21": {
@@ -765,7 +765,7 @@
     },
     "Правка продукта · основные · 25": {
       "v": "=",
-      "f": "Единица «г» использует .pe-portions-grams-unit: 500 10/1 и data-role 56 % в apps/web/styles/heys-components.css:4758.",
+      "f": "Единица «г» использует .pe-portions-grams-unit: 500 10/1 и data-role 56 % в apps/web/styles/heys-components.css:4925.",
       "h": "63c4bb427b2d"
     },
     "Правка продукта · основные · 26": {
@@ -870,7 +870,7 @@
     },
     "Правка продукта · порции · 17": {
       "v": "=",
-      "f": "Единица «г» использует .pe-portions-grams-unit: 500 10/1 и data-role 56 % в apps/web/styles/heys-components.css:4758.",
+      "f": "Единица «г» использует .pe-portions-grams-unit: 500 10/1 и data-role 56 % в apps/web/styles/heys-components.css:4925.",
       "h": "63c4bb427b2d"
     },
     "Правка продукта · порции · 18": {
