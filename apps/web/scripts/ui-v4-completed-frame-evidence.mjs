@@ -59,6 +59,32 @@ const LOWERED_LABEL = 'Сверка · норма снизилась';
 const REGISTRATION_PERSONAL_LABEL = 'Регистрация · персональные данные';
 const ACTIVE_CALM_LABEL = 'Конструктор · тренировка идёт · спокойнее';
 const CATALOG_LABEL = 'Конструктор · каталог';
+const ACTIVE_CALM_PROVEN_SUFFIXES = Object.freeze(
+  Array.from({ length: 48 }, (_, index) => String(index + 1).padStart(2, '0'))
+    .filter((suffix) => suffix !== '11')
+);
+const ACTIVE_CALM_ROWS = Object.freeze({
+  ...Object.fromEntries(ACTIVE_CALM_PROVEN_SUFFIXES.map((suffix) => [
+    `${ACTIVE_CALM_LABEL} · ${suffix}`,
+    exactMany([
+      `dom: ${TESTS.builderCalm}`,
+      `computed-style: ${TESTS.builderCalm}`,
+    ], `Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · ${suffix}.`),
+  ])),
+  ...Object.fromEntries(['текст 1/2', 'текст 2/2'].map((suffix) => [
+    `${ACTIVE_CALM_LABEL} · ${suffix}`,
+    exact('dom', TESTS.builderCalm,
+      `Rendered DOM тест доказывает точную составную строку текста А1б · ${suffix}.`),
+  ])),
+  [`${ACTIVE_CALM_LABEL} · 11`]: Object.freeze({
+    verdict: '?',
+    evidence: Object.freeze([
+      'unsupported: active strength builder has no reorder owner, persistence contract, touch flow or keyboard flow',
+      'designer-discrepancy: docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-а1б-и-а2-противоречат-друг-другу-по-ручкам-переноса',
+    ]),
+    fact: 'Canvas А1б требует drag-handle «⠿», соседний А2 его не показывает, а product-flow не умеет сохранять новый порядок; декоративный affordance не считается совпадением.',
+  }),
+});
 const FINISH_PROVEN_SUFFIXES = Object.freeze([
   ...Array.from({ length: 24 }, (_, index) => String(index + 1).padStart(2, '0')),
   ...Array.from({ length: 31 }, (_, index) => String(index + 27).padStart(2, '0')),
@@ -84,16 +110,7 @@ export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
   }),
   Object.freeze({
     zoneId: 'strength-builder', label: ACTIVE_CALM_LABEL, oid: 'А1б',
-    rows: Object.freeze({
-      [`${ACTIVE_CALM_LABEL} · 26`]: exactMany([
-        `dom: ${TESTS.builder}`,
-        `computed-style: ${TESTS.builderCalm}`,
-      ], 'DOM и CSS-тест подтверждают точный прошлый подход и спокойную пилюлю на фоне --sb-bg.'),
-      [`${ACTIVE_CALM_LABEL} · 27`]: exactMany([
-        `dom: ${TESTS.builder}`,
-        `computed-style: ${TESTS.builderCalm}`,
-      ], 'DOM и CSS-тест подтверждают точный рекорд и акцентный цвет пилюли.'),
-    }),
+    rows: ACTIVE_CALM_ROWS,
   }),
   Object.freeze({
     zoneId: 'strength-builder', label: CATALOG_LABEL, oid: 'Б2',

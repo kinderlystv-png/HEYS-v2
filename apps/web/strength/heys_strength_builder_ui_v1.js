@@ -284,6 +284,7 @@
         : started
           ? 'сейчас · подход ' + (doneCount + 1) + ' из ' + totalCount
           : (dose ? dose + ' · ' : '') + 'не начато';
+      const showDoneChevron = allDone && openIdx >= 0;
 
       return h('div', {
         key: 'e' + index,
@@ -304,14 +305,34 @@
             h('b', null, source.name || 'Без названия'),
             h('span', { className: 'sb-ex-sub' }, stateLabel)
           ),
-          allDone
-            ? h('span', { className: 'sb-ex-state', 'aria-label': 'Упражнение закрыто' }, '✓')
-            : started
-              ? h('span', { className: 'sb-ex-state' }, 'раскрыть ›')
-              : null,
-          !started && h('span', { className: 'sb-ex-chevron', 'aria-hidden': 'true' }, '›')
+          h('span', { className: 'sb-ex-signals' },
+            allDone
+              ? h('span', { className: 'sb-ex-state', 'aria-label': 'Упражнение закрыто' }, '✓')
+              : started
+                ? h('span', { className: 'sb-ex-state' }, 'раскрыть ›')
+                : null,
+            (showDoneChevron || (!allDone && !started))
+              && h('span', { className: 'sb-ex-chevron', 'aria-hidden': 'true' }, '›')
+          )
         )
       );
+    }
+
+    function compactSessionDate(value) {
+      return String((HEYS.StrengthBuilderParts || {}).humanDate(value) || '')
+        .replace(/^./, function (letter) { return letter.toLowerCase(); })
+        .replace(/ января$/, ' янв')
+        .replace(/ февраля$/, ' фев')
+        .replace(/ марта$/, ' мар')
+        .replace(/ апреля$/, ' апр')
+        .replace(/ мая$/, ' мая')
+        .replace(/ июня$/, ' июн')
+        .replace(/ июля$/, ' июл')
+        .replace(/ августа$/, ' авг')
+        .replace(/ сентября$/, ' сен')
+        .replace(/ октября$/, ' окт')
+        .replace(/ ноября$/, ' ноя')
+        .replace(/ декабря$/, ' дек');
     }
 
     function historyForCard(name, index) {
@@ -884,7 +905,7 @@
           h('b', null, wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises)),
           h('div', { className: 'sb-head-sub' }, rest && !rest.collapsed
             ? 'отдых между подходами'
-            : (HEYS.StrengthBuilderParts || {}).humanDate(dateKey)
+            : compactSessionDate(dateKey)
               + (startedAt ? ' · начата в ' + fmtTime(startedAt) : ''))
         ),
         // Очередь отправки: зал без сети — основной сценарий (решение 6). Статус
@@ -905,11 +926,14 @@
       h('div', { className: 'sb-stats' + (rest && !rest.collapsed ? ' sb-stats--rest' : '') },
         rest && !rest.collapsed
           ? elapsedSec > 0 && h('span', { className: 'sb-stat sb-stat-time' }, fmtClock(elapsedSec))
-          : elapsedSec > 0 && h('span', { className: 'sb-stat sb-stat-time' }, fmtClock(elapsedSec)),
+          : elapsedSec > 0 && h('span', { className: 'sb-stat sb-stat-time' },
+            (openIdx >= 0 ? '⏱ ' : '') + fmtClock(elapsedSec)),
         h('span', { className: 'sb-stat' + (rest && !rest.collapsed ? ' sb-stat--progress' : '') }, agg
           ? (rest && !rest.collapsed
             ? agg.doneApproaches + ' из ' + agg.totalApproaches + ' подходов'
-            : agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓')
+            : (openIdx >= 0
+              ? agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓'
+              : agg.doneApproaches + ' из ' + agg.totalApproaches + ' подходов'))
           : '—'),
         !(rest && !rest.collapsed) && agg && agg.seconds > 0 && h('span', { className: 'sb-stat' }, fmtClock(agg.seconds)),
         !(rest && !rest.collapsed) && agg && agg.meters > 0 && h('span', { className: 'sb-stat' }, Math.round(agg.meters) + ' м'),
@@ -1044,9 +1068,13 @@
             if (notClosed > 0) { setCloseConfirm(true); return; }
             setView('finish');
           }
-        }, 'Завершить тренировку'),
+        }, openIdx >= 0
+          ? 'Завершить тренировку'
+          : (notClosed > 0 ? 'Завершить · ' + notClosed + ' не закрыто' : 'Завершить')),
         !rest && h('div', { className: 'sb-builder-note' },
-          'Тот же состав, шесть правок против шума. Сделанное не громче текущего: у закрытых упражнений и подходов снята зелёная заливка, сигнал остался один — галочка. Акцент указывает одно место: обводка карточки говорит «открыто здесь», рамка полей — «писать сюда»; номера, кольцо галочки и обводка активной строки приглушены, потому что шесть акцентов внутри одного блока не акцентируют ничего. Заливки больше не вложены тройкой: строки внутри карточки живут на её фоне. Шкала тяжести без обводок — это одна необязательная оценка, а не второй блок веса таблицы. Счётчик незакрытых снят с кнопки: он уже стоит бейджем в шапке.'),
+          openIdx < 0
+            ? 'Состояние, в котором список живёт между упражнениями: карточку свернули, подход закрыт, следующее ещё не начато. Раскрытие — тап по карточке, и прежняя сворачивается сама: две открытые карточки не бывают. «Завершить» остаётся тихой, пока счёт незакрытых не дошёл до нуля.'
+            : 'Тот же состав, шесть правок против шума. Сделанное не громче текущего: у закрытых упражнений и подходов снята зелёная заливка, сигнал остался один — галочка. Акцент указывает одно место: обводка карточки говорит «открыто здесь», рамка полей — «писать сюда»; номера, кольцо галочки и обводка активной строки приглушены, потому что шесть акцентов внутри одного блока не акцентируют ничего. Заливки больше не вложены тройкой: строки внутри карточки живут на её фоне. Шкала тяжести без обводок — это одна необязательная оценка, а не второй блок веса таблицы. Счётчик незакрытых снят с кнопки: он уже стоит бейджем в шапке.'),
         rest && !rest.collapsed && h('div', { className: 'sb-rest-note' },
           'Кольцо стоит над кнопкой «Завершить», а не поверх списка: пока идёт отдых, упражнения видны и правятся. Число подписано, откуда взялось — ' + restOrigin + ', — и правится теми же двумя кнопками, а не настройками.')
       )

@@ -8912,298 +8912,436 @@
       "h": "2358ffbf11ef"
     },
     "Конструктор · тренировка идёт · спокойнее · 01": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 01.",
       "h": "830594e649a7",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 02": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 02.",
       "h": "ca9dd0dbe743",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 03": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 03.",
       "h": "f143b5d4e1e4",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 04": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 04.",
       "h": "97774a22c8cb",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 05": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 05.",
       "h": "946ab5761d8f",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 06": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 06.",
       "h": "a6047f6cec68",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 07": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 07.",
       "h": "c629f84f9712",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 08": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 08.",
       "h": "c00d4648c76a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 09": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 09.",
       "h": "036f7f97da3b",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 10": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 10.",
       "h": "4d2df61572fb",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 11": {
       "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "f": "Canvas А1б требует drag-handle «⠿», соседний А2 его не показывает, а product-flow не умеет сохранять новый порядок; декоративный affordance не считается совпадением.",
       "h": "ada3cfca3806",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "unsupported: active strength builder has no reorder owner, persistence contract, touch flow or keyboard flow",
+        "designer-discrepancy: docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-а1б-и-а2-противоречат-друг-другу-по-ручкам-переноса"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 12": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 12.",
       "h": "50cb53e25c6d",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 13": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 13.",
       "h": "7590f4699d43",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 14": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 14.",
       "h": "a45ee30c055e",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 15": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 15.",
       "h": "73f2ff511749",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 16": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 16.",
       "h": "ab8a77104f12",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 17": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 17.",
       "h": "4f90e7e17d61",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 18": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 18.",
       "h": "2397951a30bd",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 19": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 19.",
       "h": "a23633abf54d",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 20": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 20.",
       "h": "58b219c001eb",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 21": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 21.",
       "h": "91d0151785d0",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 22": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 22.",
       "h": "b5aac2f109ce",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 23": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 23.",
       "h": "e3c6d9b3cb61",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 24": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 24.",
       "h": "1fa9003a3cf7",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 25": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 25.",
       "h": "db4ca62836c2",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 26": {
       "v": "=",
-      "f": "DOM и CSS-тест подтверждают точный прошлый подход и спокойную пилюлю на фоне --sb-bg.",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 26.",
       "h": "1cea7b66c55e",
       "evidence": [
-        "dom: apps/web/__tests__/strength-builder-ui.test.js",
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 27": {
       "v": "=",
-      "f": "DOM и CSS-тест подтверждают точный рекорд и акцентный цвет пилюли.",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 27.",
       "h": "0a1d459ad221",
       "evidence": [
-        "dom: apps/web/__tests__/strength-builder-ui.test.js",
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 28": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 28.",
       "h": "6fb02725c750",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 29": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 29.",
       "h": "ee9bc1c90b56",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 30": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 30.",
       "h": "8429f740e814",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 31": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 31.",
       "h": "53b4c780e9ae",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 32": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 32.",
       "h": "521a2d24699d",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 33": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 33.",
       "h": "1e7e3b679417",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 34": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 34.",
       "h": "fab65989cddd",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 35": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 35.",
       "h": "8dda7bd28843",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 36": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 36.",
       "h": "ea251809c8f3",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 37": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 37.",
       "h": "f149b1a0693a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 38": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 38.",
       "h": "8c196dbc5767",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 39": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 39.",
       "h": "0c9356cf95bc",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 40": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 40.",
       "h": "578841c7a62f",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 41": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 41.",
       "h": "b28e699ab5d1",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 42": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 42.",
       "h": "bce6d8a3f180",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 43": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 43.",
       "h": "bc025e8f605f",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 44": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 44.",
       "h": "c4dc01779567",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 45": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 45.",
       "h": "f1e39e1f9f34",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 46": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 46.",
       "h": "7bc2baeea572",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 47": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 47.",
       "h": "47e60c36439c",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 48": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 48.",
       "h": "86f6da9b7550",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Программа · отчёт за период · 01": {
       "v": "≠",
@@ -9341,16 +9479,16 @@
       "h": "65cf343d175d"
     },
     "Конструктор · тренировка идёт · спокойнее · текст 1/2": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Rendered DOM тест доказывает точную составную строку текста А1б · текст 1/2.",
       "h": "e7b6b6c40a06",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": ["dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"]
     },
     "Конструктор · тренировка идёт · спокойнее · текст 2/2": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Rendered DOM тест доказывает точную составную строку текста А1б · текст 2/2.",
       "h": "92226772e9f4",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for А1б"]
+      "evidence": ["dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"]
     },
     "Программа · назначено против сделано · текст": {
       "v": "?",

@@ -410,7 +410,7 @@
             disabled: readOnly || !(+value > 0),
             onClick: function () { if (!readOnly) onPatch(index, { done: !approach.done }); },
             'aria-label': approach.done ? 'Отменить отметку' : 'Отметить выполненным'
-          }, approach.done ? '✓' : '○')
+          }, approach.done ? '✓' : '')
         )
       ];
       if (approach && approach.discomfort) {
@@ -492,7 +492,7 @@
           disabled: readOnly || !canClose(stage),
           onClick: function () { patchStage(si, { done: !stage.done }); },
           'aria-label': stage.done ? 'Отменить отметку' : 'Отметить выполненным'
-        }, stage.done ? '✓' : '○')
+        }, stage.done ? '✓' : '')
       ));
     });
 
@@ -549,7 +549,11 @@
     const summary = [];
     if (meta || ex.unit) {
       const g = groupsLabel(ex.name);
-      if (g) summary.push(g);
+      if (g) summary.push(g.split(' · ').map(function (part, partIndex) {
+        return partIndex > 0
+          ? part.replace(/^./, function (letter) { return letter.toLowerCase(); })
+          : part;
+      }).join(' · '));
     }
     if (unit === 'time') summary.push('время');
     else if (unit === 'distance') summary.push('метры');
@@ -573,10 +577,12 @@
           h('b', null, ex.name || 'Без названия'),
           h('span', { className: 'sb-ex-sub' }, summary.join(' · '))
         ),
-        h('span', {
-          className: 'sb-ex-count' + (totalCount > 0 && doneCount === totalCount ? ' is-done' : ' is-current')
-        }, doneCount + '/' + totalCount),
-        h('span', { className: 'sb-ex-count sb-ex-toggle' }, open ? '✕' : '›')
+        h('span', { className: 'sb-ex-signals' },
+          h('span', {
+            className: 'sb-ex-count' + (totalCount > 0 && doneCount === totalCount ? ' is-done' : ' is-current')
+          }, doneCount + '/' + totalCount),
+          h('span', { className: 'sb-ex-count sb-ex-toggle' }, open ? '✕' : '›')
+        )
       ),
 
       open && h('div', { className: 'sb-ex-body' },
@@ -651,12 +657,13 @@
           )
         ),
         h('div', { className: 'sb-rest-line' },
-          h('span', null, '⏱ Отдых ' + fmtClock(+ex.restSec || 90)),
           // Без оценки тяжести это значение по умолчанию, а не вывод из неё: подпись,
           // называющая источником незаполненное поле, врёт.
-          h('span', null, ex.restManual
-            ? '· вручную'
-            : (+ex.rpe > 0 ? '· по тяжести ' + ex.rpe : '· по умолчанию')),
+          h('span', { className: 'sb-rest-copy' },
+            '⏱ Отдых ' + fmtClock(+ex.restSec || 90) + ' '
+            + (ex.restManual
+              ? '— вручную'
+              : (+ex.rpe > 0 ? '— по тяжести ' + ex.rpe : '— по умолчанию'))),
           h('button', {
             type: 'button',
             className: 'sb-rest-manual' + (ex.restManual ? ' is-on' : ''),

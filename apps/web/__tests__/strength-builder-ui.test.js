@@ -277,12 +277,15 @@ describe('конструктор: тяжесть подхода без проф�
     fireEvent.click(helpTrigger);
     expect(help?.open).toBe(true);
     expect(screen.getByText(/6 — легко; 7–8 — тяжело/)).toBeTruthy();
-    expect(screen.getByText('· по тяжести 7')).toBeTruthy();
+    expect(screen.getByText('⏱ Отдых 2:00 — по тяжести 7')).toBeTruthy();
     expect(screen.getByLabelText('Тяжесть подхода 7 из 10')).toBeTruthy();
     expect(screen.queryByText(/RPE/i)).toBeNull();
     expect(screen.queryByLabelText(/RPE/i)).toBeNull();
   });
 });
+
+const A2_COLLAPSED_NOTE = 'Состояние, в котором список живёт между упражнениями: карточку свернули, подход закрыт, следующее ещё не начато. Раскрытие — тап по карточке, и прежняя сворачивается сама: две открытые карточки не бывают. «Завершить» остаётся тихой, пока счёт незакрытых не дошёл до нуля.';
+const A1B_OPEN_NOTE = 'Тот же состав, шесть правок против шума. Сделанное не громче текущего: у закрытых упражнений и подходов снята зелёная заливка, сигнал остался один — галочка. Акцент указывает одно место: обводка карточки говорит «открыто здесь», рамка полей — «писать сюда»; номера, кольцо галочки и обводка активной строки приглушены, потому что шесть акцентов внутри одного блока не акцентируют ничего. Заливки больше не вложены тройкой: строки внутри карточки живут на её фоне. Шкала тяжести без обводок — это одна необязательная оценка, а не второй блок веса таблицы. Счётчик незакрытых снят с кнопки: он уже стоит бейджем в шапке.';
 
 describe('конструктор: спокойная нижняя панель', () => {
   it('свёрнутый список показывает состояния из Canvas в номере и одной строке', () => {
@@ -299,7 +302,10 @@ describe('конструктор: спокойная нижняя панель',
       onClose: () => {},
     }));
 
+    expect(document.querySelector('.sb-builder-note')?.textContent).toBe(A1B_OPEN_NOTE);
+
     fireEvent.click(screen.getByRole('button', { name: /Жим лёжа/ }));
+    expect(document.querySelector('.sb-builder-note')?.textContent).toBe(A2_COLLAPSED_NOTE);
     expect(screen.getByText('2 × 8–12 · 75 кг · рекорд')).toBeTruthy();
     expect(screen.getByText('сейчас · подход 2 из 2')).toBeTruthy();
     expect(screen.getByText('1 × 12 · 20 кг · не начато')).toBeTruthy();
@@ -1379,9 +1385,9 @@ describe('lifecycle силовой сессии', () => {
         dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
       }));
 
-      expect(screen.getByText('1:00')).toBeTruthy();
+      expect(screen.getByText('⏱ 1:00')).toBeTruthy();
       act(() => { vi.advanceTimersByTime(5000); });
-      expect(screen.getByText('1:00')).toBeTruthy();
+      expect(screen.getByText('⏱ 1:00')).toBeTruthy();
 
       builderView.unmount();
       const Parts = globalThis.HEYS.StrengthBuilderParts;
