@@ -6161,7 +6161,11 @@
       }
     };
 
-    return React.createElement('div', { className: 'aps-v4-meal-summary' },
+    // `aps-v4-flow` держит полотно потока: песочный фон модалки, радиус 28,
+    // тёплая тень и поля шапки/содержимого живут на `.mc-modal:has(.aps-v4-flow)`.
+    // Без него итог приёма падал на базовый `.mc-modal` — бело-голубой градиент
+    // прежней системы под песочными карточками.
+    return React.createElement('div', { className: 'aps-v4-flow aps-v4-meal-summary' },
       typeof onPhoto === 'function' && React.createElement('input', {
         ref: fileInputRef,
         type: 'file',
@@ -6263,23 +6267,26 @@
       typeof onPhoto === 'function' && React.createElement('div', { className: 'aps-v4-meal-summary__photo-note' },
         'Фото принадлежит приёму, не продукту. Снимков может быть несколько, тап открывает на весь экран.'
       ),
-      React.createElement('div', { className: 'aps-v4-meal-summary__actions aps-v4-meal-summary__actions--row' },
-        React.createElement('button', {
-          type: 'button',
-          className: 'aps-v4-btn-ghost aps-v4-meal-summary__btn aps-v4-btn-paper',
-          onClick: onAddMore
-        }, 'Добавить ещё'),
-        typeof onSavePreset === 'function' && React.createElement('button', {
-          type: 'button',
-          className: 'aps-v4-btn-ghost aps-v4-meal-summary__btn aps-v4-btn-paper',
-          onClick: onSavePreset
-        }, 'Сохранить как набор')
-      ),
+      // Строка «вес четырёх действий»: «Добавить ещё» — главная кнопка
+      // заливкой, ниже «Завершить приём» вторичной, ниже «Сохранить как набор»
+      // текстом. Раньше здесь стояли две одинаковые призрачные плашки в ряд и
+      // «Готово» главной — глаз не различал вес действий, а главной оказывалась
+      // «закончить» вместо «продолжить сборку».
       React.createElement('button', {
         type: 'button',
-        className: 'aps-v4-btn-primary aps-v4-meal-summary__done',
+        className: 'aps-v4-btn-primary aps-v4-meal-summary__add-more',
+        onClick: onAddMore
+      }, 'Добавить ещё'),
+      React.createElement('button', {
+        type: 'button',
+        className: 'aps-v4-btn-ghost aps-v4-meal-summary__done',
         onClick: onDone
-      }, 'Готово')
+      }, 'Завершить приём'),
+      typeof onSavePreset === 'function' && React.createElement('button', {
+        type: 'button',
+        className: 'aps-v4-meal-summary__preset',
+        onClick: onSavePreset
+      }, 'Сохранить как набор')
     );
   }
 
@@ -12315,6 +12322,177 @@
         });
     }
 
+    // Canvas food-meal задаёт два реальных исхода переноса: весь
+    // состав вливается в выбранный приём либо уезжает отдельной
+    // карточкой. Цель резолвится по id на свежем дне: исчезнувшая цель
+    // даёт null и блокирует запись, а не переключается молча на новый приём.
+    function buildMealMoveDestination(existingDay, options = {}) {
+        const {
+            targetMode,
+            dstMealId,
+            sourceMeal,
+            preparedItems,
+            newMealId,
+            updatedAt = Date.now(),
+            sortMeals,
+        } = options;
+        if (!existingDay || !sourceMeal || !Array.isArray(preparedItems)) return null;
+
+        const meals = Array.isArray(existingDay.meals) ? existingDay.meals : [];
+        if (targetMode === 'existing') {
+            if (!dstMealId) return null;
+            const targetIndex = meals.findIndex(meal => meal && meal.id === dstMealId);
+            if (targetIndex < 0) return null;
+
+            const targetMeal = meals[targetIndex];
+            const targetPhotos = Array.isArray(targetMeal.photos) ? targetMeal.photos : [];
+            const sourcePhotos = Array.isArray(sourceMeal.photos) ? sourceMeal.photos : [];
+            const knownPhotoIds = new Set(targetPhotos.map(photo => photo && photo.id).filter(Boolean));
+            const movedPhotos = sourcePhotos.filter(photo => !photo?.id || !knownPhotoIds.has(photo.id));
+            const mergedMeal = {
+                // Сохраняем source-only метаданные, но контекст цели
+                // (имя, время, тип и уже заданные оценки) имеет приоритет.
+                ...sourceMeal,
+                ...targetMeal,
+                id: targetMeal.id,
+                items: [...(targetMeal.items || []), ...preparedItems],
+                ...(targetPhotos.length > 0 || sourcePhotos.length > 0
+                    ? { photos: [...targetPhotos, ...movedPhotos] }
+                    : {}),
+                updatedAt,
+            };
+            const nextMeals = meals.map((meal, index) => index === targetIndex ? mergedMeal : meal);
+            return {
+                day: { ...existingDay, meals: nextMeals, updatedAt },
+                targetMode,
+                destinationMealId: targetMeal.id,
+                targetMealBefore: targetMeal,
+                createdMealId: null,
+            };
+        }
+
+        if (targetMode !== 'new' || !newMealId) return null;
+        const movedMeal = {
+            ...sourceMeal,
+            id: newMealId,
+            items: preparedItems,
+            updatedAt,
+        };
+        const appended = [...meals, movedMeal];
+        const nextMeals = typeof sortMeals === 'function' ? sortMeals(appended) : appended;
+        return {
+            day: { ...existingDay, meals: nextMeals, updatedAt },
+            targetMode,
+            destinationMealId: movedMeal.id,
+            targetMealBefore: null,
+            createdMealId: movedMeal.id,
+        };
+    }
+
+    function rollbackMealMoveDestination(existingDay, plan, updatedAt = Date.now()) {
+        if (!existingDay || !plan) return null;
+        const meals = Array.isArray(existingDay.meals) ? existingDay.meals : [];
+        if (plan.targetMode === 'existing') {
+            if (!plan.destinationMealId || !plan.targetMealBefore) return null;
+            const targetIndex = meals.findIndex(meal => meal && meal.id === plan.destinationMealId);
+            if (targetIndex < 0) return null;
+            return {
+                ...existingDay,
+                meals: meals.map((meal, index) => index === targetIndex ? plan.targetMealBefore : meal),
+                updatedAt,
+            };
+        }
+        if (plan.targetMode !== 'new' || !plan.createdMealId) return null;
+        if (!meals.some(meal => meal && meal.id === plan.createdMealId)) return null;
+        return {
+            ...existingDay,
+            meals: meals.filter(meal => meal && meal.id !== plan.createdMealId),
+            updatedAt,
+        };
+    }
+
+    async function executeMealMoveTransaction(options = {}) {
+        const {
+            srcDate,
+            dstDate,
+            srcMealId,
+            targetMode,
+            dstMealId,
+            readSourceDay,
+            prepareItems,
+            createItemId,
+            createMealId,
+            writeDay,
+            sortMeals,
+            now = () => Date.now(),
+        } = options;
+        if (!srcDate || !dstDate || srcDate === dstDate) return { ok: false, reason: 'same_day' };
+        if (!srcMealId) return { ok: false, reason: 'source_missing' };
+        if (targetMode !== 'existing' && targetMode !== 'new') return { ok: false, reason: 'target_mode_missing' };
+        if (targetMode === 'existing' && (!dstMealId || dstMealId === srcMealId)) {
+            return { ok: false, reason: dstMealId === srcMealId ? 'same_meal' : 'target_missing' };
+        }
+        if (typeof readSourceDay !== 'function' || typeof prepareItems !== 'function'
+            || typeof createItemId !== 'function' || typeof createMealId !== 'function'
+            || typeof writeDay !== 'function') {
+            return { ok: false, reason: 'dependency_missing' };
+        }
+
+        const sourceDay = readSourceDay();
+        const sourceMeal = (sourceDay?.meals || []).find(meal => meal && meal.id === srcMealId);
+        if (!sourceMeal) return { ok: false, reason: 'source_missing' };
+        const sourceMealSnapshot = JSON.parse(JSON.stringify(sourceMeal));
+        const sourceFingerprint = JSON.stringify(sourceMeal);
+        const sourceItems = (sourceMeal.items || []).map(item => ({ ...item, id: createItemId() }));
+        const preparedItems = await prepareItems(sourceItems);
+        if (!preparedItems || preparedItems.length !== sourceItems.length) {
+            return { ok: false, reason: 'items_not_ready' };
+        }
+
+        let destinationPlan = null;
+        const targetWriteOk = writeDay(dstDate, (existing) => {
+            const plan = buildMealMoveDestination(existing, {
+                targetMode,
+                dstMealId,
+                sourceMeal,
+                preparedItems,
+                newMealId: targetMode === 'new' ? createMealId() : null,
+                updatedAt: now(),
+                sortMeals,
+            });
+            if (!plan) return null;
+            destinationPlan = plan;
+            return { ...plan.day, date: dstDate };
+        }, 'move_meal_to_target');
+        if (!targetWriteOk || !destinationPlan) {
+            return { ok: false, reason: targetMode === 'existing' ? 'target_missing' : 'target_write_failed' };
+        }
+
+        const sourceWriteOk = writeDay(srcDate, (existing) => {
+            const liveSource = (existing.meals || []).find(meal => meal && meal.id === srcMealId);
+            if (!liveSource || JSON.stringify(liveSource) !== sourceFingerprint) return null;
+            return {
+                ...existing,
+                meals: (existing.meals || []).filter(meal => meal && meal.id !== srcMealId),
+                updatedAt: now(),
+            };
+        }, 'move_meal_from_source');
+        if (!sourceWriteOk) {
+            const rollbackOk = writeDay(dstDate, (existing) =>
+                rollbackMealMoveDestination(existing, destinationPlan, now()),
+            'rollback_move_meal_target');
+            return {
+                ok: false,
+                reason: 'source_changed',
+                rollbackOk,
+                destinationPlan,
+                sourceMealSnapshot,
+            };
+        }
+
+        return { ok: true, destinationPlan, sourceMealSnapshot };
+    }
+
     function cloneItemsFromMeal(meal, itemIds, gramsOverrides) {
         const idsSet = new Set(itemIds);
         const go = gramsOverrides || {};
@@ -12461,6 +12639,74 @@
                 return false;
             }
         }, [date, protectCheckinFields]);
+
+        // Фото приёма: снимок сразу ложится в день (человек видит его в ту же
+        // секунду), а облачная загрузка догоняет и снимает pending/uploading.
+        // Один обработчик на все точки входа — лист нового приёма и итог приёма
+        // после добавления продукта.
+        const addMealPhoto = React.useCallback(async ({ mealIndex, mealId: requestedMealId, photo, filename, timestamp } = {}) => {
+            const photoLimit = HEYS.dayGallery?.PHOTO_LIMIT_PER_MEAL || 10;
+            const activeDay = HEYS.Day?.getDay?.() || dayRef.current || {};
+            const resolvedMealIndex = resolveMealIndex(activeDay, mealIndex, requestedMealId);
+            const activeMeal = activeDay?.meals?.[resolvedMealIndex];
+            if ((activeMeal?.photos?.length || 0) >= photoLimit) {
+                HEYS.Toast?.warning?.(`Максимум ${photoLimit} фото на приём пищи`);
+                return false;
+            }
+
+            const clientId = HEYS.utils?.getCurrentClientId?.() || 'default';
+            const mealId = activeMeal?.id || requestedMealId || uid('meal_');
+            const photoId = uid('photo_');
+            const photoData = {
+                id: photoId,
+                data: photo,
+                filename,
+                timestamp,
+                pending: true,
+                uploading: true,
+                uploaded: false,
+            };
+
+            setDay((prevDay = {}) => {
+                const targetIndex = resolveMealIndex(prevDay, resolvedMealIndex, mealId);
+                const meals = (prevDay.meals || []).map((m, i) =>
+                    i === targetIndex
+                        ? { ...m, photos: [...(m.photos || []), photoData] }
+                        : m
+                );
+                const nextDay = { ...prevDay, meals, updatedAt: Date.now() };
+                persistDayData(nextDay, 'meal_photo_add');
+                return nextDay;
+            });
+
+            if (!HEYS.cloud?.uploadPhoto) return true;
+            try {
+                const result = await HEYS.cloud.uploadPhoto(photo, clientId, date, mealId);
+                // Признак успеха — `path`, а не `url`: публичной ссылки на бакет
+                // больше нет (2026-08-11), и по `url` снимок навсегда оставался бы
+                // «загружается».
+                if (result?.uploaded && result?.path) {
+                    setDay((prevDay = {}) => {
+                        const targetIndex = resolveMealIndex(prevDay, resolvedMealIndex, mealId);
+                        const meals = (prevDay.meals || []).map((m, i) => {
+                            if (i !== targetIndex || !m.photos) return m;
+                            return {
+                                ...m,
+                                photos: m.photos.map((p) => (p.id === photoId
+                                    ? { ...p, path: result.path, data: undefined, pending: false, uploading: false, uploaded: true }
+                                    : p)),
+                            };
+                        });
+                        const nextDay = { ...prevDay, meals, updatedAt: Date.now() };
+                        persistDayData(nextDay, 'meal_photo_uploaded');
+                        return nextDay;
+                    });
+                }
+            } catch (e) {
+                console.warn('[HEYS.day] Photo upload failed:', e);
+            }
+            return true;
+        }, [date, setDay, persistDayData]);
 
         const readScopedDayForDate = React.useCallback((targetDate) => {
             const key = _scopedDayKey(targetDate);
@@ -12683,70 +12929,9 @@
                             const mealIndex = newMealIndex;
                             expandOnlyMeal(mealIndex);
 
-                            const PHOTO_LIMIT_PER_MEAL = HEYS.dayGallery?.PHOTO_LIMIT_PER_MEAL || 10;
-
-                            const handleAddPhoto = async ({ mealIndex: photoMealIndex, mealId: requestedMealId, photo, filename, timestamp }) => {
-                                const activeDay = HEYS.Day?.getDay?.() || day || {};
-                                const resolvedMealIndex = resolveMealIndex(activeDay, photoMealIndex, requestedMealId);
-                                const activeMeal = activeDay?.meals?.[resolvedMealIndex];
-                                const currentPhotos = activeMeal?.photos?.length || 0;
-                                if (currentPhotos >= PHOTO_LIMIT_PER_MEAL) {
-                                    HEYS.Toast?.warning?.(`Максимум ${PHOTO_LIMIT_PER_MEAL} фото на приём пищи`);
-                                    return;
-                                }
-
-                                const clientId = HEYS.utils?.getCurrentClientId?.() || 'default';
-                                const mealId = activeMeal?.id || requestedMealId || uid('meal_');
-                                const photoId = uid('photo_');
-                                const photoData = {
-                                    id: photoId,
-                                    data: photo,
-                                    filename,
-                                    timestamp,
-                                    pending: true,
-                                    uploading: true,
-                                    uploaded: false
-                                };
-
-                                setDay((prevDay = {}) => {
-                                    const targetIndex = resolveMealIndex(prevDay, photoMealIndex, mealId);
-                                    const meals = (prevDay.meals || []).map((m, i) =>
-                                        i === targetIndex
-                                            ? { ...m, photos: [...(m.photos || []), photoData] }
-                                            : m
-                                    );
-                                    const nextDay = { ...prevDay, meals, updatedAt: Date.now() };
-                                    persistDayData(nextDay, 'meal_photo_add');
-                                    return nextDay;
-                                });
-
-                                if (HEYS.cloud?.uploadPhoto) {
-                                    try {
-                                        const result = await HEYS.cloud.uploadPhoto(photo, clientId, date, mealId);
-                                        if (result?.uploaded && result?.path) {
-                                            setDay((prevDay = {}) => {
-                                                const targetIndex = resolveMealIndex(prevDay, photoMealIndex, mealId);
-                                                const meals = (prevDay.meals || []).map((m, i) => {
-                                                    if (i !== targetIndex || !m.photos) return m;
-                                                    return {
-                                                        ...m,
-                                                        photos: m.photos.map((p) =>
-                                                            p.id === photoId
-                                                                ? { ...p, path: result.path, data: undefined, pending: false, uploading: false, uploaded: true }
-                                                                : p
-                                                        )
-                                                    };
-                                                });
-                                                const nextDay = { ...prevDay, meals, updatedAt: Date.now() };
-                                                persistDayData(nextDay, 'meal_photo_uploaded');
-                                                return nextDay;
-                                            });
-                                        }
-                                    } catch (e) {
-                                        console.warn('[HEYS.day] Photo upload failed:', e);
-                                    }
-                                }
-                            };
+                            // Фото приёма — общий обработчик выше по файлу: он же
+                            // питает итог приёма после добавления продукта.
+                            const handleAddPhoto = addMealPhoto;
 
                             // Функция открытия модалки добавления продукта
                             const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride, autoRepeatCount, options = {}) => {
@@ -13639,12 +13824,17 @@
                     source: 'day-add-product-to-meal'
                 }
             }));
-            dispatchMealFlowFinished({
-                source: 'day-add-product-to-meal',
-                dateKey: newDayData?.date || date || null,
-                mealIndex: targetMealIndex,
-                mealId: newDayData?.meals?.[targetMealIndex]?.id || targetMealId || null,
-            });
+            // deferFlowFinished: вызывающий поток ещё не закончился (режим
+            // «несколько продуктов» — впереди итог приёма), и о завершении
+            // скажет он сам.
+            if (options.deferFlowFinished !== true) {
+                dispatchMealFlowFinished({
+                    source: 'day-add-product-to-meal',
+                    dateKey: newDayData?.date || date || null,
+                    mealIndex: targetMealIndex,
+                    mealId: newDayData?.meals?.[targetMealIndex]?.id || targetMealId || null,
+                });
+            }
             emitPlannerReplanRequest('PRODUCT_ADDED', { mealIndex: targetMealIndex, mealId: newDayData?.meals?.[targetMealIndex]?.id || targetMealId || null, productId: item.product_id });
             return true;
         }, [haptic, setDay, setNewItemIds, date, emitPlannerReplanRequest, buildAddProductItem, ensureProductReadyForDayWrite]);
@@ -14059,6 +14249,61 @@
             });
         }, [day, date, addProductToMeal]);
 
+        // Итог приёма после добавления («ещё» / «завершить», канвас v4 · экран 6).
+        // Лист граммов в режиме «несколько продуктов» намеренно не закрывает себя
+        // сам: он отдаёт продукт наружу и ждёт, что дневник покажет итог. Если
+        // этого не сделать, человек после «Добавить» остаётся на том же шаге
+        // граммов — продукт записан, а выхода из потока не видно.
+        const showMealSummaryAfterAdd = React.useCallback((mealIndex, mealId) => {
+            const showSummary = HEYS.dayAddProductSummary?.show;
+            HEYS.StepModal?.hide?.({ scrollToDiary: false });
+            if (typeof showSummary !== 'function') {
+                dispatchMealFlowFinished({
+                    source: 'day-add-product-for-meal-no-summary',
+                    dateKey: date,
+                    mealIndex,
+                    mealId,
+                });
+                return;
+            }
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    // День берём из LS: addProductToMeal уже записал туда новую
+                    // позицию, а dayRef ждёт commit React и на этот момент отстаёт.
+                    const freshDay = readFreshScopedDay() || dayRef.current || {};
+                    showSummary({
+                        day: freshDay,
+                        mealIndex,
+                        mealId,
+                        pIndex,
+                        getProductFromItem,
+                        per100,
+                        scale,
+                        onAddMore: (_updatedDay, autoRepeatCount) => openAddProductForMeal({
+                            mealIndex,
+                            mealId,
+                            autoRepeatCount: autoRepeatCount || 0,
+                        }),
+                        onAddLast: () => openAddProductForMeal({
+                            mealIndex,
+                            mealId,
+                            multiProductMode: false,
+                        }),
+                        onPhoto: (payload) => addMealPhoto({
+                            ...payload,
+                            mealIndex,
+                            mealId: payload?.mealId || mealId,
+                        }),
+                        onSavePreset: () => openAddProductForMeal({
+                            mealIndex,
+                            mealId,
+                            openPresetsCreate: true,
+                        }),
+                    });
+                }, 100);
+            });
+        }, [date, pIndex, getProductFromItem, readFreshScopedDay, addMealPhoto]);
+
         const openAddProductForMeal = React.useCallback((target) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
                 HEYS.Paywall?.showBlockedToast?.('Добавление продукта недоступно');
@@ -14078,11 +14323,16 @@
             }
             if (typeof expandOnlyMeal === 'function') expandOnlyMeal(resolvedIndex);
             const mealId = meal.id || opts.mealId || null;
+            const multiProductMode = opts.multiProductMode !== false;
+            const autoRepeatCount = opts.autoRepeatCount || 0;
+            // «Подряд N» ведёт лист сам: он молча возвращается к поиску и
+            // закрывается на последнем повторе — итог приёма туда не вклинивается.
+            const autoRepeatActive = autoRepeatCount > 1;
             HEYS.AddProductStep.show({
                 mealIndex: resolvedIndex,
                 mealId,
-                multiProductMode: opts.multiProductMode !== false,
-                autoRepeatCount: opts.autoRepeatCount || 0,
+                multiProductMode,
+                autoRepeatCount,
                 products,
                 day: currentDay,
                 dateKey: date,
@@ -14093,7 +14343,7 @@
                 // переходника весь объект попадал в слот номера приёма, продукт
                 // оказывался undefined, и запись падала на «Продукт не сохранён в
                 // базу» при живом и целом продукте.
-                onAdd: ({ product, grams, mealIndex: addMealIndex, mealId: addMealId, productCommitVerified, _origin } = {}) => {
+                onAdd: async ({ product, grams, mealIndex: addMealIndex, mealId: addMealId, productCommitVerified, _origin } = {}) => {
                     const idx = resolveMealIndex(
                         dayRef.current || currentDay,
                         addMealIndex ?? resolvedIndex,
@@ -14101,10 +14351,18 @@
                     );
                     // Граммы едут на самом продукте — их читает buildAddProductItem.
                     const withGrams = (grams != null) ? { ...product, grams } : product;
-                    return addProductToMeal(idx, withGrams, {
+                    const added = await addProductToMeal(idx, withGrams, {
                         productCommitVerified,
                         source: _origin || 'add-product-step',
+                        // Поток ещё не закончен: «завершено» скажет итог приёма
+                        // (или последний повтор «Подряд N»), иначе утренний
+                        // чек-ин просыпается поверх открытого листа.
+                        deferFlowFinished: multiProductMode,
                     });
+                    if (added !== false && multiProductMode && !autoRepeatActive) {
+                        showMealSummaryAfterAdd(idx, addMealId || mealId);
+                    }
+                    return added;
                 },
                 onAddMany: async ({ entries, mealIndex: addMealIndex, mealId: addMealId } = {}) => {
                     const idx = resolveMealIndex(
@@ -14120,7 +14378,7 @@
                     });
                 },
             });
-        }, [date, day, products, expandOnlyMeal, addProductToMeal, addProductsToMeal]);
+        }, [date, day, products, expandOnlyMeal, addProductToMeal, addProductsToMeal, showMealSummaryAfterAdd]);
 
         const copyItemsToMeal = React.useCallback(async (srcMealIndex, itemIds, dstMealIndex, targetDate, gramsMap) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
@@ -14670,45 +14928,50 @@
             });
         }, [date, pIndex, getProductFromItem, haptic, buildDaysWithMeals, writeDay, createNewMealAndAddItem, navigateAndScrollToMeal, prepareCopiedDiaryItem]);
 
-        const moveMealToDate = React.useCallback(async (srcMealIndex, dstDate) => {
+        const moveMealToDate = React.useCallback(async (srcMealId, destination = {}) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
                 HEYS.Paywall?.showBlockedToast?.('Перенос приёма недоступен');
-                return;
+                return false;
             }
-            const srcMeal = dayRef.current?.meals?.[srcMealIndex];
-            if (!srcMeal) return;
+            const { dstDate, targetMode, dstMealId } = destination;
             const srcDate = date;
-            if (dstDate === srcDate) {
-                HEYS.Toast?.info?.('Приём уже здесь');
-                return;
+            const result = await executeMealMoveTransaction({
+                srcDate,
+                dstDate,
+                srcMealId,
+                targetMode,
+                dstMealId,
+                readSourceDay: () => dayRef.current,
+                prepareItems: items => ensureDiaryItemsReadyForDayWrite(items, 'move_meal_to_target'),
+                createItemId: () => uid('it_'),
+                createMealId: () => uid('m_'),
+                writeDay,
+                sortMeals: sortMealsByTime,
+            });
+            if (!result.ok) {
+                if (result.reason === 'same_day') HEYS.Toast?.info?.('Приём уже здесь');
+                else if (result.reason === 'same_meal') HEYS.Toast?.error?.('Нельзя перенести приём в него же');
+                else if (result.reason === 'target_mode_missing') HEYS.Toast?.error?.('Не выбрана цель переноса');
+                else if (result.reason === 'target_missing') HEYS.Toast?.error?.('Целевой приём уже изменился — выберите цель ещё раз');
+                else if (result.reason === 'source_missing') HEYS.Toast?.error?.('Исходный приём уже изменился — откройте перенос ещё раз');
+                else if (result.reason === 'source_changed' && !result.rollbackOk) {
+                    trackError(new Error('Meal move rollback failed after source write rejection'), {
+                        source: 'day/_meals.js',
+                        action: 'move_meal_rollback',
+                        srcDate,
+                        dstDate,
+                        srcMealId,
+                        dstMealId: result.destinationPlan?.destinationMealId,
+                    });
+                    HEYS.Toast?.error?.('Перенос не завершён — проверьте оба дня');
+                } else if (result.reason === 'source_changed') {
+                    HEYS.Toast?.error?.('Приём изменился — перенос отменён');
+                } else if (result.reason !== 'items_not_ready') HEYS.Toast?.error?.('Не удалось записать в целевой день');
+                return false;
             }
-            const srcMealId = srcMeal.id;
-            const srcMealClone = JSON.parse(JSON.stringify(srcMeal));
-            const preparedItems = await ensureDiaryItemsReadyForDayWrite(
-                (srcMeal.items || []).map(it => ({ ...it, id: uid('it_') })),
-                'move_meal_to_target',
-            );
-            if (!preparedItems || preparedItems.length !== (srcMeal.items || []).length) return;
-            const dstMeal = {
-                ...srcMeal,
-                id: uid('m_'),
-                items: preparedItems,
-            };
 
-            const writeOk = writeDay(dstDate, (existing) => {
-                const newMeals = sortMealsByTime([...(existing.meals || []), dstMeal]);
-                return { ...existing, date: dstDate, meals: newMeals, updatedAt: Date.now() };
-            }, 'move_meal_to_target');
-
-            if (!writeOk) {
-                HEYS.Toast?.error?.('Не удалось записать в целевой день');
-                return;
-            }
-
-            writeDay(srcDate, (existing) => {
-                const meals = (existing.meals || []).filter(m => m && m.id !== srcMealId);
-                return { ...existing, meals, updatedAt: Date.now() };
-            }, 'move_meal_from_source');
+            const destinationPlan = result.destinationPlan;
+            const srcMealClone = result.sourceMealSnapshot;
 
             haptic('medium');
 
@@ -14719,14 +14982,30 @@
             const undo = () => {
                 if (undone) return;
                 undone = true;
-                writeDay(dstDate, (existing) => {
-                    const meals = (existing.meals || []).filter(m => m && m.id !== dstMeal.id);
-                    return { ...existing, meals, updatedAt: Date.now() };
-                }, 'undo_move_meal_target');
-                writeDay(srcDate, (existing) => {
+                const restoreSourceOk = writeDay(srcDate, (existing) => {
+                    if ((existing.meals || []).some(meal => meal && meal.id === srcMealId)) return null;
                     const meals = sortMealsByTime([...(existing.meals || []), srcMealClone]);
                     return { ...existing, meals, updatedAt: Date.now() };
                 }, 'undo_move_meal_source');
+                if (!restoreSourceOk) {
+                    HEYS.Toast?.error?.('Не удалось отменить перенос');
+                    return;
+                }
+                const rollbackTargetOk = writeDay(dstDate, (existing) =>
+                    rollbackMealMoveDestination(existing, destinationPlan, Date.now()),
+                'undo_move_meal_target');
+                if (!rollbackTargetOk) {
+                    // Возвращаем состояние «перенесено», чтобы не оставить дубль.
+                    writeDay(srcDate, (existing) => {
+                        if (!(existing.meals || []).some(meal => meal && meal.id === srcMealId)) return null;
+                        return {
+                            ...existing,
+                            meals: (existing.meals || []).filter(meal => meal && meal.id !== srcMealId),
+                            updatedAt: Date.now(),
+                        };
+                    }, 'undo_move_meal_compensate_source');
+                    HEYS.Toast?.error?.('Не удалось отменить перенос');
+                }
                 // Подтверждающего тоста после возврата нет — строка «тоста подтверждения нет».
             };
 
@@ -14735,6 +15014,7 @@
                 label: `Приём перемещён в ${dstLabel}`,
                 onUndo: undo,
             });
+            return true;
         }, [date, haptic, buildDaysWithMeals, writeDay, ensureDiaryItemsReadyForDayWrite]);
 
         const openMoveMealModal = React.useCallback((srcMealIndex) => {
@@ -14747,6 +15027,10 @@
                 HEYS.Toast?.info?.('Пустой приём — нечего переносить');
                 return;
             }
+            if (!meal.id) {
+                HEYS.Toast?.error?.('Приём не готов к переносу — обновите день');
+                return;
+            }
             const itemCount = (meal.items || []).length;
             const sourceLabel = `Переносим: ${localizeMealName(meal.name, 'Приём')}${meal.time ? ' (' + meal.time + ')' : ''}, ${itemCount} ${itemCount === 1 ? 'продукт' : (itemCount < 5 ? 'продукта' : 'продуктов')}`;
 
@@ -14755,7 +15039,7 @@
                 sourceDate: date,
                 sourceLabel,
                 daysWithMeals: buildDaysWithMeals({ includeEmpty: true }),
-                onPick: async ({ dstDate }) => moveMealToDate(srcMealIndex, dstDate),
+                onPick: async (destination) => moveMealToDate(meal.id, destination),
             });
         }, [date, buildDaysWithMeals, moveMealToDate]);
 
@@ -14882,6 +15166,7 @@
             copyItem,
             openMoveMealModal,
             moveMealToDate,
+            addMealPhoto,
             removePhoto,
             updateMealField,
             changeMealMood,
@@ -15058,7 +15343,7 @@
     function readDiaryPanelEnabled(profile, field) {
         const source = getDiaryPanelVisibilitySource(profile, field);
         if (field === SUPPLEMENTS_PANEL_PROFILE_FIELD) {
-            const hf = global.HEYS?.healthFeatures;
+            const hf = HEYS.healthFeatures;
             const trackingOn = hf && typeof hf.isSupplementsTrackingEnabled === 'function'
                 ? hf.isSupplementsTrackingEnabled(profile)
                 : source?.supplementsTrackingEnabled === true;

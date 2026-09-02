@@ -8602,7 +8602,10 @@
             // Также: НЕ fallback при userBusy (избегаем noise).
             const hasActiveWarnings = (() => {
                 try {
-                    const warnings = (signals?.earlyWarnings?.warnings) || [];
+                    // Сигналы в этой области зовутся expertSignals; голое `signals`
+                    // уходило в catch, и правило «не подменять активные
+                    // предупреждения общим советом» не работало ни разу.
+                    const warnings = (expertSignals?.earlyWarnings?.warnings) || [];
                     return warnings.some(w => w?.severity === 'high' || w?.severity === 'medium');
                 } catch (e) { return false; }
             })();

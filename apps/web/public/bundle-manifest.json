@@ -1,90 +1,90 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.98914ca20ebc.js",
-    "hash": "98914ca20ebc",
-    "sourceFingerprint": "abf94e3e8781",
+    "file": "boot-core.bundle.f909a35a1b21.js",
+    "hash": "f909a35a1b21",
+    "sourceFingerprint": "1bd1223fb99e",
     "fileCount": 47,
-    "size": 1303523,
-    "builtAt": "2026-08-29T17:48:24.103Z"
+    "size": 1305492,
+    "builtAt": "2026-09-02T23:35:39.826Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.3296dd5f0842.js",
-    "hash": "3296dd5f0842",
-    "sourceFingerprint": "760930e7929d",
-    "fileCount": 22,
-    "size": 949168,
-    "builtAt": "2026-08-29T17:48:25.812Z"
+    "file": "boot-calc.bundle.63abca3b4b14.js",
+    "hash": "63abca3b4b14",
+    "sourceFingerprint": "0c6d3dd18999",
+    "fileCount": 24,
+    "size": 981878,
+    "builtAt": "2026-09-02T23:35:41.731Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.88d0b5cc2de9.js",
-    "hash": "88d0b5cc2de9",
-    "sourceFingerprint": "c4e064bea0cd",
+    "file": "boot-day.bundle.af78a3789d90.js",
+    "hash": "af78a3789d90",
+    "sourceFingerprint": "9a5fc5ac6634",
     "fileCount": 65,
-    "size": 975295,
-    "builtAt": "2026-08-29T17:48:27.214Z"
+    "size": 979831,
+    "builtAt": "2026-09-02T23:35:43.315Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.93e0d6e8a53c.js",
-    "hash": "93e0d6e8a53c",
-    "sourceFingerprint": "4a0ef161796e",
-    "fileCount": 60,
-    "size": 1543054,
-    "builtAt": "2026-08-29T17:48:29.675Z"
+    "file": "boot-app.bundle.73a7d1dec5f6.js",
+    "hash": "73a7d1dec5f6",
+    "sourceFingerprint": "c70cfd0d1507",
+    "fileCount": 61,
+    "size": 1564162,
+    "builtAt": "2026-09-02T23:35:45.993Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.d472dc64aa0a.js",
     "hash": "d472dc64aa0a",
-    "sourceFingerprint": "f3ab4eba6a58",
+    "sourceFingerprint": "8e108817efc7",
     "fileCount": 6,
     "size": 31166,
-    "builtAt": "2026-08-29T17:48:29.847Z"
+    "builtAt": "2026-09-02T23:35:46.131Z"
   },
   "postboot-1-game-eager": {
     "file": "postboot-1-game-eager.bundle.4a5d778b7355.js",
     "hash": "4a5d778b7355",
-    "sourceFingerprint": "fbecc1eb7fb9",
+    "sourceFingerprint": "bd727188332b",
     "fileCount": 1,
     "size": 1388,
-    "builtAt": "2026-08-29T17:48:29.917Z"
+    "builtAt": "2026-09-02T23:35:46.217Z"
   },
   "postboot-1-game-lazy": {
-    "file": "postboot-1-game-lazy.bundle.5f3e200201bb.js",
-    "hash": "5f3e200201bb",
-    "sourceFingerprint": "7c1ab56ee9de",
+    "file": "postboot-1-game-lazy.bundle.17421c470dea.js",
+    "hash": "17421c470dea",
+    "sourceFingerprint": "59c05cb6c362",
     "fileCount": 32,
-    "size": 1619103,
-    "builtAt": "2026-08-29T17:48:32.504Z"
+    "size": 1628986,
+    "builtAt": "2026-09-02T23:35:48.453Z"
   },
   "postboot-2-insights-eager": {
     "file": "postboot-2-insights-eager.bundle.e7dcc353395b.js",
     "hash": "e7dcc353395b",
-    "sourceFingerprint": "c85ceb793632",
+    "sourceFingerprint": "5a44405dd082",
     "fileCount": 1,
     "size": 1543,
-    "builtAt": "2026-08-29T17:48:32.570Z"
+    "builtAt": "2026-09-02T23:35:48.526Z"
   },
   "postboot-2-insights-lazy": {
-    "file": "postboot-2-insights-lazy.bundle.afe9d8d88375.js",
-    "hash": "afe9d8d88375",
-    "sourceFingerprint": "56d4da13e5cc",
-    "fileCount": 40,
-    "size": 1724090,
-    "builtAt": "2026-08-29T17:48:35.077Z"
+    "file": "postboot-2-insights-lazy.bundle.acd329561510.js",
+    "hash": "acd329561510",
+    "sourceFingerprint": "b05c4cc8f5b5",
+    "fileCount": 41,
+    "size": 1756180,
+    "builtAt": "2026-09-02T23:35:50.627Z"
   },
   "postboot-3-ui-eager": {
     "file": "postboot-3-ui-eager.bundle.e8cad9b983c9.js",
     "hash": "e8cad9b983c9",
-    "sourceFingerprint": "b8052b2e2f0f",
+    "sourceFingerprint": "bbe79d562b08",
     "fileCount": 2,
     "size": 4041,
-    "builtAt": "2026-08-29T17:48:35.152Z"
+    "builtAt": "2026-09-02T23:35:50.703Z"
   },
   "postboot-3-ui-lazy": {
-    "file": "postboot-3-ui-lazy.bundle.97eca93834fe.js",
-    "hash": "97eca93834fe",
-    "sourceFingerprint": "13ff1c017ce7",
-    "fileCount": 71,
-    "size": 4952735,
-    "builtAt": "2026-08-29T17:48:40.397Z"
+    "file": "postboot-3-ui-lazy.bundle.ca5d6ebe4227.js",
+    "hash": "ca5d6ebe4227",
+    "sourceFingerprint": "72779b237ff2",
+    "fileCount": 72,
+    "size": 5051579,
+    "builtAt": "2026-09-02T23:35:55.415Z"
   }
 }

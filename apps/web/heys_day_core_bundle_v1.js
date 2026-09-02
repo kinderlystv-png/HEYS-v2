@@ -922,7 +922,14 @@
                 }
             } catch (_) { }
         }
-        const coef = (sex === 'female' ? 0.5 : 0.57);
+        // Запасная формула: пол берём из того же аргумента, что и основная ветка.
+        // Прежде здесь стояло голое `sex` — переменной нет, и запасной путь падал
+        // ReferenceError ровно тогда, когда HEYS.TDEE недоступен.
+        const sexFallback = (sexOrProfile && typeof sexOrProfile === 'object')
+            ? (String(sexOrProfile.gender || sexOrProfile.sex || 'Мужской').toLowerCase().startsWith('ж')
+                ? 'female' : 'male')
+            : (String(sexOrProfile || '').toLowerCase().startsWith('ж') ? 'female' : sexOrProfile);
+        const coef = (sexFallback === 'female' ? 0.5 : 0.57);
         const km = (+steps || 0) * (len || 0.7) / 1000;
         return Math.round(coef * (+w || 0) * km * 10) / 10;
     }
@@ -5276,6 +5283,7 @@
             getSmartPopupPosition,
             setZonePickerTarget,
             zonePickerTarget,
+            pendingZoneMinutes,
             setPendingZoneMinutes,
             setShowZonePicker,
             setZoneFormulaPopup,

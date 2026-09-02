@@ -62,7 +62,7 @@ describe('Ноль шагов приглушён целиком', () => {
 });
 
 describe('Календарь зарядки читается неделями', () => {
-  const grid = () => rule('.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot');
+  const grid = () => rule('.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot');
 
   it('семь колонок, а не четырнадцать', () => {
     expect(grid()).toContain('repeat(7, minmax(0, 1fr))');
@@ -71,7 +71,7 @@ describe('Календарь зарядки читается неделями', 
 
   it('зазор и размер точки — числа кадра', () => {
     expect(grid()).toContain('gap: 9px');
-    const cell = rule('.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell');
+    const cell = rule('.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell');
     expect(cell).toContain('width: 9px');
     expect(cell).toContain('height: 9px');
   });
@@ -82,13 +82,13 @@ describe('Календарь зарядки читается неделями', 
     // одной ступени 30 % и давали в сетке две одинаковые серые точки. Обводка
     // разводит их формой, не занимая ступень набора.
     const today = rule(
-      '.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-neutral',
+      '.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-neutral',
     );
     expect(today).toContain('background: transparent');
     expect(today).toContain('box-shadow: inset 0 0 0 1.5px');
     // «Не вели» вернулось к чистой ступени: приглушение 0.34 разводило те же
     // две точки тоном и после обводки не нужно.
-    const none = rule('.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-none');
+    const none = rule('.ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-none');
     expect(none).toContain('var(--v4-ink-30');
     expect(none).not.toContain('opacity');
   });
@@ -103,7 +103,7 @@ describe('Календарь зарядки читается неделями', 
 
   it('точка не растягивается на колонку, а стоит по центру', () => {
     expect(grid()).toContain('justify-items: center');
-    const cell = rule('.activity-v4 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell');
+    const cell = rule('.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell');
     expect(cell).not.toContain('aspect-ratio');
   });
 });
