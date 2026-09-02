@@ -66,40 +66,45 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(waterRootRule).toContain('position: relative');
     expect(waterRootRule).toContain('height: 100%');
     expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__fill \{[^}]*position: absolute/);
-    // Строка контракта «раскладка плитки», решение 31 августа: подпись слева
-    // сверху, число справа сверху, обоим отступ 8. Нормы на 1×1 нет — она
-    // живёт на 2×1: общая базовая линия внизу оставляла числу меньше половины
-    // ширины, и «10,5 / 12,0» не влезало. Прежняя раскладка снята целиком,
-    // вместе с элементом нормы и её порогом сливочного тона.
-    expect(uiSrc).not.toContain("className: 'widget-water__norm'");
-    expect(uiSrc).not.toContain('formatWaterNormTopLabel');
-    expect(uiSrc).not.toContain('WATER_TILE_NORM_CREAM_PCT');
-    expect(uiSrc).not.toContain('widget-water--norm-on-water');
-    expect(widgetsCss).not.toContain('.widget-water__norm');
+    // Решение владельца 2 сентября: раскладка кадра «Главная · дефолтная
+    // раскладка» вернулась — норма мелким справа сверху, «Вода» слева внизу,
+    // факт справа внизу. Оно отменяет решение дизайнера 31 августа, снявшее
+    // норму с 1×1; расхождение с текстом строки «раскладка плитки» ведётся
+    // в UI_V4_FINDINGS.md, а не молчанием кода.
+    expect(uiSrc).toContain("className: 'widget-water__norm'");
+    expect(uiSrc).toContain('formatWaterNormTopLabel');
+    expect(uiSrc).toContain("`из ${formatRuDecimal((Number(targetMl) || 0) / 1000, 1)}`");
     expect(uiSrc).toContain("className: 'widget-water__label'");
-    // Порог кремового тона сторожим правилом, а не числом: подпись читаема
-    // кремовым только когда её накрыла вода, иначе кремовое по песочному не
-    // видно. Подпись стоит top:8 и кончается на 20 px от верха, ряд сетки —
-    // 64 px, значит вода доходит до середины строки при доле (64-14)/64 = 78 %.
-    // Порог ниже этого красит текст кремовым над водой — так и было при 31 %,
-    // оставшемся от раскладки, где подпись лежала внизу.
-    const creamPct = Number(/WATER_TILE_LINES_CREAM_PCT = (\d+)/.exec(uiSrc)[1]);
-    expect(creamPct, 'порог кремового ниже уровня, на котором вода доходит до текста')
-      .toBeGreaterThanOrEqual(78);
-    expect(creamPct, 'порог кремового выше полного погружения подписи').toBeLessThanOrEqual(88);
+    // Порогов два, потому что строки стоят на разной высоте: воду, накрывшую
+    // нижние строки, и воду, дошедшую до нормы у верхнего края, нельзя
+    // сторожить одним числом. Сторожим порядок и границы, а не литералы:
+    // норма перекрашивается заведомо позже нижних строк и лишь у самого верха.
+    const linesPct = Number(/WATER_TILE_LINES_CREAM_PCT = (\d+)/.exec(uiSrc)[1]);
+    const normPct = Number(/WATER_TILE_NORM_CREAM_PCT = (\d+)/.exec(uiSrc)[1]);
+    expect(normPct, 'норма белеет позже нижних строк').toBeGreaterThan(linesPct);
+    expect(linesPct, 'нижние строки белеют, когда вода дошла до них, а не раньше')
+      .toBeGreaterThanOrEqual(25);
+    expect(normPct, 'норма белеет только у самого верха плитки').toBeGreaterThanOrEqual(85);
     expect(uiSrc).toContain('widget-water--lines-on-water');
-    expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__label \{[^}]*left: 8px/);
-    expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__label \{[^}]*top: 8px/);
+    expect(uiSrc).toContain('widget-water--norm-on-water');
+    // Обе нижние строки прижаты к нижнему краю, норма — к верхнему правому.
+    const labelRule = widgetsCss.match(/\.widget-water--v4 \.widget-water__label \{[^}]*\}/)[0];
+    expect(labelRule).toContain('left: 8px');
+    expect(labelRule).toContain('bottom: 8px');
+    const normRule = widgetsCss.match(/\.widget-water--v4 \.widget-water__norm \{[^}]*\}/)[0];
+    expect(normRule).toContain('right: 8px');
+    expect(normRule).toContain('color: var(--water-dim-text)');
     expect(widgetsCss).toMatch(/\.widget-water--v4 \{[^}]*position: relative/);
     expect(widgetsCss).toMatch(/\.widget-water--v4 \{[^}]*height: 100%/);
     const numRule = widgetsCss.match(/\.widget-water--v4 \.widget-water__numV \{[^}]*\}/)[0];
     expect(numRule).toContain('position: absolute');
-    expect(numRule).toContain('top: 8px');
+    expect(numRule).toContain('bottom: 8px');
     expect(numRule).toContain('right: 8px');
-    // «число не переносится и не сокращается» — nowrap держит соседнее правило
-    // .widget-v4-row__value, здесь сторожим сам запрет переноса у числа.
-    expect(numRule).toContain('font-size: 12px');
+    // Кадр рисует факт крупным — 17 px против 9 у нормы; на верхней раскладке
+    // он был 12, и это единственное, что различало две раскладки в размере.
+    expect(numRule).toContain('font-size: 17px');
     expect(widgetsCss).toMatch(/\.widget-water--v4\.widget-water--lines-on-water \.widget-water__numV[\s\S]*?var\(--water-cream-text\)/);
+    expect(widgetsCss).toMatch(/\.widget-water--v4\.widget-water--norm-on-water \.widget-water__norm \{[^}]*var\(--water-cream-text\)/);
 
     // Кромка заливки: два слоя пунктира, шагом 16 px и 11 px. Строка
     // контракта «блики» просит сдвиг ровно на шаг у обоих слоёв. Прежде

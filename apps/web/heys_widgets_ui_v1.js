@@ -4092,7 +4092,20 @@
   // красила текст кремовым на песочном фоне. Замер снимка 2 сентября: низ
   // текста на y=249, верхняя кромка воды на y=254 — текст выше воды на 5 px
   // и всё равно был кремовым.
-  const WATER_TILE_LINES_CREAM_PCT = 78;
+  // Решение владельца 2 сентября: раскладка кадра «Главная · дефолтная
+  // раскладка» возвращается — «Вода» и факт внизу по общей базовой линии,
+  // норма мелким справа сверху. Она отменяет решение дизайнера 31 августа
+  // (коммит 264b7cb69), снявшее норму с 1×1 ради ширины числа; расхождение
+  // с текстом строки «раскладка плитки» записано в UI_V4_FINDINGS.md.
+  //
+  // Порогов перекраски снова два, потому что строки стоят на разной высоте:
+  // нижние накрывает вода уже при 31 % плитки, норму — только при 89 %.
+  const WATER_TILE_LINES_CREAM_PCT = 31;
+  const WATER_TILE_NORM_CREAM_PCT = 89;
+
+  function formatWaterNormTopLabel(targetMl) {
+    return `из ${formatRuDecimal((Number(targetMl) || 0) / 1000, 1)}`;
+  }
 
   // Геометрию берём у самой карточки: вода заливает плитку целиком, а не
   // внутренний контейнер, зажатый её отступами.
@@ -4207,16 +4220,19 @@
       const pulse = useWaterAddPulse(rootRef, fillPct);
       const displayFillPct = useWaterFillDisplayPct(fillPct);
       const linesOnWater = displayFillPct >= WATER_TILE_LINES_CREAM_PCT;
+      const normOnWater = displayFillPct >= WATER_TILE_NORM_CREAM_PCT;
       const toneMix = waterToneMixPct(displayFillPct);
       const litersLabel = formatRuDecimal(liters, 1);
       const prevLabel = formatRuDecimal(prevLitersRef.current, 1);
+      const normLabel = formatWaterNormTopLabel(target);
       React.useEffect(() => { prevLitersRef.current = liters; }, [liters]);
 
       return React.createElement('div', {
         ref: rootRef,
         className: 'widget-water widget-water--micro widget-v4-mini widget-water--v4'
           + (pulse ? ' widget-water--adding' : '')
-          + (linesOnWater ? ' widget-water--lines-on-water' : ''),
+          + (linesOnWater ? ' widget-water--lines-on-water' : '')
+          + (normOnWater ? ' widget-water--norm-on-water' : ''),
         style: {
           '--water-tone-mix': `${toneMix}%`,
           ...(pulse ? { '--water-drop-travel': `${pulse.travel}px` } : {})
@@ -4240,10 +4256,12 @@
           style: { bottom: `${fillPct}%` },
           'aria-hidden': 'true'
         }) : null,
-        // Строка контракта «раскладка плитки», решение 31 августа: на 1×1
-        // подпись «Вода» слева сверху, число справа сверху, обоим отступ 8.
-        // Нормы на 1×1 нет — она живёт на 2×1: общая базовая линия внизу
-        // оставляла числу меньше половины ширины, и «10,5 / 12,0» не влезало.
+        // Кадр «Главная · дефолтная раскладка»: норма справа сверху, «Вода»
+        // слева внизу, факт справа внизу.
+        React.createElement('span', {
+          className: 'widget-water__norm',
+          'aria-hidden': 'true'
+        }, normLabel),
         React.createElement('span', { className: 'widget-water__label' }, 'Вода'),
         React.createElement('div', {
           className: 'widget-water__num widget-water__numV',

@@ -11188,15 +11188,30 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
   padding: 0;
 }
 
-/* Строка контракта «раскладка плитки», решение 31 августа: подпись слева
-   сверху, число справа сверху, обоим отступ 8 от края. Семёрка прежней нормы
-   была компенсацией одиночного элемента у края; наверху их теперь два, они
-   образуют строку, и строка выравнивается по 8, как нижняя. Нормы на 1×1 нет
-   — она показывается на 2×1. */
+/* Решение владельца 2 сентября: кадр «Главная · дефолтная раскладка» — норма
+   мелким справа сверху, «Вода» слева внизу, факт справа внизу по общей нижней
+   кромке. Семёрка у нормы — компенсация одиночного элемента у верхнего края,
+   она вернулась вместе с раскладкой. Расхождение с текстом строки «раскладка
+   плитки» (решение дизайнера 31 августа) записано в UI_V4_FINDINGS.md. */
+.widget-water--v4 .widget-water__norm {
+  position: absolute;
+  right: 8px;
+  top: 7px;
+  z-index: 3;
+  font-size: 0.53125rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--water-dim-text);
+  font-variant-numeric: tabular-nums;
+  transition: color 220ms ease-out;
+  pointer-events: none;
+}
+
 .widget-water--v4 .widget-water__label {
   position: absolute;
   left: 8px;
-  top: 8px;
+  bottom: 8px;
   z-index: 3;
   margin: 0;
   padding: 0;
@@ -11215,6 +11230,10 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 
 .widget-water--v4.widget-water--lines-on-water .widget-water__label,
 .widget-water--v4.widget-water--lines-on-water .widget-water__numV {
+  color: var(--water-cream-text);
+}
+
+.widget-water--v4.widget-water--norm-on-water .widget-water__norm {
   color: var(--water-cream-text);
 }
 
@@ -11386,12 +11405,12 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
 .widget-water--v4 .widget-water__numV {
   position: absolute;
   right: 8px;
-  top: 8px;
+  bottom: 8px;
   z-index: 3;
-  height: 12px;
+  height: 17px;
   min-width: 28px;
   text-align: right;
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;

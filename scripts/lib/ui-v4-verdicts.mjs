@@ -141,7 +141,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [27, '35eb1b183e2143b5'],
   }),
   'water-add': Object.freeze({
-    mismatch: [1, 'fc09bff7f42abe53'],
+    // Долг ушёл в ноль 2 сентября: обе строки «раскладка плитки» и
+    // «вид · плитка воды 1×1» переведены в typed-v1 с reasonCode
+    // owner-decision — решение владельца вернуло раскладку кадра.
+    mismatch: [0, 'e3b0c44298fc1c14'],
     notApplicable: [44, 'fb9e183ce9fbbf1a'],
   }),
 });
