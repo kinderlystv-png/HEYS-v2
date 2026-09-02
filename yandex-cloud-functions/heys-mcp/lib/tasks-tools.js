@@ -1902,11 +1902,15 @@ function createTasksTools({
       const mark = callContext.transcriptMark(callContext.current());
       const blockToWrite = mark ? `${transcriptBlock}\n${mark}` : transcriptBlock;
 
+      // По времени, а не в конец: стенограмму пишут несколько сессий сразу, и
+      // запись, начатая раньше, приходит позже — хронология рвалась прямо в
+      // файле (20:10, следом 14:20, следом 18:45). Режим дельты совпадает с
+      // тем, что делает put, иначе rebase и серверная дельта разойдутся.
       const transcript = await openForAppend(transcriptPath);
-      const putTranscript = (text) => tasks.appendBlock(text, blockToWrite);
+      const putTranscript = (text) => tasks.insertBlockByTime(text, blockToWrite);
       const savedTranscript = await writeFile(transcript, putTranscript(transcript.text), {
         rebase: putTranscript,
-        delta: { mode: 'append', block: blockToWrite },
+        delta: { mode: 'chrono', block: blockToWrite },
       });
 
       let savedJournal = null;

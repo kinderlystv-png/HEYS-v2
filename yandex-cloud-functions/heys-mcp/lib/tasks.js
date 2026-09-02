@@ -3902,6 +3902,54 @@ function appendBlock(text, block) {
 }
 
 /**
+ * Время из заголовка блока «## ЧЧ:ММ» в минутах от начала суток задачника.
+ * Ночь до трёх — это ещё вчерашний день (та же граница, что у tasks_checkpoint
+ * и у дневника), поэтому она уезжает в конец файла, а не в его начало.
+ */
+function blockMinutes(block) {
+  const m = /^##\s*(\d{1,2}):(\d{2})\b/m.exec(String(block || ''));
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (!(h >= 0 && h <= 23 && min >= 0 && min <= 59)) return null;
+  return (h < 3 ? h + 24 : h) * 60 + min;
+}
+
+/**
+ * Вставить блок по времени, а не в конец файла.
+ *
+ * Стенограмму пишут несколько сессий сразу, и запись, начатая раньше, приходит
+ * позже — appendBlock ставил её в конец, и хронология рвалась: в
+ * transcript/2026-09-02.md подряд идут 20:10, 14:20, 18:45, 18:52. Читают такой
+ * файл как раз с середины, и порядок в нём — единственный ориентир.
+ *
+ * Блок без разбираемого времени и файл без единого заголовка уходят в конец —
+ * прежнее поведение, чтобы ничего не потерялось.
+ */
+function insertBlockByTime(text, block) {
+  const base = String(text || '').replace(/\s+$/, '');
+  if (!base) return `${block}\n`;
+  const mine = blockMinutes(block);
+  if (mine == null) return appendBlock(base, block);
+
+  const lines = base.split('\n');
+  const heads = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const t = blockMinutes(lines[i]);
+    if (t != null) heads.push({ line: i, minutes: t });
+  }
+  if (!heads.length) return appendBlock(base, block);
+
+  // Первый блок, начавшийся позже нашего: перед ним и встаём.
+  const after = heads.find((h) => h.minutes > mine);
+  if (!after) return appendBlock(base, block);
+
+  const head = lines.slice(0, after.line).join('\n').replace(/\s+$/, '');
+  const tail = lines.slice(after.line).join('\n').replace(/^\s+/, '');
+  return `${head}\n\n${block}\n\n${tail}\n`;
+}
+
+/**
  * Вставить блок первым в файл. Оставлен для дельт с mode=prepend (деньги и пр.).
  * Стенограмма с 2026-08-11 пишется через appendBlock — хронология сверху вниз,
  * как tasks_append и transcriptTail.
@@ -5699,11 +5747,16 @@ function applyDeltaToFile(file, mode, block, nowMs) {
   const path = normalizePath(file.path);
   const cleanBlock = String(block || '').trim();
   if (!cleanBlock) throw new Error('empty_block');
-  if (mode !== 'prepend' && mode !== 'append') throw new Error('invalid_mode');
+  if (mode !== 'prepend' && mode !== 'append' && mode !== 'chrono') throw new Error('invalid_mode');
 
   const rotatedBefore = rotateFileText(path, file.text);
   let text = rotatedBefore.active;
-  text = mode === 'prepend' ? prependBlock(text, cleanBlock) : appendBlock(text, cleanBlock);
+  // chrono — вставка по времени заголовка: стенограмма пишется несколькими
+  // сессиями сразу, и запись, начатая раньше, приходит позже. Режим обязан
+  // совпадать с тем, что делает клиентский put, иначе rebase и дельта разойдутся.
+  text = mode === 'prepend' ? prependBlock(text, cleanBlock)
+    : mode === 'chrono' ? insertBlockByTime(text, cleanBlock)
+      : appendBlock(text, cleanBlock);
   const rotatedAfter = rotateFileText(path, text);
 
   const nextFile = bumpFile(file, rotatedAfter.active, nowMs);
@@ -5832,6 +5885,8 @@ module.exports = {
   transcriptSubstance,
   prependToSection,
   appendBlock,
+  insertBlockByTime,
+  blockMinutes,
   prependBlock,
   findTaskByHash,
   applyTaskPatch,
