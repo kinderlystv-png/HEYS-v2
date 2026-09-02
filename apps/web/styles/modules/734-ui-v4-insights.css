@@ -597,7 +597,7 @@
 
 .heys-score-insights-v4__reports-link > svg {
   flex: none;
-  color: var(--v4-ink-5, rgba(0, 0, 0, 0.3));
+  color: var(--v4-ink-mark, rgba(0, 0, 0, 0.3));
 }
 
 .heys-score-insights-v4__delta {
@@ -1634,7 +1634,7 @@
 }
 
 .insights-v4-whatif__score-delta.is-negative {
-  background: var(--v4-bad-bg, #f2ddd1);
+  background: var(--v4-tint, #f6e6dd);
   color: var(--v4-bad-text, #9b4635);
 }
 

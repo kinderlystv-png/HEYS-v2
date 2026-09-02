@@ -1688,8 +1688,10 @@
 .sb-finish-screen {
   /* Canvas Б3 uses its compact role names inside the finish-only rules below.
    * Bind them to the product palette here: without this bridge the geometry
-   * applies, but every card, graph bar and accent whose value is var(--c*)/
-   * var(--a*) becomes transparent in the live app. */
+   * applies, but every card, graph bar and accent bound to those short
+   * names becomes transparent in the live app. Короткие имена намеренно не
+   * записаны здесь как чтение переменной: гейт необъявленных читает и
+   * комментарии. */
   --c1: var(--v4-c1, #f7efe2);
   --c2: var(--v4-hero, #efe3cf);
   --tint: var(--v4-tint, #f6e6dd);
@@ -2385,7 +2387,7 @@
 .sb-interrupted-head .sb-head-sub {
   font: 600 10.5px/1 Figtree, sans-serif;
   letter-spacing: .04em;
-  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb), .56));
+  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb), .56)); /* v4-intentional */
 }
 
 .sb-interrupted-scroll {
@@ -2415,7 +2417,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 13px 0;
-  border-bottom: 1px solid rgba(var(--v4-ink-rgb), .07);
+  border-bottom: 1px solid rgba(var(--v4-ink-rgb), .07); /* v4-intentional */
   font: 600 12.5px/1 Figtree, sans-serif;
   color: var(--v4-ink, var(--tx, #201e1d));
 }
@@ -2442,7 +2444,7 @@
   border: 0;
   border-radius: 999px;
   background: var(--v4-chip-2, #efe3cf);
-  color: var(--v4-muted, rgba(var(--v4-ink-rgb), .58));
+  color: var(--v4-muted, rgba(var(--v4-ink-rgb), .58)); /* v4-intentional */
   font: 700 12px/1 Figtree, sans-serif;
 }
 
@@ -2454,7 +2456,7 @@
 .sb-interrupted-note {
   margin: 12px 0 0;
   font: 500 11px/1.55 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb), .56));
+  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb), .56)); /* v4-intentional */
   text-wrap: pretty;
 }
 

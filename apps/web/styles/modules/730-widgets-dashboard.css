@@ -10571,7 +10571,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   position: relative;
   height: 6px;
   border-radius: 999px;
-  background: rgba(var(--v4-ink-rgb), 0.1);
+  background: rgba(var(--v4-ink-rgb), 0.1); /* v4-intentional */
   overflow: hidden;
 }
 
@@ -10627,7 +10627,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 }
 
 .widget-calories__hero-bar-num--ink {
-  color: rgba(var(--v4-ink-rgb), 0.85);
+  color: rgba(var(--v4-ink-rgb), 0.85); /* v4-intentional */
 }
 
 .widget-calories__hero-bar-num--bad {

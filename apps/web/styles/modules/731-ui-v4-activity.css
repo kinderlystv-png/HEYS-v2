@@ -1107,7 +1107,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-program .sb-plan-week-days > span.is-moved {
-  background: var(--v4-c2, #efe6d9);
+  background: var(--v4-hero, #efe3cf);
 }
 
 .activity-v4-program .sb-plan-week-days > span.is-unknown {
@@ -1126,7 +1126,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-program .sb-plan-week-days .is-done b {
-  color: var(--v4-ok, #487c3a);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .activity-v4-program .sb-plan-week-days .is-assigned b {
@@ -1168,7 +1168,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-program .sb-plan-week-legend i.is-done {
-  background: var(--v4-ok, #487c3a);
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .activity-v4-program .sb-plan-week-legend i.is-assigned {

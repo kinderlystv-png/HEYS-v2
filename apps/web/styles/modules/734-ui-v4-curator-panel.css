@@ -820,7 +820,7 @@
 .cur-sheet__save-error {
   padding: 9px 12px;
   border-radius: 12px;
-  background: var(--v4-bad-soft, #f7ded6);
+  background: var(--v4-tint, #f6e6dd);
   color: var(--v4-bad-text, #9f3526);
   font-size: 12px;
   font-weight: 650;
