@@ -29,17 +29,40 @@ function stripHtmlComments(html) {
 describe('загрузка: react-bundle не должен приезжать дважды', () => {
   const live = stripHtmlComments(INDEX_HTML);
 
-  it('preload и script указывают на один и тот же абсолютный путь', () => {
-    const preload = [...live.matchAll(/<link[^>]*rel="preload"[^>]*href="([^"]*react-bundle[^"]*)"/g)]
-      .map((m) => m[1]);
-    const script = [...live.matchAll(/<script[^>]*src="([^"]*react-bundle[^"]*)"/g)].map((m) => m[1]);
+  // Прежняя версия теста требовала тега <link rel="preload"> с тем же
+  // абсолютным путём, что у <script>. В исходнике это выполнялось, тест был
+  // зелёным — а прод качал две копии: Vite видит <link rel="preload"> как
+  // ссылку на ресурс, кладёт копию в assets/react-bundle-<hash>.js по правилу
+  // assetFileNames и переписывает href, тег <script> при этом не трогая.
+  // Замер 03.09 на app.heyslab.ru: /assets/react-bundle-BpykyQoh.js на 52,7 КБ
+  // и /react-bundle.js на 44,8 КБ, оба распакованы в одинаковые 139 КБ
+  // (heys/8bd9fe). Тест сторожил форму записи в исходнике и не видел того,
+  // что делает с ней сборка, — теперь он сторожит саму причину.
 
-    expect(preload, 'ожидается ровно один preload react-bundle').toHaveLength(1);
+  it('тегом <link rel="preload"> react-bundle не объявляется — его втягивает сборщик', () => {
+    const preloadTags = [...live.matchAll(/<link[^>]*rel="preload"[^>]*href="([^"]*react-bundle[^"]*)"/g)]
+      .map((m) => m[1]);
+    expect(preloadTags, 'тег preload на react-bundle вернёт вторую копию из assets/').toHaveLength(0);
+  });
+
+  it('preload ставится скриптом и по тому же пути, что и <script>', () => {
+    const script = [...live.matchAll(/<script[^>]*src="([^"]*react-bundle[^"]*)"/g)].map((m) => m[1]);
     expect(script, 'ожидается ровно один script react-bundle').toHaveLength(1);
-    // Разные URL — preload впустую: браузер качает файл, который никто не исполнит.
-    expect(preload[0]).toBe(script[0]);
-    // Относительный путь вернёт вторую хешированную копию из сборщика.
-    expect(preload[0].startsWith('/'), 'путь обязан быть абсолютным').toBe(true);
+
+    const fromScript = [...live.matchAll(/l\.href\s*=\s*'([^']*react-bundle[^']*)'/g)].map((m) => m[1]);
+    expect(fromScript, 'preload должен создаваться скриптом').toHaveLength(1);
+
+    // Разные URL — preload впустую: браузер качает файл, который никто не ждёт.
+    expect(fromScript[0]).toBe(script[0]);
+    // Относительный путь вернёт вторую хешированную копию из графа сборщика.
+    expect(fromScript[0].startsWith('/'), 'путь обязан быть абсолютным').toBe(true);
+  });
+
+  it('в собранном dist нет хешированной копии react-bundle', () => {
+    const assetsDir = path.resolve(WEB_DIR, 'dist', 'assets');
+    if (!fs.existsSync(assetsDir)) return; // dist не собран — проверять нечего
+    const copies = fs.readdirSync(assetsDir).filter((f) => /react-bundle/i.test(f));
+    expect(copies, `сборщик снова втянул react-bundle: ${copies.join(', ')}`).toHaveLength(0);
   });
 });
 

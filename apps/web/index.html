@@ -507,7 +507,7 @@
             };
             window.__heysPerfMark('HTML parsing started');
 
-            // Boot wait: грунт палитры с T0, знак 56 после 300 мс.
+            // Boot wait: грунт палитры и знак 56 с T0.
             window.__heysSkelStart = Date.now();
             window.__heysSkelVisible = true;
         })();
@@ -740,7 +740,7 @@
                         ? 'Данные на месте. Если связь есть, а приложение не открывается — напишите куратору, он посмотрит.'
                         : 'Похоже, нет связи. Ваши данные на месте — они хранятся на устройстве.') + '</div>' +
                     '<button type="button" class="heys-boot-mark__btn heys-boot-mark__retry" onclick="location.reload()">Повторить</button>' +
-                    (again ? '<a class="heys-boot-mark__curator" href="https://t.me/heyslab_support_bot" target="_blank" rel="noopener noreferrer">Написать куратору</a>' : '') +
+                    '<a class="heys-boot-mark__curator" href="https://t.me/heyslab_support_bot" target="_blank" rel="noopener noreferrer">Написать куратору</a>' +
                     '<div id="heys-recovery-status" class="heys-boot-mark__status"></div>' +
                     '</div></div></div>';
             }
@@ -996,24 +996,38 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.cf778cf5d656.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.3296dd5f0842.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.88d0b5cc2de9.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.93e0d6e8a53c.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.d4a8ec3eb1e6.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.63abca3b4b14.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.af78a3789d90.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.73a7d1dec5f6.js" as="script" />
     <link rel="preload" href="boot-init.bundle.d472dc64aa0a.js" as="script" />
-    <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
-         Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
-         <script src="/react-bundle.js"> (внизу body) бандл уже скачан. Sync execution сохранён
-         для совместимости с heys_dark_theme_interceptor.js (использует React.createElement).
+    <!-- React бандлится локально через Vite (миграция с CDN).
+         Preload даёт parallel fetch во время парсинга HTML: к моменту, когда
+         разбор доходит до <script src="/react-bundle.js"> внизу body, бандл уже
+         скачан. Синхронное исполнение сохранено ради heys_dark_theme_interceptor.js.
 
-         Путь абсолютный намеренно. Относительный «react-bundle.js» резолвится из корня
-         Vite (apps/web/), поэтому сборщик втягивал файл в свой граф и выпускал вторую,
-         хешированную копию assets/react-bundle-<hash>.js: она попадала в dist, уезжала
-         в S3 общим sync и предзагружалась вместо той, что реально исполняется, — лишние
-         ~139 КБ на каждой холодной загрузке. Соседние boot-бандлы этой беды не знают:
-         они лежат в public/ и сборщику не видны. Абсолютный путь ставит react в тот же
-         режим и совпадает с URL тега <script> ниже. -->
-    <link rel="preload" href="/react-bundle.js" as="script" />
+         Preload ставится скриптом, а не тегом <link>, и это не украшательство.
+         Vite обрабатывает <link rel="preload"> как ссылку на ресурс: втягивает
+         файл в свой граф, кладёт копию в assets/react-bundle-<hash>.js по
+         правилу assetFileNames и переписывает href. Тег <script> внизу body он
+         при этом не трогает — пути расходятся, и браузер честно качает обе
+         копии. Абсолютный путь от этого не спасает: его пробовали раньше,
+         замер на проде 03.09 показал два запроса на один холодный вход,
+         /assets/react-bundle-BpykyQoh.js на 52,7 КБ и /react-bundle.js на
+         44,8 КБ, оба распакованные в одинаковые 139 КБ (heys/8bd9fe).
+
+         Строка внутри скрипта в граф сборщика не попадает, поэтому путь
+         остаётся тем же, что у тега ниже, и загрузка снова одна. Соседние
+         boot-бандлы тегами остаются: они лежат в public/ и сборщику не видны. -->
+    <script>
+      (function () {
+        var l = document.createElement('link');
+        l.rel = 'preload';
+        l.as = 'script';
+        l.href = '/react-bundle.js';
+        document.head.appendChild(l);
+      })();
+    </script>
 
     <!-- Non-critical JS prefetch deferred to idle after appReady (see postboot onAllDone) -->
 
@@ -3277,10 +3291,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.cf778cf5d656.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.3296dd5f0842.js"></script>
-    <script defer src="boot-day.bundle.88d0b5cc2de9.js"></script>
-    <script defer src="boot-app.bundle.93e0d6e8a53c.js"></script>
+    <script defer src="boot-core.bundle.d4a8ec3eb1e6.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.63abca3b4b14.js"></script>
+    <script defer src="boot-day.bundle.af78a3789d90.js"></script>
+    <script defer src="boot-app.bundle.73a7d1dec5f6.js"></script>
     <script defer src="boot-init.bundle.d472dc64aa0a.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
