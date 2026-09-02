@@ -27,7 +27,23 @@ function rule(css, selector) {
   return css.slice(index, css.indexOf('}', index));
 }
 
+const MODAL_SRC = fs.readFileSync(path.join(WEB, 'heys_step_modal_v1.js'), 'utf8');
+
 describe('оболочка шаговых модалок', () => {
+  it('шапка — только заголовок, без эмодзи перед ним', () => {
+    // Канвас «Питание» держит строку снятого «Эмодзи-иконки»: «шесть разных
+    // наборов, каждый рисуется по-своему на каждой платформе». В шапках всего
+    // пакета из 25 канвасов эмодзи нет ни одного, а шапка тут общая на 34
+    // точки входа — вернуть склейку значит вернуть их всем сразу.
+    const title = MODAL_SRC.slice(
+      MODAL_SRC.indexOf("className: 'mc-header-title'"),
+      MODAL_SRC.indexOf("className: 'mc-header-hint'"),
+    );
+    expect(title, 'блок заголовка найден').toBeTruthy();
+    expect(title).toContain('text: currentConfig.title');
+    expect(title).not.toContain('currentConfig.icon');
+  });
+
   it('лист стоит на кремовой поверхности палитры, а не на белом градиенте', () => {
     const modal = rule(SHELL, '.mc-modal');
     expect(modal, 'правило .mc-modal найдено').toBeTruthy();

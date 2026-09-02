@@ -457,7 +457,10 @@
       id,
       title: config.title || id,
       hint: config.hint || '',
-      icon: Object.prototype.hasOwnProperty.call(config, 'icon') ? (config.icon || '') : '📋',
+      // Шапка иконку больше не рисует (см. mc-header-title ниже). Поле
+      // оставлено: его заполняют 600 с лишним регистраций шагов, и снос
+      // самих литералов — отдельная уборка, а не часть правки шапки.
+      icon: Object.prototype.hasOwnProperty.call(config, 'icon') ? (config.icon || '') : '',
       component: config.component,
       shouldShow: config.shouldShow || null,
       getInitialData: config.getInitialData || (() => ({})),
@@ -1482,7 +1485,13 @@
                 : (!isDailyLayout && (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-header-titles' },
                   currentConfig.title && React.createElement(AutoFitText, {
                     className: 'mc-header-title',
-                    text: [currentConfig.icon, currentConfig.title].filter(Boolean).join(' '),
+                    // Только заголовок. Эмодзи перед ним сняты 2 сентября: их нет
+                    // ни в одной шапке пакета дизайна, а канвас «Питание» держит
+                    // строку снятого «Эмодзи-иконки» — «шесть разных наборов,
+                    // каждый рисуется по-своему на каждой платформе». Обещанных
+                    // взамен линейных иконок одного набора у нас нет, и выдумывать
+                    // их вместо дизайнера нельзя: в кадрах шапка — просто текст.
+                    text: currentConfig.title,
                     maxFontSize: 16,
                     minFontSize: 11
                   }),
