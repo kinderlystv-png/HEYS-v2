@@ -96,39 +96,55 @@ function frameLocatorSelector(sourceLabel, oid) {
 }
 
 /**
- * Resolves a source frame only when its label + data-oid identity is complete
- * and globally unique. `data-oid` is deliberately mandatory here: callers
- * must not silently fall back to DOM order when a Canvas has duplicate labels.
+ * Разрешает кадр канваса — по метке, а при наличии ещё и по data-oid.
+ *
+ * Требование обязательного `data-oid` снято 3 сентября: пакет дизайна приехал
+ * без него во всех девяти канвасах, где он был, и привязка легла целиком — ни
+ * один стенд не мог сняться. Ключ, который поставщик пакета вправе убрать
+ * молча, не годится в единственные.
+ *
+ * Строгость при этом не потеряна, а перенесена на метку: кадр берётся только
+ * когда метка в канвасе ровно одна. Дублирующиеся метки роняют привязку так же
+ * fail-closed, как раньше ронял отсутствующий oid, — падать на неоднозначности
+ * важнее, чем на отсутствии конкретного атрибута. Когда oid есть у обеих
+ * сторон, он по-прежнему проверяется: разъехавшуюся пару он поймает раньше
+ * метки.
  */
 export function resolveCanvasFrame(canvas, { label, oid } = {}) {
   const normalizedLabel = normalizeText(label);
   if (!normalizedLabel) throw new Error('Canvas frame label is required.');
-  if (oid === undefined || oid === null || !normalizeText(oid)) {
-    throw new Error(`Canvas frame «${normalizedLabel}» requires an explicit data-oid.`);
-  }
 
   const frames = Array.isArray(canvas?.frames) ? canvas.frames : [];
-  const exactOid = String(oid);
-  const sameOid = frames.filter((frame) => frame.oid === exactOid);
-  if (sameOid.length > 1) {
-    throw new Error(`Canvas data-oid «${exactOid}» is duplicated (${sameOid.length} frames).`);
+  const expectedOid = oid === undefined || oid === null || !normalizeText(oid)
+    ? null
+    : String(oid);
+
+  if (expectedOid !== null) {
+    const sameOid = frames.filter((frame) => frame.oid === expectedOid);
+    if (sameOid.length > 1) {
+      throw new Error(`Canvas data-oid «${expectedOid}» is duplicated (${sameOid.length} frames).`);
+    }
+    if (sameOid.length === 1) {
+      const frame = sameOid[0];
+      if (frame.identity !== normalizedLabel) {
+        throw new Error(
+          `Canvas data-oid «${expectedOid}» belongs to «${frame.identity}», not «${normalizedLabel}».`,
+        );
+      }
+      return frame;
+    }
   }
 
   const sameLabel = frames.filter((frame) => frame.identity === normalizedLabel);
-  if (!sameOid.length) {
-    if (sameLabel.some((frame) => frame.oid === null || !normalizeText(frame.oid))) {
-      throw new Error(`Canvas frame «${normalizedLabel}» is missing data-oid.`);
-    }
-    throw new Error(`Canvas frame «${normalizedLabel}» with data-oid «${exactOid}» was not found.`);
+  if (!sameLabel.length) {
+    throw new Error(`Canvas frame «${normalizedLabel}» was not found.`);
   }
-
-  const frame = sameOid[0];
-  if (frame.identity !== normalizedLabel) {
+  if (sameLabel.length > 1) {
     throw new Error(
-      `Canvas data-oid «${exactOid}» belongs to «${frame.identity}», not «${normalizedLabel}».`,
+      `Canvas frame «${normalizedLabel}» is ambiguous (${sameLabel.length} frames with this label).`,
     );
   }
-  return frame;
+  return sameLabel[0];
 }
 
 /**

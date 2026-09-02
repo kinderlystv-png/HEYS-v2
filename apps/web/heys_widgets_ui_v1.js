@@ -2346,15 +2346,29 @@
     return num > tgt + margin;
   }
 
-  // Тренд здоровья: кадр «Главная · дефолтная раскладка» красит плитку шалфеем
-  // безусловно — `color: var(--gr)` стоит в разметке и у числа, и у линии, а
-  // нарисовано на нём −1, то есть значение внутри мёртвой зоны. Строка
-  // контракта «тренд здоровья» просит там чернила, и до 2 сентября код держал
-  // её: на зелёной подложке --gr-bg выходило чернильное число, сочетание, не
-  // нарисованное ни в одном кадре. Решением владельца 2 сентября код следует
-  // кадру. Расхождение со строкой ведётся в UI_V4_FINDINGS.md.
-  function v4HealthTrendState() {
-    return 'good';
+  // Тренд здоровья. Уточнение дизайнера 3 сентября (ответ на вопрос про
+  // чернила на зелёной подложке): фон --gr-bg безусловен и состояния не несёт
+  // — это роль поверхности именно этой плитки. Состояние несут число и
+  // ломаная, три случая с отдельными кадрами «Тренд здоровья · рост /
+  // мёртвая зона / падение»:
+  //   рост выше +2   — число --gr,      ломаная --gr2;
+  //   мёртвая зона ±2 — число --tx,      ломаная чернил 30 %;
+  //   падение ниже −2 — число и ломаная --val-bad.
+  // Ломаная в мёртвой зоне — единственный случай, где её тон отличается от
+  // тона числа, поэтому она красится своим классом, а не наследует.
+  const V4_HEALTH_TREND_DEAD_ZONE = 2;
+
+  function v4HealthTrendState(delta) {
+    if (!Number.isFinite(delta)) return 'neutral';
+    if (Math.abs(delta) <= V4_HEALTH_TREND_DEAD_ZONE) return 'neutral';
+    return delta > 0 ? 'good' : 'bad';
+  }
+
+  /** Класс ломаной тренда: у мёртвой зоны свой тон, у остальных — тон числа. */
+  function v4HealthTrendSparkClass(state) {
+    if (state === 'good') return 'widget-v4-spark--ok';
+    if (state === 'bad') return 'widget-v4-spark--bad';
+    return 'widget-v4-spark--flat';
   }
 
   // Инсулиновая волна красится по текущему состоянию, а не по итогу дня
@@ -2400,7 +2414,11 @@
     return `${n.toFixed(2)} ${total}`;
   }
 
-  function v4SageRing({ value, ringValue, target, label, toneClass = 'carbs' }) {
+  // Пустой день (строка «вид · пустой день · кольца БЖУ»): кольцо стоит на
+  // месте одной дорожкой без заливки, центр пуст, под кольцом «— / N» —
+  // прочерк вместо факта и норма рядом. Ноль в факт не подставляется: правило
+  // «пустой день · чего не подставляем».
+  function v4SageRing({ value, ringValue, target, label, toneClass = 'carbs', empty = false }) {
     const num = Number(value) || 0;
     const arcNum = Number(ringValue != null ? ringValue : value) || 0;
     const tgt = Number(target) || 0;
@@ -2421,7 +2439,7 @@
           cx: 22, cy: 22, r: 18, fill: 'none',
           stroke: 'var(--v4-line, rgba(0,0,0,.09))', strokeWidth: 5
         }),
-        React.createElement('circle', {
+        empty ? null : React.createElement('circle', {
           cx: 22, cy: 22, r: 18, fill: 'none',
           className: 'widget-v4-macro__ring-fill',
           pathLength: 100,
@@ -2430,7 +2448,7 @@
           strokeDasharray: macroRingDasharray(basePct),
           transform: 'rotate(-90 22 22)'
         }),
-        React.createElement('text', {
+        empty ? null : React.createElement('text', {
           x: 22, y: 26, textAnchor: 'middle',
           className: 'widget-v4-macro__num' + (centerBad ? ' widget-v4-macro__num--bad' : '')
         }, centerLabel != null
@@ -2441,9 +2459,11 @@
           ])
       ),
       React.createElement('div', {
-        className: 'widget-v4-macro__fact' + (factBad ? ' widget-v4-macro__fact--bad' : '')
+        className: 'widget-v4-macro__fact'
+          + (empty ? ' widget-v4-macro__fact--empty' : '')
+          + (!empty && factBad ? ' widget-v4-macro__fact--bad' : '')
       },
-        React.createElement('span', { className: 'widget-v4-macro__fact-val' }, factRounded),
+        React.createElement('span', { className: 'widget-v4-macro__fact-val' }, empty ? '—' : factRounded),
         React.createElement('span', { className: 'widget-v4-macro__fact-sep' }, ' / '),
         React.createElement('span', { className: 'widget-v4-macro__fact-tgt' }, tgtRounded)
       )
@@ -3230,7 +3250,7 @@
 
   // Коробки линии сняты с кадров, а не выведены из viewBox: у 2×1 линия идёт
   // от x=2 до x=56 при высоте поля 4…18, у 2×2 её держит радиус точки.
-  const HEALTH_SPARK_BOX_COMPACT = { left: 2, right: 56, top: 4, bottom: 18, dotR: 3 };
+  const HEALTH_SPARK_BOX_COMPACT = { left: 2, right: 56, top: 4, bottom: 18, dotR: 3.5 };
   const HEALTH_SPARK_BOX_LARGE = { left: 3.5, right: 126.5, top: 3.5, bottom: 36.5, dotR: 3.5 };
 
   function HealthTrendVariantBody({ variantId, widget, data, meta = {} }) {
@@ -3268,8 +3288,8 @@
       const compactHero = Number.isFinite(compactDelta)
         ? `${compactDelta > 0 ? '+' : (compactDelta < 0 ? '−' : '')}${formatRuNumber(Math.abs(Math.round(compactDelta)))}`
         : formatRuNumber(Math.round(score));
-      // Тон не зависит от значения — см. v4HealthTrendState.
-      const compactTone = v4ValueStateClass(v4HealthTrendState());
+      const compactState = v4HealthTrendState(compactDelta);
+      const compactTone = v4ValueStateClass(compactState);
       return React.createElement('div', { className: 'widget-v4-stack widget-trend-compact' },
         v4Kicker(`Тренд здоровья · ${formatRuUnit(periodDays, 'дней')}`),
         React.createElement('div', { className: 'widget-trend-compact__row' },
@@ -3277,7 +3297,7 @@
             className: 'widget-trend-compact__value ' + compactTone
           }, compactHero),
           compactSparkPoints ? React.createElement('svg', {
-            className: 'widget-trend-compact__spark ' + compactTone,
+            className: 'widget-trend-compact__spark ' + v4HealthTrendSparkClass(compactState),
             viewBox: '0 0 58 24',
             width: 58,
             height: 24,
@@ -3328,12 +3348,12 @@
       v4Kicker('Тренд здоровья'),
       React.createElement('div', { className: 'widget-v4-hero-num' },
         React.createElement('span', {
-          className: 'widget-v4-hero-num__val ' + v4ValueStateClass(v4HealthTrendState())
+          className: 'widget-v4-hero-num__val ' + v4ValueStateClass(v4HealthTrendState(delta))
         }, hero),
         React.createElement('span', { className: 'widget-v4-unit' }, `за ${formatRuUnit(periodDays, 'дней')}`)
       ),
       trendPts ? React.createElement(WidgetV4DrawSparkSvg, {
-        className: 'widget-v4-spark widget-v4-spark--ok',
+        className: 'widget-v4-spark ' + v4HealthTrendSparkClass(v4HealthTrendState(delta)),
         viewBox: '0 0 130 40',
         height: 40,
         points: trendPts,
@@ -3933,7 +3953,37 @@
     const animRemaining = Math.max(0, animTarget - animEaten);
 
     if (data?.hasData !== true) {
-      return v4EmptyTile('Калории');
+      // Кадры «Калории · пустой день · 2×2» и «· 2×1». Норма посчитана из
+      // профиля и известна с утра, поэтому на пустом дне она видна: прочерк
+      // относится только к ФАКТУ (строка «нет данных за день», уточнение
+      // 3 сентября). Полоса не рисуется — она носитель факта.
+      const emptyTarget = Math.round(Number(target) || 0);
+      if (d.cols >= 2 && d.rows >= 2) {
+        return React.createElement('div', { className: 'widget-calories widget-calories--2x2 widget-calories--v4-hero widget-calories--empty' },
+          React.createElement('div', { className: 'widget-calories__hero-main' },
+            React.createElement('div', { className: 'widget-calories__hero-value' },
+              React.createElement('div', { className: 'widget-calories__value--lg' }, '—'),
+              React.createElement('span', { className: 'widget-calories__hero-unit' }, 'ккал')
+            ),
+            React.createElement('div', { className: 'widget-calories__hero-remaining-label' }, 'осталось')
+          ),
+          React.createElement('div', { className: 'widget-calories__hero-bar-wrap' },
+            caloriesHeroBarFoot(
+              { text: '—', cap: 'съедено' },
+              { text: formatKcal(emptyTarget), cap: 'норма', tone: 'good' }
+            )
+          )
+        );
+      }
+      return React.createElement('div', { className: 'widget-calories widget-calories--2x1 widget-calories--empty widget-v4-stack' },
+        v4Kicker('Калории'),
+        React.createElement('div', { className: 'widget-calories__empty-row' },
+          React.createElement('span', { className: 'widget-calories__empty-dash' }, '—'),
+          emptyTarget > 0
+            ? React.createElement('span', { className: 'widget-calories__empty-target' }, `из ${formatKcal(emptyTarget)}`)
+            : null
+        )
+      );
     }
 
     if (variantId === 'activity') {
@@ -6215,14 +6265,14 @@
 
     if (data?.hasData !== true) {
       if (d.cols >= 3 && d.rows >= 2) {
+        // Кадр «Кольца БЖУ · пустой день»: кольца на местах пустыми дорожками,
+        // под каждым «— / N». Прежде здесь стоял голый прочерк без колец и без
+        // норм — норма была известна с утра и всё равно не показывалась.
         return React.createElement('div', { className: 'widget-macros widget-macros--3x2 widget-v4-stack' },
           React.createElement('div', { className: 'widget-v4-macros' },
-            ['Белки', 'Жиры', 'Углеводы'].map((label) =>
-              React.createElement('div', { key: label, className: 'widget-v4-macro widget-v4-macro--empty' },
-                React.createElement('div', { className: 'widget-v4-kicker widget-v4-macro__label' }, label),
-                React.createElement('div', { className: 'widget-v4-macro__empty widget-v4-val--neutral' }, '—')
-              )
-            )
+            v4SageRing({ value: 0, target: proteinTarget, label: 'Белки', toneClass: 'protein', empty: true }),
+            v4SageRing({ value: 0, target: fatTarget, label: 'Жиры', toneClass: 'fat', empty: true }),
+            v4SageRing({ value: 0, target: carbsTarget, label: 'Углеводы', toneClass: 'carbs', empty: true })
           )
         );
       }

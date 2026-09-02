@@ -310,10 +310,12 @@ describe('линия тренда здоровья: значения проду�
   }
 
   it('коробка 2×1 повторяет полилинию кадра из значений стенда', () => {
-    // Полилиния кадра «Главная · дефолтная раскладка», плитка тренда.
-    const framePoints = /<polyline points="([^"]+)"[^>]*stroke-width="2\.5"/.exec(
-      canvas.slice(canvas.indexOf('Тренд здоровья · 7 дней')),
-    )?.[1];
+    // Кадр «Тренд здоровья · рост» — канонический для состояния роста с
+    // 3 сентября. Привязка по метке кадра, а не по подписи внутри него:
+    // подпись переехала с «7 дней» на «14 дней» вместе с пакетом, и тест
+    // сломался на переименовании, а не на геометрии.
+    const growth = canvas.slice(canvas.indexOf('data-screen-label="Тренд здоровья · рост"'));
+    const framePoints = /<polyline points="([^"]+)"[^>]*stroke-width="2\.5"/.exec(growth)?.[1];
     expect(framePoints, 'полилиния тренда найдена в кадре').toBeTruthy();
 
     const values = JSON.parse(
@@ -327,7 +329,8 @@ describe('линия тренда здоровья: значения проду�
   });
 
   it('точка последнего дня — радиус кадра', () => {
-    const frameCircle = /<circle cx="56" cy="4" r="(\d+(?:\.\d+)?)"/.exec(canvas)?.[1];
+    const growth = canvas.slice(canvas.indexOf('data-screen-label="Тренд здоровья · рост"'));
+    const frameCircle = /<circle cx="56" cy="4" r="(\d+(?:\.\d+)?)"/.exec(growth)?.[1];
     expect(Number(frameCircle)).toBe(boxFromSource('HEALTH_SPARK_BOX_COMPACT').dotR);
     // Строка «вид · тренд здоровья»: у 2×2 точка радиусом 3,5.
     expect(boxFromSource('HEALTH_SPARK_BOX_LARGE').dotR).toBe(3.5);

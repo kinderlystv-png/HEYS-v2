@@ -86,7 +86,10 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
       label: 'Главная · дефолтная раскладка',
       oid: 'HW1',
       palette: 'sand',
-      captureSelector: ':scope > .sc > .hw1-pixel-boundary',
+      // Обёртка .hw1-pixel-boundary приехала снятой в пакете 3 сентября
+      // вместе с data-oid; кадрируем по самой сетке — это ближайший узел
+      // с той же границей.
+      captureSelector: ':scope > .sc > .g',
       pixelAlign: true,
     },
   },

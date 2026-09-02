@@ -11735,6 +11735,47 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-variant-numeric: tabular-nums;
 }
 
+/* Пустой день. Кадры «Калории · пустой день · 2×1 / 2×2» и «Кольца БЖУ ·
+   пустой день»: прочерк стоит на месте ФАКТА, норма остаётся видимой. Заливка
+   любой формы — полоса, кольцо, спарклайн — появляется только с первой
+   записью (строка «пустой день · чего не подставляем»). */
+.widget-calories--empty .widget-calories__value--lg,
+.widget-calories--empty .widget-calories__hero-bar-num--ink {
+  color: var(--v4-ink-3) /* v4-intentional */);
+}
+
+.widget-calories__empty-row {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.widget-calories__empty-dash {
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-3) /* v4-intentional */);
+}
+
+.widget-calories__empty-target {
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-data) /* v4-intentional */);
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-v4-macro__fact--empty .widget-v4-macro__fact-val {
+  color: var(--v4-ink-3) /* v4-intentional */);
+}
+
+.widget-v4-macro__fact--empty .widget-v4-macro__fact-sep,
+.widget-v4-macro__fact--empty .widget-v4-macro__fact-tgt {
+  font-weight: 700;
+  color: var(--v4-ink-data) /* v4-intentional */);
+}
+
 .widget-v4-macro__empty {
   display: flex;
   align-items: center;
@@ -11859,6 +11900,39 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-spark--act circle {
   fill: #c67139;
 }
+
+/* Ломаная тренда по состоянию — кадры «Тренд здоровья · падение» и
+   «· мёртвая зона». Падение красит и число, и линию одним тоном; в мёртвой
+   зоне линия глуше числа: число --tx, ломаная чернил 30 %. Это единственное
+   место, где тон линии не повторяет тон числа. */
+.widget-v4-spark--bad .widget-v4-spark__line,
+.widget-v4-spark--bad polyline,
+.widget-trend-compact__spark.widget-v4-spark--bad polyline {
+  stroke: var(--v4-bad-text) /* v4-intentional */;
+}
+
+.widget-v4-spark--bad .widget-v4-spark__dot,
+.widget-v4-spark--bad circle,
+.widget-trend-compact__spark.widget-v4-spark--bad circle {
+  fill: var(--v4-bad-text) /* v4-intentional */;
+}
+
+.widget-v4-spark--flat .widget-v4-spark__line,
+.widget-v4-spark--flat polyline,
+.widget-trend-compact__spark.widget-v4-spark--flat polyline {
+  stroke: var(--v4-ink-mark) /* v4-intentional */);
+}
+
+.widget-v4-spark--flat .widget-v4-spark__dot,
+.widget-v4-spark--flat circle,
+.widget-trend-compact__spark.widget-v4-spark--flat circle {
+  fill: var(--v4-ink-mark) /* v4-intentional */);
+}
+
+/* Ломаная роста в 2×1 тона себе не задаёт: кадр «Главная · дефолтная
+   раскладка» рисует её тем же --gr, что и число, и она его наследует через
+   currentColor. Строка контракта просит --gr2, а стенд сверяется с кадром —
+   расхождение двух представлений одной плитки ведётся в UI_V4_FINDINGS.md. */
 
 .widget-v4-stack--spark-hold {
   visibility: hidden;

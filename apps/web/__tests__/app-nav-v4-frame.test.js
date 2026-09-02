@@ -216,8 +216,15 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(baseCss).toMatch(
             /\.tab-settings-backdrop--v4-popover\s*\{[\s\S]*?backdrop-filter:\s*blur\(var\(--v4-modal-backdrop-blur/,
         );
+        // Размытие уехало из ветки чек-ина в базовое правило подложки:
+        // 3 сентября на v4 переведена вся оболочка шаговых модалок, а не один
+        // чек-ин. Правило берём одним куском (`[^}]*`), иначе страж
+        // перепрыгивает границу и подтверждает соседнее правило.
         expect(pwaCss).toMatch(
-            /\.mc-backdrop:has\(\.mc-modal--daily\)\s*\{[\s\S]*?backdrop-filter:\s*blur\(var\(--v4-modal-backdrop-blur/,
+            /\.mc-backdrop \{[^}]*backdrop-filter:\s*blur\(var\(--v4-modal-backdrop-blur/,
+        );
+        expect(pwaCss).toMatch(
+            /\.mc-backdrop \{[^}]*background:\s*var\(--v4-modal-backdrop-dim/,
         );
         expect(pwaCss).toMatch(
             /\.ca-modal-backdrop--visible\s*\{[\s\S]*?backdrop-filter:\s*blur\(var\(--v4-modal-backdrop-blur/,

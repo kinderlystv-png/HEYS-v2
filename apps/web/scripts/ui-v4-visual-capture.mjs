@@ -1718,13 +1718,34 @@ async function openCase(browser, item, snapshot) {
         widgetData.getDataForWidget = (widget) => emptyDayData[widget?.type] || original(widget) || {};
         widgetData.refresh?.();
       });
+      // Пустой день по кадрам 3 сентября: прочерк стоит на месте факта, норма
+      // остаётся видимой, заливки нет ни в полосе, ни в кольцах. Прежде здесь
+      // ждали голых прочерков без колец и без норм.
       await page.waitForFunction(() => {
         const calories = document.querySelector('[data-widget-type="calories"]')?.textContent || '';
         const macros = document.querySelector('[data-widget-type="macros"]');
         return calories.includes('—')
-          && macros?.querySelectorAll('.widget-v4-macro--empty').length === 3
+          && /1\s?931/.test(calories)
+          && macros?.querySelectorAll('.widget-v4-macro__fact--empty').length === 3
+          && macros?.querySelectorAll('.widget-v4-macro__ring-fill').length === 0
           && !document.querySelector('[data-widget-type="healthTrend"] svg');
       }, undefined, { timeout: 10_000 });
+      // Шапка геймификации въезжает из scale(0.92) переходом 0,45 с, и всё это
+      // время цель облака меряется как 40,48 вместо объявленных 44: гейт цели
+      // ловил не малую кнопку, а незакончившийся переход. Ждать снятия
+      // is-loading мало — класс меняется в начале перехода, а не в конце;
+      // ждём, пока трансформация станет единичной.
+      await page.waitForFunction(
+        () => {
+          const bar = document.querySelector('.game-bar-slots');
+          if (!bar) return false;
+          const transform = getComputedStyle(bar).transform;
+          return transform === 'none' || transform === 'matrix(1, 0, 0, 1, 0, 0)';
+        },
+        undefined,
+        { timeout: 15_000 },
+      );
+
     }
     let visualChecks = null;
     if (item.id === 'home-widgets-default') {
@@ -1933,9 +1954,11 @@ async function openCase(browser, item, snapshot) {
         const checks = {
           widgetCount: widgets.length,
           caloriesDash: text('calories').includes('—'),
+          caloriesNorm: /1\s?931/.test(text('calories')),
           caloriesBars: tile('calories')?.querySelectorAll('.widget-calories__hero-bar,.widget-calories__bar').length || 0,
-          macroDashes: tile('macros')?.querySelectorAll('.widget-v4-macro--empty').length || 0,
+          macroDashes: tile('macros')?.querySelectorAll('.widget-v4-macro__fact--empty').length || 0,
           macroRings: tile('macros')?.querySelectorAll('svg').length || 0,
+          macroRingFills: tile('macros')?.querySelectorAll('.widget-v4-macro__ring-fill').length || 0,
           proteinDash: text('protein').includes('—'),
           fiberDash: text('fiber').includes('—'),
           stepsDash: text('steps').includes('—'),
@@ -1949,6 +1972,18 @@ async function openCase(browser, item, snapshot) {
           nav: rect('.tabs.tabs--v4-primary'),
           navRow: rect('.tabs.tabs--v4-primary .tab-primary-nav-row'),
           cloudTarget: rect('.hdr-gamification .cloud-sync-indicator'),
+          // Цель облака меряется меньше объявленных 44: прямоугольник берётся
+          // после трансформаций предков. Кто именно её сжимает — в этой строке,
+          // иначе число 40,48 не объясняет само себя.
+          cloudScaledBy: (() => {
+            let node = document.querySelector('.hdr-gamification .cloud-sync-indicator');
+            while (node && node !== document.documentElement) {
+              const t = getComputedStyle(node).transform;
+              if (t && t !== 'none') return `${node.className || node.tagName}: ${t}`;
+              node = node.parentElement;
+            }
+            return null;
+          })(),
         };
         return checks;
       });
@@ -1959,9 +1994,11 @@ async function openCase(browser, item, snapshot) {
       if (
         visualChecks.widgetCount !== 13
         || !visualChecks.caloriesDash
+        || !visualChecks.caloriesNorm
         || visualChecks.caloriesBars !== 0
         || visualChecks.macroDashes !== 3
-        || visualChecks.macroRings !== 0
+        || visualChecks.macroRings !== 3
+        || visualChecks.macroRingFills !== 0
         || !visualChecks.proteinDash
         || !visualChecks.fiberDash
         || !visualChecks.stepsDash
@@ -2583,18 +2620,28 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
         figtree: document.fonts?.check?.('12px Figtree') ?? false,
       };
     });
-    const candidates = page.locator(`.ph[data-oid="${item.canvasFrame.oid}"]`);
-    const matches = await candidates.count();
+    // Кадр берётся по oid, когда он есть в пакете, и по метке, когда его нет:
+    // пакет 3 сентября приехал без data-oid во всех девяти канвасах, где он
+    // был. Строгость от этого не падает — оба ключа обязаны дать ровно один
+    // кадр, и при обоих ключах метка ещё и сверяется с ожидаемой.
+    const oidSelector = `.ph[data-oid="${item.canvasFrame.oid}"]`;
+    const labelSelector = `.ph[data-screen-label="${item.canvasFrame.label}"]`;
+    const byOid = page.locator(oidSelector);
+    const oidMatches = await byOid.count();
+    const usedOid = oidMatches === 1;
+    const candidates = usedOid ? byOid : page.locator(labelSelector);
+    const matches = usedOid ? oidMatches : await candidates.count();
     if (matches !== 1) {
       throw new Error(
-        `Canvas oid ${item.canvasFrame.oid} дал ${matches} кадров вместо одного в ${item.canvasFrame.file}`,
+        `Кадр «${item.canvasFrame.label}» (oid ${item.canvasFrame.oid}, найдено по oid: ${oidMatches})`
+        + ` дал ${matches} кадров вместо одного в ${item.canvasFrame.file}`,
       );
     }
     const frame = candidates.first();
     const actualLabel = await frame.getAttribute('data-screen-label');
     if (actualLabel !== item.canvasFrame.label) {
       throw new Error(
-        `Canvas oid ${item.canvasFrame.oid}: ожидался «${item.canvasFrame.label}», найден «${actualLabel || ''}»`,
+        `Кадр по oid ${item.canvasFrame.oid}: ожидался «${item.canvasFrame.label}», найден «${actualLabel || ''}»`,
       );
     }
     await frame.evaluate((node) => {

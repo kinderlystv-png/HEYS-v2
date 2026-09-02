@@ -166,7 +166,12 @@ describe('UI v4 visual harness', { timeout: 45_000 }, () => {
         file: item.canvasFrame.file,
       });
       const frame = resolveCanvasFrame(canvas, item.canvasFrame);
-      expect(frame.oid, item.id).toBe(item.canvasFrame.oid);
+      // oid сверяется, только когда он есть в пакете: 3 сентября дизайнер
+      // снял data-oid во всех девяти канвасах, где он стоял, и привязка легла
+      // целиком. Ключ, который поставщик пакета вправе убрать молча, не
+      // годится в единственные — теперь обязательна метка, и она обязана быть
+      // в канвасе единственной (это проверяет сам resolveCanvasFrame).
+      if (frame.oid !== null) expect(frame.oid, item.id).toBe(item.canvasFrame.oid);
       expect(frame.label, item.id).toBe(item.canvasFrame.label);
       expect(frame.canonicalLocator.key, item.id).toBeTruthy();
     }
