@@ -825,6 +825,12 @@
 
     // Определяем, задан ли вес явно (не равен null/undefined и не пустая строка)
     const hasExplicitWeight = d.weightMorning != null && d.weightMorning !== '' && d.weightMorning !== 0;
+    // Шаги: «не вводил» и «явный ноль» — разные вещи (решение 18.08). Раньше
+    // `+d.steps || 0` схлопывало null в ноль прямо здесь, и медиана прошлых
+    // дней уже не подставлялась: день выглядел как честно нулевой. Потребители
+    // отличать null умеют — heys_day_core_bundle_v1.js:2021 и heys_day_utils.js:2016
+    // проверяют его явно.
+    const hasExplicitSteps = d.steps != null && d.steps !== '';
 
     const base = {
       date: d.date || todayISO(),
@@ -842,7 +848,7 @@
       deficitPct: hasExplicitWeight ?
         (d.deficitPct != null ? d.deficitPct : (prof && prof.deficitPctTarget) || 0) :
         (d.deficitPct || ''),
-      steps: +d.steps || 0,
+      steps: hasExplicitSteps ? (+d.steps || 0) : null,
       householdMin: +d.householdMin || 0,
       // Массив бытовых активностей (новый формат)
       householdActivities: Array.isArray(d.householdActivities) ? d.householdActivities : undefined,
