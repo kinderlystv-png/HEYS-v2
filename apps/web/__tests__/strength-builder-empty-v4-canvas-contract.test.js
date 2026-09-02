@@ -38,6 +38,12 @@ describe('strength builder · Б1 empty v4 canvas contract', () => {
     expect(css).toMatch(/\.sb-empty-note\s*\{[\s\S]*margin: 12px 0 0;[\s\S]*font-size: 11px;[\s\S]*line-height: 1\.55;/);
   });
 
+  it('does not let the OS dark preference override an explicit v4 palette', () => {
+    expect(css).toContain("html:not([data-theme]) .sb-root");
+    expect(css).not.toContain("html:not([data-theme='light']) .sb-root");
+    expect(css).toContain("[data-theme='dark'] .sb-root");
+  });
+
   it('fails closed when the plan has no usable snapshot or owner callback', () => {
     expect(source).toContain("if (!plan || plan.status !== 'assigned' || !source.length) return null;");
     expect(source).toContain('const planWasConsumed = samePlanRevision(consumedPlanRevision, planRevision);');

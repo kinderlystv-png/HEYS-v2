@@ -1676,6 +1676,53 @@ async function openCase(browser, item, snapshot) {
         throw new Error(`Strength active fixture не соответствует Canvas-состоянию: ${JSON.stringify(visualChecks)}`);
       }
     }
+    if (item.id === 'strength-superset-create-sand') {
+      visualChecks = await page.evaluate(() => {
+        const host = document.querySelector('#ui-v4-strength-superset-create-host');
+        const normalized = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+        const rect = (selector) => {
+          const box = host?.querySelector(selector)?.getBoundingClientRect();
+          return box ? {
+            x: Math.round(box.x * 100) / 100,
+            y: Math.round(box.y * 100) / 100,
+            width: Math.round(box.width * 100) / 100,
+            height: Math.round(box.height * 100) / 100,
+          } : null;
+        };
+        const rows = [...(host?.querySelectorAll('.sb-radio') || [])];
+        return {
+          rowCount: rows.length,
+          rowTexts: rows.map((row) => normalized(row.textContent)),
+          selectedText: normalized(host?.querySelector('.sb-radio.is-on')?.textContent),
+          summary: normalized(host?.querySelector('.sb-superset-result')?.textContent),
+          action: normalized(host?.querySelector('.sb-finish')?.textContent),
+          geometry: {
+            root: rect('.sb-root'),
+            header: rect('.sb-head'),
+            kinds: rect('.sb-superset-kinds'),
+            selected: rect('.sb-radio.is-on'),
+            controls: rect('.sb-superset-controls'),
+            result: rect('.sb-superset-result'),
+            action: rect('.sb-finish'),
+            note: rect('.sb-superset-note'),
+          },
+        };
+      });
+      if (
+        visualChecks.rowCount !== 3
+        || JSON.stringify(visualChecks.rowTexts) !== JSON.stringify([
+          '2Суперсетдва упражнения подряд без паузы',
+          '3Трисеттри подряд — плотнее и тяжелее✓',
+          '4+Круговаячетыре и больше, круг за кругом',
+        ])
+        || !visualChecks.selectedText.includes('Трисет')
+        || !visualChecks.summary.includes('3 упражнения подряд без паузы, затем отдых 2:00. Так 3 раза.')
+        || !visualChecks.summary.includes('подходов9пауз3время13 мин')
+        || visualChecks.action !== 'Собрать связку · 9 подходов'
+      ) {
+        throw new Error(`Strength superset fixture не соответствует Canvas-состоянию: ${JSON.stringify(visualChecks)}`);
+      }
+    }
     if (item.id === 'nutrition-empty-day-sand') {
       visualChecks = await page.evaluate(() => {
         const root = document.querySelector('.nutrition-v4');

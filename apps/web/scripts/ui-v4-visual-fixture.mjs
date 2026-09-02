@@ -444,6 +444,8 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
       label: 'Связка · создание',
       oid: 'З1',
       palette: 'sand',
+      pixelAlign: true,
+      clipRoundedCorners: 28,
     },
   },
   {
