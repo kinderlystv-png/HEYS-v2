@@ -165,7 +165,10 @@ function renderedRowMismatches(rows) {
   return mismatches;
 }
 
-describe('А1б · rendered Canvas contract', () => {
+// Разбор канваса читает весь пакет контракта, и в одиночку набор идёт
+// около 4-5 секунд — впритык к лимиту vitest по умолчанию (5 с). В общем
+// прогоне он его перешагивал и падал по времени, а не по расхождению.
+describe('А1б · rendered Canvas contract', { timeout: 45_000 }, () => {
   it('доказывает все непротиворечивые numbered rows и обе составные строки текста', () => {
     const now = vi.spyOn(Date, 'now').mockReturnValue(new Date('2022-08-08T19:27:12+03:00').getTime());
     const style = document.createElement('style');
@@ -425,7 +428,7 @@ describe('А1б · rendered Canvas contract', () => {
   });
 });
 
-describe('А2 · rendered Canvas contract', () => {
+describe('А2 · rendered Canvas contract', { timeout: 45_000 }, () => {
   it('доказывает все 26 numbered rows и составную строку свёрнутого списка', () => {
     const now = vi.spyOn(Date, 'now').mockReturnValue(new Date('2022-08-08T19:27:12+03:00').getTime());
     const style = document.createElement('style');
@@ -564,7 +567,7 @@ describe('А2 · rendered Canvas contract', () => {
   });
 });
 
-describe('strength builder: спокойные состояния активного списка', () => {
+describe('strength builder: спокойные состояния активного списка', { timeout: 45_000 }, () => {
   it('оставляет спокойный зелёный сигнал галочке, а не карточке и полям', () => {
     expect(lastRule('.sb-builder-screen.is-exercise-open .sb-ex-head'))
       .toContain('padding: 8px 11px');

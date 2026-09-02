@@ -146,7 +146,10 @@ afterEach(() => {
   finishStyle?.remove();
 });
 
-describe('Б3 · Конструктор · итоги', () => {
+// Разбор канваса читает весь пакет контракта, и в одиночку набор идёт
+// около 4-5 секунд — впритык к лимиту vitest по умолчанию (5 с). В общем
+// прогоне он его перешагивал и падал по времени, а не по расхождению.
+describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () => {
   it('рисует данные только из current/history callbacks и сохраняет введённый feedback', () => {
     const saved = [];
     render(React.createElement(Finish.FinishScreen, canvasProps({

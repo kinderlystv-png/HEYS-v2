@@ -28,7 +28,10 @@ const readZone = (zone) => JSON.parse(
   fs.readFileSync(path.join(VERDICTS_DIR, `${zone}.json`), 'utf8'),
 );
 
-describe('UI v4 visual harness', () => {
+// Разбор канваса читает весь пакет контракта, и в одиночку набор идёт
+// около 4-5 секунд — впритык к лимиту vitest по умолчанию (5 с). В общем
+// прогоне он его перешагивал и падал по времени, а не по расхождению.
+describe('UI v4 visual harness', { timeout: 45_000 }, () => {
   it('captures runtime and Canvas in the same mobile touch context', () => {
     const captureSource = fs.readFileSync(
       path.resolve(__dirname, '../scripts/ui-v4-visual-capture.mjs'),
