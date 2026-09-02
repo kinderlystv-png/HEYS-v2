@@ -3198,6 +3198,40 @@
     return points;
   }
 
+  /**
+   * Точки линии тренда строятся здесь, а не в данных: у 2×1 и 2×2 разные
+   * viewBox (58×24 против 130×40), и одна заготовка на оба вида нарисовала бы
+   * в большем крошечную линию в углу. Данные отдают сами оценки, проекцию
+   * делает тот вид, который рисует.
+   *
+   * Шкала своя у каждой плитки — от минимума к максимуму окна, а не от нуля:
+   * оценки здоровья держатся в узком коридоре, и от нуля линия была бы
+   * прямой.
+   */
+  function healthSparkGeometry(values, box) {
+    const nums = (Array.isArray(values) ? values : []).map(Number).filter(Number.isFinite);
+    if (nums.length < 2 || !box) return null;
+    const { left, right, top, bottom, dotR } = box;
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    const span = max - min || 1;
+    const round = (n) => Math.round(n * 100) / 100;
+    const points = nums.map((value, index) => [
+      round(left + ((right - left) * index) / (nums.length - 1)),
+      round(bottom - (bottom - top) * ((value - min) / span)),
+    ]);
+    const last = points[points.length - 1];
+    return {
+      points: points.map((point) => point.join(',')).join(' '),
+      last: { x: last[0], y: last[1], r: dotR },
+    };
+  }
+
+  // Коробки линии сняты с кадров, а не выведены из viewBox: у 2×1 линия идёт
+  // от x=2 до x=56 при высоте поля 4…18, у 2×2 её держит радиус точки.
+  const HEALTH_SPARK_BOX_COMPACT = { left: 2, right: 56, top: 4, bottom: 18, dotR: 3 };
+  const HEALTH_SPARK_BOX_LARGE = { left: 3.5, right: 126.5, top: 3.5, bottom: 36.5, dotR: 3.5 };
+
   function HealthTrendVariantBody({ variantId, widget, data, meta = {} }) {
     const score = data?.score ?? 0;
     const hasData = data?.hasData ?? false;
@@ -3219,11 +3253,17 @@
     if (isShort || variantId === 'compact') {
       const compactDelta = Number(data?.delta);
       const compactSpark = data?.sparkline || null;
-      const compactSparkPoints = normalizeHealthSparkPoints(compactSpark?.points);
-      const compactSparkLast = Number.isFinite(Number(compactSpark?.last?.x))
-        && Number.isFinite(Number(compactSpark?.last?.y))
-        ? compactSpark.last
-        : null;
+      // Готовые points приходят только со стенда; продукт отдаёт values.
+      const compactGeom = healthSparkGeometry(compactSpark?.values, HEALTH_SPARK_BOX_COMPACT);
+      const compactSparkPoints = normalizeHealthSparkPoints(
+        compactGeom ? compactGeom.points : compactSpark?.points
+      );
+      const compactSparkLast = compactGeom
+        ? compactGeom.last
+        : (Number.isFinite(Number(compactSpark?.last?.x))
+          && Number.isFinite(Number(compactSpark?.last?.y))
+          ? compactSpark.last
+          : null);
       const compactHero = Number.isFinite(compactDelta)
         ? `${compactDelta > 0 ? '+' : (compactDelta < 0 ? '−' : '')}${formatRuNumber(Math.abs(Math.round(compactDelta)))}`
         : formatRuNumber(Math.round(score));
@@ -3266,8 +3306,14 @@
     }
 
     // === 2×2 — канвас g1: kicker + число + «за N дней» + линия тренда
-    const trendPts = normalizeHealthSparkPoints(data?.sparkline?.points);
-    const lastPt = trendPts ? trendPts.split(' ').pop().split(',') : null;
+    // Строка «вид · тренд здоровья»: последняя точка кругом радиусом 3,5.
+    const trendGeom = healthSparkGeometry(data?.sparkline?.values, HEALTH_SPARK_BOX_LARGE);
+    const trendPts = normalizeHealthSparkPoints(
+      trendGeom ? trendGeom.points : data?.sparkline?.points
+    );
+    const lastPt = trendGeom
+      ? [trendGeom.last.x, trendGeom.last.y]
+      : (trendPts ? trendPts.split(' ').pop().split(',') : null);
     const delta = Number(data?.delta);
     const hero = Number.isFinite(delta)
       ? `${delta > 0 ? '+' : (delta < 0 ? '−' : '')}${formatRuNumber(Math.abs(Math.round(delta)))}`

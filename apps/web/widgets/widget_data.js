@@ -179,6 +179,9 @@
     _lastUpdate: 0,
     _updateInterval: 1000, // 1 second cache
 
+    /** Оценки здоровья за сдвинутые окна — см. getHealthTrendData. */
+    _healthTrendShifts: { key: '', at: 0, scores: new Map() },
+
     /**
      * Проверка: активен ли демо-режим (WidgetsTour запущен)
      * @returns {boolean}
@@ -2194,7 +2197,25 @@
       }
     },
 
+    /**
+     * Тренд здоровья: число, дельта за окно и линия под ним.
+     *
+     * Дневной оценки здоровья в продукте нет — `healthScore` считается сразу по
+     * всему окну, поэтому каждая точка линии стоит отдельного прогона
+     * `analyze` с подменённым lsGet: он сдвигает окно на N дней назад. Точек
+     * семь при любом окне — линия обязана накрывать тот же период, что и
+     * подпись «за N дней», а фиксированное число прогонов держит цену
+     * предсказуемой: шесть лишних прогонов вместо одного, каким бы длинным
+     * окно ни было.
+     *
+     * Порядок вызовов не случаен: сдвинутые идут первыми, канонический —
+     * последним. Кэш `analyze` ключуется отпечатком самих дней, поэтому
+     * сдвинутый прогон его не подменяет ложно, но оставляет в нём своё окно;
+     * последний вызов возвращает туда каноническое, и соседи не платят за
+     * лишний пересчёт.
+     */
     getHealthTrendData(settings = {}) {
+      const SPARK_POINTS = 7;
       try {
         const days = settings?.periodDays || 14;
         const analyze = HEYS.PredictiveInsights?.analyze;
@@ -2202,6 +2223,67 @@
           console.warn('[widget_data.getHealthTrendData] PredictiveInsights not loaded');
           return { hasData: false, score: 0, periodDays: days };
         }
+
+        const rawLsGet = (typeof HEYS.utils?.lsGet === 'function')
+          ? (key, fallback) => HEYS.utils.lsGet(key, fallback)
+          : (key, fallback) => {
+            try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
+          };
+        const shiftedLsGet = (shift) => (key, fallback) => {
+          const match = /^heys_dayv2_(\d{4}-\d{2}-\d{2})$/.exec(key);
+          if (!match) return rawLsGet(key, fallback);
+          const shifted = new Date(`${match[1]}T12:00:00`);
+          shifted.setDate(shifted.getDate() - shift);
+          const yyyy = shifted.getFullYear();
+          const mm = String(shifted.getMonth() + 1).padStart(2, '0');
+          const dd = String(shifted.getDate()).padStart(2, '0');
+          return rawLsGet(`heys_dayv2_${yyyy}-${mm}-${dd}`, fallback);
+        };
+        // Прошлые точки живут в кэше, и это не украшение, а условие
+        // применимости: `data:updated` прилетает на каждый глоток воды и
+        // каждый приём, а шесть прогонов — это 60–110 мс на синтетических
+        // сорока днях. Без кэша столько стоил бы каждый тап по воде.
+        // Кэшируются только сдвинутые окна: сегодняшняя точка всегда берётся
+        // из канонического прогона ниже и потому свежая. Правка дня в прошлом
+        // подтянется в линию в течение пяти минут — линия показывает форму
+        // недели, и такая задержка на ней не читается.
+        const cacheKey = `${rawLsGet('heys_client_current', 'default')}|${days}`;
+        const cache = this._healthTrendShifts;
+        if (cache.key !== cacheKey || Date.now() - cache.at > 300000) {
+          cache.key = cacheKey;
+          cache.at = Date.now();
+          cache.scores = new Map();
+        }
+        const scoreAtShift = (shift) => {
+          if (cache.scores.has(shift)) return cache.scores.get(shift);
+          let score = null;
+          try {
+            const past = analyze({ daysBack: days, lsGet: shiftedLsGet(shift) });
+            const pastTotal = past?.healthScore?.total;
+            score = past?.available && Number.isFinite(pastTotal) ? pastTotal : null;
+          } catch (e) {
+            score = null;
+          }
+          cache.scores.set(shift, score);
+          return score;
+        };
+
+        // Сдвиги от самой старой точки к сегодняшней; нулевой берётся из
+        // канонического прогона ниже.
+        const shifts = [];
+        for (let i = SPARK_POINTS - 1; i >= 0; i--) {
+          shifts.push(Math.round((days * i) / (SPARK_POINTS - 1)));
+        }
+        const scoreByShift = new Map();
+        const startedAt = (typeof performance !== 'undefined' && performance.now)
+          ? performance.now()
+          : Date.now();
+        for (const shift of new Set(shifts)) {
+          if (shift !== 0) scoreByShift.set(shift, scoreAtShift(shift));
+        }
+        const sparkMs = ((typeof performance !== 'undefined' && performance.now)
+          ? performance.now()
+          : Date.now()) - startedAt;
 
         const result = analyze({ daysBack: days });
         if (!result?.available || !result?.healthScore) {
@@ -2211,6 +2293,7 @@
         const hs = result.healthScore;
         const total = hs.total || 0;
         const hasData = total > 0 || result.daysWithData >= 3;
+        scoreByShift.set(0, total);
 
         // Категории: nutrition, timing, activity, recovery, metabolism
         const categories = [
@@ -2225,35 +2308,23 @@
           breakdown: hs.breakdown?.[cat.key] || null
         })).filter(cat => cat.score !== null);
 
-        console.info('[widget_data.getHealthTrendData] ✅', {
-          total, periodDays: days, daysWithData: result.daysWithData, categories: categories.length
-        });
+        // Дельта — та же точка линии, что и самая левая: окно назад ровно на
+        // свою длину. Второй раз её не считаем.
+        const previousTotal = scoreByShift.get(days);
+        const delta = Number.isFinite(previousTotal) ? total - previousTotal : null;
 
-        let delta = null;
-        try {
-          const rawLsGet = (typeof HEYS.utils?.lsGet === 'function')
-            ? (key, fallback) => HEYS.utils.lsGet(key, fallback)
-            : (key, fallback) => {
-              try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
-            };
-          const shiftedLsGet = (key, fallback) => {
-            const match = /^heys_dayv2_(\d{4}-\d{2}-\d{2})$/.exec(key);
-            if (!match) return rawLsGet(key, fallback);
-            const shifted = new Date(`${match[1]}T12:00:00`);
-            shifted.setDate(shifted.getDate() - days);
-            const yyyy = shifted.getFullYear();
-            const mm = String(shifted.getMonth() + 1).padStart(2, '0');
-            const dd = String(shifted.getDate()).padStart(2, '0');
-            return rawLsGet(`heys_dayv2_${yyyy}-${mm}-${dd}`, fallback);
-          };
-          const previous = analyze({ daysBack: days, lsGet: shiftedLsGet });
-          const prevTotal = previous?.healthScore?.total;
-          if (previous?.available && Number.isFinite(prevTotal)) {
-            delta = total - prevTotal;
-          }
-        } catch (e) {
-          delta = null;
-        }
+        // Пропуски выбрасываем, а не рвём линию: у дня без данных оценки нет,
+        // и ноль на её месте нарисовал бы обвал, которого не было.
+        const values = shifts
+          .map((shift) => scoreByShift.get(shift))
+          .filter((value) => Number.isFinite(value));
+        const sparkline = values.length >= 2 ? { values } : null;
+
+        console.info('[widget_data.getHealthTrendData] ✅', {
+          total, periodDays: days, daysWithData: result.daysWithData,
+          categories: categories.length,
+          sparkPoints: values.length, sparkMs: Math.round(sparkMs)
+        });
 
         return {
           hasData,
@@ -2261,6 +2332,7 @@
           delta,
           goalMode: hs.goalMode || 'unknown',
           categories,
+          sparkline,
           daysWithData: result.daysWithData,
           periodDays: days
         };

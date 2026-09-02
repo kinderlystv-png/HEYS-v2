@@ -274,3 +274,70 @@ describe('геометрия виджетов Главной против кад
     }
   });
 });
+
+// Линия тренда здоровья: канвас держит её не классом, а готовой полилинией
+// внутри кадра, поэтому пара строится иначе — от значений к точкам.
+// Продукт отдаёт оценки, вид проецирует их в свою коробку; проверяем, что
+// коробка воспроизводит полилинию кадра ровно, а не «примерно».
+describe('линия тренда здоровья: значения продукта против полилинии кадра', () => {
+  const canvas = fs.readFileSync(CANVAS, 'utf8');
+  const ui = fs.readFileSync(path.resolve(__dirname, '../heys_widgets_ui_v1.js'), 'utf8');
+  const capture = fs.readFileSync(
+    path.resolve(__dirname, '../scripts/ui-v4-visual-capture.mjs'),
+    'utf8',
+  );
+
+  function boxFromSource(name) {
+    const body = new RegExp(`const ${name} = \{([^}]*)\}`).exec(ui)?.[1];
+    if (!body) return null;
+    const box = {};
+    for (const [, key, value] of body.matchAll(/(\w+):\s*(-?[\d.]+)/g)) box[key] = Number(value);
+    return box;
+  }
+
+  function project(values, box) {
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+    const round = (n) => Math.round(n * 100) / 100;
+    return values
+      .map((value, index) => [
+        round(box.left + ((box.right - box.left) * index) / (values.length - 1)),
+        round(box.bottom - (box.bottom - box.top) * ((value - min) / span)),
+      ])
+      .map((point) => point.join(','))
+      .join(' ');
+  }
+
+  it('коробка 2×1 повторяет полилинию кадра из значений стенда', () => {
+    // Полилиния кадра «Главная · дефолтная раскладка», плитка тренда.
+    const framePoints = /<polyline points="([^"]+)"[^>]*stroke-width="2\.5"/.exec(
+      canvas.slice(canvas.indexOf('Тренд здоровья · 7 дней')),
+    )?.[1];
+    expect(framePoints, 'полилиния тренда найдена в кадре').toBeTruthy();
+
+    const values = JSON.parse(
+      /sparkline: \{ values: (\[[^\]]*\])/.exec(capture)[1],
+    );
+    expect(values).toHaveLength(7);
+
+    const box = boxFromSource('HEALTH_SPARK_BOX_COMPACT');
+    expect(box, 'коробка 2×1 объявлена в продукте').toBeTruthy();
+    expect(project(values, box)).toBe(framePoints);
+  });
+
+  it('точка последнего дня — радиус кадра', () => {
+    const frameCircle = /<circle cx="56" cy="4" r="(\d+(?:\.\d+)?)"/.exec(canvas)?.[1];
+    expect(Number(frameCircle)).toBe(boxFromSource('HEALTH_SPARK_BOX_COMPACT').dotR);
+    // Строка «вид · тренд здоровья»: у 2×2 точка радиусом 3,5.
+    expect(boxFromSource('HEALTH_SPARK_BOX_LARGE').dotR).toBe(3.5);
+  });
+
+  it('продукт отдаёт оценки, а не готовые точки', () => {
+    const data = fs.readFileSync(path.resolve(__dirname, '../widgets/widget_data.js'), 'utf8');
+    expect(data).toContain('const sparkline = values.length >= 2 ? { values } : null;');
+    // Заготовка точек мимо продукта вернула бы стенд к зелёному свету при
+    // мёртвом рабочем пути — так эта линия и прожила незамеченной.
+    expect(capture).not.toContain("points: '2,18 11,16");
+  });
+});
