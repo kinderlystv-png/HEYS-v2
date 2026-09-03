@@ -24,13 +24,16 @@ body:has(.activity-v4) .hdr::after {
   content: none;
 }
 
+/* В тёмных наборах «Актив» стоит не на дне страницы, а на тоне поверхности:
+   --v4-bg тут слишком глубокий. Литерал #23201b — песочно-тёмное значение
+   именно этой роли; в сине-тёмном он подставлял чужой набор. */
 [data-theme$="dark"] html:has(.activity-v4),
 [data-theme$="dark"] body:has(.activity-v4) {
-  background: #23201b;
+  background: var(--v4-surface, #23201b);
 }
 
 [data-theme$="dark"] body:has(.activity-v4) .hdr {
-  background: #23201b !important;
+  background: var(--v4-surface, #23201b) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
@@ -45,7 +48,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 [data-theme$="dark"] .page-day:has(.activity-v4) {
-  background-color: #23201b;
+  background-color: var(--v4-surface, #23201b);
   background-image: none;
 }
 
@@ -446,10 +449,13 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-steps__hint {
   /* Подпись стоит в подвале карточки — свой отступ ей не нужен, его даёт
-     .activity-v4-steps__foot. Кадр просит 42 %, ступень набора — 45 %. */
+     .activity-v4-steps__foot. Пакет 3 сентября поднял тон с 42 % до 56 %:
+     прежние 45 % были ближайшей ступенью к 42, а теперь кадр называет ровно
+     тон данных — и это то же правило, по которому текст мельче 12 px не стоит
+     бледнее 56 %. Рядом «251 ккал» уже на нём. */
   flex: none;
   font: 500 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* .btn кадра: текст по центру, минимальная высота 48, радиус 999,
@@ -467,7 +473,7 @@ body:has(.activity-v4) .hdr::after {
   background: var(--v4-act, #c67139);
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   /* Роли «текст на акценте» в наборе нет — цвет назван поимённо, как и был. */
-  color: #2b1608;
+  color: var(--v4-btn-on-act, #2b1608);
   cursor: pointer;
 }
 
@@ -608,7 +614,7 @@ body:has(.activity-v4) .hdr::after {
 .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active {
   border-bottom: none;
   background: var(--v4-act, #c67139);
-  color: #2b1608;
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 [data-palette="blue"] .ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn.is-active,
@@ -958,7 +964,7 @@ body:has(.activity-v4) .hdr::after {
   background: var(--v4-act, #c67139);
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   /* Роли «текст на акценте» в наборе нет — цвет назван поимённо. */
-  color: #2b1608;
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 .activity-v4-program .sb-plan-actions {

@@ -2393,7 +2393,7 @@
 
 @media (hover: hover) {
   .ma-skip-reason-option:hover {
-    background: var(--v4-chip, #f0e6d6);
+    background: var(--v4-chip, #efe3cf);
   }
 }
 
