@@ -2089,7 +2089,7 @@ body.tour-active .ios-pwa-banner {
   width: 14px;
   height: 1.75px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .mc-modal--meal-create .mc-header-btn--close::before {
@@ -8324,7 +8324,7 @@ body.tour-active .ios-pwa-banner {
   border: 0;
   padding: 0;
   margin: 0;
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
   z-index: 50;
   cursor: pointer;
 }
