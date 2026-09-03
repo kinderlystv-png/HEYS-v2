@@ -82,7 +82,7 @@ describe('оболочка шаговых модалок', () => {
     expect(active).toContain('var(--v4-sand-act');
     // Синяя точка прежней системы: базовое правило 600-го модуля ещё живо для
     // мастеров вне шапки, но в шапке его больше никто не получает.
-    expect(rule(STEPS, '.mc-progress-dot.active')).toContain('var(--color-blue-500)');
+    expect(rule(STEPS, '.mc-progress-dot.active')).toContain('var(--v4-act');
   });
   it('шапку не отбивает линия — её нет ни в одном кадре', () => {
     // Отбивка осталась от доv4 оболочки: чек-ину её снимали отдельным

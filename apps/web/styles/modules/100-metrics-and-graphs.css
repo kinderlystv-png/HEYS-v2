@@ -1620,7 +1620,7 @@
 
 /* === 08. Slider Elements === */
 .sparkline-slider-line {
-  stroke: var(--color-blue-500);
+  stroke: var(--v4-act, #2563eb);
   stroke-width: 1.5;
   stroke-dasharray: 4 2;
   opacity: 0.8;
@@ -1628,7 +1628,7 @@
 }
 
 .sparkline-slider-point {
-  fill: var(--color-blue-500);
+  fill: var(--v4-act, #2563eb);
   stroke: white;
   stroke-width: 2;
   pointer-events: none;
@@ -1724,7 +1724,7 @@
   border-radius: 8px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-blue-500);
+  color: var(--v4-act-text, #1d4ed8);
   animation: sparkline-brush-stats-appear 0.2s ease-out;
   z-index: 5;
   cursor: pointer;
@@ -2497,7 +2497,7 @@
 
 @media (hover: hover) {
   .week-heatmap-action-wrap:hover .week-heatmap-action-label {
-  color: var(--color-blue-600);
+  color: var(--v4-wgt-link, #2563eb);
 }
 }
 
@@ -2521,7 +2521,7 @@
   .week-heatmap-action:hover {
   background: rgba(59, 130, 246, 0.08);
   border-color: rgba(59, 130, 246, 0.3);
-  color: var(--color-blue-600);
+  color: var(--v4-wgt-link, #2563eb);
 }
 }
 
@@ -2604,7 +2604,7 @@
 @media (hover: hover) {
   .week-heatmap-norm:hover {
   background: rgba(59, 130, 246, 0.1);
-  color: var(--color-blue-600);
+  color: var(--v4-wgt-link, #2563eb);
 }
 }
 
@@ -2683,7 +2683,7 @@
 }
 
 .week-heatmap-day.today .week-heatmap-date {
-  background: var(--color-blue-500);
+  background: var(--v4-act, #2563eb);
   color: white;
   padding: 2px 5px;
   border-radius: 6px;
@@ -2695,7 +2695,7 @@
 }
 
 .week-heatmap-day.today .week-heatmap-name {
-  color: var(--color-blue-600);
+  color: var(--v4-wgt-link, #2563eb);
   font-weight: 700;
 }
 
@@ -2766,7 +2766,7 @@
 
 /* Today ring — статичный акцент без свечения и пульса */
 .week-heatmap-day.today .week-heatmap-cell {
-  box-shadow: 0 0 0 2px var(--color-blue-500);
+  box-shadow: 0 0 0 2px var(--v4-act, #2563eb);
   z-index: 1;
   /* чтобы свечение было поверх соседей */
 }
@@ -6931,7 +6931,7 @@
 }
 
 .formula-label {
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .formula-value {
@@ -6982,7 +6982,7 @@
 
 .formula-row.formula-subtotal .formula-label {
   font-weight: 500;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .formula-row.formula-subtotal .formula-value {
@@ -7375,7 +7375,7 @@
 .training-zones-time {
   font-size: 16px;
   font-weight: 600;
-  color: var(--color-blue-500);
+  color: var(--v4-act-text, #1d4ed8);
 }
 
 .training-zones-stats .training-zones-kcal {
@@ -7529,7 +7529,7 @@
 .training-comment-prompt .training-comment-text {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .training-comment-prompt.positive .training-comment-text {
@@ -7552,7 +7552,7 @@
 }
 
 .training-comment-input::placeholder {
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .training-comment-input:focus {
@@ -7705,7 +7705,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   font-size: 13px;
-  color: var(--color-gray-600);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   font-style: italic;
   line-height: 1.4;
 }
@@ -7834,7 +7834,7 @@
   padding: 0;
   font-size: 12px;
   line-height: 14px;
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   background: transparent;
   border: 1px solid var(--v4-line, #e5e7eb);
   border-radius: 50%;
@@ -7983,7 +7983,7 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-blue-500) 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--v4-act, #2563eb) 0%, #2563eb 100%);
   color: white;
   font-size: 36px;
   font-weight: 300;
@@ -8089,7 +8089,7 @@
 }
 
 .macro-toast-carbs {
-  border-left: 4px solid var(--color-blue-500);
+  border-left: 4px solid var(--v4-act, #2563eb);
 }
 
 /* === Toast Gradient Borders + Pastel Backgrounds по типам === */

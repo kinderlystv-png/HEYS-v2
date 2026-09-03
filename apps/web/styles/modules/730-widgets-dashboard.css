@@ -5326,7 +5326,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-heatmap__cell--today {
-  box-shadow: 0 0 0 1.5px var(--color-blue-500, #3b82f6);
+  box-shadow: 0 0 0 1.5px var(--v4-act, #2563eb);
 }
 
 .widget-heatmap__compact-grid--3x1 {

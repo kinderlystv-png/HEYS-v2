@@ -1367,7 +1367,7 @@
 .heys-score-insights-card__transition {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-blue-600, #2563eb);
+  color: var(--v4-wgt-link, #2563eb);
   background: none;
   border: none;
   padding: 0;

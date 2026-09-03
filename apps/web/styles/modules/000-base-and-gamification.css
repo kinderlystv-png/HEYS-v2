@@ -141,12 +141,12 @@ input[type="password"] {
   --color-slate-200: #e2e8f0;
   --color-slate-400: #94a3b8;
   --color-slate-500: var(--v4-ink-2, #64748b);
-  --color-gray-500: #6b7280;
+  --color-gray-500: var(--v4-ink-label, #6b7280);
   --color-slate-700: #334155;
-  --color-blue-500: var(--v4-water, #3b82f6);
+  --color-blue-500: var(--v4-act, #3b82f6);
   --color-emerald-500: #10b981;
   --color-gray-400: var(--v4-ink-4, #9ca3af);
-  --color-blue-ios: #007aff;
+  --color-blue-ios: var(--v4-act-text, #007aff);
 
   /* Найдено 2026-08-10: этот :root грузится в main.css после critical.css и
    * безусловно перебивал --bg/--card критикал-файла обратно в белый — по факту
@@ -170,7 +170,7 @@ input[type="password"] {
      Найдено гейтом необъявленных переменных (scripts/ui-check-undeclared-vars). */
   --card-bg: var(--card);
   --text: var(--v4-ink, #111827);
-  --muted: var(--color-gray-500);
+  --muted: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   --border: var(--v4-line, #e5e7eb);
   --acc: var(--v4-act, #2563eb);
   --acc-contrast: var(--v4-bg, var(--color-white));
@@ -633,7 +633,7 @@ td:first-child input {
 .card.tone-violet.main-violet .stat::after {
   content: '';
   justify-self: center;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   font-size: 12px;
 }
 
@@ -914,7 +914,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .compact-label {
   font-size: 13px;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   font-weight: 500;
 }
 
@@ -994,7 +994,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .compact-note::placeholder {
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 /* === 07. COMPACT TRAININGS === */
@@ -7272,7 +7272,7 @@ color: var(--v4-sand-ink, #201e1d);
   height: 28px;
   border-radius: 8px;
   background: rgba(107, 114, 128, 0.1);
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   transition: color, background-color 0.3s ease;
   cursor: default;
   flex-shrink: 0;
@@ -7323,7 +7323,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 .cloud-sync-indicator.queued {
   background: rgba(59, 130, 246, 0.12);
-  color: var(--color-blue-500);
+  color: var(--v4-act-text, #1d4ed8);
   position: relative;
 }
 
@@ -7332,7 +7332,7 @@ color: var(--v4-sand-ink, #201e1d);
   width: 14px;
   height: 14px;
   border: 2px solid rgba(59, 130, 246, 0.3);
-  border-top-color: var(--color-blue-500);
+  border-top-color: var(--v4-act, #2563eb);
   border-radius: 50%;
   animation: syncSpin 0.8s linear infinite;
 }
@@ -7415,7 +7415,7 @@ color: var(--v4-sand-ink, #201e1d);
   font-size: 10px;
   font-weight: 600;
   margin-left: 4px;
-  color: var(--color-blue-500);
+  color: var(--v4-act-text, #1d4ed8);
 }
 
 /* Countdown до retry (5) рядом с ошибкой */
@@ -7754,7 +7754,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .sync-toast.syncing {
-  background: var(--color-blue-500);
+  background: var(--v4-act, #2563eb);
   color: white;
 }
 
@@ -7965,7 +7965,7 @@ body:has(.offline-banner) .wrap {
 .hdr-btn.ghost {
   background: transparent;
   border: none;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   padding: 6px 8px;
   flex: 0 0 auto;
 }
@@ -9122,7 +9122,7 @@ svg.date-picker-icon {
 
 .date-picker-day.today {
   font-weight: 700;
-  background: linear-gradient(135deg, var(--color-blue-500) 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--v4-act, #2563eb) 0%, #2563eb 100%);
   color: white;
   border: none;
 }
@@ -9173,7 +9173,7 @@ svg.date-picker-icon {
 
 .date-picker-btn.delete-btn {
   background: var(--color-slate-100);
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 @media (hover: hover) {
@@ -9362,7 +9362,7 @@ svg.date-picker-icon {
 /* Сегодняшний день - синий как в навигации */
 .date-picker-day.today {
   font-weight: 700;
-  background: linear-gradient(135deg, var(--color-blue-500) 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--v4-act, #2563eb) 0%, #2563eb 100%);
   color: white;
   border: none;
   animation: todayPulse 2s ease-in-out infinite;
@@ -12555,7 +12555,7 @@ body:has(:is(
 .meal-sep.meal-type-snack1,
 .meal-sep.meal-type-snack2,
 .meal-sep.meal-type-snack3 {
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 /* серый — перекус */
@@ -12563,7 +12563,7 @@ body:has(:is(
 .meal-sep.meal-type-snack2 .meal-kcal-badge,
 .meal-sep.meal-type-snack3 .meal-kcal-badge {
   background: var(--v4-hero, #f3f4f6);
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .meal-sep.meal-type-night {
@@ -12632,7 +12632,7 @@ body:has(:is(
 .meal-type-preview-value.meal-type-snack1,
 .meal-type-preview-value.meal-type-snack2,
 .meal-type-preview-value.meal-type-snack3 {
-  color: var(--color-gray-500);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   background: var(--v4-hero, #f3f4f6);
 }
 
@@ -13622,8 +13622,8 @@ body:has(:is(
 
 /* Кнопка быстрого перехода на сегодня (в header рядом с DatePicker) */
 .today-quick-btn {
-  border: 1px solid var(--color-blue-500);
-  background: var(--color-blue-500);
+  border: 1px solid var(--v4-act, #2563eb);
+  background: var(--v4-act, #2563eb);
   color: white;
   min-width: 34px;
   height: 34px;
@@ -13682,7 +13682,7 @@ body:has(:is(
 
 .cal-today-btn {
   border: none;
-  background: var(--color-blue-500);
+  background: var(--v4-act, #2563eb);
   color: white;
   width: 28px;
   height: 28px;
@@ -14354,14 +14354,14 @@ body:has(:is(
   }
 
   .grams-manual-input:focus {
-    border-color: var(--color-blue-500);
+    border-color: var(--v4-act, #2563eb);
     background: var(--color-white);
   }
 
   .grams-input-suffix {
     font-size: 20px;
     font-weight: 500;
-    color: var(--color-gray-500);
+    color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   }
 
   .mpc-grams::-webkit-inner-spin-button,
@@ -14371,7 +14371,7 @@ body:has(:is(
   }
 
   .mpc-grams:focus {
-    border-color: var(--color-blue-500);
+    border-color: var(--v4-act, #2563eb);
     outline: none;
     background: var(--color-white);
   }
@@ -14390,7 +14390,7 @@ body:has(:is(
     padding: 0;
     border: none;
     background: transparent;
-    color: var(--color-gray-400);
+    color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
     font-size: 18px;
     display: flex;
     align-items: center;
@@ -14416,7 +14416,7 @@ body:has(:is(
 
   .mpc-header {
     font-weight: 600;
-    color: var(--color-gray-400);
+    color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
     margin-top: 4px;
   }
 
@@ -14426,7 +14426,7 @@ body:has(:is(
   }
 
   .mpc-grid .mpc-dim {
-    color: var(--color-gray-400);
+    color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
     white-space: nowrap;
   }
 
@@ -14441,7 +14441,7 @@ body:has(:is(
   }
 
   .mpc-row2 .mpc-dim {
-    color: var(--color-gray-400);
+    color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   }
 
   /* Meal totals - grid layout */
@@ -14772,7 +14772,7 @@ body:has(:is(
     border: none;
     background: transparent;
     font-size: 16px;
-    color: var(--color-gray-400);
+    color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
     cursor: pointer;
     border-radius: 4px;
   }
@@ -15844,7 +15844,7 @@ body:has(:is(
 
 .measurements-card__date {
   font-size: 12px;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .measurements-card__edit {
@@ -16044,7 +16044,7 @@ body:has(:is(
   border-radius: 10px;
   padding: 14px 12px;
   text-align: center;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   background: var(--v4-hero, #f8fafc);
   display: flex;
   flex-direction: column;
@@ -16083,7 +16083,7 @@ body:has(:is(
   justify-content: space-between;
   gap: 10px;
   font-size: 12px;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .measurements-card__history {
@@ -16096,7 +16096,7 @@ body:has(:is(
 }
 
 .measurements-card__footer-date {
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 /* === Profile v4 — три группы (Обо мне · Нормы и цели · Медицинское) === */
