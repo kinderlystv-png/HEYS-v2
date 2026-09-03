@@ -12433,6 +12433,16 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   white-space: nowrap;
 }
 
+/* Клетчатка · Добрать · 07: у этой подсказки кадр называет свои числа —
+   600 8.5px и отбивка 4. Правило точечное, потому что класс общий: вторым его
+   потребителем идёт причина в «Качестве еды», для которой кадр другой. */
+.widget-v4-fiber .widget-v4-hint {
+  margin-top: 4px;
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
 /* Неделя столбиками: сегодня всегда правый и глубоким тоном. */
 .widget-v4-weekbars {
   display: flex;
@@ -12980,7 +12990,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   color: var(--v4-sand-ok-fill, #7a8a5e);
 }
 
-/* Запасное — песочное значение самой роли (#b4442a), а не #a8382b соседних
+/* Запасное — песочное значение самой роли (#a83c22), а не #a8382b соседних
    правил: того литерала нет ни в одном наборе, и без палитры он покрасил бы
    экран чужой системой. Старые места — долг гейта запасных значений. */
 .widget-wd__chart.widget-v4-val--bad {
@@ -14601,7 +14611,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 /* Роли --v4-bad в наборе нет: писалось запасное #c45c4a, и «плохо» в листе
    рисовалось третьим красным — светлее и столбика, и подписи рядом. Красный
-   набора один, --v4-bad-text (#b4442a = --red канваса). */
+   набора один, --v4-bad-text (#a83c22 = --red канваса). */
 .widget-bd-sheet__hero-track-fill.is-bad {
   background: var(--v4-bad-text, #a83c22);
 }
@@ -14773,7 +14783,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__factor-share.is-bad {
-  color: #b4442a;
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .widget-bd-sheet__factor-bar {
@@ -14799,7 +14809,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__factor-bar.is-bad > i {
-  background: #b4442a;
+  background: var(--v4-bad-text, #a83c22);
 }
 
 .widget-bd-sheet__driver-row {
@@ -14817,7 +14827,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__driver-row.is-bad .widget-bd-sheet__driver-mark {
-  background: #b4442a;
+  background: var(--v4-bad-text, #a83c22);
 }
 
 .widget-bd-sheet__driver-row.is-warn .widget-bd-sheet__driver-mark {
@@ -14877,7 +14887,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__contrib-bar.is-bad {
-  background: #b4442a;
+  background: var(--v4-bad-text, #a83c22);
 }
 
 .widget-bd-sheet__contrib-val {
@@ -14894,7 +14904,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__contrib-val.is-bad {
-  color: #b4442a;
+  color: var(--v4-bad-text, #a83c22);
 }
 
 [data-theme$="dark"] .widget-bd-sheet {
