@@ -919,7 +919,7 @@
         className: 'text-xs',
         style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5, marginTop: 8 }
       }, 'Целых чисел достаточно — десятые вводятся в чек-ине.'),
-      React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 8 } },
+      React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 18 } },
         wheelCard('Рост, см', heightValues, height, 'height'),
         wheelCard('Вес сейчас, кг', weightValues, weight, 'weight')
       ),
