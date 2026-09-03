@@ -12,6 +12,13 @@
   color: #2b1608;
 }
 
+/* НЕ СНИМАТЬ, пока --v4-btn-on-act не объявлена в синих наборах. По брифу
+   3 сентября это правило должно было уйти вместе с переводом заливки кнопки на
+   --v4-act. Но в палитре роль текста на заливке в обоих синих наборах
+   закомментирована с причиной: «белый на #2e7cc0 даёт 4.41:1 < 4.5, в вёрстке
+   еды не использовать». Без неё перевод заливки даёт запасное песочное
+   #2b1608 — коричневую надпись на синей кнопке. Снимается вместе с решением
+   дизайнера по этой роли, не раньше. */
 [data-palette='blue'] .mc-modal--meal-create .meal-time-cta,
 [data-palette='blue-dark'] .mc-modal--meal-create .meal-time-cta {
   color: var(--v4-ink, #ffffff);
@@ -2039,7 +2046,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 [data-theme$='dark'] .mc-measurement-label {
-  color: var(--color-slate-100);
+  color: var(--v4-ink); /* v4-intentional */
 }
 
 [data-theme$='dark'] .mc-measurement-prev {
@@ -2049,7 +2056,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 [data-theme$='dark'] .mc-measurement-input {
   background: var(--v4-hero); /* v4-intentional */
   border-color: var(--v4-edge); /* v4-intentional */
-  color: var(--color-slate-100);
+  color: var(--v4-ink); /* v4-intentional */
 }
 
 [data-theme$='dark'] .mc-measurement-input::placeholder {
