@@ -1444,10 +1444,17 @@
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
+/* Кадры «Цикл · копия шага 5», элементы 29-30: ряд ответов рутины — зазор 6 и
+   отступ 11, пилюли делят ширину поровну. Стояло 8/12 и flex:none от общего
+   .mc-pill--mini, из-за чего пилюли жались к левому краю по содержимому. */
 .mc-rest-routine-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 11px;
+}
+
+.mc-rest-routine-actions .mc-pill {
+  flex: 1;
 }
 
 /* Два класса, а не один: базовое `.mc-rest-row` стоит ниже по файлу и при
