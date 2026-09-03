@@ -2034,8 +2034,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 [data-theme$='dark'] .mc-measurement-field {
-  background: var(--color-slate-800);
-  border-color: var(--color-slate-600);
+  background: var(--v4-hero); /* v4-intentional */
+  border-color: var(--v4-edge); /* v4-intentional */
 }
 
 [data-theme$='dark'] .mc-measurement-label {
@@ -2043,30 +2043,30 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 [data-theme$='dark'] .mc-measurement-prev {
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary); /* v4-intentional */
 }
 
 [data-theme$='dark'] .mc-measurement-input {
-  background: var(--color-slate-700);
-  border-color: var(--color-slate-600);
+  background: var(--v4-hero); /* v4-intentional */
+  border-color: var(--v4-edge); /* v4-intentional */
   color: var(--color-slate-100);
 }
 
 [data-theme$='dark'] .mc-measurement-input::placeholder {
-  color: var(--color-slate-500);
+  color: var(--v4-ink-2); /* v4-intentional */
 }
 
 [data-theme$='dark'] .mc-measurement-unit {
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary); /* v4-intentional */
 }
 
 [data-theme$='dark'] .mc-measurement-progress {
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary); /* v4-intentional */
 }
 
 [data-theme$='dark'] .mc-measurement-no-data {
-  color: var(--color-slate-500);
-  background: var(--color-slate-700);
+  color: var(--v4-ink-2); /* v4-intentional */
+  background: var(--v4-hero); /* v4-intentional */
 }
 
 [data-theme$='dark'] .mc-measurement-warning {
@@ -2075,31 +2075,31 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 [data-theme$='dark'] .mc-measurement-hint {
-  color: var(--color-slate-500);
+  color: var(--v4-ink-2); /* v4-intentional */
 }
 
 [data-theme$='dark'] .mc-measurements-tip {
-  background: var(--color-slate-700);
-  color: var(--color-slate-400);
+  background: var(--v4-hero); /* v4-intentional */
+  color: var(--v4-ink-secondary); /* v4-intentional */
 }
 
 [data-theme$='dark'] .mc-measurements-side-toggle {
-  background: var(--color-slate-700);
+  background: var(--v4-hero); /* v4-intentional */
 }
 
 [data-theme$='dark'] .mc-measurements-side-label {
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary); /* v4-intentional */
 }
 
 [data-theme$='dark'] .mc-measurements-side-btn {
-  background: var(--color-slate-600);
-  border-color: var(--color-slate-500);
-  color: var(--color-slate-300);
+  background: var(--v4-track); /* v4-intentional */
+  border-color: var(--v4-edge); /* v4-intentional */
+  color: var(--v4-ink-label); /* v4-intentional */
 }
 
 @media (hover: hover) {
   [data-theme$='dark'] .mc-measurements-side-btn:hover {
-    background: var(--color-slate-500);
+    background: var(--v4-track); /* v4-intentional */
   }
 }
 

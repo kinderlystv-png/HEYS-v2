@@ -19,24 +19,6 @@
 
   /* Base colors */
   --color-white: #ffffff;
-  --color-slate-100: var(--v4-ink, #f1f5f9);
-  /* Светлый текст (высокий контраст) */
-  --color-slate-200: #e2e8f0;
-  /* Очень светлый */
-  --color-slate-300: #cbd5e1;
-  /* Светлый серый */
-  --color-slate-400: var(--v4-ink-2, #94a3b8);
-  /* Средний серый (для вторичного текста) */
-  --color-slate-500: var(--v4-ink-3, #64748b);
-  /* Темный серый (для приглушенного текста) */
-  --color-slate-600: var(--v4-ink-4, #475569);
-  /* Границы */
-  --color-slate-700: var(--v4-line, #334155);
-  /* Темнее границы */
-  --color-slate-800: var(--v4-hero, #1e293b);
-  /* Карточки */
-  --color-slate-900: var(--v4-bg, #0f172a);
-  /* Фон страницы */
 
   --color-gray-400: #9ca3af;
   --color-gray-500: #6b7280;
@@ -313,20 +295,20 @@
 }
 
 [data-theme$="dark"] .metric-popup-spark-label {
-  color: var(--color-slate-500);
+  color: var(--v4-ink-2); /* v4-intentional */
 }
 
 [data-theme$="dark"] .metric-popup-progress {
-  background: var(--color-slate-700);
+  background: var(--v4-hero); /* v4-intentional */
 }
 
 [data-theme$="dark"] .metric-popup-goal {
-  color: var(--color-slate-500);
+  color: var(--v4-ink-2); /* v4-intentional */
 }
 
 [data-theme$="dark"] .metric-popup-compare {
-  background: var(--color-slate-700);
-  color: var(--color-slate-400);
+  background: var(--v4-hero); /* v4-intentional */
+  color: var(--v4-ink-secondary); /* v4-intentional */
 }
 
 [data-theme$="dark"] .metric-popup-compare.up {
@@ -340,7 +322,7 @@
 }
 
 [data-theme$="dark"] .metric-popup-extra {
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary); /* v4-intentional */
 }
 
 [data-theme$="dark"] .metric-popup-extra b {
@@ -361,7 +343,7 @@
 
 [data-theme$="dark"] .metric-popup-close {
   background: rgba(255, 255, 255, 0.1);
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary); /* v4-intentional */
 }
 
 @media (hover: hover) {
@@ -372,7 +354,7 @@
 }
 
 [data-theme$="dark"] .skeleton-item {
-  background: linear-gradient(90deg, var(--color-slate-700) 0%, #475569 50%, var(--color-slate-700) 100%);
+  background: linear-gradient(90deg, var(--v4-hero) 0%, var(--v4-track) 50%, var(--v4-hero) 100%); /* v4-intentional */
 }
 
 [data-theme$="dark"] .meal-card,
@@ -2025,12 +2007,12 @@
 
 [data-theme$="dark"] .tone-slate .mpc-totals-wrap .mpc-header,
 [data-theme$="dark"] .tone-slate .mpc-totals-wrap .mpc-totals-values {
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary); /* v4-intentional */
 }
 
 [data-theme$="dark"] .tone-slate .mpc-totals {
   background: var(--v4-surface, #2a3040);
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary); /* v4-intentional */
 }
 
 /* Violet main-violet card */
@@ -2046,7 +2028,7 @@
 
 [data-theme$="dark"] .card.tone-violet.main-violet .violet-table td {
   border-color: #4c3d6e;
-  color: var(--color-slate-200);
+  color: var(--v4-ink-secondary); /* v4-intentional */
 }
 
 [data-theme$="dark"] .card.tone-violet.main-violet .stat {
@@ -2055,7 +2037,7 @@
 }
 
 [data-theme$="dark"] .card.tone-violet.main-violet .stat>label {
-  color: var(--color-slate-200);
+  color: var(--v4-ink-secondary); /* v4-intentional */
 }
 
 /* Header bottom — v4: плоская строка названия вкладки, без плашки и тени
@@ -2684,7 +2666,7 @@
 
 .metrics-progress {
   height: 4px;
-  background: var(--color-slate-200);
+  background: var(--v4-track); /* v4-intentional */
   border-radius: 2px;
   margin-top: 8px;
   overflow: hidden;
