@@ -26,7 +26,7 @@
   --color-slate-900: var(--v4-bg, #0f172a);
 
   --color-gray-400: var(--v4-ink-4, #9ca3af);
-  --color-gray-500: #6b7280;
+  --color-gray-500: var(--v4-ink-label, #6b7280);
   --color-gray-700: #374151;
   --color-gray-800: #1f2937;
 
@@ -1982,7 +1982,7 @@
 }
 
 [data-theme$="dark"] .mpc-grams:focus {
-  border-color: var(--color-blue-500);
+  border-color: var(--v4-act, #2563eb);
   background: var(--heys-bg-elevated);
 }
 
@@ -2054,7 +2054,7 @@
 /* Cloud sync indicator dark */
 [data-theme$="dark"] .cloud-sync-indicator {
   background: rgba(156, 163, 175, 0.15);
-  color: var(--color-gray-400);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .cloud-sync-indicator.idle {
@@ -2172,7 +2172,7 @@
 
 @media (hover: hover) {
   [data-theme$="dark"] .today-quick-btn:hover {
-  background: var(--color-blue-500);
+  background: var(--v4-act, #2563eb);
 }
 }
 
@@ -2953,7 +2953,7 @@
 .sleep-quality-max {
   font-size: 16px;
   font-weight: 500;
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .sleep-duration-hint {
@@ -3190,7 +3190,7 @@ button.sleep-breakdown-item:focus-visible {
 .day-score-max {
   font-size: 16px;
   font-weight: 500;
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .day-score-auto-hint {
@@ -3268,7 +3268,7 @@ button.sleep-breakdown-item:focus-visible {
 .day-score-face-text {
   font-size: 16px;
   font-weight: 600;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   transition: color 0.2s ease;
 }
 
@@ -3290,7 +3290,7 @@ button.sleep-breakdown-item:focus-visible {
 .day-score-of-ten {
   font-size: 24px;
   font-weight: 500;
-  color: var(--color-gray-400);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .day-score-presets {
