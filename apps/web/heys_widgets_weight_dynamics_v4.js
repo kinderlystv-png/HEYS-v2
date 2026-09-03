@@ -63,20 +63,23 @@
     return (series || []).filter((d) => d.hasWeight).length;
   }
 
+  // label — подпись плитки. Со словом «вес»: без него плитка не говорила, чего
+  // именно динамика (строка контракта «состав дефолта», решение 20 августа).
+  // shortLabel — то же окно в винительном падеже для фраз вроде «Сброшено за …».
   function resolveWindow(weighDayCount) {
     if (weighDayCount < 7) {
       return { ready: false, windowDays: 0, label: 'Первые дни', shortLabel: 'Первые дни' };
     }
     if (weighDayCount < 14) {
-      return { ready: true, windowDays: 7, label: 'За неделю', shortLabel: 'неделю' };
+      return { ready: true, windowDays: 7, label: 'Вес за неделю', shortLabel: 'неделю' };
     }
     if (weighDayCount < 21) {
-      return { ready: true, windowDays: 14, label: 'За 2 недели', shortLabel: '2 недели' };
+      return { ready: true, windowDays: 14, label: 'Вес за 2 недели', shortLabel: '2 недели' };
     }
     if (weighDayCount < 28) {
-      return { ready: true, windowDays: 21, label: 'За 3 недели', shortLabel: '3 недели' };
+      return { ready: true, windowDays: 21, label: 'Вес за 3 недели', shortLabel: '3 недели' };
     }
-    return { ready: true, windowDays: MONTH_WINDOW, label: 'За месяц', shortLabel: 'месяц' };
+    return { ready: true, windowDays: MONTH_WINDOW, label: 'Вес за месяц', shortLabel: 'месяц' };
   }
 
   function movingAverageAt(series, index, windowSize) {

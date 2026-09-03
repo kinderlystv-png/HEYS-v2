@@ -6003,8 +6003,10 @@
         React.createElement('div', { className: 'widget-v4-goal-hero' },
           React.createElement('span', {
             className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
-          }, hasData ? `${formatScoreRu(score)} из 10` : '—'),
-          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'сегодня') : null
+          }, hasData ? formatScoreRu(score) : '—'),
+          // Шкала уходит в подпись, как «г сегодня» у клетчатки: крупным идёт
+          // только балл (кадр «Качество еды · Неделя»).
+          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'из 10 сегодня') : null
         ),
         v4WeekBars(week, 10),
         data?.avgWeek != null
@@ -6168,6 +6170,29 @@
     return `${formatRuThousands(item.value)} из ${formatRuThousands(item.goal)}`;
   }
 
+  // Почему пункта нет: у каждого своё недостающее поле (строки контракта
+  // «кофеин без данных» и «готовность ко сну · нет данных»).
+  const SLEEP_READY_MISSING_REASON = {
+    water: 'без нормы',
+    food: 'без отбоя',
+    steps: 'без цели',
+    caffeine: 'без ответа'
+  };
+
+  // Пункт без своего поля выпадает из счётчика — правило меняет знаменатель,
+  // поэтому плитка его называет: «шаги без цели — пункт выпал из счёта» (кадр
+  // «Готовность ко сну · пункт без данных»). Иначе «1 из 2» читается как
+  // потерянный пункт.
+  function sleepReadyDroppedText(items) {
+    const dropped = (items || []).filter((item) => item && item.hasData === false);
+    if (!dropped.length) return null;
+    const names = dropped
+      .map((item) => `${String(item.label || '').toLowerCase()} `
+        + (SLEEP_READY_MISSING_REASON[item.key] || 'без данных'))
+      .join(', ');
+    return `${names} — ${dropped.length === 1 ? 'пункт выпал' : 'пункты выпали'} из счёта`;
+  }
+
   function SleepReadyVariantBody({ variantId, data }) {
     const items = Array.isArray(data?.items) ? data.items : [];
     const hasData = data?.hasData === true;
@@ -6184,9 +6209,13 @@
         ),
         React.createElement('div', { className: 'widget-v4-goal-hero' },
           React.createElement('span', { className: 'widget-v4-goal-value widget-v4-val--neutral' },
-            hasData ? `${data.done} из ${data.total}` : '—'
+            hasData ? String(data.done) : '—'
           ),
-          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'закрыто') : null
+          // Крупным — только закрытые пункты; знаменатель со словом уходит в
+          // подпись (кадр «Готовность ко сну · Разбор»).
+          hasData
+            ? React.createElement('span', { className: 'widget-v4-unit' }, `из ${data.total} закрыто`)
+            : null
         ),
         hasData
           ? React.createElement('div', { className: 'widget-v4-checklist' },
@@ -6202,6 +6231,7 @@
       );
     }
 
+    const droppedText = hasData ? sleepReadyDroppedText(items) : null;
     return React.createElement('div', { className: 'widget-v4-stack widget-v4-sleepready' },
       React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
         v4Kicker('К вечеру'),
@@ -6210,15 +6240,19 @@
         )
       ),
       React.createElement('div', { className: 'widget-v4-checklist widget-v4-checklist--dots' },
-        items.map((item) => React.createElement('span', {
-          key: item.key,
-          className: 'widget-v4-checklist__chip'
-            + (item.done ? ' is-done' : '')
-            + (item.hasData ? '' : ' is-empty')
-        },
-          React.createElement('i', { className: 'widget-v4-checklist__dot', 'aria-hidden': 'true' }),
-          item.label.toLowerCase()
-        ))
+        // Выпавший пункт объясняем вместо точек: на 2×1 обе строки не встают,
+        // а необъяснённый знаменатель дороже перечня точками.
+        droppedText
+          ? React.createElement('span', { className: 'widget-v4-muted' }, droppedText)
+          : items.map((item) => React.createElement('span', {
+            key: item.key,
+            className: 'widget-v4-checklist__chip'
+              + (item.done ? ' is-done' : '')
+              + (item.hasData ? '' : ' is-empty')
+          },
+            React.createElement('i', { className: 'widget-v4-checklist__dot', 'aria-hidden': 'true' }),
+            item.label.toLowerCase()
+          ))
       )
     );
   }
@@ -7141,6 +7175,19 @@
     return renderWeightDynamicsBody(variant, dyn, { compact, motion });
   }
 
+  // Шапка вида «Только цифра»: у голого числа без графики она и объясняет, что
+  // это за число (кадр «Динамика · B изменение»). «Сброшено» верно только при
+  // снижении, поэтому рост говорит «Набрано», а плато — окно без глагола: в
+  // мёртвой зоне ±0,2 кг ни сброса, ни набора не было. Знак берём из
+  // посчитанной дельты, а не из анимированной, чтобы шапка не мигала.
+  function weightDynamicsDeltaKicker(dyn, windowLabel) {
+    const short = dyn?.hasDynamics ? dyn?.window?.shortLabel : null;
+    if (!short) return windowLabel;
+    if (dyn?.delta?.sign === '−') return `Сброшено за ${short}`;
+    if (dyn?.delta?.sign === '+') return `Набрано за ${short}`;
+    return windowLabel;
+  }
+
   function renderWeightDynamicsBody(variant, dyn, opts = {}) {
     const {
       compact = false,
@@ -7149,7 +7196,7 @@
     } = opts;
     const isTile = !compact;
     const stateClass = v4ValueStateClass(v4WeightDeltaStateFromDynamics(dyn));
-    const windowLabel = dyn?.window?.label || 'За месяц';
+    const windowLabel = dyn?.window?.label || 'Вес за месяц';
     const remainder = weightDynamicsRemainderMeta(dyn, variant);
     const delta = motion?.delta != null
       ? formatAnimDeltaKg(motion.delta)
@@ -7176,7 +7223,7 @@
     if (variant === 'weeks') {
       return React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'widget-wd__head' },
-          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile, playEntrance) }, 'По неделям'),
+          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile, playEntrance) }, 'Вес по неделям'),
           dyn?.hasDynamics
             ? React.createElement('span', { className: 'widget-wd__side-delta ' + stateClass + ' ' + wdElClass('meta', isTile, playEntrance) },
               delta.sign, delta.text)
@@ -7221,7 +7268,8 @@
     if (variant === 'number_only') {
       return React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'widget-wd__head' },
-          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile, playEntrance) }, windowLabel)
+          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile, playEntrance) },
+            weightDynamicsDeltaKicker(dyn, windowLabel))
         ),
         React.createElement('div', { className: 'widget-wd__num-row' },
           deltaLine,
