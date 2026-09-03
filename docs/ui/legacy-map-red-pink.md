@@ -1,0 +1,201 @@
+# Legacy map: `--color-red-*` + `--color-pink-*`
+
+Разбор легаси-токенов Tailwind-семейств красного и розового для последующей
+замены на роли v4. **Только инвентаризация** — правки CSS/JS не входят в scope.
+
+Проверено `rg` 2026-09-03. Запрещённые зоны для агентной миграции:
+`731-ui-v4-activity.css`, `300-modals-and-day.css` (вынесены в отдельные
+секции).
+
+---
+
+## Команды проверки
+
+```bash
+# Все вхождения (строки)
+rg -c -e "--color-red-" apps/web/styles/
+rg -c -e "--color-pink-" apps/web/styles/
+
+# Подсчёт токенов (вхождения внутри строк)
+rg -o -e "--color-red-[0-9]+" apps/web/styles/ | Measure-Object -Line
+rg -o -e "--color-pink-[0-9]+" apps/web/styles/ | Measure-Object -Line
+
+# In-scope модули (без запрещённых)
+rg -o -e "--color-red-[0-9]+" apps/web/styles/modules/ \
+  -g "!731-ui-v4-activity.css" -g "!300-modals-and-day.css" | Measure-Object -Line
+rg -o -e "--color-pink-[0-9]+" apps/web/styles/modules/ \
+  -g "!731-ui-v4-activity.css" -g "!300-modals-and-day.css" | Measure-Object -Line
+```
+
+---
+
+## Сводка
+
+| Область                                  | `--color-red-*` | `--color-pink-*` |  Итого |
+| ---------------------------------------- | --------------: | ---------------: | -----: |
+| **In-scope** (`modules/`, без 731/300)   |              41 |                0 |     41 |
+| **Запрещено** (`300-modals-and-day.css`) |               6 |                0 |      6 |
+| **Generated** (`tailwind.css`)           |              24 |               12 |     36 |
+| **Всего** `apps/web/styles/`             |          **71** |           **12** | **83** |
+
+Оценка «~83» из задачника совпадает: **71 red + 12 pink** (из них **6 red** в
+запрещённом `300-modals`, **24 red + 12 pink** в generated `tailwind.css`).
+
+В `apps/web/*.js` и `apps/web/*.html` вхождений `--color-red-*` /
+`--color-pink-*` **нет** (проверено `rg`).
+
+`731-ui-v4-activity.css` — **0** вхождений обоих семейств.
+
+---
+
+## Используемые ступени
+
+### `--color-red-*` (in-scope modules)
+
+| Ступень           |  Всего | text (`color`) | fill+background (`background`, `fill`, gradient) | line+border | declaration / alias | shadow |
+| ----------------- | -----: | -------------: | -----------------------------------------------: | ----------: | ------------------: | -----: |
+| `--color-red-500` |     39 |             13 |                                               13 |           8 |                   5 |      0 |
+| `--color-red-300` |      1 |              0 |                                                0 |           1 |                   0 |      0 |
+| `--color-red-100` |      1 |              0 |                                                1 |           0 |                   0 |      0 |
+| **Итого red**     | **41** |         **13** |                                           **14** |       **9** |               **5** |  **0** |
+
+Файлы in-scope: `000-base-and-gamification.css` (13),
+`100-metrics-and-graphs.css` (16), `500-pwa-and-offline.css` (7),
+`200-dark-and-effects.css` (3), `600-steps-and-aps.css` (1),
+`610-aps-meal-flow.css` (1).
+
+Ступени `--color-red-50/200/400/600/700/800` в product modules **не
+используются** — только в generated `tailwind.css`.
+
+### `--color-pink-*` (in-scope modules)
+
+**0 вхождений.** Семейство живёт только в `apps/web/styles/tailwind.css`
+(generated Tailwind v4 bundle).
+
+| Ступень (tailwind only) |  Всего |
+| ----------------------- | -----: |
+| `--color-pink-500`      |      3 |
+| `--color-pink-200`      |      3 |
+| `--color-pink-600`      |      2 |
+| `--color-pink-50`       |      2 |
+| `--color-pink-300`      |      2 |
+| **Итого pink**          | **12** |
+
+Розовый в продукте сейчас идёт **не** через `--color-pink-*`, а через литералы и
+свои роли: `--bg-pink-subtle` (`001-design-tokens.css`),
+`--widget-gradient-pink` (`730-widgets-dashboard.css`, **запрещённая зона
+730**), inline `#ec4899` в JS.
+
+---
+
+## Предлагаемые роли v4 (in-scope)
+
+Обоснование — **семантика** из `002-ui-v4-palette-roles.css`, не близость hex:
+
+| Роль v4                | Смысл (из файла ролей)                                    |
+| ---------------------- | --------------------------------------------------------- |
+| `--v4-bad-text`        | Продуктовая копия канвасного `--red`; текст «плохой зоны» |
+| `--v4-val-bad`         | Шкала зон итогов дня, канвасный `--red`; заливка «плохо»  |
+| `--v4-wgt-danger-text` | Текст опасного/ошибочного состояния (тосты, вес)          |
+| `--v4-wgt-danger-bg`   | Тонированная подложка ошибки/опасности                    |
+| `--v4-warn-1`          | Сдержанная ступень роли «внимание» (не ошибка)            |
+| `--v4-warn-text`       | Текстовый шаг предупреждения                              |
+
+### `--color-red-500`
+
+| kind        | мест | контекст (селектор / назначение)                                                                                        | предлагаемая роль                                          | обоснование                                                         |
+| ----------- | ---: | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------- |
+| declaration |    2 | `:root` в `000-base`, `200-dark`                                                                                        | _(удалить алиас)_                                          | `000` уже мапит на `--v4-warn-1` — см. развилку F1                  |
+| alias       |    2 | `--danger`, `--protein`                                                                                                 | разные роли                                                | `--danger` → `--v4-bad-text`; `--protein` → **макро-роль** (см. F2) |
+| custom-prop |    1 | `--goal-badge-color` (`.goal-critical`)                                                                                 | `--v4-bad-text`                                            | критическое превышение цели                                         |
+| text        |   13 | offline, legend bad, sparkline bad, goal-over, delete hover, household warn, health slider, day-score bad               | `--v4-bad-text` или `--v4-wgt-danger-text`                 | ошибка / плохое значение / деструктивное действие                   |
+| fill        |   10 | offline banner, sync toast error, swipe delete, heatmap red, goal-over gradient, APS slider                             | `--v4-val-bad` (данные) / `--v4-wgt-danger-bg` (UI chrome) | заливка «плохой зоны» vs сплошной баннер — см. F4                   |
+| fill (svg)  |    3 | `.sparkline-dot-over`, `.sparkline-day-weekend`, `.sparkline-min-label`                                                 | `--v4-val-bad` / **календарь**                             | dot-over → bad; weekend → **не ошибка** (F3)                        |
+| line        |    8 | mythic border, shake-excess, dev-clear dashed, macro-toast-protein, mpc-grams danger, mood-like presets в других файлах | см. развилки                                               | mythic / protein — не «bad»                                         |
+
+### `--color-red-300`
+
+| kind | мест | контекст                            | предлагаемая роль                                                      | обоснование                                  |
+| ---- | ---: | ----------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------- |
+| line |    1 | `.household-time-skip:hover` border | `--v4-wgt-danger-text` с пониженной opacity или `--v4-edge` + bad tint | hover деструктивного действия; мягче чем 500 |
+
+### `--color-red-100`
+
+| kind | мест | контекст                                 | предлагаемая роль    | обоснование                                               |
+| ---- | ---: | ---------------------------------------- | -------------------- | --------------------------------------------------------- |
+| fill |    1 | `.household-time-clear:hover` background | `--v4-wgt-danger-bg` | тонированная подложка ошибки (аналог toast error icon bg) |
+
+---
+
+## Запрещённая зона: `300-modals-and-day.css` (6 red, 0 pink)
+
+Инвентарь для полноты ~83; **агент не мигрирует** до отдельной задачи по зоне.
+
+|    строка | селектор                                           | свойства            | семантика                           | предлагаемая роль                        |
+| --------: | -------------------------------------------------- | ------------------- | ----------------------------------- | ---------------------------------------- |
+|     91–92 | `.sleep-quality-preset-bad.active`                 | color, border-color | плохое качество сна                 | `--v4-bad-text` + border `--v4-bad-text` |
+|      3877 | `.mood-diff.diff-down`                             | color               | негативное изменение настроения     | `--v4-bad-text`                          |
+| 3916–3917 | `.mood-preset-bad.active`                          | color, border-color | плохое настроение                   | `--v4-bad-text`                          |
+|      4106 | `.mood-journal-wrapper.negative .mood-journal-btn` | background          | активная кнопка негативного журнала | `--v4-val-bad`                           |
+
+---
+
+## Generated: `tailwind.css` (36 токенов, не product CSS)
+
+| семейство | ступени (все в одной минифицированной строке)                | мест |
+| --------- | ------------------------------------------------------------ | ---: |
+| red       | 500×5, 400×4, 50×3, 100×3, 800×2, 300×2, 200×2, 600×2, 700×1 |   24 |
+| pink      | 500×3, 200×3, 600×2, 50×2, 300×2                             |   12 |
+
+Миграция — только при появлении utility-классов в продуктовом коде; сейчас
+прямых потребителей в modules нет. Пересборка Tailwind — отдельный контур.
+
+---
+
+## Развилки для владельца (ambiguous forks)
+
+Агент **не выбирает** — одна строка, один смысл; здесь один токен несёт разные
+семантики.
+
+| ID     | конфликт                                                                             | где                                               | варианты                                                                                                    | рекомендация                                                                    |
+| ------ | ------------------------------------------------------------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **F1** | `--color-red-500` объявлен как `--v4-warn-1`, но везде читается как «ошибка/красный» | `000-base:148` vs 30+ use-sites                   | A) переобъявить на `--v4-bad-text` / `--v4-val-bad` B) оставить warn и сменить use-sites на bad-роли        | **B** — use-sites по смыслу; объявление legacy-токена убрать последним          |
+| **F2** | `--protein` и `--danger` оба → `--color-red-500`                                     | `000-base:198–202`                                | A) protein → новая `--v4-macro-protein` B) protein остаётся red, danger → bad C) оба на bad                 | **A** — КБЖУ ≠ ошибка; контракт nutrition-tab задаёт отдельный тон для макросов |
+| **F3** | Календарный «выходной красный» vs «плохое значение»                                  | `.sparkline-day-weekend` vs `.sparkline-dot-over` | A) оба `--v4-val-bad` B) weekend → нейтральная метка `--v4-ink-3` C) weekend → отдельная `--v4-cal-weekend` | **C** — календарь не должен совпадать с harm-scale                              |
+| **F4** | Сплошной красный баннер offline vs тон bad-зоны                                      | `.offline-banner` gradient, `.sync-toast.error`   | A) `--v4-val-bad` B) `--v4-wgt-danger-bg` + `--v4-bad-text` C) оставить saturated alert                     | **B** — баннер = UI chrome ошибки, не nutrition zone                            |
+| **F5** | Геймификация: mythic / combo ≠ harm                                                  | `.rarity-mythic`, `.combo-text`                   | A) `--v4-warn-1` B) `--v4-act` C) отдельная rarity-роль                                                     | **C** — редкость легендарная, не предупреждение                                 |
+| **F6** | Dark override без v4                                                                 | `200-dark:54` `#f87171`                           | A) `--v4-bad-text` набора B) оставить литерал C) удалить override, положиться на роль                       | **A** — единый контур палитры                                                   |
+| **F7** | Pink: семейство только в tailwind                                                    | 12 generated tokens                               | A) игнорировать B) завести `--v4-mood-pink` для retention/weight C) слить с `--bg-pink-subtle`              | **B** только если появятся utility-потребители; сейчас **no-op**                |
+
+**Итого развилок: 7** (блокируют безусловную механическую замену).
+
+---
+
+## Порядок миграции (рекомендация, не для агента)
+
+1. Закрыть **F1 + F2** — развязать `--danger` / `--protein` от одного red-500.
+2. Пройти **100-metrics** и **000-base** по контексту (больше всего вхождений).
+3. **500-pwa**, **600**, **610**, **200-dark** — точечно после форков.
+4. **300-modals** — отдельная зональная задача.
+5. **tailwind.css** — не трогать вручную; pink/red utilities мертвы пока нет
+   class-потребителей.
+
+---
+
+## Связанные роли и алиасы (уже в коде)
+
+```css
+/* 000-base-and-gamification.css:148 */
+--color-red-500: var(--v4-warn-1, #ef4444);
+--danger: var(--color-red-500);
+--protein: var(--color-red-500);
+```
+
+```css
+/* 200-dark-and-effects.css:54 — override без v4 */
+--color-red-500: #f87171;
+```
+
+Канвасные роли-источники: `--v4-bad-text`, `--v4-val-bad` (строки 199–207
+`002-ui-v4-palette-roles.css`); тосты: `--v4-wgt-danger-text`,
+`--v4-wgt-danger-bg` (строки 254–262, 860–867).
