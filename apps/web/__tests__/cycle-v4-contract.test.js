@@ -211,8 +211,12 @@ describe('cycle v4 · on-screen words', () => {
   it('v4 cycle UI and legacy registerStep avoid 🌸', () => {
     expect(CYCLE_UI_SRC).not.toContain('🌸');
     expect(STEPS_SRC).toContain("title: 'Особый период'");
-    expect(STEPS_SRC).toContain("icon: ''");
-    expect(STEPS_SRC).not.toMatch(/registerStep\('cycle'[\s\S]*icon:\s*'🌸'/);
+    // Прежде отсутствие 🌸 сторожилось наличием пустого `icon: ''` — то есть
+    // литералом, а не правилом. Поле icon снято целиком как мёртвое (шапка его
+    // не рисует с 3 сентября), намерение проверки выполнено, буква нарушена.
+    // Сторожим само правило: эмодзи в регистрациях шагов нет вовсе.
+    expect(STEPS_SRC).not.toMatch(/registerStep\([^)]*\)[\s\S]{0,400}?icon:\s*'[^a-zA-Z']/);
+    expect(STEPS_SRC).not.toContain('🌸');
     expect(CYCLE_UI_SRC).toContain('Особый период');
     expect(CYCLE_UI_SRC).toMatch(/особые дни/i);
     expect(CYCLE_UI_SRC).toContain("'начало'");

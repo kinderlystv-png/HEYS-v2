@@ -1731,8 +1731,10 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-row--ss.ct-wb-ss-g3 {
-  /* v4-intentional */
-  border-left-color: var(--v4-ok-text);
+  /* Граница — не текст: заливочная роль тут и должна стоять. Восстановлено
+     3 сентября, правку внёс проход по заливочным ролям (`a752d6cf1`) —
+     критерий приёмки ловил `border-left-color:` вместе с `color:`. */
+  border-left-color: var(--v4-ok-fill); /* v4-intentional */
   background: linear-gradient(90deg, rgba(34, 197, 94, 0.08) 0%, #f8fafc 12px);
 }
 
