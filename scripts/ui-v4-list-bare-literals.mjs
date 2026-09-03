@@ -373,6 +373,145 @@ for (const v of [
 const star = (v) => (sandOnly.has(v.toLowerCase()) ? '*' : '');
 const exact = all.filter((c) => star(c)).length;
 
+// ── ведра: размечается значение, а не место ────────────────────────────────
+//
+//   node scripts/ui-v4-list-bare-literals.mjs --buckets
+//
+// Решение дизайнера 4 сентября: разметки «место за местом» не будет, потому что
+// она неверна по существу — 2294 тёплых места это три разных множества,
+// склеенных признаком «тёплый», и знак «герой» применим только к одному.
+// Ведро 1 чинится механически без дизайнера; ведро 2 решается зоной, а не
+// тоном; ведро 3 то же, но выглядит ролью и потому переживает обе описи.
+//
+// «Герой» в наборе ровно один — `--fab` с парой `--on-fab` (плавающая кнопка,
+// строка «вид кнопки» в home-widgets). Второе такое место, главная кнопка шага
+// приёма, снято тем же решением: два исключения по одному признаку — это уже
+// вторая система.
+const CANVAS_CSS =
+  'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/v4-canvas.css';
+
+// Янтарная лестница прежней системы: в песочном наборе таких тонов нет ни
+// одного, поэтому «намеренным тёплым тоном» их помечать нельзя — это
+// легализовало бы палитру, которую v4 не принимал.
+const AMBER_LADDER = [
+  '#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7', '#eab308', '#facc15',
+  '#fde047', '#d97706', '#b45309', '#92400e', '#78350f', '#713f12', '#451a03',
+  '#f97316', '#ea580c', '#c2410c', '#9a3412', '#7c2d12', '#431407', '#fdba74',
+  '#fed7aa', '#ffedd5', '#fb923c', '#ca8a04', '#a16207', '#854d0e',
+];
+
+if (process.argv.includes('--buckets')) {
+  const key = (v) => {
+    const c = toRgb(v);
+    return c ? c.join(',') : null;
+  };
+  const keyA = (v) => {
+    const c = toRgb(v);
+    return c ? c.join(',') + '/' + alphaOf(v).toFixed(3) : null;
+  };
+
+  // Таблица ролей: все четыре набора продуктовой палитры плюс канвас дизайнера.
+  const roleSrc =
+    paletteSrc + (fs.existsSync(CANVAS_CSS) ? fs.readFileSync(CANVAS_CSS, 'utf8') : '');
+  if (!fs.existsSync(CANVAS_CSS)) {
+    console.warn(`Внимание: канвас ролей не найден (${CANVAS_CSS}) — ведро 1 считано только по продуктовой палитре.`);
+  }
+  const roleExact = new Set();
+  const roleHue = new Set();
+  for (const m of roleSrc.matchAll(/--[\w-]+\s*:\s*([^;{}]+);/g)) {
+    const v = m[1].trim();
+    if (!/^(#[0-9a-fA-F]{3,8}|(rgba?|hsla?)\([^()]*\))$/.test(v)) continue;
+    const a = keyA(v);
+    const h = key(v);
+    if (a) roleExact.add(a);
+    if (h) roleHue.add(h);
+  }
+  const amber = new Set(AMBER_LADDER.map(key).filter(Boolean));
+
+  const places = [];
+  for (const f of files) {
+    for (const [fam, arr] of f.fam) {
+      for (const v of arr) places.push({ file: f.name, zones: f.zones, fam, v });
+    }
+  }
+
+  const B = { 1: [], 2: [], 3: [], 0: [] };
+  const alphaOnly = [];
+  for (const p of places) {
+    const a = keyA(p.v);
+    const h = key(p.v);
+    if (a && roleExact.has(a)) {
+      B[1].push(p);
+      continue;
+    }
+    if (h && amber.has(h)) {
+      B[2].push(p);
+      continue;
+    }
+    if (p.fam.startsWith('--')) {
+      B[3].push(p);
+      continue;
+    }
+    if (h && roleHue.has(h)) alphaOnly.push(p);
+    B[0].push(p);
+  }
+
+  const pct = (n) => ((n / places.length) * 100).toFixed(0) + ' %';
+  console.log(`Тёплых мест всего: ${places.length}`);
+  console.log(`  ведро 1 · значение в точности равно роли набора: ${B[1].length} (${pct(B[1].length)})`);
+  console.log(`  ведро 2 · янтарная лестница прежней системы:     ${B[2].length} (${pct(B[2].length)})`);
+  console.log(`  ведро 3 · своя переменная модуля с цветом:       ${B[3].length} (${pct(B[3].length)})`);
+  console.log(`  вне трёх вёдер:                                  ${B[0].length} (${pct(B[0].length)})`);
+  console.log(
+    `    из них тон роли при другой прозрачности: ${alphaOnly.length} — механически не заменяются, роль не даёт этой альфы`,
+  );
+
+  // Ведро 2 решается зоной, поэтому по нему нужен список зон, а не мест.
+  const z2 = new Map();
+  for (const p of B[2]) {
+    for (const z of p.zones.length ? p.zones : ['— вне зон вердиктов']) {
+      if (!z2.has(z)) z2.set(z, new Set());
+      z2.get(z).add(p.file);
+    }
+  }
+  console.log('');
+  console.log('Ведро 2 по зонам (зона — файлов, мест):');
+  const cnt2 = new Map();
+  for (const p of B[2]) {
+    for (const z of p.zones.length ? p.zones : ['— вне зон вердиктов']) {
+      cnt2.set(z, (cnt2.get(z) || 0) + 1);
+    }
+  }
+  for (const [z, fs_] of [...z2.entries()].sort((a, b) => cnt2.get(b[0]) - cnt2.get(a[0]))) {
+    console.log(`  ${z} — ${fs_.size} файлов, ${cnt2.get(z)} мест`);
+  }
+  console.log(
+    '  (файл, названный вердиктами нескольких зон, считается в каждой — сумма по зонам больше числа мест)',
+  );
+
+  // Большая часть ведра 2 лежит в файлах, которых не назвал ни один вердикт:
+  // там единица решения — файл, и «список зон» для него пуст по построению.
+  console.log('');
+  console.log('Ведро 2 по файлам (файл — мест, зоны):');
+  const f2 = new Map();
+  for (const p of B[2]) {
+    if (!f2.has(p.file)) f2.set(p.file, { n: 0, zones: p.zones });
+    f2.get(p.file).n++;
+  }
+  for (const [n, d] of [...f2.entries()].sort((a, b) => b[1].n - a[1].n)) {
+    console.log(`  ${String(d.n).padStart(4)}  ${n}${d.zones.length ? '  · ' + d.zones.join(', ') : ''}`);
+  }
+
+  console.log('');
+  console.log('Ведро 3 по переменным (переменная — мест):');
+  const v3 = new Map();
+  for (const p of B[3]) v3.set(p.fam, (v3.get(p.fam) || 0) + 1);
+  for (const [n, c] of [...v3.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20)) {
+    console.log(`  ${n} — ${c}`);
+  }
+  process.exit(0);
+}
+
 // ── документ ───────────────────────────────────────────────────────────────
 const byCount = (a, b) => size(b) - size(a) || a.name.localeCompare(b.name);
 const named = files.filter((f) => f.fam.size && f.zones.length).sort(byCount);
