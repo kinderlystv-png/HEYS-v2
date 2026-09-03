@@ -95,7 +95,7 @@
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -153,7 +153,7 @@
 }
 
 .heys-auth-logo .lp path {
-  fill: #7a8a5e;
+  fill: var(--v4-ok-fill, #7a8a5e);
   stroke: none;
 }
 
@@ -186,7 +186,7 @@
 .heys-auth-title,
 .heys-auth-brand {
   margin: 32px 0 4px;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   font-size: 17px;
   font-weight: 700;
   letter-spacing: 0;
@@ -277,7 +277,7 @@
 
 .heys-auth-pin-section.is-active .heys-auth-label,
 .heys-auth-pin-section:not(.is-muted) .heys-auth-label {
-  color: #a1471c;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 /* Строка «вид карточки и боксов кода» (двенадцатая сборка): поле телефона —
@@ -307,7 +307,7 @@
 .heys-auth-field.is-active {
   background: var(--v4-bg, #fffaf1);
   border-color: transparent;
-  box-shadow: inset 0 0 0 2px #c67139;
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
 }
 
 .heys-auth-field.is-active:has(.heys-auth-phone-input:placeholder-shown),
@@ -333,7 +333,7 @@
 
 .heys-auth-phone-input,
 .heys-auth-input {
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   font-family: inherit;
   font-variant-numeric: tabular-nums;
 }
@@ -380,7 +380,7 @@
   font-weight: 600 !important;
   letter-spacing: 0 !important;
   line-height: 1 !important;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   text-align: left;
 }
 
@@ -408,7 +408,7 @@
 
 .heys-auth-input:focus {
   background: var(--v4-bg, #fffaf1);
-  box-shadow: inset 0 0 0 2px #c67139;
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
 }
 
 .heys-auth-input[type="password"]:focus {
@@ -468,7 +468,7 @@
 .heys-auth-pin-input:focus,
 .heys-auth-pin-input.is-active:not(.is-complete) {
   background: var(--v4-bg, #fffaf1);
-  box-shadow: inset 0 0 0 2px #c67139;
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
 }
 
 .heys-auth-pin-input.is-filled,
@@ -487,7 +487,7 @@
   width: 9px;
   height: 9px;
   border-radius: 999px;
-  background: #7a8a5e;
+  background: var(--v4-ok-fill, #7a8a5e);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -500,8 +500,8 @@
 .heys-auth-pin-input.is-error,
 .heys-auth-pin-input.hlg-pin-error,
 .heys-auth-pin-box.is-error .heys-auth-pin-input {
-  background: #f3e0d2;
-  box-shadow: inset 0 0 0 2px #c67139;
+  background: var(--v4-sand-tint, #f3e0d2);
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
   animation: heys-auth-pin-error-shake 0.34s ease-out;
 }
 
@@ -511,7 +511,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   pointer-events: none;
 }
 
@@ -526,7 +526,7 @@
   border: 0;
   border-radius: 16px;
   background: transparent;
-  color: #a1471c;
+  color: var(--v4-warn-text, #a1471c);
   font-size: 11.5px;
   /* Строка «вид слота ошибки»: «высота фиксирована под одну строку 11,5 px/600».
      Стояло 500 — кегль совпадал, начертание нет. */
@@ -563,7 +563,7 @@
   width: 100%;
   /* Строка «вид слота ошибки»: заливки у слота нет — только текст. */
   background: transparent;
-  color: #a1471c;
+  color: var(--v4-warn-text, #a1471c);
   font-size: 11.5px;
   /* Та же строка «вид слота ошибки»: 11,5 px/600. */
   font-weight: 600;
@@ -622,7 +622,7 @@
   border-radius: 16px;
   background: var(--v4-surface, #f7efe2);
   box-shadow: none;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   cursor: pointer;
   font-family: inherit;
   font-size: 19px;
@@ -683,7 +683,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   border: 0;
   background: none;
   padding: 0;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   font: inherit;
   font-weight: 500;
@@ -698,8 +698,8 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   margin-top: 16px;
   padding: 13px 14px;
   border-radius: 16px;
-  background: #efe3cf;
-  color: #201e1d;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-ink, #201e1d);
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.45;
@@ -749,7 +749,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   z-index: 2;
   padding: 10px 18px 16px;
   padding-bottom: max(16px, calc(env(safe-area-inset-bottom, 0px) + 16px));
-  background: #efe3cf;
+  background: var(--v4-hero, #efe3cf);
 }
 
 .heys-auth-shell--intake .heys-auth-intake-dock .heys-auth-intake-note {
@@ -787,7 +787,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   font-size: 14px;
   font-weight: 700;
   line-height: 1.35;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .heys-auth-card--new-device .heys-auth-notice-body {
@@ -850,12 +850,12 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   margin-top: 16px;
   padding: 20px 18px;
   border-radius: 20px;
-  background: #efe3cf;
+  background: var(--v4-hero, #efe3cf);
   text-align: center;
 }
 
 .heys-auth-maintenance-block__title {
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   font-size: 14px;
   font-weight: 700;
   line-height: 1.35;
@@ -900,7 +900,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-btn--primary {
   margin-top: 22px;
-  background: #c67139;
+  background: var(--v4-act, #c67139);
   box-shadow: none;
   color: var(--v4-sand-ink-deep, #2b1608);
 }
@@ -917,7 +917,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 .heys-auth-btn--secondary,
 .heys-auth-btn--ghost {
   background: var(--v4-surface, #f7efe2);
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .heys-auth-btn:disabled {
@@ -953,8 +953,8 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   border: 0;
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
-  box-shadow: 0 6px 18px color-mix(in srgb, #201e1d 12%, transparent);
-  color: #5c6a45;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--v4-ink, #201e1d) 12%, transparent);
+  color: var(--v4-ok-text, #5c6a45);
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1;
@@ -970,7 +970,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #7a8a5e;
+  background: var(--v4-ok-fill, #7a8a5e);
   animation: heys-auth-status-pulse 0.9s ease-in-out infinite;
 }
 
@@ -1017,7 +1017,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   border: 0;
   border-radius: 26px;
   background: var(--v4-bg, #fffaf1);
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   text-align: center;
   box-shadow: none;
 }
@@ -1039,7 +1039,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-support-title {
   margin-bottom: 8px;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   font-size: 15px;
   font-weight: 700;
 }
@@ -1059,7 +1059,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   margin-top: 10px;
   border: 0;
   border-radius: 999px;
-  background: #c67139;
+  background: var(--v4-act, #c67139);
   color: var(--v4-sand-ink-deep, #2b1608);
   font-size: 13px;
   font-weight: 700;
@@ -1235,7 +1235,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   font-size: 15px;
   font-weight: 700;
   line-height: 1;
@@ -1286,7 +1286,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 .heys-login-theme__chip.is-active {
-  background: #c67139;
+  background: var(--v4-act, #c67139);
   color: var(--v4-sand-ink-deep, #2b1608);
 }
 
@@ -1306,14 +1306,14 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   border: 0;
   border-radius: 14px;
   background: var(--v4-surface, #f7efe2);
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   cursor: pointer;
   text-align: left;
 }
 
 .heys-login-theme__soft-card.is-active {
   background: var(--v4-surface, #f7efe2);
-  box-shadow: inset 0 0 0 2px #c67139;
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
 }
 
 .heys-login-theme__soft-swatch {
@@ -1546,7 +1546,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   margin-top: 16px;
   padding: 15px 17px;
   border-radius: 20px;
-  background: #efe3cf;
+  background: var(--v4-hero, #efe3cf);
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-size: 11.5px;
   font-weight: 500;
@@ -1562,7 +1562,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-card--pep .heys-auth-label {
   margin: 0 0 12px;
-  color: #c67139;
+  color: var(--v4-act, #c67139);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0;
@@ -1573,7 +1573,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-card--pep .heys-auth-pin-section.is-active .heys-auth-label,
 .heys-auth-card--pep .heys-auth-pin-section:not(.is-muted) .heys-auth-label {
-  color: #c67139;
+  color: var(--v4-act, #c67139);
 }
 
 .heys-auth-card--pep .heys-auth-pin-box {
@@ -1589,21 +1589,21 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 .heys-auth-card--pep .heys-auth-pin-input:focus,
 .heys-auth-card--pep .heys-auth-pin-input.is-active:not(.is-complete) {
   background: var(--v4-bg, #fffaf1);
-  box-shadow: inset 0 0 0 2px #c67139;
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
 }
 
 .heys-auth-card--pep .heys-auth-pin-box.is-filled::after,
 .heys-auth-card--pep .heys-auth-pin-box.is-complete::after {
   width: 8px;
   height: 8px;
-  background: #201e1d;
+  background: var(--v4-ink, #201e1d);
 }
 
 .heys-auth-card--pep .heys-auth-key--muted,
 .heys-auth-card--pep .heys-auth-key.heys-auth-key--delete,
 .heys-auth-card--pep .heys-auth-key.heys-auth-key--delete.is-available {
-  background: #efe3cf;
-  color: #c67139;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act, #c67139);
 }
 
 .heys-auth-card--pep .heys-auth-key.heys-auth-key--delete:disabled,
@@ -1626,7 +1626,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   height: 20px;
   flex-shrink: 0;
   margin: 1px 0 0;
-  accent-color: #c67139;
+  accent-color: var(--v4-act, #c67139);
 }
 
 .heys-auth-card--pep .heys-auth-primary {
@@ -1640,7 +1640,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   padding: 17px 22px;
   border: none;
   border-radius: 999px;
-  background: #c67139;
+  background: var(--v4-act, #c67139);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
@@ -1687,7 +1687,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   z-index: 2;
   padding: 12px 18px 20px;
   padding-bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 20px));
-  background: #efe3cf;
+  background: var(--v4-hero, #efe3cf);
 }
 
 .heys-auth-pep-dock > * {
@@ -1754,7 +1754,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
   border-radius: 26px 26px 0 0;
   background: var(--v4-sand-surface-soft, #fffaf1);
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
   box-shadow: 0 18px 50px rgba(40, 20, 0, 0.28);
   pointer-events: auto;
@@ -1786,7 +1786,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 /* Строка «вид шторки подписи»: надзаголовок «Подписание» 10/700 прописными
    с разрядкой .14em тоном --ac, через 9 — название документа 16/700. */
 .heys-consent-sign-sheet__kicker {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   font: 700 10px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1795,7 +1795,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 .heys-consent-sign-sheet__title {
   margin: 9px 0 0;
   font: 700 16px/1.35 Figtree, system-ui, sans-serif;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   text-align: left;
   text-wrap: pretty;
 }
@@ -1830,7 +1830,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   border: 0;
   padding: 0;
   background: none;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   font: 700 11.5px/1 Figtree, system-ui, sans-serif;
   cursor: pointer;
 }
@@ -1869,14 +1869,14 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 .heys-consent-sign-sheet--sign .heys-auth-pin-input:focus,
 .heys-consent-sign-sheet--sign .heys-auth-pin-input.is-active:not(.is-complete) {
   background: var(--v4-sand-surface-soft, #fffaf1);
-  box-shadow: inset 0 0 0 2px #c67139;
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
 }
 
 .heys-consent-sign-sheet--sign .heys-auth-pin-box.is-filled::after,
 .heys-consent-sign-sheet--sign .heys-auth-pin-box.is-complete::after {
   width: 9px;
   height: 9px;
-  background: #c67139;
+  background: var(--v4-act, #c67139);
 }
 
 .heys-consent-sign-sheet--sign .heys-auth-keypad {
@@ -1894,7 +1894,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-consent-sign-sheet--sign .heys-auth-key {
   background: var(--v4-surface, #f7efe2);
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   font-size: 21px;
   font-weight: 600;
 }
@@ -1940,7 +1940,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 .heys-consent-sign-sheet__done-title {
   margin-top: 12px;
   font: 700 16px/1.3 Figtree, system-ui, sans-serif;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   text-align: center;
 }
 
@@ -1970,14 +1970,14 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-consent-sign-sheet__doc-name {
   font: 600 12px/1.4 Figtree, system-ui, sans-serif;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .heys-consent-sign-sheet__doc-version {
   flex: none;
   font: 700 10.5px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   /* Строка «язык, выделение, часовой пояс»: версия документа не выделяется. */
   user-select: none;
 }
@@ -2007,7 +2007,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   border: 0;
   border-radius: 999px;
   padding: 14px 16px;
-  background: #c67139;
+  background: var(--v4-act, #c67139);
   color: #2b1608;
   font-family: inherit;
   font-size: 13px;
