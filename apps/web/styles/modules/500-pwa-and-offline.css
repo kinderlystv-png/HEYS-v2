@@ -527,7 +527,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--v4-ok-fill, #7a8a5e) 70%, black) 0%, var(--v4-ok-fill, #7a8a5e) 100%);
+  background: linear-gradient(135deg, #059669 0%, var(--color-emerald-500) 100%);
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
@@ -3313,7 +3313,7 @@
 }
 
 .mc-btn-next {
-  background: linear-gradient(135deg, var(--v4-act, #c67139) 0%, color-mix(in srgb, var(--v4-act, #c67139) 70%, black) 100%);
+  background: linear-gradient(135deg, var(--color-emerald-500) 0%, #059669 100%);
   color: var(--color-white);
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
@@ -3358,7 +3358,7 @@
 }
 
 .mc-progress-dot.active {
-  background: var(--v4-act, #c67139);
+  background: var(--color-emerald-500);
   cursor: default;
 }
 
@@ -3369,19 +3369,19 @@
 }
 
 .mc-progress-dot.completed {
-  background: var(--v4-ok-fill, #7a8a5e);
+  background: var(--color-emerald-400);
 }
 
 @media (hover: hover) {
   .mc-progress-dot.completed:hover {
-  background: var(--v4-ok-fill, #7a8a5e);
+  background: var(--color-emerald-500);
 }
 }
 
 .mc-progress-dot.current {
   width: 24px;
   border-radius: 4px;
-  background: linear-gradient(90deg, var(--v4-act, #c67139), color-mix(in srgb, var(--v4-act, #c67139) 70%, black));
+  background: linear-gradient(90deg, var(--color-emerald-500), #059669);
 }
 
 /* Content area */
@@ -3498,7 +3498,7 @@
 .mc-wheel-item.active {
   font-size: 32px;
   font-weight: 700;
-  color: var(--v4-act-text, #8a4a20);
+  color: var(--color-emerald-500);
 }
 
 .mc-wheel-btn {
@@ -3511,7 +3511,7 @@
   align-items: center;
   justify-content: center;
   background: rgba(16, 185, 129, 0.1);
-  color: var(--v4-act-text, #8a4a20);
+  color: var(--color-emerald-500);
   border: none;
   border-radius: 6px;
   font-size: 10px;
@@ -3854,7 +3854,7 @@
   height: 26px;
   border-radius: 50%;
   background: var(--v4-bg, #fff);
-  border: 3px solid var(--v4-ok-fill, #7a8a5e);
+  border: 3px solid var(--color-emerald-500, #10b981);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -3865,7 +3865,7 @@
   height: 26px;
   border-radius: 50%;
   background: var(--v4-bg, #fff);
-  border: 3px solid var(--v4-ok-fill, #7a8a5e);
+  border: 3px solid var(--color-emerald-500, #10b981);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -3942,7 +3942,7 @@
 @media (hover: hover) {
   .household-example:hover {
   background: rgba(16, 185, 129, 0.1);
-  color: var(--v4-ok-text, #5c6a45);
+  color: var(--color-emerald-600, #059669);
   box-shadow: none;
 }
 }
@@ -4638,7 +4638,7 @@
 
 .mc-sleep-comment-input:focus {
   outline: none;
-  border-color: var(--v4-act, #c67139);
+  border-color: var(--color-emerald-500);
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
@@ -4955,7 +4955,7 @@
 }
 
 .mc-dot--active {
-  background: linear-gradient(135deg, var(--v4-act, #c67139), color-mix(in srgb, var(--v4-act, #c67139) 70%, black));
+  background: linear-gradient(135deg, var(--color-emerald-500), #059669);
 }
 
 [data-theme$="dark"] .mc-dot {
@@ -5758,7 +5758,7 @@
 }
 
 .mc-btn--primary {
-  background: linear-gradient(135deg, var(--v4-act, #c67139) 0%, color-mix(in srgb, var(--v4-act, #c67139) 70%, black) 100%);
+  background: linear-gradient(135deg, var(--color-emerald-500) 0%, #059669 100%);
   color: var(--color-white);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
