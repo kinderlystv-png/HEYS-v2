@@ -19,6 +19,11 @@
 
   /* Base colors */
   --color-white: #ffffff;
+  /* Остаток легаси-ступеней без объявления в :root — читают 300-modals / 500-pwa */
+  --color-slate-300: #cbd5e1;
+  --color-slate-600: var(--v4-ink-4, #475569);
+  --color-slate-800: var(--v4-hero, #1e293b);
+  --color-slate-900: var(--v4-bg, #0f172a);
 
   --color-gray-400: #9ca3af;
   --color-gray-500: #6b7280;

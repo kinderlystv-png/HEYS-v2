@@ -136,37 +136,30 @@
   padding-right: 66px;
 }
 
-/* Общая высота 192: три ряда по 64. Края гаснут маской 26/74 %. */
+/* ROW: три строки, высота ряда ~64 px — канон home-widgets */
 .meal-time-hero .mc-wheel-picker--compact .mc-wheel-values {
-  height: 192px;
-  -webkit-mask-image: linear-gradient(transparent, #000 26%, #000 74%, transparent);
-  mask-image: linear-gradient(transparent, #000 26%, #000 74%, transparent);
+  height: 64px;
 }
 
 .meal-time-hero .mc-wheel-value {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 74px;
-  height: 64px;
+  min-width: 0;
+  width: 100%;
   font-variant-numeric: tabular-nums;
 }
 
 .meal-time-hero .mc-wheel-value--current {
-  min-height: 64px;
-  font-size: 40px;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: -0.03em;
+  font: 700 24px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: -0.02em;
   color: var(--v4-act-text, #8a4a20);
 }
 
 .meal-time-hero .mc-wheel-value--prev,
 .meal-time-hero .mc-wheel-value--next {
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 30%, transparent);
+  font: 600 12px/1.5 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.24);
   opacity: 1;
 }
 
@@ -202,7 +195,7 @@
 .meal-time-separator {
   font-size: 32px;
   font-weight: 600;
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary, #94a3b8); /* v4-intentional */
 }
 
 /* Night hour hint — отдельная grp-плашка под hero «Время», не внутри капсулы */
@@ -775,14 +768,14 @@
 
 /* Карточка оценки — новый layout с градиентом */
 .meal-rating-card {
-  border: 1px solid var(--color-slate-200);
+  border: 1px solid var(--v4-line, #e2e8f0); /* v4-intentional */
   border-radius: 12px;
   padding: 10px 12px 8px;
   transition: background 0.3s ease;
 }
 
 [data-theme$='dark'] .meal-rating-card {
-  border-color: var(--color-slate-700);
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18)); /* v4-intentional */
 }
 
 /* Главная строка: emoji | info | presets */
@@ -870,7 +863,7 @@
 .meal-preset-btn {
   width: 32px;
   height: 32px;
-  border: 1px solid var(--color-slate-200);
+  border: 1px solid var(--v4-line, #e2e8f0); /* v4-intentional */
   border-radius: 8px;
   background: white;
   font-size: 16px;
@@ -961,12 +954,12 @@
 
 .meal-comment-neutral {
   background: var(--v4-hero, #f8fafc);
-  border-color: var(--color-slate-200);
+  border-color: var(--v4-line, #e2e8f0); /* v4-intentional */
 }
 
 [data-theme$='dark'] .meal-comment-section {
   background: var(--v4-hero, #1e293b);
-  border-color: var(--color-slate-700);
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18)); /* v4-intentional */
 }
 
 [data-theme$='dark'] .meal-comment-negative {
@@ -1049,7 +1042,7 @@
   padding: 5px 10px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--color-slate-500);
+  color: var(--v4-ink-2, #64748b); /* v4-intentional */
   background: white;
   border: 1px solid #d1d5db;
   border-radius: 16px;
@@ -1109,7 +1102,7 @@
 }
 
 [data-theme$='dark'] .meal-comment-input::placeholder {
-  color: var(--color-slate-500);
+  color: var(--v4-ink-2, #64748b); /* v4-intentional */
 }
 
 /* Confetti (Meal mood step only) */
@@ -3293,13 +3286,13 @@ button.meal-quality-badge:active {
 .mpc-name-oneoff {
   font-size: 0.85em;
   font-weight: 500;
-  color: var(--color-slate-500, #64748b);
+  color: var(--v4-ink-2, #64748b); /* v4-intentional */
   font-style: italic;
   margin-left: 2px;
 }
 
 [data-theme$='dark'] .mpc-name-oneoff {
-  color: var(--color-slate-400, #94a3b8);
+  color: var(--v4-ink-secondary, #94a3b8); /* v4-intentional */
 }
 
 .aps-v4-search-state {
@@ -4218,21 +4211,16 @@ button.meal-quality-badge:active {
 }
 
 .meal-time-step--sheet .mc-wheel-picker--compact .mc-wheel-values {
-  height: 120px;
-}
-
-.meal-time-step--sheet .mc-wheel-value {
-  height: 40px;
+  height: 64px;
 }
 
 .meal-time-step--sheet .mc-wheel-value--current {
-  min-height: 40px;
-  font-size: 27px;
+  font: 700 24px/1 Figtree, system-ui, sans-serif;
 }
 
 .meal-time-step--sheet .mc-wheel-value--prev,
 .meal-time-step--sheet .mc-wheel-value--next {
-  font-size: 17px;
+  font: 600 12px/1.5 Figtree, system-ui, sans-serif;
 }
 
 /* Шесть чипов типа приёма рядом с переносом, а не сеткой в две колонки:
