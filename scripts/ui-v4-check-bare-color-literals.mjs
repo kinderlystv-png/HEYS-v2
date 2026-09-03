@@ -71,7 +71,7 @@ const BASELINE = {
   '000-base-and-gamification.css': 347,
   '100-metrics-and-graphs.css': 207,
   '300-modals-and-day.css': 163,
-  '400-water-and-hydration.css': 67,
+  '400-water-and-hydration.css': 0,
   '500-pwa-and-offline.css': 115,
   '600-steps-and-aps.css': 66,
   '610-aps-meal-flow.css': 73,
@@ -86,7 +86,7 @@ const BASELINE = {
   '750-strength-builder.css': 6,
   'critical.css': 34,
   'heys-boot-mark.css': 1,
-  'heys-components.css': 445,
+  'heys-components.css': 414,
 };
 
 /** Файлы, на которые ссылаются вердикты, — то есть сведённые. */
