@@ -50,7 +50,7 @@ const BASELINE = {
   '001-design-tokens.css': 22,
   '100-metrics-and-graphs.css': 139,
   '1000-messenger.css': 147,
-  '200-dark-and-effects.css': 121,
+  '200-dark-and-effects.css': 108,
   '300-modals-and-day.css': 87,
   '310-client-switch-overlay.css': 5,
   '400-water-and-hydration.css': 17,
