@@ -290,7 +290,7 @@
 }
 
 [data-theme$="dark"] .metric-popup-title {
-  color: var(--color-slate-100);
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .metric-popup-sparkline {
@@ -329,7 +329,7 @@
 }
 
 [data-theme$="dark"] .metric-popup-extra b {
-  color: var(--color-slate-100);
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .metric-popup-streak {
@@ -352,7 +352,7 @@
 @media (hover: hover) {
   [data-theme$="dark"] .metric-popup-close:hover {
   background: rgba(255, 255, 255, 0.2);
-  color: var(--color-slate-100);
+  color: var(--v4-ink, #f2ede6);
 }
 }
 
