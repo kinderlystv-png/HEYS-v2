@@ -596,6 +596,35 @@ async function openCase(browser, item, snapshot) {
         { timeout: 45_000 },
       );
     }
+    if (item.kind === 'demo-checkin-skip-reason') {
+      await page.waitForFunction(
+        () =>
+          !!window.HEYS?.StepModal?.show
+          && !!window.HEYS?.StepModal?.registry?.morning_activation_skip_reason
+          && !!window.HEYS?.currentClientId,
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const dateKey = window.HEYS.StepModal.utils?.getTodayKey?.()
+          || new Date().toISOString().slice(0, 10);
+        window.HEYS.StepModal.show({
+          steps: ['morning_activation_skip_reason'],
+          title: 'Зарядка',
+          showProgress: false,
+          showStreak: false,
+          showGreeting: false,
+          showTip: false,
+          allowSwipe: false,
+          context: { dateKey },
+        });
+      }, item.themeId || null);
+      await page.waitForSelector(
+        '[data-heys-step-modal][data-heys-step-id="morning_activation_skip_reason"]',
+        { timeout: 45_000 },
+      );
+    }
     // Чек-ин: продукт уже умеет переоткрывать его целиком —
     // `HEYS.debug.replayCheckin()` собирает план и показывает StepModal ровно
     // так, как его видит человек утром. Свой план тут не строим: он разошёлся бы

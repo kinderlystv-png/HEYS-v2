@@ -131,3 +131,56 @@ describe('резервный вопрос после еды', () => {
   });
 
 });
+
+// Лист «Почему сегодня без зарядки?» против кадра «Рутина · причина пропуска» и
+// строки «вид · причина пропуска». До 3 сентября экран жил на прежней системе:
+// инлайновые #fff и #0f172a, обводка rgba(148,163,184,.45), радиус 12, кегли
+// 13/12/14 и обращение на «ты» — поэтому проверка сторожит и отсутствие этого.
+describe('причина пропуска', () => {
+  const SKIP_FRAME = CANVAS.slice(
+    CANVAS.indexOf('data-screen-label="Рутина · причина пропуска"'),
+  );
+
+  it('заголовок и подпись взяты у кадра, а не у прежней системы', () => {
+    expect(SKIP_FRAME).toContain('Почему сегодня без зарядки?');
+    expect(SKIP_FRAME).toContain('Ответ видите только вы — он нужен для картины дня.');
+    expect(STEPS).toContain("'Почему сегодня без зарядки?'");
+    expect(STEPS).toContain("'Ответ видите только вы — он нужен для картины дня.'");
+    // Прежняя подпись говорила человеку «ты», хотя лист обращается на «вы».
+    expect(STEPS).not.toContain('это только для твоей картины дня');
+    expect(rule('.ma-skip-reason-title')).toContain('font-size: 16px');
+    expect(rule('.ma-skip-reason-title')).toContain('line-height: 1.3');
+    expect(rule('.ma-skip-reason-sub')).toContain('font-size: 11.5px');
+    expect(rule('.ma-skip-reason-sub')).toContain('margin-top: 4px');
+  });
+
+  it('пять строк-ответов через 12 зазором 7, заливкой --c1 и без обводки', () => {
+    expect(SKIP_FRAME).toContain('gap:7px;margin-top:12px');
+    const options = rule('.ma-skip-reason-options');
+    expect(options).toContain('gap: 7px');
+    expect(options).toContain('margin-top: 12px');
+    const option = rule('.ma-skip-reason-option');
+    expect(option).toContain('min-height: 44px');
+    expect(option).toContain('border-radius: 14px');
+    expect(option).toContain('padding: 12px 14px');
+    expect(option).toContain('font-size: 12.5px');
+    expect(option).toContain('font-weight: 600');
+    // Строка контракта называет только заливку: «обводки нет».
+    expect(option).toContain('border: none');
+    expect(option).toMatch(/background: var\(--v4-c1\b/);
+  });
+
+  it('литералов прежней системы на этом листе не осталось', () => {
+    const from = STEPS.indexOf('function MorningActivationSkipReasonStepComponent');
+    const to = STEPS.indexOf("registerStep('morningRoutine'");
+    const body = from >= 0 && to > from ? STEPS.slice(from, to) : '';
+    expect(body.length).toBeGreaterThan(0);
+    expect(body).not.toMatch(/#0f172a|#64748b|148,163,184/);
+    expect(body).not.toContain('borderRadius');
+    // Наведение красилось синим прежней палитры, которой в наборах v4 нет.
+    // Сторожим только своё правило: тот же литерал остался обводкой фокуса
+    // в чужом месте этого файла и к листу причины отношения не имеет.
+    const hover = CSS.slice(CSS.indexOf('.ma-skip-reason-option:hover'));
+    expect(hover.slice(0, hover.indexOf('}'))).toMatch(/background: var\(--v4-chip[,)]/);
+  });
+});

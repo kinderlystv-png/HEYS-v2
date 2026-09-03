@@ -1903,6 +1903,52 @@
   color: var(--v4-sand-ok-text) /* v4-intentional */;
 }
 
+/* Кадр «Рутина · причина пропуска» и строка «вид · причина пропуска»: тот же
+   лист, что у резервного вопроса. Прежде экран жил на прежней системе —
+   инлайновые #fff, #0f172a, обводка rgba(148,163,184,.45) и радиус 12. */
+.ma-skip-reason-stack {
+  display: block;
+}
+
+/* Элемент 15 кадра: сами строки-ответы, «через 12, зазор 7». */
+.ma-skip-reason-options {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.ma-skip-reason-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--v4-ink, #201e1d);
+}
+
+.ma-skip-reason-sub {
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--v4-ink-data) /* v4-intentional */;
+  margin-top: 4px;
+  text-wrap: pretty;
+}
+
+/* Обводки нет — строка контракта называет только заливку --c1. */
+.ma-skip-reason-option {
+  min-height: 44px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 14px;
+  background: var(--v4-c1, #f7efe2);
+  color: var(--v4-ink, #201e1d);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
 /* Строка счёта под легендой — добавление шторки. */
 .ma-habit-cal-tally {
   font-size: 10.5px;
@@ -2347,9 +2393,8 @@
 
 @media (hover: hover) {
   .ma-skip-reason-option:hover {
-  border-color: rgba(59, 130, 246, 0.45) !important;
-  background: rgba(59, 130, 246, 0.06) !important;
-}
+    background: var(--v4-chip, #f0e6d6);
+  }
 }
 
 [data-theme$="dark"] .ma-skip-notice-card {

@@ -5675,18 +5675,6 @@
   function MorningActivationSkipReasonStepComponent({ context }) {
     const dateKey = context?.dateKey || getTodayKey();
     const pickedRef = useRef(false);
-    const btnBase = {
-      width: '100%',
-      textAlign: 'left',
-      padding: '12px 14px',
-      borderRadius: '12px',
-      border: '1px solid rgba(148,163,184,0.45)',
-      background: '#fff',
-      color: '#0f172a',
-      fontSize: '14px',
-      fontWeight: '600',
-      cursor: 'pointer'
-    };
     const pick = (id) => {
       if (pickedRef.current) return;
       pickedRef.current = true;
@@ -5726,23 +5714,23 @@
         }
       }, 250);
     };
-    return React.createElement('div', {
-      className: 'ma-skip-reason-stack',
-      style: { display: 'flex', flexDirection: 'column', gap: '10px', padding: '4px 0 8px' }
-    },
-    React.createElement('div', {
-      style: { fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '2px' }
-    }, 'Почему сегодня без зарядки?'),
-    React.createElement('div', {
-      style: { fontSize: '12px', color: '#64748b', lineHeight: '1.45', marginBottom: '4px' }
-    }, 'Выбери вариант — это только для твоей картины дня.'),
-    MORNING_ACTIVATION_SKIP_REASONS.map((opt) => React.createElement('button', {
-      key: opt.id,
-      type: 'button',
-      className: 'ma-skip-reason-option',
-      style: btnBase,
-      onClick: () => pick(opt.id)
-    }, opt.label))
+    // Кадр «Рутина · причина пропуска»: заголовок 16/700, под ним через 4
+    // подпись, пять строк-ответов через 12 зазором 7. Прежде экран был на
+    // прежней системе — инлайновые тона и обводка, кегль 13/12/14 — и на «ты»,
+    // хотя лист говорит человеку «вы».
+    return React.createElement('div', { className: 'ma-skip-reason-stack' },
+      React.createElement('div', { className: 'ma-skip-reason-title' },
+        'Почему сегодня без зарядки?'),
+      React.createElement('div', { className: 'ma-skip-reason-sub' },
+        'Ответ видите только вы — он нужен для картины дня.'),
+      React.createElement('div', { className: 'ma-skip-reason-options' },
+        MORNING_ACTIVATION_SKIP_REASONS.map((opt) => React.createElement('button', {
+          key: opt.id,
+          type: 'button',
+          className: 'ma-skip-reason-option',
+          onClick: () => pick(opt.id)
+        }, opt.label))
+      )
     );
   }
 

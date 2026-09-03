@@ -162,6 +162,18 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     rootSelector: '[data-heys-step-modal][data-heys-step-id="morning_activation_followup"]',
     viewport: { width: 375, height: 812 },
   },
+  // Лист причины пропуска: до 3 сентября жил на прежней системе, стенда не имел.
+  {
+    id: 'checkin-skip-reason-sand',
+    zone: 'checkin-morning',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-checkin-skip-reason',
+    themeId: 'sand',
+    stubGamificationMerge: true,
+    rootSelector: '[data-heys-step-modal][data-heys-step-id="morning_activation_skip_reason"]',
+    viewport: { width: 375, height: 812 },
+  },
   // Карточка продукта: зона видна при каждом добавлении еды, стенда не было.
   {
     id: 'product-edit-basic-sand',
