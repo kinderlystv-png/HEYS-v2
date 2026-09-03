@@ -969,7 +969,7 @@
 }
 
 .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-progress {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
 }
 
 /* === 05a. TDEE POPUP (расшифровка затрат) === */
@@ -1033,7 +1033,7 @@
 }
 
 .tdee-row-empty {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   color: #92400e;
 }
 
@@ -1120,7 +1120,7 @@
 }
 
 .sparkline-popup-header .popup-pct.warn {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   color: #d97706;
 }
 
@@ -1177,7 +1177,7 @@
 }
 
 .sparkline-popup-tag.warn {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   color: #d97706;
 }
 
@@ -1862,7 +1862,7 @@
 }
 
 .sparkline-slider-tooltip-ratio.ratio-warn {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   color: #d97706;
 }
 
@@ -1911,7 +1911,7 @@
 }
 
 .sparkline-slider-tooltip-tag.warn {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   color: #d97706;
 }
 
@@ -2541,7 +2541,7 @@
   font-size: 11px;
   font-weight: 600;
   color: #f59e0b;
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   padding: 1px 5px;
   border-radius: 6px;
   animation: streakPulse 2s ease-in-out infinite;
@@ -5084,7 +5084,7 @@
 .goal-marker.over {
   right: auto;
   transform: translateX(-50%);
-  background: #1f2937;
+  background: var(--v4-sand-ink-slate, #1f2937);
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -5221,7 +5221,7 @@
 }
 
 .context-badge-circadian.high-urgency {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   color: #92400e;
 }
 
@@ -7339,7 +7339,7 @@
 }
 
 .training-zone-header.zone-color-3 {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   color: #d97706;
 }
 
