@@ -3624,7 +3624,7 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--color-slate-500);
-  background: var(--color-slate-100);
+  background: var(--v4-chip, #efe3cf);
   border: 2px solid transparent;
   border-radius: 12px;
   cursor: pointer;
@@ -3695,7 +3695,7 @@
   height: 32px;
   border: none;
   border-radius: 8px;
-  background: var(--color-slate-100);
+  background: var(--v4-chip, #efe3cf);
   color: var(--color-slate-500);
   font-size: 20px;
   font-weight: 600;
@@ -4400,7 +4400,7 @@
   height: 32px;
   border-radius: 50%;
   border: none;
-  background: var(--color-slate-100);
+  background: var(--v4-chip, #efe3cf);
   color: var(--color-slate-500);
   font-size: 14px;
   cursor: pointer;
@@ -4440,7 +4440,7 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--color-slate-500);
-  background: var(--color-slate-100);
+  background: var(--v4-chip, #efe3cf);
   border: 2px solid transparent;
   border-radius: 10px;
   cursor: pointer;
@@ -4666,7 +4666,7 @@
 [data-theme$="dark"] .mc-sleep-comment-input {
   background: var(--v4-bg, #0f172a);
   border-color: var(--color-slate-700);
-  color: var(--color-slate-100);
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .mc-sleep-comment-input::placeholder {
@@ -4679,7 +4679,7 @@
   align-items: center;
   gap: 4px;
   padding: 10px 12px;
-  background: var(--color-slate-100);
+  background: var(--v4-chip, #efe3cf);
   border: 2px solid transparent;
   border-radius: 12px;
   cursor: pointer;
@@ -4727,7 +4727,7 @@
 }
 
 [data-theme$="dark"] .mc-title {
-  color: var(--color-slate-100);
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .mc-btn-back {
@@ -4744,7 +4744,7 @@
 
 [data-theme$="dark"] .mc-weight-value,
 [data-theme$="dark"] .mc-wheel-item {
-  color: var(--color-slate-100);
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .mc-weight-unit,
@@ -4914,7 +4914,7 @@
 }
 
 [data-theme$="dark"] .mc-greeting {
-  color: var(--color-slate-100);
+  color: var(--v4-ink, #f2ede6);
 }
 
 /* Streak badge */
@@ -4999,7 +4999,7 @@
 }
 
 [data-theme$="dark"] .mc-step-title {
-  color: var(--color-slate-100);
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .mc-step-hint {
@@ -5300,7 +5300,7 @@
    Зоны со своим переопределением (чек-ин, холодовая) остаются при своём — их
    правило стоит ниже и выигрывает порядком. */
 [data-theme$="dark"] .mc-wheel-value:not(.mc-wheel-value--current) {
-  color: var(--color-slate-100);
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .mc-wheel-value--far {
@@ -5772,7 +5772,7 @@
 }
 
 .mc-btn--secondary {
-  background: var(--color-slate-100);
+  background: var(--v4-chip, #efe3cf);
   color: var(--color-slate-500);
 }
 
@@ -6063,7 +6063,7 @@
 }
 
 [data-theme$="dark"] .wn-header-title {
-  color: var(--color-slate-100);
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .wn-close {
@@ -6767,7 +6767,7 @@
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
   border-color: rgba(99, 102, 241, 0.3);
 }
-[data-theme$="dark"] .ca-banner__title { color: var(--color-slate-100); }
+[data-theme$="dark"] .ca-banner__title { color: var(--v4-ink, #f2ede6); }
 [data-theme$="dark"] .ca-banner__summary { color: var(--color-slate-300); }
 [data-theme$="dark"] .ca-banner__dismiss {
   background: rgba(255, 255, 255, 0.1);
