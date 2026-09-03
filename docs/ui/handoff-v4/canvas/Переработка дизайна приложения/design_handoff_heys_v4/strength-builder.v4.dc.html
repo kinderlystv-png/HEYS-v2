@@ -84,6 +84,7 @@
       <h1 style="font:800 22px/1.2 Figtree,sans-serif;color:#201e1d;letter-spacing:-.01em;margin:0;">Конструктор силовой</h1>
       <span style="font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:7px 11px;border-radius:999px;background:#b4442a;color:#fff;">ЯДРО · ПЕРВЫЙ ЗАХОД</span>
       <div data-ctrbar style="font:700 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);"></div>
+    
       <div data-protbar style="font:700 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);"></div>
       <div data-canonbar style="font:700 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);"></div>
       <div onClick="{{ toggleCanon }}" style="align-self:flex-start;cursor:pointer;user-select:none;font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;padding:7px 11px;border-radius:999px;background:rgba(0,0,0,.06);color:rgba(0,0,0,.56);" style-hover="background:rgba(0,0,0,.11);color:rgba(0,0,0,.75);">Канон рядом · показать или скрыть</div>
@@ -100,7 +101,7 @@
   <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
     <div>
       <div class="lab"><span class="oid">А1</span><b>Конструктор · тренировка идёт</b><span>список и раскрытая карточка упражнения</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="А1" data-demo="protocol" data-screen-label="Конструктор · тренировка идёт · снято" data-vid="вид · шапка сессии">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="А1" data-demo="protocol" data-screen-label="Конструктор · тренировка идёт · снято" data-vid="вид · шапка сессии" data-canonref="иначе · вид · шапка сессии">
         <div class="top" style="align-items:flex-start;">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 14px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding:0 10px;"><span class="ttl">Силовая · грудь, спина, плечи</span><span class="k n">пн, 8 авг · начата в 18:40</span></span>
@@ -173,7 +174,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">А1б</span><b>Тот же экран · спокойнее — В ПРОД</b><span>предложение 1 сентября · тот же функционал, шесть правок против шума</span></div>
-<div class="ph" data-oid="А1б" data-demo="stop" data-screen-label="Конструктор · тренировка идёт · спокойнее" data-canon="иначе · вид · спокойный список" data-vid="вид · спокойный список">
+<div class="ph" data-oid="А1б" data-demo="stop" data-screen-label="Конструктор · тренировка идёт · спокойнее" data-canonref="иначе · вид · спокойный список" data-vid="вид · спокойный список">
         <div class="top" style="align-items:flex-start;">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 14px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding:0 10px;"><span class="ttl">Силовая · грудь, спина, плечи</span><span class="k n">пн, 8 авг · начата в 18:40</span></span>
@@ -277,7 +278,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">А3</span><b>Конструктор · разминка и дроп-сет</b><span>что идёт в объём, а что нет</span></div>
-      <div class="ph" data-oid="А3" data-demo="stop" data-screen-label="Конструктор · разминка и дроп-сет" data-canon="иначе · вид · разминка и дроп-сет" data-vid="вид · разминка и дроп-сет">
+      <div class="ph" data-oid="А3" data-demo="stop" data-screen-label="Конструктор · разминка и дроп-сет" data-canonref="иначе · вид · разминка и дроп-сет" data-vid="вид · разминка и дроп-сет">
         <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding:0 10px;"><span class="ttl">Приседания</span>
@@ -316,30 +317,50 @@
   <div class="sect"><span class="lt">Б</span><span class="tt">Вход, каталог, итоги</span><span class="st">начало сессии и её конец</span></div>
   <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
     <div>
-      <div class="lab"><span class="oid">Б1</span><b>Конструктор · пусто</b><span>плана нет — главное «собрать свою»</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Б1" data-demo="stop" data-screen-label="Конструктор · пусто" data-vid="вид · пустая тренировка">
-        <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Силовая</span><span class="k">пусто · 0 подходов</span></span></div>
+      <div class="lab"><span class="oid">Б1</span><b>Конструктор · пусто · плана нет</b><span>главное — «собрать свою»</span></div>
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Б1" data-demo="stop" data-screen-label="Конструктор · пусто · плана нет" data-vid="вид · пустая тренировка" data-canonref="иначе · вид · пустая тренировка">
+        <div class="top"><span style="flex:none;width:44px;height:44px;margin:-10px 2px -10px -10px;display:flex;align-items:center;justify-content:center;color:rgba(var(--ink),.45);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Силовая</span><span class="k">пусто · 0 подходов</span></span></div>
         <div class="sc">
           <div class="grp" style="margin-top:12px;">
             <div style="font:700 15px/1.32 Figtree,sans-serif;color:var(--tx);">Пустая тренировка</div>
             <div class="p">Добавляйте упражнения по ходу — план не обязан быть готов заранее.</div>
           </div>
+          <div class="btn" style="margin-top:10px;">Собрать свою</div>
+          <div class="cd" style="margin-top:10px;">
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Повторить 5 августа</span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">7 упр.</span></div>
+            
+          </div>
+          <div class="sm">Плана нет — главной становится «Собрать свою». Повтор стоит строкой, а не кнопкой: это способ начать, а не решение. Строки «Из шаблона» нет: у шаблонов в продукте нет ни хранения, ни применения, и кнопка вела бы в пустоту.</div>
+        </div>
+      </div>
+      <div data-canon data-nomirror style="display:none;flex:none;width:375px;"><div style="display:flex;align-items:baseline;gap:7px;margin-bottom:8px;"><span style="font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.09em;text-transform:uppercase;padding:4px 7px;border-radius:6px;background:rgba(var(--ink),.07);color:rgba(var(--ink),.56);">канон</span><span style="font:500 10.5px/1.35 Figtree,sans-serif;color:rgba(var(--ink),.56);">Пустая тренировка</span></div><img src="canon/02.png" alt="" loading="lazy" style="display:block;width:375px;height:auto;min-height:620px;background:var(--c1);border-radius:20px;box-shadow:0 2px 10px rgba(0,0,0,.10);"></div>
+      
+      </div>
+      
+    </div>
+    <div>
+      <div class="lab"><span class="oid">Б1</span><b>Конструктор · пусто · план назначен</b><span>главная — кнопка плана</span></div>
+      <div class="ph" data-oid="Б1" data-demo="stop" data-screen-label="Конструктор · пусто · план назначен" data-vid="вид · пустая тренировка">
+        <div class="top"><span style="flex:none;width:44px;height:44px;margin:-10px 2px -10px -10px;display:flex;align-items:center;justify-content:center;color:rgba(var(--ink),.45);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Силовая</span><span class="k">план на день · 0 подходов</span></span></div>
+        <div class="sc">
+          <div class="grp" style="margin-top:12px;">
+            <div style="font:700 15px/1.32 Figtree,sans-serif;color:var(--tx);">План на сегодня готов</div>
+            <div class="p">Можно начать по плану куратора или собрать свою — план не обязателен.</div>
+          </div>
           <div class="btn" style="margin-top:10px;">Начать по плану · День B</div>
           <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56);text-align:center;margin-top:6px;">7 упражнений · назначил Артём</div>
           <div class="btn2c" style="margin-top:10px;">Собрать свою</div>
           <div class="cd" style="margin-top:10px;">
-            <div class="row"><span style="color:var(--tx);">Повторить 5 августа</span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">7 упр.</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Из шаблона</span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">4 шаблона</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Повторить 5 августа</span><span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">7 упр.</span></div>
+            
           </div>
-          <div class="sm">Плана нет — главной становится «Собрать свою». Повтор и шаблон стоят строками, а не кнопками: это способы начать, а не решения.</div>
+          <div class="sm">План назначен — главной становится кнопка плана, «Собрать свою» уходит вторичной. Повтор стоит строкой. Состав плана раскрывается внутри карточки только для чтения.</div>
         </div>
       </div>
-      <div data-canon data-nomirror style="display:none;flex:none;width:375px;"><div style="display:flex;align-items:baseline;gap:7px;margin-bottom:8px;"><span style="font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.09em;text-transform:uppercase;padding:4px 7px;border-radius:6px;background:rgba(var(--ink),.07);color:rgba(var(--ink),.56);">канон</span><span style="font:500 10.5px/1.35 Figtree,sans-serif;color:rgba(var(--ink),.56);">Пустая тренировка</span></div><img src="canon/02.png" alt="" loading="lazy" style="display:block;width:375px;height:auto;min-height:620px;background:var(--c1);border-radius:20px;box-shadow:0 2px 10px rgba(0,0,0,.10);"></div>
-      </div>
     </div>
-    <div>
+      <div>
       <div class="lab"><span class="oid">Б2</span><b>Конструктор · каталог</b><span>поиск, фильтр по мышцам, создание</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Б2" data-demo="stop" data-screen-label="Конструктор · каталог" data-vid="вид · каталог упражнений">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Б2" data-demo="stop" data-screen-label="Конструктор · каталог" data-vid="вид · каталог упражнений" data-canonref="как в каноне">
         <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 14px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">‹</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding-left:10px;"><span class="ttl">Каталог упражнений</span><span class="k">Спина · 4 упражнения</span></span>
@@ -369,7 +390,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Б3</span><b>Конструктор · итоги</b><span>что было и что стало рекордом</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Б3" data-demo="stop" data-screen-label="Конструктор · итоги" data-vid="вид · итоги сессии">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Б3" data-demo="stop" data-screen-label="Конструктор · итоги" data-vid="вид · итоги сессии" data-canonref="иначе · вид · итоги сессии">
         <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding-left:10px;"><span class="ttl">Тренировка завершена</span><span class="k">Силовая · грудь, спина, плечи · 8 августа</span></span>
@@ -461,7 +482,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">В2</span><b>Связка · старая, без раундов</b><span>подходов неравно — плоские списки</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="В2" data-demo="stop" data-screen-label="Связка · старая, без раундов">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="В2" data-demo="stop" data-screen-label="Связка · старая, без раундов" data-vid="вид · старая связка" data-canonref="иначе · вид · старая связка">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Связка · 12 июля</span><span class="k">4 и 3 подхода</span></span><span class="badge" style="color:rgba(var(--ink),.62);">история</span></div>
         <div class="sc">
           <div class="grp" style="margin-top:12px;">
@@ -525,7 +546,7 @@
   <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
     <div>
       <div class="lab"><span class="oid">Г1</span><b>Программа · цикл</b><span>что назначено и где я в нём</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Г1" data-demo="stop" data-screen-label="Программа · цикл" data-canon="как в каноне" data-vid="вид · экран цикла">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Г1" data-demo="stop" data-screen-label="Программа · цикл" data-canonref="как в каноне" data-vid="вид · экран цикла">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Набор массы · 8 недель</span><span class="k">назначил Артём · с 4 августа</span></span><span class="badge">неделя 2</span></div>
         <div class="sc">
           <div style="display:flex;gap:8px;margin-top:12px;"><span style="flex:1;display:flex;flex-direction:column;gap:5px;background:var(--c1);border-radius:14px;padding:10px 11px;"><span style="font:600 9.5px/1 Figtree,sans-serif;letter-spacing:.11em;text-transform:uppercase;color:rgba(var(--ink),.56);">Выполнено</span><span class="n" style="font:800 17px/1 Figtree,sans-serif;color:var(--tx);">4 / 12</span></span><span style="flex:1;display:flex;flex-direction:column;gap:5px;background:var(--c1);border-radius:14px;padding:10px 11px;"><span style="font:600 9.5px/1 Figtree,sans-serif;letter-spacing:.11em;text-transform:uppercase;color:rgba(var(--ink),.56);">Тоннаж</span><span class="n" style="font:800 17px/1 Figtree,sans-serif;color:var(--tx);">26 / 82 т</span></span><span style="flex:1;display:flex;flex-direction:column;gap:5px;background:var(--tint);box-shadow:inset 0 0 0 1.5px var(--acs);border-radius:14px;padding:10px 11px;"><span style="font:600 9.5px/1 Figtree,sans-serif;letter-spacing:.11em;text-transform:uppercase;color:rgba(var(--ink),.56);">Рекорды</span><span class="n" style="font:800 17px/1 Figtree,sans-serif;color:var(--ac);">2</span></span></div>
@@ -570,7 +591,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Г2</span><b>Программа · назначено против сделано</b><span>отчёт цикла, честный про пропуски</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Г2" data-demo="stop" data-screen-label="Программа · назначено против сделано" data-canon="как в каноне" data-vid="вид · отчёт цикла">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Г2" data-demo="stop" data-screen-label="Программа · назначено против сделано" data-canonref="как в каноне" data-vid="вид · отчёт цикла">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Отчёт по циклу</span><span class="k">недели 1–2 · 6 назначено</span></span></div>
         <div class="sc">
           <div class="grp" style="margin-top:12px;background:var(--gr-bg);">
@@ -612,7 +633,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Г3</span><b>Перенос · след в обе стороны</b><span>клиент переносит сам, день ещё не прошёл</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Г3" data-demo="stop" data-screen-label="Перенос · след в обе стороны" data-vid="вид · след переноса">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Г3" data-demo="stop" data-screen-label="Перенос · след в обе стороны" data-vid="вид · след переноса" data-canonref="иначе · вид · кадры правки куратора">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">План на сегодня</span><span class="k">пн, 10 авг</span></span></div>
         <div class="sc">
           <div class="grp" style="margin-top:12px;">
@@ -650,7 +671,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Г4</span><b>Правка веса в сессии</b><span>метка авторства, без диалога версий</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Г4" data-demo="stop" data-screen-label="Правка веса в сессии" data-canon="иначе · вид · метка авторства" data-vid="вид · метка авторства">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Г4" data-demo="stop" data-screen-label="Правка веса в сессии" data-canonref="иначе · вид · метка авторства" data-vid="вид · метка авторства">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Жим гантелей сидя</span><span class="k">подход 3 из 4</span></span></div>
         <div class="sc">
           <div class="grp" style="margin-top:12px;">
@@ -672,7 +693,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Г5</span><b>Программа пройдена</b><span>итог четырёх недель: что выросло</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Г5" data-demo="stop" data-screen-label="Программа пройдена" data-vid="вид · итог программы">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Г5" data-demo="stop" data-screen-label="Программа пройдена" data-vid="вид · итог программы" data-canonref="иначе · вид · итоги сессии">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Программа пройдена</span><span class="k n">8 июля — 5 августа</span></span><span class="badge" style="background:var(--gr-bg);color:var(--gr);">цикл закрыт</span></div>
         <div class="sc">
           <div class="grp" style="margin-top:12px;background:var(--gr-bg);">
@@ -698,7 +719,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Г6</span><b>Отчёт за период</b><span>что накопилось за две недели</span></div>
-      <div class="ph" data-oid="Г6" data-demo="stop" data-screen-label="Программа · отчёт за период" data-vid="вид · отчёт за период" data-canon="иначе · вид · отчёт за период">
+      <div class="ph" data-oid="Г6" data-demo="stop" data-screen-label="Программа · отчёт за период" data-vid="вид · отчёт за период" data-canonref="иначе · вид · отчёт за период">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Отчёт за период</span><span class="k">недели 1–2 · 6 назначено</span></span></div>
         <div class="sc">
 <div class="cd" style="margin-top:12px;">
@@ -731,7 +752,7 @@
   <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
     <div>
       <div class="lab"><span class="oid">Д1</span><b>История упражнения</b><span>рекорд, прошлые подходы, оценка максимума</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Д1" data-demo="stop" data-screen-label="История упражнения" data-canon="иначе · вид · история упражнения" data-vid="вид · история упражнения">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Д1" data-demo="stop" data-screen-label="История упражнения" data-canonref="иначе · вид · история упражнения" data-vid="вид · история упражнения">
         <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 14px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>‹</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding-left:10px;"><span class="ttl">Жим лёжа</span><span class="k">Грудь · трицепс · 14 тренировок</span></span>
@@ -769,7 +790,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Д2</span><b>Правка легла не полностью</b><span>молчаливого «не применилось» не бывает</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Д2" data-demo="stop" data-screen-label="Правка легла не полностью" data-vid="вид · что не легло">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Д2" data-demo="stop" data-screen-label="Правка легла не полностью" data-vid="вид · что не легло" data-canonref="иначе · вид · кадры правки куратора">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Верх тела B · завершена</span><span class="k n">18 подходов · 4 120 кг · 52 мин</span></span></div>
         <div class="sc">
           <div class="grp" style="background:var(--tint);margin-top:12px;">
@@ -789,7 +810,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Д3</span><b>Связка · границы правки</b><span>меняется целиком, начатая заморожена</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Д3" data-demo="stop" data-screen-label="Связка · границы правки" data-vid="вид · замена связки">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Д3" data-demo="stop" data-screen-label="Связка · границы правки" data-vid="вид · замена связки" data-canonref="иначе · вид · замена связки">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Артём заменил связку</span><span class="k">связка не начата</span></span></div>
         <div class="sc">
           <div class="grp" style="margin-top:12px;">
@@ -860,7 +881,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Е2</span><b>Таблица · галочка не ставится</b><span>без модалки и без слова «ошибка»</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Е2" data-demo="stop" data-screen-label="Таблица · галочка не ставится" data-vid="вид · галочка и пустые поля">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Е2" data-demo="stop" data-screen-label="Таблица · галочка не ставится" data-vid="вид · галочка и пустые поля" data-canonref="как в каноне">
         <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding:0 10px;"><span class="ttl">Что мешает закрыть подход</span>
@@ -889,7 +910,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Е3</span><b>Отдых · кольцо</b><span>управление над «Завершить», список остаётся</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Е3" data-demo="stop" data-screen-label="Отдых · кольцо" data-vid="вид · кольцо отдыха">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Е3" data-demo="stop" data-screen-label="Отдых · кольцо" data-vid="вид · кольцо отдыха" data-canonref="иначе · вид · таблица подходов в карточке">
         <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding:0 10px;"><span class="ttl">Силовая · грудь, спина, плечи</span>
@@ -962,7 +983,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Е5</span><b>Перенумерация</b><span>рабочий подход стал разминкой</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Е5" data-demo="stop" data-screen-label="Перенумерация" data-vid="вид · перенумерация">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Е5" data-demo="stop" data-screen-label="Перенумерация" data-vid="вид · перенумерация" data-canonref="как в каноне">
         <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding:0 10px;"><span class="ttl">Жим гантелей сидя</span>
@@ -1005,7 +1026,7 @@
   <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
     <div>
       <div class="lab"><span class="oid">Ж1</span><b>Порядок · режим перестановки</b><span>стрелки для пальца, ⠿ — мышью</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Ж1" data-demo="stop" data-screen-label="Порядок · режим перестановки" data-canon="иначе · вид · режим порядка" data-vid="вид · режим порядка">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Ж1" data-demo="stop" data-screen-label="Порядок · режим перестановки" data-canonref="иначе · вид · режим порядка" data-vid="вид · режим порядка">
         <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding-left:10px;"><span class="ttl">Тот же список · режим порядка</span><span class="k">стрелки для пальца, ⠿ — мышью</span></span>
@@ -1038,7 +1059,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Ж2</span><b>Типы подходов · честный тоннаж</b><span>рабочий получает номер, разминка — ярлык</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Ж2" data-demo="stop" data-screen-label="Типы подходов · честный тоннаж" data-vid="вид · типы подходов">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Ж2" data-demo="stop" data-screen-label="Типы подходов · честный тоннаж" data-vid="вид · типы подходов" data-canonref="как в каноне">
         <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding:0 10px;"><span class="ttl">Жим лёжа · 4 × 8–12 · 75 кг</span>
@@ -1079,7 +1100,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Ж3</span><b>Дроп-сет · свой экран</b><span>ступени, счётчик, семь правил</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Ж3" data-demo="stop" data-screen-label="Дроп-сет · свой экран" data-vid="вид · экран дропа">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Ж3" data-demo="stop" data-screen-label="Дроп-сет · свой экран" data-vid="вид · экран дропа" data-canonref="как в каноне">
         <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding:0 10px;"><span class="ttl">Жим лёжа · подход 4</span>
@@ -1126,7 +1147,7 @@
   <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
     <div>
       <div class="lab"><span class="oid">З1</span><b>Связка · создание</b><span>число участников решает вид</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="З1" data-demo="stop" data-screen-label="Связка · создание" data-vid="вид · создание связки">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="З1" data-demo="stop" data-screen-label="Связка · создание" data-vid="вид · создание связки" data-canonref="как в каноне">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Новая связка</span><span class="k">упражнения подряд, отдых — после круга</span></span></div>
         <div class="sc">
           <div class="tier">Сколько упражнений</div>
@@ -1168,7 +1189,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">З2</span><b>Трисет в работе</b><span>местами, разъединить, разминка общей строкой</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="З2" data-demo="stop" data-screen-label="Трисет в работе" data-vid="вид · трисет в работе">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="З2" data-demo="stop" data-screen-label="Трисет в работе" data-vid="вид · трисет в работе" data-canonref="как в каноне">
         <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding:0 10px;"><span class="ttl">Трисет B · плечи</span>
@@ -1213,7 +1234,7 @@
   <div data-mrow style="display:flex;gap:30px;align-items:flex-start;">
     <div>
       <div class="lab"><span class="oid">И1</span><b>Куратор и зал</b><span>комментарий, дискомфорт, очередь отправки</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="И1" data-demo="stop" data-screen-label="Куратор и зал" data-vid="вид · куратор в зале">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="И1" data-demo="stop" data-screen-label="Куратор и зал" data-vid="вид · куратор в зале" data-canonref="как в каноне">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Тренировка идёт</span><span class="k">что приходит от куратора и что уходит ему</span></span></div>
         <div class="sc">
           <div class="grp" style="margin-top:12px;">
@@ -1262,7 +1283,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">И2</span><b>Шторка ⋯</b><span>шаблоны, каталог, история, отчёт</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="И2" data-demo="stop" data-screen-label="Шторка ⋯" data-vid="вид · шторка">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="И2" data-demo="stop" data-screen-label="Шторка ⋯" data-vid="вид · шторка" data-canonref="иначе · вид · шторка">
         <div style="position:relative;">
           <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
@@ -1293,7 +1314,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">И3</span><b>План в ленте дня</b><span>назначение, а не факт</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="И3" data-demo="stop" data-screen-label="План в ленте дня" data-vid="вид · план в ленте">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="И3" data-demo="stop" data-screen-label="План в ленте дня" data-vid="вид · план в ленте" data-canonref="как в каноне">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Завтра, 12 августа</span><span class="k">среда</span></span></div>
         <div class="sc">
           <div class="grp" style="margin-top:12px;">
@@ -1339,7 +1360,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">И4</span><b>День не состоялся</b><span>без обвинений, с выбором</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="И4" data-demo="stop" data-screen-label="День не состоялся" data-vid="вид · день не состоялся">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="И4" data-demo="stop" data-screen-label="День не состоялся" data-vid="вид · день не состоялся" data-canonref="как в каноне">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">День B не состоялся</span><span class="k">был назначен на понедельник · вчера</span></span></div>
         <div class="sc">
           <div class="grp" style="margin-top:12px;background:var(--tint);">
@@ -1578,7 +1599,7 @@
   <div data-mrow style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;">
     <div>
       <div class="lab"><span class="oid">Л1</span><b>Правка · план ещё не начат</b><span>принимается целиком, одной кнопкой</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л1" data-demo="stop" data-screen-label="Правка · план ещё не начат" data-vid="вид · кадры правки куратора">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л1" data-demo="stop" data-screen-label="Правка · план ещё не начат" data-vid="вид · кадры правки куратора" data-canonref="иначе · вид · кадры правки куратора">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Понедельник, 10 августа</span><span class="k">ты его ещё не начинал</span></span></div>
         <div class="sc">
           
@@ -1587,8 +1608,8 @@
             <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:4px;">поменял сегодня в 09:14 · 7 упражнений, 23 подхода</div>
             <div class="cd" style="margin-top:12px;">
               <div class="row"><span style="flex:1;min-width:0;display:flex;align-items:center;gap:9px;"><span style="flex:none;display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:var(--tint);font:700 12px/1 Figtree,sans-serif;color:var(--ac);">~</span><span style="color:var(--tx);">Жим лёжа</span></span><span class="n" style="font:600 11px/1 Figtree,sans-serif;color:var(--tx);">75 → 70 кг</span></div>
-              <div class="row"><span style="flex:1;min-width:0;display:flex;align-items:center;gap:9px;"><span style="flex:none;display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:var(--tint);font:700 12px/1 Figtree,sans-serif;color:var(--ac2);">−</span><span style="color:var(--tx);">Разведение гантелей</span></span><span class="n" style="font:600 11px/1 Figtree,sans-serif;color:var(--ac2);">снято</span></div>
-              <div class="row" style="border-bottom:none;"><span style="flex:1;min-width:0;display:flex;align-items:center;gap:9px;"><span style="flex:none;display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:var(--gr-bg);font:700 12px/1 Figtree,sans-serif;color:var(--gr);">+</span><span style="color:var(--tx);">Тяга блока</span></span><span class="n" style="font:600 11px/1 Figtree,sans-serif;color:var(--gr);">добавлено</span></div>
+              <div class="row"><span style="flex:1;min-width:0;display:flex;align-items:center;gap:9px;"><span style="flex:none;display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:var(--tint);font:700 12px/1 Figtree,sans-serif;color:var(--ac2);" data-nohit>−</span><span style="color:var(--tx);">Разведение гантелей</span></span><span class="n" style="font:600 11px/1 Figtree,sans-serif;color:var(--ac2);">снято</span></div>
+              <div class="row" style="border-bottom:none;"><span style="flex:1;min-width:0;display:flex;align-items:center;gap:9px;"><span style="flex:none;display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:var(--gr-bg);font:700 12px/1 Figtree,sans-serif;color:var(--gr);" data-nohit>+</span><span style="color:var(--tx);">Тяга блока</span></span><span class="n" style="font:600 11px/1 Figtree,sans-serif;color:var(--gr);">добавлено</span></div>
             </div>
             <div class="btn" style="margin-top:12px;">Принять план</div>
             <div class="btn2c" style="margin-top:9px;">Оставить прежний</div>
@@ -1601,7 +1622,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Л2</span><b>Правка · клиент уже начал</b><span>что заморожено, а что меняется</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л2" data-demo="stop" data-screen-label="Правка · клиент уже начал" data-vid="вид · кадры правки куратора">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л2" data-demo="stop" data-screen-label="Правка · клиент уже начал" data-vid="вид · кадры правки куратора" data-canonref="иначе · вид · кадры правки куратора">
         <div class="top">
           <span style="display:flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;border-radius:999px;background:var(--c1);font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);" data-svc>✕</span>
           <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding-left:10px;"><span class="ttl">Верх тела B</span><span class="k">по плану Артёма · идёт 24:10</span></span>
@@ -1663,7 +1684,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Л3</span><b>Правка · граница защиты — подход</b><span>«сбавь вес, я вижу, что тяжело»</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л3" data-demo="stop" data-screen-label="Правка · граница защиты" data-vid="вид · кадры правки куратора">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л3" data-demo="stop" data-screen-label="Правка · граница защиты" data-vid="вид · кадры правки куратора" data-canonref="иначе · вид · кадры правки куратора">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Разведение гантелей</span><span class="k">1 из 3 сделано</span></span></div>
         <div class="sc">
           <div class="grp" style="margin-top:12px;">
@@ -1686,7 +1707,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Л4</span><b>Правка · одно живое предложение</b><span>новое заменяет прежнее</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л4" data-demo="stop" data-screen-label="Правка · одно живое предложение" data-vid="вид · кадры правки куратора">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л4" data-demo="stop" data-screen-label="Правка · одно живое предложение" data-vid="вид · кадры правки куратора" data-canonref="иначе · вид · кадры правки куратора">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Предложение обновилось</span><span class="k">в очередь ничего не встаёт</span></span></div>
         <div class="sc">
           <div class="cd" style="margin-top:12px;">
@@ -1705,7 +1726,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Л5</span><b>Правка · пропущен сегодня</b><span>замена на месте, отказ без причины</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л5" data-demo="stop" data-screen-label="Правка · пропущен сегодня" data-vid="вид · кадры правки куратора">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л5" data-demo="stop" data-screen-label="Правка · пропущен сегодня" data-vid="вид · кадры правки куратора" data-canonref="иначе · вид · кадры правки куратора">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Верх тела B вы отпустили</span><span class="k">причина: болит плечо</span></span></div>
         <div class="sc">
           
@@ -1853,7 +1874,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Л8</span><b>Принятие · в карточке дня</b><span>решено · чат только уведомляет</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л8" data-demo="stop" data-screen-label="Принятие · ветка карточки" data-vid="вид · сравнение ветвей принятия">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л8" data-demo="stop" data-screen-label="Принятие · ветка карточки" data-vid="вид · сравнение ветвей принятия" data-canonref="иначе · вид · сравнение ветвей принятия">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">План на сегодня</span><span class="k">принятие в карточке дня</span></span><span class="badge" style="background:var(--acs);color:var(--on-acs);">в прод</span></div>
         <div class="sc">
           <div class="cd" style="margin-top:12px;">
@@ -1880,7 +1901,7 @@
     </div>
     <div>
       <div class="lab"><span class="oid">Л9</span><b>Сторона куратора</b><span>что он видит после отправки</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л9" data-demo="stop" data-screen-label="Правка · сторона куратора" data-vid="вид · кадры правки куратора">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="Л9" data-demo="stop" data-screen-label="Правка · сторона куратора" data-vid="вид · кадры правки куратора" data-canonref="иначе · вид · кадры правки куратора">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Марина К.</span><span class="k">Pro Спорт · программа «Верх-низ»</span></span></div>
         <div class="sc">
           <div class="cd" style="margin-top:12px;">
@@ -1914,7 +1935,7 @@
   <div data-mrow style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;">
     <div>
       <div class="lab"><span class="oid">М1</span><b>Упражнение · карточка</b><span>три поля, которых требует схема</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="М1" data-demo="stop" data-screen-label="Упражнение · карточка" data-vid="вид · карточка упражнения">
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="М1" data-demo="stop" data-screen-label="Упражнение · карточка" data-vid="вид · карточка упражнения" data-canonref="иначе · вид · карточка упражнения">
         <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Новое упражнение</span><span class="k">своё, не из каталога</span></span></div>
         <div class="sc">
           <div style="display:flex;align-items:center;min-height:48px;border-radius:14px;background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--acs);padding:0 14px;margin-top:12px;font:600 13.5px/1 Figtree,sans-serif;color:var(--tx);">Тяга саней</div>
@@ -2057,8 +2078,8 @@
     </div>
     <div>
       <div class="lab"><span class="oid">М7</span><b>Сессия · вернулись через час</b><span>приложение закрыли на середине</span></div>
-      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="М7" data-demo="stop" data-screen-label="Сессия · вернулись через час" data-vid="вид · прерванная сессия">
-        <div class="top"><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Тренировка на паузе</span><span class="k">10 из 23 подходов · вас не было 1:04</span></span></div>
+      <div data-canonpair style="display:flex;gap:18px;align-items:flex-start;"><div class="ph" data-oid="М7" data-demo="stop" data-screen-label="Сессия · вернулись через час" data-vid="вид · прерванная сессия" data-canonref="иначе · вид · прерванная сессия">
+        <div class="top"><span style="flex:none;width:44px;height:44px;margin:-10px 2px -10px -10px;display:flex;align-items:center;justify-content:center;color:rgba(var(--ink),.45);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Тренировка на паузе</span><span class="k">10 из 23 подходов · вас не было 1:04</span></span></div>
         <div class="sc">
           
             <div style="font:600 12.5px/1.55 Figtree,sans-serif;color:var(--tx);">Всё, что отмечено, на месте. Таймер отдыха истёк, пока вас не было, и заново не запускается.</div>
@@ -2077,6 +2098,47 @@
       <div data-canon data-nomirror style="display:none;flex:none;width:375px;"><div style="display:flex;align-items:baseline;gap:7px;margin-bottom:8px;"><span style="font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.09em;text-transform:uppercase;padding:4px 7px;border-radius:6px;background:rgba(var(--ink),.07);color:rgba(var(--ink),.56);">канон</span><span style="font:500 10.5px/1.35 Figtree,sans-serif;color:rgba(var(--ink),.56);">Не потерять сессию</span></div><img src="canon/11.png" alt="" loading="lazy" style="display:block;width:375px;height:auto;min-height:620px;background:var(--c1);border-radius:20px;box-shadow:0 2px 10px rgba(0,0,0,.10);"></div>
       </div>
     </div>
+<div>
+      <div class="lab"><span class="oid">М7</span><b>Сессия · вернулись через час · без таймера</b><span>отдых не запускали</span></div>
+      <div class="ph" data-oid="М7" data-demo="stop" data-screen-label="Сессия · вернулись через час · без таймера" data-vid="вид · прерванная сессия">
+        <div class="top"><span style="flex:none;width:44px;height:44px;margin:-10px 2px -10px -10px;display:flex;align-items:center;justify-content:center;color:rgba(var(--ink),.45);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Тренировка на паузе</span><span class="k">10 из 23 подходов · вас не было 1:04</span></span></div>
+        <div class="sc">
+          
+            <div style="font:600 12.5px/1.55 Figtree,sans-serif;color:var(--tx);">Всё, что отмечено, на месте. Таймер отдыха вы не запускали — ждать нечего.</div>
+            <div class="cd" style="margin-top:12px;">
+              <div class="row"><span style="color:var(--tx);">Последняя отметка</span><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">19:47</span></div>
+              <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Сейчас</span><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">20:51</span></div>
+            </div>
+            <div style="display:flex;gap:7px;margin-top:12px;">
+              <span class="pill44" style="flex:1;background:var(--acs);color:var(--on-acs);">Продолжить</span>
+              <span class="pill44" style="flex:1;">Завершить в 19:47</span>
+            </div>
+          
+          <div class="sm">Пауза больше 45 минут бывает и без таймера: тогда экран не говорит про истечение, потому что истекать было нечему. Кнопки те же.</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><span class="oid">М7</span><b>Сессия · вернулись через час · таймер идёт</b><span>сохранился и ещё не истёк</span></div>
+      <div class="ph" data-oid="М7" data-demo="stop" data-screen-label="Сессия · вернулись через час · таймер идёт" data-vid="вид · прерванная сессия">
+        <div class="top"><span style="flex:none;width:44px;height:44px;margin:-10px 2px -10px -10px;display:flex;align-items:center;justify-content:center;color:rgba(var(--ink),.45);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><span style="display:flex;flex-direction:column;gap:3px;"><span class="ttl">Тренировка на паузе</span><span class="k">10 из 23 подходов · вас не было 1:04</span></span></div>
+        <div class="sc">
+          
+            <div style="font:600 12.5px/1.55 Figtree,sans-serif;color:var(--tx);">Всё, что отмечено, на месте. Таймер отдыха ещё идёт — осталось 0:38.</div>
+            <div class="cd" style="margin-top:12px;">
+              <div class="row"><span style="color:var(--tx);">Последняя отметка</span><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">19:47</span></div>
+              <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Сейчас</span><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">20:51</span></div>
+            </div>
+            <div style="display:flex;gap:7px;margin-top:12px;">
+              <span class="pill44" style="flex:1;background:var(--acs);color:var(--on-acs);">Продолжить</span>
+              <span class="pill44" style="flex:1;">Завершить в 19:47</span>
+            </div>
+          
+          <div class="sm">Редкий случай: таймер сохранился и не истёк. «Продолжить» возвращает к нему, не сбрасывая; предлагать закрыть тренировку всё равно можно — разрыв уже больше 45 минут.</div>
+        </div>
+      </div>
+    </div>
+
     <div>
       <div class="lab"><span class="oid">М8</span><b>Сессия · брошена вчера</b><span>сама не закрывается и не пропадает</span></div>
       <div class="ph" data-oid="М8" data-demo="stop" data-screen-label="Сессия · брошена вчера" data-vid="вид · прерванная сессия">
@@ -2228,7 +2290,7 @@
     <div class="spec"><b>вчерашняя ждёт решения, а не закрывается сама</b><span data-v="дата тренировки — по началу, а не по завершению (9 авг). Автозавершения нет ни по таймауту, ни в полночь: оно однажды припишет тренировку, которой не было, или сотрёт ту, что была. Открытая сессия не мешает начать новую — она ждёт в ленте своего дня; пока не решено, в тоннаж вчерашнего дня она не попадает"></span></div>
     <div class="spec"><b>у брошенной сессии три исхода</b><span data-v="завершить вчерашним числом — сессия закрывается датой начала; дописать — она открывается как есть, и человек добавляет то, что не успел отметить; удалить — записи не остаётся. Автозавершения по таймауту нет ни в одном из трёх: система не решает за человека, состоялась тренировка или нет"></span><i>«Дописать» — не то же, что «завершить»: между ними разница в том, попадут ли неотмеченные подходы в тоннаж</i></div>
     <div class="spec"><b>вид · служебная шапка сессии</b><span data-v="все экраны идущей тренировки несут одну шапку: слева кнопка закрытия ✕ 36 радиусом 999 на --c1 чернилами 56 %, посередине заголовок и подпись с полями 10 по бокам, справа кнопка ⋯ 36 той же формы 13 px/700. Шапка одинакова на всех экранах сессии — таблица ввода, отдых, перенумерация, типы подходов, дроп-сет, трисет, шторка: выход из тренировки и её меню не должны находиться на разных экранах в разных местах"></span></div>
-    <div class="spec" style="border-bottom:none"><b>вид · прерванная сессия</b><span data-v="возврат через час — .grp на --c1 с фразой 12,5 px/1,55, вложенной .cd на --bg (последняя отметка 19:47, сейчас 20:51) и двумя пилюлями 44. Брошенная вчера — .grp на --tint с той же типографикой и двумя пилюлями 44 (главная на --acs, вторая на --bg), ниже .cd тремя строками правил: дата, автозавершение тоном --ac2, разрешение начать новую галочкой --gr"></span></div>
+    <div class="spec" style="border-bottom:none"><b>вид · прерванная сессия</b><span data-v="Решение 3 сентября (ответ на разбор кодера, кадры переснятые): М7 получил ВЫХОД в шапке (крест 16 в цели 44 слева) и ДВЕ ЧЕСТНЫЕ ВЕТКИ вместо безусловного утверждения про истёкший таймер. Прежний кадр говорил «Таймер отдыха истёк, пока вас не было» всегда, а в продукте пауза больше 45 минут бывает без таймера, и редкий сохранённый таймер может ещё идти. Теперь три кадра: основной — таймер истёк; «Сессия · вернулись через час · без таймера» — «Таймер отдыха вы не запускали — ждать нечего»; «Сессия · вернулись через час · таймер идёт» — «Таймер отдыха ещё идёт — осталось 0:38», и «Продолжить» возвращает к нему, не сбрасывая. Кнопки во всех трёх те же: «Продолжить» главной и «Завершить в 19:47» второй. Экран остаётся эксклюзивным решением — списка, статистики, меню и панели под ним нет, — но выход есть: решение над сессией не может быть единственным способом уйти с экрана. Было до этого решения: возврат через час — .grp на --c1 с фразой 12,5 px/1,55, вложенной .cd на --bg (последняя отметка 19:47, сейчас 20:51) и двумя пилюлями 44. Брошенная вчера — .grp на --tint с той же типографикой и двумя пилюлями 44 (главная на --acs, вторая на --bg), ниже .cd тремя строками правил: дата, автозавершение тоном --ac2, разрешение начать новую галочкой --gr"></span></div>
 
     <div class="ctrH">Связки</div>
     <div class="spec"><b>раунды только при равном числе подходов</b><span data-v="связка строит раунды, когда у всех участников подходов одинаково; неравное число — плоские списки по участникам, как в истории. Раунд, где у одного участника подхода нет, читался бы как пропуск. Задним числом не выравниваем: это переписывание чужой тренировки"></span></div>
@@ -2284,7 +2346,7 @@
     <div class="spec"><b>контекст подхода — числа</b><span data-v="в раскрытой карточке «Жим гантелей сидя»: прошлый раз 22,5 × 12, рекорд 25 × 10, счётчик 2/4, закрытые подходы 22,5 × 12 и 24 × 10, текущий 24 × 10, отдых 2:00 по тяжести 7, шкала тяжести от 6 до 10"></span></div>
     <div class="spec"><b>вид · строка подхода</b><span data-v="строка .set высотой 44 с разделителем 1 px чернил 7 %: отметка 44×44 радиусом 12 — выполненная на --gr-bg с галочкой 14 px тоном --gr, пустая на чернилах 6 % с рамкой 10 %. Отметка закрывает подход, поэтому она мишень полного порога, а не значок 24, как было в исходной сборке до пятого круга; номер 12 px/600 --tx; значение справа моноцифрами чернил 55 %. Поля ввода — 44 высотой радиусом 12 на --bg с рамкой чернил 10 %, вес шириной 64, повторы 52, единица подписью 11 px между ними"></span></div>
     <div class="spec"><b>вид · разминка и дроп-сет</b><span data-v="та же таблица подходов, но первый столбец 56 под «№ / тип»: у разминки ярлык «разм.» 10 px чернил 42 %, а её значения — чернила 56 %: приглушаем тоном, но не ниже читаемого, иначе смена прозрачности на цвет ничего не лечит; у рабочих номер на --gr-bg. Ступени сброса — строки со сдвигом 34 px вправо и ярлыком «дроп» 10 px на --c2 тоном --ac вместо номера: номера идут только по рабочим"></span><i>прозрачность строки делала цифры нечитаемыми — в исходной сборке это правили отдельным кругом ревью</i></div>
-    <div class="spec"><b>вид · пустая тренировка</b><span data-v="карточка .grp на --c1: заголовок «Пустая тренировка» 15 px/700 --tx и проза 12 px/1,55 чернил 60 %. Главная кнопка 48 на --acs, под ней подпись-строка 11 px/1,4 чернил 42 % по центру («7 упражнений · назначил Артём»); вторичная 48 на --c2 с зазором 10. Ниже .cd со строками «Повторить 5 августа» и «Из шаблона», правое значение 11,5 px/700 тоном --ac"></span></div>
+    <div class="spec"><b>долг канваса · отношение к канону</b><span data-v="ЗАКРЫТО 3 сентября: отношение к канону названо у всех 34 кадров со снимком — 12 &#039;как в каноне&#039;, 22 &#039;иначе · &lt;ключ строки&gt;&#039;. Последние 13 сверены поэлементно со своими снимками глазами: совпали составом, данными и действиями — галочка и пустые поля, перенумерация, типы подходов, экран дропа, создание связки, трисет, куратор в зале, план в ленте, день не состоялся; расошлись четыре — замена связки (в каноне у начатой связки нарисована таблица раундов, у меня — закрытая полоса), шторка (другой список входов), ветка карточки (канон рисует разбор целиком), карточка упражнения (единица рядом вместо списка, группы итогом вместо сетки одиннадцати, одна кнопка сохранения вместо двух). Сверка канваса чиста, условие сборки пакета выполнено. Было до этого решения: ПОЛОМКА, НАЙДЕННАЯ ВЛАДЕЛЬЦЕМ 3 сентября И ИСПРАВЛЕННАЯ: атрибут data-canon носил ДВА смысла — блок снимка (его прячет твик showCanon) и пометку отношения кадра к канону (её читает двадцатая проверка). Поэтому каждый помеченный кадр ПРОПАДАЛ вместе со снимками: при выключенном твике исчезали 12 экранов, из них 10 согласованных, и проверка гасила ровно те кадры, которые проверяла. Развод: data-canon остаётся у БЛОКА СНИМКА, пометка живёт в data-canonREF на кадре; contract-audit.js читает canonref, текст находки называет новое имя. Заодно исправлено: три кадра, добавленные 3 сентября, были вставлены ВНУТРЬ блока снимка М7 и вытеснили сам снимок — вынесены за пару, canon/11.png на месте, баланс тегов проверен (3207 на 3207). Проверил остальные канвасы: пометок на кадрах нет ни у одного, кроме пакетной копии силовой — она обновится сборкой. Осталось назвать отношение у 21 кадра из 34. Названо 3 сентября: у 34 кадров этого канваса рядом лежит снимок каноничной версии, и только у 8 сказано, как кадр к нему относится. Двадцатая проверка требует у каждого либо data-canon=&#039;как в каноне&#039;, либо data-canon=&#039;иначе · &lt;ключ строки&gt;&#039; — то есть либо совпадение, либо названную причину расхождения. Пока не названо у 26 кадров, сверка канваса НЕ ЧИСТА, и канвас в сборку пакета НЕ ИДЁТ: это условие, а не пожелание. Долг мой и разметочный — каждый кадр сравнивается со своим снимком глазами, оптом пометить нельзя: &#039;как в каноне&#039; это утверждение, а не заглушка. Кодера долг не касается: строки поведения и вида от него не зависят, и вердикты по ним закрываются независимо. Три кадра, добавленные 3 сентября (&#039;пусто · план назначен&#039;, &#039;вернулись через час · без таймера&#039;, &#039;· таймер идёт&#039;) снимка не имеют вовсе — они новые состояния, канона у них нет, и блок снимка у них снят, чтобы проверка не считала их непомеченными."></span><i>долг закрыт: отношение к канону названо у всех кадров со снимком</i></div><div class="spec"><b>вид · пустая тренировка</b><span data-v="Решение 3 сентября (ответ на разбор кодера, кадры переснятые): Б1 РАЗДЕЛЁН НА ДВА СОСТОЯНИЯ, потому что один кадр показывал взаимоисключающее: кнопку «Начать по плану · День B» и подпись «Плана нет — главной становится „Собрать свою"». Теперь «Конструктор · пусто · плана нет» — главная «Собрать свою», повтор строкой; «Конструктор · пусто · план назначен» — главной кнопка плана с подписью «7 упражнений · назначил Артём», «Собрать свою» вторичной, состав плана раскрывается внутри карточки только для чтения. СТРОКА «Из шаблона · 4 шаблона» СНЯТА из обоих кадров: у шаблонов в продукте нет ни хранения, ни применения, и строка вела бы в пустоту — новой обязательной функцией шаблоны не объявляются. В шапку обоих кадров добавлен ВЫХОД — крест 16 в цели 44 слева: экран полноэкранный, и закрытие обязательно по продуктовому инварианту отмены. Разведение по данным, как сделал кодер, верно: валидный planSnapshot даёт кнопку плана, без него главной становится «Собрать свою». Было до этого решения: карточка .grp на --c1: заголовок «Пустая тренировка» 15 px/700 --tx и проза 12 px/1,55 чернил 60 %. Главная кнопка 48 на --acs, под ней подпись-строка 11 px/1,4 чернил 42 % по центру («7 упражнений · назначил Артём»); вторичная 48 на --c2 с зазором 10. Ниже .cd со строками «Повторить 5 августа» и «Из шаблона», правое значение 11,5 px/700 тоном --ac"></span></div>
     <div class="spec"><b>избранное — звезда и фильтр</b><span data-v="избранные помечены звездой в строке каталога и собираются отдельным фильтром «★» в общем ряду рядом с «Все» и группами мышц: отдельного экрана избранного нет"></span></div>
     <div class="spec"><b>вид · каталог упражнений</b><span data-v="слева в шапке кнопка возврата ‹ — кружок 32 на --c1 чернилами 50 %. Строка каждого упражнения несёт слева звезду 13 px: избранное тоном --ac, остальные чернилами 18 %; справа кнопка добавления 44 радиусом 12 на --bg с рамкой 1,5 px --acs и знаком 18 px тоном --ac. Та же кнопка стоит в строке создания. Поле поиска несёт знак лупы слева. поле поиска 44 высотой радиусом 14 на --c1 полями 0/14 с текстом-подсказкой 13 px/500 чернил 38 %. Ряд фильтров — пилюли 9 px моноширинной с зазором 6 и переносом, выбранная на --acs тоном --on-acs, остальные на --c2 чернил 50 %. Строки .cd: имя 12,5 px/600 --tx, под ним прошлый результат 11 px/1,3 чернил 45 %, справа «+» 13 px/700 тоном --ac. Карточка создания — .grp на --c2 с «+» и двумя строками тоном --ac и чернил 45 %"></span></div>
     <div class="spec"><b>вид · итоги сессии</b><span data-v="в шапке кнопка закрытия ✕ 36 и подпись «Силовая · грудь, спина, плечи · 8 августа». Итог — карточка .grp на --gr-bg: строка «Отличная работа» 14 px/700 тоном --gr, под ней сетка 2 × 2 из плиток на --bg радиусом 14 полями 10/11 с зазором 8: ярус 9,5 px/600 в разрядку чернил 56 % и значение 17 px/800 — «Длительность 54:30», «Тоннаж 8,6 т» с приростом «↑ 12 %» 11 px/700 тоном --gr рядом, «Макс. вес 75 кг», «Рекорды 1» на --tint с рамкой 1,5 px --acs тоном --ac. Блок .cd из четырёх строк, значения моноцифрами: рабочих подходов --tx, разминочных чернил 55 % с пометкой «вне объёма», рекорд 12,5 px/700 тоном --gr, «без объёма» с причиной 11 px/1,3 чернил 45 % под ключом и числом чернил 42 %. Кнопка «Готово» 48 на --acs. Ниже идут ярусы: «Как оно прошло» — три плитки 52 высотой (настроение на --gr-bg, самочувствие на --c2, стресс на --tint) и поле заметки 44; «Расчётный максимум» — шесть столбиков высотой 41–78 px в поле 112 px на --c2, последний на --acs, с числами сверху и неделями снизу, справа 95 кг 17 px/800; строка «Сегодня всего две силовых · 14,2 т»; «Объём другими величинами» — две строки (планка 3:00 под нагрузкой чернил 55 %, подтягивания 2 028 кг в тоннаже тоном --tx); в конце «В шаблоны» 48 на --c2 и «Готово» 48 на --acs"></span></div>
@@ -2306,7 +2368,7 @@
     <div class="spec"><b>вид · режим порядка</b><span data-v="Правка 1 сентября: квадратные кнопки ▲▼ и −/+ выделены в свой класс .sqb — 44 × 44 радиусом 12 на --c2, знак 11 px/700 чернил 62 % (у −/+ знак 18 px). Прежде они делили класс .chk с круглой галочкой, то есть под одним именем жили два разных вида: круг радиусом 999 и квадрат радиусом 12. Один класс — один вид; иначе правка «галочки» молча меняет кнопки, и наоборот. Кнопки-пилюли «Готово» и «Отменить» выделены в класс .obtn: автоширина, поля 0/15, радиус 999, знак 11,5 px/700, тон и обводка задаются ролью на месте. Прежде они делили класс .chk с круглой галочкой 44 × 44 — второй случай «один класс, два вида» после .sqb. Девятнадцатая проверка их не находит: она сравнивает элементы по ярлыку-соседу, а у пилюли ярлыка нет, поэтому это решение названо строкой, а не оставлено на проверку. Было до этого решения: строки .ex как в сессии, но слева ручка 14 px чернил 32 %, справа две кнопки 44×44 радиусом 12 на --c2 со знаками ▲ и ▼ 11 px/700 чернил 62 % — знак, а не слово: две подписи на строку читаются дольше, чем направление. Строка на переносе — внутренняя обводка 2 px --acs, место вставки — полоса 2 px радиусом 999 тоном --acs. Связка несёт левую полосу 3 px --acs и номер на --tint тоном --ac: она едет целиком. В шапке кнопка закрытия ✕ 36, подпись «стрелки для пальца, ⠿ — мышью» и кнопка «Готово» 36 на --tint с рамкой 1,5 px --acs тоном --ac. Тост отмены — плашка на --gr-bg радиусом 16: галочка и текст 12 px/700 тоном --gr, подпись чернил 56 %, справа кнопка «Отменить» 44 на --bg с рамкой 1,5 px --gr Ответ дизайнера 1 сентября (срез открытых вопросов): шторка «⋯» несёт ШЕСТЬ пунктов: пять существующих плюс «Порядок упражнений» — он построен и в кадре был забыт. «Шаблоны тренировок» и «Повторить прошлую» сняты (не построены и решением не подтверждены), «Назначено против сделано» снято тоже — оно живёт в программе куратора"></span></div>
     <div class="spec"><b>вид · типы подходов</b><span data-v="та же таблица, но первый столбец 56 под «№ / тип»: ярлыки «разм.» и «дроп» — плашки 44 высотой радиусом 11, 10 px/700 прописными (разминка на чернилах 6 % тоном 45 %, дроп на --tint тоном --ac2). Строка дропа сдвинута на 12 px и несёт левую линию 2 px тоном --tint. Ниже пилюля 44 на --tint с весом для оставшихся, ряд единиц из четырёх пилюль 44 (выбранная на --acs) и карточка разкладки блинов на --c2"></span></div>
     <div class="spec"><b>вид · экран дропа</b><span data-v="основная ступень — строка таблицы с обводкой 2 px --acs радиусом 12 и значениями 18 px/800; ступень сброса — та же строка со сдвигом 12 px, левой линией --tint и ярлыком «дроп». Ниже пилюля 44 «+ Ещё сброс» на --tint тоном --ac, итог подхода строкой .row и семь правил в .cd — номер 10,5 px/700 тоном --ac и текст 11,5 px/1,5 чернил 62 %"></span></div>
-    <div class="spec"><b>вид · создание связки</b><span data-v="три строки выбора в .cd с кружком числа 26×26 (выбранная строка — обводка 2 px --acs радиусом 12 и галочка тоном --ac). Два блока рядом на --c1: счётчик раундов с кнопками 44 («−» на --c2, «+» на --acs) и числом 19 px/800; отдых полем 44 на --bg с рамкой чернил 10 % и подписью 10 px. Блок «Что получится» — .grp с тремя плитками на --bg (ярус 10,5 px и число 16 px/800), главная кнопка 48 на --acs"></span></div>
+    <div class="spec"><b>вид · старая связка</b><span data-v="кадр «Связка · старая, без раундов»: связка, записанная до раундов, показывается ПЛОСКИМИ списками и задним числом не выравнивается. Шапка «Связка · 12 июля» 13 px/700 --tx, справа «4 и 3 подхода» и пилюля «история» 9 px моноширинным; участники буквами A и B (не A1/A2 — нумерация раундов к ней не применяется), у каждого имя 12,5 px/600, счёт подходов 11 px/500 чернил 56 % и ряд значений «вес × повторы» чипами --c1 радиусом 10. Объём и счёт считаются как обычно; раунды появились бы только при равном числе подходов, но задним числом их не строим"></span><i>кадр расходится с каноном: там участники нумерованы A1/A2 и стоят другие упражнения — своя строка нужна именно поэтому</i></div><div class="spec"><b>вид · создание связки</b><span data-v="три строки выбора в .cd с кружком числа 26×26 (выбранная строка — обводка 2 px --acs радиусом 12 и галочка тоном --ac). Два блока рядом на --c1: счётчик раундов с кнопками 44 («−» на --c2, «+» на --acs) и числом 19 px/800; отдых полем 44 на --bg с рамкой чернил 10 % и подписью 10 px. Блок «Что получится» — .grp с тремя плитками на --bg (ярус 10,5 px и число 16 px/800), главная кнопка 48 на --acs"></span></div>
     <div class="spec"><b>вид · трисет в работе</b><span data-v="шапка — две пилюли 44 («местами» на --tint тоном --ac, «разъединить» на --c2), ниже три карточки участников на --c2. Разминка — одна строка .set с плашкой «разм.» 26 высотой и подписью «общая для связки · 2 подхода» чернил 50 %. Строки раундов — метка 36 и три клетки равной доли моноцифрами, закрытая клетка несёт галочку в самом значении; текущий раунд — обводка 2 px --acs. После закрытого круга — строка «круг закрыт · отдых 2:00» 10,5 px тоном --ac"></span></div>
     <div class="spec"><b>вид · куратор в зале</b><span data-v="четыре яруса: карточка плана с квадратом буквы 34 радиусом 11 на --c2 и двумя пилюлями 44; комментарий — врезка на --c2 радиусом 12 с текстом 12 px/1,5 и подписью автора 10,5 px чернил 45 %; дискомфорт — .grp на --tint с заголовком тоном --ac2; очередь — .cd тремя строками со второй строкой состояния (--gr, чернила 45 %, --ac2)"></span></div>
     <div class="spec"><b>вид · шторка</b><span data-v="фоновая сессия под затемнением var(--scrim); сама шторка — блок на --c1 радиусом 20 сверху, ручка 38×4 радиусом 999 чернил 18 %, внутри .cd на --bg с семью строками: имя 12,5 px/600 --tx, подпись 11 px/1,3 чернил 45 %, шеврон чернил 35 %"></span></div>
@@ -2372,7 +2434,7 @@
     <div class="spec"><b>прочерк — значение, а не пустота</b><span data-v="везде, где прочерк означает данные — пустой довес, пустой подход добавленного участника, невыполненный раунд, — он рисуется классом .dash тоном 56 % и подчиняется тому же порогу контраста, что числа. Прочерки в сетке недели плана — не данные, а разметка календаря: они стоят 11 px чернил 28 % и значением не считаются"></span><i>до этого прочерки жили на четырёх разных тонах от 28 до 56 %, и проверка контраста их не видела: она искала цифру, а в прочерке цифры нет</i></div>
 
     <div class="spec"><b>вид · отчёт за период</b><span data-v="шапка «Отчёт за период · недели 1–2 · 6 назначено». Блок .cd из четырёх строк исходов: значения моноцифрами 12,5 px/700 — сделано тоном --gr, перенесено --tx, пропущено --val-bad, свои вне плана чернил 55 %; у переноса и пропуска вторая строка с подробностью 11 px/1,3 чернил 45 %. Ниже карточка долга кода — .grp на --tint, заголовок 12,5 px/700 тоном --ac2, проза 12 px чернил 60 %. Внизу главная кнопка 48 «Отчёт за неделю»"></span><i>отчёт дня и отчёт периода — разные экраны: сводка исходов за один день всегда складывается из тех же четырёх упражнений и ни на что не отвечает</i></div>
-    <div class="spec"><b>отношение к канону называет сам кадр</b><span data-v="кадр со снимком канона несёт атрибут data-canon: либо «как в каноне», либо «иначе · <ключ строки>» с именем строки, объясняющей расхождение. Двадцатая проверка сверки убеждается, что атрибут есть и что названная строка существует. Прежде девятнадцать проверок знали про канон только счёт покрытия — что расхождение НАЗВАНО, не проверял никто, и три фазы против четырёх канонных жили молча"></span><i>долг канваса: помечены семь кадров, сверенных поэлементно; остальные ждут такой же сверки и до неё честно числятся непомеченными</i></div>
+    <div class="spec"><b>отношение к канону называет сам кадр</b><span data-v="кадр со снимком канона несёт атрибут data-canonref: либо «как в каноне», либо «иначе · <ключ строки>» с именем строки, объясняющей расхождение. Двадцатая проверка сверки убеждается, что атрибут есть и что названная строка существует. Названо у всех 34 кадров со снимком: 12 «как в каноне», 22 «иначе». Расхождением не считается палитра и служебная шапка кадра — они названы общими строками канваса; сравниваются состав, данные, порядок блоков и набор действий. Было до этого решения: атрибут звался data-canon — тем же именем, что и блок снимка, и пометка пропадала вместе со снимком при выключенном твике. Прежде девятнадцать проверок знали про канон только счёт покрытия — что расхождение НАЗВАНО, не проверял никто, и три фазы против четырёх канонных жили молча"></span><i>помечены все 34 кадра со снимком, каждый сверен со своим снимком поэлементно</i></div>
 
     <div class="spec"><b>снято · проверка «класс красится инлайном не везде»</b><span data-v="1 сентября пробовали ловить дефект .cd автоматически: класс, у которого часть экземпляров перекрывает заливку инлайном, а часть нет. Прогон дал семь классов при одном настоящем — .ex, .num, .n, .badge, .grp, .pill44, .chk, — потому что у кнопок, бейджей и карточек тон инлайном ЗАДАЁТ СОСТОЯНИЕ и разнобой там законен. Проверка снята: она обнулялась шумом ровно так же, как прежде обнулялись контраст и «заливка на заливке» до сужения признака. Дефект вылечен корнем — вложенная карточка получила своё имя .cdIn, — а не порогом"></span><i>точной эта проверка станет только по адресации: когда класс сможет объявить, что его заливка — состояние (как data-vid объявляет строку вида)</i></div>
 
@@ -2384,7 +2446,7 @@
     <div class="spec"><b>чего нет в этом заходе</b><span data-v="разбор обзора программы — секции 16c–16d исходной сборки, где сказано «первый слой сейчас неверный, второй почти верный». Найти их в файле не удалось (поиск по имени секций и заголовкам ничего не дал), поэтому кадр «Программа · цикл» построен на правилах, прочитанных прямо — перенос ≠ пропуск, след в обе стороны, фазы недель из шапки сборки — и против этого разбора не сверен. Всё остальное из сборки нарисовано и описано числами: связки, создание упражнения, программа с фазами и отчётом, перенос, история упражнения, границы правок"></span><i>единственное непроверенное место зоны названо явно: если разбор найдётся, кадр цикла пересматривается</i></div>
     <div class="spec"><b>фикстура на 23 подхода</b><span data-v="та самая тренировка, по которой сходятся все счётчики канваса, лежит в пакете файлом fixtures/workout-23-sets.json, арифметика — _kernel/heys_kernel_strength_v1.js. Прогнать свой расчёт на ней до вёрстки: совпали 23 подхода, 10 870 кг тоннажа и 95 кг расчётного максимума — единицы учёта поняты верно"></span></div>
     <div class="spec" style="border-bottom:none"><b>изменения данных</b><span data-v="названы в исходной сборке и здесь только перечислены: тип подхода полем схемы, автор и время на подходе (без них метку авторства правки куратора негде хранить), снимок плана отдельно от факта, «пропущенная тренировка не считается фактом». Первые два — предусловия кадров этого канваса"></span></div>
-                                                                                                                                                                                                                                                                                                                              <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                                                                                                                                                                                                                                                                                                                                                      <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Конструктор · тренировка идёт · снято · 01</b><span data-v="шапка: выравнивание flex-start"></span></div>
     <div class="spec"><b>Конструктор · тренировка идёт · снято · 02</b><span data-v="«✕» — выравнивание center, распределение center, флекс none, ширина 36px, высота 36px, радиус 999px, фон var(--c1), шрифт 600 14px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
@@ -2535,23 +2597,38 @@
     <div class="spec"><b>Конструктор · разминка и дроп-сет · 22</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Конструктор · разминка и дроп-сет · 23</b><span data-v="«идут все» — шрифт 700 11px/1 Figtree, цвет var(--gr)"></span></div>
     <div class="spec"><b>Конструктор · разминка и дроп-сет · 24</b><span data-v="«Дроп-сет — продолжение подхода, а не новые подходы» — сноска"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 01</b><span data-v="шапка"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 02</b><span data-v="направление column, зазор 3px"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 03</b><span data-v="«Силовая» — имя экрана"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 04</b><span data-v="«пусто · 0 подходов» — ключ"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 05</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 06</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 07</b><span data-v="«Пустая тренировка» — шрифт 700 15px/1.32 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 08</b><span data-v="«Добавляйте упражнения по ходу — план не обязан быт» — проза"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 09</b><span data-v="«Начать по плану · День B» — главная кнопка: отступ сверху 10px"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 10</b><span data-v="«7 упражнений · назначил Артём» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), выключка center, отступ сверху 6px"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 11</b><span data-v="«Собрать свою» — вторичная кнопка: отступ сверху 10px"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 12</b><span data-v="список .cd: отступ сверху 10px"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 13</b><span data-v="строка списка"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 14</b><span data-v="«Повторить 5 августа» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 15</b><span data-v="«7 упр.» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 16</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Конструктор · пусто · 17</b><span data-v="«Плана нет — главной становится «Собрать свою». Пов» — сноска"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 02</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -10px 2px -10px -10px, выравнивание center, распределение center, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 03</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 04</b><span data-v="«Силовая» — имя экрана"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 05</b><span data-v="«пусто · 0 подходов» — ключ"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 06</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 07</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 08</b><span data-v="«Пустая тренировка» — шрифт 700 15px/1.32 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 09</b><span data-v="«Добавляйте упражнения по ходу — план не обязан быт» — проза"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 10</b><span data-v="«Собрать свою» — главная кнопка: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 11</b><span data-v="список .cd: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 12</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 13</b><span data-v="«Повторить 5 августа» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 14</b><span data-v="«7 упр.» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · 15</b><span data-v="«Плана нет — главной становится «Собрать свою». Пов» — сноска"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 02</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -10px 2px -10px -10px, выравнивание center, распределение center, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 03</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 04</b><span data-v="«Силовая» — имя экрана"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 05</b><span data-v="«план на день · 0 подходов» — ключ"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 06</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 07</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 08</b><span data-v="«План на сегодня готов» — шрифт 700 15px/1.32 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 09</b><span data-v="«Можно начать по плану куратора или собрать свою —» — проза"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 10</b><span data-v="«Начать по плану · День B» — главная кнопка: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 11</b><span data-v="«7 упражнений · назначил Артём» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), выключка center, отступ сверху 6px"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 12</b><span data-v="«Собрать свою» — вторичная кнопка: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 13</b><span data-v="список .cd: отступ сверху 10px"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 14</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 15</b><span data-v="«Повторить 5 августа» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 16</b><span data-v="«7 упр.» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · 17</b><span data-v="«План назначен — главной становится кнопка плана, «» — сноска"></span></div>
     <div class="spec"><b>Конструктор · каталог · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Конструктор · каталог · 02</b><span data-v="«‹» — выравнивание center, распределение center, флекс none, ширина 36px, высота 36px, радиус 999px, фон var(--c1), шрифт 600 14px/1 Figtree, цвет rgba(var(--ink),.5)"></span></div>
     <div class="spec"><b>Конструктор · каталог · 03</b><span data-v="флекс 1, ширина от 0, направление column, зазор 3px"></span></div>
@@ -3876,20 +3953,53 @@
     <div class="spec"><b>Ввод · свой вес с довесом · 17</b><span data-v="«2 098 кг» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Ввод · свой вес с довесом · 18</b><span data-v="«Прочерк в довесе значит «только вес тела», а не за» — сноска"></span></div>
     <div class="spec"><b>Сессия · вернулись через час · 01</b><span data-v="шапка"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 02</b><span data-v="направление column, зазор 3px"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 03</b><span data-v="«Тренировка на паузе» — имя экрана"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 04</b><span data-v="«10 из 23 подходов · вас не было 1:04» — ключ"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 05</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 06</b><span data-v="«Всё, что отмечено, на месте. Таймер отдыха истёк,» — шрифт 600 12.5px/1.55 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 07</b><span data-v="список .cd: отступ сверху 12px"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 08</b><span data-v="строка списка"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 09</b><span data-v="«Последняя отметка» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 10</b><span data-v="«19:47» — моноцифры: шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 11</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 12</b><span data-v="зазор 7px, отступ сверху 12px"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 13</b><span data-v="«Продолжить» — флекс 1, фон var(--acs), цвет var(--on-acs)"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 14</b><span data-v="«Завершить в 19:47» — флекс 1"></span></div>
-    <div class="spec"><b>Сессия · вернулись через час · 15</b><span data-v="«Разрыв больше 45 минут — и второй кнопкой предлага» — сноска"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 02</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -10px 2px -10px -10px, выравнивание center, распределение center, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 03</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 04</b><span data-v="«Тренировка на паузе» — имя экрана"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 05</b><span data-v="«10 из 23 подходов · вас не было 1:04» — ключ"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 06</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 07</b><span data-v="«Всё, что отмечено, на месте. Таймер отдыха истёк,» — шрифт 600 12.5px/1.55 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 08</b><span data-v="список .cd: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 09</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 10</b><span data-v="«Последняя отметка» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 11</b><span data-v="«19:47» — моноцифры: шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 12</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 13</b><span data-v="зазор 7px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 14</b><span data-v="«Продолжить» — флекс 1, фон var(--acs), цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 15</b><span data-v="«Завершить в 19:47» — флекс 1"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · 16</b><span data-v="«Разрыв больше 45 минут — и второй кнопкой предлага» — сноска"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 02</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -10px 2px -10px -10px, выравнивание center, распределение center, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 03</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 04</b><span data-v="«Тренировка на паузе» — имя экрана"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 05</b><span data-v="«10 из 23 подходов · вас не было 1:04» — ключ"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 06</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 07</b><span data-v="«Всё, что отмечено, на месте. Таймер отдыха вы не з» — шрифт 600 12.5px/1.55 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 08</b><span data-v="список .cd: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 09</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 10</b><span data-v="«Последняя отметка» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 11</b><span data-v="«19:47» — моноцифры: шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 12</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 13</b><span data-v="зазор 7px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 14</b><span data-v="«Продолжить» — флекс 1, фон var(--acs), цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 15</b><span data-v="«Завершить в 19:47» — флекс 1"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · 16</b><span data-v="«Пауза больше 45 минут бывает и без таймера: тогда» — сноска"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 01</b><span data-v="шапка"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 02</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -10px 2px -10px -10px, выравнивание center, распределение center, цвет rgba(var(--ink),.45)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 03</b><span data-v="направление column, зазор 3px"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 04</b><span data-v="«Тренировка на паузе» — имя экрана"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 05</b><span data-v="«10 из 23 подходов · вас не было 1:04» — ключ"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 06</b><span data-v="область прокрутки"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 07</b><span data-v="«Всё, что отмечено, на месте. Таймер отдыха ещё идё» — шрифт 600 12.5px/1.55 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 08</b><span data-v="список .cd: отступ сверху 12px"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 09</b><span data-v="строка списка"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 10</b><span data-v="«Последняя отметка» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 11</b><span data-v="«19:47» — моноцифры: шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.55)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 12</b><span data-v="строка списка: разделитель none"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 13</b><span data-v="зазор 7px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 14</b><span data-v="«Продолжить» — флекс 1, фон var(--acs), цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 15</b><span data-v="«Завершить в 19:47» — флекс 1"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · 16</b><span data-v="«Редкий случай: таймер сохранился и не истёк. «Прод» — сноска"></span></div>
     <div class="spec"><b>Сессия · брошена вчера · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Сессия · брошена вчера · 02</b><span data-v="направление column, зазор 3px"></span></div>
     <div class="spec"><b>Сессия · брошена вчера · 03</b><span data-v="«Вчерашняя не завершена» — имя экрана"></span></div>
@@ -3913,12 +4023,22 @@
     <div class="spec"><b>Сессия · брошена вчера · 21</b><span data-v="«Сама она не закроется никогда: автозавершение по т» — сноска"></span></div>
     <div class="ctrH">Разбор графики · SVG в кадрах</div>
     <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · рисунок 01</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · рисунок 01</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
     <div class="spec"><b>Отдых · кольцо · рисунок 01</b><span data-v="поле рисунка 168×168 (viewBox 0 0 168 168)"></span></div>
     <div class="spec"><b>Отдых · кольцо · рисунок 02</b><span data-v="точка r 76 в (84,84), заливка none, обводка var(--v4-track)"></span></div>
     <div class="spec"><b>Отдых · кольцо · рисунок 03</b><span data-v="точка r 76 в (84,84), заливка none, обводка var(--acs)"></span></div>
     <div class="spec"><b>Правка · клиент уже начал · рисунок 01</b><span data-v="поле рисунка 11×11 (viewBox 0 0 24 24)"></span></div>
     <div class="spec"><b>Правка · клиент уже начал · рисунок 02</b><span data-v="прямоугольник 16×10, радиус 2.5"></span></div>
     <div class="spec"><b>Правка · клиент уже начал · рисунок 03</b><span data-v="кривая, точки M8 11V7a4 4 0 0 1 8 0v4"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · рисунок 01</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · рисунок 01</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · рисунок 01</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · рисунок 02</b><span data-v="кривая, точки M6 6l12 12M18 6L6 18"></span></div>
     <div class="ctrH">Текст кадров дословно</div>
     <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
     <div class="spec"><b>Конструктор · тренировка идёт · снято · текст</b><span data-v="Силовая · грудь, спина, плечи › пн, 8 авг · начата в 18:40 › ⏱ 47:12 › 10 / 23 ✓ › Жим лёжа › 4 × 8–12 · 75 кг · рекорд › Тяга штанги в наклоне › 4 × 8–12 · 60 кг › Жим гантелей сидя › Плечи · трицепс › 2/4 › Прошлый раз · 22,5 × 12 › Рекорд · 25 × 10 › Вес, кг › Повторы › 22,5 › 12 › 24 › 10 › 24 › 10 › Тяжесть › 10 › ⏱ Отдых 2:00 — по тяжести 7 › Вручную › Разведение в тренажёре › 3 × 12 · 20 кг · не начато › Завершить · 13 не закрыто › Раскрыто не больше одного упражнения и прямо в списке: промежуточного экрана нет, а всё, что делает подход, живёт внутри карточки — контекст прошлого раза и рекорда, таблица подходов, тяжесть, отдых. Свёрнутая строка несёт ручку переноса слева и «✓ ›» справа; сделанные лежат на фоне «в норме», не начатые — приглушённым номером без иконки статуса. Нижняя панель постоянна: квадрат «+» добавляет упражнение, широкая кнопка закрывает тренировку."></span></div>
@@ -3926,7 +4046,8 @@
     <div class="spec"><b>Конструктор · тренировка идёт · спокойнее · текст 2/2</b><span data-v="Тот же состав, шесть правок против шума. Сделанное не громче текущего: у закрытых упражнений и подходов снята зелёная заливка, сигнал остался один — галочка. Акцент указывает одно место: обводка карточки говорит «открыто здесь», рамка полей — «писать сюда»; номера, кольцо галочки и обводка активной строки приглушены, потому что шесть акцентов внутри одного блока не акцентируют ничего. Заливки больше не вложены тройкой: строки внутри карточки живут на её фоне. Шкала тяжести без обводок — это одна необязательная оценка, а не второй блок веса таблицы. Счётчик незакрытых снят с кнопки: он уже стоит бейджем в шапке."></span></div>
     <div class="spec"><b>Конструктор · список свёрнут · текст</b><span data-v="Силовая · грудь, спина, плечи › пн, 8 авг · начата в 18:40 › идёт › 47:12 › 10 из 23 подходов › Жим лёжа › 4 × 8–12 · 75 кг · рекорд › Тяга штанги в наклоне › 4 × 8–12 · 60 кг › Жим гантелей сидя › сейчас · подход 2 из 4 › раскрыть › › Разведение в тренажёре › 3 × 12 · 20 кг · не начато › Добавить упражнение › Завершить · 13 не закрыто › Состояние, в котором список живёт между упражнениями: карточку свернули, подход закрыт, следующее ещё не начато. Раскрытие — тап по карточке, и прежняя сворачивается сама: две открытые карточки не бывают. «Завершить» остаётся тихой, пока счёт незакрытых не дошёл до нуля."></span></div>
     <div class="spec"><b>Конструктор · разминка и дроп-сет · текст</b><span data-v="Приседания › 7 подходов · 1 разминочный › № / тип › Вес, кг › Повторы › разм. › 40 › 10 › 80 › 80 › 80 › дроп › 60 › дроп › 40 › 10 › Объём упражнения › 2 240 кг › Разминка в объём › не идёт › Ступени дроп-сета › идут все › Дроп-сет — продолжение подхода, а не новые подходы: ступени сдвинуты вправо и считаются в объём целиком, работа сделана вся. Рекорд берётся только с основной ступени, иначе сброс становился бы рекордом."></span></div>
-    <div class="spec"><b>Конструктор · пусто · текст</b><span data-v="Силовая › пусто · 0 подходов › Пустая тренировка › Добавляйте упражнения по ходу — план не обязан быть готов заранее. › Начать по плану · День B › 7 упражнений · назначил Артём › Собрать свою › Повторить 5 августа › 7 упр. › Из шаблона › 4 шаблона › Плана нет — главной становится «Собрать свою». Повтор и шаблон стоят строками, а не кнопками: это способы начать, а не решения."></span></div>
+    <div class="spec"><b>Конструктор · пусто · плана нет · текст</b><span data-v="Силовая › пусто · 0 подходов › Пустая тренировка › Добавляйте упражнения по ходу — план не обязан быть готов заранее. › Собрать свою › Повторить 5 августа › 7 упр. › Плана нет — главной становится «Собрать свою». Повтор стоит строкой, а не кнопкой: это способ начать, а не решение. Строки «Из шаблона» нет: у шаблонов в продукте нет ни хранения, ни применения, и кнопка вела бы в пустоту."></span></div>
+    <div class="spec"><b>Конструктор · пусто · план назначен · текст</b><span data-v="Силовая › план на день · 0 подходов › План на сегодня готов › Можно начать по плану куратора или собрать свою — план не обязателен. › Начать по плану · День B › 7 упражнений · назначил Артём › Собрать свою › Повторить 5 августа › 7 упр. › План назначен — главной становится кнопка плана, «Собрать свою» уходит вторичной. Повтор стоит строкой. Состав плана раскрывается внутри карточки только для чтения."></span></div>
     <div class="spec"><b>Конструктор · каталог · текст</b><span data-v="Каталог упражнений › Спина · 4 упражнения › Поиск по названию › Все › Грудь › Спина › Ноги › Плечи › Тяга штанги в наклоне › Спина · прошлый раз 60 × 8 › Подтягивания › Спина · прошлый раз ещё не делали › Тяга верхнего блока › Спина · прошлый раз 55 × 10 › Становая тяга › Спина · прошлый раз 105 × 5 › Создать «Тяга Т-грифа» › каталог подсказывает, но не запрещает › Строка создания появляется, когда в поиске набрано то, чего в каталоге нет. Прошлый результат стоит у каждого упражнения — по нему выбирают, а не по названию; у кого его нет, так и написано. Звезда слева — избранное: она же отдельным фильтром в ряду, чтобы свой короткий список открывался одним тапом."></span></div>
     <div class="spec"><b>Конструктор · итоги · текст 1/2</b><span data-v="Тренировка завершена › Силовая · грудь, спина, плечи · 8 августа › Отличная работа › Длительность › 54:30 › Тоннаж › 8,6 т › ↑ 12 % › Макс. вес › 75 кг › Рекорды › Рабочих подходов › 19 › Разминочных › 4 · вне объёма › Рекорд › Жим лёжа · 75 × 8 › Без объёма › подтягивания — вес тела неизвестен › 1 упр. › Как оно прошло › настроение › самочувствие › стресс › Заметка к тренировке › Расчётный максимум · жим лёжа › по весу и повторам каждой тренировки › 95 кг › 88 › н1 › 90 › н2 › 89 › н3 › 93 › н4 › 92 › н5 › 95 › н6 › Тоннаж растёт и от лишних подходов. Максимум из веса и повторов показывает, стал ли человек сильнее. › Сегодня всего две силовых › 14,2 т › Объём другими величинами › Планка · время › 3:00 под нагрузкой › Подтягивания · свой вес › 2 028 кг в тоннаже"></span></div>
     <div class="spec"><b>Конструктор · итоги · текст 2/2</b><span data-v="Своя строка, а не пропуск: иначе человек решит, что работа потерялась. Время и метры в тоннаж не идут — килограммы на секунды не умножаются. Свой вес идёт через коэффициент; нет коэффициента — здесь стоит строка «не посчитали». › В шаблоны › Готово › Упражнения, которые не попали в объём, названы поимённо с причиной: секунды и метры копятся своими величинами, а свой вес без известной массы тела не считается вовсе."></span></div>
@@ -3989,6 +4110,8 @@
     <div class="spec"><b>Ввод · метры · текст</b><span data-v="Гребной тренажёр › единица — метры › Метры › 500 › 500 › 400 › Итого › 1 400 м › В тоннаж › не идёт · метры не умножаются на килограммы › Метры и время устроены одинаково: одна колонка значений, свой итог в «Объёме другими величинами», в тоннаж не идут. Своя строка, а не пропуск — иначе человек решит, что работа потерялась."></span></div>
     <div class="spec"><b>Ввод · свой вес с довесом · текст</b><span data-v="Подтягивания › свой вес · коэффициент 1,0 › Довес, кг › Повторы › 10 › 10 › Первые два подхода › 78 кг за повтор › 1 482 кг › Третий · с довесом › 78 + 10 = 88 кг за повтор › 616 кг › Упражнение › 2 098 кг › Прочерк в довесе значит «только вес тела», а не забытое поле: галочку он не блокирует. Довес живёт на подходе, а не на упражнении — сегодня без блина, через месяц с блином на поясе."></span></div>
     <div class="spec"><b>Сессия · вернулись через час · текст</b><span data-v="Тренировка на паузе › 10 из 23 подходов · вас не было 1:04 › Всё, что отмечено, на месте. Таймер отдыха истёк, пока вас не было, и заново не запускается. › Последняя отметка › 19:47 › Сейчас › 20:51 › Продолжить › Завершить в 19:47 › Разрыв больше 45 минут — и второй кнопкой предлагаем закрыть тренировку временем последней отметки, а не текущим: иначе в истории останется тренировка на два часа, из которых час человек ехал домой. Длительность в итогах всегда считается от первой отметки до последней."></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · без таймера · текст</b><span data-v="Тренировка на паузе › 10 из 23 подходов · вас не было 1:04 › Всё, что отмечено, на месте. Таймер отдыха вы не запускали — ждать нечего. › Последняя отметка › 19:47 › Сейчас › 20:51 › Продолжить › Завершить в 19:47 › Пауза больше 45 минут бывает и без таймера: тогда экран не говорит про истечение, потому что истекать было нечему. Кнопки те же."></span></div>
+    <div class="spec"><b>Сессия · вернулись через час · таймер идёт · текст</b><span data-v="Тренировка на паузе › 10 из 23 подходов · вас не было 1:04 › Всё, что отмечено, на месте. Таймер отдыха ещё идёт — осталось 0:38. › Последняя отметка › 19:47 › Сейчас › 20:51 › Продолжить › Завершить в 19:47 › Редкий случай: таймер сохранился и не истёк. «Продолжить» возвращает к нему, не сбрасывая; предлагать закрыть тренировку всё равно можно — разрыв уже больше 45 минут."></span></div>
     <div class="spec"><b>Сессия · брошена вчера · текст</b><span data-v="Вчерашняя не завершена › 9 августа · 10 подходов отмечено › Она осталась открытой со вчера. Пока не решите — в тоннаж вчерашнего дня не попадёт. › Завершить вчерашним › Дописать › Удалить сессию › Дата тренировки › по началу, а не по завершению › 9 авг › Дописать › открывает вчерашнюю сессию как есть › третий исход › Автозавершение › нет › Новую начать можно › вчерашняя ждёт решения в ленте › Сама она не закроется никогда: автозавершение по таймауту однажды припишет человеку тренировку, которой не было, или сотрёт ту, что была. Открытая сессия не мешает начать новую — она просто ждёт в ленте своего дня."></span></div>
 </div>
 </div>

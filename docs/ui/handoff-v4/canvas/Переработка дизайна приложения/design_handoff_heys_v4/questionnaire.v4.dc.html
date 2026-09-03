@@ -178,7 +178,7 @@
     <div class="spec"><b>вторичный текст</b><span data-v="прозрачность .55 — как во всех канвасах"></span><i>на светлых .42 давало 2,9–3,0:1; цветная метка живёт по своим порогам, текст по 4,5</i></div>
     <div class="spec"><b>две вкладки</b><span data-v="экрана нет — нужен"></span><i>в коде есть ответ «Анкета изменилась в другой вкладке»: сохранение сверяет метку времени и отклоняет устаревший черновик, иначе теряются ответы из второй вкладки</i></div>
     <div class="spec" style="border-bottom:none"><b>срок черновика при выходе</b><span data-v="не сказан — надо добавить"></span><i>когда человек закрывает анкету на середине, знать про месяц полезнее заранее</i></div>
-                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                      <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Анкета · шаг 1 · 01</b><span data-v="высота 706px, фон var(--bg), направление column"></span></div>
     <div class="spec"><b>Анкета · шаг 1 · 02</b><span data-v="поля 16px 18px 0"></span></div>
@@ -561,9 +561,11 @@ class Component extends DCLogic {
       if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
     }
     const none = found[0] === 'НЕТ КОНТРАКТА';
+    if (!none && !found.length) { bar.textContent = ''; bar.style.display = 'none'; return; }
+    bar.style.display = '';
     bar.textContent = none
       ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено'
-      : (found.length ? '⚠ сверка: ' + found.join(' | ') : '✓ сверка чиста');
+      : '⚠ сверка: ' + found.join(' | ');
     bar.style.color = none ? '#8a4a20' : (found.length ? '#a8382b' : '#5c6a45');
   }
   contracts() {

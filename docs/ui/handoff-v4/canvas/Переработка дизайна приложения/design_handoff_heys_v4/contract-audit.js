@@ -417,12 +417,16 @@
     // проверок про канон знали только счёт покрытия: что расхождение НАЗВАНО, не проверял
     // никто — именно так в Гб молча жили три фазы против четырёх канонных.
     // Адресация такая же, как у data-vid: кадр сам называет, что и где сказано.
+    // ВНИМАНИЕ: пометка живёт в data-canonREF на кадре, а не в data-canon. Атрибут
+    // data-canon принадлежит БЛОКУ СНИМКА, и твик showCanon прячет его целиком —
+    // пока пометка стояла тем же именем, помеченные кадры пропадали вместе со
+    // снимками, то есть проверка гасила ровно те экраны, которые проверяла.
     var canonPairs = [].slice.call(document.querySelectorAll('[data-canonpair]'));
     var mute = [];
     canonPairs.forEach(function (w) {
       var fr = w.querySelector('[data-screen-label]');
       if (!fr) return;
-      var note = fr.getAttribute('data-canon');
+      var note = fr.getAttribute('data-canonref');
       var lbl = fr.getAttribute('data-screen-label');
       if (!note) { mute.push(lbl); return; }
       if (note.indexOf('иначе') !== 0) return;                  // «как в каноне» — утверждение, его проверяет глаз
@@ -430,7 +434,7 @@
       if (!key) { mute.push(lbl + ' (причина не названа)'); return; }
       if (!keysOf().some(function (k) { return k.indexOf(key) >= 0; })) mute.push(lbl + ' (строки «' + key + '» нет)');
     });
-    if (mute.length) out.push('отношение к канону не названо у ' + mute.length + ' из ' + canonPairs.length + ' кадров со снимком: ' + mute.slice(0, 4).join(' · ') + ' — пометьте data-canon="как в каноне" либо data-canon="иначе · <ключ строки>"');
+    if (mute.length) out.push('отношение к канону не названо у ' + mute.length + ' из ' + canonPairs.length + ' кадров со снимком: ' + mute.slice(0, 4).join(' · ') + ' — пометьте data-canonref="как в каноне" либо data-canonref="иначе · <ключ строки>"');
 
     // 21. голова строки спорит с хвостом. Решение, ДОПИСАННОЕ в конец data-v, оставляет
     // прежнее число в начале: в строке оказывается два ответа, а читают сверху — и первым

@@ -111,18 +111,18 @@
     <div class="spec"><b>прошлый день</b><span data-v="бар работает на любой открытой дате, включая прошлые дни: удаление там так же обратимо и теми же 5 с. Отдельного поведения для чужого дня нет"></span></div>
     <div class="spec"><b>офлайн</b><span data-v="бар работает в офлайне так же: удаление и возврат идут по локальным данным, синхронизация приходит потом. Если в офлайне окно истекло, удаление уходит на сервер вместе с остальными изменениями"></span><i>страховка, которая требует сети, бесполезна ровно там, где чаще всего ошибаются пальцем — на ходу</i></div>
     <div class="spec"><b>режим куратора</b><span data-v="куратор, правящий день клиента, видит тот же бар и те же 5 с; его отмена возвращает запись клиента. Пометки «правил куратор» бар не несёт — она живёт в листе правок"></span><i>два вида страховки для одного действия — второй способ ошибиться</i></div>
-    <div class="spec"><b>после «Отменить»</b><span data-v="бар исчезает, запись возвращается на своё место; подтверждающего тоста нет"></span><i>исчезнувший бар и есть ответ. Зелёный тост «Действие отменено» сверху экрана — прошлый дизайн и второй язык на одном экране</i></div>
+    <div class="spec"><b>после «Вернуть»</b><span data-v="бар исчезает, запись возвращается на своё место; подтверждающего тоста нет"></span><i>исчезнувший бар и есть ответ. Зелёный тост «Действие отменено» сверху экрана — прошлый дизайн и второй язык на одном экране</i></div>
     <div class="spec"><b>повторный тап и поворот</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «повторный тап · правило продукта» и «ориентация · правило продукта»: 350 мс защиты там, где повтор создаёт лишнюю сущность; интерфейс всегда портретный, ширина окна гибкая. Местное отличие: «Отменить» защищено на всё окно бара — второе нажатие уже нечего отменять; бар при этом закрывается по первому"></span></div>
     <div class="spec"><b>истёк без нажатия</b><span data-v="бар уезжает вниз за 160 мс, ничего не показывая"></span></div>
     <div class="spec"><b>появление</b><span data-v="выезд снизу 220 мс с перелётом до 1,04 — та же пружина, что у смены вида виджета"></span></div>
     <div class="spec"><b>уменьшенное движение</b><span data-v="выезда нет: бар проявляется за 120 мс, кольцо не анимируется — цифра меняется раз в секунду"></span></div>
-    <div class="spec" style="border-bottom:none"><b>доступность</b><span data-v="role='status', озвучивается текст и «Отменить, осталось N секунд»; кольцо декоративно"></span></div>
+    <div class="spec" style="border-bottom:none"><b>доступность</b><span data-v="role='status', озвучивается текст и «Вернуть, осталось N секунд»; кольцо декоративно"></span></div>
 
     <div class="ctrH">Тосты-уведомления</div>
     <div class="spec"><b>тоста подтверждения нет</b><span data-v="всплывающего уведомления об успехе или ошибке действия не рисуем: успех подтверждается самим содержимым, ошибка — на месте действия. Снимается роль подтверждения у heys_toast_v1 (зелёное «Действие отменено» с кнопкой), а не компонент целиком"></span><i>решение 21 августа: одно всплывающее место про возврат — этот бар. Роль подтверждения дублировала его кнопку «Отменить», поэтому уходит она</i></div>
     <div class="spec" style="border-bottom:none"><b>всплывающий совет — не мой</b><span data-v="второй потребитель heys_toast_v1 — всплывающий совет и плашка «Всё отлично! Советов нет». Он остаётся и описан в tips.v4.dc.html (кадр «Всплывающий совет»); этот контракт его не снимает и вида ему не задаёт"></span><i>один файл кода в двух ролях: без этой строки «прежний компонент снимается» читается как «удалить heys_toast_v1», а на нём висят советы</i></div>
 
-                                      <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                          <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Отмена · одно удаление · 01</b><span data-v="высота 300px, фон var(--bg), распределение flex-start"></span></div>
     <div class="spec"><b>Отмена · одно удаление · 02</b><span data-v="«Питание» — поля 16px 18px 0, шрифт 700 13px/1 Figtree, цвет var(--tx)"></span></div>
@@ -132,7 +132,7 @@
     <div class="spec"><b>Отмена · одно удаление · 06</b><span data-v="флекс none, позиция relative, ширина 30px, высота 30px"></span></div>
     <div class="spec"><b>Отмена · одно удаление · 07</b><span data-v="«5» — моноцифры: позиция absolute, вписан 0, выравнивание center, распределение center, шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Отмена · одно удаление · 08</b><span data-v="«Перекус удалён» — флекс 1, шрифт 600 12px/1.35 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Отмена · одно удаление · 09</b><span data-v="«Отменить» — флекс none, высота от 34px, выравнивание center, поля 0 13px, радиус 999px, фон rgba(var(--ink),.07), шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · 09</b><span data-v="«Вернуть» — флекс none, высота от 34px, выравнивание center, поля 0 13px, радиус 999px, фон rgba(var(--ink),.07), шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Отмена · одно удаление · 10</b><span data-v="позиция absolute, высота 64px, фон var(--c1), разделитель сверху 1px solid rgba(var(--ink),.07), выравнивание center, распределение space-around, поля 0 18px"></span></div>
     <div class="spec"><b>Отмена · одно удаление · 11</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Отмена · одно удаление · 12</b><span data-v="«Питание» — шрифт 600 8.5px/1 Figtree, цвет var(--ac)"></span></div>
@@ -144,7 +144,7 @@
     <div class="spec"><b>Отмена · пачка · 06</b><span data-v="флекс none, позиция relative, ширина 30px, высота 30px"></span></div>
     <div class="spec"><b>Отмена · пачка · 07</b><span data-v="«4» — моноцифры: позиция absolute, вписан 0, выравнивание center, распределение center, шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Отмена · пачка · 08</b><span data-v="«Удалено 3 продукта» — флекс 1, шрифт 600 12px/1.35 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Отмена · пачка · 09</b><span data-v="«Отменить» — флекс none, высота от 34px, выравнивание center, поля 0 13px, радиус 999px, фон rgba(var(--ink),.07), шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Отмена · пачка · 09</b><span data-v="«Вернуть» — флекс none, высота от 34px, выравнивание center, поля 0 13px, радиус 999px, фон rgba(var(--ink),.07), шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Отмена · пачка · 10</b><span data-v="позиция absolute, высота 64px, фон var(--c1), разделитель сверху 1px solid rgba(var(--ink),.07), выравнивание center, распределение space-around, поля 0 18px"></span></div>
     <div class="spec"><b>Отмена · пачка · 11</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Отмена · пачка · 12</b><span data-v="«Питание» — шрифт 600 8.5px/1 Figtree, цвет var(--ac)"></span></div>
@@ -156,7 +156,7 @@
     <div class="spec"><b>Отмена · продукт · 06</b><span data-v="флекс none, позиция relative, ширина 30px, высота 30px"></span></div>
     <div class="spec"><b>Отмена · продукт · 07</b><span data-v="«2» — моноцифры: позиция absolute, вписан 0, выравнивание center, распределение center, шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Отмена · продукт · 08</b><span data-v="«Рис бурый удалён» — флекс 1, шрифт 600 12px/1.35 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Отмена · продукт · 09</b><span data-v="«Отменить» — флекс none, высота от 34px, выравнивание center, поля 0 13px, радиус 999px, фон rgba(var(--ink),.07), шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Отмена · продукт · 09</b><span data-v="«Вернуть» — флекс none, высота от 34px, выравнивание center, поля 0 13px, радиус 999px, фон rgba(var(--ink),.07), шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Отмена · продукт · 10</b><span data-v="позиция absolute, высота 64px, фон var(--c1), разделитель сверху 1px solid rgba(var(--ink),.07), выравнивание center, распределение space-around, поля 0 18px"></span></div>
     <div class="spec"><b>Отмена · продукт · 11</b><span data-v="«Главная» — шрифт 600 8.5px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Отмена · продукт · 12</b><span data-v="«Питание» — шрифт 600 8.5px/1 Figtree, цвет var(--ac)"></span></div>
@@ -173,9 +173,9 @@
     <div class="spec"><b>Отмена · продукт · рисунок 03</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs)"></span></div>
     <div class="ctrH">Текст кадров дословно</div>
     <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
-    <div class="spec"><b>Отмена · одно удаление · текст</b><span data-v="Питание › Перекус удалён › Отменить › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
-    <div class="spec"><b>Отмена · пачка · текст</b><span data-v="Питание › Удалено 3 продукта › Отменить › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
-    <div class="spec"><b>Отмена · продукт · текст</b><span data-v="Питание › Рис бурый удалён › Отменить › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · текст</b><span data-v="Питание › Перекус удалён › Вернуть › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Отмена · пачка · текст</b><span data-v="Питание › Удалено 3 продукта › Вернуть › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
+    <div class="spec"><b>Отмена · продукт · текст</b><span data-v="Питание › Рис бурый удалён › Вернуть › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
 </div>
 
     <div class="h">Кадры</div>
@@ -191,7 +191,7 @@
           <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="78.5 78.5" transform="rotate(-90 15 15)"/></svg>
           <span class="n" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--ac);">5</span></span>
           <span style="flex:1;font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Перекус удалён</span>
-          <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Отменить</span>
+          <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Вернуть</span>
         </div>
         <div style="position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--c1);border-top:1px solid rgba(var(--ink),.07);display:flex;align-items:center;justify-content:space-around;padding:0 18px;"><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Главная</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:var(--ac);">Питание</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Актив</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Отчёты</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Инсайты</span></div>
       </div>
@@ -207,7 +207,7 @@
           <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="62.8 78.5" transform="rotate(-90 15 15)"/></svg>
           <span class="n" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--ac);">4</span></span>
           <span style="flex:1;font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Удалено 3 продукта</span>
-          <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Отменить</span>
+          <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Вернуть</span>
         </div>
         <div style="position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--c1);border-top:1px solid rgba(var(--ink),.07);display:flex;align-items:center;justify-content:space-around;padding:0 18px;"><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Главная</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:var(--ac);">Питание</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Актив</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Отчёты</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Инсайты</span></div>
       </div>
@@ -223,7 +223,7 @@
           <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="31.4 78.5" transform="rotate(-90 15 15)"/></svg>
           <span class="n" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--ac);">2</span></span>
           <span style="flex:1;font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Рис бурый удалён</span>
-          <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Отменить</span>
+          <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Вернуть</span>
         </div>
         <div style="position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--c1);border-top:1px solid rgba(var(--ink),.07);display:flex;align-items:center;justify-content:space-around;padding:0 18px;"><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Главная</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:var(--ac);">Питание</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Актив</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Отчёты</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Инсайты</span></div>
       </div>
@@ -333,9 +333,13 @@ class Component extends DCLogic {
       if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
     }
     const none = found[0] === 'НЕТ КОНТРАКТА';
+    // Молчит, когда чиста: общую строку печатает contract-audit.js, а две зелёные
+    // строки читаются как две разные сверки. Условие сборки — одна видимая строка.
+    if (!none && !found.length) { bar.textContent = ''; bar.style.display = 'none'; return; }
+    bar.style.display = '';
     bar.textContent = none
       ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено'
-      : (found.length ? '⚠ сверка: ' + found.join(' | ') : '✓ сверка чиста');
+      : '⚠ сверка: ' + found.join(' | ');
     bar.style.color = none ? '#8a4a20' : (found.length ? '#a8382b' : '#5c6a45');
   }
   contracts() {

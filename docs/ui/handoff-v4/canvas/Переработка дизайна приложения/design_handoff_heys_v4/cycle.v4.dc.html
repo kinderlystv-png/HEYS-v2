@@ -29,11 +29,13 @@
   .cd{background:var(--c1);border-radius:18px;padding:2px 15px}
   .hint{font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.56);text-wrap:pretty}
   .seg{display:flex;gap:6px;background:var(--c2);border-radius:999px;padding:4px}
-  .seg>span{flex:1;display:flex;align-items:center;justify-content:center;min-height:40px;border-radius:999px;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5)}
+  .seg>span{flex:1;display:flex;align-items:center;justify-content:center;min-height:40px;border-radius:999px;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56)}
   .seg>span.on{background:var(--acs);color:var(--on-acs)}
   .day{display:flex;gap:5px}
-  .day>span{flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:14px;background:var(--c1);font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);font-variant-numeric:tabular-nums}
+  .day>span{flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:14px;background:var(--c1);font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);font-variant-numeric:tabular-nums}
   .day>span.on{background:var(--acs);color:var(--on-acs)}
+  /* Ряд в карточке --c1: клетка уходит на грунт, иначе --c1 на --c1 не видна вовсе */
+  .day.wl>span{background:var(--bg)}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
   .chips>span{display:flex;align-items:center;min-height:34px;padding:0 12px;border-radius:999px;background:var(--c1);font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56)}
   .chips>span.on{background:var(--c2);color:var(--ac)}
@@ -41,7 +43,7 @@
   .bdg>span{display:flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;background:var(--c2);font:700 11px/1 Figtree,sans-serif;color:var(--ac);font-variant-numeric:tabular-nums}
   .btns{display:flex;gap:8px;margin-top:18px}
   .btns>span{flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;font:700 12.5px/1 Figtree,sans-serif}
-  .btns>span.sec{background:var(--c1);color:rgba(var(--ink),.55)}
+  .btns>span.sec{background:transparent;box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);color:rgba(var(--ink),.62)}
   .btns>span.pri{background:var(--acs);color:var(--on-acs)}
   .btns>span.dng{background:var(--tint);color:var(--ac2)}
   .tgl{width:44px;height:26px;border-radius:999px;background:rgba(var(--ink),.14);position:relative;flex:none}
@@ -65,7 +67,7 @@
   .fb>span{font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.56);display:block;margin-top:6px;text-wrap:pretty}
   .arw{display:flex;align-items:center;font:700 15px/1 Figtree,sans-serif;color:rgba(var(--ink),.3)}
   .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
-  .cell{height:38px;border-radius:11px;background:var(--c1);position:relative;display:flex;align-items:center;justify-content:center;font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);font-variant-numeric:tabular-nums}
+  .cell{height:38px;border-radius:11px;background:var(--c1);position:relative;display:flex;align-items:center;justify-content:center;font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);font-variant-numeric:tabular-nums}
   .cell.cyc::before{content:"";position:absolute;left:4px;top:9px;bottom:9px;width:3px;border-radius:999px;background:rgba(var(--ink),.46)}
   .cell.eat::after{content:"";position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:999px;background:rgba(var(--ink),.34)}
   .cell.rf{box-shadow:inset 0 -3px 0 rgba(var(--ink),.28)}
@@ -140,11 +142,11 @@
 
   <div>
     <div class="cap"><b>Тап по строке → какой день</b><span>второй слой, как у «Замеров»</span></div>
-    <div class="ph" data-screen-label="Цикл · шаг 5, выбор дня">
+    <div class="ph" data-screen-label="Цикл · шаг 5, выбор дня" data-vid="вид · выбор дня">
       <div style="border-radius:16px;background:var(--c1);padding:14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Особые дни</span><span style="font:700 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Не идут</span></div>
         <div class="tier" style="margin:16px 0 8px;">Какой день</div>
-        <div class="day"><span>1</span><span>2</span><span class="on">3</span><span>4</span><span>5</span><span>6</span><span>7</span></div>
+        <div class="day wl"><span>1</span><span>2</span><span class="on">3</span><span>4</span><span>5</span><span>6</span><span>7</span></div>
         <div class="hint" style="margin-top:10px;">Дни 1–7 проставятся сами, дальше счёт идёт вперёд.</div>
       </div>
       <div class="hint" style="margin-top:12px;">Раскрытие — второй слой той же строки, как у «Замеров» и «Холода». Экран не меняется, «Не идут» стоит справа в шапке.</div>
@@ -373,7 +375,7 @@
   <div>
     <div class="cap"><b>Карточка дня · заполнено</b><span>день 3: калории на базе, сдвинута только вода</span></div>
     <div class="ph" data-screen-label="Цикл · карточка дня, заполнено">
-      <div style="background:var(--c2);border-radius:18px;padding:16px;">
+      <div style="background:var(--c1);border-radius:18px;padding:16px;">
         <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
           <span style="font:600 15px/1.2 Figtree,sans-serif;color:var(--ac);">Начало периода</span>
           <span style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);flex:none;">День 3</span>
@@ -388,7 +390,7 @@
     <div class="cap"><b>Норма дня · день 22</b><span>вторая половина, единственные дни с надбавкой</span></div>
     <div class="ph" data-screen-label="Цикл · норма дня">
       <div class="cd" style="padding:2px 15px;">
-        <div class="row"><span>Съедено</span><span style="font-variant-numeric:tabular-nums;color:rgba(var(--ink),.5);">1 704 ккал</span></div>
+        <div class="row"><span>Съедено</span><span style="font-variant-numeric:tabular-nums;color:rgba(var(--ink),.56);">1 704 ккал</span></div>
         <div class="row"><span>Нужно съесть</span><span style="display:flex;align-items:center;gap:7px;"><span style="font:700 11px/1 Figtree,sans-serif;color:var(--ac);">+5 %</span><span style="font-variant-numeric:tabular-nums;color:var(--tx);">1 869 ккал</span></span></div>
       </div>
       <div class="hint" style="margin-top:10px;">Пометка стоит только в дни 15–28. В сами особые дни калории на базе — там растёт вода, а не расход.</div>
@@ -547,7 +549,7 @@
       <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(var(--ink),.56);margin:8px 0 10px;">Питание · блок «Особый период»</div>
       <div style="border-radius:18px;background:var(--c1);padding:16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Особый период</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--ac);">Указать день</span></div>
-        <div class="day" style="margin-top:14px;"><span class="on">1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span></div>
+        <div class="day wl" style="margin-top:14px;"><span class="on">1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span></div>
         <div style="font:500 11px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:10px;text-wrap:pretty;">Первый день — 16 августа. Дни 16–22 получат свои нормы, съеденное и вес останутся как есть.</div>
       </div>
       <div class="hint" style="margin-top:12px;">Тот же ряд, что в чек-ине, но на дате из капсулы. Отмечая «1» здесь, человек называет начало периода, а не сегодняшний день, — счёт пересобирается от 16-го.</div>
@@ -556,11 +558,11 @@
 
   <div>
     <div class="cap"><b>День выбран · дата по умолчанию сегодня</b><span>одна строка подтверждения, календарь — по желанию</span></div>
-    <div class="ph" data-screen-label="Цикл · день выбран, подтверждение даты">
+    <div class="ph" data-screen-label="Цикл · день выбран, подтверждение даты" data-vid="вид · карточка дня">
       <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(var(--ink),.56);margin-bottom:10px;">Питание · блок «Особый период»</div>
       <div style="border-radius:18px;background:var(--c1);padding:16px;">
         <div style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Особый период</div>
-        <div class="day" style="margin-top:14px;"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span class="on">7</span></div>
+        <div class="day wl" style="margin-top:14px;"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span class="on">7</span></div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:13px;border-top:1px solid rgba(var(--ink),.08);">
           <span><span style="display:block;font:600 12px/1 Figtree,sans-serif;color:var(--tx);">Это было сегодня</span><span style="display:block;font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:3px;">26 августа · период 20–26</span></span>
           <span style="flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:999px;background:var(--c2);font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">Другой день</span>
@@ -656,7 +658,7 @@
   <div class="spec"><b>доступность · отложенные замеры</b><span data-v="строка получает aria-disabled='true' и не попадает в обход фокусом; вслух читается целиком, вместе с причиной — «Замеры отложены. Задержка воды искажает обхваты, вернутся после периода»"></span><i>пункт, который просто исчез бы из обхода без объяснения, читается как поломка</i></div>
   <div class="spec"><b>доступность · лента в календаре</b><span data-v="лента и прогноз — не декорация: клетка получает в доступное имя «особые дни» или «ожидается период» после даты. Форма и цвет остаются единственным зрительным признаком, но не единственным признаком вообще"></span></div>
   <div class="spec"><b>доступность · пустые точки графика</b><span data-v="точка дня из окна исключения объявляется как «День N, вес, в тренд не входит»; тултип открывается с клавиатуры и закрывается Escape"></span></div>
-  <div class="spec"><b>отмена разрушительных ответов</b><span data-v="«Не идут» на отмеченной неделе и «Закончились» зовут общий бар отмены на 5 с: текст «Особые дни сняты · N дней» и «Особые дни закрыты», возврат ставит прежние cycleDay и прежние нормы этих дней. «Идут» и смена номера бара не зовут"></span><i>вид бара, длительность и поведение — undo-bar.v4.dc.html, строка «особый период»: своих значений здесь нет</i></div>
+  <div class="spec"><b>отмена разрушительных ответов</b><span data-v="Решение 3 сентября (ответ на разбор кодера): подписи у двух действий РАЗНЫЕ, потому что разные исходы: «Не идут» → «Особые дни сняты · N дней» (снята вся отмеченная неделя), «Закончились» → «Особые дни закрыты» (неделя закрыта на текущем дне, счёт фаз продолжается). Одна подпись на оба исхода ЗАПРЕЩЕНА: бар отмены существует, чтобы человек видел, что именно отменяет. Общими остаются сам бар и 5 с (pushCycleUndo, duration 5000). Моя прежняя формулировка называла одну подпись — она была недописана, а не спорна. Было до этого решения: «Не идут» на отмеченной неделе и «Закончились» зовут общий бар отмены на 5 с: текст «Особые дни сняты · N дней» и «Особые дни закрыты», возврат ставит прежние cycleDay и прежние нормы этих дней. «Идут» и смена номера бара не зовут"></span><i>вид бара, длительность и поведение — undo-bar.v4.dc.html, строка «особый период»: своих значений здесь нет</i></div>
   <div class="spec"><b>выключение не переписывает прошлое</b><span data-v="выключение тумблера гасит функцию с сегодняшнего дня: отметки и нормы прошлых дней остаются как записаны, график сохраняет ступеньку, лента в календаре остаётся на прожитых днях. Удаляются только состояние счёта и прогноз; сегодняшняя цель пересчитывается к базе, если день ещё открыт"></span><i>исправлено 26 августа: прежние строки говорили «отметки удаляются» и «история не пересчитывается» одновременно — вместе это давало приподнятые нормы прошлых дней без объяснения на экране. Прошлое не переписывают: человек в те дни правда ел по той норме</i></div>
   <div class="spec"><b>ответ «не идут»</b><span data-v="в раскрытом слое справа в шапке действие «Не идут» — пишет cycleStatus none и чистит семь дней; отдельной кнопки в свёрнутой строке нет"></span></div>
   <div class="spec"><b>день по умолчанию</b><span data-v="со второго дня карточка предлагает вчерашний день + 1; «Верно» подтверждает, ряд 1–7 переставляет, «Закончились» закрывает период; переставленный день пересобирает неделю от новой даты"></span></div>
@@ -683,22 +685,22 @@
   <div class="spec"><b>вид · строка в стопке</b><span data-v="строка стопки высотой 66 px: фон var(--c1), радиус 16, паддинг 11 сверху и снизу, 14 слева, 12 справа; заголовок 600 13px var(--tx), подпись 500 11px тон 45 % с отступом 3 px; справа чип-кнопка «Отметить» — высота 44, паддинг 0 16, радиус 999, фон var(--c2), текст 700 12px var(--ac), flex:none"></span><i>чип, а не текст: действие в строке должно читаться нажимаемым и держать 44 px — тумблера здесь нет, тумблер живёт только в профиле</i></div>
   <div class="spec"><b>вид · раскрытый слой</b><span data-v="второй слой той же строки: фон var(--c1), радиус 16, паддинг 14; шапка — заголовок 600 13px var(--tx) и справа «Не идут» 700 11px тон 40 %; заголовок ряда 700 10px letter-spacing .16em uppercase var(--ac)"></span></div>
   <div class="spec"><b>вид · верхняя карточка на днях 1–7</b><span data-v="геометрия верхней карточки шага, не строки стопки: фон var(--c2), радиус 20, паддинг 16/17; заголовок «Особые дни» 700 16px var(--tx), справа «День N · подпись» 600 12px var(--ac); подпись-пояснение 500 11,5px тон 50 %; ряд 1–7 над кнопками; кнопки высотой 44 — «Верно» фон var(--acs) текст var(--on-acs) 700 12,5px, «Закончились» фон var(--bg) обводка inset 1,5 px тон 16 % текст тон 62 %"></span><i>во весь шаг рисуется один раз: фрагмент в разделе «Ввод» и полная копия шага 5 показывают одну и ту же поверхность</i></div>
-  <div class="spec"><b>вид · выбор дня</b><span data-v="ряд 1–7 — высота 44, радиус 14, фон var(--c1), выбранный var(--acs) текст var(--on-acs) 700 13px, цифры tabular-nums, зазор 5 px; раскрытие — второй слой той же карточки, экран не меняется"></span></div>
-  <div class="spec"><b>вид · карточка дня</b><span data-v="пустая — фон var(--c1) радиус 18 паддинг 16, действие «Указать день» 700 12px var(--ac); заполненная — фон var(--c2), название фазы 600 15px var(--ac), «День N» 600 12px тон 45 %, бейджи высота 28 паддинг 0 10 фон var(--c2) текст var(--ac) 700 11px"></span></div>
+  <div class="spec"><b>вид · выбор дня</b><span data-v="Приведено 2 сентября (сверка по заливке и контрасту): клетка берёт тон по карточке под ней — на --c2 остаётся var(--c1), внутри карточки --c1 уходит на грунт var(--bg) модификатором .day.wl: --c1 на --c1 не видна вовсе, а перекрашивать карточку значило бы сломать пилюлю «Другой день» на том же экране (пробовали, сверка поймала). Цифра невыбранного дня — чернила 56 %, а не 50 %: 50 % при 13 px давало контраст 3,87. Было до этого решения: ряд 1–7 — высота 44, радиус 14, фон var(--c1), выбранный var(--acs) текст var(--on-acs) 700 13px, цифры tabular-nums, зазор 5 px; раскрытие — второй слой той же карточки, экран не меняется"></span></div>
+  <div class="spec"><b>вид · карточка дня</b><span data-v="Приведено 2 сентября (сверка по заливке): заполненная карточка тоже var(--c1), как и пустая, — она стояла на var(--c2), и плашка «+10 % вода» того же тона исчезала в фоне. Было до этого решения: пустая — фон var(--c1) радиус 18 паддинг 16, действие «Указать день» 700 12px var(--ac); заполненная — фон var(--c2), название фазы 600 15px var(--ac), «День N» 600 12px тон 45 %, бейджи высота 28 паддинг 0 10 фон var(--c2) текст var(--ac) 700 11px"></span></div>
   <div class="spec"><b>метка в календаре</b><span data-v="период рисуется одной лентой на все подряд идущие дни с cycleDay 1…7, включая проставленные автозаполнением; дни 8–28 не помечаются, ответ «Не идут» ленту укорачивает, «Закончились» обрезает по последнему дню"></span><i>лента заменяет прежнюю полосу в каждой клетке: отрезок, идущий подряд, показывается одной формой, а не пятью одинаковыми метками</i></div>
   <div class="spec"><b>вид · лента периода</b><span data-v="высота 4 px, прижата к верхнему краю клетки, заливка --acs; идёт через зазор сетки (по 5 px в каждую сторону от клетки), у первого дня скруглена слева радиусом 999, у последнего справа; на конце недели и месяца обрывается плоским краем без скругления — плоский край и означает продолжение"></span></div>
   <div class="spec"><b>контраст ленты</b><span data-v="лента красится акцентом --acs, а не тоном чернил: заливка сплошная и в каждом из четырёх наборов держит не меньше 3:1 к фону клетки, поэтому пер-палитровой подгонки тона у неё нет. Прогноз тоном --tint — вспомогательная форма, единственным носителем смысла не является: те же дни названы в доступном имени клетки и строкой «следующий — N-го»"></span><i>у неакцентной метки загрузочного дня тона подобраны пофайлово (date-remainders.v4, строка «тон метки загрузки») — у ленты этого не требуется</i></div>
   <div class="spec"><b>прогноз следующего периода</b><span data-v="та же лента заливкой --tint на днях ожидаемого начала: дата считается как последняя отметка плюс 28 дней, длина прогноза 5 дней. В шапке месяца строка «следующий — N-го». Прогноз не ставит cycleDay, в нормы не входит и не влияет ни на один множитель"></span><i>календарь — единственная поверхность, которая смотрит вперёд; счёт для этого уже есть, показать его стоит одну ленту</i></div>
   <div class="spec"><b>прогноз молчит, когда не знает</b><span data-v="лента ожидания не рисуется, если отметок ещё не было, если последняя старше 28 дней (там уже вопрос «период начался?») или если человек ответил «Не идут» на ожидаемый день"></span></div>
   <div class="spec"><b>заливка клетки не занимается</b><span data-v="заливкой клетки календарь говорит «сегодня» и качество дня; период и прогноз живут только на верхнем крае, точка еды и полоса загрузочного — внизу, выбранная дата в режиме выбора — обводкой. Вариант с заливкой интервала отклонён"></span><i>вид клетки, сетки и заливок — «Дата и остатки v4»; ленту рисую я внутри их клетки, при расхождении по клетке верен тот файл, по ленте — этот</i></div>
-  <div class="spec"><b>вид · кнопки решений</b><span data-v="ряд кнопок под текстом: зазор 8, высота 48, радиус 999, кегль 700 12,5px; вторичная — фон var(--c1) текст тоном чернил 55 %, основная — фон var(--acs) текст var(--on-acs), опасная — фон var(--tint) текст var(--ac2)"></span><i>один ряд на все четыре диалога функции: выключение, вопрос дня 29, календарь выбора даты, предупреждение о сбое. Своей геометрии кнопок ни у одного из них нет</i></div>
+  <div class="spec"><b>вид · кнопки решений</b><span data-v="Приведено 2 сентября (сверка по заливке): вторая кнопка — обводка inset 1,5 px чернил 16 % без заливки, текст чернил 62 %: заливка var(--c1) стояла на карточке var(--c1) и кнопки вовсе не было видно. Было до этого решения: ряд кнопок под текстом: зазор 8, высота 48, радиус 999, кегль 700 12,5px; вторичная — фон var(--c1) текст тоном чернил 55 %, основная — фон var(--acs) текст var(--on-acs), опасная — фон var(--tint) текст var(--ac2)"></span><i>один ряд на все четыре диалога функции: выключение, вопрос дня 29, календарь выбора даты, предупреждение о сбое. Своей геометрии кнопок ни у одного из них нет</i></div>
   <div class="spec"><b>вид · вопрос дня 29</b><span data-v="карточка дня становится вопросом: фон var(--c1), радиус 18, паддинг 16; заголовок «Период начался?» 700 12,5px var(--tx), подпись 500 11,5px тоном чернил 50 % с отступом 7; кнопки «Ещё нет» вторичная и «Да, первый день» основная"></span></div>
   <div class="spec"><b>вид · подтверждение выключения</b><span data-v="заголовок «Выключить особый период?» 700 15px/1,35 var(--tx); текст 500 12px/1,55 тоном чернил 55 % с отступом 10; кнопки «Оставить» вторичная и «Выключить» опасная"></span></div>
   <div class="spec"><b>вид · предупреждение о сбое</b><span data-v="фон var(--tint), радиус 16, паддинг 14; заголовок «Сейчас N-й день по счёту» 700 12,5px/1,35 var(--ac2), текст 500 11,5px/1,5 тоном чернил 55 % с отступом 7; кнопки «Не надо» вторичная и «Первый день» основная из общего ряда — 48 px на var(--c1), отступ 13"></span><i>единственная поверхность функции на предупреждающем тоне: она отменяет счёт, а не продолжает его</i></div>
   <div class="spec"><b>вид · строка после «Закончились»</b><span data-v="строка стопки: фон var(--c1), радиус 16, паддинг 13/14; заголовок «Особые дни» 600 13px var(--tx), справа состояние «закончились на N-й» 600 12px тоном чернил 45 %, ниже пояснение 500 11px/1,45 тоном 50 %; действий и кнопок нет"></span></div>
   <div class="spec"><b>вид · строка прогноза в шапке месяца</b><span data-v="справа от названия месяца, по базовой линии с ним: «следующий — N-го» 600 10,5px тоном чернил 40 %; при молчащем прогнозе строки нет вовсе, место не занимается"></span></div>
   <div class="spec"><b>вид · пометка нормы</b><span data-v="в строке «Нужно съесть» перед числом пилюля-текст «+5 %» 700 11px var(--ac) без фона, зазор 7 px; пометка стоит только при ненулевом множителе"></span></div>
-  <div class="spec"><b>вид · инсайт</b><span data-v="фон var(--gr-bg) радиус 18 паддинг 15/16, заголовок 700 12px var(--gr), текст 500 11,5px тон 55 %; не чаще одного раза в день"></span></div>
+  <div class="spec"><b>вид · инсайт</b><span data-v="Решение 3 сентября (ответ на разбор кодера): заголовок инсайта НЕСЁТ ЧИСЛО — «Норма выше на N %», а не глухое «Особый период»: смысл пересчёта 26 августа был в том, чтобы цена поправки стала числом, иначе исправление осталось невидимым (прежние проценты молча съедали пятую часть цели −1,8 кг). Это правка продукта, не кадра. Из трёх подписей запроса в ПРОДУКТ идёт одна — «Норма приподнята во второй половине цикла» под графиком нормы; «Пометка стоит только в дни 15–28» и «Пустые точки — дни 26–28 и 1–5» остаются ПОЯСНЕНИЯМИ КАНВАСА: первая объясняет разметку кадра, вторая уже сказана всплывающей подсказкой по тапу, и дублировать её подписью значит объяснять график дважды. Было до этого решения: фон var(--gr-bg) радиус 18 паддинг 15/16, заголовок 700 12px var(--gr), текст 500 11,5px тон 55 %; не чаще одного раза в день"></span></div>
   <div class="spec"><b>слова на экране</b><span data-v="«особый период», «особые дни», «начало · середина · конец»; медицинские названия фаз в интерфейс не выводятся; эмодзи не используется — 🌸 из канона кода не переносится"></span></div>
   <div class="spec"><b>границы</b><span data-v="мои — строка «Особые дни» внутри стопки пятого шага и её верхняя карточка на днях 1–7 (сама стопка, индикатор и кнопка «Готово» — чек-ина), содержимое блока «Особый период» на «Питании» (сама вкладка, порядок блоков и ряд чипов — nutrition-tab), карточка дня, пометка в строке «Нужно съесть», инсайт; клетка и сетка календаря — «Дата и остатки v4», метку рисую я внутри их клетки; тела графиков — «Вкладка - Отчёты v4», от меня зона периода, стиль пустых точек и исключение из тренда; строка в профиле — «Настройки и системное v4»"></span></div>
   <div class="spec"><b>расхождение с кодом · намеренное</b><span data-v="heys_cycle_v1.js держит прежние числа: +5 % на 1–5, +5 % на 13–14, +8 % на 15–28 и волну на 1–5. Контракт задаёт цель — меняется код, а не эти строки. До правки кода баннер канваса остаётся «ЭСКИЗ»"></span><i>решение владельца 26 августа: считать по физиологии, а не по тому, что уже написано</i></div>
@@ -709,7 +711,7 @@
   <div class="spec"><b>демо</b><span data-v="анимаций на канвасе нет: все кадры — стоп-кадры, сверять можно любой"></span></div>
   <div class="spec"><b>палитры</b><span data-v="все четыре темы собираются зеркалом из песочного ряда: значения берутся из v4-canvas.css, своих хексов в кадрах нет. Колонка «Решения» в зеркало не едет"></span></div>
   <div class="spec"><b>открыто до передачи</b><span data-v="ничего: все решения по особому периоду приняты текстом. Баннер «ЭСКИЗ» снимается на «В ПРОД» после подтверждения множителей владельцем — множители в контракте уже совпадают с каноном кода"></span></div>
-                            <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                            <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Цикл · шаг 5, строка в стопке · 01</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ снизу 12px"></span></div>
     <div class="spec"><b>Цикл · шаг 5, строка в стопке · 02</b><span data-v="ширина 17px, высота 17px"></span></div>
@@ -743,6 +745,150 @@
     <div class="spec"><b>Цикл · шаг 5, день предложен · 07</b><span data-v="зазор 8px, отступ сверху 11px"></span></div>
     <div class="spec"><b>Цикл · шаг 5, день предложен · 08</b><span data-v="«Закончились» — флекс 1, высота от 44px, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), выравнивание center, распределение center, шрифт 700 12.5px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
     <div class="spec"><b>Цикл · шаг 5, день предложен · 09</b><span data-v="«Верно» — флекс 1, высота от 44px, радиус 999px, фон var(--acs), выравнивание center, распределение center, шрифт 700 12.5px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 02</b><span data-v="поля 16px 18px 0, выравнивание center, распределение space-between"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 03</b><span data-v="ширина 44px, высота 44px, отступы -8px 0, выравнивание center"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 04</b><span data-v="зазор 5px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 05</b><span data-v="ширина 7px, высота 7px, радиус 999px, фон rgba(var(--ink),.14)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 06</b><span data-v="ширина 18px, высота 7px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 07</b><span data-v="ширина 44px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 08</b><span data-v="флекс 1, обрез hidden, поля 14px 18px 0"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 09</b><span data-v="радиус 20px, фон var(--c1), поля 16px 17px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 10</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 11</b><span data-v="«Прохладный душ» — шрифт 700 16px/1.25 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 12</b><span data-v="«4 дня подряд» — шрифт 700 10px/1.2 Figtree, цвет var(--gr), перенос nowrap"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 13</b><span data-v="«Хотя бы тридцать секунд в конце обычного душа — эт» — шрифт 500 11.5px/1.5 Figtree, цвет rgba(var(--ink),.56), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 14</b><span data-v="зазор 8px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 15</b><span data-v="«Было» — флекс 1, высота от 44px, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), выравнивание center, распределение center, шрифт 700 12.5px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 16</b><span data-v="направление column, зазор 8px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 17</b><span data-v="радиус 16px, фон var(--c1), поля 12px 14px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 18</b><span data-v="выравнивание center, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 19</b><span data-v="«Добавки на сегодня» — шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 20</b><span data-v="ширина 0, высота 0, разделитель сверху 6px solid rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 21</b><span data-v="направление column, зазор 7px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 22</b><span data-v="«Витамин D · 5000 МЕ» — шрифт 500 12px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 23</b><span data-v="«утром» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 24</b><span data-v="выравнивание center, зазор 7px, отступ сверху 12px, высота от 44px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 25</b><span data-v="ширина 26px, высота 26px, радиус 999px, фон var(--c2), выравнивание center, распределение center, флекс none"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 26</b><span data-v="«Добавить в курс» — шрифт 600 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 27</b><span data-v="радиус 16px, фон var(--c1), поля 13px 14px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 28</b><span data-v="«Резинки и разогрев · 6 минут» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 29</b><span data-v="зазор 6px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 30</b><span data-v="«Сделал» — флекс 1, высота от 42px, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), выравнивание center, распределение center, шрифт 700 11.5px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 31</b><span data-v="радиус 16px, фон var(--c1), поля 13px 14px, высота от 44px, выравнивание center, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 32</b><span data-v="«Прошло 9 дней с прошлых» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 3px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 33</b><span data-v="«›» — шрифт 700 15px/1 Figtree, цвет rgba(var(--ink),.3)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 34</b><span data-v="поля 12px 18px 20px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · 35</b><span data-v="«Готово» — выравнивание center, распределение center, высота от 48px, радиус 999px, фон var(--acs), шрифт 700 13px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 02</b><span data-v="поля 16px 18px 0, выравнивание center, распределение space-between"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 03</b><span data-v="ширина 44px, высота 44px, отступы -8px 0, выравнивание center"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 04</b><span data-v="зазор 5px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 05</b><span data-v="ширина 7px, высота 7px, радиус 999px, фон rgba(var(--ink),.14)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 06</b><span data-v="ширина 18px, высота 7px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 07</b><span data-v="ширина 44px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 08</b><span data-v="флекс 1, обрез hidden, поля 14px 18px 0"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 09</b><span data-v="радиус 20px, фон var(--c1), поля 16px 17px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 10</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 11</b><span data-v="«Прохладный душ» — шрифт 700 16px/1.25 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 12</b><span data-v="«4 дня подряд» — шрифт 700 10px/1.2 Figtree, цвет var(--gr), перенос nowrap"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 13</b><span data-v="«Хотя бы тридцать секунд в конце обычного душа — эт» — шрифт 500 11.5px/1.5 Figtree, цвет rgba(var(--ink),.56), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 14</b><span data-v="зазор 8px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 15</b><span data-v="«Было» — флекс 1, высота от 44px, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), выравнивание center, распределение center, шрифт 700 12.5px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 16</b><span data-v="направление column, зазор 8px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 17</b><span data-v="радиус 16px, фон var(--c1), поля 12px 14px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 18</b><span data-v="выравнивание center, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 19</b><span data-v="«Добавки на сегодня» — шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 20</b><span data-v="ширина 0, высота 0, разделитель сверху 6px solid rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 21</b><span data-v="направление column, зазор 7px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 22</b><span data-v="«Витамин D · 5000 МЕ» — шрифт 500 12px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 23</b><span data-v="«утром» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 24</b><span data-v="выравнивание center, зазор 7px, отступ сверху 12px, высота от 44px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 25</b><span data-v="ширина 26px, высота 26px, радиус 999px, фон var(--c2), выравнивание center, распределение center, флекс none"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 26</b><span data-v="«Добавить в курс» — шрифт 600 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 27</b><span data-v="радиус 16px, фон var(--c1), поля 13px 14px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 28</b><span data-v="«Резинки и разогрев · 6 минут» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 29</b><span data-v="зазор 6px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 30</b><span data-v="«Сделал» — флекс 1, высота от 42px, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), выравнивание center, распределение center, шрифт 700 11.5px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 31</b><span data-v="радиус 16px, фон var(--c1), поля 13px 14px, высота от 44px, выравнивание center, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 32</b><span data-v="«Прошло 9 дней с прошлых» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 3px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 33</b><span data-v="«›» — шрифт 700 15px/1 Figtree, цвет rgba(var(--ink),.3)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 34</b><span data-v="поля 12px 18px 20px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · 35</b><span data-v="«Готово» — выравнивание center, распределение center, высота от 48px, радиус 999px, фон var(--acs), шрифт 700 13px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 02</b><span data-v="поля 16px 18px 0, выравнивание center, распределение space-between"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 03</b><span data-v="ширина 44px, высота 44px, отступы -8px 0, выравнивание center"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 04</b><span data-v="зазор 5px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 05</b><span data-v="ширина 7px, высота 7px, радиус 999px, фон rgba(var(--ink),.14)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 06</b><span data-v="ширина 18px, высота 7px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 07</b><span data-v="ширина 44px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 08</b><span data-v="флекс 1, обрез hidden, поля 14px 18px 0"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 09</b><span data-v="радиус 20px, фон var(--c2), поля 16px 17px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 10</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 11</b><span data-v="«Особые дни» — шрифт 700 16px/1.25 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 12</b><span data-v="«День 4 · середина» — шрифт 600 12px/1 Figtree, цвет var(--ac), перенос nowrap"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 13</b><span data-v="«Вчера был третий. Если сегодня иначе — переставьте» — шрифт 500 11.5px/1.5 Figtree, цвет rgba(var(--ink),.56), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 14</b><span data-v="отступ сверху 12px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 15</b><span data-v="зазор 8px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 16</b><span data-v="«Закончились» — флекс 1, высота от 44px, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), выравнивание center, распределение center, шрифт 700 12.5px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 17</b><span data-v="«Верно» — флекс 1, высота от 44px, радиус 999px, фон var(--acs), выравнивание center, распределение center, шрифт 700 12.5px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 18</b><span data-v="направление column, зазор 8px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 19</b><span data-v="радиус 16px, фон var(--c1), поля 13px 14px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 20</b><span data-v="«Прохладный душ» — шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 21</b><span data-v="«4 дня подряд» — шрифт 700 10px/1.2 Figtree, цвет var(--gr), перенос nowrap"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 22</b><span data-v="зазор 6px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 23</b><span data-v="«Было» — флекс 1, высота от 42px, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), выравнивание center, распределение center, шрифт 700 11.5px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 24</b><span data-v="радиус 16px, фон var(--c1), поля 12px 14px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 25</b><span data-v="выравнивание center, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 26</b><span data-v="ширина 0, высота 0, разделитель сверху 6px solid rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 27</b><span data-v="направление column, зазор 7px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 28</b><span data-v="«Витамин D · 5000 МЕ» — шрифт 500 12px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 29</b><span data-v="«утром» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 30</b><span data-v="выравнивание center, зазор 7px, отступ сверху 12px, высота от 44px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 31</b><span data-v="ширина 26px, высота 26px, радиус 999px, фон var(--c2), выравнивание center, распределение center, флекс none"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 32</b><span data-v="«Добавить в курс» — шрифт 600 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 33</b><span data-v="радиус 16px, фон var(--c1), поля 13px 14px, высота от 44px, выравнивание center, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 34</b><span data-v="«Замеры отложены» — шрифт 600 13px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 35</b><span data-v="«Задержка воды искажает обхваты — вернутся после пе» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 3px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 36</b><span data-v="поля 12px 18px 20px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · 37</b><span data-v="«Готово» — выравнивание center, распределение center, высота от 48px, радиус 999px, фон var(--acs), шрифт 700 13px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 01</b><span data-v="ширина 330px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 02</b><span data-v="поля 16px 18px 0, выравнивание center, распределение space-between"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 03</b><span data-v="ширина 44px, высота 44px, отступы -8px 0, выравнивание center"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 04</b><span data-v="зазор 5px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 05</b><span data-v="ширина 7px, высота 7px, радиус 999px, фон rgba(var(--ink),.14)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 06</b><span data-v="ширина 18px, высота 7px, радиус 999px, фон var(--acs)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 07</b><span data-v="ширина 44px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 08</b><span data-v="флекс 1, обрез hidden, поля 14px 18px 0"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 09</b><span data-v="радиус 20px, фон var(--c1), поля 16px 17px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 10</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 11</b><span data-v="«Прохладный душ» — шрифт 700 16px/1.25 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 12</b><span data-v="«4 дня подряд» — шрифт 700 10px/1.2 Figtree, цвет var(--gr), перенос nowrap"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 13</b><span data-v="«Хотя бы тридцать секунд в конце обычного душа — эт» — шрифт 500 11.5px/1.5 Figtree, цвет rgba(var(--ink),.56), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 14</b><span data-v="зазор 8px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 15</b><span data-v="«Было» — флекс 1, высота от 44px, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), выравнивание center, распределение center, шрифт 700 12.5px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 16</b><span data-v="направление column, зазор 8px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 17</b><span data-v="радиус 16px, фон var(--c1), поля 12px 14px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 18</b><span data-v="выравнивание center, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 19</b><span data-v="«Добавки на сегодня» — шрифт 600 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 20</b><span data-v="ширина 0, высота 0, разделитель сверху 6px solid rgba(var(--ink),.35)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 21</b><span data-v="направление column, зазор 7px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 22</b><span data-v="«Витамин D · 5000 МЕ» — шрифт 500 12px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 23</b><span data-v="«утром» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 24</b><span data-v="выравнивание center, зазор 7px, отступ сверху 12px, высота от 44px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 25</b><span data-v="ширина 26px, высота 26px, радиус 999px, фон var(--c2), выравнивание center, распределение center, флекс none"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 26</b><span data-v="«Добавить в курс» — шрифт 600 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 27</b><span data-v="радиус 16px, фон var(--c1), поля 13px 14px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 28</b><span data-v="«Резинки и разогрев · 6 минут» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 29</b><span data-v="зазор 6px, отступ сверху 11px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 30</b><span data-v="«Сделал» — флекс 1, высота от 42px, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), выравнивание center, распределение center, шрифт 700 11.5px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 31</b><span data-v="радиус 16px, фон var(--c1), поля 11px 12px 11px 14px, выравнивание center, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 32</b><span data-v="«Нормы дня подстроятся под них» — шрифт 500 11px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 3px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 33</b><span data-v="«Отметить» — флекс none, выравнивание center, высота от 44px, поля 0 16px, радиус 999px, фон var(--c2), шрифт 700 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 34</b><span data-v="радиус 16px, фон var(--c1), поля 13px 14px, высота от 44px, выравнивание center, распределение space-between, зазор 10px"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 35</b><span data-v="«›» — шрифт 700 15px/1 Figtree, цвет rgba(var(--ink),.3)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 36</b><span data-v="поля 12px 18px 20px, фон var(--bg)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · 37</b><span data-v="«Готово» — выравнивание center, распределение center, высота от 48px, радиус 999px, фон var(--acs), шрифт 700 13px/1 Figtree, цвет var(--on-acs)"></span></div>
     <div class="spec"><b>Цикл · профиль, тумблер · 01</b><span data-v="«Нормы» — ярус"></span></div>
     <div class="spec"><b>Цикл · профиль, тумблер · 02</b><span data-v="список .cd"></span></div>
     <div class="spec"><b>Цикл · профиль, тумблер · 03</b><span data-v="строка списка"></span></div>
@@ -758,7 +904,7 @@
     <div class="spec"><b>Цикл · карточка дня, пусто · 01</b><span data-v="выравнивание center, распределение space-between, зазор 12px, фон var(--c1), радиус 18px, поля 16px"></span></div>
     <div class="spec"><b>Цикл · карточка дня, пусто · 02</b><span data-v="«Особый период» — шрифт 600 12.5px/1.35 Figtree, цвет rgba(var(--ink),.55)"></span></div>
     <div class="spec"><b>Цикл · карточка дня, пусто · 03</b><span data-v="«Указать день» — шрифт 700 12px/1 Figtree, цвет var(--ac), флекс none"></span></div>
-    <div class="spec"><b>Цикл · карточка дня, заполнено · 01</b><span data-v="фон var(--c2), радиус 18px, поля 16px"></span></div>
+    <div class="spec"><b>Цикл · карточка дня, заполнено · 01</b><span data-v="фон var(--c1), радиус 18px, поля 16px"></span></div>
     <div class="spec"><b>Цикл · карточка дня, заполнено · 02</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
     <div class="spec"><b>Цикл · карточка дня, заполнено · 03</b><span data-v="«Начало периода» — шрифт 600 15px/1.2 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Цикл · карточка дня, заполнено · 04</b><span data-v="«День 3» — шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.45), флекс none"></span></div>
@@ -768,7 +914,7 @@
     <div class="spec"><b>Цикл · карточка дня, заполнено · 08</b><span data-v="«Сбросить неделю» — шрифт 700 11.5px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Цикл · норма дня · 01</b><span data-v="список .cd: поля 2px 15px"></span></div>
     <div class="spec"><b>Цикл · норма дня · 02</b><span data-v="строка списка"></span></div>
-    <div class="spec"><b>Цикл · норма дня · 03</b><span data-v="«1 704 ккал» — цвет rgba(var(--ink),.5)"></span></div>
+    <div class="spec"><b>Цикл · норма дня · 03</b><span data-v="«1 704 ккал» — цвет rgba(var(--ink),.56)"></span></div>
     <div class="spec"><b>Цикл · норма дня · 04</b><span data-v="выравнивание center, зазор 7px"></span></div>
     <div class="spec"><b>Цикл · норма дня · 05</b><span data-v="«+5 %» — шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Цикл · норма дня · 06</b><span data-v="«1 869 ккал» — цвет var(--tx)"></span></div>
@@ -859,6 +1005,22 @@
     <div class="spec"><b>Цикл · тултип задержки · 06</b><span data-v="«Показан день до периода — самый пик набранной воды» — отступ сверху 12px"></span></div>
     <div class="ctrH">Разбор графики · SVG в кадрах</div>
     <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · рисунок 03</b><span data-v="поле рисунка 13×13 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · рисунок 04</b><span data-v="кривая, точки M12 6v12M6 12h12"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · рисунок 03</b><span data-v="поле рисунка 13×13 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · рисунок 04</b><span data-v="кривая, точки M12 6v12M6 12h12"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · рисунок 03</b><span data-v="поле рисунка 13×13 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · рисунок 04</b><span data-v="кривая, точки M12 6v12M6 12h12"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · рисунок 02</b><span data-v="кривая, точки M15 18l-6-6 6-6"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · рисунок 03</b><span data-v="поле рисунка 13×13 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · рисунок 04</b><span data-v="кривая, точки M12 6v12M6 12h12"></span></div>
     <div class="spec"><b>Цикл · график калорий · рисунок 01</b><span data-v="поле рисунка 266×86 (viewBox 0 0 266 86)"></span></div>
     <div class="spec"><b>Цикл · график калорий · рисунок 02</b><span data-v="ломаная, точки 6,30 25,30 44,30 63,30 82,30 101,30 120,30 139,30 158,30 177,44 196,44 215,44 234,44 253,44, линия var(--acs), толщина 2.4"></span></div>
     <div class="spec"><b>Цикл · график калорий · рисунок 03</b><span data-v="ломаная, точки 6,44 25,36 44,50 63,40 82,34 101,52 120,42 139,56 158,40 177,60 196,50 215,66 234,54 253,62, линия rgba(var(--ink),.45), толщина 2, пунктир 0"></span></div>
@@ -893,6 +1055,10 @@
     <div class="spec"><b>Цикл · шаг 5, строка в стопке · текст</b><span data-v="Добавки на сегодня › 2 пункта › Особые дни › Нормы дня подстроятся под них › Отметить › Замеры › Прошло 9 дней с прошлых › Строка, а не карточка с кнопками: карточка в стопку не влезала — проверка ниже."></span></div>
     <div class="spec"><b>Цикл · шаг 5, выбор дня · текст</b><span data-v="Особые дни › Не идут › Какой день › Дни 1–7 проставятся сами, дальше счёт идёт вперёд. › Раскрытие — второй слой той же строки, как у «Замеров» и «Холода». Экран не меняется, «Не идут» стоит справа в шапке."></span></div>
     <div class="spec"><b>Цикл · шаг 5, день предложен · текст</b><span data-v="Особые дни › День 4 · середина › Вчера был третий. Если сегодня иначе — переставьте номер. › Закончились › Верно › Это верхняя карточка шага, а не строка стопки: на днях 1–7 период занимает её место, «Прохладный душ» уходит вниз строкой. Полный кадр — в проверке высоты."></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, канон · текст</b><span data-v="Прохладный душ › 4 дня подряд › Хотя бы тридцать секунд в конце обычного душа — этого достаточно. › Было › Не сегодня › Добавки на сегодня › Витамин D · 5000 МЕ › утром › Магний · 400 мг › вечером › Добавить в курс › Утренняя рутина › 2 дня подряд › Резинки и разогрев · 6 минут › Сделал › Сделаю › Не сегодня › Замеры › Прошло 9 дней с прошлых › Готово"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, с карточкой · текст</b><span data-v="Прохладный душ › 4 дня подряд › Хотя бы тридцать секунд в конце обычного душа — этого достаточно. › Было › Не сегодня › Добавки на сегодня › Витамин D · 5000 МЕ › утром › Магний · 400 мг › вечером › Добавить в курс › Утренняя рутина › 2 дня подряд › Резинки и разогрев · 6 минут › Сделал › Сделаю › Не сегодня › Особые дни › Нормы дня подстроятся под них › Идут › Нет › Замеры › Прошло 9 дней с прошлых › Готово"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, период идёт · текст</b><span data-v="Особые дни › День 4 · середина › Вчера был третий. Если сегодня иначе — переставьте номер. › Закончились › Верно › Прохладный душ › 4 дня подряд › Было › Не сегодня › Добавки на сегодня › Витамин D · 5000 МЕ › утром › Магний · 400 мг › вечером › Добавить в курс › Утренняя рутина › 2 дня подряд › Сделал › Сделаю › Не сегодня › Замеры отложены › Задержка воды искажает обхваты — вернутся после периода › Готово"></span></div>
+    <div class="spec"><b>Цикл · копия шага 5, строка · текст</b><span data-v="Прохладный душ › 4 дня подряд › Хотя бы тридцать секунд в конце обычного душа — этого достаточно. › Было › Не сегодня › Добавки на сегодня › Витамин D · 5000 МЕ › утром › Магний · 400 мг › вечером › Добавить в курс › Утренняя рутина › 2 дня подряд › Резинки и разогрев · 6 минут › Сделал › Сделаю › Не сегодня › Особые дни › Нормы дня подстроятся под них › Отметить › Замеры › Прошло 9 дней с прошлых › Готово"></span></div>
     <div class="spec"><b>Цикл · профиль, тумблер · текст</b><span data-v="Нормы › Сон › 7 часов › Особый период › Инсулиновая волна › 3 часа › Стоит среди норм, а не в «Медицинском»: функция меняет нормы дня, а отдельного согласия у неё больше нет. Вид группы — «Регистрация v4», кадр «Профиль · низ»."></span></div>
     <div class="spec"><b>Цикл · профиль, выключение · текст</b><span data-v="Выключить особый период? › Вопрос в чек-ине исчезнет, а сегодняшняя цель вернётся к базовой. Прожитые дни останутся как записаны — вместе с их нормами и отметками. › Оставить › Выключить"></span></div>
     <div class="spec"><b>Цикл · день 29, вопрос · текст</b><span data-v="Период начался? › С последней отметки прошло 28 дней. Пока не ответите, нормы считаются базовыми. › Ещё нет › Да, первый день"></span></div>
@@ -1101,12 +1267,14 @@ class Component extends DCLogic {
     if (audit) {
       const found = this.audit();
       const none = found[0] === 'НЕТ КОНТРАКТА';
+      if (!none && !found.length) { audit.textContent = ''; audit.style.display = 'none'; }
+      else {
+      audit.style.display = '';
       audit.textContent = none
         ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено'
-        : (found.length
-          ? '⚠ сверка: ' + found.join(' | ')
-          : '✓ сверка чиста: у каждого кадра есть «вид», кнопок мимо общего ряда нет, числа в прозе есть в контракте, живые замеры сходятся со своей строкой');
-      audit.style.color = none ? '#8a4a20' : (found.length ? '#a8382b' : '#5c6a45');
+        : '⚠ сверка: ' + found.join(' | ');
+      audit.style.color = none ? '#8a4a20' : '#a8382b';
+      }
     }
     const bar = document.querySelector('[data-probar]');
     if (bar) bar.textContent = [this.contracts(), this.protocols()].filter(Boolean).join(' · ');

@@ -190,7 +190,7 @@
 
     <div class="ctrH">Открыто</div>
     <div class="spec" style="border-bottom:none"><b>документ подписания</b><span data-v="ещё не существует: на экране стоит «Согласие на обработку персональных данных, редакция от 11 августа»"></span><i>верстать экран можно, но название и дату редакции взять из готового документа у юриста, а не из макета</i></div>
-                                      <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                          <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Вход в анкету · 01</b><span data-v="высота 706px, фон #efe3cf, направление column, выравнивание center, распределение flex-start, поля 14px 18px 150px"></span></div>
     <div class="spec"><b>Вход в анкету · 02</b><span data-v="ширина 100%, фон #fffaf1, радиус 26px, поля 16px 20px 12px, направление column, выравнивание center"></span></div>
@@ -1492,9 +1492,11 @@ class Component extends DCLogic {
       if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
     }
     const none = found[0] === 'НЕТ КОНТРАКТА';
+    if (!none && !found.length) { bar.textContent = ''; bar.style.display = 'none'; return; }
+    bar.style.display = '';
     bar.textContent = none
       ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено'
-      : (found.length ? '⚠ сверка: ' + found.join(' | ') : '✓ сверка чиста');
+      : '⚠ сверка: ' + found.join(' | ');
     bar.style.color = none ? '#8a4a20' : (found.length ? '#a8382b' : '#5c6a45');
   }
   contracts() {
