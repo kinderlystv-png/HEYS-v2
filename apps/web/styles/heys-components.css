@@ -1908,7 +1908,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-step__stat-value.is-balance {
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
 }
 
 .weekly-wrap-step__stat-label {
@@ -1939,7 +1939,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-step__delta-pct--below {
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
 }
 
 .weekly-wrap-step__delta-pct--above {
@@ -3160,7 +3160,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme$="dark"] .weekly-wrap-breakdown__value--good {
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
 }
 
 [data-theme$="dark"] .weekly-wrap-breakdown__value--bad {
@@ -5848,7 +5848,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme$="dark"] .game-audit-item__delta {
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
 }
 
 [data-theme$="dark"] .game-audit-item__meta {
@@ -7679,7 +7679,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .monthly-weight-trend--good {
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
 }
 
 .monthly-weight-trend--bad {
@@ -7691,7 +7691,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .monthly-metric-value--deficit {
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
 }
 
 .monthly-metric-value--surplus {
@@ -7747,7 +7747,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .monthly-macro-diff-value--good {
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
 }
 
 .monthly-macro-diff-value--bad {

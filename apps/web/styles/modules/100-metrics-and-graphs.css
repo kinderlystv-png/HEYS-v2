@@ -1217,7 +1217,7 @@
 }
 
 .sparkline-popup-value.good {
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
 }
 
 .sparkline-popup-value.warn {
@@ -3120,7 +3120,7 @@
 .caloric-balance-boost {
   font-size: 11px;
   font-weight: 500;
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
 }
 
 .caloric-balance-rec-short {
@@ -3487,7 +3487,7 @@
 .debt-card-boost {
   font-size: 12px;
   font-weight: 500;
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
   background: rgba(34, 197, 94, 0.1);
   padding: 2px 8px;
   border-radius: 12px;
@@ -3642,7 +3642,7 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
   padding: 8px 12px;
   background: rgba(34, 197, 94, 0.06);
   border-radius: 8px;
@@ -3682,7 +3682,7 @@
 }
 
 .debt-plan-result {
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
   font-size: 15px;
 }
 
@@ -5295,7 +5295,7 @@
 }
 
 .goal-remaining b {
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
   font-weight: 700;
   font-size: 16px;
 }
@@ -6718,7 +6718,7 @@
 
 .household-value-kcal {
   font-size: 12px;
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
   font-weight: 500;
   margin-top: 2px;
 }
@@ -6884,7 +6884,7 @@
 
 .household-value-kcal {
   font-size: 12px;
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
   margin-left: 8px;
   font-weight: 500;
 }
