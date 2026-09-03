@@ -1714,12 +1714,23 @@
    * и значок «синергия» на них лгал бы. Полная раскладка правил по семействам
    * — docs/ui/designer-answers/mapping-советы-приёма.md.
    *
-   * Разбор в два шага:
+   * Семейство отвечает на вопрос «почему совет именно сейчас». Разбор в три
+   * шага, порядок важен:
    *  1. есть временнóе окно (trigger.time) → «время»: правило отвечает на
    *     «когда», даже если попутно смотрит на макрос;
-   *  2. иначе — назван ли конкретный партнёр (has/missing/hasKeyword/…): да →
-   *     «синергия» (два вещества работают вместе или мешают друг другу),
-   *     нет → «баланс» (правило меряет макрос порогом, без пары).
+   *  2. назван ли конкретный партнёр (has/missing/hasKeyword/…) → «синергия»:
+   *     два вещества работают вместе или мешают друг другу;
+   *  3. привязка к тренировке (hasTrainingAfterMeal/hadTrainingRecently/
+   *     hasTrainingToday) → «время»: час суток не определение семейства, а один
+   *     из его источников, и «потому что тренировка была или будет» — тот же
+   *     ответ про момент;
+   *  4. иначе «баланс»: правило меряет макрос порогом, без пары и без момента.
+   *
+   * Почему тренировка слабее партнёра (шаг 3 после шага 2). `omega3_recovery`
+   * смотрит и на тренировку, и на отсутствие омега-3; его ответ на «почему
+   * сейчас» — «потому что омега-3 нет», а тренировка лишь повод обратить
+   * внимание. Решение дизайнера 03.09: «время» получают `preworkout_carbs` и
+   * `postworkout_protein`, у которых партнёр не назван.
    *
    * Признак пары взят вместо признака макроса намеренно: `missingMacro: 'fat'`
    * стоит и в «добавь масло к овощам» (синергия жирорастворимых), и в «мало
@@ -1732,14 +1743,17 @@
     'has', 'has2', 'missing', 'hasKeyword', 'hasKeyword2', 'missingKeyword',
     'hasCategory', 'missingCategory',
   ];
+  const TRAINING_TRIGGER_KEYS = [
+    'hasTrainingAfterMeal', 'hadTrainingRecently', 'hasTrainingToday',
+  ];
 
   function getRuleFamily(rule) {
     const trigger = rule && rule.trigger;
     if (!trigger || typeof trigger !== 'object') return 'synergy';
     if (trigger.time) return 'timing';
-    return PARTNER_TRIGGER_KEYS.some((key) => trigger[key] !== undefined)
-      ? 'synergy'
-      : 'balance';
+    if (PARTNER_TRIGGER_KEYS.some((key) => trigger[key] !== undefined)) return 'synergy';
+    if (TRAINING_TRIGGER_KEYS.some((key) => trigger[key] !== undefined)) return 'timing';
+    return 'balance';
   }
 
   function getMealOptimization(params) {

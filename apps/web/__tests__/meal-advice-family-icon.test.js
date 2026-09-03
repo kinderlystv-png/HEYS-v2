@@ -63,13 +63,25 @@ describe('семейство правила считается из тригге
     }
   });
 
+  it('привязка к тренировке — «время», но слабее названного партнёра', () => {
+    // Решение дизайнера 03.09 (вечер): «часы суток — не определение семейства,
+    // а один из его источников», поэтому «потому что тренировка была или будет»
+    // — тоже «время». Партнёр при этом старше: omega3_recovery отвечает
+    // «потому что омега-3 нет», тренировка там лишь повод.
+    const byId = new Map(ALL_RULES().map((rule) => [rule.id, rule]));
+    expect(MO.getRuleFamily(byId.get('preworkout_carbs'))).toBe('timing');
+    expect(MO.getRuleFamily(byId.get('postworkout_protein'))).toBe('timing');
+    expect(MO.getRuleFamily(byId.get('protein_creatine_timing'))).toBe('timing');
+    expect(MO.getRuleFamily(byId.get('omega3_recovery'))).toBe('synergy');
+  });
+
   it('раскладка заморожена числом — новое правило не сдвинет картину молча', () => {
-    // 37 · 15 · 12 на 03.09. Правило добавили — цифра изменится, и это повод
-    // перечитать docs/ui/designer-answers/mapping-советы-приёма.md, а не
+    // 37 · 12 · 15 на 03.09, вечер. Правило добавили — цифра изменится, и это
+    // повод перечитать docs/ui/designer-answers/mapping-советы-приёма.md, а не
     // подогнать число.
     const count = { synergy: 0, balance: 0, timing: 0 };
     for (const rule of ALL_RULES()) count[MO.getRuleFamily(rule)] += 1;
-    expect(count).toEqual({ synergy: 37, balance: 15, timing: 12 });
+    expect(count).toEqual({ synergy: 37, balance: 12, timing: 15 });
   });
 
   it('живой приём отдаёт советы с проставленным семейством', () => {
