@@ -587,7 +587,7 @@
 .meal-mood-scale__value--bad {
   /* Кадр даёт тревожной полосе --val-bad, а не акцент: акцентом на этом шаге
      покрашены действия, и число «3 · слабость» читалось кнопкой. */
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 /* Строка «Как в прошлый раз, 11:20» — числа шкал подставлены от прошлого приёма
@@ -3721,7 +3721,7 @@ button.meal-quality-badge:active {
 
 /* Кадр «Порция · перебор нормы»: за нормой дня вклад порции краснеет. */
 .aps-v4-grams-impact__bar-add.is-over {
-  background: var(--v4-bad-text, #b4442a);
+  background: var(--v4-bad-text, #a83c22);
 }
 
 /* Та же карточка, что у дубля продукта, но своим тоном: перебор нормы —
@@ -3734,7 +3734,7 @@ button.meal-quality-badge:active {
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.45;
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .aps-v4-grams-impact__foot {
@@ -3813,7 +3813,7 @@ button.meal-quality-badge:active {
 /* «В переборе вторая половина меняется на „перебор M" тоном --val-bad,
    первая остаётся как есть». */
 .aps-v4-meal-summary__hero-over {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .aps-v4-meal-summary__list {
@@ -4664,6 +4664,49 @@ button.meal-quality-badge:active {
   line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Строка приёма в листе копирования и переноса продукта · nutrition-tab
+   «копирование продукта». Тот же ряд, что у переноса приёма, но выбор один и
+   тап сразу выполняет операцию — поэтому кнопка вместо радио, а вместо кружка
+   справа стоит шеврон. */
+.meal-transfer-v4__target--pick {
+  width: 100%;
+  justify-content: space-between;
+  border: none;
+  text-align: left;
+  font: inherit;
+}
+
+.meal-transfer-v4__target-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Мета приёма под названием: «N продуктов · ~M ккал». */
+.meal-transfer-v4__target-meta {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--v4-ink-data); /* v4-intentional */
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-transfer-v4__target--pick .meal-transfer-v4__chevron {
+  flex: 0 0 auto;
+  color: var(--v4-ink-data); /* v4-intentional */
+}
+
+/* Приём-источник: выбрать нельзя, подпись «(откуда)» стоит в самой строке. */
+.meal-transfer-v4__target--pick.is-source {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .meal-transfer-v4__footer {

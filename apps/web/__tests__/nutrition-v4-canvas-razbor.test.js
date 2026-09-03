@@ -21,6 +21,11 @@ const CANVAS = path.resolve(
   '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/nutrition-tab.v4.dc.html',
 );
 const CSS = path.resolve(__dirname, '../styles/modules/732-ui-v4-nutrition.css');
+// Палитра канваса — источник ролей --red / --warn / --ovl / --val-bad.
+const RED_CANVAS_PALETTE = path.resolve(
+  __dirname,
+  '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/v4-canvas.css',
+);
 
 const S = '.nutrition-v4-sheet__swipe-actions button';
 
@@ -94,8 +99,37 @@ describe('«Питание» · разбор кадров канваса', () =>
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
   const rules = readRules(fs.readFileSync(CSS, 'utf8'));
 
+  // Отступление, названное поимённо · 3 сентября. Роль --v4-bad-text
+  // (продуктовая копия канвасного --red) углублена с #b4442a до #a83c22 по
+  // решению дизайнера: на --v4-hero прежний тон давал 4,36 при 11 px/600, стало
+  // 4,97. Канвас с новым значением приезжает отдельным пакетом, и до его
+  // прихода код опережает кадр ровно на этот один тон — в трёх местах зоны:
+  // число героя и заливка перебора в кадре «зона красная», необратимое действие
+  // свайпа в кадре «лист правки приёма».
+  //
+  // Исключение снимает себя само: как только пакет приедет, `canvasRed` станет
+  // #a83c22, ветка ниже потребует полного совпадения, и блок можно будет
+  // удалить. Пока канвас держит третье значение — это уже другое расхождение, и
+  // проверка падает.
+  const RED_SHIFT = 'кадр: #b4442a · код: #a83c22';
+  const canvasRed = (() => {
+    const src = fs.readFileSync(RED_CANVAS_PALETTE, 'utf8');
+    const found = /--red:\s*(#[0-9a-f]{6})/i.exec(src);
+    expect(found, 'канвасная роль --red не найдена').toBeTruthy();
+    return found[1].toLowerCase();
+  })();
+
+  function withoutRedShift(diff, expectedCount) {
+    if (canvasRed === '#a83c22') return diff; // пакет приехал — отступления нет
+    expect(canvasRed, 'канвас держит третье значение — это уже не то отступление').toBe('#b4442a');
+    const rest = diff.filter(entry => !String(entry).includes(RED_SHIFT));
+    expect(diff.length - rest.length, 'число мест отступления не сходится').toBe(expectedCount);
+    return rest;
+  }
+
   it('кадр «Питание · лист правки приёма» совпадает с действиями свайпа', () => {
-    expect(compare({ razbor, rules, frame: 'Питание · лист правки приёма', pairs: SWIPE })).toEqual([]);
+    const diff = compare({ razbor, rules, frame: 'Питание · лист правки приёма', pairs: SWIPE });
+    expect(withoutRedShift(diff, 1)).toEqual([]);
   });
 
   it('кадр «Питание · вопрос о дате» совпадает с невыбранным вариантом', () => {
@@ -116,7 +150,8 @@ describe('«Питание» · разбор кадров канваса', () =>
 
   it('кадры зон совпадают с тоном числа и заливкой перебора', () => {
     expect(compare({ razbor, rules, frame: 'Питание · зона предупреждения', pairs: ZONE_WARN })).toEqual([]);
-    expect(compare({ razbor, rules, frame: 'Питание · зона красная', pairs: ZONE_RED })).toEqual([]);
+    const redDiff = compare({ razbor, rules, frame: 'Питание · зона красная', pairs: ZONE_RED });
+    expect(withoutRedShift(redDiff, 2)).toEqual([]);
   });
 
   it('кадр «Питание · блок · Оценка и риск» совпадает со словом дня и полосой шагов', () => {

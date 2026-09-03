@@ -890,7 +890,7 @@
     // #d99a63 — это тон нахлёста волны, а кадр называет здесь --val-bad.
     const fill = tone === 'ok' ? 'var(--v4-ok-fill, #7a8a5e)'
       : tone === 'mid' ? 'var(--v4-wave-overlap, #d99a63)'
-        : 'var(--v4-bad-text, #b4442a)';
+        : 'var(--v4-bad-text, #a83c22)';
     const ends = MOOD_SCALE_ENDS[field] || ['', ''];
     return React.createElement('div', { className: 'meal-mood-scale' },
       React.createElement('div', { className: 'meal-mood-scale__top' },

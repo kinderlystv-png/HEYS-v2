@@ -693,7 +693,7 @@
   text-transform: uppercase;
   /* Бейдж риска срыва: запасное #b3402a — тон «разрушающего действия», и по
      смыслу это он. Роль --v4-warn его не давала ни в одном наборе. */
-  background: var(--v4-bad-text, #b4442a);
+  background: var(--v4-bad-text, #a83c22);
   color: var(--v4-btn-on-act, #fff5ef);
 }
 

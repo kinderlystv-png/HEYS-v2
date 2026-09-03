@@ -1129,7 +1129,7 @@
 }
 
 .aps-v4-harm-breakdown__section-title--bad {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .aps-v4-harm-breakdown__section-title--good {
@@ -2003,7 +2003,7 @@
   border: none;
   border-radius: 12px;
   background: var(--v4-tint, #f6e6dd);
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;

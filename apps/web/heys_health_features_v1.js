@@ -37,8 +37,16 @@
       'Отметки о добавках из справочника сервиса и даты. Лекарства вносить нельзя. Видят вы и куратор. Пока функция включена; выключение удаляет отметки. Документ: /docs/v1.0/supplements-consent.md',
   });
 
+  // Зеркало ключей SUPPLEMENTS_CATALOG (heys_supplements_v1.js). Список —
+  // allowlist того, что вообще можно сохранить по добавкам (см. таблицу
+  // docs/release/lawyer-B-fields.md, строка «Добавки»), поэтому он остаётся
+  // явным, а не выводится из каталога: модуль грузится раньше каталога.
+  // 03.09: расхождение с каталогом молча роняло позицию — 'iodine' был в
+  // каталоге и в экране курса, но не здесь, и filterCatalogSupplementIds
+  // выбрасывал его при сохранении без ошибки и без подсказки. Пара списков
+  // сторожится тестом supplements-known-ids-mirror-catalog.
   const KNOWN_SUPPLEMENT_IDS = new Set([
-    'vitD', 'vitC', 'zinc', 'selenium', 'omega3', 'magnesium', 'b12', 'b6', 'lecithin',
+    'vitD', 'vitC', 'zinc', 'selenium', 'iodine', 'omega3', 'magnesium', 'b12', 'b6', 'lecithin',
     'calcium', 'k2', 'collagen', 'glucosamine', 'creatine', 'bcaa', 'protein', 'biotin',
     'vitE', 'hyaluronic', 'iron', 'folic', 'melatonin', 'glycine', 'ltheanine', 'coq10',
     'berberine', 'cinnamon', 'chromium', 'vinegar', 'flaxOil', 'oliveOil', 'fishOil',

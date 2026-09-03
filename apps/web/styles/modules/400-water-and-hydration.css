@@ -2149,7 +2149,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 /* Строка «не сохранено»: иконка облака тоном --red. */
 .advice-v4-icon--cloud-off {
   flex: none;
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .advice-v4-sync-copy {

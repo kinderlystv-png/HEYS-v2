@@ -432,10 +432,21 @@ describe('food-meal · копирование и перенос v4', () => {
     expect(writeDay).not.toHaveBeenCalled();
   });
 
+  // 03.09: проверка переписана. Прежде она сторожила старый каркас листа
+  // продукта — «оболочка не meal-transfer-v4__sheet, в тексте есть вопрос
+  // „Куда скопировать продукт?"». Строка контракта nutrition-tab «копирование
+  // продукта» свела лист с тем же видом, что у переноса приёма, а вопрос увела
+  // из заголовка в ярус, и в прежнем виде проверка запрещала бы сведение.
+  //
+  // Замысел, ради которого она стояла, остаётся и проверяется по механике:
+  // режимы продукта не должны стать MealMoveView — там выбирают ещё и режим
+  // цели, поэтому там радио и подтверждение. У листа продукта выбор один и тап
+  // выполняет операцию сразу.
   it.each([
-    ['product-copy', 'Куда скопировать продукт?'],
-    ['product-move', 'Куда переместить продукт?'],
-  ])('не переводит %s на meal-move оболочку', async (mode, title) => {
+    ['product-copy', 'скопировать', 'Куда скопировать'],
+    ['product-move', 'переместить', 'Куда переместить'],
+  ])('%s: вид листа переноса, механика прежняя — тап без подтверждения', async (mode, title, tier) => {
+    const onPick = vi.fn();
     await act(async () => {
       window.HEYS.MoveModal.show({
         mode,
@@ -443,25 +454,69 @@ describe('food-meal · копирование и перенос v4', () => {
         sourceMealIndex: 0,
         sourceLabel: 'Копируем: кофе',
         todayDateStr: '2026-09-01',
-        daysWithMeals: [{ dateStr: '2026-09-01', dateLabel: 'Сегодня', meals: [] }],
-        onPick: vi.fn(),
+        daysWithMeals: [{
+          dateStr: '2026-09-01',
+          dateLabel: 'Сегодня',
+          meals: [
+            { id: 'src', name: 'Завтрак', time: '08:30', items: [{ grams: 100, kcal100: 250 }] },
+            { id: 'dst', name: 'Обед', time: '13:00', items: [] },
+          ],
+        }],
+        onPick,
       });
     });
 
-    const legacySheet = document.querySelector('#move-modal-root .move-modal');
-    expect(legacySheet?.textContent).toContain(title);
-    expect(legacySheet?.classList.contains('meal-transfer-v4__sheet')).toBe(false);
+    const sheet = document.querySelector('#move-modal-root .move-modal');
+    expect(sheet).toBeTruthy();
+    // Вид — общий лист переноса.
+    expect(sheet.classList.contains('meal-transfer-v4__sheet')).toBe(true);
+    expect(sheet.classList.contains('meal-transfer-v4__sheet--move')).toBe(true);
+    // Заголовок называет операцию, вопрос ушёл в ярус.
+    expect(sheet.querySelector('.meal-transfer-v4__title')?.textContent).toBe(title);
+    expect(sheet.textContent).toContain(tier);
+    expect(sheet.textContent).not.toContain(tier + ' продукт?');
+    // Эмодзи приёмов и аккордеон по дням сняты.
+    expect(/\p{Extended_Pictographic}/u.test(sheet.textContent)).toBe(false);
+    expect(sheet.textContent).not.toContain('▾');
+    expect(sheet.textContent).not.toContain('▸');
+    // Дата — одной строкой, как в переносе.
+    expect(sheet.querySelector('.meal-transfer-v4__date-select')).toBeTruthy();
+
+    // Механика прежняя: ни радио, ни подтверждающей кнопки.
+    expect(sheet.querySelector('input[type="radio"]')).toBeNull();
+    expect(sheet.querySelector('.meal-transfer-v4__button--primary')).toBeNull();
+
+    // Источник приглушён и выбрать его нельзя.
+    const rows = [...sheet.querySelectorAll('.meal-transfer-v4__target--pick')];
+    expect(rows.length).toBe(3); // два приёма дня + «Создать новый приём»
+    const source = rows.find(row => row.classList.contains('is-source'));
+    expect(source?.disabled).toBe(true);
+    expect(source?.textContent).toContain('(откуда)');
+    expect(source?.textContent).toContain('1 продукт');
+
+    // Тап по цели выполняет операцию сразу, без второго шага.
+    const target = rows.find(row => row.textContent.includes('Обед'));
+    await act(async () => { target.click(); });
+    expect(onPick).toHaveBeenCalledTimes(1);
+    expect(onPick.mock.calls[0][0]).toMatchObject({ dstDate: '2026-09-01', dstMealId: 'dst' });
   });
 
   it('фиксирует роли без литеральной палитры в обеих v4-ветках', () => {
     const copyView = COPY_SOURCE.slice(COPY_SOURCE.indexOf('function CopyMealView'), COPY_SOURCE.indexOf('// === DOM root'));
-    const moveView = MOVE_SOURCE.slice(MOVE_SOURCE.indexOf('function MealMoveView'), MOVE_SOURCE.indexOf('function ensureRoot'));
+    // 03.09: у heys_move_modal_v1.js обе ветки теперь v4 — и MealMoveView, и
+    // ProductMoveView, — поэтому сверяется весь модуль, а не один срез.
+    const moveView = MOVE_SOURCE.slice(MOVE_SOURCE.indexOf('function ProductMoveView'), MOVE_SOURCE.indexOf('function ensureRoot'));
     const scopedCss = CSS.slice(CSS.indexOf('/* === Food meal v4'), CSS.indexOf('/* === /Food meal v4'));
 
     expect(copyView).not.toMatch(/(?:background|color):\s*['"]/);
     expect(moveView).not.toMatch(/(?:background|color):\s*['"]/);
+    expect(moveView).toContain('function MealMoveView'); // срез накрыл обе ветки
     expect(COPY_SOURCE).toContain('.copy-meal-modal:not(.meal-transfer-v4__sheet)');
-    expect(MOVE_SOURCE).toContain('.move-modal:not(.meal-transfer-v4__sheet)');
+    // Заплатки тёмной темы у листа продукта больше нет и быть не должно: она
+    // висела на `.move-modal:not(.meal-transfer-v4__sheet)`, а такого элемента
+    // после сведения не остаётся — селектор не совпал бы ни с чем.
+    expect(MOVE_SOURCE).not.toContain('.move-modal:not(.meal-transfer-v4__sheet)');
+    expect(MOVE_SOURCE).not.toContain('getMealEmoji');
     expect(scopedCss).not.toMatch(/#[0-9a-f]{3,8}\b/i);
     expect(scopedCss).toContain('background: var(--v4-card)');
     expect(scopedCss).toContain('background: var(--v4-act)');

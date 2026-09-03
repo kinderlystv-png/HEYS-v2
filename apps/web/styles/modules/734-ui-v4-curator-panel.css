@@ -244,7 +244,7 @@
 
 .cur-row__dot--awaits { background: var(--v4-act, #c67139); }
 .cur-row__dot--mismatch { background: var(--v4-warn-1, #d99a63); }
-.cur-row__dot--silent { background: var(--v4-bad-text, #b4442a); }
+.cur-row__dot--silent { background: var(--v4-bad-text, #a83c22); }
 .cur-row__dot--decided_today { background: var(--v4-good, #7a8a5e); }
 /* Коридор — нейтральная точка, а не зелёная: строка контракта «группа
    "В коридоре"» ставит чернила 22 %. Зелёный в наборе значит «норма закрыта»,
@@ -652,7 +652,7 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1111,7 +1111,7 @@
    «посмотреть» и такого же вида, так что промах стоил клиента. */
 .cur-cab__menu-row.is-bad .cur-cab__menu-label,
 .cur-cab__menu-row.is-bad .cur-cab__menu-hint {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 /* Метки дня в карточке клиента. Набор один и порядок один — ккал, вода, шаги,
@@ -1264,7 +1264,7 @@
 /* Сбой и отклонение отличаются тоном числа, а не рамкой: рамка вокруг
    карточки читается как выделение, а число говорит само. */
 .cdo-metric--bad strong {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .cdo-metric--warn strong {
@@ -1410,7 +1410,7 @@
 .cdo-problem {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .cdo-ok {
@@ -1460,7 +1460,7 @@
 }
 
 .cdo-event--failed::before {
-  background: var(--v4-bad-text, #b4442a);
+  background: var(--v4-bad-text, #a83c22);
 }
 
 .cdo-event-context {
@@ -1577,7 +1577,7 @@
 }
 
 .cd-event--failed::before {
-  background: var(--v4-bad-text, #b4442a);
+  background: var(--v4-bad-text, #a83c22);
 }
 
 .cd-event-time {
@@ -1654,8 +1654,8 @@
 }
 
 .cd-status--failed {
-  background: color-mix(in srgb, var(--v4-bad-text, #b4442a) 14%, transparent);
-  color: var(--v4-bad-text, #b4442a);
+  background: color-mix(in srgb, var(--v4-bad-text, #a83c22) 14%, transparent);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .cd-status--degraded,
@@ -1737,7 +1737,7 @@
 }
 
 .cur-cab__health.is-critical {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 /* Карточка клиента — та же плоская карточка, что у клиента в приложении:
@@ -1871,7 +1871,7 @@
   /* Подложка та же, что у прочих круглых кнопок, красным только знак: своя
      красная заливка делала бы отказ заметнее работы, стоящей рядом. */
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
   font-size: 13px;
   line-height: 1;
   cursor: pointer;
@@ -1954,7 +1954,7 @@
 
 /* Сорванный deploy в Ops dashboard — это уже разрушающее, а не предупреждение. */
 .cur-kv__val.is-bad {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 /* ── Ops dashboard ────────────────────────────────────────────────────────
@@ -1994,7 +1994,7 @@
 
 /* Тяжесть инцидента — тоном разрушающего в той же строке источника. */
 .cur-cab__source .is-bad {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 /* Служебный подвал очереди: обновление во всю ширину, под разделителем —

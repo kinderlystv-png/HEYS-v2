@@ -13,6 +13,12 @@ const SPARK_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_sparkline
 const STATS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_stats_v1.js'), 'utf8');
 const POPUPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_popups_state_v1.js'), 'utf8');
 const REPORTS_CSS_SRC = fs.readFileSync(path.resolve(__dirname, '../styles/modules/733-ui-v4-reports.css'), 'utf8');
+// 03.09: файл виджетов Главной добавлен сюда потому, что проверка «эмодзи не
+// переносится» читала два файла из трёх и потому была зелёной при живой утечке —
+// виджет «Цикл» рисовал phase.icon на Главной. Слепая зона гейта, не ошибка
+// автора кода.
+const WIDGETS_UI_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_widgets_ui_v1.js'), 'utf8');
+const WIDGETS_REGISTRY_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_widgets_registry_v1.js'), 'utf8');
 
 const BASE_CSS_SRC = fs
   .readFileSync(path.resolve(__dirname, '../styles/modules/000-base-and-gamification.css'), 'utf8')
@@ -178,6 +184,35 @@ describe('cycle v4 · calorie chart reports styling', () => {
 });
 
 describe('cycle v4 · on-screen words', () => {
+  it('виджет «Цикл» на Главной называет фазу словом, а не символом', () => {
+    // Обе раскладки виджета: 2×2 (шапка фазы) и остальные размеры (строка фазы).
+    const cycleWidget = WIDGETS_UI_SRC.slice(
+      WIDGETS_UI_SRC.indexOf('function CycleWidgetContent('),
+      WIDGETS_UI_SRC.indexOf('// === Weight Dynamics v4'),
+    );
+    expect(cycleWidget.length).toBeGreaterThan(500); // якорь не уехал
+    expect(cycleWidget).toContain("className: 'widget-cycle__phase-header'");
+    expect(cycleWidget).toContain("className: 'widget-cycle__phase'");
+    expect(cycleWidget).not.toContain('phase.icon');
+    expect(cycleWidget).not.toContain('🌸');
+  });
+
+  // Гейт обязан отличать «сошлось» от «не смотрели»: перечисляем ВСЕ оставшиеся
+  // 🌸 в файлах Главной поимённо. Появится новый — проверка упадёт и потребует
+  // решения, а не пройдёт молча. Три нынешних — не метка фазы, а члены общего
+  // эмодзи-набора (значок виджета в каталоге, значок его категории, чип рядом с
+  // 📊), и снимать их поштучно нельзя: останется дыра среди соседей. Вынесено
+  // дизайнеру 03.09 отдельным вопросом.
+  it('оставшиеся 🌸 на Главной пересчитаны поимённо и заморожены', () => {
+    const uiHits = (WIDGETS_UI_SRC.match(/🌸/g) || []).length;
+    const registryHits = (WIDGETS_REGISTRY_SRC.match(/🌸/g) || []).length;
+    // heys_widgets_ui_v1.js: ровно один — чип «Чистый тренд».
+    expect(uiHits).toBe(1);
+    expect(WIDGETS_UI_SRC).toContain("{ icon: '🌸', text: 'Чистый тренд'");
+    // heys_widgets_registry_v1.js: значок категории «Цикл» и значок типа виджета.
+    expect(registryHits).toBe(2);
+  });
+
   it('v4 cycle UI and legacy registerStep avoid 🌸', () => {
     expect(CYCLE_UI_SRC).not.toContain('🌸');
     expect(STEPS_SRC).toContain("title: 'Особый период'");

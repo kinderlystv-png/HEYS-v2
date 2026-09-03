@@ -7274,7 +7274,7 @@ color: var(--v4-sand-ink, #201e1d);
    и вводила в заблуждение при чтении. */
 .cloud-sync-indicator.problem {
   background: rgba(180, 68, 42, 0.12);
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .cloud-sync-indicator.problem .cloud-icon.problem {
@@ -17703,8 +17703,8 @@ body:has(:is(
    --v4-bad-text и есть продуктовый --red: значения совпадают с канвасом
    во всех четырёх наборах. */
 .cloud-sync-indicator.problem {
-  color: var(--v4-bad-text, #b4442a) !important;
-  border-color: var(--v4-bad-text, #b4442a) !important;
+  color: var(--v4-bad-text, #a83c22) !important;
+  border-color: var(--v4-bad-text, #a83c22) !important;
 }
 
 /* Точка 6 px рядом с облаком — вторая примета проблемы, кроме тона: тон
@@ -17720,7 +17720,7 @@ body:has(:is(
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: var(--v4-bad-text, #b4442a);
+  background: var(--v4-bad-text, #a83c22);
   box-shadow: 0 0 0 1.5px var(--v4-bg, #fffaf1);
   pointer-events: none;
 }

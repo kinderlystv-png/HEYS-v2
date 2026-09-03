@@ -80,20 +80,13 @@
         }, React.createElement('path', { d: 'M9 6l6 6-6 6' }));
     }
 
-    function getMealEmoji(meal) {
-        if (!meal) return '🍽️';
-        if (meal.mealType === 'breakfast') return '🌅';
-        if (meal.mealType === 'lunch') return '🌞';
-        if (meal.mealType === 'dinner') return '🌆';
-        if (meal.mealType === 'snack' || meal.mealType === 'snack1' || meal.mealType === 'snack2' || meal.mealType === 'snack3') return '🍎';
-        const t = (meal.time || '').split(':')[0];
-        const h = parseInt(t, 10);
-        if (Number.isFinite(h)) {
-            if (h >= 6 && h < 11) return '🌅';
-            if (h >= 11 && h < 16) return '🌞';
-            if (h >= 16 && h < 21) return '🌆';
-        }
-        return '🍎';
+    function pluralRu(n, one, few, many) {
+        const abs = Math.abs(n) % 100;
+        const last = abs % 10;
+        if (abs > 10 && abs < 20) return many;
+        if (last === 1) return one;
+        if (last >= 2 && last <= 4) return few;
+        return many;
     }
 
     function calcMealKcal(meal, pIndex, getProductFromItem) {
@@ -131,235 +124,153 @@
         return React.createElement(ProductMoveView, state);
     }
 
-    function ModalShellWrap({ title, sourceLabel, onClose, children }) {
-        const handleBackdropClick = (e) => {
-            if (e.target === e.currentTarget) onClose();
-        };
-        return React.createElement('div', {
-            onClick: handleBackdropClick,
-            style: {
-                position: 'fixed', inset: 0, zIndex: 9999,
-                background: 'rgba(15, 23, 42, 0.55)',
-                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-                animation: 'moveModalFadeIn 0.18s ease',
-            },
-        },
-            React.createElement('div', {
-                className: 'move-modal',
-                style: {
-                    width: '100%', maxWidth: '520px', maxHeight: '92vh',
-                    background: '#fff', borderRadius: '16px 16px 0 0',
-                    display: 'flex', flexDirection: 'column',
-                    boxShadow: '0 -8px 30px rgba(0,0,0,0.15)',
-                    animation: 'moveModalSlideUp 0.22s ease',
-                    overflow: 'hidden',
-                },
-            },
-                React.createElement('div', {
-                    style: {
-                        padding: '14px 20px 12px',
-                        borderBottom: '1px solid #f1f5f9',
-                        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px',
-                        flexShrink: 0,
-                    },
-                },
-                    React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-                        React.createElement('div', {
-                            style: { fontSize: '16px', fontWeight: 700, color: '#0f172a', lineHeight: 1.3 },
-                        }, title),
-                        sourceLabel && React.createElement('div', {
-                            style: { fontSize: '12px', color: '#475569', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis' },
-                        }, sourceLabel),
-                    ),
-                    React.createElement('button', {
-                        onClick: onClose,
-                        style: {
-                            border: 'none', background: '#f1f5f9', color: '#475569',
-                            width: '32px', height: '32px', borderRadius: '8px',
-                            cursor: 'pointer', fontSize: '18px', lineHeight: 1,
-                            flexShrink: 0,
-                        },
-                        'aria-label': 'Закрыть',
-                    }, '×'),
-                ),
-                React.createElement('div', {
-                    style: { flex: 1, overflowY: 'auto', padding: '8px 16px 12px' },
-                }, children),
-                React.createElement('div', {
-                    style: {
-                        padding: '12px 16px', borderTop: '1px solid #f1f5f9',
-                        flexShrink: 0, background: '#fff',
-                    },
-                },
-                    React.createElement('button', {
-                        onClick: onClose,
-                        style: {
-                            width: '100%', padding: '12px',
-                            border: 'none', borderRadius: '10px',
-                            background: '#f1f5f9', color: '#0f172a',
-                            fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-                        },
-                    }, 'Отмена'),
-                ),
-            ),
-        );
-    }
-
+    // Лист выбора приёма для копирования и переноса продукта.
+    //
+    // Сведено с канвасом 03.09 по строке nutrition-tab.v4.dc.html «копирование
+    // продукта · что править в коде»: лист сидел на собственном каркасе в чужой
+    // палитре — слейт-литералы (#f8fafc, #0f172a, #dbeafe, #94a3b8, #e2e8f0),
+    // эмодзи приёмов, аккордеон по дням с ▾/▸, радиусы 8 и 10. Теперь это тот
+    // же лист, что и перенос приёма (meal-transfer-v4__sheet--move): роли
+    // набора, радиус 16, дата — одной строкой вместо аккордеона.
+    //
+    // Механика не менялась: тап по приёму выполняет операцию сразу, как и
+    // раньше. Лист переноса приёма спрашивает подтверждение, потому что там
+    // выбирают ещё и режим цели; здесь выбор один, и добавлять второй шаг
+    // значило бы менять то, что человек может делать, а не то, как это
+    // выглядит.
     function ProductMoveView(state) {
         const {
-            mode, sourceDate, sourceMealIndex, sourceLabel,
+            mode, sourceDate, sourceMealIndex,
             daysWithMeals, onPick, pIndex, getProductFromItem,
             todayDateStr,
         } = state;
 
         const isCopy = mode === 'product-copy';
-        const title = isCopy ? 'Куда скопировать продукт?' : 'Куда переместить продукт?';
+        // Заголовок листа называет операцию; вопрос ушёл в ярус ниже.
+        const title = isCopy ? 'скопировать' : 'переместить';
+        const tier = isCopy ? 'Куда скопировать' : 'Куда переместить';
 
-        const [expandedDates, setExpandedDates] = React.useState(() => {
-            const init = {};
-            (daysWithMeals || []).forEach(d => { init[d.dateStr] = d.dateStr === sourceDate; });
-            if (Object.values(init).every(v => !v) && daysWithMeals && daysWithMeals.length > 0) {
-                init[daysWithMeals[0].dateStr] = true;
-            }
-            return init;
-        });
+        const days = Array.isArray(daysWithMeals) ? daysWithMeals : [];
+        const initialDate = (days.find(day => day.dateStr === sourceDate) || days[0] || {}).dateStr || '';
+        const [dstDate, setDstDate] = React.useState(initialDate);
+        const selectedDay = days.find(day => day.dateStr === dstDate) || days[0] || null;
+        const meals = Array.isArray(selectedDay && selectedDay.meals) ? selectedDay.meals : [];
+        const isToday = !!(todayDateStr && selectedDay && selectedDay.dateStr === todayDateStr);
 
-        const toggleDate = (dateStr) => {
-            setExpandedDates(prev => ({ ...prev, [dateStr]: !prev[dateStr] }));
+        const handleBackdropClick = (event) => {
+            if (event.target === event.currentTarget) hide();
         };
 
-        const handlePick = (dstDate, dstMealIndex, dstMealId) => {
+        const handlePick = (dstMealIndex, dstMealId) => {
             hide();
             if (typeof onPick === 'function') {
-                onPick({ dstDate, dstMealIndex, dstMealId });
+                onPick({ dstDate: selectedDay.dateStr, dstMealIndex, dstMealId });
             }
         };
 
-        const handleCreateNew = (dstDate) => {
+        const handleCreateNew = () => {
             hide();
             if (typeof onPick === 'function') {
-                onPick({ dstDate, createNewMeal: true });
+                onPick({ dstDate: selectedDay.dateStr, createNewMeal: true });
             }
         };
 
-        const sections = (daysWithMeals || []).map((day) => {
-            const isExpanded = !!expandedDates[day.dateStr];
-            const meals = Array.isArray(day.meals) ? day.meals : [];
-            const isToday = todayDateStr && day.dateStr === todayDateStr;
+        const dateLabel = selectedDay
+            ? (selectedDay.dateLabel || '') + (selectedDay.dateLabel ? ', ' : '') + formatDateLabel(selectedDay.dateStr)
+            : 'Нет доступной даты';
 
-            const header = React.createElement('button', {
-                onClick: () => toggleDate(day.dateStr),
-                style: {
-                    width: '100%',
-                    padding: '12px 14px',
-                    border: 'none',
-                    background: '#f8fafc',
-                    borderRadius: '10px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    cursor: 'pointer',
-                    marginBottom: '6px',
-                    fontSize: '14px', fontWeight: 600, color: '#0f172a',
-                },
+        const mealRows = meals.map((meal, index) => {
+            const isSource = selectedDay.dateStr === sourceDate && index === sourceMealIndex;
+            const kcal = calcMealKcal(meal, pIndex, getProductFromItem);
+            const itemCount = (meal.items || []).length;
+            const name = meal.name || 'Приём';
+            return React.createElement('button', {
+                key: meal.id || (selectedDay.dateStr + '_' + index),
+                type: 'button',
+                disabled: isSource,
+                onClick: isSource ? undefined : () => handlePick(index, meal.id),
+                className: 'meal-transfer-v4__target meal-transfer-v4__target--pick'
+                    + (isSource ? ' is-source' : ''),
             },
-                React.createElement('span', null,
-                    React.createElement('span', { style: { fontWeight: 700 } }, day.dateLabel),
-                    React.createElement('span', { style: { color: '#94a3b8', fontWeight: 500, marginLeft: '6px' } },
-                        '— ' + formatDateLabel(day.dateStr)),
+                React.createElement('span', { className: 'meal-transfer-v4__target-text' },
+                    React.createElement('span', { className: 'meal-transfer-v4__target-label' },
+                        (meal.time ? meal.time + ' · ' : '') + name + (isSource ? ' (откуда)' : ''),
+                    ),
+                    React.createElement('span', { className: 'meal-transfer-v4__target-meta' },
+                        itemCount + ' ' + pluralRu(itemCount, 'продукт', 'продукта', 'продуктов')
+                        + (kcal > 0 ? ' · ~' + kcal + ' ккал' : ''),
+                    ),
                 ),
-                React.createElement('span', { style: { color: '#94a3b8', fontSize: '12px' } },
-                    meals.length + ' ' + (meals.length === 1 ? 'приём' : (meals.length < 5 ? 'приёма' : 'приёмов')),
-                    React.createElement('span', { style: { marginLeft: '8px' } }, isExpanded ? '▾' : '▸'),
-                ),
+                !isSource && React.createElement('span', { className: 'meal-transfer-v4__chevron' },
+                    React.createElement(ChevronIcon)),
             );
-
-            const mealButtons = meals.map((meal, mi) => {
-                const isSource = day.dateStr === sourceDate && mi === sourceMealIndex;
-                const kcal = calcMealKcal(meal, pIndex, getProductFromItem);
-                const itemCount = (meal.items || []).length;
-                const emoji = getMealEmoji(meal);
-                const name = meal.name || 'Приём';
-                return React.createElement('button', {
-                    key: meal.id || (day.dateStr + '_' + mi),
-                    onClick: isSource ? undefined : () => handlePick(day.dateStr, mi, meal.id),
-                    disabled: isSource,
-                    style: {
-                        display: 'flex', alignItems: 'center', gap: '10px',
-                        padding: '10px 12px',
-                        border: '1px solid ' + (isSource ? '#e2e8f0' : '#dbeafe'),
-                        background: isSource ? '#f8fafc' : '#fff',
-                        borderRadius: '8px',
-                        cursor: isSource ? 'not-allowed' : 'pointer',
-                        opacity: isSource ? 0.5 : 1,
-                        textAlign: 'left',
-                        width: '100%',
-                    },
-                },
-                    React.createElement('span', { style: { fontSize: '18px' } }, emoji),
-                    React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-                        React.createElement('div', {
-                            style: { fontSize: '14px', fontWeight: 600, color: '#0f172a' },
-                        },
-                            meal.time ? meal.time + ' · ' : '',
-                            name,
-                            isSource ? ' (откуда)' : '',
-                        ),
-                        React.createElement('div', {
-                            style: { fontSize: '11px', color: '#64748b', marginTop: '2px' },
-                        },
-                            itemCount + ' ' + (itemCount === 1 ? 'продукт' : (itemCount < 5 ? 'продукта' : 'продуктов')),
-                            kcal > 0 ? ' · ~' + kcal + ' ккал' : '',
-                        ),
-                    ),
-                );
-            });
-
-            const emptyHint = (meals.length === 0 && !isToday)
-                ? React.createElement('div', {
-                    key: '_empty_',
-                    style: { padding: '10px 14px', color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' },
-                }, 'Приёмов нет')
-                : null;
-
-            const newMealBtn = isToday
-                ? React.createElement('button', {
-                    key: '_new_meal_',
-                    onClick: () => handleCreateNew(day.dateStr),
-                    style: {
-                        display: 'flex', alignItems: 'center', gap: '10px',
-                        padding: '10px 12px',
-                        border: '1px dashed #3b82f6',
-                        background: '#eff6ff',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        width: '100%',
-                        color: '#1d4ed8',
-                    },
-                },
-                    React.createElement('span', { style: { fontSize: '18px' } }, '➕'),
-                    React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-                        React.createElement('div', {
-                            style: { fontSize: '14px', fontWeight: 600 },
-                        }, 'Новый приём'),
-                        React.createElement('div', {
-                            style: { fontSize: '11px', color: '#64748b', marginTop: '2px' },
-                        }, 'выбрать время и оценки'),
-                    ),
-                )
-                : null;
-
-            const list = isExpanded && React.createElement('div', {
-                style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px', paddingLeft: '4px' },
-            }, emptyHint, ...mealButtons, newMealBtn);
-
-            return React.createElement('div', { key: day.dateStr }, header, list);
         });
 
-        return React.createElement(ModalShellWrap, {
-            title,
-            sourceLabel,
-            onClose: hide,
-        }, sections);
+        const newMealRow = isToday
+            ? React.createElement('button', {
+                key: '_new_meal_',
+                type: 'button',
+                onClick: handleCreateNew,
+                className: 'meal-transfer-v4__target meal-transfer-v4__target--pick',
+            },
+                React.createElement('span', { className: 'meal-transfer-v4__target-text' },
+                    React.createElement('span', { className: 'meal-transfer-v4__target-label' }, '+ Создать новый приём'),
+                    React.createElement('span', { className: 'meal-transfer-v4__target-meta' }, 'выбрать время и оценки'),
+                ),
+                React.createElement('span', { className: 'meal-transfer-v4__chevron' },
+                    React.createElement(ChevronIcon)),
+            )
+            : null;
+
+        return React.createElement('div', {
+            className: 'meal-transfer-v4__backdrop',
+            onClick: handleBackdropClick,
+        }, React.createElement('div', {
+            className: 'move-modal meal-transfer-v4__sheet meal-transfer-v4__sheet--move',
+            onClick: event => event.stopPropagation(),
+        },
+            React.createElement('div', { className: 'meal-transfer-v4__top' },
+                React.createElement('div', { className: 'meal-transfer-v4__title' }, title),
+                React.createElement('button', {
+                    type: 'button',
+                    onClick: () => hide(),
+                    className: 'meal-transfer-v4__close',
+                    'aria-label': 'Закрыть',
+                }, React.createElement(CloseIcon)),
+            ),
+            React.createElement('div', { className: 'meal-transfer-v4__move-content' },
+                React.createElement('div', { className: 'meal-transfer-v4__tier' }, tier),
+                React.createElement('label', { className: 'meal-transfer-v4__date' },
+                    React.createElement('span', { className: 'meal-transfer-v4__calendar' }, React.createElement(CalendarIcon)),
+                    React.createElement('span', { className: 'meal-transfer-v4__date-label' }, dateLabel),
+                    React.createElement('span', { className: 'meal-transfer-v4__chevron' }, React.createElement(ChevronIcon)),
+                    React.createElement('select', {
+                        className: 'meal-transfer-v4__date-select',
+                        value: selectedDay ? selectedDay.dateStr : '',
+                        onChange: event => setDstDate(event.target.value),
+                        'aria-label': isCopy ? 'Дата копирования' : 'Дата переноса',
+                        disabled: days.length === 0,
+                    }, days.map(day => React.createElement('option', {
+                        key: day.dateStr,
+                        value: day.dateStr,
+                    }, (day.dateLabel ? day.dateLabel + ', ' : '') + formatDateLabel(day.dateStr)))),
+                ),
+                React.createElement('div', { className: 'meal-transfer-v4__tier meal-transfer-v4__tier--move-target' }, 'В какой приём'),
+                (mealRows.length === 0 && !newMealRow)
+                    ? React.createElement('div', { className: 'meal-transfer-v4__empty' }, 'Приёмов нет')
+                    : React.createElement('div', { className: 'meal-transfer-v4__target-list' },
+                        ...mealRows, newMealRow),
+            ),
+            React.createElement('div', { className: 'meal-transfer-v4__footer' },
+                React.createElement('div', { className: 'meal-transfer-v4__actions' },
+                    React.createElement('button', {
+                        type: 'button',
+                        onClick: () => hide(),
+                        className: 'meal-transfer-v4__button meal-transfer-v4__button--cancel',
+                    }, 'Отмена'),
+                ),
+            ),
+        ));
     }
 
     function MealMoveView(state) {
@@ -501,22 +412,15 @@
         modalRootInstance.render(React.createElement(MoveModalShell));
     }
 
-    function ensureAnimations() {
-        if (document.getElementById('move-modal-anim')) return;
-        const style = document.createElement('style');
-        style.id = 'move-modal-anim';
-        style.textContent = `
-@keyframes moveModalFadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes moveModalSlideUp { from { transform: translateY(20px); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
-[data-theme$="dark"] .move-modal:not(.meal-transfer-v4__sheet) { background: #1e293b; color: #f1f5f9; }
-[data-theme$="dark"] .move-modal:not(.meal-transfer-v4__sheet) button { color: #f1f5f9; }
-`;
-        document.head.appendChild(style);
-    }
+    // ensureAnimations снят 03.09 вместе со старым каркасом. Он вставлял в
+    // <head> два кадра (moveModalFadeIn / moveModalSlideUp) и заплатку тёмной
+    // темы для листа, у которого нет класса общего листа переноса. Оба вида
+    // теперь на классах meal-transfer-v4, у них свои кадры (copyMealFadeIn /
+    // copyMealScaleIn) и свои роли набора в 610-aps-meal-flow.css — селектор
+    // заплатки больше не совпадает ни с чем, а кадры никто не звал.
 
     function show(options = {}) {
         ensureRoot();
-        ensureAnimations();
         if (HEYS.ModalManager) {
             modalCleanup = HEYS.ModalManager.register('move-modal', () => hide(true));
         }
@@ -538,9 +442,8 @@
     HEYS.MoveModal = { show, hide, close: hide };
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => { ensureRoot(); ensureAnimations(); });
+        document.addEventListener('DOMContentLoaded', () => { ensureRoot(); });
     } else {
         ensureRoot();
-        ensureAnimations();
     }
 })(window);

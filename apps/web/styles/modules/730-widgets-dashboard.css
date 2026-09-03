@@ -4317,7 +4317,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-weight__number-week-val.widget-v4-val--bad {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .widget-weight__number-week-val {
@@ -12984,7 +12984,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
    правил: того литерала нет ни в одном наборе, и без палитры он покрасил бы
    экран чужой системой. Старые места — долг гейта запасных значений. */
 .widget-wd__chart.widget-v4-val--bad {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .widget-wd__chart.widget-v4-val--neutral {
@@ -14249,7 +14249,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 /* Кадр не выделяет сегодняшний столбик заливкой — день называет ось под
    графиком (последняя подпись тоном --ac). Столбики красит только состояние. */
 .widget-bd-sheet__bar.is-bad {
-  background: var(--v4-bad-text, #b4442a);
+  background: var(--v4-bad-text, #a83c22);
 }
 
 .widget-bd-sheet__bar-target {
@@ -14603,7 +14603,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
    рисовалось третьим красным — светлее и столбика, и подписи рядом. Красный
    набора один, --v4-bad-text (#b4442a = --red канваса). */
 .widget-bd-sheet__hero-track-fill.is-bad {
-  background: var(--v4-bad-text, #b4442a);
+  background: var(--v4-bad-text, #a83c22);
 }
 
 .widget-bd-sheet__hero-track-label {
@@ -14648,7 +14648,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__stats--table .widget-bd-sheet__stat-row.is-bad .widget-bd-sheet__stat-label {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .widget-bd-sheet__stats--table .widget-bd-sheet__stat-row.is-good .widget-bd-sheet__stat-label {
@@ -14670,7 +14670,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__stat-row.is-bad .widget-bd-sheet__stat-value {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .widget-bd-sheet__stat-row.is-good .widget-bd-sheet__stat-value {
@@ -15152,7 +15152,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__evening-fill.is-bad {
-  background: var(--v4-bad-text, #b4442a);
+  background: var(--v4-bad-text, #a83c22);
 }
 
 /* Пункт без данных дорожки не рисует вовсе — пустая читалась бы как «открыт». */
@@ -15193,5 +15193,5 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__evening-dot.is-bad {
-  background: var(--v4-bad-text, #b4442a);
+  background: var(--v4-bad-text, #a83c22);
 }

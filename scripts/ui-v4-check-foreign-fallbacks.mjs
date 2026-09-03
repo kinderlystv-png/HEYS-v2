@@ -73,7 +73,6 @@ const BASELINE = {
   '734-ui-v4-insights.css': 3,
   '740-cascade-card.css': 14,
   '750-strength-builder.css': 20,
-  '800-meal-optimizer.css': 40,
   '900-planning.css': 144,
   '905-planning-chrono.css': 45,
   '906-planning-goal-map.css': 4,

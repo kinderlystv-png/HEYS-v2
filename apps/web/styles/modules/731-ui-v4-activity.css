@@ -671,7 +671,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-missed {
-  background: var(--v4-bad-text, #b4442a);
+  background: var(--v4-bad-text, #a83c22);
   color: transparent;
 }
 
@@ -694,7 +694,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-missed {
-  background: var(--v4-bad-text, #b4442a);
+  background: var(--v4-bad-text, #a83c22);
 }
 
 /* Легенда календаря — ряд из четырёх пар «точка + слово» с переносом
@@ -732,7 +732,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-missed {
-  background: var(--v4-bad-text, #b4442a);
+  background: var(--v4-bad-text, #a83c22);
 }
 
 /* «Не вели» — тон времени до первой отметки: это не результат, и красить его
@@ -822,7 +822,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-history__delta--drop {
-  color: var(--v4-bad-text, #b4442a);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 /* Ноль — не падение: приглушаем, а не красим тревогой. */

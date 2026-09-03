@@ -1704,6 +1704,44 @@
    * @param {Object} params.pIndex - Индекс продуктов
    * @returns {Array} Массив рекомендаций
    */
+  /**
+   * Семейство правила для значка совета · строка контракта nutrition-tab
+   * «советы приёма»: иконка рисуется по семейству — синергия, баланс, время.
+   *
+   * Считается по триггеру, а не по массиву, в котором правило объявлено:
+   * SYNERGY_RULES исторически собрал 57 правил из 64, включая явно временные
+   * (evening_protein, iron_morning_best, late_night_fat, morning_cortisol),
+   * и значок «синергия» на них лгал бы. Полная раскладка правил по семействам
+   * — docs/ui/designer-answers/mapping-советы-приёма.md.
+   *
+   * Разбор в два шага:
+   *  1. есть временнóе окно (trigger.time) → «время»: правило отвечает на
+   *     «когда», даже если попутно смотрит на макрос;
+   *  2. иначе — назван ли конкретный партнёр (has/missing/hasKeyword/…): да →
+   *     «синергия» (два вещества работают вместе или мешают друг другу),
+   *     нет → «баланс» (правило меряет макрос порогом, без пары).
+   *
+   * Признак пары взят вместо признака макроса намеренно: `missingMacro: 'fat'`
+   * стоит и в «добавь масло к овощам» (синергия жирорастворимых), и в «мало
+   * жиров за приём» (баланс), и различает их только наличие партнёра.
+   *
+   * @param {Object} rule
+   * @returns {'timing'|'balance'|'synergy'}
+   */
+  const PARTNER_TRIGGER_KEYS = [
+    'has', 'has2', 'missing', 'hasKeyword', 'hasKeyword2', 'missingKeyword',
+    'hasCategory', 'missingCategory',
+  ];
+
+  function getRuleFamily(rule) {
+    const trigger = rule && rule.trigger;
+    if (!trigger || typeof trigger !== 'object') return 'synergy';
+    if (trigger.time) return 'timing';
+    return PARTNER_TRIGGER_KEYS.some((key) => trigger[key] !== undefined)
+      ? 'synergy'
+      : 'balance';
+  }
+
   function getMealOptimization(params) {
     const { meal, mealTotals, dayData, profile, products, pIndex, avgGI } = params;
 
@@ -1740,10 +1778,11 @@
 
     const recommendations = [];
 
-    // Проверяем все правила
+    // Проверяем все правила.
     const allRules = [...SYNERGY_RULES, ...BALANCE_RULES, ...TIMING_RULES];
 
     for (const rule of allRules) {
+      const family = getRuleFamily(rule);
       if (checkTrigger(rule.trigger, context)) {
         // Сначала находим продукты для рекомендации
         let recProducts = [];
@@ -1773,7 +1812,12 @@
           // периода остаются у своих потребителей и сюда не подмешиваются.
           scope: 'meal',
           priority: rule.priority || 50,
+          // icon — легаси-эмодзи правила. С 03.09 в интерфейс не выводится:
+          // строка контракта «советы приёма» ставит иконку 15×15 обводкой по
+          // семейству. Поле оставлено в ответе как есть — снимать его значит
+          // менять контракт движка ради вида одного экрана.
           icon: rule.icon,
+          family,
           title: contextual.title,
           reason: contextual.reason,
           science: rule.science,
@@ -1890,6 +1934,7 @@
     getMealOptimization,
 
     // Helpers
+    getRuleFamily,
     detectNutrients,
     detectCategories,
     getSmartPortion,

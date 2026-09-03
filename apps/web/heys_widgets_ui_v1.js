@@ -6929,9 +6929,12 @@
       const strokeDashoffset = circumference - (progressPct / 100) * circumference;
 
       return React.createElement('div', { className: 'widget-cycle widget-cycle--2x2' },
-        // Верх: фаза
+        // Верх: фаза — только слово. Запрос 26.08 снял символ фазы из
+        // интерфейса: метку несут форма и тон. Значок остаётся в каталоге фаз
+        // ради легаси-потребителей, но сюда не выводится; гейт зоны cycle
+        // сторожит это чтением самого блока.
         phase && widget.settings?.showPhase !== false && React.createElement('div', { className: 'widget-cycle__phase-header', style: { color: phaseColor } },
-          phase.icon, ' ', phase.name
+          phase.name
         ),
         // Центр: кольцо с днём
         React.createElement('div', { className: 'widget-cycle__ring-container' },
@@ -6976,7 +6979,7 @@
       ),
       widget.settings?.showPhase && phase && !d.isTiny &&
       React.createElement('div', { className: 'widget-cycle__phase' },
-        phase.icon, ' ', phase.name
+        phase.name
       ),
       widget.settings?.showCorrections !== false && recommendation && !d.isTiny
         ? React.createElement('div', { className: 'widget-cycle__tip' }, recommendation)

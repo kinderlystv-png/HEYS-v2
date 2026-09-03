@@ -1703,7 +1703,7 @@
   --on-acs: var(--v4-btn-on-act, #2b1608);
   --gr: var(--v4-ok-text, #5c6a45);
   --gr-bg: var(--v4-ok-bg, #eaefe0);
-  --val-bad: var(--v4-bad-text, #b4442a);
+  --val-bad: var(--v4-bad-text, #a83c22);
   background: var(--bg);
   color: var(--tx);
   font-family: Figtree, system-ui, sans-serif;
