@@ -653,11 +653,16 @@ describe('«Утренний чек-ин» · разбор кадров канв
     expect(compare({ razbor, rules, frame: 'Чек-ин · сон', pairs: SLEEP })).toEqual([]);
   });
 
-  it('колесо времени сна следует home-widgets ROW, а не устаревшему кадру checkin', () => {
-    expect(rules.get('.mc-modal--daily .mc-sleep-combined .mc-wheel-value--current')['font-size']).toBe('24px');
-    expect(rules.get('.mc-modal--daily .mc-sleep-combined .mc-wheel-value--prev')['font-size']).toBe('12px');
-    expect(rules.get('.mc-modal--daily .mc-sleep-combined .mc-time-sep')['font-size']).toBe('20px');
-    expect(rules.get('.mc-modal--daily .mc-sleep-combined .mc-time-sep').padding).toBe('0 1px');
+  // Пакет 3 сентября решил спор в другую сторону: строка «колесо — общий кадр»
+  // называет для времени сна КРУПНЫЙ размер 36/16/32 — «у шага „Сон" это
+  // единственный ввод», — а рядовой 24/12/20 оставляет времени холода. Прежняя
+  // проверка держала ряд и оказалась стражем снятого решения; код при этом стоял
+  // на 32/13/28, то есть ни на одном из двух.
+  it('колесо времени сна крупное — 36/16/32 по строке «колесо — общий кадр»', () => {
+    expect(rules.get('.mc-modal--daily .mc-sleep-combined .mc-wheel-value--current')['font-size']).toBe('36px');
+    expect(rules.get('.mc-modal--daily .mc-sleep-combined .mc-wheel-value--prev')['font-size']).toBe('16px');
+    expect(rules.get('.mc-modal--daily .mc-sleep-combined .mc-time-sep')['font-size']).toBe('32px');
+    expect(rules.get('.mc-modal--daily .mc-sleep-combined .mc-time-sep').padding).toBe('0 2px');
   });
 
   it('кадр «Чек-ин · как вы сегодня» совпадает с шагом трёх шкал', () => {

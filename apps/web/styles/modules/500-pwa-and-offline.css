@@ -1192,8 +1192,10 @@
   border-top: 5px solid var(--v4-sand-act-text, #8a4a20);
 }
 
+/* Строка «Чек-ин · шаги своё число · 07» называет тон --ac: своё число — текст,
+   а не заливка, и заливочная роль его не красит. Стояла --acs. */
 .mc-modal--daily .mc-steps-hero--custom .mc-steps-hero-value {
-  color: var(--v4-sand-act, #c67139);
+  color: var(--v4-sand-act-text, #8a4a20);
 }
 
 .mc-pill {
@@ -7123,21 +7125,24 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   height: auto;
 }
 
+/* Крупный размер колеса — 36/16/32. Строка «колесо — общий кадр» называет для
+   времени сна именно его: у шага «Сон» это единственный ввод. Код стоял на
+   32/13/28 — ни прежнего ряда 24/12/20, ни крупного. */
 .mc-modal--daily .mc-sleep-combined .mc-wheel-value--current {
-  font: 700 32px/1.2 Figtree, system-ui, sans-serif;
+  font: 700 36px/1.2 Figtree, system-ui, sans-serif;
   letter-spacing: -0.025em;
 }
 
 .mc-modal--daily .mc-sleep-combined .mc-wheel-value--prev,
 .mc-modal--daily .mc-sleep-combined .mc-wheel-value--next {
-  font: 600 13px/1.45 Figtree, system-ui, sans-serif;
+  font: 600 16px/1.45 Figtree, system-ui, sans-serif;
 }
 
 .mc-modal--daily .mc-sleep-combined .mc-time-sep {
   flex: none;
   margin: 0;
-  padding: 0 1px;
-  font: 700 28px/1 Figtree, system-ui, sans-serif;
+  padding: 0 2px;
+  font: 700 32px/1 Figtree, system-ui, sans-serif;
 }
 
 .mc-modal--daily .mc-weight-pickers {
