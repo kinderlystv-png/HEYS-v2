@@ -141,17 +141,24 @@ describe('причина пропуска', () => {
     CANVAS.indexOf('data-screen-label="Рутина · причина пропуска"'),
   );
 
-  it('заголовок и подпись взяты у кадра, а не у прежней системы', () => {
+  // Решение владельца 3 сентября: слой остаётся диалогом по центру. Поэтому
+  // заголовок и подпись листа живут в шапке шага, а не вторым заголовком под
+  // ней: выход у диалога несёт крестик шапки, и убрать её нельзя.
+  it('заголовок и подпись стоят один раз — в шапке шага', () => {
     expect(SKIP_FRAME).toContain('Почему сегодня без зарядки?');
     expect(SKIP_FRAME).toContain('Ответ видите только вы — он нужен для картины дня.');
-    expect(STEPS).toContain("'Почему сегодня без зарядки?'");
-    expect(STEPS).toContain("'Ответ видите только вы — он нужен для картины дня.'");
+    const step = STEPS.slice(
+      STEPS.indexOf("registerStep('morning_activation_skip_reason'"),
+      STEPS.indexOf('function scaleWord'),
+    );
+    expect(step).toContain("title: 'Почему сегодня без зарядки?'");
+    expect(step).toContain("hint: 'Ответ видите только вы — он нужен для картины дня.'");
     // Прежняя подпись говорила человеку «ты», хотя лист обращается на «вы».
     expect(STEPS).not.toContain('это только для твоей картины дня');
-    expect(rule('.ma-skip-reason-title')).toContain('font-size: 16px');
-    expect(rule('.ma-skip-reason-title')).toContain('line-height: 1.3');
-    expect(rule('.ma-skip-reason-sub')).toContain('font-size: 11.5px');
-    expect(rule('.ma-skip-reason-sub')).toContain('margin-top: 4px');
+    // Своего заголовка у тела больше нет — это и был второй заголовок.
+    expect(STEPS).not.toContain('ma-skip-reason-title');
+    expect(STEPS).not.toContain('ma-skip-reason-sub');
+    expect(rule('.ma-skip-reason-title')).toBeNull();
   });
 
   it('пять строк-ответов через 12 зазором 7, заливкой --c1 и без обводки', () => {

@@ -1918,22 +1918,6 @@
   margin-top: 12px;
 }
 
-.ma-skip-reason-title {
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.3;
-  color: var(--v4-ink, #201e1d);
-}
-
-.ma-skip-reason-sub {
-  font-size: 11.5px;
-  font-weight: 500;
-  line-height: 1.4;
-  color: var(--v4-ink-data) /* v4-intentional */;
-  margin-top: 4px;
-  text-wrap: pretty;
-}
-
 /* Обводки нет — строка контракта называет только заливку --c1. */
 .ma-skip-reason-option {
   min-height: 44px;

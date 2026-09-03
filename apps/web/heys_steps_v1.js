@@ -5719,10 +5719,6 @@
     // прежней системе — инлайновые тона и обводка, кегль 13/12/14 — и на «ты»,
     // хотя лист говорит человеку «вы».
     return React.createElement('div', { className: 'ma-skip-reason-stack' },
-      React.createElement('div', { className: 'ma-skip-reason-title' },
-        'Почему сегодня без зарядки?'),
-      React.createElement('div', { className: 'ma-skip-reason-sub' },
-        'Ответ видите только вы — он нужен для картины дня.'),
       React.createElement('div', { className: 'ma-skip-reason-options' },
         MORNING_ACTIVATION_SKIP_REASONS.map((opt) => React.createElement('button', {
           key: opt.id,
@@ -5771,8 +5767,13 @@
   });
 
   registerStep('morning_activation_skip_reason', {
-    title: 'Зарядка',
-    hint: 'Почему не в плане сегодня?',
+    // Решение владельца 3 сентября: слой остаётся диалогом по центру, поэтому
+    // выход несёт крестик шапки, а не ручка. Заголовок и подпись листа подняты
+    // в шапку — иначе они шли вторым заголовком под заголовком шага, и на
+    // экране стояло два заголовка об одном. Текст взят у кадра «Рутина ·
+    // причина пропуска»: он точнее прежнего «Зарядка».
+    title: 'Почему сегодня без зарядки?',
+    hint: 'Ответ видите только вы — он нужен для картины дня.',
     canSkip: true,
     hideHeaderNext: true,
     component: MorningActivationSkipReasonStepComponent,
