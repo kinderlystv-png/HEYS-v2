@@ -1919,16 +1919,6 @@
   min-height: 66px;
 }
 
-/* Заголовок вторичен ровно там, где это называет кадр: «Прохладный душ»,
-   ушедший строкой в неделю периода, и «Замеры отложены» — оба 600 13px/1
-   против 700 16px/1.25 у карточки. Шире не берём: у остальных строк того же
-   класса кадры чек-ина держат заголовок карточки, и общее правило по
-   .mc-rest-row ломает пятнадцать пар разбора. */
-.mc-rest-row--cold .mc-rest-card-title,
-.mc-rest-row--measurements-deferred .mc-rest-card-title {
-  font: 600 13px/1 Figtree, system-ui, sans-serif;
-}
-
 .mc-rest-row-actions {
   display: flex;
   gap: 8px;
@@ -4643,7 +4633,7 @@
 }
 
 .mc-sleep-comment-input::placeholder {
-  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
+  color: var(--color-gray-400);
 }
 
 [data-theme$="dark"] .mc-sleep-comment {
@@ -5587,7 +5577,7 @@
   text-align: center;
   margin-top: 12px;
   font-size: 13px;
-  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
+  color: var(--color-gray-500);
   font-style: italic;
   min-height: 36px;
   /* Фикс для 2 строк текста */
@@ -5597,7 +5587,7 @@
 }
 
 [data-theme$="dark"] .mc-steps-recommendation {
-  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
+  color: var(--color-gray-400);
 }
 
 /* Steps purpose — зачем ставить цель */
