@@ -4763,6 +4763,44 @@ function setDayNote(text, note) {
   return lines.join('\n');
 }
 
+/**
+ * Событие дня — строка `~ …` внизу файла (days/README.md). Её пишет доска, когда
+ * со слотом что-то происходит, и ровно из этих строк собирается «План и факт»
+ * на вечернем закрытии.
+ *
+ * Чат в этот канал не ходил вовсе. Отметить дело он мог только через
+ * tasks_close_day, а тот пишет заметку `>`, по которой доска и считает день
+ * закрытым (build_board.day_closed). Отметка в обед объявляла день
+ * законченным: 3 сентября так одиннадцать неотмеченных пунктов стали
+ * читаться как «не состоялись».
+ *
+ * Формат повторяет board_server.day_event и регулярку build_board:
+ * `~ 14:31 закрыт · 14:00-14:40 Ателье`. Между временами дефис, хотя сами
+ * слоты набраны длинным тире, — доска ищет именно дефис.
+ */
+const DAY_EVENT_KINDS = new Set(['закрыт', 'удалён', 'сдвинут']);
+const NEWLINE = String.fromCharCode(10);
+
+function appendDayEvent(text, kind, slot, { at = null, nowMs = Date.now(), extra = '' } = {}) {
+  if (!DAY_EVENT_KINDS.has(kind)) throw new Error(`unknown_day_event_kind:${kind}`);
+  const time = /^\d{2}:\d{2}$/.test(String(at || '').trim())
+    ? String(at).trim()
+    : moscowTime(nowMs);
+  const title = String(slot && slot.title ? slot.title : '').trim();
+  const line = `~ ${time} ${kind} · ${slot.start}-${slot.end} ${title}`.trimEnd()
+    + (extra ? ` ${extra}` : '');
+  return appendBlock(text, line);
+}
+
+/** Есть ли уже событие про этот слот — повторная отметка не плодит строк. */
+function hasDayEvent(text, kind, slot) {
+  // Без регулярки: время у слота своё, а строка события собрана нами же —
+  // достаточно узнать её по началу и хвосту, и не думать про экранирование.
+  const tail = ` ${kind} · ${slot.start}-${slot.end}`;
+  return String(text || '').split(NEWLINE)
+    .some((line) => line.trim().startsWith('~ ') && line.includes(tail));
+}
+
 // ── Загруженность вперёд ─────────────────────────────────────────────────
 //
 // «Когда можно уехать» — вопрос не про поиск по словам. Поиск находит то, что
@@ -6090,6 +6128,8 @@ module.exports = {
   removeSlotLine,
   retimeSlotLine,
   markSlotDone,
+  appendDayEvent,
+  hasDayEvent,
   dayNote,
   setDayNote,
   markHabit,

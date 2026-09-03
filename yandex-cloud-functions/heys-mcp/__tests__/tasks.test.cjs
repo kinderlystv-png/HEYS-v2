@@ -6514,3 +6514,91 @@ test('tasks_context поднимает выводы из archive/journal_* и с
   assert.match(res.text, /записей в журнале/);
   assert.match(res.text, /сырья стенограммы/);
 });
+
+// ── Отметка по ходу дня против закрытия дня ──────────────────────────
+//
+// 3 сентября галочку умел ставить только tasks_close_day, а он обязан писать
+// заметку «> как прошло» — по ней доска и считает день закрытым. Отметка в
+// обед объявляла день законченным, и одиннадцать ещё не наступивших пунктов
+// читались как «не состоялись».
+
+// Регулярка доски, слово в слово из build_board.py: событие пишется для неё,
+// и разойтись формату молча нельзя — вечерний «План и факт» просто опустеет.
+const BOARD_EVENT_RE =
+  /^~\s+(\d{2}:\d{2})\s+(закрыт|удалён|сдвинут)\s*·\s*(\d{2}:\d{2})-(\d{2}:\d{2})\s*(.*)$/;
+
+test('отметка слота ставит галочку и пишет событие, дня не закрывая', async () => {
+  const api = withBoard();
+  const tools = build(api);
+  const res = await tools.tasks_slot_done({ slot: '17:00' });
+
+  const text = api.kv[tasks.keyForPath('days/2026-08-02.md')].text;
+  assert.match(text, /- \[x\] 17:00–22:00 Дом у родителей/, 'галочка на месте');
+
+  const event = text.split('\n').find((line) => line.startsWith('~ '));
+  assert.ok(event, 'событие дня записано');
+  const parsed = BOARD_EVENT_RE.exec(event);
+  assert.ok(parsed, `доска не прочитает такую строку: ${event}`);
+  assert.equal(parsed[2], 'закрыт');
+  assert.equal(parsed[3], '17:00');
+  assert.equal(parsed[4], '22:00');
+  assert.match(parsed[5], /Дом у родителей/);
+
+  assert.equal(tasks.dayNote(text), null, 'заметку дня отметка не пишет');
+  assert.equal(res.structured.dayClosed, false);
+  assert.match(res.text, /День не закрываю/);
+});
+
+test('повторная отметка не плодит событий и не двигает время', async () => {
+  const api = withBoard();
+  const tools = build(api);
+  await tools.tasks_slot_done({ slot: '17:00', at: '18:20' });
+  const after = api.kv[tasks.keyForPath('days/2026-08-02.md')].text;
+  const second = await tools.tasks_slot_done({ slot: '17:00' });
+
+  const text = api.kv[tasks.keyForPath('days/2026-08-02.md')].text;
+  assert.equal(text, after, 'второй вызов файл не меняет');
+  assert.equal(second.structured.already, true);
+  assert.equal(text.split('\n').filter((l) => l.startsWith('~ ')).length, 1);
+  assert.match(text, /~ 18:20 закрыт/, 'время из первого вызова осталось');
+});
+
+test('закрытие дня пишет событие каждому отмеченному слоту', async () => {
+  const api = withBoard();
+  const tools = build(api);
+  await tools.tasks_close_day({ date: '2026-08-02', done: ['17:00'], note: 'обычный день' });
+
+  const text = api.kv[tasks.keyForPath('days/2026-08-02.md')].text;
+  const events = text.split('\n').filter((line) => line.startsWith('~ '));
+  assert.equal(events.length, 1, 'у отмеченного слота есть событие');
+  assert.ok(BOARD_EVENT_RE.test(events[0]), events[0]);
+  assert.equal(tasks.dayNote(text).text, 'обычный день', 'заметка на месте');
+});
+
+test('слот, отмеченный по ходу дня, при закрытии не получает второго события', async () => {
+  const api = withBoard();
+  const tools = build(api);
+  await tools.tasks_slot_done({ slot: '17:00', at: '18:20' });
+  await tools.tasks_close_day({ date: '2026-08-02', done: ['17:00'], note: 'день прошёл' });
+
+  const text = api.kv[tasks.keyForPath('days/2026-08-02.md')].text;
+  assert.equal(text.split('\n').filter((l) => l.startsWith('~ ')).length, 1);
+  assert.match(text, /~ 18:20 закрыт/);
+  assert.equal(tasks.dayNote(text).text, 'день прошёл');
+});
+
+test('несуществующий слот — понятный отказ, файл не тронут', async () => {
+  const api = withBoard();
+  const tools = build(api);
+  const before = api.kv[tasks.keyForPath('days/2026-08-02.md')].text;
+  await assert.rejects(() => tools.tasks_slot_done({ slot: 'полёт на Луну' }));
+  assert.equal(api.kv[tasks.keyForPath('days/2026-08-02.md')].text, before);
+});
+
+test('время закрытия пишется ЧЧ:ММ, мусор отбивается до записи', async () => {
+  const api = withBoard();
+  const tools = build(api);
+  const before = api.kv[tasks.keyForPath('days/2026-08-02.md')].text;
+  await assert.rejects(() => tools.tasks_slot_done({ slot: '17:00', at: 'вечером' }));
+  assert.equal(api.kv[tasks.keyForPath('days/2026-08-02.md')].text, before);
+});

@@ -285,6 +285,28 @@ const TASKS_BOARD_SCHEMAS = [
     },
   },
   {
+    name: 'tasks_slot_done',
+    description: 'Отметить слот дня состоявшимся — по ходу дня, не закрывая день. Ставит галочку и дописывает событие «~ ЧЧ:ММ закрыт · …», из которого вечером собирается «План и факт». Заметку дня не трогает и днём закрытым его не объявляет — для этого есть tasks_close_day. Повторный вызов не плодит событий. Этим и отмечай дела, когда он говорит «сделал», «съездил», «созвонился»: закрывать день ради одной галочки не нужно.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        slot: {
+          type: 'string',
+          description: 'Какой слот: время «14:00», название «ателье» или то и другое — «14:00 ателье». Название ищется как в файле дня, регистр не важен.',
+        },
+        date: {
+          type: 'string',
+          description: 'День, ГГГГ-ММ-ДД. По умолчанию сегодняшний — отмечают обычно по ходу дня. Понимает «вчера» и «позавчера».',
+        },
+        at: {
+          type: 'string',
+          description: 'Во сколько дело закрыто, ЧЧ:ММ. По умолчанию сейчас. Ставь явно, когда он говорит про прошедшее: «в два часа заехал».',
+        },
+      },
+      required: ['slot'],
+    },
+  },
+  {
     name: 'tasks_close_day',
     description: 'Закрыть день: отметить, что из запланированного состоялось, и записать одну фразу «как прошло» строкой «> …» — так это описано в days/README.md. Без закрытия в задачнике остаётся один план: слот без галочки в незакрытом дне значит «неизвестно», а не «не состоялось», и на «как прошла неделя», «что я забросил», «сколько реально ушло на kinderly» отвечать нечем. Отмечай только то, что он сам назвал состоявшимся — галочка это его слово, а не твой вывод. Что осталось без отметки, инструмент перечислит в ответе: перенести, снять или оставить — решает он. Записывается ровно один факт — состоялось или нет. Фактической длительности здесь нет и взять её неоткуда: сколько дело заняло на самом деле, не хранит ничто, и плановые часы за факт выдавать нельзя. Закрывается ВЧЕРАШНИЙ день, и делается это утром на планёрке: вечером день ещё не кончился. Поэтому дата по умолчанию — вчерашняя, а не сегодняшняя. Повторяющиеся расхождения плана с фактом собирает планёрка (tasks_standup) — но не с третьего случая подряд: нужно, чтобы дело срывалось трижды и чаще, чтобы срывов было больше 60% его появлений и чтобы всё это уместилось в 60 дней по закрытым дням. Три срыва из десяти планёрка не покажет — молчание не значит, что расхождения нет.',
     inputSchema: {
@@ -2475,6 +2497,67 @@ function createTasksTools({
      * закрывать нечего, а «сегодня» по умолчанию раз за разом закрывало не тот
      * день. Сегодняшний закрывается явно — датой или словом «сегодня».
      */
+    /**
+     * Отметка по ходу дня. Отдельно от закрытия дня — и это главное в ней.
+     *
+     * Раньше галочку умел ставить только tasks_close_day, а он обязан писать
+     * заметку «> как прошло», по которой доска и считает день закрытым
+     * (build_board.day_closed). Отметить дело в обед было нельзя, не объявив
+     * день законченным: 3 сентября так одиннадцать ещё не наступивших пунктов
+     * стали читаться как «не состоялись».
+     *
+     * Пишем ровно то же, что доска: галочку и событие «~ ЧЧ:ММ закрыт · …».
+     * Из этих строк вечером собирается «План и факт», поэтому чат, ставящий
+     * галочку молча, оставил бы вечер без половины фактов.
+     */
+    async tasks_slot_done(args = {}) {
+      const date = args.date ? closeDayDate(args.date) : today();
+      const query = String(args.slot || '').trim();
+      if (!query) {
+        throw new ToolError('slot_required', 'Скажи, какой слот отмечаем: время, название или то и другое.');
+      }
+      const at = String(args.at || '').trim();
+      if (at && !/^\d{1,2}:\d{2}$/.test(at)) {
+        throw new ToolError('bad_time', `Время закрытия пишется ЧЧ:ММ, а пришло «${at}».`);
+      }
+
+      const file = await readFile(`days/${date}.md`);
+      const { at: queryAt, title } = splitSlotQuery(query);
+      const slot = locateSlotIn(file, { at: queryAt, title }, date);
+
+      // Уже отмеченный слот — не ошибка: он мог сказать дважды или отметить
+      // на доске. Молчим и не трогаем время в событии: оно про первый раз.
+      if (slot.done) {
+        return {
+          text: `Уже отмечено: ${slot.start} ${slot.title}.`,
+          structured: { date, slot: { from: slot.start, to: slot.end, title: slot.title }, already: true },
+        };
+      }
+
+      let text = tasks.markSlotDone(file.text, slot.line, true);
+      if (!tasks.hasDayEvent(text, 'закрыт', slot)) {
+        text = tasks.appendDayEvent(text, 'закрыт', slot, { at: at || null, nowMs });
+      }
+      const saved = await writeFile(file, text);
+
+      const rest = tasks.parseSlots(text).filter((s) => !s.done);
+      const closed = tasks.dayNote(text);
+      const tail = rest.length
+        ? ` Осталось ${rest.length}: ${rest.slice(0, 3).map((s) => `${s.start} ${s.title}`).join(', ')}${rest.length > 3 ? '…' : ''}`
+        : ' Это было последнее на сегодня.';
+
+      return {
+        text: `Отметил: ${slot.start} ${slot.title}.${tail}`
+          + (closed ? '' : ' День не закрываю — закрытие вечером, одной фразой «как прошло».'),
+        structured: {
+          date,
+          rev: saved.rev,
+          slot: { from: slot.start, to: slot.end, title: slot.title },
+          open: rest.map((s) => ({ from: s.start, to: s.end, title: s.title })),
+          dayClosed: Boolean(closed),
+        },
+      };
+    },
     async tasks_close_day(args = {}) {
       const date = closeDayDate(args.date);
       const note = String(args.note || '').trim();
@@ -2504,6 +2587,12 @@ function createTasksTools({
       for (const slot of picked) {
         if (slot.done) { marked.push({ ...slot, already: true }); continue; }
         text = tasks.markSlotDone(text, slot.line, true);
+        // Событие «~ … закрыт · …» — то же, что пишет доска: из него вечером
+        // собирается «План и факт». Галочка без него оставляет разбор без
+        // времени, а закрытие дня — ровно тот момент, когда его читают.
+        if (!tasks.hasDayEvent(text, 'закрыт', slot)) {
+          text = tasks.appendDayEvent(text, 'закрыт', slot, { nowMs });
+        }
         marked.push({ ...slot, already: false });
       }
       text = tasks.setDayNote(text, note);
@@ -4584,6 +4673,7 @@ function createTasksTools({
     'tasks_close_day',
     'tasks_patch',
     'tasks_slot',
+    'tasks_slot_done',
     'tasks_money',
     'tasks_remind',
     'tasks_idea',

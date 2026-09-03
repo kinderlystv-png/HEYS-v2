@@ -53,6 +53,7 @@ const TASKS_WRITE_TOOLS = new Set([
   'tasks_patch',
   'tasks_habit',
   'tasks_slot',
+  'tasks_slot_done',
   'tasks_unslot',
   'tasks_reslot',
   'tasks_close_day',
