@@ -259,6 +259,13 @@
       "path": "scripts/db/migrations/2026-08-31_curator_day_summary_event_and_goals.sql",
       "description": "Day summary: last meal time, training type, last visit; norm context: steps and sleep goals",
       "destructive": false
+    },
+    {
+      "id": "2026-09-03_shared_products_macro_mass_rule",
+      "order": 35,
+      "path": "scripts/db/migrations/2026-09-03_shared_products_macro_mass_rule.sql",
+      "description": "Shared catalog mass: separate CHECK for macronutrients without fiber, so a breach names the guilty field",
+      "destructive": false
     }
   ]
 }
