@@ -1600,14 +1600,14 @@
               : 'Оба документа открываются целиком: отметка появится, когда дочитаете до конца.'),
             React.createElement('div', {
               style: {
-                backgroundColor: '#f6e6dd',
+                backgroundColor: 'var(--v4-tint, #f6e6dd)',
                 borderRadius: 18,
                 padding: '13px 15px',
                 marginTop: 16,
               }
             },
               React.createElement('div', {
-                style: { font: '700 12px/1.4 Figtree, system-ui, sans-serif', color: '#a1471c' }
+                style: { font: '700 12px/1.4 Figtree, system-ui, sans-serif', color: 'var(--v4-warn-text, #a1471c)' }
               }, 'Важно'),
               React.createElement('div', {
                 style: {
@@ -1628,7 +1628,7 @@
                 font: '600 10px/1 Figtree, system-ui, sans-serif',
                 letterSpacing: '0.16em',
                 textTransform: 'uppercase',
-                color: '#8a4a20',
+                color: 'var(--v4-act-text, #8a4a20)',
                 marginBottom: 2,
               }
             }, 'Обязательные'),
@@ -1662,7 +1662,7 @@
                   font: '600 10px/1 Figtree, system-ui, sans-serif',
                   letterSpacing: '0.16em',
                   textTransform: 'uppercase',
-                  color: '#8a4a20',
+                  color: 'var(--v4-act-text, #8a4a20)',
                   marginTop: 10,
                   marginBottom: 2,
                 }
@@ -1903,8 +1903,8 @@
                 // верен контракт; так же гаснет полка шторки подписи
                 // (733-ui-v4-login-theme.css: .heys-consent-sign-sheet__primary:disabled).
                 // Пока идёт запрос — 60 % по строке «вид знака в кнопке» зоны spinners.
-                backgroundColor: '#c67139',
-                color: '#2b1608',
+                backgroundColor: 'var(--v4-act, #c67139)',
+                color: 'var(--v4-btn-on-act, #2b1608)',
                 opacity: loading ? 0.6 : (allRequiredAccepted ? 1 : 0.45),
                 cursor: allRequiredAccepted && !loading ? 'pointer' : 'not-allowed',
               }
@@ -2020,7 +2020,7 @@
       : (checked ? checkedStyle : uncheckedStyle);
     const boxStyle = canvasCard
       ? (checked
-        ? { border: 'none', backgroundColor: '#c67139', boxShadow: 'none' }
+        ? { border: 'none', backgroundColor: 'var(--v4-act, #c67139)', boxShadow: 'none' }
         : { border: 'none', backgroundColor: '#fffaf1', boxShadow: 'inset 0 0 0 2px rgba(0,0,0,.18)' })
       : (checked
         ? { border: '2px solid #22c55e', backgroundColor: '#22c55e' }
@@ -2091,7 +2091,7 @@
         // остаётся на экране («вид пункта согласия»), но уходит из озвучки.
         config.required && !compact && React.createElement(React.Fragment, null,
           React.createElement('span', {
-            style: { color: canvasCard ? '#8a4a20' : '#ef4444', marginLeft: 4 },
+            style: { color: canvasCard ? 'var(--v4-act-text, #8a4a20)' : '#ef4444', marginLeft: 4 },
             'aria-hidden': 'true',
           }, '*'),
           React.createElement('span', { className: 'sr-only' }, ' — обязательно')
@@ -2145,7 +2145,7 @@
               border: 'none',
               background: 'transparent',
               font: '700 11.5px/1 Figtree, system-ui, sans-serif',
-              color: '#8a4a20',
+              color: 'var(--v4-act-text, #8a4a20)',
               cursor: 'pointer',
             }
             : { color: '#3b82f6' },
@@ -3598,7 +3598,7 @@
             onClick: function () { setOpenDoc(type); },
             style: {
               display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
-              background: done ? '#f0fdf4' : '#f6e6dd',
+              background: done ? '#f0fdf4' : 'var(--v4-tint, #f6e6dd)',
               border: done ? '1px solid #86efac' : '1px solid transparent',
               borderRadius: 14, padding: '12px 14px', marginBottom: 10, font: 'inherit',
             },

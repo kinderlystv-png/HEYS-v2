@@ -288,7 +288,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: color-mix(in srgb, #141210 72%, transparent);
+  background: color-mix(in srgb, var(--v4-bg, #141210) 72%, transparent);
 }
 
 .aps-barcode-modal {
@@ -349,7 +349,7 @@
   overflow: hidden;
   aspect-ratio: 4 / 3;
   border-radius: 12px;
-  background: #141210;
+  background: var(--v4-bg, #141210);
 }
 
 .aps-barcode-video {
@@ -661,7 +661,7 @@
 }
 
 .aps-barcode-overlay--v4-fullscreen {
-  background: #141210;
+  background: var(--v4-bg, #141210);
   padding: 0;
 }
 
@@ -724,7 +724,7 @@
   position: absolute;
   width: 34px;
   height: 34px;
-  border-color: #cf8144;
+  border-color: var(--v4-act, #cf8144);
   border-style: solid;
 }
 
@@ -765,7 +765,7 @@
   right: 14px;
   top: 50%;
   height: 2px;
-  background: #cf8144;
+  background: var(--v4-act, #cf8144);
 }
 
 .aps-barcode-finder-bars {

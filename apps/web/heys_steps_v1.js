@@ -1802,8 +1802,8 @@
         ),
         React.createElement('div', {
           style: {
-            marginTop: 12, padding: '5px 12px', borderRadius: 999, background: '#efe3cf',
-            fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#8a4a20'
+            marginTop: 12, padding: '5px 12px', borderRadius: 999, background: 'var(--v4-chip, #efe3cf)',
+            fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--v4-act-text, #8a4a20)'
           }
         }, estimatedBadge),
         React.createElement('div', {

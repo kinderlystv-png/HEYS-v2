@@ -869,7 +869,7 @@
       const fiber = hasData ? Math.round(Number(totals?.fiber) || 0) : null;
 
       // Подсказка — тот же словарь «чем добрать», что на «Питании»; граммовки
-      // виджет не показывает (строка «клетчатка · подсказка»).
+      // виджет не показывает (строка «клетчатка · подсказка»): Овощи · Бобовые · Цельные злаки.
       let sources = [];
       try {
         sources = (HEYS.dayDiarySection?.getFiberSources?.() || [])
@@ -2133,7 +2133,7 @@
                 isPastDay,
                 waveCount: mealsWithTime.length,
                 isLipolysis: result.status === 'complete',
-                color: result.status === 'complete' ? '#16a34a' : '#c67139'
+                color: result.status === 'complete' ? '#16a34a' : 'var(--v4-act, #c67139)'
               };
             }
           } catch (e) {
@@ -2188,7 +2188,7 @@
             // (heys_day_insulin_wave_data_v1.js): признак и его день ходят парой.
             sourceDate: yesterdayStr,
             isLipolysis: canonicalResult.status === 'complete',
-            color: canonicalResult.status === 'complete' ? '#16a34a' : '#c67139'
+            color: canonicalResult.status === 'complete' ? '#16a34a' : 'var(--v4-act, #c67139)'
           };
         })() : { hasData: false, status: 'noData', progress: 0, remaining: 0 };
       } catch (e) {
