@@ -128,7 +128,8 @@
   margin-top: 14px;
   padding: 22px 20px 20px;
   border-radius: 26px;
-  background: var(--v4-hero, #f8fafc);
+  /* Запасное было #f8fafc — грифель прежней системы, а не значение роли. */
+  background: var(--v4-hero, #efe3cf);
 }
 
 .nutrition-v4-hero__label {
@@ -191,7 +192,8 @@
   display: block;
   height: 6px;
   border-radius: 999px;
-  background: var(--v4-act, #2563eb);
+  /* Запасное было #2563eb — синий прежней системы; песочное значение роли терракота. */
+  background: var(--v4-act, #c67139);
   /* Тот же переход, что у заливки воды. */
   transition: width 320ms ease-in-out;
 }
