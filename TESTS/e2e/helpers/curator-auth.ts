@@ -166,10 +166,14 @@ export async function enterCuratorClientFromPanel(page: Page, clientName: string
     }, { timeout: 60_000 }).toBe(true);
 
     // На "Панели куратора" каждый клиент — clickable tile с его именем как text.
-    // Click triggers cloud.switchClient → enters client's dashboard.
-    const tile = page.getByText(clientName, { exact: true }).first();
-    await tile.waitFor({ state: 'visible', timeout: 30_000 });
-    await tile.click();
+    // v4 curator clients tab: client name is not clickable — use Open diary on the card.
+    const clientCard = page.locator('.cur-cab__card').filter({
+        has: page.getByText(clientName, { exact: true }),
+    }).first();
+    await clientCard.waitFor({ state: 'visible', timeout: 30_000 });
+    const openDiary = clientCard.getByRole('button', { name: 'Открыть дневник' });
+    await openDiary.waitFor({ state: 'visible', timeout: 30_000 });
+    await openDiary.click();
 
     // Wait для client dashboard загрузится — currentClientId is set, dashboard markers visible.
     await expect.poll(async () => {
