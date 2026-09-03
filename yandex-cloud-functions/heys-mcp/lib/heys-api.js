@@ -381,15 +381,64 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
   }
 
   /** Пакетное чтение кураторским путём — тот же `in.k`, что у getKVBatchByCurator в приложении. */
+  /**
+   * Чтение многих ключей — пачками, и пачка делится пополам, если сервер её
+   * не принял.
+   *
+   * Одним запросом это работало, пока задачник был маленьким. 3 сентября
+   * поиск по всему задачнику (282 файла) начал падать с 414 «адрес слишком
+   * длинный», и tasks_search перестал работать целиком — не «искал хуже», а
+   * не отвечал вовсе. В тот же день у моста нашлась зеркальная беда: там не
+   * влезал ОТВЕТ, и приходила 502.
+   *
+   * Поэтому два потолка. Длину адреса считаем заранее — она известна. Объём
+   * ответа заранее не знает никто, его знает только облако, поэтому на отказ
+   * делим пачку пополам и пробуем снова. Пачка из одного ключа, который не
+   * влез сам по себе, честно возвращает ошибку: молчать об этом нельзя.
+   */
+  const KV_MANY_MAX_URL_BYTES = 1800;
+  const KV_MANY_MAX_KEYS = 40;
+  const KV_MANY_SPLIT_STATUSES = new Set([413, 414, 431, 502]);
+
   async function getKVManyByCurator(bearer, clientId, keys) {
     if (!Array.isArray(keys) || !keys.length) return { data: {}, error: null };
-    const { data, error } = await rest('client_kv_store', {
-      select: 'k,v',
-      filters: { 'eq.client_id': clientId, 'in.k': `(${keys.join(',')})` },
-      bearer,
-    });
-    if (error) return { data: null, error };
-    return { data: rowsToMap(data), error: null };
+
+    const chunks = [];
+    let cur = [];
+    let bytes = 0;
+    for (const key of keys) {
+      const size = encodeURIComponent(String(key)).length + 1; // +1 на запятую
+      if (cur.length && (bytes + size > KV_MANY_MAX_URL_BYTES || cur.length >= KV_MANY_MAX_KEYS)) {
+        chunks.push(cur);
+        cur = [];
+        bytes = 0;
+      }
+      cur.push(key);
+      bytes += size;
+    }
+    if (cur.length) chunks.push(cur);
+
+    const out = {};
+    const readChunk = async (chunk) => {
+      const { data, error } = await rest('client_kv_store', {
+        select: 'k,v',
+        filters: { 'eq.client_id': clientId, 'in.k': `(${chunk.join(',')})` },
+        bearer,
+      });
+      if (!error) {
+        Object.assign(out, rowsToMap(data));
+        return null;
+      }
+      if (!KV_MANY_SPLIT_STATUSES.has(Number(error.status)) || chunk.length < 2) return error;
+      const mid = Math.ceil(chunk.length / 2);
+      return (await readChunk(chunk.slice(0, mid))) || (await readChunk(chunk.slice(mid)));
+    };
+
+    for (const chunk of chunks) {
+      const error = await readChunk(chunk);
+      if (error) return { data: null, error };
+    }
+    return { data: out, error: null };
   }
 
   /**
