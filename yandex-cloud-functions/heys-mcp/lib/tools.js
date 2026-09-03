@@ -3393,7 +3393,14 @@ function createTools({
         const payload = products.buildSharedProductPayload(sharedBase, built.patch);
         const saved = await api.updateSharedProduct(payload);
         if (!saved.ok) {
-          throw new ToolError('save_failed', `Сервер отклонил правку общей карточки: ${saved.error}`);
+          // У `shared_products` стоят CHECK на массу нутриентов, а REST-шлюз
+          // отдаёт нарушение как голый 500 (в отличие от RPC, где 23514
+          // разворачивается в человеческий текст). Без этой подсказки куратор
+          // видит «http_500» и не знает, что проверять.
+          const hint = saved.status === 500
+            ? ' Если менялись нутриенты — проверь сумму БЖУ и клетчатки: у общей базы стоит ограничение на массу, и его нарушение шлюз отдаёт неразборчивой ошибкой.'
+            : '';
+          throw new ToolError('save_failed', `Сервер отклонил правку общей карточки: ${saved.error}.${hint}`);
         }
         // Справочник кешируется на инстанс: без сброса следующий поиск в этом
         // же вызове отдал бы старые числа и выглядел бы как несохранённая правка.

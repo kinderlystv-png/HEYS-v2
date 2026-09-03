@@ -238,6 +238,21 @@ test('общая карточка уже содержит присланное �
   assert.equal(api.sharedWrites.length, 0);
 });
 
+test('отказ шлюза не превращается в «сохранено» и называет, что проверять', async () => {
+  const api = fakeApi();
+  api.updateSharedProduct = async () => ({ ok: false, error: 'shared_update_http_500', status: 500 });
+  await assert.rejects(
+    () => build(api).heys_update_product({ query: 'кофе латте', protein100: 90, scope: 'shared' }),
+    (e) => {
+      assert.equal(e.code, 'save_failed');
+      // CHECK на массу нутриентов шлюз отдаёт голым 500 — без подсказки куратор
+      // видит только «http_500» и не знает, где искать причину.
+      assert.match(e.message, /сумму БЖУ и клетчатки/);
+      return true;
+    },
+  );
+});
+
 // ── Payload общей базы ───────────────────────────────────────────────────
 
 test('payload собирается из общей строки: колонки таблицы, пересчитанные отпечатки', () => {
